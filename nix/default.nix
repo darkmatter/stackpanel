@@ -1,0 +1,3 @@
+{}: {
+  imports = [./git-hooks.nix];
+}
