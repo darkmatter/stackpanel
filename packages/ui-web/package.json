@@ -1,0 +1,86 @@
+{
+  "name": "@stackpanel/ui-web",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./button": {
+      "types": "./src/components/button.tsx",
+      "default": "./src/components/button.tsx"
+    },
+    "./card": {
+      "types": "./src/components/card.tsx",
+      "default": "./src/components/card.tsx"
+    },
+    "./dialog": {
+      "types": "./src/components/dialog.tsx",
+      "default": "./src/components/dialog.tsx"
+    },
+    "./input": {
+      "types": "./src/components/input.tsx",
+      "default": "./src/components/input.tsx"
+    },
+    "./label": {
+      "types": "./src/components/label.tsx",
+      "default": "./src/components/label.tsx"
+    },
+    "./avatar": {
+      "types": "./src/components/avatar.tsx",
+      "default": "./src/components/avatar.tsx"
+    },
+    "./badge": {
+      "types": "./src/components/badge.tsx",
+      "default": "./src/components/badge.tsx"
+    },
+    "./checkbox": {
+      "types": "./src/components/checkbox.tsx",
+      "default": "./src/components/checkbox.tsx"
+    },
+    "./dropdown-menu": {
+      "types": "./src/components/dropdown-menu.tsx",
+      "default": "./src/components/dropdown-menu.tsx"
+    },
+    "./progress": {
+      "types": "./src/components/progress.tsx",
+      "default": "./src/components/progress.tsx"
+    },
+    "./select": {
+      "types": "./src/components/select.tsx",
+      "default": "./src/components/select.tsx"
+    },
+    "./switch": {
+      "types": "./src/components/switch.tsx",
+      "default": "./src/components/switch.tsx"
+    },
+    "./tabs": {
+      "types": "./src/components/tabs.tsx",
+      "default": "./src/components/tabs.tsx"
+    },
+    "./textarea": {
+      "types": "./src/components/textarea.tsx",
+      "default": "./src/components/textarea.tsx"
+    },
+    "./tooltip": {
+      "types": "./src/components/tooltip.tsx",
+      "default": "./src/components/tooltip.tsx"
+    }
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@stackpanel/ui-core": "workspace:*",
+    "@stackpanel/ui-primitives": "workspace:*",
+    "lucide-react": "^0.454.0"
+  },
+  "devDependencies": {
+    "@stackpanel/config": "workspace:*",
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  }
+}
