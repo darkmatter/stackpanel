@@ -1,0 +1,40 @@
+inputs:
+  mk-shell-bin:
+    url: github:rrbutani/nix-mk-shell-bin
+  nix2container:
+    url: github:nlewo/nix2container
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs/rolling
+  treefmt-nix:
+    url: github:coopermaruyama/treefmt-nix
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+allowUnfree: true
+imports:
+  - ./devenv.nix
+  - ./tooling/nix/devenv.nix
+clean:
+  enabled: false
+  keep:
+    - HOME
+    - SERVICE
+    - ENV
+    - AWS_PROFILE
+    - AWS_REGION
+    - AWS_ACCESS_KEY_ID
+    - AWS_SECRET_ACCESS_KEY
+    - AWS_DEFAULT_REGION
+    - AWS_START_URL
+    - TURBO_TEAM
+    - TURBO_TOKEN
+    - DOCKER_BUILDKIT
+    - STARSHIP_CONFIG
+    - COMPOSE_DOCKER_CLI_BUILD
+    - XDG_DATA_DIRS
+    - PATH
+    - NODE_PATH
+    - GOPATH
