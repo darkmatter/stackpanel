@@ -49,6 +49,16 @@ coverage
 tmp
 temp
 
+# We deliberately ignore files that are usually checked in because we generate them
+/.claude
+/.codex
+/.cursor
+/.zed
+# These files will be ignored once we finish the modules for them
+# /.github
+# /.ruler
+# /.vscode
+
 # START Ruler Generated Files
 /.codex/config.json
 /.codex/config.json.bak
