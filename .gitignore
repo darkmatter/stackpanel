@@ -69,3 +69,14 @@ temp
 /WARP.md
 /WARP.md.bak
 # END Ruler Generated Files
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml

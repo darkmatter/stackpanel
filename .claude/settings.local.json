@@ -1,0 +1,10 @@
+{
+  "enabledMcpjsonServers": [
+    "context7",
+    "cloudflare",
+    "shadcn",
+    "neon",
+    "better-auth"
+  ],
+  "enableAllProjectMcpServers": true
+}
