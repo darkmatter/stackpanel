@@ -41,7 +41,8 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootComponent() {
   const routerState = useRouterState();
-  const isLandingPage = routerState.location.pathname === "/";
+  const pathname = routerState.location.pathname;
+  const isFullScreenPage = pathname === "/" || pathname === "/demo";
 
   return (
     <>
@@ -52,7 +53,7 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        {isLandingPage ? (
+        {isFullScreenPage ? (
           <Outlet />
         ) : (
           <div className="grid h-svh grid-rows-[auto_1fr]">

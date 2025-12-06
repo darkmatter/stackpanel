@@ -33,12 +33,12 @@ export function HeroSection() {
                 className="bg-foreground text-background hover:bg-foreground/90"
                 size="lg"
               >
-                <Link to="/dashboard">
+                <Link to="/demo">
                   Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link to="/dashboard">Instant Demo</Link>
+                <Link to="/demo">Instant Demo</Link>
               </Button>
             </div>
 
