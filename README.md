@@ -1,15 +1,18 @@
 <center>
-<h1>stackpanel</h1>
 
-Your stack, one panel
+# stackpanel
+
+Your entire stack, one panel
 
 </center>
+
+## 1. Overview
 
 Internal control plane to that lets you go from `localhost:3000` -> production without leaving the page. [^1]
 
 For now, this document describes the architecture and implementation plan.
 
-## Goals
+## 2. Goals
 
 - Autogenerate a reproducible dev environment for any project
   - Zero setup for popular stacks
@@ -17,7 +20,7 @@ For now, this document describes the architecture and implementation plan.
 - Minimal lock-in
 - Open source and self-hosted.
 
-## Architecture
+## 3. Architecture
 
 ```mermaid
 flowchart TB
@@ -66,7 +69,7 @@ imports = [
 ];
 ```
 
-## How it Works
+## 4. How it Works
 
 **Nix Foundation**
 
@@ -82,7 +85,7 @@ Nix's builtins and standard libraries make it very easy to do the same things us
 
 These are the levers we will pull to make this work. Below are more detailed plans for each module.
 
-## Codebase
+## 5. Codebase
 
 At a high-level, the user's project will look like this:
 
@@ -125,11 +128,9 @@ my-project/
 # To customize, modify flake.nix and run: stackpanel generate
 ```
 
-## Implemenation Details
+## 6. Implemenation Details
 
 \appendix
-
-# Appendix
 
 <!-- REFERENCES -->
 
