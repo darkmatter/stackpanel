@@ -1,0 +1,23 @@
+# stackpanel agent - local CLI client for StackPanel
+
+# Project root for file operations
+project_root: "."
+
+# Port for local WebSocket/HTTP server
+port: 9876
+
+# StackPanel API endpoint (for cloud sync)
+api_endpoint: "https://stackpanel.dev/api/agent"
+
+# Authentication token (set via STACKPANEL_AUTH_TOKEN env var)
+# auth_token: ""
+
+# Allowed commands (empty = all allowed)
+# For security, you can restrict which commands the agent can run
+allowed_commands:
+  []
+  # - nix
+  # - git
+
+# Data directory for agent state
+data_dir: ~/.stackpanel
