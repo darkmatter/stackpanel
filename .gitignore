@@ -81,7 +81,8 @@ temp
 # END Ruler Generated Files
 
 # Devenv
-.devenv*
+.devenv
+.devenv.flake.nix
 devenv.local.nix
 devenv.local.yaml
 
@@ -90,3 +91,8 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+/.stackpanel
+/.devenv*
+/.devenv-root
+/bts.jsonc
+

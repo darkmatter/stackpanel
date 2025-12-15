@@ -1,0 +1,8 @@
+
+
+inputs:
+  stackpanel:
+    url: github:stack-panel/nix
+
+imports:
+  - stackpanel/devenvModules/default

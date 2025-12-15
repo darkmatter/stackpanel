@@ -53,13 +53,13 @@ Environment variables:
 
 ### HTTP Endpoints
 
-| Endpoint            | Method   | Description             |
+| Endpoint | Method | Description |
 | ------------------- | -------- | ----------------------- |
-| `/health`           | GET      | Health check            |
-| `/api/exec`         | POST     | Execute command         |
-| `/api/nix/eval`     | POST     | Evaluate Nix expression |
-| `/api/nix/generate` | POST     | Run nix generate        |
-| `/api/files`        | GET/POST | Read/write files        |
+| `/health` | GET | Health check |
+| `/api/exec` | POST | Execute command |
+| `/api/nix/eval` | POST | Evaluate Nix expression |
+| `/api/nix/generate` | POST | Run nix generate |
+| `/api/files` | GET/POST | Read/write files |
 
 ### WebSocket (`/ws`)
 

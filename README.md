@@ -45,11 +45,11 @@ flowchart TB
 
 **Components:**
 
-| Component           | Role                                                                          |
+| Component | Role |
 | ------------------- | ----------------------------------------------------------------------------- |
-| **Agent**           | Go binary serving GUI locally. Executes Nix commands. Works offline.          |
-| **GUI**             | Browser interface to configure stack, trigger builds, view status.            |
-| **Flake**           | Source of truth. flake-parts modules define the entire stack.                 |
+| **Agent** | Go binary serving GUI locally. Executes Nix commands. Works offline. |
+| **GUI** | Browser interface to configure stack, trigger builds, view status. |
+| **Flake** | Source of truth. flake-parts modules define the entire stack. |
 | **Generated Files** | Standard paths (`.github/`, `Dockerfile`). Git-tracked. CI works without Nix. |
 
 **Plugin ecosystem:**
@@ -283,8 +283,8 @@ in
 
 In other words, users.nix is semi-generated. I say semi because it's still in git and gets checked in, but it's done by the agent. The agent is just translating UI actions to the repo. So there's no database. The UI in the browser relies on the agent to be it's "database", which in turn is just reading and writing to nix files that are formatted like a database.
 
-\appendix
+\\appendix
 
 <!-- REFERENCES -->
 
-[^1]: Can be taken further and go from _joins team_ -> production
+\[^1\]: Can be taken further and go from _joins team_ -> production
