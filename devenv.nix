@@ -101,19 +101,20 @@ in {
   # Formaattingdevev
   git-hooks.enable = true;
   git-hooks.install.enable = true;
+  git-hooks.hooks.commitizen.enable = true;
+  git-hooks.hooks.treefmt.enable = true;
+  git-hooks.default_stages = [
+    "pre-commit"
+    "pre-push"
+    "commit-msg"
+  ];
+  git-hooks.hooks.treefmt.settings.formatters = [
+    pkgs.alejandra
+    pkgs.biome
+    pkgs.mdformat
+  ];
   treefmt.enable = true;
-  git-hooks.hooks = lib.mkMerge [
-    (lib.listToAttrs (map (formatter: {
-        name = formatter;
-        value.enable = true;
-      })
-      formatters))
-  ];
-  treefmt.config.programs = lib.mkMerge [
-    (lib.listToAttrs (map (formatter: {
-        name = formatter;
-        value.enable = true;
-      })
-      formatters))
-  ];
+  treefmt.config.programs.alejandra.enable = true;
+  treefmt.config.programs.biome.enable = true;
+  treefmt.config.programs.mdformat.enable = true;
 }
