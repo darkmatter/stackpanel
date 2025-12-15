@@ -6,9 +6,9 @@ import { PrismaClient } from "../prisma/generated/client";
 neonConfig.poolQueryViaFetch = true;
 
 const prisma = new PrismaClient({
-  adapter: new PrismaNeon({
-    connectionString: env.DATABASE_URL || "",
-  }),
+	adapter: new PrismaNeon({
+		connectionString: env.DATABASE_URL || "",
+	}),
 });
 
 export default prisma;

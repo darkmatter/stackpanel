@@ -1,0 +1,290 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+[░▒▓](fg:surface2)\
+[ $os$username](bg:gray fg:white)\
+[](bg:black fg:gray)\
+$directory\
+[](bg:white fg:black)\
+$git_branch\
+[](fg:white)\
+[ $git_status[](fg:base)](bg:base)\
+$fill\
+$aws\
+$nix_shell\
+$time\
+$line_break\
+$shlvl\
+$character"""
+
+
+
+
+# right_format =  """
+# $nix_shell\
+# $aws\
+# [](bg:white fg:black)\
+# $git_branch\
+# $git_status\
+# [](bg:black fg:gray)\
+# $time\
+# """
+
+palette = 'apathy'
+
+[fill]
+disabled = false
+symbol = ' '
+
+[os]
+disabled = false
+style = "bg:gray fg:white"
+
+[os.symbols]
+Windows = ""
+Ubuntu = "󰕈"
+SUSE = ""
+Raspbian = "󰐿"
+Mint = "󰣭"
+Macos = "󰀵"
+Manjaro = ""
+Linux = "󰌽"
+Gentoo = "󰣨"
+Fedora = "󰣛"
+Alpine = ""
+Amazon = ""
+Android = ""
+AOSC = ""
+Arch = "󰣇"
+Artix = "󰣇"
+CentOS = ""
+Debian = "󰣚"
+Redhat = "󱄛"
+RedHatEnterprise = "󱄛"
+
+[username]
+show_always = true
+style_user = "fg:white bg:gray"
+style_root = "fg:red bg:gray"
+format = '[ $user ]($style)'
+
+[directory]
+style = "bg:black fg:white"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = "󰝚 "
+"Pictures" = " "
+"Developer" = "󰲋 "
+
+[git_branch]
+symbol = ""
+style = "bg:white fg:black"
+format = '[ $symbol $branch ]($style)'
+
+[git_status]
+style = "bold bg:base fg:peach"
+format = '[$all_status]($style)'
+# format = '[ $all_status$ahead_behind ]($style)'
+
+[git_metrics]
+disabled = true
+added_style = 'bg:base fg:green'
+deleted_style = 'bg:base fg:red'
+format = '[+$added]($added_style) [-$deleted]($deleted_style) '
+
+[nodejs]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+# ~/.config/starship.toml
+
+[nix_shell]
+disabled = false
+impure_msg = '[impure](maroon)'
+pure_msg = '[pure](sky)'
+unknown_msg = '[unknown](mauve)'
+format = '[ $state( $name)](overlay0) '
+
+
+[shlvl]
+disabled = false
+format = '[$symbol]($style)'
+repeat = true
+symbol = '❯'
+repeat_offset = 1
+
+[shell]
+fish_indicator = '󰈺 '
+powershell_indicator = '_'
+unknown_indicator = 'mystery shell'
+style = 'cyan bold'
+disabled = true
+
+[c]
+symbol = " "
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[rust]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[golang]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[php]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[aws]
+symbol = ""
+style = "fg:yellow"
+format = '[[ $symbol( $version) ](fg:crust)]($style)'
+
+[java]
+symbol = " "
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[kotlin]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[haskell]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[python]
+symbol = ""
+style = "bg:green"
+format = '[[ $symbol( $version)(\(#$virtualenv\)) ](fg:crust bg:green)]($style)'
+
+[docker_context]
+symbol = ""
+style = "bg:sapphire"
+format = '[[ $symbol( $context) ](fg:crust bg:sapphire)]($style)'
+
+[conda]
+symbol = "  "
+style = "fg:crust bg:sapphire"
+format = '[$symbol$environment ]($style)'
+ignore_base = false
+
+[time]
+disabled = false
+time_format = "%R"
+style = "fg:subtext0"
+format = '[  $time ]($style)'
+
+[battery]
+# full_symbol = '🔋 '
+# charging_symbol = '⚡️ '
+# discharging_symbol = '💀 '
+format = '[$symbol$percentage]($style) '
+disabled = false
+
+[line_break]
+disabled = false
+
+[character]
+disabled = false
+success_symbol = '[❯](bold fg:green)'
+error_symbol = '[❯](bold fg:red)'
+vimcmd_symbol = '[❮](bold fg:green)'
+vimcmd_replace_one_symbol = '[❮](bold fg:lavender)'
+vimcmd_replace_symbol = '[❮](bold fg:lavender)'
+vimcmd_visual_symbol = '[❮](bold fg:yellow)'
+
+[cmd_duration]
+show_milliseconds = true
+format = " in $duration "
+style = "bg:lavender"
+disabled = false
+show_notifications = true
+min_time_to_notify = 45000
+
+[palettes.apathy]
+gray = "#575B60"
+black = "#16181D"
+white = "#D7D8E0"
+rosewater = "#f0c9dd"
+flamingo = "#f0c9dd"
+pink = "#f5c2e7"
+mauve = "#998fe1"
+red = "#bb4561"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#ffcb6b"
+green = "#a6e3a1"
+teal = "#93e3db"
+sky = "#baf8e5"
+sapphire = "#33b3cc"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext1 = "#bac2de"
+subtext0 = "#a6adc8"
+overlay2 = "#9399b2"
+overlay1 = "#7f849c"
+overlay0 = "#6c7086"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"
+
+#           "foreground": "#829297"
+# Colors": {
+# pace": "#f0c9dd",
+# ": {
+#   "foreground": "#bb7494",
+#   "fontStyle": ""
+#
+# .defaultLibrary": "#e0a2b1",
+# face": {
+#   "foreground": "#93e3db",
+# ember": "#33b3cc",
+# : "#ffcb6b",
+#   "foreground": "#93e3db",
+# t": "#cdf6ff",
+# eter": {
+#   "foreground": "#8e8db3",
+# ble": "#9aa1c7",
+# ble.defaultLibrary": "#ffa114",
+# rty": "#e0a2b1",
+# rty.definition": "#74728f",
+# rty.defaultLibrary": "#96a5b6",
+# rty.declaration": "#675f5a",
+# ion": "#7ce6bcff",
+# ion.defaultLibrary": "#7ce6bcff",
+# ion.declaration": "#7ce6bcff",
+# d": "#baf8e5",
+# d.defaultLibrary": "#baf8e5",
+# d.declaration": "#baf8e5",
+# ": "#afd1e9cf",
+#   "foreground": "#4D4A56",
+# g": "#c3dc8f",
+#   "foreground": "#FF6188",
+# r": "#33b3cc",
+# rd": "#998fe1cf",
+# rd.wordlike": "#FF6188",
+# rd.unsafe": "#FF6188",
+# tor": "#e60063",
+#   "foreground": "#ffa114",
+# ification": "#ffd014d4",
+#   "foreground": "#4D4A56",
+# donly": "#96a5b6"
+
