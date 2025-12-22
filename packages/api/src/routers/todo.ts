@@ -1,55 +1,61 @@
-import prisma from "@stackpanel/db";
+import { db, todo as todoSchema } from "@stackpanel/db";
 import { TRPCError } from "@trpc/server";
+import { asc, eq } from "drizzle-orm";
 import z from "zod";
 import { publicProcedure, router } from "../index";
 
 export const todoRouter = router({
 	getAll: publicProcedure.query(
 		async () =>
-			await prisma.todo.findMany({
-				orderBy: {
-					id: "asc",
-				},
-			}),
+			await db.select().from(todoSchema.todo).orderBy(asc(todoSchema.todo.id)),
 	),
 
-	create: publicProcedure.input(z.object({ text: z.string().min(1) })).mutation(
-		async ({ input }) =>
-			await prisma.todo.create({
-				data: {
+	create: publicProcedure
+		.input(z.object({ text: z.string().min(1) }))
+		.mutation(async ({ input }) => {
+			const result = await db
+				.insert(todoSchema.todo)
+				.values({
 					text: input.text,
-				},
-			}),
-	),
+				})
+				.returning();
+			return result[0];
+		}),
 
 	toggle: publicProcedure
 		.input(z.object({ id: z.number(), completed: z.boolean() }))
 		.mutation(async ({ input }) => {
-			try {
-				return await prisma.todo.update({
-					where: { id: input.id },
-					data: { completed: input.completed },
-				});
-			} catch (error) {
+			const result = await db
+				.update(todoSchema.todo)
+				.set({ completed: input.completed })
+				.where(eq(todoSchema.todo.id, input.id))
+				.returning();
+
+			if (result.length === 0) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
 					message: "Todo not found",
 				});
 			}
+
+			return result[0];
 		}),
 
 	delete: publicProcedure
 		.input(z.object({ id: z.number() }))
 		.mutation(async ({ input }) => {
-			try {
-				return await prisma.todo.delete({
-					where: { id: input.id },
-				});
-			} catch (error) {
+			const result = await db
+				.delete(todoSchema.todo)
+				.where(eq(todoSchema.todo.id, input.id))
+				.returning();
+
+			if (result.length === 0) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
 					message: "Todo not found",
 				});
 			}
+
+			return result[0];
 		}),
 });

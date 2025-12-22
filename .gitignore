@@ -91,7 +91,7 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
-/.stackpanel
+/.stackpanel/state
 /.devenv*
 /.devenv-root
 /bts.jsonc

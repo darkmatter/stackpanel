@@ -1,14 +1,17 @@
-import { env } from "cloudflare:workers";
-import { neonConfig } from "@neondatabase/serverless";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { PrismaClient } from "../prisma/generated/client";
+import { neon, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import ws from "ws";
+import * as auth from "./schema/auth";
+import * as todo from "./schema/todo";
 
-neonConfig.poolQueryViaFetch = true;
+neonConfig.webSocketConstructor = ws;
 
-const prisma = new PrismaClient({
-	adapter: new PrismaNeon({
-		connectionString: env.DATABASE_URL || "",
-	}),
-});
+// To work in edge environments (Cloudflare Workers, Vercel Edge, etc.), enable querying over fetch
+// neonConfig.poolQueryViaFetch = true
 
-export default prisma;
+const sql = neon(process.env.DATABASE_URL || "");
+const schema = { ...auth, ...todo };
+export const db = drizzle(sql, { schema });
+
+// Export schema tables
+export { auth, todo };

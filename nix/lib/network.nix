@@ -11,7 +11,7 @@
   # Create Step CA certificate management scripts
   # Returns an attrset of derivations that can be added to packages
   mkStepScripts = {
-    # Directory where certs/keys are stored
+    # Directory where certs/keys are stored (used as default, can be overridden via STACKPANEL_STATE_DIR)
     stateDir,
     # Step CA URL (e.g., "https://ca.internal:443")
     caUrl,
@@ -24,13 +24,27 @@
     # Certificate duration (default: 24h)
     duration ? "24h",
   }: let
-    certPath = "${stateDir}/device-root.chain.crt";
-    keyPath = "${stateDir}/device.key";
+    # These are defaults - scripts will resolve actual paths at runtime
+    defaultCertPath = "${stateDir}/device-root.chain.crt";
+    defaultKeyPath = "${stateDir}/device.key";
 
     caHost = lib.removePrefix "https://" (lib.removeSuffix ":443" caUrl);
 
+    # Helper to get the step state directory at runtime
+    # Uses STACKPANEL_STATE_DIR if set, otherwise falls back to relative path
+    getStepDir = ''
+      _step_state_dir="''${STACKPANEL_STATE_DIR:-}"/step
+      if [[ -z "''${STACKPANEL_STATE_DIR:-}" ]]; then
+        _step_state_dir="${stateDir}"
+      fi
+    '';
+
     checkCert = pkgs.writeShellScriptBin "check-device-cert" ''
       set -uo pipefail
+
+      ${getStepDir}
+      _cert_path="$_step_state_dir/device-root.chain.crt"
+      _key_path="$_step_state_dir/device.key"
 
       red='\033[0;31m'
       green='\033[0;32m'
@@ -77,7 +91,7 @@
       fi
 
       echo -n "Checking if device certificate exists... "
-      if [[ -f "${certPath}" && -f "${keyPath}" ]]; then
+      if [[ -f "$_cert_path" && -f "$_key_path" ]]; then
         pass
       else
         fail
@@ -85,9 +99,9 @@
         all_passed=false
       fi
 
-      if [[ -f "${certPath}" ]]; then
+      if [[ -f "$_cert_path" ]]; then
         echo -n "Checking if device certificate is valid... "
-        if ${pkgs.step-cli}/bin/step certificate verify "${certPath}" --roots="$HOME/.step/certs/root_ca.crt" 2>/dev/null; then
+        if ${pkgs.step-cli}/bin/step certificate verify "$_cert_path" --roots="$HOME/.step/certs/root_ca.crt" 2>/dev/null; then
           pass
         else
           fail
@@ -109,13 +123,17 @@
     ensureCert = pkgs.writeShellScriptBin "ensure-device-cert" ''
       set -euo pipefail
 
-      if [[ -f "${certPath}" && -f "${keyPath}" ]]; then
-        echo "Device certificate already exists at ${certPath}"
+      ${getStepDir}
+      _cert_path="$_step_state_dir/device-root.chain.crt"
+      _key_path="$_step_state_dir/device.key"
+
+      if [[ -f "$_cert_path" && -f "$_key_path" ]]; then
+        echo "Device certificate already exists at $_cert_path"
         exit 0
       fi
 
       echo "Setting up device certificate..."
-      mkdir -p "${stateDir}"
+      mkdir -p "$_step_state_dir"
 
       if [[ ! -f "$HOME/.step/certs/root_ca.crt" ]]; then
         echo "Bootstrapping CA trust..."
@@ -139,41 +157,45 @@
       echo "CA fingerprint verified."
 
       echo "Requesting device certificate..."
-      device_cert="${stateDir}/device.crt"
+      device_cert="$_step_state_dir/device.crt"
       ${pkgs.step-cli}/bin/step ca certificate \
         "${certName}" \
         "$device_cert" \
-        "${keyPath}" \
+        "$_key_path" \
         --provisioner="${provisioner}" \
         --ca-url="${caUrl}"
 
       echo "Fetching root CA certificate..."
-      root_cert="${stateDir}/root_ca.crt"
+      root_cert="$_step_state_dir/root_ca.crt"
       ${pkgs.step-cli}/bin/step ca roots \
         "$root_cert" \
         --ca-url="${caUrl}"
 
       echo "Assembling certificate chain..."
-      cat "$device_cert" "$root_cert" > "${certPath}"
+      cat "$device_cert" "$root_cert" > "$_cert_path"
 
-      chmod 600 "${keyPath}"
-      chmod 644 "${certPath}"
+      chmod 600 "$_key_path"
+      chmod 644 "$_cert_path"
 
-      echo "Device certificate chain created at ${certPath}"
+      echo "Device certificate chain created at $_cert_path"
     '';
 
     renewCert = pkgs.writeShellScriptBin "renew-device-cert" ''
       set -euo pipefail
 
-      if [[ ! -f "${certPath}" || ! -f "${keyPath}" ]]; then
+      ${getStepDir}
+      _cert_path="$_step_state_dir/device-root.chain.crt"
+      _key_path="$_step_state_dir/device.key"
+
+      if [[ ! -f "$_cert_path" || ! -f "$_key_path" ]]; then
         echo "No existing certificate found. Run 'ensure-device-cert' first."
         exit 1
       fi
 
       echo "Renewing device certificate..."
       ${pkgs.step-cli}/bin/step ca renew \
-        "${certPath}" \
-        "${keyPath}" \
+        "$_cert_path" \
+        "$_key_path" \
         --force
       echo "Certificate renewed successfully!"
     '';
@@ -183,10 +205,10 @@
     requiredPackages = [pkgs.step-cli];
     # All packages together
     allPackages = [checkCert ensureCert renewCert pkgs.step-cli];
-    # Paths for use by other modules
+    # Paths for use by other modules (these are defaults, actual paths resolved at runtime)
     paths = {
-      cert = certPath;
-      key = keyPath;
+      cert = defaultCertPath;
+      key = defaultKeyPath;
     };
   };
 }

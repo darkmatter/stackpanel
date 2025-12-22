@@ -1,0 +1,152 @@
+---
+title: Ide Options
+description: Configuration options for stackpanel.ide
+---
+
+# Ide Options
+
+## `stackpanel.ide.cursor.enable`
+
+Whether to enable Cursor editor integration (not yet implemented).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.ide.enable`
+
+Generate IDE configuration files into .stackpanel/gen/ide/
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.ide.vscode.enable`
+
+Generate VS Code workspace and configuration files
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.ide.vscode.existingSettingsPath`
+
+Path to existing VS Code settings.json to merge with generated settings.
+
+WARNING: This creates IMPURE evaluation - the file must exist at Nix evaluation time.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or absolute path` |
+| **Default** | `null` |
+
+
+---
+
+## `stackpanel.ide.vscode.extensions`
+
+Recommended VS Code extension IDs
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+
+---
+
+## `stackpanel.ide.vscode.extraFolders`
+
+Additional workspace folders to include
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of attribute set of string` |
+| **Default** | `[ ]` |
+
+
+---
+
+## `stackpanel.ide.vscode.outputMode`
+
+Where to output VS Code settings:
+- "workspace": Generate .stackpanel/gen/ide/vscode/stackpanel.code-workspace (default, safe)
+- "settingsJson": Generate .vscode/settings.json (CAUTION: may overwrite existing file)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "workspace", "settingsJson"` |
+| **Default** | `"workspace"` |
+
+
+---
+
+## `stackpanel.ide.vscode.settings`
+
+VS Code settings to include in the generated configuration.
+These take highest priority and will override any existing or generated settings.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+
+---
+
+## `stackpanel.ide.vscode.workspaceName`
+
+Name for the generated .code-workspace file (without extension)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"stackpanel"` |
+
+
+---
+
+## `stackpanel.ide.zed.enable`
+
+Whether to enable Zed editor integration (not yet implemented).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+

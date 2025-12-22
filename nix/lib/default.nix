@@ -37,4 +37,11 @@
     if pkgs != null
     then import ./theme.nix {inherit pkgs lib;}
     else throw "stackpanel.lib.theme requires pkgs to be passed";
+
+  # Caddy reverse proxy utilities
+  # Requires pkgs to be passed
+  caddy =
+    if pkgs != null
+    then import ./caddy.nix {inherit pkgs lib;}
+    else throw "stackpanel.lib.caddy requires pkgs to be passed";
 }

@@ -1,7 +1,12 @@
 # Secrets schema + code generation for TypeScript, Python, Go
-# Standalone module - no flake-parts dependency
+# Per-app code generation based on .stackpanel/secrets/apps/{appName}/config.nix
 #
-# Define your secrets schema once, get:
+# Each app defines:
+#   - config.nix: { codegen = { language = "typescript"; path = "..."; }; }
+#   - common.nix: shared schema across all environments
+#   - {env}.nix: per-environment schema overrides
+#
+# Generated code provides:
 #   - Type-safe env access in your language of choice
 #   - Nullable types for optional secrets
 #   - PUBLIC_* prefix for client-safe values (non-sensitive)
@@ -15,14 +20,36 @@
   inherit (lib) concatStringsSep concatMapStringsSep optionalString;
   cfg = config.stackpanel.secrets;
 
-  # Schema entries as list with name included
-  schemaEntries =
-    lib.mapAttrsToList (name: opts: opts // {inherit name;}) cfg.schema;
+  # ══════════════════════════════════════════════════════════════════════════════
+  # Per-App Schema Processing
+  # ══════════════════════════════════════════════════════════════════════════════
 
-  # Split by sensitivity
-  sensitiveSecrets = lib.filter (s: s.sensitive) schemaEntries;
-  publicSecrets = lib.filter (s: !s.sensitive) schemaEntries;
-  allSecrets = sensitiveSecrets ++ publicSecrets;
+  # Merge common schema with environment-specific overrides
+  # Environment schema takes precedence
+  mergeSchemas = commonSchema: envSchema:
+    lib.recursiveUpdate commonSchema envSchema;
+
+  # Get the full merged schema for an app (common + all env overrides combined)
+  getAppSchema = appName: appData: let
+    common = appData.commonSchema or {};
+    envSchemas = lib.mapAttrsToList (_env: envCfg: envCfg.schema or {}) (appData.environments or {});
+    # Merge common with all env schemas (to get all possible keys)
+    allEnvKeys = lib.foldl' lib.recursiveUpdate {} envSchemas;
+  in
+    mergeSchemas common allEnvKeys;
+
+  # Convert schema attrs to list with name included
+  schemaToEntries = schema:
+    lib.mapAttrsToList (name: opts: (opts // {inherit name;})) schema;
+
+  # Apply defaults to schema entry
+  normalizeEntry = entry: {
+    name = entry.name;
+    required = entry.required or true;
+    sensitive = entry.sensitive or true;
+    description = entry.description or "";
+    default = entry.default or null;
+  };
 
   # ══════════════════════════════════════════════════════════════════════════════
   # TypeScript Code Generation
@@ -41,18 +68,19 @@
       if s.required
       then "@required"
       else "@optional";
+    defaultComment = optionalString (s.default != null) " (default: ${s.default})";
     bodyLines =
       if s.required
       then [
         "    const value = process.env.${s.name};"
-        ''if (!value) throw new Error("Missing required env var: ${s.name}");''
+        ''    if (!value) throw new Error("Missing required env var: ${s.name}");''
         "    return value;"
       ]
       else ["    return process.env.${s.name};"];
   in
     concatStringsSep "\n" ([
         "  /**"
-        "   * ${desc}"
+        "   * ${desc}${defaultComment}"
         "   * ${tag}"
         "   */"
         "  get ${s.name}(): ${type} {"
@@ -76,8 +104,7 @@
       if s.required
       then [
         "    const value = process.env.PUBLIC_${s.name} ?? process.env.NEXT_PUBLIC_${s.name};"
-        ''
-          if (!value) throw new Error("Missing required env var: PUBLIC_${s.name}");''
+        ''    if (!value) throw new Error("Missing required env var: PUBLIC_${s.name}");''
         "    return value;"
       ]
       else [
@@ -98,44 +125,50 @@
     then concatMapStringsSep " | " (s: ''"${s.name}"'') secrets
     else "never";
 
-  tsCode = concatStringsSep "\n" ([
-      "// Regenerate with: nix run .#generate"
-      ""
-      "/**"
-      " * Server-side environment variables (all secrets)"
-      " * Use with: import { serverEnv } from \"./env\";"
-      " */"
-      "class ServerEnv {"
-    ]
-    ++ (map tsServerGetter allSecrets)
-    ++ [
-      "}"
-      ""
-      "/**"
-      " * Client-side environment variables (public only)"
-      " * Safe to use in browser code"
-      " * Use with: import { clientEnv } from \"./env\";"
-      " */"
-      "class ClientEnv {"
-    ]
-    ++ (map tsClientGetter publicSecrets)
-    ++ [
-      "}"
-      ""
-      "/** Server environment - all secrets */"
-      "export const serverEnv = new ServerEnv();"
-      ""
-      "/** Client environment - public secrets only */"
-      "export const clientEnv = new ClientEnv();"
-      ""
-      "/** Default export for convenience */"
-      "export default serverEnv;"
-      ""
-      "// Type exports"
-      "export type ServerEnvKeys = ${tsKeyTypes allSecrets};"
-      "export type ClientEnvKeys = ${tsKeyTypes publicSecrets};"
-      ""
-    ]);
+  generateTsCode = appName: allSecrets: let
+    sensitiveSecrets = lib.filter (s: s.sensitive) allSecrets;
+    publicSecrets = lib.filter (s: !s.sensitive) allSecrets;
+  in
+    concatStringsSep "\n" ([
+        "// Generated by stackpanel secrets module"
+        "// App: ${appName}"
+        "// Regenerate with: devenv shell"
+        ""
+        "/**"
+        " * Server-side environment variables (all secrets)"
+        " * Use with: import { serverEnv } from \"./env\";"
+        " */"
+        "class ServerEnv {"
+      ]
+      ++ (map tsServerGetter allSecrets)
+      ++ [
+        "}"
+        ""
+        "/**"
+        " * Client-side environment variables (public only)"
+        " * Safe to use in browser code"
+        " * Use with: import { clientEnv } from \"./env\";"
+        " */"
+        "class ClientEnv {"
+      ]
+      ++ (map tsClientGetter publicSecrets)
+      ++ [
+        "}"
+        ""
+        "/** Server environment - all secrets */"
+        "export const serverEnv = new ServerEnv();"
+        ""
+        "/** Client environment - public secrets only */"
+        "export const clientEnv = new ClientEnv();"
+        ""
+        "/** Default export for convenience */"
+        "export default serverEnv;"
+        ""
+        "// Type exports"
+        "export type ServerEnvKeys = ${tsKeyTypes allSecrets};"
+        "export type ClientEnvKeys = ${tsKeyTypes publicSecrets};"
+        ""
+      ]);
 
   # ══════════════════════════════════════════════════════════════════════════════
   # Python Code Generation
@@ -154,18 +187,18 @@
     bodyLines =
       if s.required
       then [
-        ''value = os.environ.get("${s.name}")''
+        ''        value = os.environ.get("${s.name}")''
         "        if not value:"
-        ''raise ValueError("Missing required env var: ${s.name}")''
+        ''            raise ValueError("Missing required env var: ${s.name}")''
         "        return value"
       ]
-      else [''return os.environ.get("${s.name}")''];
+      else [''        return os.environ.get("${s.name}")''];
   in
     concatStringsSep "\n" ([
         ""
         "    @property"
         "    def ${name}(self) -> ${type}:"
-        ''"""${desc}"""''
+        ''        """${desc}"""''
       ]
       ++ bodyLines);
 
@@ -182,50 +215,55 @@
     bodyLines =
       if s.required
       then [
-        ''value = os.environ.get("PUBLIC_${s.name}")''
+        ''        value = os.environ.get("PUBLIC_${s.name}")''
         "        if not value:"
-        ''raise ValueError("Missing required env var: PUBLIC_${s.name}")''
+        ''            raise ValueError("Missing required env var: PUBLIC_${s.name}")''
         "        return value"
       ]
-      else [''return os.environ.get("PUBLIC_${s.name}")''];
+      else [''        return os.environ.get("PUBLIC_${s.name}")''];
   in
     concatStringsSep "\n" ([
         ""
         "    @property"
         "    def ${name}(self) -> ${type}:"
-        ''"""${desc}"""''
+        ''        """${desc}"""''
       ]
       ++ bodyLines);
 
-  pyCode = concatStringsSep "\n" ([
-      "# Generated by stackpanel - do not edit manually"
-      "# Regenerate with: nix run .#generate"
-      ""
-      "import os"
-      ""
-      ""
-      "class ServerEnv:"
-      ''"""Server-side environment variables (all secrets)"""''
-    ]
-    ++ (map pyServerProp allSecrets)
-    ++ [
-      ""
-      ""
-      "class ClientEnv:"
-      ''"""Client-side environment variables (public only)"""''
-    ]
-    ++ (map pyClientProp publicSecrets)
-    ++ [
-      ""
-      ""
-      "# Singleton instances"
-      "server_env = ServerEnv()"
-      "client_env = ClientEnv()"
-      ""
-      "# Convenience alias"
-      "env = server_env"
-      ""
-    ]);
+  generatePyCode = appName: allSecrets: let
+    sensitiveSecrets = lib.filter (s: s.sensitive) allSecrets;
+    publicSecrets = lib.filter (s: !s.sensitive) allSecrets;
+  in
+    concatStringsSep "\n" ([
+        "# Generated by stackpanel secrets module"
+        "# App: ${appName}"
+        "# Regenerate with: devenv shell"
+        ""
+        "import os"
+        ""
+        ""
+        "class ServerEnv:"
+        ''    """Server-side environment variables (all secrets)"""''
+      ]
+      ++ (map pyServerProp allSecrets)
+      ++ [
+        ""
+        ""
+        "class ClientEnv:"
+        ''    """Client-side environment variables (public only)"""''
+      ]
+      ++ (map pyClientProp publicSecrets)
+      ++ [
+        ""
+        ""
+        "# Singleton instances"
+        "server_env = ServerEnv()"
+        "client_env = ClientEnv()"
+        ""
+        "# Convenience alias"
+        "env = server_env"
+        ""
+      ]);
 
   # ══════════════════════════════════════════════════════════════════════════════
   # Go Code Generation
@@ -243,15 +281,15 @@
     if s.required
     then
       concatStringsSep "\n" [
-        ''if v := os.Getenv("${s.name}"); v != "" {''
+        ''	if v := os.Getenv("${s.name}"); v != "" {''
         "		env.${s.name} = v"
         "	} else {"
-        ''return nil, fmt.Errorf("missing required env var: ${s.name}")''
+        ''		return nil, fmt.Errorf("missing required env var: ${s.name}")''
         "	}"
       ]
     else
       concatStringsSep "\n" [
-        ''if v := os.Getenv("${s.name}"); v != "" {''
+        ''	if v := os.Getenv("${s.name}"); v != "" {''
         "		env.${s.name} = &v"
         "	}"
       ];
@@ -260,174 +298,125 @@
     if s.required
     then
       concatStringsSep "\n" [
-        ''if v := os.Getenv("PUBLIC_${s.name}"); v != "" {''
+        ''	if v := os.Getenv("PUBLIC_${s.name}"); v != "" {''
         "		env.${s.name} = v"
         "	} else {"
-        ''return nil, fmt.Errorf("missing required env var: PUBLIC_${s.name}")''
+        ''		return nil, fmt.Errorf("missing required env var: PUBLIC_${s.name}")''
         "	}"
       ]
     else
       concatStringsSep "\n" [
-        ''if v := os.Getenv("PUBLIC_${s.name}"); v != "" {''
+        ''	if v := os.Getenv("PUBLIC_${s.name}"); v != "" {''
         "		env.${s.name} = &v"
         "	}"
       ];
 
-  goCode = concatStringsSep "\n" ([
-      "// Generated by stackpanel - do not edit manually"
-      "// Regenerate with: nix run .#generate"
-      ""
-      "package env"
-      ""
-      "import ("
-      ''"fmt"''
-      ''"os"''
-      ")"
-      ""
-      "// ServerEnv contains all environment variables (sensitive + public)"
-      "type ServerEnv struct {"
-    ]
-    ++ (map goField allSecrets)
-    ++ [
-      "}"
-      ""
-      "// ClientEnv contains only public environment variables"
-      "type ClientEnv struct {"
-    ]
-    ++ (map goField publicSecrets)
-    ++ [
-      "}"
-      ""
-      "// LoadServerEnv loads all environment variables"
-      "func LoadServerEnv() (*ServerEnv, error) {"
-      "	env := &ServerEnv{}"
-    ]
-    ++ (map goLoadField allSecrets)
-    ++ [
-      "	return env, nil"
-      "}"
-      ""
-      "// LoadClientEnv loads only public environment variables"
-      "func LoadClientEnv() (*ClientEnv, error) {"
-      "	env := &ClientEnv{}"
-    ]
-    ++ (map goLoadClientField publicSecrets)
-    ++ [
-      "	return env, nil"
-      "}"
-      ""
-      "// MustLoadServerEnv loads server env or panics"
-      "func MustLoadServerEnv() *ServerEnv {"
-      "	env, err := LoadServerEnv()"
-      "	if err != nil {"
-      "		panic(err)"
-      "	}"
-      "	return env"
-      "}"
-      ""
-      "// MustLoadClientEnv loads client env or panics"
-      "func MustLoadClientEnv() *ClientEnv {"
-      "	env, err := LoadClientEnv()"
-      "	if err != nil {"
-      "		panic(err)"
-      "	}"
-      "	return env"
-      "}"
-      ""
-    ]);
+  generateGoCode = appName: allSecrets: let
+    sensitiveSecrets = lib.filter (s: s.sensitive) allSecrets;
+    publicSecrets = lib.filter (s: !s.sensitive) allSecrets;
+  in
+    concatStringsSep "\n" ([
+        "// Generated by stackpanel secrets module"
+        "// App: ${appName}"
+        "// Regenerate with: devenv shell"
+        ""
+        "package env"
+        ""
+        "import ("
+        ''	"fmt"''
+        ''	"os"''
+        ")"
+        ""
+        "// ServerEnv contains all environment variables (sensitive + public)"
+        "type ServerEnv struct {"
+      ]
+      ++ (map goField allSecrets)
+      ++ [
+        "}"
+        ""
+        "// ClientEnv contains only public environment variables"
+        "type ClientEnv struct {"
+      ]
+      ++ (map goField publicSecrets)
+      ++ [
+        "}"
+        ""
+        "// LoadServerEnv loads all environment variables"
+        "func LoadServerEnv() (*ServerEnv, error) {"
+        "	env := &ServerEnv{}"
+      ]
+      ++ (map goLoadField allSecrets)
+      ++ [
+        "	return env, nil"
+        "}"
+        ""
+        "// LoadClientEnv loads only public environment variables"
+        "func LoadClientEnv() (*ClientEnv, error) {"
+        "	env := &ClientEnv{}"
+      ]
+      ++ (map goLoadClientField publicSecrets)
+      ++ [
+        "	return env, nil"
+        "}"
+        ""
+        "// MustLoadServerEnv loads server env or panics"
+        "func MustLoadServerEnv() *ServerEnv {"
+        "	env, err := LoadServerEnv()"
+        "	if err != nil {"
+        "		panic(err)"
+        "	}"
+        "	return env"
+        "}"
+        ""
+        "// MustLoadClientEnv loads client env or panics"
+        "func MustLoadClientEnv() *ClientEnv {"
+        "	env, err := LoadClientEnv()"
+        "	if err != nil {"
+        "		panic(err)"
+        "	}"
+        "	return env"
+        "}"
+        ""
+      ]);
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # Per-App Code Generator
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  # Generate code for a single app
+  generateAppCode = appName: appData: let
+    appConfig = appData.appConfig or {};
+    codegen = appConfig.codegen or null;
+    language = codegen.language or null;
+    path = codegen.path or null;
+
+    # Get merged schema for this app
+    schema = getAppSchema appName appData;
+    entries = map normalizeEntry (schemaToEntries schema);
+
+    # Generate code based on language
+    code =
+      if language == "typescript"
+      then generateTsCode appName entries
+      else if language == "python"
+      then generatePyCode appName entries
+      else if language == "go"
+      then generateGoCode appName entries
+      else null;
+  in
+    if codegen != null && language != null && path != null && code != null
+    then {${path}.text = code;}
+    else {};
+
+  # Generate code for all apps
+  allAppCodeFiles =
+    lib.foldl' (acc: appName:
+      acc // (generateAppCode appName cfg.apps.${appName})) {} (lib.attrNames cfg.apps);
 in {
-  options.stackpanel.secrets = {
-    schema = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule {
-        options = {
-          required = lib.mkOption {
-            type = lib.types.bool;
-            default = true;
-            description = "Whether this secret is required (affects nullability in generated code)";
-          };
-          sensitive = lib.mkOption {
-            type = lib.types.bool;
-            default = true;
-            description = "Whether this secret is sensitive. Non-sensitive secrets get PUBLIC_ prefix and are safe for client-side code";
-          };
-          description = lib.mkOption {
-            type = lib.types.str;
-            default = "";
-            description = "Description of what this secret is for";
-          };
-        };
-      });
-      default = {};
-      example = lib.literalExpression ''
-        {
-          DATABASE_URL = { required = true; sensitive = true; description = "PostgreSQL connection string"; };
-          STRIPE_SECRET_KEY = { required = true; sensitive = true; };
-          STRIPE_PUBLISHABLE_KEY = { required = true; sensitive = false; };  # -> PUBLIC_*
-          ANALYTICS_ID = { required = false; sensitive = false; description = "Google Analytics ID"; };
-        }
-      '';
-      description = "Schema defining expected secrets with their properties";
-    };
+  # No additional options needed - we read from cfg.apps which is defined in secrets.nix
 
-    codegen = {
-      enable =
-        lib.mkEnableOption "Generate typed env modules"
-        // {
-          default = cfg.schema != {};
-        };
-
-      typescript = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Generate TypeScript env module";
-        };
-        path = lib.mkOption {
-          type = lib.types.str;
-          default = "packages/env/src/env.ts";
-          description = "Output path for TypeScript module";
-        };
-      };
-
-      python = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Generate Python env module";
-        };
-        path = lib.mkOption {
-          type = lib.types.str;
-          default = "packages/env/env.py";
-          description = "Output path for Python module";
-        };
-      };
-
-      go = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Generate Go env module";
-        };
-        path = lib.mkOption {
-          type = lib.types.str;
-          default = "internal/env/env.go";
-          description = "Output path for Go module";
-        };
-      };
-    };
-  };
-
-  config = lib.mkIf (cfg.enable && cfg.codegen.enable && cfg.schema != {}) {
-    stackpanel.files =
-      {}
-      // lib.optionalAttrs cfg.codegen.typescript.enable {
-        ${cfg.codegen.typescript.path} = tsCode;
-      }
-      // lib.optionalAttrs cfg.codegen.python.enable {
-        ${cfg.codegen.python.path} = pyCode;
-      }
-      // lib.optionalAttrs cfg.codegen.go.enable {
-        ${cfg.codegen.go.path} = goCode;
-      };
+  config = lib.mkIf cfg.enable {
+    # Generate code files for all apps with codegen enabled
+    files = allAppCodeFiles;
   };
 }

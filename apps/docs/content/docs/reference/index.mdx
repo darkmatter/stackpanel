@@ -1,0 +1,52 @@
+---
+title: Options Reference
+description: Complete reference for all stackpanel configuration options
+---
+
+# Options Reference
+
+This section documents all available configuration options for stackpanel.
+
+## Categories
+
+  - [Apps](./apps)
+  - [AppsComputed](./appsComputed)
+  - [Aws](./aws)
+  - [Caddy](./caddy)
+  - [Ci](./ci)
+  - [Cli](./cli)
+  - [DataDir](./dataDir)
+  - [Devenv](./devenv)
+  - [Direnv](./direnv)
+  - [Enable](./enable)
+  - [GenDir](./genDir)
+  - [GlobalServices](./globalServices)
+  - [Ide](./ide)
+  - [Motd](./motd)
+  - [Network](./network)
+  - [Ports](./ports)
+  - [Secrets](./secrets)
+  - [State](./state)
+  - [StateDir](./stateDir)
+  - [Theme](./theme)
+
+## Quick Start
+
+```nix
+# In your devenv.nix
+{
+  stackpanel = {
+    enable = true;
+
+    # Port management
+    ports.projectName = "myproject";
+
+    # Services
+    globalServices.postgres.enable = true;
+    globalServices.redis.enable = true;
+
+    # Theme
+    theme.enable = true;
+  };
+}
+```

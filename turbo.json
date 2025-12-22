@@ -32,6 +32,17 @@
 		"db:generate": {
 			"cache": false,
 			"persistent": true
+		},
+		"deploy": {
+			"dependsOn": ["^deploy"],
+			"cache": false
+		},
+		"server#destroy": {
+			"dependsOn": ["server#destroy"],
+			"cache": false
+		},
+		"web#destroy": {
+			"cache": false
 		}
 	}
 }

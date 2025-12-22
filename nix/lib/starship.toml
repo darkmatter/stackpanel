@@ -109,7 +109,7 @@ disabled = false
 impure_msg = '[impure](maroon)'
 pure_msg = '[pure](sky)'
 unknown_msg = '[unknown](mauve)'
-format = '[ $state( $name)](overlay0) '
+format = '[ $state](overlay0) '
 
 
 [shlvl]

@@ -1,0 +1,49 @@
+---
+title: AppsComputed Options
+description: Configuration options for stackpanel.appsComputed
+---
+
+# AppsComputed Options
+
+## `stackpanel.appsComputed`
+
+Computed app configurations with ports and URLs
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | _see below_ |
+| **Read Only** | `true` |
+
+
+**Default:**
+
+```nix
+{
+  docs = {
+    domain = "docs.localhost";
+    offset = null;
+    port = 6400;
+    tls = false;
+    url = "http://docs.localhost";
+  };
+  server = {
+    domain = null;
+    offset = null;
+    port = 6401;
+    tls = false;
+    url = null;
+  };
+  web = {
+    domain = "stackpanel.localhost";
+    offset = null;
+    port = 6402;
+    tls = false;
+    url = "http://stackpanel.localhost";
+  };
+}
+```
+
+
+---
+
