@@ -1,0 +1,53 @@
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/darkmatter/stackpanel/cli/state"
+	"github.com/darkmatter/stackpanel/cli/tui"
+	"github.com/spf13/cobra"
+)
+
+var motdCmd = &cobra.Command{
+	Use:   "motd",
+	Short: "Display the message of the day",
+	Long:  `Display the stackpanel message of the day with available commands, features, and hints.`,
+	RunE:  runMOTD,
+}
+
+func init() {
+	rootCmd.AddCommand(motdCmd)
+}
+
+func runMOTD(cmd *cobra.Command, args []string) error {
+	// Load state to get MOTD configuration
+	cfg, err := state.Load("")
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Check if MOTD is enabled
+	if !cfg.MOTD.Enable {
+		return nil
+	}
+
+	// Convert state commands to TUI format
+	commands := make([]tui.MOTDCommand, len(cfg.MOTD.Commands))
+	for i, cmd := range cfg.MOTD.Commands {
+		commands[i] = tui.MOTDCommand{
+			Name:        cmd.Name,
+			Description: cmd.Description,
+		}
+	}
+
+	// Render MOTD
+	data := tui.MOTDData{
+		ProjectName: cfg.ProjectName,
+		Commands:    commands,
+		Features:    cfg.MOTD.Features,
+		Hints:       cfg.MOTD.Hints,
+	}
+
+	fmt.Print(tui.RenderMOTD(data))
+	return nil
+}

@@ -1,0 +1,80 @@
+---
+title: Apps Options
+description: Configuration options for stackpanel.apps
+---
+
+# Apps Options
+
+## `stackpanel.apps`
+
+Apps to assign ports and optionally create Caddy vhosts for.
+Each app gets a port starting at basePort + 10.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+
+**Example:**
+
+```nix
+{
+  web = {};
+  server = { offset = 1; };
+  docs = { domain = "docs"; };
+  api = { domain = "api"; tls = true; };
+}
+```
+
+
+---
+
+## `stackpanel.apps.<name>.domain`
+
+Domain prefix for .localhost vhost.
+If set, a Caddy vhost will be created at .localhost
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+
+**Example:**
+
+`"api"`
+
+
+---
+
+## `stackpanel.apps.<name>.offset`
+
+Port offset from base port.
+If null, offset is determined by position in apps attrset.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `null` |
+
+
+**Example:**
+
+`5`
+
+
+---
+
+## `stackpanel.apps.<name>.tls`
+
+Enable TLS for the vhost (requires Step CA)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+---
+

@@ -119,11 +119,11 @@ ______________________________________________________________________
 Biome's linter will catch most issues automatically. Focus your attention on:
 
 1. **Business logic correctness** - Biome can't validate your algorithms
-1. **Meaningful naming** - Use descriptive names for functions, variables, and types
-1. **Architecture decisions** - Component structure, data flow, and API design
-1. **Edge cases** - Handle boundary conditions and error states
-1. **User experience** - Accessibility, performance, and usability considerations
-1. **Documentation** - Add comments for complex logic, but prefer self-documenting code
+2. **Meaningful naming** - Use descriptive names for functions, variables, and types
+3. **Architecture decisions** - Component structure, data flow, and API design
+4. **Edge cases** - Handle boundary conditions and error states
+5. **User experience** - Accessibility, performance, and usability considerations
+6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
 
 ______________________________________________________________________
 

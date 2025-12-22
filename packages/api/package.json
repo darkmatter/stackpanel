@@ -17,15 +17,16 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@trpc/server": "catalog:",
-		"@trpc/client": "catalog:",
-		"hono": "catalog:",
-		"@prisma/client": "catalog:",
-		"ai": "catalog:",
 		"@ai-sdk/google": "catalog:",
-		"dotenv": "catalog:",
-		"zod": "^4.1.11",
+		"@prisma/client": "catalog:",
 		"@stackpanel/auth": "workspace:*",
-		"@stackpanel/db": "workspace:*"
+		"@stackpanel/db": "workspace:*",
+		"@trpc/client": "catalog:",
+		"@trpc/server": "catalog:",
+		"ai": "catalog:",
+		"dotenv": "catalog:",
+		"drizzle-orm": "^0.45.1",
+		"hono": "catalog:",
+		"zod": "^4.1.11"
 	}
 }

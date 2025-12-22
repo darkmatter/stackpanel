@@ -263,12 +263,7 @@ sops exec-env secrets/dev.yaml './start-server.sh'
 
 ## TODO
 
-- [x] Template for `nix flake init -t github:stack-panel/nix`
-- [x] Devenv integration (devenvModules)
-- [x] Non-flake compatibility (default.nix, shell.nix)
-- [x] Standalone modules (no flake-parts dependency)
-- [ ] Integration tests
-- [ ] VSCode module
+See [TODO.md](/TODO.md) for the centralized task list.
 
 ## Maintenance Notes
 

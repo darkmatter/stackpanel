@@ -1,12 +1,12 @@
 import { checkout, polar, portal } from "@polar-sh/better-auth";
-import prisma from "@stackpanel/db";
+import { db } from "@stackpanel/db";
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { polarClient } from "./lib/payments";
 
 export const auth = betterAuth({
-	database: prismaAdapter(prisma, {
-		provider: "postgresql",
+	database: drizzleAdapter(db, {
+		provider: "pg",
 	}),
 	trustedOrigins: [process.env.CORS_ORIGIN || ""],
 	emailAndPassword: {

@@ -1,17 +1,22 @@
 {
-	"name": "web",
+	"name": "@stackpanel/web",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite --port=3001",
+		"dev": "vite",
 		"build": "vite build",
 		"serve": "vite preview",
 		"start": "vite",
-		"check-types": "tsc --noEmit"
+		"check-types": "tsc --noEmit",
+		"dev:cloud": "alchemy dev --app web",
+		"deploy": "alchemy deploy --app web",
+		"destroy": "alchemy destroy --app web"
 	},
 	"dependencies": {
 		"@ai-sdk/react": "^2.0.39",
+		"@fontsource-variable/geist": "^5.2.8",
+		"@fontsource-variable/inter": "^5.2.8",
 		"@hookform/resolvers": "^5.1.1",
 		"@polar-sh/better-auth": "catalog:",
 		"@prisma/client": "catalog:",
@@ -25,6 +30,7 @@
 		"@radix-ui/react-tooltip": "^1.2.8",
 		"@stackpanel/api": "workspace:*",
 		"@stackpanel/auth": "workspace:*",
+		"@stackpanel/server": "workspace:*",
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-form": "^1.12.3",
 		"@tanstack/react-query": "^5.85.5",
