@@ -1,0 +1,81 @@
+# Stackpanel configuration evaluator
+#
+# This file evaluates the stackpanel configuration from devenv.nix
+# and outputs it as JSON for use by the Go CLI/agent.
+#
+# Usage (must be run with --impure to read DEVENV_* env vars):
+#   nix eval --impure --json -f nix/eval/stackpanel-config.nix
+#
+# Or from any directory:
+#   nix eval --impure --json -f /path/to/project/nix/eval/stackpanel-config.nix
+#
+# The Go agent/CLI can call this to get live config without state.json,
+# eliminating state drift entirely.
+#
+let
+  # Get project root from environment (set by devenv)
+  # Falls back to searching for devenv.nix
+  envRoot = builtins.getEnv "DEVENV_ROOT";
+  pwd = builtins.getEnv "PWD";
+
+  findProjectRoot = dir:
+    if dir == "" then null
+    else if builtins.pathExists (dir + "/devenv.nix")
+    then dir
+    else if dir == "/" || dir == ""
+    then null
+    else findProjectRoot (dirOf dir);
+
+  # Convert string path to actual path for dirOf
+  dirOf = path:
+    let
+      parts = builtins.filter (x: x != "") (builtins.split "/" path);
+      parent = builtins.concatStringsSep "/" (builtins.genList (i: builtins.elemAt parts i) (builtins.length parts - 1));
+    in if builtins.length parts <= 1 then "/" else "/" + parent;
+
+  projectRoot =
+    if envRoot != "" then envRoot
+    else findProjectRoot pwd;
+
+  # Priority 1: Read from Nix store config (set by devenv enterShell)
+  # This is the most authoritative source when inside a devenv shell
+  nixConfigPath = builtins.getEnv "STACKPANEL_NIX_CONFIG";
+
+  configFromNixStore =
+    if nixConfigPath != "" && builtins.pathExists nixConfigPath
+    then
+      let
+        raw = builtins.fromJSON (builtins.readFile nixConfigPath);
+        # Replace $DEVENV_ROOT placeholder with actual value
+        fixProjectRoot = config:
+          if config.projectRoot == "$DEVENV_ROOT" && envRoot != ""
+          then config // { projectRoot = envRoot; }
+          else config;
+      in fixProjectRoot raw
+    else null;
+
+  # Priority 2: Read from state file as fallback
+  stateDir = builtins.getEnv "STACKPANEL_STATE_DIR";
+  stateFile =
+    if stateDir != ""
+    then stateDir + "/stackpanel.json"
+    else if projectRoot != null
+    then projectRoot + "/.stackpanel/state/stackpanel.json"
+    else null;
+
+  configFromState =
+    if stateFile != null && builtins.pathExists stateFile
+    then builtins.fromJSON (builtins.readFile stateFile)
+    else null;
+
+in
+  if configFromNixStore != null then configFromNixStore
+  else if configFromState != null then configFromState
+  else {
+    error = "No stackpanel configuration found";
+    hint = "Run this from within a devenv shell, or ensure STACKPANEL_STATE_DIR is set";
+    projectRoot = projectRoot;
+    envRoot = envRoot;
+    stateFile = stateFile;
+    nixConfigPath = nixConfigPath;
+  }

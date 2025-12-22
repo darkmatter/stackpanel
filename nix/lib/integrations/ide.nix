@@ -1,0 +1,155 @@
+# IDE integration utilities - pure functions for generating IDE configuration
+#
+# Usage:
+#   let ideLib = import ./lib/integrations/ide.nix { inherit pkgs lib; };
+#   in ideLib.mkDevshellLoader { shellMode = "devenv"; }
+#   in ideLib.mkVscodeSettings { loaderPath = "\${workspaceFolder}/.stackpanel/gen/ide/vscode/devshell-loader.sh"; }
+#   in ideLib.mkWorkspaceContent { settings = {...}; extraFolders = []; extensions = []; }
+#
+{ pkgs, lib, ... }: {
+
+  # Generate VS Code terminal integration settings
+  # Returns an attrset of VS Code settings for terminal integration
+  mkVscodeSettings = {
+    # Path to the devshell loader script (relative to workspace root, with ${workspaceFolder} prefix)
+    loaderPath,
+  }: {
+    "terminal.integrated.profiles.osx" = {
+      "Devshell" = {
+        path = "/bin/bash";
+        args = ["-c" loaderPath];
+      };
+    };
+    "terminal.integrated.profiles.linux" = {
+      "Devshell" = {
+        path = "/bin/bash";
+        args = ["-c" loaderPath];
+      };
+    };
+    "terminal.integrated.defaultProfile.osx" = "Devshell";
+    "terminal.integrated.defaultProfile.linux" = "Devshell";
+    "terminal.integrated.shellIntegration.enabled" = true;
+  };
+
+  # Generate VS Code workspace file content as an attrset
+  # Call builtins.toJSON on the result to get the final content
+  mkWorkspaceContent = {
+    # Merged VS Code settings
+    settings,
+    # Additional workspace folders beyond the root
+    extraFolders ? [],
+    # Recommended extension IDs
+    extensions ? [],
+    # Relative path from workspace file to project root (default for .stackpanel/gen/ide/vscode/)
+    rootPath ? "../../../..",
+  }: {
+    folders = [{ path = rootPath; }] ++ extraFolders;
+    inherit settings;
+  } // lib.optionalAttrs (extensions != []) {
+    extensions.recommendations = extensions;
+  };
+
+  # Create a shell loader script for IDEs like VS Code
+  # Returns either a derivation (asPackage=true) or script content string (asPackage=false)
+  mkDevshellLoader = {
+    # Shell mode: "devenv" uses devenv shell, "flake" uses nix develop
+    shellMode ? "devenv",
+    # Custom nix command to run the devshell (overrides shellMode if set)
+    exec ? null,
+    # Enable VS Code anti-recursion protection
+    vscode ? true,
+    # Return as package (derivation) or raw script content
+    asPackage ? true,
+  }: let
+    # Determine exec command based on shellMode
+    execCommand =
+      if exec != null then exec
+      else if shellMode == "flake" then "nix develop"
+      else "nix run --accept-flake-config github:cachix/devenv/v1.11.1 -- shell";
+
+    # Determine which file to look for when finding project root
+    lookupFile = if shellMode == "flake" then "flake.nix" else "devenv.yaml";
+
+    vscode-anti-recursion = if vscode then ''
+      # Avoid recursion if VS Code reuses this profile inside itself
+      if [[ "''${DEVENV_VSCODE_SHELL:-}" == "1" ]]; then
+        # If we're already inside, just start a login shell.
+        exec "''${SHELL:-/bin/bash}" -l
+      fi
+      export DEVENV_VSCODE_SHELL=1
+    '' else "";
+
+    script = lib.concatStringsSep "\n" [
+      "#!/usr/bin/env bash"
+      "# syntax: bash"
+      "#"
+      "# Development shell loader"
+      "#"
+      "# Loader for IDEs like VS Code to start a shell inside a Nix-based development environment."
+      "# Handles common edge cases like Nix not being in PATH yet."
+      "#"
+      "# Shell mode: ${shellMode}"
+      "# Lookup file: ${lookupFile}"
+      "#"
+      ""
+      "export DIRENV_DISABLE=1"
+      ""
+      "# --- small helpers"
+      ''die() { printf "devshell: %s\n" "$*" >&2; exit 1; }''
+      ""
+      vscode-anti-recursion
+      "# Ensure nix is available"
+      "if ! command -v nix >/dev/null 2>&1; then"
+      "  if [[ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then"
+      "    # shellcheck disable=SC1091"
+      "    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+      ''  elif [[ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]]; then''
+      "    # shellcheck disable=SC1091"
+      ''    . "$HOME/.nix-profile/etc/profile.d/nix.sh"''
+      "  elif [[ -e /etc/profile.d/nix.sh ]]; then"
+      "    # shellcheck disable=SC1091"
+      "    . /etc/profile.d/nix.sh"
+      "  fi"
+      "fi"
+      ''command -v nix >/dev/null 2>&1 || die "nix not found, install it: https://install.determinate.systems"''
+      ""
+      "# Find the right project root"
+      "find_root() {"
+      "  # Prefer git root if available"
+      "  if command -v git >/dev/null 2>&1; then"
+      "    local gr"
+      ''    gr="$(git rev-parse --show-toplevel 2>/dev/null || true)"''
+      ''    if [[ -n "$gr" && -f "$gr/${lookupFile}" ]]; then''
+      ''      printf "%s\n" "$gr"''
+      "      return 0"
+      "    fi"
+      "  fi"
+      ""
+      "  # Walk up from current dir"
+      ''  local d="$PWD"''
+      ''  while [[ "$d" != "/" ]]; do''
+      ''    if [[ -f "$d/${lookupFile}" ]]; then''
+      ''      printf "%s\n" "$d"''
+      "      return 0"
+      "    fi"
+      ''    d="$(dirname "$d")"''
+      "  done"
+      ""
+      ''  die "couldn't find ${lookupFile} (open VS Code at the repo root)"''
+      "}"
+      ""
+      ''ROOT="$(find_root)"''
+      ''cd "$ROOT"''
+      ""
+      "exec ${execCommand}"
+    ];
+
+  in
+    if asPackage
+    then pkgs.writeShellScriptBin "devshell-loader" script
+    else script;
+
+  # Generate just the script content (for use with stackpanel.files)
+  mkDevshellLoaderScript = args:
+    (args // { asPackage = false; });
+}

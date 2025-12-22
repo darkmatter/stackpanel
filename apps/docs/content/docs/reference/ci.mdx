@@ -1,0 +1,113 @@
+---
+title: Ci Options
+description: Configuration options for stackpanel.ci
+---
+
+# Ci Options
+
+## `stackpanel.ci.enable`
+
+Whether to enable CI/CD generation.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.ci.github.checks.branches`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+
+**Default:**
+
+```nix
+[
+  "main"
+]
+```
+
+
+---
+
+## `stackpanel.ci.github.checks.commands`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+
+**Example:**
+
+```nix
+[
+  "nix flake check"
+  "nix build"
+]
+```
+
+
+---
+
+## `stackpanel.ci.github.checks.enable`
+
+Whether to enable standard CI checks workflow.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.ci.github.enable`
+
+Whether to enable GitHub Actions.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.ci.github.workflows`
+
+Workflow name -> workflow definition (raw)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (attribute set)` |
+| **Default** | `{ }` |
+
+
+---
+

@@ -47,7 +47,7 @@
     # Shell initialization snippet (for use in shell hooks)
     shellInit = configPath: ''
       export STARSHIP_CONFIG="${configPath}"
-      eval "$(${pkgs.starship}/bin/starship init "$SHELL")"
+      eval "$(${pkgs.starship}/bin/starship init bash)"
     '';
   };
 }

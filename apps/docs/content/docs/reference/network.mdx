@@ -1,0 +1,84 @@
+---
+title: Network Options
+description: Configuration options for stackpanel.network
+---
+
+# Network Options
+
+## `stackpanel.network.step.caFingerprint`
+
+Step CA root certificate fingerprint
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+
+---
+
+## `stackpanel.network.step.caUrl`
+
+Step CA URL (e.g., https://ca.internal:443)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+
+---
+
+## `stackpanel.network.step.certName`
+
+Common name for the device certificate
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"device"` |
+
+
+---
+
+## `stackpanel.network.step.enable`
+
+Whether to enable Step CA certificate management.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+
+**Example:**
+
+`true`
+
+
+---
+
+## `stackpanel.network.step.promptOnShell`
+
+Prompt for certificate setup on shell entry if not configured
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+
+---
+
+## `stackpanel.network.step.provisioner`
+
+Step CA provisioner name
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"Authentik"` |
+
+
+---
+
