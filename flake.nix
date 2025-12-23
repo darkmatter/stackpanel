@@ -4,6 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    devenv.url = "github:cachix/devenv";
+    # Required for devenv containers outputs
+    nix2container.url = "github:nlewo/nix2container";
+    nix2container.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Required when enabling stackpanel.devenv.recommended.formatters
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -11,61 +19,180 @@
     nixpkgs,
     flake-parts,
     ...
-  }: {
-    # Standalone NixOS/nix modules
-    # Usage: imports = [ inputs.stackpanel.nixosModules.default ];
-    nixosModules = {
-      default = ./nix/modules;
-      aws = ./nix/modules/aws;
-      network = ./nix/modules/network;
-      secrets = ./nix/modules/secrets;
-      theme = ./nix/modules/theme;
-      caddy = ./nix/modules/caddy;
-      ci = ./nix/modules/ci;
-    };
+  }:
+    flake-parts.lib.mkFlake {inherit inputs;} ({
+      withSystem,
+      flake-parts-lib,
+      ...
+    }: let
+      inherit (flake-parts-lib) importApply;
 
-    # Flake-parts modules
-    # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
-    flakeModules = {
-      default = ./nix/modules/flake-parts.nix;
-    };
-
-    # Devenv modules (for use in devenv.yaml imports)
-    # Usage in devenv.yaml:
-    #   inputs:
-    #     stackpanel:
-    #       url: github:darkmatter/stackpanel
-    #   imports:
-    #     - stackpanel/nix/modules/devenv
-    devenvModules = {
-      default = ./nix/modules/devenv;
-    };
-
-    # Library functions for use in other flakes
-    lib = {
-      # AWS credential helpers
-      mkAwsCredScripts = pkgs:
-        import ./nix/lib/aws.nix {
-          inherit pkgs;
-          lib = pkgs.lib;
-        };
-      # Step CA certificate helpers
-      mkStepScripts = pkgs:
-        import ./nix/lib/network.nix {
-          inherit pkgs;
-          lib = pkgs.lib;
-        };
-      # Global dev services for `nix develop` / mkShell
-      # Usage: stackpanel.lib.mkDevShell pkgs { projectName = "myapp"; postgres.enable = true; }
-      mkDevShell = pkgs: (import ./nix/lib/devshell.nix {inherit pkgs;}).mkDevShell;
-    };
-
-    # Templates for bootstrapping new projects
-    templates = {
-      default = {
-        path = ./nix/templates/default;
-        description = "Basic stackpanel project with devenv";
+      # =============================================================
+      # FLAKE MODULES (for users to import)
+      #
+      # These are modules that OTHER flakes import when they use stackpanel.
+      # The importApply pattern allows them to reference things from THIS flake.
+      # =============================================================
+      flakeModules.default = importApply ./nix/flake-module.nix {
+        localFlake = self;
+        inherit withSystem;
       };
-    };
-  };
+    in {
+      # =============================================================
+      # LOCAL DEVELOPMENT (dogfooding)
+      #
+      # We use devenv via flake-parts to develop stackpanel itself.
+      # This means we're testing the exact same integration our users get.
+      #
+      # Run with: nix develop --no-pure-eval
+      # =============================================================
+      imports = [
+        inputs.devenv.flakeModule
+        flakeModules.default # Dogfood our own module!
+      ];
+
+      systems = nixpkgs.lib.systems.flakeExposed;
+
+      perSystem = {
+        config,
+        pkgs,
+        lib,
+        system,
+        ...
+      }: {
+        # Packages we build
+        packages = {
+          default = pkgs.hello; # placeholder
+          
+          # Expose devenv shell outputs as packages
+          # These come from the `outputs` option in nix/docs/devenv.nix
+        } // (config.devenv.shells.default.outputs or {});
+
+        # Local development shell - uses the same pattern users would
+        devenv.shells.default = {
+          # Import our own devenv modules (dogfooding!)
+          imports = [
+            self.devenvModules.default
+            # Local-only config that shouldn't be in the exported module
+            ./infra/devenv
+            # Stackpanel-specific config for this repo
+            ./infra/stackpanel/stackpanel.nix
+          ];
+
+          # Enable stackpanel
+          stackpanel.enable = true;
+
+          # Core packages
+          packages = with pkgs; [
+            bun
+            nodejs_22
+            go
+            jq
+            git
+          ];
+
+          # Languages
+          languages = {
+            javascript = {
+              enable = true;
+              bun.enable = true;
+              bun.install.enable = true;
+            };
+            typescript.enable = true;
+            go = {
+              enable = true;
+              package = pkgs.go;
+            };
+          };
+
+          # Environment variables
+          env = {
+            EDITOR = "vim";
+            STEP_CA_URL = "https://ca.internal:443";
+            STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
+          };
+
+          # Shell hooks
+          enterShell = ''
+            # Build stackpanel CLI if needed
+            if [[ ! -f "$DEVENV_STATE/stackpanel" ]] || [[ "$DEVENV_ROOT/apps/cli/main.go" -nt "$DEVENV_STATE/stackpanel" ]]; then
+              echo "Building stackpanel CLI..."
+              (cd "$DEVENV_ROOT/apps/cli" && go build -o "$DEVENV_STATE/stackpanel" . 2>/dev/null) || true
+            fi
+            export PATH="$DEVENV_STATE:$PATH"
+
+            # Authenticate AWS certs on shell entry
+            eval "$(aws-creds-env)" || true
+          '';
+        };
+      };
+
+      # =============================================================
+      # EXPORTS (for users)
+      #
+      # These are what users import when they add stackpanel to their flake.
+      # =============================================================
+      flake = {
+        # Flake-parts modules (for flake-parts users)
+        # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
+        inherit flakeModules;
+
+        # Standalone NixOS/nix modules (for NixOS users)
+        # Usage: imports = [ inputs.stackpanel.nixosModules.default ];
+        nixosModules = {
+          # Point directly at module files, not directories
+          default = ./nix/modules/devenv.nix;
+          aws = ./nix/modules/aws.nix;
+          network = ./nix/modules/network.nix;
+          secrets = ./nix/modules/secrets/default.nix;
+          theme = ./nix/modules/theme.nix;
+          caddy = ./nix/modules/caddy.nix;
+          ci = ./nix/modules/ci.nix;
+        };
+
+        # Devenv modules (for devenv users - both yaml and flake-parts)
+        # Usage in devenv.yaml:
+        #   inputs:
+        #     stackpanel:
+        #       url: github:darkmatter/stackpanel
+        #   imports:
+        #     - stackpanel/nix/modules
+        #
+        # Usage in flake-parts:
+        #   devenv.shells.default = {
+        #     imports = [ inputs.stackpanel.devenvModules.default ];
+        #   };
+        devenvModules = {
+          # devenv.nix is the entry point (devenv convention for directory imports)
+          default = ./nix/modules/devenv.nix;
+        };
+
+        # Library functions for use in other flakes
+        lib = {
+          # AWS credential helpers
+          mkAwsCredScripts = pkgs:
+            import ./nix/lib/aws.nix {
+              inherit pkgs;
+              lib = pkgs.lib;
+            };
+          # Step CA certificate helpers
+          mkStepScripts = pkgs:
+            import ./nix/lib/network.nix {
+              inherit pkgs;
+              lib = pkgs.lib;
+            };
+          # Global dev services for `nix develop` / mkShell
+          # Usage: stackpanel.lib.mkDevShell pkgs { projectName = "myapp"; postgres.enable = true; }
+          mkDevShell = pkgs: (import ./nix/lib/devshell.nix {inherit pkgs;}).mkDevShell;
+        };
+
+        # Templates for bootstrapping new projects
+        templates = {
+          default = {
+            path = ./nix/templates/default;
+            description = "Basic stackpanel project with devenv";
+          };
+        };
+      };
+    });
 }

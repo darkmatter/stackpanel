@@ -1,23 +1,23 @@
 {
-	"name": "@stackpanel/ui-native",
-	"version": "0.0.1",
-	"type": "module",
-	"exports": {
-		".": {
-			"types": "./src/index.ts",
-			"default": "./src/index.ts"
-		}
-	},
-	"peerDependencies": {
-		"react": "^19",
-		"react-native": ">=0.70",
-		"typescript": "^5"
-	},
-	"dependencies": {
-		"@stackpanel/ui-core": "workspace:*"
-	},
-	"devDependencies": {
-		"@stackpanel/config": "workspace:*",
-		"@types/react": "^19"
-	}
+  "name": "@stackpanel/ui-native",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-native": ">=0.70",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@stackpanel/ui-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@stackpanel/config": "workspace:*",
+    "@types/react": "^19"
+  }
 }

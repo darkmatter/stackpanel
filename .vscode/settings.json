@@ -59,13 +59,7 @@
 	"nix.enableLanguageServer": true,
 	"nix.serverPath": "nixd",
 	"nix.serverSettings": {
-		"nixd": {
-			"options": {
-				"languages": {
-					"expr": "(builtins.readDir (builtins.getFlake \"github:cachix/devenv\").modules).languages"
-				}
-			}
-		}
+		"nixd": {}
 	},
 	"[nix]": {
 		"editor.defaultFormatter": "jnoortheen.nix-ide"
