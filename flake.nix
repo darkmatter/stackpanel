@@ -51,7 +51,13 @@
         flakeModules.default # Dogfood our own module!
       ];
 
-      systems = nixpkgs.lib.systems.flakeExposed;
+      # Only support systems that all our dependencies (nix2container, etc.) support
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
       perSystem = {
         config,
