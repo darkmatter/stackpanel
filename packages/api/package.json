@@ -1,32 +1,32 @@
 {
-	"name": "@stackpanel/api",
-	"exports": {
-		".": {
-			"default": "./src/index.ts"
-		},
-		"./*": {
-			"default": "./src/*.ts"
-		}
-	},
-	"type": "module",
-	"scripts": {},
-	"devDependencies": {
-		"@stackpanel/config": "workspace:*"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
-	},
-	"dependencies": {
-		"@ai-sdk/google": "catalog:",
-		"@prisma/client": "catalog:",
-		"@stackpanel/auth": "workspace:*",
-		"@stackpanel/db": "workspace:*",
-		"@trpc/client": "catalog:",
-		"@trpc/server": "catalog:",
-		"ai": "catalog:",
-		"dotenv": "catalog:",
-		"drizzle-orm": "^0.45.1",
-		"hono": "catalog:",
-		"zod": "^4.1.11"
-	}
+  "name": "@stackpanel/api",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "type": "module",
+  "scripts": {},
+  "devDependencies": {
+    "@stackpanel/config": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "catalog:",
+    "@prisma/client": "catalog:",
+    "@stackpanel/auth": "workspace:*",
+    "@stackpanel/db": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "ai": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.1",
+    "hono": "catalog:",
+    "zod": "^4.1.11"
+  }
 }

@@ -20,7 +20,7 @@
   };
 in {
   imports = [
-    ./tooling/devenv/default.nix
+    ./infra/devenv/default.nix
   ];
   # Enable stackpanel modules
   stackpanel = {

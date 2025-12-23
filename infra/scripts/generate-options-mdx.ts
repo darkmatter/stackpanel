@@ -5,8 +5,8 @@
  * Usage: bun run generate-options-mdx.ts <options.json> <output-dir>
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
-import { join, dirname } from "path";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 
 interface NixOption {
   declarations: Array<{ name: string; url: string | null }>;
@@ -40,7 +40,9 @@ function groupOptions(options: OptionsJson): Record<string, OptionsJson> {
 }
 
 // Format a Nix value for display in a table cell (inline only)
-function formatValueInline(val: { text: string; _type?: string } | null | undefined): string {
+function formatValueInline(
+  val: { text: string; _type?: string } | null | undefined
+): string {
   if (!val) return "_none_";
   const text = val.text.trim();
   // For simple single-line values, use inline code
@@ -52,7 +54,9 @@ function formatValueInline(val: { text: string; _type?: string } | null | undefi
 }
 
 // Format a Nix value as a code block (for display outside tables)
-function formatValueBlock(val: { text: string; _type?: string } | null | undefined): string | null {
+function formatValueBlock(
+  val: { text: string; _type?: string } | null | undefined
+): string | null {
   if (!val) return null;
   const text = val.text.trim();
   // Only return a block if it's multi-line or long
@@ -131,7 +135,7 @@ ${exampleBlock || `\`${opt.example.text}\``}
 function generateIndexMdx(categories: string[]): string {
   const categoryLinks = categories
     .sort()
-    .map(cat => `  - [${cat.charAt(0).toUpperCase() + cat.slice(1)}](./${cat})`)
+    .map((cat) => `  - [${cat.charAt(0).toUpperCase() + cat.slice(1)}](./${cat})`)
     .join("\n");
 
   return `---

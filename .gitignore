@@ -96,3 +96,4 @@ devenv.local.yaml
 /.devenv-root
 /bts.jsonc
 
+/result

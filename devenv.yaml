@@ -23,7 +23,7 @@ imports:
   # Documentation generation
   - ./nix/docs
   # Stackpanel-specific services (postgres, redis, caddy, etc.)
-  - ./tooling/devenv/services.nix
+  - ./infra/devenv
 clean:
   enabled: true
   keep:
