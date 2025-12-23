@@ -26,21 +26,21 @@
   # Import schemas module
   schemasLib = import ./secrets/schemas.nix {
     inherit lib;
-    genDir = cfg.genDir;
+    genDir = cfg.gen-dir;
   };
   schemas = schemasLib.generateSchemas;
 
   # Build the complete configuration for the CLI
   fullConfig = {
     version = 1;
-    projectName = portsCfg.projectName;
+    projectName = portsCfg.project-name;
     projectRoot = "$DEVENV_ROOT"; # Will be expanded at runtime
-    basePort = portsCfg.basePort;
+    basePort = portsCfg.base-port;
 
     paths = {
-      state = cfg.stateDir;
-      gen = cfg.genDir;
-      data = cfg.dataDir;
+      state = cfg.state-dir;
+      gen = cfg.gen-dir;
+      data = cfg.data-dir;
     };
 
     # Apps with computed ports and domains
@@ -66,7 +66,7 @@
     network = {
       step = {
         enable = cfg.network.step.enable or false;
-        caUrl = cfg.network.step.caUrl or null;
+        caUrl = cfg.network.step.ca-url or null;
       };
     };
 
@@ -74,10 +74,10 @@
     ide = lib.optionalAttrs (ideCfg.enable && ideCfg.vscode.enable) {
       vscode = {
         enable = true;
-        workspaceName = ideCfg.vscode.workspaceName;
+        workspaceName = ideCfg.vscode.workspace-name;
         settings = ideCfg.vscode.settings;
         extensions = ideCfg.vscode.extensions;
-        extraFolders = ideCfg.vscode.extraFolders;
+        extraFolders = ideCfg.vscode.extra-folders;
       };
     };
 
@@ -124,7 +124,7 @@ in {
 
     # Add hints about IDE integration (if enabled)
     stackpanel.motd.hints = lib.mkIf (ideCfg.enable && ideCfg.vscode.enable) [
-      "Open ${cfg.genDir}/ide/vscode/${ideCfg.vscode.workspaceName}.code-workspace in VS Code for integrated terminal"
+      "Open ${cfg.gen-dir}/ide/vscode/${ideCfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
     ];
 
     # Call the CLI in enterShell to generate all files

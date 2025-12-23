@@ -54,24 +54,24 @@
   postgresPort = getServicePort "POSTGRES" cfg.postgres.port;
   redisPort = getServicePort "REDIS" cfg.redis.port;
   minioPort = getServicePort "MINIO" cfg.minio.port;
-  minioConsolePort = getServicePort "MINIO_CONSOLE" cfg.minio.consolePort;
+  minioConsolePort = getServicePort "MINIO_CONSOLE" cfg.minio.console-port;
 
   # Create service instances if enabled
   postgres = lib.optionalAttrs cfg.postgres.enable (servicesLib.mkGlobalPostgres {
-    projectName = cfg.projectName;
+    projectName = cfg.project-name;
     databases = cfg.postgres.databases;
     port = postgresPort;
     package = cfg.postgres.package;
   });
 
   redis = lib.optionalAttrs cfg.redis.enable (servicesLib.mkGlobalRedis {
-    projectName = cfg.projectName;
+    projectName = cfg.project-name;
     port = redisPort;
     package = cfg.redis.package;
   });
 
   minio = lib.optionalAttrs cfg.minio.enable (servicesLib.mkGlobalMinio {
-    projectName = cfg.projectName;
+    projectName = cfg.project-name;
     port = minioPort;
     consolePort = minioConsolePort;
     package = cfg.minio.package;
@@ -81,14 +81,14 @@
   caddyLib = import ../lib/caddy.nix {inherit pkgs lib;};
   caddyScripts = lib.optionalAttrs cfg.caddy.enable (caddyLib.mkCaddyScripts {
     stepEnabled = config.stackpanel.network.step.enable or false;
-    stepCaUrl = config.stackpanel.network.step.caUrl or "";
-    stepCaFingerprint = config.stackpanel.network.step.caFingerprint or "";
+    stepCaUrl = config.stackpanel.network.step.ca-url or "";
+    stepCaFingerprint = config.stackpanel.network.step.ca-fingerprint or "";
   });
 in {
   options.stackpanel.globalServices = {
     enable = lib.mkEnableOption "Global singleton development services";
 
-    projectName = lib.mkOption {
+    project-name = lib.mkOption {
       type = lib.types.str;
       default = "default";
       description = "Project name used for registering databases and sites";
@@ -100,7 +100,7 @@ in {
 
       databases = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [cfg.projectName];
+        default = [cfg.project-name];
         description = "List of databases to create for this project";
         example = ["myapp" "myapp_test"];
       };
@@ -143,7 +143,7 @@ in {
         description = "Minio API port. If null, uses computed port from stackpanel.ports.";
       };
 
-      consolePort = lib.mkOption {
+      console-port = lib.mkOption {
         type = lib.types.nullOr lib.types.port;
         default = null;
         description = "Minio console port. If null, uses computed port from stackpanel.ports.";
@@ -173,7 +173,7 @@ in {
 
   config = lib.mkIf cfg.enable {
     # Ensure ports module uses the same project name
-    stackpanel.ports.projectName = lib.mkDefault cfg.projectName;
+    stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
 
     # Add all service packages (CLI binaries like psql, redis-cli, etc.)
     packages =
@@ -217,7 +217,7 @@ in {
       (lib.optional (cfg.caddy.enable && cfg.caddy.sites != {}) ''
         # Register this project's Caddy sites
         ${lib.concatMapStringsSep "\n" (site: ''
-          ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${site}" "${cfg.caddy.sites.${site}}" --project "${cfg.projectName}" 2>/dev/null || true
+          ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${site}" "${cfg.caddy.sites.${site}}" --project "${cfg.project-name}" 2>/dev/null || true
         '') (lib.attrNames cfg.caddy.sites)}
       '')
     );

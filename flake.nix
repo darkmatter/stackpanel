@@ -47,8 +47,11 @@
       # Run with: nix develop --no-pure-eval
       # =============================================================
       imports = [
-        inputs.devenv.flakeModule
         flakeModules.default # Dogfood our own module!
+      ] ++ nixpkgs.lib.optionals (builtins.getEnv "CI" != "true") [
+        # Only import devenv in non-CI environments
+        # CI evaluation (like FlakeHub) doesn't support --impure which devenv requires
+        inputs.devenv.flakeModule
       ];
 
       # Only support systems that all our dependencies (nix2container, etc.) support
@@ -69,7 +72,7 @@
         # Packages we build
         packages = {
           default = pkgs.hello; # placeholder
-          
+
           # Expose devenv shell outputs as packages
           # These come from the `outputs` option in nix/docs/devenv.nix
         } // (config.devenv.shells.default.outputs or {});

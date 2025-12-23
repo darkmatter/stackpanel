@@ -35,8 +35,8 @@
   # Then rounds to nearest modulus (default 100)
   computeBasePort = {
     name,
-    minPort ? cfg.minPort,
-    portRange ? cfg.portRange,
+    minPort ? cfg.min-port,
+    portRange ? cfg.port-range,
     modulus ? cfg.modulus,
   }: let
     hash = builtins.hashString "md5" name;
@@ -48,7 +48,7 @@
     minPort + roundedOffset;
 
   # Compute port for this project
-  basePort = computeBasePort {name = cfg.projectName;};
+  basePort = computeBasePort {name = cfg.project-name;};
 
   # Services base offset (apps use 0-9, services use 10+)
   servicesBaseOffset = 10;
@@ -105,23 +105,23 @@ in {
   options.stackpanel.ports = {
     enable = lib.mkEnableOption "Automatic port assignment" // {default = true;};
 
-    projectName = lib.mkOption {
+    project-name = lib.mkOption {
       type = lib.types.str;
       default = "default";
       description = "Project name used for port computation. Set this to match your project name.";
       example = "myapp";
     };
 
-    minPort = lib.mkOption {
+    min-port = lib.mkOption {
       type = lib.types.port;
       default = 3000;
       description = "Minimum port number for the port range";
     };
 
-    portRange = lib.mkOption {
+    port-range = lib.mkOption {
       type = lib.types.int;
       default = 7000;
-      description = "Range of ports to use (minPort to minPort + portRange)";
+      description = "Range of ports to use (min-port to min-port + port-range)";
     };
 
     modulus = lib.mkOption {
@@ -154,7 +154,7 @@ in {
     };
 
     # Computed values (read-only)
-    basePort = lib.mkOption {
+    base-port = lib.mkOption {
       type = lib.types.port;
       default = basePort;
       readOnly = true;
@@ -177,7 +177,7 @@ in {
     # Expose computed ports as environment variables
     env =
       {
-        STACKPANEL_BASE_PORT = toString cfg.basePort;
+        STACKPANEL_BASE_PORT = toString cfg.base-port;
       }
       // serviceEnvVars;
 
@@ -186,8 +186,8 @@ in {
       # Display port information
       if [[ -z "$STACKPANEL_QUIET" ]]; then
         echo ""
-        echo "📦 Stackpanel Ports (project: ${cfg.projectName})"
-        echo "   Base port: ${toString cfg.basePort}"
+        echo "📦 Stackpanel Ports (project: ${cfg.project-name})"
+        echo "   Base port: ${toString cfg.base-port}"
         ${lib.optionalString hasApps ''
         echo ""
         echo "   Apps:"

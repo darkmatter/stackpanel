@@ -18,7 +18,7 @@ in {
   options.stackpanel.theme = {
     enable = lib.mkEnableOption "Starship prompt for stackpanel devenv";
 
-    configFile = lib.mkOption {
+    config-file = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
       description = "Custom starship.toml config file (uses stackpanel default if not set)";
@@ -35,8 +35,8 @@ in {
       # Set the config path for starship
       export STARSHIP_CONFIG=$DEVENV_STATE/starship.toml
       install -m 644 ${
-        if cfg.configFile != null
-        then cfg.configFile
+        if cfg.config-file != null
+        then cfg.config-file
         else starshipTheme.config
       } $DEVENV_STATE/starship.toml
 
