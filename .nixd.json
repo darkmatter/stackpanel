@@ -1,9 +1,9 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nix-community/nixd/main/nixd/docs/nixd-schema.json",
-  "nixpkgs": {
-    "expr": "import (builtins.getFlake (toString ./.)).inputs.nixpkgs { }"
-  },
-  "formatting": {
-    "command": ["alejandra"]
-  }
+	"$schema": "https://raw.githubusercontent.com/nix-community/nixd/main/nixd/docs/nixd-schema.json",
+	"nixpkgs": {
+		"expr": "import (builtins.getFlake (toString ./.)).inputs.nixpkgs { }"
+	},
+	"formatting": {
+		"command": ["alejandra"]
+	}
 }

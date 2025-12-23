@@ -12,5 +12,5 @@ inputs:
   stackpanel:
     url: path:../../..
 imports:
-  - stackpanel/nix/modules
+  - stackpanel/nix
 

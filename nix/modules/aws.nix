@@ -25,67 +25,115 @@
 
   # Import shared AWS library
   awsLib = import ../lib/aws.nix {inherit pkgs lib;};
+in {
+  options.stackpanel.aws.certAuth = {
+    enable = lib.mkEnableOption "AWS Roles Anywhere cert auth";
 
-  # Create scripts using shared library
-  awsScripts = awsLib.mkAwsCredScripts {
-    stateDir = baseStateDir;
-    inherit
-      (cfg)
-      accountId
-      roleName
-      trustAnchorArn
-      profileArn
-      region
-      cacheBufferSeconds
-      ;
+    region = lib.mkOption {
+      type = lib.types.str;
+      default = "us-west-2";
+      description = "AWS region";
+    };
+
+    accountId = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "AWS account ID";
+    };
+
+    roleName = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "IAM role name to assume";
+    };
+
+    trustAnchorArn = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "AWS Roles Anywhere trust anchor ARN";
+    };
+
+    profileArn = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "AWS Roles Anywhere profile ARN";
+    };
+
+    cacheBufferSeconds = lib.mkOption {
+      type = lib.types.str;
+      default = "300";
+      description = "Seconds before expiry to refresh cached credentials";
+    };
+
+    promptOnShell = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Prompt for AWS cert-auth setup on shell entry if not configured";
+    };
   };
 
-  # Check if AWS cert-auth is working
-  checkAwsCert = pkgs.writeShellScriptBin "check-aws-cert" ''
-    set -uo pipefail
+  config = lib.mkIf cfg.enable (
+    let
+      # Create scripts using shared library - only evaluated when enabled
+      awsScripts = awsLib.mkAwsCredScripts {
+        stateDir = baseStateDir;
+        inherit
+          (cfg)
+          accountId
+          roleName
+          trustAnchorArn
+          profileArn
+          region
+          cacheBufferSeconds
+          ;
+      };
 
-    red='\033[0;31m'
-    green='\033[0;32m'
-    nc='\033[0m'
+      # Check if AWS cert-auth is working
+      checkAwsCert = pkgs.writeShellScriptBin "check-aws-cert" ''
+        set -uo pipefail
 
-    pass() { echo -e "''${green}OK''${nc}"; }
-    fail() { echo -e "''${red}FAIL''${nc}"; }
+        red='\033[0;31m'
+        green='\033[0;32m'
+        nc='\033[0m'
 
-    all_passed=true
+        pass() { echo -e "''${green}OK''${nc}"; }
+        fail() { echo -e "''${red}FAIL''${nc}"; }
 
-    echo -n "Checking if device certificate exists... "
-    if [[ -f "${stepCertPath}" && -f "${stepKeyPath}" ]]; then
-      pass
-    else
-      fail
-      echo "  Hint: Run 'ensure-device-cert' first (Step CA required)"
-      all_passed=false
-    fi
+        all_passed=true
 
-    if [[ -f "${stepCertPath}" ]]; then
-      echo -n "Checking if AWS credentials can be fetched... "
-      if eval "$(${awsScripts.awsCredsEnv}/bin/aws-creds-env 2>/dev/null)" && \
-         [[ -n "''${AWS_ACCESS_KEY_ID:-}" ]]; then
-        pass
-      else
-        fail
-        echo "  Hint: Check Roles Anywhere configuration"
-        all_passed=false
-      fi
-    fi
+        echo -n "Checking if device certificate exists... "
+        if [[ -f "${stepCertPath}" && -f "${stepKeyPath}" ]]; then
+          pass
+        else
+          fail
+          echo "  Hint: Run 'ensure-device-cert' first (Step CA required)"
+          all_passed=false
+        fi
 
-    echo ""
-    if $all_passed; then
-      echo -e "''${green}AWS cert-auth is configured!''${nc}"
-      exit 0
-    else
-      echo -e "''${red}AWS cert-auth not ready.''${nc}"
-      exit 1
-    fi
-  '';
+        if [[ -f "${stepCertPath}" ]]; then
+          echo -n "Checking if AWS credentials can be fetched... "
+          if eval "$(${awsScripts.awsCredsEnv}/bin/aws-creds-env 2>/dev/null)" && \
+             [[ -n "''${AWS_ACCESS_KEY_ID:-}" ]]; then
+            pass
+          else
+            fail
+            echo "  Hint: Check Roles Anywhere configuration"
+            all_passed=false
+          fi
+        fi
 
-  # Interactive setup prompt script
-  interactiveSetup = pkgs.writeShellScriptBin "aws-cert-setup-prompt" ''
+        echo ""
+        if $all_passed; then
+          echo -e "''${green}AWS cert-auth is configured!''${nc}"
+          exit 0
+        else
+          echo -e "''${red}AWS cert-auth not ready.''${nc}"
+          exit 1
+        fi
+      '';
+
+      # Interactive setup prompt script
+      interactiveSetup = pkgs.writeShellScriptBin "aws-cert-setup-prompt" ''
         set -uo pipefail
 
         # Check if user chose "don't ask again"
@@ -148,85 +196,43 @@
               "Skipped. Run 'check-aws-cert' to verify setup."
             ;;
         esac
-  '';
-in {
-  options.stackpanel.aws.certAuth = {
-    enable = lib.mkEnableOption "AWS Roles Anywhere cert auth";
+      '';
+    in {
+      packages = awsScripts.allPackages ++ [pkgs.gum checkAwsCert interactiveSetup];
 
-    region = lib.mkOption {
-      type = lib.types.str;
-      default = "us-west-2";
-      description = "AWS region";
-    };
+      stackpanel.motd.commands = [
+        {
+          name = "aws-creds-env";
+          description = "Export AWS credentials to env";
+        }
+        {
+          name = "check-aws-cert";
+          description = "Verify AWS cert-auth status";
+        }
+      ];
+      stackpanel.motd.features = ["AWS Roles Anywhere (${cfg.roleName})"];
 
-    accountId = lib.mkOption {
-      type = lib.types.str;
-      description = "AWS account ID";
-    };
+      # Set base AWS env vars (AWS_CONFIG_FILE is set in enterShell with absolute path)
+      env = awsScripts.env;
 
-    roleName = lib.mkOption {
-      type = lib.types.str;
-      description = "IAM role name to assume";
-    };
+      enterShell = ''
+        # Set AWS_CONFIG_FILE using STACKPANEL_STATE_DIR (absolute, works in Docker too)
+        export AWS_CONFIG_FILE="$STACKPANEL_STATE_DIR/aws/config"
 
-    trustAnchorArn = lib.mkOption {
-      type = lib.types.str;
-      description = "AWS Roles Anywhere trust anchor ARN";
-    };
+        # Generate AWS config with credential_process for auto-refresh
+        _step_cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+        _step_key="$STACKPANEL_STATE_DIR/step/device.key"
+        if [[ -f "$_step_cert" && -f "$_step_key" ]]; then
+          mkdir -p "$STACKPANEL_STATE_DIR/aws"
+          AWS_CERT_PATH="$_step_cert" AWS_KEY_PATH="$_step_key" \
+            ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
+        fi
 
-    profileArn = lib.mkOption {
-      type = lib.types.str;
-      description = "AWS Roles Anywhere profile ARN";
-    };
-
-    cacheBufferSeconds = lib.mkOption {
-      type = lib.types.str;
-      default = "300";
-      description = "Seconds before expiry to refresh cached credentials";
-    };
-
-    promptOnShell = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Prompt for AWS cert-auth setup on shell entry if not configured";
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    packages = awsScripts.allPackages ++ [pkgs.gum checkAwsCert interactiveSetup];
-
-    stackpanel.motd.commands = [
-      {
-        name = "aws-creds-env";
-        description = "Export AWS credentials to env";
-      }
-      {
-        name = "check-aws-cert";
-        description = "Verify AWS cert-auth status";
-      }
-    ];
-    stackpanel.motd.features = ["AWS Roles Anywhere (${cfg.roleName})"];
-
-    # Set base AWS env vars (AWS_CONFIG_FILE is set in enterShell with absolute path)
-    env = awsScripts.env;
-
-    enterShell = ''
-      # Set AWS_CONFIG_FILE using STACKPANEL_STATE_DIR (absolute, works in Docker too)
-      export AWS_CONFIG_FILE="$STACKPANEL_STATE_DIR/aws/config"
-
-      # Generate AWS config with credential_process for auto-refresh
-      _step_cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
-      _step_key="$STACKPANEL_STATE_DIR/step/device.key"
-      if [[ -f "$_step_cert" && -f "$_step_key" ]]; then
-        mkdir -p "$STACKPANEL_STATE_DIR/aws"
-        AWS_CERT_PATH="$_step_cert" AWS_KEY_PATH="$_step_key" \
-          ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
-      fi
-
-      ${lib.optionalString cfg.promptOnShell ''
-        # Interactive AWS cert-auth setup
-        ${interactiveSetup}/bin/aws-cert-setup-prompt
-      ''}
-    '';
-  };
+        ${lib.optionalString cfg.promptOnShell ''
+          # Interactive AWS cert-auth setup
+          ${interactiveSetup}/bin/aws-cert-setup-prompt
+        ''}
+      '';
+    }
+  );
 }

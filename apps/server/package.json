@@ -1,41 +1,41 @@
 {
-  "name": "@stackpanel/server",
-  "main": "src/index.ts",
-  "type": "module",
-  "exports": {
-    "./alchemy": "./alchemy.run.ts"
-  },
-  "scripts": {
-    "build": "tsdown",
-    "check-types": "tsc -b",
-    "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
-    "dev": "wrangler dev src/index.ts --port ${PORT_SERVER:-6401} --compatibility-flag nodejs_compat --var DATABASE_URL:$DATABASE_URL --var CORS_ORIGIN:${CORS_ORIGIN:-http://localhost:6402} --var BETTER_AUTH_URL:${BETTER_AUTH_URL:-http://localhost:6401}",
-    "dev:alchemy": "alchemy dev --app server",
-    "deploy": "alchemy deploy --app server",
-    "destroy": "alchemy destroy --app server"
-  },
-  "dependencies": {
-    "@ai-sdk/google": "catalog:",
-    "@hono/trpc-server": "^0.4.0",
-    "@stackpanel/api": "workspace:*",
-    "@stackpanel/auth": "workspace:*",
-    "@stackpanel/db": "workspace:*",
-    "@trpc/server": "catalog:",
-    "ai": "catalog:",
-    "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "drizzle-orm": "^0.45.1",
-    "hono": "catalog:",
-    "zod": "^4.1.11"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250822.0",
-    "@stackpanel/config": "workspace:*",
-    "@types/node": "^22.13.11",
-    "alchemy": "catalog:",
-    "tsdown": "^0.16.5",
-    "tsx": "^4.21.0",
-    "typescript": "^5.8.2",
-    "wrangler": "^4.40.3"
-  }
+	"name": "@stackpanel/server",
+	"main": "src/index.ts",
+	"type": "module",
+	"exports": {
+		"./alchemy": "./alchemy.run.ts"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc -b",
+		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
+		"dev": "wrangler dev src/index.ts --port ${PORT_SERVER:-6401} --compatibility-flag nodejs_compat --var DATABASE_URL:$DATABASE_URL --var CORS_ORIGIN:${CORS_ORIGIN:-http://localhost:6402} --var BETTER_AUTH_URL:${BETTER_AUTH_URL:-http://localhost:6401}",
+		"dev:alchemy": "alchemy dev --app server",
+		"deploy": "alchemy deploy --app server",
+		"destroy": "alchemy destroy --app server"
+	},
+	"dependencies": {
+		"@ai-sdk/google": "catalog:",
+		"@hono/trpc-server": "^0.4.0",
+		"@stackpanel/api": "workspace:*",
+		"@stackpanel/auth": "workspace:*",
+		"@stackpanel/db": "workspace:*",
+		"@trpc/server": "catalog:",
+		"ai": "catalog:",
+		"better-auth": "catalog:",
+		"dotenv": "catalog:",
+		"drizzle-orm": "^0.45.1",
+		"hono": "catalog:",
+		"zod": "^4.1.11"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250822.0",
+		"@stackpanel/config": "workspace:*",
+		"@types/node": "^22.13.11",
+		"alchemy": "catalog:",
+		"tsdown": "^0.16.5",
+		"tsx": "^4.21.0",
+		"typescript": "^5.8.2",
+		"wrangler": "^4.40.3"
+	}
 }

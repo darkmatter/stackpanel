@@ -19,15 +19,51 @@
 
   # Import shared network library
   networkLib = import ../lib/network.nix {inherit pkgs lib;};
+in {
+  options.stackpanel.network.step = {
+    enable = lib.mkEnableOption "Step CA certificate management";
 
-  # Create scripts using shared library
-  stepScripts = networkLib.mkStepScripts {
-    inherit stateDir;
-    inherit (cfg) caUrl caFingerprint provisioner certName;
+    caUrl = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "Step CA URL (e.g., https://ca.internal:443)";
+    };
+
+    caFingerprint = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "Step CA root certificate fingerprint";
+    };
+
+    provisioner = lib.mkOption {
+      type = lib.types.str;
+      default = "Authentik";
+      description = "Step CA provisioner name";
+    };
+
+    certName = lib.mkOption {
+      type = lib.types.str;
+      default = "device";
+      description = "Common name for the device certificate";
+    };
+
+    promptOnShell = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Prompt for certificate setup on shell entry if not configured";
+    };
   };
 
-  # Interactive setup prompt script
-  interactiveSetup = pkgs.writeShellScriptBin "step-cert-setup-prompt" ''
+  config = lib.mkIf cfg.enable (
+    let
+      # Create scripts using shared library - only evaluated when enabled
+      stepScripts = networkLib.mkStepScripts {
+        inherit stateDir;
+        inherit (cfg) caUrl caFingerprint provisioner certName;
+      };
+
+      # Interactive setup prompt script
+      interactiveSetup = pkgs.writeShellScriptBin "step-cert-setup-prompt" ''
         set -uo pipefail
 
         # Check if user chose "don't ask again"
@@ -82,58 +118,26 @@
               "Skipped. Run 'ensure-device-cert' when ready."
             ;;
         esac
-  '';
-in {
-  options.stackpanel.network.step = {
-    enable = lib.mkEnableOption "Step CA certificate management";
+      '';
+    in {
+      packages = stepScripts.allPackages ++ [pkgs.gum interactiveSetup];
 
-    caUrl = lib.mkOption {
-      type = lib.types.str;
-      description = "Step CA URL (e.g., https://ca.internal:443)";
-    };
+      stackpanel.motd.commands = [
+        {
+          name = "ensure-device-cert";
+          description = "Request/renew device certificate";
+        }
+        {
+          name = "check-device-cert";
+          description = "Verify certificate status";
+        }
+      ];
+      stackpanel.motd.features = ["Step CA certificates (${cfg.caUrl})"];
 
-    caFingerprint = lib.mkOption {
-      type = lib.types.str;
-      description = "Step CA root certificate fingerprint";
-    };
-
-    provisioner = lib.mkOption {
-      type = lib.types.str;
-      default = "Authentik";
-      description = "Step CA provisioner name";
-    };
-
-    certName = lib.mkOption {
-      type = lib.types.str;
-      default = "device";
-      description = "Common name for the device certificate";
-    };
-
-    promptOnShell = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Prompt for certificate setup on shell entry if not configured";
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    packages = stepScripts.allPackages ++ [pkgs.gum interactiveSetup];
-
-    stackpanel.motd.commands = [
-      {
-        name = "ensure-device-cert";
-        description = "Request/renew device certificate";
-      }
-      {
-        name = "check-device-cert";
-        description = "Verify certificate status";
-      }
-    ];
-    stackpanel.motd.features = ["Step CA certificates (${cfg.caUrl})"];
-
-    enterShell = lib.mkIf cfg.promptOnShell ''
-      # Interactive Step CA cert setup
-      ${interactiveSetup}/bin/step-cert-setup-prompt
-    '';
-  };
+      enterShell = lib.mkIf cfg.promptOnShell ''
+        # Interactive Step CA cert setup
+        ${interactiveSetup}/bin/step-cert-setup-prompt
+      '';
+    }
+  );
 }

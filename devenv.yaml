@@ -19,11 +19,11 @@ inputs:
 allowUnfree: true
 imports:
   # Reusable stackpanel modules (AWS, network, theme, etc.)
-  - ./nix/modules/stackpanel.nix
+  - ./nix/stackpanel.nix
   # Documentation generation
-  - ./nix/docs
+  - ./infra/devenv/docs
   # Stackpanel-specific services (postgres, redis, caddy, etc.)
-  - ./infra/devenv
+  - ./infra/devenv/devenv.nix
 clean:
   enabled: true
   keep:
