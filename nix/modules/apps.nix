@@ -36,15 +36,15 @@
   caddyLib = import ../lib/caddy.nix {inherit pkgs lib;};
   caddyScripts = caddyLib.mkCaddyScripts {
     stepEnabled = config.stackpanel.network.step.enable or false;
-    stepCaUrl = config.stackpanel.network.step.caUrl or "";
-    stepCaFingerprint = config.stackpanel.network.step.caFingerprint or "";
+    stepCaUrl = config.stackpanel.network.step.ca-url or "";
+    stepCaFingerprint = config.stackpanel.network.step.ca-fingerprint or "";
   };
 
   # Apps use offset 0-9 (services use 10+)
   appsBaseOffset = 0;
 
   # Get the project base port
-  projectBasePort = portsCfg.basePort;
+  projectBasePort = portsCfg.base-port;
 
   # App option type (just user inputs, no computed fields)
   appType = lib.types.submodule {
@@ -168,7 +168,7 @@ in {
         app = computedApps.${name};
       in ''
         # Register Caddy site for ${name}
-        ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${app.domain}" "localhost:${toString app.port}" --project "${portsCfg.projectName}" ${lib.optionalString app.tls "--tls-internal"} 2>/dev/null || true
+        ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${app.domain}" "localhost:${toString app.port}" --project "${portsCfg.project-name}" ${lib.optionalString app.tls "--tls-internal"} 2>/dev/null || true
       '')
       appsWithVhosts);
 

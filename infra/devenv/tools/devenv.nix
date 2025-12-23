@@ -68,10 +68,10 @@
   ];
 
   # Enable project-local services (data stored in .stackpanel/state/services/)
-  # Ports are automatically computed from projectName (see stackpanel.ports)
+  # Ports are automatically computed from project-name (see stackpanel.ports)
   stackpanel.globalServices = {
     enable = true;
-    projectName = "stackpanel";
+    project-name = "stackpanel";
 
     # PostgreSQL for local development
     postgres = {

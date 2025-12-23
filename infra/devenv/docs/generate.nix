@@ -22,11 +22,11 @@ let
 
   # Transform option declarations to readable paths
   transformOptions = opt: opt // {
-    declarations = map (decl: 
+    declarations = map (decl:
       let
         declStr = toString decl;
         # Try to make paths relative and linkable
-        relativePath = 
+        relativePath =
           if lib.hasPrefix (toString ../.) declStr
           then lib.removePrefix (toString ../. + "/") declStr
           else if lib.hasPrefix "/nix/store" declStr
@@ -34,7 +34,7 @@ let
           else declStr;
       in {
         name = relativePath;
-        url = 
+        url =
           if lib.hasPrefix "modules/" relativePath
           then "https://github.com/darkmatter/stackpanel/blob/main/nix/${relativePath}"
           else null;
@@ -43,7 +43,7 @@ let
   };
 
   # Filter to only stackpanel.* options
-  filterStackpanelOptions = 
+  filterStackpanelOptions =
     lib.filterAttrs (name: _: lib.hasPrefix "stackpanel" name);
 
   # Generate documentation using nixosOptionsDoc
@@ -56,24 +56,26 @@ let
   # Script to generate MDX docs
   generateDocsScript = pkgs.writeShellScriptBin "stackpanel-generate-docs" ''
     set -euo pipefail
-    
-    SCRIPT_DIR="$(cd "$(dirname "''${BASH_SOURCE[0]}")" && pwd)"
+
     ROOT_DIR="''${DEVENV_ROOT:-$(pwd)}"
-    DOCS_DIR="''${1:-$ROOT_DIR/apps/fumadocs/content/docs/reference}"
+    DOCS_DIR="''${1:-$ROOT_DIR/apps/docs/content/docs/reference}"
+    MODULES_DIR="$ROOT_DIR/nix/modules"
     OPTIONS_JSON="${optionsDoc.optionsJSON}/share/doc/nixos/options.json"
-    
+
     echo "📚 Generating stackpanel options documentation..."
     echo "  Source: $OPTIONS_JSON"
     echo "  Output: $DOCS_DIR"
-    
+    echo "  Modules: $MODULES_DIR"
+
     mkdir -p "$DOCS_DIR"
-    
-    # Use bun to run the TypeScript generator
-    cd "$ROOT_DIR"
-    ${pkgs.bun}/bin/bun run nix/docs/scripts/generate-options-mdx.ts \
+
+    # Use the Go CLI to generate docs
+    cd "$ROOT_DIR/apps/cli"
+    ${pkgs.go}/bin/go run . gendocs \
       "$OPTIONS_JSON" \
-      "$DOCS_DIR"
-    
+      "$DOCS_DIR" \
+      "$MODULES_DIR"
+
     echo "✅ Done! Generated documentation in $DOCS_DIR"
   '';
 

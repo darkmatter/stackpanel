@@ -24,14 +24,14 @@
   stateData = {
     # Metadata
     version = 1;
-    projectName = portsCfg.projectName;
-    basePort = portsCfg.basePort;
+    projectName = portsCfg.project-name;
+    basePort = portsCfg.base-port;
 
     # Directories (relative paths - CLI will resolve to absolute)
     paths = {
-      state = cfg.stateDir;
-      gen = cfg.genDir;
-      data = cfg.dataDir;
+      state = cfg.state-dir;
+      gen = cfg.gen-dir;
+      data = cfg.data-dir;
     };
 
     # Apps with computed ports and domains
@@ -57,7 +57,7 @@
     network = {
       step = {
         enable = cfg.network.step.enable or false;
-        caUrl = cfg.network.step.caUrl or null;
+        caUrl = cfg.network.step.ca-url or null;
       };
     };
   };

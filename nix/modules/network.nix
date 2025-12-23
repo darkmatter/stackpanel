@@ -14,7 +14,7 @@
   ...
 }: let
   cfg = config.stackpanel.network.step;
-  stateDir = "${config.stackpanel.stateDir}/step";
+  stateDir = "${config.stackpanel.state-dir}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
 
   # Import shared network library
@@ -23,13 +23,13 @@ in {
   options.stackpanel.network.step = {
     enable = lib.mkEnableOption "Step CA certificate management";
 
-    caUrl = lib.mkOption {
+    ca-url = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "Step CA URL (e.g., https://ca.internal:443)";
     };
 
-    caFingerprint = lib.mkOption {
+    ca-fingerprint = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "Step CA root certificate fingerprint";
@@ -41,13 +41,13 @@ in {
       description = "Step CA provisioner name";
     };
 
-    certName = lib.mkOption {
+    cert-name = lib.mkOption {
       type = lib.types.str;
       default = "device";
       description = "Common name for the device certificate";
     };
 
-    promptOnShell = lib.mkOption {
+    prompt-on-shell = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Prompt for certificate setup on shell entry if not configured";
@@ -59,7 +59,10 @@ in {
       # Create scripts using shared library - only evaluated when enabled
       stepScripts = networkLib.mkStepScripts {
         inherit stateDir;
-        inherit (cfg) caUrl caFingerprint provisioner certName;
+        caUrl = cfg.ca-url;
+        caFingerprint = cfg.ca-fingerprint;
+        provisioner = cfg.provisioner;
+        certName = cfg.cert-name;
       };
 
       # Interactive setup prompt script
@@ -132,9 +135,9 @@ in {
           description = "Verify certificate status";
         }
       ];
-      stackpanel.motd.features = ["Step CA certificates (${cfg.caUrl})"];
+      stackpanel.motd.features = ["Step CA certificates (${cfg.ca-url})"];
 
-      enterShell = lib.mkIf cfg.promptOnShell ''
+      enterShell = lib.mkIf cfg.prompt-on-shell ''
         # Interactive Step CA cert setup
         ${interactiveSetup}/bin/step-cert-setup-prompt
       '';

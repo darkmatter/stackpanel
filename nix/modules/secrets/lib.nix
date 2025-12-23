@@ -96,7 +96,7 @@ in {
     envCfg = appData.environments.${env} or {};
     explicitKeys = map (name: users.${name}.pubkey) (envCfg.users or []);
   in
-    lib.unique (explicitKeys ++ adminKeys ++ (envCfg.extraKeys or []));
+    lib.unique (explicitKeys ++ adminKeys ++ (envCfg.extra-keys or []));
 
   # Generate .sops.yaml creation rules
   generateSopsRules = {
@@ -113,7 +113,7 @@ in {
       envCfg = appData.environments.${env} or {};
       explicitKeys = map (name: users.${name}.pubkey) (envCfg.users or []);
     in
-      lib.unique (explicitKeys ++ adminKeys ++ (envCfg.extraKeys or []));
+      lib.unique (explicitKeys ++ adminKeys ++ (envCfg.extra-keys or []));
 
     # Build creation rules for each app/environment
     appEnvRules = lib.flatten (lib.mapAttrsToList (appName: appData:

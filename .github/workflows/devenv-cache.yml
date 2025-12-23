@@ -1,0 +1,44 @@
+name: "Build and cache devenv"
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  devenv-build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org https://stackpanel.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+
+      - uses: cachix/cachix-action@v15
+        with:
+          name: stackpanel
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          # Pull from devenv cache as well
+          extraPullNames: devenv
+
+      - name: Install devenv
+        run: |
+          nix profile install nixpkgs#devenv --accept-flake-config
+
+      - name: Build devenv shell
+        run: |
+          # Build the devenv shell - this populates the Nix store
+          devenv build
+        env:
+          # Ensure devenv can determine the project root
+          DEVENV_ROOT: ${{ github.workspace }}
+
