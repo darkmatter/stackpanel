@@ -1,0 +1,46 @@
+name: "om ci"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual triggers
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Run on aarch64-linux and aarch64-darwin
+jobs:
+  configure:
+    runs-on: x86_64-linux
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Install omnix
+        run: nix profile install nixpkgs#omnix
+      - id: set-matrix
+        run: |
+          set -euxo pipefail
+          MATRIX="$(om ci gh-matrix --systems=x86_64-linux,aarch64-darwin | jq -c .)"
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+  nix:
+    runs-on: ${{ matrix.system }}
+    needs: configure
+    strategy:
+      matrix: ${{ fromJson(needs.configure.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Install omnix
+        run: nix profile install nixpkgs#omnix
+      - run: om ci run --systems "${{ matrix.system }}" ".#default.${{ matrix.subflake }}"
+

@@ -1,44 +1,65 @@
+# Build and cache the devenv shell to Cachix for faster CI and local builds.
+#
+# Setup required:
+# 1. Create a cachix cache at https://app.cachix.org/cache (name: stackpanel)
+# 2. Get the auth token from the cache settings
+# 3. Add CACHIX_AUTH_TOKEN to GitHub repo secrets
+# 4. Update the public key below (find it at https://app.cachix.org/cache/stackpanel -> Settings)
+
 name: "Build and cache devenv"
+
 on:
   push:
     branches:
-      - "main"
+      - main
   pull_request:
     branches:
-      - "main"
+      - main
+  workflow_dispatch: # Allow manual triggers
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   devenv-build:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+          - os: macos-latest
+            system: aarch64-darwin
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v31
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             accept-flake-config = true
             extra-substituters = https://devenv.cachix.org https://stackpanel.cachix.org
-            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= stackpanel.cachix.org-1:REPLACE_WITH_YOUR_PUBLIC_KEY
 
-      - uses: cachix/cachix-action@v15
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
         with:
           name: stackpanel
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          # Pull from devenv cache as well
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: devenv
 
       - name: Install devenv
-        run: |
-          nix profile install nixpkgs#devenv --accept-flake-config
+        run: nix profile install nixpkgs#devenv --accept-flake-config
 
       - name: Build devenv shell
-        run: |
-          # Build the devenv shell - this populates the Nix store
-          devenv build
+        run: devenv build
         env:
-          # Ensure devenv can determine the project root
           DEVENV_ROOT: ${{ github.workspace }}
 
+      - name: Test devenv shell
+        run: devenv shell -- echo "Shell works!"
+        env:
+          DEVENV_ROOT: ${{ github.workspace }}
