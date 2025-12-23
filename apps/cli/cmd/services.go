@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/darkmatter/stackpanel/cli/services"
-	"github.com/darkmatter/stackpanel/cli/tui"
+	"github.com/darkmatter/stackpanel/cli/internal/services"
+	"github.com/darkmatter/stackpanel/cli/internal/tui"
 	"github.com/spf13/cobra"
 )
 

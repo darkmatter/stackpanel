@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -41,6 +42,12 @@ type ReadmeFile struct {
 	ModuleName   string
 }
 
+const (
+	DirnameReference = "reference"
+	DirnameModules   = "modules"
+	DirnameDevenv		= "devenv"
+)
+
 var gendocsCmd = &cobra.Command{
 	Use:   "gendocs <options.json> <output-dir> [modules-dir]",
 	Short: "Generate MDX documentation from Nix options JSON",
@@ -61,11 +68,10 @@ func init() {
 
 func runGenDocs(cmd *cobra.Command, args []string) error {
 	optionsPath := args[0]
-	outputDir := args[1]
-	var modulesDir string
-	if len(args) > 2 {
-		modulesDir = args[2]
-	}
+	docsDir := args[1]
+	outputDir := fmt.Sprintf("%s/%s", docsDir, DirnameReference)
+	modulesDir := fmt.Sprintf("%s/%s", docsDir, DirnameModules)
+	devenvDir := fmt.Sprintf("%s/%s", docsDir, DirnameDevenv)
 
 	// Read and parse options JSON
 	fmt.Printf("Reading options from: %s\n", optionsPath)
@@ -91,9 +97,10 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Categories: %s\n", strings.Join(categories, ", "))
 
-	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %w", err)
+	// Ensure output directories exist
+	dirs := []string{outputDir, modulesDir, devenvDir}
+	if err := mkDirs(dirs...); err != nil {
+		return fmt.Errorf("failed to create output directories: %w", err)
 	}
 
 	// Generate index
@@ -129,16 +136,32 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func mkDirs(paths ...string) error {
+	for _, p := range paths {
+		if err := os.MkdirAll(p, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", p, err)
+		}
+	}
+	return nil
+}
+
 // groupOptions groups options by their top-level category
 func groupOptions(options OptionsJSON) map[string]OptionsJSON {
 	groups := make(map[string]OptionsJSON)
+	regexDevenv := regexp.MustCompile(`perSystem\.[^.]+\.devenv\.shells\.default\.`)
 
 	for path, opt := range options {
+		isDevenv := regexDevenv.MatchString(path)
 		// Remove 'stackpanel.' prefix and get first segment
 		withoutPrefix := strings.TrimPrefix(path, "stackpanel.")
-		parts := strings.Split(withoutPrefix, ".")
+		// RRemove "perSystem.<system>"
+		withoutDevenv := regexDevenv.ReplaceAllString(withoutPrefix, "")
+		parts := strings.Split(withoutDevenv, ".")
 		category := parts[0]
-		if category == "" {
+
+		if isDevenv {
+			category = "devenv"
+		} else if category == "" {
 			category = "core"
 		}
 
