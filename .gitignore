@@ -49,6 +49,7 @@ coverage
 tmp
 temp
 
+
 # We deliberately ignore files that are usually checked in because we generate them
 /.claude
 /.codex

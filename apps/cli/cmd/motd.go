@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/darkmatter/stackpanel/cli/state"
-	"github.com/darkmatter/stackpanel/cli/tui"
+	"github.com/darkmatter/stackpanel/cli/internal/state"
+	"github.com/darkmatter/stackpanel/cli/internal/tui"
 	"github.com/spf13/cobra"
 )
 

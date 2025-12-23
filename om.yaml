@@ -1,0 +1,11 @@
+ci:
+  default:
+    stackpanel:
+      dir: .
+      steps:
+        build:
+          enable: true
+        lockfile:
+          enable: true
+        flake-check:
+          enable: true
