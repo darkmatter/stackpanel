@@ -20,22 +20,22 @@
   cfg = config.stackpanel;
 
   # Import the stackpanel CLI package (for MOTD)
-  stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli {};
+  stackpanel-cli = pkgs.callPackage ./packages/stackpanel-cli {};
 in {
   imports = [
-    ./secrets
-    ./aws.nix
-    ./network.nix
-    ./theme.nix
-    ./caddy.nix
-    ./ports.nix
-    ./apps.nix
-    ./global-services.nix
-    ./ide.nix
-    ./ci.nix
-    ./state.nix
-    ./cli-generate.nix
-    ./recommended/devenv.nix
+    ./modules/secrets
+    ./modules/aws.nix
+    ./modules/network.nix
+    ./modules/theme.nix
+    ./modules/caddy.nix
+    ./modules/ports.nix
+    ./modules/apps.nix
+    ./modules/global-services.nix
+    ./modules/ide.nix
+    ./modules/ci.nix
+    ./modules/state.nix
+    ./modules/cli-generate.nix
+    ./modules/recommended/devenv.nix
   ];
 
   # Base stackpanel options for devenv
@@ -123,7 +123,6 @@ in {
     # Use mkBefore to ensure this runs before other modules' enterShell hooks
     enterShell = lib.mkMerge [
       (lib.mkBefore ''
-        # syntax: bash
         # Set absolute paths for stackpanel directories
         # These can be pre-set to override (e.g., in Docker with mounted volumes)
         export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$DEVENV_ROOT}"

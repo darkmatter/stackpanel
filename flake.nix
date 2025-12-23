@@ -74,7 +74,7 @@
           imports = [
             self.devenvModules.default
             # Local-only config that shouldn't be in the exported module
-            ./infra/devenv
+            ./infra/devenv/devenv.nix
             # Stackpanel-specific config for this repo
             ./infra/stackpanel/stackpanel.nix
           ];
@@ -164,7 +164,7 @@
         #   };
         devenvModules = {
           # devenv.nix is the entry point (devenv convention for directory imports)
-          default = ./nix/modules/devenv.nix;
+          default = ./nix/devenv.nix;
         };
 
         # Library functions for use in other flakes

@@ -1,30 +1,30 @@
 {
-  "name": "@stackpanel/alchemy",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    }
-  },
-  "scripts": {
-    "dev": "alchemy dev",
-    "deploy": "alchemy deploy",
-    "destroy": "alchemy destroy"
-  },
-  "devDependencies": {
-    "alchemy": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "drizzle-orm": "^0.45.1",
-    "@neondatabase/serverless": "^1.0.2",
-    "ws": "^8.18.3",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
-  }
+	"name": "@stackpanel/alchemy",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {
+		"dev": "alchemy dev",
+		"deploy": "alchemy deploy",
+		"destroy": "alchemy destroy"
+	},
+	"devDependencies": {
+		"alchemy": "catalog:"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.45.1",
+		"@neondatabase/serverless": "^1.0.2",
+		"ws": "^8.18.3",
+		"dotenv": "catalog:",
+		"zod": "catalog:"
+	}
 }

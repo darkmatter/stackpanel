@@ -1,6 +1,8 @@
 {
   "extensions": {
-    "recommendations": ["redhat.vscode-yaml"]
+    "recommendations": [
+      "redhat.vscode-yaml"
+    ]
   },
   "folders": [
     {
