@@ -8,10 +8,10 @@ config({ path: "./.env" });
 const app = await alchemy("stackpanel");
 
 export const web = await Vite("web", {
-  assets: "dist",
-  bindings: {
-    server,
-  },
+	assets: "dist",
+	bindings: {
+		server,
+	},
 });
 
 console.log(`Web    -> ${web.url}`);

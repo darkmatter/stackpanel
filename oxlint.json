@@ -1,0 +1,41 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["import", "typescript", "react"],
+	"env": {
+		"browser": true,
+		"node": true
+	},
+	"globals": {},
+	"rules": {
+		"eqeqeq": "warn",
+		"no-unused-vars": "warn",
+		"no-console": "off"
+	},
+	"overrides": [
+		{
+			"files": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx"],
+			"rules": {
+				"typescript/no-explicit-any": "off"
+			}
+		}
+	],
+	"ignorePatterns": [
+		".git",
+		".github",
+		".turbo",
+		".devenv",
+		".vscode",
+		"node_modules",
+		"dist",
+		"dist-ssr",
+		"build",
+		".cache",
+		"coverage",
+		"src-tauri/target",
+		"src-tauri/gen",
+		"vendor"
+	]
+}
+
+
+
