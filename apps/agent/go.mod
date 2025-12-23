@@ -7,8 +7,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+replace github.com/darkmatter/stackpanel/packages/stackpanel-go => ../../packages/stackpanel-go
+
 require (
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.28.0 // indirect

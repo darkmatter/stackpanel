@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/cli/services"
+	"github.com/darkmatter/stackpanel/cli/internal/services"
 	"github.com/spf13/cobra"
 )
 
