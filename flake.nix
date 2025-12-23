@@ -12,6 +12,9 @@
     # Required when enabling stackpanel.devenv.recommended.formatters
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    gomod2nix.url = "github:nix-community/gomod2nix";
+    gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -69,6 +72,10 @@
         system,
         ...
       }: {
+        _module.args.pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ inputs.gomod2nix.overlays.default ];
+        };
         # Packages we build
         packages = {
           default = pkgs.hello; # placeholder
