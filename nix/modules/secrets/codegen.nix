@@ -31,7 +31,7 @@
 
   # Get the full merged schema for an app (common + all env overrides combined)
   getAppSchema = appName: appData: let
-    common = appData.commonSchema or {};
+    common = appData.common-schema or {};
     envSchemas = lib.mapAttrsToList (_env: envCfg: envCfg.schema or {}) (appData.environments or {});
     # Merge common with all env schemas (to get all possible keys)
     allEnvKeys = lib.foldl' lib.recursiveUpdate {} envSchemas;
@@ -385,7 +385,7 @@
 
   # Generate code for a single app
   generateAppCode = appName: appData: let
-    appConfig = appData.appConfig or {};
+    appConfig = appData.app-config or {};
     codegen = appConfig.codegen or null;
     language = codegen.language or null;
     path = codegen.path or null;

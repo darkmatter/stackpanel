@@ -9,7 +9,7 @@
 #   };
 #
 # Access the computed port:
-#   config.stackpanel.caddy.projectPort  # e.g., 34521
+#   config.stackpanel.caddy.project-port  # e.g., 34521
 #
 # Commands:
 #   caddy-start        # Start/reload caddy
@@ -35,9 +35,9 @@
 
   # Create scripts using shared library
   caddyScripts = caddyLib.mkCaddyScripts {
-    stepEnabled = cfg.useStepTls && stepCfg.enable;
-    stepCaUrl = stepCfg.caUrl or "";
-    stepCaFingerprint = stepCfg.caFingerprint or "";
+    stepEnabled = cfg.use-step-tls && stepCfg.enable;
+    stepCaUrl = stepCfg.ca-url or "";
+    stepCaFingerprint = stepCfg.ca-fingerprint or "";
   };
 
   # Get stable project port for current directory
@@ -49,8 +49,8 @@
   caddyDevSite = pkgs.writeShellScriptBin "caddy-dev-site" ''
     set -euo pipefail
 
-    project_name="''${1:-${cfg.projectName}}"
-    port="''${2:-${toString cfg.projectPort}}"
+    project_name="''${1:-${cfg.project-name}}"
+    port="''${2:-${toString cfg.project-port}}"
 
     domain="$project_name.localhost"
     upstream="localhost:$port"
@@ -74,28 +74,28 @@ in {
   options.stackpanel.caddy = {
     enable = lib.mkEnableOption "Caddy reverse proxy";
 
-    projectName = lib.mkOption {
+    project-name = lib.mkOption {
       type = lib.types.str;
       default = "default";
       description = "Project name used to compute a stable port. Set this to your project name for consistent port allocation.";
       example = "myapp";
     };
 
-    projectPort = lib.mkOption {
+    project-port = lib.mkOption {
       type = lib.types.port;
-      default = caddyLib.mkProjectPort {name = cfg.projectName;};
-      defaultText = lib.literalExpression "caddyLib.mkProjectPort { name = cfg.projectName; }";
-      description = "Computed stable port based on projectName. Can be overridden manually.";
+      default = caddyLib.mkProjectPort {name = cfg.project-name;};
+      defaultText = lib.literalExpression "caddyLib.mkProjectPort { name = cfg.project-name; }";
+      description = "Computed stable port based on project-name. Can be overridden manually.";
       example = 34521;
     };
 
-    useStepTls = lib.mkOption {
+    use-step-tls = lib.mkOption {
       type = lib.types.bool;
       default = false;
       description = "Use Step CA for TLS certificates (requires stackpanel.network.step.enable)";
     };
 
-    autoStart = lib.mkOption {
+    auto-start = lib.mkOption {
       type = lib.types.bool;
       default = false;
       description = "Automatically start Caddy when entering the shell";
@@ -110,7 +110,7 @@ in {
         caddyDevSite
       ];
 
-    enterShell = lib.mkIf cfg.autoStart ''
+    enterShell = lib.mkIf cfg.auto-start ''
       # Start Caddy if not already running
       if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
         ${caddyScripts.caddyStart}/bin/caddy-start

@@ -41,7 +41,7 @@
   # Import schema generation (pass genDir for output path)
   schemasLib = import ./schemas.nix {
     inherit lib;
-    genDir = config.stackpanel.genDir;
+    genDir = config.stackpanel.gen-dir;
   };
 
   # Load configs from YAML files

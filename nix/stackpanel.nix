@@ -42,19 +42,19 @@ in {
   options.stackpanel = {
     enable = lib.mkEnableOption "stackpanel integration" // {default = true;};
 
-    stateDir = lib.mkOption {
+    state-dir = lib.mkOption {
       type = lib.types.str;
       default = ".stackpanel/state";
       description = "Directory for runtime state (gitignored)";
     };
 
-    genDir = lib.mkOption {
+    gen-dir = lib.mkOption {
       type = lib.types.str;
       default = ".stackpanel/gen";
       description = "Directory for generated files (gitignored, regenerated on each devenv run)";
     };
 
-    dataDir = lib.mkOption {
+    data-dir = lib.mkOption {
       type = lib.types.str;
       default = ".stackpanel";
       description = "Directory for stackpanel config (checked in)";
@@ -62,7 +62,7 @@ in {
 
     # Direnv configuration
     direnv = {
-      hideEnvDiff = lib.mkOption {
+      hide-env-diff = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Hide the 'direnv: export +VAR...' log line (requires user's direnv.toml)";
@@ -114,9 +114,9 @@ in {
     env = {
       # Relative paths used as defaults - resolved to absolute in enterShell
       # Override these env vars when running in Docker with mounted volumes
-      STACKPANEL_STATE_DIR_REL = cfg.stateDir;
-      STACKPANEL_GEN_DIR_REL = cfg.genDir;
-      STACKPANEL_DATA_DIR_REL = cfg.dataDir;
+      STACKPANEL_STATE_DIR_REL = cfg.state-dir;
+      STACKPANEL_GEN_DIR_REL = cfg.gen-dir;
+      STACKPANEL_DATA_DIR_REL = cfg.data-dir;
     };
 
     # Ensure state directory is gitignored
@@ -126,9 +126,9 @@ in {
         # Set absolute paths for stackpanel directories
         # These can be pre-set to override (e.g., in Docker with mounted volumes)
         export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$DEVENV_ROOT}"
-        export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.stateDir}}"
-        export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.genDir}}"
-        export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.dataDir}}"
+        export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.state-dir}}"
+        export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.gen-dir}}"
+        export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.data-dir}}"
 
         mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
         # Ensure state/ is gitignored (gen/ is checked in)
@@ -137,7 +137,7 @@ in {
           echo "state/" > "$_gitignore"
         fi
 
-        ${lib.optionalString cfg.direnv.hideEnvDiff ''
+        ${lib.optionalString cfg.direnv.hide-env-diff ''
           # Ensure direnv is configured to hide env diff (less noisy output)
           _direnv_config="''${XDG_CONFIG_HOME:-$HOME/.config}/direnv/direnv.toml"
           if [[ ! -f "$_direnv_config" ]] || ! grep -q "hide_env_diff" "$_direnv_config" 2>/dev/null; then

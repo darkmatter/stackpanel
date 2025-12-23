@@ -136,21 +136,21 @@
       ".sops.yaml".text = toYaml sopsYamlContent;
 
       # secrets/.gitignore - ignore local overrides
-      "${cfg.secretsDir}/.gitignore".text = secretsGitignore;
+      "${cfg.secrets-dir}/.gitignore".text = secretsGitignore;
 
       # secrets/README.md - usage instructions
-      "${cfg.secretsDir}/README.md".text = secretsReadme cfg.backend;
+      "${cfg.secrets-dir}/README.md".text = secretsReadme cfg.backend;
     }
-    // lib.optionalAttrs cfg.generatePlaceholders (
+    // lib.optionalAttrs cfg.generate-placeholders (
       # Generate placeholder files for each app/environment
       lib.foldl' (acc: appName: let
         appData = cfg.apps.${appName};
         envFiles = lib.mapAttrs' (env: _:
-          lib.nameValuePair "${cfg.secretsDir}/${appName}/${env}.yaml"
+          lib.nameValuePair "${cfg.secrets-dir}/${appName}/${env}.yaml"
           {text = secretsPlaceholder appName env;})
         (appData.environments or {});
         commonFile = {
-          "${cfg.secretsDir}/${appName}/common.yaml".text = secretsPlaceholder appName "common";
+          "${cfg.secrets-dir}/${appName}/common.yaml".text = secretsPlaceholder appName "common";
         };
       in
         acc // envFiles // commonFile) {}

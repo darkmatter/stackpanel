@@ -13,14 +13,14 @@
   # Import the IDE lib for generating configuration
   ideLib = import ../lib/integrations/ide.nix { inherit pkgs lib; };
 
-  # Base directory for VS Code files (in genDir since these are generated)
-  baseDir = "${stackpanelCfg.genDir}/ide/vscode";
+  # Base directory for VS Code files (in gen-dir since these are generated)
+  baseDir = "${stackpanelCfg.gen-dir}/ide/vscode";
 
   # Loader path as VS Code sees it (with ${workspaceFolder} variable)
   loaderPath = "\${workspaceFolder}/${baseDir}/devshell-loader.sh";
 
   # Schema paths (relative to workspace root)
-  schemasDir = "${stackpanelCfg.genDir}/schemas/secrets";
+  schemasDir = "${stackpanelCfg.gen-dir}/schemas/secrets";
 
   # YAML schema associations for intellisense
   yamlSchemas = {
@@ -37,8 +37,8 @@
 
   # Read existing settings if path is provided (IMPURE)
   existingSettings =
-    if cfg.vscode.existingSettingsPath != null && builtins.pathExists cfg.vscode.existingSettingsPath
-    then builtins.fromJSON (builtins.readFile cfg.vscode.existingSettingsPath)
+    if cfg.vscode.existing-settings-path != null && builtins.pathExists cfg.vscode.existing-settings-path
+    then builtins.fromJSON (builtins.readFile cfg.vscode.existing-settings-path)
     else {};
 
   # Generate terminal integration settings using shared lib
@@ -66,7 +66,7 @@
   # rootPath is relative from .stackpanel/gen/ide/vscode/ to repo root
   workspaceContent = ideLib.mkWorkspaceContent {
     settings = mergedSettings;
-    extraFolders = cfg.vscode.extraFolders;
+    extraFolders = cfg.vscode.extra-folders;
     extensions = ["redhat.vscode-yaml"] ++ cfg.vscode.extensions;
     rootPath = "../../../..";
   };
@@ -91,7 +91,7 @@ in {
         '';
       };
 
-      existingSettingsPath = lib.mkOption {
+      existing-settings-path = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
         description = ''
@@ -101,7 +101,7 @@ in {
         '';
       };
 
-      outputMode = lib.mkOption {
+      output-mode = lib.mkOption {
         type = lib.types.enum ["workspace" "settingsJson"];
         default = "workspace";
         description = ''
@@ -111,13 +111,13 @@ in {
         '';
       };
 
-      workspaceName = lib.mkOption {
+      workspace-name = lib.mkOption {
         type = lib.types.str;
         default = "stackpanel";
         description = "Name for the generated .code-workspace file (without extension)";
       };
 
-      extraFolders = lib.mkOption {
+      extra-folders = lib.mkOption {
         type = lib.types.listOf (lib.types.attrsOf lib.types.str);
         default = [];
         description = "Additional workspace folders to include";
@@ -138,7 +138,7 @@ in {
   config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false)) {
     # Add hints about IDE integration
     stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
-      "Open ${baseDir}/${cfg.vscode.workspaceName}.code-workspace in VS Code for integrated terminal"
+      "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
     ];
 
     # Use devenv's native files option for file generation
@@ -151,11 +151,11 @@ in {
       };
     }
     # Generate workspace file (default mode)
-    // lib.optionalAttrs (cfg.vscode.outputMode == "workspace") {
-      "${baseDir}/${cfg.vscode.workspaceName}.code-workspace".json = workspaceContent;
+    // lib.optionalAttrs (cfg.vscode.output-mode == "workspace") {
+      "${baseDir}/${cfg.vscode.workspace-name}.code-workspace".json = workspaceContent;
     }
     # Generate settings.json (explicit opt-in)
-    // lib.optionalAttrs (cfg.vscode.outputMode == "settingsJson") {
+    // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
       ".vscode/settings.json".json = mergedSettings;
     };
 

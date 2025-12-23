@@ -41,17 +41,17 @@ in {
     aws.certAuth = {
       enable = true;
       region = "us-west-2";
-      accountId = "950224716579";
-      roleName = "darkmatter-dev";
-      trustAnchorArn = "arn:aws:rolesanywhere:us-west-2:950224716579:trust-anchor/c99a9383-6be1-48ba-8e63-c3ab6b7069cb";
-      profileArn = "arn:aws:rolesanywhere:us-west-2:950224716579:profile/4e72b392-9074-4e53-8cd0-1ba50856d1ca";
+      account-id = "950224716579";
+      role-name = "darkmatter-dev";
+      trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:trust-anchor/c99a9383-6be1-48ba-8e63-c3ab6b7069cb";
+      profile-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:profile/4e72b392-9074-4e53-8cd0-1ba50856d1ca";
     };
     #
     # Step CA certificate management
     network.step = {
       enable = true;
-      caUrl = "https://ca.internal:443";
-      caFingerprint = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
+      ca-url = "https://ca.internal:443";
+      ca-fingerprint = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
     };
   };
   # devenv.debug = true;

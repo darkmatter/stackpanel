@@ -14,7 +14,7 @@
   ...
 }: let
   cfg = config.stackpanel.aws.certAuth;
-  baseStateDir = config.stackpanel.stateDir;
+  baseStateDir = config.stackpanel.state-dir;
   stateDir = "${baseStateDir}/aws";
   stepStateDir = "${baseStateDir}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
@@ -35,37 +35,37 @@ in {
       description = "AWS region";
     };
 
-    accountId = lib.mkOption {
+    account-id = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "AWS account ID";
     };
 
-    roleName = lib.mkOption {
+    role-name = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "IAM role name to assume";
     };
 
-    trustAnchorArn = lib.mkOption {
+    trust-anchor-arn = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "AWS Roles Anywhere trust anchor ARN";
     };
 
-    profileArn = lib.mkOption {
+    profile-arn = lib.mkOption {
       type = lib.types.str;
       default = "";
       description = "AWS Roles Anywhere profile ARN";
     };
 
-    cacheBufferSeconds = lib.mkOption {
+    cache-buffer-seconds = lib.mkOption {
       type = lib.types.str;
       default = "300";
       description = "Seconds before expiry to refresh cached credentials";
     };
 
-    promptOnShell = lib.mkOption {
+    prompt-on-shell = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Prompt for AWS cert-auth setup on shell entry if not configured";
@@ -77,15 +77,12 @@ in {
       # Create scripts using shared library - only evaluated when enabled
       awsScripts = awsLib.mkAwsCredScripts {
         stateDir = baseStateDir;
-        inherit
-          (cfg)
-          accountId
-          roleName
-          trustAnchorArn
-          profileArn
-          region
-          cacheBufferSeconds
-          ;
+        accountId = cfg.account-id;
+        roleName = cfg.role-name;
+        trustAnchorArn = cfg.trust-anchor-arn;
+        profileArn = cfg.profile-arn;
+        region = cfg.region;
+        cacheBufferSeconds = cfg.cache-buffer-seconds;
       };
 
       # Check if AWS cert-auth is working
@@ -169,8 +166,8 @@ in {
       • Use 'chamber' for environment variable injection
 
     Your credentials are fetched on-demand and cached temporarily.
-    Account: ${cfg.accountId}
-    Role:    ${cfg.roleName}
+    Account: ${cfg.account-id}
+    Role:    ${cfg.role-name}
     "
 
         choice=$(${pkgs.gum}/bin/gum choose \
@@ -210,7 +207,7 @@ in {
           description = "Verify AWS cert-auth status";
         }
       ];
-      stackpanel.motd.features = ["AWS Roles Anywhere (${cfg.roleName})"];
+      stackpanel.motd.features = ["AWS Roles Anywhere (${cfg.role-name})"];
 
       # Set base AWS env vars (AWS_CONFIG_FILE is set in enterShell with absolute path)
       env = awsScripts.env;
@@ -228,7 +225,7 @@ in {
             ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
         fi
 
-        ${lib.optionalString cfg.promptOnShell ''
+        ${lib.optionalString cfg.prompt-on-shell ''
           # Interactive AWS cert-auth setup
           ${interactiveSetup}/bin/aws-cert-setup-prompt
         ''}

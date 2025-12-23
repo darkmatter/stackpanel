@@ -50,12 +50,12 @@
     apps = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule {
         options = {
-          appConfig = lib.mkOption {
+          app-config = lib.mkOption {
             type = lib.types.attrs;
             default = {};
             description = "App-specific configuration (codegen settings)";
           };
-          commonSchema = lib.mkOption {
+          common-schema = lib.mkOption {
             type = lib.types.attrs;
             default = {};
             description = "Schema shared across all environments";
@@ -73,7 +73,7 @@
                   default = [];
                   description = "User names who can access this environment's secrets";
                 };
-                extraKeys = lib.mkOption {
+                extra-keys = lib.mkOption {
                   type = lib.types.listOf lib.types.str;
                   default = [];
                   description = "Additional AGE keys (CI systems, servers)";
@@ -89,19 +89,19 @@
       description = "Per-app secrets configuration (auto-discovered from .stackpanel/secrets/apps/)";
     };
 
-    secretsDir = lib.mkOption {
+    secrets-dir = lib.mkOption {
       type = lib.types.str;
       default = globalConfig.secretsDir or "secrets";
       description = "Directory for encrypted secrets files";
     };
 
-    generatePlaceholders = lib.mkOption {
+    generate-placeholders = lib.mkOption {
       type = lib.types.bool;
       default = globalConfig.generatePlaceholders or true;
       description = "Generate placeholder .yaml files for each app/environment";
     };
 
-    defaultEnvironments = lib.mkOption {
+    default-environments = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = globalConfig.defaultEnvironments or ["dev" "staging" "prod"];
       description = "Default environments for all apps";
