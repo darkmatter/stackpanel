@@ -58,7 +58,7 @@ let
     set -euo pipefail
 
     ROOT_DIR="''${DEVENV_ROOT:-$(pwd)}"
-    DOCS_DIR="''${1:-$ROOT_DIR/apps/docs/content/docs/reference}"
+    DOCS_DIR="''${1:-$ROOT_DIR/apps/docs/content/docs}"
     MODULES_DIR="$ROOT_DIR/nix/modules"
     OPTIONS_JSON="${optionsDoc.optionsJSON}/share/doc/nixos/options.json"
 
