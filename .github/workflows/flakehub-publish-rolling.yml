@@ -14,9 +14,16 @@ jobs:
         with:
           persist-credentials: false
       - uses: "DeterminateSystems/determinate-nix-action@v3"
+        with:
+          extra-conf: |
+            allow-import-from-derivation = true
       - uses: "DeterminateSystems/flakehub-push@main"
+        env:
+          # Required for devenv flakes which need impure evaluation
+          NIX_CONFIG: "accept-flake-config = true"
         with:
           name: "darkmatter/stackpanel"
           rolling: true
           visibility: "unlisted"
-          include-output-paths: true
+          # Don't evaluate outputs - devenv requires --impure which flakehub-push doesn't support
+          include-output-paths: false
