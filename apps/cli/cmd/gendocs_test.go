@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -218,13 +219,13 @@ func TestGenerateIndexMdx(t *testing.T) {
 	}
 
 	// Check category links
-	if !strings.Contains(result, "[Ports](./ports)") {
+	if !strings.Contains(result, fmt.Sprintf("[Ports](./%s/ports)", DirnameReference)) {
 		t.Error("expected ports link")
 	}
-	if !strings.Contains(result, "[Secrets](./secrets)") {
+	if !strings.Contains(result, fmt.Sprintf("[Secrets](./%s/secrets)", DirnameReference)) {
 		t.Error("expected secrets link")
 	}
-	if !strings.Contains(result, "[Apps](./apps)") {
+	if !strings.Contains(result, fmt.Sprintf("[Apps](./%s/apps)", DirnameReference)) {
 		t.Error("expected apps link")
 	}
 
