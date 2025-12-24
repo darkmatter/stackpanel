@@ -8,6 +8,7 @@
     # Required for devenv containers outputs
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
+    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
 
     # Required when enabling stackpanel.devenv.recommended.formatters
     treefmt-nix.url = "github:numtide/treefmt-nix";
