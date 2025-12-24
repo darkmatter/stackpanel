@@ -42,7 +42,7 @@ jobs:
           extra_nix_config: |
             accept-flake-config = true
             extra-substituters = https://devenv.cachix.org https://stackpanel.cachix.org
-            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= stackpanel.cachix.org-1:REPLACE_WITH_YOUR_PUBLIC_KEY
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:FM0VM+D2fvMt8R899nyKsAxkcwERzDVYaeJEZ9oKejQ=
 
       - name: Setup Cachix
         uses: cachix/cachix-action@v15
