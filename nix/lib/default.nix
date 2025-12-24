@@ -6,6 +6,7 @@
 # Usage:
 #   let stackpanelLib = import ./lib { inherit pkgs lib; };
 #   in stackpanelLib.aws.mkAwsCredScripts { ... }
+#   in stackpanelLib.ports.computeBasePort { name = "myproject"; }
 #
 {
   lib,
@@ -16,6 +17,9 @@
     yaml = pkgs.formats.yaml {};
   in
     builtins.readFile (yaml.generate "output.yml" attrs);
+
+  # Port computation utilities (pure, no pkgs needed)
+  ports = import ./core/ports.nix { inherit lib; };
 
   # AWS cert-auth utilities
   # Requires pkgs to be passed
