@@ -1,4 +1,4 @@
-{ pkgs, lib, config, ...}: 
+{ pkgs, lib, config, ...}:
 let
   # config.devenv.root is set by devenv and points to the project root
   # Fall back to "." if not available (shouldn't happen in practice)
@@ -14,4 +14,8 @@ in {
     cwd = "${root}/apps/docs";
   };
   profiles.docs.module = {};
+  enterShell = ''
+    echo "📚 Starting docs development server..."
+
+  '';
 }

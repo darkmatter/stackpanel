@@ -66,6 +66,9 @@
   "nix.formatterPath": "nixfmt",
   "nix.serverSettings": {
     "nixd": {
+      "formatting": {
+        "command": ["nixfmt"]
+      },
       "options": {
         "stackpanel": {
           "expr": "let  system = builtins.currentSystem; pkgs = import <nixpkgs> { inherit system; }; lib = pkgs.lib; in (lib.evalModules { modules = [ ./nix/modules/secrets/default.nix { _module.args = { inherit pkgs lib; }; } ]; }).options"
