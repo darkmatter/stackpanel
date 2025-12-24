@@ -147,6 +147,7 @@
           # via `nix develop` or `devenv shell`.
         };
 
+      } // (if builtins.getEnv "SKIP_DEVENV" != "true" then {
         # Local development shell - uses the same pattern users would
         devenv.shells.default = sharedDevenvConfig;
 
@@ -155,7 +156,7 @@
           # Explicitly disable containers to avoid evaluating Linux-only packages
           containers = lib.mkForce {};
         };
-      };
+      } else {});
 
       # =============================================================
       # EXPORTS (for users)
