@@ -1,0 +1,15 @@
+---
+title: "CLI-based file generation for stackpanel"
+description: This module builds the complete configuration and calls the Go CLI
+---
+
+This module builds the complete configuration and calls the Go CLI
+to generate all files in a single atomic operation. This ensures
+that generated files and state.json are always in sync.
+
+Generated files (by CLI):
+```nix
+- .stackpanel/state/stackpanel.json (runtime state)
+- .stackpanel/gen/ide/vscode/* (VS Code workspace, loader script)
+- .stackpanel/gen/schemas/secrets/* (JSON schemas from Nix definitions)
+```

@@ -33,11 +33,15 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }: let
   cfg = config.stackpanel.globalServices;
   portsCfg = config.stackpanel.ports;
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   coreGlobalServices = import ../lib/core/global-services.nix {inherit pkgs lib;};
 
@@ -157,10 +161,10 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable ({
     # Ensure ports module uses the same project name
     stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
-
+  } // lib.optionalAttrs isDevenv {
     # Add all service packages (CLI binaries like psql, redis-cli, etc.)
     packages = gs.packages;
 
@@ -169,5 +173,5 @@ in {
 
     # Set shell hooks for each enabled service
     enterShell = lib.mkAfter gs.enterShell;
-  };
+  });
 }

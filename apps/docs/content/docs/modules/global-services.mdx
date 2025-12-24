@@ -1,0 +1,48 @@
+---
+title: Global Development Services Module for devenv
+description: "This module provides project-local services (with global Caddy)."
+---
+
+This module provides project-local services (with global Caddy).
+Each project can enable services and they will:
+1. Provide the required packages
+2. Set environment variables for connectivity
+3. Use deterministic ports based on project name
+
+All lifecycle management (start/stop/status) is handled by the stackpanel CLI:
+```nix
+stackpanel services start/stop/status
+```
+
+
+Port Assignment:
+```nix
+Ports are computed from project name using stackpanel.ports.
+By default, services use:
+  PostgreSQL: basePort + 0
+  Redis: basePort + 1
+  Minio: basePort + 2, console: basePort + 3
+```
+
+
+Usage in devenv.nix:
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  projectName = "stackpanel";
+```
+
+
+```nix
+  postgres = {
+    enable = true;
+    databases = ["stackpanel" "stackpanel_test"];
+  };
+```
+
+
+```nix
+  redis.enable = true;
+  minio.enable = true;
+};
+```

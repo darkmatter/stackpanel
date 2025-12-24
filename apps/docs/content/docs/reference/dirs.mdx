@@ -1,0 +1,74 @@
+---
+title: Dirs Options
+description: Configuration options for stackpanel.dirs
+---
+
+# Dirs Options
+
+## `dirs`
+
+Directories used by stackpanel.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `dirs.config`
+
+Directory for stackpanel configuration files.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `absolute path` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+/nix/store/d5prmxp1952wa84k1p1cicx280hhjpb3-source/nix/infra/stackpanel
+```
+
+
+---
+
+## `dirs.gen`
+
+Generated files directory path (relative to project root).
+Computed from dirs.home. This directory is checked in and contains
+generated files (IDE configs, schemas, etc.).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel/gen"` |
+
+---
+
+## `dirs.home`
+
+Root directory for runtime files (relative to project root).
+Contains state/ (gitignored) and gen/ (checked in) subdirectories.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel"` |
+
+---
+
+## `dirs.state`
+
+State directory path (relative to project root).
+Computed from dirs.home. This directory is gitignored and contains
+runtime state files that shouldn't be committed.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel/state"` |
+
+---
+

@@ -1,0 +1,10 @@
+---
+title: Legacy module entry point
+description: Historically, consumers referenced `stackpanel/nix/modules/devenv.nix`.
+---
+
+Historically, consumers referenced `stackpanel/nix/modules/devenv.nix`.
+The clearer path is now the directory import:
+- devenv.yaml: `imports: - stackpanel/nix/modules/devenv`
+
+This file remains as a small compatibility shim.

@@ -11,11 +11,17 @@
   pkgs,
   lib,
   config,
+  options,
   ...
 }: let
   cfg = config.stackpanel.network.step;
-  stateDir = "${config.stackpanel.state-dir}/step";
+  # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
+  dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
+  stateDir = "${dirs.state}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Import shared network library
   networkLib = import ../lib/network.nix {inherit pkgs lib;};
@@ -51,6 +57,12 @@ in {
       type = lib.types.bool;
       default = true;
       description = "Prompt for certificate setup on shell entry if not configured";
+    };
+
+    enterShell = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Scripts to run when entering the shell (internal)";
     };
   };
 
@@ -122,7 +134,7 @@ in {
             ;;
         esac
       '';
-    in {
+    in lib.optionalAttrs isDevenv {
       packages = stepScripts.allPackages ++ [pkgs.gum interactiveSetup];
 
       stackpanel.motd.commands = [
@@ -137,7 +149,7 @@ in {
       ];
       stackpanel.motd.features = ["Step CA certificates (${cfg.ca-url})"];
 
-      enterShell = lib.mkIf cfg.prompt-on-shell ''
+      stackpanel.network.step.enterShell = lib.mkIf cfg.prompt-on-shell ''
         # Interactive Step CA cert setup
         ${interactiveSetup}/bin/step-cert-setup-prompt
       '';
