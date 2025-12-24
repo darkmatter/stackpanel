@@ -52,12 +52,17 @@ jobs:
             accept-flake-config = true
             extra-substituters = https://devenv.cachix.org https://darkmatter.cachix.org
             extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA=
+      - name: Pre-install cachix for Determinate Nix (Darwin)
+        if: matrix.system == 'aarch64-darwin'
+        run: nix profile install nixpkgs#cachix
       - name: Setup Cachix
-        uses: cachix/cachix-action@v15
+        uses: cachix/cachix-action@v16
         with:
           name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: devenv
+          # On Darwin, use pre-installed cachix (via nix profile); on Linux use default install
+          installCommand: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
       - name: Install omnix
         run: nix --accept-flake-config profile install github:juspay/omnix
       - name: Run om ci
@@ -65,4 +70,3 @@ jobs:
           # Skip devenv on Darwin to avoid container outputs that require Linux-only packages (shadow)
           SKIP_DEVENV: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
         run: om ci run --systems "${{ matrix.system }}" ".#default.${{ matrix.subflake }}" -- --impure
-
