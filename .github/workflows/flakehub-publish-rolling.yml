@@ -19,7 +19,8 @@ jobs:
             allow-import-from-derivation = true
       - uses: "DeterminateSystems/flakehub-push@main"
         env:
-          # Required for devenv flakes which need impure evaluation
+          # Skip devenv since FlakeHub uses pure evaluation
+          SKIP_DEVENV: "true"
           NIX_CONFIG: "accept-flake-config = true"
         with:
           name: "darkmatter/stackpanel"
