@@ -1,7 +1,11 @@
 ci:
   default:
-    stackpanel:
+    # Linux builds - can evaluate all outputs including containers
+    stackpanel-linux:
       dir: .
+      systems:
+        - x86_64-linux
+        - aarch64-linux
       steps:
         build:
           enable: true
@@ -9,6 +13,26 @@ ci:
           enable: true
         flake-check:
           enable: true
+    # Darwin builds - use ci-darwin shell which excludes container outputs
+    stackpanel-darwin:
+      dir: .
+      systems:
+        - x86_64-darwin
+        - aarch64-darwin
+      overrideInputs:
+        # Use the ci-darwin devenv shell instead of default
+        devenv-shell: ci-darwin
+      steps:
+        build:
+          enable: true
+          # Only build packages that work on Darwin (exclude devenv shell outputs)
+          include:
+            - "packages.*"
+            - "devShells.*.ci-darwin"
+        lockfile:
+          enable: true
+        flake-check:
+          enable: false  # Flake check evaluates all outputs
 health:
   default:
     caches:

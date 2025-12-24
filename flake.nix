@@ -72,25 +72,9 @@
         lib,
         system,
         ...
-      }: {
-        _module.args.pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ inputs.gomod2nix.overlays.default ];
-        };
-        # Packages we build
-        packages = {
-          # CLI package export
-          stackpanel-cli = pkgs.callPackage ./nix/packages/stackpanel-cli {};
-
-          default = pkgs.hello; # placeholder
-
-          # Note: We don't merge devenv outputs here since they include container outputs
-          # that require Linux-only packages (shadow). The devenv shell is still accessible
-          # via `nix develop` or `devenv shell`.
-        };
-
-        # Local development shell - uses the same pattern users would
-        devenv.shells.default = {
+      }: let
+        # Shared devenv configuration used by multiple shells
+        sharedDevenvConfig = {
           # Import our own devenv modules (dogfooding!)
           imports = [
             self.devenvModules.default
@@ -145,6 +129,31 @@
             # Authenticate AWS certs on shell entry
             eval "$(aws-creds-env)" || true
           '';
+        };
+      in {
+        _module.args.pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ inputs.gomod2nix.overlays.default ];
+        };
+        # Packages we build
+        packages = {
+          # CLI package export
+          stackpanel-cli = pkgs.callPackage ./nix/packages/stackpanel-cli {};
+
+          default = pkgs.hello; # placeholder
+
+          # Note: We don't merge devenv outputs here since they include container outputs
+          # that require Linux-only packages (shadow). The devenv shell is still accessible
+          # via `nix develop` or `devenv shell`.
+        };
+
+        # Local development shell - uses the same pattern users would
+        devenv.shells.default = sharedDevenvConfig;
+
+        # CI shell for Darwin - excludes container outputs that require Linux-only packages
+        devenv.shells.ci-darwin = sharedDevenvConfig // {
+          # Explicitly disable containers to avoid evaluating Linux-only packages
+          containers = lib.mkForce {};
         };
       };
 

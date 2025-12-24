@@ -34,11 +34,6 @@ in {
         treefmt.config.programs.ruff-check.enable = lib.mkIf config.languages.python.enable true;
         treefmt.config.programs.mdformat.enable = true;
         treefmt.config.programs.mdformat.settings.number = true;
-        treefmt.config.settings.formatter.biome = lib.mkIf config.languages.python.enable {
-          command = "${config.git.root}/node_modules/.bin/biome";
-          options = ["check" "--fix"];
-          includes = ["*.js" "*.ts" "*.jsx" "*.tsx" "*.json" "*.jsonc"];
-        };
         treefmt.config.settings.formatter.shellcheck.options = ["-C" "auto"];
     })
 

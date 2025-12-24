@@ -39,51 +39,37 @@
   cfg = config.stackpanel.globalServices;
   portsCfg = config.stackpanel.ports;
 
-  # Import the modular services library
-  servicesLib = import ../lib/services {inherit pkgs lib;};
+  coreGlobalServices = import ../lib/core/global-services.nix {inherit pkgs lib;};
 
-  # Helper to get port from service config or fall back to computed port
-  getServicePort = key: explicitPort:
-    if explicitPort != null
-    then explicitPort
-    else if portsCfg.service ? ${key}
-    then portsCfg.service.${key}.port
-    else throw "Service port '${key}' not found. Add it to stackpanel.ports.services list.";
-
-  # Use computed ports from the ports module, or fall back to explicit overrides
-  postgresPort = getServicePort "POSTGRES" cfg.postgres.port;
-  redisPort = getServicePort "REDIS" cfg.redis.port;
-  minioPort = getServicePort "MINIO" cfg.minio.port;
-  minioConsolePort = getServicePort "MINIO_CONSOLE" cfg.minio.console-port;
-
-  # Create service instances if enabled
-  postgres = lib.optionalAttrs cfg.postgres.enable (servicesLib.mkGlobalPostgres {
+  gs = coreGlobalServices.mkGlobalServices {
     projectName = cfg.project-name;
-    databases = cfg.postgres.databases;
-    port = postgresPort;
-    package = cfg.postgres.package;
-  });
-
-  redis = lib.optionalAttrs cfg.redis.enable (servicesLib.mkGlobalRedis {
-    projectName = cfg.project-name;
-    port = redisPort;
-    package = cfg.redis.package;
-  });
-
-  minio = lib.optionalAttrs cfg.minio.enable (servicesLib.mkGlobalMinio {
-    projectName = cfg.project-name;
-    port = minioPort;
-    consolePort = minioConsolePort;
-    package = cfg.minio.package;
-  });
-
-  # Get caddy scripts if caddy module is enabled
-  caddyLib = import ../lib/caddy.nix {inherit pkgs lib;};
-  caddyScripts = lib.optionalAttrs cfg.caddy.enable (caddyLib.mkCaddyScripts {
-    stepEnabled = config.stackpanel.network.step.enable or false;
-    stepCaUrl = config.stackpanel.network.step.ca-url or "";
-    stepCaFingerprint = config.stackpanel.network.step.ca-fingerprint or "";
-  });
+    ports = portsCfg.service or {};
+    postgres = {
+      enable = cfg.postgres.enable;
+      databases = cfg.postgres.databases;
+      port = cfg.postgres.port;
+      package = cfg.postgres.package;
+    };
+    redis = {
+      enable = cfg.redis.enable;
+      port = cfg.redis.port;
+      package = cfg.redis.package;
+    };
+    minio = {
+      enable = cfg.minio.enable;
+      port = cfg.minio.port;
+      consolePort = cfg.minio."console-port";
+      package = cfg.minio.package;
+    };
+    caddy = {
+      enable = cfg.caddy.enable;
+      sites = cfg.caddy.sites;
+      stepEnabled = config.stackpanel.network.step.enable or false;
+      stepCaUrl = config.stackpanel.network.step."ca-url" or "";
+      stepCaFingerprint = config.stackpanel.network.step."ca-fingerprint" or "";
+      projectName = cfg.project-name;
+    };
+  };
 in {
   options.stackpanel.globalServices = {
     enable = lib.mkEnableOption "Global singleton development services";
@@ -176,50 +162,12 @@ in {
     stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
 
     # Add all service packages (CLI binaries like psql, redis-cli, etc.)
-    packages =
-      (lib.optionals cfg.postgres.enable postgres.allPackages)
-      ++ (lib.optionals cfg.redis.enable redis.allPackages)
-      ++ (lib.optionals cfg.minio.enable minio.allPackages)
-      ++ (lib.optionals cfg.caddy.enable caddyScripts.allPackages);
+    packages = gs.packages;
 
     # Set environment variables using computed ports
-    env = lib.mkMerge [
-      (lib.optionalAttrs cfg.postgres.enable {
-        PGHOST = "$HOME/.local/share/devservices/postgres/socket";
-        PGPORT = toString postgresPort;
-        DATABASE_URL = "postgresql://localhost:${toString postgresPort}/${lib.head cfg.postgres.databases}";
-      })
-      (lib.optionalAttrs cfg.redis.enable {
-        REDIS_URL = "redis://localhost:${toString redisPort}";
-      })
-      (lib.optionalAttrs cfg.minio.enable {
-        # NOTE: Do NOT set AWS_ENDPOINT_URL_S3 globally - it breaks AWS IAM auth.
-        # Use MINIO_ENDPOINT or S3_ENDPOINT for apps that need Minio.
-        MINIO_ENDPOINT = "http://localhost:${toString minioPort}";
-        S3_ENDPOINT = "http://localhost:${toString minioPort}";
-        MINIO_ROOT_USER = "minioadmin";
-        MINIO_ROOT_PASSWORD = "minioadmin";
-      })
-    ];
+    env = gs.env;
 
     # Set shell hooks for each enabled service
-    enterShell = lib.concatStringsSep "\n" (
-      # PostgreSQL shell hook
-      (lib.optional cfg.postgres.enable postgres.shellHook)
-      ++
-      # Redis shell hook
-      (lib.optional cfg.redis.enable redis.shellHook)
-      ++
-      # Minio shell hook
-      (lib.optional cfg.minio.enable minio.shellHook)
-      ++
-      # Register caddy sites
-      (lib.optional (cfg.caddy.enable && cfg.caddy.sites != {}) ''
-        # Register this project's Caddy sites
-        ${lib.concatMapStringsSep "\n" (site: ''
-          ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${site}" "${cfg.caddy.sites.${site}}" --project "${cfg.project-name}" 2>/dev/null || true
-        '') (lib.attrNames cfg.caddy.sites)}
-      '')
-    );
+    enterShell = lib.mkAfter gs.enterShell;
   };
 }

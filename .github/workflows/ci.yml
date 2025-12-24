@@ -32,11 +32,9 @@ jobs:
       - id: set-matrix
         run: |
           set -euxo pipefail
-          # Only run on Linux for now - Darwin fails due to devenv container outputs
-          # evaluating Linux-only packages (shadow). This can be fixed by either:
-          # 1. Configuring devenv to not generate container outputs
-          # 2. Using a separate CI config for Darwin that skips devenv
-          MATRIX="$(om ci gh-matrix --systems=x86_64-linux -- --impure | jq -c .)"
+          # om.yaml configures separate subflakes for Linux (stackpanel-linux) and Darwin (stackpanel-darwin)
+          # Darwin uses the ci-darwin devenv shell which excludes container outputs
+          MATRIX="$(om ci gh-matrix --systems=x86_64-linux,aarch64-darwin -- --impure | jq -c .)"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   nix:
