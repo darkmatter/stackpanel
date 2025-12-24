@@ -5,22 +5,28 @@
   pkgs,
   lib,
   config,
+  options,
   ...
 }: let
   cfg = config.stackpanel.ide;
   stackpanelCfg = config.stackpanel;
+  # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
+  dirs = stackpanelCfg.dirs or { gen = ".stackpanel/gen"; };
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Import the IDE lib for generating configuration
   ideLib = import ../lib/integrations/ide.nix { inherit pkgs lib; };
 
   # Base directory for VS Code files (in gen-dir since these are generated)
-  baseDir = "${stackpanelCfg.gen-dir}/ide/vscode";
+  baseDir = "${dirs.gen}/ide/vscode";
 
   # Loader path as VS Code sees it (with ${workspaceFolder} variable)
   loaderPath = "\${workspaceFolder}/${baseDir}/devshell-loader.sh";
 
   # Schema paths (relative to workspace root)
-  schemasDir = "${stackpanelCfg.gen-dir}/schemas/secrets";
+  schemasDir = "${dirs.gen}/schemas/secrets";
 
   # YAML schema associations for intellisense
   yamlSchemas = {
@@ -135,11 +141,17 @@ in {
     cursor.enable = lib.mkEnableOption "Cursor editor integration (not yet implemented)";
   };
 
-  config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false)) {
+  config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false)) (lib.optionalAttrs isDevenv {
     # Add hints about IDE integration
     stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
       "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
     ];
+
+    # Warn about unimplemented editors
+    warnings = lib.optional cfg.zed.enable
+      "stackpanel.ide.zed.enable is set but Zed integration is not yet implemented"
+      ++ lib.optional cfg.cursor.enable
+      "stackpanel.ide.cursor.enable is set but Cursor integration is not yet implemented";
 
     # Use devenv's native files option for file generation
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
@@ -158,11 +170,5 @@ in {
     // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
       ".vscode/settings.json".json = mergedSettings;
     };
-
-    # Warn about unimplemented editors
-    warnings = lib.optional cfg.zed.enable
-      "stackpanel.ide.zed.enable is set but Zed integration is not yet implemented"
-      ++ lib.optional cfg.cursor.enable
-      "stackpanel.ide.cursor.enable is set but Cursor integration is not yet implemented";
-  };
+  });
 }

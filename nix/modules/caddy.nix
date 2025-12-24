@@ -25,10 +25,14 @@
   pkgs,
   lib,
   config,
+  options,
   ...
 }: let
   cfg = config.stackpanel.caddy;
   stepCfg = config.stackpanel.network.step or {enable = false;};
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Import shared caddy library
   caddyLib = import ../lib/caddy.nix {inherit pkgs lib;};
@@ -102,7 +106,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
     packages =
       caddyScripts.allPackages
       ++ [
@@ -116,5 +120,5 @@ in {
         ${caddyScripts.caddyStart}/bin/caddy-start
       fi
     '';
-  };
+  });
 }

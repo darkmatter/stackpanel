@@ -4,15 +4,59 @@ Nix flake providing composable modules for full-stack project management.
 
 ## Architecture
 
+Stackpanel uses a **shared core + thin adapters** pattern:
+
 ```
-Agent (Go)                    Nix Modules                    Generated Files
-    │                              │                              │
-    │  writes                      │  transforms                  │
-    ▼                              ▼                              ▼
-.stackpanel/               stackpanel.files.*           .github/workflows/
-├── team.nix          ───►  (accumulator)         ───►  secrets/secrets.nix
-├── config.nix                                          Dockerfile
-└── ...                                                 etc.
+nix/
+├── lib/                      # Pure library functions
+│   ├── core/                 # Pure logic (ports, services)
+│   │   ├── ports.nix         # Deterministic port computation
+│   │   └── global-services.nix # Service orchestration
+│   ├── options.nix           # Central option schema
+│   ├── devshell.nix          # mkDevShell - THE core function
+│   ├── services/             # Per-service helpers (postgres, redis, minio)
+│   └── integrations/         # IDE scripts (vscode, starship)
+│
+├── config/                   # User configuration
+│   └── project.nix           # Single source of truth for project settings
+│
+├── modules/
+│   ├── devenv/               # Thin devenv adapter
+│   │   ├── devenv.nix        # Entry point (full modules)
+│   │   └── adapter.nix       # Unified adapter using mkDevShell
+│   └── flake/                # Thin flake adapter
+│       └── adapter.nix       # For `nix develop`
+│
+└── stackpanel.nix            # Main devenv module (imports all sub-modules)
+```
+
+### Two Entry Points, Same Result
+
+Both `nix develop` and `devenv shell` use the same core `mkDevShell` function:
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│  nix develop    │     │  devenv shell   │
+│  (flake.nix)    │     │  (devenv.nix)   │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│ modules/flake/  │     │ modules/devenv/ │
+│ adapter.nix     │     │ adapter.nix     │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         └───────────┬───────────┘
+                     ▼
+           ┌─────────────────┐
+           │ lib/devshell.nix│
+           │   mkDevShell()  │
+           └────────┬────────┘
+                    ▼
+           ┌─────────────────┐
+           │ config/project.nix │
+           │ (user settings) │
+           └─────────────────┘
 ```
 
 ## Installation

@@ -25,6 +25,8 @@
     ca-fingerprint = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
   };
 
+
+
   # MOTD content
   stackpanel.motd.commands = [
     { name = "stackpanel status"; description = "Show all service status"; }

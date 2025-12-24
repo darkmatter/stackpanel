@@ -25,9 +25,13 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }: let
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
+
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
@@ -159,7 +163,7 @@ in {
     description = "Computed app configurations with ports and URLs";
   };
 
-  config = lib.mkIf (rawApps != {}) {
+  config = lib.mkIf (rawApps != {}) (lib.optionalAttrs isDevenv {
     # Expose ports as environment variables
     env = appEnvVars // appUrlEnvVars;
 
@@ -179,5 +183,5 @@ in {
         description = lib.concatMapStringsSep ", " (name: "${name}=${computedApps.${name}.domain}") appsWithVhosts;
       }
     ];
-  };
+  });
 }

@@ -28,11 +28,6 @@
     cacheBufferSeconds ? "300",
   }: let
     # Derived paths (defaults, can be overridden via STACKPANEL_STATE_DIR at runtime)
-    awsCacheDir = "${stateDir}/aws";
-    stepStateDir = "${stateDir}/step";
-    # Step CA stores certs directly in step/, not in subdirectories
-    certPath = "${stepStateDir}/device-root.chain.crt";
-    keyPath = "${stepStateDir}/device.key";
 
     # Helper to resolve state directory at runtime
     getAwsStateDir = ''

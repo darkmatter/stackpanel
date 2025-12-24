@@ -19,10 +19,14 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }: let
   cfg = config.stackpanel.ports;
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Import shared port computation library
   portsLib = import ../lib/core/ports.nix { inherit lib; };
@@ -141,7 +145,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
     # Expose computed ports as environment variables
     env =
       {
@@ -178,5 +182,5 @@ in {
         echo ""
       fi
     '';
-  };
+  });
 }

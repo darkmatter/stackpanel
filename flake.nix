@@ -16,6 +16,8 @@
 
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
+    stackpanel-root.url = "file+file:///dev/null";
+    stackpanel-root.flake = false;
   };
 
   outputs = inputs @ {
@@ -30,6 +32,12 @@
       ...
     }: let
       inherit (flake-parts-lib) importApply;
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
       # =============================================================
       # FLAKE MODULES (for users to import)
@@ -41,6 +49,38 @@
         localFlake = self;
         inherit withSystem;
       };
+
+      # Helper module for pure flake evaluation (like `nix flake check`)
+      # Users add this to their imports and provide a stackpanel-root input:
+      #
+      #   inputs.stackpanel-root = {
+      #     url = "file+file:///dev/null";
+      #     flake = false;
+      #   };
+      #
+      # Then their .envrc writes the actual path:
+      #   echo "$PWD" > .stackpanel-root
+      #
+      flakeModules.readStackpanelRoot = {
+        inputs,
+        lib,
+        ...
+      }: {
+        config = let
+          rootContent =
+            if inputs ? stackpanel-root
+            then builtins.readFile inputs.stackpanel-root.outPath
+            else "";
+        in
+          lib.mkIf (rootContent != "") {
+            # Set the stackpanel root for all devenv shells
+            perSystem = {lib, ...}: {
+              devenv.shells = lib.mkDefault {
+                default.stackpanel.root = lib.strings.trim rootContent;
+              };
+            };
+          };
+      };
     in {
       # =============================================================
       # LOCAL DEVELOPMENT (dogfooding)
@@ -51,20 +91,14 @@
       # Run with: nix develop --no-pure-eval
       # =============================================================
       imports = [
+        flakeModules.readStackpanelRoot
         flakeModules.default # Dogfood our own module!
       ] ++ nixpkgs.lib.optionals (builtins.getEnv "SKIP_DEVENV" != "true") [
         # Import devenv unless explicitly skipped (e.g., for FlakeHub which doesn't support --impure)
         # Set SKIP_DEVENV=true to disable devenv for pure evaluation contexts
         inputs.devenv.flakeModule
       ];
-
-      # Only support systems that all our dependencies (nix2container, etc.) support
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
+      systems = supportedSystems;
 
       perSystem = {
         config,
@@ -94,6 +128,8 @@
             go
             jq
             git
+            nixd
+            nixfmt
           ];
 
           # Languages
@@ -167,6 +203,53 @@
         # Flake-parts modules (for flake-parts users)
         # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
         inherit flakeModules;
+
+        # Expose evaluated option trees to provide support for language servers
+        # Usage (vscode settings.json):
+        #   (builtins.getFlake (toString ./.)).stackpanelOptions.${builtins.currentSystem}.secrets
+        stackpanelOptions = nixpkgs.lib.genAttrs supportedSystems (system:
+          withSystem system ({ pkgs, ...}:
+            let
+              lib = pkgs.lib;
+              mkOptions = modules:
+                (lib.evalModules {
+                  modules = modules ++ [
+                    {
+                      _module.args = { inherit pkgs lib; };
+                    }
+                  ];
+                }).options;
+            in {
+              secrets = mkOptions [
+                ./nix/modules/secrets/default.nix
+                {
+                  stackpanel.secrets.enable = true;
+                }
+              ];
+              aws = mkOptions [
+                ./nix/modules/aws.nix
+                {
+                  stackpanel.aws.certAuth.enable = true;
+                }
+              ];
+              # network = mkOptions [
+              #   ./nix/modules/network.nix
+              #   {
+              #     stackpanel.network.enable = true;
+              #   }
+              # ]
+              all = mkOptions [
+                ./nix/modules/secrets/default.nix
+                ./nix/modules/network.nix
+                {
+                  stackpanel = {
+                    enable = true;
+                  };
+                }
+              ];
+            }
+          )
+        );
 
         # Standalone NixOS/nix modules (for NixOS users)
         # Usage: imports = [ inputs.stackpanel.nixosModules.default ];

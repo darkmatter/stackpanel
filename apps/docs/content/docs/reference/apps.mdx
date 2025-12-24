@@ -5,7 +5,7 @@ description: Configuration options for stackpanel.apps
 
 # Apps Options
 
-## `stackpanel.apps`
+## `apps`
 
 Apps to assign ports and optionally create Caddy vhosts for.
 Each app gets a port starting at basePort + 10.
@@ -14,7 +14,6 @@ Each app gets a port starting at basePort + 10.
 |----------|-------|
 | **Type** | `attribute set of (submodule)` |
 | **Default** | `{ }` |
-
 
 **Example:**
 
@@ -30,7 +29,7 @@ Each app gets a port starting at basePort + 10.
 
 ---
 
-## `stackpanel.apps.<name>.domain`
+## `apps.<name>.domain`
 
 Domain prefix for .localhost vhost.
 If set, a Caddy vhost will be created at .localhost
@@ -40,7 +39,6 @@ If set, a Caddy vhost will be created at .localhost
 | **Type** | `null or string` |
 | **Default** | `null` |
 
-
 **Example:**
 
 `"api"`
@@ -48,7 +46,7 @@ If set, a Caddy vhost will be created at .localhost
 
 ---
 
-## `stackpanel.apps.<name>.offset`
+## `apps.<name>.offset`
 
 Port offset from base port.
 If null, offset is determined by position in apps attrset.
@@ -58,7 +56,6 @@ If null, offset is determined by position in apps attrset.
 | **Type** | `null or signed integer` |
 | **Default** | `null` |
 
-
 **Example:**
 
 `5`
@@ -66,7 +63,7 @@ If null, offset is determined by position in apps attrset.
 
 ---
 
-## `stackpanel.apps.<name>.tls`
+## `apps.<name>.tls`
 
 Enable TLS for the vhost (requires Step CA)
 
@@ -74,7 +71,6 @@ Enable TLS for the vhost (requires Step CA)
 |----------|-------|
 | **Type** | `boolean` |
 | **Default** | `false` |
-
 
 ---
 

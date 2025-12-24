@@ -1,7 +1,7 @@
-# Global Development Services for `nix develop`
+# mkDevShell - Development Shell Builder for `nix develop`
 #
-# This library provides the same global singleton services as the devenv module,
-# but compatible with standard `nix develop` (flake devShells / mkShell).
+# Creates shell attributes for mkShell, providing the same global services
+# available in devenv but for standard flake-based development.
 #
 # Usage in flake.nix:
 #
@@ -13,91 +13,54 @@
 #       let
 #         system = "x86_64-linux";
 #         pkgs = nixpkgs.legacyPackages.${system};
-#         devServices = stackpanel.lib.mkDevShell pkgs {
+#         devShell = stackpanel.lib.mkDevShell pkgs {
 #           projectName = "myproject";
-#           postgres = {
-#             enable = true;
-#             databases = ["myapp" "myapp_test"];
-#           };
-#           redis.enable = true;
-#           minio.enable = true;
-#           caddy.enable = true;
+#           postgres.enable = true;
 #         };
 #       in {
-#         devShells.${system}.default = pkgs.mkShell (devServices // {
-#           # Add your own packages
-#           packages = devServices.packages ++ [ pkgs.nodejs ];
-#         });
+#         devShells.${system}.default = devShell.shell;
 #       };
 #   }
-#
-# Or merge with an existing mkShell:
-#
-#   devShells.default = pkgs.mkShell {
-#     packages = [ pkgs.nodejs ] ++ devServices.packages;
-#     shellHook = ''
-#       ${devServices.shellHook}
-#       echo "My custom setup"
-#     '';
-#   } // { inherit (devServices) env; };
 #
 {
   pkgs,
   lib ? pkgs.lib,
 }: let
-  # Shared core implementation for global services (used by both devenv and mkShell)
-  globalServices = import ./core/global-services.nix {inherit pkgs lib;};
-
-  # Port computation utilities
+  # Import shared libraries
   portsLib = import ./core/ports.nix { inherit lib; };
+  globalServices = import ./core/global-services.nix { inherit pkgs lib; };
 
-  # Default configuration - services can be added by including them here
+  # Default configuration
   defaultConfig = {
     projectName = "default";
+    stateDir = ".stackpanel/state";
+    genDir = ".stackpanel/gen";
+    dataDir = ".stackpanel";
     ports = {};
-
-    # Each service follows the pattern:
-    # serviceName = {
-    #   enable = false;
-    #   ...options specific to that service
-    # };
-    postgres = {
-      enable = false;
-      databases = null; # Will default to [projectName] if null
-      port = 5432;
-      package = pkgs.postgresql_17;
-    };
-
-    redis = {
-      enable = false;
-      port = 6379;
-      package = pkgs.redis;
-    };
-
-    minio = {
-      enable = false;
-      port = 9000;
-      consolePort = 9001;
-      package = pkgs.minio;
-    };
-
-    caddy = {
-      enable = false;
-      sites = {};
-      # Step CA integration (optional)
-      stepEnabled = false;
-      stepCaUrl = "";
-      stepCaFingerprint = "";
-    };
+    postgres = { enable = false; databases = null; port = null; };
+    redis = { enable = false; port = null; };
+    minio = { enable = false; port = null; consolePort = null; };
+    caddy = { enable = false; sites = {}; };
   };
 
   # Deep merge helper
   mergeConfig = defaults: user:
     lib.recursiveUpdate defaults user;
+
 in {
   # Main entry point: creates shell attributes for mkShell
   mkDevShell = userConfig: let
     cfg = mergeConfig defaultConfig userConfig;
+
+    # Compute ports
+    basePort = portsLib.computeBasePort {
+      name = cfg.projectName;
+      minPort = cfg.ports.minPort or portsLib.defaults.minPort;
+      portRange = cfg.ports.portRange or portsLib.defaults.portRange;
+      modulus = cfg.ports.modulus or portsLib.defaults.modulus;
+    };
+
+    # Build global services
     gs = globalServices.mkGlobalServices {
       projectName = cfg.projectName;
       ports = cfg.ports;
@@ -106,11 +69,49 @@ in {
       minio = cfg.minio;
       caddy = cfg.caddy;
     };
+
+    # Shell hook for directory setup
+    dirSetupHook = ''
+      # Stackpanel shell initialization
+      export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$PWD}"
+      export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.stateDir}}"
+      export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.genDir}}"
+      export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.dataDir}}"
+      mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
+
+      export STACKPANEL_BASE_PORT="${toString basePort}"
+      export STACKPANEL_PROJECT_NAME="${cfg.projectName}"
+    '';
+
+    allShellHook = dirSetupHook + "\n" + gs.shellHook;
+
+    allEnv = gs.env // {
+      STACKPANEL_BASE_PORT = toString basePort;
+      STACKPANEL_PROJECT_NAME = cfg.projectName;
+    };
+
   in {
-    inherit (gs) packages shellHook env services shell;
+    packages = gs.packages;
+    shellHook = allShellHook;
+    env = allEnv;
+    services = gs.services;
+
+    # Computed values
+    computed = {
+      inherit basePort;
+      inherit (cfg) projectName;
+    };
+
+    # Ready-to-use mkShell
+    shell = pkgs.mkShell ({
+      packages = gs.packages;
+      shellHook = allShellHook;
+    } // allEnv);
+
+    # For compatibility
+    enterShell = allShellHook;
   };
 
-  # Expose port computation utilities for mkShell users
-  # Usage: stackpanelLib.ports.computeBasePort { name = "myproject"; }
+  # Expose port computation utilities
   ports = portsLib;
 }

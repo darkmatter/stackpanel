@@ -5,7 +5,7 @@ description: Configuration options for stackpanel.caddy
 
 # Caddy Options
 
-## `stackpanel.caddy.autoStart`
+## `caddy.auto-start`
 
 Automatically start Caddy when entering the shell
 
@@ -14,10 +14,9 @@ Automatically start Caddy when entering the shell
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 ---
 
-## `stackpanel.caddy.enable`
+## `caddy.enable`
 
 Whether to enable Caddy reverse proxy.
 
@@ -26,7 +25,6 @@ Whether to enable Caddy reverse proxy.
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -34,7 +32,7 @@ Whether to enable Caddy reverse proxy.
 
 ---
 
-## `stackpanel.caddy.projectName`
+## `caddy.project-name`
 
 Project name used to compute a stable port. Set this to your project name for consistent port allocation.
 
@@ -43,7 +41,6 @@ Project name used to compute a stable port. Set this to your project name for co
 | **Type** | `string` |
 | **Default** | `"default"` |
 
-
 **Example:**
 
 `"myapp"`
@@ -51,15 +48,14 @@ Project name used to compute a stable port. Set this to your project name for co
 
 ---
 
-## `stackpanel.caddy.projectPort`
+## `caddy.project-port`
 
-Computed stable port based on projectName. Can be overridden manually.
+Computed stable port based on project-name. Can be overridden manually.
 
 | Property | Value |
 |----------|-------|
 | **Type** | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
-| **Default** | `caddyLib.mkProjectPort { name = cfg.projectName; }` |
-
+| **Default** | `caddyLib.mkProjectPort { name = cfg.project-name; }` |
 
 **Example:**
 
@@ -68,7 +64,7 @@ Computed stable port based on projectName. Can be overridden manually.
 
 ---
 
-## `stackpanel.caddy.useStepTls`
+## `caddy.use-step-tls`
 
 Use Step CA for TLS certificates (requires stackpanel.network.step.enable)
 
@@ -76,7 +72,6 @@ Use Step CA for TLS certificates (requires stackpanel.network.step.enable)
 |----------|-------|
 | **Type** | `boolean` |
 | **Default** | `false` |
-
 
 ---
 

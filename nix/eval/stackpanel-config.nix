@@ -3,7 +3,7 @@
 # This file evaluates the stackpanel configuration from devenv.nix
 # and outputs it as JSON for use by the Go CLI/agent.
 #
-# Usage (must be run with --impure to read DEVENV_* env vars):
+# Usage (must be run with --impure to read STACKPANEL_* env vars):
 #   nix eval --impure --json -f nix/eval/stackpanel-config.nix
 #
 # Or from any directory:
@@ -13,9 +13,9 @@
 # eliminating state drift entirely.
 #
 let
-  # Get project root from environment (set by devenv)
-  # Falls back to searching for devenv.nix
-  envRoot = builtins.getEnv "DEVENV_ROOT";
+  # Get project root from environment (set by stackpanel enterShell)
+  # Falls back to searching for devenv.nix from PWD
+  envRoot = builtins.getEnv "STACKPANEL_ROOT";
   pwd = builtins.getEnv "PWD";
 
   findProjectRoot = dir:
@@ -46,9 +46,9 @@ let
     then
       let
         raw = builtins.fromJSON (builtins.readFile nixConfigPath);
-        # Replace $DEVENV_ROOT placeholder with actual value
+        # Replace $STACKPANEL_ROOT placeholder with actual value
         fixProjectRoot = config:
-          if config.projectRoot == "$DEVENV_ROOT" && envRoot != ""
+          if config.projectRoot == "$STACKPANEL_ROOT" && envRoot != ""
           then config // { projectRoot = envRoot; }
           else config;
       in fixProjectRoot raw

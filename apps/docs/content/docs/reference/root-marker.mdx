@@ -1,0 +1,21 @@
+---
+title: Root-marker Options
+description: Configuration options for stackpanel.root-marker
+---
+
+# Root-marker Options
+
+## `root-marker`
+
+Filename for the root marker file written to the project root.
+Contains the absolute path to the project root, allowing tools
+to find the project from any subdirectory. Add to .dockerignore
+and .gitignore so containers create their own marker.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel-root"` |
+
+---
+

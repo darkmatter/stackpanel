@@ -2,10 +2,14 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }: let
   cfg = config.stackpanel.ci.github;
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Proper YAML generation
   yaml = pkgs.formats.yaml {};
@@ -40,7 +44,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable ({
     # Build workflows from high-level options
     stackpanel.ci.github.workflows = lib.mkIf cfg.checks.enable {
       ci = {
@@ -60,7 +64,7 @@ in {
         };
       };
     };
-
+  } // lib.optionalAttrs isDevenv {
     # Generate workflow files using devenv's files option
     files =
       lib.mapAttrs' (name: workflow: {
@@ -68,5 +72,5 @@ in {
         value = { text = toYaml workflow; };
       })
       cfg.workflows;
-  };
+  });
 }

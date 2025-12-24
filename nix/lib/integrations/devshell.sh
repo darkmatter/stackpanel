@@ -55,7 +55,7 @@ find_root() {
     d="$(dirname "$d")"
   done
 
-  die "couldn't find devenv.yaml (set DEVENV_ROOT or open VS Code at the repo root)"
+  die "couldn't find devenv.yaml (set STACKPANEL_ROOT or open VS Code at the repo root)"
 }
 
 ROOT="$(find_root)"

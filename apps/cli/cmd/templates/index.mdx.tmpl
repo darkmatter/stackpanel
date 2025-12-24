@@ -1,0 +1,32 @@
+---
+title: Options Reference
+description: Complete reference for all stackpanel configuration options
+---
+
+# Options Reference
+
+This section documents all available configuration options for stackpanel.
+
+## Categories
+
+{{.CategoryLinks}}
+## Quick Start
+
+```nix
+# In your devenv.nix
+{
+  stackpanel = {
+    enable = true;
+
+    # Port management
+    ports.projectName = "myproject";
+
+    # Services
+    globalServices.postgres.enable = true;
+    globalServices.redis.enable = true;
+
+    # Theme
+    theme.enable = true;
+  };
+}
+```

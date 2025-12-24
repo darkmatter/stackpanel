@@ -13,12 +13,18 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }: let
   cfg = config.stackpanel;
-  portsCfg = config.stackpanel.ports;
+  portsCfg = config.stackpanel.ports or { project-name = "unknown"; base-port = 5000; };
   appsComputed = config.stackpanel.appsComputed or {};
+  # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
+  dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Build the state object
   stateData = {
@@ -27,11 +33,12 @@
     projectName = portsCfg.project-name;
     basePort = portsCfg.base-port;
 
-    # Directories (relative paths - CLI will resolve to absolute)
+    # Directories
     paths = {
-      state = cfg.state-dir;
-      gen = cfg.gen-dir;
-      data = cfg.data-dir;
+      root = dirs.home;
+      state = dirs.state;
+      gen = dirs.gen;
+      config = toString dirs.config;
     };
 
     # Apps with computed ports and domains
@@ -76,7 +83,7 @@ in {
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfg.state.enable && !(cfg.cli.enable or false)) {
+  config = lib.mkIf (cfg.enable && cfg.state.enable && !(cfg.cli.enable or false)) (lib.optionalAttrs isDevenv {
     # Write state file on shell entry
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
     enterShell = lib.mkAfter ''
@@ -89,5 +96,5 @@ STACKPANEL_STATE_EOF
 
     # Export state file path
     env.STACKPANEL_STATE_FILE = "\${STACKPANEL_STATE_DIR}/${cfg.state.file}";
-  };
+  });
 }

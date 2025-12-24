@@ -13,7 +13,6 @@ build
 .env*.local
 
 # IDEs and editors
-.vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -98,3 +97,6 @@ devenv.local.yaml
 /bts.jsonc
 
 /result
+
+# Stackpanel root marker (machine-specific)
+.stackpanel-root

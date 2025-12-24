@@ -5,7 +5,7 @@ description: Configuration options for stackpanel.ports
 
 # Ports Options
 
-## `stackpanel.ports.basePort`
+## `ports.base-port`
 
 The computed base port for this project
 
@@ -15,10 +15,9 @@ The computed base port for this project
 | **Default** | `6400` |
 | **Read Only** | `true` |
 
-
 ---
 
-## `stackpanel.ports.enable`
+## `ports.enable`
 
 Whether to enable Automatic port assignment.
 
@@ -27,7 +26,6 @@ Whether to enable Automatic port assignment.
 | **Type** | `boolean` |
 | **Default** | `true` |
 
-
 **Example:**
 
 `true`
@@ -35,7 +33,7 @@ Whether to enable Automatic port assignment.
 
 ---
 
-## `stackpanel.ports.minPort`
+## `ports.min-port`
 
 Minimum port number for the port range
 
@@ -44,10 +42,9 @@ Minimum port number for the port range
 | **Type** | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
 | **Default** | `3000` |
 
-
 ---
 
-## `stackpanel.ports.modulus`
+## `ports.modulus`
 
 Port rounding modulus. Ports are rounded to nearest multiple.
 Use 100 for ports like 3100, 3200, 3300.
@@ -58,7 +55,6 @@ Use 10 for ports like 3110, 3120, 3130 (if collision occurs).
 | **Type** | `signed integer` |
 | **Default** | `100` |
 
-
 **Example:**
 
 `10`
@@ -66,19 +62,18 @@ Use 10 for ports like 3110, 3120, 3130 (if collision occurs).
 
 ---
 
-## `stackpanel.ports.portRange`
+## `ports.port-range`
 
-Range of ports to use (minPort to minPort + portRange)
+Range of ports to use (min-port to min-port + port-range)
 
 | Property | Value |
 |----------|-------|
 | **Type** | `signed integer` |
 | **Default** | `7000` |
 
-
 ---
 
-## `stackpanel.ports.projectName`
+## `ports.project-name`
 
 Project name used for port computation. Set this to match your project name.
 
@@ -87,7 +82,6 @@ Project name used for port computation. Set this to match your project name.
 | **Type** | `string` |
 | **Default** | `"default"` |
 
-
 **Example:**
 
 `"myapp"`
@@ -95,7 +89,7 @@ Project name used for port computation. Set this to match your project name.
 
 ---
 
-## `stackpanel.ports.service`
+## `ports.service`
 
 Computed service information by key.
 Access: config.stackpanel.ports.service.POSTGRES.port
@@ -105,7 +99,6 @@ Access: config.stackpanel.ports.service.POSTGRES.port
 | **Type** | `attribute set of attribute set of unspecified value` |
 | **Default** | _see below_ |
 | **Read Only** | `true` |
-
 
 **Default:**
 
@@ -141,7 +134,7 @@ Access: config.stackpanel.ports.service.POSTGRES.port
 
 ---
 
-## `stackpanel.ports.services`
+## `ports.services`
 
 List of infrastructure services that need ports.
 Each service gets a port at basePort + 10 + index.
@@ -151,7 +144,6 @@ Environment variable: STACKPANEL__PORT
 |----------|-------|
 | **Type** | `list of (submodule)` |
 | **Default** | `[ ]` |
-
 
 **Example:**
 
@@ -167,7 +159,7 @@ Environment variable: STACKPANEL__PORT
 
 ---
 
-## `stackpanel.ports.services.*.key`
+## `ports.services.*.key`
 
 Unique key for the service (used in env var: STACKPANEL__PORT)
 
@@ -176,7 +168,6 @@ Unique key for the service (used in env var: STACKPANEL__PORT)
 | **Type** | `string` |
 | **Default** | _none_ |
 
-
 **Example:**
 
 `"POSTGRES"`
@@ -184,7 +175,7 @@ Unique key for the service (used in env var: STACKPANEL__PORT)
 
 ---
 
-## `stackpanel.ports.services.*.name`
+## `ports.services.*.name`
 
 Human-readable name for display
 
@@ -192,7 +183,6 @@ Human-readable name for display
 |----------|-------|
 | **Type** | `string` |
 | **Default** | `""` |
-
 
 **Example:**
 
