@@ -72,12 +72,7 @@
         lib,
         system,
         ...
-      }: let
-        isLinux = lib.hasSuffix "-linux" system;
-        # Filter out container outputs on non-Linux systems (they require Linux-only packages like shadow)
-        devenvOutputs = config.devenv.shells.default.outputs or {};
-        filteredOutputs = if isLinux then devenvOutputs else lib.filterAttrs (name: _: name != "container") devenvOutputs;
-      in {
+      }: {
         _module.args.pkgs = import nixpkgs {
           inherit system;
           overlays = [ inputs.gomod2nix.overlays.default ];
@@ -89,10 +84,10 @@
 
           default = pkgs.hello; # placeholder
 
-          # Expose devenv shell outputs as packages
-          # These come from the `outputs` option in nix/docs/devenv.nix
-          # Note: Container outputs are filtered out on Darwin (require Linux-only packages)
-        } // filteredOutputs;
+          # Note: We don't merge devenv outputs here since they include container outputs
+          # that require Linux-only packages (shadow). The devenv shell is still accessible
+          # via `nix develop` or `devenv shell`.
+        };
 
         # Local development shell - uses the same pattern users would
         devenv.shells.default = {
