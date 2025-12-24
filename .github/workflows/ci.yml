@@ -61,5 +61,8 @@ jobs:
       - name: Install omnix
         run: nix --accept-flake-config profile install github:juspay/omnix
       - name: Run om ci
+        env:
+          # Skip devenv on Darwin to avoid container outputs that require Linux-only packages (shadow)
+          SKIP_DEVENV: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
         run: om ci run --systems "${{ matrix.system }}" ".#default.${{ matrix.subflake }}" -- --impure
 
