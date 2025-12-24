@@ -51,9 +51,9 @@
       # =============================================================
       imports = [
         flakeModules.default # Dogfood our own module!
-      ] ++ nixpkgs.lib.optionals (builtins.getEnv "CI" != "true") [
-        # Only import devenv in non-CI environments
-        # CI evaluation (like FlakeHub) doesn't support --impure which devenv requires
+      ] ++ nixpkgs.lib.optionals (builtins.getEnv "SKIP_DEVENV" != "true") [
+        # Import devenv unless explicitly skipped (e.g., for FlakeHub which doesn't support --impure)
+        # Set SKIP_DEVENV=true to disable devenv for pure evaluation contexts
         inputs.devenv.flakeModule
       ];
 
