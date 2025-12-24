@@ -9,3 +9,8 @@ ci:
           enable: true
         flake-check:
           enable: true
+health:
+  default:
+    caches:
+      required:
+        - "https://darkmatter.cachix.org"

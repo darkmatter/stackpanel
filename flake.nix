@@ -78,6 +78,9 @@
         };
         # Packages we build
         packages = {
+          # CLI package export
+          stackpanel-cli = pkgs.callPackage ./nix/packages/stackpanel-cli {};
+
           default = pkgs.hello; # placeholder
 
           # Expose devenv shell outputs as packages

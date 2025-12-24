@@ -47,7 +47,7 @@ jobs:
       - name: Setup Cachix
         uses: cachix/cachix-action@v15
         with:
-          name: stackpanel
+          name: darkmatter
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: devenv
 
