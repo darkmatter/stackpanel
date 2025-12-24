@@ -15,12 +15,17 @@
   pkgs,
   lib,
   config,
+  options,
   ...
 }: let
   cfg = config.stackpanel;
 
-  # Import the stackpanel CLI package (for MOTD)
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
+
+  # Import libraries
   stackpanel-cli = pkgs.callPackage ./packages/stackpanel-cli {};
+  pathsLib = import ./lib/paths.nix { inherit lib; };
 in {
   imports = [
     ./modules/secrets
@@ -42,22 +47,82 @@ in {
   options.stackpanel = {
     enable = lib.mkEnableOption "stackpanel integration" // {default = true;};
 
-    state-dir = lib.mkOption {
-      type = lib.types.str;
-      default = ".stackpanel/state";
-      description = "Directory for runtime state (gitignored)";
+    root = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Absolute path to the project root. If set, this overrides PWD-based detection.
+
+        For pure flake evaluation (like `nix flake check`), use the readStackpanelRoot
+        flake module which reads this from a flake input:
+
+        ```nix
+        # flake.nix inputs
+        inputs.stackpanel-root = {
+          url = "file+file:///dev/null";
+          flake = false;
+        };
+
+        # imports
+        imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
+        ```
+
+        Then in .envrc: `echo "$PWD" > .stackpanel-root`
+      '';
     };
 
-    gen-dir = lib.mkOption {
-      type = lib.types.str;
-      default = ".stackpanel/gen";
-      description = "Directory for generated files (gitignored, regenerated on each devenv run)";
+    dirs = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          config = lib.mkOption {
+            type = lib.types.path;
+            default = ./infra/stackpanel;
+            description = "Directory for stackpanel configuration files.";
+          };
+          home = lib.mkOption {
+            type = lib.types.str;
+            default = ".stackpanel";
+            description = ''
+              Root directory for runtime files (relative to project root).
+              Contains state/ (gitignored) and gen/ (checked in) subdirectories.
+            '';
+          };
+          state = lib.mkOption {
+            type = lib.types.str;
+            default = "${cfg.dirs.home}/state";
+            description = ''
+              State directory path (relative to project root).
+              Computed from dirs.home. This directory is gitignored and contains
+              runtime state files that shouldn't be committed.
+            '';
+          };
+          gen = lib.mkOption {
+            type = lib.types.str;
+            default = "${cfg.dirs.home}/gen";
+            description = ''
+              Generated files directory path (relative to project root).
+              Computed from dirs.home. This directory is checked in and contains
+              generated files (IDE configs, schemas, etc.).
+            '';
+          };
+        };
+      };
+      default = {};
+      description = "Directories used by stackpanel.";
     };
 
-    data-dir = lib.mkOption {
+
+
+
+    root-marker = lib.mkOption {
       type = lib.types.str;
-      default = ".stackpanel";
-      description = "Directory for stackpanel config (checked in)";
+      default = ".stackpanel-root";
+      description = ''
+        Filename for the root marker file written to the project root.
+        Contains the absolute path to the project root, allowing tools
+        to find the project from any subdirectory. Add to .dockerignore
+        and .gitignore so containers create their own marker.
+      '';
     };
 
     # Direnv configuration
@@ -108,33 +173,60 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
     # Environment variables for stackpanel paths
-    # These can be overridden (e.g., in Docker) to point to mounted volumes
     env = {
-      # Relative paths used as defaults - resolved to absolute in enterShell
-      # Override these env vars when running in Docker with mounted volumes
-      STACKPANEL_STATE_DIR_REL = cfg.state-dir;
-      STACKPANEL_GEN_DIR_REL = cfg.gen-dir;
-      STACKPANEL_DATA_DIR_REL = cfg.data-dir;
+      # Config dir is a Nix store path (build input)
+      STACKPANEL_CONFIG_DIR = toString cfg.dirs.config;
+      # Root directory name for reference
+      STACKPANEL_ROOT_DIR_NAME = cfg.dirs.home;
+      # Root marker filename
+      STACKPANEL_ROOT_MARKER = cfg.root-marker;
     };
 
     # Ensure state directory is gitignored
     # Use mkBefore to ensure this runs before other modules' enterShell hooks
     enterShell = lib.mkMerge [
       (lib.mkBefore ''
+        # Define path utility functions (available to all scripts in this shell)
+        ${pathsLib.mkShellFindRoot {
+          rootDir = cfg.dirs.home;
+          rootMarker = cfg.root-marker;
+        }}
+        ${pathsLib.mkShellResolvePaths {
+          rootDir = cfg.dirs.home;
+        }}
+
         # Set absolute paths for stackpanel directories
-        # These can be pre-set to override (e.g., in Docker with mounted volumes)
-        export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$DEVENV_ROOT}"
-        export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.state-dir}}"
-        export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.gen-dir}}"
-        export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.data-dir}}"
+        # Priority: 1) STACKPANEL_ROOT env var (pre-set), 2) cfg.root (Nix config), 3) $PWD
+        ${if cfg.root != null then ''
+        export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-${cfg.root}}"
+        '' else ''
+        export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$PWD}"
+        ''}
+        export STACKPANEL_ROOT_DIR="$STACKPANEL_ROOT/${cfg.dirs.home}"
+        export STACKPANEL_STATE_DIR="$STACKPANEL_ROOT/${cfg.dirs.state}"
+        export STACKPANEL_GEN_DIR="$STACKPANEL_ROOT/${cfg.dirs.gen}"
 
         mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
-        # Ensure state/ is gitignored (gen/ is checked in)
-        _gitignore="$STACKPANEL_DATA_DIR/.gitignore"
-        if [[ ! -f "$_gitignore" ]] || ! grep -q "^state/$" "$_gitignore" 2>/dev/null; then
-          echo "state/" > "$_gitignore"
+
+        # Write root marker file at project root (allows tools to find project from any subdir)
+        echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
+
+        # Ensure state/ is gitignored in .stackpanel/
+        _sp_gitignore="$STACKPANEL_ROOT_DIR/.gitignore"
+        if [[ ! -f "$_sp_gitignore" ]]; then
+          echo "state/" > "$_sp_gitignore"
+        fi
+
+        # Add root marker to project .gitignore if not already present
+        _root_gitignore="$STACKPANEL_ROOT/.gitignore"
+        if [[ -f "$_root_gitignore" ]]; then
+          if ! grep -q "^${cfg.root-marker}$" "$_root_gitignore" 2>/dev/null; then
+            echo "" >> "$_root_gitignore"
+            echo "# Stackpanel root marker (machine-specific)" >> "$_root_gitignore"
+            echo "${cfg.root-marker}" >> "$_root_gitignore"
+          fi
         fi
 
         ${lib.optionalString cfg.direnv.hide-env-diff ''
@@ -161,5 +253,5 @@ in {
         ${lib.optionalString cfg.motd.enable "${stackpanel-cli}/bin/stackpanel motd"}
       '')
     ];
-  };
+  });
 }

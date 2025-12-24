@@ -4,43 +4,47 @@
 # to generate all files in a single atomic operation. This ensures
 # that generated files and state.json are always in sync.
 #
-# Generated files:
+# Generated files (by CLI):
 #   - .stackpanel/state/stackpanel.json (runtime state)
 #   - .stackpanel/gen/ide/vscode/* (VS Code workspace, loader script)
-#   - .stackpanel/gen/schemas/secrets/* (JSON schemas for YAML)
+#   - .stackpanel/gen/schemas/secrets/* (JSON schemas from Nix definitions)
 #
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }: let
   cfg = config.stackpanel;
-  portsCfg = config.stackpanel.ports;
-  ideCfg = config.stackpanel.ide;
+  portsCfg = config.stackpanel.ports or { project-name = "unknown"; base-port = 5000; };
+  ideCfg = config.stackpanel.ide or { enable = false; vscode = { enable = false; workspace-name = "workspace"; }; };
   appsComputed = config.stackpanel.appsComputed or {};
+  # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
+  dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Import the stackpanel CLI package
   stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli {};
 
-  # Import schemas module
-  schemasLib = import ./secrets/schemas.nix {
-    inherit lib;
-    genDir = cfg.gen-dir;
-  };
-  schemas = schemasLib.generateSchemas;
+  # Import schemas from the secrets module (single source of truth)
+  schemasLib = import ./secrets/schemas.nix { inherit lib; };
+  schemas = schemasLib.allSchemas;
 
   # Build the complete configuration for the CLI
   fullConfig = {
     version = 1;
     projectName = portsCfg.project-name;
-    projectRoot = "$DEVENV_ROOT"; # Will be expanded at runtime
+    projectRoot = "$STACKPANEL_ROOT"; # Will be expanded at runtime from PWD
     basePort = portsCfg.base-port;
 
     paths = {
-      state = cfg.state-dir;
-      gen = cfg.gen-dir;
-      data = cfg.data-dir;
+      root = dirs.home;
+      state = dirs.state;
+      gen = dirs.gen;
+      config = toString dirs.config;
     };
 
     # Apps with computed ports and domains
@@ -66,7 +70,7 @@
     network = {
       step = {
         enable = cfg.network.step.enable or false;
-        caUrl = cfg.network.step.ca-url or null;
+        caUrl = cfg.network.step.caUrl or null;
       };
     };
 
@@ -81,7 +85,7 @@
       };
     };
 
-    # Schemas configuration
+    # Schemas for YAML config validation (generated from Nix definitions)
     schemas = {
       secrets = {
         config = schemas."config.schema.json";
@@ -118,21 +122,21 @@ in {
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfg.cli.enable) {
+  config = lib.mkIf (cfg.enable && cfg.cli.enable) (lib.optionalAttrs isDevenv {
     # Add the CLI to packages
     packages = [stackpanel-cli];
 
     # Add hints about IDE integration (if enabled)
     stackpanel.motd.hints = lib.mkIf (ideCfg.enable && ideCfg.vscode.enable) [
-      "Open ${cfg.gen-dir}/ide/vscode/${ideCfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
+      "Open ${dirs.gen}/ide/vscode/${ideCfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
     ];
 
     # Call the CLI in enterShell to generate all files
     # Use mkOrder to ensure this runs early but after directory setup
     enterShell = lib.mkOrder 450 ''
       # Generate stackpanel files via CLI
-      # Read config from nix store, replace $DEVENV_ROOT with actual value
-      _sp_config=$(cat ${configFile} | sed "s|\\\$DEVENV_ROOT|$DEVENV_ROOT|g")
+      # Read config from nix store, replace $STACKPANEL_ROOT with actual value
+      _sp_config=$(cat ${configFile} | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
       echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel init ${lib.optionalString cfg.cli.quiet "--quiet"}
     '';
 
@@ -142,5 +146,5 @@ in {
       # Path to the Nix-generated config in the store (for nix eval to read)
       STACKPANEL_NIX_CONFIG = "${configFile}";
     };
-  };
+  });
 }

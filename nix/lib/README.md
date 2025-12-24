@@ -2,7 +2,135 @@
 
 Reusable Nix libraries for development services, certificates, and AWS integration.
 
+## Architecture
+
+Stackpanel uses a **shared core + thin adapters** architecture:
+
+```
+nix/lib/
+├── core/                  # Pure logic (no side effects)
+│   ├── ports.nix          # Port computation
+│   └── global-services.nix # Service orchestration
+├── options.nix            # Central option schema (types/defaults)
+├── devshell.nix           # mkDevShell - THE core function
+├── services/              # Per-service helpers
+└── integrations/          # IDE/devshell scripts
+
+nix/config/
+└── project.nix            # Single user-facing config
+
+nix/modules/
+├── devenv/                # Thin devenv adapter
+│   ├── devenv.nix         # Entry point (imports stackpanel.nix)
+│   └── adapter.nix        # New unified adapter
+└── flake/                 # Thin flake adapter
+    └── adapter.nix        # Flake-compatible mkDevShell
+```
+
+## Two Entry Points, Same Result
+
+Both `nix develop` and `devenv shell` use the same core logic:
+
+### Option 1: `nix develop` (Flake)
+
+```nix
+# flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    stackpanel.url = "github:darkmatter/stackpanel";
+  };
+
+  outputs = { self, nixpkgs, stackpanel, ... }:
+    let
+      system = "x86_64-linux"; # or "aarch64-darwin", etc.
+      pkgs = nixpkgs.legacyPackages.${system};
+
+      # Load your project config
+      projectConfig = import ./nix/config/project.nix;
+
+      # Create dev shell using stackpanel
+      devShell = stackpanel.lib.mkDevShell pkgs projectConfig;
+    in {
+      devShells.${system}.default = devShell.shell;
+    };
+}
+```
+
+### Option 2: `devenv shell`
+
+```yaml
+# devenv.yaml
+inputs:
+  stackpanel:
+    url: github:darkmatter/stackpanel
+
+imports:
+  - stackpanel/nix/modules/devenv
+```
+
+```nix
+# devenv.nix
+{ pkgs, ... }: {
+  stackpanel = {
+    enable = true;
+
+    globalServices = {
+      enable = true;
+      project-name = "myproject";
+
+      postgres = {
+        enable = true;
+        databases = ["myapp" "myapp_test"];
+      };
+
+      redis.enable = true;
+    };
+
+    theme.enable = true;
+    ide.vscode.enable = true;
+  };
+}
+```
+
+## Single Configuration File
+
+Create `nix/config/project.nix` as your single source of truth:
+
+```nix
+# nix/config/project.nix
+{
+  projectName = "myproject";
+
+  postgres = {
+    enable = true;
+    databases = [ "myapp" "myapp_test" ];
+  };
+
+  redis.enable = true;
+  minio.enable = false;
+
+  caddy = {
+    enable = true;
+    sites = {
+      "api.localhost" = "localhost:3001";
+      "web.localhost" = "localhost:3000";
+    };
+  };
+
+  theme.enable = true;
+
+  ide = {
+    enable = true;
+    vscode.enable = true;
+  };
+}
+```
+
+This file is used by both entry points, ensuring identical environments.
+
 ## Global Development Services
+
 
 The `devshell.nix` library provides singleton development services that work across multiple projects. Services are shared (Postgres, Redis, Minio, Caddy) but each project can register its own databases and sites.
 

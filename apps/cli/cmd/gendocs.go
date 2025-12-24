@@ -35,11 +35,12 @@ type NixValue struct {
 // OptionsJSON is the top-level structure of the Nix options JSON
 type OptionsJSON map[string]NixOption
 
-// ReadmeFile represents a discovered README.md file
-type ReadmeFile struct {
+// DocSource represents a discovered documentation source (README.md or .nix header)
+type DocSource struct {
 	Path         string
 	RelativePath string
 	ModuleName   string
+	IsNixFile    bool // true if extracted from .nix file header, false for README.md
 }
 
 const (
@@ -69,9 +70,21 @@ func init() {
 func runGenDocs(cmd *cobra.Command, args []string) error {
 	optionsPath := args[0]
 	docsDir := args[1]
+	var nixModulesDir string
+	if len(args) > 2 {
+		nixModulesDir = args[2]
+	}
+
 	outputDir := fmt.Sprintf("%s/%s", docsDir, DirnameReference)
-	modulesDir := fmt.Sprintf("%s/%s", docsDir, DirnameModules)
+	modulesOutputDir := fmt.Sprintf("%s/%s", docsDir, DirnameModules)
 	devenvDir := fmt.Sprintf("%s/%s", docsDir, DirnameDevenv)
+
+	// Clean up old generated files to prevent stale content
+	for _, dir := range []string{outputDir, modulesOutputDir, devenvDir} {
+		if err := os.RemoveAll(dir); err != nil {
+			fmt.Printf("Warning: failed to clean %s: %v\n", dir, err)
+		}
+	}
 
 	// Read and parse options JSON
 	fmt.Printf("Reading options from: %s\n", optionsPath)
@@ -98,7 +111,7 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Categories: %s\n", strings.Join(categories, ", "))
 
 	// Ensure output directories exist
-	dirs := []string{outputDir, modulesDir, devenvDir}
+	dirs := []string{outputDir, modulesOutputDir, devenvDir}
 	if err := mkDirs(dirs...); err != nil {
 		return fmt.Errorf("failed to create output directories: %w", err)
 	}
@@ -109,6 +122,11 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to write index: %w", err)
 	}
 	fmt.Printf("  ✓ %s\n", indexPath)
+	// devenvPath := filepath.Join(devenvDir, "index.mdx")
+	// if err := os.WriteFile(devenvPath, []byte(generateIndexMdx(categories)), 0644); err != nil {
+	// 	return fmt.Errorf("failed to write index: %w", err)
+	// }
+	// fmt.Printf("  ✓ %s\n", devenvPath)
 
 	// Generate category pages
 	for category, opts := range groups {
@@ -121,10 +139,9 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\nGenerated %d reference files\n", len(categories)+1)
 
-	// Generate module documentation from README files if modules dir provided
-	if modulesDir != "" {
-		parentOutputDir := filepath.Dir(outputDir)
-		generatedModules, err := generateModuleDocs(modulesDir, parentOutputDir)
+	// Generate module documentation from README files and .nix headers
+	if nixModulesDir != "" {
+		generatedModules, err := generateModuleDocs(nixModulesDir, modulesOutputDir)
 		if err != nil {
 			return fmt.Errorf("failed to generate module docs: %w", err)
 		}
@@ -148,27 +165,33 @@ func mkDirs(paths ...string) error {
 // groupOptions groups options by their top-level category
 func groupOptions(options OptionsJSON) map[string]OptionsJSON {
 	groups := make(map[string]OptionsJSON)
-	regexDevenv := regexp.MustCompile(`perSystem\.[^.]+\.devenv\.shells\.default\.`)
+	// Match devenv shell prefix: perSystem.<system>.devenv.shells.<name>.
+	regexDevenv := regexp.MustCompile(`^perSystem\.[^.]+\.devenv\.shells\.[^.]+\.`)
 
 	for path, opt := range options {
-		isDevenv := regexDevenv.MatchString(path)
-		// Remove 'stackpanel.' prefix and get first segment
-		withoutPrefix := strings.TrimPrefix(path, "stackpanel.")
-		// RRemove "perSystem.<system>"
-		withoutDevenv := regexDevenv.ReplaceAllString(withoutPrefix, "")
-		parts := strings.Split(withoutDevenv, ".")
-		category := parts[0]
+		var category string
 
-		if isDevenv {
-			category = "devenv"
-		} else if category == "" {
+		// Strip devenv shell prefix if present
+		// e.g., "perSystem.aarch64-darwin.devenv.shells.default.stackpanel.apps" -> "stackpanel.apps"
+		cleanPath := regexDevenv.ReplaceAllString(path, "")
+
+		// Remove 'stackpanel.' prefix if present
+		cleanPath = strings.TrimPrefix(cleanPath, "stackpanel.")
+
+		// Get first segment as category
+		parts := strings.Split(cleanPath, ".")
+		if len(parts) > 0 && parts[0] != "" {
+			category = parts[0]
+		} else {
 			category = "core"
 		}
 
 		if groups[category] == nil {
 			groups[category] = make(OptionsJSON)
 		}
-		groups[category][path] = opt
+
+		// Store with cleaned path for display
+		groups[category][cleanPath] = opt
 	}
 
 	return groups
@@ -233,14 +256,12 @@ func generateCategoryMdx(category string, options OptionsJSON) string {
 	sort.Strings(paths)
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf(`---
-title: %s Options
-description: Configuration options for stackpanel.%s
----
-
-# %s Options
-
-`, title, category, title))
+	header, err := RenderCategoryHeader(title, category)
+	if err != nil {
+		// Fallback to simple header on error
+		header = fmt.Sprintf("# %s Options\n\n", title)
+	}
+	sb.WriteString(header)
 
 	for _, path := range paths {
 		opt := options[path]
@@ -283,45 +304,20 @@ func generateIndexMdx(categories []string) string {
 	var categoryLinks strings.Builder
 	for _, cat := range categories {
 		title := strings.ToUpper(cat[:1]) + cat[1:]
-		categoryLinks.WriteString(fmt.Sprintf("  - [%s](./%s)\n", title, cat))
+		categoryLinks.WriteString(fmt.Sprintf("  - [%s](./%s/%s)\n", title, DirnameReference, cat))
 	}
 
-	return fmt.Sprintf(`---
-title: Options Reference
-description: Complete reference for all stackpanel configuration options
----
-
-# Options Reference
-
-This section documents all available configuration options for stackpanel.
-
-## Categories
-
-%s
-## Quick Start
-
-`+"```nix\n"+`# In your devenv.nix
-{
-  stackpanel = {
-    enable = true;
-
-    # Port management
-    ports.projectName = "myproject";
-
-    # Services
-    globalServices.postgres.enable = true;
-    globalServices.redis.enable = true;
-
-    # Theme
-    theme.enable = true;
-  };
-}
-`+"```\n", categoryLinks.String())
+	result, err := RenderIndex(categoryLinks.String())
+	if err != nil {
+		// Fallback on error
+		return "# Options Reference\n\n" + categoryLinks.String()
+	}
+	return result
 }
 
 // findReadmeFiles recursively finds README.md files in subdirectories
-func findReadmeFiles(dir string, baseDir string) ([]ReadmeFile, error) {
-	var results []ReadmeFile
+func findReadmeFiles(dir string, baseDir string) ([]DocSource, error) {
+	var results []DocSource
 
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return results, nil
@@ -343,10 +339,11 @@ func findReadmeFiles(dir string, baseDir string) ([]ReadmeFile, error) {
 		// Check for README.md in this directory
 		if _, err := os.Stat(readmePath); err == nil {
 			relativePath, _ := filepath.Rel(baseDir, fullPath)
-			results = append(results, ReadmeFile{
+			results = append(results, DocSource{
 				Path:         readmePath,
 				RelativePath: relativePath,
 				ModuleName:   entry.Name(),
+				IsNixFile:    false,
 			})
 		}
 
@@ -361,16 +358,132 @@ func findReadmeFiles(dir string, baseDir string) ([]ReadmeFile, error) {
 	return results, nil
 }
 
+// findNixDocHeaders finds .nix files with documentation headers (multi-line comments at the start)
+func findNixDocHeaders(dir string, baseDir string) ([]DocSource, error) {
+	var results []DocSource
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return results, nil
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		fullPath := filepath.Join(dir, entry.Name())
+
+		if entry.IsDir() {
+			// Skip directories that have a README.md (those are handled separately)
+			readmePath := filepath.Join(fullPath, "README.md")
+			if _, err := os.Stat(readmePath); err == nil {
+				continue
+			}
+
+			// Check for default.nix with doc header in this directory
+			defaultNixPath := filepath.Join(fullPath, "default.nix")
+			if docHeader := extractNixDocHeader(defaultNixPath); docHeader != "" {
+				relativePath, _ := filepath.Rel(baseDir, fullPath)
+				results = append(results, DocSource{
+					Path:         defaultNixPath,
+					RelativePath: relativePath,
+					ModuleName:   entry.Name(),
+					IsNixFile:    true,
+				})
+			}
+
+			// Recurse into subdirectories
+			subResults, err := findNixDocHeaders(fullPath, baseDir)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, subResults...)
+		} else if strings.HasSuffix(entry.Name(), ".nix") && entry.Name() != "default.nix" {
+			// Check for standalone .nix files with doc headers
+			if docHeader := extractNixDocHeader(fullPath); docHeader != "" {
+				// Use filename without .nix as module name
+				moduleName := strings.TrimSuffix(entry.Name(), ".nix")
+				relativePath, _ := filepath.Rel(baseDir, dir)
+				if relativePath == "." {
+					relativePath = moduleName
+				} else {
+					relativePath = filepath.Join(relativePath, moduleName)
+				}
+				results = append(results, DocSource{
+					Path:         fullPath,
+					RelativePath: relativePath,
+					ModuleName:   moduleName,
+					IsNixFile:    true,
+				})
+			}
+		}
+	}
+
+	return results, nil
+}
+
+// extractNixDocHeader extracts the documentation header from a .nix file
+// Returns the content if the file starts with a multi-line comment block (5+ lines)
+func extractNixDocHeader(path string) string {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(content), "\n")
+	if len(lines) < 5 {
+		return ""
+	}
+
+	// Check if file starts with # comment lines
+	var docLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			// Remove the # prefix and leading space
+			docLine := strings.TrimPrefix(trimmed, "#")
+			docLine = strings.TrimPrefix(docLine, " ")
+			docLines = append(docLines, docLine)
+		} else if trimmed == "" && len(docLines) > 0 {
+			// Allow empty lines within the doc block
+			docLines = append(docLines, "")
+		} else {
+			// Hit non-comment, non-empty line - end of doc block
+			break
+		}
+	}
+
+	// Require at least 5 lines to be considered a doc header
+	if len(docLines) < 5 {
+		return ""
+	}
+
+	return strings.TrimSpace(strings.Join(docLines, "\n"))
+}
+
 // convertReadmeToMdx converts README.md content to MDX with frontmatter
 func convertReadmeToMdx(readmeContent string, moduleName string) string {
-	lines := strings.Split(readmeContent, "\n")
+	return convertDocToMdx(readmeContent, moduleName, false)
+}
+
+// convertNixHeaderToMdx converts a .nix doc header to MDX with frontmatter
+func convertNixHeaderToMdx(docHeader string, moduleName string) string {
+	return convertDocToMdx(docHeader, moduleName, true)
+}
+
+// convertDocToMdx converts documentation content to MDX with frontmatter
+func convertDocToMdx(content string, moduleName string, isNixHeader bool) string {
+	lines := strings.Split(content, "\n")
 
 	// Default title and description
 	title := strings.ToUpper(moduleName[:1]) + moduleName[1:]
 	description := fmt.Sprintf("Documentation for the %s module", moduleName)
 	contentStartIndex := 0
 
-	// Look for h1 title in first few lines
+	// Look for title in first few lines
+	// For .nix headers, the first non-empty line is often the title (without #)
+	// For README.md, look for # heading
 	maxLines := 5
 	if len(lines) < maxLines {
 		maxLines = len(lines)
@@ -378,16 +491,40 @@ func convertReadmeToMdx(readmeContent string, moduleName string) string {
 
 	for i := 0; i < maxLines; i++ {
 		line := lines[i]
-		if strings.HasPrefix(line, "# ") {
-			// Clean up title (remove trailing / or other artifacts)
-			title = strings.TrimSuffix(strings.TrimPrefix(line, "# "), "/")
+		trimmedLine := strings.TrimSpace(line)
+
+		// Skip empty lines at the start
+		if trimmedLine == "" && contentStartIndex == 0 {
+			continue
+		}
+
+		var foundTitle bool
+		var extractedTitle string
+
+		if isNixHeader {
+			// For .nix headers, first non-empty line is the title
+			if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "-") {
+				extractedTitle = trimmedLine
+				foundTitle = true
+			}
+		} else {
+			// For README.md, look for # heading
+			if strings.HasPrefix(line, "# ") {
+				extractedTitle = strings.TrimPrefix(line, "# ")
+				foundTitle = true
+			}
+		}
+
+		if foundTitle {
+			// Clean up title
+			title = strings.TrimSuffix(extractedTitle, "/")
 			title = strings.TrimSpace(title)
 			contentStartIndex = i + 1
 
 			// Look for description in the next non-empty line
 			for j := i + 1; j < len(lines) && j < i+5; j++ {
 				nextLine := strings.TrimSpace(lines[j])
-				if nextLine != "" && !strings.HasPrefix(nextLine, "#") {
+				if nextLine != "" && !strings.HasPrefix(nextLine, "#") && !strings.HasPrefix(nextLine, "-") {
 					description = nextLine
 					break
 				}
@@ -396,53 +533,175 @@ func convertReadmeToMdx(readmeContent string, moduleName string) string {
 		}
 	}
 
-	// Get content after the title
-	var content string
+	// Get content after the title and format it
+	var contentBody string
 	if contentStartIndex < len(lines) {
-		content = strings.TrimSpace(strings.Join(lines[contentStartIndex:], "\n"))
+		if isNixHeader {
+			contentBody = formatNixDocContent(lines[contentStartIndex:])
+		} else {
+			contentBody = strings.TrimSpace(strings.Join(lines[contentStartIndex:], "\n"))
+		}
 	}
 
-	return fmt.Sprintf(`---
-title: %s
-description: %s
----
-
-%s
-`, title, description, content)
+	result, err := RenderModule(title, description, contentBody)
+	if err != nil {
+		// Fallback on error
+		return fmt.Sprintf("# %s\n\n%s", title, contentBody)
+	}
+	return result
 }
 
-// generateModuleDocs generates MDX docs from README files in module directories
+// escapeYAMLString ensures a string is safe for YAML frontmatter
+// Quotes strings containing special characters like colons, brackets, etc.
+func escapeYAMLString(s string) string {
+	// Characters that need quoting in YAML
+	needsQuotes := strings.ContainsAny(s, `:{}[]&*#?|-<>=!%@\'"`)
+	if needsQuotes {
+		// Escape any existing double quotes and wrap in quotes
+		escaped := strings.ReplaceAll(s, `"`, `\"`)
+		return `"` + escaped + `"`
+	}
+	return s
+}
+
+// formatNixDocContent formats nix doc header content, converting indented blocks to code blocks
+func formatNixDocContent(lines []string) string {
+	var result strings.Builder
+	var inCodeBlock bool
+	var codeBlockLines []string
+	var lastSectionHeader string
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Check for section headers like "Usage:", "Example:", "Access:"
+		if strings.HasSuffix(trimmed, ":") && !strings.Contains(trimmed, " ") && len(trimmed) > 1 {
+			// Flush any pending code block
+			if inCodeBlock && len(codeBlockLines) > 0 {
+				result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
+				codeBlockLines = nil
+				inCodeBlock = false
+			}
+			lastSectionHeader = strings.TrimSuffix(trimmed, ":")
+			result.WriteString("## " + lastSectionHeader + "\n\n")
+			continue
+		}
+
+		// Detect if this line is indented (starts with spaces after the comment prefix was removed)
+		isIndented := len(line) > 0 && (line[0] == ' ' || line[0] == '\t')
+
+		if isIndented && trimmed != "" {
+			// Start or continue code block
+			if !inCodeBlock {
+				inCodeBlock = true
+				codeBlockLines = nil
+			}
+			// Remove common indentation (usually 2 spaces)
+			codeLine := line
+			if strings.HasPrefix(line, "  ") {
+				codeLine = line[2:]
+			}
+			codeBlockLines = append(codeBlockLines, codeLine)
+		} else {
+			// Flush any pending code block
+			if inCodeBlock && len(codeBlockLines) > 0 {
+				result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
+				codeBlockLines = nil
+				inCodeBlock = false
+			}
+
+			// Regular text line
+			if trimmed != "" {
+				result.WriteString(trimmed + "\n")
+			} else if i > 0 && i < len(lines)-1 {
+				// Preserve paragraph breaks
+				result.WriteString("\n")
+			}
+		}
+	}
+
+	// Flush final code block if any
+	if inCodeBlock && len(codeBlockLines) > 0 {
+		result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
+	}
+
+	return strings.TrimSpace(result.String())
+}
+
+// formatCodeBlock formats lines as a markdown code block
+func formatCodeBlock(lines []string, sectionHeader string) string {
+	// Determine language hint based on content or section header
+	lang := "nix"
+	content := strings.Join(lines, "\n")
+
+	// Check for bash-like content
+	if strings.Contains(content, "$") && !strings.Contains(content, "=") && !strings.Contains(content, "{") {
+		lang = "bash"
+	}
+
+	return fmt.Sprintf("```%s\n%s\n```\n\n", lang, content)
+}
+
+// generateModuleDocs generates MDX docs from README files and .nix headers in module directories
 func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
+	// Find README.md files
 	readmeFiles, err := findReadmeFiles(modulesDir, modulesDir)
 	if err != nil {
 		return nil, err
 	}
 
+	// Find .nix files with doc headers
+	nixDocFiles, err := findNixDocHeaders(modulesDir, modulesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine and deduplicate (README takes precedence)
+	seenModules := make(map[string]bool)
+	var allDocs []DocSource
+
+	for _, rf := range readmeFiles {
+		seenModules[rf.RelativePath] = true
+		allDocs = append(allDocs, rf)
+	}
+
+	for _, nf := range nixDocFiles {
+		if !seenModules[nf.RelativePath] {
+			allDocs = append(allDocs, nf)
+		}
+	}
+
 	var generatedModules []string
 
-	if len(readmeFiles) == 0 {
-		fmt.Println("No README.md files found in modules directory")
+	if len(allDocs) == 0 {
+		fmt.Println("No documentation sources found in modules directory")
 		return generatedModules, nil
 	}
 
 	// Create modules output directory
-	modulesOutputDir := filepath.Join(outputDir, "modules")
-	if err := os.MkdirAll(modulesOutputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, err
 	}
 
 	fmt.Println("\n📖 Generating module documentation...")
 
-	for _, rf := range readmeFiles {
-		readmeContent, err := os.ReadFile(rf.Path)
+	for _, doc := range allDocs {
+		content, err := os.ReadFile(doc.Path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read %s: %w", rf.Path, err)
+			return nil, fmt.Errorf("failed to read %s: %w", doc.Path, err)
 		}
 
-		mdxContent := convertReadmeToMdx(string(readmeContent), rf.ModuleName)
+		var mdxContent string
+		if doc.IsNixFile {
+			// Extract and convert nix doc header
+			docHeader := extractNixDocHeader(doc.Path)
+			mdxContent = convertNixHeaderToMdx(docHeader, doc.ModuleName)
+		} else {
+			mdxContent = convertReadmeToMdx(string(content), doc.ModuleName)
+		}
 
 		// Create subdirectory structure if needed
-		outputPath := filepath.Join(modulesOutputDir, rf.RelativePath+".mdx")
+		outputPath := filepath.Join(outputDir, doc.RelativePath+".mdx")
 		outputDirForFile := filepath.Dir(outputPath)
 		if err := os.MkdirAll(outputDirForFile, 0755); err != nil {
 			return nil, err
@@ -451,13 +710,18 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 		if err := os.WriteFile(outputPath, []byte(mdxContent), 0644); err != nil {
 			return nil, fmt.Errorf("failed to write %s: %w", outputPath, err)
 		}
-		fmt.Printf("  ✓ %s\n", outputPath)
-		generatedModules = append(generatedModules, rf.ModuleName)
+
+		sourceType := "README"
+		if doc.IsNixFile {
+			sourceType = "nix"
+		}
+		fmt.Printf("  ✓ %s (%s)\n", outputPath, sourceType)
+		generatedModules = append(generatedModules, doc.ModuleName)
 	}
 
 	// Generate modules index
-	modulesIndexPath := filepath.Join(modulesOutputDir, "index.mdx")
-	modulesIndex := generateModulesIndexMdx(readmeFiles)
+	modulesIndexPath := filepath.Join(outputDir, "index.mdx")
+	modulesIndex := generateModulesIndexMdx(allDocs)
 	if err := os.WriteFile(modulesIndexPath, []byte(modulesIndex), 0644); err != nil {
 		return nil, err
 	}
@@ -467,28 +731,22 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 }
 
 // generateModulesIndexMdx generates the index page for modules
-func generateModulesIndexMdx(readmeFiles []ReadmeFile) string {
+func generateModulesIndexMdx(docSources []DocSource) string {
 	// Sort by module name
-	sort.Slice(readmeFiles, func(i, j int) bool {
-		return readmeFiles[i].ModuleName < readmeFiles[j].ModuleName
+	sort.Slice(docSources, func(i, j int) bool {
+		return docSources[i].ModuleName < docSources[j].ModuleName
 	})
 
 	var moduleLinks strings.Builder
-	for _, rf := range readmeFiles {
-		title := strings.ToUpper(rf.ModuleName[:1]) + rf.ModuleName[1:]
-		moduleLinks.WriteString(fmt.Sprintf("  - [%s](./%s)\n", title, rf.RelativePath))
+	for _, ds := range docSources {
+		title := strings.ToUpper(ds.ModuleName[:1]) + ds.ModuleName[1:]
+		moduleLinks.WriteString(fmt.Sprintf("  - [%s](./%s)\n", title, ds.RelativePath))
 	}
 
-	return fmt.Sprintf(`---
-title: Module Documentation
-description: In-depth documentation for stackpanel modules
----
-
-# Module Documentation
-
-This section contains detailed documentation for individual stackpanel modules.
-
-## Modules
-
-%s`, moduleLinks.String())
+	result, err := RenderModulesIndex(moduleLinks.String())
+	if err != nil {
+		// Fallback on error
+		return "# Module Documentation\n\n" + moduleLinks.String()
+	}
+	return result
 }

@@ -11,10 +11,16 @@
   pkgs,
   lib,
   config,
+  options,
   ...
 }: let
   cfg = config.stackpanel.aws.certAuth;
-  baseStateDir = config.stackpanel.state-dir;
+  # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
+  dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
+  baseStateDir = dirs.state;
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
   stateDir = "${baseStateDir}/aws";
   stepStateDir = "${baseStateDir}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
@@ -194,7 +200,7 @@ in {
             ;;
         esac
       '';
-    in {
+    in lib.optionalAttrs isDevenv {
       packages = awsScripts.allPackages ++ [pkgs.gum checkAwsCert interactiveSetup];
 
       stackpanel.motd.commands = [

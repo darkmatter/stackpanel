@@ -349,7 +349,7 @@ func TestConvertReadmeToMdx(t *testing.T) {
 }
 
 func TestGenerateModulesIndexMdx(t *testing.T) {
-	readmeFiles := []ReadmeFile{
+	readmeFiles := []DocSource{
 		{ModuleName: "secrets", RelativePath: "secrets"},
 		{ModuleName: "ports", RelativePath: "ports"},
 		{ModuleName: "postgres", RelativePath: "services/postgres"},
@@ -393,18 +393,13 @@ func TestGenerateModuleDocs(t *testing.T) {
 		t.Errorf("expected 1 generated module, got %d", len(generatedModules))
 	}
 
-	// Check output files exist
-	modulesOutputDir := filepath.Join(outputDir, "modules")
-	if _, err := os.Stat(modulesOutputDir); os.IsNotExist(err) {
-		t.Error("modules output directory not created")
-	}
-
-	secretsMdx := filepath.Join(modulesOutputDir, "secrets.mdx")
+	// Check output files exist (generateModuleDocs writes directly to outputDir)
+	secretsMdx := filepath.Join(outputDir, "secrets.mdx")
 	if _, err := os.Stat(secretsMdx); os.IsNotExist(err) {
 		t.Error("secrets.mdx not created")
 	}
 
-	indexMdx := filepath.Join(modulesOutputDir, "index.mdx")
+	indexMdx := filepath.Join(outputDir, "index.mdx")
 	if _, err := os.Stat(indexMdx); os.IsNotExist(err) {
 		t.Error("index.mdx not created")
 	}

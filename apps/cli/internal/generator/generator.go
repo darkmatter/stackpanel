@@ -42,7 +42,7 @@ func (g *Generator) Run() error {
 		}
 	}
 
-	// Generate schema files
+	// Generate schema files (from Nix-defined schemas)
 	if g.config.Schemas != nil && g.config.Schemas.Secrets != nil {
 		if err := g.generateSchemaFiles(); err != nil {
 			return err
@@ -212,7 +212,7 @@ fi
 `
 }
 
-// generateSchemaFiles generates JSON schema files
+// generateSchemaFiles generates JSON schema files from Nix-provided definitions
 func (g *Generator) generateSchemaFiles() error {
 	secrets := g.config.Schemas.Secrets
 	schemasDir := filepath.Join(g.config.ProjectRoot, g.config.Paths.Gen, "schemas", "secrets")

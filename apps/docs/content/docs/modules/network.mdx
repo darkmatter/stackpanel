@@ -1,0 +1,13 @@
+---
+title: Step CA certificate management for devenv
+description: "Usage in devenv.nix:"
+---
+
+Usage in devenv.nix:
+```nix
+stackpanel.network.step = {
+  enable = true;
+  caUrl = "https://ca.internal:443";
+  caFingerprint = "...";
+};
+```

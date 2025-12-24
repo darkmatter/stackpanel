@@ -7,9 +7,13 @@
   pkgs,
   lib,
   config,
+  options,
   ...
 }: let
   cfg = config.stackpanel.theme;
+
+  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
+  isDevenv = options ? enterShell;
 
   # Import shared theme library
   themeLib = import ../lib/theme.nix {inherit pkgs lib;};
@@ -25,7 +29,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
     packages = starshipTheme.requiredPackages;
 
     stackpanel.motd.features = ["Starship prompt theme"];
@@ -46,5 +50,5 @@ in {
         eval "$(starship init bash)"
       fi
     '';
-  };
+  });
 }

@@ -5,7 +5,7 @@ description: Configuration options for stackpanel.ide
 
 # Ide Options
 
-## `stackpanel.ide.cursor.enable`
+## `ide.cursor.enable`
 
 Whether to enable Cursor editor integration (not yet implemented).
 
@@ -14,7 +14,6 @@ Whether to enable Cursor editor integration (not yet implemented).
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -22,7 +21,7 @@ Whether to enable Cursor editor integration (not yet implemented).
 
 ---
 
-## `stackpanel.ide.enable`
+## `ide.enable`
 
 Generate IDE configuration files into .stackpanel/gen/ide/
 
@@ -31,7 +30,6 @@ Generate IDE configuration files into .stackpanel/gen/ide/
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -39,7 +37,7 @@ Generate IDE configuration files into .stackpanel/gen/ide/
 
 ---
 
-## `stackpanel.ide.vscode.enable`
+## `ide.vscode.enable`
 
 Generate VS Code workspace and configuration files
 
@@ -48,7 +46,6 @@ Generate VS Code workspace and configuration files
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -56,7 +53,7 @@ Generate VS Code workspace and configuration files
 
 ---
 
-## `stackpanel.ide.vscode.existingSettingsPath`
+## `ide.vscode.existing-settings-path`
 
 Path to existing VS Code settings.json to merge with generated settings.
 
@@ -67,10 +64,9 @@ WARNING: This creates IMPURE evaluation - the file must exist at Nix evaluation 
 | **Type** | `null or absolute path` |
 | **Default** | `null` |
 
-
 ---
 
-## `stackpanel.ide.vscode.extensions`
+## `ide.vscode.extensions`
 
 Recommended VS Code extension IDs
 
@@ -79,10 +75,9 @@ Recommended VS Code extension IDs
 | **Type** | `list of string` |
 | **Default** | `[ ]` |
 
-
 ---
 
-## `stackpanel.ide.vscode.extraFolders`
+## `ide.vscode.extra-folders`
 
 Additional workspace folders to include
 
@@ -91,10 +86,9 @@ Additional workspace folders to include
 | **Type** | `list of attribute set of string` |
 | **Default** | `[ ]` |
 
-
 ---
 
-## `stackpanel.ide.vscode.outputMode`
+## `ide.vscode.output-mode`
 
 Where to output VS Code settings:
 - "workspace": Generate .stackpanel/gen/ide/vscode/stackpanel.code-workspace (default, safe)
@@ -105,10 +99,9 @@ Where to output VS Code settings:
 | **Type** | `one of "workspace", "settingsJson"` |
 | **Default** | `"workspace"` |
 
-
 ---
 
-## `stackpanel.ide.vscode.settings`
+## `ide.vscode.settings`
 
 VS Code settings to include in the generated configuration.
 These take highest priority and will override any existing or generated settings.
@@ -118,10 +111,9 @@ These take highest priority and will override any existing or generated settings
 | **Type** | `attribute set of anything` |
 | **Default** | `{ }` |
 
-
 ---
 
-## `stackpanel.ide.vscode.workspaceName`
+## `ide.vscode.workspace-name`
 
 Name for the generated .code-workspace file (without extension)
 
@@ -130,10 +122,9 @@ Name for the generated .code-workspace file (without extension)
 | **Type** | `string` |
 | **Default** | `"stackpanel"` |
 
-
 ---
 
-## `stackpanel.ide.zed.enable`
+## `ide.zed.enable`
 
 Whether to enable Zed editor integration (not yet implemented).
 
@@ -141,7 +132,6 @@ Whether to enable Zed editor integration (not yet implemented).
 |----------|-------|
 | **Type** | `boolean` |
 | **Default** | `false` |
-
 
 **Example:**
 

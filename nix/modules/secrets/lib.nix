@@ -1,140 +1,116 @@
 # Secrets module library functions
-# Utility functions for SOPS/vals secrets management
-{
-  lib,
-  pkgs,
-  secretsConfigDir,
-}: let
-  # YAML generation
-  yaml = pkgs.formats.yaml {};
+# Shared logic for both devenv and standalone adapters
+{ lib, pkgs }: rec {
+  # Convert YAML file to JSON (decrypting with SOPS)
+  # Returns a shell function that can be used in scripts
+  toJsonScript = ''
+    to_json() {
+      cat "$1" \
+        | ${pkgs.yq}/bin/yq \
+        | ${pkgs.sops}/bin/sops decrypt --input-type json --output-type json /dev/stdin
+    }
+  '';
 
-  # Parse YAML file to Nix attrset
-  # Uses yj (YAML to JSON converter) at build time
-  fromYaml = file:
-    builtins.fromJSON (
-      builtins.readFile (
-        pkgs.runCommand "yaml-to-json" {} ''
-          ${pkgs.yj}/bin/yj < ${file} > $out
-        ''
-      )
-    );
+  # Build the ensure-age-key script body
+  ensureAgeKeyScript = ''
+    KEYFILE="''${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
 
-  # Load YAML file if exists, otherwise return default
-  loadYamlIfExists = path: default:
-    if builtins.pathExists path
-    then fromYaml path
-    else default;
-in {
-  # Convert attrs to YAML string
-  toYaml = attrs: builtins.readFile (yaml.generate "sops.yaml" attrs);
+    if [[ ! -f "$KEYFILE" ]]; then
+      echo "❌ Error: AGE key file not found at $KEYFILE" >&2
+      echo "Follow the instructions to add the decryption key:" >&2
+      echo "1. Find 'SOPS (Dev)' in 1Password > Dev Vault" >&2
+      echo "2. Copy the AGE secret key (password)" >&2
+      echo "3. Add it to $KEYFILE (create the file if it doesn't exist)" >&2
+      echo "4. Try again" >&2
+      exit 1
+    fi
 
-  # Re-export fromYaml for use in other modules
-  inherit fromYaml loadYamlIfExists;
+    while read -r line; do
+      [[ "$line" == AGE-SECRET-KEY-* ]] || continue
+      derived="$(printf '%s\n' "$line" | ${pkgs.age}/bin/age-keygen -y - | awk '{print $NF}')"
+      if [[ "$derived" == "$AGE_PUBLIC_KEY_DEV" ]]; then
+        [[ "$1" != "-q" ]] && echo "✅ Dev age key found in $KEYFILE"
+        exit 0
+      fi
+    done < "$KEYFILE"
 
-  # Check if key is an AGE key (matches age1...)
-  isAgeKey = key: lib.hasPrefix "age1" key;
+    echo "❌ Error: Dev age key not found in $KEYFILE" >&2
+    echo "Follow the instructions to add the decryption key:" >&2
+    echo "1. Find 'SOPS (Dev)' in 1Password > Dev Vault" >&2
+    echo "2. Copy the AGE secret key (password)" >&2
+    echo "3. Add it to $KEYFILE (create the file if it doesn't exist)" >&2
+    echo "4. Try again" >&2
+    exit 1
+  '';
 
-  # Get admin users from users attrset
-  getAdmins = users: lib.filterAttrs (_: u: u.admin or false) users;
+  # Build the sops wrapper script body (takes ensure-age-key path as arg)
+  sopsWrapperScript = ensureAgeKeyPath: ''
+    # Run preflight check before sops
+    ${ensureAgeKeyPath} -q || exit 1
+    export SOPS_AGE_KEY_FILE="''${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
+    exec ${pkgs.sops}/bin/sops "$@"
+  '';
 
-  # Get admin keys from users attrset
-  getAdminKeys = users: lib.mapAttrsToList (_: u: u.pubkey) (lib.getAdmins users);
+  # Build generate-secrets-schema script body
+  generateSecretsSchemaScript = ''
+    set -e
+    ${toJsonScript}
 
-  # Get all user keys
-  getAllUserKeys = users: lib.mapAttrsToList (_: u: u.pubkey) users;
+    INPUT_FILE="$1"
+    OUTPUT_FILE="$2"
+    LANGUAGE="$3"
+    JSON_DATA=$(to_json "$INPUT_FILE")
 
-  # Load global config (YAML)
-  loadGlobalConfig = loadYamlIfExists "${secretsConfigDir}/config.yaml" {};
+    case "$LANGUAGE" in
+      "typescript")
+        echo "$JSON_DATA" | ${pkgs.bun}/bin/bun x quicktype -o "$OUTPUT_FILE" --lang typescript -
+        ;;
+      "go")
+        echo "$JSON_DATA" | ${pkgs.bun}/bin/bun x quicktype -o "$OUTPUT_FILE" --lang go -
+        ;;
+      *)
+        echo "Unsupported language: $LANGUAGE" >&2
+        exit 1
+        ;;
+    esac
+  '';
 
-  # Load users config (YAML)
-  loadUsersConfig = loadYamlIfExists "${secretsConfigDir}/users.yaml" {};
+  # Build generate-secrets-package script body
+  # Takes cfg values as arguments to bake in at build time
+  generateSecretsPackageScript = { inputDir, environments, codegen }: ''
+    set -e
+    ${toJsonScript}
 
-  # Auto-discover apps from .stackpanel/secrets/apps/
-  # Apps prefixed with _ (like _example) are ignored
-  discoverApps = let
-    appsDir = "${secretsConfigDir}/apps";
-    exists = builtins.pathExists appsDir;
-    entries =
-      if exists
-      then builtins.readDir appsDir
-      else {};
-    # Filter to directories not starting with _
-    validApps = lib.filterAttrs (name: type: type == "directory" && !lib.hasPrefix "_" name) entries;
-  in
-    lib.mapAttrs (appName: _: let
-      appDir = "${appsDir}/${appName}";
-      # Load app config (YAML)
-      appConfig = loadYamlIfExists "${appDir}/config.yaml" {};
-      # Load common schema (YAML)
-      commonSchema = loadYamlIfExists "${appDir}/common.yaml" {};
-      # Load environment configs (YAML)
-      loadEnv = env:
-        loadYamlIfExists "${appDir}/${env}.yaml" {
-          schema = {};
-          users = [];
-          extraKeys = [];
-        };
-    in {
-      inherit appConfig commonSchema;
-      environments = {
-        dev = loadEnv "dev";
-        staging = loadEnv "staging";
-        prod = loadEnv "prod";
-      };
-    })
-    validApps;
+    INPUT_DIR="${inputDir}"
 
-  # Get keys for a specific app/environment
-  getAppEnvKeys = {
-    apps,
-    users,
-    appName,
-    env,
-  }: let
-    adminKeys = lib.mapAttrsToList (_: u: u.pubkey) (lib.filterAttrs (_: u: u.admin or false) users);
-    appData = apps.${appName} or {};
-    envCfg = appData.environments.${env} or {};
-    explicitKeys = map (name: users.${name}.pubkey) (envCfg.users or []);
-  in
-    lib.unique (explicitKeys ++ adminKeys ++ (envCfg.extra-keys or []));
+    # Configuration baked in at build time as JSON
+    ENVIRONMENTS_JSON='${builtins.toJSON environments}'
+    CODEGEN_JSON='${builtins.toJSON codegen}'
 
-  # Generate .sops.yaml creation rules
-  generateSopsRules = {
-    apps,
-    users,
-    isAgeKey,
-  }: let
-    adminKeys = lib.mapAttrsToList (_: u: u.pubkey) (lib.filterAttrs (_: u: u.admin or false) users);
-    allUserKeys = lib.mapAttrsToList (_: u: u.pubkey) users;
+    for ENV_NAME in $(echo "$ENVIRONMENTS_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]'); do
+      ENV_CFG=$(echo "$ENVIRONMENTS_JSON" | ${pkgs.jq}/bin/jq -r --arg name "$ENV_NAME" '.[$name]')
+      SOURCES=$(echo "$ENV_CFG" | ${pkgs.jq}/bin/jq -r '.sources[]')
 
-    # Get keys for a specific app/environment
-    getAppEnvKeys' = appName: env: let
-      appData = apps.${appName} or {};
-      envCfg = appData.environments.${env} or {};
-      explicitKeys = map (name: users.${name}.pubkey) (envCfg.users or []);
-    in
-      lib.unique (explicitKeys ++ adminKeys ++ (envCfg.extra-keys or []));
+      # Decrypt and merge all source files for this environment
+      MERGED_SECRETS=$(mktemp)
+      {
+        for SRC in $SOURCES; do
+          to_json "$INPUT_DIR/$SRC.yaml"
+        done
+      } | ${pkgs.jq}/bin/jq -s 'reduce .[] as $item ({}; . * $item)' > "$MERGED_SECRETS"
 
-    # Build creation rules for each app/environment
-    appEnvRules = lib.flatten (lib.mapAttrsToList (appName: appData:
-      lib.mapAttrsToList (env: _envCfg: let
-        keys = getAppEnvKeys' appName env;
-        ageKeys = lib.filter isAgeKey keys;
-      in {
-        path_regex = "secrets/${appName}/${env}(\\.local)?\\.yaml$";
-        age = lib.concatStringsSep "," ageKeys;
-      })
-      (appData.environments or {}))
-    apps);
+      # Generate code for each codegen target
+      for CODEGEN_NAME in $(echo "$CODEGEN_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]'); do
+        CODEGEN_CFG=$(echo "$CODEGEN_JSON" | ${pkgs.jq}/bin/jq -r --arg name "$CODEGEN_NAME" '.[$name]')
+        OUTPUT_DIR=$(echo "$CODEGEN_CFG" | ${pkgs.jq}/bin/jq -r '.directory')
+        LANGUAGE=$(echo "$CODEGEN_CFG" | ${pkgs.jq}/bin/jq -r '.language')
+        mkdir -p "$OUTPUT_DIR"
+        OUTPUT_FILE="$OUTPUT_DIR/''${ENV_NAME}_secrets.$( [ "$LANGUAGE" = "typescript" ] && echo "ts" || echo "go" )"
+        generate-secrets-schema "$MERGED_SECRETS" "$OUTPUT_FILE" "$LANGUAGE"
+        echo "Generated secrets for environment '$ENV_NAME' in '$OUTPUT_FILE'"
+      done
 
-    # Common secrets per app - all users have access
-    appCommonRules = lib.mapAttrsToList (appName: _: {
-      path_regex = "secrets/${appName}/common(\\.local)?\\.yaml$";
-      age = lib.concatStringsSep "," (lib.filter isAgeKey allUserKeys);
-    })
-    apps;
-
-    # Filter out rules with empty age keys
-    validRules = lib.filter (r: r.age != "") (appCommonRules ++ appEnvRules);
-  in {creation_rules = validRules;};
+      rm "$MERGED_SECRETS"
+    done
+  '';
 }

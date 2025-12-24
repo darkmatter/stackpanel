@@ -5,7 +5,7 @@ description: Configuration options for stackpanel.ci
 
 # Ci Options
 
-## `stackpanel.ci.enable`
+## `ci.enable`
 
 Whether to enable CI/CD generation.
 
@@ -14,7 +14,6 @@ Whether to enable CI/CD generation.
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -22,7 +21,7 @@ Whether to enable CI/CD generation.
 
 ---
 
-## `stackpanel.ci.github.checks.branches`
+## `ci.github.checks.branches`
 
 This option has no description.
 
@@ -30,7 +29,6 @@ This option has no description.
 |----------|-------|
 | **Type** | `list of string` |
 | **Default** | _see below_ |
-
 
 **Default:**
 
@@ -43,7 +41,7 @@ This option has no description.
 
 ---
 
-## `stackpanel.ci.github.checks.commands`
+## `ci.github.checks.commands`
 
 This option has no description.
 
@@ -51,7 +49,6 @@ This option has no description.
 |----------|-------|
 | **Type** | `list of string` |
 | **Default** | `[ ]` |
-
 
 **Example:**
 
@@ -65,7 +62,7 @@ This option has no description.
 
 ---
 
-## `stackpanel.ci.github.checks.enable`
+## `ci.github.checks.enable`
 
 Whether to enable standard CI checks workflow.
 
@@ -74,7 +71,6 @@ Whether to enable standard CI checks workflow.
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -82,7 +78,7 @@ Whether to enable standard CI checks workflow.
 
 ---
 
-## `stackpanel.ci.github.enable`
+## `ci.github.enable`
 
 Whether to enable GitHub Actions.
 
@@ -91,7 +87,6 @@ Whether to enable GitHub Actions.
 | **Type** | `boolean` |
 | **Default** | `false` |
 
-
 **Example:**
 
 `true`
@@ -99,7 +94,7 @@ Whether to enable GitHub Actions.
 
 ---
 
-## `stackpanel.ci.github.workflows`
+## `ci.github.workflows`
 
 Workflow name -> workflow definition (raw)
 
@@ -107,7 +102,6 @@ Workflow name -> workflow definition (raw)
 |----------|-------|
 | **Type** | `attribute set of (attribute set)` |
 | **Default** | `{ }` |
-
 
 ---
 
