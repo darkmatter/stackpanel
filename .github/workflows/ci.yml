@@ -65,8 +65,14 @@ jobs:
           installCommand: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
       - name: Install omnix
         run: nix --accept-flake-config profile install github:juspay/omnix
-      - name: Run om ci
-        env:
-          # Skip devenv on Darwin to avoid container outputs that require Linux-only packages (shadow)
-          SKIP_DEVENV: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
+      - name: Run om ci (Linux)
+        if: matrix.system != 'aarch64-darwin'
         run: om ci run --systems "${{ matrix.system }}" ".#default.${{ matrix.subflake }}" -- --impure
+      - name: Run om ci (Darwin - skip devenv)
+        if: matrix.system == 'aarch64-darwin'
+        run: |
+          # Build packages directly with SKIP_DEVENV to avoid container outputs
+          export SKIP_DEVENV=true
+          nix build .#packages.aarch64-darwin.stackpanel-cli --impure
+          nix build .#packages.aarch64-darwin.default --impure
+          nix flake check --no-build --impure
