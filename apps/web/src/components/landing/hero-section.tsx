@@ -13,12 +13,13 @@ export function HeroSection() {
 						<div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5">
 							<span className="h-2 w-2 rounded-full bg-accent" />
 							<span className="text-muted-foreground text-sm">
-								The new localhost:3000
+								The new localhost:3001
 							</span>
 						</div>
 
 						<h1 className="text-balance font-bold text-4xl text-foreground tracking-tight sm:text-5xl lg:text-6xl">
-							Your entire stack, <span className="text-accent">one panel</span>
+							Build <span className="font-bold text-accent">products</span> not
+							plumbing.
 						</h1>
 
 						<p className="mt-6 max-w-xl text-pretty text-lg text-muted-foreground leading-relaxed">

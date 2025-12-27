@@ -1,4 +1,4 @@
-import { protectedProcedure, publicProcedure, router } from "../index";
+import { protectedProcedure, publicProcedure, router } from "../index.old";
 import { todoRouter } from "./todo";
 
 export const appRouter = router({

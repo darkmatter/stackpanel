@@ -44,5 +44,6 @@
 		"web#destroy": {
 			"cache": false
 		}
-	}
+	},
+	"envMode": "loose"
 }

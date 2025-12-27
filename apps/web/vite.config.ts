@@ -1,17 +1,26 @@
-import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
-import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import react from "@vitejs/plugin-react";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import alchemy from "alchemy/cloudflare/tanstack-start";
+import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+// ALCHEMY=1 is set by root alchemy.run.ts for builds/deploys
+const useAlchemy = process.env.ALCHEMY === "1";
 
 export default defineConfig({
-	plugins: [tailwindcss(), tanstackRouter({}), react()],
-	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "./src"),
-		},
-	},
+	plugins: [
+		tsconfigPaths({
+			projects: ["./tsconfig.json"],
+		}),
+		tailwindcss(),
+		// Use alchemy for Cloudflare deployment, nitro for local dev (HMR)
+		...(useAlchemy ? [alchemy()] : [nitro()]),
+		tanstackStart(),
+		viteReact(),
+	],
 	server: {
-		port: Number.parseInt(process.env.PORT_WEB || "6402"),
+		port: 3001,
 	},
 });

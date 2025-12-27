@@ -40,7 +40,7 @@ func init() {
 	statusCmd.Flags().Bool("static", false, "Show static status (non-interactive)")
 }
 
-var Header = `
+const Banner = `
        |                 |                                |
   __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |
 \__ \  |    (   |  (       <   |   |  (   |  |   |   __/  |
@@ -50,7 +50,7 @@ ____/ \__| \__,_| \___| _|\_\  .__/  \__,_| _|  _| \___| _|
 
 func showFullStatus() {
 	fmt.Println()
-	purple.Println(Header)
+	purple.Println(Banner)
 
 	// Load state file if available
 	st, stateErr := state.Load("")

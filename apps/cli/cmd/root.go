@@ -44,6 +44,7 @@ func init() {
 	rootCmd.AddCommand(certsCmd)
 	rootCmd.AddCommand(caddyCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(agentCmd)
 
 	// Handle --no-color flag
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {

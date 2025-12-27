@@ -18,7 +18,8 @@
 	"devDependencies": {
 		"drizzle-kit": "^0.31.8",
 		"@types/ws": "^8.18.1",
-		"@stackpanel/config": "workspace:*"
+		"@stackpanel/config": "workspace:*",
+		"@stackpanel/env": "workspace:*"
 	},
 	"peerDependencies": {
 		"typescript": "^5"

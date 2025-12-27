@@ -27,6 +27,7 @@
 		"dotenv": "catalog:",
 		"drizzle-orm": "^0.45.1",
 		"hono": "catalog:",
+		"superjson": "^2.2.6",
 		"zod": "^4.1.11"
 	}
 }

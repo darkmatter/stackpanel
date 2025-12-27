@@ -28,8 +28,12 @@ export const auth = betterAuth({
 				checkout({
 					products: [
 						{
-							productId: "your-product-id",
-							slug: "pro",
+							productId: "5fb4014e-d879-4b28-966a-9efcf60b6c24",
+							slug: "Pro",
+						},
+						{
+							productId: "70acf138-0b13-4fd0-8c25-78c63f09a122",
+							slug: "Free",
 						},
 					],
 					successUrl: process.env.POLAR_SUCCESS_URL,
@@ -37,6 +41,9 @@ export const auth = betterAuth({
 				}),
 				portal(),
 			],
-		}),
+		}) as unknown as import("better-auth").BetterAuthPlugin,
 	],
 });
+
+export type Auth = typeof auth;
+export type Session = (typeof auth)["$Infer"]["Session"];

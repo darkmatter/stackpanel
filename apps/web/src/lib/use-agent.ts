@@ -5,11 +5,13 @@ import {
 	type ExecResult,
 	type FileContent,
 	type GenerateResult,
+	type SetSecretResult,
 } from "./agent";
 
 interface UseAgentOptions {
 	host?: string;
 	port?: number;
+	token?: string;
 	autoConnect?: boolean;
 }
 
@@ -24,24 +26,42 @@ interface UseAgentReturn {
 	nixGenerate: () => Promise<GenerateResult>;
 	readFile: (path: string) => Promise<FileContent>;
 	writeFile: (path: string, content: string) => Promise<void>;
+	setSecret: (
+		env: "dev" | "staging" | "prod",
+		key: string,
+		value: string,
+	) => Promise<SetSecretResult>;
 }
 
 /**
  * React hook for interacting with the StackPanel agent
  */
 export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
-	const { host = "localhost", port = 9876, autoConnect = true } = options;
+	const {
+		host = "localhost",
+		port = 9876,
+		token,
+		autoConnect = true,
+	} = options;
 
-	const [client] = useState(() => new AgentClient({ host, port }));
+	const [client] = useState(() => new AgentClient({ host, port, token }));
 	const [isConnected, setIsConnected] = useState(false);
 	const [isConnecting, setIsConnecting] = useState(false);
 	const [error, setError] = useState<Error | null>(null);
+
+	// Keep token up to date (needed after pairing).
+	useEffect(() => {
+		client.setToken(token);
+	}, [client, token]);
 
 	const connect = useCallback(async () => {
 		setIsConnecting(true);
 		setError(null);
 
 		try {
+			if (!token) {
+				throw new Error("Missing agent token (pair first)");
+			}
 			await client.connect();
 			setIsConnected(true);
 		} catch (err) {
@@ -50,7 +70,7 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 		} finally {
 			setIsConnecting(false);
 		}
-	}, [client]);
+	}, [client, token]);
 
 	const disconnect = useCallback(() => {
 		client.disconnect();
@@ -70,14 +90,14 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 			config: { ...client["config"], ...originalConfig },
 		});
 
-		if (autoConnect) {
+		if (autoConnect && token) {
 			connect();
 		}
 
 		return () => {
 			client.disconnect();
 		};
-	}, [client, autoConnect, connect]);
+	}, [client, autoConnect, connect, token]);
 
 	return {
 		isConnected,
@@ -90,6 +110,7 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 		nixGenerate: () => client.nixGenerate(),
 		readFile: (path) => client.readFile(path),
 		writeFile: (path, content) => client.writeFile(path, content),
+		setSecret: (env, key, value) => client.setSecret({ env, key, value }),
 	};
 }
 

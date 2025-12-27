@@ -27,7 +27,7 @@ func EvalOnce(ctx context.Context, projectRoot string) (*Config, error) {
 		return nil, fmt.Errorf("failed to resolve project root: %w", err)
 	}
 
-	nixFile := filepath.Join(absRoot, "nix", "eval", "stackpanel-config.nix")
+	nixFile := filepath.Join(absRoot, "nix", "stackpanel", "util", "evalconfig.nix")
 
 	// Check if nix file exists
 	if _, err := os.Stat(nixFile); os.IsNotExist(err) {

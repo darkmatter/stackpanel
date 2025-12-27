@@ -24,6 +24,7 @@
 		".github",
 		".turbo",
 		".devenv",
+		".devenv*",
 		".vscode",
 		"node_modules",
 		"dist",

@@ -6,14 +6,22 @@ This is a Next.js application generated with
 Run development server:
 
 ```bash
-npm run dev
-# or
-pnpm dev
-# or
-yarn dev
+bun run dev
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+Open http://localhost:4000 with your browser to see the result.
+
+## Writing Docs
+
+We have an internal documentation generator that automatically generates documenation by one of two methods:
+
+1. **Nix Options Parsing**
+
+We use `nix eval` to generate `nix-options.json` - this is built into nix and gives us the schema of all the options. We then pass this to `stackpanel docgen` which parses this and generates docs using the descriptions for each option. This allows docs and source code to co-exist.
+
+2. **README Parsing**
+
+
 
 ## Explore
 

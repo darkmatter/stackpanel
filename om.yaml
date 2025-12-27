@@ -14,3 +14,21 @@ health:
     caches:
       required:
         - "https://darkmatter.cachix.org"
+    flake-enabled:
+      enable: true
+develop:
+  default:
+    readme: |
+      # Stackpanel Development Environment
+
+      This is the development environment for the Stackpanel project.
+      This environment is used to develop the Stackpanel project.
+      It is used to test the Stackpanel project and to develop the Stackpanel project.
+
+      To enter the development environment, run:
+
+        $ direnv allow
+
+      To exit the development environment, run:
+
+        $ exit

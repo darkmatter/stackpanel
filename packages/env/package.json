@@ -1,0 +1,32 @@
+{
+	"name": "@stackpanel/env",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./auth": {
+			"default": "./src/auth.ts"
+		},
+		"./web": {
+			"default": "./src/web.ts"
+		},
+		"./web-client": {
+			"default": "./src/web-client.ts"
+		},
+		"./web-server": {
+			"default": "./src/web-server.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		}
+	},
+	"dependencies": {
+		"@stackpanel/config": "workspace:*",
+		"znv": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.3"
+	}
+}

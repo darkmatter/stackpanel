@@ -1,0 +1,26 @@
+---
+title: Stackpanel Nix Library
+description: Pure utility functions for stackpanel that work with any Nix module system
+---
+
+Pure utility functions for stackpanel that work with any Nix module system
+(flake-parts, devenv, NixOS, etc.)
+
+## Architecture
+
+```nix
+lib/core/        - Pure logic: ports, services, global-services
+lib/devshell.nix - mkDevShell function for standalone usage
+lib/services/    - Per-service helpers (postgres, redis, minio)
+lib/integrations/- IDE/devshell scripts (vscode, starship)
+lib/*.nix        - Individual helper libraries (aws, network, caddy, theme)
+```
+
+
+## Usage
+
+```nix
+let stackpanelLib = import ./lib { inherit pkgs lib; };
+in stackpanelLib.mkDevShell projectConfig
+in stackpanelLib.ports.computeBasePort { name = "myproject"; }
+```

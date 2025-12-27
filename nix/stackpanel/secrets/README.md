@@ -1,0 +1,131 @@
+# StackPanel Secrets Module
+
+SOPS-based secrets management for StackPanel projects.
+
+## Overview
+
+This module provides a comprehensive secrets management solution using [SOPS](https://github.com/getsops/sops) (Secrets OPerationS) with [AGE](https://github.com/FiloSottile/age) encryption. It supports both devenv and standalone Nix flake contexts.
+
+## Features
+
+- **AGE Encryption**: Secure encryption using AGE public/private key pairs
+- **Environment Isolation**: Separate secrets per environment (dev, staging, prod)
+- **Type-Safe Code Generation**: Generate TypeScript or Go code from secrets schemas
+- **IDE Validation**: JSON schemas for YAML config file validation and autocompletion
+- **Dual Context Support**: Works in both devenv and standalone flake contexts
+
+## Module Structure
+
+| File | Purpose |
+|------|---------|
+| `default.nix` | Unified entry point, auto-detects context |
+| `core.nix` | Core script implementations for devenv |
+| `lib.nix` | Shared library functions for both adapters |
+| `options.nix` | Pure NixOS module option definitions |
+| `schemas.nix` | JSON schemas for YAML config validation |
+
+## Quick Start
+
+### In devenv.nix
+
+```nix
+{
+  imports = [ ./nix/stackpanel/secrets ];
+
+  stackpanel.secrets = {
+    enable = true;
+    input-directory = ".stackpanel/secrets";
+
+    environments = {
+      dev = {
+        name = "dev";
+        sources = [ "shared" "dev" ];
+        public-keys = [ "age1..." ];
+      };
+    };
+
+    codegen = {
+      api = {
+        name = "api";
+        directory = "packages/api/src";
+        language = "typescript";
+      };
+    };
+  };
+}
+```
+
+### In a standalone flake
+
+```nix
+{
+  imports = [ ./nix/stackpanel/secrets ];
+  _module.args.pkgs = nixpkgs.legacyPackages.x86_64-linux;
+
+  stackpanel.secrets.enable = true;
+
+  # Access generated packages via:
+  # config.stackpanel.secrets.packages.ensure-age-key
+  # config.stackpanel.secrets.packages.sops-wrapped
+  # config.stackpanel.secrets.packages.generate-secrets-schema
+  # config.stackpanel.secrets.packages.generate-secrets-package
+}
+```
+
+## Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `ensure-age-key` | Validates that the required AGE decryption key exists |
+| `sops` | Wrapped SOPS command with automatic key preflight check |
+| `generate-secrets-schema` | Generates typed code from a single SOPS-encrypted file |
+| `generate-secrets-package` | Orchestrates code generation for all configured environments |
+
+## Directory Structure
+
+The module expects secrets to be organized as:
+
+```
+.stackpanel/secrets/
+├── config.yaml          # Global secrets configuration
+├── users.yaml           # Team members with AGE public keys
+└── apps/
+    └── <app-name>/
+        ├── config.yaml  # Per-app codegen configuration
+        ├── common.yaml  # Shared secret schema
+        ├── dev.yaml     # Development secrets (SOPS-encrypted)
+        ├── staging.yaml # Staging secrets (SOPS-encrypted)
+        └── prod.yaml    # Production secrets (SOPS-encrypted)
+```
+
+## Configuration Options
+
+### `stackpanel.secrets.enable`
+Enable the secrets module. Default: `false`
+
+### `stackpanel.secrets.input-directory`
+Directory containing SOPS-encrypted secrets. Default: `.stackpanel/secrets`
+
+### `stackpanel.secrets.environments`
+Attribute set defining environment-specific configurations:
+- `name`: Environment name
+- `sources`: List of SOPS files to merge (without `.yaml` extension)
+- `public-keys`: AGE public keys that can decrypt this environment
+
+### `stackpanel.secrets.codegen`
+Attribute set defining code generation targets:
+- `name`: Target name
+- `directory`: Output directory for generated code
+- `language`: `"typescript"` or `"go"`
+
+## AGE Key Setup
+
+1. Find "SOPS (Dev)" in 1Password > Dev Vault
+2. Copy the AGE secret key (starts with `AGE-SECRET-KEY-`)
+3. Add it to `~/.config/sops/age/keys.txt`
+4. Run `ensure-age-key` to verify setup
+
+## Related Documentation
+
+- [SOPS Documentation](https://github.com/getsops/sops)
+- [AGE Encryption](https://github.com/FiloSottile/age)

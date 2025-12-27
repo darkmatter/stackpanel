@@ -1,0 +1,11 @@
+---
+title: "AWS cert-auth utilities - pure functions that work with any Nix module system"
+description: "Usage:"
+---
+
+## Usage
+
+```nix
+let awsLib = import ./lib/aws.nix { inherit pkgs lib; };
+in awsLib.mkAwsCredScripts { ... }
+```

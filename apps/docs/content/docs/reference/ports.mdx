@@ -1,6 +1,7 @@
 ---
-title: Ports Options
+title: ports
 description: Configuration options for stackpanel.ports
+icon: Plug
 ---
 
 # Ports Options
@@ -12,7 +13,7 @@ The computed base port for this project
 | Property | Value |
 |----------|-------|
 | **Type** | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
-| **Default** | `6400` |
+| **Default** | `3600` |
 | **Read Only** | `true` |
 
 ---
@@ -108,25 +109,25 @@ Access: config.stackpanel.ports.service.POSTGRES.port
     displayName = "Minio";
     key = "MINIO";
     name = "Minio";
-    port = 6412;
+    port = 3612;
   };
   MINIO_CONSOLE = {
     displayName = "Minio Console";
     key = "MINIO_CONSOLE";
     name = "Minio Console";
-    port = 6413;
+    port = 3613;
   };
   POSTGRES = {
     displayName = "PostgreSQL";
     key = "POSTGRES";
     name = "PostgreSQL";
-    port = 6410;
+    port = 3610;
   };
   REDIS = {
     displayName = "Redis";
     key = "REDIS";
     name = "Redis";
-    port = 6411;
+    port = 3611;
   };
 }
 ```

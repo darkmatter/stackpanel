@@ -25,6 +25,10 @@ type Config struct {
 
 	// Data directory for agent state
 	DataDir string `yaml:"data_dir"`
+
+	// Allowed web UI origins (CORS + WebSocket Origin). Empty means defaults.
+	// Localhost origins are always allowed.
+	AllowedOrigins []string `yaml:"allowed_origins"`
 }
 
 func DefaultConfig() *Config {
@@ -35,6 +39,7 @@ func DefaultConfig() *Config {
 		APIEndpoint:     "https://stackpanel.dev/api/agent",
 		AllowedCommands: []string{},
 		DataDir:         filepath.Join(home, ".stackpanel"),
+		AllowedOrigins:  []string{},
 	}
 }
 

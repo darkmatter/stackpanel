@@ -14,6 +14,7 @@ import {
 	Users,
 	Wifi,
 } from "lucide-react";
+import { AgentConnect } from "@/components/agent-connect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PanelType } from "../dashboard-shell";
@@ -100,6 +101,9 @@ const systemHealth = [
 export function OverviewPanel({ onNavigate }: OverviewPanelProps) {
 	return (
 		<div className="space-y-6">
+			{/* Agent Connection Status */}
+			<AgentConnect />
+
 			{/* Quick Stats */}
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{quickStats.map((stat) => {

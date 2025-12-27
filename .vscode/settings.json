@@ -1,99 +1,104 @@
 {
-  // Rust Analyzer - configured to use devenv toolchain
-  "[rust]": {
-    "editor.defaultFormatter": "rust-lang.rust-analyzer"
-  },
-  "rust-analyzer.server.path": "${workspaceFolder}/.devenv/profile/bin/rust-analyzer",
-  "rust-analyzer.cargo.extraEnv": {
-    "PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}",
-    "CARGO_HOME": "${workspaceFolder}/.devenv/profile"
-  },
-  "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.procMacro.enable": true,
-  "rust-analyzer.imports.granularity.group": "module",
-  "rust-analyzer.imports.prefix": "self",
-  "rust-analyzer.inlayHints.parameterHints.enable": true,
-  "rust-analyzer.inlayHints.typeHints.enable": true,
-  "rust-analyzer.inlayHints.chainingHints.enable": true,
-  "rust-analyzer.diagnostics.experimental.enable": true,
-
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[javascriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[css]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[graphql]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[nix]": {
-    "editor.defaultFormatter": "jnoortheen.nix-ide"
-  },
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
-  "emmet.showExpandedAbbreviation": "never",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.oxc": "explicit"
-  },
-  "oxc.enable": true,
-  "oxc.configPath": "oxlint.json",
-  "explorer.excludeGitIgnore": true,
-  "terminal.integrated.defaultProfile.osx": "devenv",
-  "terminal.integrated.profiles.osx": {
-    "devenv": {
-      "path": ".vscode/devshell"
-    }
-  },
-  "nix.enableLanguageServer": true,
-  "nix.serverPath": "nixd",
-  "nix.formatterPath": "nixfmt",
-  "nix.serverSettings": {
-    "nixd": {
-      "formatting": {
-        "command": ["nixfmt"]
-      },
-      "options": {
-        "stackpanel": {
-          "expr": "let  system = builtins.currentSystem; pkgs = import <nixpkgs> { inherit system; }; lib = pkgs.lib; in (lib.evalModules { modules = [ ./nix/modules/secrets/default.nix { _module.args = { inherit pkgs lib; }; } ]; }).options"
-        }
-      }
-    }
-  },
-  "terminal.integrated.shellIntegration.enabled": true,
-  "terminal.integrated.shellIntegration.environmentReporting": true,
-  "files.exclude": {
-    "**/.claude": true,
-    "**/.codex": true,
-    "**/.cursor": true,
-    "**/.zed": true,
-    "**/.git": true,
-    "**/gen": true,
-    "**/.stackpanel/gen": false,
-    "**/.svn": true,
-    "**/.hg": true,
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true,
-    "**/.goosehints": true,
-    "**/bts.jsonc": true,
-    "**/Cargo.lock": true,
-    "**/node_modules": true,
-    "**/devenv.lock": true
-  }
+	// Rust Analyzer - configured to use devenv toolchain
+	"[rust]": {
+		"editor.defaultFormatter": "rust-lang.rust-analyzer"
+	},
+	"rust-analyzer.server.path": "${workspaceFolder}/.devenv/profile/bin/rust-analyzer",
+	"rust-analyzer.cargo.extraEnv": {
+		"PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}",
+		"CARGO_HOME": "${workspaceFolder}/.devenv/profile"
+	},
+	"go.alternateTools": {},
+	"rust-analyzer.check.command": "clippy",
+	"rust-analyzer.cargo.features": "all",
+	"rust-analyzer.procMacro.enable": true,
+	"rust-analyzer.imports.granularity.group": "module",
+	"rust-analyzer.imports.prefix": "self",
+	"rust-analyzer.inlayHints.parameterHints.enable": true,
+	"rust-analyzer.inlayHints.typeHints.enable": true,
+	"rust-analyzer.inlayHints.chainingHints.enable": true,
+	"rust-analyzer.diagnostics.experimental.enable": true,
+	"editor.insertSpaces": true,
+	"editor.tabSize": 2,
+	"editor.detectIndentation": false,
+	"editor.defaultFormatter": "oxc.oxc-vscode",
+	"[javascript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[css]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[graphql]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	},
+	"[nix]": {
+		"editor.defaultFormatter": "jnoortheen.nix-ide"
+	},
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"editor.formatOnSave": true,
+	"editor.formatOnPaste": true,
+	"emmet.showExpandedAbbreviation": "never",
+	"editor.codeActionsOnSave": {
+		"source.fixAll.oxc": "explicit"
+	},
+	"oxc.enable": true,
+	"oxc.configPath": "oxlint.json",
+	"explorer.excludeGitIgnore": true,
+	// "terminal.integrated.defaultProfile.osx": "devenv",
+	"terminal.integrated.profiles.osx": {
+		"devenv": {
+			"path": ".vscode/devshell"
+		}
+	},
+	"nix.enableLanguageServer": true,
+	"nix.serverPath": "/etc/profiles/per-user/coopermaruyama/bin/nixd",
+	"nix.formatterPath": "nixfmt",
+	"nix.serverSettings": {
+		"nixd": {
+			"formatting": {
+				"command": ["nixfmt"]
+			},
+			"options": {
+				"stackpanel": {
+					"expr": "let  system = builtins.currentSystem; pkgs = import <nixpkgs> { inherit system; }; lib = pkgs.lib; in (lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; })"
+					// "expr": "let  system = builtins.currentSystem; pkgs = import <nixpkgs> { inherit system; }; lib = pkgs.lib; in (lib.evalModules { modules = [ ./nix/stackpanel/default.nix { _module.args = { inherit pkgs lib; }; } ]; }).options"
+				}
+			}
+		}
+	},
+	"terminal.integrated.shellIntegration.enabled": true,
+	"terminal.integrated.shellIntegration.environmentReporting": true,
+	"files.exclude": {
+		"**/.claude": true,
+		"**/.codex": true,
+		"**/.cursor": true,
+		"**/.zed": true,
+		"**/.git": true,
+		"**/gen": true,
+		"**/.stackpanel/gen": false,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/.DS_Store": true,
+		"**/Thumbs.db": true,
+		"**/.goosehints": true,
+		"**/bts.jsonc": true,
+		"**/Cargo.lock": true,
+		"**/node_modules": true,
+		"**/devenv.lock": true
+	}
 }
