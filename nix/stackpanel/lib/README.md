@@ -1,0 +1,126 @@
+# Stackpanel Nix Library
+
+Pure library functions used throughout Stackpanel for creating development shells, managing services, and generating configuration files.
+
+## Overview
+
+This library provides a collection of pure Nix functions that work with any Nix module system (flake-parts, devenv, NixOS, etc.). The main entry point is `default.nix`, which aggregates all sub-libraries.
+
+## Directory Structure
+
+```
+lib/
+├── default.nix      # Main entry point - aggregates all libraries
+├── codegen.nix      # File generation system for project configs
+├── files.nix        # File writer utilities for materializing configs
+├── ide.nix          # IDE integration (VS Code terminal, workspaces)
+├── paths.nix        # Path resolution utilities (pure, no pkgs needed)
+├── theme.nix        # Shell theming (Starship configuration)
+├── README.md        # This file
+└── services/        # Per-service configuration modules
+    ├── aws.nix      # AWS IAM Roles Anywhere authentication
+    ├── caddy.nix    # Caddy reverse proxy management
+    ├── minio.nix    # MinIO S3-compatible storage
+    ├── postgres.nix # PostgreSQL database
+    ├── redis.nix    # Redis in-memory store
+    └── step.nix     # Step CA certificate management
+```
+
+## Usage
+
+### Basic Import
+
+```nix
+let
+  stackpanelLib = import ./lib { inherit pkgs lib; };
+in {
+  # Create a development shell
+  devShell = stackpanelLib.mkDevShell projectConfig;
+
+  # Compute deterministic port from project name
+  port = stackpanelLib.ports.computeBasePort { name = "myproject"; };
+}
+```
+
+### Pure Functions (No pkgs Required)
+
+Some utilities work without `pkgs`:
+
+```nix
+let
+  stackpanelLib = import ./lib { inherit lib; };  # pkgs is optional
+in {
+  # Path utilities
+  paths = stackpanelLib.paths.mkPaths { rootDir = ".stackpanel"; };
+
+  # Port computation
+  ports = stackpanelLib.ports;
+}
+```
+
+### Service Configuration
+
+Service modules provide packages and environment variables. Lifecycle management is handled by the stackpanel CLI.
+
+```nix
+let
+  stackpanelLib = import ./lib { inherit pkgs lib; };
+  pgService = stackpanelLib.services.postgres.mkService {
+    projectName = "myapp";
+    port = 5432;
+    databases = [ "app" "test" ];
+  };
+in {
+  packages = pgService.allPackages;
+  shellHook = pgService.shellHook;
+}
+```
+
+### IDE Integration
+
+Generate VS Code workspace files and terminal configurations:
+
+```nix
+let
+  stackpanelLib = import ./lib { inherit pkgs lib; };
+  ideLib = stackpanelLib.integrations.ide;
+in {
+  # Generate VS Code settings for devshell terminal
+  settings = ideLib.mkVscodeSettings {
+    loaderPath = "\${workspaceFolder}/.stackpanel/gen/ide/vscode/devshell-loader.sh";
+  };
+
+  # Create devshell loader script
+  loader = ideLib.mkDevshellLoader { shellMode = "devenv"; };
+}
+```
+
+## Architecture
+
+### Core Libraries
+
+| Module | Requires pkgs | Description |
+|--------|--------------|-------------|
+| `paths.nix` | No | Path resolution, root detection |
+| `ports` (via core) | No | Deterministic port computation |
+| `codegen.nix` | Yes | File generation with headers |
+| `files.nix` | Yes | Atomic file writing |
+| `ide.nix` | Yes | IDE configuration |
+| `theme.nix` | Yes | Starship theming |
+
+### Service Modules
+
+All service modules in `services/` require `pkgs` and provide:
+
+- `packages`: Required Nix packages
+- `mkService`: Factory function for project-specific configuration
+- `shellHook`: Environment variable setup for shell integration
+
+Service lifecycle (start/stop/status) is managed externally by the stackpanel CLI, not by these Nix modules.
+
+## Design Principles
+
+1. **Pure Functions**: All functions are pure and deterministic
+2. **Module System Agnostic**: Works with flake-parts, devenv, or plain NixOS
+3. **Runtime Path Resolution**: Uses environment variables for flexibility
+4. **Separation of Concerns**: Nix handles packages/config, CLI handles lifecycle

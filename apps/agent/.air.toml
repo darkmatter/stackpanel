@@ -1,0 +1,37 @@
+# Air configuration for stackpanel agent development
+# Run `air` in this directory for live reload
+# See: https://github.com/air-verse/air
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/agent ."
+bin = "./tmp/agent"
+include_ext = ["go", "html", "yaml"]
+include_dir = ["cmd", "internal"]
+exclude_dir = ["tmp", "vendor", ".git"]
+exclude_file = []
+exclude_unchanged = false
+follow_symlink = false
+delay = 200
+stop_on_error = true
+# Send SIGINT for graceful shutdown (agent is a long-running server)
+send_interrupt = true
+kill_delay = 1000
+args_bin = ["-debug"]
+rerun = false
+rerun_delay = 500
+
+[log]
+time = false
+main_only = false
+
+[color]
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[misc]
+clean_on_exit = true

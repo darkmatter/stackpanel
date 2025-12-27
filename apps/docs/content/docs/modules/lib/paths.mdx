@@ -1,0 +1,21 @@
+---
+title: Stackpanel Path Utilities
+description: Provides consistent path resolution across all modules and shell scripts.
+---
+
+Provides consistent path resolution across all modules and shell scripts.
+Uses the root marker file pattern (like devenv's .devenv-root) to allow
+tools to find the project root from any subdirectory.
+
+Usage in Nix modules:
+```nix
+let pathsLib = import ./paths.nix { inherit lib; };
+in pathsLib.shellFindRoot  # Shell script snippet
+```
+
+
+Usage in shell scripts (via exported function):
+```nix
+source <stackpanel-paths-script>
+STACKPANEL_ROOT=$(stackpanel_find_root)
+```

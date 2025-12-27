@@ -1,0 +1,11 @@
+{
+	"snapshots": [
+		{
+			"id": "latest",
+			"label": "Latest seed snapshot",
+			"snapshot_uri": "s3://stackpanel-seeds/latest.dump",
+			"description": "Most recent published seed dataset.",
+			"created_at": "2025-12-26T00:00:00Z"
+		}
+	]
+}

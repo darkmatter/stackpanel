@@ -1,0 +1,20 @@
+---
+title: "Pure helper: builds a writer executable that materializes configured files"
+description: "into a target repo root (no flake-parts, no perSystem)."
+---
+
+into a target repo root (no flake-parts, no perSystem).
+
+## Usage
+
+```nix
+let mk = import ./files-writer.nix { inherit pkgs lib; };
+in mk.mkWriter {
+  exeFilename = "write-files";
+  root = "/path/to/repo";     # or "$STACKPANEL_ROOT" via runtimeRootVar
+  runtimeRootVar = "STACKPANEL_ROOT";  # optional
+  files = [
+    { path = "README.md"; drv = pkgs.writeText "README.md" "hello\n"; }
+  ];
+}
+```
