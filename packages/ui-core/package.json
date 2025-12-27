@@ -15,6 +15,10 @@
 			"types": "./src/styles/index.ts",
 			"default": "./src/styles/index.ts"
 		},
+		"./logo": {
+			"types": "./src/components/logo.tsx",
+			"default": "./src/components/logo.tsx"
+		},
 		"./styles/globals.css": "./src/styles/globals.css"
 	},
 	"peerDependencies": {
@@ -23,9 +27,11 @@
 	"dependencies": {
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
-		"tailwind-merge": "^2.5.5"
+		"tailwind-merge": "^2.5.5",
+		"react": "catalog:"
 	},
 	"devDependencies": {
-		"@stackpanel/config": "workspace:*"
+		"@stackpanel/config": "workspace:*",
+		"@types/react": "^19.2.7"
 	}
 }

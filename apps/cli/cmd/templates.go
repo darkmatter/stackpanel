@@ -23,6 +23,7 @@ func init() {
 type CategoryData struct {
 	Title    string
 	Category string
+	Icon     string
 }
 
 // IndexData holds data for index.mdx.tmpl
@@ -34,6 +35,7 @@ type IndexData struct {
 type ModuleData struct {
 	Title       string
 	Description string
+	Icon        string
 	Content     string
 }
 
@@ -52,10 +54,11 @@ func renderTemplate(name string, data interface{}) (string, error) {
 }
 
 // RenderCategoryHeader renders the category page header
-func RenderCategoryHeader(title, category string) (string, error) {
+func RenderCategoryHeader(title, category, icon string) (string, error) {
 	return renderTemplate("category.mdx.tmpl", CategoryData{
 		Title:    title,
 		Category: category,
+		Icon:     icon,
 	})
 }
 
@@ -67,10 +70,11 @@ func RenderIndex(categoryLinks string) (string, error) {
 }
 
 // RenderModule renders a module documentation page
-func RenderModule(title, description, content string) (string, error) {
+func RenderModule(title, description, icon, content string) (string, error) {
 	return renderTemplate("module.mdx.tmpl", ModuleData{
 		Title:       escapeYAMLString(title),
 		Description: escapeYAMLString(description),
+		Icon:        icon,
 		Content:     content,
 	})
 }

@@ -8,6 +8,7 @@
 export interface AgentConfig {
 	host?: string;
 	port?: number;
+	token?: string;
 	onConnect?: () => void;
 	onDisconnect?: () => void;
 	onError?: (error: Error) => void;
@@ -43,12 +44,25 @@ export interface GenerateResult {
 	error?: string;
 }
 
+export type SecretEnv = "dev" | "staging" | "prod";
+
+export interface SetSecretRequest {
+	env: SecretEnv;
+	key: string;
+	value: string;
+}
+
+export interface SetSecretResult {
+	path: string;
+}
+
 type MessageType =
 	| "exec"
 	| "nix.eval"
 	| "nix.generate"
 	| "file.read"
-	| "file.write";
+	| "file.write"
+	| "secrets.set";
 
 interface Message {
 	id: string;
@@ -70,7 +84,14 @@ type PendingRequest<T> = {
 
 export class AgentClient {
 	private ws: WebSocket | null = null;
-	private config: Required<AgentConfig>;
+	private config: {
+		host: string;
+		port: number;
+		token?: string;
+		onConnect: () => void;
+		onDisconnect: () => void;
+		onError: (error: Error) => void;
+	};
 	private pendingRequests = new Map<string, PendingRequest<unknown>>();
 	private messageId = 0;
 	private reconnectAttempts = 0;
@@ -81,10 +102,15 @@ export class AgentClient {
 		this.config = {
 			host: config.host ?? "localhost",
 			port: config.port ?? 9876,
+			token: config.token,
 			onConnect: config.onConnect ?? (() => {}),
 			onDisconnect: config.onDisconnect ?? (() => {}),
 			onError: config.onError ?? (() => {}),
 		};
+	}
+
+	setToken(token?: string): void {
+		this.config.token = token;
 	}
 
 	/**
@@ -92,10 +118,13 @@ export class AgentClient {
 	 */
 	connect(): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const url = `ws://${this.config.host}:${this.config.port}/ws`;
+			const u = new URL(`ws://${this.config.host}:${this.config.port}/ws`);
+			if (this.config.token) {
+				u.searchParams.set("token", this.config.token);
+			}
 
 			try {
-				this.ws = new WebSocket(url);
+				this.ws = new WebSocket(u.toString());
 			} catch (err) {
 				reject(new Error(`Failed to create WebSocket: ${err}`));
 				return;
@@ -176,6 +205,13 @@ export class AgentClient {
 		await this.send("file.write", { path, content });
 	}
 
+	/**
+	 * Set a secret in .stackpanel/secrets/<env>.yaml (encrypted via sops + team recipients).
+	 */
+	async setSecret(request: SetSecretRequest): Promise<SetSecretResult> {
+		return this.send<SetSecretResult>("secrets.set", request);
+	}
+
 	// Private methods
 
 	private send<T>(type: MessageType, payload: unknown): Promise<T> {
@@ -250,9 +286,22 @@ export class AgentClient {
  */
 export class AgentHttpClient {
 	private baseUrl: string;
+	private token?: string;
 
-	constructor(host = "localhost", port = 9876) {
+	constructor(host = "localhost", port = 9876, token?: string) {
 		this.baseUrl = `http://${host}:${port}`;
+		this.token = token;
+	}
+
+	setToken(token?: string): void {
+		this.token = token;
+	}
+
+	private getHeaders(contentType = false): Record<string, string> {
+		const headers: Record<string, string> = {};
+		if (contentType) headers["Content-Type"] = "application/json";
+		if (this.token) headers["X-Stackpanel-Token"] = this.token;
+		return headers;
 	}
 
 	async health(): Promise<{ status: string; project_root: string }> {
@@ -263,7 +312,7 @@ export class AgentHttpClient {
 	async exec(request: ExecRequest): Promise<ExecResult> {
 		const res = await fetch(`${this.baseUrl}/api/exec`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: this.getHeaders(true),
 			body: JSON.stringify(request),
 		});
 		const data = await res.json();
@@ -274,7 +323,7 @@ export class AgentHttpClient {
 	async nixEval<T = unknown>(expression: string): Promise<T> {
 		const res = await fetch(`${this.baseUrl}/api/nix/eval`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: this.getHeaders(true),
 			body: JSON.stringify({ expression }),
 		});
 		const data = await res.json();
@@ -285,6 +334,7 @@ export class AgentHttpClient {
 	async nixGenerate(): Promise<GenerateResult> {
 		const res = await fetch(`${this.baseUrl}/api/nix/generate`, {
 			method: "POST",
+			headers: this.getHeaders(false),
 		});
 		const data = await res.json();
 		if (!data.success) throw new Error(data.error);
@@ -294,6 +344,7 @@ export class AgentHttpClient {
 	async readFile(path: string): Promise<FileContent> {
 		const res = await fetch(
 			`${this.baseUrl}/api/files?path=${encodeURIComponent(path)}`,
+			{ headers: this.getHeaders(false) },
 		);
 		const data = await res.json();
 		if (!data.success) throw new Error(data.error);
@@ -303,11 +354,22 @@ export class AgentHttpClient {
 	async writeFile(path: string, content: string): Promise<void> {
 		const res = await fetch(`${this.baseUrl}/api/files`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: this.getHeaders(true),
 			body: JSON.stringify({ path, content }),
 		});
 		const data = await res.json();
 		if (!data.success) throw new Error(data.error);
+	}
+
+	async setSecret(request: SetSecretRequest): Promise<SetSecretResult> {
+		const res = await fetch(`${this.baseUrl}/api/secrets/set`, {
+			method: "POST",
+			headers: this.getHeaders(true),
+			body: JSON.stringify(request),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data;
 	}
 }
 

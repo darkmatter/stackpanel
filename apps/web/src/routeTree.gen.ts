@@ -9,19 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TodosRouteImport } from './routes/todos'
 import { Route as SuccessRouteImport } from './routes/success'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudioIndexRouteImport } from './routes/studio/index'
+import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
+import { Route as ApiProvisionDbRouteImport } from './routes/api/provision-db'
+import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 
-const TodosRoute = TodosRouteImport.update({
-  id: '/todos',
-  path: '/todos',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SuccessRoute = SuccessRouteImport.update({
   id: '/success',
   path: '/success',
@@ -52,6 +51,31 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudioIndexRoute = StudioIndexRouteImport.update({
+  id: '/studio/',
+  path: '/studio/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSeedSnapshotsRoute = ApiSeedSnapshotsRouteImport.update({
+  id: '/api/seed-snapshots',
+  path: '/api/seed-snapshots',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProvisionDbRoute = ApiProvisionDbRouteImport.update({
+  id: '/api/provision-db',
+  path: '/api/provision-db',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
+  id: '/api/trpc/$',
+  path: '/api/trpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -60,7 +84,11 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
-  '/todos': typeof TodosRoute
+  '/api/provision-db': typeof ApiProvisionDbRoute
+  '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio': typeof StudioIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,7 +97,11 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
-  '/todos': typeof TodosRoute
+  '/api/provision-db': typeof ApiProvisionDbRoute
+  '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio': typeof StudioIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,7 +111,11 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
-  '/todos': typeof TodosRoute
+  '/api/provision-db': typeof ApiProvisionDbRoute
+  '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio/': typeof StudioIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,9 +126,24 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/success'
-    | '/todos'
+    | '/api/provision-db'
+    | '/api/seed-snapshots'
+    | '/studio'
+    | '/api/auth/$'
+    | '/api/trpc/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ai' | '/dashboard' | '/demo' | '/login' | '/success' | '/todos'
+  to:
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/success'
+    | '/api/provision-db'
+    | '/api/seed-snapshots'
+    | '/studio'
+    | '/api/auth/$'
+    | '/api/trpc/$'
   id:
     | '__root__'
     | '/'
@@ -101,7 +152,11 @@ export interface FileRouteTypes {
     | '/demo'
     | '/login'
     | '/success'
-    | '/todos'
+    | '/api/provision-db'
+    | '/api/seed-snapshots'
+    | '/studio/'
+    | '/api/auth/$'
+    | '/api/trpc/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -111,18 +166,15 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   LoginRoute: typeof LoginRoute
   SuccessRoute: typeof SuccessRoute
-  TodosRoute: typeof TodosRoute
+  ApiProvisionDbRoute: typeof ApiProvisionDbRoute
+  ApiSeedSnapshotsRoute: typeof ApiSeedSnapshotsRoute
+  StudioIndexRoute: typeof StudioIndexRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/todos': {
-      id: '/todos'
-      path: '/todos'
-      fullPath: '/todos'
-      preLoaderRoute: typeof TodosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/success': {
       id: '/success'
       path: '/success'
@@ -165,6 +217,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio/': {
+      id: '/studio/'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/seed-snapshots': {
+      id: '/api/seed-snapshots'
+      path: '/api/seed-snapshots'
+      fullPath: '/api/seed-snapshots'
+      preLoaderRoute: typeof ApiSeedSnapshotsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/provision-db': {
+      id: '/api/provision-db'
+      path: '/api/provision-db'
+      fullPath: '/api/provision-db'
+      preLoaderRoute: typeof ApiProvisionDbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/trpc/$': {
+      id: '/api/trpc/$'
+      path: '/api/trpc/$'
+      fullPath: '/api/trpc/$'
+      preLoaderRoute: typeof ApiTrpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -175,8 +262,21 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   LoginRoute: LoginRoute,
   SuccessRoute: SuccessRoute,
-  TodosRoute: TodosRoute,
+  ApiProvisionDbRoute: ApiProvisionDbRoute,
+  ApiSeedSnapshotsRoute: ApiSeedSnapshotsRoute,
+  StudioIndexRoute: StudioIndexRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiTrpcSplatRoute: ApiTrpcSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

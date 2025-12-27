@@ -1,0 +1,32 @@
+---
+title: Devshell
+description: Create reproducible development shells with Nix using stackpanel's mkDevShell.
+icon: Terminal
+---
+
+# Devshell
+
+Usage (Minimal):
+
+```nix
+# flake.nix
+devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
+  pkgs = pkgs;
+  modules = [
+    ({ ... }: { devshell.packages = [ pkgs.nodejs_22 ]; })
+  ];
+};
+```
+
+Usage (Recommended):
+
+```nix
+devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
+  pkgs = pkgs;
+  includeDefaults = true;
+  modules = [
+    inputs.stackpanel.lib.devshell.features.aws
+    ({ ... }: { stackpanel.aws.enable = true; })
+  ];
+};
+```

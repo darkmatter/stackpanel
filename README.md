@@ -1,10 +1,26 @@
 <center>
 
-# 1. stackpanel
+<h1>
+  stackpanel
+</h1>
+<!-- Your stack's control center -->
+ <!-- Your Entire Stack. One Panel. -->
+ <!-- localhost -> prod from one panel -->
+<!-- Zero-Click Deploy. Zero-Line Configuration. -->
 
-Your entire stack in one panel
+ship the vision. skip the setup.
 
+<!-- Build product, not plumbing -->
+<!-- Write features, not config -->
+
+
+
+
+---
+
+[![om ci](https://github.com/darkmatter/stackpanel/actions/workflows/ci.yml/badge.svg)](https://github.com/darkmatter/stackpanel/actions/workflows/ci.yml)
 </center>
+
 
 ## 1.1. Overview
 

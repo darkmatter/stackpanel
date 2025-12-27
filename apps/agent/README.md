@@ -19,16 +19,23 @@ go install github.com/darkmatter/stackpanel/agent@latest
 
 ## Usage
 
+The recommended way to start the agent is via the StackPanel CLI:
+
 ```bash
 # Start agent in current project
-stackpanel-agent
+stackpanel agent
 
-# With custom config
-stackpanel-agent --config .stackpanel/agent.yaml
+# On a specific port
+stackpanel agent --port 9877
 
-# Debug mode
-stackpanel-agent --debug
+# With debug logging
+stackpanel agent --debug
 ```
+
+Alternatively, run the agent binary directly:
+
+```bash
+# Start agent directly
 
 ## Configuration
 

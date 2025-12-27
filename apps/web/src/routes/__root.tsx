@@ -1,20 +1,24 @@
+/// <reference types="vite/client" />
+
+import type { AppRouter } from "@stackpanel/api/routers/index";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
 	createRootRouteWithContext,
 	HeadContent,
 	Outlet,
+	Scripts,
 	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import type { trpc } from "@/utils/trpc";
-import "../index.css";
+import appCss from "@/styles.css?url";
 
 export interface RouterAppContext {
-	trpc: typeof trpc;
+	trpc: TRPCOptionsProxy<AppRouter>;
 	queryClient: QueryClient;
 }
 
@@ -35,36 +39,47 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 				rel: "icon",
 				href: "/favicon.ico",
 			},
+			{
+				rel: "stylesheet",
+				href: appCss,
+			},
 		],
 	}),
 });
 
 function RootComponent() {
+	return (
+		<RootDocument>
+			<Outlet />
+		</RootDocument>
+	);
+}
+
+function RootDocument({ children }: { children: React.ReactNode }) {
 	const routerState = useRouterState();
 	const pathname = routerState.location.pathname;
 	const isFullScreenPage = pathname === "/" || pathname === "/demo";
 
 	return (
-		<>
-			<HeadContent />
-			<ThemeProvider
-				attribute="class"
-				defaultTheme="dark"
-				disableTransitionOnChange
-				storageKey="vite-ui-theme"
-			>
-				{isFullScreenPage ? (
-					<Outlet />
-				) : (
-					<div className="grid h-svh grid-rows-[auto_1fr]">
-						<Header />
-						<Outlet />
-					</div>
-				)}
-				<Toaster richColors />
-			</ThemeProvider>
-			<TanStackRouterDevtools position="bottom-left" />
-			<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
-		</>
+		<ThemeProvider
+			attribute="class"
+			defaultTheme="dark"
+			disableTransitionOnChange
+			storageKey="vite-ui-theme"
+		>
+			<html lang="en" suppressHydrationWarning>
+				<head>
+					<HeadContent />
+				</head>
+				<body>
+					{!isFullScreenPage && <Header />}
+					<div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
+					<Toaster richColors />
+					<TanStackRouterDevtools position="bottom-left" />
+					<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
+					<Scripts />
+				</body>
+			</html>
+		</ThemeProvider>
 	);
 }

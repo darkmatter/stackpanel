@@ -64,7 +64,7 @@ export function DashboardSidebar({
 							</div>
 							<div>
 								<p className="font-semibold text-sidebar-foreground text-sm">
-									StackPanel
+									Stack Panel
 								</p>
 								<p className="text-muted-foreground text-xs">acme-corp</p>
 							</div>

@@ -1,19 +1,25 @@
 "use client";
 
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+	AlertCircle,
+	CheckCircle2,
 	Clock,
 	Copy,
 	Database,
 	ExternalLink,
 	HardDrive,
+	Loader2,
 	MoreVertical,
 	Plus,
+	RefreshCw,
 	Shield,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -39,6 +45,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useAgentHealth } from "@/lib/use-agent";
+import { useTRPC } from "@/utils/trpc";
 
 const databases = [
 	{
@@ -89,6 +97,73 @@ const databases = [
 
 export function DatabasesPanel() {
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [dbName, setDbName] = useState("");
+	const [seedSnapshot, setSeedSnapshot] = useState("empty");
+	const [runMigrations, setRunMigrations] = useState(true);
+	const [provisioningRunId, setProvisioningRunId] = useState<number | null>(
+		null,
+	);
+
+	const { isPaired } = useAgentHealth();
+	const trpc = useTRPC();
+
+	// Query for available snapshots
+	const snapshotsQuery = useQuery(trpc.github.listSnapshots.queryOptions());
+
+	// Mutation to provision database
+	const provisionMutation = useMutation(
+		trpc.github.provisionDatabase.mutationOptions({
+			onSuccess: (data) => {
+				if (data.runId) {
+					setProvisioningRunId(data.runId);
+				}
+			},
+		}),
+	);
+
+	// Query to poll workflow status
+	const workflowStatusQuery = useQuery({
+		...trpc.github.getWorkflowRun.queryOptions({ runId: provisioningRunId! }),
+		enabled: provisioningRunId !== null,
+		refetchInterval: (query) => {
+			const data = query.state.data;
+			if (data?.status === "completed") {
+				return false;
+			}
+			return 3000; // Poll every 3 seconds
+		},
+	});
+
+	const handleProvision = async () => {
+		if (!dbName.trim()) return;
+
+		provisionMutation.mutate({
+			databaseName: dbName.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
+			seedSnapshot: seedSnapshot === "empty" ? undefined : seedSnapshot,
+			runMigrations,
+		});
+	};
+
+	const handleDialogClose = () => {
+		setDialogOpen(false);
+		setDbName("");
+		setSeedSnapshot("empty");
+		setRunMigrations(true);
+		setProvisioningRunId(null);
+		provisionMutation.reset();
+	};
+
+	const isProvisioning =
+		provisionMutation.isPending ||
+		(provisioningRunId !== null &&
+			workflowStatusQuery.data?.status !== "completed");
+
+	const provisioningComplete =
+		provisioningRunId !== null &&
+		workflowStatusQuery.data?.status === "completed";
+
+	const provisioningSuccess =
+		provisioningComplete && workflowStatusQuery.data?.conclusion === "success";
 
 	return (
 		<div className="space-y-6">
@@ -99,64 +174,228 @@ export function DatabasesPanel() {
 						Manage your database instances and connections
 					</p>
 				</div>
-				<Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
+				<Dialog
+					onOpenChange={(open) => !open && handleDialogClose()}
+					open={dialogOpen}
+				>
 					<DialogTrigger asChild>
-						<Button className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90">
+						<Button
+							className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+							onClick={() => setDialogOpen(true)}
+						>
 							<Plus className="h-4 w-4" />
 							Create Database
 						</Button>
 					</DialogTrigger>
-					<DialogContent>
+					<DialogContent className="sm:max-w-md">
 						<DialogHeader>
 							<DialogTitle>Create New Database</DialogTitle>
 							<DialogDescription>
-								Provision a new database instance for your stack.
+								Provision a new PostgreSQL database on the internal server.
 							</DialogDescription>
 						</DialogHeader>
-						<div className="grid gap-4 py-4">
-							<div className="grid gap-2">
-								<Label htmlFor="db-name">Database Name</Label>
-								<Input id="db-name" placeholder="my-database" />
+
+						{!provisioningComplete ? (
+							<>
+								<div className="grid gap-4 py-4">
+									<div className="grid gap-2">
+										<Label htmlFor="db-name">Database Name</Label>
+										<Input
+											disabled={isProvisioning}
+											id="db-name"
+											onChange={(e) => setDbName(e.target.value)}
+											placeholder="my_database"
+											value={dbName}
+										/>
+										<p className="text-muted-foreground text-xs">
+											Lowercase letters, numbers, and underscores only
+										</p>
+									</div>
+
+									<div className="grid gap-2">
+										<Label>Seed from Snapshot (optional)</Label>
+										<Select
+											disabled={isProvisioning}
+											onValueChange={setSeedSnapshot}
+											value={seedSnapshot}
+										>
+											<SelectTrigger>
+												<SelectValue placeholder="Start with empty database" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="empty">Empty database</SelectItem>
+												{snapshotsQuery.data?.snapshots.map((snapshot) => (
+													<SelectItem key={snapshot.key} value={snapshot.key}>
+														{snapshot.description || snapshot.key}
+														{snapshot.isDefault && " (default)"}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+
+									<div className="flex items-center gap-2">
+										<Checkbox
+											checked={runMigrations}
+											disabled={isProvisioning}
+											id="run-migrations"
+											onCheckedChange={(checked) =>
+												setRunMigrations(checked === true)
+											}
+										/>
+										<Label className="cursor-pointer" htmlFor="run-migrations">
+											Run migrations after creation
+										</Label>
+									</div>
+
+									{!isPaired && (
+										<div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3">
+											<p className="text-muted-foreground text-sm">
+												<AlertCircle className="mr-2 inline h-4 w-4 text-yellow-500" />
+												Connect to the local agent to save credentials to your
+												project.
+											</p>
+										</div>
+									)}
+
+									{provisionMutation.isError && (
+										<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+											<p className="text-destructive text-sm">
+												{provisionMutation.error?.message ||
+													"Failed to start provisioning"}
+											</p>
+										</div>
+									)}
+
+									{isProvisioning && (
+										<div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+											<div className="flex items-center gap-3">
+												<Loader2 className="h-5 w-5 animate-spin text-accent" />
+												<div>
+													<p className="font-medium text-foreground text-sm">
+														Provisioning database...
+													</p>
+													<p className="text-muted-foreground text-xs">
+														{workflowStatusQuery.data?.status ||
+															"Starting workflow"}
+													</p>
+												</div>
+											</div>
+											{provisionMutation.data?.runUrl && (
+												<a
+													className="mt-2 flex items-center gap-1 text-accent text-xs hover:underline"
+													href={provisionMutation.data.runUrl}
+													rel="noopener noreferrer"
+													target="_blank"
+												>
+													View in GitHub Actions
+													<ExternalLink className="h-3 w-3" />
+												</a>
+											)}
+										</div>
+									)}
+								</div>
+
+								<DialogFooter>
+									<Button
+										disabled={isProvisioning}
+										onClick={handleDialogClose}
+										variant="outline"
+									>
+										Cancel
+									</Button>
+									<Button
+										className="bg-accent text-accent-foreground hover:bg-accent/90"
+										disabled={!dbName.trim() || isProvisioning}
+										onClick={handleProvision}
+									>
+										{isProvisioning ? (
+											<>
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												Provisioning...
+											</>
+										) : (
+											"Create Database"
+										)}
+									</Button>
+								</DialogFooter>
+							</>
+						) : (
+							<div className="py-6">
+								{provisioningSuccess ? (
+									<div className="space-y-4 text-center">
+										<div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+											<CheckCircle2 className="h-6 w-6 text-accent" />
+										</div>
+										<div>
+											<p className="font-medium text-foreground">
+												Database Created!
+											</p>
+											<p className="text-muted-foreground text-sm">
+												Your database <code>{dbName}</code> is ready to use.
+											</p>
+										</div>
+										{provisionMutation.data?.runUrl && (
+											<a
+												className="flex items-center justify-center gap-1 text-accent text-sm hover:underline"
+												href={provisionMutation.data.runUrl}
+												rel="noopener noreferrer"
+												target="_blank"
+											>
+												View workflow details
+												<ExternalLink className="h-3 w-3" />
+											</a>
+										)}
+										<Button
+											className="mt-4"
+											onClick={handleDialogClose}
+											variant="outline"
+										>
+											Close
+										</Button>
+									</div>
+								) : (
+									<div className="space-y-4 text-center">
+										<div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+											<AlertCircle className="h-6 w-6 text-destructive" />
+										</div>
+										<div>
+											<p className="font-medium text-foreground">
+												Provisioning Failed
+											</p>
+											<p className="text-muted-foreground text-sm">
+												Check the workflow logs for details.
+											</p>
+										</div>
+										{provisionMutation.data?.runUrl && (
+											<a
+												className="flex items-center justify-center gap-1 text-accent text-sm hover:underline"
+												href={provisionMutation.data.runUrl}
+												rel="noopener noreferrer"
+												target="_blank"
+											>
+												View workflow logs
+												<ExternalLink className="h-3 w-3" />
+											</a>
+										)}
+										<div className="flex justify-center gap-2">
+											<Button onClick={handleDialogClose} variant="outline">
+												Close
+											</Button>
+											<Button
+												onClick={() => {
+													setProvisioningRunId(null);
+													provisionMutation.reset();
+												}}
+											>
+												<RefreshCw className="mr-2 h-4 w-4" />
+												Try Again
+											</Button>
+										</div>
+									</div>
+								)}
 							</div>
-							<div className="grid gap-2">
-								<Label>Database Type</Label>
-								<Select>
-									<SelectTrigger>
-										<SelectValue placeholder="Select type" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="postgres">PostgreSQL</SelectItem>
-										<SelectItem value="mysql">MySQL</SelectItem>
-										<SelectItem value="redis">Redis</SelectItem>
-										<SelectItem value="clickhouse">ClickHouse</SelectItem>
-										<SelectItem value="mongo">MongoDB</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="grid gap-2">
-								<Label>Storage Size</Label>
-								<Select defaultValue="20">
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="10">10 GB</SelectItem>
-										<SelectItem value="20">20 GB</SelectItem>
-										<SelectItem value="50">50 GB</SelectItem>
-										<SelectItem value="100">100 GB</SelectItem>
-										<SelectItem value="200">200 GB</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-						<DialogFooter>
-							<Button onClick={() => setDialogOpen(false)} variant="outline">
-								Cancel
-							</Button>
-							<Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-								Create
-							</Button>
-						</DialogFooter>
+						)}
 					</DialogContent>
 				</Dialog>
 			</div>

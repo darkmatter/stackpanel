@@ -100,3 +100,5 @@ devenv.local.yaml
 
 # Stackpanel root marker (machine-specific)
 .stackpanel-root
+.sst
+.tmp

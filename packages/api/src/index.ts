@@ -1,24 +1,23 @@
-import { initTRPC, TRPCError } from "@trpc/server";
-import type { Context } from "./context";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 
-export const t = initTRPC.context<Context>().create();
+import { type AppRouter, appRouter } from "./routers";
 
-export const router = t.router;
+/**
+ * Inference helpers for input types
+ * @example
+ * type PostByIdInput = RouterInputs['post']['byId']
+ *      ^? { id: number }
+ */
+type RouterInputs = inferRouterInputs<AppRouter>;
 
-export const publicProcedure = t.procedure;
+/**
+ * Inference helpers for output types
+ * @example
+ * type AllPostsOutput = RouterOutputs['post']['all']
+ *      ^? Post[]
+ */
+type RouterOutputs = inferRouterOutputs<AppRouter>;
 
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-	if (!ctx.session) {
-		throw new TRPCError({
-			code: "UNAUTHORIZED",
-			message: "Authentication required",
-			cause: "No session",
-		});
-	}
-	return next({
-		ctx: {
-			...ctx,
-			session: ctx.session,
-		},
-	});
-});
+export { type AppRouter, appRouter };
+export { createTRPCContext } from "./trpc";
+export type { RouterInputs, RouterOutputs };

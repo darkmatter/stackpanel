@@ -68,6 +68,7 @@ in {
     # Dev tools
     jq
     git
+    oxlint
   ];
 
   # Languages

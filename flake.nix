@@ -1,9 +1,19 @@
 {
   description = "Stackpanel - Infrastructure toolkit for NixOS, devenv, and flake-parts";
 
+  nixConfig = {
+    extra-experimental-features = "nix-command flakes";
+    allow-import-from-derivation = "true";
+    extra-substituters = "https://devenv.cachix.org https://darkmatter.cachix.org";
+    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA=";
+  };
+
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    # Util that makes it easy to build all outputs of a flake.
+    # devour-flake.url = "github:srid/devour-flake";
+    # devour-flake.flake = false;
     devenv.url = "github:cachix/devenv";
     # Required for devenv containers outputs
     nix2container.url = "github:nlewo/nix2container";
@@ -31,6 +41,7 @@
       flake-parts-lib,
       ...
     }: let
+      devshell = import ./nix/flake/devshells { inherit inputs; };
       inherit (flake-parts-lib) importApply;
       supportedSystems = [
         "x86_64-linux"
@@ -44,10 +55,25 @@
       #
       # These are modules that OTHER flakes import when they use stackpanel.
       # The importApply pattern allows them to reference things from THIS flake.
+      # Usage:
+      #
+      # imports = [
+      #   inputs.stackpanel.flakeModules.default
+      #   inputs.stackpanel.flakeModules.devshell
+      # ];
+      # stackpanel.devshell.enable = true;
+      # stackpanel.devshell.modules = [ .
+      #   inputs.stackpanel.lib.mkDevShellModule.postgres
+      #   ({ lib, pkgs, ... }: {
+      #      postgres.enable = true;
+      #      devshell.packages = [ pkgs.psql ];
+      #      devshell.hooks.before = lib.mkBefore [ "echo enter" ];
+      #   })
+      # ];
       # =============================================================
-      flakeModules.default = importApply ./nix/flake-module.nix {
+      flakeModules.default = importApply ./nix/internal/flake-module.nix {
         localFlake = self;
-        inherit withSystem;
+        inherit withSystem devshell;
       };
 
       # Helper module for pure flake evaluation (like `nix flake check`)
@@ -113,9 +139,9 @@
           imports = [
             self.devenvModules.default
             # Local-only config that shouldn't be in the exported module
-            ./infra/devenv/devenv.nix
+            ./nix/internal/devenv/devenv.nix
             # Stackpanel-specific config for this repo
-            ./infra/stackpanel/stackpanel.nix
+            ./nix/internal/stackpanel.nix
           ];
 
           # Enable stackpanel
@@ -126,6 +152,7 @@
             bun
             nodejs_22
             go
+            air  # Go live reload for CLI development
             jq
             git
             nixd
@@ -153,18 +180,8 @@
             STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
           };
 
-          # Shell hooks
-          enterShell = ''
-            # Build stackpanel CLI if needed
-            if [[ ! -f "$DEVENV_STATE/stackpanel" ]] || [[ "$DEVENV_ROOT/apps/cli/main.go" -nt "$DEVENV_STATE/stackpanel" ]]; then
-              echo "Building stackpanel CLI..."
-              (cd "$DEVENV_ROOT/apps/cli" && go build -o "$DEVENV_STATE/stackpanel" . 2>/dev/null) || true
-            fi
-            export PATH="$DEVENV_STATE:$PATH"
-
-            # Authenticate AWS certs on shell entry
-            eval "$(aws-creds-env)" || true
-          '';
+          # Note: AWS credentials are handled by stackpanel.aws.certAuth module
+          # which adds aws-creds-env to enterShell with proper error handling
         };
       in {
         _module.args.pkgs = import nixpkgs {
@@ -172,9 +189,24 @@
           overlays = [ inputs.gomod2nix.overlays.default ];
         };
         # Packages we build
-        packages = {
-          # CLI package export
-          stackpanel-cli = pkgs.callPackage ./nix/packages/stackpanel-cli {};
+        packages = let
+          stackpanel-cli-unwrapped = pkgs.callPackage ./nix/stackpanel/packages/stackpanel-cli {};
+          stackpanel-agent = pkgs.callPackage ./nix/stackpanel/packages/stackpanel-agent {};
+        in {
+          # CLI package export (wrapped to include agent in PATH)
+          stackpanel-cli = pkgs.symlinkJoin {
+            name = "stackpanel-cli-${stackpanel-cli-unwrapped.version}";
+            paths = [ stackpanel-cli-unwrapped stackpanel-agent ];
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              # Wrap stackpanel to have stackpanel-agent in PATH
+              wrapProgram $out/bin/stackpanel \
+                --prefix PATH : ${stackpanel-agent}/bin
+            '';
+          };
+
+          # Expose agent separately too
+          inherit stackpanel-agent;
 
           default = pkgs.hello; # placeholder
 
@@ -199,7 +231,9 @@
       #
       # These are what users import when they add stackpanel to their flake.
       # =============================================================
-      flake = {
+      flake = let
+        devshell = import ./nix/flake/devshells { inherit inputs; };
+      in {
         # Flake-parts modules (for flake-parts users)
         # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
         inherit flakeModules;
@@ -220,18 +254,6 @@
                   ];
                 }).options;
             in {
-              secrets = mkOptions [
-                ./nix/modules/secrets/default.nix
-                {
-                  stackpanel.secrets.enable = true;
-                }
-              ];
-              aws = mkOptions [
-                ./nix/modules/aws.nix
-                {
-                  stackpanel.aws.certAuth.enable = true;
-                }
-              ];
               # network = mkOptions [
               #   ./nix/modules/network.nix
               #   {
@@ -239,8 +261,7 @@
               #   }
               # ]
               all = mkOptions [
-                ./nix/modules/secrets/default.nix
-                ./nix/modules/network.nix
+                ./nix/stackpanel/core/options/default.nix
                 {
                   stackpanel = {
                     enable = true;
@@ -255,13 +276,13 @@
         # Usage: imports = [ inputs.stackpanel.nixosModules.default ];
         nixosModules = {
           # Point directly at module files, not directories
-          default = ./nix/modules/devenv.nix;
-          aws = ./nix/modules/aws.nix;
-          network = ./nix/modules/network.nix;
-          secrets = ./nix/modules/secrets/default.nix;
-          theme = ./nix/modules/theme.nix;
-          caddy = ./nix/modules/caddy.nix;
-          ci = ./nix/modules/ci.nix;
+          default = ./nix/flake/modules/devenv;
+          aws = ./nix/stackpanel/services/aws.nix;
+          network = ./nix/stackpanel/network/network.nix;
+          secrets = ./nix/stackpanel/secrets/default.nix;
+          theme = ./nix/stackpanel/lib/theme.nix;
+          caddy = ./nix/stackpanel/services/caddy.nix;
+          ci = ./nix/stackpanel/apps/ci.nix;
         };
 
         # Devenv modules (for devenv users - both yaml and flake-parts)
@@ -277,33 +298,48 @@
         #     imports = [ inputs.stackpanel.devenvModules.default ];
         #   };
         devenvModules = {
-          # devenv.nix is the entry point (devenv convention for directory imports)
-          default = ./nix/devenv.nix;
+
+          # Main devenv module (imports core stackpanel options + adapter)
+          default = import ./nix/flake/modules/devenv {
+            inherit devshell;
+          };
+
+          # Adapter to reuse a stackpanel devshell inside devenv
+          devshell = import ./nix/flake/modules/devenv-devshell-adapter.nix {
+            inherit devshell;
+          };
         };
 
         # Library functions for use in other flakes
         lib = {
           # AWS credential helpers
           mkAwsCredScripts = pkgs:
-            import ./nix/lib/aws.nix {
+            import ./nix/stackpanel/lib/services/aws.nix {
               inherit pkgs;
               lib = pkgs.lib;
             };
           # Step CA certificate helpers
           mkStepScripts = pkgs:
-            import ./nix/lib/network.nix {
+            import ./nix/stackpanel/lib/services/step.nix {
               inherit pkgs;
               lib = pkgs.lib;
             };
           # Global dev services for `nix develop` / mkShell
           # Usage: stackpanel.lib.mkDevShell pkgs { projectName = "myapp"; postgres.enable = true; }
-          mkDevShell = pkgs: (import ./nix/lib/devshell.nix {inherit pkgs;}).mkDevShell;
+          # new config-based mkDevShell
+          mkDevShell = { pkgs, modules ? [], specialArgs ? {} }:
+            (import ./nix/stackpanel/devshell { inherit pkgs; }) {
+              inherit modules specialArgs;
+            };
+
+          # export feature modules (so consumers can import them)
+          devshellModules = devshell.devshellModules;
         };
 
         # Templates for bootstrapping new projects
         templates = {
           default = {
-            path = ./nix/templates/default;
+            path = ./nix/flake/templates/default;
             description = "Basic stackpanel project with devenv";
           };
         };
