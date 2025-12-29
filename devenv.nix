@@ -32,7 +32,9 @@ in {
       nixseparatedebuginfod = prev.nixseparatedebuginfod2 or prev.nixseparatedebuginfod or null;
     })
   ];
-
+  enterShell = ''
+    echo "Welcome to the devenv shell!"
+  '';
   # Workaround for devenv bug: process-compose.nix accesses configFile
   # before checking if enable is true. Provide a dummy value.
   # process.managers.process-compose.enable = lib.mkForce false;
