@@ -26,6 +26,13 @@ in {
     # ./nix/internal/devenv/devenv.nix
   ];
 
+  # Fix for devenv 1.11.2 + rolling nixpkgs: nixseparatedebuginfod was renamed
+  overlays = [
+    (final: prev: {
+      nixseparatedebuginfod = prev.nixseparatedebuginfod2 or prev.nixseparatedebuginfod or null;
+    })
+  ];
+
   # Workaround for devenv bug: process-compose.nix accesses configFile
   # before checking if enable is true. Provide a dummy value.
   # process.managers.process-compose.enable = lib.mkForce false;
