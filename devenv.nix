@@ -20,72 +20,82 @@
   };
 in {
   imports = [
-    ./infra/devenv/devenv.nix
+    # Compatibility adapter
+    ./nix/flake/modules/devenv/default.nix
+    # Configuration for our own devenv
+    # ./nix/internal/devenv/devenv.nix
   ];
+
+  # Workaround for devenv bug: process-compose.nix accesses configFile
+  # before checking if enable is true. Provide a dummy value.
+  # process.managers.process-compose.enable = lib.mkForce false;
+  # Need to provide a configFile even when disabled due to devenv evaluation order bug
+  process.managers.process-compose.configFile = lib.mkForce (pkgs.writeText "empty-pc.yaml" "version: '0.5'\nprocesses: {}");
+
   # Enable stackpanel modules
-  stackpanel = {
-    enable = true;
+  # stackpanel = {
+  #   enable = true;
 
-    # Theme with starship prompt
-    theme.enable = true;
+  #   # Theme with starship prompt
+  #   theme.enable = true;
 
-    # IDE integration
-    ide.enable = true;
-    ide.vscode.enable = true;
+  #   # IDE integration
+  #   ide.enable = true;
+  #   ide.vscode.enable = true;
 
-    devenv.recommended.enable = true;
-    devenv.recommended.formatters.enable = true;
-    # Uncomment and configure as needed:
-    #
-    # AWS cert-based authentication
-    aws.certAuth = {
-      enable = true;
-      region = "us-west-2";
-      account-id = "950224716579";
-      role-name = "darkmatter-dev";
-      trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:trust-anchor/c99a9383-6be1-48ba-8e63-c3ab6b7069cb";
-      profile-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:profile/4e72b392-9074-4e53-8cd0-1ba50856d1ca";
-    };
-    #
-    # Step CA certificate management
-    network.step = {
-      enable = true;
-      ca-url = "https://ca.internal:443";
-      ca-fingerprint = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
-    };
-  };
+  #   devenv.recommended.enable = true;
+  #   devenv.recommended.formatters.enable = true;
+  #   # Uncomment and configure as needed:
+  #   #
+  #   # AWS cert-based authentication
+  #   aws.certAuth = {
+  #     enable = true;
+  #     region = "us-west-2";
+  #     account-id = "950224716579";
+  #     role-name = "darkmatter-dev";
+  #     trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:trust-anchor/c99a9383-6be1-48ba-8e63-c3ab6b7069cb";
+  #     profile-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:profile/4e72b392-9074-4e53-8cd0-1ba50856d1ca";
+  #   };
+  #   #
+  #   # Step CA certificate management
+  #   network.step = {
+  #     enable = true;
+  #     ca-url = "https://ca.internal:443";
+  #     ca-fingerprint = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
+  #   };
+  # };
   # devenv.debug = true;
 
   # Core packages
-  packages = with pkgs; [
-    # Node.js ecosystem
-    bun
-    nodejs_22
+  # packages = with pkgs; [
+  #   # Node.js ecosystem
+  #   bun
+  #   nodejs_22
 
-    # Go (for agent)
-    go
+  #   # Go (for agent)
+  #   go
 
-    # Dev tools
-    jq
-    git
-    oxlint
-  ];
+  #   # Dev tools
+  #   jq
+  #   git
+  #   oxlint
+  # ];
 
-  # Languages
-  languages = {
-    javascript = {
-      enable = true;
-      bun.enable = true;
-      bun.install.enable = true;
-    };
+  # # Languages
+  # languages = {
+  #   javascript = {
+  #     enable = true;
+  #     bun.enable = true;
+  #     bun.install.enable = true;
+  #   };
 
-    typescript.enable = true;
+  #   typescript.enable = true;
 
-    go = {
-      enable = true;
-      package = pkgs.go;
-    };
-  };
+  #   go = {
+  #     enable = true;
+  #     package = pkgs.go;
+  #   };
+  # };
 
   # processes = {
   #   # Start stackpanel agent in dev mode
@@ -112,59 +122,27 @@ in {
   # };
 
   # Environment variables
-  env = {
-    # Add any project-specific env vars here
-    EDITOR = "vim";
-    # Step CA config for stackpanel CLI
-    STEP_CA_URL = "https://ca.internal:443";
-    STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
-  };
+  # env = {
+  #   # Add any project-specific env vars here
+  #   EDITOR = "vim";
+  #   # Step CA config for stackpanel CLI
+  #   STEP_CA_URL = "https://ca.internal:443";
+  #   STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
+  # };
 
   # Shell hooks
-  enterShell = ''
-    # syntax: bash
-    # Build stackpanel CLI if needed
-    if [[ ! -f "$DEVENV_STATE/stackpanel" ]] || [[ "$DEVENV_ROOT/cli/main.go" -nt "$DEVENV_STATE/stackpanel" ]]; then
-      echo "Building stackpanel CLI..."
-      (cd "$DEVENV_ROOT/cli" && go build -o "$DEVENV_STATE/stackpanel" . 2>/dev/null) || true
-    fi
-    export PATH="$DEVENV_STATE:$PATH"
+  # enterShell = ''
+  #   # syntax: bash
+  #   # Build stackpanel CLI if needed
+  #   if [[ ! -f "$DEVENV_STATE/stackpanel" ]] || [[ "$DEVENV_ROOT/apps/cli/main.go" -nt "$DEVENV_STATE/stackpanel" ]]; then
+  #     echo "Building stackpanel CLI..."
+  #     (cd "$DEVENV_ROOT/apps/cli" && go build -o "$DEVENV_STATE/stackpanel" . 2>/dev/null) || true
+  #   fi
+  #   export PATH="$DEVENV_STATE:$PATH"
 
-    # Authenticate AWS certs on shell entry
-    eval "$(aws-creds-env)" || true
-  '';
-
-  # Add project-specific commands to MOTD
-  stackpanel.motd.commands = [
-    {
-      name = "stackpanel status";
-      description = "Show all service status";
-    }
-    {
-      name = "stackpanel services start";
-      description = "Start dev services";
-    }
-    {
-      name = "stackpanel caddy add";
-      description = "Add a Caddy site";
-    }
-    {
-      name = "stackpanel certs ensure";
-      description = "Get device certificate";
-    }
-    {
-      name = "bun install";
-      description = "Install dependencies";
-    }
-    {
-      name = "bun run dev";
-      description = "Start development server";
-    }
-  ];
-  stackpanel.motd.hints = [
-    "Run 'stackpanel --help' for all commands"
-    "Run 'devenv up' to start all processes"
-  ];
+  #   # Note: AWS credentials are handled by stackpanel.aws.certAuth module
+  #   # via credential_process in ~/.aws/config - no manual eval needed
+  # '';
 
   # Formaattingdevev
   # git-hooks.enable = true;

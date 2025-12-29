@@ -105,5 +105,3 @@ func findRepoRoot() (string, error) {
 
 	return "", errors.New("could not locate repo root (apps/agent/main.go not found in parents)")
 }
-
-

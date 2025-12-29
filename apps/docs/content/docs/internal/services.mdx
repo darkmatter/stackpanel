@@ -1,0 +1,93 @@
+---
+title: Services Module
+description: Documentation for the services module
+---
+
+Development services orchestration for devenv.
+
+## Overview
+
+This module provides project-local database and infrastructure services with lifecycle management. Services use deterministic ports based on project name and expose environment variables for easy connectivity.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `global-services.nix` | PostgreSQL, Redis, Minio, and Caddy orchestration |
+| `caddy.nix` | Caddy reverse proxy with virtual hosts |
+| `aws.nix` | AWS Roles Anywhere certificate authentication |
+
+## Supported Services
+
+### PostgreSQL
+
+Database service with automatic database creation.
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+  databases = ["myapp" "myapp_test"];
+};
+```
+
+**Environment**: `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`
+
+### Redis
+
+Key-value store for caching and queues.
+
+```nix
+stackpanel.globalServices.redis.enable = true;
+```
+
+**Environment**: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`
+
+### Minio
+
+S3-compatible object storage.
+
+```nix
+stackpanel.globalServices.minio.enable = true;
+```
+
+**Environment**: `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
+
+### Caddy
+
+Reverse proxy with virtual hosts and optional TLS.
+
+```nix
+stackpanel.caddy = {
+  enable = true;
+  project-name = "myapp";
+  use-step-tls = true;
+};
+```
+
+**Commands**: `caddy-start`, `caddy-stop`, `caddy-add-site`, `caddy-list-sites`
+
+## AWS Certificate Authentication
+
+Passwordless AWS access using Step CA device certificates.
+
+```nix
+stackpanel.aws.certAuth = {
+  enable = true;
+  account-id = "123456789";
+  role-name = "developer";
+  trust-anchor-arn = "arn:aws:rolesanywhere:...";
+  profile-arn = "arn:aws:rolesanywhere:...";
+};
+```
+
+**Commands**: `check-aws-cert`, `aws-creds-env`
+
+## Service Lifecycle
+
+All services are managed via the stackpanel CLI:
+
+```bash
+stackpanel services start    # Start all enabled services
+stackpanel services stop     # Stop all services
+stackpanel services status   # Check service status
+```

@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/darkmatter/stackpanel/cli/internal/services"
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 )
 
 // ServiceStartState represents the state of a service being started
@@ -64,7 +64,7 @@ func NewStartServicesModel(serviceNames []string) StartServicesModel {
 	svcInfos := make([]ServiceStartInfo, len(serviceNames))
 	for i, name := range serviceNames {
 		displayName := name
-		if svc := services.Get(name); svc != nil {
+		if svc := svc.Get(name); svc != nil {
 			displayName = svc.DisplayName()
 		}
 		svcInfos[i] = ServiceStartInfo{
@@ -101,7 +101,7 @@ func (m StartServicesModel) Init() tea.Cmd {
 
 func startServiceCmd(name string, idx int) tea.Cmd {
 	return func() tea.Msg {
-		svc := services.Get(name)
+		svc := svc.Get(name)
 		if svc == nil {
 			return serviceStartedMsg{
 				idx:     idx,
@@ -283,7 +283,7 @@ func (m StartServicesModel) View() string {
 // RunStartServices launches the interactive service start TUI
 func RunStartServices(serviceNames []string) error {
 	if len(serviceNames) == 0 {
-		serviceNames = services.Names()
+		serviceNames = svc.Names()
 	}
 
 	// Mark first service as starting

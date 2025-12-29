@@ -29,7 +29,6 @@
   pkgs,
   lib,
   config,
-  options,
   ...
 }: let
   cfg = config.stackpanel.aws.certAuth;
@@ -37,8 +36,7 @@
   dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
   baseStateDir = dirs.state;
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
   stateDir = "${baseStateDir}/aws";
   stepStateDir = "${baseStateDir}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
@@ -172,8 +170,8 @@ in {
             ;;
         esac
       '';
-    in lib.optionalAttrs isDevenv {
-      packages = awsScripts.allPackages ++ [pkgs.gum checkAwsCert interactiveSetup];
+    in {
+      stackpanel.devshell.packages = awsScripts.allPackages ++ [pkgs.gum checkAwsCert interactiveSetup];
 
       stackpanel.motd.commands = [
         {
@@ -187,27 +185,29 @@ in {
       ];
       stackpanel.motd.features = ["AWS Roles Anywhere (${cfg.role-name})"];
 
-      # Set base AWS env vars (AWS_CONFIG_FILE is set in enterShell with absolute path)
-      env = awsScripts.env;
+      # Set base AWS env vars (AWS_CONFIG_FILE is set in hooks with absolute path)
+      stackpanel.devshell.env = awsScripts.env;
 
-      enterShell = ''
-        # Set AWS_CONFIG_FILE using STACKPANEL_STATE_DIR (absolute, works in Docker too)
-        export AWS_CONFIG_FILE="$STACKPANEL_STATE_DIR/aws/config"
+      stackpanel.devshell.hooks.main = [
+        ''
+          # Set AWS_CONFIG_FILE using STACKPANEL_STATE_DIR (absolute, works in Docker too)
+          export AWS_CONFIG_FILE="$STACKPANEL_STATE_DIR/aws/config"
 
-        # Generate AWS config with credential_process for auto-refresh
-        _step_cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
-        _step_key="$STACKPANEL_STATE_DIR/step/device.key"
-        if [[ -f "$_step_cert" && -f "$_step_key" ]]; then
-          mkdir -p "$STACKPANEL_STATE_DIR/aws"
-          AWS_CERT_PATH="$_step_cert" AWS_KEY_PATH="$_step_key" \
-            ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
-        fi
+          # Generate AWS config with credential_process for auto-refresh
+          _step_cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+          _step_key="$STACKPANEL_STATE_DIR/step/device.key"
+          if [[ -f "$_step_cert" && -f "$_step_key" ]]; then
+            mkdir -p "$STACKPANEL_STATE_DIR/aws"
+            AWS_CERT_PATH="$_step_cert" AWS_KEY_PATH="$_step_key" \
+              ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
+          fi
 
-        ${lib.optionalString cfg.prompt-on-shell ''
-          # Interactive AWS cert-auth setup
-          ${interactiveSetup}/bin/aws-cert-setup-prompt
-        ''}
-      '';
+          ${lib.optionalString cfg.prompt-on-shell ''
+            # Interactive AWS cert-auth setup (errors should not crash the shell)
+            ${interactiveSetup}/bin/aws-cert-setup-prompt || true
+          ''}
+        ''
+      ];
     }
   );
 }

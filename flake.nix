@@ -5,26 +5,32 @@
     extra-experimental-features = "nix-command flakes";
     allow-import-from-derivation = "true";
     extra-substituters = "https://devenv.cachix.org https://darkmatter.cachix.org";
-    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA=";
+    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA= nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU=";
   };
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    nixpkgs.url = "git+https://github.com/NixOS/nixpkgs?ref=nixos-unstable";
+    flake-parts.url = "git+https://github.com/hercules-ci/flake-parts";
     # Util that makes it easy to build all outputs of a flake.
     # devour-flake.url = "github:srid/devour-flake";
     # devour-flake.flake = false;
-    devenv.url = "github:cachix/devenv";
+    # Pin to a known-good release to avoid lockfile churn and old aliases
+    devenv.url = "git+https://github.com/cachix/devenv?ref=refs/tags/v1.11.2";
     # Required for devenv containers outputs
-    nix2container.url = "github:nlewo/nix2container";
+    nix2container.url = "git+https://github.com/nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
-    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
+    mk-shell-bin.url = "git+https://github.com/rrbutani/nix-mk-shell-bin";
+
+    # Back-compat: some modules still refer to 'pre-commit-hooks'
+    # Map it to the new repository name
+    pre-commit-hooks.url = "git+https://github.com/cachix/git-hooks.nix";
+    pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
 
     # Required when enabling stackpanel.devenv.recommended.formatters
-    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.url = "git+https://github.com/numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
-    gomod2nix.url = "github:nix-community/gomod2nix";
+    gomod2nix.url = "git+https://github.com/nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
     stackpanel-root.url = "file+file:///dev/null";
     stackpanel-root.flake = false;
@@ -215,6 +221,12 @@
           # via `nix develop` or `devenv shell`.
         };
 
+        checks = {
+          stackpanel-cli = config.packages.stackpanel-cli;
+          stackpanel-agent = config.packages.stackpanel-agent;
+          default-package = config.packages.default;
+        };
+
       } // (if builtins.getEnv "SKIP_DEVENV" != "true" then {
         # Local development shell - uses the same pattern users would
         devenv.shells.default = sharedDevenvConfig;
@@ -300,9 +312,7 @@
         devenvModules = {
 
           # Main devenv module (imports core stackpanel options + adapter)
-          default = import ./nix/flake/modules/devenv {
-            inherit devshell;
-          };
+          default = ./nix/flake/modules/devenv;
 
           # Adapter to reuse a stackpanel devshell inside devenv
           devshell = import ./nix/flake/modules/devenv-devshell-adapter.nix {

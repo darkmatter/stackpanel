@@ -26,8 +26,8 @@
 }: let
   cfg = config.stackpanel.ci.github;
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+  # Detect if we're in devenv context (files option is declared) vs standalone eval
+  hasFilesOption = options ? files;
 
   # Proper YAML generation
   yaml = pkgs.formats.yaml {};
@@ -55,7 +55,7 @@ in {
         };
       };
     };
-  } // lib.optionalAttrs isDevenv {
+  } // lib.optionalAttrs hasFilesOption {
     # Generate workflow files using devenv's files option
     files =
       lib.mapAttrs' (name: workflow: {

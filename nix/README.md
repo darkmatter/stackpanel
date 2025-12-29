@@ -84,7 +84,7 @@ Import the devenv module:
 # devenv.nix
 { inputs, ... }: {
   imports = [ inputs.stackpanel.devenvModules.default ];
-  
+
   stackpanel = {
     name = "my-project";
     apps.web.port = 3000;
@@ -99,7 +99,7 @@ Or use the flake-parts module:
 # flake.nix
 {
   imports = [ inputs.stackpanel.flakeModules.default ];
-  
+
   perSystem = { ... }: {
     devenv.shells.default = {
       stackpanel.name = "my-project";

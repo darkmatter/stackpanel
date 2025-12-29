@@ -14,7 +14,9 @@
 		"./native": {
 			"types": "./src/native.ts",
 			"default": "./src/native.ts"
-		}
+		},
+		"./docs.css": "./src/styles/docs.css",
+		"./web.css": "./src/styles/web.css"
 	},
 	"peerDependencies": {
 		"react": "^19",

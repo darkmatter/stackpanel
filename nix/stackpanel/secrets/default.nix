@@ -21,13 +21,10 @@
 #     stackpanel.secrets.enable = true;
 #     # Access packages via: config.stackpanel.secrets.packages
 # ==============================================================================
-{ pkgs, lib, config, options, ... }:
+{ pkgs, lib, config, ... }:
 let
   cfg = config.stackpanel.secrets;
   secretsLib = import ./lib.nix { inherit lib pkgs; };
-
-  # Detect if we're in a devenv context by checking for devenv-specific options
-  isDevenv = options ? scripts;
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # Standalone packages (for flake users who need derivations)
@@ -63,7 +60,7 @@ let
 in {
   # Options are now centralized in core/options/secrets.nix
 
-  config = lib.mkMerge ([
+  config = lib.mkMerge [
     # ═══════════════════════════════════════════════════════════════════════════════
     # Common config (both devenv and standalone)
     # ═══════════════════════════════════════════════════════════════════════════════
@@ -72,65 +69,35 @@ in {
       stackpanel.secrets.packages = {
         inherit ensure-age-key sops-wrapped generate-secrets-schema generate-secrets-package;
       };
-    })
-  ]
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # Devenv-specific config (only included when in devenv context)
-  # ═══════════════════════════════════════════════════════════════════════════════
-  ++ lib.optionals isDevenv [
-    (lib.mkIf cfg.enable {
-      # Scripts using devenv's scripts.*.exec pattern
-      scripts.ensure-age-key.exec = secretsLib.ensureAgeKeyScript;
-      scripts.sops.exec = secretsLib.sopsWrapperScript "ensure-age-key";
-      scripts.generate-secrets-schema.exec = secretsLib.generateSecretsSchemaScript;
-      scripts.generate-secrets-package.exec = secretsLib.generateSecretsPackageScript {
-        inputDir = cfg.input-directory;
-        environments = cfg.environments;
-        codegen = cfg.codegen;
-      };
 
-      # Add required packages to devenv shell
-      packages = [
+      # Add required packages to devshell
+      stackpanel.devshell.packages = [
         pkgs.sops
         pkgs.age
         pkgs.yq
         pkgs.jq
         pkgs.bun
       ];
+
+      # Commands using stackpanel abstraction
+      stackpanel.devshell.commands = {
+        ensure-age-key = {
+          exec = secretsLib.ensureAgeKeyScript;
+        };
+        sops = {
+          exec = secretsLib.sopsWrapperScript "ensure-age-key";
+        };
+        generate-secrets-schema = {
+          exec = secretsLib.generateSecretsSchemaScript;
+        };
+        generate-secrets-package = {
+          exec = secretsLib.generateSecretsPackageScript {
+            inputDir = cfg.input-directory;
+            environments = cfg.environments;
+            codegen = cfg.codegen;
+          };
+        };
+      };
     })
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Devenv test module (only when testing)
-    # ═══════════════════════════════════════════════════════════════════════════════
-    (lib.mkIf (cfg.enable && (config.devenv.isTesting or false)) {
-      scripts."test-secrets".exec = ''
-        set -e
-        echo "🧪 Testing secrets module..."
-
-        # Test 1: Verify sops wrapper exists
-        command -v sops >/dev/null && echo "✅ sops wrapper exists" || { echo "❌ sops wrapper missing"; exit 1; }
-
-        # Test 2: Verify ensure-age-key exists
-        command -v ensure-age-key >/dev/null && echo "✅ ensure-age-key exists" || { echo "❌ ensure-age-key missing"; exit 1; }
-
-        # Test 3: Verify generate-secrets-schema exists
-        command -v generate-secrets-schema >/dev/null && echo "✅ generate-secrets-schema exists" || { echo "❌ generate-secrets-schema missing"; exit 1; }
-
-        # Test 4: Verify generate-secrets-package exists
-        command -v generate-secrets-package >/dev/null && echo "✅ generate-secrets-package exists" || { echo "❌ generate-secrets-package missing"; exit 1; }
-
-        # Test 5: Verify sops wrapper runs preflight (will fail if no key, but script should exist)
-        sops --version >/dev/null 2>&1 || true
-        echo "✅ sops wrapper is callable"
-
-        echo ""
-        echo "✅ All secrets tests passed!"
-      '';
-
-      enterTest = ''
-        test-secrets
-      '';
-    })
-  ]);
+  ];
 }
-

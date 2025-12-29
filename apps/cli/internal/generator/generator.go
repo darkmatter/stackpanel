@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/darkmatter/stackpanel/cli/internal/config"
+	"github.com/darkmatter/stackpanel/packages/stackpanel-go/config"
 )
 
 // Generator handles file generation from config

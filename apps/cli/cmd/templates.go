@@ -3,8 +3,16 @@ package cmd
 import (
 	"bytes"
 	"embed"
+	"strings"
 	"text/template"
 )
+
+// escapeYAMLString escapes a string for use in a YAML value
+func escapeYAMLString(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	return "\"" + s + "\""
+}
 
 //go:embed templates/*.tmpl
 var templateFS embed.FS

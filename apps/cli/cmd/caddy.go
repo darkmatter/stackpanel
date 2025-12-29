@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/cli/internal/services"
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 	"github.com/spf13/cobra"
 )
 
@@ -140,7 +140,7 @@ func startCaddy() {
 	caddyfile := filepath.Join(caddyConfigDir, "Caddyfile")
 
 	// Check if already running
-	if pid := readCaddyPidFile(caddyPidFile); pid > 0 && services.IsProcessRunning(pid) {
+	if pid := readCaddyPidFile(caddyPidFile); pid > 0 && svc.IsProcessRunning(pid) {
 		printInfo("Reloading configuration...")
 		cmd := exec.Command("caddy", "reload", "--config", caddyfile, "--force")
 		if output, err := cmd.CombinedOutput(); err != nil {
@@ -165,7 +165,7 @@ func stopCaddy() {
 	fmt.Printf("\n%s Caddy\n", purple.Sprint("==>"))
 
 	pid := readCaddyPidFile(caddyPidFile)
-	if pid == 0 || !services.IsProcessRunning(pid) {
+	if pid == 0 || !svc.IsProcessRunning(pid) {
 		printDim("Not running")
 		os.Remove(caddyPidFile)
 		return
@@ -185,7 +185,7 @@ func showCaddyStatus() {
 	fmt.Printf("\n%s Caddy\n", purple.Sprint("==>"))
 
 	pid := readCaddyPidFile(caddyPidFile)
-	if pid > 0 && services.IsProcessRunning(pid) {
+	if pid > 0 && svc.IsProcessRunning(pid) {
 		green.Printf("  ● Running")
 		fmt.Printf(" (PID: %d)\n", pid)
 	} else {
@@ -226,7 +226,7 @@ func addCaddySite(domain, upstream string, useTls bool) {
 	printDim(fmt.Sprintf("  Config: %s", siteFile))
 
 	// Create symlink from project to global config
-	projectRoot := services.GetProjectRoot()
+	projectRoot := svc.GetProjectRoot()
 	if projectRoot != "" {
 		projectCaddyDir := filepath.Join(projectRoot, ".stackpanel", "caddy")
 		if err := os.MkdirAll(projectCaddyDir, 0755); err == nil {
@@ -258,7 +258,7 @@ func removeCaddySite(domain string) {
 	}
 
 	// Also remove symlink from project if it exists
-	projectRoot := services.GetProjectRoot()
+	projectRoot := svc.GetProjectRoot()
 	if projectRoot != "" {
 		symlinkPath := filepath.Join(projectRoot, ".stackpanel", "caddy", filename+".caddy")
 		os.Remove(symlinkPath) // Ignore error - might not exist

@@ -24,7 +24,7 @@ pkgs.stdenv.mkDerivation {
   pname = "stackpanel-go-src";
   version = "0.1.0";
 
-  src = ../../../packages/stackpanel-go;
+  src = ../../../../packages/stackpanel-go;
 
   dontBuild = true;
   dontConfigure = true;

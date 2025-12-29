@@ -5,9 +5,9 @@ import (
 	"os"
 	"sort"
 
-	"github.com/darkmatter/stackpanel/cli/internal/services"
 	"github.com/darkmatter/stackpanel/cli/internal/state"
 	"github.com/darkmatter/stackpanel/cli/internal/tui"
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +50,7 @@ ____/ \__| \__,_| \___| _|\_\  .__/  \__,_| _|  _| \___| _|
 
 func showFullStatus() {
 	fmt.Println()
-	purple.Println(Banner)
+	purple.Print(Banner)
 
 	// Load state file if available
 	st, stateErr := state.Load("")
@@ -106,7 +106,7 @@ func showFullStatus() {
 
 // showServiceStatusWithPort shows service status with port from state
 func showServiceStatusWithPort(name, displayName string, port int) {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		dim.Printf("  ○ %s (not registered)\n", displayName)
 		return
@@ -123,7 +123,7 @@ func showServiceStatusWithPort(name, displayName string, port int) {
 
 func showCaddyStatusCompact() {
 	pid := readCaddyPidFile(caddyPidFile)
-	if pid > 0 && services.IsProcessRunning(pid) {
+	if pid > 0 && svc.IsProcessRunning(pid) {
 		green.Print("  ● Caddy")
 		dim.Printf(" (PID: %d)\n", pid)
 	} else {

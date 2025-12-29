@@ -19,31 +19,28 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 // Directory names for generated documentation
 const (
+	// Docs generated from evaluating Nix options => /core/reference
 	DirnameReference = "reference"
-	DirnameModules   = "modules"
-	DirnameDevenv    = "devenv"
+	// Docs generated from READMEs => /internal
+	DirnameModules   = "internal"
 )
-
 
 func Run(optionsPath string, docsDir string, nixModulesDir string) error {
 	if nixModulesDir == "" {
 		nixModulesDir = ""
 	}
-	}
 
-	outputDir := fmt.Sprintf("%s/%s", docsDir, DirnameReference)
+	outputDir := fmt.Sprintf("%s/%s", docsDir,  DirnameReference)
 	modulesOutputDir := fmt.Sprintf("%s/%s", docsDir, DirnameModules)
-	devenvDir := fmt.Sprintf("%s/%s", docsDir, DirnameDevenv)
 
 	// Clean up old generated files to prevent stale content
-	for _, dir := range []string{outputDir, modulesOutputDir, devenvDir} {
-		if err := os.RemoveAll(dir); err != nil {
+	// Preserve meta.json files as they are manually maintained
+	for _, dir := range []string{outputDir, modulesOutputDir} {
+		if err := cleanDirectory(dir); err != nil {
 			fmt.Printf("Warning: failed to clean %s: %v\n", dir, err)
 		}
 	}
@@ -73,7 +70,7 @@ func Run(optionsPath string, docsDir string, nixModulesDir string) error {
 	fmt.Printf("Categories: %s\n", strings.Join(categories, ", "))
 
 	// Ensure output directories exist
-	dirs := []string{outputDir, modulesOutputDir, devenvDir}
+	dirs := []string{outputDir, modulesOutputDir}
 	if err := mkDirs(dirs...); err != nil {
 		return fmt.Errorf("failed to create output directories: %w", err)
 	}
@@ -116,5 +113,39 @@ func mkDirs(paths ...string) error {
 			return fmt.Errorf("failed to create directory %s: %w", p, err)
 		}
 	}
+	return nil
+}
+
+// cleanDirectory removes all files and subdirectories except meta.json files
+func cleanDirectory(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		path := filepath.Join(dir, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively clean subdirectories
+			if err := cleanDirectory(path); err != nil {
+				return err
+			}
+			// Remove the subdirectory if it's empty
+			subEntries, err := os.ReadDir(path)
+			if err == nil && len(subEntries) == 0 {
+				os.Remove(path)
+			}
+		} else if entry.Name() != "meta.json" {
+			// Remove all files except meta.json
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
