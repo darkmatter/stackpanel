@@ -227,9 +227,6 @@ st, err := state.Load("", state.WithNixEval(false))
 # Enter development shell
 direnv allow  # or: devenv shell
 
-# Start all services
-devenv up
-
 # Individual commands
 bun install            # Install dependencies
 bun run dev            # Start dev servers
@@ -261,3 +258,7 @@ All user-editable config files use YAML with JSON Schema validation:
 - Schemas are generated from Nix in `.stackpanel/gen/schemas/`
 - VS Code workspace maps schemas to file patterns
 - Install the Red Hat YAML extension for intellisense
+
+## Docs
+
+The docs for stackpanel are in apps/docs/content - ALWAYS give the docs a quick scan so that you understand stackpanel.
