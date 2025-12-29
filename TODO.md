@@ -17,6 +17,11 @@ ______________________________________________________________________
   - `stackpanel db drop <name>` - Drop database
   - `stackpanel db migrate` - Run migrations
   - `stackpanel db seed` - Seed data
+- [ ] git-hooks.nix
+- [ ] aws hardening
+- [ ] caddy
+- [ ] step
+- [ ] tasks
 
 ### Medium Priority
 

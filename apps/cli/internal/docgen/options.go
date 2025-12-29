@@ -136,6 +136,7 @@ func generateCategoryMdx(category string, options OptionsJSON) string {
 	sort.Strings(paths)
 
 	var sb strings.Builder
+	// var tb strings.Builder // Table builder
 	header, err := RenderCategoryHeader(title, category, icon)
 	if err != nil {
 		// Fallback to simple header on error

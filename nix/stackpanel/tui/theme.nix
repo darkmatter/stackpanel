@@ -23,38 +23,34 @@
   pkgs,
   lib,
   config,
-  options,
   ...
 }: let
   cfg = config.stackpanel.theme;
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Import shared theme library
   themeLib = import ../lib/theme.nix {inherit pkgs lib;};
   starshipTheme = themeLib.mkStarshipTheme {};
 in {
-  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
-    packages = starshipTheme.requiredPackages;
+  config = lib.mkIf cfg.enable {
+    stackpanel.devshell.packages = starshipTheme.requiredPackages;
 
     stackpanel.motd.features = ["Starship prompt theme"];
 
-    enterShell = ''
-      # syntax: bash
-      # Set the config path for starship
-      export STARSHIP_CONFIG=$DEVENV_STATE/starship.toml
-      install -m 644 ${
-        if cfg.config-file != null
-        then cfg.config-file
-        else starshipTheme.config
-      } $DEVENV_STATE/starship.toml
+    stackpanel.devshell.hooks.main = [
+      ''
+        # syntax: bash
+        # Set the config path for starship
+        export STARSHIP_CONFIG=$DEVENV_STATE/starship.toml
+        install -m 644 ${if cfg.config-file != null then cfg.config-file else starshipTheme.config} $DEVENV_STATE/starship.toml
 
-      # Only initialize starship here if we're in a direct `devenv shell` (bash)
-      # When using direnv, the user's shell rc file handles starship init
-      if [[ -z "''${DIRENV_IN_ENVRC:-}" ]]; then
-        eval "$(starship init bash)"
-      fi
-    '';
-  });
+        # Only initialize starship here if we're in a direct `devenv shell` (bash)
+        # When using direnv, the user's shell rc file handles starship init
+        if [[ -z "''${DIRENV_IN_ENVRC:-}" ]]; then
+          eval "$(starship init bash)"
+        fi
+      ''
+    ];
+  };
 }

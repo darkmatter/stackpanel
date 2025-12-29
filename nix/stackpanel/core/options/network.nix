@@ -52,11 +52,5 @@
       default = true;
       description = "Prompt for certificate setup on shell entry if not configured";
     };
-
-    enterShell = lib.mkOption {
-      type = lib.types.lines;
-      default = "";
-      description = "Scripts to run when entering the shell (internal)";
-    };
   };
 }

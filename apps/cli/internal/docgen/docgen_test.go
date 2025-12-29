@@ -10,11 +10,11 @@ import (
 
 func TestGroupOptions(t *testing.T) {
 	options := OptionsJSON{
-		"stackpanel.enable":                    NixOption{Type: "boolean"},
-		"stackpanel.ports.base":                NixOption{Type: "int"},
-		"stackpanel.ports.projectName":         NixOption{Type: "string"},
-		"stackpanel.secrets.enable":            NixOption{Type: "boolean"},
-		"stackpanel.globalServices.postgres":   NixOption{Type: "submodule"},
+		"stackpanel.enable":                  NixOption{Type: "boolean"},
+		"stackpanel.ports.base":              NixOption{Type: "int"},
+		"stackpanel.ports.projectName":       NixOption{Type: "string"},
+		"stackpanel.secrets.enable":          NixOption{Type: "boolean"},
+		"stackpanel.globalServices.postgres": NixOption{Type: "submodule"},
 	}
 
 	groups := groupOptions(options)
@@ -183,9 +183,9 @@ func TestGenerateCategoryMdx(t *testing.T) {
 
 	result := generateCategoryMdx("ports", options)
 
-	// Check frontmatter
-	if !strings.Contains(result, "title: Ports Options") {
-		t.Error("expected title in frontmatter")
+	// Check frontmatter now emitted by template
+	if !strings.Contains(result, "title: ports") {
+		t.Error("expected lowercase category title in frontmatter")
 	}
 	if !strings.Contains(result, "description: Configuration options for stackpanel.ports") {
 		t.Error("expected description in frontmatter")
@@ -295,12 +295,12 @@ func TestFindReadmeFiles_NonExistentDir(t *testing.T) {
 
 func TestConvertReadmeToMdx(t *testing.T) {
 	tests := []struct {
-		name           string
-		content        string
-		moduleName     string
-		expectTitle    string
-		expectDesc     string
-		expectContent  string
+		name          string
+		content       string
+		moduleName    string
+		expectTitle   string
+		expectDesc    string
+		expectContent string
 	}{
 		{
 			name:          "with h1 title",

@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/darkmatter/stackpanel/cli/internal/services"
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 )
 
 // ServiceInfo holds status information for a service
@@ -53,7 +53,7 @@ type (
 
 // Configuration
 var (
-	// ServicesBaseDir is now dynamic - use services.BaseDir instead
+	// ServicesBaseDir is now dynamic - use svc.BaseDir instead
 	// This variable is kept for backward compatibility but should be avoided
 	ServicesBaseDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "devservices")
 	CaddyConfigDir  = filepath.Join(os.Getenv("HOME"), ".config", "caddy")
@@ -62,7 +62,7 @@ var (
 // GetServicesBaseDir returns the current services base directory.
 // Prefer this over the ServicesBaseDir variable.
 func GetServicesBaseDir() string {
-	return services.BaseDir
+	return svc.BaseDir
 }
 
 // Service definitions are now loaded dynamically from the services package
@@ -129,7 +129,7 @@ func tickCmd() tea.Cmd {
 func refreshServices() tea.Msg {
 	var svcInfos []ServiceInfo
 
-	for _, svc := range services.All() {
+	for _, svc := range svc.All() {
 		status := svc.Status()
 		info := ServiceInfo{
 			Name:        svc.Name(),
@@ -169,7 +169,7 @@ func refreshCaddy() tea.Msg {
 	pidFile := filepath.Join(CaddyConfigDir, "caddy.pid")
 	pid := readCaddyPid(pidFile)
 
-	if pid > 0 && services.IsProcessRunning(pid) {
+	if pid > 0 && svc.IsProcessRunning(pid) {
 		info.Status = "running"
 		info.PID = pid
 		info.Details = countCaddySites()
@@ -315,7 +315,7 @@ func (m StatusModel) View() string {
 	// Loading state
 	if m.loading {
 		b.WriteString(m.spinner.View())
-		b.WriteString(" Loading services...")
+		b.WriteString(" Loading svc...")
 		return b.String()
 	}
 

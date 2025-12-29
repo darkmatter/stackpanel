@@ -6,6 +6,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	_ "github.com/darkmatter/stackpanel/cli/internal/services" // register built-in dev services
 )
 
 var (

@@ -1,0 +1,127 @@
+---
+title: Stackpanel Options Schema
+description: Documentation for the options module
+---
+
+This directory contains all option definitions for the Stackpanel module system. These are **pure option declarations** - they define the schema and types, but contain no implementation logic.
+
+## Overview
+
+Options are organized by feature area:
+
+| File | Description |
+|------|-------------|
+| `core.nix` | Root paths, directories, basic settings |
+| `apps.nix` | Application port and domain configuration |
+| `ports.nix` | Deterministic port computation |
+| `devshell.nix` | Shell environment (packages, hooks, commands, files) |
+| `global-services.nix` | PostgreSQL, Redis, Minio, Caddy services |
+| `caddy.nix` | Caddy reverse proxy configuration |
+| `network.nix` | Step CA certificate management |
+| `aws.nix` | AWS Roles Anywhere certificate auth |
+| `ide.nix` | VS Code, Zed, Cursor integration |
+| `secrets.nix` | SOPS-encrypted secrets management |
+| `cli.nix` | CLI behavior options |
+| `codegen.nix` | Code generator definitions |
+| `ci.nix` | CI/CD workflow generation |
+| `motd.nix` | Message of the Day help display |
+| `theme.nix` | Starship prompt theming |
+
+## Option Namespaces
+
+All options are under the `stackpanel` namespace:
+
+```nix
+stackpanel.enable           # Master switch
+stackpanel.root             # Project root path
+stackpanel.dirs.*           # Directory configuration
+stackpanel.apps.*           # Application definitions
+stackpanel.ports.*          # Port configuration
+stackpanel.devshell.*       # Shell environment
+stackpanel.globalServices.* # Development services
+stackpanel.network.*        # Network/TLS settings
+stackpanel.secrets.*        # Secrets management
+stackpanel.ide.*            # IDE integration
+stackpanel.cli.*            # CLI settings
+stackpanel.motd.*           # Help message
+stackpanel.theme.*          # Prompt theming
+```
+
+## Design Principles
+
+### Pure Declarations
+
+Option files contain only `lib.mkOption` declarations. No implementation logic, no `config = ...` blocks. This allows the schema to be:
+- Evaluated without side effects
+- Used for documentation generation
+- Validated independently of implementation
+
+### Adapter-Agnostic
+
+Options work with any Nix module system:
+- devenv
+- NixOS modules
+- flake-parts
+- `lib.evalModules`
+
+Implementation is provided by adapter modules that translate options to the target system.
+
+### Hierarchical Types
+
+Complex options use `lib.types.submodule` for nested configuration:
+
+```nix
+options.stackpanel.apps = lib.mkOption {
+  type = lib.types.attrsOf (lib.types.submodule {
+    options = {
+      offset = lib.mkOption { ... };
+      domain = lib.mkOption { ... };
+      tls = lib.mkOption { ... };
+    };
+  });
+};
+```
+
+### Computed Values
+
+Read-only options expose computed values:
+
+```nix
+options.stackpanel.ports.base-port = lib.mkOption {
+  type = lib.types.port;
+  readOnly = true;
+  default = basePort;  # Computed from project-name
+};
+```
+
+## Adding New Options
+
+1. Create a new file following the naming convention: `<feature>.nix`
+2. Use the standard header format (see existing files)
+3. Define options under `options.stackpanel.<feature>`
+4. Import the file in `default.nix`
+5. Implement the feature in the appropriate core module
+
+Example template:
+
+```nix
+# ==============================================================================
+# myfeature.nix
+#
+# Brief description of what this feature does.
+#
+# Detailed explanation of options, usage examples, etc.
+# ==============================================================================
+{ lib, ... }: {
+  options.stackpanel.myfeature = {
+    enable = lib.mkEnableOption "My feature description";
+
+    setting = lib.mkOption {
+      type = lib.types.str;
+      default = "default-value";
+      description = "What this setting controls";
+      example = "example-value";
+    };
+  };
+}
+```

@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/darkmatter/stackpanel/cli/internal/services"
 	"github.com/darkmatter/stackpanel/cli/internal/tui"
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 	"github.com/spf13/cobra"
 )
 
@@ -23,16 +23,16 @@ This allows different projects to use different versions and configurations.
 Note: Caddy is a global service (shared across projects) to avoid port 443 conflicts.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize services for this project
-		services.InitForProject("")
+		svc.InitForProject("")
 	},
 }
 
 var servicesStartCmd = &cobra.Command{
 	Use:   "start [service...]",
 	Short: "Start services (all if none specified)",
-	Long: `Start development services.
+	Long: `Start development svc.
 
-If no services are specified, starts all configured services.
+If no services are specified, starts all configured svc.
 If a service is already running, it will be reattached.
 
 Examples:
@@ -45,10 +45,10 @@ Examples:
 		// Get service names to start
 		var svcNames []string
 		if len(args) == 0 {
-			svcNames = services.Names()
+			svcNames = svc.Names()
 		} else {
 			for _, arg := range args {
-				svcNames = append(svcNames, services.Normalize(arg))
+				svcNames = append(svcNames, svc.Normalize(arg))
 			}
 		}
 
@@ -76,10 +76,10 @@ var servicesStopCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var svcNames []string
 		if len(args) == 0 {
-			svcNames = services.Names()
+			svcNames = svc.Names()
 		} else {
 			for _, arg := range args {
-				svcNames = append(svcNames, services.Normalize(arg))
+				svcNames = append(svcNames, svc.Normalize(arg))
 			}
 		}
 
@@ -96,10 +96,10 @@ var servicesStatusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var svcNames []string
 		if len(args) == 0 {
-			svcNames = services.Names()
+			svcNames = svc.Names()
 		} else {
 			for _, arg := range args {
-				svcNames = append(svcNames, services.Normalize(arg))
+				svcNames = append(svcNames, svc.Normalize(arg))
 			}
 		}
 
@@ -115,10 +115,10 @@ var servicesRestartCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var svcNames []string
 		if len(args) == 0 {
-			svcNames = services.Names()
+			svcNames = svc.Names()
 		} else {
 			for _, arg := range args {
-				svcNames = append(svcNames, services.Normalize(arg))
+				svcNames = append(svcNames, svc.Normalize(arg))
 			}
 		}
 
@@ -140,7 +140,7 @@ var servicesLogsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		follow, _ := cmd.Flags().GetBool("follow")
 		lines, _ := cmd.Flags().GetInt("lines")
-		showServiceLogs(services.Normalize(args[0]), follow, lines)
+		showServiceLogs(svc.Normalize(args[0]), follow, lines)
 	},
 }
 
@@ -149,7 +149,7 @@ var servicesListCmd = &cobra.Command{
 	Short: "List available services",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Available services:")
-		for _, svc := range services.All() {
+		for _, svc := range svc.All() {
 			status := svc.Status()
 			statusIcon := dim.Sprint("○")
 			if status.Running {
@@ -174,7 +174,7 @@ func init() {
 }
 
 func startService(name string) {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		printError(fmt.Sprintf("Unknown service: %s", name))
 		return
@@ -206,7 +206,7 @@ func startService(name string) {
 }
 
 func stopService(name string) {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		printError(fmt.Sprintf("Unknown service: %s", name))
 		return
@@ -228,7 +228,7 @@ func stopService(name string) {
 }
 
 func showServiceStatus(name string) {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		printError(fmt.Sprintf("Unknown service: %s", name))
 		return
@@ -252,7 +252,7 @@ func showServiceStatus(name string) {
 }
 
 func showServiceLogs(name string, follow bool, lines int) {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		printError(fmt.Sprintf("Unknown service: %s", name))
 		return
@@ -278,7 +278,7 @@ func showServiceLogs(name string, follow bool, lines int) {
 
 // GetServiceStatus returns the status of a service (used by TUI)
 func GetServiceStatus(name string) (bool, int) {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		return false, 0
 	}
@@ -288,7 +288,7 @@ func GetServiceStatus(name string) (bool, int) {
 
 // StartServiceByName starts a service by name (used by TUI)
 func StartServiceByName(name string) error {
-	svc := services.Get(name)
+	svc := svc.Get(name)
 	if svc == nil {
 		return fmt.Errorf("unknown service: %s", name)
 	}
@@ -298,5 +298,5 @@ func StartServiceByName(name string) error {
 // GetServicesBaseDir returns the current services base directory
 // This is project-local by default (.stackpanel/state/services/)
 func GetServicesBaseDir() string {
-	return services.BaseDir
+	return svc.BaseDir
 }

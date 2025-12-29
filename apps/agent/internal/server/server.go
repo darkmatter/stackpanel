@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/agent/internal/config"
-	"github.com/darkmatter/stackpanel/agent/internal/executor"
+	sharedexec "github.com/darkmatter/stackpanel/packages/stackpanel-go/exec"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -28,7 +28,7 @@ import (
 type Server struct {
 	config     *config.Config
 	httpServer *http.Server
-	exec       *executor.Executor
+	exec       *sharedexec.Executor
 
 	// pairToken is a per-process token used by the hosted UI to authenticate.
 	// It is only delivered to an allowed origin via the /pair handshake page.
@@ -38,7 +38,7 @@ type Server struct {
 
 // New creates a new server instance.
 func New(cfg *config.Config) (*Server, error) {
-	exec, err := executor.New(cfg.ProjectRoot, cfg.AllowedCommands)
+	exec, err := sharedexec.New(cfg.ProjectRoot, cfg.AllowedCommands)
 	if err != nil {
 		return nil, err
 	}
@@ -928,5 +928,3 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 
 	return secretsRel, nil
 }
-
-

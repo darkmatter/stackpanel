@@ -21,7 +21,6 @@
 {
   lib,
   config,
-  options,
   pkgs,
   ...
 }: let
@@ -32,8 +31,7 @@
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Import the stackpanel CLI package
   stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli {};
@@ -50,11 +48,13 @@
     projectRoot = "$STACKPANEL_ROOT"; # Will be expanded at runtime from PWD
     basePort = portsCfg.base-port;
 
+    # Note: these must match the Go Paths struct fields (state, gen, data)
+    # dirs.config is intentionally excluded - it's a Nix-time path that becomes
+    # a store path, and the CLI doesn't need it at runtime.
     paths = {
-      root = dirs.home;
       state = dirs.state;
       gen = dirs.gen;
-      config = toString dirs.config;
+      data = dirs.home;  # "data" in Go corresponds to dirs.home (.stackpanel)
     };
 
     # Apps with computed ports and domains
@@ -118,17 +118,18 @@
   # Serialize config to JSON
   configJson = builtins.toJSON fullConfig;
 
-  # Write config to a temp file in the nix store for shell to read
-  configFile = pkgs.writeText "stackpanel-config.json" configJson;
+  # Write config to a store path.
+  # Using builtins.toFile (no builder needed) since we no longer embed store path references.
+  configFile = builtins.toFile "stackpanel-config.json" configJson;
 
 in {
   imports = [
     ./options
   ];
 
-  config = lib.mkIf (cfg.enable && cfg.cli.enable) (lib.optionalAttrs isDevenv {
+  config = lib.mkIf (cfg.enable && cfg.cli.enable) {
     # Add the CLI to packages
-    packages = [stackpanel-cli];
+    stackpanel.devshell.packages = [stackpanel-cli];
 
     # Add hints about IDE integration (if enabled)
     stackpanel.motd.hints = lib.mkIf (ideCfg.enable && ideCfg.vscode.enable) [
@@ -136,19 +137,21 @@ in {
     ];
 
     # Call the CLI in enterShell to generate all files
-    # Use mkOrder to ensure this runs early but after directory setup
-    enterShell = lib.mkOrder 450 ''
-      # Generate stackpanel files via CLI
-      # Read config from nix store, replace $STACKPANEL_ROOT with actual value
-      _sp_config=$(cat ${configFile} | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
-      echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel init ${lib.optionalString cfg.cli.quiet "--quiet"}
-    '';
+    # Use mkBefore to ensure this runs early but after directory setup
+    stackpanel.devshell.hooks.before = [
+      ''
+        # Generate stackpanel files via CLI
+        # Read config from nix store, replace $STACKPANEL_ROOT with actual value
+        _sp_config=$(cat ${configFile} | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
+        echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel init ${lib.optionalString cfg.cli.quiet "--quiet"}
+      ''
+    ];
 
     # Export paths for other tools
-    env = {
+    stackpanel.devshell.env = {
       STACKPANEL_STATE_FILE = "\${STACKPANEL_STATE_DIR}/stackpanel.json";
       # Path to the Nix-generated config in the store (for nix eval to read)
       STACKPANEL_NIX_CONFIG = "${configFile}";
     };
-  });
+  };
 }

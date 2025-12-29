@@ -29,12 +29,10 @@
 {
   lib,
   config,
-  options,
   pkgs,
   ...
 }: let
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
@@ -53,37 +51,6 @@
 
   # Get the project base port
   projectBasePort = portsCfg.base-port;
-
-  # App option type (just user inputs, no computed fields)
-  appType = lib.types.submodule {
-    options = {
-      offset = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        description = ''
-          Port offset from base port.
-          If null, offset is determined by position in apps attrset.
-        '';
-        example = 5;
-      };
-
-      domain = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = ''
-          Domain prefix for .localhost vhost.
-          If set, a Caddy vhost will be created at <domain>.localhost
-        '';
-        example = "api";
-      };
-
-      tls = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Enable TLS for the vhost (requires Step CA)";
-      };
-    };
-  };
 
   # Compute full app configurations with ports
   appNames = lib.attrNames rawApps;
@@ -146,18 +113,20 @@ in {
     ../core/options
   ];
 
-  config = lib.mkIf (rawApps != {}) (lib.optionalAttrs isDevenv {
+  config = lib.mkIf (rawApps != {}) {
     # Expose ports as environment variables
-    env = appEnvVars // appUrlEnvVars;
+    stackpanel.devshell.env = appEnvVars // appUrlEnvVars;
 
     # Register Caddy sites for apps with domains
-    enterShell = lib.mkAfter (lib.concatMapStrings (name: let
-        app = computedApps.${name};
-      in ''
-        # Register Caddy site for ${name}
-        ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${app.domain}" "localhost:${toString app.port}" --project "${portsCfg.project-name}" ${lib.optionalString app.tls "--tls-internal"} 2>/dev/null || true
-      '')
-      appsWithVhosts);
+    stackpanel.devshell.hooks.after = [
+      (lib.concatMapStrings (name: let
+          app = computedApps.${name};
+        in ''
+          # Register Caddy site for ${name}
+          ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${app.domain}" "localhost:${toString app.port}" --project "${portsCfg.project-name}" ${lib.optionalString app.tls "--tls-internal"} 2>/dev/null || true
+        '')
+        appsWithVhosts)
+    ];
 
     # Add to MOTD
     stackpanel.motd.commands = lib.mkIf (appsWithVhosts != []) [
@@ -166,5 +135,5 @@ in {
         description = lib.concatMapStringsSep ", " (name: "${name}=${computedApps.${name}.domain}") appsWithVhosts;
       }
     ];
-  });
+  };
 }

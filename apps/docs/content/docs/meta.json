@@ -1,0 +1,23 @@
+{
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "quick-start",
+    "features",
+    "install",
+    "concepts",
+    "...",
+    "---Guides---",
+    "guides",
+    "---Configuration---",
+    "configuration",
+    "reference",
+    "... reference",
+    "---Contributing---",
+    "contributing",
+    "internal",
+    "---",
+    "[heart][darkmatter](https://darkmatter.io)"
+  ],
+  "root": true
+}

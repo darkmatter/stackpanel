@@ -22,15 +22,21 @@
   ...
 }:
 let
-  stackpanelGoSrc = pkgs.callPackage ../stackpanel-go {};
-in
-let
-  repoRoot = ../../..;
-  compositeSrc = pkgs.runCommand "stackpanel-cli-src" { } ''
+  repoRoot = ../../../..;
+
+  # Source paths - evaluated before being copied to store
+  cliSrc = "${repoRoot}/apps/cli";
+  goSrc = "${repoRoot}/packages/stackpanel-go";
+
+  # Create composite source with proper directory structure for Go module resolution
+  compositeSrc = pkgs.runCommand "stackpanel-cli-src" {
+    preferLocalBuild = true;
+    allowSubstitutes = false;
+  } ''
     mkdir -p $out/apps/cli
     mkdir -p $out/packages/stackpanel-go
-    cp -R ${repoRoot}/apps/cli/* $out/apps/cli/
-    cp -R ${repoRoot}/packages/stackpanel-go/* $out/packages/stackpanel-go/
+    cp -R ${cliSrc}/. $out/apps/cli/
+    cp -R ${goSrc}/. $out/packages/stackpanel-go/
   '';
 in
 pkgs.buildGoModule {
@@ -41,9 +47,14 @@ pkgs.buildGoModule {
   src = compositeSrc;
   modRoot = "apps/cli";
 
+  # Use proxy vendoring to handle the local replace directive
+  proxyVendor = true;
 
   # Nix will vendor deterministically from go.mod/go.sum
-  vendorHash = "sha256-orEq07AQsCXLLn7bLBZQMA+KXzz3NPuFt4Uh1O8KjaI=";
+  vendorHash = "sha256-ZjBCSaWoCCpq3YWKzzex3sgWArsilUHb/Qjj3olMmgw=";
+
+  # Skip tests during build (some tests require specific environment)
+  doCheck = false;
 
   ldflags = [
     "-s"

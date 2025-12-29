@@ -6,21 +6,23 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 )
 
 // RedisService manages the Redis service
 type RedisService struct {
-	BaseService
+	svc.BaseService
 }
 
 func init() {
-	Register(NewRedisService())
+	svc.Register(NewRedisService())
 }
 
 // NewRedisService creates a new Redis service
 func NewRedisService() *RedisService {
 	return &RedisService{
-		BaseService: NewBaseService("redis", "Redis", 6379, "rd"),
+		BaseService: svc.NewBaseService("redis", "Redis", 6379, "rd"),
 	}
 }
 
@@ -87,7 +89,7 @@ func (r *RedisService) Stop() error {
 	if err := cmd.Run(); err != nil {
 		// Force kill
 		if status.PID > 0 {
-			KillProcess(status.PID, 9)
+			svc.KillProcess(status.PID, 9)
 		}
 	}
 
@@ -95,18 +97,18 @@ func (r *RedisService) Stop() error {
 	return nil
 }
 
-func (r *RedisService) Status() ServiceStatus {
-	status := ServiceStatus{
+func (r *RedisService) Status() svc.ServiceStatus {
+	status := svc.ServiceStatus{
 		Port: r.Port(),
 		Info: make(map[string]string),
 	}
 
 	pid := r.ReadPID()
-	if pid > 0 && IsProcessRunning(pid) {
+	if pid > 0 && svc.IsProcessRunning(pid) {
 		status.Running = true
 		status.PID = pid
-	} else if IsPortInUse(r.Port()) {
-		if portPid := GetPIDOnPort(r.Port()); portPid > 0 {
+	} else if svc.IsPortInUse(r.Port()) {
+		if portPid := svc.GetPIDOnPort(r.Port()); portPid > 0 {
 			status.Running = true
 			status.PID = portPid
 			r.WritePID(portPid)

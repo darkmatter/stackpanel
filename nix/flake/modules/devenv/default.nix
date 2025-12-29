@@ -14,14 +14,16 @@
 #   - hooks → devenv enterShell
 #   - commands → devenv scripts
 #
-# Usage:
-#   devenv.shells.default = {
+# Usage in devenv.nix:
+#   { inputs, ... }:
+#   {
 #     imports = [ inputs.stackpanel.devenvModules.default ];
 #     stackpanel.enable = true;
 #     stackpanel.apps.web = { domain = "myapp"; };
-#   };
+#   }
+#
+# Note: devenv.yaml is used for configuring inputs, not for stackpanel options.
 # ==============================================================================
-{ devshell }:
 { config, lib, pkgs, ... }:
 let
   cfg = config.stackpanel;

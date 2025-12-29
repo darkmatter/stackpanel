@@ -4,22 +4,24 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 )
 
 // MinioService manages the Minio S3-compatible service
 type MinioService struct {
-	BaseService
+	svc.BaseService
 	consolePort int
 }
 
 func init() {
-	Register(NewMinioService())
+	svc.Register(NewMinioService())
 }
 
 // NewMinioService creates a new Minio service
 func NewMinioService() *MinioService {
 	return &MinioService{
-		BaseService: NewBaseService("minio", "Minio", 9000, "s3"),
+		BaseService: svc.NewBaseService("minio", "Minio", 9000, "s3"),
 		consolePort: 9001,
 	}
 }
@@ -48,7 +50,7 @@ func (m *MinioService) Start() error {
 	}
 
 	// Start Minio in background
-	cmd := NewBackgroundProcess("minio", "server", m.DataDir(),
+	cmd := svc.NewBackgroundProcess("minio", "server", m.DataDir(),
 		"--address", fmt.Sprintf(":%d", m.Port()),
 		"--console-address", fmt.Sprintf(":%d", m.consolePort),
 	)
@@ -72,8 +74,8 @@ func (m *MinioService) Stop() error {
 	}
 
 	if status.PID > 0 {
-		if err := KillProcess(status.PID, syscall.SIGTERM); err != nil {
-			KillProcess(status.PID, syscall.SIGKILL)
+		if err := svc.KillProcess(status.PID, syscall.SIGTERM); err != nil {
+			svc.KillProcess(status.PID, syscall.SIGKILL)
 		}
 	}
 
@@ -81,18 +83,18 @@ func (m *MinioService) Stop() error {
 	return nil
 }
 
-func (m *MinioService) Status() ServiceStatus {
-	status := ServiceStatus{
+func (m *MinioService) Status() svc.ServiceStatus {
+	status := svc.ServiceStatus{
 		Port: m.Port(),
 		Info: make(map[string]string),
 	}
 
 	pid := m.ReadPID()
-	if pid > 0 && IsProcessRunning(pid) {
+	if pid > 0 && svc.IsProcessRunning(pid) {
 		status.Running = true
 		status.PID = pid
-	} else if IsPortInUse(m.Port()) {
-		if portPid := GetPIDOnPort(m.Port()); portPid > 0 {
+	} else if svc.IsPortInUse(m.Port()) {
+		if portPid := svc.GetPIDOnPort(m.Port()); portPid > 0 {
 			status.Running = true
 			status.PID = portPid
 			m.WritePID(portPid)

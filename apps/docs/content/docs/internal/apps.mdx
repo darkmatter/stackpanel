@@ -1,0 +1,61 @@
+---
+title: Apps Module
+description: Documentation for the apps module
+---
+
+Application port management and Caddy virtual host configuration for devenv.
+
+## Overview
+
+This module provides a unified way to manage application ports and domains in development environments. Each app gets a deterministic port based on the project name and can optionally be assigned a `.localhost` domain with automatic Caddy vhost setup.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `apps.nix` | Application port assignment and Caddy vhost integration |
+| `ci.nix` | GitHub Actions CI/CD workflow generation |
+
+## Port Layout
+
+Ports are computed from a base port (derived from project name):
+
+- **+0 to +9**: User apps (web, server, docs, etc.)
+- **+10 to +99**: Infrastructure services (postgres, redis, minio)
+
+## Usage
+
+```nix
+# devenv.nix
+stackpanel.apps = {
+  web = {};                          # Just port (basePort + 0)
+  server = { offset = 1; };          # Port with explicit offset
+  docs = { domain = "docs"; };       # Port + docs.localhost vhost
+  api = {
+    domain = "api";
+    tls = true;                      # Use TLS (requires Step CA)
+  };
+};
+```
+
+## Environment Variables
+
+Apps automatically generate environment variables:
+
+- `$PORT_WEB`, `$PORT_SERVER`, etc. - Port numbers
+- `$URL_DOCS`, `$URL_API` - Full URLs for apps with domains
+
+## CI Integration
+
+Generate GitHub Actions workflows declaratively:
+
+```nix
+stackpanel.ci.github = {
+  enable = true;
+  checks = {
+    enable = true;
+    branches = ["main"];
+    commands = ["nix flake check"];
+  };
+};
+```

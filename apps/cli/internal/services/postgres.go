@@ -7,21 +7,23 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 )
 
 // PostgresService manages the PostgreSQL service
 type PostgresService struct {
-	BaseService
+	svc.BaseService
 }
 
 func init() {
-	Register(NewPostgresService())
+	svc.Register(NewPostgresService())
 }
 
 // NewPostgresService creates a new PostgreSQL service
 func NewPostgresService() *PostgresService {
 	return &PostgresService{
-		BaseService: NewBaseService("postgres", "PostgreSQL", 5432, "pg", "postgresql"),
+		BaseService: svc.NewBaseService("postgres", "PostgreSQL", 5432, "pg", "postgresql"),
 	}
 }
 
@@ -97,18 +99,18 @@ func (p *PostgresService) Stop() error {
 	return nil
 }
 
-func (p *PostgresService) Status() ServiceStatus {
-	status := ServiceStatus{
+func (p *PostgresService) Status() svc.ServiceStatus {
+	status := svc.ServiceStatus{
 		Port: p.Port(),
 		Info: make(map[string]string),
 	}
 
 	pid := p.ReadPID()
-	if pid > 0 && IsProcessRunning(pid) {
+	if pid > 0 && svc.IsProcessRunning(pid) {
 		status.Running = true
 		status.PID = pid
-	} else if IsPortInUse(p.Port()) {
-		if portPid := GetPIDOnPort(p.Port()); portPid > 0 {
+	} else if svc.IsPortInUse(p.Port()) {
+		if portPid := svc.GetPIDOnPort(p.Port()); portPid > 0 {
 			status.Running = true
 			status.PID = portPid
 			p.WritePID(portPid)

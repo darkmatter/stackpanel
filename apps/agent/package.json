@@ -1,0 +1,12 @@
+{
+  "name": "agent",
+  "private": true,
+  "scripts": {
+    "deps": "go mod tidy && go mod download",
+    "lint": "golangci-lint run ./...",
+    "format": "gofumpt -l -w .",
+    "test": "go test -v ./...",
+    "build": "go build -ldflags \"-s -w\" -o ./dist/stackpanel-agent .",
+    "dev": "air"
+  }
+}

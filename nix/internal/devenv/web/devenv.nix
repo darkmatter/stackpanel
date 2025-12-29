@@ -28,6 +28,20 @@ in {
     # '';
     exec = "${pkgs.bun}/bin/bun dev";
     cwd = "${root}/apps/web";
+    process-compose = {
+      availability = {
+        backoff_seconds = 4;
+        max_restarts = 5;
+      };
+      depends_on = {
+        # start-services = {
+        #   condition = "process_completed_successfully";
+        # };
+      };
+      environment = [
+        "NODE_OPTIONS=\"--max-old-space-size=4096\""
+      ];
+    };
   };
   profiles.web.module = {};
 }

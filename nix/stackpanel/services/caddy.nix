@@ -29,14 +29,12 @@
   pkgs,
   lib,
   config,
-  options,
   ...
 }: let
   cfg = config.stackpanel.caddy;
   stepCfg = config.stackpanel.network.step or {enable = false;};
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Import shared caddy library
   caddyLib = import ../lib/services/caddy.nix {inherit pkgs lib;};
@@ -84,19 +82,21 @@
     echo "Start your dev server on port $port"
   '';
 in {
-  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
-    packages =
+  config = lib.mkIf cfg.enable {
+    stackpanel.devshell.packages =
       caddyScripts.allPackages
       ++ [
         projectPortScript
         caddyDevSite
       ];
 
-    enterShell = lib.mkIf cfg.auto-start ''
-      # Start Caddy if not already running
-      if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
-        ${caddyScripts.caddyStart}/bin/caddy-start
-      fi
-    '';
-  });
+    stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start [
+      ''
+        # Start Caddy if not already running
+        if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
+          ${caddyScripts.caddyStart}/bin/caddy-start
+        fi
+      ''
+    ];
+  };
 }
