@@ -54,6 +54,9 @@ jobs:
       - name: Install devenv
         run: nix profile install nixpkgs#devenv --accept-flake-config
 
+      - name: Create stackpanel root marker
+        run: echo "${{ github.workspace }}" > .stackpanel-root
+
       - name: Build devenv shell
         run: devenv build
         env:
