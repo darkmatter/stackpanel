@@ -25,7 +25,6 @@
   pkgs,
   lib,
   config,
-  options,
   ...
 }: let
   cfg = config.stackpanel.network.step;
@@ -34,8 +33,7 @@
   stateDir = "${dirs.state}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Import shared Step CA library
   stepLib = import ../lib/services/step.nix {inherit pkgs lib;};
@@ -108,8 +106,8 @@ in {
             ;;
         esac
       '';
-    in lib.optionalAttrs isDevenv {
-      packages = stepScripts.allPackages ++ [pkgs.gum interactiveSetup];
+    in {
+      stackpanel.devshell.packages = stepScripts.allPackages ++ [pkgs.gum interactiveSetup];
 
       stackpanel.motd.commands = [
         {
@@ -123,10 +121,12 @@ in {
       ];
       stackpanel.motd.features = ["Step CA certificates (${cfg.ca-url})"];
 
-      stackpanel.network.step.enterShell = lib.mkIf cfg.prompt-on-shell ''
-        # Interactive Step CA cert setup
-        ${interactiveSetup}/bin/step-cert-setup-prompt
-      '';
+      stackpanel.devshell.hooks.main = lib.mkIf cfg.prompt-on-shell [
+        ''
+          # Interactive Step CA cert setup
+          ${interactiveSetup}/bin/step-cert-setup-prompt
+        ''
+      ];
     }
   );
 }

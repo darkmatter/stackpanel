@@ -22,16 +22,14 @@
 {
   lib,
   config,
-  options,
   ...
 }: let
   cfg = config.stackpanel.ports;
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Import shared port computation library
-  portsLib = import ../lib/core/ports.nix { inherit lib; };
+  portsLib = import ../core/services/ports.nix { inherit lib; };
 
   # Compute ports using shared library
   servicesWithPorts = portsLib.computeServicesWithPorts {
@@ -47,42 +45,44 @@
   hasApps = appsComputedCfg != {};
   hasServices = cfg.services != [];
 in {
-  config = lib.mkIf cfg.enable (lib.optionalAttrs isDevenv {
+  config = lib.mkIf cfg.enable {
     # Expose computed ports as environment variables
-    env =
+    stackpanel.devshell.env =
       {
         STACKPANEL_BASE_PORT = toString cfg.base-port;
       }
       // serviceEnvVars;
 
     # Print port info in shell MOTD
-    enterShell = lib.mkAfter ''
-      # Display port information
-      if [[ -z "$STACKPANEL_QUIET" ]]; then
-        echo ""
-        echo "📦 Stackpanel Ports (project: ${cfg.project-name})"
-        echo "   Base port: ${toString cfg.base-port}"
-        ${lib.optionalString hasApps ''
-        echo ""
-        echo "   Apps:"
-        ${lib.concatMapStrings (name: let
-          app = appsComputedCfg.${name};
-        in ''
-          echo "     ${name}: ${toString app.port}${lib.optionalString (app.domain != null) " -> ${app.url}"}"
-        '') (lib.attrNames appsComputedCfg)}
-      ''}
-        ${lib.optionalString hasServices ''
-        echo ""
-        echo "   Services:"
-        ${lib.concatMapStrings (svc: ''
-            echo "     ${svc.displayName}: ${toString svc.port}"
-          '')
-          servicesWithPorts}
-      ''}
-        echo ""
-        echo "   Tip: Set STACKPANEL_QUIET=1 to hide this message"
-        echo ""
-      fi
-    '';
-  });
+    stackpanel.devshell.hooks.after = [
+      ''
+        # Display port information
+        if [[ -z "''${STACKPANEL_QUIET:-}" ]]; then
+          echo ""
+          echo "📦 Stackpanel Ports (project: ${cfg.project-name})"
+          echo "   Base port: ${toString cfg.base-port}"
+          ${lib.optionalString hasApps ''
+          echo ""
+          echo "   Apps:"
+          ${lib.concatMapStrings (name: let
+            app = appsComputedCfg.${name};
+          in ''
+            echo "     ${name}: ${toString app.port}${lib.optionalString (app.domain != null) " -> ${app.url}"}"
+          '') (lib.attrNames appsComputedCfg)}
+        ''}
+          ${lib.optionalString hasServices ''
+          echo ""
+          echo "   Services:"
+          ${lib.concatMapStrings (svc: ''
+              echo "     ${svc.displayName}: ${toString svc.port}"
+            '')
+            servicesWithPorts}
+        ''}
+          echo ""
+          echo "   Tip: Set STACKPANEL_QUIET=1 to hide this message"
+          echo ""
+        fi
+      ''
+    ];
+  };
 }

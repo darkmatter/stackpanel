@@ -12,13 +12,13 @@ var (
 	ColorAccent    = lipgloss.Color("#ff87d7") // Amber
 
 	// Status colors
-	ColorSuccess = lipgloss.Color("#afff87") // Green
+	ColorSuccess = lipgloss.Color("#afff87")   // Green
 	ColorWarning = lipgloss.Color("#ffc823ff") // Amber
-	ColorError   = lipgloss.Color("#ff5f5f") // Red
+	ColorError   = lipgloss.Color("#ff5f5f")   // Red
 	ColorInfo    = lipgloss.Color("#6394e3ff") // Blue
 
 	// Neutral colors
-	ColorWhite  = lipgloss.Color("#DDDDDD") // White
+	ColorWhite   = lipgloss.Color("#DDDDDD") // White
 	ColorDim     = lipgloss.Color("#6B7280") // Gray
 	ColorSubtle  = lipgloss.Color("#9CA3AF") // Light gray
 	ColorMuted   = lipgloss.Color("#4B5563") // Dark gray

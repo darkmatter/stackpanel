@@ -1,123 +1,131 @@
 package types
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}	return names	}		names = append(names, name)	for name := range c.Services {	names := make([]string, 0, len(c.Services))func (c *Config) ServiceNames() []string {// ServiceNames returns all service names}	return names	}		names = append(names, name)	for name := range c.Apps {	names := make([]string, 0, len(c.Apps))func (c *Config) AppNames() []string {// AppNames returns all app names}	return nil	}		return &svc	if svc, ok := c.Services[key]; ok {func (c *Config) GetService(key string) *Service {// GetService returns service info by key, or nil if not found}	return nil	}		return &app	if app, ok := c.Apps[name]; ok {func (c *Config) GetApp(name string) *App {// GetApp returns app info by name, or nil if not found}	return 0	}		return svc.Port	if svc, ok := c.Services[key]; ok {func (c *Config) GetServicePort(key string) int {// GetServicePort returns the port for a service, or 0 if not found}	return 0	}		return app.Port	if app, ok := c.Apps[name]; ok {func (c *Config) GetAppPort(name string) int {// GetAppPort returns the port for an app, or 0 if not found}	Description string `json:"description"`	Name        string `json:"name"`type MOTDCommand struct {// MOTDCommand represents a command to show in the MOTD}	Hints    []string      `json:"hints"`	Features []string      `json:"features"`	Commands []MOTDCommand `json:"commands"`	Enable   bool          `json:"enable"`type MOTD struct {// MOTD contains message of the day configuration}	CAUrl  *string `json:"caUrl,omitempty"`	Enable bool    `json:"enable"`type StepConfig struct {// StepConfig contains Step CA configuration}	Step StepConfig `json:"step"`type Network struct {// Network contains network configuration}	EnvVar string `json:"envVar"`	Port   int    `json:"port"`	Name   string `json:"name"`	Key    string `json:"key"`type Service struct {// Service represents an infrastructure service}	TLS    bool    `json:"tls"`	URL    *string `json:"url,omitempty"`	Domain *string `json:"domain,omitempty"`	Port   int     `json:"port"`type App struct {// App represents an application with its port and domain configuration}	Data  string `json:"data"`  // e.g., ".stackpanel"	Gen   string `json:"gen"`   // e.g., ".stackpanel/gen"	State string `json:"state"` // e.g., ".stackpanel/state"type Paths struct {// Paths contains directory paths (relative to project root)}	Hint  string `json:"hint,omitempty"`	Error string `json:"error,omitempty"`	// Error fields (only present if evaluation failed)	MOTD        *MOTD              `json:"motd,omitempty"`	Network     Network            `json:"network"`	Services    map[string]Service `json:"services"`	Apps        map[string]App     `json:"apps"`	Paths       Paths              `json:"paths"`	BasePort    int                `json:"basePort"`	ProjectRoot string             `json:"projectRoot,omitempty"`	ProjectName string             `json:"projectName"`	Version     int                `json:"version"`type Config struct {// This is the canonical representation used throughout stackpanel.// Config represents the stackpanel configuration from Nix or state file.package types// stackpanel project configuration, apps, services, and network settings.// These types are used by both the CLI and agent for representing//// Package types provides shared type definitions for stackpanel configuration.
+// Config represents the stackpanel configuration produced by Nix evaluation
+// or read from the state file. Both the CLI and agent should treat this as
+// the canonical project description.
+type Config struct {
+	Version     int    `json:"version"`
+	ProjectName string `json:"projectName"`
+	ProjectRoot string `json:"projectRoot,omitempty"`
+	BasePort    int    `json:"basePort"`
+
+	Paths    Paths              `json:"paths"`
+	Apps     map[string]App     `json:"apps"`
+	Services map[string]Service `json:"services"`
+	Network  Network            `json:"network"`
+	MOTD     *MOTD              `json:"motd,omitempty"`
+
+	// Optional error hint fields returned by some Nix evaluations
+	Error string `json:"error,omitempty"`
+	Hint  string `json:"hint,omitempty"`
+}
+
+// Paths describes important directories within the project.
+type Paths struct {
+	State string `json:"state"` // e.g., ".stackpanel/state"
+	Gen   string `json:"gen"`   // e.g., ".stackpanel/gen"
+	Data  string `json:"data"`  // e.g., ".stackpanel"
+}
+
+// App describes a user application with associated routing data.
+type App struct {
+	Port   int     `json:"port"`
+	Domain *string `json:"domain,omitempty"`
+	URL    *string `json:"url,omitempty"`
+	TLS    bool    `json:"tls"`
+}
+
+// Service describes an infrastructure service (postgres, redis, etc.).
+type Service struct {
+	Key    string `json:"key"`
+	Name   string `json:"name"`
+	Port   int    `json:"port"`
+	EnvVar string `json:"envVar"`
+}
+
+// Network contains network-related configuration (Step CA, ports, etc.).
+type Network struct {
+	Step StepConfig `json:"step"`
+}
+
+// StepConfig configures the Step CA integration.
+type StepConfig struct {
+	Enable bool    `json:"enable"`
+	CAUrl  *string `json:"caUrl,omitempty"`
+}
+
+// MOTD contains optional message-of-the-day settings rendered by the CLI.
+type MOTD struct {
+	Enable   bool          `json:"enable"`
+	Commands []MOTDCommand `json:"commands,omitempty"`
+	Features []string      `json:"features,omitempty"`
+	Hints    []string      `json:"hints,omitempty"`
+}
+
+// MOTDCommand lists a suggested command for the CLI MOTD panel.
+type MOTDCommand struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// GetApp returns app info by name, or nil if not found.
+func (c *Config) GetApp(name string) *App {
+	if c == nil {
+		return nil
+	}
+	if app, ok := c.Apps[name]; ok {
+		return &app
+	}
+	return nil
+}
+
+// GetService returns service info by key, or nil if not found.
+func (c *Config) GetService(key string) *Service {
+	if c == nil {
+		return nil
+	}
+	if svc, ok := c.Services[key]; ok {
+		return &svc
+	}
+	return nil
+}
+
+// GetAppPort returns the port for an app, or 0 if not found.
+func (c *Config) GetAppPort(name string) int {
+	if app := c.GetApp(name); app != nil {
+		return app.Port
+	}
+	return 0
+}
+
+// GetServicePort returns the port for a service, or 0 if not found.
+func (c *Config) GetServicePort(key string) int {
+	if svc := c.GetService(key); svc != nil {
+		return svc.Port
+	}
+	return 0
+}
+
+// AppNames returns all app names sorted arbitrarily.
+func (c *Config) AppNames() []string {
+	if c == nil {
+		return nil
+	}
+	names := make([]string, 0, len(c.Apps))
+	for name := range c.Apps {
+		names = append(names, name)
+	}
+	return names
+}
+
+// ServiceNames returns all registered service keys.
+func (c *Config) ServiceNames() []string {
+	if c == nil {
+		return nil
+	}
+	names := make([]string, 0, len(c.Services))
+	for name := range c.Services {
+		names = append(names, name)
+	}
+	return names
+}

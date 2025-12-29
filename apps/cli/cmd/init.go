@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/cli/internal/config"
 	"github.com/darkmatter/stackpanel/cli/internal/generator"
+	stackconfig "github.com/darkmatter/stackpanel/packages/stackpanel-go/config"
 	"github.com/spf13/cobra"
 )
 
@@ -102,17 +102,17 @@ func runInit(cmd *cobra.Command, args []string) error {
 }
 
 // loadConfig loads configuration from the available sources
-func loadConfig(cmd *cobra.Command) (*config.Config, error) {
+func loadConfig(cmd *cobra.Command) (*stackconfig.Config, error) {
 	// Priority: --config-file > --config > stdin
 
 	configFile, _ := cmd.Flags().GetString("config-file")
 	if configFile != "" {
-		return config.LoadFromFile(configFile)
+		return stackconfig.LoadFromFile(configFile)
 	}
 
 	configJSON, _ := cmd.Flags().GetString("config")
 	if configJSON != "" {
-		return config.LoadFromString(configJSON)
+		return stackconfig.LoadFromString(configJSON)
 	}
 
 	// Check if stdin has data
@@ -124,7 +124,7 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 			return nil, fmt.Errorf("failed to read stdin: %w", err)
 		}
 		if len(strings.TrimSpace(string(data))) > 0 {
-			return config.LoadFromString(string(data))
+			return stackconfig.LoadFromString(string(data))
 		}
 	}
 

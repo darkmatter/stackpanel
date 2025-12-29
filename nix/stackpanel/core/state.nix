@@ -23,8 +23,6 @@
 {
   lib,
   config,
-  options,
-  pkgs,
   ...
 }: let
   cfg = config.stackpanel;
@@ -33,8 +31,7 @@
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+
 
   # Build the state object
   stateData = {
@@ -81,24 +78,25 @@
 
   # Generate JSON
   stateJson = builtins.toJSON stateData;
-  stateFile = pkgs.writeText "stackpanel-state.json" stateJson;
 in {
   imports = [
     ./options
   ];
 
-  config = lib.mkIf (cfg.enable && cfg.state.enable && !(cfg.cli.enable or false)) (lib.optionalAttrs isDevenv {
+  config = lib.mkIf (cfg.enable && cfg.state.enable && !(cfg.cli.enable or false)) {
     # Write state file on shell entry
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
-    enterShell = lib.mkAfter ''
-      # Write stackpanel state file for CLI/agent consumption
-      mkdir -p "$STACKPANEL_STATE_DIR"
-      cat > "$STACKPANEL_STATE_DIR/${cfg.state.file}" << 'STACKPANEL_STATE_EOF'
+    stackpanel.devshell.hooks.main = [
+      ''
+        # Write stackpanel state file for CLI/agent consumption
+        mkdir -p "$STACKPANEL_STATE_DIR"
+        cat > "$STACKPANEL_STATE_DIR/${cfg.state.file}" << 'STACKPANEL_STATE_EOF'
 ${stateJson}
 STACKPANEL_STATE_EOF
-    '';
+      ''
+    ];
 
     # Export state file path
-    env.STACKPANEL_STATE_FILE = "\${STACKPANEL_STATE_DIR}/${cfg.state.file}";
-  });
+    stackpanel.devshell.env.STACKPANEL_STATE_FILE = "\${STACKPANEL_STATE_DIR}/${cfg.state.file}";
+  };
 }

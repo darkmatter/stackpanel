@@ -1,29 +1,22 @@
 
 inputs:
   devenv:
-    url: github:cachix/devenv/v1.11.2
+    url: git+https://github.com/cachix/devenv?ref=refs/tags/v1.11.2
   nixpkgs:
-    url: github:cachix/devenv-nixpkgs/rolling
+    url: git+https://github.com/cachix/devenv-nixpkgs?ref=rolling
   nixpkgs-unstable:
-    url: github:NixOS/nixpkgs/nixpkgs-unstable
+    url: git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable
   treefmt-nix:
-    url: github:numtide/treefmt-nix
+    url: git+https://github.com/numtide/treefmt-nix
     inputs:
       nixpkgs:
         follows: nixpkgs-unstable
   git-hooks:
-    url: github:cachix/git-hooks.nix
+    url: git+https://github.com/cachix/git-hooks.nix
     inputs:
       nixpkgs:
         follows: nixpkgs-unstable
 allowUnfree: true
-imports:
-  # Reusable stackpanel modules (AWS, network, theme, etc.)
-  - ./nix/stackpanel.nix
-  # Documentation generation
-  - ./infra/devenv/docs
-  # Stackpanel-specific services (postgres, redis, caddy, etc.)
-  - ./infra/devenv/devenv.nix
 clean:
   enabled: true
   keep:

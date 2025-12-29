@@ -34,8 +34,8 @@
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = stackpanelCfg.dirs or { gen = ".stackpanel/gen"; };
 
-  # Detect if we're in devenv context (enterShell option is declared) vs standalone eval
-  isDevenv = options ? enterShell;
+  # Detect if we're in devenv context (files option is declared) vs standalone eval
+  hasFilesOption = options ? files;
 
   # Import the IDE lib for generating configuration
   ideLib = import ../lib/integrations/ide.nix { inherit pkgs lib; };
@@ -99,7 +99,7 @@
   };
 
 in {
-  config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false)) (lib.optionalAttrs isDevenv {
+  config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false)) (lib.optionalAttrs hasFilesOption {
     # Add hints about IDE integration
     stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
       "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"

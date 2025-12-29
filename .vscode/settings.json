@@ -8,7 +8,10 @@
 		"PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}",
 		"CARGO_HOME": "${workspaceFolder}/.devenv/profile"
 	},
-	"go.alternateTools": {},
+	"go.testExplorer.enable": true,
+	"go.useLanguageServer": true,
+	"go.toolsManagement.go": "${workspaceFolder}/.devenv/profile/bin/go",
+	"go.toolsGopath": "${workspaceFolder}/.devenv/profile/bin",
 	"rust-analyzer.check.command": "clippy",
 	"rust-analyzer.cargo.features": "all",
 	"rust-analyzer.procMacro.enable": true,
@@ -18,6 +21,7 @@
 	"rust-analyzer.inlayHints.typeHints.enable": true,
 	"rust-analyzer.inlayHints.chainingHints.enable": true,
 	"rust-analyzer.diagnostics.experimental.enable": true,
+	"css.lint.unknownAtRules": "ignore",
 	"editor.insertSpaces": true,
 	"editor.tabSize": 2,
 	"editor.detectIndentation": false,
@@ -59,12 +63,20 @@
 	"oxc.enable": true,
 	"oxc.configPath": "oxlint.json",
 	"explorer.excludeGitIgnore": true,
-	// "terminal.integrated.defaultProfile.osx": "devenv",
+	"terminal.integrated.defaultProfile.osx": "devenv",
 	"terminal.integrated.profiles.osx": {
 		"devenv": {
 			"path": ".vscode/devshell"
 		}
 	},
+  "terminal.integrated.automationProfile.osx": {
+    "path": "${workspaceFolder}/.vscode/devshell"
+  },
+  "terminal.integrated.developer.devMode": true,
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}"
+  },
+  "go.goroot": "${workspaceFolder}/.devenv/profile/share/go",
 	"nix.enableLanguageServer": true,
 	"nix.serverPath": "/etc/profiles/per-user/coopermaruyama/bin/nixd",
 	"nix.formatterPath": "nixfmt",
