@@ -21,7 +21,7 @@
 in {
   imports = [
     # Compatibility adapter
-    ./nix/flake/modules/devenv/default.nix
+    ./nix/flake/modules/devenv.nix
     # Configuration for our own devenv
     # ./nix/internal/devenv/devenv.nix
   ];

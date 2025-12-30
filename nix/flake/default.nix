@@ -52,11 +52,21 @@
 
 # This uses the "importApply" pattern to get the localFlake reference.
 # The outer function receives args from importApply in flake.nix.
-{ localFlake, withSystem, devshell }:
+{
+  localFlake,
+  withSystem,
+  devshell,
+}:
 
 # The inner function is the actual flake-parts module.
 # These args (self, inputs, lib, etc.) refer to the USER's flake.
-{ lib, self, inputs, ... }:
+{
+  lib,
+  self,
+  inputs,
+  config,
+  ...
+}:
 {
   # This flake module doesn't need to define any flake-parts options.
   # All the real work is done by the devenv module (devenvModules.default).
@@ -71,15 +81,15 @@
 
   # Provide a way for perSystem to access the stackpanel flake's packages
   # This is useful for things like the stackpanel CLI
-  perSystem = { system, pkgs, ... }:
-  {
-    # Make stackpanel's packages available to users
-    # They can access: config.stackpanel.packages.cli
-    _module.args.stackpanel = {
-      inherit localFlake;
-      # Access packages from the stackpanel flake itself
-      packages = withSystem system ({ config, ... }: config.packages or {});
+  perSystem =
+    { system, pkgs, ... }:
+    {
+      # Make stackpanel's packages available to users
+      # They can access: config.stackpanel.packages.cli
+      _module.args.stackpanel = {
+        inherit localFlake;
+        # Access packages from the stackpanel flake itself
+        packages = withSystem system ({ config, ... }: config.packages or { });
+      };
     };
-  };
 }
-
