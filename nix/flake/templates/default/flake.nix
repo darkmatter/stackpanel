@@ -1,20 +1,12 @@
 # ==============================================================================
-# flake.nix (Template)
+# flake.nix
 #
-# Starter flake template for projects using stackpanel with flake-parts.
-# Provides a complete project structure with secrets management and CI/CD.
-#
-# Features:
-#   - Multi-platform support (Linux x86_64/aarch64, Darwin x86_64/aarch64)
-#   - Team-based secrets management with age encryption
-#   - GitHub Actions CI/CD integration
-#   - Modular architecture via flake-parts
+# Starter flake template for projects using stackpanel with devenv + flake-parts.
 #
 # Getting started:
-#   1. Copy this template to your project
-#   2. Add team members to .stackpanel/team.nix
-#   3. Configure secrets in perSystem.stackpanel.secrets
-#   4. Enable CI/CD features as needed
+#   1. Run: nix flake init -t github:darkmatter/stackpanel
+#   2. Run: direnv allow
+#   3. Configure stackpanel in ./nix/stackpanel.nix
 # ==============================================================================
 {
   description = "My project powered by stackpanel";
@@ -22,52 +14,49 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    # stackpanel.url = "github:stack-panel/nix";  # uncomment when published
+    devenv.url = "github:cachix/devenv";
+    stackpanel.url = "github:darkmatter/stackpanel";
+
+    # Required for devenv
+    nix2container.url = "github:nlewo/nix2container";
+    nix2container.inputs.nixpkgs.follows = "nixpkgs";
+    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
+
+    # For pure flake evaluation (nix flake check)
+    stackpanel-root.url = "file+file:///dev/null";
+    stackpanel-root.flake = false;
   };
 
-  outputs = inputs @ {flake-parts, ...}:
-    flake-parts.lib.mkFlake {inherit inputs;} {
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        # inputs.stackpanel.flakeModules.default  # uncomment when published
+        inputs.devenv.flakeModule
+        inputs.stackpanel.flakeModules.readStackpanelRoot
+        inputs.stackpanel.flakeModules.default
       ];
 
-      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
 
-      perSystem = {
-        config,
-        pkgs,
-        ...
-      }: let
-        # Import team data if it exists
-        teamData =
-          if builtins.pathExists ./.stackpanel/team.nix
-          then import ./.stackpanel/team.nix
-          else {
-            users = {};
-          };
-      in {
-        stackpanel = {
-          # Secrets management
-          secrets = {
-            enable = false; # Enable when you have team members
-            users = teamData.users;
-            secrets = {
-              # "api-key.age".owners = [ "alice" ];
-            };
-          };
+      perSystem =
+        { pkgs, ... }:
+        {
+          devenv.shells.default = {
+            imports = [ inputs.stackpanel.devenvModules.default ];
 
-          # CI/CD
-          ci.github = {
-            enable = true;
-            checks = {
-              enable = true;
-              commands = ["nix flake check"];
-            };
-          };
+            # Stackpanel config (edit ./nix/stackpanel.nix)
+            stackpanel = import ./nix/stackpanel.nix;
+
+            # Devenv config (edit ./nix/devenv.nix)
+          }
+          // (import ./nix/devenv.nix { inherit pkgs; });
+
+          packages.default = pkgs.hello;
         };
-
-        # Your packages here
-        packages.default = pkgs.hello;
-      };
     };
 }

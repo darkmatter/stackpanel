@@ -19,6 +19,7 @@ in
     ./core
     ./network
     ./secrets
+    ./services
     # SOPS helper
     ./tui
   ];

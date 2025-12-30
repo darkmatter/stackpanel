@@ -18,9 +18,11 @@
 #
 # Requires Step CA certificates to be configured via stackpanel.network.step.
 # ==============================================================================
-{ lib, ... }: {
-  options.stackpanel.aws.certAuth = {
+{ lib, ... }:
+{
+  options.stackpanel.aws.roles-anywhere = {
     enable = lib.mkEnableOption "AWS Roles Anywhere cert auth";
+    debug = lib.mkEnableOption "Enable debug logging";
 
     region = lib.mkOption {
       type = lib.types.str;

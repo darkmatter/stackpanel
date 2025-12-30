@@ -22,8 +22,9 @@
   ide.vscode.enable = true;
 
   # AWS Roles Anywhere via stackpanel's AWS module
-  aws.certAuth = {
+  aws.roles-anywhere = {
     enable = true;
+    debug = true;
     region = "us-west-2";
     account-id = "950224716579";
     role-name = "darkmatter-dev";

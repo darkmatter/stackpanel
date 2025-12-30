@@ -17,7 +17,7 @@
 #   - AWS Roles Anywhere trust anchor and profile configured
 #
 # Usage:
-#   stackpanel.aws.certAuth = {
+#   stackpanel.aws.roles-anywhere = {
 #     enable = true;
 #     account-id = "123456789";
 #     role-name = "developer";
@@ -30,12 +30,12 @@
   lib,
   config,
   ...
-}: let
-  cfg = config.stackpanel.aws.certAuth;
+}:
+let
+  cfg = config.stackpanel.aws.roles-anywhere;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
   baseStateDir = dirs.state;
-
 
   stateDir = "${baseStateDir}/aws";
   stepStateDir = "${baseStateDir}/step";
@@ -46,8 +46,9 @@
   stepKeyPath = "${stepStateDir}/device.key";
 
   # Import shared AWS library
-  awsLib = import ../lib/services/aws.nix {inherit pkgs lib;};
-in {
+  awsLib = import ../lib/services/aws.nix { inherit pkgs lib; };
+in
+{
   config = lib.mkIf cfg.enable (
     let
       # Create scripts using shared library - only evaluated when enabled
@@ -59,6 +60,7 @@ in {
         profileArn = cfg.profile-arn;
         region = cfg.region;
         cacheBufferSeconds = cfg.cache-buffer-seconds;
+        debug = cfg.debug;
       };
 
       # Check if AWS cert-auth is working
@@ -107,71 +109,76 @@ in {
 
       # Interactive setup prompt script
       interactiveSetup = pkgs.writeShellScriptBin "aws-cert-setup-prompt" ''
-        set -uo pipefail
+            set -uo pipefail
 
-        # Check if user chose "don't ask again"
-        if [[ -f "${skipFile}" ]]; then
-          exit 0
-        fi
+            # Check if user chose "don't ask again"
+            if [[ -f "${skipFile}" ]]; then
+              exit 0
+            fi
 
-        # Check if AWS cert-auth is already working
-        if ${checkAwsCert}/bin/check-aws-cert >/dev/null 2>&1; then
-          exit 0
-        fi
+            # Check if AWS cert-auth is already working
+            if ${checkAwsCert}/bin/check-aws-cert >/dev/null 2>&1; then
+              exit 0
+            fi
 
-        # Check if Step CA cert exists first
-        if [[ ! -f "${stepCertPath}" || ! -f "${stepKeyPath}" ]]; then
-          # Step CA not set up yet - don't prompt, let the Step CA module handle it
-          exit 0
-        fi
+            # Check if Step CA cert exists first
+            if [[ ! -f "${stepCertPath}" || ! -f "${stepKeyPath}" ]]; then
+              # Step CA not set up yet - don't prompt, let the Step CA module handle it
+              exit 0
+            fi
 
-        # Show description and prompt
-        echo ""
-        ${pkgs.gum}/bin/gum style \
-          --foreground 208 --border-foreground 208 --border double \
-          --align center --width 60 --margin "1 2" --padding "1 2" \
-          "AWS Roles Anywhere Setup"
-
-        echo ""
-        ${pkgs.gum}/bin/gum style --foreground 250 "
-    AWS Roles Anywhere lets you access AWS without long-lived keys.
-    Using your device certificate, you can:
-
-      • Access AWS services (S3, EC2, etc.) securely
-      • Fetch secrets from Parameter Store / Secrets Manager
-      • Use 'chamber' for environment variable injection
-
-    Your credentials are fetched on-demand and cached temporarily.
-    Account: ${cfg.account-id}
-    Role:    ${cfg.role-name}
-    "
-
-        choice=$(${pkgs.gum}/bin/gum choose \
-          "Test connection now" \
-          "Skip for now" \
-          "Don't ask again")
-
-        case "$choice" in
-          "Test connection now")
+            # Show description and prompt
             echo ""
-            ${checkAwsCert}/bin/check-aws-cert
-            ;;
-          "Don't ask again")
-            mkdir -p "${stateDir}"
-            touch "${skipFile}"
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "Got it! You can run 'check-aws-cert' manually when ready."
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "To re-enable prompts, delete: ${skipFile}"
-            ;;
-          *)
-            ${pkgs.gum}/bin/gum style --foreground 245 \
-              "Skipped. Run 'check-aws-cert' to verify setup."
-            ;;
-        esac
+            ${pkgs.gum}/bin/gum style \
+              --foreground 208 --border-foreground 208 --border double \
+              --align center --width 60 --margin "1 2" --padding "1 2" \
+              "AWS Roles Anywhere Setup"
+
+            echo ""
+            ${pkgs.gum}/bin/gum style --foreground 250 "
+        AWS Roles Anywhere lets you access AWS without long-lived keys.
+        Using your device certificate, you can:
+
+          • Access AWS services (S3, EC2, etc.) securely
+          • Fetch secrets from Parameter Store / Secrets Manager
+          • Use 'chamber' for environment variable injection
+
+        Your credentials are fetched on-demand and cached temporarily.
+        Account: ${cfg.account-id}
+        Role:    ${cfg.role-name}
+        "
+
+            choice=$(${pkgs.gum}/bin/gum choose \
+              "Test connection now" \
+              "Skip for now" \
+              "Don't ask again")
+
+            case "$choice" in
+              "Test connection now")
+                echo ""
+                ${checkAwsCert}/bin/check-aws-cert
+                ;;
+              "Don't ask again")
+                mkdir -p "${stateDir}"
+                touch "${skipFile}"
+                ${pkgs.gum}/bin/gum style --foreground 245 \
+                  "Got it! You can run 'check-aws-cert' manually when ready."
+                ${pkgs.gum}/bin/gum style --foreground 245 \
+                  "To re-enable prompts, delete: ${skipFile}"
+                ;;
+              *)
+                ${pkgs.gum}/bin/gum style --foreground 245 \
+                  "Skipped. Run 'check-aws-cert' to verify setup."
+                ;;
+            esac
       '';
-    in {
-      stackpanel.devshell.packages = awsScripts.allPackages ++ [pkgs.gum checkAwsCert interactiveSetup];
+    in
+    {
+      stackpanel.devshell.packages = awsScripts.allPackages ++ [
+        pkgs.gum
+        checkAwsCert
+        interactiveSetup
+      ];
 
       stackpanel.motd.commands = [
         {
@@ -183,13 +190,16 @@ in {
           description = "Verify AWS cert-auth status";
         }
       ];
-      stackpanel.motd.features = ["AWS Roles Anywhere (${cfg.role-name})"];
+      stackpanel.motd.features = [ "AWS Roles Anywhere (${cfg.role-name})" ];
 
       # Set base AWS env vars (AWS_CONFIG_FILE is set in hooks with absolute path)
       stackpanel.devshell.env = awsScripts.env;
 
       stackpanel.devshell.hooks.main = [
         ''
+          ${lib.optionalString config.stackpanel.aws.roles-anywhere.debug ''
+            echo "[rolesanywhere]: Debug mode ON"
+          ''}
           # Set AWS_CONFIG_FILE using STACKPANEL_STATE_DIR (absolute, works in Docker too)
           export AWS_CONFIG_FILE="$STACKPANEL_STATE_DIR/aws/config"
 

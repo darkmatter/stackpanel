@@ -1,12 +1,12 @@
 ---
-title: network
-description: Configuration options for stackpanel.network
-icon: Globe
+title: step-ca
+description: Configuration options for stackpanel.step-ca
+icon: Settings
 ---
 
-# Network Options
+# Step-ca Options
 
-## `network.step.ca-fingerprint`
+## `step-ca.ca-fingerprint`
 
 Step CA root certificate fingerprint
 
@@ -17,7 +17,7 @@ Step CA root certificate fingerprint
 
 ---
 
-## `network.step.ca-url`
+## `step-ca.ca-url`
 
 Step CA URL (e.g., https://ca.internal:443)
 
@@ -28,7 +28,7 @@ Step CA URL (e.g., https://ca.internal:443)
 
 ---
 
-## `network.step.cert-name`
+## `step-ca.cert-name`
 
 Common name for the device certificate
 
@@ -39,7 +39,7 @@ Common name for the device certificate
 
 ---
 
-## `network.step.enable`
+## `step-ca.enable`
 
 Whether to enable Step CA certificate management.
 
@@ -55,18 +55,7 @@ Whether to enable Step CA certificate management.
 
 ---
 
-## `network.step.enterShell`
-
-Scripts to run when entering the shell (internal)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `strings concatenated with "\n"` |
-| **Default** | `""` |
-
----
-
-## `network.step.prompt-on-shell`
+## `step-ca.prompt-on-shell`
 
 Prompt for certificate setup on shell entry if not configured
 
@@ -77,7 +66,7 @@ Prompt for certificate setup on shell entry if not configured
 
 ---
 
-## `network.step.provisioner`
+## `step-ca.provisioner`
 
 Step CA provisioner name
 
