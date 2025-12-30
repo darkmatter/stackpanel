@@ -1,11 +1,12 @@
 # ==============================================================================
 # default.nix
 #
-# Module exports for stackpanel flake. Provides the devenvModules attribute set
-# that consumers can import into their devenv configurations.
+# Canonical flake outputs for stackpanel modules. This file exports all module
+# types that consumers can import into their configurations.
 #
 # Exports:
-#   - devenvModules.default: Main devenv adapter with stackpanel.* options
+#   - devenvModules: For devenv users (yaml or flake-parts)
+#   - flakeModules: For flake-parts users
 #
 # Usage in consumer flake:
 #   devenv.shells.default = {
@@ -15,6 +16,12 @@
 { inputs, devshell }:
 {
   devenvModules = {
-    default = import ./devenv/default.nix { inherit devshell; };
+    # Main devenv module with stackpanel.* options
+    default = import ./devenv.nix { inherit devshell; };
+  };
+
+  flakeModules = {
+    # Flake-parts module for stackpanel devshells
+    devshell = import ./flake-parts.nix { inherit devshell; };
   };
 }

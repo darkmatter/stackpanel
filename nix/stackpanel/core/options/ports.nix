@@ -24,19 +24,12 @@
 #
 # Uses shared core library (../services/ports.nix) for computation logic.
 # ==============================================================================
-{ lib, config, ... }: let
+{ lib, config, ... }:
+let
   cfg = config.stackpanel.ports;
 
   # Import shared port computation library
-  portsLib = import ../services/ports.nix { inherit lib; };
-
-  # Compute base port using shared library
-  basePort = portsLib.computeBasePort {
-    name = cfg.project-name;
-    minPort = cfg.min-port;
-    portRange = cfg.port-range;
-    modulus = cfg.modulus;
-  };
+  portsLib = import ../../lib/ports.nix { inherit lib; };
 
   # Service type for defining infrastructure services
   serviceType = lib.types.submodule {
@@ -55,7 +48,13 @@
       };
     };
   };
-
+  # Compute base port using shared library
+  basePort = portsLib.computeBasePort {
+    name = cfg.project-name;
+    minPort = cfg.min-port;
+    portRange = cfg.port-range;
+    modulus = cfg.modulus;
+  };
   # Compute ports using shared library
   servicesWithPorts = portsLib.computeServicesWithPorts {
     inherit basePort;
@@ -65,9 +64,12 @@
   # Create attrset for easy lookup using shared library
   servicesByKey = portsLib.mkServicesByKey servicesWithPorts;
 
-in {
+in
+{
   options.stackpanel.ports = {
-    enable = lib.mkEnableOption "Automatic port assignment" // {default = true;};
+    enable = lib.mkEnableOption "Automatic port assignment" // {
+      default = true;
+    };
 
     project-name = lib.mkOption {
       type = lib.types.str;
@@ -101,7 +103,7 @@ in {
 
     services = lib.mkOption {
       type = lib.types.listOf serviceType;
-      default = [];
+      default = [ ];
       description = ''
         List of infrastructure services that need ports.
         Each service gets a port at basePort + 10 + index.

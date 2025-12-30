@@ -1,29 +1,31 @@
 # ==============================================================================
 # default.nix
 #
-# Entry point for stackpanel devshells. Exports the core devshell module,
-# the mkDevShell function for creating development shells, and feature modules.
+# Entry point for stackpanel devshells. Uses nix/stackpanel/default.nix as the
+# single source of truth for all modules.
 #
 # Usage:
 #   devshell = import ./devshells { inherit inputs; };
-#   shell = devshell.mkDevShell { inherit pkgs; modules = [ ... ]; };
 #
 # Exports:
-#   - core: The core devshell module providing schema, commands, codegen, files
+#   - core: The main stackpanel module entrypoint
 #   - mkDevShell: Function to create a development shell with given modules
-#   - features: Optional feature modules (aws, step, etc.)
 # ==============================================================================
 { inputs }:
 {
-  # Core devshell module - provides schema, commands, codegen, files
-  core = ../../stackpanel/devshell/core.nix;
+  # Main stackpanel module - imports all features
+  # Features only activate when their .enable option is set
+  core = ../../stackpanel;
 
-  mkDevShell = { pkgs, modules ? [], specialArgs ? {} }:
-    (import ./mkDevShell.nix { inherit pkgs; }) { inherit modules specialArgs; };
-
-  # @TODO wire in modules
-  features = {
-    # aws = ../../stackpanel/features/aws/devshell.nix;
-    # step = ../../stackpanel/features/step/devshell.nix;
-  };
+  # mkDevShell for standalone nix develop usage (without devenv)
+  mkDevShell =
+    {
+      pkgs,
+      modules ? [ ],
+      specialArgs ? { },
+    }:
+    (import ./mkDevShell.nix { inherit pkgs; }) {
+      modules = [ ../../stackpanel ] ++ modules;
+      inherit specialArgs;
+    };
 }
