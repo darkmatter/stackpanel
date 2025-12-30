@@ -26,7 +26,7 @@
 # ==============================================================================
 {
   pkgs,
-  ...
+  lib ? pkgs.lib,
 }:
 {
   # Create AWS credential helper scripts
@@ -48,9 +48,16 @@
       region ? "us-west-2",
       # Seconds before expiry to refresh cached credentials
       cacheBufferSeconds ? "300",
+      # Enable debug logging
+      debug ? false,
     }:
     let
-      # Derived paths (defaults, can be overridden via STACKPANEL_STATE_DIR at runtime)
+      # Debug logging helper (shell code)
+      logDebug =
+        msg:
+        lib.optionalString debug ''
+          echo "[rolesanywhere]: ${msg}" >&2
+        '';
 
       # Helper to resolve state directory at runtime
       getAwsStateDir = ''
@@ -63,10 +70,15 @@
       '';
 
       awsCredsEnv = pkgs.writeShellScriptBin "aws-creds-env" ''
-        # syntax: bash
         set -euo pipefail
 
+        ${logDebug "aws-creds-env starting"}
+
         ${getAwsStateDir}
+
+        ${logDebug "state_dir=$_state_dir"}
+        ${logDebug "cert_path=$_cert_path"}
+        ${logDebug "key_path=$_key_path"}
 
         # Pre-flight checks for certificate existence
         if [[ ! -f "$_cert_path" ]]; then
@@ -90,7 +102,10 @@
           exit 1
         fi
 
+        ${logDebug "certificate validation passed"}
+
         fetch_fresh_creds() {
+          ${logDebug "fetching fresh credentials from Roles Anywhere"}
           ${pkgs.aws-signing-helper}/bin/aws_signing_helper credential-process \
             --certificate "$_cert_path" \
             --private-key "$_key_path" \
@@ -108,6 +123,7 @@
               now_epoch=$(date +%s)
               if (( exp_epoch - now_epoch > ${cacheBufferSeconds} )); then
                 use_cache=true
+                ${logDebug "using cached credentials (expires in $((exp_epoch - now_epoch))s)"}
               fi
             fi
           fi
@@ -120,6 +136,7 @@
           mkdir -p "$(dirname "$_cache_file")"
           echo "$creds" > "$_cache_file"
           chmod 600 "$_cache_file"
+          ${logDebug "cached new credentials"}
         fi
 
         echo "export AWS_ACCESS_KEY_ID=$(echo "$creds" | ${pkgs.jq}/bin/jq -r '.AccessKeyId')"
@@ -154,7 +171,6 @@
       # Generate an AWS config file that uses credential_process
       # Mount this into Docker containers along with the cert/key
       generateAwsConfig = pkgs.writeShellScriptBin "aws-generate-config" ''
-        # syntax: bash
         set -euo pipefail
 
         OUTPUT="''${1:-/dev/stdout}"

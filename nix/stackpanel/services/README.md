@@ -68,7 +68,7 @@ stackpanel.caddy = {
 Passwordless AWS access using Step CA device certificates.
 
 ```nix
-stackpanel.aws.certAuth = {
+stackpanel.aws.roles-anywhere = {
   enable = true;
   account-id = "123456789";
   role-name = "developer";
