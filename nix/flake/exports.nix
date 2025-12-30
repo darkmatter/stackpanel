@@ -125,7 +125,15 @@ in
   templates = {
     default = {
       path = ./templates/default;
-      description = "Basic stackpanel project with devenv";
+      description = "Stackpanel + devenv + flake-parts (recommended)";
+    };
+    devenv = {
+      path = ./templates/devenv;
+      description = "Stackpanel + devenv standalone (devenv.yaml)";
+    };
+    minimal = {
+      path = ./templates/minimal;
+      description = "Stackpanel + devenv without flake-parts";
     };
   };
 

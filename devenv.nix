@@ -7,18 +7,20 @@
   lib,
   config,
   ...
-}: let
+}:
+let
   # Optimization to reduce size of cachix by ~4 GB!
   cachixBin = pkgs.cachix.bin;
   cachixSlim = {
     type = "derivation";
     name = cachixBin.name;
     outPath = cachixBin.outPath;
-    outputs = ["out"];
+    outputs = [ "out" ];
     out = cachixSlim;
     outputName = "out";
   };
-in {
+in
+{
   imports = [
     # Compatibility adapter
     ./nix/flake/modules/devenv.nix
@@ -39,7 +41,9 @@ in {
   # before checking if enable is true. Provide a dummy value.
   # process.managers.process-compose.enable = lib.mkForce false;
   # Need to provide a configFile even when disabled due to devenv evaluation order bug
-  process.managers.process-compose.configFile = lib.mkForce (pkgs.writeText "empty-pc.yaml" "version: '0.5'\nprocesses: {}");
+  process.managers.process-compose.configFile = lib.mkForce (
+    pkgs.writeText "empty-pc.yaml" "version: '0.5'\nprocesses: {}"
+  );
 
   # Enable stackpanel modules
   # stackpanel = {
@@ -57,7 +61,7 @@ in {
   #   # Uncomment and configure as needed:
   #   #
   #   # AWS cert-based authentication
-  #   aws.certAuth = {
+  #   aws.roles-anywhere = {
   #     enable = true;
   #     region = "us-west-2";
   #     account-id = "950224716579";
@@ -149,7 +153,7 @@ in {
   #   fi
   #   export PATH="$DEVENV_STATE:$PATH"
 
-  #   # Note: AWS credentials are handled by stackpanel.aws.certAuth module
+  #   # Note: AWS credentials are handled by stackpanel.aws.roles-anywhere module
   #   # via credential_process in ~/.aws/config - no manual eval needed
   # '';
 

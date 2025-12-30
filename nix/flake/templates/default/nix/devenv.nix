@@ -1,23 +1,13 @@
 # ==============================================================================
 # devenv.nix
 #
-# Devenv configuration for standalone usage (with devenv.yaml).
-# Run `devenv shell` to enter the dev environment.
+# Devenv configuration for this project.
+# These are standard devenv options (packages, languages, env, etc.)
 #
 # Documentation: https://devenv.sh/reference/options/
 # ==============================================================================
+{ pkgs }:
 {
-  pkgs,
-  lib,
-  config,
-  ...
-}:
-{
-  # ---------------------------------------------------------------------------
-  # Stackpanel Configuration
-  # ---------------------------------------------------------------------------
-  stackpanel = import ./stackpanel.nix;
-
   # ---------------------------------------------------------------------------
   # Packages - Available in the dev shell
   # ---------------------------------------------------------------------------
@@ -45,6 +35,8 @@
     #   enable = true;
     #   version = "3.12";
     # };
+
+    # rust.enable = true;
   };
 
   # ---------------------------------------------------------------------------
@@ -71,7 +63,7 @@
   # };
 
   # ---------------------------------------------------------------------------
-  # Services - Managed services
+  # Services - Managed services (postgres, redis, etc.)
   # ---------------------------------------------------------------------------
   # services.postgres = {
   #   enable = true;
@@ -79,4 +71,10 @@
   # };
 
   # services.redis.enable = true;
+
+  # ---------------------------------------------------------------------------
+  # Scripts - Custom commands available in the shell
+  # ---------------------------------------------------------------------------
+  # scripts.dev.exec = "bun run dev";
+  # scripts.build.exec = "bun run build";
 }

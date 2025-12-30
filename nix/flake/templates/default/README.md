@@ -1,33 +1,93 @@
 # My Project
 
-Powered by [stackpanel](https://github.com/stack-panel/nix).
+Powered by [stackpanel](https://github.com/darkmatter/stackpanel).
 
 ## Getting Started
 
+### Prerequisites
+
+- [Nix](https://nixos.org/download.html) with flakes enabled
+- [direnv](https://direnv.net/) (recommended)
+
+### Enter the Dev Environment
+
 ```bash
-# Enter dev environment
+# Allow direnv (first time only)
 direnv allow
-# or
-nix develop
 
-# Generate managed files
-nix run .#generate
-
-# Preview what would be generated
-nix run .#generate-diff
+# Or manually enter the shell
+nix develop --impure
 ```
 
-## Secrets
-
-Secrets are managed via agenix. To add a new secret:
+### Run Development Server
 
 ```bash
-cd secrets
-agenix -e my-secret.age
+# Start all processes defined in devenv
+devenv up
+
+# Or run individual commands
+bun run dev
 ```
 
-Then add it to `flake.nix`:
+## Configuration
+
+All configuration is in `flake.nix` under `devenv.shells.default`.
+
+### Enable Features
 
 ```nix
-stackpanel.secrets.secrets."my-secret.age".owners = [ "alice" ];
+stackpanel = {
+  enable = true;
+  theme.enable = true;           # Starship prompt
+  ide.vscode.enable = true;      # VS Code integration
+  
+  # AWS certificate auth
+  aws.roles-anywhere.enable = true;
+  
+  # Global services
+  globalServices.postgres.enable = true;
+};
 ```
+
+### Add Packages
+
+```nix
+packages = with pkgs; [
+  nodejs
+  bun
+  go
+];
+```
+
+### Configure Languages
+
+```nix
+languages = {
+  typescript.enable = true;
+  go.enable = true;
+  python.enable = true;
+};
+```
+
+### Environment Variables
+
+```nix
+env = {
+  DATABASE_URL = "postgres://localhost:5432/myapp";
+};
+```
+
+## Common Commands
+
+| Command | Description |
+|---------|-------------|
+| `direnv allow` | Activate the dev environment |
+| `devenv up` | Start all processes |
+| `nix flake check` | Validate the flake |
+| `nix flake update` | Update dependencies |
+
+## Learn More
+
+- [stackpanel Documentation](https://stackpanel.dev/docs)
+- [devenv Documentation](https://devenv.sh)
+- [Nix Flakes](https://nixos.wiki/wiki/Flakes)
