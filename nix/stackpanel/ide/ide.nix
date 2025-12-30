@@ -3,7 +3,7 @@
 #
 # IDE integration module for VS Code and other editors.
 #
-# This module generates IDE configuration files that integrate the devenv
+# This module generates IDE configuration files that integrate the stackpanel
 # shell with editor terminals. For VS Code, it creates:
 #   - A devshell loader script that initializes the nix environment
 #   - A .code-workspace file with proper terminal integration
@@ -20,7 +20,7 @@
 #   };
 #
 # The generated workspace file should be opened in VS Code to get integrated
-# terminal sessions that automatically load the devenv environment.
+# terminal sessions that automatically load the stackpanel environment.
 # ==============================================================================
 {
   pkgs,
@@ -28,14 +28,15 @@
   config,
   options,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel.ide;
   stackpanelCfg = config.stackpanel;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = stackpanelCfg.dirs or { gen = ".stackpanel/gen"; };
 
-  # Detect if we're in devenv context (files option is declared) vs standalone eval
-  hasFilesOption = options ? files;
+  # Detect if stackpanel.files is available
+  hasFilesOption = options ? stackpanel.files;
 
   # Import the IDE lib for generating configuration
   ideLib = import ../lib/integrations/ide.nix { inherit pkgs lib; };
@@ -64,15 +65,18 @@
 
   # Read existing settings if path is provided (IMPURE)
   existingSettings =
-    if cfg.vscode.existing-settings-path != null && builtins.pathExists cfg.vscode.existing-settings-path
-    then builtins.fromJSON (builtins.readFile cfg.vscode.existing-settings-path)
-    else {};
+    if
+      cfg.vscode.existing-settings-path != null && builtins.pathExists cfg.vscode.existing-settings-path
+    then
+      builtins.fromJSON (builtins.readFile cfg.vscode.existing-settings-path)
+    else
+      { };
 
   # Generate terminal integration settings using shared lib
   generatedSettings = ideLib.mkVscodeSettings { inherit loaderPath; } // {
     # YAML extension settings
     "yaml.schemas" = yamlSchemas;
-    "yaml.customTags" = [];
+    "yaml.customTags" = [ ];
     "yaml.validate" = true;
     "yaml.completion" = true;
     "yaml.hover" = true;
@@ -81,9 +85,9 @@
   # Merge settings: existing -> generated -> user overrides
   mergedSettings = existingSettings // generatedSettings // cfg.vscode.settings;
 
-  # Generate the devshell loader script content (always devenv mode in this module)
+  # Generate the devshell loader script content (always stackpanel mode in this module)
   devshellLoaderScript = ideLib.mkDevshellLoader {
-    shellMode = "devenv";
+    shellMode = "stackpanel";
     vscode = true;
     asPackage = false;
   };
@@ -94,39 +98,52 @@
   workspaceContent = ideLib.mkWorkspaceContent {
     settings = mergedSettings;
     extraFolders = cfg.vscode.extra-folders;
-    extensions = ["redhat.vscode-yaml"] ++ cfg.vscode.extensions;
+    extensions = [ "redhat.vscode-yaml" ] ++ cfg.vscode.extensions;
     rootPath = "../../../..";
   };
 
-in {
-  config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false)) (lib.optionalAttrs hasFilesOption {
-    # Add hints about IDE integration
-    stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
-      "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
-    ];
+in
+{
+  config =
+    lib.mkIf
+      (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false))
+      (
+        lib.optionalAttrs hasFilesOption {
+          # Add hints about IDE integration
+          stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
+            "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
+          ];
 
-    # Warn about unimplemented editors
-    warnings = lib.optional cfg.zed.enable
-      "stackpanel.ide.zed.enable is set but Zed integration is not yet implemented"
-      ++ lib.optional cfg.cursor.enable
-      "stackpanel.ide.cursor.enable is set but Cursor integration is not yet implemented";
+          # Warn about unimplemented editors
+          warnings =
+            lib.optional cfg.zed.enable "stackpanel.ide.zed.enable is set but Zed integration is not yet implemented"
+            ++ lib.optional cfg.cursor.enable "stackpanel.ide.cursor.enable is set but Cursor integration is not yet implemented";
 
-    # Use devenv's native files option for file generation
-    # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
-    files = {
-      # Devshell loader script (executable)
-      "${baseDir}/devshell-loader.sh" = {
-        text = devshellLoaderScript;
-        executable = true;
-      };
-    }
-    # Generate workspace file (default mode)
-    // lib.optionalAttrs (cfg.vscode.output-mode == "workspace") {
-      "${baseDir}/${cfg.vscode.workspace-name}.code-workspace".json = workspaceContent;
-    }
-    # Generate settings.json (explicit opt-in)
-    // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
-      ".vscode/settings.json".json = mergedSettings;
-    };
-  });
+          # Use stackpanel.files for file generation
+          # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
+          stackpanel.files = {
+            enable = true;
+            files = [
+              # Devshell loader script (executable)
+              {
+                path = "${baseDir}/devshell-loader.sh";
+                drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
+                mode = "755";
+              }
+            ]
+            # Generate workspace file (default mode)
+            ++ lib.optional (cfg.vscode.output-mode == "workspace") {
+              path = "${baseDir}/${cfg.vscode.workspace-name}.code-workspace";
+              drv = pkgs.writeText "${cfg.vscode.workspace-name}.code-workspace" (
+                builtins.toJSON workspaceContent
+              );
+            }
+            # Generate settings.json (explicit opt-in)
+            ++ lib.optional (cfg.vscode.output-mode == "settingsJson") {
+              path = ".vscode/settings.json";
+              drv = pkgs.writeText "settings.json" (builtins.toJSON mergedSettings);
+            };
+          };
+        }
+      );
 }

@@ -11,7 +11,12 @@
 #
 # Imported by devenv.nix to enable the Stackpanel module system.
 # ==============================================================================
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stackpanel;
   pathsLib = import ../lib/paths.nix { inherit lib; };
@@ -19,8 +24,8 @@ in
 {
   imports = [
     ./options
+    ./cli.nix
   ];
-
 
   config = lib.mkIf cfg.enable {
     # Provide marker + optional root override as data
@@ -39,8 +44,7 @@ in
           rootDir = cfg.dirs.home;
           rootMarker = cfg.root-marker;
           stateDir = cfg.dirs.state;
-          genDir =
-            cfg.dirs.gen;
+          genDir = cfg.dirs.gen;
         }}
 
         # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking

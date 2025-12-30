@@ -19,12 +19,17 @@
 #   ├── state/             (dirs.state - gitignored, runtime state)
 #   └── gen/               (dirs.gen - checked in, generated files)
 # ==============================================================================
-{ lib, config, ... }: {
+{ lib, config, ... }:
+{
 
   # Base stackpanel options for devenv
   options.stackpanel = {
-    enable = lib.mkEnableOption "Enable Stackpanel" // {default = true;};
-
+    enable = lib.mkEnableOption "Enable Stackpanel" // {
+      default = true;
+    };
+    debug = lib.mkEnableOption "Enable Stackpanel Debug Mode" // {
+      default = false;
+    };
     # ----------------------------------------------------------------------------
     # Root Path
     # ----------------------------------------------------------------------------
@@ -73,42 +78,45 @@
     # Directories
     # ----------------------------------------------------------------------------
     dirs = lib.mkOption {
-      type = lib.types.submodule ({ config, ... }: {
-        options = {
-          config = lib.mkOption {
-            description = "Directory for stackpanel configuration files.";
-            type = lib.types.path;
-            default = ../../../../infra/stackpanel;
+      type = lib.types.submodule (
+        { config, ... }:
+        {
+          options = {
+            config = lib.mkOption {
+              description = "Directory for stackpanel configuration files.";
+              type = lib.types.path;
+              default = ../../../../infra/stackpanel;
+            };
+            home = lib.mkOption {
+              description = ''
+                Root directory for runtime files (relative to project root).
+                Contains state/ (gitignored) and gen/ (checked in) subdirectories.
+              '';
+              type = lib.types.str;
+              default = ".stackpanel";
+            };
+            state = lib.mkOption {
+              description = ''
+                State directory path (relative to project root).
+                Computed from dirs.home. This directory is gitignored and contains
+                runtime state files that shouldn't be committed.
+              '';
+              type = lib.types.str;
+              default = "${config.home}/state";
+            };
+            gen = lib.mkOption {
+              description = ''
+                Generated files directory path (relative to project root).
+                Computed from dirs.home. This directory is checked in and contains
+                generated files (IDE configs, schemas, etc.).
+              '';
+              type = lib.types.str;
+              default = "${config.home}/gen";
+            };
           };
-          home = lib.mkOption {
-            description = ''
-              Root directory for runtime files (relative to project root).
-              Contains state/ (gitignored) and gen/ (checked in) subdirectories.
-            '';
-            type = lib.types.str;
-            default = ".stackpanel";
-          };
-          state = lib.mkOption {
-            description = ''
-              State directory path (relative to project root).
-              Computed from dirs.home. This directory is gitignored and contains
-              runtime state files that shouldn't be committed.
-            '';
-            type = lib.types.str;
-            default = "${config.home}/state";
-          };
-          gen = lib.mkOption {
-            description = ''
-              Generated files directory path (relative to project root).
-              Computed from dirs.home. This directory is checked in and contains
-              generated files (IDE configs, schemas, etc.).
-            '';
-            type = lib.types.str;
-            default = "${config.home}/gen";
-          };
-        };
-      });
-      default = {};
+        }
+      );
+      default = { };
       description = "Directories used by stackpanel.";
     };
 

@@ -14,7 +14,8 @@
 # This library is imported by both default.nix (standalone packages) and
 # core.nix (devenv scripts) to ensure consistent behavior.
 # ==============================================================================
-{ lib, pkgs }: rec {
+{ lib, pkgs }:
+rec {
   # Convert YAML file to JSON (decrypting with SOPS)
   # Returns a shell function that can be used in scripts
   toJsonScript = ''
@@ -91,40 +92,46 @@
 
   # Build generate-secrets-package script body
   # Takes cfg values as arguments to bake in at build time
-  generateSecretsPackageScript = { inputDir, environments, codegen }: ''
-    set -e
-    ${toJsonScript}
+  generateSecretsPackageScript =
+    {
+      inputDir,
+      environments,
+      codegen,
+    }:
+    ''
+      set -e
+      ${toJsonScript}
 
-    INPUT_DIR="${inputDir}"
+      INPUT_DIR="${inputDir}"
 
-    # Configuration baked in at build time as JSON
-    ENVIRONMENTS_JSON='${builtins.toJSON environments}'
-    CODEGEN_JSON='${builtins.toJSON codegen}'
+      # Configuration baked in at build time as JSON
+      ENVIRONMENTS_JSON='${builtins.toJSON environments}'
+      CODEGEN_JSON='${builtins.toJSON codegen}'
 
-    for ENV_NAME in $(echo "$ENVIRONMENTS_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]'); do
-      ENV_CFG=$(echo "$ENVIRONMENTS_JSON" | ${pkgs.jq}/bin/jq -r --arg name "$ENV_NAME" '.[$name]')
-      SOURCES=$(echo "$ENV_CFG" | ${pkgs.jq}/bin/jq -r '.sources[]')
+      for ENV_NAME in $(echo "$ENVIRONMENTS_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]'); do
+        ENV_CFG=$(echo "$ENVIRONMENTS_JSON" | ${pkgs.jq}/bin/jq -r --arg name "$ENV_NAME" '.[$name]')
+        SOURCES=$(echo "$ENV_CFG" | ${pkgs.jq}/bin/jq -r '.sources[]')
 
-      # Decrypt and merge all source files for this environment
-      MERGED_SECRETS=$(mktemp)
-      {
-        for SRC in $SOURCES; do
-          to_json "$INPUT_DIR/$SRC.yaml"
+        # Decrypt and merge all source files for this environment
+        MERGED_SECRETS=$(mktemp)
+        {
+          for SRC in $SOURCES; do
+            to_json "$INPUT_DIR/$SRC.yaml"
+          done
+        } | ${pkgs.jq}/bin/jq -s 'reduce .[] as $item ({}; . * $item)' > "$MERGED_SECRETS"
+
+        # Generate code for each codegen target
+        for CODEGEN_NAME in $(echo "$CODEGEN_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]'); do
+          CODEGEN_CFG=$(echo "$CODEGEN_JSON" | ${pkgs.jq}/bin/jq -r --arg name "$CODEGEN_NAME" '.[$name]')
+          OUTPUT_DIR=$(echo "$CODEGEN_CFG" | ${pkgs.jq}/bin/jq -r '.directory')
+          LANGUAGE=$(echo "$CODEGEN_CFG" | ${pkgs.jq}/bin/jq -r '.language')
+          mkdir -p "$OUTPUT_DIR"
+          OUTPUT_FILE="$OUTPUT_DIR/''${ENV_NAME}_secrets.$( [ "$LANGUAGE" = "typescript" ] && echo "ts" || echo "go" )"
+          generate-secrets-schema "$MERGED_SECRETS" "$OUTPUT_FILE" "$LANGUAGE"
+          echo "Generated secrets for environment '$ENV_NAME' in '$OUTPUT_FILE'"
         done
-      } | ${pkgs.jq}/bin/jq -s 'reduce .[] as $item ({}; . * $item)' > "$MERGED_SECRETS"
 
-      # Generate code for each codegen target
-      for CODEGEN_NAME in $(echo "$CODEGEN_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]'); do
-        CODEGEN_CFG=$(echo "$CODEGEN_JSON" | ${pkgs.jq}/bin/jq -r --arg name "$CODEGEN_NAME" '.[$name]')
-        OUTPUT_DIR=$(echo "$CODEGEN_CFG" | ${pkgs.jq}/bin/jq -r '.directory')
-        LANGUAGE=$(echo "$CODEGEN_CFG" | ${pkgs.jq}/bin/jq -r '.language')
-        mkdir -p "$OUTPUT_DIR"
-        OUTPUT_FILE="$OUTPUT_DIR/''${ENV_NAME}_secrets.$( [ "$LANGUAGE" = "typescript" ] && echo "ts" || echo "go" )"
-        generate-secrets-schema "$MERGED_SECRETS" "$OUTPUT_FILE" "$LANGUAGE"
-        echo "Generated secrets for environment '$ENV_NAME' in '$OUTPUT_FILE'"
+        rm "$MERGED_SECRETS"
       done
-
-      rm "$MERGED_SECRETS"
-    done
-  '';
+    '';
 }

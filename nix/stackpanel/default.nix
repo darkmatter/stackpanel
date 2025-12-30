@@ -4,21 +4,22 @@
 # Main entry point for the stackpanel Nix module system.
 #
 # ==============================================================================
-{ lib, ... }: let
-
+{ lib, ... }:
+let
   initshell = lib.concatLines [
     ''
       echo "✅ Stackpanel Nix module system initialized"
     ''
   ];
-  in {
+in
+{
   imports = [
+    ./devshell/core.nix
+    # Core hooks
+    ./core
+    ./network
+    ./secrets
     # SOPS helper
-    ./packages/sops
-    ./core/default.nix
-  ];
-
-  stackpanel.devshell.hooks.before = [
-
+    ./tui
   ];
 }

@@ -14,22 +14,22 @@
 # This is imported by nix/internal/stackpanel.nix for local development.
 # ==============================================================================
 
-{...}: {
+{ ... }:
+{
   imports = [
-    # Import stackpanel core (options + core config)
-    ../../stackpanel/core
-    # Import service implementation modules (these add packages based on options)
-    ../../stackpanel/services/aws.nix
-    ../../stackpanel/services/caddy.nix
-    ../../stackpanel/services/global-services.nix
-    ../../stackpanel/network/network.nix
-    ../../stackpanel/network/ports.nix
-    ../../stackpanel/tui/default.nix
-    ../../stackpanel/ide/ide.nix
-    ../../stackpanel/apps/apps.nix
-    ../../stackpanel/core/cli.nix
-    # Import recommended settings module (stackpanel.devenv.recommended)
-    ../../flake/modules/devenv/recommended.nix
+    # # Import stackpanel core (options + core config)
+    # ../../stackpanel/core
+    # # Import service implementation modules (these add packages based on options)
+    # ../../stackpanel/services/aws.nix
+    # ../../stackpanel/services/caddy.nix
+    # ../../stackpanel/services/global-services.nix
+    # ../../stackpanel/network/network.nix
+    # ../../stackpanel/network/ports.nix
+    # ../../stackpanel/tui/default.nix
+    # ../../stackpanel/ide/ide.nix
+    # ../../stackpanel/apps/apps.nix
+    # ../../stackpanel/core/cli.nix
+
     # App-specific modules for this project
     ./web/devenv.nix
     ./docs/devenv.nix

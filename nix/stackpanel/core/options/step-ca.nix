@@ -19,8 +19,9 @@
 #   - AWS Roles Anywhere for IAM role assumption
 #   - Other services requiring mutual TLS
 # ==============================================================================
-{ lib, ... }: {
-  options.stackpanel.network.step = {
+{ lib, ... }:
+{
+  options.stackpanel.step-ca = {
     enable = lib.mkEnableOption "Step CA certificate management";
 
     ca-url = lib.mkOption {

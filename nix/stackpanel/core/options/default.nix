@@ -15,7 +15,8 @@
 #
 # Imported by: ../default.nix
 # ==============================================================================
-{ ... }: {
+{ ... }:
+{
   imports = [
     ./apps.nix
     ./aws.nix
@@ -28,7 +29,7 @@
     ./global-services.nix
     ./ide.nix
     ./motd.nix
-    ./network.nix
+    ./step-ca.nix
     ./ports.nix
     ./secrets.nix
     ./theme.nix
