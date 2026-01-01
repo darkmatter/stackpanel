@@ -27,7 +27,7 @@ var rootCmd = &cobra.Command{
 	Short: "Stackpanel development CLI",
 	Long: `Stackpanel CLI - unified development environment management.
 
-Manage development services, certificates, and infrastructure
+Manage development services and infrastructure
 from a single command-line interface.`,
 	Version: Version,
 }
@@ -43,7 +43,6 @@ func init() {
 
 	// Add subcommands
 	rootCmd.AddCommand(servicesCmd)
-	rootCmd.AddCommand(certsCmd)
 	rootCmd.AddCommand(caddyCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(agentCmd)

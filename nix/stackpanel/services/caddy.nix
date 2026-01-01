@@ -34,7 +34,8 @@
   cfg = config.stackpanel.caddy;
   stepCfg = config.stackpanel.network.step or {enable = false;};
 
-
+  # Import util for debug logging
+  util = import ../lib/util.nix { inherit pkgs lib config; };
 
   # Import shared caddy library
   caddyLib = import ../lib/services/caddy.nix {inherit pkgs lib;};
@@ -94,7 +95,11 @@ in {
       ''
         # Start Caddy if not already running
         if ! ${caddyScripts.caddyStatus}/bin/caddy-status >/dev/null 2>&1; then
+          ${util.log.debug "caddy: not running, starting..."}
           ${caddyScripts.caddyStart}/bin/caddy-start
+          ${util.log.debug "caddy: started"}
+        else
+          ${util.log.debug "caddy: already running"}
         fi
       ''
     ];

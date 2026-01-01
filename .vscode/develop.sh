@@ -16,9 +16,9 @@ fi
 # If no arguments are provided, run an interactive dev shell
 if (($# == 0)); then
     # Interactive dev shell
-    exec nix develop "$ROOT" -c bash -l
+    exec nix develop "$ROOT" -c bash -lc
     exit 0
 fi
 
 # default
-exec nix develop --impure "$ROOT" -c bash -c "$@"
+exec nix develop --impure "$ROOT" -c bash -lc "$@"

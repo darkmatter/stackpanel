@@ -43,8 +43,9 @@ in
         ${pathsLib.mkShellPathUtils {
           rootDir = cfg.dirs.home;
           rootMarker = cfg.root-marker;
-          stateDir = cfg.dirs.state;
-          genDir = cfg.dirs.gen;
+          # Hardcoded subdirectory names - these are not configurable
+          stateDir = "state";
+          genDir = "gen";
         }}
 
         # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking
@@ -61,13 +62,19 @@ in
           echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
         fi
 
-        # Ensure .stackpanel/.gitignore exists and ignores state/
+        # Ensure .stackpanel/.gitignore exists and ignores state/ and config.local.nix
         _sp_gitignore="$STACKPANEL_ROOT_DIR/.gitignore"
         if [[ ! -f "$_sp_gitignore" ]]; then
-          echo "${cfg.dirs.state}/" > "$_sp_gitignore"
+          cat > "$_sp_gitignore" << 'EOF'
+${cfg.dirs.state}/
+config.local.nix
+EOF
         else
           if ! grep -q "^${cfg.dirs.state}/$" "$_sp_gitignore" 2>/dev/null; then
             echo "${cfg.dirs.state}/" >> "$_sp_gitignore"
+          fi
+          if ! grep -q "^config\.local\.nix$" "$_sp_gitignore" 2>/dev/null; then
+            echo "config.local.nix" >> "$_sp_gitignore"
           fi
         fi
 
@@ -83,5 +90,7 @@ in
         ''}
       ''
     ];
+
+    # local overrides
   };
 }

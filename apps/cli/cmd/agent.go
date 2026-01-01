@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/cli/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -61,7 +62,7 @@ This command will:
 		if _, err := os.Stat(filepath.Join(agentDir, "main.go")); err != nil {
 			return errors.New("stackpanel-agent not found in PATH and apps/agent is missing (cannot run fallback)")
 		}
-
+		fmt.Print(tui.Banner)
 		goArgs := append([]string{"run", "."}, agentArgs...)
 		c := exec.Command("go", goArgs...)
 		c.Dir = agentDir

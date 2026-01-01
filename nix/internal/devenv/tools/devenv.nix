@@ -37,7 +37,6 @@
 #   stackpanel services start     - Start all services
 #   stackpanel services stop      - Stop all services
 #   stackpanel caddy add <d> <u>  - Add a Caddy site (creates symlink in project)
-#   stackpanel certs ensure       - Get device certificate
 #
 {
   pkgs,

@@ -58,6 +58,25 @@ in
   # Works without pkgs - pure functions and shell script generators
   paths = import ./paths.nix { inherit lib; };
 
+  # Helper for conditionally importing local config files
+  # Use in your devenv.nix or flake imports:
+  #
+  #   imports = [
+  #     inputs.stackpanel.devenvModules.default
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #
+  # Or for multiple local config paths:
+  #   ] ++ stackpanelLib.optionalLocalConfigs [
+  #     ./.stackpanel/config.local.nix
+  #     ./stackpanel.local.nix
+  #   ];
+  #
+  optionalLocalConfig = path:
+    lib.optional (builtins.pathExists path) path;
+
+  optionalLocalConfigs = paths:
+    lib.filter (p: builtins.pathExists p) paths;
+
   # Convert attrs to YAML using nixpkgs yaml format
   toYAML =
     attrs:

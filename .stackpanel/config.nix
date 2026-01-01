@@ -20,6 +20,7 @@
   theme.enable = true;
   ide.enable = true;
   ide.vscode.enable = true;
+  cli.enable = false;
 
   # AWS Roles Anywhere via stackpanel's AWS module
   aws.roles-anywhere = {
@@ -40,6 +41,8 @@
     prompt-on-shell = true;
     cert-name = "device";
   };
+
+
 
   # MOTD content
   motd.enable = true;
