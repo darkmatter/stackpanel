@@ -17,9 +17,9 @@ in
     ./devshell/core.nix
     # Core hooks
     ./core
-    ./network
+    ./network # step
+    ./services # aws
     ./secrets
-    ./services
     # SOPS helper
     ./tui
   ];

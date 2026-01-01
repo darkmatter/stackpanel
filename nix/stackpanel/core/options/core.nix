@@ -85,33 +85,45 @@
             config = lib.mkOption {
               description = "Directory for stackpanel configuration files.";
               type = lib.types.path;
-              default = ../../../../infra/stackpanel;
+              default = ../../../../.stackpanel/config.nix;
             };
             home = lib.mkOption {
               description = ''
-                Root directory for runtime files (relative to project root).
-                Contains state/ (gitignored) and gen/ (checked in) subdirectories.
+                Root directory for stackpanel files (relative to project root).
+                This is the ONLY configurable directory option.
+
+                Subdirectories are automatically computed:
+                  - state/ (gitignored) - runtime state files
+                  - gen/   (checked in) - generated IDE configs, schemas
+
+                Example: ".stackpanel" → state at ".stackpanel/state"
               '';
               type = lib.types.str;
               default = ".stackpanel";
             };
+            # ================================================================
+            # COMPUTED PATHS (read-only, derived from home)
+            # These cannot be configured - change `home` instead.
+            # ================================================================
             state = lib.mkOption {
               description = ''
-                State directory path (relative to project root).
-                Computed from dirs.home. This directory is gitignored and contains
-                runtime state files that shouldn't be committed.
+                Full state directory path (relative to project root).
+                Computed as: dirs.home + "/state"
+                This is read-only - configure dirs.home instead.
               '';
               type = lib.types.str;
               default = "${config.home}/state";
+              readOnly = true;
             };
             gen = lib.mkOption {
               description = ''
-                Generated files directory path (relative to project root).
-                Computed from dirs.home. This directory is checked in and contains
-                generated files (IDE configs, schemas, etc.).
+                Full generated files directory path (relative to project root).
+                Computed as: dirs.home + "/gen"
+                This is read-only - configure dirs.home instead.
               '';
               type = lib.types.str;
               default = "${config.home}/gen";
+              readOnly = true;
             };
           };
         }
@@ -129,4 +141,16 @@
       };
     };
   };
+
+  # ============================================================================
+  # Flake helper: optionalLocalConfig
+  #
+  # Use this in your devenv.nix imports to conditionally import a local config:
+  #
+  #   imports = [
+  #     inputs.stackpanel.devenvModules.default
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #
+  # The file .stackpanel/config.local.nix is automatically gitignored.
+  # ============================================================================
 }

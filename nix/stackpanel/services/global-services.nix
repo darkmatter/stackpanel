@@ -36,7 +36,8 @@
   cfg = config.stackpanel.globalServices;
   portsCfg = config.stackpanel.ports;
 
-
+  # Import util for debug logging
+  util = import ../lib/util.nix { inherit pkgs lib config; };
 
   coreGlobalServices = import ../core/services/global-services.nix {inherit pkgs lib;};
 
@@ -75,12 +76,23 @@ in {
     stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
 
     # Add all service packages (CLI binaries like psql, redis-cli, etc.)
-    stackpanel.devshell.packages = gs.packages;
+    stackpanel.devshell.packages = gs.packages ++ [ pkgs.gum ];
 
     # Set environment variables using computed ports
     stackpanel.devshell.env = gs.env;
 
     # Set shell hooks for each enabled service
-    stackpanel.devshell.hooks.main = [ gs.enterShell ];
+    stackpanel.devshell.hooks.main = [
+      ''
+        ${util.log.debug "global-services: initializing services for ${cfg.project-name}"}
+        ${lib.optionalString cfg.postgres.enable (util.log.debug "global-services: postgres enabled on port ${toString (portsCfg.service.POSTGRES.port or 5432)}")}
+        ${lib.optionalString cfg.redis.enable (util.log.debug "global-services: redis enabled")}
+        ${lib.optionalString cfg.minio.enable (util.log.debug "global-services: minio enabled")}
+      ''
+      gs.enterShell
+      ''
+        ${util.log.debug "global-services: initialization complete"}
+      ''
+    ];
   };
 }

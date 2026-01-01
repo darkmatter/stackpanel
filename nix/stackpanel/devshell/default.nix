@@ -28,11 +28,13 @@
   globalServices = import ../core/global-services.nix { inherit pkgs lib; };
 
   # Default configuration
+  # NOTE: stateDir, genDir, dataDir are FULL PATHS relative to project root
+  # (e.g., ".stackpanel/state", not just "state")
   defaultConfig = {
     projectName = "default";
-    stateDir = ".stackpanel/state";
-    genDir = ".stackpanel/gen";
-    dataDir = ".stackpanel";
+    stateDir = ".stackpanel/state";  # Full path from project root
+    genDir = ".stackpanel/gen";      # Full path from project root
+    dataDir = ".stackpanel";         # Full path from project root
     ports = {};
     postgres = { enable = false; databases = null; port = null; };
     redis = { enable = false; port = null; };

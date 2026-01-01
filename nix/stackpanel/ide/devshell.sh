@@ -35,6 +35,11 @@ command -v nix >/dev/null 2>&1 || die "nix not found, install it: https://instal
 
 # Find the right project root so devenv sees devenv.yaml + devenv.lock
 find_root() {
+  # always prefer STACKPANEL_ROOT if set
+  if [[ -n "${STACKPANEL_ROOT:-}" ]]; then
+    printf "%s\n" "$STACKPANEL_ROOT"
+    return 0
+  fi
   # Prefer git root if available
   if command -v git >/dev/null 2>&1; then
     local gr
@@ -48,7 +53,7 @@ find_root() {
   # Walk up from current dir
   local d="$PWD"
   while [[ "$d" != "/" ]]; do
-    if [[ -f "$d/devenv.yaml" ]]; then
+    if [[ -d "$d/.stackpanel" ]]; then
       printf "%s\n" "$d"
       return 0
     fi
@@ -65,4 +70,4 @@ cd "$ROOT"
 # Force bash shell to avoid starship prompt issues with zsh
 # (devenv enterShell runs starship init for bash, so we need to stay in bash)
 
-exec nix run --accept-flake-config github:cachix/devenv/v1.11.1 -- shell
+exec nix develop --impure

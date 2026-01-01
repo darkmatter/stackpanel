@@ -23,6 +23,9 @@ let
   cfg = config.stackpanel.files;
   types = lib.types;
 
+  # Import util for debug logging
+  util = import ../lib/util.nix { inherit pkgs lib config; };
+
   q = lib.escapeShellArg;
 
   mkWriteSnippet = item:
@@ -32,10 +35,12 @@ let
       mode = item.mode or null;
       # If you want “no leading whitespace” heredocs etc, do that in drv creation.
     in ''
+      ${util.log.debug "files: writing ${path}"}
       echo "• ${path}"
       mkdir -p "$(dirname ${q path})"
       cat ${drv} > ${q path}
       ${lib.optionalString (mode != null) ''
+        ${util.log.debug "files: setting mode ${mode} on ${path}"}
         chmod ${q mode} ${q path}
       ''}
     '';
@@ -43,9 +48,10 @@ let
   writerDrv =
     pkgs.writeShellApplication {
       name = cfg.exeFilename;
-      runtimeInputs = [];
+      runtimeInputs = [ pkgs.gum ];
       text = ''
         set -euo pipefail
+        ${util.log.debug "files: starting file generation"}
 
         # Determine repo root
         ROOT="''${${cfg.rootVar}:-}"
@@ -54,10 +60,12 @@ let
           exit 1
         fi
 
+        ${util.log.debug "files: ROOT=$ROOT"}
         cd "$ROOT"
 
         ${lib.concatLines (map mkWriteSnippet cfg.files)}
 
+        ${util.log.debug "files: completed writing ${toString (builtins.length cfg.files)} file(s)"}
         echo "✅ wrote ${toString (builtins.length cfg.files)} file(s) into $ROOT"
       '';
     };

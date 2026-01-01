@@ -22,6 +22,8 @@ ______________________________________________________________________
 - [ ] caddy
 - [ ] step
 - [ ] tasks
+- [ ] auto docgen
+- [ ] auto infra (sst)
 
 ### Medium Priority
 

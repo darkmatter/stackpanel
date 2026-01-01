@@ -80,26 +80,6 @@ stackpanel caddy add api.localhost localhost:8080 --tls
 stackpanel caddy remove myapp.localhost
 ```
 
-#### Certificates
-
-Manage device certificates for development.
-
-```bash
-stackpanel certs ensure             # Request/renew device certificate
-stackpanel certs status             # Show certificate status
-stackpanel certs revoke             # Revoke current certificate
-```
-
-#### AWS Credentials
-
-Get AWS credentials using device certificates.
-
-```bash
-stackpanel certs aws status         # Check AWS auth status
-stackpanel certs aws creds          # Get AWS credentials (JSON)
-stackpanel certs aws creds -e       # Get as export statements
-```
-
 ## Global Flags
 
 ```bash

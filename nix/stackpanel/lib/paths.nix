@@ -4,6 +4,19 @@
 # Stackpanel path utilities for consistent path resolution across all modules
 # and shell scripts. This is a pure library (no pkgs required).
 #
+# IMPORTANT: NAMING CONVENTIONS
+# -----------------------------
+# This library uses SUBDIRECTORY NAMES, not full paths:
+#   - rootDir = ".stackpanel"  (the stackpanel home directory)
+#   - stateDir = "state"       (subdirectory name, NOT ".stackpanel/state")
+#   - genDir = "gen"           (subdirectory name, NOT ".stackpanel/gen")
+#
+# Full paths are computed as: $root/${rootDir}/${stateDir}
+# For example: /path/to/project/.stackpanel/state
+#
+# If you're getting duplicate path segments like ".stackpanel/.stackpanel/state",
+# you're passing a full path where a subdirectory name is expected!
+#
 # Uses a root marker file pattern (similar to devenv's .devenv-root) to allow
 # tools to find the project root from any subdirectory.
 #
@@ -15,10 +28,15 @@
 #
 # Usage in Nix modules:
 #   let pathsLib = import ./paths.nix { inherit lib; };
-#   in pathsLib.mkShellPathUtils cfg
+#   in pathsLib.mkShellPathUtils {
+#     rootDir = ".stackpanel";    # The home directory
+#     stateDir = "state";         # SUBDIRECTORY NAME, not full path!
+#     genDir = "gen";             # SUBDIRECTORY NAME, not full path!
+#   }
 #
 # Usage in shell scripts:
 #   STACKPANEL_ROOT=$(stackpanel_find_root)
+# ==============================================================================
 # ==============================================================================
 {lib}: let
   # Default configuration (can be overridden)
@@ -76,15 +94,38 @@ in {
   inherit defaults mkShellFindRoot mkShellResolvePaths;
 
   # Combined shell setup script with all path utilities
+  # IMPORTANT: stateDir and genDir must be SUBDIRECTORY NAMES, not full paths!
   mkShellPathUtils = cfg: let
     rootDir = cfg.rootDir or defaults.rootDir;
     rootMarker = cfg.rootMarker or defaults.rootMarker;
     stateDir = cfg.stateDir or defaults.stateDir;
     genDir = cfg.genDir or defaults.genDir;
+
+    # Validate that stateDir doesn't look like a full path (starts with ".")
+    validatedStateDir =
+      if lib.hasPrefix "." stateDir && stateDir != "."
+      then throw ''
+        paths.nix: stateDir should be a subdirectory name (e.g., "state"), not a full path!
+        Got: "${stateDir}"
+        Expected: just the subdirectory name like "state"
+        The full path is computed as: $root/${rootDir}/${stateDir}
+      ''
+      else stateDir;
+
+    # Validate that genDir doesn't look like a full path (starts with ".")
+    validatedGenDir =
+      if lib.hasPrefix "." genDir && genDir != "."
+      then throw ''
+        paths.nix: genDir should be a subdirectory name (e.g., "gen"), not a full path!
+        Got: "${genDir}"
+        Expected: just the subdirectory name like "gen"
+        The full path is computed as: $root/${rootDir}/${genDir}
+      ''
+      else genDir;
   in ''
     # Stackpanel path utilities
     ${mkShellFindRoot { inherit rootDir rootMarker; }}
-    ${mkShellResolvePaths { inherit rootDir stateDir genDir; }}
+    ${mkShellResolvePaths { rootDir = rootDir; stateDir = validatedStateDir; genDir = validatedGenDir; }}
   '';
 
   # ============================================================================
