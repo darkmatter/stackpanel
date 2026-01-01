@@ -18,7 +18,7 @@
   ];
 
   # Stackpanel options (imported from separate file for cleaner organization)
-  stackpanel = import ./stackpanel.nix;
+  stackpanel = import ../../.stackpanel/config.nix;
 
   # ===========================================================================
   # Devenv options below (packages, languages, env, enterShell, etc.)

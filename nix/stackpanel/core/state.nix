@@ -23,6 +23,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }: let
   cfg = config.stackpanel;
@@ -30,6 +31,9 @@
   appsComputed = config.stackpanel.appsComputed or {};
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
+
+  # Import util for debug logging
+  util = import ../lib/util.nix { inherit pkgs lib config; };
 
 
 
@@ -88,11 +92,13 @@ in {
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
     stackpanel.devshell.hooks.main = [
       ''
+        ${util.log.debug "state: writing state file to $STACKPANEL_STATE_DIR/${cfg.state.file}"}
         # Write stackpanel state file for CLI/agent consumption
         mkdir -p "$STACKPANEL_STATE_DIR"
         cat > "$STACKPANEL_STATE_DIR/${cfg.state.file}" << 'STACKPANEL_STATE_EOF'
 ${stateJson}
 STACKPANEL_STATE_EOF
+        ${util.log.debug "state: state file written successfully"}
       ''
     ];
 

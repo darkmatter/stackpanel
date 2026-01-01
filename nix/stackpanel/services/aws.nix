@@ -37,6 +37,9 @@ let
   dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
   baseStateDir = dirs.state;
 
+  # Import util for debug logging
+  util = import ../lib/util.nix { inherit pkgs lib config; };
+
   stateDir = "${baseStateDir}/aws";
   stepStateDir = "${baseStateDir}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
@@ -51,21 +54,23 @@ in
 {
   config = lib.mkIf cfg.enable (
     let
-      # Create scripts using shared library - only evaluated when enabled
-      awsScripts = awsLib.mkAwsCredScripts {
-        stateDir = baseStateDir;
+      # Create scripts using runtime paths (Step CA certs are generated at runtime)
+      awsScripts = awsLib.mkRuntimeAwsScripts {
+        # These are resolved at runtime via environment variables
+        certPath = "$STACKPANEL_STATE_DIR/step/device-root.chain.crt";
+        keyPath = "$STACKPANEL_STATE_DIR/step/device.key";
         accountId = cfg.account-id;
         roleName = cfg.role-name;
         trustAnchorArn = cfg.trust-anchor-arn;
         profileArn = cfg.profile-arn;
         region = cfg.region;
-        cacheBufferSeconds = cfg.cache-buffer-seconds;
-        debug = cfg.debug;
+        debug = config.stackpanel.debug;
       };
 
       # Check if AWS cert-auth is working
       checkAwsCert = pkgs.writeShellScriptBin "check-aws-cert" ''
         set -uo pipefail
+        ${util.log.debug "check-aws-cert: starting certificate verification"}
 
         red='\033[0;31m'
         green='\033[0;32m'
@@ -75,34 +80,81 @@ in
         fail() { echo -e "''${red}FAIL''${nc}"; }
 
         all_passed=true
+        _needs_regen=false
+
+        _cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+        _key="$STACKPANEL_STATE_DIR/step/device.key"
 
         echo -n "Checking if device certificate exists... "
-        if [[ -f "${stepCertPath}" && -f "${stepKeyPath}" ]]; then
+        if [[ -f "$_cert" && -f "$_key" ]]; then
+          ${util.log.debug "check-aws-cert: found cert at $_cert"}
           pass
         else
+          ${util.log.debug "check-aws-cert: cert not found at $_cert"}
           fail
           echo "  Hint: Run 'ensure-device-cert' first (Step CA required)"
           all_passed=false
         fi
 
-        if [[ -f "${stepCertPath}" ]]; then
+        if [[ -f "$_cert" ]]; then
           echo -n "Checking if AWS credentials can be fetched... "
-          if eval "$(${awsScripts.awsCredsEnv}/bin/aws-creds-env 2>/dev/null)" && \
-             [[ -n "''${AWS_ACCESS_KEY_ID:-}" ]]; then
+          ${util.log.debug "check-aws-cert: attempting credential fetch via sts get-caller-identity"}
+
+          # Set up AWS config for credential_process auth
+          eval "$(${awsScripts.awsCredsEnv}/bin/aws-creds-env 2>/dev/null)"
+
+          # Test credentials by calling AWS STS
+          if ${pkgs.awscli2}/bin/aws sts get-caller-identity >/dev/null 2>&1; then
+            ${util.log.debug "check-aws-cert: credentials fetched successfully"}
             pass
           else
+            ${util.log.debug "check-aws-cert: credential fetch failed"}
             fail
-            echo "  Hint: Check Roles Anywhere configuration"
             all_passed=false
+
+            # Check if the cert might be expired or invalid
+            cert_expiry=$(${pkgs.openssl}/bin/openssl x509 -enddate -noout -in "$_cert" 2>/dev/null | cut -d= -f2)
+            if [[ -n "$cert_expiry" ]]; then
+              cert_epoch=$(date -d "$cert_expiry" +%s 2>/dev/null || date -jf "%b %d %T %Y %Z" "$cert_expiry" +%s 2>/dev/null || echo "0")
+              now_epoch=$(date +%s)
+              if [[ "$cert_epoch" -lt "$now_epoch" ]]; then
+                echo "  Certificate expired on: $cert_expiry"
+                echo "  Hint: Run 'ensure-device-cert' to regenerate"
+                _needs_regen=true
+              else
+                echo "  Certificate valid until: $cert_expiry"
+                echo "  Hint: Check Roles Anywhere configuration (trust anchor, profile, role)"
+              fi
+            else
+              echo "  Hint: Check Roles Anywhere configuration"
+            fi
           fi
         fi
 
         echo ""
         if $all_passed; then
+          ${util.log.debug "check-aws-cert: all checks passed"}
           echo -e "''${green}AWS cert-auth is configured!''${nc}"
           exit 0
         else
+          ${util.log.debug "check-aws-cert: some checks failed"}
           echo -e "''${red}AWS cert-auth not ready.''${nc}"
+
+          # Offer to regenerate cert if it might help
+          if [[ "''${_needs_regen:-false}" == "true" ]]; then
+            echo ""
+            if ${pkgs.gum}/bin/gum confirm "Would you like to regenerate the device certificate?"; then
+              echo ""
+              echo "Removing expired certificate..."
+              rm -f "$_cert" "$_key" "$STACKPANEL_STATE_DIR/step/device.crt"
+              echo ""
+              ensure-device-cert
+              echo ""
+              echo "Retrying AWS auth check..."
+              exec "$0"  # Re-run this script
+            fi
+          fi
+
           exit 1
         fi
       '';
@@ -110,22 +162,33 @@ in
       # Interactive setup prompt script
       interactiveSetup = pkgs.writeShellScriptBin "aws-cert-setup-prompt" ''
             set -uo pipefail
+            ${util.log.debug "aws-cert-setup-prompt: starting"}
+
+            _skip_file="$STACKPANEL_STATE_DIR/aws/.skip-setup-prompt"
 
             # Check if user chose "don't ask again"
-            if [[ -f "${skipFile}" ]]; then
+            if [[ -f "$_skip_file" ]]; then
+              ${util.log.debug "aws-cert-setup-prompt: skip file exists, exiting"}
               exit 0
             fi
 
             # Check if AWS cert-auth is already working
             if ${checkAwsCert}/bin/check-aws-cert >/dev/null 2>&1; then
+              ${util.log.debug "aws-cert-setup-prompt: cert-auth already working"}
               exit 0
             fi
 
+            _cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+            _key="$STACKPANEL_STATE_DIR/step/device.key"
+
             # Check if Step CA cert exists first
-            if [[ ! -f "${stepCertPath}" || ! -f "${stepKeyPath}" ]]; then
+            if [[ ! -f "$_cert" || ! -f "$_key" ]]; then
               # Step CA not set up yet - don't prompt, let the Step CA module handle it
+              ${util.log.debug "aws-cert-setup-prompt: Step CA cert not found, skipping"}
               exit 0
             fi
+
+            ${util.log.debug "aws-cert-setup-prompt: showing interactive prompt"}
 
             # Show description and prompt
             echo ""
@@ -159,12 +222,12 @@ in
                 ${checkAwsCert}/bin/check-aws-cert
                 ;;
               "Don't ask again")
-                mkdir -p "${stateDir}"
-                touch "${skipFile}"
+                mkdir -p "$STACKPANEL_STATE_DIR/aws"
+                touch "$_skip_file"
                 ${pkgs.gum}/bin/gum style --foreground 245 \
                   "Got it! You can run 'check-aws-cert' manually when ready."
                 ${pkgs.gum}/bin/gum style --foreground 245 \
-                  "To re-enable prompts, delete: ${skipFile}"
+                  "To re-enable prompts, delete: \$_skip_file"
                 ;;
               *)
                 ${pkgs.gum}/bin/gum style --foreground 245 \
@@ -178,6 +241,8 @@ in
         pkgs.gum
         checkAwsCert
         interactiveSetup
+        # Wrapped chamber with AWS credentials baked in
+        (awsScripts.wrapPackage pkgs.chamber)
       ];
 
       stackpanel.motd.commands = [
@@ -197,25 +262,31 @@ in
 
       stackpanel.devshell.hooks.main = [
         ''
-          ${lib.optionalString config.stackpanel.aws.roles-anywhere.debug ''
-            echo "[rolesanywhere]: Debug mode ON"
-          ''}
+          ${util.log.debug "aws: hook starting"}
           # Set AWS_CONFIG_FILE using STACKPANEL_STATE_DIR (absolute, works in Docker too)
           export AWS_CONFIG_FILE="$STACKPANEL_STATE_DIR/aws/config"
+          ${util.log.debug "aws: AWS_CONFIG_FILE=$AWS_CONFIG_FILE"}
+
+          # Export cert paths for the credential-process script
+          export AWS_CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
+          export AWS_KEY_PATH="$STACKPANEL_STATE_DIR/step/device.key"
 
           # Generate AWS config with credential_process for auto-refresh
-          _step_cert="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
-          _step_key="$STACKPANEL_STATE_DIR/step/device.key"
-          if [[ -f "$_step_cert" && -f "$_step_key" ]]; then
+          if [[ -f "$AWS_CERT_PATH" && -f "$AWS_KEY_PATH" ]]; then
+            ${util.log.debug "aws: Step CA cert found, generating AWS config"}
             mkdir -p "$STACKPANEL_STATE_DIR/aws"
-            AWS_CERT_PATH="$_step_cert" AWS_KEY_PATH="$_step_key" \
-              ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
+            ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
+            ${util.log.debug "aws: AWS config generated at $AWS_CONFIG_FILE"}
+          else
+            ${util.log.debug "aws: Step CA cert not found, skipping AWS config generation"}
           fi
 
           ${lib.optionalString cfg.prompt-on-shell ''
+            ${util.log.debug "aws: running interactive setup prompt"}
             # Interactive AWS cert-auth setup (errors should not crash the shell)
             ${interactiveSetup}/bin/aws-cert-setup-prompt || true
           ''}
+          ${util.log.debug "aws: hook complete"}
         ''
       ];
     }

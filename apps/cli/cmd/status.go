@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 
 	"github.com/darkmatter/stackpanel/cli/internal/state"
@@ -19,7 +18,6 @@ var statusCmd = &cobra.Command{
 This includes:
   - Development services (PostgreSQL, Redis, Minio)
   - Reverse proxy (Caddy)
-  - Certificates
 
 By default, opens an interactive dashboard. Use --static for non-interactive output.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -97,10 +95,6 @@ func showFullStatus() {
 	fmt.Printf("\n%s Reverse Proxy\n", yellow.Sprint("■"))
 	showCaddyStatusCompact()
 
-	// Certificates
-	fmt.Printf("\n%s Certificates\n", yellow.Sprint("■"))
-	showCertStatusCompact()
-
 	fmt.Println()
 }
 
@@ -128,14 +122,5 @@ func showCaddyStatusCompact() {
 		dim.Printf(" (PID: %d)\n", pid)
 	} else {
 		dim.Println("  ○ Caddy (stopped)")
-	}
-}
-
-func showCertStatusCompact() {
-	certFile, _ := getCertPaths()
-	if _, err := os.Stat(certFile); err == nil {
-		green.Println("  ● Device certificate present")
-	} else {
-		dim.Println("  ○ No device certificate")
 	}
 }

@@ -1,2 +1,3 @@
 state/
 .stackpanel/state/
+config.local.nix

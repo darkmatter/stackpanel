@@ -39,7 +39,7 @@ let
   hasFilesOption = options ? stackpanel.files;
 
   # Import the IDE lib for generating configuration
-  ideLib = import ../lib/integrations/ide.nix { inherit pkgs lib; };
+  ideLib = import ../lib/ide.nix { inherit pkgs lib; };
 
   # Base directory for VS Code files (in gen-dir since these are generated)
   baseDir = "${dirs.gen}/ide/vscode";

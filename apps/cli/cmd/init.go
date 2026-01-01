@@ -16,7 +16,7 @@ var initCmd = &cobra.Command{
 	Short: "Initialize stackpanel from Nix configuration",
 	Long: `Initialize stackpanel by generating files from Nix configuration.
 
-This command is typically called by Nix during devenv shell entry.
+This command is typically called by Nix during  shell entry.
 It reads configuration JSON and generates:
   - IDE integration files (VS Code workspace, terminal integration)
   - JSON schemas for YAML intellisense

@@ -22,6 +22,9 @@ let
   cfg = config.stackpanel.codegen;
   types = lib.types;
 
+  # Import util for debug logging
+  util = import ../lib/util.nix { inherit pkgs lib config; };
+
   mkGenCmd = _name: gen: {
     exec = lib.concatStringsSep "\n" (lib.filter (s: s != "") [
       (lib.concatStringsSep "\n" (lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (gen.env or {})))
@@ -35,8 +38,10 @@ let
   onEnterHooks =
     lib.mapAttrsToList (name: gen:
       lib.optionalString ((gen.onEnter or cfg.runOnEnter) == true) ''
+        ${util.log.debug "codegen: running generator '${name}'"}
         echo "▶ running codegen: ${name}"
         ${gen.exec}
+        ${util.log.debug "codegen: generator '${name}' completed"}
       ''
     ) cfg.generators;
 in

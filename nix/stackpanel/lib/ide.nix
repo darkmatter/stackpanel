@@ -64,7 +64,7 @@
   # Returns either a derivation (asPackage=true) or script content string (asPackage=false)
   mkDevshellLoader = {
     # Shell mode: "devenv" uses devenv shell, "flake" uses nix develop
-    shellMode ? "devenv",
+    shellMode ? "flake",
     # Custom nix command to run the devshell (overrides shellMode if set)
     exec ? null,
     # Enable VS Code anti-recursion protection
