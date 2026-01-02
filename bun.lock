@@ -26,9 +26,15 @@
     },
     "apps/agent": {
       "name": "agent",
+      "dependencies": {
+        "@stackpanel/scripts": "workspace:*",
+      },
     },
     "apps/cli": {
       "name": "cli",
+      "dependencies": {
+        "@stackpanel/scripts": "workspace:*",
+      },
     },
     "apps/docs": {
       "name": "docs",
@@ -230,6 +236,13 @@
       },
       "devDependencies": {
         "typescript": "^5.9.3",
+      },
+    },
+    "packages/scripts": {
+      "name": "@stackpanel/scripts",
+      "version": "0.0.0",
+      "bin": {
+        "check-devshell": "./bin/check-devshell.sh",
       },
     },
     "packages/stackpanel-go": {
@@ -1638,6 +1651,8 @@
     "@stackpanel/db": ["@stackpanel/db@workspace:packages/db"],
 
     "@stackpanel/env": ["@stackpanel/env@workspace:packages/env"],
+
+    "@stackpanel/scripts": ["@stackpanel/scripts@workspace:packages/scripts"],
 
     "@stackpanel/ui": ["@stackpanel/ui@workspace:packages/ui"],
 
