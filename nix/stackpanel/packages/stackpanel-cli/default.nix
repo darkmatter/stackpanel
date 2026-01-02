@@ -39,20 +39,17 @@ let
     cp -R ${goSrc}/. $out/packages/stackpanel-go/
   '';
 in
-pkgs.buildGoModule {
+pkgs.buildGoApplication {
   pname = "stackpanel-cli";
   version = "0.1.0";
 
-  # Use a minimal source tree that contains both the CLI and the local module
+  # Use a minimal source tree that contains both the CLI and the local module  
   src = compositeSrc;
-  modRoot = "apps/cli";
-
-  # Use proxy vendoring to handle the local replace directive
-  proxyVendor = true;
-
-  # Nix will vendor deterministically from go.mod/go.sum
-  vendorHash = "sha256-7AMYyjWa1o3sxwSPG/PYSUkv6Sezkgxz9vlhjPAKkDM=";
-
+  pwd = compositeSrc + "/apps/cli";  # Tell gomod2nix where to find go.mod
+  modules = compositeSrc + "/apps/cli/gomod2nix.toml";
+  sourceRoot = "stackpanel-cli-src/apps/cli";  # Build from this subdirectory
+  subPackages = [ "." ];  # Build from pwd (apps/cli)
+  
   # Skip tests during build (some tests require specific environment)
   doCheck = false;
 

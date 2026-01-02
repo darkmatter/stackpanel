@@ -11,7 +11,7 @@
 #   let mk = import ./files.nix { inherit pkgs lib; };
 #   in mk.mkWriter {
 #     exeFilename = "write-files";
-#     root = "/path/to/repo";
+#     root = "/paath/to/repo";
 #     runtimeRootVar = "STACKPANEL_ROOT";  # optional runtime override
 #     files = [
 #       { path = "README.md"; drv = pkgs.writeText "README.md" "hello\n"; }

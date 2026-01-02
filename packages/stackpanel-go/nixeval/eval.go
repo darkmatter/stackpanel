@@ -48,7 +48,7 @@ func hasAbsoluteEnvPaths() bool {
 //
 // If projectRoot is empty and no absolute env paths are set, it will
 // attempt to find the project root by searching for devenv.nix
-func EvalOnce(ctx context.Context, projectRoot string) (*Config, error) {
+func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error) {
 	var absRoot string
 	var needsProjectRoot bool
 
@@ -163,6 +163,52 @@ func EvalOnce(ctx context.Context, projectRoot string) (*Config, error) {
 	return &config, nil
 }
 
+type EvalOnceParams struct {
+	Expression string
+	File string
+	Args map[string]string
+	ProjectRoot string
+	Timeout time.Duration
+}
+
+func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
+	var absRoot string
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Build nix eval command - only pass projectRoot if we have it
+	args := []string{"eval", "--impure", "--json"}
+	if opts.Expression != "" {
+		args = append(args, "--expr", opts.Expression)
+	} else if opts.File != "" {
+		args = append(args, "-f", opts.File)
+	}
+	for k, v := range opts.Args {
+		args = append(args, "--argstr", k, v)
+	}
+
+	cmd := exec.CommandContext(ctx, "nix", args...)
+	if absRoot != "" {
+		cmd.Dir = absRoot
+	}
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
+	}
+
+	var config Config
+	if err := json.Unmarshal(stdout.Bytes(), &config); err != nil {
+		return nil, fmt.Errorf("failed to parse nix eval output: %w", err)
+	}
+
+
+	return stdout.Bytes(), nil
+}
+
 // loadFromStateDirEnv loads config from STACKPANEL_STATE_DIR env var
 func loadFromStateDirEnv(stateDir string) (*Config, error) {
 	stateFile := filepath.Join(stateDir, "stackpanel.json")
@@ -238,10 +284,19 @@ func findProjectRoot() string {
 
 // MustEvalOnce is like EvalOnce but panics on error
 // Useful for initialization code
-func MustEvalOnce(ctx context.Context, projectRoot string) *Config {
-	config, err := EvalOnce(ctx, projectRoot)
+func MustEvalOnceConfig(ctx context.Context, projectRoot string) *Config {
+	config, err := GetConfigWithEval(ctx, projectRoot)
 	if err != nil {
 		panic(fmt.Sprintf("failed to evaluate stackpanel config: %v", err))
 	}
 	return config
+}
+
+
+func MustEvalOnce(ctx context.Context, opts EvalOnceParams) []byte {
+	result, err := EvalOnce(ctx, opts)
+	if err != nil {
+		panic(fmt.Sprintf("failed to evaluate stackpanel result: %v", err))
+	}
+	return result
 }

@@ -31,10 +31,19 @@
       default = false;
     };
 
+    name = lib.mkOption {
+      description = ''
+        Name of your project. May be used for naming things and diplay purposes.
+      '';
+      type = lib.types.str;
+      default = "my-project";
+    };
+
     github = lib.mkOption {
       description = ''
-        GitHub repository in 'owner/repo' format for this project. You should always
-        set this option since some features (like automatic user syncing) depend on it.
+        GitHub repository in 'owner/repo' format for this project. This value is
+        used as a key for certain features like stable port calculation and
+        user sync.
       '';
       type = lib.types.str;
       default = "";
@@ -119,6 +128,7 @@
                 Subdirectories are automatically computed:
                   - state/ (gitignored) - runtime state files
                   - gen/   (checked in) - generated IDE configs, schemas
+                  - data/ (checked in) -  nix-backed configuration db
 
                 Example: ".stackpanel" → state at ".stackpanel/state"
               '';
@@ -137,6 +147,16 @@
               '';
               type = lib.types.str;
               default = "${config.home}/state";
+              readOnly = true;
+            };
+            data = lib.mkOption {
+              description = ''
+                Full data directory path (relative to project root).
+                Computed as: dirs.home + "/data"
+                This is read-only - configure dirs.home instead.
+              '';
+              type = lib.types.str;
+              default = "${config.home}/data";
               readOnly = true;
             };
             gen = lib.mkOption {

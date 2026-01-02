@@ -28,7 +28,7 @@
   ...
 }:
 let
-  hooks = config.stackpanel.devshell.hooks;
+  hooks = config.stackpanel.hooks or config.stackpanel.devshell.hooks;
 
   enterShell = lib.concatStringsSep "\n\n" (
     lib.flatten [

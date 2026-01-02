@@ -24,14 +24,13 @@
   git-hooks ? null,
 }:
 let
-  # Import main.nix to extract config sections
-  mainConfig = import ./nix/internal/main.nix {
-    inherit pkgs lib inputs;
-    config = {};
-  };
-  stackpanelConfig = mainConfig.stackpanel or {};
-  devenvConfig = mainConfig.devenv or {};
-  gitHooksConfig = mainConfig.git-hooks or {};
+  # Import merged config (single source of truth)
+  mergedConfig = import ./nix/flake/merged-config.nix { inherit pkgs lib inputs; };
+  
+  # Extract sections
+  stackpanelConfig = mergedConfig.stackpanel;
+  devenvConfig = mergedConfig.devenv;
+  gitHooksConfig = mergedConfig.git-hooks;
 
   # Check if devenv should be used
   useDevenv = stackpanelConfig.useDevenv or true;
@@ -48,7 +47,8 @@ let
   mkDevShell = import ./nix/flake/devshells/mkDevShell.nix { inherit pkgs; };
 
   # Local devshell config module (for devenv shells)
-  localDevshellModule = import ./nix/internal/devshell.nix { inherit inputs; };
+  # Pass merged config so it doesn't need to re-evaluate
+  localDevshellModule = import ./nix/internal/devshell.nix { inherit inputs mergedConfig; };
 
   # Create a stackpanel-only module from main.nix config
   stackpanelOnlyModule = { ... }: {

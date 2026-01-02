@@ -1,3 +1,5 @@
+#:schema https://json.schemastore.org/any.json
+
 # Air configuration for stackpanel agent development
 # Run `air` in this directory for live reload
 # See: https://github.com/air-verse/air

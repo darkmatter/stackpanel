@@ -16,11 +16,24 @@
   # ===========================================================================
   stackpanel = {
     enable = true;
+    name = "stackpanel";
+    github = "darkmatter/stackpanel";
     debug = true;
     theme.enable = true;
     ide.enable = true;
-    ide.vscode.enable = true;
     cli.enable = true;
+
+    # Packages for the devshell
+    packages = with pkgs; [
+      air
+      nixd
+      git
+      jq
+      go
+      gomod2nix
+      quicktype
+      prek
+    ];
 
     # AWS Roles Anywhere via stackpanel's AWS module
     aws.roles-anywhere = {
@@ -50,55 +63,118 @@
         description = "Export AWS credentials to environment";
       }
     ];
-  };
-
-  # ===========================================================================
-  # Devenv options (packages, languages, env, enterShell, etc.)
-  # ===========================================================================
-  devenv = {
-    packages = with pkgs; [
-      bun
-      nodejs_22
-      go
-      air # Go live reload for CLI development
-      jq
-      git
-      nixd
-      nixfmt
+    motd.hints = [
+      "Run './test' to test both devenv and native shells"
+      "Run './test devenv' or './test native' to test individual shells"
+      "Run 'nix flake check --impure' to run all checks including smoke tests"
+    ];
+    devshell.hooks.main = [
+      ''
+        echo "✅ Stackpanel development environment"
+      ''
     ];
 
-    languages = {
-      javascript = {
-        enable = true;
-        bun.enable = true;
-        bun.install.enable = true;
-      };
-      typescript.enable = true;
+    # ============================================================================
+    # Apps - web app, docs, and Go CLI/agent
+    # ============================================================================
+    apps.web = {
+      name = "web";
+      domain = "stackpanel";
+      tls = true;
+    };
+    apps.server = {
+      name = "server";
+    };
+    apps.docs = {
+      name = "docs";
+      domain = "docs";
+    };
+    apps.cli = {
+      path = "apps/cli";
       go = {
         enable = true;
-        package = pkgs.go;
+        binaryName = "stackpanel";
+        ldflags = [ "-s" "-w" ];
+        generateFiles = true;
+      };
+    };
+    apps.agent = {
+      name = "agent";
+      tls = false;
+      path = "apps/agent";
+      go = {
+        enable = true;
+        binaryName = "stackpanel-agent";
       };
     };
 
-    env = {
-      STACKPANEL_SHELL_ID = "1";
-      EDITOR = "vim";
-      STEP_CA_URL = "https://ca.internal:443";
-      STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
+    # ============================================================================
+    # Ports - infrastructure service ports
+    # ============================================================================
+    ports.services = [
+      { key = "POSTGRES"; name = "PostgreSQL"; }
+      { key = "REDIS"; name = "Redis"; }
+      { key = "MINIO"; name = "Minio"; }
+      { key = "MINIO_CONSOLE"; name = "Minio Console"; }
+    ];
+
+    # ============================================================================
+    # Global Services - PostgreSQL, Redis, Minio, Caddy
+    # ============================================================================
+    globalServices = {
+      enable = true;
+      project-name = "stackpanel";
+
+      postgres = {
+        enable = true;
+        databases = [ "stackpanel" "stackpanel_test" ];
+        package = pkgs.postgresql_17;
+      };
+
+      redis.enable = true;
+      minio.enable = true;
+      caddy.enable = true;
     };
 
-    enterShell = ''
-      echo "✅ Devenv for the stackpanel repository"
-    '';
-  };
+    # ============================================================================
+    # Users
+    # ============================================================================
+    users = {
+      cooper = {
+        name = "Cooper Maruyama";
+        github = "coopmoney";
+        public-keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINh0gA7reCRW+zQ5pPpIjoJGpaFQSbC/4K8B6vMXJVr+ cooper@darkmatter.io" ];
+        secrets-allowed-environments = [ "web/dev" "web/staging" "web/production" ];
+      };
+    };
 
-  # ===========================================================================
-  # Git hooks configuration (for git-hooks.nix / pre-commit)
-  # ===========================================================================
-  git-hooks = {
-    enable = true;
-    # Add hook configurations here, e.g.:
-    # nixfmt-rfc-style.enable = true;
-    # gofmt.enable = true;
+    secrets =  {
+      input-directory = "infra/secrets";
+      # enable = true;
+      environments = {
+        "web/dev" = {
+          name = "dev";
+          sources = [ "shared" "dev" ];
+          public-keys = [ "age1..." ];
+        };
+        "web/staging" = {
+          name = "staging";
+          sources = [ "shared" "staging" ];
+          public-keys = [ "age1..." ];
+        };
+        "web/production" = {
+          name = "production";
+          sources = [ "shared" "production" ];
+          public-keys = [ "age1..." ];
+        };
+      };
+    };
+
+    ide.vscode = {
+      enable = true;
+      extensions = [ "ms-azuretools.vscode-docker" "golang.go" ];
+      extra-folders = [ ];
+    };
   };
 }
+

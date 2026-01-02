@@ -8,276 +8,275 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as AiRouteImport } from "./routes/ai";
-import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth.$";
-import { Route as ApiProvisionDbRouteImport } from "./routes/api/provision-db";
-import { Route as ApiSeedSnapshotsRouteImport } from "./routes/api/seed-snapshots";
-import { Route as ApiTrpcSplatRouteImport } from "./routes/api/trpc.$";
-import { Route as DashboardRouteImport } from "./routes/dashboard";
-import { Route as DemoRouteImport } from "./routes/demo";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as LoginRouteImport } from "./routes/login";
-import { Route as StudioIndexRouteImport } from "./routes/studio/index";
-import { Route as SuccessRouteImport } from "./routes/success";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as SuccessRouteImport } from './routes/success'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DemoRouteImport } from './routes/demo'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AiRouteImport } from './routes/ai'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudioIndexRouteImport } from './routes/studio/index'
+import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
+import { Route as ApiProvisionDbRouteImport } from './routes/api/provision-db'
+import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
 
 const SuccessRoute = SuccessRouteImport.update({
-	id: "/success",
-	path: "/success",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
-	id: "/login",
-	path: "/login",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoRoute = DemoRouteImport.update({
-	id: "/demo",
-	path: "/demo",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
-	id: "/dashboard",
-	path: "/dashboard",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiRoute = AiRouteImport.update({
-	id: "/ai",
-	path: "/ai",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
-	id: "/",
-	path: "/",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioIndexRoute = StudioIndexRouteImport.update({
-	id: "/studio/",
-	path: "/studio/",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/studio/',
+  path: '/studio/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSeedSnapshotsRoute = ApiSeedSnapshotsRouteImport.update({
-	id: "/api/seed-snapshots",
-	path: "/api/seed-snapshots",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/api/seed-snapshots',
+  path: '/api/seed-snapshots',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiProvisionDbRoute = ApiProvisionDbRouteImport.update({
-	id: "/api/provision-db",
-	path: "/api/provision-db",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/api/provision-db',
+  path: '/api/provision-db',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
-	id: "/api/trpc/$",
-	path: "/api/trpc/$",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/api/trpc/$',
+  path: '/api/trpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-	id: "/api/auth/$",
-	path: "/api/auth/$",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-	"/": typeof IndexRoute;
-	"/ai": typeof AiRoute;
-	"/dashboard": typeof DashboardRoute;
-	"/demo": typeof DemoRoute;
-	"/login": typeof LoginRoute;
-	"/success": typeof SuccessRoute;
-	"/api/provision-db": typeof ApiProvisionDbRoute;
-	"/api/seed-snapshots": typeof ApiSeedSnapshotsRoute;
-	"/studio": typeof StudioIndexRoute;
-	"/api/auth/$": typeof ApiAuthSplatRoute;
-	"/api/trpc/$": typeof ApiTrpcSplatRoute;
+  '/': typeof IndexRoute
+  '/ai': typeof AiRoute
+  '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
+  '/login': typeof LoginRoute
+  '/success': typeof SuccessRoute
+  '/api/provision-db': typeof ApiProvisionDbRoute
+  '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio': typeof StudioIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRoutesByTo {
-	"/": typeof IndexRoute;
-	"/ai": typeof AiRoute;
-	"/dashboard": typeof DashboardRoute;
-	"/demo": typeof DemoRoute;
-	"/login": typeof LoginRoute;
-	"/success": typeof SuccessRoute;
-	"/api/provision-db": typeof ApiProvisionDbRoute;
-	"/api/seed-snapshots": typeof ApiSeedSnapshotsRoute;
-	"/studio": typeof StudioIndexRoute;
-	"/api/auth/$": typeof ApiAuthSplatRoute;
-	"/api/trpc/$": typeof ApiTrpcSplatRoute;
+  '/': typeof IndexRoute
+  '/ai': typeof AiRoute
+  '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
+  '/login': typeof LoginRoute
+  '/success': typeof SuccessRoute
+  '/api/provision-db': typeof ApiProvisionDbRoute
+  '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio': typeof StudioIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRoutesById {
-	__root__: typeof rootRouteImport;
-	"/": typeof IndexRoute;
-	"/ai": typeof AiRoute;
-	"/dashboard": typeof DashboardRoute;
-	"/demo": typeof DemoRoute;
-	"/login": typeof LoginRoute;
-	"/success": typeof SuccessRoute;
-	"/api/provision-db": typeof ApiProvisionDbRoute;
-	"/api/seed-snapshots": typeof ApiSeedSnapshotsRoute;
-	"/studio/": typeof StudioIndexRoute;
-	"/api/auth/$": typeof ApiAuthSplatRoute;
-	"/api/trpc/$": typeof ApiTrpcSplatRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/ai': typeof AiRoute
+  '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
+  '/login': typeof LoginRoute
+  '/success': typeof SuccessRoute
+  '/api/provision-db': typeof ApiProvisionDbRoute
+  '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio/': typeof StudioIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRouteTypes {
-	fileRoutesByFullPath: FileRoutesByFullPath;
-	fullPaths:
-		| "/"
-		| "/ai"
-		| "/dashboard"
-		| "/demo"
-		| "/login"
-		| "/success"
-		| "/api/provision-db"
-		| "/api/seed-snapshots"
-		| "/studio"
-		| "/api/auth/$"
-		| "/api/trpc/$";
-	fileRoutesByTo: FileRoutesByTo;
-	to:
-		| "/"
-		| "/ai"
-		| "/dashboard"
-		| "/demo"
-		| "/login"
-		| "/success"
-		| "/api/provision-db"
-		| "/api/seed-snapshots"
-		| "/studio"
-		| "/api/auth/$"
-		| "/api/trpc/$";
-	id:
-		| "__root__"
-		| "/"
-		| "/ai"
-		| "/dashboard"
-		| "/demo"
-		| "/login"
-		| "/success"
-		| "/api/provision-db"
-		| "/api/seed-snapshots"
-		| "/studio/"
-		| "/api/auth/$"
-		| "/api/trpc/$";
-	fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/success'
+    | '/api/provision-db'
+    | '/api/seed-snapshots'
+    | '/studio'
+    | '/api/auth/$'
+    | '/api/trpc/$'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/success'
+    | '/api/provision-db'
+    | '/api/seed-snapshots'
+    | '/studio'
+    | '/api/auth/$'
+    | '/api/trpc/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai'
+    | '/dashboard'
+    | '/demo'
+    | '/login'
+    | '/success'
+    | '/api/provision-db'
+    | '/api/seed-snapshots'
+    | '/studio/'
+    | '/api/auth/$'
+    | '/api/trpc/$'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-	IndexRoute: typeof IndexRoute;
-	AiRoute: typeof AiRoute;
-	DashboardRoute: typeof DashboardRoute;
-	DemoRoute: typeof DemoRoute;
-	LoginRoute: typeof LoginRoute;
-	SuccessRoute: typeof SuccessRoute;
-	ApiProvisionDbRoute: typeof ApiProvisionDbRoute;
-	ApiSeedSnapshotsRoute: typeof ApiSeedSnapshotsRoute;
-	StudioIndexRoute: typeof StudioIndexRoute;
-	ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
-	ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute;
+  IndexRoute: typeof IndexRoute
+  AiRoute: typeof AiRoute
+  DashboardRoute: typeof DashboardRoute
+  DemoRoute: typeof DemoRoute
+  LoginRoute: typeof LoginRoute
+  SuccessRoute: typeof SuccessRoute
+  ApiProvisionDbRoute: typeof ApiProvisionDbRoute
+  ApiSeedSnapshotsRoute: typeof ApiSeedSnapshotsRoute
+  StudioIndexRoute: typeof StudioIndexRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
 }
 
-declare module "@tanstack/react-router" {
-	interface FileRoutesByPath {
-		"/success": {
-			id: "/success";
-			path: "/success";
-			fullPath: "/success";
-			preLoaderRoute: typeof SuccessRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/login": {
-			id: "/login";
-			path: "/login";
-			fullPath: "/login";
-			preLoaderRoute: typeof LoginRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/demo": {
-			id: "/demo";
-			path: "/demo";
-			fullPath: "/demo";
-			preLoaderRoute: typeof DemoRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/dashboard": {
-			id: "/dashboard";
-			path: "/dashboard";
-			fullPath: "/dashboard";
-			preLoaderRoute: typeof DashboardRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/ai": {
-			id: "/ai";
-			path: "/ai";
-			fullPath: "/ai";
-			preLoaderRoute: typeof AiRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/": {
-			id: "/";
-			path: "/";
-			fullPath: "/";
-			preLoaderRoute: typeof IndexRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/studio/": {
-			id: "/studio/";
-			path: "/studio";
-			fullPath: "/studio";
-			preLoaderRoute: typeof StudioIndexRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/api/seed-snapshots": {
-			id: "/api/seed-snapshots";
-			path: "/api/seed-snapshots";
-			fullPath: "/api/seed-snapshots";
-			preLoaderRoute: typeof ApiSeedSnapshotsRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/api/provision-db": {
-			id: "/api/provision-db";
-			path: "/api/provision-db";
-			fullPath: "/api/provision-db";
-			preLoaderRoute: typeof ApiProvisionDbRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/api/trpc/$": {
-			id: "/api/trpc/$";
-			path: "/api/trpc/$";
-			fullPath: "/api/trpc/$";
-			preLoaderRoute: typeof ApiTrpcSplatRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/api/auth/$": {
-			id: "/api/auth/$";
-			path: "/api/auth/$";
-			fullPath: "/api/auth/$";
-			preLoaderRoute: typeof ApiAuthSplatRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-	}
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/success': {
+      id: '/success'
+      path: '/success'
+      fullPath: '/success'
+      preLoaderRoute: typeof SuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai': {
+      id: '/ai'
+      path: '/ai'
+      fullPath: '/ai'
+      preLoaderRoute: typeof AiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio/': {
+      id: '/studio/'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/seed-snapshots': {
+      id: '/api/seed-snapshots'
+      path: '/api/seed-snapshots'
+      fullPath: '/api/seed-snapshots'
+      preLoaderRoute: typeof ApiSeedSnapshotsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/provision-db': {
+      id: '/api/provision-db'
+      path: '/api/provision-db'
+      fullPath: '/api/provision-db'
+      preLoaderRoute: typeof ApiProvisionDbRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/trpc/$': {
+      id: '/api/trpc/$'
+      path: '/api/trpc/$'
+      fullPath: '/api/trpc/$'
+      preLoaderRoute: typeof ApiTrpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-	IndexRoute: IndexRoute,
-	AiRoute: AiRoute,
-	DashboardRoute: DashboardRoute,
-	DemoRoute: DemoRoute,
-	LoginRoute: LoginRoute,
-	SuccessRoute: SuccessRoute,
-	ApiProvisionDbRoute: ApiProvisionDbRoute,
-	ApiSeedSnapshotsRoute: ApiSeedSnapshotsRoute,
-	StudioIndexRoute: StudioIndexRoute,
-	ApiAuthSplatRoute: ApiAuthSplatRoute,
-	ApiTrpcSplatRoute: ApiTrpcSplatRoute,
-};
+  IndexRoute: IndexRoute,
+  AiRoute: AiRoute,
+  DashboardRoute: DashboardRoute,
+  DemoRoute: DemoRoute,
+  LoginRoute: LoginRoute,
+  SuccessRoute: SuccessRoute,
+  ApiProvisionDbRoute: ApiProvisionDbRoute,
+  ApiSeedSnapshotsRoute: ApiSeedSnapshotsRoute,
+  StudioIndexRoute: StudioIndexRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiTrpcSplatRoute: ApiTrpcSplatRoute,
+}
 export const routeTree = rootRouteImport
-	._addFileChildren(rootRouteChildren)
-	._addFileTypes<FileRouteTypes>();
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
 
-import type { createStart } from "@tanstack/react-start";
-import type { getRouter } from "./router.tsx";
-
-declare module "@tanstack/react-start" {
-	interface Register {
-		ssr: true;
-		router: Awaited<ReturnType<typeof getRouter>>;
-	}
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
 }

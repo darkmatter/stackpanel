@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/darkmatter/stackpanel-go/common"
 	"github.com/darkmatter/stackpanel/agent/internal/config"
 	"github.com/darkmatter/stackpanel/agent/internal/server"
 	"github.com/rs/zerolog"
@@ -16,6 +17,7 @@ import (
 var (
 	version = "dev"
 	commit  = "none"
+	logger = common.L()
 )
 
 func main() {

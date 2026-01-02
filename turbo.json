@@ -2,10 +2,13 @@
 	"$schema": "https://turbo.build/schema.json",
 	"ui": "tui",
 	"tasks": {
+		"deps": {
+			"cache": false
+		},
 		"build": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build", "deps"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-			"outputs": ["dist/**"]
+			"outputs": ["dist/**", "build/**", "gomod2nix.toml"]
 		},
 		"lint": {
 			"dependsOn": ["^lint"]
