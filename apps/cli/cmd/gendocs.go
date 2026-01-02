@@ -1,39 +1,25 @@
 // Package cmd provides CLI commands for the stackpanel tool.
 //
-// This file contains the main gendocs command for generating MDX documentation
-// from Nix options JSON and module README files. The implementation is split
-// across multiple files:
-//   - gendocs.go (this file): Command definition and main entry point
-//   - gendocs_types.go: Type definitions
-//   - gendocs_frontmatter.go: Frontmatter and directive parsing
-//   - gendocs_options.go: Options reference generation
-//   - gendocs_discovery.go: Module discovery (README.md and .nix files)
-//   - gendocs_convert.go: MDX conversion utilities
-//   - gendocs_modules.go: Module documentation generation
+// This file contains the gendocs command for generating MDX documentation.
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/darkmatter/stackpanel/cli/internal/docgen"
 	"github.com/spf13/cobra"
 )
 
-// Directory names for generated documentation
-const (
-	DirnameReference = "reference"
-	DirnameModules   = "modules"
-	DirnameDevenv    = "devenv"
-)
-
 var gendocsCmd = &cobra.Command{
 	Use:   "gendocs <options.json> <output-dir> [modules-dir]",
-	Short: "Generate MDX documentation from Nix options JSON",
-	Long: `Generate MDX documentation from Nix options JSON and module README files.
+	Short: "Generate MDX documentation from Nix options JSON and CLI commands",
+	Long: `Generate MDX documentation from Nix options JSON, module README files, and CLI commands.
 
 This command reads the Nix options JSON file and generates MDX documentation
 files suitable for use with documentation frameworks like Fumadocs.
+
+Generated documentation includes:
+  - Options reference (from Nix options JSON)
+  - Module documentation (from README.md files in modules directory)
+  - CLI reference (from cobra command definitions)
 
 If a modules directory is provided, it will also scan for README.md files
 in subdirectories and generate corresponding MDX documentation pages.`,
@@ -53,16 +39,8 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 		nixModulesDir = args[2]
 	}
 
-	docgen.Run(optionsPath, docsDir, nixModulesDir)
-
-	return nil
-}
-
-func mkDirs(paths ...string) error {
-	for _, p := range paths {
-		if err := os.MkdirAll(p, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", p, err)
-		}
-	}
-	return nil
+	// Pass the root command to generate CLI documentation
+	// This allows docgen to traverse the command tree and extract
+	// descriptions, flags, and examples from cobra definitions
+	return docgen.RunWithCLI(optionsPath, docsDir, nixModulesDir, rootCmd)
 }

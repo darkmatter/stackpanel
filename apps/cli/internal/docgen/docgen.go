@@ -1,15 +1,19 @@
-// Package cmd provides CLI commands for the stackpanel tool.
+// Package docgen provides documentation generation utilities for stackpanel.
 //
-// This file contains the main gendocs command for generating MDX documentation
-// from Nix options JSON and module README files. The implementation is split
-// across multiple files:
-//   - gendocs.go (this file): Command definition and main entry point
-//   - gendocs_types.go: Type definitions
-//   - gendocs_frontmatter.go: Frontmatter and directive parsing
-//   - gendocs_options.go: Options reference generation
-//   - gendocs_discovery.go: Module discovery (README.md and .nix files)
-//   - gendocs_convert.go: MDX conversion utilities
-//   - gendocs_modules.go: Module documentation generation
+// This package generates MDX documentation from multiple sources:
+//   - Nix options JSON (reference documentation)
+//   - Module README files (internal documentation)
+//   - Cobra CLI commands (CLI reference)
+//
+// The implementation is split across multiple files:
+//   - docgen.go (this file): Main entry points and orchestration
+//   - types.go: Type definitions
+//   - frontmatter.go: Frontmatter and directive parsing
+//   - options.go: Options reference generation
+//   - discovery.go: Module discovery (README.md and .nix files)
+//   - convert.go: MDX conversion utilities
+//   - modules.go: Module documentation generation
+//   - cli.go: CLI documentation generation
 package docgen
 
 import (
@@ -19,32 +23,78 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
+type Topic string
 // Directory names for generated documentation
 const (
 	// Docs generated from evaluating Nix options => /core/reference
-	DirnameReference = "reference"
+	DirnameReference Topic = "reference"
 	// Docs generated from READMEs => /internal
-	DirnameModules   = "internal"
+	DirnameModules   Topic = "internal"
+	// Docs gnerate from CLI readme => cli
+	DirnameCLI 	Topic = "cli"
 )
 
-func Run(optionsPath string, docsDir string, nixModulesDir string) error {
-	if nixModulesDir == "" {
-		nixModulesDir = ""
-	}
+func mkpath(topic Topic, basedir string) string {
+	return fmt.Sprintf("%s/%s", basedir, topic)
+}
 
-	outputDir := fmt.Sprintf("%s/%s", docsDir,  DirnameReference)
-	modulesOutputDir := fmt.Sprintf("%s/%s", docsDir, DirnameModules)
+// Run generates documentation without CLI command docs.
+// This is the legacy entry point for backward compatibility.
+// Use RunWithCLI to also generate CLI documentation.
+func Run(optionsPath string, docsDir string, nixModulesDir string) error {
+	return RunWithCLI(optionsPath, docsDir, nixModulesDir, nil)
+}
+
+// RunWithCLI generates all documentation including CLI command docs.
+// If rootCmd is nil, CLI docs generation is skipped.
+func RunWithCLI(optionsPath string, docsDir string, nixModulesDir string, rootCmd *cobra.Command) error {
+	dirs := map[Topic]string{
+		"reference": mkpath(DirnameReference, docsDir),
+		"internal":  mkpath(DirnameModules, docsDir),
+		"cli":       mkpath(DirnameCLI, docsDir),
+	}
 
 	// Clean up old generated files to prevent stale content
 	// Preserve meta.json files as they are manually maintained
-	for _, dir := range []string{outputDir, modulesOutputDir} {
+	for _, dir := range []string{dirs["reference"], dirs["internal"], dirs["cli"]} {
 		if err := cleanDirectory(dir); err != nil {
 			fmt.Printf("Warning: failed to clean %s: %v\n", dir, err)
 		}
 	}
 
+	// generates docs/reference
+	if err := generateOptionsDocs(optionsPath, dirs["reference"], dirs["internal"]); err != nil {
+		return fmt.Errorf("failed to generate options docs: %w", err)
+	}
+
+	// generates docs/internal
+	if nixModulesDir != "" {
+		generatedModules, err := generateModuleDocs(nixModulesDir, dirs["internal"])
+		if err != nil {
+			return fmt.Errorf("failed to generate module docs: %w", err)
+		}
+		if len(generatedModules) > 0 {
+			fmt.Printf("\nGenerated %d module doc(s)\n", len(generatedModules))
+		}
+	}
+
+	// generates docs/cli
+	if rootCmd != nil {
+		fmt.Println("\nGenerating CLI documentation...")
+		if err := GenerateCLIDocs(rootCmd, dirs["cli"]); err != nil {
+			return fmt.Errorf("failed to generate CLI docs: %w", err)
+		}
+	}
+
+	return nil
+}
+
+
+func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir string) error {
 	// Read and parse options JSON
 	fmt.Printf("Reading options from: %s\n", optionsPath)
 	optionsData, err := os.ReadFile(optionsPath)
@@ -92,18 +142,6 @@ func Run(optionsPath string, docsDir string, nixModulesDir string) error {
 	}
 
 	fmt.Printf("\nGenerated %d reference files\n", len(categories)+1)
-
-	// Generate module documentation from README files and .nix headers
-	if nixModulesDir != "" {
-		generatedModules, err := generateModuleDocs(nixModulesDir, modulesOutputDir)
-		if err != nil {
-			return fmt.Errorf("failed to generate module docs: %w", err)
-		}
-		if len(generatedModules) > 0 {
-			fmt.Printf("\nGenerated %d module doc(s)\n", len(generatedModules))
-		}
-	}
-
 	return nil
 }
 

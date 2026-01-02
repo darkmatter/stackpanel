@@ -2,11 +2,13 @@
 # flake.nix
 #
 # Starter flake template for projects using stackpanel with devenv + flake-parts.
+# This is the recommended setup for most projects.
 #
 # Getting started:
 #   1. Run: nix flake init -t github:darkmatter/stackpanel
 #   2. Run: direnv allow
-#   3. Configure stackpanel in ./nix/stackpanel.nix
+#   3. Configure stackpanel in ./.stackpanel/config.nix
+#   4. Configure devenv options in ./nix/devenv.nix
 # ==============================================================================
 {
   description = "My project powered by stackpanel";
@@ -49,10 +51,10 @@
           devenv.shells.default = {
             imports = [ inputs.stackpanel.devenvModules.default ];
 
-            # Stackpanel config (edit ./nix/stackpanel.nix)
-            stackpanel = import ./nix/stackpanel.nix;
+            # Stackpanel config - edit ./.stackpanel/config.nix
+            stackpanel = import ./.stackpanel/config.nix;
 
-            # Devenv config (edit ./nix/devenv.nix)
+            # Devenv config - edit ./nix/devenv.nix
           }
           // (import ./nix/devenv.nix { inherit pkgs; });
 

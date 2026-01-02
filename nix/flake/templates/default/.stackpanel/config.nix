@@ -1,5 +1,5 @@
 # ==============================================================================
-# stackpanel.nix
+# .stackpanel/config.nix
 #
 # Stackpanel configuration for this project.
 # All options here are under the `stackpanel.*` namespace.
@@ -8,6 +8,11 @@
 # ==============================================================================
 {
   enable = true;
+
+  # ---------------------------------------------------------------------------
+  # CLI - Stackpanel command-line tools
+  # ---------------------------------------------------------------------------
+  cli.enable = true;
 
   # ---------------------------------------------------------------------------
   # Theme - Starship prompt with stackpanel styling

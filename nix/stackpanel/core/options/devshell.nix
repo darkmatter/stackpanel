@@ -22,11 +22,20 @@
 # This module is adapter-agnostic; the actual shell creation happens in
 # the devenv or flake adapter modules.
 # ==============================================================================
-{ lib, ... }:
+{ lib, config, ... }:
 let
   types = lib.types;
 in
 {
+  # ----------------------------------------------------------------------------
+  # Top-level packages (preferred API)
+  # ----------------------------------------------------------------------------
+  options.stackpanel.packages = lib.mkOption {
+    type = types.listOf types.package;
+    default = [];
+    description = "Packages to include in the devshell. Preferred over devshell.packages.";
+  };
+
   # ----------------------------------------------------------------------------
   # Devshell
   # ----------------------------------------------------------------------------
@@ -68,43 +77,61 @@ in
   # Files
   # ----------------------------------------------------------------------------
   options.stackpanel.files = {
-    enable = lib.mkEnableOption "Generate arbitrary files into the repo";
+    enable = lib.mkEnableOption "file generation" // { default = true; };
 
-    # command name
-    exeFilename = lib.mkOption {
-      type = types.str;
-      default = "write-files";
-      description = "Name of the generated writer executable.";
-    };
+    entries = lib.mkOption {
+      description = ''
+        Files to generate into the repo. Keys are file paths relative to repo root.
 
-    # where to write; defaults to your core behavior
-    rootVar = lib.mkOption {
-      type = types.str;
-      default = "STACKPANEL_ROOT";
-      description = "Environment variable that points at the repo root.";
-    };
-
-    files = lib.mkOption {
-      description = "List of files to write (path relative to repo root) + derivation with contents.";
-      type = types.listOf (types.submodule ({ ... }: {
+        Example:
+          stackpanel.files.entries.".github/workflows/ci.yml" = {
+            type = "text";
+            text = "name: CI\n...";
+          };
+          stackpanel.files.entries."scripts/deploy.sh" = {
+            type = "derivation";
+            drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
+            mode = "0755";
+          };
+      '';
+      type = types.attrsOf (types.submodule ({ name, ... }: {
         options = {
-          path = lib.mkOption {
-            type = types.str;
-            description = "File path relative to repo root.";
-            example = ".github/workflows/ci.yml";
+          enable = lib.mkEnableOption "Generate this file" // { default = true; };
+
+          type = lib.mkOption {
+            type = types.enum [ "text" "derivation" ];
+            default = "text";
+            description = "Type of file content: 'text' for inline text, 'derivation' for a derivation.";
           };
+
+          text = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+            description = "Text content for the file (when type = 'text').";
+          };
+
           drv = lib.mkOption {
-            type = types.package;
-            description = "Derivation whose outPath is a file containing the desired content.";
+            type = types.nullOr types.package;
+            default = null;
+            description = "Derivation whose outPath contains the file content (when type = 'derivation').";
           };
+
           mode = lib.mkOption {
             type = types.nullOr types.str;
             default = null;
-            description = "Optional chmod mode (e.g. 0644, 0755).";
+            description = "Optional chmod mode (e.g. '0644', '0755').";
+            example = "0755";
           };
         };
       }));
-      default = [];
+      default = {};
     };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Config: merge top-level packages into devshell.packages
+  # ----------------------------------------------------------------------------
+  config = {
+    stackpanel.devshell.packages = config.stackpanel.packages;
   };
 }

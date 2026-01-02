@@ -7,7 +7,7 @@
 # Getting started:
 #   1. Run: nix flake init -t github:darkmatter/stackpanel#minimal
 #   2. Run: direnv allow
-#   3. Configure stackpanel in ./nix/stackpanel.nix
+#   3. Configure stackpanel in ./.stackpanel/config.nix
 # ==============================================================================
 {
   description = "My project powered by stackpanel";
@@ -53,8 +53,8 @@
               (
                 { pkgs, ... }:
                 {
-                  # Stackpanel config (edit ./nix/stackpanel.nix)
-                  stackpanel = import ./nix/stackpanel.nix;
+                  # Stackpanel config (edit ./.stackpanel/config.nix)
+                  stackpanel = import ./.stackpanel/config.nix;
 
                   # Packages
                   packages = with pkgs; [

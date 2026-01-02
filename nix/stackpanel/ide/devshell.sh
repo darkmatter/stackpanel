@@ -11,13 +11,6 @@ export DIRENV_DISABLE=1
 # --- small helpers
 die() { printf "devshell: %s\n" "$*" >&2; exit 1; }
 
-# Avoid recursion if VS Code reuses this profile inside itself
-if [[ "${DEVENV_VSCODE_SHELL:-}" == "1" ]]; then
-  # If we're already inside, just start a login shell.
-  exec "${SHELL:-/bin/bash}" -l
-fi
-export DEVENV_VSCODE_SHELL=1
-
 # Ensure nix is available
 if ! command -v nix >/dev/null 2>&1; then
   if [[ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then
@@ -70,4 +63,4 @@ cd "$ROOT"
 # Force bash shell to avoid starship prompt issues with zsh
 # (devenv enterShell runs starship init for bash, so we need to stay in bash)
 
-exec nix develop --impure
+. <(nix print-dev-env --impure)

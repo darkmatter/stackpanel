@@ -127,7 +127,7 @@ in {
     ./options
   ];
 
-  config = lib.mkIf (cfg.enable && cfg.cli.enable) {
+  config = lib.mkIf cfg.enable {
     # Add the CLI to packages
     stackpanel.devshell.packages = [stackpanel-cli];
 

@@ -80,3 +80,30 @@ type ParsedDoc struct {
 	Content     string // Content after frontmatter
 	OutputPath  string // Resolved output path
 }
+
+// CLICommand represents a CLI command for documentation generation
+type CLICommand struct {
+	Name        string       // Command name (e.g., "services")
+	FullPath    string       // Full command path (e.g., "stackpanel services start")
+	Use         string       // Usage string from cobra (e.g., "start [service...]")
+	Short       string       // Short description
+	Long        string       // Long description
+	Example     string       // Example usage
+	Aliases     []string     // Command aliases
+	Flags       []CLIFlag    // Command-specific flags
+	GlobalFlags []CLIFlag    // Inherited/persistent flags
+	Subcommands []CLICommand // Nested subcommands
+	Deprecated  string       // Deprecation message if any
+	Hidden      bool         // Whether command is hidden
+}
+
+// CLIFlag represents a CLI flag for documentation
+type CLIFlag struct {
+	Name        string // Long flag name (e.g., "verbose")
+	Shorthand   string // Short flag (e.g., "v")
+	Type        string // Flag type (e.g., "bool", "string", "int")
+	Default     string // Default value
+	Description string // Flag description
+	Required    bool   // Whether flag is required
+	Persistent  bool   // Whether flag is inherited by subcommands
+}

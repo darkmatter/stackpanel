@@ -75,8 +75,8 @@
     # Determine exec command based on shellMode
     execCommand =
       if exec != null then exec
-      else if shellMode == "flake" then "nix develop"
-      else "nix run --accept-flake-config github:cachix/devenv/v1.11.1 -- shell";
+      else if shellMode == "flake" then ". <(nix print-dev-env --impure)"
+      else ". <(devenv print-dev-env --impure";
 
     # Determine which file to look for when finding project root
     lookupFile = if shellMode == "flake" then "flake.nix" else "devenv.yaml";
@@ -108,7 +108,7 @@
       "# --- small helpers"
       ''die() { printf "devshell: %s\n" "$*" >&2; exit 1; }''
       ""
-      vscode-anti-recursion
+      # vscode-anti-recursion
       "# Ensure nix is available"
       "if ! command -v nix >/dev/null 2>&1; then"
       "  if [[ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then"
@@ -126,6 +126,10 @@
       ""
       "# Find the right project root"
       "find_root() {"
+      ''  if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then''
+      "    printf \"%s\n\" \"$STACKPANEL_ROOT\""
+      "    return 0"
+      "  fi"
       "  # Prefer git root if available"
       "  if command -v git >/dev/null 2>&1; then"
       "    local gr"
@@ -152,7 +156,7 @@
       ''ROOT="$(find_root)"''
       ''cd "$ROOT"''
       ""
-      "exec ${execCommand}"
+      "${execCommand}"
     ];
 
   in

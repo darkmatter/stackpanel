@@ -1,5 +1,5 @@
 # ==============================================================================
-# stackpanel.nix
+# .stackpanel/config.nix
 #
 # Stackpanel configuration for this project.
 # All options here are under the `stackpanel.*` namespace.
@@ -7,7 +7,10 @@
 # Documentation: https://stackpanel.dev/docs
 # ==============================================================================
 {
-  enable = true;
+  # ---------------------------------------------------------------------------
+  # CLI - Stackpanel command-line tools
+  # ---------------------------------------------------------------------------
+  cli.enable = true;
 
   # ---------------------------------------------------------------------------
   # Theme - Starship prompt with stackpanel styling
@@ -29,10 +32,6 @@
       name = "dev";
       description = "Start development server";
     }
-    {
-      name = "build";
-      description = "Build the project";
-    }
   ];
 
   # ---------------------------------------------------------------------------
@@ -43,8 +42,8 @@
   #   region = "us-west-2";
   #   account-id = "123456789012";
   #   role-name = "dev-role";
-  #   trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/...";
-  #   profile-arn = "arn:aws:rolesanywhere:us-west-2:123456789012:profile/...";
+  #   trust-anchor-arn = "arn:aws:rolesanywhere:...";
+  #   profile-arn = "arn:aws:rolesanywhere:...";
   # };
 
   # ---------------------------------------------------------------------------
@@ -54,24 +53,5 @@
   #   enable = true;
   #   ca-url = "https://ca.internal:443";
   #   ca-fingerprint = "your-fingerprint-here";
-  # };
-
-  # ---------------------------------------------------------------------------
-  # Global Services - Shared development services
-  # ---------------------------------------------------------------------------
-  # globalServices = {
-  #   enable = true;
-  #   project-name = "myproject";
-  #   postgres.enable = true;
-  #   redis.enable = true;
-  #   minio.enable = true;
-  # };
-
-  # ---------------------------------------------------------------------------
-  # Caddy - Local HTTPS reverse proxy
-  # ---------------------------------------------------------------------------
-  # caddy = {
-  #   enable = true;
-  #   project-name = "myproject";
   # };
 }

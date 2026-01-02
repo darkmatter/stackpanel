@@ -69,14 +69,14 @@
 			"path": ".vscode/devshell"
 		}
 	},
-  "terminal.integrated.automationProfile.osx": {
-    "path": "${workspaceFolder}/.vscode/devshell"
-  },
-  "terminal.integrated.developer.devMode": true,
-  "terminal.integrated.env.osx": {
-    "PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}"
-  },
-  "go.goroot": "${workspaceFolder}/.devenv/profile/share/go",
+	"terminal.integrated.automationProfile.osx": {
+		"path": "${workspaceFolder}/.vscode/devshell"
+	},
+	"terminal.integrated.developer.devMode": true,
+	"terminal.integrated.env.osx": {
+		"PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}"
+	},
+	"go.goroot": "${workspaceFolder}/.devenv/profile/share/go",
 	"nix.enableLanguageServer": true,
 	"nix.serverPath": "/etc/profiles/per-user/coopermaruyama/bin/nixd",
 	"nix.formatterPath": "nixfmt",

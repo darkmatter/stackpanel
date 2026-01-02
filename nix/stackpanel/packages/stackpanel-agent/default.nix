@@ -8,7 +8,7 @@
 # services, providing real-time monitoring and control capabilities.
 #
 # Build inputs:
-#   - Source: apps/agent (Go module)
+#   - Source: apps/agent (Go module) + packages/stackpanel-go (shared Go library)
 #   - Output: stackpanel-agent binary
 #
 # Usage: This package is typically included via the stackpanel flake outputs.
@@ -20,16 +20,36 @@
   ...
 }:
 let
-  repoRoot = ../../..;
+  repoRoot = ../../../..;
+
+  # Source paths - evaluated before being copied to store
+  agentSrc = "${repoRoot}/apps/agent";
+  goSrc = "${repoRoot}/packages/stackpanel-go";
+
+  # Create composite source with proper directory structure for Go module resolution
+  compositeSrc = pkgs.runCommand "stackpanel-agent-src" {
+    preferLocalBuild = true;
+    allowSubstitutes = false;
+  } ''
+    mkdir -p $out/apps/agent
+    mkdir -p $out/packages/stackpanel-go
+    cp -R ${agentSrc}/. $out/apps/agent/
+    cp -R ${goSrc}/. $out/packages/stackpanel-go/
+  '';
 in
 pkgs.buildGoModule {
   pname = "stackpanel-agent";
   version = "0.1.0";
 
-  src = "${repoRoot}/apps/agent";
+  # Use a minimal source tree that contains both the agent and the local module
+  src = compositeSrc;
+  modRoot = "apps/agent";
+
+  # Use proxy vendoring to handle the local replace directive
+  proxyVendor = true;
 
   # Nix will vendor deterministically from go.mod/go.sum
-  vendorHash = "sha256-o9p/JdqaChJYVahojkFgq/3xiuSZvyXEjpEEo4GT9PU=";
+  vendorHash = "sha256-njC8SCaLJVqemEx9xC416KNJXtK4jgHDtBaamn9Lv34=";
 
   ldflags = [
     "-s"

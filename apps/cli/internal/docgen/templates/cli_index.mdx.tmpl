@@ -1,0 +1,41 @@
+---
+title: CLI Reference
+description: Complete reference for the stackpanel CLI commands
+icon: Terminal
+---
+
+# CLI Reference
+
+The `stackpanel` command-line interface provides tools for managing development environments, services, and infrastructure.
+
+## Quick Start
+
+```bash
+# Enter interactive TUI mode
+stackpanel
+
+# Show status of all services
+stackpanel status
+
+# Start development services
+stackpanel services start
+
+# Show help for any command
+stackpanel <command> --help
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+{{range .Commands}}| [`{{.Name}}`](./{{.Slug}}) | {{.Short}} |
+{{end}}
+
+## Global Flags
+
+These flags are available on all commands:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+{{range .GlobalFlags}}| `{{.FlagSyntax}}` | `{{.Type}}` | {{.DefaultFormatted}} | {{.Description}} |
+{{end}}

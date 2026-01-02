@@ -127,12 +127,12 @@
 
 in {
   config = lib.mkIf cfg.enable {
-    stackpanel.packages = {
-      generate = pkgs.writeShellScriptBin "stackpanel-generate"
-        (if hasFiles then generateScript else noFilesScript);
-
-      generate-diff = pkgs.writeShellScriptBin "stackpanel-generate-diff"
-        (if hasFiles then generateDiffScript else noFilesMessage);
-    };
+    # Add generation scripts to the devshell packages
+    stackpanel.devshell.packages = [
+      (pkgs.writeShellScriptBin "stackpanel-generate"
+        (if hasFiles then generateScript else noFilesScript))
+      (pkgs.writeShellScriptBin "stackpanel-generate-diff"
+        (if hasFiles then generateDiffScript else noFilesMessage))
+    ];
   };
 }

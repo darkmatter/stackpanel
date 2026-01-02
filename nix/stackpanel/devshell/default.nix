@@ -22,10 +22,11 @@
 {
   pkgs,
   lib ? pkgs.lib,
+  ...
 }: let
   # Import shared libraries
-  portsLib = import ../core/ports.nix { inherit lib; };
-  globalServices = import ../core/global-services.nix { inherit pkgs lib; };
+  portsLib = import ../lib/ports.nix { inherit lib; };
+  globalServices = import ../core/services/global-services.nix { inherit pkgs lib; };
 
   # Default configuration
   # NOTE: stateDir, genDir, dataDir are FULL PATHS relative to project root

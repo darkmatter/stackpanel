@@ -9,6 +9,7 @@
 #   mkDevShell { inherit pkgs; } {
 #     modules = [ ./my-module.nix ];
 #     specialArgs = { myArg = "value"; };
+#     extraPackages = [ pkgs.jq ];  # additional packages to include
 #   }
 #
 # The resulting shell includes:
@@ -18,7 +19,7 @@
 #   - passthru with devshellConfig and moduleConfig for introspection
 # ==============================================================================
 { pkgs }:
-{ modules ? [], specialArgs ? {} }:
+{ modules ? [], specialArgs ? {}, extraPackages ? [] }:
 let
   lib = pkgs.lib;
 
@@ -30,7 +31,8 @@ let
     specialArgs = { inherit pkgs; } // specialArgs;
   };
 
-  cfg = evaluated.config.devshell;
+  # Access stackpanel.devshell config
+  cfg = evaluated.config.stackpanel.devshell;
 
   envExports =
     lib.concatStringsSep "\n"
@@ -45,7 +47,7 @@ let
   ]);
 in
 pkgs.mkShell {
-  packages = cfg.packages ++ (cfg._commandPkgs or []);
+  packages = cfg.packages ++ (cfg._commandPkgs or []) ++ extraPackages;
   nativeBuildInputs = cfg.nativeBuildInputs;
   buildInputs = cfg.buildInputs;
   shellHook = shellHook;

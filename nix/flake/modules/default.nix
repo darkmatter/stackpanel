@@ -13,7 +13,7 @@
 #     imports = [ inputs.stackpanel.devenvModules.default ];
 #   };
 # ==============================================================================
-{ inputs, devshell }:
+{ inputs, devshell, ... }:
 {
   devenvModules = {
     # Main devenv module with stackpanel.* options

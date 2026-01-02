@@ -1,11 +1,13 @@
 # ==============================================================================
-# devenv.nix
+# devenv.nix - Devenv Adapter
 #
-# Main devenv module for stackpanel. Bridges stackpanel's module system
-# with devenv's native configuration.
+# Bridges stackpanel's module system with devenv's native configuration.
+# This is the ONLY file that has devenv-specific knowledge.
 #
-# Uses nix/stackpanel/default.nix as the single entrypoint for all features.
-# Features only activate when their .enable option is set.
+# Import flow:
+#   User's devenv config
+#     → this adapter
+#       → nix/stackpanel/default.nix (core module system, devenv-agnostic)
 #
 # Mappings:
 #   config.stackpanel.devshell.packages    → devenv packages
@@ -18,7 +20,6 @@
 #     imports = [ inputs.stackpanel.devenvModules.default ];
 #     stackpanel.enable = true;
 #     stackpanel.theme.enable = true;
-#     # etc.
 #   };
 # ==============================================================================
 {

@@ -30,6 +30,30 @@
     debug = lib.mkEnableOption "Enable Stackpanel Debug Mode" // {
       default = false;
     };
+
+    github = lib.mkOption {
+      description = ''
+        GitHub repository in 'owner/repo' format for this project. You should always
+        set this option since some features (like automatic user syncing) depend on it.
+      '';
+      type = lib.types.str;
+      default = "";
+      example = "darkmatter/stackpanel";
+    };
+    useDevenv = lib.mkOption {
+      description = ''
+
+        For internal use:
+
+        Whether to use devenv as the shell backend. When true, devenv features
+        like languages, processes, and tasks are available. When false, uses a
+        lean native nix shell with only stackpanel features.
+
+        Defaults to true unless SKIP_DEVENV environment variable is set.
+      '';
+      type = lib.types.bool;
+      default = builtins.getEnv "SKIP_DEVENV" != "true";
+    };
     # ----------------------------------------------------------------------------
     # Root Path
     # ----------------------------------------------------------------------------

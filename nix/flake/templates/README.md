@@ -1,135 +1,153 @@
-# nix/flake/templates/
+# Stackpanel Templates
 
 Project templates for bootstrapping new stackpanel projects.
 
-## Overview
-
-These templates provide ready-to-use project structures for common stackpanel use cases. Use `nix flake init` to bootstrap a new project.
-
 ## Available Templates
 
-### default
+| Template | Description | Use Case |
+|----------|-------------|----------|
+| `default` | devenv + flake-parts | Full-featured, recommended for most projects |
+| `native` | Native Nix shell + flake-parts | When you want stackpanel without devenv |
+| `devenv` | Standalone devenv.yaml | For devenv-first workflows (no flake.nix) |
+| `minimal` | devenv without flake-parts | Simple flake without flake-parts |
 
-A complete flake-parts project with:
-- Multi-platform support (Linux/Darwin, x86_64/aarch64)
-- Team-based secrets management with age encryption
-- GitHub Actions CI/CD integration
-- Modular architecture
+## Quick Start
 
 ```bash
-nix flake init -t github:stack-panel/nix#default
+# Create a new directory
+mkdir myproject && cd myproject
+
+# Initialize from template (choose one)
+nix flake init -t github:darkmatter/stackpanel          # default
+nix flake init -t github:darkmatter/stackpanel#native   # native
+nix flake init -t github:darkmatter/stackpanel#devenv   # devenv
+nix flake init -t github:darkmatter/stackpanel#minimal  # minimal
+
+# Enter the dev environment
+direnv allow  # or: nix develop --impure
+```
+
+## Template Details
+
+### default (Recommended)
+
+Full-featured setup with devenv and flake-parts integration.
+
+```bash
+nix flake init -t github:darkmatter/stackpanel
 ```
 
 **Structure:**
 ```
 .
-├── flake.nix
-└── .stackpanel/
-    └── team.nix
+├── flake.nix              # Flake entry with flake-parts
+├── nix/
+│   └── devenv.nix         # Devenv options (packages, languages, etc.)
+├── .stackpanel/
+│   └── config.nix         # Stackpanel options
+└── .envrc                 # Direnv configuration
 ```
+
+**Features:**
+- Multi-platform support (Linux/Darwin, x86_64/aarch64)
+- All devenv features (processes, services, languages)
+- All stackpanel features (CLI, IDE, theme, services)
+- Clean separation of concerns
+
+---
+
+### native
+
+Lightweight setup using native `mkShell` instead of devenv.
+
+```bash
+nix flake init -t github:darkmatter/stackpanel#native
+```
+
+**Structure:**
+```
+.
+├── flake.nix              # Flake with flakeModules.native
+├── .stackpanel/
+│   └── config.nix         # Stackpanel options
+└── .envrc                 # Direnv configuration
+```
+
+**Features:**
+- Faster evaluation (no devenv dependency)
+- Pure Nix implementation
+- All stackpanel features
+- No `devenv up` (use external process managers)
+
+---
 
 ### devenv
 
-A minimal devenv.nix template showcasing stackpanel features:
-- AWS Roles Anywhere integration
-- Step CA certificate management
-- Secrets handling
-- Language support examples
+Standalone devenv setup without a flake.nix.
 
 ```bash
-nix flake init -t github:stack-panel/nix#devenv
+nix flake init -t github:darkmatter/stackpanel#devenv
 ```
 
-## Template Files
+**Structure:**
+```
+.
+├── devenv.yaml            # Devenv inputs and imports
+├── devenv.nix             # Devenv + stackpanel options
+├── .stackpanel/
+│   └── config.nix         # Stackpanel options
+└── .envrc                 # Direnv configuration
+```
 
-### default/flake.nix
+**Usage:**
+```bash
+devenv shell   # Enter the environment
+devenv up      # Start processes
+```
 
-Starter flake with:
-- nixpkgs and flake-parts inputs
-- stackpanel module imports (commented until published)
-- perSystem configuration for secrets and CI
-- Example package output
+---
 
-### default/.stackpanel/team.nix
+### minimal
 
-Team member registry for secrets management:
-- Maps usernames to public keys
-- Supports GitHub key sync via agent
-- Admin role designation
-- Safe to commit (public keys only)
-
-### devenv/devenv.nix
-
-Example devenv configuration with:
-- Basic package setup
-- Commented stackpanel feature examples
-- Language configuration (JavaScript/Node.js)
-- Process management hints
-- Welcome message in enterShell
-
-## Usage
-
-### Initialize from Template
+Traditional flake.nix without flake-parts.
 
 ```bash
-# In a new project directory
-nix flake init -t github:stack-panel/nix#default
-
-# Or for devenv template
-nix flake init -t github:stack-panel/nix#devenv
+nix flake init -t github:darkmatter/stackpanel#minimal
 ```
 
-### Add Team Members
+**Structure:**
+```
+.
+├── flake.nix              # Standard Nix flake
+├── .stackpanel/
+│   └── config.nix         # Stackpanel options
+└── .envrc                 # Direnv configuration
+```
 
-Edit `.stackpanel/team.nix`:
+**Features:**
+- Simple, no abstraction layers
+- Standard `forAllSystems` pattern
+- Full control over flake outputs
+
+## Configuration
+
+All templates use the same `.stackpanel/config.nix` structure:
+
 ```nix
 {
-  users = {
-    alice = {
-      github = "alice";
-      pubkey = "ssh-ed25519 AAAA...";
-      admin = true;
-    };
-  };
+  enable = true;
+  cli.enable = true;             # CLI tools
+  theme.enable = true;           # Starship prompt
+  ide.vscode.enable = true;      # VS Code integration
+
+  # motd.enable = true;
+  # aws.roles-anywhere.enable = true;
+  # globalServices.postgres.enable = true;
 }
 ```
 
-Or sync from GitHub:
-```bash
-stackpanel team sync alice bob charlie
-```
+## Learn More
 
-### Configure Secrets
-
-In `flake.nix`:
-```nix
-stackpanel.secrets = {
-  enable = true;
-  users = teamData.users;
-  secrets = {
-    "api-key.age".owners = [ "alice" "bob" ];
-  };
-};
-```
-
-### Enable CI/CD
-
-```nix
-stackpanel.ci.github = {
-  enable = true;
-  checks = {
-    enable = true;
-    commands = [ "nix flake check" ];
-  };
-};
-```
-
-## Customization
-
-Templates are starting points. After initialization:
-
-1. Update the description in `flake.nix`
-2. Add your team members
-3. Configure secrets for your project
-4. Enable relevant stackpanel features
-5. Add your packages and development tools
+- [Stackpanel Documentation](https://stackpanel.dev/docs)
+- [Devenv Documentation](https://devenv.sh)
+- [Flake Parts](https://flake.parts)

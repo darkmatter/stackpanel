@@ -14,9 +14,9 @@
 }:
 {
   # ---------------------------------------------------------------------------
-  # Stackpanel Configuration
+  # Stackpanel Configuration (edit ./.stackpanel/config.nix)
   # ---------------------------------------------------------------------------
-  stackpanel = import ./stackpanel.nix;
+  stackpanel = import ./.stackpanel/config.nix;
 
   # ---------------------------------------------------------------------------
   # Packages - Available in the dev shell

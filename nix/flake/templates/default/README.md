@@ -31,50 +31,50 @@ bun run dev
 
 ## Configuration
 
-All configuration is in `flake.nix` under `devenv.shells.default`.
+- **Stackpanel config**: `.stackpanel/config.nix`
+- **Devenv options**: `nix/devenv.nix`
+- **Flake entry**: `flake.nix`
 
-### Enable Features
+### Enable Stackpanel Features
+
+Edit `.stackpanel/config.nix`:
 
 ```nix
-stackpanel = {
+{
   enable = true;
+  cli.enable = true;             # CLI tools
   theme.enable = true;           # Starship prompt
   ide.vscode.enable = true;      # VS Code integration
-  
+
   # AWS certificate auth
-  aws.roles-anywhere.enable = true;
-  
+  # aws.roles-anywhere.enable = true;
+
   # Global services
-  globalServices.postgres.enable = true;
-};
+  # globalServices.postgres.enable = true;
+}
 ```
 
-### Add Packages
+### Add Packages & Languages
+
+Edit `nix/devenv.nix`:
 
 ```nix
-packages = with pkgs; [
-  nodejs
-  bun
-  go
-];
-```
+{ pkgs }: {
+  packages = with pkgs; [
+    nodejs
+    bun
+    go
+  ];
 
-### Configure Languages
+  languages = {
+    typescript.enable = true;
+    go.enable = true;
+  };
 
-```nix
-languages = {
-  typescript.enable = true;
-  go.enable = true;
-  python.enable = true;
-};
-```
-
-### Environment Variables
-
-```nix
-env = {
-  DATABASE_URL = "postgres://localhost:5432/myapp";
-};
+  env = {
+    DATABASE_URL = "postgres://localhost:5432/myapp";
+  };
+}
 ```
 
 ## Common Commands
@@ -83,6 +83,8 @@ env = {
 |---------|-------------|
 | `direnv allow` | Activate the dev environment |
 | `devenv up` | Start all processes |
+| `stackpanel status` | Check stackpanel services |
+| `stackpanel users sync` | Sync team from GitHub |
 | `nix flake check` | Validate the flake |
 | `nix flake update` | Update dependencies |
 

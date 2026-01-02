@@ -87,7 +87,7 @@ in {
     ./options
   ];
 
-  config = lib.mkIf (cfg.enable && cfg.state.enable && !(cfg.cli.enable or false)) {
+  config = lib.mkIf cfg.enable {
     # Write state file on shell entry
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
     stackpanel.devshell.hooks.main = [

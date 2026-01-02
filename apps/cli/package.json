@@ -1,12 +1,12 @@
 {
-  "name": "cli",
-  "private": true,
-  "scripts": {
-    "deps": "go mod tidy && go mod download",
-    "lint": "golangci-lint run ./...",
-    "format": "gofumpt -l -w .",
-    "test": "go test -v ./...",
-    "build": "go build -ldflags \"-s -w\" -o ./build/stackpanel .",
-    "dev": "air"
-  }
+	"name": "cli",
+	"private": true,
+	"scripts": {
+		"deps": "go mod tidy && go mod download && gomod2nix",
+		"lint": "golangci-lint run ./...",
+		"format": "gofumpt -l -w .",
+		"test": "go test -v ./...",
+		"build": "go build -ldflags \"-s -w\" -o ./build/stackpanel .",
+		"dev": "air"
+	}
 }

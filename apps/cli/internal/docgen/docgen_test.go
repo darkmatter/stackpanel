@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestGroupOptions(t *testing.T) {
@@ -426,5 +428,168 @@ func TestGenerateModuleDocs_EmptyDir(t *testing.T) {
 
 	if len(generatedModules) != 0 {
 		t.Errorf("expected 0 generated modules, got %d", len(generatedModules))
+	}
+}
+
+func TestGenerateCLIDocs(t *testing.T) {
+	outputDir := t.TempDir()
+
+	// Create a mock cobra command tree
+	rootCmd := &cobra.Command{
+		Use:   "testcli",
+		Short: "Test CLI application",
+		Long:  "A test CLI application for documentation generation.",
+	}
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().Bool("no-color", false, "Disable color output")
+
+	servicesCmd := &cobra.Command{
+		Use:     "services",
+		Aliases: []string{"svc", "s"},
+		Short:   "Manage development services",
+		Long:    "Manage project-local development services (PostgreSQL, Redis, etc.)",
+	}
+
+	startCmd := &cobra.Command{
+		Use:   "start [service...]",
+		Short: "Start services",
+		Long:  "Start development services. If no services are specified, starts all.",
+		Example: `  testcli services start
+  testcli services start postgres
+  testcli services start postgres redis`,
+	}
+	startCmd.Flags().Bool("no-tui", false, "Disable interactive TUI")
+
+	stopCmd := &cobra.Command{
+		Use:   "stop [service...]",
+		Short: "Stop services",
+	}
+
+	servicesCmd.AddCommand(startCmd)
+	servicesCmd.AddCommand(stopCmd)
+	rootCmd.AddCommand(servicesCmd)
+
+	statusCmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show status of all services",
+	}
+	statusCmd.Flags().Bool("static", false, "Use static output instead of TUI")
+	rootCmd.AddCommand(statusCmd)
+
+	// Generate docs
+	err := GenerateCLIDocs(rootCmd, outputDir)
+	if err != nil {
+		t.Fatalf("GenerateCLIDocs failed: %v", err)
+	}
+
+	// Check index.mdx exists
+	indexPath := filepath.Join(outputDir, "index.mdx")
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		t.Error("index.mdx not created")
+	}
+
+	// Check index content
+	indexContent, _ := os.ReadFile(indexPath)
+	if !strings.Contains(string(indexContent), "title: CLI Reference") {
+		t.Error("expected CLI Reference title in index")
+	}
+	if !strings.Contains(string(indexContent), "[`services`](./services)") {
+		t.Error("expected services command link in index")
+	}
+	if !strings.Contains(string(indexContent), "[`status`](./status)") {
+		t.Error("expected status command link in index")
+	}
+
+	// Check services directory and index (has subcommands)
+	servicesIndexPath := filepath.Join(outputDir, "services", "index.mdx")
+	if _, err := os.Stat(servicesIndexPath); os.IsNotExist(err) {
+		t.Error("services/index.mdx not created")
+	}
+
+	servicesContent, _ := os.ReadFile(servicesIndexPath)
+	if !strings.Contains(string(servicesContent), "Manage development services") {
+		t.Error("expected services description in content")
+	}
+	if !strings.Contains(string(servicesContent), "**Aliases:**") {
+		t.Error("expected aliases section")
+	}
+	if !strings.Contains(string(servicesContent), "`svc`") {
+		t.Error("expected svc alias")
+	}
+	if !strings.Contains(string(servicesContent), "[`start`](./start)") {
+		t.Error("expected start subcommand link")
+	}
+
+	// Check start subcommand doc
+	startPath := filepath.Join(outputDir, "services", "start.mdx")
+	if _, err := os.Stat(startPath); os.IsNotExist(err) {
+		t.Error("services/start.mdx not created")
+	}
+
+	startContent, _ := os.ReadFile(startPath)
+	if !strings.Contains(string(startContent), "## Examples") {
+		t.Error("expected examples section")
+	}
+	if !strings.Contains(string(startContent), "--no-tui") {
+		t.Error("expected --no-tui flag documented")
+	}
+
+	// Check status.mdx (leaf command, no subcommands)
+	statusPath := filepath.Join(outputDir, "status.mdx")
+	if _, err := os.Stat(statusPath); os.IsNotExist(err) {
+		t.Error("status.mdx not created")
+	}
+
+	statusContent, _ := os.ReadFile(statusPath)
+	if !strings.Contains(string(statusContent), "--static") {
+		t.Error("expected --static flag documented")
+	}
+}
+
+func TestExtractFlags(t *testing.T) {
+	cmd := &cobra.Command{Use: "test"}
+	cmd.Flags().StringP("config", "c", "/etc/app.conf", "Path to config file")
+	cmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	cmd.Flags().Int("port", 8080, "Server port")
+
+	flags := extractFlags(cmd.Flags())
+
+	if len(flags) != 3 {
+		t.Errorf("expected 3 flags, got %d", len(flags))
+	}
+
+	// Check flags are sorted by name
+	expectedOrder := []string{"config", "port", "verbose"}
+	for i, f := range flags {
+		if f.Name != expectedOrder[i] {
+			t.Errorf("expected flag %d to be %s, got %s", i, expectedOrder[i], f.Name)
+		}
+	}
+
+	// Check config flag
+	configFlag := flags[0]
+	if configFlag.Shorthand != "c" {
+		t.Errorf("expected shorthand 'c', got %s", configFlag.Shorthand)
+	}
+	if configFlag.Default != "/etc/app.conf" {
+		t.Errorf("expected default '/etc/app.conf', got %s", configFlag.Default)
+	}
+	if configFlag.FlagSyntax != "--config, -c" {
+		t.Errorf("expected flag syntax '--config, -c', got %s", configFlag.FlagSyntax)
+	}
+}
+
+func TestBuildUsageString(t *testing.T) {
+	rootCmd := &cobra.Command{Use: "app"}
+	subCmd := &cobra.Command{Use: "sub"}
+	leafCmd := &cobra.Command{Use: "leaf [args...]"}
+
+	rootCmd.AddCommand(subCmd)
+	subCmd.AddCommand(leafCmd)
+
+	usage := buildUsageString(leafCmd)
+	expected := "app sub leaf [args...]"
+	if usage != expected {
+		t.Errorf("expected %q, got %q", expected, usage)
 	}
 }
