@@ -44,67 +44,17 @@
   config,
   ...
 }: {
-  # Define apps with ports and optional Caddy vhosts
-  # Each app gets:
-  #   - A deterministic port (basePort + offset)
-  #   - Environment variable: PORT_<NAME>
-  #   - Optional: Caddy vhost at <domain>.localhost
+  # NOTE: stackpanel.* options have been moved to .stackpanel/config.nix
+  # This file should only contain devenv-native options.
   #
-  # Access in shell: $PORT_WEB, $URL_WEB
-  stackpanel.apps = {
-    web = {domain = "stackpanel";}; # -> stackpanel.localhost:6400
-    server = {}; # -> port 6401 (no vhost)
-    docs = {domain = "docs";}; # -> docs.localhost:6402
-  };
-
-  # Define infrastructure services with ports
-  # Each service gets:
-  #   - A deterministic port (basePort + 10 + index)
-  #   - Environment variable: STACKPANEL_<KEY>_PORT
+  # The stackpanel configuration is evaluated separately and its outputs
+  # (packages, env, hooks) are passed to devenv without importing the
+  # stackpanel module system into devenv.
   #
-  # Access in Nix: config.stackpanel.ports.service.POSTGRES.port
-  # Access in shell: $STACKPANEL_POSTGRES_PORT
-  stackpanel.ports.services = [
-    {
-      key = "POSTGRES";
-      name = "PostgreSQL";
-    }
-    {
-      key = "REDIS";
-      name = "Redis";
-    }
-    {
-      key = "MINIO";
-      name = "Minio";
-    }
-    {
-      key = "MINIO_CONSOLE";
-      name = "Minio Console";
-    }
-  ];
-
-  # Enable project-local services (data stored in .stackpanel/state/services/)
-  # Ports are automatically computed from project-name (see stackpanel.ports)
-  stackpanel.globalServices = {
-    enable = true;
-    project-name = "stackpanel";
-
-    # PostgreSQL for local development
-    postgres = {
-      enable = true;
-      databases = ["stackpanel" "stackpanel_test"];
-      package = pkgs.postgresql_17;
-    };
-
-    # Redis for caching
-    redis.enable = true;
-
-    # Minio for S3-compatible storage
-    minio.enable = true;
-
-    # Caddy reverse proxy (uses ~/.config/caddy/sites.d/)
-    caddy.enable = true;
-  };
+  # See .stackpanel/config.nix for:
+  #   - stackpanel.apps (web, server, docs)
+  #   - stackpanel.ports.services (postgres, redis, minio)
+  #   - stackpanel.globalServices (postgres, redis, minio, caddy)
 
   # Mailpit for email testing (UI on port 8025)
   # Keep this as devenv service since it's lightweight and project-specific

@@ -54,8 +54,8 @@ Ports are computed from a hash of the project name, ensuring consistent ports ac
 
 ### Environment Variables
 
-- `STACKPANEL_BASE_PORT` - The computed base port
-- `PORT_POSTGRES`, `PORT_REDIS`, etc. - Service-specific ports
+- `STACKPANEL_STABLE_PORT` - The computed base port
+- `STACKPANEL_SERVICES_CONFIG` - JSON array of service definitions with ports
 
 ### Example
 

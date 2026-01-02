@@ -109,8 +109,6 @@ in {
     '';
   };
 
-  # Add hint about docs generation
-  stackpanel.motd.hints = lib.mkIf (config.stackpanel.enable or false) [
-    "Run 'generate-docs' to regenerate options documentation"
-  ];
+  # NOTE: MOTD hints have been moved to .stackpanel/config.nix
+  # since stackpanel options are no longer available in devenv context
 }

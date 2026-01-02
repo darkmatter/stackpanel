@@ -47,6 +47,9 @@ in
   then (import configPath { pkgs = null; lib = null; config = {}; inputs = {}; }).stackpanel or {}
   else {}
 `
+
+	// ActiveConfig returns the current active stackpanel configuration as JSON (evaluated)
+	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
 )
 
 // EvalExprResult holds the raw JSON result of a Nix expression evaluation

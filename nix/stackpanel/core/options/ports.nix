@@ -36,7 +36,7 @@ let
     options = {
       key = lib.mkOption {
         type = lib.types.str;
-        description = "Unique key for the service (used in env var: STACKPANEL_<KEY>_PORT)";
+        description = "Unique key for the service (used in generated services config)";
         example = "POSTGRES";
       };
 
@@ -107,7 +107,7 @@ in
       description = ''
         List of infrastructure services that need ports.
         Each service gets a port at basePort + 10 + index.
-        Environment variable: STACKPANEL_<KEY>_PORT
+        Provided via STACKPANEL_SERVICES_CONFIG (JSON).
       '';
       example = lib.literalExpression ''
         [

@@ -101,7 +101,7 @@
 		"**/.cursor": true,
 		"**/.zed": true,
 		"**/.git": true,
-		"**/gen": true,
+		"**/gen": false,
 		"**/.stackpanel/gen": false,
 		"**/.svn": true,
 		"**/.hg": true,

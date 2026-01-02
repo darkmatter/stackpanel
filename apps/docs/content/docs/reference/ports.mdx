@@ -139,7 +139,7 @@ Access: config.stackpanel.ports.service.POSTGRES.port
 
 List of infrastructure services that need ports.
 Each service gets a port at basePort + 10 + index.
-Environment variable: STACKPANEL__PORT
+Provided via `STACKPANEL_SERVICES_CONFIG` (JSON).
 
 | Property | Value |
 |----------|-------|
@@ -162,7 +162,7 @@ Environment variable: STACKPANEL__PORT
 
 ## `ports.services.*.key`
 
-Unique key for the service (used in env var: STACKPANEL__PORT)
+Unique key for the service (used in generated services config).
 
 | Property | Value |
 |----------|-------|
@@ -191,4 +191,3 @@ Human-readable name for display
 
 
 ---
-

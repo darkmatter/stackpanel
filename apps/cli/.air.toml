@@ -8,7 +8,17 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/stackpanel ."
+# Run go mod tidy, then gomod2nix only if go.sum changed, then build
+cmd = """
+go mod tidy && \
+HASH=$(md5 -q go.sum 2>/dev/null || md5sum go.sum | cut -d' ' -f1) && \
+if [ ! -f tmp/.go.sum.hash ] || [ "$HASH" != "$(cat tmp/.go.sum.hash)" ]; then \
+  echo 'go.sum changed, running gomod2nix...' && \
+  gomod2nix && \
+  echo "$HASH" > tmp/.go.sum.hash; \
+fi && \
+go build -o ./tmp/stackpanel .
+"""
 bin = "./tmp/stackpanel"
 include_ext = ["go", "tpl", "tmpl", "html", "md"]
 include_dir = ["cmd", "internal"]

@@ -55,10 +55,6 @@ in {
     # Shell hook to set environment variables
     shellHook = ''
       # Set environment variables for Redis
-      export STACKPANEL_REDIS_ENABLED=1
-      export STACKPANEL_REDIS_PORT="${toString port}"
-      export STACKPANEL_REDIS_DATADIR="${dataDir}"
-      export STACKPANEL_REDIS_SOCKET="${socketPath}"
       export REDIS_URL="redis://localhost:${toString port}"
       export REDIS_HOST="localhost"
       export REDIS_PORT="${toString port}"

@@ -92,6 +92,8 @@ let
     asPackage = false;
   };
 
+  workspaceName = stackpanelCfg.name or cfg.vscode.workspace-name or "stackpanel";
+
   # Generate workspace content using shared lib
   # Always include redhat.vscode-yaml for schema intellisense
   # rootPath is relative from .stackpanel/gen/ide/vscode/ to repo root
@@ -111,7 +113,7 @@ in
         lib.optionalAttrs hasFilesOption {
           # Add hints about IDE integration
           stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
-            "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
+            "Open ${baseDir}/${workspaceName}.code-workspace in VS Code for integrated terminal"
           ];
 
           # Use stackpanel.files for file generation

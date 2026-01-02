@@ -36,39 +36,54 @@
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
+  repoKey = rawApps.github or "darkmatter/stackpanel";
+  portsLib = import ../lib/ports.nix { inherit lib config; };
   # Apps use offset 0-9 (services use 10+)
   appsBaseOffset = 0;
 
   # Get the project base port
   projectBasePort = portsCfg.base-port;
 
-  # App option type (just user inputs, no computed fields)
-  appType = lib.types.submodule {
+  # Base app option type (just user inputs, no computed fields)
+  baseAppModule = { lib, ... }: {
     options = {
-      offset = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
+      name = lib.mkOption {
+        description = ''
+          Name of the application - mainly used for display purposes.
+        '';
+        type = lib.types.str;
+      };
+      path = lib.mkOption {
+        description = ''
+          Path to app directory relative to repo root.
+          Optional unless required by a specific app module.
+        '';
+        type = lib.types.nullOr lib.types.str;
         default = null;
+        example = "apps/web";
+      };
+      offset = lib.mkOption {
         description = ''
           Port offset from base port.
           If null, offset is determined by position in apps attrset.
         '';
+        type = lib.types.nullOr lib.types.int;
+        default = null;
         example = 5;
       };
-
       domain = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
         description = ''
           Domain prefix for .localhost vhost.
           If set, a Caddy vhost will be created at <domain>.localhost
         '';
+        type = lib.types.nullOr lib.types.str;
+        default = null;
         example = "api";
       };
-
       tls = lib.mkOption {
+        description = "Enable TLS for the vhost (requires Step CA)";
         type = lib.types.bool;
         default = false;
-        description = "Enable TLS for the vhost (requires Step CA)";
       };
     };
   };
@@ -82,7 +97,10 @@
           if appCfg.offset != null
           then appCfg.offset
           else idx;
-        port = projectBasePort + appsBaseOffset + offset;
+        port = portsLib.stablePort {
+          repo = repoKey;
+          service = name;
+        };
         domain =
           if appCfg.domain != null
           then "${appCfg.domain}.localhost"
@@ -105,16 +123,69 @@
     )
     appNames);
 in {
+  options.stackpanel.appModules = lib.mkOption {
+    type = lib.types.listOf lib.types.deferredModule;
+    default = [];
+    description = ''
+      Additional modules to extend app configuration options.
+
+      This allows other modules to add functionality to each app, such as
+      scaffolding, IDE support, deployment settings, etc.
+
+      These modules are applied to each app under `stackpanel.apps.<appName>.<module>`.
+    '';
+  };
   options.stackpanel.apps = lib.mkOption {
-    type = lib.types.attrsOf appType;
+    # type = lib.types.attrsOf appType;
+    type = lib.types.attrsOf (lib.types.submoduleWith {
+      modules = [ baseAppModule ] ++ config.stackpanel.appModules;
+      specialArgs = { inherit lib; };
+    });
     default = {};
     description = ''
-      Apps to assign ports and optionally create Caddy vhosts for.
-      Each app gets a port starting at basePort + 10.
+      # Stackpanel apps
+
+      Configuration options for defining and managing applications within
+      the Stackpanel environment. This module allows you to declare app-specific
+      settings, dependencies, and runtime configurations that integrate with the
+      Stackpanel orchestration system.
+
+      Core configuration options are defined here. These options are extended
+      by other modules to add functionality such as scaffolding, IDE support,
+      and deployment settings. These are typically configured at
+      `stackpanel.apps.<appName>.<module>`.
+
+      A core stackpanel feature and convention is that each app is assigned a stable,
+      deterministic port based on the repo (`organization/repo`) and app/service
+      name. This allows the port to be known ahead of time without having to
+      pass it around manually.
+
+      This key will also be used as the default value by other modules lke Caddy
+      to create virtual hosts for the app.
+
+      If you encounter a collision in the port calculation, you can set
+      `<appName>` to a different name to get a different port range.
     '';
     example = lib.literalExpression ''
       {
-        web = {};
+        web = {
+          name = "web";
+          path = "apps/web";
+          tls = true;
+          # Go app example - enable go features
+          go = {
+            enable = true;
+            # Watch directories for live reload
+            watchDirs = [ "cmd" "pkg" "internal" ];
+            # tools.go will be automatically created, add dev tools here
+            tools = [
+              "github.com/golangci/golangci-lint/cmd/golangci-lint"
+            ];
+            # By default, turborepo integration (package.json), air live reload (.air.toml),
+            # tools.go is all scaffolded automatically, but can be suppressed here
+            generateFiles = true;
+          };
+        };
         server = { offset = 1; };
         docs = { domain = "docs"; };
         api = { domain = "api"; tls = true; };

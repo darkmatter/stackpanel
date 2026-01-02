@@ -3,6 +3,9 @@
 package services
 
 import (
+	"context"
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +13,15 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	nixeval "github.com/darkmatter/stackpanel/packages/stackpanel-go/nixeval"
+)
+
+
+const (
+	PortMin = 3000
+	PortMax = 10000
+	PortMod = 100
 )
 
 // BaseDir is the root directory for all service data.
@@ -141,7 +153,6 @@ func NewBaseService(name, displayName string, port int, aliases ...string) BaseS
 func (b BaseService) Name() string        { return b.name }
 func (b BaseService) DisplayName() string { return b.displayName }
 func (b BaseService) Aliases() []string   { return b.aliases }
-func (b BaseService) Port() int           { return b.port }
 func (b BaseService) DataDir() string     { return b.dataDir }
 func (b BaseService) PidFile() string     { return b.pidFile }
 func (b BaseService) LogFile() string     { return b.logFile }
@@ -150,6 +161,42 @@ func (b BaseService) ServiceDir() string  { return filepath.Dir(b.dataDir) }
 // EnsureDir creates the service data directory
 func (b BaseService) EnsureDir() error {
 	return os.MkdirAll(b.dataDir, 0755)
+}
+
+func (b BaseService) StablePort() (int, error) {
+	ctx := context.Background()
+	// Get the github org/repo using nix evaloz
+	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
+		Expression: nixeval.ActiveConfigPreset,
+		ProjectRoot: GetProjectRoot(),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to eval nix expression: %v", err)
+	}
+	type RepoInfo struct {
+		Github string `json:"github"`
+	}
+	var data RepoInfo
+	err = json.Unmarshal(result, &data)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse nix eval result: %v", err)
+	}
+	if data.Github == "" {
+		return 0, fmt.Errorf("could not determine port: github repo info not found")
+	}
+	// Use github repo as key
+	port := computeOverRange(
+		data.Github,
+		3000,
+		10000,
+		100,
+	)
+	return port, nil
+}
+
+func (b BaseService) Port() int {
+	p, _ := b.StablePort()
+	return p
 }
 
 // ReadPID reads the PID from the pid file
@@ -214,4 +261,60 @@ func KillProcess(pid int, sig syscall.Signal) error {
 		return err
 	}
 	return process.Signal(sig)
+}
+
+func computeOverRange(
+	key string,
+	min int,
+	max int,
+	mod int,
+) int {
+	h := md5.Sum([]byte(key))
+	// get the numeric value of the first 4 hex chars
+	hexStr := fmt.Sprintf("%x", h)[:4]
+	n, _ := strconv.ParseInt(hexStr, 16, 64)
+	rawOffset := n % int64(max - min)
+	offsetInRange := rawOffset
+	roundedOffset := offsetInRange - (offsetInRange % int64(mod))
+	return min + int(roundedOffset)
+}
+
+func StablePort(
+	reposlug string, // e.g., "darkmatter/stackpanel"
+	service string, // e.g., "postgres"
+) int {
+	prange := computeOverRange(reposlug, PortMin, PortMax, PortMod)
+	return computeOverRange(
+		service,
+		prange,
+		prange + PortMod,
+		1,
+	)
+}
+
+// ComputePort computes a stable port for a service.
+// If reposlug is empty, it will attempt to detect it from the project root.
+func ComputePort(serviceName string, reposlug string) int {
+	if reposlug == "" {
+		// Try to get from nix eval
+		ctx := context.Background()
+		result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
+			Expression: nixeval.ActiveConfigPreset,
+			ProjectRoot: GetProjectRoot(),
+		})
+		if err == nil {
+			type RepoInfo struct {
+				Github string `json:"github"`
+			}
+			var data RepoInfo
+			if json.Unmarshal(result, &data) == nil && data.Github != "" {
+				reposlug = data.Github
+			}
+		}
+		// Fallback to a default if still empty
+		if reposlug == "" {
+			reposlug = "default/project"
+		}
+	}
+	return StablePort(reposlug, serviceName)
 }

@@ -1,12 +1,17 @@
 {
 	"name": "agent",
 	"private": true,
+	"dependencies": {
+		"@stackpanel/scripts": "workspace:*"
+	},
 	"scripts": {
-		"deps": "go mod tidy && go mod download",
+		"preinstall": "check-devshell",
+		"deps": "go mod tidy && gomod2nix import && gomod2nix generate --with-deps",
+		"postinstall": "bun run deps",
 		"lint": "golangci-lint run ./...",
 		"format": "gofumpt -l -w .",
 		"test": "go test -v ./...",
-		"build": "go build -ldflags \"-s -w\" -o ./dist/stackpanel-agent .",
+		"build": "bun run deps && go build -ldflags \"-s -w\" -o ./dist/stackpanel-agent .",
 		"dev": "air"
 	}
 }

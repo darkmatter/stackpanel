@@ -24,7 +24,7 @@
 #   - computeServicePort: Compute port for a service by index
 #   - computeServicesWithPorts: Compute ports for a list of services
 #   - mkServicesByKey: Create lookup attrset by service key
-#   - mkServiceEnvVars: Generate environment variables for services
+#   - mkServicesConfig: Generate JSON config for services
 #   - mkPortsConfig: Convenience function to compute everything at once
 #
 # Usage:
@@ -39,6 +39,52 @@
     modulus = 100;
     servicesBaseOffset = 10;
   };
+  constants = {
+    MIN_PORT = 3000;
+    MAX_PORT = 10000;
+    MODULUS = 100;
+  };
+
+  # Compute a value within a specified range based on a key
+  # Used internally for port computations
+  computeOverRange = {
+    key,
+    min,
+    max,
+    modulus
+  }: let
+    range = max - min;
+    rawHash = builtins.hashString "md5" key;
+    hash = builtins.substring 0 4 rawHash;
+    # numeric representation of hash
+    n = lib.trivial.fromHexString hash;
+    # convert to min < n < max, then round down to nearest modulus
+    offset = lib.mod n range;
+    # apply offset and round down
+    roundedOffset = offset - (lib.mod offset modulus);
+  in
+    min + roundedOffset;
+
+
+  stablePort = {
+    repo,
+    service
+  }: let
+    # compute a range (size 100) over 3000-10000
+    projectBase = computeOverRange {
+      key = repo;
+      min = constants.MIN_PORT;
+      max = constants.MAX_PORT;
+      modulus = constants.MODULUS;
+    };
+    # compute service port within that range
+    servicePort = computeOverRange {
+      key = service;
+      min = projectBase;
+      max = projectBase + constants.MODULUS;
+      modulus = 1;
+    };
+    in servicePort;
 
   # Compute the base port from project name
   # Uses MD5 hash of name, takes first 4 hex chars, converts to number
@@ -49,13 +95,19 @@
     portRange ? defaults.portRange,
     modulus ? defaults.modulus,
   }: let
-    hash = builtins.hashString "md5" name;
-    rawOffset = lib.trivial.fromHexString (builtins.substring 0 4 hash);
+    range = constants.MAX_PORT - constants.MIN_PORT;
+    # Ensure provided portRange is within allowed limits
+    hraw = builtins.hashString "md5" name;
+    h = builtins.substring 0 4 hraw;
+    # numeric representation of hash
+    n = lib.trivial.fromHexString h;
+
+    rawOffset = lib.trivial.fromHexString (builtins.substring 0 4 hraw);
     # Get offset within range, then round down to nearest modulus
     offsetInRange = lib.mod rawOffset portRange;
-    roundedOffset = offsetInRange - (lib.mod offsetInRange modulus);
+    roundedOffset = offsetInRange - (lib.mod offsetInRange constants.MODULUS);
   in
-    minPort + roundedOffset;
+    constants.MIN_PORT + roundedOffset;
 
   # Compute port for a service based on its index
   computeServicePort = {
@@ -91,17 +143,17 @@
       })
       servicesWithPorts);
 
-  # Generate environment variables for all services
-  # Returns { STACKPANEL_POSTGRES_PORT = "3110"; ... }
-  mkServiceEnvVars = servicesWithPorts:
-    lib.listToAttrs (map (svc: {
-        name = "STACKPANEL_${svc.key}_PORT";
-        value = toString svc.port;
+  # Generate JSON config for all services
+  mkServicesConfig = servicesWithPorts:
+    builtins.toJSON (map (svc: {
+        key = svc.key;
+        name = svc.displayName;
+        port = svc.port;
       })
       servicesWithPorts);
 
   # Convenience function: compute everything from project name and services list
-  # Returns { basePort, servicesWithPorts, servicesByKey, serviceEnvVars }
+  # Returns { basePort, servicesWithPorts, servicesByKey, servicesConfig }
   mkPortsConfig = {
     projectName,
     services ? [],
@@ -118,10 +170,13 @@
       inherit basePort services servicesBaseOffset;
     };
     servicesByKey = mkServicesByKey servicesWithPorts;
-    serviceEnvVars = mkServiceEnvVars servicesWithPorts;
+    servicesConfig = mkServicesConfig servicesWithPorts;
   in {
-    inherit basePort servicesWithPorts servicesByKey serviceEnvVars;
-    # Environment variables including base port
-    env = { STACKPANEL_BASE_PORT = toString basePort; } // serviceEnvVars;
+    inherit basePort servicesWithPorts servicesByKey servicesConfig;
+    # Environment variables including stable port + services config
+    env = {
+      STACKPANEL_STABLE_PORT = toString basePort;
+      STACKPANEL_SERVICES_CONFIG = servicesConfig;
+    };
   };
 }

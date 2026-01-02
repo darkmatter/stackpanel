@@ -15,6 +15,8 @@ This document provides a comprehensive reference for all environment variables u
 | `STACKPANEL_STATE_FILE` | Path to state file | |
 | `STACKPANEL_GEN_DIR` | Generated files directory | |
 | `STACKPANEL_NIX_CONFIG` | Nix config path in store | |
+| `STACKPANEL_STABLE_PORT` | Base port for the project | |
+| `STACKPANEL_SERVICES_CONFIG` | JSON array of service definitions | |
 
 ## CLI Commands
 
@@ -353,54 +355,6 @@ These variables configure the MinIO local S3-compatible storage service.
 
 > **Note**: We intentionally don't set `AWS_ENDPOINT_URL` or `AWS_*` credentials globally because it would break AWS IAM authentication. Apps should use `MINIO_ENDPOINT` and `S3_ENDPOINT` for MinIO access.
 
-### `STACKPANEL_MINIO_ENABLED`
-
-Whether MinIO service is enabled (1 = enabled).
-
-| Property | Value |
-|----------|-------|
-| Source | nix |
-| Required | No |
-| Default | `0` |
-
-### `STACKPANEL_MINIO_PORT`
-
-Port for the MinIO S3 API.
-
-| Property | Value |
-|----------|-------|
-| Source | nix |
-| Required | No |
-| Example | `9000` |
-
-### `STACKPANEL_MINIO_CONSOLE_PORT`
-
-Port for the MinIO web console.
-
-| Property | Value |
-|----------|-------|
-| Source | nix |
-| Required | No |
-| Example | `9001` |
-
-### `STACKPANEL_MINIO_DATADIR`
-
-Data directory for MinIO storage.
-
-| Property | Value |
-|----------|-------|
-| Source | nix |
-| Required | No |
-
-### `STACKPANEL_MINIO_CONFIGDIR`
-
-Configuration directory for MinIO.
-
-| Property | Value |
-|----------|-------|
-| Source | nix |
-| Required | No |
-
 ### `MINIO_ROOT_USER`
 
 MinIO admin username.
@@ -471,24 +425,29 @@ S3-compatible endpoint URL (points to MinIO when enabled).
 
 ---
 
-## Service Ports
+## Services Config
 
-Dynamic port variables are generated for each configured service using the pattern:
+Service ports are exposed via a JSON payload instead of per-service environment variables.
 
-```
-STACKPANEL_<KEY>_PORT
-```
+### `STACKPANEL_STABLE_PORT`
 
-Where `<KEY>` is the uppercase service key defined in `stackpanel.ports.services`.
+Base port for the project (index 0 in the port layout).
 
-### Common Service Ports
+| Property | Value |
+|----------|-------|
+| Source | nix |
+| Required | No |
+| Example | `6400` |
 
-| Variable | Description |
-|----------|-------------|
-| `STACKPANEL_POSTGRES_PORT` | PostgreSQL server port |
-| `STACKPANEL_REDIS_PORT` | Redis server port |
-| `STACKPANEL_MINIO_PORT` | MinIO S3 API port |
-| `STACKPANEL_MINIO_CONSOLE_PORT` | MinIO console port |
+### `STACKPANEL_SERVICES_CONFIG`
+
+JSON array of service definitions with ports.
+
+| Property | Value |
+|----------|-------|
+| Source | nix |
+| Required | No |
+| Example | `[{"key":"POSTGRES","name":"PostgreSQL","port":6410}]` |
 
 ### Configuring Ports
 
@@ -503,7 +462,7 @@ stackpanel.ports.services = [
 ];
 ```
 
-Each service gets a port at `basePort + 10 + index`.
+Each service gets a port at `basePort + 10 + index`, which is available in `STACKPANEL_SERVICES_CONFIG`.
 
 ---
 

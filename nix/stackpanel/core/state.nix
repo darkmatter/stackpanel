@@ -67,7 +67,6 @@
         key = svc.key;
         name = svc.displayName;
         port = svc.port;
-        envVar = "STACKPANEL_${svc.key}_PORT";
       };
     }) (lib.attrValues portsCfg.service));
 
@@ -92,6 +91,7 @@ in {
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
     stackpanel.devshell.hooks.main = [
       ''
+        export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/${cfg.state.file}"
         ${util.log.debug "state: writing state file to $STACKPANEL_STATE_DIR/${cfg.state.file}"}
         # Write stackpanel state file for CLI/agent consumption
         mkdir -p "$STACKPANEL_STATE_DIR"
@@ -101,8 +101,5 @@ STACKPANEL_STATE_EOF
         ${util.log.debug "state: state file written successfully"}
       ''
     ];
-
-    # Export state file path
-    stackpanel.devshell.env.STACKPANEL_STATE_FILE = "\${STACKPANEL_STATE_DIR}/${cfg.state.file}";
   };
 }

@@ -72,11 +72,13 @@ type StepConfig struct {
 // Evaluator provides cached Nix evaluation with file watching
 type Evaluator struct {
 	projectRoot string
-	nixFile     string
+	nixFile     string // Path to nix eval file - unused if expression is set
+	nixExpr		 string  // Nix expression to evaluate
+	nixArgs		 map[string]string // Additional Nix arguments
 	timeout     time.Duration
 
 	mu          sync.RWMutex
-	cached      *Config
+	cached      []byte
 	cachedAt    time.Time
 	cacheTTL    time.Duration
 
@@ -109,6 +111,24 @@ func WithWatchPaths(paths []string) Option {
 	}
 }
 
+func WithNixFile(nixFile string) Option {
+	return func(e *Evaluator) {
+		e.nixFile = nixFile
+	}
+}
+
+func WithArgs(args map[string]string) Option {
+	return func(e *Evaluator) {
+		e.nixArgs = args
+	}
+}
+
+func WithExpression(expr string) Option {
+	return func(e *Evaluator) {
+		e.nixExpr = expr
+	}
+}
+
 // New creates a new Evaluator for the given project root
 func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 	absRoot, err := filepath.Abs(projectRoot)
@@ -116,21 +136,24 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 		return nil, fmt.Errorf("failed to resolve project root: %w", err)
 	}
 
-	nixFile := filepath.Join(absRoot, "nix", "eval", "stackpanel-config.nix")
-	if _, err := os.Stat(nixFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("nix eval file not found: %s", nixFile)
+	// nixFile := filepath.Join(absRoot, "nix", "eval", "stackpanel-config.nix")
+	// if _, err := os.Stat(nixFile); os.IsNotExist(err) {
+	// 	return nil, fmt.Errorf("nix eval file not found: %s", nixFile)
+	// }
+	defaultWatchPaths := []string{
+		filepath.Join(absRoot, "flake.nix"),
+		filepath.Join(absRoot, ".stackpanel"),
+	}
+	if os.Getenv("STACKPANEL_NIX_CONFIG") != "" {
+		defaultWatchPaths = append(defaultWatchPaths, os.Getenv("STACKPANEL_NIX_CONFIG"))
 	}
 
 	e := &Evaluator{
 		projectRoot: absRoot,
-		nixFile:     nixFile,
+		// nixFile:     nixFile,
 		timeout:     10 * time.Second,
 		cacheTTL:    5 * time.Second,
-		watchPaths: []string{
-			filepath.Join(absRoot, "devenv.nix"),
-			filepath.Join(absRoot, "devenv.yaml"),
-			filepath.Join(absRoot, "nix"),
-		},
+		watchPaths: defaultWatchPaths,
 	}
 
 	for _, opt := range opts {
@@ -140,9 +163,29 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 	return e, nil
 }
 
-// Eval evaluates the Nix configuration and returns the result
-// Results are cached and invalidated by file watches
-func (e *Evaluator) Eval(ctx context.Context) (*Config, error) {
+// NewWatchConfig is a helper to create an Evaluator to watch the standard
+// config
+func NewWatchConfig(projectRoot string, opts ...Option) (*Evaluator, error) {
+	nixFile := filepath.Join(projectRoot, "nix", "eval", "stackpanel-config.nix")
+	if _, err := os.Stat(nixFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("nix eval file not found: %s", nixFile)
+	}
+	defaultOpts := []Option{
+		WithWatchPaths([]string{
+			filepath.Join(projectRoot, "flake.nix"),
+			filepath.Join(projectRoot, ".stackpanel"),
+		}),
+		WithNixFile(nixFile),
+	}
+	opts = append(opts, defaultOpts...)
+	return New(projectRoot, opts...)
+}
+
+// Eval lets you subscribe to a nix evaluation. It's essentially a wrapper around
+// `nix eval` that caches results and watches for file changes. It will re-evaluate
+// the expression when the files change and provide the updated result in
+// realtime. It is the core function of the agent.
+func (e *Evaluator) Eval(ctx context.Context) ([]byte, error) {
 	e.mu.RLock()
 	if e.cached != nil && !e.invalidated && time.Since(e.cachedAt) < e.cacheTTL {
 		defer e.mu.RUnlock()
@@ -159,39 +202,27 @@ func (e *Evaluator) Eval(ctx context.Context) (*Config, error) {
 		return e.cached, nil
 	}
 
-	config, err := e.evalNix(ctx)
+	result, err := e.evalNix(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	e.cached = config
+	e.cached = result
 	e.cachedAt = time.Now()
 	e.invalidated = false
 
-	return config, nil
+	return result, nil
 }
 
 // evalNix runs the actual nix eval command
-func (e *Evaluator) evalNix(ctx context.Context) (*Config, error) {
-	ctx, cancel := context.WithTimeout(ctx, e.timeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "nix", "eval", "--impure", "--json", "-f", e.nixFile)
-	cmd.Dir = e.projectRoot
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf("nix eval timed out after %v", e.timeout)
-		}
-		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
+func (e *Evaluator) evalNixConfig(ctx context.Context) (*Config, error) {
+	result, err := e.evalNix(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	var config Config
-	if err := json.Unmarshal(stdout.Bytes(), &config); err != nil {
+	if err := json.Unmarshal(result, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse nix eval output: %w", err)
 	}
 
@@ -207,6 +238,39 @@ func (e *Evaluator) evalNix(ctx context.Context) (*Config, error) {
 
 	return &config, nil
 }
+
+// evalNix runs the actual nix eval command
+func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+
+	args := []string{"eval", "--impure", "--json"}
+	if e.nixExpr != "" {
+		args = append(args, "--expr", e.nixExpr)
+	} else if e.nixFile != "" {
+		args = append(args, "-f", e.nixFile)
+	}
+	for k, v := range e.nixArgs {
+		args = append(args, "--argstr", k, v)
+	}
+
+	cmd := exec.CommandContext(ctx, "nix", args...)
+	cmd.Dir = e.projectRoot
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("nix eval timed out after %v", e.timeout)
+		}
+		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
+	}
+
+	return stdout.Bytes(), nil
+}
+
 
 // StartWatching begins watching files for changes
 // When a change is detected, the cache is invalidated

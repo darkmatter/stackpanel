@@ -16,8 +16,8 @@
 #   Web app: 3100, Server: 3101, Docs: 3102
 #   PostgreSQL: 3110, Redis: 3111, Minio: 3112
 #
-# Environment variables are generated as STACKPANEL_BASE_PORT and
-# service-specific vars like PORT_POSTGRES, PORT_REDIS, etc.
+# Environment variables are generated as STACKPANEL_STABLE_PORT and
+# STACKPANEL_SERVICES_CONFIG (JSON).
 # ==============================================================================
 {
   lib,
@@ -36,8 +36,8 @@ let
     services = cfg.services;
   };
 
-  # Generate environment variables using shared library
-  serviceEnvVars = portsLib.mkServiceEnvVars servicesWithPorts;
+  # Generate services config JSON using shared library
+  servicesConfig = portsLib.mkServicesConfig servicesWithPorts;
 
   # Get app info for MOTD display
   appsComputedCfg = config.stackpanel.appsComputed or { };
@@ -48,9 +48,9 @@ in
   config = lib.mkIf cfg.enable {
     # Expose computed ports as environment variables
     stackpanel.devshell.env = {
-      STACKPANEL_BASE_PORT = toString cfg.base-port;
-    }
-    // serviceEnvVars;
+      STACKPANEL_STABLE_PORT = toString cfg.base-port;
+      STACKPANEL_SERVICES_CONFIG = servicesConfig;
+    };
 
     # Print port info in shell MOTD
     stackpanel.devshell.hooks.after = [
@@ -59,7 +59,7 @@ in
         if [[ -z "''${STACKPANEL_QUIET:-}" ]]; then
           echo ""
           echo "📦 Stackpanel Ports (project: ${cfg.project-name})"
-          echo "   Base port: ${toString cfg.base-port}"
+          echo "   Stable port: ${toString cfg.base-port}"
           ${lib.optionalString hasApps ''
             echo ""
             echo "   Apps:"

@@ -70,11 +70,6 @@ in {
     # Apps that need to use Minio should use MINIO_ENDPOINT and S3_ENDPOINT.
     shellHook = ''
       # Set environment variables for Minio
-      export STACKPANEL_MINIO_ENABLED=1
-      export STACKPANEL_MINIO_PORT="${toString port}"
-      export STACKPANEL_MINIO_CONSOLE_PORT="${toString consolePort}"
-      export STACKPANEL_MINIO_DATADIR="${dataDir}"
-      export STACKPANEL_MINIO_CONFIGDIR="${configDir}"
       export MINIO_ROOT_USER="${accessKey}"
       export MINIO_ROOT_PASSWORD="${secretKey}"
       export MINIO_ENDPOINT="http://localhost:${toString port}"

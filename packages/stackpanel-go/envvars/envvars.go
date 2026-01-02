@@ -34,7 +34,7 @@ const (
 	CategoryStepCA   Category = "Step CA (Certificates)"
 	CategoryAWS      Category = "AWS & Roles Anywhere"
 	CategoryMinio    Category = "MinIO (S3-Compatible Storage)"
-	CategoryServices Category = "Service Ports"
+	CategoryServices Category = "Services Config"
 	CategoryDevenv   Category = "Devenv Integration"
 	CategoryIDE      Category = "IDE Integration"
 )
@@ -353,49 +353,6 @@ var (
 // ===========================================================================
 
 var (
-	// StackpanelMinioEnabled indicates whether MinIO service is enabled
-	StackpanelMinioEnabled = EnvVar{
-		Name:        "STACKPANEL_MINIO_ENABLED",
-		Description: "Whether MinIO service is enabled (1 = enabled)",
-		Category:    CategoryMinio,
-		Source:      SourceNix,
-		Default:     "0",
-	}
-
-	// StackpanelMinioPort is the port for the MinIO S3 API
-	StackpanelMinioPort = EnvVar{
-		Name:        "STACKPANEL_MINIO_PORT",
-		Description: "Port for the MinIO S3 API",
-		Category:    CategoryMinio,
-		Source:      SourceNix,
-		Example:     "9000",
-	}
-
-	// StackpanelMinioConsolePort is the port for the MinIO web console
-	StackpanelMinioConsolePort = EnvVar{
-		Name:        "STACKPANEL_MINIO_CONSOLE_PORT",
-		Description: "Port for the MinIO web console",
-		Category:    CategoryMinio,
-		Source:      SourceNix,
-		Example:     "9001",
-	}
-
-	// StackpanelMinioDataDir is the data directory for MinIO storage
-	StackpanelMinioDataDir = EnvVar{
-		Name:        "STACKPANEL_MINIO_DATADIR",
-		Description: "Data directory for MinIO storage",
-		Category:    CategoryMinio,
-		Source:      SourceNix,
-	}
-
-	// StackpanelMinioConfigDir is the configuration directory for MinIO
-	StackpanelMinioConfigDir = EnvVar{
-		Name:        "STACKPANEL_MINIO_CONFIGDIR",
-		Description: "Configuration directory for MinIO",
-		Category:    CategoryMinio,
-		Source:      SourceNix,
-	}
-
 	// MinioRootUser is the MinIO admin username
 	MinioRootUser = EnvVar{
 		Name:        "MINIO_ROOT_USER",
@@ -454,6 +411,30 @@ var (
 		Category:    CategoryMinio,
 		Source:      SourceNix,
 		Example:     "http://localhost:9000",
+	}
+)
+
+// ===========================================================================
+// Services Config
+// ===========================================================================
+
+var (
+	// StackpanelStablePort is the base port for the project (index 0 in the port layout)
+	StackpanelStablePort = EnvVar{
+		Name:        "STACKPANEL_STABLE_PORT",
+		Description: "Base port for the project (index 0 in the port layout)",
+		Category:    CategoryServices,
+		Source:      SourceNix,
+		Example:     "6400",
+	}
+
+	// StackpanelServicesConfig is the JSON array of service definitions with ports
+	StackpanelServicesConfig = EnvVar{
+		Name:        "STACKPANEL_SERVICES_CONFIG",
+		Description: "JSON array of service definitions with ports",
+		Category:    CategoryServices,
+		Source:      SourceNix,
+		Example:     `[{"key":"POSTGRES","name":"PostgreSQL","port":6410}]`,
 	}
 )
 
@@ -556,11 +537,6 @@ func All() []EnvVar {
 		AWSKeyPath,
 		AWSSigningHelper,
 		// MinIO
-		StackpanelMinioEnabled,
-		StackpanelMinioPort,
-		StackpanelMinioConsolePort,
-		StackpanelMinioDataDir,
-		StackpanelMinioConfigDir,
 		MinioRootUser,
 		MinioRootPassword,
 		MinioEndpoint,
@@ -568,6 +544,9 @@ func All() []EnvVar {
 		MinioSecretKey,
 		MinioConsoleAddress,
 		S3Endpoint,
+		// Services Config
+		StackpanelStablePort,
+		StackpanelServicesConfig,
 		// Devenv
 		DevenvRoot,
 		DevenvState,
@@ -652,17 +631,6 @@ func Validate() ValidationResult {
 	}
 
 	return result
-}
-
-// ServicePortVar returns the environment variable name for a service port
-// The pattern is STACKPANEL_<KEY>_PORT where KEY is uppercase
-func ServicePortVar(key string) string {
-	return fmt.Sprintf("STACKPANEL_%s_PORT", strings.ToUpper(key))
-}
-
-// GetServicePort retrieves the port for a service by its key
-func GetServicePort(key string) string {
-	return os.Getenv(ServicePortVar(key))
 }
 
 // PrintDebug prints all environment variables and their current values

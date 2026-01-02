@@ -422,6 +422,3 @@ func (s *Server) handleSecretsList(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
-
-
-
