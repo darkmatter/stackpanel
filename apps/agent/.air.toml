@@ -1,6 +1,6 @@
 #:schema https://json.schemastore.org/any.json
 
-# Air configuration for stackpanel agent development
+# Air configuration for agent development
 # Run `air` in this directory for live reload
 # See: https://github.com/air-verse/air
 
@@ -8,20 +8,29 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/agent ."
+# Run go mod tidy, then gomod2nix only if go.sum changed, then build
+cmd = """
+go mod tidy && \\
+HASH=$(md5 -q go.sum 2>/dev/null || md5sum go.sum | cut -d' ' -f1) && \\
+if [ ! -f tmp/.go.sum.hash ] || [ "$HASH" != "$(cat tmp/.go.sum.hash)" ]; then \\
+  echo 'go.sum changed, running gomod2nix...' && \\
+  gomod2nix && \\
+  echo "$HASH" > tmp/.go.sum.hash; \\
+fi && \\
+go build -o ./tmp/agent .
+"""
 bin = "./tmp/agent"
-include_ext = ["go", "html", "yaml"]
-include_dir = ["cmd", "internal"]
-exclude_dir = ["tmp", "vendor", ".git"]
+include_ext = ["go", "tpl", "tmpl", "html", "md"]
+include_dir = ["cmd","internal"]
+exclude_dir = ["tmp", "vendor", ".git", "build"]
 exclude_file = []
 exclude_unchanged = false
 follow_symlink = false
 delay = 200
 stop_on_error = true
-# Send SIGINT for graceful shutdown (agent is a long-running server)
-send_interrupt = true
-kill_delay = 1000
-args_bin = ["-debug"]
+send_interrupt = false
+kill_delay = 500
+args_bin = []
 rerun = false
 rerun_delay = 500
 
