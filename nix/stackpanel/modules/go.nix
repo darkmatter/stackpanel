@@ -374,10 +374,11 @@ in {
     # ) goApps;
 
     # Materialize generated files using stackpanel.files system
-    stackpanel.files.entries = lib.mkMerge (
-      lib.mapAttrsToList (name: app:
-        lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
-      ) goApps);
+    # NOTE: Disabled until file entry type is fixed
+    # stackpanel.files.entries = lib.mkMerge (
+    #   lib.mapAttrsToList (name: app:
+    #     lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
+    #   ) goApps);
 
     # add IDE support
     # stackpanel.ide.vscode.settings.
