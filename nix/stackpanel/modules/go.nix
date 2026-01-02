@@ -357,14 +357,16 @@ in {
     #   message = "stackpanel.apps.${name}.path must be set when stackpanel.apps.${name}.go.enable = true";
     # }) goApps;
 
-    stackpanel.packages = lib.attrValues (
-      (lib.mapAttrs mkGoPackage goApps)
-      // (lib.mapAttrs' (name: app:
-        lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
-      ) goApps)
-      // (lib.mapAttrs' (name: app:
-        lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
-      ) goApps));
+    # NOTE: Package building is disabled until gomod2nix.toml is set up
+    # Go packages require gomod2nix.toml which might not exist for all apps
+    # stackpanel.packages = lib.attrValues (
+    #   (lib.mapAttrs mkGoPackage goApps)
+    #   // (lib.mapAttrs' (name: app:
+    #     lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
+    #   ) goApps)
+    #   // (lib.mapAttrs' (name: app:
+    #     lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
+    #   ) goApps));
 
     # TODO: Add test checks when stackpanel.checks option exists
     # stackpanel.checks = lib.mapAttrs' (name: app:
