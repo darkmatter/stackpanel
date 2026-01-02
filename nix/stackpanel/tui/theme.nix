@@ -42,8 +42,11 @@ in {
       ''
         # syntax: bash
         # Set the config path for starship
-        export STARSHIP_CONFIG=$DEVENV_STATE/starship.toml
-        install -m 644 ${if cfg.config-file != null then cfg.config-file else starshipTheme.config} $DEVENV_STATE/starship.toml
+        # Use STACKPANEL_STATE_DIR (native) or DEVENV_STATE (devenv) 
+        _starship_state_dir="''${STACKPANEL_STATE_DIR:-''${DEVENV_STATE:-$PWD/.stackpanel/state}}"
+        export STARSHIP_CONFIG="$_starship_state_dir/starship.toml"
+        mkdir -p "$_starship_state_dir"
+        install -m 644 ${if cfg.config-file != null then cfg.config-file else starshipTheme.config} "$_starship_state_dir/starship.toml"
 
         # Only initialize starship here if we're in a direct `devenv shell` (bash)
         # When using direnv, the user's shell rc file handles starship init

@@ -9,6 +9,7 @@
   };
 
   inputs = {
+    git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1147";
     nixpkgs.url = "git+https://github.com/NixOS/nixpkgs?ref=nixos-unstable";
     flake-parts.url = "git+https://github.com/hercules-ci/flake-parts";
     devenv.url = "git+https://github.com/cachix/devenv?ref=refs/tags/v1.11.2";
@@ -30,6 +31,7 @@
       self,
       nixpkgs,
       flake-parts,
+      git-hooks,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } (
@@ -70,8 +72,16 @@
           let
             packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
 
-            # Local devshell config (dogfooding our own modules)
-            sharedDevenvConfig = import ./nix/internal/devshell.nix;
+            # Import local shell configuration
+            localShell = import ./shell.nix {
+              inherit pkgs lib inputs system;
+              git-hooks = git-hooks;
+            };
+
+            # Derivation that creates bin directory with all devshell packages
+            devshell-bin = pkgs.callPackage ./nix/flake/packages/devshell-bin.nix {
+              devShell = localShell.nativeDevshell;
+            };
           in
           {
             _module.args.pkgs = import nixpkgs {
@@ -79,25 +89,52 @@
               overlays = [ inputs.gomod2nix.overlays.default ];
             };
 
-            inherit packages;
+            packages = packages // {
+              inherit devshell-bin;
+            };
 
             checks = {
               stackpanel-cli = config.packages.stackpanel-cli;
               stackpanel-agent = config.packages.stackpanel-agent;
               default-package = config.packages.default;
+            } // lib.optionalAttrs (localShell.pre-commit-check != null) {
+              inherit (localShell) pre-commit-check;
             };
           }
           // (
-            if builtins.getEnv "SKIP_DEVENV" != "true" then
+            # When useDevenv is true, use devenv
+            if localShell.useDevenv && builtins.getEnv "SKIP_DEVENV" != "true" then
               {
-                devenv.shells.default.imports = [ sharedDevenvConfig ];
+                # Devenv provides devShells.default via its flakeModule
+                devenv.shells.default = {
+                  imports = [ localShell.localDevshellModule ];
+                  # Install git hooks on shell entry
+                  enterShell = lib.optionalString (localShell.pre-commit-check != null) ''
+                    ${localShell.pre-commit-check.shellHook}
+                  '';
+                };
                 devenv.shells.ci-darwin = {
-                  imports = [ sharedDevenvConfig ];
+                  imports = [ localShell.localDevshellModule ];
+                  containers = lib.mkForce { };
+                  devenv.flakesIntegration = true;
+                };
+              }
+            # When useDevenv is false but devenv flakeModule is loaded, use native + CI shell
+            else if builtins.getEnv "SKIP_DEVENV" != "true" then
+              {
+                # Native Nix devShell using stackpanel modules (not devenv)
+                devShells.default = localShell.nativeDevshell;
+                # CI shell still uses devenv for compatibility
+                devenv.shells.ci-darwin = {
+                  imports = [ localShell.localDevshellModule ];
                   containers = lib.mkForce { };
                 };
               }
+            # SKIP_DEVENV=true: pure native shell only
             else
-              { }
+              {
+                devShells.default = localShell.nativeDevshell;
+              }
           );
 
         # =============================================================

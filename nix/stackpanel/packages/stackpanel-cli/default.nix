@@ -51,7 +51,7 @@ pkgs.buildGoModule {
   proxyVendor = true;
 
   # Nix will vendor deterministically from go.mod/go.sum
-  vendorHash = "sha256-ZjBCSaWoCCpq3YWKzzex3sgWArsilUHb/Qjj3olMmgw=";
+  vendorHash = "sha256-7AMYyjWa1o3sxwSPG/PYSUkv6Sezkgxz9vlhjPAKkDM=";
 
   # Skip tests during build (some tests require specific environment)
   doCheck = false;

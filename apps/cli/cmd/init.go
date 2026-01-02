@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/cli/internal/generator"
 	stackconfig "github.com/darkmatter/stackpanel/packages/stackpanel-go/config"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +46,6 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	verbose, _ := cmd.Flags().GetBool("verbose")
 	quiet, _ := cmd.Flags().GetBool("quiet")
 
 	// Load configuration from various sources
@@ -83,18 +81,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 		cfg.Version = 1
 	}
 
-	// Run generator
-	gen := generator.New(cfg, verbose && !quiet)
+	// File generation is now handled by Nix's write-files script.
+	// This command now just validates config.
 
 	if !quiet {
-		fmt.Printf("Initializing stackpanel for %s...\n", cfg.ProjectName)
-	}
-
-	if err := gen.Run(); err != nil {
-		return fmt.Errorf("generation failed: %w", err)
-	}
-
-	if !quiet {
+		fmt.Printf("Config validated for %s\n", cfg.ProjectName)
 		printSuccess("Stackpanel initialized")
 	}
 

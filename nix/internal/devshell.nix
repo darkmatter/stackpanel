@@ -4,61 +4,42 @@
 # Local development shell configuration for the stackpanel repository itself.
 # This is the "dogfooding" config - we use our own modules to develop stackpanel.
 #
+# Import flow:
+#   flake.nix (devenv.shells.default.imports)
+#     → this file
+#       → nix/flake/modules/devenv.nix (devenv adapter)
+#         → nix/stackpanel/default.nix (core stackpanel module system)
+#
 # Usage in flake.nix:
-#   devenv.shells.default.imports = [ (import ./nix/internal/devshell.nix) ];
+#   devenv.shells.default.imports = [ (import ./nix/internal/devshell.nix { inherit inputs; }) ];
 # ==============================================================================
-{ pkgs, lib, ... }:
+{ inputs }:
+{ pkgs, lib, config, ... }:
+let
+  # Import config.nix which returns { stackpanel, devenv, git-hooks }
+  fullConfig = import ./main.nix { inherit pkgs lib config inputs; };
+
+  # Extract each section with defaults
+  stackpanelConfig = fullConfig.stackpanel or {};
+  devenvConfig = fullConfig.devenv or {};
+  gitHooksConfig = fullConfig.git-hooks or {};
+in
 {
-  # Import stackpanel modules
   imports = [
-    # Main stackpanel module (all features available via options)
+    # Devenv adapter - bridges stackpanel.devshell.* options to devenv
+    # The adapter imports nix/stackpanel/default.nix internally
+    # This MUST be imported for `stackpanel.*` options to be available in devenv
     ../flake/modules/devenv.nix
-    # Internal devenv config (services, modules we're developing)
+
+    # Internal project-specific devenv modules (apps/docs, tools, etc.)
     ./devenv/devenv.nix
   ];
 
-  # Stackpanel options (imported from separate file for cleaner organization)
-  stackpanel = import ../../.stackpanel/config.nix;
+  # Stackpanel options (from .stackpanel/config.nix)
+  stackpanel = stackpanelConfig;
 
   # ===========================================================================
-  # Devenv options below (packages, languages, env, enterShell, etc.)
+  # Devenv-specific options (from .stackpanel/config.nix devenv section)
+  # These are native devenv options, not stackpanel options
   # ===========================================================================
-
-  # Core packages for development
-  packages = with pkgs; [
-    bun
-    nodejs_22
-    go
-    air # Go live reload for CLI development
-    jq
-    git
-    nixd
-    nixfmt
-  ];
-
-  # Languages
-  languages = {
-    javascript = {
-      enable = true;
-      bun.enable = true;
-      bun.install.enable = true;
-    };
-    typescript.enable = true;
-    go = {
-      enable = true;
-      package = pkgs.go;
-    };
-  };
-
-  # Environment variables
-  env = {
-    STACKPANEL_SHELL_ID = "1";
-    EDITOR = "vim";
-    STEP_CA_URL = "https://ca.internal:443";
-    STEP_CA_FINGERPRINT = "3996f98e09f54bdfc705bb0f022d70dc3e15230c009add60508d0593ae805d5a";
-  };
-
-  enterShell = ''
-    echo "✅ Devenv for the stackpanel repository"
-  '';
-}
+} // devenvConfig

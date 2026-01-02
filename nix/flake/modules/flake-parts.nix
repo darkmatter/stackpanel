@@ -19,7 +19,7 @@
 #   - modules: List of devshell modules to include
 #   - specialArgs: Extra arguments passed to module evaluation
 # ==============================================================================
-{ localFlake, withSystem, devshell }:
+{ localFlake, withSystem, devshell, ... }:
 { config, lib, ... }:
 let
   cfg = config.stackpanel.devshell;
