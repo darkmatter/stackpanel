@@ -1,6 +1,6 @@
 #:schema https://json.schemastore.org/any.json
 
-# Air configuration for stackpanel CLI development
+# Air configuration for cli development
 # Run `air` in this directory for live reload
 # See: https://github.com/air-verse/air
 
@@ -10,18 +10,18 @@ tmp_dir = "tmp"
 [build]
 # Run go mod tidy, then gomod2nix only if go.sum changed, then build
 cmd = """
-go mod tidy && \
-HASH=$(md5 -q go.sum 2>/dev/null || md5sum go.sum | cut -d' ' -f1) && \
-if [ ! -f tmp/.go.sum.hash ] || [ "$HASH" != "$(cat tmp/.go.sum.hash)" ]; then \
-  echo 'go.sum changed, running gomod2nix...' && \
-  gomod2nix && \
-  echo "$HASH" > tmp/.go.sum.hash; \
-fi && \
-go build -o ./tmp/stackpanel .
+go mod tidy && \\
+HASH=$(md5 -q go.sum 2>/dev/null || md5sum go.sum | cut -d' ' -f1) && \\
+if [ ! -f tmp/.go.sum.hash ] || [ "$HASH" != "$(cat tmp/.go.sum.hash)" ]; then \\
+  echo 'go.sum changed, running gomod2nix...' && \\
+  gomod2nix && \\
+  echo "$HASH" > tmp/.go.sum.hash; \\
+fi && \\
+go build -o ./tmp/cli .
 """
-bin = "./tmp/stackpanel"
+bin = "./tmp/cli"
 include_ext = ["go", "tpl", "tmpl", "html", "md"]
-include_dir = ["cmd", "internal"]
+include_dir = ["cmd","internal"]
 exclude_dir = ["tmp", "vendor", ".git", "build"]
 exclude_file = []
 exclude_unchanged = false
@@ -30,7 +30,7 @@ delay = 200
 stop_on_error = true
 send_interrupt = false
 kill_delay = 500
-args_bin = ["status"]
+args_bin = []
 rerun = false
 rerun_delay = 500
 
