@@ -222,21 +222,36 @@
   };
 
   # Build a Go app package
-  # Uses source with generated files if generation is enabled
+  # Supports both Go workspace (root go.mod) and per-app go.mod layouts
   mkGoPackage = name: app: let
     goCfg = app.go;
     repoRoot = ../../..;
-    # Use generated source if file generation is enabled, otherwise use raw repo
-    src = if goCfg.generateFiles
-          then mkGoSourceWithGenerated name app
-          else repoRoot;
+    appPath = app.path;
+    
+    # Check if app has its own go.mod (per-app layout)
+    hasPerAppGoMod = builtins.pathExists (repoRoot + "/${appPath}/go.mod");
+    hasPerAppGomod2nix = builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml");
+    
+    # For per-app layout, use the app directory as source
+    # For workspace layout, use repo root with subPackages
+    src = if hasPerAppGoMod
+          then repoRoot + "/${appPath}"
+          else if goCfg.generateFiles
+               then mkGoSourceWithGenerated name app
+               else repoRoot;
+    
+    # gomod2nix.toml location depends on layout
+    gomod2nixPath = if hasPerAppGomod2nix
+                    then repoRoot + "/${appPath}/gomod2nix.toml"
+                    else repoRoot + "/gomod2nix.toml";
   in pkgs.buildGoApplication {
     pname = name;
     version = goCfg.version;
     inherit src;
 
-    modules = src + "/gomod2nix.toml";
-    subPackages = [ app.path ];  # e.g., "apps/cli"
+    modules = gomod2nixPath;
+    # For per-app layout, build from current dir; for workspace, specify subpackage
+    subPackages = if hasPerAppGoMod then [ "." ] else [ appPath ];
 
     doCheck = false;  # Tests run separately via checks
 
@@ -245,9 +260,12 @@
       "-w"
     ] ++ goCfg.ldflags;
 
-    # Rename binary if needed (e.g., cli -> stackpanel)
+    # Rename binary if needed
     postInstall = lib.optionalString (goCfg.binaryName != null) ''
-      mv $out/bin/${lib.last (lib.splitString "/" app.path)} $out/bin/${goCfg.binaryName}
+      # For per-app layout, binary name is the directory name
+      # For workspace layout, binary name is the last path component
+      oldName=${if hasPerAppGoMod then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)}
+      mv $out/bin/$oldName $out/bin/${goCfg.binaryName} 2>/dev/null || true
     '';
 
     meta = with lib; {
@@ -256,13 +274,27 @@
     };
   };
 
-  # Create mkGoEnv for development (assumes root go.mod)
+  # Create mkGoEnv for development
+  # Supports both Go workspace (root go.mod) and per-app go.mod layouts
   mkGoDevEnv = name: app: let
     goCfg = app.go;
     repoRoot = ../../..;
+    appPath = app.path;
+    
+    # Check if app has its own go.mod (per-app layout)
+    hasPerAppGoMod = builtins.pathExists (repoRoot + "/${appPath}/go.mod");
+    hasPerAppGomod2nix = builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml");
+    
+    pwd = if hasPerAppGoMod
+          then repoRoot + "/${appPath}"
+          else repoRoot;
+    
+    gomod2nixPath = if hasPerAppGomod2nix
+                    then repoRoot + "/${appPath}/gomod2nix.toml"
+                    else repoRoot + "/gomod2nix.toml";
   in pkgs.mkGoEnv {
-    pwd = repoRoot;
-    modules = repoRoot + "/gomod2nix.toml";
+    inherit pwd;
+    modules = gomod2nixPath;
   };
 
   # Create test package (assumes root go.mod)
@@ -277,6 +309,17 @@
   '';
 
 in {
+  # Option for exposing Go packages (not included in devshell)
+  options.stackpanel.go.packages = lib.mkOption {
+    type = lib.types.attrsOf lib.types.unspecified;
+    default = {};
+    description = ''
+      Go packages for apps with go.enable = true.
+      These are exposed for `nix build` but NOT included in devshell.
+      Access via config.stackpanel.go.packages.apps.<name>, etc.
+    '';
+  };
+
   # Always add go options to all apps (not conditional)
   config = lib.mkMerge [
     {
@@ -366,22 +409,17 @@ in {
     #   message = "stackpanel.apps.${name}.path must be set when stackpanel.apps.${name}.go.enable = true";
     # }) goApps;
 
-    # NOTE: Package building requires Go workspace setup (single go.mod at root)
-    # For now, each app has its own go.mod which isn't supported by buildGoApplication
-    # TODO: Support per-app go.mod or Go workspaces
-    # stackpanel.packages = lib.attrValues (
-    #   (lib.mapAttrs mkGoPackage goApps)
-    #   // (lib.mapAttrs' (name: app:
-    #     lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
-    #   ) goApps)
-    #   // (lib.mapAttrs' (name: app:
-    #     lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
-    #   ) goApps));
+    # Expose Go packages via stackpanel.go.packages (NOT in devshell)
+    # These are for `nix build` outputs, not devshell dependencies
+    # Build failures here won't prevent shell entry
+    stackpanel.go.packages = {
+      apps = lib.mapAttrs mkGoPackage goApps;
+      devEnvs = lib.mapAttrs mkGoDevEnv goApps;
+      generatedFiles = lib.mapAttrs mkGeneratedFiles goApps;
+    };
 
     # TODO: Add test checks when stackpanel.checks option exists
-    # stackpanel.checks = lib.mapAttrs' (name: app:
-    #   lib.nameValuePair "${name}-tests" (mkGoTests name app)
-    # ) goApps;
+    # stackpanel.go.checks = lib.mapAttrs mkGoTests goApps;
 
     # Materialize generated files using stackpanel.files system
     stackpanel.files.entries = lib.mkMerge (
