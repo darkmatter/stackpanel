@@ -160,6 +160,16 @@ var servicesListCmd = &cobra.Command{
 	},
 }
 
+var servicesComputePortCmd = &cobra.Command{
+	Use:   "port <service-name>",
+	Short: "Compute stable port for a service based on project name",
+	Run: func(cmd *cobra.Command, args []string) {
+		serviceName := args[0]
+		port := svc.ComputePort(serviceName, "")
+		fmt.Printf("%d\n", port)
+	},
+}
+
 func init() {
 	servicesCmd.AddCommand(servicesStartCmd)
 	servicesCmd.AddCommand(servicesStopCmd)

@@ -65,6 +65,11 @@ in {
       portRange = cfg.ports.portRange or portsLib.defaults.portRange;
       modulus = cfg.ports.modulus or portsLib.defaults.modulus;
     };
+    servicesWithPorts = portsLib.computeServicesWithPorts {
+      basePort = basePort;
+      services = cfg.ports.services or [];
+    };
+    servicesConfig = portsLib.mkServicesConfig servicesWithPorts;
 
     # Build global services
     gs = globalServices.mkGlobalServices {
@@ -85,14 +90,16 @@ in {
       export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.dataDir}}"
       mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
 
-      export STACKPANEL_BASE_PORT="${toString basePort}"
+      export STACKPANEL_STABLE_PORT="${toString basePort}"
+      export STACKPANEL_SERVICES_CONFIG='${servicesConfig}'
       export STACKPANEL_PROJECT_NAME="${cfg.projectName}"
     '';
 
     allShellHook = dirSetupHook + "\n" + gs.shellHook;
 
     allEnv = gs.env // {
-      STACKPANEL_BASE_PORT = toString basePort;
+      STACKPANEL_STABLE_PORT = toString basePort;
+      STACKPANEL_SERVICES_CONFIG = servicesConfig;
       STACKPANEL_PROJECT_NAME = cfg.projectName;
     };
 

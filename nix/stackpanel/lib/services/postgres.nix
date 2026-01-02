@@ -66,13 +66,6 @@ in {
     # Shell hook to set environment variables
     shellHook = ''
       # Set environment variables for PostgreSQL
-      export STACKPANEL_POSTGRES_ENABLED=1
-      export STACKPANEL_POSTGRES_PORT="${toString port}"
-      export STACKPANEL_POSTGRES_DATADIR="${dataDir}"
-      export STACKPANEL_POSTGRES_SOCKETDIR="${socketDir}"
-      ${lib.optionalString (databases != []) ''
-        export STACKPANEL_POSTGRES_DATABASES="${lib.concatStringsSep "," databases}"
-      ''}
       export PGDATA="${dataDir}"
       export PGHOST="${socketDir}"
       export PGPORT="${toString port}"

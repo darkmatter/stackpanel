@@ -38,6 +38,7 @@ in
     ./secrets  # SOPS helper
     ./tui      # TUI components
     ./ide      # IDE integration (VS Code)
+    ./modules/go.nix  # Go app support
 
   ];
 

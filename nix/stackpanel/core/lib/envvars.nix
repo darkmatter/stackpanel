@@ -68,7 +68,7 @@ let
     stepca = "Step CA (Certificates)";
     aws = "AWS & Roles Anywhere";
     minio = "MinIO (S3-Compatible Storage)";
-    services = "Service Ports";
+    services = "Services Config";
     devenv = "Devenv Integration";
     ide = "IDE Integration";
   };
@@ -310,44 +310,6 @@ rec {
   # MinIO (S3-Compatible Storage)
   # ===========================================================================
   minio = {
-    STACKPANEL_MINIO_ENABLED = mkEnvVar {
-      name = "STACKPANEL_MINIO_ENABLED";
-      description = "Whether MinIO service is enabled (1 = enabled)";
-      category = categories.minio;
-      source = "nix";
-      default = "0";
-    };
-
-    STACKPANEL_MINIO_PORT = mkEnvVar {
-      name = "STACKPANEL_MINIO_PORT";
-      description = "Port for the MinIO S3 API";
-      category = categories.minio;
-      source = "nix";
-      example = "9000";
-    };
-
-    STACKPANEL_MINIO_CONSOLE_PORT = mkEnvVar {
-      name = "STACKPANEL_MINIO_CONSOLE_PORT";
-      description = "Port for the MinIO web console";
-      category = categories.minio;
-      source = "nix";
-      example = "9001";
-    };
-
-    STACKPANEL_MINIO_DATADIR = mkEnvVar {
-      name = "STACKPANEL_MINIO_DATADIR";
-      description = "Data directory for MinIO storage";
-      category = categories.minio;
-      source = "nix";
-    };
-
-    STACKPANEL_MINIO_CONFIGDIR = mkEnvVar {
-      name = "STACKPANEL_MINIO_CONFIGDIR";
-      description = "Configuration directory for MinIO";
-      category = categories.minio;
-      source = "nix";
-    };
-
     MINIO_ROOT_USER = mkEnvVar {
       name = "MINIO_ROOT_USER";
       description = "MinIO admin username";
@@ -403,48 +365,23 @@ rec {
   };
 
   # ===========================================================================
-  # Dynamic Service Ports (STACKPANEL_<KEY>_PORT)
+  # Services Config
   # ===========================================================================
-  # These are generated dynamically based on stackpanel.ports.services
-  # The pattern is: STACKPANEL_${uppercase(key)}_PORT
   services = {
-    _pattern = mkEnvVar {
-      name = "STACKPANEL_<KEY>_PORT";
-      description = "Port for a configured service. <KEY> is the uppercase service key.";
+    STACKPANEL_STABLE_PORT = mkEnvVar {
+      name = "STACKPANEL_STABLE_PORT";
+      description = "Base port for the project (index 0 in the port layout)";
       category = categories.services;
       source = "nix";
-      example = "STACKPANEL_POSTGRES_PORT=6410";
+      example = "6400";
     };
 
-    # Common service port variables
-    STACKPANEL_POSTGRES_PORT = mkEnvVar {
-      name = "STACKPANEL_POSTGRES_PORT";
-      description = "PostgreSQL server port";
+    STACKPANEL_SERVICES_CONFIG = mkEnvVar {
+      name = "STACKPANEL_SERVICES_CONFIG";
+      description = "JSON array of service definitions with ports";
       category = categories.services;
       source = "nix";
-      default = "5432";
-    };
-
-    STACKPANEL_REDIS_PORT = mkEnvVar {
-      name = "STACKPANEL_REDIS_PORT";
-      description = "Redis server port";
-      category = categories.services;
-      source = "nix";
-      default = "6379";
-    };
-
-    STACKPANEL_MINIO_PORT = mkEnvVar {
-      name = "STACKPANEL_MINIO_PORT";
-      description = "MinIO S3 API port (same as minio.STACKPANEL_MINIO_PORT)";
-      category = categories.services;
-      source = "nix";
-    };
-
-    STACKPANEL_MINIO_CONSOLE_PORT = mkEnvVar {
-      name = "STACKPANEL_MINIO_CONSOLE_PORT";
-      description = "MinIO console port";
-      category = categories.services;
-      source = "nix";
+      example = ''[{"key":"POSTGRES","name":"PostgreSQL","port":6410}]'';
     };
   };
 

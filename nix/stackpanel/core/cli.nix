@@ -72,7 +72,6 @@
         key = svc.key;
         name = svc.displayName;
         port = svc.port;
-        envVar = "STACKPANEL_${svc.key}_PORT";
       };
     }) (lib.attrValues portsCfg.service));
 
@@ -127,7 +126,7 @@ in {
     ./options
   ];
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && builtins.getEnv "STACKPANEL_SKIP_CLI" != "true") {
     # Add the CLI to packages
     stackpanel.devshell.packages = [stackpanel-cli];
 
@@ -142,6 +141,7 @@ in {
       ''
         # Generate stackpanel files via CLI
         # Read config from nix store, replace $STACKPANEL_ROOT with actual value
+        export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/stackpanel.json"
         _sp_config=$(cat ${configFile} | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
         echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel init ${lib.optionalString cfg.cli.quiet "--quiet"}
       ''
@@ -149,7 +149,6 @@ in {
 
     # Export paths for other tools
     stackpanel.devshell.env = {
-      STACKPANEL_STATE_FILE = "\${STACKPANEL_STATE_DIR}/stackpanel.json";
       # Path to the Nix-generated config in the store (for nix eval to read)
       STACKPANEL_NIX_CONFIG = "${configFile}";
     };

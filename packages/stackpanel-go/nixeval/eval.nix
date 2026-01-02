@@ -87,4 +87,5 @@ in
     envRoot = envRoot;
     stateFile = stateFile;
     nixConfigPath = nixConfigPath;
+    pwd = pwd;
   }
