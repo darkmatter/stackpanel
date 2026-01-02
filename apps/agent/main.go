@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/darkmatter/stackpanel-go/common"
 	"github.com/darkmatter/stackpanel/agent/internal/config"
 	"github.com/darkmatter/stackpanel/agent/internal/server"
+	"github.com/darkmatter/stackpanel/stackpanel-go/common"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
