@@ -37,7 +37,7 @@
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
   repoKey = rawApps.github or "darkmatter/stackpanel";
-  portsLib = import ../lib/ports.nix { inherit lib config; };
+  portsLib = import ../../lib/ports.nix { inherit lib config; };
   # Apps use offset 0-9 (services use 10+)
   appsBaseOffset = 0;
 
