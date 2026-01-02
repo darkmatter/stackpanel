@@ -194,21 +194,30 @@
   '';
 
   # Create file entries for materialization (uses stackpanel.files system)
+  # Each file needs its own derivation (not a path into another derivation)
   mkGeneratedFileEntries = name: app: let
     goCfg = app.go;
-    generatedFiles = mkGeneratedFiles name app;
+    # Create individual file derivations
+    packageJsonDrv = pkgs.runCommand "${name}-package.json" {
+      nativeBuildInputs = [ pkgs.jq ];
+      passAsFile = [ "jsonContent" ];
+      jsonContent = builtins.toJSON (generatePackageJson name app);
+    } ''jq '.' < "$jsonContentPath" > $out'';
+    
+    airTomlDrv = pkgs.writeText "${name}-air.toml" (generateAirToml name app);
+    toolsGoDrv = pkgs.writeText "${name}-tools.go" (generateToolsGo name app);
   in {
     "${app.path}/package.json" = {
       type = "derivation";
-      drv = generatedFiles + "/${app.path}/package.json";
+      drv = packageJsonDrv;
     };
     "${app.path}/.air.toml" = {
       type = "derivation";
-      drv = generatedFiles + "/${app.path}/.air.toml";
+      drv = airTomlDrv;
     };
     "${app.path}/tools.go" = {
       type = "derivation";
-      drv = generatedFiles + "/${app.path}/tools.go";
+      drv = toolsGoDrv;
     };
   };
 
@@ -357,16 +366,14 @@ in {
     #   message = "stackpanel.apps.${name}.path must be set when stackpanel.apps.${name}.go.enable = true";
     # }) goApps;
 
-    # NOTE: Package building is disabled until gomod2nix.toml is set up
-    # Go packages require gomod2nix.toml which might not exist for all apps
-    # stackpanel.packages = lib.attrValues (
-    #   (lib.mapAttrs mkGoPackage goApps)
-    #   // (lib.mapAttrs' (name: app:
-    #     lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
-    #   ) goApps)
-    #   // (lib.mapAttrs' (name: app:
-    #     lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
-    #   ) goApps));
+    stackpanel.packages = lib.attrValues (
+      (lib.mapAttrs mkGoPackage goApps)
+      // (lib.mapAttrs' (name: app:
+        lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
+      ) goApps)
+      // (lib.mapAttrs' (name: app:
+        lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
+      ) goApps));
 
     # TODO: Add test checks when stackpanel.checks option exists
     # stackpanel.checks = lib.mapAttrs' (name: app:
@@ -374,11 +381,10 @@ in {
     # ) goApps;
 
     # Materialize generated files using stackpanel.files system
-    # NOTE: Disabled until file entry type is fixed
-    # stackpanel.files.entries = lib.mkMerge (
-    #   lib.mapAttrsToList (name: app:
-    #     lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
-    #   ) goApps);
+    stackpanel.files.entries = lib.mkMerge (
+      lib.mapAttrsToList (name: app:
+        lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
+      ) goApps);
 
     # add IDE support
     # stackpanel.ide.vscode.settings.
