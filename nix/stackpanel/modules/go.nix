@@ -366,14 +366,17 @@ in {
     #   message = "stackpanel.apps.${name}.path must be set when stackpanel.apps.${name}.go.enable = true";
     # }) goApps;
 
-    stackpanel.packages = lib.attrValues (
-      (lib.mapAttrs mkGoPackage goApps)
-      // (lib.mapAttrs' (name: app:
-        lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
-      ) goApps)
-      // (lib.mapAttrs' (name: app:
-        lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
-      ) goApps));
+    # NOTE: Package building requires Go workspace setup (single go.mod at root)
+    # For now, each app has its own go.mod which isn't supported by buildGoApplication
+    # TODO: Support per-app go.mod or Go workspaces
+    # stackpanel.packages = lib.attrValues (
+    #   (lib.mapAttrs mkGoPackage goApps)
+    #   // (lib.mapAttrs' (name: app:
+    #     lib.nameValuePair "${name}-dev" (mkGoDevEnv name app)
+    #   ) goApps)
+    #   // (lib.mapAttrs' (name: app:
+    #     lib.nameValuePair "${name}-generated-files" (mkGeneratedFiles name app)
+    #   ) goApps));
 
     # TODO: Add test checks when stackpanel.checks option exists
     # stackpanel.checks = lib.mapAttrs' (name: app:
