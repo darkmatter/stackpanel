@@ -33,5 +33,6 @@
     ./ports.nix
     ./secrets.nix
     ./theme.nix
+    ./users.nix
   ];
 }

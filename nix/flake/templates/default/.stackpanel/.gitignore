@@ -1,0 +1,6 @@
+# Runtime state (gitignored)
+state/
+
+# Data directory contains generated files that should be committed
+# but can be regenerated with `stackpanel users sync`
+# data/

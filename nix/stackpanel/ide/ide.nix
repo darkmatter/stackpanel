@@ -42,7 +42,7 @@ let
   ideLib = import ../lib/ide.nix { inherit pkgs lib; };
 
   # Base directory for VS Code files (in gen-dir since these are generated)
-  baseDir = "${dirs.gen}/ide/vscode";
+  baseDir = "${dirs.gen}/vscode";
 
   # Loader path as VS Code sees it (with ${workspaceFolder} variable)
   loaderPath = "\${workspaceFolder}/${baseDir}/devshell-loader.sh";
@@ -106,7 +106,7 @@ in
 {
   config =
     lib.mkIf
-      (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable && !(stackpanelCfg.cli.enable or false))
+      (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable)
       (
         lib.optionalAttrs hasFilesOption {
           # Add hints about IDE integration
@@ -114,33 +114,27 @@ in
             "Open ${baseDir}/${cfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
           ];
 
-          # Warn about unimplemented editors
-          warnings =
-            lib.optional cfg.zed.enable "stackpanel.ide.zed.enable is set but Zed integration is not yet implemented"
-            ++ lib.optional cfg.cursor.enable "stackpanel.ide.cursor.enable is set but Cursor integration is not yet implemented";
-
           # Use stackpanel.files for file generation
           # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
-          stackpanel.files = {
-            enable = true;
-            files = [
-              # Devshell loader script (executable)
-              {
-                path = "${baseDir}/devshell-loader.sh";
-                drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
-                mode = "755";
-              }
-            ]
+          stackpanel.files.enable = true;
+          stackpanel.files.entries = {
+            "${baseDir}/devshell-loader.sh" = {
+              type = "derivation";
+              drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
+              mode = "0755";
+            };
+          } // lib.optionalAttrs (cfg.vscode.output-mode == "workspace") {
             # Generate workspace file (default mode)
-            ++ lib.optional (cfg.vscode.output-mode == "workspace") {
-              path = "${baseDir}/${cfg.vscode.workspace-name}.code-workspace";
+            "${baseDir}/${cfg.vscode.workspace-name}.code-workspace" = {
+              type = "derivation";
               drv = pkgs.writeText "${cfg.vscode.workspace-name}.code-workspace" (
                 builtins.toJSON workspaceContent
               );
-            }
+            };
+          } // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
             # Generate settings.json (explicit opt-in)
-            ++ lib.optional (cfg.vscode.output-mode == "settingsJson") {
-              path = ".vscode/settings.json";
+            ".vscode/settings.json" = {
+              type = "derivation";
               drv = pkgs.writeText "settings.json" (builtins.toJSON mergedSettings);
             };
           };

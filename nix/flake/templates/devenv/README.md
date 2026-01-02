@@ -34,29 +34,31 @@ bun run dev
 
 ```
 .
-├── devenv.yaml       # Devenv inputs and imports
-├── devenv.nix        # Devenv configuration (packages, languages, etc.)
-├── stackpanel.nix    # Stackpanel options (theme, AWS, services, etc.)
-└── devenv.lock       # Locked dependencies (auto-generated)
+├── devenv.yaml            # Devenv inputs and imports
+├── devenv.nix             # Devenv configuration (packages, languages, etc.)
+├── .stackpanel/
+│   └── config.nix         # Stackpanel options (theme, AWS, services, etc.)
+└── devenv.lock            # Locked dependencies (auto-generated)
 ```
 
 ## Configuration
 
 ### Stackpanel Options
 
-Edit `stackpanel.nix` to configure stackpanel features:
+Edit `.stackpanel/config.nix` to configure stackpanel features:
 
 ```nix
 {
   enable = true;
+  cli.enable = true;             # CLI tools
   theme.enable = true;           # Starship prompt
   ide.vscode.enable = true;      # VS Code integration
-  
+
   # AWS certificate auth
-  aws.roles-anywhere.enable = true;
-  
+  # aws.roles-anywhere.enable = true;
+
   # Global services
-  globalServices.postgres.enable = true;
+  # globalServices.postgres.enable = true;
 }
 ```
 
@@ -67,11 +69,11 @@ Edit `devenv.nix` to configure the dev environment:
 ```nix
 {
   packages = [ pkgs.nodejs pkgs.bun ];
-  
+
   languages.typescript.enable = true;
-  
+
   env.DATABASE_URL = "postgres://localhost:5432/myapp";
-  
+
   processes.server.exec = "bun run dev";
 }
 ```

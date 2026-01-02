@@ -1,0 +1,48 @@
+---
+title: {{.Title}}
+description: {{.Description}}
+icon: Terminal
+---
+
+# {{.Title}}
+
+{{.Long}}
+
+## Usage
+
+```bash
+{{.Usage}}
+```
+{{if .Aliases}}
+**Aliases:** {{.AliasesFormatted}}
+{{end}}
+{{if .Flags}}
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+{{range .Flags}}| `{{.FlagSyntax}}` | `{{.Type}}` | {{.DefaultFormatted}} | {{.Description}} |
+{{end}}{{end}}
+{{if .GlobalFlags}}
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+{{range .GlobalFlags}}| `{{.FlagSyntax}}` | `{{.Type}}` | {{.DefaultFormatted}} | {{.Description}} |
+{{end}}{{end}}
+{{if .Example}}
+## Examples
+
+```bash
+{{.Example}}
+```
+{{end}}
+{{if .Subcommands}}
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+{{range .Subcommands}}| [`{{.Name}}`](./{{.Slug}}) | {{.Short}} |
+{{end}}{{end}}

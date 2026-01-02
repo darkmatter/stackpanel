@@ -22,6 +22,9 @@ let
   # Devshell utilities (core module, mkDevShell, features)
   devshell = import ./devshells { inherit inputs; };
 
+  # Devenv module (stackpanel adapter for devenv)
+  devenv = import ./devenv.nix;
+
   supportedSystems = [
     "x86_64-linux"
     "aarch64-linux"
@@ -31,17 +34,32 @@ let
 in
 {
   # Re-export for use in flake.nix
-  inherit devshell supportedSystems;
+  inherit devshell devenv supportedSystems;
 
   # ===========================================================================
   # FLAKE MODULES (for flake-parts users)
   # ===========================================================================
   flakeModules = {
-    # Main stackpanel flake-parts module
+    # Main stackpanel flake-parts module (for devenv users)
     # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
     default = importApply ./default.nix {
       localFlake = self;
       inherit withSystem devshell;
+    };
+
+    # Alias for devenv module (backwards compatibility)
+    # Usage: imports = [ inputs.stackpanel.flakeModules.devenv ];
+    devenv = importApply ./default.nix {
+      localFlake = self;
+      inherit withSystem devshell;
+    };
+
+    # Native Nix devShell module (without devenv dependency)
+    # Usage: imports = [ inputs.stackpanel.flakeModules.native ];
+    # Then set: perSystem = { ... }: { stackpanel.enable = true; };
+    native = importApply ./modules/native.nix {
+      localFlake = self;
+      inherit withSystem;
     };
 
     # Helper module for pure flake evaluation (like `nix flake check`)
@@ -126,6 +144,10 @@ in
     default = {
       path = ./templates/default;
       description = "Stackpanel + devenv + flake-parts (recommended)";
+    };
+    native = {
+      path = ./templates/native;
+      description = "Stackpanel + native Nix shell (no devenv)";
     };
     devenv = {
       path = ./templates/devenv;
