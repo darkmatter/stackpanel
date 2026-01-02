@@ -226,21 +226,16 @@
   mkGoPackage = name: app: let
     goCfg = app.go;
     repoRoot = ../../..;
-    appPath = app.path;
     # Use generated source if file generation is enabled, otherwise use raw repo
     src = if goCfg.generateFiles
           then mkGoSourceWithGenerated name app
           else repoRoot;
-    # Look for gomod2nix.toml in app directory (per-app), fallback to repo root
-    gomod2nixPath = if builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml")
-                    then src + "/${appPath}/gomod2nix.toml"
-                    else src + "/gomod2nix.toml";
   in pkgs.buildGoApplication {
     pname = name;
     version = goCfg.version;
     inherit src;
 
-    modules = gomod2nixPath;
+    modules = src + "/gomod2nix.toml";
     subPackages = [ app.path ];  # e.g., "apps/cli"
 
     doCheck = false;  # Tests run separately via checks
@@ -261,22 +256,13 @@
     };
   };
 
-  # Create mkGoEnv for development
+  # Create mkGoEnv for development (assumes root go.mod)
   mkGoDevEnv = name: app: let
     goCfg = app.go;
     repoRoot = ../../..;
-    appPath = app.path;
-    # Look for gomod2nix.toml in app directory (per-app), fallback to repo root
-    gomod2nixPath = if builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml")
-                    then repoRoot + "/${appPath}/gomod2nix.toml"
-                    else repoRoot + "/gomod2nix.toml";
-    # Use app directory as pwd if it has go.mod
-    pwd = if builtins.pathExists (repoRoot + "/${appPath}/go.mod")
-          then repoRoot + "/${appPath}"
-          else repoRoot;
   in pkgs.mkGoEnv {
-    inherit pwd;
-    modules = gomod2nixPath;
+    pwd = repoRoot;
+    modules = repoRoot + "/gomod2nix.toml";
   };
 
   # Create test package (assumes root go.mod)
