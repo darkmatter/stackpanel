@@ -24,7 +24,11 @@
 #
 # Uses shared core library (../services/ports.nix) for computation logic.
 # ==============================================================================
-{ lib, config, ... }:
+{
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stackpanel.ports;
 
@@ -63,7 +67,6 @@ let
 
   # Create attrset for easy lookup using shared library
   servicesByKey = portsLib.mkServicesByKey servicesWithPorts;
-
 in
 {
   options.stackpanel.ports = {

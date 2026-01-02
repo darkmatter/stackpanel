@@ -22,9 +22,16 @@
 #     postgres.databases = ["myapp" "myapp_test"];
 #   };
 # ==============================================================================
-{ lib, config, pkgs, ... }: let
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
+let
   cfg = config.stackpanel.globalServices;
-in {
+in
+{
   options.stackpanel.globalServices = {
     enable = lib.mkEnableOption "Global singleton development services";
 
@@ -40,9 +47,12 @@ in {
 
       databases = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [cfg.project-name];
+        default = [ cfg.project-name ];
         description = "List of databases to create for this project";
-        example = ["myapp" "myapp_test"];
+        example = [
+          "myapp"
+          "myapp_test"
+        ];
       };
 
       port = lib.mkOption {
@@ -101,7 +111,7 @@ in {
 
       sites = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
-        default = {};
+        default = { };
         description = "Sites to register with Caddy (domain -> upstream)";
         example = {
           "myapp.localhost" = "localhost:3000";

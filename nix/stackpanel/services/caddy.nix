@@ -30,20 +30,23 @@
   lib,
   config,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel.caddy;
-  stepCfg = config.stackpanel.network.step or {enable = false;};
+  stepCfg = config.stackpanel.network.step or { enable = false; };
 
   # Import util for debug logging
   util = import ../lib/util.nix { inherit pkgs lib config; };
 
   # Import shared caddy library
-  caddyLib = import ../lib/services/caddy.nix {inherit pkgs lib;};
+  caddyLib = import ../lib/services/caddy.nix { inherit pkgs lib; };
 
   # Compute project port if not explicitly set
-  projectPort = if cfg.project-port != null
-    then cfg.project-port
-    else caddyLib.mkProjectPort { name = cfg.project-name; };
+  projectPort =
+    if cfg.project-port != null then
+      cfg.project-port
+    else
+      caddyLib.mkProjectPort { name = cfg.project-name; };
 
   # Create scripts using shared library
   caddyScripts = caddyLib.mkCaddyScripts {
@@ -82,14 +85,13 @@
     echo "Your dev site is available at: http://$domain"
     echo "Start your dev server on port $port"
   '';
-in {
+in
+{
   config = lib.mkIf cfg.enable {
-    stackpanel.devshell.packages =
-      caddyScripts.allPackages
-      ++ [
-        projectPortScript
-        caddyDevSite
-      ];
+    stackpanel.devshell.packages = caddyScripts.allPackages ++ [
+      projectPortScript
+      caddyDevSite
+    ];
 
     stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start [
       ''

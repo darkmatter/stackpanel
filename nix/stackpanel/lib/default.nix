@@ -24,10 +24,8 @@
   pkgs ? null,
 }:
 let
-
   # Import devshell library (requires pkgs)
   devshellLib = if pkgs != null then import ../devshell { inherit pkgs lib; } else null;
-
 in
 {
   # ============================================================================
@@ -71,11 +69,9 @@ in
   #     ./stackpanel.local.nix
   #   ];
   #
-  optionalLocalConfig = path:
-    lib.optional (builtins.pathExists path) path;
+  optionalLocalConfig = path: lib.optional (builtins.pathExists path) path;
 
-  optionalLocalConfigs = paths:
-    lib.filter (p: builtins.pathExists p) paths;
+  optionalLocalConfigs = paths: lib.filter (p: builtins.pathExists p) paths;
 
   # Convert attrs to YAML using nixpkgs yaml format
   toYAML =

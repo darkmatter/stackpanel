@@ -9,7 +9,13 @@
 #
 # Imported by devshell.nix which extracts each section appropriately.
 # ==============================================================================
-{ pkgs, lib, config, inputs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}:
 {
   # ===========================================================================
   # Stackpanel options
@@ -94,7 +100,10 @@
       go = {
         enable = true;
         binaryName = "stackpanel";
-        ldflags = [ "-s" "-w" ];
+        ldflags = [
+          "-s"
+          "-w"
+        ];
         generateFiles = true;
       };
     };
@@ -112,10 +121,22 @@
     # Ports - infrastructure service ports
     # ============================================================================
     ports.services = [
-      { key = "POSTGRES"; name = "PostgreSQL"; }
-      { key = "REDIS"; name = "Redis"; }
-      { key = "MINIO"; name = "Minio"; }
-      { key = "MINIO_CONSOLE"; name = "Minio Console"; }
+      {
+        key = "POSTGRES";
+        name = "PostgreSQL";
+      }
+      {
+        key = "REDIS";
+        name = "Redis";
+      }
+      {
+        key = "MINIO";
+        name = "Minio";
+      }
+      {
+        key = "MINIO_CONSOLE";
+        name = "Minio Console";
+      }
     ];
 
     # ============================================================================
@@ -127,7 +148,10 @@
 
       postgres = {
         enable = true;
-        databases = [ "stackpanel" "stackpanel_test" ];
+        databases = [
+          "stackpanel"
+          "stackpanel_test"
+        ];
         package = pkgs.postgresql_17;
       };
 
@@ -143,28 +167,43 @@
       cooper = {
         name = "Cooper Maruyama";
         github = "coopmoney";
-        public-keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINh0gA7reCRW+zQ5pPpIjoJGpaFQSbC/4K8B6vMXJVr+ cooper@darkmatter.io" ];
-        secrets-allowed-environments = [ "web/dev" "web/staging" "web/production" ];
+        public-keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINh0gA7reCRW+zQ5pPpIjoJGpaFQSbC/4K8B6vMXJVr+ cooper@darkmatter.io"
+        ];
+        secrets-allowed-environments = [
+          "web/dev"
+          "web/staging"
+          "web/production"
+        ];
       };
     };
 
-    secrets =  {
+    secrets = {
       input-directory = "infra/secrets";
       # enable = true;
       environments = {
         "web/dev" = {
           name = "dev";
-          sources = [ "shared" "dev" ];
+          sources = [
+            "shared"
+            "dev"
+          ];
           public-keys = [ "age1..." ];
         };
         "web/staging" = {
           name = "staging";
-          sources = [ "shared" "staging" ];
+          sources = [
+            "shared"
+            "staging"
+          ];
           public-keys = [ "age1..." ];
         };
         "web/production" = {
           name = "production";
-          sources = [ "shared" "production" ];
+          sources = [
+            "shared"
+            "production"
+          ];
           public-keys = [ "age1..." ];
         };
       };
@@ -172,9 +211,11 @@
 
     ide.vscode = {
       enable = true;
-      extensions = [ "ms-azuretools.vscode-docker" "golang.go" ];
+      extensions = [
+        "ms-azuretools.vscode-docker"
+        "golang.go"
+      ];
       extra-folders = [ ];
     };
   };
 }
-

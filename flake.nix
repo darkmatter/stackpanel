@@ -11,11 +11,11 @@
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
     git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
-		git-hooks.inputs.nixpkgs.follows = "nixpkgs";
-		flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
+    git-hooks.inputs.nixpkgs.follows = "nixpkgs";
+    flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
     flake-parts.url = "https://flakehub.com/f/hercules-ci/flake-parts/0.1.424";
     devenv.url = "github:cachix/devenv";
-		devenv.inputs.nixpkgs.follows = "nixpkgs";
+    devenv.inputs.nixpkgs.follows = "nixpkgs";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
@@ -25,8 +25,10 @@
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
-		gomod2nix.inputs.flake-utils.follows = "flake-utils";
-		# read absolute path to repo without impure eval
+    gomod2nix.inputs.flake-utils.follows = "flake-utils";
+    bun2nix.url = "github:nix-community/bun2nix";
+    bun2nix.inputs.nixpkgs.follows = "nixpkgs";
+    # read absolute path to repo without impure eval
     stackpanel-root.url = "file+file:///dev/null";
     stackpanel-root.flake = false;
   };
@@ -40,7 +42,11 @@
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } (
-      { withSystem, flake-parts-lib, ... }:
+      {
+        withSystem,
+        flake-parts-lib,
+        ...
+      }:
       let
         # Import consolidated exports
         exports = import ./nix/flake/exports.nix {
@@ -79,7 +85,12 @@
 
             # Import local shell configuration
             localShell = import ./shell.nix {
-              inherit pkgs lib inputs system;
+              inherit
+                pkgs
+                lib
+                inputs
+                system
+                ;
               git-hooks = git-hooks;
             };
 
@@ -104,22 +115,29 @@
               default-package = config.packages.default;
 
               # Smoke tests for devenv and native shells
-              smoke-test-devenv = pkgs.runCommand "smoke-test-devenv" {
-                nativeBuildInputs = [ pkgs.bash ];
-              } ''
-                cd ${./.}
-                ${./tests/smoke-test.sh} --project . --devenv
-                touch $out
-              '';
+              smoke-test-devenv =
+                pkgs.runCommand "smoke-test-devenv"
+                  {
+                    nativeBuildInputs = [ pkgs.bash ];
+                  }
+                  ''
+                    cd ${./.}
+                    ${./tests/smoke-test.sh} --project . --devenv
+                    touch $out
+                  '';
 
-              smoke-test-native = pkgs.runCommand "smoke-test-native" {
-                nativeBuildInputs = [ pkgs.bash ];
-              } ''
-                cd ${./.}
-                SKIP_DEVENV=true ${./tests/smoke-test.sh} --project . --native
-                touch $out
-              '';
-            } // lib.optionalAttrs (localShell.pre-commit-check != null) {
+              smoke-test-native =
+                pkgs.runCommand "smoke-test-native"
+                  {
+                    nativeBuildInputs = [ pkgs.bash ];
+                  }
+                  ''
+                    cd ${./.}
+                    SKIP_DEVENV=true ${./tests/smoke-test.sh} --project . --native
+                    touch $out
+                  '';
+            }
+            // lib.optionalAttrs (localShell.pre-commit-check != null) {
               inherit (localShell) pre-commit-check;
             };
           }

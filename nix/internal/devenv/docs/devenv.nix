@@ -13,13 +13,18 @@
 # Process: `bun run dev` running in apps/docs directory
 # Profile: profiles.docs available for docs-only development
 # ==============================================================================
-
-{ pkgs, lib, config, ...}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   # config.devenv.root is set by devenv and points to the project root
   # Fall back to "." if not available (shouldn't happen in practice)
   root = if config.git.root != null then config.git.root else config.devenv.root or ".";
-in {
+in
+{
   languages.javascript.enable = true;
   languages.javascript.bun.enable = true;
   languages.javascript.bun.install.enable = true;
@@ -39,7 +44,7 @@ in {
     '';
   };
 
-  profiles.docs.module = {};
+  profiles.docs.module = { };
   enterShell = ''
     echo "📚 Starting docs development server..."
   '';

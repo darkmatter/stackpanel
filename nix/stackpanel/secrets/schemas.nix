@@ -15,7 +15,6 @@
 # for iteration, or individual schema attributes for specific access.
 # ==============================================================================
 { lib, ... }:
-
 let
   # config.schema.json - Global secrets configuration
   configSchema = {
@@ -26,14 +25,23 @@ let
     properties = {
       backend = {
         type = "string";
-        enum = ["sops" "vals"];
+        enum = [
+          "sops"
+          "vals"
+        ];
         default = "sops";
         description = "Secrets backend to use (sops or vals)";
       };
       default-environments = {
         type = "array";
-        items = { type = "string"; };
-        default = ["dev" "staging" "prod"];
+        items = {
+          type = "string";
+        };
+        default = [
+          "dev"
+          "staging"
+          "prod"
+        ];
         description = "Default environments created for new apps";
       };
     };
@@ -64,7 +72,7 @@ let
           description = "Admins can decrypt secrets for all environments";
         };
       };
-      required = ["pubkey"];
+      required = [ "pubkey" ];
       additionalProperties = false;
     };
   };
@@ -82,7 +90,11 @@ let
         properties = {
           language = {
             type = "string";
-            enum = ["typescript" "python" "go"];
+            enum = [
+              "typescript"
+              "python"
+              "go"
+            ];
             description = "Target language for generated code";
           };
           path = {
@@ -90,7 +102,10 @@ let
             description = "Output path relative to project root (e.g., packages/api/src/env.ts)";
           };
         };
-        required = ["language" "path"];
+        required = [
+          "language"
+          "path"
+        ];
         additionalProperties = false;
       };
     };
@@ -139,7 +154,9 @@ let
     properties = {
       users = {
         type = "array";
-        items = { type = "string"; };
+        items = {
+          type = "string";
+        };
         description = "Usernames (from users.yaml) who can access this environment";
       };
       schema = {
@@ -148,10 +165,18 @@ let
         additionalProperties = {
           type = "object";
           properties = {
-            required = { type = "boolean"; };
-            sensitive = { type = "boolean"; };
-            description = { type = "string"; };
-            default = { type = "string"; };
+            required = {
+              type = "boolean";
+            };
+            sensitive = {
+              type = "boolean";
+            };
+            description = {
+              type = "string";
+            };
+            default = {
+              type = "string";
+            };
           };
           additionalProperties = false;
         };
@@ -159,9 +184,15 @@ let
     };
     additionalProperties = false;
   };
-
-in {
-  inherit configSchema usersSchema appConfigSchema schemaSchema envSchema;
+in
+{
+  inherit
+    configSchema
+    usersSchema
+    appConfigSchema
+    schemaSchema
+    envSchema
+    ;
 
   # All schemas as an attrset for easy iteration
   allSchemas = {

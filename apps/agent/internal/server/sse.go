@@ -18,7 +18,6 @@ type SSEEvent struct {
 	Data  any    `json:"data"`
 }
 
-
 // watchConfigFiles watches for changes to stackpanel config files and broadcasts SSE events.
 func (s *Server) watchConfigFiles() {
 	// Watch the state file

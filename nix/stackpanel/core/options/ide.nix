@@ -20,7 +20,8 @@
 # Generated files are in .stackpanel/gen/ide/vscode/ and should be opened
 # as a workspace for the best experience.
 # ==============================================================================
-{ lib, ... }: {
+{ lib, ... }:
+{
   options.stackpanel.ide = {
     enable = lib.mkEnableOption "IDE integration" // {
       description = "Generate IDE configuration files into .stackpanel/gen/ide/";
@@ -33,7 +34,7 @@
 
       settings = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
-        default = {};
+        default = { };
         description = ''
           VS Code settings to include in the generated configuration.
           These take highest priority and will override any existing or generated settings.
@@ -51,7 +52,10 @@
       };
 
       output-mode = lib.mkOption {
-        type = lib.types.enum ["workspace" "settingsJson"];
+        type = lib.types.enum [
+          "workspace"
+          "settingsJson"
+        ];
         default = "workspace";
         description = ''
           Where to output VS Code settings:
@@ -68,13 +72,13 @@
 
       extra-folders = lib.mkOption {
         type = lib.types.listOf (lib.types.attrsOf lib.types.str);
-        default = [];
+        default = [ ];
         description = "Additional workspace folders to include";
       };
 
       extensions = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = "Recommended VS Code extension IDs";
       };
     };

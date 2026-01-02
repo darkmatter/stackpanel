@@ -23,7 +23,8 @@
   pkgs,
   lib ? pkgs.lib,
   ...
-}: let
+}:
+let
   # Import shared libraries
   portsLib = import ../lib/ports.nix { inherit lib; };
   globalServices = import ../core/services/global-services.nix { inherit pkgs lib; };
@@ -33,21 +34,34 @@
   # (e.g., ".stackpanel/state", not just "state")
   defaultConfig = {
     projectName = "default";
-    stateDir = ".stackpanel/state";  # Full path from project root
-    genDir = ".stackpanel/gen";      # Full path from project root
-    dataDir = ".stackpanel";         # Full path from project root
-    ports = {};
-    postgres = { enable = false; databases = null; port = null; };
-    redis = { enable = false; port = null; };
-    minio = { enable = false; port = null; consolePort = null; };
-    caddy = { enable = false; sites = {}; };
+    stateDir = ".stackpanel/state"; # Full path from project root
+    genDir = ".stackpanel/gen"; # Full path from project root
+    dataDir = ".stackpanel"; # Full path from project root
+    ports = { };
+    postgres = {
+      enable = false;
+      databases = null;
+      port = null;
+    };
+    redis = {
+      enable = false;
+      port = null;
+    };
+    minio = {
+      enable = false;
+      port = null;
+      consolePort = null;
+    };
+    caddy = {
+      enable = false;
+      sites = { };
+    };
   };
 
   # Deep merge helper
-  mergeConfig = defaults: user:
-    lib.recursiveUpdate defaults user;
-
-in {
+  mergeConfig = defaults: user: lib.recursiveUpdate defaults user;
+in
+{
   imports = [
     ./schema.nix
     ./commands.nix
@@ -55,75 +69,80 @@ in {
     ./files.nix
   ];
   # Main entry point: creates shell attributes for mkShell
-  mkDevShell = userConfig: let
-    cfg = mergeConfig defaultConfig userConfig;
+  mkDevShell =
+    userConfig:
+    let
+      cfg = mergeConfig defaultConfig userConfig;
 
-    # Compute ports
-    basePort = portsLib.computeBasePort {
-      name = cfg.projectName;
-      minPort = cfg.ports.minPort or portsLib.defaults.minPort;
-      portRange = cfg.ports.portRange or portsLib.defaults.portRange;
-      modulus = cfg.ports.modulus or portsLib.defaults.modulus;
-    };
-    servicesWithPorts = portsLib.computeServicesWithPorts {
-      basePort = basePort;
-      services = cfg.ports.services or [];
-    };
-    servicesConfig = portsLib.mkServicesConfig servicesWithPorts;
+      # Compute ports
+      basePort = portsLib.computeBasePort {
+        name = cfg.projectName;
+        minPort = cfg.ports.minPort or portsLib.defaults.minPort;
+        portRange = cfg.ports.portRange or portsLib.defaults.portRange;
+        modulus = cfg.ports.modulus or portsLib.defaults.modulus;
+      };
+      servicesWithPorts = portsLib.computeServicesWithPorts {
+        basePort = basePort;
+        services = cfg.ports.services or [ ];
+      };
+      servicesConfig = portsLib.mkServicesConfig servicesWithPorts;
 
-    # Build global services
-    gs = globalServices.mkGlobalServices {
-      projectName = cfg.projectName;
-      ports = cfg.ports;
-      postgres = cfg.postgres;
-      redis = cfg.redis;
-      minio = cfg.minio;
-      caddy = cfg.caddy;
-    };
+      # Build global services
+      gs = globalServices.mkGlobalServices {
+        projectName = cfg.projectName;
+        ports = cfg.ports;
+        postgres = cfg.postgres;
+        redis = cfg.redis;
+        minio = cfg.minio;
+        caddy = cfg.caddy;
+      };
 
-    # Shell hook for directory setup
-    dirSetupHook = ''
-      # Stackpanel shell initialization
-      export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$PWD}"
-      export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.stateDir}}"
-      export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.genDir}}"
-      export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.dataDir}}"
-      mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
+      # Shell hook for directory setup
+      dirSetupHook = ''
+        # Stackpanel shell initialization
+        export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$PWD}"
+        export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.stateDir}}"
+        export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.genDir}}"
+        export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.dataDir}}"
+        mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
 
-      export STACKPANEL_STABLE_PORT="${toString basePort}"
-      export STACKPANEL_SERVICES_CONFIG='${servicesConfig}'
-      export STACKPANEL_PROJECT_NAME="${cfg.projectName}"
-    '';
+        export STACKPANEL_STABLE_PORT="${toString basePort}"
+        export STACKPANEL_SERVICES_CONFIG='${servicesConfig}'
+        export STACKPANEL_PROJECT_NAME="${cfg.projectName}"
+      '';
 
-    allShellHook = dirSetupHook + "\n" + gs.shellHook;
+      allShellHook = dirSetupHook + "\n" + gs.shellHook;
 
-    allEnv = gs.env // {
-      STACKPANEL_STABLE_PORT = toString basePort;
-      STACKPANEL_SERVICES_CONFIG = servicesConfig;
-      STACKPANEL_PROJECT_NAME = cfg.projectName;
-    };
-
-  in {
-    packages = gs.packages;
-    shellHook = allShellHook;
-    env = allEnv;
-    services = gs.services;
-
-    # Computed values
-    computed = {
-      inherit basePort;
-      inherit (cfg) projectName;
-    };
-
-    # Ready-to-use mkShell
-    shell = pkgs.mkShell ({
+      allEnv = gs.env // {
+        STACKPANEL_STABLE_PORT = toString basePort;
+        STACKPANEL_SERVICES_CONFIG = servicesConfig;
+        STACKPANEL_PROJECT_NAME = cfg.projectName;
+      };
+    in
+    {
       packages = gs.packages;
       shellHook = allShellHook;
-    } // allEnv);
+      env = allEnv;
+      services = gs.services;
 
-    # For compatibility
-    enterShell = allShellHook;
-  };
+      # Computed values
+      computed = {
+        inherit basePort;
+        inherit (cfg) projectName;
+      };
+
+      # Ready-to-use mkShell
+      shell = pkgs.mkShell (
+        {
+          packages = gs.packages;
+          shellHook = allShellHook;
+        }
+        // allEnv
+      );
+
+      # For compatibility
+      enterShell = allShellHook;
+    };
 
   # Expose port computation utilities
   ports = portsLib;

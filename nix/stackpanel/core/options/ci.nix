@@ -22,7 +22,8 @@
 #     };
 #   };
 # ==============================================================================
-{lib,...}: {
+{ lib, ... }:
+{
   options.stackpanel.ci = {
     enable = lib.mkEnableOption "CI/CD generation";
 
@@ -32,7 +33,7 @@
       # Escape hatch: raw workflow definitions
       workflows = lib.mkOption {
         type = lib.types.attrsOf lib.types.attrs;
-        default = {};
+        default = { };
         description = "Workflow name -> workflow definition (raw)";
       };
 
@@ -41,12 +42,15 @@
         enable = lib.mkEnableOption "standard CI checks workflow";
         branches = lib.mkOption {
           type = lib.types.listOf lib.types.str;
-          default = ["main"];
+          default = [ "main" ];
         };
         commands = lib.mkOption {
           type = lib.types.listOf lib.types.str;
-          default = [];
-          example = ["nix flake check" "nix build"];
+          default = [ ];
+          example = [
+            "nix flake check"
+            "nix build"
+          ];
         };
       };
     };

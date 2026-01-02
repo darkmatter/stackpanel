@@ -103,10 +103,10 @@ func EvalExprWithTimeout(ctx context.Context, nixExpr string, timeout time.Durat
 
 // User represents a stackpanel user from the users config
 type User struct {
-	Name                        string   `json:"name,omitempty"`
-	GitHub                      string   `json:"github,omitempty"`
-	PublicKeys                  []string `json:"public-keys,omitempty"`
-	SecretsAllowedEnvironments  []string `json:"secrets-allowed-environments,omitempty"`
+	Name                       string   `json:"name,omitempty"`
+	GitHub                     string   `json:"github,omitempty"`
+	PublicKeys                 []string `json:"public-keys,omitempty"`
+	SecretsAllowedEnvironments []string `json:"secrets-allowed-environments,omitempty"`
 }
 
 // GetUsers evaluates and returns the users configuration

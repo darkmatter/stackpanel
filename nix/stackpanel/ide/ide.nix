@@ -103,43 +103,41 @@ let
     extensions = [ "redhat.vscode-yaml" ] ++ cfg.vscode.extensions;
     rootPath = "../../../..";
   };
-
 in
 {
-  config =
-    lib.mkIf
-      (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable)
-      (
-        lib.optionalAttrs hasFilesOption {
-          # Add hints about IDE integration
-          stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
-            "Open ${baseDir}/${workspaceName}.code-workspace in VS Code for integrated terminal"
-          ];
+  config = lib.mkIf (stackpanelCfg.enable && cfg.enable && cfg.vscode.enable) (
+    lib.optionalAttrs hasFilesOption {
+      # Add hints about IDE integration
+      stackpanel.motd.hints = lib.mkIf cfg.vscode.enable [
+        "Open ${baseDir}/${workspaceName}.code-workspace in VS Code for integrated terminal"
+      ];
 
-          # Use stackpanel.files for file generation
-          # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
-          stackpanel.files.enable = true;
-          stackpanel.files.entries = {
-            "${baseDir}/devshell-loader.sh" = {
-              type = "derivation";
-              drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
-              mode = "0755";
-            };
-          } // lib.optionalAttrs (cfg.vscode.output-mode == "workspace") {
-            # Generate workspace file (default mode)
-            "${baseDir}/${cfg.vscode.workspace-name}.code-workspace" = {
-              type = "derivation";
-              drv = pkgs.writeText "${cfg.vscode.workspace-name}.code-workspace" (
-                builtins.toJSON workspaceContent
-              );
-            };
-          } // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
-            # Generate settings.json (explicit opt-in)
-            ".vscode/settings.json" = {
-              type = "derivation";
-              drv = pkgs.writeText "settings.json" (builtins.toJSON mergedSettings);
-            };
-          };
-        }
-      );
+      # Use stackpanel.files for file generation
+      # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
+      stackpanel.files.enable = true;
+      stackpanel.files.entries = {
+        "${baseDir}/devshell-loader.sh" = {
+          type = "derivation";
+          drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
+          mode = "0755";
+        };
+      }
+      // lib.optionalAttrs (cfg.vscode.output-mode == "workspace") {
+        # Generate workspace file (default mode)
+        "${baseDir}/${cfg.vscode.workspace-name}.code-workspace" = {
+          type = "derivation";
+          drv = pkgs.writeText "${cfg.vscode.workspace-name}.code-workspace" (
+            builtins.toJSON workspaceContent
+          );
+        };
+      }
+      // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
+        # Generate settings.json (explicit opt-in)
+        ".vscode/settings.json" = {
+          type = "derivation";
+          drv = pkgs.writeText "settings.json" (builtins.toJSON mergedSettings);
+        };
+      };
+    }
+  );
 }

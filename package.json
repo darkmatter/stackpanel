@@ -59,6 +59,7 @@
 		"@pulumi/pulumi": "^3.213.0",
 		"@types/node": "^22.13.11",
 		"alchemy": "^0.77.0",
+		"bun2nix": "^2.0.6",
 		"oxlint": "^1.2.0",
 		"turbo": "^2.5.4",
 		"ultracite": "6.3.9"

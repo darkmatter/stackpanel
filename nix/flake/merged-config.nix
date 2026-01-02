@@ -28,8 +28,8 @@ let
   devenvConfigData = import ../../.stackpanel/devenv.nix { inherit pkgs lib inputs; };
 
   # Separate devenv and git-hooks
-  devenvConfig = builtins.removeAttrs devenvConfigData ["git-hooks"];
-  gitHooksConfig = devenvConfigData.git-hooks or {};
+  devenvConfig = builtins.removeAttrs devenvConfigData [ "git-hooks" ];
+  gitHooksConfig = devenvConfigData.git-hooks or { };
 
   # Evaluate stackpanel modules with user config
   # This validates stackpanel config and computes derived values
@@ -43,14 +43,14 @@ let
 
   # Extract validated and computed stackpanel config
   stackpanelConfig = stackpanelEval.config.stackpanel;
-
-in {
+in
+{
   # Stackpanel config (validated and computed via module system)
   stackpanel = stackpanelConfig;
-  
+
   # Devenv config (passed through without validation)
   devenv = devenvConfig;
-  
+
   # Git hooks config (passed through without validation)
   git-hooks = gitHooksConfig;
 }

@@ -164,11 +164,11 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 }
 
 type EvalOnceParams struct {
-	Expression string
-	File string
-	Args map[string]string
+	Expression  string
+	File        string
+	Args        map[string]string
 	ProjectRoot string
-	Timeout time.Duration
+	Timeout     time.Duration
 }
 
 func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
@@ -204,7 +204,6 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 	if err := json.Unmarshal(stdout.Bytes(), &config); err != nil {
 		return nil, fmt.Errorf("failed to parse nix eval output: %w", err)
 	}
-
 
 	return stdout.Bytes(), nil
 }
@@ -291,7 +290,6 @@ func MustEvalOnceConfig(ctx context.Context, projectRoot string) *Config {
 	}
 	return config
 }
-
 
 func MustEvalOnce(ctx context.Context, opts EvalOnceParams) []byte {
 	result, err := EvalOnce(ctx, opts)

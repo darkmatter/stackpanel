@@ -65,7 +65,11 @@ in
     # Helper module for pure flake evaluation (like `nix flake check`)
     # Reads stackpanel root from a file input for impure-free evaluation
     readStackpanelRoot =
-      { inputs, lib, ... }:
+      {
+        inputs,
+        lib,
+        ...
+      }:
       {
         config =
           let

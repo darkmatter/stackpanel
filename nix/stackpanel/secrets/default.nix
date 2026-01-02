@@ -21,7 +21,12 @@
 #     stackpanel.secrets.enable = true;
 #     # Access packages via: config.stackpanel.secrets.packages
 # ==============================================================================
-{ pkgs, lib, config, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stackpanel.secrets;
   secretsLib = import ./lib.nix { inherit lib pkgs; };
@@ -31,33 +36,51 @@ let
   # ═══════════════════════════════════════════════════════════════════════════════
   ensure-age-key = pkgs.writeShellApplication {
     name = "ensure-age-key";
-    runtimeInputs = [ pkgs.age pkgs.coreutils pkgs.gawk ];
+    runtimeInputs = [
+      pkgs.age
+      pkgs.coreutils
+      pkgs.gawk
+    ];
     text = secretsLib.ensureAgeKeyScript;
   };
 
   sops-wrapped = pkgs.writeShellApplication {
     name = "sops-wrapped";
-    runtimeInputs = [ pkgs.sops ensure-age-key ];
+    runtimeInputs = [
+      pkgs.sops
+      ensure-age-key
+    ];
     text = secretsLib.sopsWrapperScript "${ensure-age-key}/bin/ensure-age-key";
   };
 
   generate-secrets-schema = pkgs.writeShellApplication {
     name = "generate-secrets-schema";
-    runtimeInputs = [ pkgs.yq pkgs.sops pkgs.jq pkgs.bun ];
+    runtimeInputs = [
+      pkgs.yq
+      pkgs.sops
+      pkgs.jq
+      pkgs.bun
+    ];
     text = secretsLib.generateSecretsSchemaScript;
   };
 
   generate-secrets-package = pkgs.writeShellApplication {
     name = "generate-secrets-package";
-    runtimeInputs = [ pkgs.yq pkgs.sops pkgs.jq pkgs.bun generate-secrets-schema ];
+    runtimeInputs = [
+      pkgs.yq
+      pkgs.sops
+      pkgs.jq
+      pkgs.bun
+      generate-secrets-schema
+    ];
     text = secretsLib.generateSecretsPackageScript {
       inputDir = cfg.input-directory;
       environments = cfg.environments;
       codegen = cfg.codegen;
     };
   };
-
-in {
+in
+{
   # Options are now centralized in core/options/secrets.nix
 
   config = lib.mkMerge [
@@ -67,7 +90,12 @@ in {
     (lib.mkIf cfg.enable {
       # Always provide packages for programmatic access
       stackpanel.secrets.packages = {
-        inherit ensure-age-key sops-wrapped generate-secrets-schema generate-secrets-package;
+        inherit
+          ensure-age-key
+          sops-wrapped
+          generate-secrets-schema
+          generate-secrets-package
+          ;
       };
 
       # Add required packages to devshell

@@ -20,7 +20,12 @@
 #     mode = "0755";
 #   };
 # ==============================================================================
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stackpanel.files;
 
@@ -33,19 +38,22 @@ let
   enabledFiles = cfg.entries;
 
   # Check if there are any files to write (and global enable is true)
-  hasFiles = enabledFiles != {};
+  hasFiles = enabledFiles != { };
 
   fileCount = builtins.length (builtins.attrNames enabledFiles);
 
-  mkWriteSnippet = path: fileConfig:
+  mkWriteSnippet =
+    path: fileConfig:
     let
       mode = fileConfig.mode;
       # Get the source content based on type
-      source = if fileConfig.type == "text" then
-        pkgs.writeText (builtins.baseNameOf path) fileConfig.text
-      else
-        fileConfig.drv;
-    in ''
+      source =
+        if fileConfig.type == "text" then
+          pkgs.writeText (builtins.baseNameOf path) fileConfig.text
+        else
+          fileConfig.drv;
+    in
+    ''
       ${util.log.debug "files: writing ${path}"}
       echo "• ${path}"
       mkdir -p "$(dirname ${q path})"
@@ -56,30 +64,29 @@ let
       ''}
     '';
 
-  writerDrv =
-    pkgs.writeShellApplication {
-      name = "write-files";
-      runtimeInputs = [ pkgs.gum ];
-      text = ''
-        set -euo pipefail
-        ${util.log.debug "files: starting file generation"}
+  writerDrv = pkgs.writeShellApplication {
+    name = "write-files";
+    runtimeInputs = [ pkgs.gum ];
+    text = ''
+      set -euo pipefail
+      ${util.log.debug "files: starting file generation"}
 
-        # Determine repo root
-        ROOT="''${STACKPANEL_ROOT:-}"
-        if [[ -z "$ROOT" ]]; then
-          echo "ERROR: STACKPANEL_ROOT is not set. (Stackpanel core should set it.)" >&2
-          exit 1
-        fi
+      # Determine repo root
+      ROOT="''${STACKPANEL_ROOT:-}"
+      if [[ -z "$ROOT" ]]; then
+        echo "ERROR: STACKPANEL_ROOT is not set. (Stackpanel core should set it.)" >&2
+        exit 1
+      fi
 
-        ${util.log.debug "files: ROOT=$ROOT"}
-        cd "$ROOT"
+      ${util.log.debug "files: ROOT=$ROOT"}
+      cd "$ROOT"
 
-        ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet enabledFiles)}
+      ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet enabledFiles)}
 
-        ${util.log.debug "files: completed writing ${toString fileCount} file(s)"}
-        echo "✅ wrote ${toString fileCount} file(s) into $ROOT"
-      '';
-    };
+      ${util.log.debug "files: completed writing ${toString fileCount} file(s)"}
+      echo "✅ wrote ${toString fileCount} file(s) into $ROOT"
+    '';
+  };
 in
 {
   imports = [
@@ -101,8 +108,8 @@ in
     # Also expose as a devshell command (nice for devenv scripts, too)
     stackpanel.devshell.commands."write-files" = {
       exec = ''${writerDrv}/bin/write-files "$@"'';
-      runtimeInputs = [];
-      env = {};
+      runtimeInputs = [ ];
+      env = { };
     };
   };
 }

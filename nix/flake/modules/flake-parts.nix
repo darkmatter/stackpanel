@@ -19,8 +19,17 @@
 #   - modules: List of devshell modules to include
 #   - specialArgs: Extra arguments passed to module evaluation
 # ==============================================================================
-{ localFlake, withSystem, devshell, ... }:
-{ config, lib, ... }:
+{
+  localFlake,
+  withSystem,
+  devshell,
+  ...
+}:
+{
+  config,
+  lib,
+  ...
+}:
 let
   cfg = config.stackpanel.devshell;
   types = lib.types;
@@ -29,27 +38,37 @@ in
   options.stackpanel.devshell = {
     enable = lib.mkEnableOption "Stackpanel devShells via flake-parts";
 
-    shellName = lib.mkOption { type = types.str; default = "default"; };
+    shellName = lib.mkOption {
+      type = types.str;
+      default = "default";
+    };
 
     modules = lib.mkOption {
       type = types.listOf types.deferredModule;
-      default = [];
+      default = [ ];
     };
 
     specialArgs = lib.mkOption {
       type = types.attrs;
-      default = {};
+      default = { };
     };
   };
 
   config = lib.mkIf cfg.enable {
-    perSystem = { pkgs, system, ... }: {
-      devShells.${cfg.shellName} =
-        devshell.mkDevShell {
+    perSystem =
+      {
+        pkgs,
+        system,
+        ...
+      }:
+      {
+        devShells.${cfg.shellName} = devshell.mkDevShell {
           inherit pkgs;
           modules = cfg.modules;
-          specialArgs = cfg.specialArgs // { inherit localFlake withSystem system; };
+          specialArgs = cfg.specialArgs // {
+            inherit localFlake withSystem system;
+          };
         };
-    };
+      };
   };
 }

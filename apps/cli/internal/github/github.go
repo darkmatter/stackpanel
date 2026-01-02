@@ -13,13 +13,13 @@ import (
 
 // Collaborator represents a GitHub repository collaborator
 type Collaborator struct {
-	Login             string      `json:"login"`
-	ID                int         `json:"id"`
-	AvatarURL         string      `json:"avatar_url"`
-	Type              string      `json:"type"`
-	SiteAdmin         bool        `json:"site_admin"`
-	RoleName          string      `json:"role_name"`
-	Permissions       Permissions `json:"permissions"`
+	Login       string      `json:"login"`
+	ID          int         `json:"id"`
+	AvatarURL   string      `json:"avatar_url"`
+	Type        string      `json:"type"`
+	SiteAdmin   bool        `json:"site_admin"`
+	RoleName    string      `json:"role_name"`
+	Permissions Permissions `json:"permissions"`
 }
 
 // Permissions represents the permissions a collaborator has
@@ -33,11 +33,11 @@ type Permissions struct {
 
 // User represents a processed user with their public keys
 type User struct {
-	Login       string   `json:"login"`
-	ID          int      `json:"id"`
-	RoleName    string   `json:"role_name"`
-	IsAdmin     bool     `json:"is_admin"`
-	PublicKeys  []string `json:"public_keys"`
+	Login      string   `json:"login"`
+	ID         int      `json:"id"`
+	RoleName   string   `json:"role_name"`
+	IsAdmin    bool     `json:"is_admin"`
+	PublicKeys []string `json:"public_keys"`
 }
 
 // GetCollaborators fetches repository collaborators using gh CLI

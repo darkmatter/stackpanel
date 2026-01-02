@@ -18,30 +18,39 @@
 #     ];
 #   }
 # ==============================================================================
-{ pkgs, lib }:
+{
+  pkgs,
+  lib,
+}:
 let
   types = lib.types;
 
   # ensure paths are safe to pass into shell
   q = lib.escapeShellArg;
 
-  mkWriteSnippet = { path, drv }:
+  mkWriteSnippet =
+    {
+      path,
+      drv,
+    }:
     let
       # path relative to repo root
       rel = path;
-    in ''
+    in
+    ''
       # ${rel}
       mkdir -p "$(dirname ${q rel})"
       cat ${drv} > ${q rel}
     '';
-
-in {
+in
+{
   # mkWriter :: { exeFilename, root?, runtimeRootVar?, files } -> derivation (executable)
   mkWriter =
-    { exeFilename ? "write-files"
-    , root ? null
-    , runtimeRootVar ? null
-    , files ? []
+    {
+      exeFilename ? "write-files",
+      root ? null,
+      runtimeRootVar ? null,
+      files ? [ ],
     }:
     pkgs.writeShellApplication {
       name = exeFilename;
@@ -57,12 +66,12 @@ in {
           if [[ -n "''${${runtimeRootVar}:-}" ]]; then
             ROOT="''${${runtimeRootVar}}"
           else
-            ROOT=${q (toString (root or "."))}
+            ROOT=${q (toString root)}
           fi
         ''}
 
         ${lib.optionalString (runtimeRootVar == null) ''
-          ROOT=${q (toString (root or "."))}
+          ROOT=${q (toString root)}
         ''}
 
         if [[ -z "$ROOT" ]]; then

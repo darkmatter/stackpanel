@@ -20,10 +20,15 @@ let
     github = collab.login;
     public-keys = collab.publicKeys;
     # Default environments based on admin status
-    secrets-allowed-environments = 
-      if collab.isAdmin 
-      then [ "dev" "staging" "production" ]
-      else [ "dev" ];
+    secrets-allowed-environments =
+      if collab.isAdmin then
+        [
+          "dev"
+          "staging"
+          "production"
+        ]
+      else
+        [ "dev" ];
   };
 
   # Convert all collaborators
@@ -48,10 +53,7 @@ let
   };
 
   # Merge function that applies overrides
-  applyOverrides = users: 
-    builtins.mapAttrs (name: user: 
-      user // (userOverrides.${name} or {})
-    ) users;
-
+  applyOverrides =
+    users: builtins.mapAttrs (name: user: user // (userOverrides.${name} or { })) users;
 in
-  applyOverrides (githubUsers // additionalUsers)
+applyOverrides (githubUsers // additionalUsers)

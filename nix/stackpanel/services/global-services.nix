@@ -32,18 +32,19 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel.globalServices;
   portsCfg = config.stackpanel.ports;
 
   # Import util for debug logging
   util = import ../lib/util.nix { inherit pkgs lib config; };
 
-  coreGlobalServices = import ../core/services/global-services.nix {inherit pkgs lib;};
+  coreGlobalServices = import ../core/services/global-services.nix { inherit pkgs lib; };
 
   gs = coreGlobalServices.mkGlobalServices {
     projectName = cfg.project-name;
-    ports = portsCfg.service or {};
+    ports = portsCfg.service or { };
     postgres = {
       enable = cfg.postgres.enable;
       databases = cfg.postgres.databases;
@@ -70,7 +71,8 @@
       projectName = cfg.project-name;
     };
   };
-in {
+in
+{
   config = lib.mkIf cfg.enable {
     # Ensure ports module uses the same project name
     stackpanel.ports.project-name = lib.mkDefault cfg.project-name;
@@ -85,7 +87,11 @@ in {
     stackpanel.devshell.hooks.main = [
       ''
         ${util.log.debug "global-services: initializing services for ${cfg.project-name}"}
-        ${lib.optionalString cfg.postgres.enable (util.log.debug "global-services: postgres enabled on port ${toString (portsCfg.service.POSTGRES.port or 5432)}")}
+        ${lib.optionalString cfg.postgres.enable (
+          util.log.debug "global-services: postgres enabled on port ${
+            toString (portsCfg.service.POSTGRES.port or 5432)
+          }"
+        )}
         ${lib.optionalString cfg.redis.enable (util.log.debug "global-services: redis enabled")}
         ${lib.optionalString cfg.minio.enable (util.log.debug "global-services: minio enabled")}
       ''

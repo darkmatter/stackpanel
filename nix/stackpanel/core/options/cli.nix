@@ -15,9 +15,12 @@
 #   - IDE configurations (.stackpanel/gen/ide/)
 #   - JSON schemas (.stackpanel/gen/schemas/)
 # ==============================================================================
-{ lib, ... }: {
+{ lib, ... }:
+{
   options.stackpanel.cli = {
-    enable = lib.mkEnableOption "CLI-based file generation" // {default = false;};
+    enable = lib.mkEnableOption "CLI-based file generation" // {
+      default = false;
+    };
 
     quiet = lib.mkOption {
       type = lib.types.bool;

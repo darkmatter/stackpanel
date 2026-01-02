@@ -7,10 +7,17 @@
 # devshells, including common packages (git, jq) and a shell entry message.
 # These can be overridden in project-specific configuration.
 # ==============================================================================
-{ lib, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  ...
+}:
 {
   config = {
-    stackpanel.devshell.packages = [ pkgs.git pkgs.jq ];
+    stackpanel.devshell.packages = [
+      pkgs.git
+      pkgs.jq
+    ];
     stackpanel.devshell.hooks.before = lib.mkBefore [ ''echo "stackpanel shell"'' ];
   };
 }

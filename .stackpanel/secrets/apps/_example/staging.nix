@@ -7,8 +7,8 @@
   };
 
   # Users who can access staging secrets
-  users = [];
+  users = [ ];
 
   # Additional AGE keys
-  extraKeys = [];
+  extraKeys = [ ];
 }

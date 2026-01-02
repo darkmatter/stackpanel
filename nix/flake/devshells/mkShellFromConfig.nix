@@ -17,26 +17,31 @@
 #   - shell hooks (before, main, after phases)
 # ==============================================================================
 { pkgs }:
-{ devshellConfig, extraPackages ? [] }:
+{
+  devshellConfig,
+  extraPackages ? [ ],
+}:
 let
   lib = pkgs.lib;
   cfg = devshellConfig;
 
-  envExports =
-    lib.concatStringsSep "\n"
-      (lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (cfg.env or {}));
+  envExports = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (cfg.env or { })
+  );
 
-  shellHook = lib.concatStringsSep "\n\n" (lib.flatten [
-    envExports
-    (cfg.hooks.before or [])
-    (cfg.hooks.main or [])
-    (cfg.hooks.after or [])
-  ]);
+  shellHook = lib.concatStringsSep "\n\n" (
+    lib.flatten [
+      envExports
+      (cfg.hooks.before or [ ])
+      (cfg.hooks.main or [ ])
+      (cfg.hooks.after or [ ])
+    ]
+  );
 in
 pkgs.mkShell {
-  packages = (cfg.packages or []) ++ (cfg._commandPkgs or []) ++ extraPackages;
-  nativeBuildInputs = cfg.nativeBuildInputs or [];
-  buildInputs = cfg.buildInputs or [];
+  packages = (cfg.packages or [ ]) ++ (cfg._commandPkgs or [ ]) ++ extraPackages;
+  nativeBuildInputs = cfg.nativeBuildInputs or [ ];
+  buildInputs = cfg.buildInputs or [ ];
   shellHook = shellHook;
 
   passthru = {

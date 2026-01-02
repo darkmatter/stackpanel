@@ -13,7 +13,6 @@
 #
 # This is imported by nix/internal/stackpanel.nix for local development.
 # ==============================================================================
-
 { ... }:
 {
   imports = [
@@ -35,5 +34,13 @@
     ./docs/devenv.nix
     ./docs/generate.nix
     ./tools/devenv.nix
+  ];
+
+  cachix.enable = true;
+  cachix.pull = [
+    "stackpanel"
+    "devenv"
+    "darkmatter"
+    "nix-community"
   ];
 }

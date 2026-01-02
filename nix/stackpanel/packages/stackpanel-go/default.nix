@@ -14,7 +14,6 @@
 #
 # Usage: Called by other Nix packages that need the stackpanel-go source.
 # ==============================================================================
-
 {
   pkgs,
   lib,

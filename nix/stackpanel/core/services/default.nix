@@ -19,20 +19,23 @@
 {
   lib,
   pkgs ? null,
-}: {
+}:
+{
   # Port computation utilities (pure, no pkgs needed)
   ports = import ./ports.nix { inherit lib; };
 
   # Global services configuration (requires pkgs)
   globalServices =
-    if pkgs != null
-    then import ./global-services.nix { inherit pkgs lib; }
-    else throw "stackpanel.core.globalServices requires pkgs to be passed";
+    if pkgs != null then
+      import ./global-services.nix { inherit pkgs lib; }
+    else
+      throw "stackpanel.core.globalServices requires pkgs to be passed";
 
   # Service definitions helpers (requires pkgs)
   # These are wrappers that call into lib/services/
   services =
-    if pkgs != null
-    then import ./services { inherit pkgs lib; }
-    else throw "stackpanel.core.services requires pkgs to be passed";
+    if pkgs != null then
+      import ./services { inherit pkgs lib; }
+    else
+      throw "stackpanel.core.services requires pkgs to be passed";
 }

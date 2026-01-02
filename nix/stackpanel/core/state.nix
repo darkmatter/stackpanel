@@ -25,17 +25,26 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel;
-  portsCfg = config.stackpanel.ports or { project-name = "unknown"; base-port = 5000; };
-  appsComputed = config.stackpanel.appsComputed or {};
+  portsCfg =
+    config.stackpanel.ports or {
+      project-name = "unknown";
+      base-port = 5000;
+    };
+  appsComputed = config.stackpanel.appsComputed or { };
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
+  dirs =
+    cfg.dirs or {
+      home = ".stackpanel";
+      state = ".stackpanel/state";
+      gen = ".stackpanel/gen";
+      config = ./.;
+    };
 
   # Import util for debug logging
   util = import ../lib/util.nix { inherit pkgs lib config; };
-
-
 
   # Build the state object
   stateData = {
@@ -61,14 +70,16 @@
     }) appsComputed;
 
     # Services with ports
-    services = lib.listToAttrs (map (svc: {
-      name = lib.toLower svc.key;
-      value = {
-        key = svc.key;
-        name = svc.displayName;
-        port = svc.port;
-      };
-    }) (lib.attrValues portsCfg.service));
+    services = lib.listToAttrs (
+      map (svc: {
+        name = lib.toLower svc.key;
+        value = {
+          key = svc.key;
+          name = svc.displayName;
+          port = svc.port;
+        };
+      }) (lib.attrValues portsCfg.service)
+    );
 
     # Network configuration
     network = {
@@ -81,7 +92,8 @@
 
   # Generate JSON
   stateJson = builtins.toJSON stateData;
-in {
+in
+{
   imports = [
     ./options
   ];
@@ -91,14 +103,14 @@ in {
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)
     stackpanel.devshell.hooks.main = [
       ''
-        export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/${cfg.state.file}"
-        ${util.log.debug "state: writing state file to $STACKPANEL_STATE_DIR/${cfg.state.file}"}
-        # Write stackpanel state file for CLI/agent consumption
-        mkdir -p "$STACKPANEL_STATE_DIR"
-        cat > "$STACKPANEL_STATE_DIR/${cfg.state.file}" << 'STACKPANEL_STATE_EOF'
-${stateJson}
-STACKPANEL_STATE_EOF
-        ${util.log.debug "state: state file written successfully"}
+                export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/${cfg.state.file}"
+                ${util.log.debug "state: writing state file to $STACKPANEL_STATE_DIR/${cfg.state.file}"}
+                # Write stackpanel state file for CLI/agent consumption
+                mkdir -p "$STACKPANEL_STATE_DIR"
+                cat > "$STACKPANEL_STATE_DIR/${cfg.state.file}" << 'STACKPANEL_STATE_EOF'
+        ${stateJson}
+        STACKPANEL_STATE_EOF
+                ${util.log.debug "state: state file written successfully"}
       ''
     ];
   };

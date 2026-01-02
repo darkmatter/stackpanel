@@ -22,7 +22,9 @@
 #     };
 #   };
 # ==============================================================================
-{ lib, ... }: with lib; {
+{ lib, ... }:
+with lib;
+{
   options.stackpanel.codegen = {
     enable = lib.mkEnableOption "Stackpanel codegen helpers";
 
@@ -33,16 +35,30 @@
 
     generators = lib.mkOption {
       description = "Code generators to run in the devenv on shell enter.";
-      type = types.attrsOf (types.submodule {
-        options = {
-          exec = lib.mkOption { type = types.str; };
-          cwd = lib.mkOption { type = types.nullOr types.str; default = null; };
-          env = lib.mkOption { type = types.attrsOf types.str; default = {}; };
-          runtimeInputs = lib.mkOption { type = types.listOf types.package; default = []; };
-          onEnter = lib.mkOption { type = types.nullOr types.bool; default = null; };
-        };
-      });
-      default = {};
+      type = types.attrsOf (
+        types.submodule {
+          options = {
+            exec = lib.mkOption { type = types.str; };
+            cwd = lib.mkOption {
+              type = types.nullOr types.str;
+              default = null;
+            };
+            env = lib.mkOption {
+              type = types.attrsOf types.str;
+              default = { };
+            };
+            runtimeInputs = lib.mkOption {
+              type = types.listOf types.package;
+              default = [ ];
+            };
+            onEnter = lib.mkOption {
+              type = types.nullOr types.bool;
+              default = null;
+            };
+          };
+        }
+      );
+      default = { };
     };
   };
 }
