@@ -269,8 +269,9 @@
 
 in {
   # Always add go options to all apps (not conditional)
-  config = {
-    stackpanel.appModules = [
+  config = lib.mkMerge [
+    {
+      stackpanel.appModules = [
       ({ lib, ... }: {
         options.go = lib.mkOption {
         type = lib.types.submodule {
@@ -344,8 +345,9 @@ in {
         description = "Go-specific configuration for this app";
       };
     })
-    ];
-  } // lib.mkIf (cfg.apps != {}) (let
+      ];
+    }
+    (lib.mkIf (cfg.apps != {}) (let
     # Filter apps to only Go apps (evaluated lazily inside mkIf)
     goApps = lib.filterAttrs (name: app: app.go.enable or false) cfg.apps;
   in lib.mkIf (goApps != {}) {
@@ -377,5 +379,6 @@ in {
 
     # add IDE support
     # stackpanel.ide.vscode.settings.
-  });
+  }))
+  ];
 }
