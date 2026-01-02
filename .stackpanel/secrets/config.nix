@@ -17,5 +17,9 @@
 
   # Default environments for all apps
   # Apps can override with their own environment config
-  defaultEnvironments = ["dev" "staging" "prod"];
+  defaultEnvironments = [
+    "dev"
+    "staging"
+    "prod"
+  ];
 }

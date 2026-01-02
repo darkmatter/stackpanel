@@ -33,13 +33,11 @@
 #
 # This creates devShells.default automatically from stackpanel config.
 # ==============================================================================
-
 # This uses the "importApply" pattern to get the localFlake reference.
 {
   localFlake,
   withSystem,
 }:
-
 # The inner function is the actual flake-parts module.
 {
   lib,
@@ -50,44 +48,55 @@ let
   inherit (flake-parts-lib) mkPerSystemOption;
   # Import mkShellFromConfig - takes already-evaluated config
   mkShellFromConfigFactory = import ../devshells/mkShellFromConfig.nix;
-  
+
   # Get devenv-tasks-fast-build from stackpanel's devenv input
   # localFlake is stackpanel itself, which has devenv as an input
-  stackpanelInputs = localFlake.inputs or {};
+  stackpanelInputs = localFlake.inputs or { };
   hasDevenvInput = stackpanelInputs ? devenv;
-  
+
   # Import full stackpanel module (options + config logic)
   stackpanelModule = ../../stackpanel/default.nix;
 in
 {
   # Use mkPerSystemOption to properly add options to perSystem
   # This is the correct flake-parts pattern for adding perSystem options
-  options.perSystem = mkPerSystemOption ({ config, pkgs, lib, system, inputs, ... }: {
-    # Import full stackpanel (options + computed values)
-    imports = [ stackpanelModule ];
+  options.perSystem = mkPerSystemOption (
+    {
+      config,
+      pkgs,
+      lib,
+      system,
+      inputs,
+      ...
+    }:
+    {
+      # Import full stackpanel (options + computed values)
+      imports = [ stackpanelModule ];
 
-    config =
-      let
-        cfg = config.stackpanel;
+      config =
+        let
+          cfg = config.stackpanel;
 
-        # Create shell from already-evaluated config
-        mkShellFromConfig = mkShellFromConfigFactory { inherit pkgs; };
+          # Create shell from already-evaluated config
+          mkShellFromConfig = mkShellFromConfigFactory { inherit pkgs; };
 
-        # Get devenv-tasks-fast-build from stackpanel's devenv input
-        devenvTasksPkg = 
-          if hasDevenvInput && stackpanelInputs.devenv ? packages.${system}.devenv-tasks-fast-build
-          then [ stackpanelInputs.devenv.packages.${system}.devenv-tasks-fast-build ]
-          else [];
+          # Get devenv-tasks-fast-build from stackpanel's devenv input
+          devenvTasksPkg =
+            if hasDevenvInput && stackpanelInputs.devenv ? packages.${system}.devenv-tasks-fast-build then
+              [ stackpanelInputs.devenv.packages.${system}.devenv-tasks-fast-build ]
+            else
+              [ ];
 
-        # Build the shell directly from the evaluated devshell config
-        # No need to re-evaluate modules - config.stackpanel.devshell already has everything
-        nativeDevshell = mkShellFromConfig {
-          devshellConfig = cfg.devshell;
-          extraPackages = devenvTasksPkg;
+          # Build the shell directly from the evaluated devshell config
+          # No need to re-evaluate modules - config.stackpanel.devshell already has everything
+          nativeDevshell = mkShellFromConfig {
+            devshellConfig = cfg.devshell;
+            extraPackages = devenvTasksPkg;
+          };
+        in
+        lib.mkIf (cfg.enable or false) {
+          devShells.default = nativeDevshell;
         };
-      in
-      lib.mkIf (cfg.enable or false) {
-        devShells.default = nativeDevshell;
-      };
-  });
+    }
+  );
 }

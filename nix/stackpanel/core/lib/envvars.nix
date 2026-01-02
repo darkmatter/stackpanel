@@ -25,11 +25,9 @@
 #   4. Provide autocomplete/IDE hints
 #
 # ==============================================================================
-
 {
   lib ? import <nixpkgs/lib>,
 }:
-
 let
   # Helper to create an env var definition
   mkEnvVar =
@@ -72,7 +70,6 @@ let
     devenv = "Devenv Integration";
     ide = "IDE Integration";
   };
-
 in
 rec {
   inherit categories;
@@ -530,7 +527,6 @@ rec {
 
         ${lib.concatMapStringsSep "\n---\n" renderVar vars}
       '';
-
     in
     ''
       # Stackpanel Environment Variables Reference
@@ -550,8 +546,8 @@ rec {
     // Environment variable names used by Stackpanel
     const (
     ${lib.concatMapStringsSep "\n" (v: ''
-      	// ${v.description}
-      	${lib.toUpper (lib.replaceStrings [ "-" " " ] [ "_" "_" ] v.name)} = "${v.name}"
+      // ${v.description}
+      ${lib.toUpper (lib.replaceStrings [ "-" " " ] [ "_" "_" ] v.name)} = "${v.name}"
     '') (lib.filter (v: v.source != "devenv") allVariables)}
     )
 
@@ -560,7 +556,7 @@ rec {
     ${lib.concatMapStringsSep "\n" (cat: ''
       	"${cat}": {
       ${lib.concatMapStringsSep ",\n" (
-        v: ''		${lib.toUpper (lib.replaceStrings [ "-" " " ] [ "_" "_" ] v.name)}''
+        v: ''${lib.toUpper (lib.replaceStrings [ "-" " " ] [ "_" "_" ] v.name)}''
       ) (byCategory cat)}
       	},
     '') (lib.attrValues categories)}

@@ -23,18 +23,34 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel;
-  portsCfg = config.stackpanel.ports or { project-name = "unknown"; base-port = 5000; };
-  ideCfg = config.stackpanel.ide or { enable = false; vscode = { enable = false; workspace-name = "workspace"; }; };
-  appsComputed = config.stackpanel.appsComputed or {};
+  portsCfg =
+    config.stackpanel.ports or {
+      project-name = "unknown";
+      base-port = 5000;
+    };
+  ideCfg =
+    config.stackpanel.ide or {
+      enable = false;
+      vscode = {
+        enable = false;
+        workspace-name = "workspace";
+      };
+    };
+  appsComputed = config.stackpanel.appsComputed or { };
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = cfg.dirs or { home = ".stackpanel"; state = ".stackpanel/state"; gen = ".stackpanel/gen"; config = ./.; };
-
-
+  dirs =
+    cfg.dirs or {
+      home = ".stackpanel";
+      state = ".stackpanel/state";
+      gen = ".stackpanel/gen";
+      config = ./.;
+    };
 
   # Import the stackpanel CLI package
-  stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli {};
+  stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli { };
 
   # Import schemas from the secrets module (single source of truth)
   schemasLib = import ../secrets/schemas.nix { inherit lib; };
@@ -54,7 +70,7 @@
     paths = {
       state = dirs.state;
       gen = dirs.gen;
-      data = dirs.home;  # "data" in Go corresponds to dirs.home (.stackpanel)
+      data = dirs.home; # "data" in Go corresponds to dirs.home (.stackpanel)
     };
 
     # Apps with computed ports and domains
@@ -66,14 +82,16 @@
     }) appsComputed;
 
     # Services with ports
-    services = lib.listToAttrs (map (svc: {
-      name = lib.toLower svc.key;
-      value = {
-        key = svc.key;
-        name = svc.displayName;
-        port = svc.port;
-      };
-    }) (lib.attrValues portsCfg.service));
+    services = lib.listToAttrs (
+      map (svc: {
+        name = lib.toLower svc.key;
+        value = {
+          key = svc.key;
+          name = svc.displayName;
+          port = svc.port;
+        };
+      }) (lib.attrValues portsCfg.service)
+    );
 
     # Network configuration
     network = {
@@ -120,15 +138,15 @@
   # Write config to a store path.
   # Using builtins.toFile (no builder needed) since we no longer embed store path references.
   configFile = builtins.toFile "stackpanel-config.json" configJson;
-
-in {
+in
+{
   imports = [
     ./options
   ];
 
   config = lib.mkIf (cfg.enable && builtins.getEnv "STACKPANEL_SKIP_CLI" != "true") {
     # Add the CLI to packages
-    stackpanel.devshell.packages = [stackpanel-cli];
+    stackpanel.devshell.packages = [ stackpanel-cli ];
 
     # Add hints about IDE integration (if enabled)
     stackpanel.motd.hints = lib.mkIf (ideCfg.enable && ideCfg.vscode.enable) [

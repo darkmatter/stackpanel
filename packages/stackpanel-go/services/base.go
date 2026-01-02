@@ -17,7 +17,6 @@ import (
 	nixeval "github.com/darkmatter/stackpanel/packages/stackpanel-go/nixeval"
 )
 
-
 const (
 	PortMin = 3000
 	PortMax = 10000
@@ -167,7 +166,7 @@ func (b BaseService) StablePort() (int, error) {
 	ctx := context.Background()
 	// Get the github org/repo using nix evaloz
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
-		Expression: nixeval.ActiveConfigPreset,
+		Expression:  nixeval.ActiveConfigPreset,
 		ProjectRoot: GetProjectRoot(),
 	})
 	if err != nil {
@@ -273,7 +272,7 @@ func computeOverRange(
 	// get the numeric value of the first 4 hex chars
 	hexStr := fmt.Sprintf("%x", h)[:4]
 	n, _ := strconv.ParseInt(hexStr, 16, 64)
-	rawOffset := n % int64(max - min)
+	rawOffset := n % int64(max-min)
 	offsetInRange := rawOffset
 	roundedOffset := offsetInRange - (offsetInRange % int64(mod))
 	return min + int(roundedOffset)
@@ -287,7 +286,7 @@ func StablePort(
 	return computeOverRange(
 		service,
 		prange,
-		prange + PortMod,
+		prange+PortMod,
 		1,
 	)
 }
@@ -299,7 +298,7 @@ func ComputePort(serviceName string, reposlug string) int {
 		// Try to get from nix eval
 		ctx := context.Background()
 		result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
-			Expression: nixeval.ActiveConfigPreset,
+			Expression:  nixeval.ActiveConfigPreset,
 			ProjectRoot: GetProjectRoot(),
 		})
 		if err == nil {

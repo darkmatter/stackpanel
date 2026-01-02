@@ -26,7 +26,7 @@
 let
   # Import merged config (single source of truth)
   mergedConfig = import ./nix/flake/merged-config.nix { inherit pkgs lib inputs; };
-  
+
   # Extract sections
   stackpanelConfig = mergedConfig.stackpanel;
   devenvConfig = mergedConfig.devenv;
@@ -36,12 +36,14 @@ let
   useDevenv = stackpanelConfig.useDevenv or true;
 
   # Git hooks configuration (optional)
-  pre-commit-check = if git-hooks != null then
-    git-hooks.lib.${system}.run {
-      src = ./.;
-      hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];
-    }
-  else null;
+  pre-commit-check =
+    if git-hooks != null then
+      git-hooks.lib.${system}.run {
+        src = ./.;
+        hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];
+      }
+    else
+      null;
 
   # Module-based mkDevShell for native nix develop
   mkDevShell = import ./nix/flake/devshells/mkDevShell.nix { inherit pkgs; };
@@ -51,18 +53,20 @@ let
   localDevshellModule = import ./nix/internal/devshell.nix { inherit inputs mergedConfig; };
 
   # Create a stackpanel-only module from main.nix config
-  stackpanelOnlyModule = { ... }: {
-    imports = [ ./nix/stackpanel/default.nix ];
-    stackpanel = stackpanelConfig;
-  };
+  stackpanelOnlyModule =
+    { ... }:
+    {
+      imports = [ ./nix/stackpanel/default.nix ];
+      stackpanel = stackpanelConfig;
+    };
 
   # Native devshell using module-based mkDevShell
   nativeDevshell = mkDevShell {
     modules = [ stackpanelOnlyModule ];
     specialArgs = { inherit inputs; };
   };
-
-in {
+in
+{
   # Export for use in flake.nix
   inherit
     useDevenv

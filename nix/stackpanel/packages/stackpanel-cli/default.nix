@@ -15,7 +15,6 @@
 # Usage: Run `stackpanel` commands to manage development services, certificates,
 # Caddy configuration, and more.
 # ==============================================================================
-
 {
   pkgs,
   lib,
@@ -29,27 +28,30 @@ let
   goSrc = "${repoRoot}/packages/stackpanel-go";
 
   # Create composite source with proper directory structure for Go module resolution
-  compositeSrc = pkgs.runCommand "stackpanel-cli-src" {
-    preferLocalBuild = true;
-    allowSubstitutes = false;
-  } ''
-    mkdir -p $out/apps/cli
-    mkdir -p $out/packages/stackpanel-go
-    cp -R ${cliSrc}/. $out/apps/cli/
-    cp -R ${goSrc}/. $out/packages/stackpanel-go/
-  '';
+  compositeSrc =
+    pkgs.runCommand "stackpanel-cli-src"
+      {
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+      }
+      ''
+        mkdir -p $out/apps/cli
+        mkdir -p $out/packages/stackpanel-go
+        cp -R ${cliSrc}/. $out/apps/cli/
+        cp -R ${goSrc}/. $out/packages/stackpanel-go/
+      '';
 in
 pkgs.buildGoApplication {
   pname = "stackpanel-cli";
   version = "0.1.0";
 
-  # Use a minimal source tree that contains both the CLI and the local module  
+  # Use a minimal source tree that contains both the CLI and the local module
   src = compositeSrc;
-  pwd = compositeSrc + "/apps/cli";  # Tell gomod2nix where to find go.mod
+  pwd = compositeSrc + "/apps/cli"; # Tell gomod2nix where to find go.mod
   modules = compositeSrc + "/apps/cli/gomod2nix.toml";
-  sourceRoot = "stackpanel-cli-src/apps/cli";  # Build from this subdirectory
-  subPackages = [ "." ];  # Build from pwd (apps/cli)
-  
+  sourceRoot = "stackpanel-cli-src/apps/cli"; # Build from this subdirectory
+  subPackages = [ "." ]; # Build from pwd (apps/cli)
+
   # Skip tests during build (some tests require specific environment)
   doCheck = false;
 
@@ -68,6 +70,6 @@ pkgs.buildGoApplication {
     description = "Stackpanel development CLI";
     homepage = "https://github.com/darkmatter/stackpanel";
     license = licenses.mit;
-    maintainers = [];
+    maintainers = [ ];
   };
 }

@@ -17,7 +17,7 @@ import (
 var (
 	version = "dev"
 	commit  = "none"
-	logger = common.L()
+	logger  = common.L()
 )
 
 func main() {

@@ -1,5 +1,12 @@
 # attrset of useful scripts
-{ pkgs, lib, inputs, system, ... }: let
+{
+  pkgs,
+  lib,
+  inputs,
+  system,
+  ...
+}:
+let
   multisops = pkgs.writeShellApplication {
     name = "multisops";
     runtimeInputs = with pkgs; [
@@ -64,6 +71,6 @@ in
       cp ${inputs.devenv.packages.${system}.devenv-scripts-stackpanel}/bin/stackpanel_* $out/bin/
     '';
     # No need for any special runtime dependencies
-    passthru = {};
+    passthru = { };
   };
 }

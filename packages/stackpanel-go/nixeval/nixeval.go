@@ -72,15 +72,15 @@ type StepConfig struct {
 // Evaluator provides cached Nix evaluation with file watching
 type Evaluator struct {
 	projectRoot string
-	nixFile     string // Path to nix eval file - unused if expression is set
-	nixExpr		 string  // Nix expression to evaluate
-	nixArgs		 map[string]string // Additional Nix arguments
+	nixFile     string            // Path to nix eval file - unused if expression is set
+	nixExpr     string            // Nix expression to evaluate
+	nixArgs     map[string]string // Additional Nix arguments
 	timeout     time.Duration
 
-	mu          sync.RWMutex
-	cached      []byte
-	cachedAt    time.Time
-	cacheTTL    time.Duration
+	mu       sync.RWMutex
+	cached   []byte
+	cachedAt time.Time
+	cacheTTL time.Duration
 
 	watcher     *fsnotify.Watcher
 	watchPaths  []string
@@ -151,8 +151,8 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 	e := &Evaluator{
 		projectRoot: absRoot,
 		// nixFile:     nixFile,
-		timeout:     10 * time.Second,
-		cacheTTL:    5 * time.Second,
+		timeout:    10 * time.Second,
+		cacheTTL:   5 * time.Second,
 		watchPaths: defaultWatchPaths,
 	}
 
@@ -270,7 +270,6 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 
 	return stdout.Bytes(), nil
 }
-
 
 // StartWatching begins watching files for changes
 // When a change is detected, the cache is invalidated

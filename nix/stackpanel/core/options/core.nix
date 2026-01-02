@@ -19,9 +19,12 @@
 #   ├── state/             (dirs.state - gitignored, runtime state)
 #   └── gen/               (dirs.gen - checked in, generated files)
 # ==============================================================================
-{ lib, config, ... }:
 {
-
+  lib,
+  config,
+  ...
+}:
+{
   # Base stackpanel options for devenv
   options.stackpanel = {
     enable = lib.mkEnableOption "Enable Stackpanel" // {

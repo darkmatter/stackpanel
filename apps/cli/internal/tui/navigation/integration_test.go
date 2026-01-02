@@ -313,10 +313,10 @@ func TestQuitKeyAtAllLevels(t *testing.T) {
 	root := createDeepCommandTree()
 
 	levels := [][]string{
-		{},                                     // root
-		{"app", "services"},                    // level 1
-		{"app", "services", "db"},              // level 2
-		{"app", "services", "db", "migrate"},   // level 3 (leaf)
+		{},                                   // root
+		{"app", "services"},                  // level 1
+		{"app", "services", "db"},            // level 2
+		{"app", "services", "db", "migrate"}, // level 3 (leaf)
 	}
 
 	for _, path := range levels {

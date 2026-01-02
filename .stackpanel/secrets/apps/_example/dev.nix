@@ -18,8 +18,8 @@
   };
 
   # Users who can access dev secrets (from users.nix)
-  users = [];
+  users = [ ];
 
   # Additional AGE keys (CI systems, etc)
-  extraKeys = [];
+  extraKeys = [ ];
 }

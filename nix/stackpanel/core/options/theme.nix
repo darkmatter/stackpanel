@@ -14,7 +14,8 @@
 # which shows relevant information like git status, Nix shell indicator,
 # and project-specific context.
 # ==============================================================================
-{ lib, ... }: {
+{ lib, ... }:
+{
   options.stackpanel.theme = {
     enable = lib.mkEnableOption "Starship prompt for stackpanel devenv";
 

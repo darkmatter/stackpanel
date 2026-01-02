@@ -16,7 +16,8 @@
 # Sites are registered via stackpanel.apps with domain configuration,
 # or manually via stackpanel.globalServices.caddy.sites.
 # ==============================================================================
-{ lib, ... }: {
+{ lib, ... }:
+{
   options.stackpanel.caddy = {
     enable = lib.mkEnableOption "Caddy reverse proxy";
 

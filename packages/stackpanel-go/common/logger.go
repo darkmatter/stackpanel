@@ -48,7 +48,6 @@ func (e *charmEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (*
 
 func L() *zap.SugaredLogger { return logger }
 
-
 // Plain methods
 func Debug(msg string, args ...any) { zap.S().Debugw(msg, args...) }
 func Info(msg string, args ...any)  { zap.S().Infow(msg, args...) }

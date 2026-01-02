@@ -1,5 +1,10 @@
-{pkgs, lib, ...}: let
-  root = ../../../..
+{
+  pkgs,
+  lib,
+  ...
+}:
+let
+  root = ../../../..;
   mkGoInstall = name: {
     description = "Install go dependencies for ${name}";
     script = ''
@@ -8,7 +13,8 @@
       ${pkgs.go}/bin/go mod download
     '';
   };
-in  {
+in
+{
   tasks."stackpanel-go:install" = {
     description = "Install Go dependencies for StackPanel Go projects";
     script = ''

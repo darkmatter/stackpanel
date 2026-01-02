@@ -13,7 +13,6 @@
 #
 # Usage: This package is typically included via the stackpanel flake outputs.
 # ==============================================================================
-
 {
   pkgs,
   lib,
@@ -27,15 +26,18 @@ let
   goSrc = "${repoRoot}/packages/stackpanel-go";
 
   # Create composite source with proper directory structure for Go module resolution
-  compositeSrc = pkgs.runCommand "stackpanel-agent-src" {
-    preferLocalBuild = true;
-    allowSubstitutes = false;
-  } ''
-    mkdir -p $out/apps/agent
-    mkdir -p $out/packages/stackpanel-go
-    cp -R ${agentSrc}/. $out/apps/agent/
-    cp -R ${goSrc}/. $out/packages/stackpanel-go/
-  '';
+  compositeSrc =
+    pkgs.runCommand "stackpanel-agent-src"
+      {
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+      }
+      ''
+        mkdir -p $out/apps/agent
+        mkdir -p $out/packages/stackpanel-go
+        cp -R ${agentSrc}/. $out/apps/agent/
+        cp -R ${goSrc}/. $out/packages/stackpanel-go/
+      '';
 in
 pkgs.buildGoApplication {
   pname = "stackpanel-agent";
@@ -43,10 +45,10 @@ pkgs.buildGoApplication {
 
   # Use a minimal source tree that contains both the agent and the local module
   src = compositeSrc;
-  pwd = compositeSrc + "/apps/agent";  # Tell gomod2nix where to find go.mod
+  pwd = compositeSrc + "/apps/agent"; # Tell gomod2nix where to find go.mod
   modules = compositeSrc + "/apps/agent/gomod2nix.toml";
-  sourceRoot = "stackpanel-agent-src/apps/agent";  # Build from this subdirectory
-  subPackages = [ "." ];  # Build from pwd (apps/agent)
+  sourceRoot = "stackpanel-agent-src/apps/agent"; # Build from this subdirectory
+  subPackages = [ "." ]; # Build from pwd (apps/agent)
 
   ldflags = [
     "-s"
@@ -63,7 +65,6 @@ pkgs.buildGoApplication {
     description = "StackPanel agent for web UI integration";
     homepage = "https://github.com/darkmatter/stackpanel";
     license = licenses.mit;
-    maintainers = [];
+    maintainers = [ ];
   };
 }
-

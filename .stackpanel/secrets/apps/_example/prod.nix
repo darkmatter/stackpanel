@@ -12,8 +12,8 @@
   };
 
   # Users who can access production secrets (should be limited!)
-  users = [];
+  users = [ ];
 
   # Additional AGE keys (CI/CD systems for deployment)
-  extraKeys = [];
+  extraKeys = [ ];
 }

@@ -14,7 +14,10 @@
 # This library is imported by both default.nix (standalone packages) and
 # core.nix (devenv scripts) to ensure consistent behavior.
 # ==============================================================================
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+}:
 rec {
   # Convert YAML file to JSON (decrypting with SOPS)
   # Returns a shell function that can be used in scripts

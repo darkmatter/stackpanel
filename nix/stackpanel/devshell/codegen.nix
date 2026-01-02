@@ -17,7 +17,12 @@
 #     };
 #   };
 # ==============================================================================
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stackpanel.codegen;
   types = lib.types;
@@ -26,24 +31,28 @@ let
   util = import ../lib/util.nix { inherit pkgs lib config; };
 
   mkGenCmd = _name: gen: {
-    exec = lib.concatStringsSep "\n" (lib.filter (s: s != "") [
-      (lib.concatStringsSep "\n" (lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (gen.env or {})))
-      (if gen.cwd != null then "cd ${gen.cwd}" else "")
-      gen.exec
-    ]);
-    runtimeInputs = gen.runtimeInputs or [];
-    env = {}; # already injected in exec above; keep consistent
+    exec = lib.concatStringsSep "\n" (
+      lib.filter (s: s != "") [
+        (lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (gen.env or { })
+        ))
+        (if gen.cwd != null then "cd ${gen.cwd}" else "")
+        gen.exec
+      ]
+    );
+    runtimeInputs = gen.runtimeInputs or [ ];
+    env = { }; # already injected in exec above; keep consistent
   };
 
-  onEnterHooks =
-    lib.mapAttrsToList (name: gen:
-      lib.optionalString ((gen.onEnter or cfg.runOnEnter) == true) ''
-        ${util.log.debug "codegen: running generator '${name}'"}
-        echo "▶ running codegen: ${name}"
-        ${gen.exec}
-        ${util.log.debug "codegen: generator '${name}' completed"}
-      ''
-    ) cfg.generators;
+  onEnterHooks = lib.mapAttrsToList (
+    name: gen:
+    lib.optionalString ((gen.onEnter or cfg.runOnEnter) == true) ''
+      ${util.log.debug "codegen: running generator '${name}'"}
+      echo "▶ running codegen: ${name}"
+      ${gen.exec}
+      ${util.log.debug "codegen: generator '${name}' completed"}
+    ''
+  ) cfg.generators;
 in
 {
   imports = [
