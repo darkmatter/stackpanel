@@ -427,8 +427,18 @@ in {
         lib.optionalAttrs app.go.generateFiles (mkGeneratedFileEntries name app)
       ) goApps);
 
-    # add IDE support
-    # stackpanel.ide.vscode.settings.
+    # Add run-<app> and test-<app> wrapper commands for each Go app
+    # Uses STACKPANEL_ROOT env var which is set on shell entry
+    stackpanel.devshell.commands = lib.mkMerge (lib.mapAttrsToList (name: app: {
+      "run-${name}" = {
+        exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.go.mainPackage} "$@"'';
+        runtimeInputs = [ pkgs.go ];
+      };
+      "test-${name}" = {
+        exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
+        runtimeInputs = [ pkgs.go ];
+      };
+    }) goApps);
   }))
   ];
 }
