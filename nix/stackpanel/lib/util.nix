@@ -21,7 +21,6 @@ let
     lib.optionalString debug ''
       ${pkgs.gum}/bin/gum log -l error --prefix "step" "${v}"
     '';
-
 in
 {
   log = {
@@ -37,6 +36,9 @@ in
   # the stackpanel config. The key is encoded such that it can be passed to
   # jq to extract the value.
   getConfigValue =
-    { selector, defaultValue }:
-    builtins.getAttr selector config.stackpanel or defaultValue ;
+    {
+      selector,
+      defaultValue,
+    }:
+    builtins.getAttr selector config.stackpanel or defaultValue;
 }

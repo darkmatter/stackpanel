@@ -22,9 +22,11 @@
   pkgs,
   lib,
   baseDir,
-}: let
+}:
+let
   defaultPackage = pkgs.postgresql_17;
-in {
+in
+{
   # Required packages for PostgreSQL
   packages = [
     defaultPackage
@@ -32,47 +34,55 @@ in {
   ];
 
   # Create a service configuration for a project
-  mkService = {
-    projectName,
-    port ? 5432,
-    databases ? [],
-    package ? defaultPackage,
-  }: let
-    postgresPackage = package;
-    dataDir = "${baseDir}/postgres/data";
-    socketDir = "${baseDir}/postgres";
-    # Common environment variables
-    env = {
-      PGDATA = dataDir;
-      PGHOST = socketDir;
-      PGPORT = toString port;
-      PGDATABASE = "postgres";
-      PGUSER = "postgres";
-      # Connection strings for applications
-      DATABASE_URL = "postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}";
-      POSTGRES_URL = "postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}";
+  mkService =
+    {
+      projectName,
+      port ? 5432,
+      databases ? [ ],
+      package ? defaultPackage,
+    }:
+    let
+      postgresPackage = package;
+      dataDir = "${baseDir}/postgres/data";
+      socketDir = "${baseDir}/postgres";
+      # Common environment variables
+      env = {
+        PGDATA = dataDir;
+        PGHOST = socketDir;
+        PGPORT = toString port;
+        PGDATABASE = "postgres";
+        PGUSER = "postgres";
+        # Connection strings for applications
+        DATABASE_URL = "postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}";
+        POSTGRES_URL = "postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}";
+      };
+    in
+    {
+      inherit env;
+      inherit
+        dataDir
+        socketDir
+        port
+        databases
+        ;
+      package = postgresPackage;
+
+      # All packages needed by the CLI to manage PostgreSQL
+      allPackages = [
+        postgresPackage
+        postgresPackage.lib
+      ];
+
+      # Shell hook to set environment variables
+      shellHook = ''
+        # Set environment variables for PostgreSQL
+        export PGDATA="${dataDir}"
+        export PGHOST="${socketDir}"
+        export PGPORT="${toString port}"
+        export PGDATABASE="postgres"
+        export PGUSER="postgres"
+        export DATABASE_URL="postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}"
+        export POSTGRES_URL="postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}"
+      '';
     };
-  in {
-    inherit env;
-    inherit dataDir socketDir port databases;
-    package = postgresPackage;
-
-    # All packages needed by the CLI to manage PostgreSQL
-    allPackages = [
-      postgresPackage
-      postgresPackage.lib
-    ];
-
-    # Shell hook to set environment variables
-    shellHook = ''
-      # Set environment variables for PostgreSQL
-      export PGDATA="${dataDir}"
-      export PGHOST="${socketDir}"
-      export PGPORT="${toString port}"
-      export PGDATABASE="postgres"
-      export PGUSER="postgres"
-      export DATABASE_URL="postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}"
-      export POSTGRES_URL="postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}"
-    '';
-  };
 }

@@ -24,7 +24,11 @@
   };
 
   outputs =
-    inputs@{ flake-parts, nixpkgs, ... }:
+    inputs@{
+      flake-parts,
+      nixpkgs,
+      ...
+    }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.stackpanel.flakeModules.readStackpanelRoot
@@ -39,7 +43,11 @@
       ];
 
       perSystem =
-        { pkgs, system, ... }:
+        {
+          pkgs,
+          system,
+          ...
+        }:
         {
           # Stackpanel configuration
           # The flakeModules.native creates devShells.default automatically

@@ -397,8 +397,8 @@ func (m AgentView) renderLogsPanel(width int) string {
 
 	// Logs content
 	logsStyle := lipgloss.NewStyle().
-		Width(width - 2).
-		Height(m.height - 6).
+		Width(width-2).
+		Height(m.height-6).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(tui.ColorBorder).
 		Padding(0, 1)
@@ -436,7 +436,7 @@ func (m AgentView) renderMenuPanel(width int) string {
 		isSelected := i == m.selectedIdx && m.focus == FocusMenu
 
 		itemStyle := lipgloss.NewStyle().
-			Width(width - 6).
+			Width(width-6).
 			Padding(0, 1)
 
 		cursor := "  "
@@ -464,8 +464,8 @@ func (m AgentView) renderMenuPanel(width int) string {
 
 	// Menu container
 	menuStyle := lipgloss.NewStyle().
-		Width(width - 2).
-		Height(m.height - 6).
+		Width(width-2).
+		Height(m.height-6).
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(tui.ColorBorder).
 		Padding(0, 1)

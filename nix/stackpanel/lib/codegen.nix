@@ -21,7 +21,8 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel;
   files = cfg.files;
   executableFiles = cfg.executableFiles;
@@ -46,72 +47,82 @@
   };
 
   # Extract file extension from path
-  getExt = path:
-    lib.last (lib.splitString "." path);
+  getExt = path: lib.last (lib.splitString "." path);
 
   # Add header comment to content based on file extension
-  withHeader = ext: content: let
-    style = commentStyles.${ext} or null;
-  in
-    if style == null then content
-    else if style == "<!--" then "<!-- ${header} -->\n${content}"
-    else "${style} ${header}\n${content}";
+  withHeader =
+    ext: content:
+    let
+      style = commentStyles.${ext} or null;
+    in
+    if style == null then
+      content
+    else if style == "<!--" then
+      "<!-- ${header} -->\n${content}"
+    else
+      "${style} ${header}\n${content}";
 
   # Process a single file entry into its final content
-  processFile = path: content: let
-    ext = getExt path;
-  in
-    if builtins.isPath content
-    then builtins.readFile content
-    else withHeader ext content;
+  processFile =
+    path: content:
+    let
+      ext = getExt path;
+    in
+    if builtins.isPath content then builtins.readFile content else withHeader ext content;
 
   # Pre-process all files into a list of { path, content } attrs
-  processedFiles = lib.mapAttrsToList
-    (path: content: {
-      inherit path;
-      content = processFile path content;
-    })
-    files;
+  processedFiles = lib.mapAttrsToList (path: content: {
+    inherit path;
+    content = processFile path content;
+  }) files;
 
-  hasFiles = files != {};
+  hasFiles = files != { };
   fileCount = toString (lib.length (lib.attrNames files));
-  hasExecutables = executableFiles != [];
+  hasExecutables = executableFiles != [ ];
 
   # Generate chmod command for executable files
   mkChmodCommand = path: ''chmod +x "${path}" && echo "  ⚡ ${path} (executable)"'';
 
   # Generate shell command for writing a single file
-  mkWriteCommand = file: lib.concatStringsSep "\n" [
-    ''mkdir -p "$(dirname "${file.path}")"''
-    "cat > \"${file.path}\" << 'STACKPANEL_EOF'"
-    file.content
-    "STACKPANEL_EOF"
-    ''echo "  ✓ ${file.path}"''
-  ];
+  mkWriteCommand =
+    file:
+    lib.concatStringsSep "\n" [
+      ''mkdir -p "$(dirname "${file.path}")"''
+      "cat > \"${file.path}\" << 'STACKPANEL_EOF'"
+      file.content
+      "STACKPANEL_EOF"
+      ''echo "  ✓ ${file.path}"''
+    ];
 
   # Generate shell command for displaying a single file
-  mkDisplayCommand = file: lib.concatStringsSep "\n" [
-    ''echo ""''
-    ''echo "─── ${file.path} ───"''
-    "cat << 'STACKPANEL_EOF'"
-    file.content
-    "STACKPANEL_EOF"
-  ];
+  mkDisplayCommand =
+    file:
+    lib.concatStringsSep "\n" [
+      ''echo ""''
+      ''echo "─── ${file.path} ───"''
+      "cat << 'STACKPANEL_EOF'"
+      file.content
+      "STACKPANEL_EOF"
+    ];
 
   # Script bodies
-  generateScript = lib.concatStringsSep "\n" ([
-    "set -euo pipefail"
-    ''cd "${root}"''
-    ''echo "Generating stackpanel files..."''
-    (lib.concatMapStringsSep "\n" mkWriteCommand processedFiles)
-  ] ++ lib.optionals hasExecutables [
-    ''echo ""''
-    ''echo "Making files executable..."''
-    (lib.concatMapStringsSep "\n" mkChmodCommand executableFiles)
-  ] ++ [
-    ''echo ""''
-    ''echo "Done! Generated ${fileCount} files."''
-  ]);
+  generateScript = lib.concatStringsSep "\n" (
+    [
+      "set -euo pipefail"
+      ''cd "${root}"''
+      ''echo "Generating stackpanel files..."''
+      (lib.concatMapStringsSep "\n" mkWriteCommand processedFiles)
+    ]
+    ++ lib.optionals hasExecutables [
+      ''echo ""''
+      ''echo "Making files executable..."''
+      (lib.concatMapStringsSep "\n" mkChmodCommand executableFiles)
+    ]
+    ++ [
+      ''echo ""''
+      ''echo "Done! Generated ${fileCount} files."''
+    ]
+  );
 
   generateDiffScript = lib.concatStringsSep "\n" [
     ''echo "=== stackpanel managed files (${fileCount}) ==="''
@@ -124,15 +135,17 @@
     noFilesMessage
     ''echo "Add files in your flake.nix perSystem config"''
   ];
-
-in {
+in
+{
   config = lib.mkIf cfg.enable {
     # Add generation scripts to the devshell packages
     stackpanel.devshell.packages = [
-      (pkgs.writeShellScriptBin "stackpanel-generate"
-        (if hasFiles then generateScript else noFilesScript))
-      (pkgs.writeShellScriptBin "stackpanel-generate-diff"
-        (if hasFiles then generateDiffScript else noFilesMessage))
+      (pkgs.writeShellScriptBin "stackpanel-generate" (
+        if hasFiles then generateScript else noFilesScript
+      ))
+      (pkgs.writeShellScriptBin "stackpanel-generate-diff" (
+        if hasFiles then generateDiffScript else noFilesMessage
+      ))
     ];
   };
 }

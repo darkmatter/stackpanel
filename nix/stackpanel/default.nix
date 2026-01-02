@@ -16,7 +16,11 @@
 #       → core/, network/, services/, etc.
 #
 # ==============================================================================
-{ lib, config, ... }:
+{
+  lib,
+  config,
+  ...
+}:
 let
   initshell = lib.concatLines [
     ''
@@ -33,13 +37,12 @@ in
     ./core
 
     # Feature modules (all adapter-agnostic)
-    ./network  # step-ca, ports
+    ./network # step-ca, ports
     ./services # aws, caddy, global-services
-    ./secrets  # SOPS helper
-    ./tui      # TUI components
-    ./ide      # IDE integration (VS Code)
-    ./modules/go.nix  # Go app support
-
+    ./secrets # SOPS helper
+    ./tui # TUI components
+    ./ide # IDE integration (VS Code)
+    ./modules/go.nix # Go app support
   ];
 
   config.stackpanel.devshell.hooks.after = [

@@ -14,7 +14,6 @@
 #
 # CLI commands: stackpanel status, stackpanel services start/stop
 # ==============================================================================
-
 # Stackpanel-specific devenv services
 #
 # This file contains service configurations specific to developing stackpanel.
@@ -43,7 +42,8 @@
   lib,
   config,
   ...
-}: {
+}:
+{
   # NOTE: stackpanel.* options have been moved to .stackpanel/config.nix
   # This file should only contain devenv-native options.
   #

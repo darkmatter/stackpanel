@@ -17,20 +17,29 @@
 # Usage in flake.nix:
 #   devenv.shells.default.imports = [ (import ./nix/internal/devshell.nix { inherit inputs; }) ];
 # ==============================================================================
-{ inputs, mergedConfig ? null }:
-{ pkgs, lib, config, ... }:
+{
+  inputs,
+  mergedConfig ? null,
+}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   # Import merged config (single source of truth)
   # Passed as parameter or imported directly
-  actualMergedConfig = 
-    if mergedConfig != null 
-    then mergedConfig
-    else import ../../nix/flake/merged-config.nix { inherit pkgs lib inputs; };
+  actualMergedConfig =
+    if mergedConfig != null then
+      mergedConfig
+    else
+      import ../../nix/flake/merged-config.nix { inherit pkgs lib inputs; };
 
   # Extract sections
   stackpanelConfig = actualMergedConfig.stackpanel;
   devenvConfig = actualMergedConfig.devenv;
-  
+
   # Extract only the devshell outputs from stackpanel
   devshellOutputs = stackpanelConfig.devshell;
 in
@@ -42,26 +51,33 @@ in
 
   # Apply stackpanel devshell outputs directly to devenv
   # Note: Merge packages from both stackpanel and devenv config
-  packages = devshellOutputs.packages 
-    ++ (devshellOutputs._commandPkgs or [])
-    ++ (devenvConfig.packages or []);
-  
-  env = devshellOutputs.env // (devenvConfig.env or {});
-  
-  enterShell = lib.concatStringsSep "\n\n" (
-    lib.flatten [
-      devshellOutputs.hooks.before
-      devshellOutputs.hooks.main
-      devshellOutputs.hooks.after
-    ]
-  ) + "\n\n" + (devenvConfig.enterShell or "");
-  
+  packages =
+    devshellOutputs.packages ++ (devshellOutputs._commandPkgs or [ ]) ++ (devenvConfig.packages or [ ]);
+
+  env = devshellOutputs.env // (devenvConfig.env or { });
+
+  enterShell =
+    lib.concatStringsSep "\n\n" (
+      lib.flatten [
+        devshellOutputs.hooks.before
+        devshellOutputs.hooks.main
+        devshellOutputs.hooks.after
+      ]
+    )
+    + "\n\n"
+    + (devenvConfig.enterShell or "");
+
   scripts = lib.mapAttrs (name: _cmd: {
     exec = ''exec ${name} "$@"'';
-  }) (devshellOutputs.commands or {});
+  }) (devshellOutputs.commands or { });
 
   # ===========================================================================
   # Devenv-specific options (from .stackpanel/config.nix devenv section)
   # These are native devenv options, not stackpanel options (except packages/env/enterShell which are merged above)
   # ===========================================================================
-} // (builtins.removeAttrs devenvConfig ["packages" "env" "enterShell"])
+}
+// (builtins.removeAttrs devenvConfig [
+  "packages"
+  "env"
+  "enterShell"
+])

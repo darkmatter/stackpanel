@@ -7,4 +7,7 @@
 # currently importing the theme module for terminal customization.
 # Future TUI features (interactive menus, dashboards) would be added here.
 # ==============================================================================
-{ ... }: { imports = [ ./theme.nix ]; }
+{ ... }:
+{
+  imports = [ ./theme.nix ];
+}

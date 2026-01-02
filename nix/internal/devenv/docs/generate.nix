@@ -12,7 +12,6 @@
 # Usage: Run 'generate-docs' in devenv shell to regenerate documentation.
 # The Go CLI (apps/cli) processes the JSON to create fumadocs-compatible MDX.
 # ==============================================================================
-
 # Stackpanel options documentation generator
 #
 # This module is imported by devenv to generate documentation.
@@ -24,42 +23,48 @@
 # Then access via:
 #   nix build .#devenv-docs-options-json
 #
-{ pkgs
-, lib
-, config
-, options
-, ...
+{
+  pkgs,
+  lib,
+  config,
+  options,
+  ...
 }:
-
 let
   # Get stackpanel options from the evaluated module system
-  stackpanelOptions = options.stackpanel or {};
+  stackpanelOptions = options.stackpanel or { };
 
   # Transform option declarations to readable paths
-  transformOptions = opt: opt // {
-    declarations = map (decl:
-      let
-        declStr = toString decl;
-        # Try to make paths relative and linkable
-        relativePath =
-          if lib.hasPrefix (toString ../.) declStr
-          then lib.removePrefix (toString ../. + "/") declStr
-          else if lib.hasPrefix "/nix/store" declStr
-          then builtins.baseNameOf (builtins.dirOf declStr) + "/" + builtins.baseNameOf declStr
-          else declStr;
-      in {
-        name = relativePath;
-        url =
-          if lib.hasPrefix "modules/" relativePath
-          then "https://github.com/darkmatter/stackpanel/blob/main/nix/${relativePath}"
-          else null;
-      }
-    ) (opt.declarations or []);
-  };
+  transformOptions =
+    opt:
+    opt
+    // {
+      declarations = map (
+        decl:
+        let
+          declStr = toString decl;
+          # Try to make paths relative and linkable
+          relativePath =
+            if lib.hasPrefix (toString ../.) declStr then
+              lib.removePrefix (toString ../. + "/") declStr
+            else if lib.hasPrefix "/nix/store" declStr then
+              builtins.baseNameOf (builtins.dirOf declStr) + "/" + builtins.baseNameOf declStr
+            else
+              declStr;
+        in
+        {
+          name = relativePath;
+          url =
+            if lib.hasPrefix "modules/" relativePath then
+              "https://github.com/darkmatter/stackpanel/blob/main/nix/${relativePath}"
+            else
+              null;
+        }
+      ) (opt.declarations or [ ]);
+    };
 
   # Filter to only stackpanel.* options
-  filterStackpanelOptions =
-    lib.filterAttrs (name: _: lib.hasPrefix "stackpanel" name);
+  filterStackpanelOptions = lib.filterAttrs (name: _: lib.hasPrefix "stackpanel" name);
 
   # Generate documentation using nixosOptionsDoc
   optionsDoc = pkgs.nixosOptionsDoc {
@@ -93,8 +98,8 @@ let
 
     echo "✅ Done! Generated documentation in $DOCS_DIR"
   '';
-
-in {
+in
+{
   # Add to devenv outputs
   outputs = {
     stackpanel-docs-options-json = optionsDoc.optionsJSON;

@@ -28,14 +28,15 @@ import (
 )
 
 type Topic string
+
 // Directory names for generated documentation
 const (
 	// Docs generated from evaluating Nix options => /core/reference
 	DirnameReference Topic = "reference"
 	// Docs generated from READMEs => /internal
-	DirnameModules   Topic = "internal"
+	DirnameModules Topic = "internal"
 	// Docs gnerate from CLI readme => cli
-	DirnameCLI 	Topic = "cli"
+	DirnameCLI Topic = "cli"
 )
 
 func mkpath(topic Topic, basedir string) string {
@@ -92,7 +93,6 @@ func RunWithCLI(optionsPath string, docsDir string, nixModulesDir string, rootCm
 
 	return nil
 }
-
 
 func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir string) error {
 	// Read and parse options JSON

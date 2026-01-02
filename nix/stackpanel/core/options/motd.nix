@@ -16,7 +16,8 @@
 # The actual rendering is done by the CLI, which formats the MOTD with
 # colors and proper alignment.
 # ==============================================================================
-{lib,...}: {
+{ lib, ... }:
+{
   # MOTD help system
   options.stackpanel.motd = {
     enable = lib.mkOption {
@@ -27,31 +28,33 @@
 
     commands = lib.mkOption {
       description = "List of available commands to show in MOTD";
-      type = lib.types.listOf (lib.types.submodule {
-        options = {
-          name = lib.mkOption {
-            type = lib.types.str;
-            description = "Command name";
+      type = lib.types.listOf (
+        lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Command name";
+            };
+            description = lib.mkOption {
+              type = lib.types.str;
+              description = "Command description";
+            };
           };
-          description = lib.mkOption {
-            type = lib.types.str;
-            description = "Command description";
-          };
-        };
-      });
-      default = [];
+        }
+      );
+      default = [ ];
     };
 
     features = lib.mkOption {
       description = "List of enabled features to show in MOTD";
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
     };
 
     hints = lib.mkOption {
       description = "List of hints to show in MOTD";
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
     };
   };
 }

@@ -31,7 +31,8 @@
 #   let portsLib = import ./ports.nix { inherit lib; };
 #   in portsLib.computeBasePort { name = "myproject"; }
 # ==============================================================================
-{ lib }: rec {
+{ lib }:
+rec {
   # Default port configuration
   defaults = {
     minPort = 3000;
@@ -47,136 +48,152 @@
 
   # Compute a value within a specified range based on a key
   # Used internally for port computations
-  computeOverRange = {
-    key,
-    min,
-    max,
-    modulus
-  }: let
-    range = max - min;
-    rawHash = builtins.hashString "md5" key;
-    hash = builtins.substring 0 4 rawHash;
-    # numeric representation of hash
-    n = lib.trivial.fromHexString hash;
-    # convert to min < n < max, then round down to nearest modulus
-    offset = lib.mod n range;
-    # apply offset and round down
-    roundedOffset = offset - (lib.mod offset modulus);
-  in
+  computeOverRange =
+    {
+      key,
+      min,
+      max,
+      modulus,
+    }:
+    let
+      range = max - min;
+      rawHash = builtins.hashString "md5" key;
+      hash = builtins.substring 0 4 rawHash;
+      # numeric representation of hash
+      n = lib.trivial.fromHexString hash;
+      # convert to min < n < max, then round down to nearest modulus
+      offset = lib.mod n range;
+      # apply offset and round down
+      roundedOffset = offset - (lib.mod offset modulus);
+    in
     min + roundedOffset;
 
-
-  stablePort = {
-    repo,
-    service
-  }: let
-    # compute a range (size 100) over 3000-10000
-    projectBase = computeOverRange {
-      key = repo;
-      min = constants.MIN_PORT;
-      max = constants.MAX_PORT;
-      modulus = constants.MODULUS;
-    };
-    # compute service port within that range
-    servicePort = computeOverRange {
-      key = service;
-      min = projectBase;
-      max = projectBase + constants.MODULUS;
-      modulus = 1;
-    };
-    in servicePort;
+  stablePort =
+    {
+      repo,
+      service,
+    }:
+    let
+      # compute a range (size 100) over 3000-10000
+      projectBase = computeOverRange {
+        key = repo;
+        min = constants.MIN_PORT;
+        max = constants.MAX_PORT;
+        modulus = constants.MODULUS;
+      };
+      # compute service port within that range
+      servicePort = computeOverRange {
+        key = service;
+        min = projectBase;
+        max = projectBase + constants.MODULUS;
+        modulus = 1;
+      };
+    in
+    servicePort;
 
   # Compute the base port from project name
   # Uses MD5 hash of name, takes first 4 hex chars, converts to number
   # Then rounds to nearest modulus (default 100)
-  computeBasePort = {
-    name,
-    minPort ? defaults.minPort,
-    portRange ? defaults.portRange,
-    modulus ? defaults.modulus,
-  }: let
-    range = constants.MAX_PORT - constants.MIN_PORT;
-    # Ensure provided portRange is within allowed limits
-    hraw = builtins.hashString "md5" name;
-    h = builtins.substring 0 4 hraw;
-    # numeric representation of hash
-    n = lib.trivial.fromHexString h;
+  computeBasePort =
+    {
+      name,
+      minPort ? defaults.minPort,
+      portRange ? defaults.portRange,
+      modulus ? defaults.modulus,
+    }:
+    let
+      range = constants.MAX_PORT - constants.MIN_PORT;
+      # Ensure provided portRange is within allowed limits
+      hraw = builtins.hashString "md5" name;
+      h = builtins.substring 0 4 hraw;
+      # numeric representation of hash
+      n = lib.trivial.fromHexString h;
 
-    rawOffset = lib.trivial.fromHexString (builtins.substring 0 4 hraw);
-    # Get offset within range, then round down to nearest modulus
-    offsetInRange = lib.mod rawOffset portRange;
-    roundedOffset = offsetInRange - (lib.mod offsetInRange constants.MODULUS);
-  in
+      rawOffset = lib.trivial.fromHexString (builtins.substring 0 4 hraw);
+      # Get offset within range, then round down to nearest modulus
+      offsetInRange = lib.mod rawOffset portRange;
+      roundedOffset = offsetInRange - (lib.mod offsetInRange constants.MODULUS);
+    in
     constants.MIN_PORT + roundedOffset;
 
   # Compute port for a service based on its index
-  computeServicePort = {
-    basePort,
-    index,
-    servicesBaseOffset ? defaults.servicesBaseOffset,
-  }:
+  computeServicePort =
+    {
+      basePort,
+      index,
+      servicesBaseOffset ? defaults.servicesBaseOffset,
+    }:
     basePort + servicesBaseOffset + index;
 
   # Compute ports for a list of services
   # Returns a list of attrsets with key, name, port, displayName
-  computeServicesWithPorts = {
-    basePort,
-    services,
-    servicesBaseOffset ? defaults.servicesBaseOffset,
-  }:
+  computeServicesWithPorts =
+    {
+      basePort,
+      services,
+      servicesBaseOffset ? defaults.servicesBaseOffset,
+    }:
     lib.imap0 (idx: svc: {
       inherit (svc) key;
       name = svc.name or "";
       port = basePort + servicesBaseOffset + idx;
-      displayName =
-        if (svc.name or "") != ""
-        then svc.name
-        else svc.key;
-    })
-    services;
+      displayName = if (svc.name or "") != "" then svc.name else svc.key;
+    }) services;
 
   # Create attrset for easy lookup: { POSTGRES = { port = ...; ... }; }
-  mkServicesByKey = servicesWithPorts:
-    lib.listToAttrs (map (svc: {
+  mkServicesByKey =
+    servicesWithPorts:
+    lib.listToAttrs (
+      map (svc: {
         name = svc.key;
         value = svc;
-      })
-      servicesWithPorts);
+      }) servicesWithPorts
+    );
 
   # Generate JSON config for all services
-  mkServicesConfig = servicesWithPorts:
-    builtins.toJSON (map (svc: {
+  mkServicesConfig =
+    servicesWithPorts:
+    builtins.toJSON (
+      map (svc: {
         key = svc.key;
         name = svc.displayName;
         port = svc.port;
-      })
-      servicesWithPorts);
+      }) servicesWithPorts
+    );
 
   # Convenience function: compute everything from project name and services list
   # Returns { basePort, servicesWithPorts, servicesByKey, servicesConfig }
-  mkPortsConfig = {
-    projectName,
-    services ? [],
-    minPort ? defaults.minPort,
-    portRange ? defaults.portRange,
-    modulus ? defaults.modulus,
-    servicesBaseOffset ? defaults.servicesBaseOffset,
-  }: let
-    basePort = computeBasePort {
-      name = projectName;
-      inherit minPort portRange modulus;
+  mkPortsConfig =
+    {
+      projectName,
+      services ? [ ],
+      minPort ? defaults.minPort,
+      portRange ? defaults.portRange,
+      modulus ? defaults.modulus,
+      servicesBaseOffset ? defaults.servicesBaseOffset,
+    }:
+    let
+      basePort = computeBasePort {
+        name = projectName;
+        inherit minPort portRange modulus;
+      };
+      servicesWithPorts = computeServicesWithPorts {
+        inherit basePort services servicesBaseOffset;
+      };
+      servicesByKey = mkServicesByKey servicesWithPorts;
+      servicesConfig = mkServicesConfig servicesWithPorts;
+    in
+    {
+      inherit
+        basePort
+        servicesWithPorts
+        servicesByKey
+        servicesConfig
+        ;
+      # Environment variables including stable port + services config
+      env = {
+        STACKPANEL_STABLE_PORT = toString basePort;
+        STACKPANEL_SERVICES_CONFIG = servicesConfig;
+      };
     };
-    servicesWithPorts = computeServicesWithPorts {
-      inherit basePort services servicesBaseOffset;
-    };
-    servicesByKey = mkServicesByKey servicesWithPorts;
-    servicesConfig = mkServicesConfig servicesWithPorts;
-  in {
-    inherit basePort servicesWithPorts servicesByKey servicesConfig;
-    # Environment variables including stable port + services config
-    env = {
-      STACKPANEL_STABLE_PORT = toString basePort;
-      STACKPANEL_SERVICES_CONFIG = servicesConfig;
-    };
-  };
 }

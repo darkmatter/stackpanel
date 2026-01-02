@@ -14,7 +14,6 @@
 #     inputs.stackpanel.flakeModules.default
 #   ];
 # ==============================================================================
-
 # Stackpanel flake-parts module
 #
 # This module is for USERS to import into their flakes.
@@ -49,7 +48,6 @@
 #       };
 #   }
 #
-
 # This uses the "importApply" pattern to get the localFlake reference.
 # The outer function receives args from importApply in flake.nix.
 {
@@ -57,7 +55,6 @@
   withSystem,
   devshell,
 }:
-
 # The inner function is the actual flake-parts module.
 # These args (self, inputs, lib, etc.) refer to the USER's flake.
 {
@@ -82,7 +79,11 @@
   # Provide a way for perSystem to access the stackpanel flake's packages
   # This is useful for things like the stackpanel CLI
   perSystem =
-    { system, pkgs, ... }:
+    {
+      system,
+      pkgs,
+      ...
+    }:
     {
       # Make stackpanel's packages available to users
       # They can access: config.stackpanel.packages.cli

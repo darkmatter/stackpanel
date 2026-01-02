@@ -31,21 +31,23 @@
   # Project root directory - services will be stored in <projectRoot>/.stackpanel/state/services/
   # If not provided, falls back to legacy global directory
   projectRoot ? null,
-}: let
+}:
+let
   # Base directory for service data
   # Project-local by default, with fallback to global for backwards compatibility
   baseDir =
-    if projectRoot != null
-    then "${projectRoot}/.stackpanel/state/services"
-    else "$HOME/.local/share/devservices";
+    if projectRoot != null then
+      "${projectRoot}/.stackpanel/state/services"
+    else
+      "$HOME/.local/share/devservices";
 
   # Global directory for services that must be shared (like Caddy)
   globalBaseDir = "$HOME/.local/share/devservices";
 
   # Import individual service modules with the appropriate baseDir
-  postgresModule = import ../../lib/services/postgres.nix {inherit pkgs lib baseDir;};
-  redisModule = import ../../lib/services/redis.nix {inherit pkgs lib baseDir;};
-  minioModule = import ../../lib/services/minio.nix {inherit pkgs lib baseDir;};
+  postgresModule = import ../../lib/services/postgres.nix { inherit pkgs lib baseDir; };
+  redisModule = import ../../lib/services/redis.nix { inherit pkgs lib baseDir; };
+  minioModule = import ../../lib/services/minio.nix { inherit pkgs lib baseDir; };
 
   # Service registry - add new services here
   serviceModules = {
@@ -61,17 +63,25 @@
     minio = 9000;
     minio-console = 9001;
   };
-in {
-  inherit baseDir globalBaseDir defaultPorts serviceModules;
+in
+{
+  inherit
+    baseDir
+    globalBaseDir
+    defaultPorts
+    serviceModules
+    ;
 
   # Get list of available service names
   availableServices = lib.attrNames serviceModules;
 
   # Create a service instance by name
-  mkService = name: args:
-    if lib.hasAttr name serviceModules
-    then serviceModules.${name}.mkService args
-    else throw "Unknown service: ${name}. Available: ${lib.concatStringsSep ", " (lib.attrNames serviceModules)}";
+  mkService =
+    name: args:
+    if lib.hasAttr name serviceModules then
+      serviceModules.${name}.mkService args
+    else
+      throw "Unknown service: ${name}. Available: ${lib.concatStringsSep ", " (lib.attrNames serviceModules)}";
 
   # Convenience functions for specific services
   mkGlobalPostgres = postgresModule.mkService;

@@ -40,10 +40,10 @@ Requires: gh CLI to be installed and authenticated.`,
 }
 
 var (
-	syncOwner    string
-	syncRepo     string
-	syncNoKeys   bool
-	syncDataDir  string
+	syncOwner   string
+	syncRepo    string
+	syncNoKeys  bool
+	syncDataDir string
 )
 
 func init() {

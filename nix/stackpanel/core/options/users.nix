@@ -27,9 +27,11 @@
 #     };
 #   };
 # ==============================================================================
-{ lib, ... }: let
+{ lib, ... }:
+let
   types = lib.types;
-in {
+in
+{
   options.stackpanel.users = lib.mkOption {
     description = ''
       Users of the repository who should have access to secrets.
@@ -38,8 +40,15 @@ in {
       cooper = {
         name = "Cooper Maruyama";
         github = "coopermaruyama";
-        secrets-allowed-environments = [ "dev" "staging" "production" ];
-        public-keys = [ "age1..." "ssh-ed25519 AAAA..." ];
+        secrets-allowed-environments = [
+          "dev"
+          "staging"
+          "production"
+        ];
+        public-keys = [
+          "age1..."
+          "ssh-ed25519 AAAA..."
+        ];
       };
       alice = {
         name = "Alice Example";
@@ -50,38 +59,51 @@ in {
       ci = {
         name = "CI Bot";
         public-keys = [ "age1..." ];
-        secrets-allowed-environments = [ "dev" "staging" "production" ];
+        secrets-allowed-environments = [
+          "dev"
+          "staging"
+          "production"
+        ];
       };
     };
-    type = types.attrsOf (types.submodule ({ name, ... }: {
-      options = {
-        name = lib.mkOption {
-          type = types.nullOr types.str;
-          default = null;
-          description = "Display name";
-        };
+    type = types.attrsOf (
+      types.submodule (
+        { name, ... }:
+        {
+          options = {
+            name = lib.mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Display name";
+            };
 
-        github = lib.mkOption {
-          type = types.nullOr types.str;
-          default = null;
-          description = "Github username for this user. Enable for automatic access control in GitHub Actions.";
-        };
+            github = lib.mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Github username for this user. Enable for automatic access control in GitHub Actions.";
+            };
 
-        secrets-allowed-environments = lib.mkOption {
-          type = types.listOf types.str;
-          default = [];
-          description = "List of environment names this user should have access to.";
-          example = [ "dev" "staging" "production" ];
-        };
+            secrets-allowed-environments = lib.mkOption {
+              type = types.listOf types.str;
+              default = [ ];
+              description = "List of environment names this user should have access to.";
+              example = [
+                "dev"
+                "staging"
+                "production"
+              ];
+            };
 
-        public-keys = lib.mkOption {
-          type = types.listOf types.str;
-          default = [];
-          description = "public keys for this user. will be autopopulated if user has github username with public key. accepts age and ssh keys.";
-        };
-      };
-    }));
-    default = {};
+            public-keys = lib.mkOption {
+              type = types.listOf types.str;
+              default = [ ];
+              description = "public keys for this user. will be autopopulated if user has github username with public key. accepts age and ssh keys.";
+            };
+          };
+        }
+      )
+    );
+    default = { };
   };
 
   options.stackpanel.users-settings = {

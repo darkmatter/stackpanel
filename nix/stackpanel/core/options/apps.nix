@@ -31,8 +31,8 @@
   lib,
   config,
   ...
-}: let
-
+}:
+let
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
@@ -45,87 +45,81 @@
   projectBasePort = portsCfg.base-port;
 
   # Base app option type (just user inputs, no computed fields)
-  baseAppModule = { lib, ... }: {
-    options = {
-      name = lib.mkOption {
-        description = ''
-          Name of the application - mainly used for display purposes.
-        '';
-        type = lib.types.str;
-      };
-      path = lib.mkOption {
-        description = ''
-          Path to app directory relative to repo root.
-          Optional unless required by a specific app module.
-        '';
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        example = "apps/web";
-      };
-      offset = lib.mkOption {
-        description = ''
-          Port offset from base port.
-          If null, offset is determined by position in apps attrset.
-        '';
-        type = lib.types.nullOr lib.types.int;
-        default = null;
-        example = 5;
-      };
-      domain = lib.mkOption {
-        description = ''
-          Domain prefix for .localhost vhost.
-          If set, a Caddy vhost will be created at <domain>.localhost
-        '';
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        example = "api";
-      };
-      tls = lib.mkOption {
-        description = "Enable TLS for the vhost (requires Step CA)";
-        type = lib.types.bool;
-        default = false;
+  baseAppModule =
+    { lib, ... }:
+    {
+      options = {
+        name = lib.mkOption {
+          description = ''
+            Name of the application - mainly used for display purposes.
+          '';
+          type = lib.types.str;
+        };
+        path = lib.mkOption {
+          description = ''
+            Path to app directory relative to repo root.
+            Optional unless required by a specific app module.
+          '';
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "apps/web";
+        };
+        offset = lib.mkOption {
+          description = ''
+            Port offset from base port.
+            If null, offset is determined by position in apps attrset.
+          '';
+          type = lib.types.nullOr lib.types.int;
+          default = null;
+          example = 5;
+        };
+        domain = lib.mkOption {
+          description = ''
+            Domain prefix for .localhost vhost.
+            If set, a Caddy vhost will be created at <domain>.localhost
+          '';
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "api";
+        };
+        tls = lib.mkOption {
+          description = "Enable TLS for the vhost (requires Step CA)";
+          type = lib.types.bool;
+          default = false;
+        };
       };
     };
-  };
 
   # Compute full app configurations with ports
   appNames = lib.attrNames rawApps;
-  computedApps = lib.listToAttrs (lib.imap0 (
-      idx: name: let
+  computedApps = lib.listToAttrs (
+    lib.imap0 (
+      idx: name:
+      let
         appCfg = rawApps.${name};
-        offset =
-          if appCfg.offset != null
-          then appCfg.offset
-          else idx;
+        offset = if appCfg.offset != null then appCfg.offset else idx;
         port = portsLib.stablePort {
           repo = repoKey;
           service = name;
         };
-        domain =
-          if appCfg.domain != null
-          then "${appCfg.domain}.localhost"
-          else null;
-        protocol =
-          if appCfg.tls
-          then "https"
-          else "http";
-        url =
-          if domain != null
-          then "${protocol}://${domain}"
-          else null;
-      in {
+        domain = if appCfg.domain != null then "${appCfg.domain}.localhost" else null;
+        protocol = if appCfg.tls then "https" else "http";
+        url = if domain != null then "${protocol}://${domain}" else null;
+      in
+      {
         inherit name;
         value = {
           inherit port domain url;
           inherit (appCfg) tls offset;
         };
       }
-    )
-    appNames);
-in {
+    ) appNames
+  );
+in
+{
   options.stackpanel.appModules = lib.mkOption {
     type = lib.types.listOf lib.types.deferredModule;
-    default = [];
+    default = [ ];
     description = ''
       Additional modules to extend app configuration options.
 
@@ -137,11 +131,13 @@ in {
   };
   options.stackpanel.apps = lib.mkOption {
     # type = lib.types.attrsOf appType;
-    type = lib.types.attrsOf (lib.types.submoduleWith {
-      modules = [ baseAppModule ] ++ config.stackpanel.appModules;
-      specialArgs = { inherit lib; };
-    });
-    default = {};
+    type = lib.types.attrsOf (
+      lib.types.submoduleWith {
+        modules = [ baseAppModule ] ++ config.stackpanel.appModules;
+        specialArgs = { inherit lib; };
+      }
+    );
+    default = { };
     description = ''
       # Stackpanel apps
 
