@@ -1,5 +1,5 @@
 schema = 3
-cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chroma/v2/formatters", "github.com/alecthomas/chroma/v2/formatters/html", "github.com/alecthomas/chroma/v2/formatters/svg", "github.com/alecthomas/chroma/v2/lexers", "github.com/alecthomas/chroma/v2/quick", "github.com/alecthomas/chroma/v2/styles", "github.com/aymanbagabas/go-osc52/v2", "github.com/aymerick/douceur/css", "github.com/aymerick/douceur/parser", "github.com/charmbracelet/bubbles/help", "github.com/charmbracelet/bubbles/key", "github.com/charmbracelet/bubbles/progress", "github.com/charmbracelet/bubbles/spinner", "github.com/charmbracelet/bubbles/table", "github.com/charmbracelet/bubbles/viewport", "github.com/charmbracelet/bubbletea", "github.com/charmbracelet/colorprofile", "github.com/charmbracelet/glamour", "github.com/charmbracelet/glamour/ansi", "github.com/charmbracelet/glamour/styles", "github.com/charmbracelet/harmonica", "github.com/charmbracelet/lipgloss", "github.com/charmbracelet/lipgloss/table", "github.com/charmbracelet/x/ansi", "github.com/charmbracelet/x/ansi/parser", "github.com/charmbracelet/x/cellbuf", "github.com/charmbracelet/x/exp/slice", "github.com/charmbracelet/x/term", "github.com/darkmatter/stackpanel/packages/stackpanel-go/config", "github.com/darkmatter/stackpanel/packages/stackpanel-go/envvars", "github.com/darkmatter/stackpanel/packages/stackpanel-go/nixeval", "github.com/darkmatter/stackpanel/packages/stackpanel-go/services", "github.com/darkmatter/stackpanel/packages/stackpanel-go/state", "github.com/dlclark/regexp2", "github.com/dlclark/regexp2/syntax", "github.com/fatih/color", "github.com/fsnotify/fsnotify", "github.com/gorilla/css/scanner", "github.com/lucasb-eyer/go-colorful", "github.com/mattn/go-colorable", "github.com/mattn/go-isatty", "github.com/mattn/go-runewidth", "github.com/microcosm-cc/bluemonday", "github.com/microcosm-cc/bluemonday/css", "github.com/muesli/ansi", "github.com/muesli/ansi/compressor", "github.com/muesli/cancelreader", "github.com/muesli/reflow/ansi", "github.com/muesli/reflow/indent", "github.com/muesli/reflow/padding", "github.com/muesli/reflow/wordwrap", "github.com/muesli/termenv", "github.com/rivo/uniseg", "github.com/spf13/cobra", "github.com/spf13/pflag", "github.com/xo/terminfo", "github.com/yuin/goldmark", "github.com/yuin/goldmark-emoji", "github.com/yuin/goldmark-emoji/ast", "github.com/yuin/goldmark-emoji/definition", "github.com/yuin/goldmark/ast", "github.com/yuin/goldmark/extension", "github.com/yuin/goldmark/extension/ast", "github.com/yuin/goldmark/parser", "github.com/yuin/goldmark/renderer", "github.com/yuin/goldmark/renderer/html", "github.com/yuin/goldmark/text", "github.com/yuin/goldmark/util", "golang.org/x/net/html", "golang.org/x/net/html/atom", "golang.org/x/sys/unix", "golang.org/x/term", "golang.org/x/text/cases", "golang.org/x/text/language", "golang.org/x/text/transform", "golang.org/x/text/unicode/norm"]
+cachePackages = ["github.com/aymanbagabas/go-osc52/v2", "github.com/charmbracelet/colorprofile", "github.com/charmbracelet/lipgloss", "github.com/charmbracelet/log", "github.com/charmbracelet/x/ansi", "github.com/charmbracelet/x/ansi/parser", "github.com/charmbracelet/x/cellbuf", "github.com/charmbracelet/x/term", "github.com/darkmatter/stackpanel/packages/stackpanel-go/common", "github.com/darkmatter/stackpanel/packages/stackpanel-go/envvars", "github.com/darkmatter/stackpanel/packages/stackpanel-go/exec", "github.com/fsnotify/fsnotify", "github.com/go-logfmt/logfmt", "github.com/gorilla/websocket", "github.com/lucasb-eyer/go-colorful", "github.com/mattn/go-colorable", "github.com/mattn/go-isatty", "github.com/mattn/go-runewidth", "github.com/muesli/termenv", "github.com/rivo/uniseg", "github.com/rs/zerolog", "github.com/rs/zerolog/log", "github.com/xo/terminfo", "go.uber.org/multierr", "go.uber.org/zap", "go.uber.org/zap/buffer", "go.uber.org/zap/zapcore", "golang.org/x/sys/unix", "gopkg.in/yaml.v3"]
 
 [mod]
   [mod."4d63.com/gocheckcompilerdirectives"]
@@ -47,9 +47,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/air-verse/air"]
     version = "v1.63.4"
     hash = "sha256-0RI/1VNy2XbRIebnntTgycgJDf9nIPYOWEYfsP9byPc="
-  [mod."github.com/alecthomas/chroma/v2"]
-    version = "v2.20.0"
-    hash = "sha256-rL1mJS8fCltcii9w/efyyE4iyzogyjP+N80lE3CuzVE="
   [mod."github.com/alecthomas/go-check-sumtype"]
     version = "v0.3.1"
     hash = "sha256-2Omgn9DsUaaUf6K1WU5eirlJdySTbNkrBCpL/51fB/s="
@@ -74,9 +71,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/aymanbagabas/go-osc52/v2"]
     version = "v2.0.1"
     hash = "sha256-6Bp0jBZ6npvsYcKZGHHIUSVSTAMEyieweAX2YAKDjjg="
-  [mod."github.com/aymerick/douceur"]
-    version = "v0.2.0"
-    hash = "sha256-NiBX8EfOvLXNiK3pJaZX4N73YgfzdrzRXdiBFe3X3sE="
   [mod."github.com/beorn7/perks"]
     version = "v1.0.1"
     hash = "sha256-h75GUqfwJKngCJQVE5Ao5wnO3cfKD9lSIteoLp/3xJ4="
@@ -119,33 +113,21 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/charithe/durationcheck"]
     version = "v0.0.10"
     hash = "sha256-t1SzX6U55OpGdn5C1tD7iUYvrtM/XFHDwLbc6pre2Yo="
-  [mod."github.com/charmbracelet/bubbles"]
-    version = "v0.21.0"
-    hash = "sha256-cfjUHgy9eq5SretTHuYuRaeeT6QmJYQBB9dsI8QSnW0="
-  [mod."github.com/charmbracelet/bubbletea"]
-    version = "v1.3.10"
-    hash = "sha256-7wr85TLszu1CHNEMv+o4w+r24Z0xdzCgecPv+ZtRX/A="
   [mod."github.com/charmbracelet/colorprofile"]
     version = "v0.2.3-0.20250311203215-f60798e515dc"
     hash = "sha256-D9E/bMOyLXAUVOHA1/6o3i+vVmLfwIMOWib6sU7A6+Q="
-  [mod."github.com/charmbracelet/glamour"]
-    version = "v0.10.0"
-    hash = "sha256-Vbn/axm6qE67ZVH2YM7slYq0b/CKin4YbUmV3xPmKaU="
-  [mod."github.com/charmbracelet/harmonica"]
-    version = "v0.2.0"
-    hash = "sha256-fi5N0IXhSbbYHdSZFngCfpT4kdiEaKedqj8YpnlvX0o="
   [mod."github.com/charmbracelet/lipgloss"]
     version = "v1.1.1-0.20250404203927-76690c660834"
     hash = "sha256-CwS1AyoRsPOFA4SrC0CTtwLnbg57FmmSW/mvVQUFYcc="
+  [mod."github.com/charmbracelet/log"]
+    version = "v0.4.2"
+    hash = "sha256-3w1PCM/c4JvVEh2d0sMfv4C77Xs1bPa1Ea84zdynC7I="
   [mod."github.com/charmbracelet/x/ansi"]
     version = "v0.10.1"
     hash = "sha256-nY4zkUGnuD+Lczwt+NMXdQ38cAsy5mtxzXrFSJmR0E4="
   [mod."github.com/charmbracelet/x/cellbuf"]
     version = "v0.0.13"
     hash = "sha256-ubgBd82jcS5L4i6rCFLOB1BXGrDEu6wWlciJA0gsH2g="
-  [mod."github.com/charmbracelet/x/exp/slice"]
-    version = "v0.0.0-20250327172914-2fdc97757edf"
-    hash = "sha256-C1tksnevc/RdytJRQg5LQ0+VVSWlTwbNGic649m6E1Q="
   [mod."github.com/charmbracelet/x/term"]
     version = "v0.2.1"
     hash = "sha256-VBkCZLI90PhMasftGw3403IqoV7d3E5WEGAIVrN5xQM="
@@ -167,12 +149,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/denis-tingaikin/go-header"]
     version = "v0.5.0"
     hash = "sha256-ugkGuTlpc1jYeIm4zO/wwEYfqZn1oKS6aZrgbv0E7/8="
-  [mod."github.com/dlclark/regexp2"]
-    version = "v1.11.5"
-    hash = "sha256-jN5+2ED+YbIoPIuyJ4Ou5pqJb2w1uNKzp5yTjKY6rEQ="
-  [mod."github.com/erikgeiser/coninput"]
-    version = "v0.0.0-20211004153227-1c3628e74d0f"
-    hash = "sha256-OWSqN1+IoL73rWXWdbbcahZu8n2al90Y3eT5Z0vgHvU="
   [mod."github.com/ettle/strcase"]
     version = "v0.2.0"
     hash = "sha256-FSoHfW0jeHUQ1PeKcPeVcWDtJLDV+EzCvpyzk3y7su4="
@@ -197,6 +173,9 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/go-critic/go-critic"]
     version = "v0.12.0"
     hash = "sha256-Wj0UXVJ3HLqgKKuF2bxVxqcfmpzIqRoqljT7WpWW7Ck="
+  [mod."github.com/go-logfmt/logfmt"]
+    version = "v0.6.0"
+    hash = "sha256-RtIG2qARd5sT10WQ7F3LR8YJhS8exs+KiuUiVf75bWg="
   [mod."github.com/go-toolsmith/astcast"]
     version = "v1.1.0"
     hash = "sha256-Rv3tAJMtJMeKGWmRB5ZzWQXEdK2XIVRa3moJy/7Dzfw="
@@ -266,9 +245,9 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/gordonklaus/ineffassign"]
     version = "v0.1.0"
     hash = "sha256-JVrAIspRL6XvDd/AnPFt9IJPQ0hY1KPwXvldAfwYkzU="
-  [mod."github.com/gorilla/css"]
-    version = "v1.0.1"
-    hash = "sha256-6JwNHqlY2NpZ0pSQTyYPSpiNqjXOdFHqrUT10sv3y8A="
+  [mod."github.com/gorilla/websocket"]
+    version = "v1.5.3"
+    hash = "sha256-vTIGEFMEi+30ZdO6ffMNJ/kId6pZs5bbyqov8xe9BM0="
   [mod."github.com/gostaticanalysis/analysisutil"]
     version = "v0.7.1"
     hash = "sha256-kyLDWIxSa6zcIUSNGwakXb8zISsGBk8fsjI+WYj7DNs="
@@ -371,9 +350,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/mattn/go-isatty"]
     version = "v0.0.20"
     hash = "sha256-qhw9hWtU5wnyFyuMbKx+7RB8ckQaFQ8D+8GKPkN3HHQ="
-  [mod."github.com/mattn/go-localereader"]
-    version = "v0.0.1"
-    hash = "sha256-JlWckeGaWG+bXK8l8WEdZqmSiTwCA8b1qbmBKa/Fj3E="
   [mod."github.com/mattn/go-runewidth"]
     version = "v0.0.16"
     hash = "sha256-NC+ntvwIpqDNmXb7aixcg09il80ygq6JAnW0Gb5b/DQ="
@@ -383,9 +359,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/mgechev/revive"]
     version = "v1.7.0"
     hash = "sha256-gEUi3Run4GTE4IWso3eslpdlbkDme6gW3aa3HpGBaPY="
-  [mod."github.com/microcosm-cc/bluemonday"]
-    version = "v1.0.27"
-    hash = "sha256-EZSya9FLPQ83CL7N2cZy21fdS35hViTkiMK5f3op8Es="
   [mod."github.com/mitchellh/go-homedir"]
     version = "v1.1.0"
     hash = "sha256-oduBKXHAQG8X6aqLEpqZHs5DOKe84u6WkBwi4W6cv3k="
@@ -395,15 +368,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/moricho/tparallel"]
     version = "v0.3.2"
     hash = "sha256-fUkPvQG52ISEURb0kIYQyCidCuuhNHq2mPIv19aRCIA="
-  [mod."github.com/muesli/ansi"]
-    version = "v0.0.0-20230316100256-276c6243b2f6"
-    hash = "sha256-qRKn0Bh2yvP0QxeEMeZe11Vz0BPFIkVcleKsPeybKMs="
-  [mod."github.com/muesli/cancelreader"]
-    version = "v0.2.2"
-    hash = "sha256-uEPpzwRJBJsQWBw6M71FDfgJuR7n55d/7IV8MO+rpwQ="
-  [mod."github.com/muesli/reflow"]
-    version = "v0.3.0"
-    hash = "sha256-Pou2ybE9SFSZG6YfZLVV1Eyfm+X4FuVpDPLxhpn47Cc="
   [mod."github.com/muesli/termenv"]
     version = "v0.16.0"
     hash = "sha256-hGo275DJlyLtcifSLpWnk8jardOksdeX9lH4lBeE3gI="
@@ -476,6 +440,9 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/rogpeppe/go-internal"]
     version = "v1.14.1"
     hash = "sha256-6NzhXCCD1Qhj05WHbCDxH5hwfNM6psoAk7uIxm7N55E="
+  [mod."github.com/rs/zerolog"]
+    version = "v1.33.0"
+    hash = "sha256-jT/Y/izhZiCdrDbC/ty83FGs8UQavTU+OW03O4vKFkY="
   [mod."github.com/ryancurrah/gomodguard"]
     version = "v1.3.5"
     hash = "sha256-SbVlYJENSlZKoqO09m3cBCKqrgL3sQMV9h0lJy378CQ="
@@ -593,12 +560,6 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."github.com/ykadowak/zerologlint"]
     version = "v0.1.5"
     hash = "sha256-wPHpuDFMV+35JjOpyVW5OElsSnGVjaUkMkjmsHOoFI4="
-  [mod."github.com/yuin/goldmark"]
-    version = "v1.7.13"
-    hash = "sha256-vBCxZrPYPc8x/nvAAv3Au59dCCyfS80Vw3/a9EXK7TE="
-  [mod."github.com/yuin/goldmark-emoji"]
-    version = "v1.0.6"
-    hash = "sha256-+d6bZzOPE+JSFsZbQNZMCWE+n3jgcQnkPETVk47mxSY="
   [mod."gitlab.com/bosi/decorder"]
     version = "v0.4.2"
     hash = "sha256-hcjFhs0/MF5vBeb48bpPOfZNoNuCBkHW4EZEzE1jaF4="
@@ -617,36 +578,27 @@ cachePackages = ["github.com/alecthomas/chroma/v2", "github.com/alecthomas/chrom
   [mod."go.uber.org/zap"]
     version = "v1.27.1"
     hash = "sha256-bn/MMu7X3GkUuW12Xwn9JYbOJeEu9+yoQtkmO+36xlQ="
+  [mod."golang.org/x/exp"]
+    version = "v0.0.0-20250819193227-8b4c13bb791b"
+    hash = "sha256-rp8WHdfnVSbFi4ENtReQ0qLzfXlUHuC58cwtKqEbwG8="
   [mod."golang.org/x/exp/typeparams"]
     version = "v0.0.0-20250210185358-939b2ce775ac"
     hash = "sha256-rwnrzYkeyMB+E3Q+CjrXRoEQRhRwQmVv5FVB/Rv2oCg="
   [mod."golang.org/x/mod"]
     version = "v0.29.0"
     hash = "sha256-UaJLv8CdfUpnT4nArFSt8lLpFVAGHYmT7jaZ6vPGuEQ="
-  [mod."golang.org/x/net"]
-    version = "v0.46.0"
-    hash = "sha256-GkAUXwqEJZF2t5dmxJVEE+t58EDzO24KtihqHqsrZH0="
   [mod."golang.org/x/sync"]
     version = "v0.17.0"
     hash = "sha256-M85lz4hK3/fzmcUViAp/CowHSxnr3BHSO7pjHp1O6i0="
   [mod."golang.org/x/sys"]
     version = "v0.37.0"
     hash = "sha256-5aT0xP02sW1o9sfJHtWoGGNVYDdwb9FyiX/n6RAlzPo="
-  [mod."golang.org/x/term"]
-    version = "v0.36.0"
-    hash = "sha256-5YLOE1v+5zEXG62rGrJKXyuDM/ylDnJQW/hLwbMLrY8="
   [mod."golang.org/x/text"]
-    version = "v0.30.0"
-    hash = "sha256-VPT1Y2zzgdk+Q3Gx8hdwKdxbVh0/Zn/HwDpILCW3ZNA="
+    version = "v0.28.0"
+    hash = "sha256-8UlJniGK+km4Hmrw6XMxELnExgrih7+z8tU26Cntmto="
   [mod."golang.org/x/tools"]
     version = "v0.38.0"
     hash = "sha256-GeIkpuKtUfxxrOZLikNlZA3lMKhdyO++PVvXppBGmbw="
-  [mod."golang.org/x/tools/go/expect"]
-    version = "v0.1.1-deprecated"
-    hash = "sha256-7JLwLMSzp9Eovnq7YBTv4Lgx8/FZnfMlx6ZkUdaW4dc="
-  [mod."golang.org/x/tools/go/packages/packagestest"]
-    version = "v0.1.1-deprecated"
-    hash = "sha256-K3ljJg+gzsY/MAvrVSpWTzKlxOnXMCcsPHLQvH7JRbU="
   [mod."google.golang.org/protobuf"]
     version = "v1.36.8"
     hash = "sha256-yZN8ZON0b5HjUNUSubHst7zbvnMsOzd81tDPYQRtPgM="
