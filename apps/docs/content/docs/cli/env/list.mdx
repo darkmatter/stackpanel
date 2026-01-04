@@ -1,0 +1,44 @@
+---
+title: stackpanel env list
+description: List all Stackpanel environment variables
+icon: Terminal
+---
+
+# stackpanel env list
+
+List all environment variables used by Stackpanel.
+
+By default, shows all variables with their current values. Use flags to
+filter by category, source, or show only required/missing variables.
+
+## Usage
+
+```bash
+stackpanel env list
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--category, -c` | `string` | _none_ | Filter by category (core, paths, agent, aws, minio, etc.) |
+| `--missing, -m` | `bool` | `false` | Show only missing required variables |
+| `--required, -r` | `bool` | `false` | Show only required variables |
+| `--source, -s` | `string` | _none_ | Filter by source (nix, dynamic, devenv) |
+| `--values, -V` | `bool` | `false` | Show current values |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

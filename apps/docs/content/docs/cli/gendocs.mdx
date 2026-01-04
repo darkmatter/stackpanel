@@ -1,0 +1,42 @@
+---
+title: stackpanel gendocs
+description: Generate MDX documentation from Nix options JSON and CLI commands
+icon: Terminal
+---
+
+# stackpanel gendocs
+
+Generate MDX documentation from Nix options JSON, module README files, and CLI commands.
+
+This command reads the Nix options JSON file and generates MDX documentation
+files suitable for use with documentation frameworks like Fumadocs.
+
+Generated documentation includes:
+  - Options reference (from Nix options JSON)
+  - Module documentation (from README.md files in modules directory)
+  - CLI reference (from cobra command definitions)
+
+If a modules directory is provided, it will also scan for README.md files
+in subdirectories and generate corresponding MDX documentation pages.
+
+## Usage
+
+```bash
+stackpanel gendocs <options.json> <output-dir> [modules-dir]
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

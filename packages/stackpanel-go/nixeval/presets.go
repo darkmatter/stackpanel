@@ -50,6 +50,26 @@ in
 
 	// ActiveConfig returns the current active stackpanel configuration as JSON (evaluated)
 	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
+
+	// InitFilesPreset evaluates the db module to get boilerplate files for project scaffolding
+	// Returns a map of relative paths to file contents
+	InitFilesPreset = `
+let
+  root = builtins.getEnv "STACKPANEL_ROOT";
+  dbModule = import (root + "/nix/stackpanel/db") { };
+in
+  dbModule.initFiles
+`
+
+	// DbSchemasPreset evaluates all schemas from the db module for codegen
+	// Returns a map of entity names to JSON Schema
+	DbSchemasPreset = `
+let
+  root = builtins.getEnv "STACKPANEL_ROOT";
+  dbModule = import (root + "/nix/stackpanel/db") { };
+in
+  dbModule.forCodegen
+`
 )
 
 // EvalExprResult holds the raw JSON result of a Nix expression evaluation
@@ -60,6 +80,29 @@ type EvalExprResult struct {
 // Unmarshal decodes the result into the provided type
 func (r *EvalExprResult) Unmarshal(v interface{}) error {
 	return json.Unmarshal(r.Raw, v)
+}
+
+// findNixBin locates the nix binary, checking PATH first then common locations
+func findNixBin() (string, error) {
+	// Check PATH first
+	if path, err := exec.LookPath("nix"); err == nil {
+		return path, nil
+	}
+
+	// Check common locations
+	commonPaths := []string{
+		"/nix/var/nix/profiles/default/bin/nix",
+		"/run/current-system/sw/bin/nix",
+		"/etc/profiles/per-user/root/bin/nix",
+	}
+
+	for _, p := range commonPaths {
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
+		}
+	}
+
+	return "", fmt.Errorf("nix not found in PATH or common locations")
 }
 
 // EvalExpr evaluates an arbitrary Nix expression and returns the JSON result.
@@ -80,8 +123,13 @@ func EvalExprWithTimeout(ctx context.Context, nixExpr string, timeout time.Durat
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	nixBin, err := findNixBin()
+	if err != nil {
+		return nil, err
+	}
+
 	// Use nix eval --expr for inline expressions
-	cmd := exec.CommandContext(ctx, "nix", "eval", "--impure", "--json", "--expr", nixExpr)
+	cmd := exec.CommandContext(ctx, nixBin, "eval", "--impure", "--json", "--expr", nixExpr)
 
 	// Set STACKPANEL_ROOT if not already set
 	if os.Getenv("STACKPANEL_ROOT") == "" {
@@ -171,6 +219,37 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 	}
 
 	return config, nil
+}
+
+// GetInitFiles evaluates the db module and returns the map of paths to content
+// for scaffolding a new project
+func GetInitFiles(ctx context.Context) (map[string]string, error) {
+	result, err := EvalExpr(ctx, InitFilesPreset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate initFiles: %w", err)
+	}
+
+	var files map[string]string
+	if err := result.Unmarshal(&files); err != nil {
+		return nil, fmt.Errorf("failed to parse initFiles: %w", err)
+	}
+
+	return files, nil
+}
+
+// GetDbSchemas evaluates the db module and returns all schemas for codegen
+func GetDbSchemas(ctx context.Context) (map[string]interface{}, error) {
+	result, err := EvalExpr(ctx, DbSchemasPreset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate db schemas: %w", err)
+	}
+
+	var schemas map[string]interface{}
+	if err := result.Unmarshal(&schemas); err != nil {
+		return nil, fmt.Errorf("failed to parse db schemas: %w", err)
+	}
+
+	return schemas, nil
 }
 
 // BuildExpr builds a Nix expression from a template with variables

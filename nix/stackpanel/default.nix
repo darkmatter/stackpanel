@@ -42,7 +42,10 @@ in
     ./secrets # SOPS helper
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
+    ./modules/git-hooks.nix # git-hooks integration
+    ./modules/ci-formatters.nix # CI formatter checks
     ./modules/go.nix # Go app support
+    ./modules/process-compose.nix # App scripts + process-compose
   ];
 
   config.stackpanel.devshell.hooks.after = [

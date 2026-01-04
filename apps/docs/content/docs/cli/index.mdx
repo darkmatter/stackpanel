@@ -1,0 +1,55 @@
+---
+title: CLI
+description: Stackpanel CLI Reference
+icon: Terminal
+---
+
+# CLI Reference
+
+The `stackpanel` command-line interface provides tools for managing development environments, services, and infrastructure.
+
+## Quick Start
+
+```bash
+# Enter interactive TUI mode
+stackpanel
+
+# Show status of all services
+stackpanel status
+
+# Start development services
+stackpanel services start
+
+# Show help for any command
+stackpanel \<command\> --help
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| [`agent`](./agent) | Run the local Stackpanel agent |
+| [`caddy`](./caddy) | Manage Caddy reverse proxy |
+| [`env`](./env) | Manage and inspect environment variables |
+| [`gendocs`](./gendocs) | Generate MDX documentation from Nix options JSON and CLI commands |
+| [`init`](./init) | Initialize stackpanel from Nix configuration |
+| [`motd`](./motd) | Display the message of the day |
+| [`port`](./port) | Deterministic stable port assignment for services |
+| [`scaffold`](./scaffold) | Scaffold a new stackpanel project |
+| [`services`](./services) | Manage development services |
+| [`status`](./status) | Show status of all services and resources |
+| [`users`](./users) | Manage project users |
+| [`users`](./users) | Manage project users |
+
+
+## Global Flags
+
+These flags are available on all commands:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+

@@ -22,18 +22,18 @@ It reads configuration JSON and generates:
   - State file for runtime queries
 
 Configuration can be passed via:
-  - --config-file <path>   Read from a JSON file
-  - --config <json>        Pass JSON directly as argument
+  - --config-file [path]   Read from a JSON file
+  - --config [json]        Pass JSON directly as argument
   - stdin                  Pipe JSON to stdin
 
 Example (from Nix):
-  stackpanel init --config '${builtins.toJSON config}'
+  stackpanel init --config '$\{builtins.toJSON config\}'
 
 Example (from file):
   stackpanel init --config-file /tmp/stackpanel-config.json
 
 Example (from stdin):
-  echo '{"projectName": "myapp", ...}' | stackpanel init`,
+  echo '\{"projectName": "myapp", ...\}' | stackpanel init`,
 	RunE: runInit,
 }
 

@@ -1,0 +1,53 @@
+---
+title: stackpanel scaffold
+description: Scaffold a new stackpanel project
+icon: Terminal
+---
+
+# stackpanel scaffold
+
+Scaffold creates the .stackpanel directory structure with boilerplate files.
+
+This command evaluates the Nix db module to get the list of files to create,
+then writes them to the appropriate locations. Existing files are NOT overwritten
+unless --force is specified.
+
+The scaffolded structure includes:
+  - .stackpanel/config.nix      Main configuration file
+  - .stackpanel/data/           Data directory for user-managed files
+  - .stackpanel/data/default.nix  Auto-loader for data files
+  - .stackpanel/data/users.nix  User definitions
+
+Example:
+  stackpanel scaffold                 # Create files in current directory
+  stackpanel scaffold --force         # Overwrite existing files
+  stackpanel scaffold --dry-run       # Show what would be created
+
+## Usage
+
+```bash
+stackpanel scaffold
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--dry-run` | `bool` | `false` | Show what would be created without writing files |
+| `--force` | `bool` | `false` | Overwrite existing files |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

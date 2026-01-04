@@ -1,0 +1,43 @@
+---
+title: stackpanel status
+description: Show status of all services and resources
+icon: Terminal
+---
+
+# stackpanel status
+
+Show a comprehensive status of all development resources.
+
+This includes:
+  - Development services (PostgreSQL, Redis, Minio)
+  - Reverse proxy (Caddy)
+
+By default, opens an interactive dashboard. Use --static for non-interactive output.
+
+## Usage
+
+```bash
+stackpanel status
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--static` | `bool` | `false` | Show static status (non-interactive) |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

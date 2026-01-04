@@ -3,22 +3,25 @@
 #
 # Theme options - Starship prompt customization for devenv shells.
 #
-# Configures the Starship prompt for a consistent and informative shell
-# experience. Uses a Stackpanel-specific theme by default.
+# This module imports options from the proto schema (db/schemas/theme.proto.nix)
+# and extends them with Nix-specific runtime options like config-file.
 #
-# Options:
-#   - enable: Enable Starship prompt for stackpanel devenv
-#   - config-file: Custom starship.toml config file (optional)
-#
-# When enabled without a custom config, uses the Stackpanel default theme
-# which shows relevant information like git status, Nix shell indicator,
-# and project-specific context.
+# The proto schema is the SINGLE SOURCE OF TRUTH for the data structure.
 # ==============================================================================
 { lib, ... }:
+let
+  # Import the db module to get proto-derived options
+  db = import ../../db { inherit lib; };
+in
 {
-  options.stackpanel.theme = {
+  # Theme options derived from proto schema
+  # The proto defines: name, colors, starship, nerd_font, minimal
+  # These are converted to kebab-case: nerd-font
+  options.stackpanel.theme = db.extend.theme // {
+    # Nix-specific extension: enable option (not in data schema)
     enable = lib.mkEnableOption "Starship prompt for stackpanel devenv";
 
+    # Nix-specific extension: path to custom config file
     config-file = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;

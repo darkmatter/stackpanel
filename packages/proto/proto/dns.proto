@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// DNS provider
+enum DnsProvider {
+  DNS_PROVIDER_UNSPECIFIED = 0;
+  DNS_PROVIDER_CLOUDFLARE = 1;
+  DNS_PROVIDER_ROUTE53 = 2;
+  DNS_PROVIDER_NAMECHEAP = 3;
+  DNS_PROVIDER_DIGITALOCEAN = 4;
+  DNS_PROVIDER_MANUAL = 5;
+}
+
+// DNS record types
+enum RecordType {
+  RECORD_TYPE_UNSPECIFIED = 0;
+  RECORD_TYPE_A = 1;
+  RECORD_TYPE_AAAA = 2;
+  RECORD_TYPE_CNAME = 3;
+  RECORD_TYPE_TXT = 4;
+  RECORD_TYPE_MX = 5;
+  RECORD_TYPE_NS = 6;
+  RECORD_TYPE_SRV = 7;
+  RECORD_TYPE_CAA = 8;
+}
+
+// DNS records and domain configuration
+message Dns {
+  int32 default_ttl = 1; // Default TTL for records (seconds)
+  map<string, Zone> zones = 2; // DNS zones/domains configuration
+}
+
+// DNS record configuration
+message Record {
+  RecordType type = 1; // DNS record type
+  string name = 2; // Record name (subdomain or @ for root)
+  string value = 3; // Record value (IP, hostname, or text content)
+  int32 ttl = 4; // Time to live in seconds
+  optional int32 priority = 5; // Priority for MX/SRV records
+  bool proxied = 6; // Whether to proxy through CDN (Cloudflare-specific)
+  optional string comment = 7; // Optional comment describing this record
+}
+
+// DNS zone configuration
+message Zone {
+  string domain = 1; // Domain name (e.g., 'example.com')
+  DnsProvider provider = 2; // DNS provider
+  optional string zone_id = 3; // Provider-specific zone ID (if required)
+  repeated Record records = 4; // List of DNS records for this zone
+  bool managed = 5; // Whether stackpanel manages this zone
+}

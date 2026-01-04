@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// A workspace command definition
+message Command {
+  string package = 1; // Package that provides the binary
+  optional string bin = 2; // Optional binary name if different from tool name
+  repeated string args = 3; // Arguments to pass to the tool
+  optional string config_path = 4; // Optional config file path for the tool
+  repeated string config_arg = 5; // Argument prefix inserted before configPath (e.g. --config)
+  map<string, string> env = 6; // Environment variables for the tool
+  optional string cwd = 7; // Working directory for the tool
+}
+
+// Primary workspace commands configuration
+message Commands {
+  map<string, Command> commands = 1; // Map of command name to command config
+}

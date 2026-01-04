@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Step CA certificate management configuration for local HTTPS
+message StepCa {
+  StepCaConfig config = 1; // Step CA configuration
+}
+
+// Step CA certificate management configuration
+message StepCaConfig {
+  bool enable = 1; // Enable Step CA certificate management
+  string ca_url = 2; // Step CA server URL (e.g., https://ca.internal:443)
+  string ca_fingerprint = 3; // Step CA root certificate fingerprint for verification
+  string provisioner = 4; // Step CA provisioner name
+  string cert_name = 5; // Common name for the device certificate
+  bool prompt_on_shell = 6; // Prompt for certificate setup on shell entry if not configured
+}

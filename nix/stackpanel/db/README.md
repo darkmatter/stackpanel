@@ -1,0 +1,305 @@
+# Stackpanel DB Module
+
+This module defines **Nix-first protobuf schemas** for all data types in Stackpanel. Schemas are written in `.proto.nix` files using a Nix DSL that generates Protocol Buffer definitions.
+
+**Single source of truth** for:
+
+- **Protocol Buffer schemas** - `.proto` files generated from Nix
+- **Go types** - via `buf generate` with protoc-gen-go
+- **TypeScript types** - via `buf generate` with protobuf-ts
+- **Nix option types** - derived from proto message definitions
+
+## Architecture
+
+```
+.proto.nix (Nix DSL) → .proto (Protocol Buffers) → Go/TypeScript types
+```
+
+The Nix protobuf DSL provides:
+- Familiar Nix syntax for defining messages, enums, and fields
+- Automatic field numbering validation
+- Proto3 best practices enforced (e.g., first enum value = 0)
+- Single source of truth for cross-language type generation
+
+## Directory Structure
+
+```
+db/
+├── default.nix              # Main module, aggregates all schemas
+├── README.md                # This file
+├── lib/
+│   ├── default.nix          # Library exports
+│   ├── proto.nix            # Protobuf generation library
+│   └── types.nix            # Legacy JSON Schema types (deprecated)
+└── schemas/
+    ├── _template.proto.nix  # Template for new schemas
+    ├── users.proto.nix      # User management schema
+    ├── apps.proto.nix       # Application configuration
+    ├── aws.proto.nix        # AWS Roles Anywhere config
+    ├── commands.proto.nix   # Workspace commands
+    ├── config.proto.nix     # Root project configuration
+    ├── databases.proto.nix  # Database connections
+    ├── dns.proto.nix        # DNS configuration
+    ├── extensions.proto.nix # IDE/editor extensions
+    ├── onboarding.proto.nix # Onboarding steps
+    ├── secrets.proto.nix    # Secrets management
+    ├── services.proto.nix   # Local services (postgres, redis, etc.)
+    ├── shells.proto.nix     # Shell profiles
+    ├── step-ca.proto.nix    # Step CA certificate authority
+    ├── theme.proto.nix      # UI theme configuration
+    └── external/
+        └── github-collaborators.proto.nix  # GitHub team sync
+```
+
+## Generated Output
+
+Proto generation creates files in `packages/proto/`:
+
+```
+packages/proto/
+├── proto/           # Generated .proto files
+│   ├── users.proto
+│   ├── apps.proto
+│   └── ...
+├── gen/
+│   ├── go/          # Generated Go types (*.pb.go)
+│   └── ts/          # Generated TypeScript types (*.ts)
+├── buf.yaml         # Buf configuration
+├── buf.gen.yaml     # Buf codegen plugins
+└── generate.sh      # Generation script
+```
+
+## Quick Start
+
+### Generate Types
+
+```bash
+# Full pipeline: Nix → Proto → Go/TypeScript
+./nix/stackpanel/core/generate-types.sh
+
+# Or use the proto package directly
+cd packages/proto
+./generate.sh
+```
+
+### List All Schemas
+
+```bash
+nix eval --impure --json -f nix/stackpanel/db '.entityNames'
+# ["apps","aws","commands","config","databases","dns","extensions",...]
+```
+
+### Render a Proto File
+
+```bash
+nix eval --impure --raw -f nix/stackpanel/db '.render.users'
+```
+
+## Writing Schemas
+
+### Basic Structure
+
+```nix
+# schemas/myentity.proto.nix
+{ lib }:
+let
+  proto = import ../lib/proto.nix { inherit lib; };
+in
+proto.mkProtoFile {
+  name = "myentity.proto";
+  package = "stackpanel.db";
+
+  options = {
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+  };
+
+  messages = {
+    MyEntity = proto.mkMessage {
+      name = "MyEntity";
+      description = "Description of my entity";
+      fields = {
+        name = proto.string 1 "Display name";
+        enabled = proto.bool 2 "Whether enabled";
+        tags = proto.repeated (proto.string 3 "List of tags");
+      };
+    };
+  };
+}
+```
+
+### Field Types
+
+| Proto Type | Nix Constructor | Description |
+|------------|-----------------|-------------|
+| `string` | `proto.string N "desc"` | UTF-8 string |
+| `int32` | `proto.int32 N "desc"` | 32-bit signed integer |
+| `int64` | `proto.int64 N "desc"` | 64-bit signed integer |
+| `uint32` | `proto.uint32 N "desc"` | 32-bit unsigned integer |
+| `uint64` | `proto.uint64 N "desc"` | 64-bit unsigned integer |
+| `bool` | `proto.bool N "desc"` | Boolean |
+| `double` | `proto.double N "desc"` | 64-bit floating point |
+| `float` | `proto.float N "desc"` | 32-bit floating point |
+| `bytes` | `proto.bytes N "desc"` | Raw bytes |
+
+### Field Modifiers
+
+| Modifier | Usage | Result |
+|----------|-------|--------|
+| `optional` | `proto.optional (proto.string N "desc")` | `optional string` |
+| `repeated` | `proto.repeated (proto.string N "desc")` | `repeated string` |
+| `map` | `proto.map "string" "User" N "desc"` | `map<string, User>` |
+| `message` | `proto.message "User" N "desc"` | Reference to message type |
+
+### Enums
+
+```nix
+enums = {
+  Environment = proto.mkEnum {
+    name = "Environment";
+    description = "Deployment environments";
+    # First value MUST be 0 (proto3 requirement)
+    values = [
+      "ENVIRONMENT_UNSPECIFIED"  # = 0
+      "ENVIRONMENT_DEV"          # = 1
+      "ENVIRONMENT_STAGING"      # = 2
+      "ENVIRONMENT_PRODUCTION"   # = 3
+    ];
+  };
+};
+```
+
+### Field Numbering Rules
+
+- **Field numbers are REQUIRED** - explicitly assign to each field
+- Numbers 1-15 use 1 byte (use for frequently-accessed fields)
+- Numbers 16-2047 use 2 bytes
+- **Never reuse** a field number after deleting a field
+- Reserved range: 19000-19999 (protobuf internal)
+
+## Type Mapping
+
+### Proto → Go
+
+| Proto | Go |
+|-------|-----|
+| `string` | `string` |
+| `int32` | `int32` |
+| `int64` | `int64` |
+| `bool` | `bool` |
+| `double` | `float64` |
+| `optional T` | `*T` |
+| `repeated T` | `[]T` |
+| `map<K, V>` | `map[K]V` |
+| `message Foo` | `*Foo` |
+
+### Proto → TypeScript
+
+| Proto | TypeScript |
+|-------|------------|
+| `string` | `string` |
+| `int32`, `int64` | `string` (for precision) |
+| `bool` | `boolean` |
+| `double`, `float` | `number` |
+| `optional T` | `T \| undefined` |
+| `repeated T` | `T[]` |
+| `map<K, V>` | `{ [key: K]: V }` |
+| `message Foo` | `Foo` |
+
+## Integration with Core Options
+
+The db module exports utilities for deriving Nix options from proto schemas:
+
+```nix
+# In core/options/default.nix
+{ lib, ... }:
+let
+  db = import ../../db { inherit lib; };
+in
+{
+  _module.args = {
+    dbSchema = db;
+    dbExtend = db.extend;  # Pre-built option sets from proto messages
+  };
+}
+```
+
+Use in option modules:
+
+```nix
+# In core/options/aws.nix
+{ lib, dbExtend, ... }:
+{
+  options.stackpanel.aws = {
+    # Options derived from proto messages
+    roles-anywhere = dbExtend.awsOptions;
+  };
+}
+```
+
+## Adding a New Schema
+
+1. **Create the schema file:**
+
+```bash
+cp nix/stackpanel/db/schemas/_template.proto.nix \
+   nix/stackpanel/db/schemas/myentity.proto.nix
+```
+
+2. **Edit the schema** - define messages, enums, fields
+
+3. **Add to db/default.nix:**
+
+```nix
+schemas = {
+  # ...existing schemas
+  myEntity = import ./schemas/myentity.proto.nix { inherit lib; };
+};
+
+dataSchemas = {
+  # ...existing schemas
+  inherit (schemas) myEntity;
+};
+```
+
+4. **Regenerate types:**
+
+```bash
+./nix/stackpanel/core/generate-types.sh
+```
+
+5. **Use the generated types:**
+
+```go
+// Go
+import pb "github.com/darkmatter/stackpanel/packages/proto/gen/go"
+
+entity := &pb.MyEntity{
+    Name:    "example",
+    Enabled: true,
+}
+```
+
+```typescript
+// TypeScript
+import { MyEntity } from '@stackpanel/proto/gen/ts/myentity';
+
+const entity: MyEntity = {
+    name: 'example',
+    enabled: true,
+};
+```
+
+## Migration from JSON Schema
+
+The previous approach used JSON Schema + quicktype. The new protobuf approach provides:
+
+| Feature | JSON Schema | Protobuf |
+|---------|-------------|----------|
+| Type safety | Good | Excellent |
+| Cross-language | Via quicktype | Native buf plugins |
+| Serialization | JSON only | Binary + JSON |
+| Services/RPC | Manual | Built-in (gRPC, Connect) |
+| Versioning | Manual | Field numbers |
+| Tooling | Limited | Extensive (buf, grpc, etc.) |
+
+Legacy `lib/types.nix` is kept for compatibility but deprecated.

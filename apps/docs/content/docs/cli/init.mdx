@@ -1,0 +1,59 @@
+---
+title: stackpanel init
+description: Initialize stackpanel from Nix configuration
+icon: Terminal
+---
+
+# stackpanel init
+
+Initialize stackpanel by generating files from Nix configuration.
+
+This command is typically called by Nix during  shell entry.
+It reads configuration JSON and generates:
+  - IDE integration files (VS Code workspace, terminal integration)
+  - JSON schemas for YAML intellisense
+  - State file for runtime queries
+
+Configuration can be passed via:
+  - --config-file [path]   Read from a JSON file
+  - --config [json]        Pass JSON directly as argument
+  - stdin                  Pipe JSON to stdin
+
+Example (from Nix):
+  stackpanel init --config '$\{builtins.toJSON config\}'
+
+Example (from file):
+  stackpanel init --config-file /tmp/stackpanel-config.json
+
+Example (from stdin):
+  echo '\{"projectName": "myapp", ...\}' | stackpanel init
+
+## Usage
+
+```bash
+stackpanel init
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--config` | `string` | _none_ | Configuration JSON string |
+| `--config-file` | `string` | _none_ | Path to configuration JSON file |
+| `--quiet` | `bool` | `false` | Suppress output |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

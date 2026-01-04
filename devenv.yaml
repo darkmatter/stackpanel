@@ -1,4 +1,3 @@
-
 inputs:
   devenv:
     url: git+https://github.com/cachix/devenv?ref=refs/tags/v1.11.2
@@ -11,6 +10,13 @@ inputs:
     inputs:
       nixpkgs:
         follows: nixpkgs-unstable
+  gomod2nix:
+    url: github:nix-community/gomod2nix
+    inputs:
+      nixpkgs:
+        follows: nixpkgs-unstable
+    overlays:
+      - default
   git-hooks:
     url: git+https://github.com/cachix/git-hooks.nix
     inputs:

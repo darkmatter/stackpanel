@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Supported shell types
+enum ShellType {
+  SHELL_TYPE_UNSPECIFIED = 0;
+  SHELL_TYPE_BASH = 1;
+  SHELL_TYPE_ZSH = 2;
+  SHELL_TYPE_FISH = 3;
+  SHELL_TYPE_NUSHELL = 4;
+}
+
+// Shell alias configuration
+message Alias {
+  string command = 1; // Command to alias to
+  optional string description = 2; // Description of the alias
+}
+
+// Environment variable configuration
+message EnvVar {
+  string value = 1; // Environment variable value
+  bool secret = 2; // Whether this value should be treated as a secret
+  optional string description = 3; // Description of what this variable is for
+}
+
+// Shell hook configuration
+message Hook {
+  string name = 1; // Hook name/identifier
+  string script = 2; // Shell script to execute
+  int32 order = 3; // Execution order (lower runs first)
+  bool enabled = 4; // Whether this hook is enabled
+}
+
+// Shell profile configuration
+message Profile {
+  map<string, EnvVar> env = 1; // Environment variables
+  map<string, Alias> aliases = 2; // Shell aliases
+  optional string init_extra = 3; // Extra shell initialization script
+  int32 history_size = 4; // Number of history entries to keep
+  repeated string history_ignore = 5; // Patterns to ignore in history
+}
+
+// Shell-specific settings and configurations
+message Shells {
+  ShellType default_shell = 1; // Default shell type
+  Profile common = 2; // Common settings applied to all shells
+  Profile bash = 3; // Bash-specific settings
+  Profile zsh = 4; // Zsh-specific settings
+  Profile fish = 5; // Fish-specific settings
+  repeated Hook hooks = 6; // Shell hooks to run on initialization
+  repeated string path_prepend = 7; // Directories to prepend to PATH
+  repeated string path_append = 8; // Directories to append to PATH
+}

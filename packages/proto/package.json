@@ -1,0 +1,77 @@
+{
+	"name": "@stackpanel/proto",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "./gen/ts/index.ts",
+	"types": "./gen/ts/index.ts",
+	"exports": {
+		".": {
+			"types": "./gen/ts/index.ts",
+			"import": "./gen/ts/index.ts"
+		},
+		"./apps": {
+			"types": "./gen/ts/apps.ts",
+			"import": "./gen/ts/apps.ts"
+		},
+		"./aws": {
+			"types": "./gen/ts/aws.ts",
+			"import": "./gen/ts/aws.ts"
+		},
+		"./commands": {
+			"types": "./gen/ts/commands.ts",
+			"import": "./gen/ts/commands.ts"
+		},
+		"./config": {
+			"types": "./gen/ts/config.ts",
+			"import": "./gen/ts/config.ts"
+		},
+		"./databases": {
+			"types": "./gen/ts/databases.ts",
+			"import": "./gen/ts/databases.ts"
+		},
+		"./dns": {
+			"types": "./gen/ts/dns.ts",
+			"import": "./gen/ts/dns.ts"
+		},
+		"./extensions": {
+			"types": "./gen/ts/extensions.ts",
+			"import": "./gen/ts/extensions.ts"
+		},
+		"./github-collaborators": {
+			"types": "./gen/ts/github_collaborators.ts",
+			"import": "./gen/ts/github_collaborators.ts"
+		},
+		"./onboarding": {
+			"types": "./gen/ts/onboarding.ts",
+			"import": "./gen/ts/onboarding.ts"
+		},
+		"./secrets": {
+			"types": "./gen/ts/secrets.ts",
+			"import": "./gen/ts/secrets.ts"
+		},
+		"./services": {
+			"types": "./gen/ts/services.ts",
+			"import": "./gen/ts/services.ts"
+		},
+		"./shells": {
+			"types": "./gen/ts/shells.ts",
+			"import": "./gen/ts/shells.ts"
+		},
+		"./step-ca": {
+			"types": "./gen/ts/step_ca.ts",
+			"import": "./gen/ts/step_ca.ts"
+		},
+		"./theme": {
+			"types": "./gen/ts/theme.ts",
+			"import": "./gen/ts/theme.ts"
+		},
+		"./users": {
+			"types": "./gen/ts/users.ts",
+			"import": "./gen/ts/users.ts"
+		}
+	},
+	"dependencies": {
+		"@protobuf-ts/runtime": "^2.11.1"
+	}
+}

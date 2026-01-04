@@ -111,6 +111,7 @@
         "@stackpanel/api": "workspace:*",
         "@stackpanel/auth": "workspace:*",
         "@stackpanel/env": "workspace:*",
+        "@stackpanel/proto": "workspace:*",
         "@stackpanel/ui-core": "workspace:*",
         "@tailwindcss/vite": "^4.1.18",
         "@tanstack/react-devtools": "^0.8.6",
@@ -237,6 +238,13 @@
       },
       "devDependencies": {
         "typescript": "^5.9.3",
+      },
+    },
+    "packages/proto": {
+      "name": "@stackpanel/proto",
+      "version": "0.1.0",
+      "dependencies": {
+        "@protobuf-ts/runtime": "^2.11.1",
       },
     },
     "packages/scripts": {
@@ -1265,6 +1273,8 @@
 
     "@prisma/studio-core": ["@prisma/studio-core@0.8.2", "", { "peerDependencies": { "@types/react": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-/iAEWEUpTja+7gVMu1LtR2pPlvDmveAwMHdTWbDeGlT7yiv0ZTCPpmeAGdq/Y9aJ9Zj1cEGBXGRbmmNPj022PQ=="],
 
+    "@protobuf-ts/runtime": ["@protobuf-ts/runtime@2.11.1", "", {}, "sha512-KuDaT1IfHkugM2pyz+FwiY80ejWrkH1pAtOBOZFuR6SXEFTsnb/jiQWQ1rCIrcKx2BtyxnxW6BWwsVSA/Ie+WQ=="],
+
     "@protobufjs/aspromise": ["@protobufjs/aspromise@1.1.2", "", {}, "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ=="],
 
     "@protobufjs/base64": ["@protobufjs/base64@1.1.2", "", {}, "sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg=="],
@@ -1652,6 +1662,8 @@
     "@stackpanel/db": ["@stackpanel/db@workspace:packages/db"],
 
     "@stackpanel/env": ["@stackpanel/env@workspace:packages/env"],
+
+    "@stackpanel/proto": ["@stackpanel/proto@workspace:packages/proto"],
 
     "@stackpanel/scripts": ["@stackpanel/scripts@workspace:packages/scripts"],
 

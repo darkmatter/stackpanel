@@ -16,11 +16,60 @@
   inputs,
   ...
 }:
+let
+  # ---------------------------------------------------------------------------
+  # Auto-import data "tables" from ./data/
+  # Each .nix file becomes a top-level key under stackpanel.*
+  # ---------------------------------------------------------------------------
+  dataDir = ./data;
+
+  loadDataTables =
+    dir:
+    let
+      entries = builtins.readDir dir;
+      nixFiles = lib.filterAttrs (
+        n: type: type == "regular" && lib.hasSuffix ".nix" n && n != "default.nix" && (!lib.hasPrefix "_" n)
+      ) entries;
+      toKey = n: lib.removeSuffix ".nix" n;
+    in
+    lib.mapAttrs' (n: _: {
+      name = toKey n;
+      value = import (dir + "/${n}");
+    }) nixFiles;
+
+  # Load all data tables
+  data = if builtins.pathExists dataDir then loadDataTables dataDir else { };
+
+  ghCollabs = import ./external/github-collaborators.nix;
+
+  # Transform a GitHub collaborator to stackpanel user format
+  toUser = name: collab: {
+    inherit name;
+    github = collab.login;
+    public-keys = collab.publicKeys;
+    # Default environments based on admin status
+    secrets-allowed-environments =
+      if collab.isAdmin then
+        [
+          "dev"
+          "staging"
+          "production"
+        ]
+      else
+        [ "dev" ];
+  };
+  # ghusers = ghCollabs.collaborators;
+  github-team = lib.mapAttrs (name: user: toUser name user) ghCollabs.collaborators;
+  # github-data-by-username = {
+  #   is-admin = lib.mapAttrs (name: user: user.isAdmin) ghusers;
+  #   public-keys = lib.mapAttrs (name: user: user.publicKeys) ghusers;
+  # };
+in
 {
   # ===========================================================================
   # Stackpanel options
   # ===========================================================================
-  stackpanel = {
+  stackpanel = lib.recursiveUpdate {
     enable = true;
     name = "stackpanel";
     github = "darkmatter/stackpanel";
@@ -39,6 +88,7 @@
       gomod2nix
       quicktype
       prek
+      buf
     ];
 
     # AWS Roles Anywhere via stackpanel's AWS module
@@ -80,6 +130,10 @@
       ''
     ];
 
+    git-hooks = {
+      enable = true;
+    };
+
     # ============================================================================
     # Apps - web app, docs, and Go CLI/agent
     # ============================================================================
@@ -120,24 +174,20 @@
     # ============================================================================
     # Ports - infrastructure service ports
     # ============================================================================
-    ports.services = [
-      {
-        key = "POSTGRES";
+    ports.services = {
+      POSTGRES = {
         name = "PostgreSQL";
-      }
-      {
-        key = "REDIS";
+      };
+      REDIS = {
         name = "Redis";
-      }
-      {
-        key = "MINIO";
+      };
+      MINIO = {
         name = "Minio";
-      }
-      {
-        key = "MINIO_CONSOLE";
+      };
+      MINIO_CONSOLE = {
         name = "Minio Console";
-      }
-    ];
+      };
+    };
 
     # ============================================================================
     # Global Services - PostgreSQL, Redis, Minio, Caddy
@@ -163,7 +213,7 @@
     # ============================================================================
     # Users
     # ============================================================================
-    users = {
+    users = lib.recursiveUpdate github-team {
       cooper = {
         name = "Cooper Maruyama";
         github = "coopmoney";
@@ -217,5 +267,5 @@
       ];
       extra-folders = [ ];
     };
-  };
+  } data;
 }

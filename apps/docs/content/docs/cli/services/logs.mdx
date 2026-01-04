@@ -1,0 +1,38 @@
+---
+title: stackpanel services logs
+description: Show service logs
+icon: Terminal
+---
+
+# stackpanel services logs
+
+Show service logs
+
+## Usage
+
+```bash
+stackpanel services logs [service]
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--follow, -f` | `bool` | `false` | Follow log output |
+| `--lines, -n` | `int` | `50` | Number of lines to show |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

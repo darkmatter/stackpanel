@@ -30,7 +30,7 @@ Site configs are stored in ~/.config/caddy/sites.d/ and can be
 contributed to by multiple projects.
 
 When you add a site, a symlink is created in your project at:
-  .stackpanel/caddy/<domain>.caddy -> ~/.config/caddy/sites.d/<domain>.caddy
+  .stackpanel/caddy/\<domain\>.caddy -> ~/.config/caddy/sites.d/\<domain\>.caddy
 
 This allows you to:
   - See which sites belong to your project
@@ -63,7 +63,7 @@ var caddyStatusCmd = &cobra.Command{
 }
 
 var caddyAddSiteCmd = &cobra.Command{
-	Use:   "add <domain> <upstream>",
+	Use:   "add [domain] [upstream]",
 	Short: "Add a site to Caddy",
 	Long: `Add a reverse proxy site to Caddy.
 
@@ -78,7 +78,7 @@ Examples:
 }
 
 var caddyRemoveSiteCmd = &cobra.Command{
-	Use:   "remove <domain>",
+	Use:   "remove [domain]",
 	Short: "Remove a site from Caddy",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

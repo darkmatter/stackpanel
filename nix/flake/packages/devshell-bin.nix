@@ -20,7 +20,8 @@ let
   # Extract all packages from the devshell
   # devShell is expected to be the result of mkDevShell
   devshellConfig = devShell.passthru.devshellConfig or { };
-  allPackages = devshellConfig.packages or [ ];
+  extraPackages = devShell.passthru.extraPackages or [ ];
+  allPackages = (devshellConfig.packages or [ ]) ++ extraPackages;
 in
 pkgs.runCommand "devshell-bin"
   {

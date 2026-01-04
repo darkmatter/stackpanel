@@ -30,6 +30,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 let
@@ -38,31 +39,135 @@ let
   portsCfg = config.stackpanel.ports;
   repoKey = rawApps.github or "darkmatter/stackpanel";
   portsLib = import ../../lib/ports.nix { inherit lib; };
+  db = import ../../db { inherit lib; };
   # Apps use offset 0-9 (services use 10+)
   appsBaseOffset = 0;
 
   # Get the project base port
   projectBasePort = portsCfg.base-port;
 
-  # Base app option type (just user inputs, no computed fields)
-  baseAppModule =
+  toolStepModule =
     { lib, ... }:
     {
       options = {
-        name = lib.mkOption {
-          description = ''
-            Name of the application - mainly used for display purposes.
-          '';
-          type = lib.types.str;
+        package = lib.mkOption {
+          type = lib.types.package;
+          description = "Package that provides the tool binary.";
         };
-        path = lib.mkOption {
-          description = ''
-            Path to app directory relative to repo root.
-            Optional unless required by a specific app module.
-          '';
+        bin = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
-          example = "apps/web";
+          description = "Optional binary name if the package provides multiple executables.";
+        };
+        args = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Arguments passed to the tool.";
+        };
+        env = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          default = { };
+          description = "Environment variables for the tool.";
+        };
+        configPath = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Repo-relative config file path for the tool.";
+        };
+        configArg = lib.mkOption {
+          type = lib.types.nullOr (lib.types.listOf lib.types.str);
+          default = null;
+          description = "Argument prefix inserted before configPath (e.g. [\"--config\"]).";
+        };
+        cwd = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Override working directory (repo-relative). Defaults to app path.";
+        };
+      };
+    };
+
+  mkToolWrapper =
+    appName: appCfg: label: stepCfg:
+    let
+      exe =
+        if stepCfg.bin != null then "${stepCfg.package}/bin/${stepCfg.bin}" else lib.getExe stepCfg.package;
+      appPath = stepCfg.cwd or appCfg.path or null;
+      args = lib.escapeShellArgs stepCfg.args;
+      configArgs =
+        if stepCfg.configPath == null then
+          ""
+        else if stepCfg.configArg == null then
+          ''"$ROOT/${stepCfg.configPath}"''
+        else
+          ''${lib.escapeShellArgs stepCfg.configArg} "$ROOT/${stepCfg.configPath}"'';
+      envLines = lib.concatMapStringsSep "\n" (
+        name:
+        let
+          value = stepCfg.env.${name};
+        in
+        "export ${name}=${lib.escapeShellArg value}"
+      ) (lib.attrNames stepCfg.env);
+      cdLine = if appPath != null then ''cd "$ROOT/${appPath}"'' else "";
+    in
+    pkgs.writeShellApplication {
+      name = "${appName}-${label}";
+      runtimeInputs = [ stepCfg.package ];
+      text = lib.concatStringsSep "\n" [
+        "set -euo pipefail"
+        ''ROOT="''${STACKPANEL_ROOT:-$(pwd)}"''
+        envLines
+        cdLine
+        "exec ${exe} ${args} ${configArgs}"
+      ];
+    };
+
+  wrapToolList =
+    appName: appCfg: label: tools:
+    lib.imap0 (idx: step: mkToolWrapper appName appCfg "${label}-${toString idx}" step) tools;
+
+  # Nix-specific app options (not in proto schema)
+  # These are runtime/devenv options that don't belong in serialized data
+  nixAppOptionsModule =
+    { lib, ... }:
+    {
+      options = {
+        tooling = {
+          install = lib.mkOption {
+            type = lib.types.nullOr (lib.types.submodule toolStepModule);
+            default = null;
+            description = "Install tool definition (wrapped).";
+          };
+          build = lib.mkOption {
+            type = lib.types.nullOr (lib.types.submodule toolStepModule);
+            default = null;
+            description = "Build tool definition (wrapped).";
+          };
+          test = lib.mkOption {
+            type = lib.types.nullOr (lib.types.submodule toolStepModule);
+            default = null;
+            description = "Test tool definition (wrapped).";
+          };
+          dev = lib.mkOption {
+            type = lib.types.nullOr (lib.types.submodule toolStepModule);
+            default = null;
+            description = "Dev tool definition (wrapped).";
+          };
+          build-steps = lib.mkOption {
+            type = lib.types.listOf (lib.types.submodule toolStepModule);
+            default = [ ];
+            description = "Additional build steps (wrapped).";
+          };
+          formatters = lib.mkOption {
+            type = lib.types.listOf (lib.types.submodule toolStepModule);
+            default = [ ];
+            description = "Formatter definitions (wrapped).";
+          };
+          linters = lib.mkOption {
+            type = lib.types.listOf (lib.types.submodule toolStepModule);
+            default = [ ];
+            description = "Linter definitions (wrapped).";
+          };
         };
         offset = lib.mkOption {
           description = ''
@@ -105,11 +210,28 @@ let
         domain = if appCfg.domain != null then "${appCfg.domain}.localhost" else null;
         protocol = if appCfg.tls then "https" else "http";
         url = if domain != null then "${protocol}://${domain}" else null;
+        tooling = appCfg.tooling;
+        wrappedTooling = {
+          install =
+            if tooling.install != null then mkToolWrapper name appCfg "install" tooling.install else null;
+          build = if tooling.build != null then mkToolWrapper name appCfg "build" tooling.build else null;
+          test = if tooling.test != null then mkToolWrapper name appCfg "test" tooling.test else null;
+          dev = if tooling.dev != null then mkToolWrapper name appCfg "dev" tooling.dev else null;
+          build-steps = wrapToolList name appCfg "build" tooling.build-steps;
+          formatters = wrapToolList name appCfg "format" tooling.formatters;
+          linters = wrapToolList name appCfg "lint" tooling.linters;
+        };
       in
       {
         inherit name;
         value = {
-          inherit port domain url;
+          inherit
+            port
+            domain
+            url
+            tooling
+            wrappedTooling
+            ;
           inherit (appCfg) tls offset;
         };
       }
@@ -133,7 +255,13 @@ in
     # type = lib.types.attrsOf appType;
     type = lib.types.attrsOf (
       lib.types.submoduleWith {
-        modules = [ baseAppModule ] ++ config.stackpanel.appModules;
+        modules = [
+          # Proto-derived options (name, path, install-command, etc.)
+          { options = db.extend.app; }
+          # Nix-specific runtime options (tooling, offset, domain, tls)
+          nixAppOptionsModule
+        ]
+        ++ config.stackpanel.appModules;
         specialArgs = { inherit lib; };
       }
     );

@@ -1,0 +1,18 @@
+---
+title: "=============================================================================="
+description: "git-hooks.nix"
+---
+
+git-hooks.nix
+
+Git hooks integration using stackpanel app tooling wrappers.
+Consumes stackpanel.appsComputed\<app\>wrappedTooling.* and exposes a
+git-hooks configuration fragment suitable for git-hooks.nix.
+
+Usage (in .stackpanel/devenv.nix):
+```nix
+git-hooks.enable = true;
+# merged-config.nix will expose this as git-hooks config
+```
+
+==============================================================================

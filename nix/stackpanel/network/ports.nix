@@ -30,19 +30,24 @@ let
   # Import shared port computation library
   portsLib = import ../lib/ports.nix { inherit lib; };
 
-  # Compute ports using shared library
-  servicesWithPorts = portsLib.computeServicesWithPorts {
-    basePort = cfg.base-port;
+  # Compute ports using shared library (attrset-based)
+  servicesByKey = portsLib.computeServicesFromAttrset {
+    projectName = cfg.project-name;
     services = cfg.services;
   };
 
-  # Generate services config JSON using shared library
-  servicesConfig = portsLib.mkServicesConfig servicesWithPorts;
+  # Generate services config JSON
+  servicesConfig = builtins.toJSON (
+    lib.mapAttrsToList (key: svc: {
+      inherit (svc) key port;
+      name = svc.displayName;
+    }) servicesByKey
+  );
 
   # Get app info for MOTD display
   appsComputedCfg = config.stackpanel.appsComputed or { };
   hasApps = appsComputedCfg != { };
-  hasServices = cfg.services != [ ];
+  hasServices = cfg.services != { };
 in
 {
   config = lib.mkIf cfg.enable {
@@ -78,7 +83,7 @@ in
             echo "   Services:"
             ${lib.concatMapStrings (svc: ''
               echo "     ${svc.displayName}: ${toString svc.port}"
-            '') servicesWithPorts}
+            '') (lib.attrValues servicesByKey)}
           ''}
           echo ""
           echo "   Tip: Set STACKPANEL_QUIET=1 to hide this message"

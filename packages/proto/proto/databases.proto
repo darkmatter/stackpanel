@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Supported database types
+enum DatabaseType {
+  DATABASE_TYPE_UNSPECIFIED = 0;
+  DATABASE_TYPE_POSTGRESQL = 1;
+  DATABASE_TYPE_MYSQL = 2;
+  DATABASE_TYPE_SQLITE = 3;
+  DATABASE_TYPE_MONGODB = 4;
+}
+
+// SSL mode for PostgreSQL connections
+enum SSLMode {
+  SSL_MODE_UNSPECIFIED = 0;
+  SSL_MODE_DISABLE = 1;
+  SSL_MODE_ALLOW = 2;
+  SSL_MODE_PREFER = 3;
+  SSL_MODE_REQUIRE = 4;
+  SSL_MODE_VERIFY_CA = 5;
+  SSL_MODE_VERIFY_FULL = 6;
+}
+
+// Database connection settings
+message Connection {
+  string host = 1; // Database host
+  int32 port = 2; // Database port
+  string database = 3; // Database name
+  string username = 4; // Database username
+  optional string password_env = 5; // Environment variable containing the password
+  bool ssl = 6; // Enable SSL/TLS connection
+  SSLMode ssl_mode = 7; // SSL mode for PostgreSQL connections
+}
+
+// Database instance configuration for a specific environment
+message DatabaseInstance {
+  DatabaseType type = 1; // Database type
+  Connection connection = 2; // Database connection settings
+  Pool pool = 3; // Connection pool settings
+  string migrations_path = 4; // Path to migrations directory
+  optional string seeds_path = 5; // Path to seed data directory
+  bool auto_migrate = 6; // Run migrations on startup
+}
+
+// Database connection and configuration settings
+message Databases {
+  string default = 1; // Default database configuration to use
+  map<string, DatabaseInstance> databases = 2; // Database configurations by environment/name
+}
+
+// Connection pool settings
+message Pool {
+  int32 min = 1; // Minimum connections in pool
+  int32 max = 2; // Maximum connections in pool
+  int32 idle_timeout = 3; // Idle connection timeout in seconds
+  int32 connection_timeout = 4; // Connection timeout in seconds
+}

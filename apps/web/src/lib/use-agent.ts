@@ -117,8 +117,10 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 /**
  * Hook for checking if agent is available (health check)
  */
-export function useAgentHealth(options: { host?: string; port?: number } = {}) {
-	const { host = "localhost", port = 9876 } = options;
+export function useAgentHealth(
+	options: { host?: string; port?: number; intervalMs?: number } = {},
+) {
+	const { host = "localhost", port = 9876, intervalMs = 2000 } = options;
 
 	const [status, setStatus] = useState<
 		"checking" | "available" | "unavailable"
@@ -127,17 +129,29 @@ export function useAgentHealth(options: { host?: string; port?: number } = {}) {
 
 	useEffect(() => {
 		const client = new AgentHttpClient(host, port);
+		let isMounted = true;
 
-		client
-			.health()
-			.then((data) => {
-				setStatus("available");
-				setProjectRoot(data.project_root);
-			})
-			.catch(() => {
-				setStatus("unavailable");
+		const check = () => {
+			client.ping().then((data) => {
+				if (!isMounted) return;
+				if (data) {
+					setStatus("available");
+					setProjectRoot(data.project_root);
+				} else {
+					setStatus("unavailable");
+					setProjectRoot(null);
+				}
 			});
-	}, [host, port]);
+		};
+
+		check();
+		const interval = setInterval(check, intervalMs);
+
+		return () => {
+			isMounted = false;
+			clearInterval(interval);
+		};
+	}, [host, port, intervalMs]);
 
 	return { status, projectRoot };
 }
