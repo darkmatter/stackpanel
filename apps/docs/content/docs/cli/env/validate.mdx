@@ -1,0 +1,39 @@
+---
+title: stackpanel env validate
+description: Validate required environment variables
+icon: Terminal
+---
+
+# stackpanel env validate
+
+Check that all required environment variables are set.
+
+Returns a non-zero exit code if any required variables are missing.
+
+## Usage
+
+```bash
+stackpanel env validate
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--strict` | `bool` | `false` | Exit with error if any required variable is missing |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

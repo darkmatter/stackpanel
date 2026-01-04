@@ -34,6 +34,7 @@ in
     exec = "${pkgs.bun}/bin/bun dev";
     cwd = "${root}/apps/web";
     process-compose = {
+      is_tty = true;
       availability = {
         backoff_seconds = 4;
         max_restarts = 5;

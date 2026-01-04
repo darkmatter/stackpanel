@@ -1,0 +1,51 @@
+---
+title: stackpanel users sync
+description: Sync users from GitHub collaborators
+icon: Terminal
+---
+
+# stackpanel users sync
+
+Sync users from GitHub repository collaborators.
+
+This command:
+1. Fetches collaborators from the GitHub repository using gh CLI
+2. Fetches public SSH keys for each collaborator from github.com/\<user\\>keys
+3. Generates .stackpanel/data/github-collaborators.nix with raw collaborator data
+4. Creates .stackpanel/data/users.nix that transforms data to stackpanel.users format
+
+The github-collaborators.nix file is auto-generated and should not be edited.
+Edit users.nix to customize permissions or add non-GitHub users.
+
+Requires: gh CLI to be installed and authenticated.
+
+## Usage
+
+```bash
+stackpanel users sync
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--data-dir` | `string` | _none_ | Data directory path (default: .stackpanel/data) |
+| `--no-keys` | `bool` | `false` | Skip fetching public keys |
+| `--owner` | `string` | _none_ | GitHub repository owner (default: current repo) |
+| `--repo` | `string` | _none_ | GitHub repository name (default: current repo) |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

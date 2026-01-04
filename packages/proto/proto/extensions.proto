@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Source type for extensions
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_GITHUB = 1;
+  SOURCE_TYPE_NPM = 2;
+  SOURCE_TYPE_LOCAL = 3;
+  SOURCE_TYPE_URL = 4;
+}
+
+// Extension configuration
+message Extension {
+  string name = 1; // Display name of the extension
+  bool enabled = 2; // Whether this extension is enabled
+  Source source = 3; // Extension source configuration
+  optional string version = 4; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+  int32 priority = 5; // Load order priority (lower = earlier)
+  repeated string dependencies = 6; // Other extensions this depends on
+  repeated string tags = 7; // Tags for categorizing/filtering extensions
+}
+
+// Extensions and plugins configuration
+message Extensions {
+  bool enabled = 1; // Enable extensions system
+  bool auto_update = 2; // Automatically check for extension updates
+  string registry = 3; // Default extension registry URL
+  map<string, Extension> extensions = 4; // Installed extensions by key
+}
+
+// Extension source configuration
+message Source {
+  SourceType type = 1; // Source type for the extension
+  optional string repo = 2; // GitHub repository (owner/repo) for github source type
+  optional string package = 3; // NPM package name for npm source type
+  optional string path = 4; // Local path for local source type
+  optional string url = 5; // URL for url source type
+  optional string ref = 6; // Git ref (branch, tag, commit) for github source type
+}

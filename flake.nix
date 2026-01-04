@@ -28,6 +28,7 @@
     gomod2nix.inputs.flake-utils.follows = "flake-utils";
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     # read absolute path to repo without impure eval
     stackpanel-root.url = "file+file:///dev/null";
     stackpanel-root.flake = false;
@@ -68,9 +69,7 @@
           exports.flakeModules.readStackpanelRoot
           exports.flakeModules.default
         ]
-        ++ nixpkgs.lib.optionals (builtins.getEnv "SKIP_DEVENV" != "true") [
-          inputs.devenv.flakeModule
-        ];
+        ++ nixpkgs.lib.optionals (builtins.getEnv "SKIP_DEVENV" != "true") [ ];
 
         perSystem =
           {
@@ -137,6 +136,7 @@
                     touch $out
                   '';
             }
+            // (localShell.stackpanelConfig.checks or { })
             // lib.optionalAttrs (localShell.pre-commit-check != null) {
               inherit (localShell) pre-commit-check;
             };

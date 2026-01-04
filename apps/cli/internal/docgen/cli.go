@@ -117,6 +117,21 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 	return nil
 }
 
+// Escape sequences that are unlikely to be actual jsx
+func escapeMDX(text string) string {
+	// Order matters: escape backslashes first so you don't double-escape later
+	// text = strings.ReplaceAll(text, "\\", "\\\\") // Escape literal backslashes
+	// text = strings.ReplaceAll(text, "{", "\\{")   // Escape JS expression braces
+	// text = strings.ReplaceAll(text, "}", "\\}")
+	text = strings.ReplaceAll(text, ".<", "\\<") // Escape JSX tags
+	text = strings.ReplaceAll(text, ">.", "\\>")
+	// text = strings.ReplaceAll(text, "*", "\\*") // Escape bold/italic
+	// text = strings.ReplaceAll(text, "_", "\\_")
+	// text = strings.ReplaceAll(text, "#", "\\#") // Escape headers
+	// Add other characters if needed (e.g., '[', ']', '`', etc., depending on context)
+	return text
+}
+
 // generateCommandDocs generates documentation for a single command and its subcommands
 func generateCommandDocs(tmpl *template.Template, cmd *cobra.Command, baseDir string, inheritedFlags []CLIFlagView, pathPrefix string) error {
 	// Collect subcommands
@@ -311,11 +326,15 @@ func buildUsageString(cmd *cobra.Command) string {
 // renderToFile renders a template to a file
 func renderToFile(tmpl *template.Template, name string, data interface{}, path string) error {
 	var buf bytes.Buffer
+	var safe bytes.Buffer
 	if err := tmpl.ExecuteTemplate(&buf, name, data); err != nil {
 		return fmt.Errorf("failed to execute template %s: %w", name, err)
 	}
 
-	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
+	// escape
+	safe.WriteString(escapeMDX(buf.String()))
+
+	if err := os.WriteFile(path, safe.Bytes(), 0644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 

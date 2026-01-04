@@ -1,0 +1,41 @@
+---
+title: stackpanel caddy add
+description: Add a site to Caddy
+icon: Terminal
+---
+
+# stackpanel caddy add
+
+Add a reverse proxy site to Caddy.
+
+Examples:
+  stackpanel caddy add myapp.localhost localhost:3000
+  stackpanel caddy add api.localhost localhost:8080 --tls
+
+## Usage
+
+```bash
+stackpanel caddy add [domain] [upstream]
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--tls` | `bool` | `false` | Enable internal TLS |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

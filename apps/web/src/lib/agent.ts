@@ -44,6 +44,11 @@ export interface GenerateResult {
 	error?: string;
 }
 
+export interface AgentHealth {
+	status: string;
+	project_root: string;
+}
+
 export type SecretEnv = "dev" | "staging" | "prod";
 
 export interface SetSecretRequest {
@@ -151,6 +156,21 @@ export class AgentClient {
 				this.handleMessage(event.data);
 			};
 		});
+	}
+
+	/**
+	 * Ping the agent over HTTP to see if it's available.
+	 */
+	async ping(): Promise<AgentHealth | null> {
+		try {
+			const res = await fetch(
+				`http://${this.config.host}:${this.config.port}/health`,
+			);
+			if (!res.ok) return null;
+			return (await res.json()) as AgentHealth;
+		} catch {
+			return null;
+		}
 	}
 
 	/**
@@ -304,9 +324,17 @@ export class AgentHttpClient {
 		return headers;
 	}
 
-	async health(): Promise<{ status: string; project_root: string }> {
+	async health(): Promise<AgentHealth> {
 		const res = await fetch(`${this.baseUrl}/health`);
 		return res.json();
+	}
+
+	async ping(): Promise<AgentHealth | null> {
+		try {
+			return await this.health();
+		} catch {
+			return null;
+		}
 	}
 
 	async exec(request: ExecRequest): Promise<ExecResult> {

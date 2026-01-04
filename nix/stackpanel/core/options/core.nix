@@ -187,6 +187,18 @@
         default = true;
       };
     };
+
+    git-hooks = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = { };
+      description = "Git hooks configuration fragment (consumed by git-hooks.nix).";
+    };
+
+    checks = lib.mkOption {
+      type = lib.types.attrsOf lib.types.package;
+      default = { };
+      description = "Additional flake checks contributed by stackpanel modules.";
+    };
   };
 
   # ============================================================================

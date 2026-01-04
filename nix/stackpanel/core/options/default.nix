@@ -13,6 +13,9 @@
 #   - devshell.nix: Shell environment (packages, hooks, commands)
 #   - And more...
 #
+# The db schema (.proto.nix files) is the source of truth for data types.
+# Option files that need proto-derived types import db directly.
+#
 # Imported by: ../default.nix
 # ==============================================================================
 { ... }:

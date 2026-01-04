@@ -1,0 +1,5 @@
+# Generated proto files (from Nix schemas)
+#proto/
+
+# Generated code (from buf generate)
+#gen/

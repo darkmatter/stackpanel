@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Color scheme configuration
+message ColorScheme {
+  string primary = 1; // Primary accent color
+  string secondary = 2; // Secondary accent color
+  string success = 3; // Success/positive color
+  string warning = 4; // Warning color
+  string error = 5; // Error/negative color
+  string muted = 6; // Muted/subtle color
+}
+
+// Starship prompt configuration
+message Starship {
+  optional string format = 1; // Custom prompt format string
+  optional string right_format = 2; // Right-side prompt format
+  string continuation_prompt = 3; // Continuation prompt for multi-line input
+  int32 scan_timeout = 4; // Timeout for directory scanning (ms)
+  int32 command_timeout = 5; // Timeout for commands (ms)
+  bool add_newline = 6; // Add blank line before prompt
+}
+
+// Theme and Starship prompt configuration
+message Theme {
+  string name = 1; // Theme name
+  ColorScheme colors = 2; // Color scheme configuration
+  Starship starship = 3; // Starship prompt configuration
+  bool nerd_font = 4; // Use Nerd Font icons in prompt
+  bool minimal = 5; // Use minimal prompt (fewer segments)
+}

@@ -35,7 +35,7 @@ core/
     ├── services.nix     # Service registry and factory
     ├── global-services.nix  # Global singleton services
     ├── ports.nix        # Port computation utilities (pure functions)
-    └── <service>.nix    # Individual service definitions
+    └── <service\>nix    # Individual service definitions
 ```
 
 ## Usage
@@ -87,5 +87,5 @@ To add new options:
 3. Implement the feature in the appropriate module
 
 To add new services:
-1. Create a new file in `services/<name>.nix`
+1. Create a new file in `services/<name\>nix`
 2. Register it in `services/services.nix`

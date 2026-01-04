@@ -125,6 +125,8 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 			return nil, err
 		}
 
+		mdxContent = escapeMDX(mdxContent)
+
 		if err := os.WriteFile(outputPath, []byte(mdxContent), 0644); err != nil {
 			return nil, fmt.Errorf("failed to write %s: %w", outputPath, err)
 		}

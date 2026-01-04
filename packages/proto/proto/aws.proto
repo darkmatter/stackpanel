@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// AWS configuration including Roles Anywhere for certificate-based authentication
+message Aws {
+  RolesAnywhere roles_anywhere = 1; // AWS Roles Anywhere configuration
+}
+
+// AWS Roles Anywhere configuration for certificate-based authentication
+message RolesAnywhere {
+  bool enable = 1; // Enable AWS Roles Anywhere cert auth
+  string region = 2; // AWS region
+  string account_id = 3; // AWS account ID
+  string role_name = 4; // IAM role name to assume
+  string trust_anchor_arn = 5; // AWS Roles Anywhere trust anchor ARN
+  string profile_arn = 6; // AWS Roles Anywhere profile ARN
+  string cache_buffer_seconds = 7; // Seconds before expiry to refresh cached credentials
+  bool prompt_on_shell = 8; // Prompt for AWS cert-auth setup on shell entry if not configured
+}

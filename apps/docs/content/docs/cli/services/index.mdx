@@ -1,0 +1,49 @@
+---
+title: stackpanel services
+description: Manage development services
+icon: Terminal
+---
+
+# stackpanel services
+
+Manage project-local development services (PostgreSQL, Redis, Minio, etc.)
+
+Services are project-local by default, with data stored in .stackpanel/state/services/
+This allows different projects to use different versions and configurations.
+
+Note: Caddy is a global service (shared across projects) to avoid port 443 conflicts.
+
+## Usage
+
+```bash
+stackpanel services
+```
+
+**Aliases:** `svc`, `s`
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`list`](./list) | List available services |
+| [`logs`](./logs) | Show service logs |
+| [`restart`](./restart) | Restart services |
+| [`start`](./start) | Start services (all if none specified) |
+| [`status`](./status) | Show service status |
+| [`stop`](./stop) | Stop services (all if none specified) |
+

@@ -1,0 +1,56 @@
+---
+title: stackpanel caddy
+description: Manage Caddy reverse proxy
+icon: Terminal
+---
+
+# stackpanel caddy
+
+Manage the global Caddy reverse proxy.
+
+Caddy is a GLOBAL service (unlike other services which are project-local).
+This avoids port 443 conflicts between projects.
+
+Site configs are stored in ~/.config/caddy/sites.d/ and can be
+contributed to by multiple projects.
+
+When you add a site, a symlink is created in your project at:
+  .stackpanel/caddy/\<domain\\>caddy -> ~/.config/caddy/sites.d/\<domain\\>caddy
+
+This allows you to:
+  - See which sites belong to your project
+  - Customize the config and check it into version control
+  - Easily find and edit your project's Caddy configuration
+
+## Usage
+
+```bash
+stackpanel caddy
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`add`](./add) | Add a site to Caddy |
+| [`list`](./list) | List configured sites |
+| [`remove`](./remove) | Remove a site from Caddy |
+| [`start`](./start) | Start or reload Caddy |
+| [`status`](./status) | Show Caddy status |
+| [`stop`](./stop) | Stop Caddy |
+
