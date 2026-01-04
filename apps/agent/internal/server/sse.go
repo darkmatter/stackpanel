@@ -32,6 +32,13 @@ func (s *Server) watchConfigFiles() {
 		log.Warn().Err(err).Str("path", genDir).Msg("failed to watch gen directory")
 	}
 
+	// Watch the data directory for Nix data file changes
+	dataDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data")
+	if err := s.watcher.Add(dataDir); err != nil {
+		// Data dir might not exist yet, that's fine
+		log.Debug().Err(err).Str("path", dataDir).Msg("failed to watch data directory (may not exist yet)")
+	}
+
 	// Debounce rapid file changes
 	var debounceTimer *time.Timer
 	debounceDuration := 100 * time.Millisecond

@@ -1,0 +1,46 @@
+---
+title: stackpanel agent
+description: Run the local Stackpanel agent
+icon: Terminal
+---
+
+# stackpanel agent
+
+Run the local Stackpanel agent (stackpanel-agent).
+
+The agent runs on your machine and exposes a localhost API used by the Stackpanel web UI
+to run commands, evaluate Nix, and read/write files in the project.
+
+This command will:
+  - Prefer an installed 'stackpanel-agent' binary in PATH
+  - Otherwise fall back to 'go run .' from the repo's apps/agent/ directory (dev mode)
+
+## Usage
+
+```bash
+stackpanel agent
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--config` | `string` | _none_ | Path to agent config file |
+| `--debug` | `bool` | `false` | Enable debug logging |
+| `--project-root` | `string` | _none_ | Project root to run the agent in (defaults to current working directory) |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

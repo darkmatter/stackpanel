@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Environments a user can access secrets for
+enum Environment {
+  ENVIRONMENT_UNSPECIFIED = 0;
+  ENVIRONMENT_DEV = 1;
+  ENVIRONMENT_STAGING = 2;
+  ENVIRONMENT_PRODUCTION = 3;
+}
+
+// A team member with access to the project
+message User {
+  string name = 1; // Display name of the user
+  optional string github = 2; // GitHub username
+  repeated string public_keys = 3; // SSH or AGE public keys for encryption
+  repeated Environment secrets_allowed_environments = 4; // Environments this user can access secrets for
+}
+
+// Map of username to user configuration
+message Users {
+  map<string, User> users = 1; // Map of username to user config
+}

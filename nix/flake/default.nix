@@ -65,6 +65,38 @@
   ...
 }:
 {
+  imports =
+    lib.optional (inputs ? process-compose-flake) inputs.process-compose-flake.flakeModule
+    ++ lib.optional (inputs ? devenv) inputs.devenv.flakeModule
+    ++ lib.optional (inputs ? git-hooks) inputs.git-hooks.flakeModule;
+
+  config = lib.mkMerge [
+    (lib.mkIf (inputs ? process-compose-flake) {
+      perSystem =
+        { lib, ... }:
+        {
+          process-compose = lib.mkDefault { };
+        };
+    })
+    {
+      perSystem =
+        {
+          system,
+          pkgs,
+          ...
+        }:
+        {
+          # Make stackpanel's packages available to users
+          # They can access: config.stackpanel.packages.cli
+          _module.args.stackpanel = {
+            inherit localFlake;
+            # Access packages from the stackpanel flake itself
+            packages = withSystem system ({ config, ... }: config.packages or { });
+          };
+        };
+    }
+  ];
+
   # This flake module doesn't need to define any flake-parts options.
   # All the real work is done by the devenv module (devenvModules.default).
   #
@@ -78,19 +110,5 @@
 
   # Provide a way for perSystem to access the stackpanel flake's packages
   # This is useful for things like the stackpanel CLI
-  perSystem =
-    {
-      system,
-      pkgs,
-      ...
-    }:
-    {
-      # Make stackpanel's packages available to users
-      # They can access: config.stackpanel.packages.cli
-      _module.args.stackpanel = {
-        inherit localFlake;
-        # Access packages from the stackpanel flake itself
-        packages = withSystem system ({ config, ... }: config.packages or { });
-      };
-    };
+  # perSystem is now defined under config to avoid top-level/config mixing.
 }

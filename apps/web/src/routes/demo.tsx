@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DashboardShell } from "@/components/demo/dashboard-shell";
+import { DashboardShell } from "@/components/studio/dashboard-shell";
 import { AgentProvider } from "@/lib/agent-provider";
 
 export const Route = createFileRoute("/demo")({
-	component: DemoPage,
+  component: DemoPage,
 });
 
 function DemoPage() {
-	return (
-		<AgentProvider>
-			<DashboardShell />
-		</AgentProvider>
-	);
+  return (
+    <AgentProvider>
+      <DashboardShell />
+    </AgentProvider>
+  );
 }

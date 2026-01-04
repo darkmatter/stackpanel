@@ -39,7 +39,7 @@ Returns a non-zero exit code if any required variables are missing.`,
 }
 
 var envGetCmd = &cobra.Command{
-	Use:   "get <NAME>",
+	Use:   "get [NAME]",
 	Short: "Get the value of an environment variable",
 	Long: `Get the current value of a specific environment variable.
 
@@ -81,7 +81,7 @@ func init() {
 	envListCmd.Flags().StringVarP(&envListSource, "source", "s", "", "Filter by source (nix, dynamic, devenv)")
 	envListCmd.Flags().BoolVarP(&envListRequired, "required", "r", false, "Show only required variables")
 	envListCmd.Flags().BoolVarP(&envListMissing, "missing", "m", false, "Show only missing required variables")
-	envListCmd.Flags().BoolVarP(&envListShowValues, "values", "v", false, "Show current values")
+	envListCmd.Flags().BoolVarP(&envListShowValues, "values", "V", false, "Show current values")
 
 	// Validate command flags
 	envValidateCmd.Flags().BoolVar(&envValidateStrict, "strict", false, "Exit with error if any required variable is missing")

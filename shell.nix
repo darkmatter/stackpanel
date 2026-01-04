@@ -53,17 +53,30 @@ let
   localDevshellModule = import ./nix/internal/devshell.nix { inherit inputs mergedConfig; };
 
   # Create a stackpanel-only module from main.nix config
+  # Import the raw config module to avoid double-evaluation of computed values
   stackpanelOnlyModule =
     { ... }:
     {
-      imports = [ ./nix/stackpanel/default.nix ];
-      stackpanel = stackpanelConfig;
+      imports = [
+        ./nix/stackpanel/default.nix
+        mergedConfig.stackpanelConfigModule
+      ];
     };
+
+  # Get slim devenv-tasks-fast-build (fast builds, provides task execution)
+  # Users who want `devenv tasks list` should install devenv in their profile:
+  #   nix profile install github:cachix/devenv
+  devenvTasksFastBuildPkg =
+    if inputs ? devenv && inputs.devenv ? packages.${system}.devenv-tasks-fast-build then
+      [ inputs.devenv.packages.${system}.devenv-tasks-fast-build ]
+    else
+      [ ];
 
   # Native devshell using module-based mkDevShell
   nativeDevshell = mkDevShell {
     modules = [ stackpanelOnlyModule ];
     specialArgs = { inherit inputs; };
+    extraPackages = devenvTasksFastBuildPkg;
   };
 in
 {

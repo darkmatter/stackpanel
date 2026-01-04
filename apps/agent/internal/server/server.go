@@ -68,6 +68,8 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/exec", s.withCORS(s.requireAuth(s.handleExec)))
 	mux.HandleFunc("/api/nix/eval", s.withCORS(s.requireAuth(s.handleNixEval)))
 	mux.HandleFunc("/api/nix/generate", s.withCORS(s.requireAuth(s.handleNixGenerate)))
+	mux.HandleFunc("/api/nix/data", s.withCORS(s.requireAuth(s.handleNixData)))
+	mux.HandleFunc("/api/nix/data/list", s.withCORS(s.requireAuth(s.handleNixDataList)))
 	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.handleFiles)))
 	mux.HandleFunc("/api/secrets/set", s.withCORS(s.requireAuth(s.handleSecretsSet)))
 

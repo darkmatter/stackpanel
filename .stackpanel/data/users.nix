@@ -12,7 +12,7 @@
 # The github-collaborators.nix is auto-generated and should not be edited.
 # ==============================================================================
 let
-  ghCollabs = import ./github-collaborators.nix;
+  ghCollabs = import ./_github-collaborators.nix;
 
   # Transform a GitHub collaborator to stackpanel user format
   toUser = name: collab: {

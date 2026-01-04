@@ -13,14 +13,14 @@
 # Options:
 #   - enable: Enable automatic port assignment (default: true)
 #   - project-name: Project name for port computation
-#   - min-port: Minimum port number (default: 3000)
-#   - port-range: Range size (default: 7000)
-#   - modulus: Rounding modulus for memorable ports (default: 100)
-#   - services: List of infrastructure services needing ports
+#   - services: Attrset of infrastructure services needing ports
 #
 # Read-only computed values:
 #   - base-port: The computed base port for the project
 #   - service.<KEY>.port: Port for each service by key
+#
+# Port computation uses stablePort which hashes both project name and service
+# name together, eliminating the need for index-based offsets.
 #
 # Uses shared core library (../services/ports.nix) for computation logic.
 # ==============================================================================
@@ -36,37 +36,29 @@ let
   portsLib = import ../../lib/ports.nix { inherit lib; };
 
   # Service type for defining infrastructure services
-  serviceType = lib.types.submodule {
-    options = {
-      key = lib.mkOption {
-        type = lib.types.str;
-        description = "Unique key for the service (used in generated services config)";
-        example = "POSTGRES";
+  serviceType = lib.types.submodule (
+    { name, ... }:
+    {
+      options = {
+        name = lib.mkOption {
+          type = lib.types.str;
+          default = name;
+          description = "Human-readable name for display (defaults to attrset key)";
+          example = "PostgreSQL";
+        };
       };
-
-      name = lib.mkOption {
-        type = lib.types.str;
-        default = "";
-        description = "Human-readable name for display";
-        example = "PostgreSQL";
-      };
-    };
-  };
+    }
+  );
   # Compute base port using shared library
   basePort = portsLib.computeBasePort {
     name = cfg.project-name;
-    minPort = cfg.min-port;
-    portRange = cfg.port-range;
-    modulus = cfg.modulus;
-  };
-  # Compute ports using shared library
-  servicesWithPorts = portsLib.computeServicesWithPorts {
-    inherit basePort;
-    services = cfg.services;
   };
 
-  # Create attrset for easy lookup using shared library
-  servicesByKey = portsLib.mkServicesByKey servicesWithPorts;
+  # Compute ports using shared library (attrset-based)
+  servicesByKey = portsLib.computeServicesFromAttrset {
+    projectName = cfg.project-name;
+    services = cfg.services;
+  };
 in
 {
   options.stackpanel.ports = {
@@ -81,44 +73,21 @@ in
       example = "myapp";
     };
 
-    min-port = lib.mkOption {
-      type = lib.types.port;
-      default = portsLib.defaults.minPort;
-      description = "Minimum port number for the port range";
-    };
-
-    port-range = lib.mkOption {
-      type = lib.types.int;
-      default = portsLib.defaults.portRange;
-      description = "Range of ports to use (min-port to min-port + port-range)";
-    };
-
-    modulus = lib.mkOption {
-      type = lib.types.int;
-      default = portsLib.defaults.modulus;
-      description = ''
-        Port rounding modulus. Ports are rounded to nearest multiple.
-        Use 100 for ports like 3100, 3200, 3300.
-        Use 10 for ports like 3110, 3120, 3130 (if collision occurs).
-      '';
-      example = 10;
-    };
-
     services = lib.mkOption {
-      type = lib.types.listOf serviceType;
-      default = [ ];
+      type = lib.types.attrsOf serviceType;
+      default = { };
       description = ''
-        List of infrastructure services that need ports.
-        Each service gets a port at basePort + 10 + index.
+        Attrset of infrastructure services that need ports.
+        Each service gets a deterministic port based on project name + service key.
         Provided via STACKPANEL_SERVICES_CONFIG (JSON).
       '';
       example = lib.literalExpression ''
-        [
-          { key = "POSTGRES"; name = "PostgreSQL"; }
-          { key = "REDIS"; name = "Redis"; }
-          { key = "MINIO"; name = "Minio"; }
-          { key = "MINIO_CONSOLE"; name = "Minio Console"; }
-        ]
+        {
+          POSTGRES = { name = "PostgreSQL"; };
+          REDIS = { name = "Redis"; };
+          MINIO = { name = "Minio"; };
+          MINIO_CONSOLE = { name = "Minio Console"; };
+        }
       '';
     };
 

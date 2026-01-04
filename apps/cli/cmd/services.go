@@ -134,7 +134,7 @@ var servicesRestartCmd = &cobra.Command{
 }
 
 var servicesLogsCmd = &cobra.Command{
-	Use:   "logs <service>",
+	Use:   "logs [service]",
 	Short: "Show service logs",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -161,7 +161,7 @@ var servicesListCmd = &cobra.Command{
 }
 
 var servicesComputePortCmd = &cobra.Command{
-	Use:   "port <service-name>",
+	Use:   "port [service-name]",
 	Short: "Compute stable port for a service based on project name",
 	Run: func(cmd *cobra.Command, args []string) {
 		serviceName := args[0]

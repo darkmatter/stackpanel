@@ -1,0 +1,25 @@
+---
+title: "=============================================================================="
+description: "app-module-template.nix"
+---
+
+app-module-template.nix
+
+Template for Stackpanel app modules.
+
+This shows the standard patterns:
+- define per-app options under stackpanel.apps.\<name\\>\<module\>
+- add a module to stackpanel.appModules so it applies to every app
+- write files via stackpanel.files.entries (derivation-backed)
+
+## Usage
+
+```nix
+imports = [ ./modules/app-module-template.nix ];
+stackpanel.appModules = [ config.stackpanel.modules.myModule ];
+stackpanel.apps.myapp.myModule.enable = true;
+# Example of consuming wrapped tooling:
+# config.stackpanel.appsComputed.myapp.wrappedTooling.formatters
+```
+
+==============================================================================

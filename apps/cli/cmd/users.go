@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/darkmatter/stackpanel/cli/internal/github"
 	"github.com/darkmatter/stackpanel/cli/internal/nixgen"
@@ -28,7 +29,7 @@ var usersSyncCmd = &cobra.Command{
 
 This command:
 1. Fetches collaborators from the GitHub repository using gh CLI
-2. Fetches public SSH keys for each collaborator from github.com/<user>.keys
+2. Fetches public SSH keys for each collaborator from github.com/\<user\>.keys
 3. Generates .stackpanel/data/github-collaborators.nix with raw collaborator data
 4. Creates .stackpanel/data/users.nix that transforms data to stackpanel.users format
 
@@ -110,6 +111,10 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 		} else {
 			dataDir = ".stackpanel/data"
 		}
+	}
+
+	if !strings.HasSuffix(dataDir, "external") {
+		dataDir = filepath.Join(dataDir, "external")
 	}
 
 	// Generate github-collaborators.nix

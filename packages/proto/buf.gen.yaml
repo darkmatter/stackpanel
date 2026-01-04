@@ -1,0 +1,35 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/darkmatter/stackpanel/packages/proto/gen
+plugins:
+  # Go
+  - remote: buf.build/protocolbuffers/go
+    out: gen/go
+    opt: paths=source_relative
+  # connectrpc/go: Generates Connect-RPC handlers (.connect.go files)
+  # Purpose: HTTP-based RPC that works with Connect, gRPC, and gRPC-Web protocols
+  # Output: *connect/*.connect.go files with Connect service handlers
+  - remote: buf.build/connectrpc/go:v1.18.1
+    out: gen/go
+    opt:
+      - paths=source_relative
+  # bufbuild/es: Generates ES module protobuf messages using @bufbuild/protobuf
+  # Purpose: Modern ES6+ message classes with full TypeScript support
+  # Output: *_pb.js and *_pb.d.ts files with message classes
+  - remote: buf.build/bufbuild/es:v2.7.0
+    out: ./gen/ts
+  # connectrpc/query-es: Generates TanStack Query hooks for Connect-RPC
+  # Purpose: React Query integration - useQuery/useMutation hooks for each RPC
+  # Output: *_connectquery.js files with query/mutation hooks
+  - remote: buf.build/connectrpc/query-es:v2.1.1
+    out: ./gen/ts
+  # TypeScript (using protobuf-ts for better ergonomics)
+  - remote: buf.build/community/timostamm-protobuf-ts
+    out: gen/ts
+    opt:
+      - long_type_string
+      - output_typescript
+      - use_proto_field_name

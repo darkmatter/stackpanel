@@ -29,7 +29,11 @@ let
 
   # Separate devenv and git-hooks
   devenvConfig = builtins.removeAttrs devenvConfigData [ "git-hooks" ];
-  gitHooksConfig = devenvConfigData.git-hooks or { };
+  gitHooksConfig =
+    if stackpanelConfigModule ? stackpanel && stackpanelConfigModule.stackpanel ? git-hooks then
+      stackpanelConfigModule.stackpanel.git-hooks
+    else
+      devenvConfigData.git-hooks or { };
 
   # Evaluate stackpanel modules with user config
   # This validates stackpanel config and computes derived values
@@ -47,6 +51,9 @@ in
 {
   # Stackpanel config (validated and computed via module system)
   stackpanel = stackpanelConfig;
+
+  # Raw config module (for native shell that needs to evaluate modules itself)
+  stackpanelConfigModule = stackpanelConfigModule;
 
   # Devenv config (passed through without validation)
   devenv = devenvConfig;

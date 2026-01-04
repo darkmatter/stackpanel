@@ -62,8 +62,8 @@ pkgs.mkShell {
   buildInputs = cfg.buildInputs;
   shellHook = shellHook;
 
-  passthru = {
-    devshellConfig = cfg;
-    moduleConfig = evaluated.config;
-  };
+  passthru.devshellConfig = cfg;
+  passthru.moduleConfig = evaluated.config;
+  passthru.extraPackages = extraPackages;
+
 }

@@ -20,9 +20,11 @@
 #   +10 to +99: Infrastructure services (postgres, redis, minio, etc.)
 #
 # Exports:
+#   - stablePort: Compute stable port from project name + service name
 #   - computeBasePort: Compute base port from project name
-#   - computeServicePort: Compute port for a service by index
-#   - computeServicesWithPorts: Compute ports for a list of services
+#   - computeServicesFromAttrset: Compute ports from attrset of services (preferred)
+#   - computeServicePort: Compute port for a service by index (legacy)
+#   - computeServicesWithPorts: Compute ports for a list of services (legacy)
 #   - mkServicesByKey: Create lookup attrset by service key
 #   - mkServicesConfig: Generate JSON config for services
 #   - mkPortsConfig: Convenience function to compute everything at once
@@ -91,9 +93,31 @@ rec {
     in
     servicePort;
 
+  # Compute services from an attrset { KEY = { name = "..."; }; ... }
+  # Returns an attrset with port information for each service
+  # Uses stablePort for deterministic port assignment without offsets
+  computeServicesFromAttrset =
+    {
+      projectName,
+      services,
+    }:
+    lib.mapAttrs (
+      key: svc:
+      let
+        port = stablePort {
+          repo = projectName;
+          service = key;
+        };
+      in
+      {
+        inherit key port;
+        name = svc.name or key;
+        displayName = if (svc.name or "") != "" then svc.name else key;
+      }
+    ) services;
+
   # Compute the base port from project name
-  # Uses MD5 hash of name, takes first 4 hex chars, converts to number
-  # Then rounds to nearest modulus (default 100)
+  # Uses computeOverRange for consistent algorithm
   computeBasePort =
     {
       name,
@@ -101,20 +125,12 @@ rec {
       portRange ? defaults.portRange,
       modulus ? defaults.modulus,
     }:
-    let
-      range = constants.MAX_PORT - constants.MIN_PORT;
-      # Ensure provided portRange is within allowed limits
-      hraw = builtins.hashString "md5" name;
-      h = builtins.substring 0 4 hraw;
-      # numeric representation of hash
-      n = lib.trivial.fromHexString h;
-
-      rawOffset = lib.trivial.fromHexString (builtins.substring 0 4 hraw);
-      # Get offset within range, then round down to nearest modulus
-      offsetInRange = lib.mod rawOffset portRange;
-      roundedOffset = offsetInRange - (lib.mod offsetInRange constants.MODULUS);
-    in
-    constants.MIN_PORT + roundedOffset;
+    computeOverRange {
+      key = name;
+      min = constants.MIN_PORT;
+      max = constants.MAX_PORT;
+      modulus = constants.MODULUS;
+    };
 
   # Compute port for a service based on its index
   computeServicePort =

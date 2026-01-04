@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Stackpanel project configuration
+message Config {
+  bool enable = 1; // Enable stackpanel for this project
+  string name = 2; // Project name
+  string github = 3; // GitHub repository (owner/repo format)
+  bool debug = 4; // Enable debug output
+}

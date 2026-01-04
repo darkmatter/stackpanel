@@ -1,45 +1,57 @@
 # ==============================================================================
-# secrets.nix
+# users.nix
 #
-# Secrets management options - SOPS-encrypted secrets with codegen.
+# User management options.
 #
-# Pure option definitions for secrets management (no implementation).
-# Works with any Nix module system (devenv, NixOS, lib.evalModules).
+# This module imports options from the proto schema (db/schemas/users.proto.nix)
+# and extends them with Nix-specific runtime options.
 #
-# Options:
-#   - enable: Enable StackPanel secrets utilities
-#   - input-directory: Directory for SOPS-encrypted files
-#   - environments: Environment-specific configurations
-#     - name: Environment name
-#     - public-keys: AGE public keys for decryption
-#     - sources: SOPS-encrypted source files
-#   - codegen: Code generation settings per language
-#     - name: Package name
-#     - directory: Output directory
-#     - language: "typescript" or "go"
-#
-# Usage:
-#   stackpanel.secrets = {
-#     enable = true;
-#     environments.prod = {
-#       name = "production";
-#       public-keys = ["age1..."];
-#     };
-#   };
+# The proto schema is the SINGLE SOURCE OF TRUTH for the data structure.
 # ==============================================================================
 { lib, ... }:
 let
-  types = lib.types;
+  # Import the db module to get proto-derived options
+  db = import ../../db { inherit lib; };
+
+  # Get the base user options from proto schema
+  # Proto defines: name, github, public_keys, secrets_allowed_environments
+  # Converted to kebab-case: public-keys, secrets-allowed-environments
+  baseUserOptions = db.extend.user;
+
+  # Extended user options with Nix-specific runtime fields
+  extendedUserOptions = baseUserOptions // {
+    # Nix-specific extension: runtime-only admin flag (not persisted to data)
+    is-admin = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether this user has admin privileges (computed at runtime)";
+    };
+
+    # Nix-specific extension: email for notifications
+    email = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Email address for notifications";
+    };
+  };
+
+  # Build the extended submodule type
+  extendedUserType = lib.types.submodule { options = extendedUserOptions; };
 in
 {
   options.stackpanel.users = lib.mkOption {
     description = ''
       Users of the repository who should have access to secrets.
+
+      Base schema: nix/stackpanel/db/schemas/users.proto.nix
+      Extended with: is-admin, email
     '';
     example = {
       cooper = {
         name = "Cooper Maruyama";
         github = "coopermaruyama";
+        email = "cooper@example.com";
+        is-admin = true;
         secrets-allowed-environments = [
           "dev"
           "staging"
@@ -56,59 +68,14 @@ in
         secrets-allowed-environments = [ "dev" ];
         public-keys = [ "age1..." ];
       };
-      ci = {
-        name = "CI Bot";
-        public-keys = [ "age1..." ];
-        secrets-allowed-environments = [
-          "dev"
-          "staging"
-          "production"
-        ];
-      };
     };
-    type = types.attrsOf (
-      types.submodule (
-        { name, ... }:
-        {
-          options = {
-            name = lib.mkOption {
-              type = types.nullOr types.str;
-              default = null;
-              description = "Display name";
-            };
-
-            github = lib.mkOption {
-              type = types.nullOr types.str;
-              default = null;
-              description = "Github username for this user. Enable for automatic access control in GitHub Actions.";
-            };
-
-            secrets-allowed-environments = lib.mkOption {
-              type = types.listOf types.str;
-              default = [ ];
-              description = "List of environment names this user should have access to.";
-              example = [
-                "dev"
-                "staging"
-                "production"
-              ];
-            };
-
-            public-keys = lib.mkOption {
-              type = types.listOf types.str;
-              default = [ ];
-              description = "public keys for this user. will be autopopulated if user has github username with public key. accepts age and ssh keys.";
-            };
-          };
-        }
-      )
-    );
+    type = lib.types.attrsOf extendedUserType;
     default = { };
   };
 
   options.stackpanel.users-settings = {
     disable-github-sync = lib.mkOption {
-      type = types.bool;
+      type = lib.types.bool;
       default = false;
       description = "Disable automatic GitHub public key synchronization for users with GitHub usernames.";
     };

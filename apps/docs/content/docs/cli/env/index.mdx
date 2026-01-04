@@ -1,0 +1,43 @@
+---
+title: stackpanel env
+description: Manage and inspect environment variables
+icon: Terminal
+---
+
+# stackpanel env
+
+Manage and inspect Stackpanel environment variables.
+
+This command provides tools for debugging and validating the environment
+configuration used by Stackpanel.
+
+## Usage
+
+```bash
+stackpanel env
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`debug`](./debug) | Print all environment variables for debugging |
+| [`get`](./get) | Get the value of an environment variable |
+| [`list`](./list) | List all Stackpanel environment variables |
+| [`validate`](./validate) | Validate required environment variables |
+

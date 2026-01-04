@@ -3,66 +3,20 @@
 #
 # AWS Roles Anywhere certificate authentication options.
 #
-# Configures AWS Roles Anywhere for certificate-based authentication,
-# allowing devenv shells to assume IAM roles without long-lived credentials.
+# This module imports options from the proto schema (db/schemas/aws.proto.nix)
+# and extends them with any Nix-specific runtime options.
 #
-# Options:
-#   - enable: Enable AWS Roles Anywhere cert auth
-#   - region: AWS region
-#   - account-id: AWS account ID
-#   - role-name: IAM role name to assume
-#   - trust-anchor-arn: AWS Roles Anywhere trust anchor ARN
-#   - profile-arn: AWS Roles Anywhere profile ARN
-#   - cache-buffer-seconds: Seconds before expiry to refresh credentials
-#   - prompt-on-shell: Prompt for setup on shell entry if not configured
-#
-# Requires Step CA certificates to be configured via stackpanel.network.step.
+# The proto schema is the SINGLE SOURCE OF TRUTH for the data structure.
 # ==============================================================================
 { lib, ... }:
+let
+  # Import the db module to get proto-derived options
+  db = import ../../db { inherit lib; };
+in
 {
-  options.stackpanel.aws.roles-anywhere = {
-    enable = lib.mkEnableOption "AWS Roles Anywhere cert auth";
-
-    region = lib.mkOption {
-      type = lib.types.str;
-      default = "us-west-2";
-      description = "AWS region";
-    };
-
-    account-id = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "AWS account ID";
-    };
-
-    role-name = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "IAM role name to assume";
-    };
-
-    trust-anchor-arn = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "AWS Roles Anywhere trust anchor ARN";
-    };
-
-    profile-arn = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "AWS Roles Anywhere profile ARN";
-    };
-
-    cache-buffer-seconds = lib.mkOption {
-      type = lib.types.str;
-      default = "300";
-      description = "Seconds before expiry to refresh cached credentials";
-    };
-
-    prompt-on-shell = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Prompt for AWS cert-auth setup on shell entry if not configured";
-    };
-  };
+  # AWS options derived from proto schema
+  # The proto defines: enable, region, account_id, role_name, trust_anchor_arn,
+  # profile_arn, cache_buffer_seconds, prompt_on_shell
+  # These are converted to kebab-case: account-id, role-name, etc.
+  options.stackpanel.aws.roles-anywhere = db.extend.aws;
 }

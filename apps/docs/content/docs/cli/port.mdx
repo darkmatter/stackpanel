@@ -1,0 +1,66 @@
+---
+title: stackpanel port
+description: Deterministic stable port assignment for services
+icon: Terminal
+---
+
+# stackpanel port
+
+Compute a port using the Stackpanel conventional port assignment algorithm.
+
+Stackpanel uses a simple deterministic algorithm to assign stable ports to development services.
+The convention affords a couple of conveniences:
+	- Simple to compute from any language
+	- Ports can be known ahead of time
+	- Avoids port conflicts between projects
+	- Removes the need to pass ports around in config files or environment variables
+
+The algorithm to compute a port is as follows:
+  1. Define a range computation as follow:
+
+		range = int(md5("owner/repo")) % 7000
+		min = f - (f % 100)
+		project_port_min = min + 3000
+
+	2. This gives us a base port like 5500 or 3200 - the base port is always rounded down to the nearest 100, and the last two digits are owned by this project, giving us 100 ports to assign to services.
+
+	3. Perform the same computation over the project's range to get the service port:
+
+		service_offset = int(md5("owner/repo/service_name")) % 100
+		service_port = floor(project_port_min + service_offset)
+
+  The numeric value of the hash is determined by taking the first 4 hex characters of the md5 hash and converting them to an integer (base16).
+
+To keep it simple, there is no conflict resolution mechanism - if you run into this just change the
+service name or add a prefix to it.
+
+
+
+## Usage
+
+```bash
+stackpanel port
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--repo` | `string` | _none_ | git repo formatterd as `owner/repo` to use for port computation |
+| `--service` | `string` | _none_ | service name to use for port computation |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

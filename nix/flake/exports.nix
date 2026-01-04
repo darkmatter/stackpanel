@@ -40,7 +40,7 @@ in
   # FLAKE MODULES (for flake-parts users)
   # ===========================================================================
   flakeModules = {
-    # Main stackpanel flake-parts module (for devenv users)
+    # Main stackpanel flake-parts module
     # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
     default = importApply ./default.nix {
       localFlake = self;

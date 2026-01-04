@@ -1,0 +1,42 @@
+---
+title: stackpanel users
+description: Manage project users
+icon: Terminal
+---
+
+# stackpanel users
+
+Manage users who have access to the project.
+
+Users can be synced from GitHub collaborators and their public keys
+are automatically fetched for use with secrets encryption.
+
+## Usage
+
+```bash
+stackpanel users
+```
+
+**Aliases:** `user`, `u`
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`sync`](./sync) | Sync users from GitHub collaborators |
+

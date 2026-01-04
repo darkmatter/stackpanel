@@ -1,0 +1,45 @@
+---
+title: stackpanel services start
+description: Start services (all if none specified)
+icon: Terminal
+---
+
+# stackpanel services start
+
+Start development svc.
+
+If no services are specified, starts all configured svc.
+If a service is already running, it will be reattached.
+
+Examples:
+  stackpanel services start           # Start all services
+  stackpanel services start postgres  # Start only PostgreSQL
+  stackpanel services start pg redis  # Start PostgreSQL and Redis
+
+## Usage
+
+```bash
+stackpanel services start [service...]
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--no-tui` | `bool` | `false` | Disable interactive TUI |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

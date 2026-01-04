@@ -58,10 +58,10 @@
     "flake-compat": {
       "flake": false,
       "locked": {
-        "lastModified": 1766661267,
+        "lastModified": 1767039857,
         "owner": "edolstra",
         "repo": "flake-compat",
-        "rev": "f275e157c50c3a9a682b4c9b4aa4db7a4cd3b5f2",
+        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
         "type": "github"
       },
       "original": {
@@ -73,14 +73,14 @@
     "flake-compat_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1766661267,
-        "owner": "edolstra",
+        "lastModified": 1767039857,
+        "owner": "NixOS",
         "repo": "flake-compat",
-        "rev": "f275e157c50c3a9a682b4c9b4aa4db7a4cd3b5f2",
+        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
         "type": "github"
       },
       "original": {
-        "owner": "edolstra",
+        "owner": "NixOS",
         "repo": "flake-compat",
         "type": "github"
       }
@@ -102,6 +102,23 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
         "type": "github"
       }
     },
@@ -139,10 +156,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1765911976,
+        "lastModified": 1767281941,
         "ref": "refs/heads/master",
-        "rev": "b68b780b69702a090c8bb1b973bab13756cc7a27",
-        "revCount": 1147,
+        "rev": "f0927703b7b1c8d97511c4116eb9b4ec6645a0fa",
+        "revCount": 1149,
         "type": "git",
         "url": "https://github.com/cachix/git-hooks.nix"
       },
@@ -189,6 +206,26 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "gitignore.nix",
+        "type": "github"
+      }
+    },
+    "gomod2nix": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs-unstable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1767019875,
+        "owner": "nix-community",
+        "repo": "gomod2nix",
+        "rev": "49662a44272806ff785df2990a420edaaca15db4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "gomod2nix",
         "type": "github"
       }
     },
@@ -248,10 +285,10 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1766840161,
+        "lastModified": 1767364772,
         "ref": "nixpkgs-unstable",
-        "rev": "3edc4a30ed3903fdf6f90c837f961fa6b49582d1",
-        "revCount": 917285,
+        "rev": "16c7794d0a28b5a37904d55bcca36003b9109aaa",
+        "revCount": 921317,
         "type": "git",
         "url": "https://github.com/NixOS/nixpkgs"
       },
@@ -263,10 +300,10 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1764580874,
+        "lastModified": 1767052823,
         "ref": "rolling",
-        "rev": "dcf61356c3ab25f1362b4a4428a6d871e84f1d1d",
-        "revCount": 904782,
+        "rev": "538a5124359f0b3d466e1160378c87887e3b51a4",
+        "revCount": 918101,
         "type": "git",
         "url": "https://github.com/cachix/devenv-nixpkgs"
       },
@@ -280,12 +317,27 @@
       "inputs": {
         "devenv": "devenv",
         "git-hooks": "git-hooks_2",
+        "gomod2nix": "gomod2nix",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-unstable": "nixpkgs-unstable",
         "pre-commit-hooks": [
           "git-hooks"
         ],
         "treefmt-nix": "treefmt-nix"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     },
     "treefmt-nix": {
@@ -295,10 +347,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1766000401,
+        "lastModified": 1767468822,
         "ref": "refs/heads/main",
-        "rev": "42d96e75aa56a3f70cab7e7dc4a32868db28e8fd",
-        "revCount": 507,
+        "rev": "d56486eb9493ad9c4777c65932618e9c2d0468fc",
+        "revCount": 513,
         "type": "git",
         "url": "https://github.com/numtide/treefmt-nix"
       },

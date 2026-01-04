@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Environments an app can be associated with
+enum AppEnvironment {
+  APP_ENVIRONMENT_UNSPECIFIED = 0;
+  APP_ENVIRONMENT_DEV = 1;
+  APP_ENVIRONMENT_STAGING = 2;
+  APP_ENVIRONMENT_PRODUCTION = 3;
+}
+
+// Configuration for a single application in the workspace
+message App {
+  string name = 1; // Display name of the app
+  string path = 2; // Relative path to the app directory
+  optional string install_command = 3; // Custom install command (overrides default behavior)
+  optional string build_command = 4; // Custom build command (overrides default behavior)
+  optional string format_command = 5; // Custom code formatting command
+  optional string lint_command = 6; // Custom linting command
+  optional string test_command = 7; // Custom test command
+  optional string start_command = 8; // Custom start/development command
+  repeated AppEnvironment environments = 9; // Environments associated with this app
+}
+
+// Map of app identifier to app configuration
+message Apps {
+  map<string, App> apps = 1; // Map of app ID to app config
+}
