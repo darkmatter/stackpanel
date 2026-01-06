@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/studio/dashboard-shell";
+import { AgentSSEProvider } from "@/lib/agent-sse-provider";
 import { AgentProvider } from "@/lib/agent-provider";
 
 export const Route = createFileRoute("/studio/")({
@@ -9,7 +10,9 @@ export const Route = createFileRoute("/studio/")({
 function RouteComponent() {
   return (
     <AgentProvider>
-      <DashboardShell />
+      <AgentSSEProvider>
+        <DashboardShell />
+      </AgentSSEProvider>
     </AgentProvider>
   );
 }

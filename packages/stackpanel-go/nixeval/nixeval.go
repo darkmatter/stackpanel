@@ -144,8 +144,8 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 		filepath.Join(absRoot, "flake.nix"),
 		filepath.Join(absRoot, ".stackpanel"),
 	}
-	if os.Getenv("STACKPANEL_NIX_CONFIG") != "" {
-		defaultWatchPaths = append(defaultWatchPaths, os.Getenv("STACKPANEL_NIX_CONFIG"))
+	if os.Getenv("STACKPANEL_CONFIG_JSON") != "" {
+		defaultWatchPaths = append(defaultWatchPaths, os.Getenv("STACKPANEL_CONFIG_JSON"))
 	}
 
 	e := &Evaluator{

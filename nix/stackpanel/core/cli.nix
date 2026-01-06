@@ -167,8 +167,10 @@ in
 
     # Export paths for other tools
     stackpanel.devshell.env = {
-      # Path to the Nix-generated config in the store (for nix eval to read)
-      STACKPANEL_NIX_CONFIG = "${configFile}";
+      # Path to the source Nix config file (for nix eval/import)
+      STACKPANEL_NIX_CONFIG = "$STACKPANEL_ROOT/${dirs.home}/config.nix";
+      # Path to the Nix-generated config JSON in the store (for Go CLI)
+      STACKPANEL_CONFIG_JSON = "${configFile}";
     };
   };
 }
