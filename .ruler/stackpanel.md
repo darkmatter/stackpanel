@@ -195,10 +195,13 @@ The state file (`.stackpanel/state/stackpanel.json`) is generated on each devenv
 For tools that need always-fresh config without state file drift, use `nix eval`:
 
 ```bash
-# Within devenv shell (uses STACKPANEL_NIX_CONFIG env var)
-nix eval --impure --json -f nix/eval/stackpanel-config.nix
+# Within devenv shell (uses STACKPANEL_CONFIG_JSON env var for pre-computed JSON)
+nix eval --impure --json --expr 'builtins.fromJSON (builtins.readFile (builtins.getEnv "STACKPANEL_CONFIG_JSON"))'
 
-# Returns same structure as state.json but directly from Nix store
+# Or import the source Nix config directly (uses STACKPANEL_NIX_CONFIG)
+nix eval --impure --json --expr 'import (builtins.getEnv "STACKPANEL_NIX_CONFIG")'
+
+# Returns same structure as state.json but directly from Nix
 ```
 
 **Go Usage** (with fallback):

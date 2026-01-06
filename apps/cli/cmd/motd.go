@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/darkmatter/stackpanel/cli/internal/state"
+	"github.com/darkmatter/stackpanel/cli/internal/nixconfig"
 	"github.com/darkmatter/stackpanel/cli/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -20,8 +20,8 @@ func init() {
 }
 
 func runMOTD(cmd *cobra.Command, args []string) error {
-	// Load state to get MOTD configuration
-	cfg, err := state.Load("")
+	// Load config from Nix
+	cfg, err := nixconfig.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -31,12 +31,12 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Convert state commands to TUI format
+	// Convert config commands to TUI format
 	commands := make([]tui.MOTDCommand, len(cfg.MOTD.Commands))
-	for i, cmd := range cfg.MOTD.Commands {
+	for i, c := range cfg.MOTD.Commands {
 		commands[i] = tui.MOTDCommand{
-			Name:        cmd.Name,
-			Description: cmd.Description,
+			Name:        c.Name,
+			Description: c.Description,
 		}
 	}
 

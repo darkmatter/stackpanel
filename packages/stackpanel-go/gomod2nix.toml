@@ -1,5 +1,4 @@
 schema = 3
-cachePackages = ["github.com/aymanbagabas/go-osc52/v2", "github.com/charmbracelet/colorprofile", "github.com/charmbracelet/lipgloss", "github.com/charmbracelet/log", "github.com/charmbracelet/x/ansi", "github.com/charmbracelet/x/ansi/parser", "github.com/charmbracelet/x/cellbuf", "github.com/charmbracelet/x/term", "github.com/davecgh/go-spew/spew", "github.com/fsnotify/fsnotify", "github.com/go-logfmt/logfmt", "github.com/lucasb-eyer/go-colorful", "github.com/mattn/go-colorable", "github.com/mattn/go-isatty", "github.com/mattn/go-runewidth", "github.com/muesli/termenv", "github.com/otiai10/copy", "github.com/pmezard/go-difflib/difflib", "github.com/rivo/uniseg", "github.com/rs/zerolog", "github.com/rs/zerolog/log", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/assert/yaml", "github.com/stretchr/testify/require", "github.com/xo/terminfo", "go.uber.org/multierr", "go.uber.org/zap", "go.uber.org/zap/buffer", "go.uber.org/zap/zapcore", "golang.org/x/sync/errgroup", "golang.org/x/sync/semaphore", "golang.org/x/sys/unix", "gopkg.in/yaml.v3"]
 
 [mod]
   [mod."github.com/aymanbagabas/go-osc52/v2"]

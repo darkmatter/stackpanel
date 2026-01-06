@@ -11,9 +11,11 @@ import (
 
 // TestHandleHealth verifies the basic happy-path server wiring.
 func TestHandleHealth(t *testing.T) {
+	tempDir := t.TempDir()
 	cfg := &config.Config{
-		ProjectRoot: t.TempDir(),
+		ProjectRoot: tempDir,
 		Port:        0,
+		DataDir:     tempDir,
 	}
 
 	srv, err := New(cfg)

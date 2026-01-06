@@ -43,16 +43,48 @@ type secretSetRequest struct {
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	s.writeJSON(w, http.StatusOK, map[string]any{
-		"status":       "ok",
-		"project_root": s.config.ProjectRoot,
-	})
+	hasProject := s.config.ProjectRoot != ""
+	resp := map[string]any{
+		"status":      "ok",
+		"has_project": hasProject,
+	}
+	if hasProject {
+		resp["project_root"] = s.config.ProjectRoot
+	}
+	s.writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	s.writeJSON(w, http.StatusOK, map[string]any{
-		"status": "running",
-	})
+	hasProject := s.config.ProjectRoot != ""
+	resp := map[string]any{
+		"status":      "running",
+		"has_project": hasProject,
+	}
+	if hasProject {
+		resp["project_root"] = s.config.ProjectRoot
+		if proj, err := s.projectMgr.CurrentProject(); err == nil {
+			resp["project"] = map[string]any{
+				"path":        proj.Path,
+				"name":        proj.Name,
+				"last_opened": proj.LastOpened,
+			}
+		}
+	}
+
+	// Add devshell status information
+	if s.exec != nil {
+		resp["devshell"] = map[string]any{
+			"in_devshell":      s.exec.InDevshell(),
+			"has_devshell_env": s.exec.HasDevshellEnv(),
+		}
+	} else {
+		resp["devshell"] = map[string]any{
+			"in_devshell":      false,
+			"has_devshell_env": false,
+		}
+	}
+
+	s.writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {

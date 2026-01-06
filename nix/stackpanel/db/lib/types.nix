@@ -177,9 +177,9 @@ let
       # oneOf/either
       "either" = { }; # Would need anyOf handling
       "oneOf" = { }; # Would need anyOf handling
-
     }
-    .${typeName} or { };
+    .${typeName} or {
+    };
 
   # =============================================================================
   # Schema Option Builder (mkOption-style)
@@ -263,7 +263,6 @@ let
         // lib.optionalAttrs (default != null) { inherit default; }
         // lib.optionalAttrs (example != null) { inherit example; }
       );
-
     in
     {
       # The Nix mkOption result
@@ -365,7 +364,6 @@ let
           types.attrsOf types.anything;
 
       nixType = if isMap then nixTypeForMap else nixTypeForObject;
-
     in
     {
       inherit
@@ -563,7 +561,6 @@ let
         title = name;
       };
     };
-
 in
 {
   # Core API

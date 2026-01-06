@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/darkmatter/stackpanel/packages/stackpanel-go/envvars"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,7 +35,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	home, _ := os.UserHomeDir()
 	return &Config{
-		ProjectRoot:     ".",
+		ProjectRoot:     "", // Empty by default - must be set via project manager or env var
 		Port:            9876,
 		APIEndpoint:     "https://stackpanel.dev/api/agent",
 		AllowedCommands: []string{},
@@ -72,18 +73,19 @@ func Load(path string) (*Config, error) {
 	}
 
 	// Override with environment variables
-	if v := os.Getenv("STACKPANEL_PROJECT_ROOT"); v != "" {
+	// STACKPANEL_PROJECT_ROOT takes precedence if set
+	if v := envvars.StackpanelProjectRoot.Get(); v != "" {
 		cfg.ProjectRoot = v
 	}
-	if v := os.Getenv("STACKPANEL_AUTH_TOKEN"); v != "" {
+	if v := envvars.StackpanelAuthToken.Get(); v != "" {
 		cfg.AuthToken = v
 	}
-	if v := os.Getenv("STACKPANEL_API_ENDPOINT"); v != "" {
+	if v := envvars.StackpanelAPIEndpoint.Get(); v != "" {
 		cfg.APIEndpoint = v
 	}
 
-	// Resolve project root to absolute path
-	if !filepath.IsAbs(cfg.ProjectRoot) {
+	// Resolve project root to absolute path (only if set)
+	if cfg.ProjectRoot != "" && !filepath.IsAbs(cfg.ProjectRoot) {
 		abs, err := filepath.Abs(cfg.ProjectRoot)
 		if err != nil {
 			return nil, err

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/darkmatter/stackpanel/cli/internal/state"
+	"github.com/darkmatter/stackpanel/cli/internal/nixconfig"
 	"github.com/darkmatter/stackpanel/cli/internal/tui"
 	svc "github.com/darkmatter/stackpanel/packages/stackpanel-go/services"
 	"github.com/spf13/cobra"
@@ -50,22 +50,22 @@ func showFullStatus() {
 	fmt.Println()
 	purple.Print(Banner)
 
-	// Load state file if available
-	st, stateErr := state.Load("")
+	// Load config from Nix
+	cfg, cfgErr := nixconfig.Load()
 
-	// Show project info from state
-	if stateErr == nil && st != nil {
-		fmt.Printf("\n%s Project: %s (base port: %d)\n", yellow.Sprint("■"), purple.Sprint(st.ProjectName), st.BasePort)
+	// Show project info from config
+	if cfgErr == nil && cfg != nil {
+		fmt.Printf("\n%s Project: %s (base port: %d)\n", yellow.Sprint("■"), purple.Sprint(cfg.ProjectName), cfg.BasePort)
 	}
 
-	// Apps (from state file)
-	if stateErr == nil && st != nil && len(st.Apps) > 0 {
+	// Apps (from config)
+	if cfgErr == nil && cfg != nil && len(cfg.Apps) > 0 {
 		fmt.Printf("\n%s Apps\n", yellow.Sprint("■"))
 		// Sort app names for consistent output
-		appNames := st.AppNames()
+		appNames := cfg.AppNames()
 		sort.Strings(appNames)
 		for _, name := range appNames {
-			app := st.Apps[name]
+			app := cfg.Apps[name]
 			if app.URL != nil && *app.URL != "" {
 				fmt.Printf("  %s %s → %s\n", green.Sprint("●"), name, dim.Sprint(*app.URL))
 			} else {
@@ -74,15 +74,15 @@ func showFullStatus() {
 		}
 	}
 
-	// Services (from state file if available, fallback to hardcoded)
+	// Services (from config if available, fallback to hardcoded)
 	fmt.Printf("\n%s Development Services\n", yellow.Sprint("■"))
-	if stateErr == nil && st != nil && len(st.Services) > 0 {
-		// Show services from state
-		serviceNames := st.ServiceNames()
+	if cfgErr == nil && cfg != nil && len(cfg.Services) > 0 {
+		// Show services from config
+		serviceNames := cfg.ServiceNames()
 		sort.Strings(serviceNames)
 		for _, name := range serviceNames {
-			svc := st.Services[name]
-			showServiceStatusWithPort(name, svc.Name, svc.Port)
+			svcInfo := cfg.Services[name]
+			showServiceStatusWithPort(name, svcInfo.Name, svcInfo.Port)
 		}
 	} else {
 		// Fallback to hardcoded services
@@ -98,15 +98,15 @@ func showFullStatus() {
 	fmt.Println()
 }
 
-// showServiceStatusWithPort shows service status with port from state
+// showServiceStatusWithPort shows service status with port from config
 func showServiceStatusWithPort(name, displayName string, port int) {
-	svc := svc.Get(name)
-	if svc == nil {
+	s := svc.Get(name)
+	if s == nil {
 		dim.Printf("  ○ %s (not registered)\n", displayName)
 		return
 	}
 
-	status := svc.Status()
+	status := s.Status()
 	if status.Running {
 		green.Printf("  ● %s", displayName)
 		dim.Printf(" (port %d, PID %d)\n", port, status.PID)
