@@ -115,11 +115,20 @@ rec {
 
     STACKPANEL_NIX_CONFIG = mkEnvVar {
       name = "STACKPANEL_NIX_CONFIG";
-      description = "Path to the Nix-generated config JSON in the Nix store";
+      description = "Path to the source Nix config file (.stackpanel/config.nix)";
+      category = categories.core;
+      source = "nix";
+      example = "/home/user/my-project/.stackpanel/config.nix";
+      goField = "NixConfigPath";
+    };
+
+    STACKPANEL_CONFIG_JSON = mkEnvVar {
+      name = "STACKPANEL_CONFIG_JSON";
+      description = "Path to the Nix-generated config JSON in the Nix store (for Go CLI)";
       category = categories.core;
       source = "nix";
       example = "/nix/store/xxx-stackpanel-config.json";
-      goField = "NixConfigPath";
+      goField = "ConfigJsonPath";
     };
   };
 

@@ -493,7 +493,6 @@ let
       inherit package enums;
       messages.${name} = mainMessage;
     };
-
 in
 {
   # Scalar type names (raw strings for manual use)

@@ -133,14 +133,24 @@ var (
 		Default:     "1",
 	}
 
-	// StackpanelNixConfig is the path to the Nix-generated config JSON
+	// StackpanelNixConfig is the path to the source Nix config file
 	StackpanelNixConfig = EnvVar{
 		Name:        "STACKPANEL_NIX_CONFIG",
-		Description: "Path to the Nix-generated config JSON in the Nix store",
+		Description: "Path to the source Nix config file (.stackpanel/config.nix)",
+		Category:    CategoryCore,
+		Source:      SourceNix,
+		Example:     "/home/user/my-project/.stackpanel/config.nix",
+		GoField:     "NixConfigPath",
+	}
+
+	// StackpanelConfigJson is the path to the Nix-generated config JSON
+	StackpanelConfigJson = EnvVar{
+		Name:        "STACKPANEL_CONFIG_JSON",
+		Description: "Path to the Nix-generated config JSON in the Nix store (for Go CLI)",
 		Category:    CategoryCore,
 		Source:      SourceNix,
 		Example:     "/nix/store/xxx-stackpanel-config.json",
-		GoField:     "NixConfigPath",
+		GoField:     "ConfigJsonPath",
 	}
 )
 

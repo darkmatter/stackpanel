@@ -14,7 +14,8 @@ This document provides a comprehensive reference for all environment variables u
 | `STACKPANEL_STATE_DIR` | State directory | ✓ |
 | `STACKPANEL_STATE_FILE` | Path to state file | |
 | `STACKPANEL_GEN_DIR` | Generated files directory | |
-| `STACKPANEL_NIX_CONFIG` | Nix config path in store | |
+| `STACKPANEL_NIX_CONFIG` | Source Nix config file path | |
+| `STACKPANEL_CONFIG_JSON` | Nix-generated config JSON in store | |
 | `STACKPANEL_STABLE_PORT` | Base port for the project | |
 | `STACKPANEL_SERVICES_CONFIG` | JSON array of service definitions | |
 
@@ -97,6 +98,18 @@ Used to differentiate between multiple concurrent shell sessions.
 
 ### `STACKPANEL_NIX_CONFIG`
 
+Path to the source Nix config file (`.stackpanel/config.nix`).
+
+| Property | Value |
+|----------|-------|
+| Source | nix |
+| Required | No |
+| Example | `/home/user/my-project/.stackpanel/config.nix` |
+
+This points to the source Nix configuration file that users edit. Use this for `nix eval` or `import` operations that need to evaluate the live configuration.
+
+### `STACKPANEL_CONFIG_JSON`
+
 Path to the Nix-generated config JSON in the Nix store.
 
 | Property | Value |
@@ -105,7 +118,7 @@ Path to the Nix-generated config JSON in the Nix store.
 | Required | No |
 | Example | `/nix/store/xxx-stackpanel-config.json` |
 
-This is set by the devenv shell hook and points to the configuration generated at shell entry time. The Go CLI uses this for `nix eval` operations.
+This is set by the devenv shell hook and points to the pre-computed JSON configuration generated at shell entry time. The Go CLI uses this for fast config access without needing to evaluate Nix.
 
 ---
 

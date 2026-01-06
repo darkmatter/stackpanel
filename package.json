@@ -45,6 +45,7 @@
 		"destroy": "alchemy destroy"
 	},
 	"dependencies": {
+		"@fontsource-variable/open-sans": "^5.2.7",
 		"@intellectronica/ruler": "^0.3.18",
 		"@pulumi/aws": "^7.15.0",
 		"@pulumi/command": "^1.1.3",

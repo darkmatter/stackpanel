@@ -8,7 +8,7 @@
 # tools to read live configuration directly from Nix.
 #
 # Configuration sources (in priority order):
-#   1. STACKPANEL_NIX_CONFIG - Nix store path (set by devenv enterShell)
+#   1. STACKPANEL_CONFIG_JSON - Nix store path to JSON config (set by devenv enterShell)
 #   2. State file - .stackpanel/state/stackpanel.json (fallback)
 #
 # Usage (must be run with --impure to read STACKPANEL_* env vars):
@@ -59,14 +59,14 @@ let
     else
       findProjectRoot pwd;
 
-  # Priority 1: Read from Nix store config (set by devenv enterShell)
+  # Priority 1: Read from Nix store config JSON (set by devenv enterShell)
   # This is the most authoritative source when inside a devenv shell
-  nixConfigPath = builtins.getEnv "STACKPANEL_NIX_CONFIG";
+  configJsonPath = builtins.getEnv "STACKPANEL_CONFIG_JSON";
 
   configFromNixStore =
-    if nixConfigPath != "" && builtins.pathExists nixConfigPath then
+    if configJsonPath != "" && builtins.pathExists configJsonPath then
       let
-        raw = builtins.fromJSON (builtins.readFile nixConfigPath);
+        raw = builtins.fromJSON (builtins.readFile configJsonPath);
         # Replace $STACKPANEL_ROOT placeholder with actual value
         fixProjectRoot =
           config:
@@ -106,6 +106,6 @@ else
     projectRoot = projectRoot;
     envRoot = envRoot;
     stateFile = stateFile;
-    nixConfigPath = nixConfigPath;
+    configJsonPath = configJsonPath;
     pwd = pwd;
   }

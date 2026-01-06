@@ -65,5 +65,4 @@ pkgs.mkShell {
   passthru.devshellConfig = cfg;
   passthru.moduleConfig = evaluated.config;
   passthru.extraPackages = extraPackages;
-
 }

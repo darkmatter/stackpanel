@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	nixser "github.com/darkmatter/stackpanel/packages/stackpanel-go/nix"
+	"github.com/rs/zerolog/log"
 )
 
 // nixDataRequest represents a request to read or write a Nix data file.
@@ -27,6 +28,11 @@ type nixDataRequest struct {
 // POST: Write a data file by serializing the provided data to Nix.
 // DELETE: Remove a data file.
 func (s *Server) handleNixData(w http.ResponseWriter, r *http.Request) {
+	log.Debug().
+		Str("method", r.Method).
+		Str("url", r.URL.String()).
+		Msg("handleNixData called")
+
 	switch r.Method {
 	case http.MethodGet:
 		s.handleNixDataRead(w, r)
@@ -92,24 +98,35 @@ func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 
 // handleNixDataWrite writes data to a Nix data file.
 func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Msg("handleNixDataWrite: parsing request body")
+
 	var req nixDataRequest
 	if err := s.readJSON(r.Body, &req); err != nil {
+		log.Error().Err(err).Msg("handleNixDataWrite: failed to parse JSON")
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Debug().
+		Str("entity", req.Entity).
+		Interface("data", req.Data).
+		Msg("handleNixDataWrite: received request")
+
 	req.Entity = strings.TrimSpace(req.Entity)
 	if req.Entity == "" {
+		log.Error().Msg("handleNixDataWrite: entity is required")
 		s.writeAPIError(w, http.StatusBadRequest, "entity is required")
 		return
 	}
 
 	if err := validateEntityName(req.Entity); err != nil {
+		log.Error().Err(err).Str("entity", req.Entity).Msg("handleNixDataWrite: invalid entity name")
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if req.Data == nil {
+		log.Error().Msg("handleNixDataWrite: data is required")
 		s.writeAPIError(w, http.StatusBadRequest, "data is required")
 		return
 	}
@@ -117,23 +134,38 @@ func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
 	// Serialize the data to Nix
 	nixExpr, err := nixser.SerializeIndented(req.Data, "  ")
 	if err != nil {
+		log.Error().Err(err).Msg("handleNixDataWrite: failed to serialize to Nix")
 		s.writeAPIError(w, http.StatusBadRequest, "failed to serialize data to Nix: "+err.Error())
 		return
 	}
 
+	log.Debug().
+		Str("entity", req.Entity).
+		Str("nixExpr", nixExpr).
+		Msg("handleNixDataWrite: serialized to Nix")
+
 	// Ensure data directory exists
 	dataDir := s.nixDataDir()
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		log.Error().Err(err).Str("dataDir", dataDir).Msg("handleNixDataWrite: failed to create data directory")
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to create data directory: "+err.Error())
 		return
 	}
 
 	// Write the file
 	dataPath := s.nixDataPath(req.Entity)
+	log.Debug().Str("path", dataPath).Msg("handleNixDataWrite: writing file")
+
 	if err := os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644); err != nil {
+		log.Error().Err(err).Str("path", dataPath).Msg("handleNixDataWrite: failed to write file")
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to write data file: "+err.Error())
 		return
 	}
+
+	log.Info().
+		Str("entity", req.Entity).
+		Str("path", dataPath).
+		Msg("handleNixDataWrite: successfully wrote data file")
 
 	s.writeAPI(w, http.StatusOK, map[string]any{
 		"entity":  req.Entity,

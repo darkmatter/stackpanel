@@ -20,12 +20,12 @@ var evalNixContent []byte
 // meaning we don't need projectRoot to construct valid paths
 func hasAbsoluteEnvPaths() bool {
 	// If any of these are set with absolute paths, eval.nix can find config
-	nixConfig := os.Getenv("STACKPANEL_NIX_CONFIG")
+	configJson := os.Getenv("STACKPANEL_CONFIG_JSON")
 	stateDir := os.Getenv("STACKPANEL_STATE_DIR")
 	root := os.Getenv("STACKPANEL_ROOT")
 
 	// Check if we have at least one absolute path that eval.nix can use
-	if nixConfig != "" && strings.HasPrefix(nixConfig, "/") {
+	if configJson != "" && strings.HasPrefix(configJson, "/") {
 		return true
 	}
 	if stateDir != "" && strings.HasPrefix(stateDir, "/") {
@@ -42,7 +42,7 @@ func hasAbsoluteEnvPaths() bool {
 // This is useful for CLI commands that just need the config once.
 //
 // projectRoot is optional if:
-//   - STACKPANEL_NIX_CONFIG is set to an absolute path, or
+//   - STACKPANEL_CONFIG_JSON is set to an absolute path, or
 //   - STACKPANEL_STATE_DIR is set to an absolute path, or
 //   - STACKPANEL_ROOT is set to an absolute path
 //

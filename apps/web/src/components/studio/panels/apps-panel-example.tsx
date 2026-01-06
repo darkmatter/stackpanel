@@ -22,22 +22,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  useApps,
-  useUpdateApp,
-  useDeleteApp,
-} from "@/lib/nix-data";
+import { useApps, useUpdateApp, useDeleteApp } from "@/lib/use-nix-config";
 import type { App } from "@stackpanel/proto";
 
 /**
- * Form state for editing an app
+ * Form state for editing an app (uses snake_case to match proto types)
  */
 interface AppFormState {
   name: string;
   path: string;
-  installCommand?: string;
-  buildCommand?: string;
-  startCommand?: string;
+  install_command?: string;
+  build_command?: string;
+  start_command?: string;
 }
 
 /**
@@ -53,7 +49,7 @@ export function AppsPanelExample() {
   const [newAppId, setNewAppId] = useState("");
 
   // Read apps from Nix config
-  const { data: appsResult, isLoading, error } = useApps();
+  const { data: apps, isLoading, error } = useApps();
 
   // Mutation hooks
   const updateApp = useUpdateApp({
@@ -69,18 +65,15 @@ export function AppsPanelExample() {
     },
   });
 
-  // Extract apps data
-  const apps = appsResult?.data ?? {};
-
   // Handle starting edit
   const handleEdit = (appId: string, app: App) => {
     setEditingApp(appId);
     setFormState({
       name: app.name,
       path: app.path,
-      installCommand: app.installCommand,
-      buildCommand: app.buildCommand,
-      startCommand: app.startCommand,
+      install_command: app.install_command,
+      build_command: app.build_command,
+      start_command: app.start_command,
     });
   };
 
@@ -91,9 +84,9 @@ export function AppsPanelExample() {
       data: {
         name: formState.name,
         path: formState.path,
-        installCommand: formState.installCommand || undefined,
-        buildCommand: formState.buildCommand || undefined,
-        startCommand: formState.startCommand || undefined,
+        install_command: formState.install_command || undefined,
+        build_command: formState.build_command || undefined,
+        start_command: formState.start_command || undefined,
       },
     });
   };
@@ -197,7 +190,7 @@ export function AppsPanelExample() {
         </Dialog>
       </div>
 
-      {Object.keys(apps).length === 0 ? (
+      {Object.keys(apps ?? {}).length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
@@ -207,7 +200,7 @@ export function AppsPanelExample() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {Object.entries(apps).map(([appId, app]) => (
+          {Object.entries(apps ?? {}).map(([appId, app]) => (
             <Card key={appId}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -262,11 +255,11 @@ export function AppsPanelExample() {
                       </Label>
                       <Input
                         id={`${appId}-install`}
-                        value={formState.installCommand ?? ""}
+                        value={formState.install_command ?? ""}
                         onChange={(e) =>
                           setFormState((s) => ({
                             ...s,
-                            installCommand: e.target.value,
+                            install_command: e.target.value,
                           }))
                         }
                         placeholder="e.g., bun install"
@@ -278,11 +271,11 @@ export function AppsPanelExample() {
                       </Label>
                       <Input
                         id={`${appId}-build`}
-                        value={formState.buildCommand ?? ""}
+                        value={formState.build_command ?? ""}
                         onChange={(e) =>
                           setFormState((s) => ({
                             ...s,
-                            buildCommand: e.target.value,
+                            build_command: e.target.value,
                           }))
                         }
                         placeholder="e.g., bun run build"
@@ -294,11 +287,11 @@ export function AppsPanelExample() {
                       </Label>
                       <Input
                         id={`${appId}-start`}
-                        value={formState.startCommand ?? ""}
+                        value={formState.start_command ?? ""}
                         onChange={(e) =>
                           setFormState((s) => ({
                             ...s,
-                            startCommand: e.target.value,
+                            start_command: e.target.value,
                           }))
                         }
                         placeholder="e.g., bun run dev"
@@ -335,19 +328,19 @@ export function AppsPanelExample() {
                         {app.path}
                       </code>
                     </div>
-                    {app.installCommand && (
+                    {app.install_command && (
                       <div className="flex gap-2">
                         <span className="text-muted-foreground">Install:</span>
                         <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                          {app.installCommand}
+                          {app.install_command}
                         </code>
                       </div>
                     )}
-                    {app.startCommand && (
+                    {app.start_command && (
                       <div className="flex gap-2">
                         <span className="text-muted-foreground">Start:</span>
                         <code className="rounded bg-muted px-1 py-0.5 text-xs">
-                          {app.startCommand}
+                          {app.start_command}
                         </code>
                       </div>
                     )}

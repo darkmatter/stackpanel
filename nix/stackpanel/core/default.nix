@@ -88,6 +88,9 @@ in
                     fi
                   fi
                 ''}
+
+                # Restore default interactive shell behavior (disable strict error handling)
+                set +euo pipefail
       ''
     ];
 

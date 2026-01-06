@@ -7,8 +7,9 @@ import (
 	"strings"
 
 	"github.com/darkmatter/stackpanel/cli/internal/github"
+	"github.com/darkmatter/stackpanel/cli/internal/nixconfig"
 	"github.com/darkmatter/stackpanel/cli/internal/nixgen"
-	"github.com/darkmatter/stackpanel/packages/stackpanel-go/state"
+	"github.com/darkmatter/stackpanel/packages/stackpanel-go/envvars"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +30,7 @@ var usersSyncCmd = &cobra.Command{
 
 This command:
 1. Fetches collaborators from the GitHub repository using gh CLI
-2. Fetches public SSH keys for each collaborator from github.com/\<user\>.keys
+2. Fetches public SSH keys for each collaborator from github.com/<user>.keys
 3. Generates .stackpanel/data/github-collaborators.nix with raw collaborator data
 4. Creates .stackpanel/data/users.nix that transforms data to stackpanel.users format
 
@@ -104,12 +105,18 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 	// Determine data directory
 	dataDir := syncDataDir
 	if dataDir == "" {
-		// Try to get from state file, otherwise use default
-		st, err := state.Load("")
-		if err == nil && st.Paths.Data != "" {
-			dataDir = filepath.Join(st.Paths.Data, "data")
+		// Try env var first
+		if dir := envvars.StackpanelDataDir.Get(); dir != "" {
+			dataDir = dir
 		} else {
-			dataDir = ".stackpanel/data"
+			// Try to get from nix config
+			cfg, err := nixconfig.Load()
+			if err == nil && cfg.Paths.Data != "" {
+				dataDir = filepath.Join(cfg.Paths.Data, "data")
+			} else {
+				// Default
+				dataDir = ".stackpanel/data"
+			}
 		}
 	}
 

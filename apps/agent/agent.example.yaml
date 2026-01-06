@@ -1,7 +1,9 @@
-# stackpanel agent - local CLI client for StackPanel
+# stackpanel agent - local development server for StackPanel
 
 # Project root for file operations
-project_root: "."
+# This is typically set automatically via the project manager or STACKPANEL_PROJECT_ROOT env var
+# Leave empty to use the agent's project selection UI
+# project_root: "/path/to/your/project"
 
 # Port for local WebSocket/HTTP server
 port: 9876
@@ -14,10 +16,15 @@ api_endpoint: "https://stackpanel.dev/api/agent"
 
 # Allowed commands (empty = all allowed)
 # For security, you can restrict which commands the agent can run
-allowed_commands:
-  []
+allowed_commands: []
   # - nix
   # - git
 
-# Data directory for agent state
+# Data directory for agent state (stores project history, tokens, etc.)
 data_dir: ~/.stackpanel
+
+# Allowed web UI origins for CORS (localhost origins are always allowed)
+# Add your deployment URLs here if accessing from non-localhost
+allowed_origins: []
+  # - "https://stackpanel.dev"
+  # - "https://your-custom-domain.com"

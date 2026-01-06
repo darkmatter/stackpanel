@@ -1,7 +1,7 @@
 # ==============================================================================
 # nix/stackpanel/db/default.nix
 #
-# Database schema module for Stackpanel protobuf definitions.
+# Database schema registry for Stackpanel protobuf definitions.
 #
 # This module aggregates all .proto.nix schemas and provides utilities for:
 #   - Proto file generation (Nix → .proto)
@@ -11,6 +11,23 @@
 #
 # The .proto.nix files are the SINGLE SOURCE OF TRUTH for data types.
 # Generated code lives in packages/proto/gen/{go,ts}.
+#
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │                    HOW TO ADD A NEW SCHEMA                                  │
+# │                                                                             │
+# │  1. Create your schema file in schemas/<name>.proto.nix                     │
+# │     (copy schemas/_template.proto.nix as a starting point)                  │
+# │                                                                             │
+# │  2. Register it in STEP 1 below (schemas = { ... })                         │
+# │                                                                             │
+# │  3. Categorize it in STEP 2 below (dataSchemas, rootSchemas, etc.)          │
+# │                                                                             │
+# │  4. Register options in STEP 3 below (entity options extraction)            │
+# │                                                                             │
+# │  5. Export options in STEP 4 below (extend = { ... })                       │
+# │                                                                             │
+# │  6. Run `nix run .#generate-protos` to regenerate Go/TS types               │
+# └─────────────────────────────────────────────────────────────────────────────┘
 #
 # Usage:
 #   # List all schemas
@@ -26,18 +43,46 @@
   lib ? (import <nixpkgs> { }).lib,
 }:
 let
-  # Import the proto library
+  # Import libraries
   proto = import ./lib/proto.nix { inherit lib; };
+  optionsLib = import ./lib/options.nix { inherit lib; };
 
-  # ---------------------------------------------------------------------------
-  # Schema imports - all .proto.nix files
-  # ---------------------------------------------------------------------------
+  # Re-export commonly used functions from optionsLib for convenience
+  inherit (optionsLib)
+    snakeToKebab
+    kebabToSnake
+    protoTypeToNix
+    getFieldDefault
+    mkOptionFromField
+    mkOptionsFromMessage
+    mkSubmoduleFromMessage
+    mkOptionFromMessage
+    mkMapOptionFromMessage
+    getSchemaMessages
+    mkEntityOptions
+    ;
+
+  # ============================================================================
+  #
+  #   STEP 1: SCHEMA IMPORTS
+  #
+  #   Register your .proto.nix schema files here.
+  #   Each schema is imported and made available for rendering and introspection.
+  #
+  #   Example:
+  #     myfeature = import ./schemas/myfeature.proto.nix { inherit lib; };
+  #
+  # ============================================================================
   schemas = {
-    # Core schemas
+    # ──────────────────────────────────────────────────────────────────────────
+    # Core schemas (required for stackpanel to function)
+    # ──────────────────────────────────────────────────────────────────────────
     config = import ./schemas/config.proto.nix { inherit lib; };
     users = import ./schemas/users.proto.nix { inherit lib; };
 
-    # Feature schemas
+    # ──────────────────────────────────────────────────────────────────────────
+    # Feature schemas (optional features)
+    # ──────────────────────────────────────────────────────────────────────────
     apps = import ./schemas/apps.proto.nix { inherit lib; };
     aws = import ./schemas/aws.proto.nix { inherit lib; };
     commands = import ./schemas/commands.proto.nix { inherit lib; };
@@ -51,34 +96,62 @@ let
     step-ca = import ./schemas/step-ca.proto.nix { inherit lib; };
     theme = import ./schemas/theme.proto.nix { inherit lib; };
 
-    # External schemas (synced from external sources)
+    # ──────────────────────────────────────────────────────────────────────────
+    # External schemas (synced from external sources, not user-edited)
+    # ──────────────────────────────────────────────────────────────────────────
     github-collaborators = import ./schemas/external/github-collaborators.proto.nix { inherit lib; };
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # ADD NEW SCHEMAS HERE
+    # ──────────────────────────────────────────────────────────────────────────
+    # myfeature = import ./schemas/myfeature.proto.nix { inherit lib; };
   };
 
-  # ---------------------------------------------------------------------------
-  # Schema categorization
-  # ---------------------------------------------------------------------------
+  # ============================================================================
+  #
+  #   STEP 2: SCHEMA CATEGORIZATION
+  #
+  #   Assign your schema to the appropriate category. This determines:
+  #     - dataSchemas: Goes in .stackpanel/data/<name>.nix (user-editable data)
+  #     - rootSchemas: Goes in .stackpanel/ root (project config)
+  #     - externalSchemas: Synced from external sources (not user-edited)
+  #
+  #   Example:
+  #     dataSchemas = { inherit (schemas) myfeature; };
+  #
+  # ============================================================================
 
-  # Schemas that go in .stackpanel/data/
+  # Schemas that generate data files in .stackpanel/data/
+  # NOTE: Only include schemas that have corresponding options in core/options/
   dataSchemas = {
     inherit (schemas)
       users
       apps
       aws
+      secrets
+      step-ca
+      theme
+      ;
+    # ADD NEW DATA SCHEMAS HERE (must also have options in core/options/):
+    # myfeature
+  };
+
+  # Schemas that exist but don't yet have Nix options defined.
+  # These are proto schemas only - no data files are generated for them.
+  # When you add options for these, move them to dataSchemas above.
+  pendingSchemas = {
+    inherit (schemas)
       commands
       databases
       dns
       extensions
       onboarding
-      secrets
       services
       shells
-      step-ca
-      theme
       ;
   };
 
-  # Schemas for .stackpanel/ root
+  # Schemas for .stackpanel/ root (project-level config)
   rootSchemas = {
     inherit (schemas) config;
   };
@@ -88,9 +161,269 @@ let
     inherit (schemas) github-collaborators;
   };
 
-  # ---------------------------------------------------------------------------
-  # Proto rendering utilities
-  # ---------------------------------------------------------------------------
+  # ============================================================================
+  #
+  #   STEP 3: ENTITY OPTIONS EXTRACTION
+  #
+  #   For each schema, extract the "top-level" message that represents a single
+  #   entity. This is used to generate Nix module options.
+  #
+  #   ┌─────────────────────────────────────────────────────────────────────────┐
+  #   │  IMPORTANT: Choosing the "Top-Level" Message                            │
+  #   │                                                                         │
+  #   │  Most schemas define two message types:                                 │
+  #   │                                                                         │
+  #   │    1. Singular (e.g., User, App) - defines ONE entity's fields          │
+  #   │    2. Plural wrapper (e.g., Users, Apps) - wraps in map<string, Entity> │
+  #   │                                                                         │
+  #   │  You should extract the SINGULAR form here, because Nix options         │
+  #   │  are structured as:                                                     │
+  #   │                                                                         │
+  #   │    stackpanel.users.<username>.name = "...";                            │
+  #   │                      ↑ key          ↑ User message fields               │
+  #   │                                                                         │
+  #   │  NOT:                                                                   │
+  #   │    stackpanel.users.users.<username>.name = "...";  # redundant!        │
+  #   └─────────────────────────────────────────────────────────────────────────┘
+  #
+  #   Example for a new schema:
+  #
+  #     # Get all messages from the schema (for nested type resolution)
+  #     myfeatureMessages = getSchemaMessages schemas.myfeature;
+  #
+  #     # Extract options from the singular entity message
+  #     myfeatureOptions = mkOptionsFromMessage {
+  #       message = schemas.myfeature.messages.MyFeature or { fields = { }; };
+  #       allMessages = myfeatureMessages;
+  #     };
+  #
+  # ============================================================================
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # AWS
+  # ──────────────────────────────────────────────────────────────────────────
+  awsMessages = getSchemaMessages schemas.aws;
+  awsRolesAnywhereOptions = mkOptionsFromMessage {
+    message = schemas.aws.messages.RolesAnywhere or { fields = { }; };
+    allMessages = awsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Users
+  # ──────────────────────────────────────────────────────────────────────────
+  usersMessages = getSchemaMessages schemas.users;
+  userOptions = mkOptionsFromMessage {
+    message = schemas.users.messages.User or { fields = { }; };
+    allMessages = usersMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Apps
+  # ──────────────────────────────────────────────────────────────────────────
+  appsMessages = getSchemaMessages schemas.apps;
+  appOptions = mkOptionsFromMessage {
+    message = schemas.apps.messages.App or { fields = { }; };
+    allMessages = appsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Commands
+  # ──────────────────────────────────────────────────────────────────────────
+  commandsMessages = getSchemaMessages schemas.commands;
+  commandOptions = mkOptionsFromMessage {
+    message = schemas.commands.messages.Command or { fields = { }; };
+    allMessages = commandsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Secrets
+  # ──────────────────────────────────────────────────────────────────────────
+  secretsMessages = getSchemaMessages schemas.secrets;
+  secretsOptions = mkOptionsFromMessage {
+    message = schemas.secrets.messages.Secrets or { fields = { }; };
+    allMessages = secretsMessages;
+  };
+  secretsEnvironmentOptions = mkOptionsFromMessage {
+    message = schemas.secrets.messages.SecretsEnvironment or { fields = { }; };
+    allMessages = secretsMessages;
+  };
+  secretsCodegenOptions = mkOptionsFromMessage {
+    message = schemas.secrets.messages.Codegen or { fields = { }; };
+    allMessages = secretsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Step CA
+  # Note: Use StepCaConfig (the flat fields) not StepCa (the wrapper)
+  # ──────────────────────────────────────────────────────────────────────────
+  stepCaMessages = getSchemaMessages schemas.step-ca;
+  stepCaOptions = mkOptionsFromMessage {
+    message = schemas.step-ca.messages.StepCaConfig or { fields = { }; };
+    allMessages = stepCaMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Theme
+  # ──────────────────────────────────────────────────────────────────────────
+  themeMessages = getSchemaMessages schemas.theme;
+  themeOptions = mkOptionsFromMessage {
+    message = schemas.theme.messages.Theme or { fields = { }; };
+    allMessages = themeMessages;
+  };
+  colorSchemeOptions = mkOptionsFromMessage {
+    message = schemas.theme.messages.ColorScheme or { fields = { }; };
+    allMessages = themeMessages;
+  };
+  starshipOptions = mkOptionsFromMessage {
+    message = schemas.theme.messages.Starship or { fields = { }; };
+    allMessages = themeMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # DNS
+  # ──────────────────────────────────────────────────────────────────────────
+  dnsMessages = getSchemaMessages schemas.dns;
+  dnsOptions = mkOptionsFromMessage {
+    message = schemas.dns.messages.DnsRecord or { fields = { }; };
+    allMessages = dnsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Databases
+  # ──────────────────────────────────────────────────────────────────────────
+  databasesMessages = getSchemaMessages schemas.databases;
+  databaseOptions = mkOptionsFromMessage {
+    message =
+      schemas.databases.messages.Database or {
+        fields = { };
+      };
+    allMessages = databasesMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Services
+  # ──────────────────────────────────────────────────────────────────────────
+  servicesMessages = getSchemaMessages schemas.services;
+  serviceOptions = mkOptionsFromMessage {
+    message = schemas.services.messages.Service or { fields = { }; };
+    allMessages = servicesMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Shells
+  # ──────────────────────────────────────────────────────────────────────────
+  shellsMessages = getSchemaMessages schemas.shells;
+  shellOptions = mkOptionsFromMessage {
+    message = schemas.shells.messages.Shell or { fields = { }; };
+    allMessages = shellsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Extensions
+  # ──────────────────────────────────────────────────────────────────────────
+  extensionsMessages = getSchemaMessages schemas.extensions;
+  extensionOptions = mkOptionsFromMessage {
+    message = schemas.extensions.messages.Extension or { fields = { }; };
+    allMessages = extensionsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Onboarding
+  # ──────────────────────────────────────────────────────────────────────────
+  onboardingMessages = getSchemaMessages schemas.onboarding;
+  onboardingOptions = mkOptionsFromMessage {
+    message = schemas.onboarding.messages.OnboardingStep or { fields = { }; };
+    allMessages = onboardingMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Config
+  # ──────────────────────────────────────────────────────────────────────────
+  configMessages = getSchemaMessages schemas.config;
+  configOptions = mkOptionsFromMessage {
+    message = schemas.config.messages.Config or { fields = { }; };
+    allMessages = configMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # ADD NEW ENTITY OPTIONS HERE
+  # ──────────────────────────────────────────────────────────────────────────
+  #
+  # myfeatureMessages = getSchemaMessages schemas.myfeature;
+  # myfeatureOptions = mkOptionsFromMessage {
+  #   message = schemas.myfeature.messages.MyFeature or { fields = { }; };
+  #   allMessages = myfeatureMessages;
+  # };
+
+  # ============================================================================
+  #
+  #   STEP 4: OPTIONS EXPORT (extend object)
+  #
+  #   Export your options so they can be used in core/options/*.nix files.
+  #   This is what other parts of the codebase import to build Nix module options.
+  #
+  #   Example:
+  #     extend = {
+  #       myfeature = myfeatureOptions;
+  #       messages = {
+  #         myfeature = myfeatureMessages;
+  #       };
+  #     };
+  #
+  # ============================================================================
+  extend = {
+    # Pre-built option sets (can be spread into options)
+    aws = awsRolesAnywhereOptions;
+    user = userOptions;
+    app = appOptions;
+    command = commandOptions;
+    secrets = secretsOptions;
+    secretsEnvironment = secretsEnvironmentOptions;
+    secretsCodegen = secretsCodegenOptions;
+    stepCa = stepCaOptions;
+    theme = themeOptions;
+    colorScheme = colorSchemeOptions;
+    starship = starshipOptions;
+    dns = dnsOptions;
+    database = databaseOptions;
+    service = serviceOptions;
+    shell = shellOptions;
+    extension = extensionOptions;
+    onboarding = onboardingOptions;
+    config = configOptions;
+
+    # ADD NEW OPTIONS EXPORTS HERE:
+    # myfeature = myfeatureOptions;
+
+    # Message definitions for custom option building
+    messages = {
+      aws = awsMessages;
+      users = usersMessages;
+      apps = appsMessages;
+      commands = commandsMessages;
+      secrets = secretsMessages;
+      stepCa = stepCaMessages;
+      theme = themeMessages;
+      dns = dnsMessages;
+      databases = databasesMessages;
+      services = servicesMessages;
+      shells = shellsMessages;
+      extensions = extensionsMessages;
+      onboarding = onboardingMessages;
+      config = configMessages;
+
+      # ADD NEW MESSAGE EXPORTS HERE:
+      # myfeature = myfeatureMessages;
+    };
+  };
+
+  # ============================================================================
+  #
+  #   INTERNAL: Proto rendering and introspection utilities
+  #
+  #   You typically don't need to modify anything below this line.
+  #
+  # ============================================================================
 
   # Render each schema to its .proto text
   render = lib.mapAttrs (_: schema: proto.renderProtoFile schema) schemas;
@@ -100,10 +433,6 @@ let
 
   # Get proto file name for each schema key
   protoFileMap = lib.mapAttrs (_: schema: schema.name) schemas;
-
-  # ---------------------------------------------------------------------------
-  # Schema introspection for tooling
-  # ---------------------------------------------------------------------------
 
   # Extract message names from a schema
   getMessageNames = schema: lib.attrNames (schema.messages or { });
@@ -125,17 +454,16 @@ let
     ) schemas
   );
 
-  # ---------------------------------------------------------------------------
-  # Entity names for iteration
-  # ---------------------------------------------------------------------------
+  # Entity name lists
   entityNames = lib.attrNames schemas;
   dataEntityNames = lib.attrNames dataSchemas;
   externalEntityNames = lib.attrNames externalSchemas;
 
-  # ---------------------------------------------------------------------------
-  # Init files for scaffolding
-  # Generates default/empty data files for each entity
-  # ---------------------------------------------------------------------------
+  # ============================================================================
+  #
+  #   INTERNAL: Scaffolding / init file generation
+  #
+  # ============================================================================
   initFiles =
     let
       # Generate an empty data file for a data schema
@@ -166,361 +494,19 @@ let
     in
     configFile // dataFiles;
 
-  # ---------------------------------------------------------------------------
-  # Nix option type builders from proto schemas
-  #
-  # These helpers allow core/options to derive Nix module options from proto
-  # message definitions, maintaining the proto as the source of truth.
-  # ---------------------------------------------------------------------------
-
-  # Convert snake_case to kebab-case
-  snakeToKebab = str: builtins.replaceStrings [ "_" ] [ "-" ] str;
-
-  # Convert kebab-case to snake_case
-  kebabToSnake = str: builtins.replaceStrings [ "-" ] [ "_" ] str;
-
-  # Map proto field types to Nix types
-  protoTypeToNix =
-    {
-      field,
-      allMessages ? { },
-    }:
-    let
-      # Check if it's a message reference
-      isMessageRef =
-        !(builtins.elem field.type [
-          "string"
-          "int32"
-          "int64"
-          "uint32"
-          "uint64"
-          "bool"
-          "double"
-          "float"
-          "bytes"
-        ]);
-
-      baseType =
-        if isMessageRef then
-          # For message references, create a submodule if we have the message definition
-          if allMessages ? ${field.type} then
-            lib.types.submodule {
-              options = mkOptionsFromMessage {
-                message = allMessages.${field.type};
-                inherit allMessages;
-              };
-            }
-          else
-            # Fallback to attrs if message not found
-            lib.types.attrs
-        else
-          {
-            string = lib.types.str;
-            int32 = lib.types.int;
-            int64 = lib.types.int;
-            uint32 = lib.types.ints.unsigned;
-            uint64 = lib.types.ints.unsigned;
-            bool = lib.types.bool;
-            double = lib.types.float;
-            float = lib.types.float;
-            bytes = lib.types.str; # Base64 encoded
-          }
-          .${field.type} or lib.types.str;
-    in
-    if field.mapKey != null then
-      lib.types.attrsOf baseType
-    else if field.repeated then
-      lib.types.listOf baseType
-    else if field.optional then
-      lib.types.nullOr baseType
-    else
-      baseType;
-
-  # Get default value for a proto field
-  getFieldDefault =
-    field:
-    if field.optional then
-      null
-    else if field.repeated then
-      [ ]
-    else if field.mapKey != null then
-      { }
-    else if field.type == "bool" then
-      false
-    else if field.type == "string" then
-      ""
-    else if
-      builtins.elem field.type [
-        "int32"
-        "int64"
-        "uint32"
-        "uint64"
-      ]
-    then
-      0
-    else if
-      builtins.elem field.type [
-        "float"
-        "double"
-      ]
-    then
-      0.0
-    else
-      { }; # message type defaults to empty attrset
-
-  # Build a single Nix option from a proto field
-  mkOptionFromField =
-    {
-      field,
-      allMessages ? { },
-    }:
-    lib.mkOption {
-      type = protoTypeToNix { inherit field allMessages; };
-      description = field.description or "";
-      default = getFieldDefault field;
-    };
-
-  # Build Nix options from a proto message's fields
-  # Converts field names from snake_case to kebab-case
-  mkOptionsFromMessage =
-    {
-      message,
-      allMessages ? { },
-      useKebabCase ? true,
-    }:
-    lib.mapAttrs' (
-      fieldName: field:
-      let
-        nixFieldName = if useKebabCase then snakeToKebab fieldName else fieldName;
-      in
-      {
-        name = nixFieldName;
-        value = mkOptionFromField { inherit field allMessages; };
-      }
-    ) (message.fields or { });
-
-  # Build a submodule type from a proto message
-  mkSubmoduleFromMessage =
-    {
-      message,
-      allMessages ? { },
-      useKebabCase ? true,
-    }:
-    lib.types.submodule {
-      options = mkOptionsFromMessage { inherit message allMessages useKebabCase; };
-    };
-
-  # Build a complete option (with type, description, default) from a proto message
-  # This is the main entry point for core/options to use
-  mkOptionFromMessage =
-    {
-      message,
-      allMessages ? { },
-      useKebabCase ? true,
-      description ? message.description or "",
-      default ? { },
-      example ? null,
-    }:
-    lib.mkOption {
-      type = mkSubmoduleFromMessage { inherit message allMessages useKebabCase; };
-      inherit description default;
-    }
-    // (if example != null then { inherit example; } else { });
-
-  # Build an attrsOf option for map-style messages (like Users, Apps, etc.)
-  mkMapOptionFromMessage =
-    {
-      message, # The value message (e.g., User, App)
-      allMessages ? { },
-      useKebabCase ? true,
-      description ? "",
-      default ? { },
-      example ? null,
-    }:
-    lib.mkOption {
-      type = lib.types.attrsOf (mkSubmoduleFromMessage {
-        inherit message allMessages useKebabCase;
-      });
-      inherit description default;
-    }
-    // (if example != null then { inherit example; } else { });
-
-  # ---------------------------------------------------------------------------
-  # Pre-built option sets from proto messages
-  # These can be imported directly in core/options files
-  # ---------------------------------------------------------------------------
-
-  # Helper to get all messages from a schema for nested resolution
-  getSchemaMessages = schema: schema.messages or { };
-
-  # AWS options
-  awsMessages = getSchemaMessages schemas.aws;
-  awsRolesAnywhereOptions = mkOptionsFromMessage {
-    message = schemas.aws.messages.RolesAnywhere or { fields = { }; };
-    allMessages = awsMessages;
-  };
-
-  # Users options
-  usersMessages = getSchemaMessages schemas.users;
-  userOptions = mkOptionsFromMessage {
-    message = schemas.users.messages.User or { fields = { }; };
-    allMessages = usersMessages;
-  };
-
-  # Apps options
-  appsMessages = getSchemaMessages schemas.apps;
-  appOptions = mkOptionsFromMessage {
-    message = schemas.apps.messages.App or { fields = { }; };
-    allMessages = appsMessages;
-  };
-
-  # Commands options
-  commandsMessages = getSchemaMessages schemas.commands;
-  commandOptions = mkOptionsFromMessage {
-    message = schemas.commands.messages.Command or { fields = { }; };
-    allMessages = commandsMessages;
-  };
-
-  # Secrets options
-  secretsMessages = getSchemaMessages schemas.secrets;
-  secretsOptions = mkOptionsFromMessage {
-    message = schemas.secrets.messages.Secrets or { fields = { }; };
-    allMessages = secretsMessages;
-  };
-  secretsEnvironmentOptions = mkOptionsFromMessage {
-    message = schemas.secrets.messages.SecretsEnvironment or { fields = { }; };
-    allMessages = secretsMessages;
-  };
-  secretsCodegenOptions = mkOptionsFromMessage {
-    message = schemas.secrets.messages.Codegen or { fields = { }; };
-    allMessages = secretsMessages;
-  };
-
-  # Step CA options
-  stepCaMessages = getSchemaMessages schemas.step-ca;
-  stepCaOptions = mkOptionsFromMessage {
-    message = schemas.step-ca.messages.StepCaConfig or { fields = { }; };
-    allMessages = stepCaMessages;
-  };
-
-  # Theme options
-  themeMessages = getSchemaMessages schemas.theme;
-  themeOptions = mkOptionsFromMessage {
-    message = schemas.theme.messages.Theme or { fields = { }; };
-    allMessages = themeMessages;
-  };
-  colorSchemeOptions = mkOptionsFromMessage {
-    message = schemas.theme.messages.ColorScheme or { fields = { }; };
-    allMessages = themeMessages;
-  };
-  starshipOptions = mkOptionsFromMessage {
-    message = schemas.theme.messages.Starship or { fields = { }; };
-    allMessages = themeMessages;
-  };
-
-  # DNS options
-  dnsMessages = getSchemaMessages schemas.dns;
-  dnsOptions = mkOptionsFromMessage {
-    message = schemas.dns.messages.Dns or schemas.dns.messages.DNS or { fields = { }; };
-    allMessages = dnsMessages;
-  };
-
-  # Databases options
-  databasesMessages = getSchemaMessages schemas.databases;
-  databaseOptions = mkOptionsFromMessage {
-    message =
-      schemas.databases.messages.DatabaseInstance or schemas.databases.messages.Database or {
-        fields = { };
-      };
-    allMessages = databasesMessages;
-  };
-
-  # Services options
-  servicesMessages = getSchemaMessages schemas.services;
-  serviceOptions = mkOptionsFromMessage {
-    message = schemas.services.messages.Service or { fields = { }; };
-    allMessages = servicesMessages;
-  };
-
-  # Shells options
-  shellsMessages = getSchemaMessages schemas.shells;
-  shellOptions = mkOptionsFromMessage {
-    message = schemas.shells.messages.Shell or { fields = { }; };
-    allMessages = shellsMessages;
-  };
-
-  # Extensions options
-  extensionsMessages = getSchemaMessages schemas.extensions;
-  extensionOptions = mkOptionsFromMessage {
-    message = schemas.extensions.messages.Extension or { fields = { }; };
-    allMessages = extensionsMessages;
-  };
-
-  # Onboarding options
-  onboardingMessages = getSchemaMessages schemas.onboarding;
-  onboardingOptions = mkOptionsFromMessage {
-    message = schemas.onboarding.messages.Onboarding or { fields = { }; };
-    allMessages = onboardingMessages;
-  };
-
-  # Config options
-  configMessages = getSchemaMessages schemas.config;
-  configOptions = mkOptionsFromMessage {
-    message = schemas.config.messages.Config or { fields = { }; };
-    allMessages = configMessages;
-  };
-
-  # ---------------------------------------------------------------------------
-  # Extension object - for use in core/options
-  # ---------------------------------------------------------------------------
-  extend = {
-    # Pre-built option sets (can be spread into options)
-    aws = awsRolesAnywhereOptions;
-    user = userOptions;
-    app = appOptions;
-    command = commandOptions;
-    secrets = secretsOptions;
-    secretsEnvironment = secretsEnvironmentOptions;
-    secretsCodegen = secretsCodegenOptions;
-    stepCa = stepCaOptions;
-    theme = themeOptions;
-    colorScheme = colorSchemeOptions;
-    starship = starshipOptions;
-    dns = dnsOptions;
-    database = databaseOptions;
-    service = serviceOptions;
-    shell = shellOptions;
-    extension = extensionOptions;
-    onboarding = onboardingOptions;
-    config = configOptions;
-
-    # Message definitions for custom option building
-    messages = {
-      aws = awsMessages;
-      users = usersMessages;
-      apps = appsMessages;
-      commands = commandsMessages;
-      secrets = secretsMessages;
-      stepCa = stepCaMessages;
-      theme = themeMessages;
-      dns = dnsMessages;
-      databases = databasesMessages;
-      services = servicesMessages;
-      shells = shellsMessages;
-      extensions = extensionsMessages;
-      onboarding = onboardingMessages;
-      config = configMessages;
-    };
-  };
-
 in
 {
+  # ============================================================================
+  # PUBLIC API
+  # ============================================================================
+
   # Schema definitions
   inherit
     schemas
     dataSchemas
     rootSchemas
     externalSchemas
+    pendingSchemas
     ;
 
   # Entity name lists
@@ -544,10 +530,13 @@ in
   inherit proto;
   lib = proto;
 
+  # Options library for custom option building
+  inherit optionsLib;
+
   # Options extension for core/options
   inherit extend;
 
-  # Type conversion utilities
+  # Type conversion utilities (re-exported from optionsLib)
   inherit
     snakeToKebab
     kebabToSnake
