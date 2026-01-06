@@ -1,19 +1,20 @@
 # ==============================================================================
 # stackpanel-cli/default.nix
 #
-# Nix package definition for the StackPanel CLI - a Go-based command-line tool
-# for managing local development services and environments.
+# Nix package definition for the StackPanel CLI - a unified Go-based command-line
+# tool that includes both the CLI and agent functionality.
 #
-# This package creates a composite source derivation that includes both the CLI
-# application and the shared stackpanel-go module, allowing proper Go module
-# resolution during the build.
+# The CLI and agent have been merged into a single application at apps/stackpanel-go.
+# The agent is now a subcommand: `stackpanel agent`
 #
 # Build inputs:
-#   - Source: apps/cli (Go module) + packages/stackpanel-go (shared Go library)
-#   - Output: stackpanel binary (renamed from 'cli')
+#   - Source: apps/stackpanel-go (unified Go module with CLI, agent, and shared packages)
+#   - Output: stackpanel binary
 #
-# Usage: Run `stackpanel` commands to manage development services, certificates,
-# Caddy configuration, and more.
+# Usage:
+#   - Run `stackpanel` for interactive TUI
+#   - Run `stackpanel agent` to start the local agent server
+#   - Run `stackpanel --help` for all available commands
 # ==============================================================================
 {
   pkgs,
@@ -23,34 +24,17 @@
 let
   repoRoot = ../../../..;
 
-  # Source paths - evaluated before being copied to store
-  cliSrc = "${repoRoot}/apps/cli";
-  goSrc = "${repoRoot}/packages/stackpanel-go";
-
-  # Create composite source with proper directory structure for Go module resolution
-  compositeSrc =
-    pkgs.runCommand "stackpanel-cli-src"
-      {
-        preferLocalBuild = true;
-        allowSubstitutes = false;
-      }
-      ''
-        mkdir -p $out/apps/cli
-        mkdir -p $out/packages/stackpanel-go
-        cp -R ${cliSrc}/. $out/apps/cli/
-        cp -R ${goSrc}/. $out/packages/stackpanel-go/
-      '';
+  # Source path - the unified stackpanel-go app
+  srcPath = "${repoRoot}/apps/stackpanel-go";
 in
 pkgs.buildGoApplication {
-  pname = "stackpanel-cli";
+  pname = "stackpanel";
   version = "0.1.0";
 
-  # Use a minimal source tree that contains both the CLI and the local module
-  src = compositeSrc;
-  pwd = compositeSrc + "/apps/cli"; # Tell gomod2nix where to find go.mod
-  modules = compositeSrc + "/apps/cli/gomod2nix.toml";
-  sourceRoot = "stackpanel-cli-src/apps/cli"; # Build from this subdirectory
-  subPackages = [ "." ]; # Build from pwd (apps/cli)
+  src = srcPath;
+  pwd = srcPath;
+  modules = srcPath + "/gomod2nix.toml";
+  subPackages = [ "." ];
 
   # Skip tests during build (some tests require specific environment)
   doCheck = false;
@@ -58,16 +42,17 @@ pkgs.buildGoApplication {
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/darkmatter/stackpanel/cli/cmd.Version=0.1.0"
+    "-X github.com/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli.Version=0.1.0"
   ];
 
-  # Rename the binary from "cli" to "stackpanel"
+  # Rename the binary from stackpanel-go to stackpanel
+  # Go names the binary after the module's last path component
   postInstall = ''
-    mv $out/bin/cli $out/bin/stackpanel
+    mv $out/bin/stackpanel-go $out/bin/stackpanel
   '';
 
   meta = with lib; {
-    description = "Stackpanel development CLI";
+    description = "Stackpanel unified CLI and agent";
     homepage = "https://github.com/darkmatter/stackpanel";
     license = licenses.mit;
     maintainers = [ ];

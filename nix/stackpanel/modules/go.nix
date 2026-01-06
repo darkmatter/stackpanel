@@ -9,7 +9,7 @@
 # Prerequisites:
 #   - Root go.mod at repository root (monorepo/workspace style)
 #   - Single gomod2nix.toml at root (generated via: gomod2nix generate)
-#   - Apps are subpackages (e.g., apps/cli, apps/agent)
+#   - Apps are subpackages (e.g., apps/stackpanel-go)
 #
 # Architecture:
 #   Generated files (package.json, .air.toml, tools.go) are created as
@@ -24,8 +24,8 @@
 #   - Test package for flake checks
 #
 # App definition example:
-#   stackpanel.apps.cli = {
-#     path = "apps/cli";          # Path relative to repo root
+#   stackpanel.apps.stackpanel-go = {
+#     path = "apps/stackpanel-go";  # Path relative to repo root
 #     go = {
 #       enable = true;
 #       binaryName = "stackpanel";  # Rename binary (optional)

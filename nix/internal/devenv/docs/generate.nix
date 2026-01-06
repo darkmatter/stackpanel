@@ -10,7 +10,7 @@
 #   - Outputs: stackpanel-docs-options-json, stackpanel-docs-options-md
 #
 # Usage: Run 'generate-docs' in devenv shell to regenerate documentation.
-# The Go CLI (apps/cli) processes the JSON to create fumadocs-compatible MDX.
+# The Go CLI (apps/stackpanel-go) processes the JSON to create fumadocs-compatible MDX.
 # ==============================================================================
 # Stackpanel options documentation generator
 #
@@ -90,7 +90,7 @@ let
     mkdir -p "$DOCS_DIR"
 
     # Use the Go CLI to generate docs
-    cd "$ROOT_DIR/apps/cli"
+    cd "$ROOT_DIR/apps/stackpanel-go"
     ${pkgs.go}/bin/go run . gendocs \
       "$OPTIONS_JSON" \
       "$DOCS_DIR" \
