@@ -34,7 +34,6 @@ let
   # ---------------------------------------------------------------------------
   # String case conversion utilities
   # ---------------------------------------------------------------------------
-
   # Convert snake_case to kebab-case
   # Example: "public_keys" → "public-keys"
   snakeToKebab = str: builtins.replaceStrings [ "_" ] [ "-" ] str;
@@ -252,7 +251,6 @@ let
       message = schema.messages.${messageName} or { fields = { }; };
       inherit allMessages;
     };
-
 in
 {
   # String utilities

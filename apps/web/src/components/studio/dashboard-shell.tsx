@@ -11,7 +11,9 @@ import { SecretsPanel } from "./panels/secrets-panel";
 import { ServicesPanel } from "./panels/services-panel";
 import { TeamPanel } from "./panels/team-panel";
 import { TerminalPanel } from "./panels/terminal-panel";
-import { AppsPanelExample } from "./panels/apps-panel-example";
+import { AppsPanel } from "./panels/apps-panel";
+import { CommandsPanel } from "./panels/commands-panel";
+import { VariablesPanel } from "./panels/variables-panel";
 
 export type PanelType =
   | "overview"
@@ -21,6 +23,8 @@ export type PanelType =
   | "devshells"
   | "team"
   | "apps"
+  | "commands"
+  | "variables"
   | "network"
   | "terminal";
 
@@ -45,7 +49,11 @@ export function DashboardShell() {
       case "network":
         return <NetworkPanel />;
       case "apps":
-        return <AppsPanelExample />;
+        return <AppsPanel />;
+      case "commands":
+        return <CommandsPanel />;
+      case "variables":
+        return <VariablesPanel />;
       case "terminal":
         return <TerminalPanel />;
       default:

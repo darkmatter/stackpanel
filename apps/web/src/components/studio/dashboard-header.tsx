@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AgentStatus } from "@/components/agent-connect";
+import { ProjectSelector } from "@/components/project-selector";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,8 @@ const panelTitles: Record<PanelType, string> = {
   devshells: "Dev Shells",
   team: "Team",
   apps: "Apps",
+  commands: "Commands",
+  variables: "Variables",
   network: "Network",
   terminal: "Terminal",
 };
@@ -118,6 +121,8 @@ export function DashboardHeader({ activePanel }: DashboardHeaderProps) {
             <Settings className="h-5 w-5" />
           </Button>
         </div>
+
+        <ProjectSelector />
 
         <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5">
           <AgentStatus />

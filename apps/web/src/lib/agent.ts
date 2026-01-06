@@ -5,6 +5,38 @@
  * to execute commands and manage files.
  */
 
+export interface Project {
+  path: string;
+  name: string;
+  last_opened: string;
+  active: boolean;
+}
+
+export interface ProjectListResponse {
+  projects: Project[];
+}
+
+export interface ProjectCurrentResponse {
+  has_project: boolean;
+  project: Project | null;
+}
+
+export interface ProjectOpenResponse {
+  success: boolean;
+  project: Project;
+  devshell?: {
+    in_devshell: boolean;
+    has_devshell_env: boolean;
+    error?: string;
+  };
+}
+
+export interface ProjectValidateResponse {
+  valid: boolean;
+  error?: string;
+  message?: string;
+}
+
 export interface AgentConfig {
   host?: string;
   port?: number;
@@ -399,6 +431,66 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
+  }
+
+  // Project management methods
+
+  async listProjects(): Promise<Project[]> {
+    const res = await fetch(`${this.baseUrl}/api/project/list`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    return data.projects ?? [];
+  }
+
+  async getCurrentProject(): Promise<ProjectCurrentResponse> {
+    const res = await fetch(`${this.baseUrl}/api/project/current`, {
+      headers: this.getHeaders(false),
+    });
+    return res.json();
+  }
+
+  async openProject(path: string): Promise<ProjectOpenResponse> {
+    const res = await fetch(`${this.baseUrl}/api/project/open`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ path }),
+    });
+    const data = await res.json();
+    if (!data.success && data.error) {
+      throw new Error(data.message ?? data.error);
+    }
+    return data;
+  }
+
+  async closeProject(): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/api/project/close`, {
+      method: "POST",
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+  }
+
+  async validateProject(path: string): Promise<ProjectValidateResponse> {
+    const res = await fetch(`${this.baseUrl}/api/project/validate`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ path }),
+    });
+    return res.json();
+  }
+
+  async removeProject(path: string): Promise<void> {
+    const res = await fetch(
+      `${this.baseUrl}/api/project/remove?path=${encodeURIComponent(path)}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(false),
+      },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
   }
 }
 

@@ -43,6 +43,99 @@ export type SSEEvent = ConfigChangedEvent | HeartbeatEvent;
 // Data Entity Types - For .stackpanel/data/ files
 // =============================================================================
 
+/**
+ * Command definition from commands.nix
+ * Commands are standalone entities that can be linked to apps.
+ */
+export interface Command {
+  /** Unique identifier (key in commands.nix) */
+  id?: string;
+  /** Display name for the command */
+  name: string;
+  /** Description of what the command does */
+  description: string;
+  /** Category for grouping (development, build, testing, database, etc.) */
+  category: string;
+  /** The actual command to run (optional - can be app-specific) */
+  command?: string;
+}
+
+/** Map of command ID to Command */
+export type Commands = Record<string, Command>;
+
+/**
+ * Variable/environment variable definition from variables.nix
+ * Variables are standalone entities that can be linked to apps.
+ */
+export interface Variable {
+  /** Unique identifier (key in variables.nix) */
+  id?: string;
+  /** Environment variable name (e.g., DATABASE_URL) */
+  name: string;
+  /** Description of what the variable is for */
+  description: string;
+  /**
+   * Variable type:
+   * - secret: Sensitive value stored encrypted
+   * - config: Non-sensitive configuration
+   * - computed: Derived from other config
+   * - service: Auto-generated from service config
+   */
+  type: "secret" | "config" | "computed" | "service";
+  /** Whether this variable is required */
+  required?: boolean;
+  /** Whether the value should be masked in logs/UI */
+  sensitive?: boolean;
+  /** Default value (if any) */
+  default?: string;
+  /** Valid options for enum-like variables */
+  options?: string[];
+  /** Service ID if type is "service" */
+  service?: string;
+}
+
+/** Map of variable ID to Variable */
+export type Variables = Record<string, Variable>;
+
+/**
+ * App definition from apps.nix
+ * Apps reference commands and variables by their IDs.
+ */
+export interface AppEntity {
+  /** Unique identifier (key in apps.nix) */
+  id?: string;
+  /** Display name for the app */
+  name: string;
+  /** Brief description of what the app does */
+  description?: string;
+  /** Path to app directory relative to project root */
+  path: string;
+  /** App type/runtime (bun, go, python, rust, etc.) */
+  type?: string;
+  /** Development server port */
+  port?: number;
+  /** Local development domain */
+  domain?: string;
+  /** List of command IDs from commands.nix */
+  commands?: string[];
+  /** List of variable IDs from variables.nix */
+  variables?: string[];
+}
+
+/** Map of app ID to AppEntity */
+export type AppEntities = Record<string, AppEntity>;
+
+/**
+ * Resolved app with full command and variable definitions
+ * Created by joining app references with actual entity data
+ */
+export interface ResolvedApp extends Omit<AppEntity, "commands" | "variables"> {
+  /** Full command definitions (resolved from IDs) */
+  commands: Command[];
+  /** Full variable definitions (resolved from IDs) */
+  variables: Variable[];
+}
+
 /** Base response for data operations */
 export interface DataResponse<T> {
   entity: string;

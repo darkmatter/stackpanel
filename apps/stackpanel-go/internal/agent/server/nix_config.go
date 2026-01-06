@@ -1,0 +1,281 @@
+package server
+
+import (
+	"encoding/json"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
+// configCache holds the cached config and metadata
+type configCache struct {
+	mu          sync.RWMutex
+	config      map[string]any
+	lastUpdated time.Time
+	configPath  string // Path to the cached config file
+}
+
+var globalConfigCache = &configCache{}
+
+// handleNixConfig returns the current Stackpanel config.
+// GET: Returns cached config (fast)
+// POST: Forces a refresh by re-evaluating the flake (slow but fresh)
+func (s *Server) handleNixConfig(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleNixConfigGet(w, r)
+	case http.MethodPost:
+		s.handleNixConfigRefresh(w, r)
+	default:
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+// handleNixConfigGet returns the current config, either from cache or by evaluating
+func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
+	// Check if force refresh is requested via query param
+	forceRefresh := r.URL.Query().Get("refresh") == "true"
+
+	if !forceRefresh {
+		// Try to get from cache first
+		globalConfigCache.mu.RLock()
+		if globalConfigCache.config != nil {
+			config := globalConfigCache.config
+			lastUpdated := globalConfigCache.lastUpdated
+			globalConfigCache.mu.RUnlock()
+
+			s.writeAPI(w, http.StatusOK, map[string]any{
+				"config":       config,
+				"last_updated": lastUpdated.Format(time.RFC3339),
+				"cached":       true,
+			})
+			return
+		}
+		globalConfigCache.mu.RUnlock()
+	}
+
+	// No cache or force refresh - evaluate config
+	config, err := s.evaluateConfig()
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate config: "+err.Error())
+		return
+	}
+
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"config":       config,
+		"last_updated": time.Now().Format(time.RFC3339),
+		"cached":       false,
+	})
+}
+
+// handleNixConfigRefresh forces a config refresh by re-evaluating the flake
+func (s *Server) handleNixConfigRefresh(w http.ResponseWriter, r *http.Request) {
+	log.Info().Msg("Refreshing Stackpanel config from flake")
+
+	config, err := s.evaluateConfig()
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate config: "+err.Error())
+		return
+	}
+
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"config":       config,
+		"last_updated": time.Now().Format(time.RFC3339),
+		"refreshed":    true,
+	})
+
+	// Notify SSE subscribers that config has changed
+	s.broadcastSSE(SSEEvent{
+		Event: "config.refreshed",
+		Data: map[string]any{
+			"timestamp": time.Now().Format(time.RFC3339),
+		},
+	})
+}
+
+// evaluateConfig evaluates the Stackpanel config from the flake or config file
+func (s *Server) evaluateConfig() (map[string]any, error) {
+	var config map[string]any
+	var err error
+
+	// Strategy 1: Try to evaluate from flake output
+	config, err = s.evaluateConfigFromFlake()
+	if err == nil {
+		s.cacheConfig(config)
+		return config, nil
+	}
+	log.Debug().Err(err).Msg("Failed to evaluate config from flake, trying STACKPANEL_CONFIG_JSON")
+
+	// Strategy 2: Try STACKPANEL_CONFIG_JSON env var (pre-computed JSON)
+	if jsonPath := os.Getenv("STACKPANEL_CONFIG_JSON"); jsonPath != "" {
+		config, err = s.loadConfigFromJSON(jsonPath)
+		if err == nil {
+			s.cacheConfig(config)
+			return config, nil
+		}
+		log.Debug().Err(err).Str("path", jsonPath).Msg("Failed to load config from STACKPANEL_CONFIG_JSON")
+	}
+
+	// Strategy 3: Try to find a cached config in the project
+	cachedPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "gen", "config.json")
+	if config, err = s.loadConfigFromJSON(cachedPath); err == nil {
+		s.cacheConfig(config)
+		return config, nil
+	}
+
+	return nil, err
+}
+
+// evaluateConfigFromFlake evaluates the config by running nix eval on the flake
+func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
+	// Try to evaluate .#stackpanelConfig or similar flake output
+	// This is the most accurate way to get fresh config
+	args := []string{"eval", "--impure", "--json", ".#stackpanelConfig"}
+
+	res, err := s.exec.RunNix(args...)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.ExitCode != 0 {
+		// Try alternative attribute paths
+		alternativePaths := []string{
+			".#devShells." + getCurrentSystem() + ".default.passthru.moduleConfig.stackpanel",
+			".#stackpanel",
+		}
+
+		for _, attrPath := range alternativePaths {
+			args = []string{"eval", "--impure", "--json", attrPath}
+			res, err = s.exec.RunNix(args...)
+			if err == nil && res.ExitCode == 0 {
+				break
+			}
+		}
+
+		if res.ExitCode != 0 {
+			return nil, &evalError{stderr: strings.TrimSpace(res.Stderr)}
+		}
+	}
+
+	var config map[string]any
+	if err := json.Unmarshal([]byte(res.Stdout), &config); err != nil {
+		return nil, err
+	}
+
+	// Also save to a local cache file for faster subsequent loads
+	s.saveConfigToCache(config)
+
+	return config, nil
+}
+
+// loadConfigFromJSON loads config from a JSON file
+func (s *Server) loadConfigFromJSON(path string) (map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var config map[string]any
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+// cacheConfig stores the config in the in-memory cache
+func (s *Server) cacheConfig(config map[string]any) {
+	globalConfigCache.mu.Lock()
+	defer globalConfigCache.mu.Unlock()
+
+	globalConfigCache.config = config
+	globalConfigCache.lastUpdated = time.Now()
+}
+
+// saveConfigToCache saves the config to a local JSON file for persistence
+func (s *Server) saveConfigToCache(config map[string]any) {
+	cacheDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "gen")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		log.Warn().Err(err).Msg("Failed to create cache directory")
+		return
+	}
+
+	cachePath := filepath.Join(cacheDir, "config.json")
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to marshal config for cache")
+		return
+	}
+
+	if err := os.WriteFile(cachePath, data, 0644); err != nil {
+		log.Warn().Err(err).Str("path", cachePath).Msg("Failed to write config cache")
+		return
+	}
+
+	globalConfigCache.mu.Lock()
+	globalConfigCache.configPath = cachePath
+	globalConfigCache.mu.Unlock()
+
+	log.Debug().Str("path", cachePath).Msg("Saved config to cache file")
+}
+
+// getCurrentSystem returns the current Nix system (e.g., "x86_64-linux", "aarch64-darwin")
+func getCurrentSystem() string {
+	// Try to get from environment first
+	if system := os.Getenv("NIX_SYSTEM"); system != "" {
+		return system
+	}
+
+	// Default based on GOOS/GOARCH
+	goos := os.Getenv("GOOS")
+	if goos == "" {
+		goos = "linux" // default
+	}
+	goarch := os.Getenv("GOARCH")
+	if goarch == "" {
+		goarch = "amd64" // default
+	}
+
+	// Map Go arch to Nix arch
+	nixArch := goarch
+	switch goarch {
+	case "amd64":
+		nixArch = "x86_64"
+	case "arm64":
+		nixArch = "aarch64"
+	}
+
+	// Map Go OS to Nix OS
+	nixOS := goos
+	switch goos {
+	case "darwin":
+		nixOS = "darwin"
+	case "linux":
+		nixOS = "linux"
+	}
+
+	return nixArch + "-" + nixOS
+}
+
+// evalError wraps nix eval errors
+type evalError struct {
+	stderr string
+}
+
+func (e *evalError) Error() string {
+	return e.stderr
+}
+
+// InvalidateConfigCache clears the config cache, forcing a refresh on next access
+func InvalidateConfigCache() {
+	globalConfigCache.mu.Lock()
+	defer globalConfigCache.mu.Unlock()
+
+	globalConfigCache.config = nil
+	globalConfigCache.lastUpdated = time.Time{}
+}

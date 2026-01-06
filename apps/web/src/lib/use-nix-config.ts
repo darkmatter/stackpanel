@@ -4,7 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAgentSSEEvent } from "./agent-sse-provider";
 import { NixClient, type NixClientConfig } from "./nix-client";
 import type { App } from "@stackpanel/proto";
-import type { Service, StackpanelConfig } from "./types";
+import type {
+  Service,
+  StackpanelConfig,
+  Command,
+  Commands,
+  Variable,
+  Variables,
+  AppEntity,
+  AppEntities,
+  ResolvedApp,
+} from "./types";
 
 // =============================================================================
 // Types
@@ -114,17 +124,47 @@ export function useNixConfig(options: UseNixConfigOptions = {}) {
     isSuccess: false,
     dataUpdatedAt: null,
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchConfig = useCallback(async () => {
-    setState((s) => ({
-      ...s,
-      status: "loading",
-      isLoading: true,
-      error: null,
-    }));
+  const fetchConfig = useCallback(
+    async (forceRefresh = false) => {
+      setState((s) => ({
+        ...s,
+        status: "loading",
+        isLoading: true,
+        error: null,
+      }));
 
+      try {
+        const config = await client.config({ refresh: forceRefresh });
+        setState({
+          data: config,
+          error: null,
+          status: "success",
+          isLoading: false,
+          isError: false,
+          isSuccess: true,
+          dataUpdatedAt: Date.now(),
+        });
+      } catch (err) {
+        setState((s) => ({
+          ...s,
+          error: err instanceof Error ? err : new Error(String(err)),
+          status: "error",
+          isLoading: false,
+          isError: true,
+          isSuccess: false,
+        }));
+      }
+    },
+    [client],
+  );
+
+  // Force refresh by re-evaluating the flake (slower but guaranteed fresh)
+  const forceRefresh = useCallback(async () => {
+    setIsRefreshing(true);
     try {
-      const config = await client.config();
+      const config = await client.refreshConfig();
       setState({
         data: config,
         error: null,
@@ -143,6 +183,8 @@ export function useNixConfig(options: UseNixConfigOptions = {}) {
         isError: true,
         isSuccess: false,
       }));
+    } finally {
+      setIsRefreshing(false);
     }
   }, [client]);
 
@@ -158,12 +200,21 @@ export function useNixConfig(options: UseNixConfigOptions = {}) {
     }
   });
 
+  // Also listen for config.refreshed events (triggered by POST /api/nix/config)
+  useAgentSSEEvent("config.refreshed", () => {
+    if (autoRefetch) {
+      fetchConfig();
+    }
+  });
+
   return useMemo(
     () => ({
       ...state,
-      refetch: fetchConfig,
+      refetch: () => fetchConfig(false),
+      forceRefresh,
+      isRefreshing,
     }),
-    [state, fetchConfig],
+    [state, fetchConfig, forceRefresh, isRefreshing],
   );
 }
 
@@ -516,7 +567,283 @@ export function useDeleteApp(options: MutationOptions = {}) {
 }
 
 // =============================================================================
+// Relational Entity Hooks
+// =============================================================================
+
+/**
+ * Hook for accessing command definitions from commands.nix
+ */
+export function useCommands(options: UseNixConfigOptions = {}) {
+  return useNixMapData<Command>("commands", options);
+}
+
+/**
+ * Hook for accessing variable definitions from variables.nix
+ */
+export function useVariables(options: UseNixConfigOptions = {}) {
+  return useNixMapData<Variable>("variables", options);
+}
+
+/**
+ * Hook for accessing app entities from apps.nix (with command/variable IDs)
+ */
+export function useAppEntities(options: UseNixConfigOptions = {}) {
+  return useNixMapData<AppEntity>("apps", options);
+}
+
+/**
+ * Hook for accessing resolved apps with full command and variable definitions.
+ * This joins app data with commands.nix and variables.nix to provide complete entities.
+ */
+export function useResolvedApps(options: UseNixConfigOptions = {}) {
+  const {
+    data: apps,
+    isLoading: appsLoading,
+    error: appsError,
+    refetch: refetchApps,
+  } = useAppEntities(options);
+  const {
+    data: commands,
+    isLoading: commandsLoading,
+    error: commandsError,
+    refetch: refetchCommands,
+  } = useCommands(options);
+  const {
+    data: variables,
+    isLoading: variablesLoading,
+    error: variablesError,
+    refetch: refetchVariables,
+  } = useVariables(options);
+
+  const isLoading = appsLoading || commandsLoading || variablesLoading;
+  const error = appsError || commandsError || variablesError;
+
+  const resolvedApps = useMemo(() => {
+    if (!apps || !commands || !variables) return null;
+
+    const result: Record<string, ResolvedApp> = {};
+
+    for (const [appId, app] of Object.entries(apps)) {
+      // Resolve command IDs to full command objects
+      const resolvedCommands: Command[] = (app.commands ?? [])
+        .map((cmdId) => {
+          const cmd = commands[cmdId];
+          return cmd ? { ...cmd, id: cmdId } : null;
+        })
+        .filter((cmd): cmd is Command & { id: string } => cmd !== null);
+
+      // Resolve variable IDs to full variable objects
+      const resolvedVariables: Variable[] = (app.variables ?? [])
+        .map((varId) => {
+          const variable = variables[varId];
+          return variable ? { ...variable, id: varId } : null;
+        })
+        .filter((v): v is Variable & { id: string } => v !== null);
+
+      result[appId] = {
+        ...app,
+        id: appId,
+        commands: resolvedCommands,
+        variables: resolvedVariables,
+      };
+    }
+
+    return result;
+  }, [apps, commands, variables]);
+
+  const refetch = useCallback(async () => {
+    await Promise.all([refetchApps(), refetchCommands(), refetchVariables()]);
+  }, [refetchApps, refetchCommands, refetchVariables]);
+
+  return useMemo(
+    () => ({
+      data: resolvedApps,
+      isLoading,
+      isError: !!error,
+      isSuccess: !!resolvedApps,
+      error,
+      refetch,
+    }),
+    [resolvedApps, isLoading, error, refetch],
+  );
+}
+
+/**
+ * Hook to get a single resolved app by ID
+ */
+export function useResolvedApp(
+  appId: string,
+  options: UseNixConfigOptions = {},
+) {
+  const {
+    data: apps,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useResolvedApps(options);
+
+  const app = useMemo(() => {
+    if (!apps) return null;
+    return apps[appId] ?? null;
+  }, [apps, appId]);
+
+  return useMemo(
+    () => ({
+      data: app,
+      isLoading,
+      isError,
+      isSuccess: !!app,
+      error,
+      refetch,
+    }),
+    [app, isLoading, isError, error, refetch],
+  );
+}
+
+/**
+ * Hook to find which apps use a specific variable
+ */
+export function useAppsUsingVariable(
+  variableId: string,
+  options: UseNixConfigOptions = {},
+) {
+  const { data: apps, isLoading, error, refetch } = useAppEntities(options);
+
+  const matchingApps = useMemo(() => {
+    if (!apps) return null;
+
+    return Object.entries(apps)
+      .filter(([_, app]) => app.variables?.includes(variableId))
+      .map(([id, app]) => ({ ...app, id }));
+  }, [apps, variableId]);
+
+  return useMemo(
+    () => ({
+      data: matchingApps,
+      isLoading,
+      isError: !!error,
+      isSuccess: !!matchingApps,
+      error,
+      refetch,
+    }),
+    [matchingApps, isLoading, error, refetch],
+  );
+}
+
+/**
+ * Hook to find which apps have a specific command
+ */
+export function useAppsWithCommand(
+  commandId: string,
+  options: UseNixConfigOptions = {},
+) {
+  const { data: apps, isLoading, error, refetch } = useAppEntities(options);
+
+  const matchingApps = useMemo(() => {
+    if (!apps) return null;
+
+    return Object.entries(apps)
+      .filter(([_, app]) => app.commands?.includes(commandId))
+      .map(([id, app]) => ({ ...app, id }));
+  }, [apps, commandId]);
+
+  return useMemo(
+    () => ({
+      data: matchingApps,
+      isLoading,
+      isError: !!error,
+      isSuccess: !!matchingApps,
+      error,
+      refetch,
+    }),
+    [matchingApps, isLoading, error, refetch],
+  );
+}
+
+/**
+ * Hook to get commands grouped by category
+ */
+export function useCommandsByCategory(options: UseNixConfigOptions = {}) {
+  const { data: commands, isLoading, error, refetch } = useCommands(options);
+
+  const grouped = useMemo(() => {
+    if (!commands) return null;
+
+    const result: Record<string, Command[]> = {};
+
+    for (const [id, cmd] of Object.entries(commands)) {
+      const category = cmd.category ?? "other";
+      if (!result[category]) {
+        result[category] = [];
+      }
+      result[category].push({ ...cmd, id });
+    }
+
+    return result;
+  }, [commands]);
+
+  return useMemo(
+    () => ({
+      data: grouped,
+      isLoading,
+      isError: !!error,
+      isSuccess: !!grouped,
+      error,
+      refetch,
+    }),
+    [grouped, isLoading, error, refetch],
+  );
+}
+
+/**
+ * Hook to get variables grouped by type
+ */
+export function useVariablesByType(options: UseNixConfigOptions = {}) {
+  const { data: variables, isLoading, error, refetch } = useVariables(options);
+
+  const grouped = useMemo(() => {
+    if (!variables) return null;
+
+    const result: Record<string, Variable[]> = {};
+
+    for (const [id, variable] of Object.entries(variables)) {
+      const type = variable.type ?? "config";
+      if (!result[type]) {
+        result[type] = [];
+      }
+      result[type].push({ ...variable, id });
+    }
+
+    return result;
+  }, [variables]);
+
+  return useMemo(
+    () => ({
+      data: grouped,
+      isLoading,
+      isError: !!error,
+      isSuccess: !!grouped,
+      error,
+      refetch,
+    }),
+    [grouped, isLoading, error, refetch],
+  );
+}
+
+// =============================================================================
 // Re-exports for convenience
 // =============================================================================
 
-export type { App, Service, StackpanelConfig };
+export type {
+  App,
+  Service,
+  StackpanelConfig,
+  Command,
+  Commands,
+  Variable,
+  Variables,
+  AppEntity,
+  AppEntities,
+  ResolvedApp,
+};

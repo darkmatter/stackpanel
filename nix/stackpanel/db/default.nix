@@ -493,7 +493,6 @@ let
       dataFiles = lib.listToAttrs (lib.mapAttrsToList mkDataFile dataSchemas);
     in
     configFile // dataFiles;
-
 in
 {
   # ============================================================================

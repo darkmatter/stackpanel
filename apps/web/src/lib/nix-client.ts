@@ -281,18 +281,34 @@ export class NixClient {
   }
 
   /**
-   * Get the full stackpanel config by evaluating the Nix expression.
-   * This reads the computed config, not raw data files.
+   * Get the full stackpanel config.
    *
-   * STACKPANEL_NIX_CONFIG points to the source .nix file (.stackpanel/config.nix)
-   * STACKPANEL_CONFIG_JSON points to the pre-computed JSON in the Nix store
+   * This uses the /api/nix/config endpoint which:
+   * - Returns cached config for fast access (GET)
+   * - Can force refresh by re-evaluating the flake (GET ?refresh=true or POST)
    *
-   * We use the JSON version here since it's already evaluated and faster.
+   * For dynamic data that changes frequently, use the entity hooks
+   * (useNixData, useApps, useServices) which read from .stackpanel/data/
+   * and are always fresh.
    */
-  async config(): Promise<StackpanelConfig> {
-    return this.eval<StackpanelConfig>(
-      'builtins.fromJSON (builtins.readFile (builtins.getEnv "STACKPANEL_CONFIG_JSON"))',
+  async config(options?: { refresh?: boolean }): Promise<StackpanelConfig> {
+    const url = options?.refresh
+      ? "/api/nix/config?refresh=true"
+      : "/api/nix/config";
+    const res = await this.fetch<{ config: StackpanelConfig }>(url);
+    return res.config;
+  }
+
+  /**
+   * Force refresh the config by re-evaluating the flake.
+   * This is slower but ensures you get the latest computed values.
+   */
+  async refreshConfig(): Promise<StackpanelConfig> {
+    const res = await this.post<{ config: StackpanelConfig }>(
+      "/api/nix/config",
+      {},
     );
+    return res.config;
   }
 
   /**

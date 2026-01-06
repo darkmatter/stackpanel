@@ -13,6 +13,8 @@ import {
   Terminal,
   Users,
   AppWindow,
+  Play,
+  Variable,
 } from "lucide-react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,9 @@ interface DashboardSidebarProps {
 
 const navItems: { id: PanelType; label: string; icon: React.ElementType }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "apps", label: "Apps", icon: AppWindow },
+  { id: "commands", label: "Commands", icon: Play },
+  { id: "variables", label: "Variables", icon: Variable },
   { id: "services", label: "Services", icon: Server },
   { id: "databases", label: "Databases", icon: Database },
   { id: "secrets", label: "Secrets", icon: KeyRound },
@@ -41,7 +46,6 @@ const navItems: { id: PanelType; label: string; icon: React.ElementType }[] = [
   { id: "team", label: "Team", icon: Users },
   { id: "network", label: "Network", icon: Network },
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
-  { id: "apps", label: "Apps", icon: AppWindow },
 ];
 
 export function DashboardSidebar({
