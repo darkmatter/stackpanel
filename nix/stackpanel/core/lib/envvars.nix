@@ -202,6 +202,16 @@ rec {
       default = "http://localhost:6401";
       goField = "APIEndpoint";
     };
+
+    STACKPANEL_USER_CONFIG = mkEnvVar {
+      name = "STACKPANEL_USER_CONFIG";
+      description = "Path to user-level config file (stores cross-repo data like projects list)";
+      category = categories.agent;
+      source = "dynamic";
+      default = "~/.config/stackpanel/stackpanel.yaml";
+      example = "/home/user/.config/stackpanel/stackpanel.yaml";
+      goField = "UserConfigPath";
+    };
   };
 
   # ===========================================================================

@@ -1,12 +1,10 @@
-import { protectedProcedure, publicProcedure, router } from "../index.old";
+import { createTRPCRouter } from "../trpc";
+import { agentRouter } from "./agent";
 import { todoRouter } from "./todo";
 
-export const appRouter = router({
-	healthCheck: publicProcedure.query(() => "OK"),
-	privateData: protectedProcedure.query(({ ctx }) => ({
-		message: "This is private",
-		user: ctx.session.user,
-	})),
-	todo: todoRouter,
+export const appRouter = createTRPCRouter({
+  agent: agentRouter,
+  todo: todoRouter,
 });
+
 export type AppRouter = typeof appRouter;

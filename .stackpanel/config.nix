@@ -149,8 +149,10 @@ in
       name = "docs";
       domain = "docs";
     };
-    apps.cli = {
-      path = "apps/cli";
+    # Unified CLI + Agent app
+    apps.stackpanel-go = {
+      name = "stackpanel";
+      path = "apps/stackpanel-go";
       go = {
         enable = true;
         binaryName = "stackpanel";
@@ -158,16 +160,7 @@ in
           "-s"
           "-w"
         ];
-        generateFiles = true;
-      };
-    };
-    apps.agent = {
-      name = "agent";
-      tls = false;
-      path = "apps/agent";
-      go = {
-        enable = true;
-        binaryName = "stackpanel-agent";
+        generateFiles = false; # Already has package.json, .air.toml, tools.go
       };
     };
 
