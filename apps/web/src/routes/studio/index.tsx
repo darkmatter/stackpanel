@@ -1,18 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DashboardShell } from "@/components/studio/dashboard-shell";
-import { AgentSSEProvider } from "@/lib/agent-sse-provider";
-import { AgentProvider } from "@/lib/agent-provider";
+import { OverviewPanel } from "@/components/studio/panels/overview-panel";
 
 export const Route = createFileRoute("/studio/")({
-  component: RouteComponent,
+  component: OverviewRoute,
 });
 
-function RouteComponent() {
-  return (
-    <AgentProvider>
-      <AgentSSEProvider>
-        <DashboardShell />
-      </AgentSSEProvider>
-    </AgentProvider>
-  );
+function OverviewRoute() {
+  return <OverviewPanel />;
 }

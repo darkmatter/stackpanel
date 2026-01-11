@@ -4,10 +4,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  FileCode,
   KeyRound,
   Layers,
   LayoutDashboard,
   Network,
+  Puzzle,
   Server,
   SquareTerminal,
   Terminal,
@@ -15,8 +17,9 @@ import {
   AppWindow,
   Play,
   Variable,
+  Package,
 } from "lucide-react";
-import type React from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -25,35 +28,58 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { PanelType } from "./dashboard-shell";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { ProjectSelector } from "../project-selector";
 
 interface DashboardSidebarProps {
-  activePanel: PanelType;
-  onPanelChange: (panel: PanelType) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-const navItems: { id: PanelType; label: string; icon: React.ElementType }[] = [
+export type PanelType =
+  | "overview"
+  | "apps"
+  | "packages"
+  | "secrets"
+  | "tasks"
+  | "variables"
+  | "databases"
+  | "devshells"
+  | "team"
+  | "network"
+  | "extensions"
+  | "files"
+  | "terminal"
+  | "services";
+
+const navItems: { id: string; label: string; icon: React.ElementType }[] = [
+  // required: maybe create onboarding flow
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "apps", label: "Apps", icon: AppWindow },
-  { id: "commands", label: "Commands", icon: Play },
-  { id: "variables", label: "Variables", icon: Variable },
-  { id: "services", label: "Services", icon: Server },
+  { id: "packages", label: "Packages", icon: Package },
+  // { id: "secrets", label: "Secrets", icon: KeyRound },
+  { id: "variables", label: "Variables / Secrets", icon: Variable },
+  // rest
+  { id: "divider", label: "", icon: React.Fragment },
+  { id: "tasks", label: "Tasks", icon: Play },
   { id: "databases", label: "Databases", icon: Database },
-  { id: "secrets", label: "Secrets", icon: KeyRound },
   { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
   { id: "network", label: "Network", icon: Network },
+  { id: "extensions", label: "Extensions", icon: Puzzle },
+  { id: "files", label: "Generated Files", icon: FileCode },
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
+  // consider removing
+  { id: "divider", label: "", icon: React.Fragment },
+  { id: "services", label: "Services", icon: Server },
 ];
 
 export function DashboardSidebar({
-  activePanel,
-  onPanelChange,
   collapsed,
   onToggleCollapse,
 }: DashboardSidebarProps) {
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
   return (
     <TooltipProvider delayDuration={0}>
       <aside
@@ -64,16 +90,8 @@ export function DashboardSidebar({
       >
         <div className="flex h-16 items-center justify-between border-sidebar-border border-b px-4">
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                <Layers className="h-4 w-4 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="font-semibold text-sidebar-foreground text-sm">
-                  Stack Panel
-                </p>
-                <p className="text-muted-foreground text-xs">acme-corp</p>
-              </div>
+            <div className="w-full">
+              <ProjectSelector variant="sidebar" />
             </div>
           )}
           {collapsed && (
@@ -84,38 +102,56 @@ export function DashboardSidebar({
         </div>
 
         <nav className="flex-1 space-y-1 p-2">
-          {navItems.map((item) => {
+          {navItems.map((item, i) => {
             const Icon = item.icon;
-            const isActive = activePanel === item.id;
+            // "overview" is the index route at /studio, others are at /studio/<id>
+            const itemPath =
+              item.id === "overview" ? "/studio" : `/studio/${item.id}`;
+            const isActive =
+              item.id === "overview"
+                ? pathname === "/studio" || pathname === "/studio/"
+                : pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 
-            const button = (
-              <button
+            const linkContent = (
+              <Link
+                to={itemPath}
+                activeOptions={{ exact: item.id === "overview" }}
+                activeProps={{
+                  className: "bg-sidebar-accent text-sidebar-accent-foreground",
+                }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-medium text-sm transition-colors",
                   isActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
                 )}
-                key={item.id}
-                onClick={() => onPanelChange(item.id)}
               >
                 <Icon
                   className={cn("h-5 w-5 shrink-0", isActive && "text-accent")}
                 />
                 {!collapsed && <span>{item.label}</span>}
-              </button>
+              </Link>
             );
 
             if (collapsed) {
               return (
                 <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>{button}</TooltipTrigger>
+                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                   <TooltipContent side="right">{item.label}</TooltipContent>
                 </Tooltip>
               );
             }
 
-            return button;
+            if (item.id === "divider") {
+              return (
+                <div
+                  key={`${item.id}-${i}`}
+                  className="border-t border-sidebar-border my-2"
+                />
+              );
+            }
+
+            return <div key={item.id}>{linkContent}</div>;
           })}
         </nav>
 

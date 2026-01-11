@@ -23,12 +23,26 @@ let
   # ---------------------------------------------------------------------------
   dataDir = ./data;
 
+  # Files that are data-only (read by agent) and don't have corresponding module options
+  # These should NOT be merged into stackpanel.* config
+  dataOnlyFiles = [
+    "variables.nix"
+    "commands.nix"
+    "apps.nix"
+    "tasks.nix"
+  ];
+
   loadDataTables =
     dir:
     let
       entries = builtins.readDir dir;
       nixFiles = lib.filterAttrs (
-        n: type: type == "regular" && lib.hasSuffix ".nix" n && n != "default.nix" && (!lib.hasPrefix "_" n)
+        n: type:
+        type == "regular"
+        && lib.hasSuffix ".nix" n
+        && n != "default.nix"
+        && (!lib.hasPrefix "_" n)
+        && (!builtins.elem n dataOnlyFiles)
       ) entries;
       toKey = n: lib.removeSuffix ".nix" n;
     in
@@ -132,6 +146,18 @@ in
 
     git-hooks = {
       enable = true;
+    };
+
+    # Example extension (demonstration of extension panels)
+    example = {
+      enable = true;
+      message = "Welcome to Stackpanel!";
+    };
+
+    # Caddy reverse proxy (enables caddy extension panels)
+    caddy = {
+      enable = true;
+      project-name = "stackpanel";
     };
 
     # ============================================================================

@@ -1,0 +1,106 @@
+---
+title: ports
+description: Configuration options for stackpanel.ports
+icon: Plug
+---
+
+# Ports Options
+
+## `ports.base-port`
+
+The computed base port for this project
+
+| Property | Value |
+|----------|-------|
+| **Type** | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
+| **Default** | `3600` |
+| **Read Only** | `true` |
+
+---
+
+## `ports.enable`
+
+Whether to enable Automatic port assignment.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `ports.project-name`
+
+Project name used for port computation. Set this to match your project name.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"default"` |
+
+**Example:**
+
+`"myapp"`
+
+
+---
+
+## `ports.service`
+
+Computed service information by key.
+Access: config.stackpanel.ports.service.POSTGRES.port
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
+
+## `ports.services`
+
+Attrset of infrastructure services that need ports.
+Each service gets a deterministic port based on project name + service key.
+Provided via STACKPANEL_SERVICES_CONFIG (JSON).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  POSTGRES = { name = "PostgreSQL"; };
+  REDIS = { name = "Redis"; };
+  MINIO = { name = "Minio"; };
+  MINIO_CONSOLE = { name = "Minio Console"; };
+}
+```
+
+
+---
+
+## `ports.services.<name>.name`
+
+Human-readable name for display (defaults to attrset key)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"‹name›"` |
+
+**Example:**
+
+`"PostgreSQL"`
+
+
+---
+

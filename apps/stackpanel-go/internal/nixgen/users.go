@@ -10,7 +10,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/github"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/github"
 )
 
 // Template data structures

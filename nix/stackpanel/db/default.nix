@@ -89,11 +89,13 @@ let
     databases = import ./schemas/databases.proto.nix { inherit lib; };
     dns = import ./schemas/dns.proto.nix { inherit lib; };
     extensions = import ./schemas/extensions.proto.nix { inherit lib; };
+    files = import ./schemas/files.proto.nix { inherit lib; };
     onboarding = import ./schemas/onboarding.proto.nix { inherit lib; };
     secrets = import ./schemas/secrets.proto.nix { inherit lib; };
     services = import ./schemas/services.proto.nix { inherit lib; };
     shells = import ./schemas/shells.proto.nix { inherit lib; };
     step-ca = import ./schemas/step-ca.proto.nix { inherit lib; };
+    tasks = import ./schemas/tasks.proto.nix { inherit lib; };
     theme = import ./schemas/theme.proto.nix { inherit lib; };
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -130,6 +132,8 @@ let
       aws
       secrets
       step-ca
+      tasks
+      commands
       theme
       ;
     # ADD NEW DATA SCHEMAS HERE (must also have options in core/options/):
@@ -141,10 +145,10 @@ let
   # When you add options for these, move them to dataSchemas above.
   pendingSchemas = {
     inherit (schemas)
-      commands
       databases
       dns
       extensions
+      files
       onboarding
       services
       shells
@@ -233,6 +237,15 @@ let
   commandOptions = mkOptionsFromMessage {
     message = schemas.commands.messages.Command or { fields = { }; };
     allMessages = commandsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Tasks
+  # ──────────────────────────────────────────────────────────────────────────
+  tasksMessages = getSchemaMessages schemas.tasks;
+  taskOptions = mkOptionsFromMessage {
+    message = schemas.tasks.messages.Task or { fields = { }; };
+    allMessages = tasksMessages;
   };
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -326,6 +339,18 @@ let
     message = schemas.extensions.messages.Extension or { fields = { }; };
     allMessages = extensionsMessages;
   };
+  extensionPanelOptions = mkOptionsFromMessage {
+    message = schemas.extensions.messages.ExtensionPanel or { fields = { }; };
+    allMessages = extensionsMessages;
+  };
+  panelFieldOptions = mkOptionsFromMessage {
+    message = schemas.extensions.messages.PanelField or { fields = { }; };
+    allMessages = extensionsMessages;
+  };
+  extensionAppDataOptions = mkOptionsFromMessage {
+    message = schemas.extensions.messages.ExtensionAppData or { fields = { }; };
+    allMessages = extensionsMessages;
+  };
 
   # ──────────────────────────────────────────────────────────────────────────
   # Onboarding
@@ -377,6 +402,7 @@ let
     user = userOptions;
     app = appOptions;
     command = commandOptions;
+    task = taskOptions;
     secrets = secretsOptions;
     secretsEnvironment = secretsEnvironmentOptions;
     secretsCodegen = secretsCodegenOptions;
@@ -389,6 +415,9 @@ let
     service = serviceOptions;
     shell = shellOptions;
     extension = extensionOptions;
+    extensionPanel = extensionPanelOptions;
+    panelField = panelFieldOptions;
+    extensionAppData = extensionAppDataOptions;
     onboarding = onboardingOptions;
     config = configOptions;
 
@@ -401,6 +430,7 @@ let
       users = usersMessages;
       apps = appsMessages;
       commands = commandsMessages;
+      tasks = tasksMessages;
       secrets = secretsMessages;
       stepCa = stepCaMessages;
       theme = themeMessages;

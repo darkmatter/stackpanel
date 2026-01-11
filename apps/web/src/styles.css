@@ -7,9 +7,9 @@
 @custom-variant auto (&:where(.auto, .auto *));
 
 @theme {
-  --font-sans: "Montserrat Variable", "Inter", "Geist", ui-sans-serif, system-ui,
-    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-    "Noto Color Emoji";
+  --font-sans:
+    "Inter", "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 :root {
@@ -22,30 +22,30 @@
   --primary: oklch(0.98 0 0);
   --primary-foreground: oklch(0.08 0 0);
   --secondary: oklch(0.18 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
+  --secondary-foreground: oklch(0.8 0 0);
   --muted: oklch(0.18 0 0);
   --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.7 0.15 145);
+  --accent: oklch(0.7 0.15 160);
   --accent-foreground: oklch(0.08 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.22 0 0);
   --input: oklch(0.18 0 0);
-  --ring: oklch(0.7 0.15 145);
-  --chart-1: oklch(0.7 0.15 145);
+  --ring: oklch(0.7 0.15 170);
+  --chart-1: oklch(0.7 0.15 160);
   --chart-2: oklch(0.6 0.15 250);
   --chart-3: oklch(0.65 0.2 30);
   --chart-4: oklch(0.75 0.15 60);
   --chart-5: oklch(0.55 0.2 300);
-  --radius: 0.5rem;
+  --radius: 0.4rem;
   --sidebar: oklch(0.1 0 0);
   --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.7 0.15 145);
+  --sidebar-primary: oklch(0.7 0.15 160);
   --sidebar-primary-foreground: oklch(0.08 0 0);
   --sidebar-accent: oklch(0.18 0 0);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.7 0.15 145);
+  --sidebar-ring: oklch(0.7 0.15 160);
 }
 
 .dark {
@@ -58,35 +58,38 @@
   --primary: oklch(0.98 0 0);
   --primary-foreground: oklch(0.08 0 0);
   --secondary: oklch(0.18 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
+  --secondary-foreground: oklch(0.8 0 0);
   --muted: oklch(0.18 0 0);
   --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.7 0.15 145);
+  --accent: oklch(0.7 0.15 160);
   --accent-foreground: oklch(0.08 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.22 0 0);
   --input: oklch(0.18 0 0);
-  --ring: oklch(0.7 0.15 145);
-  --chart-1: oklch(0.7 0.15 145);
+  --ring: oklch(0.7 0.15 170);
+  --chart-1: oklch(0.7 0.15 160);
   --chart-2: oklch(0.6 0.15 250);
   --chart-3: oklch(0.65 0.2 30);
   --chart-4: oklch(0.75 0.15 60);
   --chart-5: oklch(0.55 0.2 300);
   --sidebar: oklch(0.1 0 0);
   --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.7 0.15 145);
+  --sidebar-primary: oklch(0.7 0.15 160);
   --sidebar-primary-foreground: oklch(0.08 0 0);
   --sidebar-accent: oklch(0.18 0 0);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.7 0.15 145);
+  --sidebar-ring: oklch(0.7 0.15 160);
 }
 
 @theme inline {
-  --font-sans: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif,
+  --font-mono: "Source Code Pro Variable", "Geist Mono Fallback";
+  --font-studio:
+    "Source Code Pro Variable", "Geist", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-mono--font-variation-settings: "wght" 300, "wdth" 100;
+  --font-mono--font-feature-settings: "calt" 1, "kern" 1;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -131,8 +134,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
-    font-weight: 400;
-    font-variation-settings: "wdth" 75, "wght" 400;
   }
 }

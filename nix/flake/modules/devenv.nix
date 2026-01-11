@@ -38,9 +38,28 @@ let
     ]
   );
 
-  scripts = lib.mapAttrs (name: _cmd: {
-    exec = ''exec ${name} "$@"'';
-  }) (config.stackpanel.devshell.commands or { });
+  tasksFromCommands = config.stackpanel.devshell._tasks or { };
+  tasks = tasksFromCommands // (config.stackpanel.tasks or { });
+
+  scriptsFromStackpanel = config.stackpanel.devshell._scripts or { };
+
+  mkTaskCommand = name: {
+    exec = ''
+      if command -v tasks >/dev/null 2>&1; then
+        exec tasks run ${lib.escapeShellArg name} -- "$@"
+      elif command -v devenv-tasks-fast-build >/dev/null 2>&1; then
+        exec devenv-tasks-fast-build run ${lib.escapeShellArg name} -- "$@"
+      elif command -v devenv >/dev/null 2>&1; then
+        exec devenv tasks run ${lib.escapeShellArg name} -- "$@"
+      else
+        echo "error: no devenv task runner found (tasks or devenv)" >&2
+        exit 127
+      fi
+    '';
+  };
+
+  scriptsFromCommands = lib.mapAttrs (name: _cmd: mkTaskCommand name) tasksFromCommands;
+  scripts = scriptsFromCommands // scriptsFromStackpanel;
 in
 {
   # Single entrypoint - imports all stackpanel modules
@@ -50,9 +69,10 @@ in
   ];
 
   config = {
-    packages = config.stackpanel.devshell.packages ++ (config.stackpanel.devshell._commandPkgs or [ ]);
+    packages = config.stackpanel.devshell.packages;
     env = config.stackpanel.devshell.env;
     enterShell = enterShell;
+    tasks = tasks;
     scripts = scripts;
   };
 }

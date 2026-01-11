@@ -27,15 +27,15 @@ Ports are computed from a base port (derived from project name):
 
 ```nix
 # devenv.nix
-stackpanel.apps = {
-  web = {};                          # Just port (basePort + 0)
-  server = { offset = 1; };          # Port with explicit offset
-  docs = { domain = "docs"; };       # Port + docs.localhost vhost
-  api = {
+stackpanel.apps = \{
+  web = \{\};                          # Just port (basePort + 0)
+  server = \{ offset = 1; \};          # Port with explicit offset
+  docs = \{ domain = "docs"; \};       # Port + docs.localhost vhost
+  api = \{
     domain = "api";
     tls = true;                      # Use TLS (requires Step CA)
-  };
-};
+  \};
+\};
 ```
 
 ## Environment Variables
@@ -50,12 +50,12 @@ Apps automatically generate environment variables:
 Generate GitHub Actions workflows declaratively:
 
 ```nix
-stackpanel.ci.github = {
+stackpanel.ci.github = \{
   enable = true;
-  checks = {
+  checks = \{
     enable = true;
     branches = ["main"];
     commands = ["nix flake check"];
-  };
-};
+  \};
+\};
 ```

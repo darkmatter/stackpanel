@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/github"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/nixconfig"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/nixgen"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/github"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixgen"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ var usersSyncCmd = &cobra.Command{
 
 This command:
 1. Fetches collaborators from the GitHub repository using gh CLI
-2. Fetches public SSH keys for each collaborator from github.com/<user>.keys
+2. Fetches public SSH keys for each collaborator from github.com/\<user\>.keys
 3. Generates .stackpanel/data/github-collaborators.nix with raw collaborator data
 4. Creates .stackpanel/data/users.nix that transforms data to stackpanel.users format
 

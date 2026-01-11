@@ -10,12 +10,26 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuccessRouteImport } from './routes/success'
-import { Route as LoginRouteImport } from './routes/login'
+import { Route as StudioRouteImport } from './routes/studio'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudioIndexRouteImport } from './routes/studio/index'
+import { Route as StudioVariablesRouteImport } from './routes/studio/variables'
+import { Route as StudioTerminalRouteImport } from './routes/studio/terminal'
+import { Route as StudioTeamRouteImport } from './routes/studio/team'
+import { Route as StudioTasksRouteImport } from './routes/studio/tasks'
+import { Route as StudioServicesRouteImport } from './routes/studio/services'
+import { Route as StudioSecretsRouteImport } from './routes/studio/secrets'
+import { Route as StudioPackagesRouteImport } from './routes/studio/packages'
+import { Route as StudioNetworkRouteImport } from './routes/studio/network'
+import { Route as StudioFilesRouteImport } from './routes/studio/files'
+import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions'
+import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
+import { Route as StudioDatabasesRouteImport } from './routes/studio/databases'
+import { Route as StudioCommandsRouteImport } from './routes/studio/commands'
+import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
 import { Route as ApiProvisionDbRouteImport } from './routes/api/provision-db'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
@@ -26,9 +40,9 @@ const SuccessRoute = SuccessRouteImport.update({
   path: '/success',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoRoute = DemoRouteImport.update({
@@ -52,9 +66,79 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudioIndexRoute = StudioIndexRouteImport.update({
-  id: '/studio/',
-  path: '/studio/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioVariablesRoute = StudioVariablesRouteImport.update({
+  id: '/variables',
+  path: '/variables',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioTerminalRoute = StudioTerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioTeamRoute = StudioTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioTasksRoute = StudioTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioServicesRoute = StudioServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioSecretsRoute = StudioSecretsRouteImport.update({
+  id: '/secrets',
+  path: '/secrets',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioPackagesRoute = StudioPackagesRouteImport.update({
+  id: '/packages',
+  path: '/packages',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioNetworkRoute = StudioNetworkRouteImport.update({
+  id: '/network',
+  path: '/network',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioFilesRoute = StudioFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioExtensionsRoute = StudioExtensionsRouteImport.update({
+  id: '/extensions',
+  path: '/extensions',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioDevshellsRoute = StudioDevshellsRouteImport.update({
+  id: '/devshells',
+  path: '/devshells',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioDatabasesRoute = StudioDatabasesRouteImport.update({
+  id: '/databases',
+  path: '/databases',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioCommandsRoute = StudioCommandsRouteImport.update({
+  id: '/commands',
+  path: '/commands',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioAppsRoute = StudioAppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
+  getParentRoute: () => StudioRoute,
 } as any)
 const ApiSeedSnapshotsRoute = ApiSeedSnapshotsRouteImport.update({
   id: '/api/seed-snapshots',
@@ -82,11 +166,25 @@ export interface FileRoutesByFullPath {
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
-  '/login': typeof LoginRoute
+  '/studio': typeof StudioRouteWithChildren
   '/success': typeof SuccessRoute
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
-  '/studio': typeof StudioIndexRoute
+  '/studio/apps': typeof StudioAppsRoute
+  '/studio/commands': typeof StudioCommandsRoute
+  '/studio/databases': typeof StudioDatabasesRoute
+  '/studio/devshells': typeof StudioDevshellsRoute
+  '/studio/extensions': typeof StudioExtensionsRoute
+  '/studio/files': typeof StudioFilesRoute
+  '/studio/network': typeof StudioNetworkRoute
+  '/studio/packages': typeof StudioPackagesRoute
+  '/studio/secrets': typeof StudioSecretsRoute
+  '/studio/services': typeof StudioServicesRoute
+  '/studio/tasks': typeof StudioTasksRoute
+  '/studio/team': typeof StudioTeamRoute
+  '/studio/terminal': typeof StudioTerminalRoute
+  '/studio/variables': typeof StudioVariablesRoute
+  '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
@@ -95,10 +193,23 @@ export interface FileRoutesByTo {
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
-  '/login': typeof LoginRoute
   '/success': typeof SuccessRoute
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio/apps': typeof StudioAppsRoute
+  '/studio/commands': typeof StudioCommandsRoute
+  '/studio/databases': typeof StudioDatabasesRoute
+  '/studio/devshells': typeof StudioDevshellsRoute
+  '/studio/extensions': typeof StudioExtensionsRoute
+  '/studio/files': typeof StudioFilesRoute
+  '/studio/network': typeof StudioNetworkRoute
+  '/studio/packages': typeof StudioPackagesRoute
+  '/studio/secrets': typeof StudioSecretsRoute
+  '/studio/services': typeof StudioServicesRoute
+  '/studio/tasks': typeof StudioTasksRoute
+  '/studio/team': typeof StudioTeamRoute
+  '/studio/terminal': typeof StudioTerminalRoute
+  '/studio/variables': typeof StudioVariablesRoute
   '/studio': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -109,10 +220,24 @@ export interface FileRoutesById {
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
-  '/login': typeof LoginRoute
+  '/studio': typeof StudioRouteWithChildren
   '/success': typeof SuccessRoute
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
+  '/studio/apps': typeof StudioAppsRoute
+  '/studio/commands': typeof StudioCommandsRoute
+  '/studio/databases': typeof StudioDatabasesRoute
+  '/studio/devshells': typeof StudioDevshellsRoute
+  '/studio/extensions': typeof StudioExtensionsRoute
+  '/studio/files': typeof StudioFilesRoute
+  '/studio/network': typeof StudioNetworkRoute
+  '/studio/packages': typeof StudioPackagesRoute
+  '/studio/secrets': typeof StudioSecretsRoute
+  '/studio/services': typeof StudioServicesRoute
+  '/studio/tasks': typeof StudioTasksRoute
+  '/studio/team': typeof StudioTeamRoute
+  '/studio/terminal': typeof StudioTerminalRoute
+  '/studio/variables': typeof StudioVariablesRoute
   '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -124,11 +249,25 @@ export interface FileRouteTypes {
     | '/ai'
     | '/dashboard'
     | '/demo'
-    | '/login'
+    | '/studio'
     | '/success'
     | '/api/provision-db'
     | '/api/seed-snapshots'
-    | '/studio'
+    | '/studio/apps'
+    | '/studio/commands'
+    | '/studio/databases'
+    | '/studio/devshells'
+    | '/studio/extensions'
+    | '/studio/files'
+    | '/studio/network'
+    | '/studio/packages'
+    | '/studio/secrets'
+    | '/studio/services'
+    | '/studio/tasks'
+    | '/studio/team'
+    | '/studio/terminal'
+    | '/studio/variables'
+    | '/studio/'
     | '/api/auth/$'
     | '/api/trpc/$'
   fileRoutesByTo: FileRoutesByTo
@@ -137,10 +276,23 @@ export interface FileRouteTypes {
     | '/ai'
     | '/dashboard'
     | '/demo'
-    | '/login'
     | '/success'
     | '/api/provision-db'
     | '/api/seed-snapshots'
+    | '/studio/apps'
+    | '/studio/commands'
+    | '/studio/databases'
+    | '/studio/devshells'
+    | '/studio/extensions'
+    | '/studio/files'
+    | '/studio/network'
+    | '/studio/packages'
+    | '/studio/secrets'
+    | '/studio/services'
+    | '/studio/tasks'
+    | '/studio/team'
+    | '/studio/terminal'
+    | '/studio/variables'
     | '/studio'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -150,10 +302,24 @@ export interface FileRouteTypes {
     | '/ai'
     | '/dashboard'
     | '/demo'
-    | '/login'
+    | '/studio'
     | '/success'
     | '/api/provision-db'
     | '/api/seed-snapshots'
+    | '/studio/apps'
+    | '/studio/commands'
+    | '/studio/databases'
+    | '/studio/devshells'
+    | '/studio/extensions'
+    | '/studio/files'
+    | '/studio/network'
+    | '/studio/packages'
+    | '/studio/secrets'
+    | '/studio/services'
+    | '/studio/tasks'
+    | '/studio/team'
+    | '/studio/terminal'
+    | '/studio/variables'
     | '/studio/'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -164,11 +330,10 @@ export interface RootRouteChildren {
   AiRoute: typeof AiRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
-  LoginRoute: typeof LoginRoute
+  StudioRoute: typeof StudioRouteWithChildren
   SuccessRoute: typeof SuccessRoute
   ApiProvisionDbRoute: typeof ApiProvisionDbRoute
   ApiSeedSnapshotsRoute: typeof ApiSeedSnapshotsRoute
-  StudioIndexRoute: typeof StudioIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
 }
@@ -182,11 +347,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo': {
@@ -219,10 +384,108 @@ declare module '@tanstack/react-router' {
     }
     '/studio/': {
       id: '/studio/'
-      path: '/studio'
-      fullPath: '/studio'
+      path: '/'
+      fullPath: '/studio/'
       preLoaderRoute: typeof StudioIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/variables': {
+      id: '/studio/variables'
+      path: '/variables'
+      fullPath: '/studio/variables'
+      preLoaderRoute: typeof StudioVariablesRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/terminal': {
+      id: '/studio/terminal'
+      path: '/terminal'
+      fullPath: '/studio/terminal'
+      preLoaderRoute: typeof StudioTerminalRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/team': {
+      id: '/studio/team'
+      path: '/team'
+      fullPath: '/studio/team'
+      preLoaderRoute: typeof StudioTeamRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/tasks': {
+      id: '/studio/tasks'
+      path: '/tasks'
+      fullPath: '/studio/tasks'
+      preLoaderRoute: typeof StudioTasksRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/services': {
+      id: '/studio/services'
+      path: '/services'
+      fullPath: '/studio/services'
+      preLoaderRoute: typeof StudioServicesRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/secrets': {
+      id: '/studio/secrets'
+      path: '/secrets'
+      fullPath: '/studio/secrets'
+      preLoaderRoute: typeof StudioSecretsRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/packages': {
+      id: '/studio/packages'
+      path: '/packages'
+      fullPath: '/studio/packages'
+      preLoaderRoute: typeof StudioPackagesRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/network': {
+      id: '/studio/network'
+      path: '/network'
+      fullPath: '/studio/network'
+      preLoaderRoute: typeof StudioNetworkRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/files': {
+      id: '/studio/files'
+      path: '/files'
+      fullPath: '/studio/files'
+      preLoaderRoute: typeof StudioFilesRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/extensions': {
+      id: '/studio/extensions'
+      path: '/extensions'
+      fullPath: '/studio/extensions'
+      preLoaderRoute: typeof StudioExtensionsRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/devshells': {
+      id: '/studio/devshells'
+      path: '/devshells'
+      fullPath: '/studio/devshells'
+      preLoaderRoute: typeof StudioDevshellsRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/databases': {
+      id: '/studio/databases'
+      path: '/databases'
+      fullPath: '/studio/databases'
+      preLoaderRoute: typeof StudioDatabasesRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/commands': {
+      id: '/studio/commands'
+      path: '/commands'
+      fullPath: '/studio/commands'
+      preLoaderRoute: typeof StudioCommandsRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/apps': {
+      id: '/studio/apps'
+      path: '/apps'
+      fullPath: '/studio/apps'
+      preLoaderRoute: typeof StudioAppsRouteImport
+      parentRoute: typeof StudioRoute
     }
     '/api/seed-snapshots': {
       id: '/api/seed-snapshots'
@@ -255,16 +518,54 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface StudioRouteChildren {
+  StudioAppsRoute: typeof StudioAppsRoute
+  StudioCommandsRoute: typeof StudioCommandsRoute
+  StudioDatabasesRoute: typeof StudioDatabasesRoute
+  StudioDevshellsRoute: typeof StudioDevshellsRoute
+  StudioExtensionsRoute: typeof StudioExtensionsRoute
+  StudioFilesRoute: typeof StudioFilesRoute
+  StudioNetworkRoute: typeof StudioNetworkRoute
+  StudioPackagesRoute: typeof StudioPackagesRoute
+  StudioSecretsRoute: typeof StudioSecretsRoute
+  StudioServicesRoute: typeof StudioServicesRoute
+  StudioTasksRoute: typeof StudioTasksRoute
+  StudioTeamRoute: typeof StudioTeamRoute
+  StudioTerminalRoute: typeof StudioTerminalRoute
+  StudioVariablesRoute: typeof StudioVariablesRoute
+  StudioIndexRoute: typeof StudioIndexRoute
+}
+
+const StudioRouteChildren: StudioRouteChildren = {
+  StudioAppsRoute: StudioAppsRoute,
+  StudioCommandsRoute: StudioCommandsRoute,
+  StudioDatabasesRoute: StudioDatabasesRoute,
+  StudioDevshellsRoute: StudioDevshellsRoute,
+  StudioExtensionsRoute: StudioExtensionsRoute,
+  StudioFilesRoute: StudioFilesRoute,
+  StudioNetworkRoute: StudioNetworkRoute,
+  StudioPackagesRoute: StudioPackagesRoute,
+  StudioSecretsRoute: StudioSecretsRoute,
+  StudioServicesRoute: StudioServicesRoute,
+  StudioTasksRoute: StudioTasksRoute,
+  StudioTeamRoute: StudioTeamRoute,
+  StudioTerminalRoute: StudioTerminalRoute,
+  StudioVariablesRoute: StudioVariablesRoute,
+  StudioIndexRoute: StudioIndexRoute,
+}
+
+const StudioRouteWithChildren =
+  StudioRoute._addFileChildren(StudioRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
-  LoginRoute: LoginRoute,
+  StudioRoute: StudioRouteWithChildren,
   SuccessRoute: SuccessRoute,
   ApiProvisionDbRoute: ApiProvisionDbRoute,
   ApiSeedSnapshotsRoute: ApiSeedSnapshotsRoute,
-  StudioIndexRoute: StudioIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
 }

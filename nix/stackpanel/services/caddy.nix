@@ -85,6 +85,11 @@ let
     echo "Your dev site is available at: http://$domain"
     echo "Start your dev server on port $port"
   '';
+  # Get apps with domains configured
+  appsWithDomains = lib.filterAttrs (_: app: (app.domain or null) != null) (
+    config.stackpanel.apps or { }
+  );
+  domainCount = lib.length (lib.attrNames appsWithDomains);
 in
 {
   config = lib.mkIf cfg.enable {
@@ -105,5 +110,79 @@ in
         fi
       ''
     ];
+
+    # Register Caddy extension with UI panels
+    stackpanel.extensions.caddy = {
+      name = "Caddy";
+      enabled = true;
+      priority = 20;
+      tags = [
+        "networking"
+        "proxy"
+      ];
+
+      panels = [
+        {
+          id = "caddy-status";
+          title = "Caddy Reverse Proxy";
+          type = "PANEL_TYPE_STATUS";
+          order = 1;
+          fields = [
+            {
+              name = "metrics";
+              type = "FIELD_TYPE_STRING";
+              value = builtins.toJSON [
+                {
+                  label = "Project";
+                  value = cfg.project-name;
+                  status = "ok";
+                }
+                {
+                  label = "Port";
+                  value = toString projectPort;
+                  status = "ok";
+                }
+                {
+                  label = "TLS";
+                  value = if cfg.use-step-tls && stepCfg.enable then "Enabled (Step CA)" else "Disabled";
+                  status = if cfg.use-step-tls && stepCfg.enable then "ok" else "warning";
+                }
+                {
+                  label = "Virtual Hosts";
+                  value = toString domainCount;
+                  status = "ok";
+                }
+              ];
+            }
+          ];
+        }
+        {
+          id = "caddy-apps";
+          title = "Virtual Hosts";
+          type = "PANEL_TYPE_APPS_GRID";
+          order = 2;
+          fields = [
+            {
+              name = "columns";
+              type = "FIELD_TYPE_COLUMNS";
+              value = builtins.toJSON [
+                "name"
+                "port"
+              ];
+            }
+          ];
+        }
+      ];
+
+      # Per-app data for apps with domains
+      apps = lib.mapAttrs (name: app: {
+        enabled = true;
+        config = {
+          domain = app.domain or "";
+          url = app.url or "";
+          tls = if app.tls or false then "true" else "false";
+        };
+      }) appsWithDomains;
+    };
   };
 }

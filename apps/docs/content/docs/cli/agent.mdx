@@ -6,14 +6,13 @@ icon: Terminal
 
 # stackpanel agent
 
-Run the local Stackpanel agent (stackpanel-agent).
+Run the local Stackpanel agent server.
 
 The agent runs on your machine and exposes a localhost API used by the Stackpanel web UI
 to run commands, evaluate Nix, and read/write files in the project.
 
-This command will:
-  - Prefer an installed 'stackpanel-agent' binary in PATH
-  - Otherwise fall back to 'go run .' from the repo's apps/agent/ directory (dev mode)
+The agent auto-detects projects by looking for .stackpanel/config.nix in the current
+directory or parent directories.
 
 ## Usage
 
@@ -26,9 +25,9 @@ stackpanel agent
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--config` | `string` | _none_ | Path to agent config file |
 | `--debug` | `bool` | `false` | Enable debug logging |
-| `--project-root` | `string` | _none_ | Project root to run the agent in (defaults to current working directory) |
+| `--port` | `int` | `9876` | Port to listen on |
+| `--project-root, -p` | `string` | _none_ | Project root (defaults to auto-detect from current directory) |
 
 
 ## Global Flags

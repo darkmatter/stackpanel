@@ -24,10 +24,10 @@ This module provides project-local database and infrastructure services with lif
 Database service with automatic database creation.
 
 ```nix
-stackpanel.globalServices.postgres = {
+stackpanel.globalServices.postgres = \{
   enable = true;
   databases = ["myapp" "myapp_test"];
-};
+\};
 ```
 
 **Environment**: `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`
@@ -57,11 +57,11 @@ stackpanel.globalServices.minio.enable = true;
 Reverse proxy with virtual hosts and optional TLS.
 
 ```nix
-stackpanel.caddy = {
+stackpanel.caddy = \{
   enable = true;
   project-name = "myapp";
   use-step-tls = true;
-};
+\};
 ```
 
 **Commands**: `caddy-start`, `caddy-stop`, `caddy-add-site`, `caddy-list-sites`
@@ -71,13 +71,13 @@ stackpanel.caddy = {
 Passwordless AWS access using Step CA device certificates.
 
 ```nix
-stackpanel.aws.roles-anywhere = {
+stackpanel.aws.roles-anywhere = \{
   enable = true;
   account-id = "123456789";
   role-name = "developer";
   trust-anchor-arn = "arn:aws:rolesanywhere:...";
   profile-arn = "arn:aws:rolesanywhere:...";
-};
+\};
 ```
 
 **Commands**: `check-aws-cert`, `aws-creds-env`

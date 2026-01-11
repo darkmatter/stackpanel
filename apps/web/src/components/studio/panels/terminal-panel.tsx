@@ -1,10 +1,12 @@
 "use client";
 
 import { Maximize2, Minimize2, Plus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAgentContext } from "@/lib/agent-provider";
+import type { ExecResult } from "@/lib/agent";
 
 interface TerminalLine {
 	type: "input" | "output" | "error" | "success";
@@ -21,115 +23,13 @@ const initialTabs: Tab[] = [
 	{
 		id: "1",
 		name: "main",
-		lines: [
-			{ type: "output", content: "Welcome to StackPanel Terminal" },
-			{ type: "output", content: "Type 'help' for available commands" },
-			{ type: "output", content: "" },
-			{ type: "input", content: "$ x status" },
-			{ type: "success", content: "✓ All services operational" },
-			{ type: "output", content: "  api-gateway      running   3/3 replicas" },
-			{ type: "output", content: "  auth-service     running   2/2 replicas" },
-			{ type: "output", content: "  worker-service   running   4/4 replicas" },
-			{ type: "output", content: "" },
-		],
+			lines: [
+				{ type: "output", content: "Welcome to the Stackpanel terminal." },
+				{ type: "output", content: "Run any shell command via the agent." },
+				{ type: "output", content: "" },
+			],
 	},
 ];
-
-const commandResponses: Record<string, TerminalLine[]> = {
-	help: [
-		{ type: "output", content: "Available commands:" },
-		{
-			type: "output",
-			content:
-				"  create-app <name>     Create a new app with turborepo template",
-		},
-		{
-			type: "output",
-			content: "  x install <package>   Install and configure a package",
-		},
-		{
-			type: "output",
-			content: "  x status              Show status of all services",
-		},
-		{ type: "output", content: "  x deploy <service>    Deploy a service" },
-		{
-			type: "output",
-			content: "  x logs <service>      Tail logs for a service",
-		},
-		{
-			type: "output",
-			content: "  db connect <name>     Connect to a database",
-		},
-		{ type: "output", content: "  secrets list          List all secrets" },
-		{ type: "output", content: "  secrets get <key>     Get a secret value" },
-		{ type: "output", content: "" },
-	],
-	"create-app": [
-		{ type: "success", content: "✓ Creating new app..." },
-		{ type: "output", content: "  Cloning turborepo template..." },
-		{ type: "success", content: "✓ Created repo acme-corp/my-app" },
-		{ type: "success", content: "✓ Applied stack configuration" },
-		{ type: "success", content: "✓ Configured CI/CD pipeline" },
-		{ type: "success", content: "✓ Added to StackPanel" },
-		{ type: "output", content: "" },
-		{ type: "output", content: "Next steps:" },
-		{ type: "output", content: "  cd my-app && pnpm install" },
-		{ type: "output", content: "  pnpm dev" },
-		{ type: "output", content: "" },
-	],
-	"x install neon": [
-		{ type: "success", content: "✓ Installing Neon..." },
-		{ type: "output", content: "  Adding @neondatabase/serverless..." },
-		{ type: "success", content: "✓ Added DATABASE_URL to secrets" },
-		{ type: "success", content: "✓ Created db/schema.ts" },
-		{ type: "success", content: "✓ Created db/migrations/" },
-		{ type: "output", content: "" },
-		{
-			type: "output",
-			content: "Neon is ready! Run 'db migrate' to apply migrations.",
-		},
-		{ type: "output", content: "" },
-	],
-	"x status": [
-		{ type: "success", content: "✓ All services operational" },
-		{ type: "output", content: "  api-gateway      running   3/3 replicas" },
-		{ type: "output", content: "  auth-service     running   2/2 replicas" },
-		{ type: "output", content: "  worker-service   running   4/4 replicas" },
-		{ type: "output", content: "  frontend         running   2/2 replicas" },
-		{ type: "output", content: "" },
-	],
-	"secrets list": [
-		{ type: "output", content: "Secrets (encrypted with age):" },
-		{
-			type: "output",
-			content: "  DATABASE_URL        production   rotated 3d ago",
-		},
-		{
-			type: "output",
-			content: "  REDIS_URL           production   rotated 1w ago",
-		},
-		{
-			type: "output",
-			content: "  JWT_SECRET          production   rotated 30d ago",
-		},
-		{
-			type: "output",
-			content: "  STRIPE_SECRET_KEY   production   rotated 60d ago",
-		},
-		{ type: "output", content: "" },
-	],
-	"db connect main-postgres": [
-		{ type: "success", content: "✓ Connecting to main-postgres..." },
-		{ type: "output", content: "  Using mTLS certificate from internal CA" },
-		{ type: "success", content: "✓ Connected to PostgreSQL 15.2" },
-		{ type: "output", content: "" },
-		{ type: "output", content: "psql (15.2)" },
-		{ type: "output", content: 'Type "help" for help.' },
-		{ type: "output", content: "" },
-		{ type: "output", content: "main-postgres=# " },
-	],
-	clear: [],
-};
 
 export function TerminalPanel() {
 	const [tabs, setTabs] = useState<Tab[]>(initialTabs);
@@ -138,53 +38,109 @@ export function TerminalPanel() {
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const terminalRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+	const { exec, isConnected } = useAgentContext();
 
 	const currentTab = tabs.find((t) => t.id === activeTab);
-
 	useEffect(() => {
 		if (terminalRef.current) {
 			terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
 		}
 	}, [currentTab?.lines]);
 
-	const handleCommand = (command: string) => {
-		if (!currentTab) return;
+	const appendLines = useCallback(
+		(tabId: string, lines: TerminalLine[]) => {
+			setTabs((prev) =>
+				prev.map((tab) =>
+					tab.id === tabId
+						? { ...tab, lines: [...tab.lines, ...lines] }
+						: tab,
+				),
+			);
+		},
+		[],
+	);
 
-		const trimmedCommand = command.trim().toLowerCase();
-
+	const setTabLines = useCallback((tabId: string, lines: TerminalLine[]) => {
 		setTabs((prev) =>
-			prev.map((tab) => {
-				if (tab.id !== activeTab) return tab;
-
-				const newLines = [
-					...tab.lines,
-					{ type: "input" as const, content: `$ ${command}` },
-				];
-
-				if (trimmedCommand === "clear") {
-					return { ...tab, lines: [] };
-				}
-
-				const response = commandResponses[trimmedCommand] ||
-					commandResponses[trimmedCommand.split(" ").slice(0, 2).join(" ")] ||
-					commandResponses[trimmedCommand.split(" ")[0]] || [
-						{
-							type: "error" as const,
-							content: `Command not found: ${command}`,
-						},
-						{
-							type: "output" as const,
-							content: "Type 'help' for available commands",
-						},
-						{ type: "output" as const, content: "" },
-					];
-
-				return { ...tab, lines: [...newLines, ...response] };
-			}),
+			prev.map((tab) => (tab.id === tabId ? { ...tab, lines } : tab)),
 		);
+	}, []);
 
-		setInput("");
-	};
+	const streamExecOutput = useCallback(
+		async (tabId: string, result: ExecResult) => {
+			const outputLines = result.stdout
+				.split("\n")
+				.filter((line) => line !== "")
+				.map((line) => ({ type: "output" as const, content: line }));
+			const errorLines = result.stderr
+				.split("\n")
+				.filter((line) => line !== "")
+				.map((line) => ({ type: "error" as const, content: line }));
+
+			const lines =
+				outputLines.length === 0 && errorLines.length === 0
+					? [
+							{
+								type: result.exit_code === 0 ? "success" : "error",
+								content:
+									result.exit_code === 0
+										? "✓ Command completed"
+										: `Command exited with status ${result.exit_code}`,
+							},
+						]
+					: [...outputLines, ...errorLines];
+
+			for (const line of lines) {
+				appendLines(tabId, [line]);
+				await new Promise((resolve) => requestAnimationFrame(resolve));
+			}
+		},
+		[appendLines],
+	);
+
+	const handleCommand = useCallback(
+		async (command: string) => {
+			if (!currentTab) return;
+
+			const trimmedCommand = command.trim();
+			if (!trimmedCommand) return;
+
+			const tabId = currentTab.id;
+			appendLines(tabId, [
+				{ type: "input" as const, content: `$ ${command}` },
+			]);
+			setInput("");
+
+			if (trimmedCommand.toLowerCase() === "clear") {
+				setTabLines(tabId, []);
+				return;
+			}
+
+				try {
+					if (!isConnected) {
+						throw new Error("Not connected to the agent");
+					}
+
+					const result = (await exec("bash", ["-lc", trimmedCommand])) as ExecResult;
+					await streamExecOutput(tabId, result);
+				} catch (err) {
+				const message =
+					err instanceof Error ? err.message : "Command failed";
+				appendLines(tabId, [
+					{ type: "error", content: message },
+					{ type: "output", content: "" },
+				]);
+			}
+		},
+		[
+				appendLines,
+				currentTab,
+				exec,
+				isConnected,
+				setTabLines,
+				streamExecOutput,
+			],
+		);
 
 	const addTab = () => {
 		const newId = String(tabs.length + 1);
@@ -194,7 +150,7 @@ export function TerminalPanel() {
 				id: newId,
 				name: `shell-${newId}`,
 				lines: [
-					{ type: "output", content: "Welcome to StackPanel Terminal" },
+					{ type: "output", content: "New terminal session." },
 					{ type: "output", content: "" },
 				],
 			},
@@ -306,10 +262,10 @@ export function TerminalPanel() {
 								className="flex-1 bg-transparent text-foreground outline-none"
 								onChange={(e) => setInput(e.target.value)}
 								onKeyDown={(e) => {
-									if (e.key === "Enter" && input.trim()) {
-										handleCommand(input);
-									}
-								}}
+								if (e.key === "Enter" && input.trim()) {
+									handleCommand(input);
+								}
+							}}
 								ref={inputRef}
 								type="text"
 								value={input}
@@ -321,32 +277,9 @@ export function TerminalPanel() {
 
 			<Card>
 				<CardContent className="p-4">
-					<p className="mb-3 text-muted-foreground text-sm">
-						Try these commands:
+					<p className="text-muted-foreground text-sm">
+						Enter any shell command to run via the agent.
 					</p>
-					<div className="flex flex-wrap gap-2">
-						{[
-							"help",
-							"x status",
-							"create-app my-app",
-							"x install neon",
-							"secrets list",
-							"db connect main-postgres",
-						].map((cmd) => (
-							<Button
-								className="bg-transparent font-mono text-xs"
-								key={cmd}
-								onClick={() => {
-									setInput(cmd);
-									inputRef.current?.focus();
-								}}
-								size="sm"
-								variant="outline"
-							>
-								{cmd}
-							</Button>
-						))}
-					</div>
 				</CardContent>
 			</Card>
 		</div>

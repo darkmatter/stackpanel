@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/userconfig"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/rs/zerolog/log"
 )
 

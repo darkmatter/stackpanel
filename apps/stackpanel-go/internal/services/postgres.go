@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
 // PostgresService manages the PostgreSQL service

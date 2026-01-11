@@ -24,60 +24,53 @@ export declare type App = Message<"stackpanel.db.App"> & {
   name: string;
 
   /**
+   * Description of the app
+   *
+   * @generated from field: optional string description = 2;
+   */
+  description?: string;
+
+  /**
    * Relative path to the app directory
    *
-   * @generated from field: string path = 2;
+   * @generated from field: string path = 3;
    */
   path: string;
 
   /**
-   * Custom install command (overrides default behavior)
+   * App type/runtime (bun, go, python, rust, etc.)
    *
-   * @generated from field: optional string install_command = 3;
+   * @generated from field: optional string type = 4;
    */
-  installCommand?: string;
+  type?: string;
 
   /**
-   * Custom build command (overrides default behavior)
+   * Development server port
    *
-   * @generated from field: optional string build_command = 4;
+   * @generated from field: optional int32 port = 5;
    */
-  buildCommand?: string;
+  port?: number;
 
   /**
-   * Custom code formatting command
+   * Local development domain
    *
-   * @generated from field: optional string format_command = 5;
+   * @generated from field: optional string domain = 6;
    */
-  formatCommand?: string;
+  domain?: string;
 
   /**
-   * Custom linting command
+   * Tasks for this app (key = task name)
    *
-   * @generated from field: optional string lint_command = 6;
+   * @generated from field: map<string, stackpanel.db.AppTask> tasks = 7;
    */
-  lintCommand?: string;
+  tasks: { [key: string]: AppTask };
 
   /**
-   * Custom test command
+   * Environment variables (key = variable name)
    *
-   * @generated from field: optional string test_command = 7;
+   * @generated from field: map<string, stackpanel.db.AppVariable> variables = 8;
    */
-  testCommand?: string;
-
-  /**
-   * Custom start/development command
-   *
-   * @generated from field: optional string start_command = 8;
-   */
-  startCommand?: string;
-
-  /**
-   * Environments associated with this app
-   *
-   * @generated from field: repeated stackpanel.db.AppEnvironment environments = 9;
-   */
-  environments: AppEnvironment[];
+  variables: { [key: string]: AppVariable };
 };
 
 /**
@@ -85,6 +78,94 @@ export declare type App = Message<"stackpanel.db.App"> & {
  * Use `create(AppSchema)` to create a new message.
  */
 export declare const AppSchema: GenMessage<App>;
+
+/**
+ * Command configuration
+ *
+ * @generated from message stackpanel.db.AppTask
+ */
+export declare type AppTask = Message<"stackpanel.db.AppTask"> & {
+  /**
+   * Corresponds to CMD in  `turbo task run CMD`
+   *
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * (optional) Description of the command
+   *
+   * @generated from field: optional string description = 2;
+   */
+  description?: string;
+
+  /**
+   * Command to run
+   *
+   * @generated from field: string command = 3;
+   */
+  command: string;
+
+  /**
+   * Environment variables to set
+   *
+   * @generated from field: map<string, stackpanel.db.AppVariable> env = 4;
+   */
+  env: { [key: string]: AppVariable };
+};
+
+/**
+ * Describes the message stackpanel.db.AppTask.
+ * Use `create(AppTaskSchema)` to create a new message.
+ */
+export declare const AppTaskSchema: GenMessage<AppTask>;
+
+/**
+ * Environment variable configuration
+ *
+ * @generated from message stackpanel.db.AppVariable
+ */
+export declare type AppVariable = Message<"stackpanel.db.AppVariable"> & {
+  /**
+   * value will be passed to app using this key
+   *
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * (optional) Description of the variable
+   *
+   * @generated from field: optional string description = 2;
+   */
+  description?: string;
+
+  /**
+   * Type of environment variable
+   *
+   * @generated from field: stackpanel.db.AppVariableType type = 3;
+   */
+  type: AppVariableType;
+
+  /**
+   *
+   * - When type = "LITERAL", the value will be passed as is.
+   * - When type = "VARIABLE", should refer to the key of the variable or secret.
+   * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
+   *   compatible descriptor, for example if you want to get a value from AWS Parameter
+   *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
+   *
+   *
+   * @generated from field: string value = 4;
+   */
+  value: string;
+};
+
+/**
+ * Describes the message stackpanel.db.AppVariable.
+ * Use `create(AppVariableSchema)` to create a new message.
+ */
+export declare const AppVariableSchema: GenMessage<AppVariable>;
 
 /**
  * Map of app identifier to app configuration
@@ -107,34 +188,34 @@ export declare type Apps = Message<"stackpanel.db.Apps"> & {
 export declare const AppsSchema: GenMessage<Apps>;
 
 /**
- * Environments an app can be associated with
+ * Type of environment variable
  *
- * @generated from enum stackpanel.db.AppEnvironment
+ * @generated from enum stackpanel.db.AppVariableType
  */
-export enum AppEnvironment {
+export enum AppVariableType {
   /**
-   * @generated from enum value: APP_ENVIRONMENT_UNSPECIFIED = 0;
+   * @generated from enum value: APP_VARIABLE_TYPE_UNSPECIFIED = 0;
    */
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: APP_ENVIRONMENT_DEV = 1;
+   * @generated from enum value: APP_VARIABLE_TYPE_LITERAL = 1;
    */
-  DEV = 1,
+  LITERAL = 1,
 
   /**
-   * @generated from enum value: APP_ENVIRONMENT_STAGING = 2;
+   * @generated from enum value: APP_VARIABLE_TYPE_VARIABLE = 2;
    */
-  STAGING = 2,
+  VARIABLE = 2,
 
   /**
-   * @generated from enum value: APP_ENVIRONMENT_PRODUCTION = 3;
+   * @generated from enum value: APP_VARIABLE_TYPE_VALS = 3;
    */
-  PRODUCTION = 3,
+  VALS = 3,
 }
 
 /**
- * Describes the enum stackpanel.db.AppEnvironment.
+ * Describes the enum stackpanel.db.AppVariableType.
  */
-export declare const AppEnvironmentSchema: GenEnum<AppEnvironment>;
+export declare const AppVariableTypeSchema: GenEnum<AppVariableType>;
 

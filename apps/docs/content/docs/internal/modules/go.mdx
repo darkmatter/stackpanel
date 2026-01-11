@@ -15,7 +15,7 @@ config.stackpanel.apps with go.enable = true.
 ```nix
 - Root go.mod at repository root (monorepo/workspace style)
 - Single gomod2nix.toml at root (generated via: gomod2nix generate)
-- Apps are subpackages (e.g., apps/cli, apps/agent)
+- Apps are subpackages (e.g., apps/stackpanel-go)
 ```
 
 
@@ -40,15 +40,15 @@ Features per Go app:
 
 App definition example:
 ```nix
-stackpanel.apps.cli = {
-  path = "apps/cli";          # Path relative to repo root
-  go = {
+stackpanel.apps.stackpanel-go = \{
+  path = "apps/stackpanel-go";  # Path relative to repo root
+  go = \{
     enable = true;
     binaryName = "stackpanel";  # Rename binary (optional)
     ldflags = [ "-s" "-w" ];    # Optional linker flags
     generateFiles = true;       # Generate package.json, .air.toml, tools.go
-  };
-};
+  \};
+\};
 ```
 
 

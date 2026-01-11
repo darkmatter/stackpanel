@@ -12,6 +12,10 @@
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.2511.904620";
     git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
+    agenix.url = "github:ryantm/agenix";
+    agenix.inputs.nixpkgs.follows = "nixpkgs";
+    agenix-rekey.url = "github:oddlama/agenix-rekey";
+    agenix-rekey.inputs.nixpkgs.follows = "nixpkgs";
     flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
     flake-parts.url = "https://flakehub.com/f/hercules-ci/flake-parts/0.1.424";
     devenv.url = "github:cachix/devenv";
@@ -103,14 +107,15 @@
               inherit system;
               overlays = [ inputs.gomod2nix.overlays.default ];
             };
-
+            debug = true;
+            # combine devenv packages and devshell-bin which contains stackpanel
+            # packages
             packages = packages // {
               inherit devshell-bin;
             };
 
             checks = {
-              stackpanel-cli = config.packages.stackpanel-cli;
-              stackpanel-agent = config.packages.stackpanel-agent;
+              stackpanel-go = config.packages.stackpanel-go;
               default-package = config.packages.default;
 
               # Smoke tests for devenv and native shells
@@ -189,6 +194,30 @@
             templates
             ;
           stackpanelOptions = exports.mkStackpanelOptions nixpkgs;
+
+          # Evaluated stackpanel config for agent/CLI access
+          # Usage: nix eval --impure --json .#stackpanelConfig
+          # Only includes serializable attributes (no functions, derivations, etc.)
+          stackpanelConfig =
+            let
+              pkgs = import nixpkgs { system = "aarch64-darwin"; };
+              lib = pkgs.lib;
+              mergedConfig = import ./nix/flake/merged-config.nix { inherit pkgs lib inputs; };
+              cfg = mergedConfig.stackpanel;
+
+              # Filter to only serializable attributes for the UI
+              # Exclude: appModules (functions), devshell (has derivations), go.packages, users (has external file)
+              serializableKeys = [
+                "name"
+                "github"
+                "debug"
+                "enable"
+                "extensions"
+                "ports"
+                "motd"
+              ];
+            in
+            lib.filterAttrs (k: _: builtins.elem k serializableKeys) cfg;
         };
       }
     );
