@@ -63,6 +63,7 @@ export function useInstalledPackages(
   const { host = "localhost", port = 9876, pollInterval = 0 } = options;
 
   const [packages, setPackages] = useState<InstalledPackageInfo[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -80,9 +81,41 @@ export function useInstalledPackages(
   // Fetch installed packages
   const fetchPackages = useCallback(async () => {
     try {
+      setIsLoading(true);
       const client = getClient();
-      const result = await client.getInstalledPackages();
-      setPackages(result.packages);
+      const pageSize = 100;
+      let offset = 0;
+      let total = 0;
+      let allPackages: InstalledPackageInfo[] = [];
+
+      while (true) {
+        const result = await client.getInstalledPackages({
+          limit: pageSize,
+          offset,
+        });
+
+        if (offset === 0) {
+          total = result.count ?? result.packages.length;
+        }
+
+        if (result.packages.length === 0) {
+          break;
+        }
+
+        allPackages = [...allPackages, ...result.packages];
+        offset += result.packages.length;
+
+        if (allPackages.length >= total) {
+          break;
+        }
+      }
+
+      if (total === 0) {
+        total = allPackages.length;
+      }
+
+      setPackages(allPackages);
+      setTotalCount(total);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -126,12 +159,20 @@ export function useInstalledPackages(
     () => ({
       packages,
       installedSet,
-      count: packages.length,
+      count: totalCount,
       isLoading,
       error,
       refresh: fetchPackages,
       isInstalled,
     }),
-    [packages, installedSet, isLoading, error, fetchPackages, isInstalled]
+    [
+      packages,
+      installedSet,
+      totalCount,
+      isLoading,
+      error,
+      fetchPackages,
+      isInstalled,
+    ]
   );
 }

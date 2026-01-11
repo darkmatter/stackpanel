@@ -583,10 +583,21 @@ export class AgentHttpClient {
   /**
    * Get installed packages from the devenv/stackpanel config
    */
-  async getInstalledPackages(): Promise<InstalledPackagesResponse> {
-    const res = await fetch(`${this.baseUrl}/api/nixpkgs/installed`, {
-      headers: this.getHeaders(false),
-    });
+  async getInstalledPackages(options: {
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<InstalledPackagesResponse> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) params.set("limit", String(options.limit));
+    if (options.offset !== undefined)
+      params.set("offset", String(options.offset));
+    const query = params.toString();
+    const res = await fetch(
+      `${this.baseUrl}/api/nixpkgs/installed${query ? `?${query}` : ""}`,
+      {
+        headers: this.getHeaders(false),
+      },
+    );
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;

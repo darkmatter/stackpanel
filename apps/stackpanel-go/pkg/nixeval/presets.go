@@ -72,48 +72,25 @@ in
 `
 )
 
-// InstalledPackagesExpr builds a Nix expression to get installed packages from a flake's devshell.
+// InstalledPackagesExpr builds a Nix expression to get installed packages from a flake.
+// Uses the pre-computed .#stackpanelPackages flake output for fast evaluation.
 // The projectRoot is baked directly into the expression to avoid relying on environment variables.
 func InstalledPackagesExpr(projectRoot string) string {
 	return fmt.Sprintf(`
 let
-  system = builtins.currentSystem;
-
-  # Get the flake and extract devshell packages
   flake = builtins.getFlake "%s";
-
-  # Try to get packages from the devshell's passthru
-  devShell = flake.devShells.${system}.default or null;
-  devshellConfig = if devShell != null then devShell.passthru.devshellConfig or null else null;
-  extraPackages = if devShell != null then devShell.passthru.extraPackages or [] else [];
-
-  # Get packages from devshellConfig (this is stackpanel.devshell config)
-  configPackages = if devshellConfig != null then devshellConfig.packages or [] else [];
-  commandPkgs = if devshellConfig != null then devshellConfig._commandPkgs or [] else [];
-
-  # Combine all package sources
-  allPkgs = configPackages ++ commandPkgs ++ extraPackages;
-
-  # Convert a package derivation to serializable form
-  mkPackageInfo = pkg:
-    if builtins.isAttrs pkg then {
-      name = pkg.pname or pkg.name or "unknown";
-      version = pkg.version or "";
-      attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
-    } else if builtins.isString pkg then {
-      name = pkg;
-      version = "";
-      attrPath = pkg;
-    } else {
-      name = "unknown";
-      version = "";
-      attrPath = "";
-    };
-
 in
-  if devshellConfig != null
-  then builtins.map mkPackageInfo allPkgs
-  else []
+  # Use pre-computed stackpanelPackages if available (fast path)
+  if flake ? stackpanelPackages then
+    flake.stackpanelPackages
+  # Fallback: try to get from devshell passthru (slower)
+  else
+    let
+      system = builtins.currentSystem;
+      devShell = flake.devShells.${system}.default or null;
+      stackpanelPackages = if devShell != null then devShell.passthru.stackpanelPackages or null else null;
+    in
+      if stackpanelPackages != null then stackpanelPackages else []
 `, projectRoot)
 }
 

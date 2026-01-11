@@ -33,6 +33,9 @@ type Server struct {
 
 	// File watcher for config changes
 	watcher *fsnotify.Watcher
+
+	// FlakeWatcher for monitoring .#stackpanelConfig and .#stackpanelPackages
+	flakeWatcher *FlakeWatcher
 }
 
 // New creates a new server instance.
@@ -206,6 +209,20 @@ func (s *Server) Start() error {
 	// Start watching config files for changes (only if we have a project)
 	if s.config.ProjectRoot != "" {
 		go s.watchConfigFiles()
+
+		// Start the FlakeWatcher for live .#stackpanelConfig and .#stackpanelPackages evaluation
+		fw, err := NewFlakeWatcher(FlakeWatcherConfig{
+			ProjectRoot: s.config.ProjectRoot,
+			Server:      s,
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to create FlakeWatcher, config/packages watching disabled")
+		} else {
+			s.flakeWatcher = fw
+			if err := fw.Start(); err != nil {
+				log.Warn().Err(err).Msg("Failed to start FlakeWatcher")
+			}
+		}
 	}
 
 	return s.httpServer.ListenAndServe()
@@ -213,6 +230,9 @@ func (s *Server) Start() error {
 
 // Stop gracefully shuts down the server.
 func (s *Server) Stop() {
+	if s.flakeWatcher != nil {
+		_ = s.flakeWatcher.Stop()
+	}
 	if s.watcher != nil {
 		_ = s.watcher.Close()
 	}
@@ -258,6 +278,23 @@ func (s *Server) reinitializeExecutor() error {
 
 	// Restart file watcher for new project
 	go s.watchConfigFiles()
+
+	// Restart FlakeWatcher for new project
+	if s.flakeWatcher != nil {
+		_ = s.flakeWatcher.Stop()
+	}
+	fw, err := NewFlakeWatcher(FlakeWatcherConfig{
+		ProjectRoot: s.config.ProjectRoot,
+		Server:      s,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to create FlakeWatcher for new project")
+	} else {
+		s.flakeWatcher = fw
+		if err := fw.Start(); err != nil {
+			log.Warn().Err(err).Msg("Failed to start FlakeWatcher for new project")
+		}
+	}
 
 	return nil
 }

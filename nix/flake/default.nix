@@ -13,44 +13,16 @@
 #     inputs.devenv.flakeModule
 #     inputs.stackpanel.flakeModules.default
 #   ];
+#
+# Outputs provided:
+#   - stackpanelConfig: Serializable config for agent/CLI access
+#     Usage: nix eval --impure --json .#stackpanelConfig
 # ==============================================================================
-# Stackpanel flake-parts module
-#
-# This module is for USERS to import into their flakes.
-# It provides stackpanel options when used with devenv + flake-parts.
-#
-# Usage in user's flake.nix:
-#
-#   {
-#     inputs = {
-#       nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-#       flake-parts.url = "github:hercules-ci/flake-parts";
-#       devenv.url = "github:cachix/devenv";
-#       stackpanel.url = "github:darkmatter/stackpanel";
-#     };
-#
-#     outputs = inputs@{ flake-parts, ... }:
-#       flake-parts.lib.mkFlake { inherit inputs; } {
-#         imports = [
-#           inputs.devenv.flakeModule
-#           inputs.stackpanel.flakeModules.default  # <-- this module
-#         ];
-#
-#         systems = [ "x86_64-linux" "aarch64-darwin" ];
-#
-#         perSystem = { ... }: {
-#           devenv.shells.default = {
-#             imports = [ inputs.stackpanel.devenvModules.default ];
-#             stackpanel.enable = true;
-#             # User's stackpanel config here
-#           };
-#         };
-#       };
-#   }
-#
-# This uses the "importApply" pattern to get the localFlake reference.
-# The outer function receives args from importApply in flake.nix.
-localFlake:
+{
+  localFlake,
+  withSystem,
+  devshell,
+}:
 # The inner function is the actual flake-parts module.
 # These args (self, inputs, lib, etc.) refer to the USER's flake.
 {
@@ -60,6 +32,22 @@ localFlake:
   config,
   ...
 }:
+let
+  # Helper to evaluate full stackpanel config from a config module
+  # This evaluates the complete module system with user's config
+  mkEvaluatedConfig =
+    { pkgs, configModule }:
+    let
+      evaluated = lib.evalModules {
+        modules = [
+          ../stackpanel
+          configModule
+        ];
+        specialArgs = { inherit pkgs lib inputs; };
+      };
+    in
+    evaluated.config.stackpanel;
+in
 {
   imports = [
     # Import stackpanel options (pkgs-free, safe for flake-parts top-level)
@@ -70,20 +58,20 @@ localFlake:
   ++ lib.optional (inputs ? git-hooks) inputs.git-hooks.flakeModule;
 
   config = lib.mkMerge [
-    # conditionally build process-compose if enabled
-    (lib.mkIf (inputs ? process-compose-flake) {
-      perSystem =
-        { lib, ... }:
-        {
-          process-compose = lib.mkDefault { };
-        };
-    })
+    # NOTE: stackpanelConfig and stackpanelFullConfig are NOT provided by this module.
+    # Users should define them in their flake using the shell's passthru:
+    #
+    #   legacyPackages.stackpanelConfig = shell.passthru.stackpanelSerializable;
+    #   legacyPackages.stackpanelFullConfig = shell.passthru.stackpanelConfig;
+    #
+    # Then in flake outputs:
+    #   stackpanelConfig = withSystem "aarch64-darwin" ({ config, ... }: config.legacyPackages.stackpanelConfig);
 
     # Validate: secrets.enable requires agenix input
     # This check runs at flake evaluation time
     (
       let
-        secretsEnabled = config.stackpanel.secrets.enable;
+        secretsEnabled = config.stackpanel.secrets.enable or false;
         hasAgenix = inputs ? agenix;
         check =
           if secretsEnabled && !hasAgenix then
@@ -100,22 +88,55 @@ localFlake:
       lib.mkIf (secretsEnabled && check) { }
     )
 
+    # Base perSystem config - always applied
     {
       perSystem =
         {
           system,
           pkgs,
+          lib,
           ...
         }:
         {
-          # Make stackpanel's packages available to users
-          # They can access: config.stackpanel.packages.cli
+          # Make stackpanel's packages and helpers available to users
           _module.args.stackpanel = {
-            inherit localFlake;
+            inherit localFlake mkEvaluatedConfig;
             # Access packages from the stackpanel flake itself
-            packages = localFlake.withSystem system ({ config, ... }: config.packages or { });
+            packages = withSystem system ({ config, ... }: config.packages or { });
           };
         };
     }
+
+    # =========================================================================
+    # Process-compose integration (optional, for process-compose-flake users)
+    #
+    # The `dev` command is built-in via stackpanel.process-compose.package.
+    # This section only wires to process-compose-flake if users have it.
+    # =========================================================================
+    (lib.optionalAttrs (inputs ? process-compose-flake) (
+      lib.mkIf (inputs ? process-compose-flake) {
+        perSystem =
+          {
+            config,
+            lib,
+            ...
+          }:
+          let
+            sp = config.legacyPackages.stackpanelFullConfig or null;
+            pc = sp.process-compose or null;
+            hasProcesses = pc != null && (pc.processes or { }) != { };
+            enabled = pc != null && (pc.enable or false) && hasProcesses;
+          in
+          lib.mkIf enabled {
+            # Wire to process-compose-flake for users who want its features
+            process-compose.dev = {
+              settings = {
+                environment = pc.environment or { };
+                processes = pc.processes;
+              };
+            };
+          };
+      }
+    ))
   ];
 }

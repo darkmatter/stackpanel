@@ -1,3 +1,33 @@
+# ==============================================================================
+# process-compose.nix
+#
+# Process-compose integration for stackpanel.
+#
+# This module:
+#   1. Defines stackpanel.process-compose.{enable, processes, environment, package}
+#   2. Auto-generates process entries from apps (defaults to turbo run -F <name> dev)
+#   3. Creates a `dev` wrapper package added to devshell
+#
+# Usage:
+#   # All apps get a dev process by default using: turbo run -F <name> dev
+#   # Just define the app:
+#   web = {
+#     path = "apps/web";
+#   };
+#
+#   # Override with explicit command if needed:
+#   api = {
+#     path = "apps/api";
+#     tasks.dev.command = "go run ./cmd/api";
+#   };
+#
+#   # Disable process-compose for a specific app:
+#   stackpanel.apps.legacy.process-compose.enable = false;
+#
+# Access the generated config:
+#   config.stackpanel.process-compose.processes
+#   config.stackpanel.process-compose.package
+# ==============================================================================
 {
   lib,
   config,
@@ -7,216 +37,330 @@
 }:
 let
   cfg = config.stackpanel;
-  apps = cfg.apps or { };
-  appsComputed = cfg.appsComputed or { };
+  pcCfg = cfg.process-compose;
 
-  hasFilesOption = options ? stackpanel.files;
-  hasProcessesOption = options ? processes;
+  # Check for devenv compatibility
+  hasDevenvProcessesOption = options ? processes;
 
-  scriptsModule =
+  # Default command uses turbo with filter flag (full store path for reliability)
+  turbo = "${pkgs.turbo}/bin/turbo";
+  mkDefaultCommand = name: taskKey: "${turbo} run -F ${name} ${taskKey}";
+
+  # watchexec for file watching
+  watchexec = "${pkgs.watchexec}/bin/watchexec";
+
+  # ---------------------------------------------------------------------------
+  # Per-app process-compose options (added via appModules)
+  # ---------------------------------------------------------------------------
+  processComposeAppModule =
     { lib, ... }:
     {
-      options.scripts = {
-        enable = lib.mkEnableOption "app scripts + process-compose integration";
-        package-json = {
-          enable = lib.mkEnableOption "package.json generation for scripts";
-          path = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "Override package.json path (defaults to app.path/package.json).";
-          };
+      options.process-compose = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether to include this app in process-compose.";
         };
-        process-compose = {
-          enable = lib.mkEnableOption "process-compose dev process";
-          name = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "Override process name (defaults to app name).";
-          };
+        name = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Override process name (defaults to app name).";
+        };
+        namespace = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Process-compose namespace for grouping.";
         };
       };
     };
 
-  mkAggregateWrapper =
-    appName: label: tools:
-    if tools == [ ] then
-      null
-    else
-      pkgs.writeShellApplication {
-        name = "stackpanel-${appName}-${label}";
-        runtimeInputs = tools;
-        text = lib.concatStringsSep "\n" (
-          [ "set -euo pipefail" ] ++ map (tool: "${lib.getExe tool}") tools
-        );
-      };
+  # ---------------------------------------------------------------------------
+  # Process entry generation
+  # ---------------------------------------------------------------------------
 
-  mkWrapperSet =
-    appName: appCfg: appComputed:
+  # Get apps that have process-compose enabled
+  apps = cfg.apps or { };
+  appsWithProcessCompose = lib.filterAttrs (name: app: app.process-compose.enable or true) apps;
+
+  # Generate process-compose process entries from an app
+  mkProcessEntry =
+    name: app:
     let
-      tooling = appComputed.wrappedTooling or { };
-      buildTools =
-        (if tooling.build != null then [ tooling.build ] else [ ]) ++ (tooling.build-steps or [ ]);
+      pcAppCfg = app.process-compose or { };
+      processName = pcAppCfg.name or name;
+
+      # Get task commands, falling back to turbo defaults
+      devTask = app.tasks.dev or { };
+      devCommand = devTask.command or (mkDefaultCommand name "dev");
     in
     {
-      install =
-        if tooling.install != null then mkAggregateWrapper appName "install" [ tooling.install ] else null;
-      build = mkAggregateWrapper appName "build" buildTools;
-      test = if tooling.test != null then mkAggregateWrapper appName "test" [ tooling.test ] else null;
-      dev = if tooling.dev != null then mkAggregateWrapper appName "dev" [ tooling.dev ] else null;
-      format = mkAggregateWrapper appName "format" (tooling.formatters or [ ]);
-      lint = mkAggregateWrapper appName "lint" (tooling.linters or [ ]);
-    };
-
-  scriptEntries =
-    name: wrappers:
-    lib.filterAttrs (_: v: v != null) {
-      install = if wrappers.install != null then lib.getExe wrappers.install else null;
-      build = if wrappers.build != null then lib.getExe wrappers.build else null;
-      test = if wrappers.test != null then lib.getExe wrappers.test else null;
-      dev = if wrappers.dev != null then lib.getExe wrappers.dev else null;
-      format = if wrappers.format != null then lib.getExe wrappers.format else null;
-      lint = if wrappers.lint != null then lib.getExe wrappers.lint else null;
-    };
-
-  mkPackageJson =
-    name: appCfg: wrappers:
-    let
-      appName = appCfg.name or name;
-      scripts = scriptEntries name wrappers;
-    in
-    pkgs.runCommand "${name}-package.json"
-      {
-        nativeBuildInputs = [ pkgs.jq ];
-        passAsFile = [ "jsonContent" ];
-        jsonContent = builtins.toJSON {
-          name = appName;
-          private = true;
-          scripts = scripts;
-        };
+      ${processName} = {
+        command = devCommand;
+        working_dir = app.path or null;
       }
-      ''
-        jq '.' < "$jsonContentPath" > $out
-      '';
+      // lib.optionalAttrs (pcAppCfg.namespace or null != null) {
+        namespace = pcAppCfg.namespace;
+      };
+    };
 
-  mkProcessEntries =
-    name: appCfg: wrappers:
-    let
-      processName = appCfg.scripts.process-compose.name or name;
-      installName = "${processName}-install";
-      buildName = "${processName}-build";
-      installProcess =
-        if wrappers.install != null then
-          {
-            ${installName} = {
-              exec = lib.getExe wrappers.install;
-              process-compose = {
-                availability.restart = "never";
-              };
-            };
-          }
-        else
-          { };
-      buildProcess =
-        if wrappers.build != null then
-          {
-            ${buildName} = {
-              exec = lib.getExe wrappers.build;
-              process-compose = {
-                availability.restart = "never";
-                depends_on = lib.optionalAttrs (wrappers.install != null) {
-                  ${installName}.condition = "process_completed_successfully";
-                };
-              };
-            };
-          }
-        else
-          { };
-      devDepends =
-        (lib.optionalAttrs (wrappers.install != null) {
-          ${installName}.condition = "process_completed_successfully";
-        })
-        // (lib.optionalAttrs (wrappers.build != null) {
-          ${buildName}.condition = "process_completed_successfully";
-        });
-      devProcess =
-        if wrappers.dev != null then
-          {
-            ${processName} = {
-              exec = lib.getExe wrappers.dev;
-              process-compose = lib.optionalAttrs (devDepends != { }) {
-                depends_on = devDepends;
-              };
-            };
-          }
-        else
-          { };
-    in
-    installProcess // buildProcess // devProcess;
+  # Collect all process entries from apps
+  appProcessEntries = lib.foldl' (acc: name: acc // (mkProcessEntry name apps.${name})) { } (
+    lib.attrNames appsWithProcessCompose
+  );
 
-  appEntries = lib.mapAttrsToList (
-    name: appCfg:
+  # App names for dependencies
+  appNames = lib.attrNames appsWithProcessCompose;
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure processes (format watcher, etc.)
+  # ---------------------------------------------------------------------------
+
+  # Format watcher config
+  formatWatcherCfg = pcCfg.formatWatcher or { enable = true; };
+  formatExtensions =
+    formatWatcherCfg.extensions or [
+      "ts"
+      "tsx"
+      "js"
+      "jsx"
+      "json"
+      "md"
+      "css"
+      "scss"
+      "html"
+      "nix"
+      "go"
+      "rs"
+      "py"
+    ];
+  formatCommand =
+    if formatWatcherCfg.command or null != null then
+      formatWatcherCfg.command
+    else
+      "${turbo} run format --continue";
+  formatExtStr = lib.concatStringsSep "," formatExtensions;
+
+  infrastructureProcesses = lib.optionalAttrs (formatWatcherCfg.enable or true) {
+    # Format watcher - runs turbo format on file changes
+    format-watch = {
+      command = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
+      working_dir = null;
+      namespace = "infra";
+      availability = {
+        restart = "always";
+        backoff_seconds = 2;
+      };
+    };
+  };
+
+  # Combine app processes with infrastructure processes
+  allProcessEntries = appProcessEntries // infrastructureProcesses;
+
+  # ---------------------------------------------------------------------------
+  # Devenv-compatible process entries (uses exec instead of command)
+  # ---------------------------------------------------------------------------
+  mkDevenvProcessEntry =
+    name: app:
     let
-      appComputed = appsComputed.${name} or { };
-      wrappers = mkWrapperSet name appCfg appComputed;
-      packageJsonPath =
-        if appCfg.scripts.package-json.path != null then
-          appCfg.scripts.package-json.path
-        else if appCfg.path != null then
-          "${appCfg.path}/package.json"
-        else
-          null;
+      pcAppCfg = app.process-compose or { };
+      processName = pcAppCfg.name or name;
+
+      devTask = app.tasks.dev or { };
+      devCommand = devTask.command or (mkDefaultCommand name "dev");
     in
     {
-      wrappers = wrappers;
-      packageJsonPath = packageJsonPath;
-      packageJsonDrv = mkPackageJson name appCfg wrappers;
-      processEntries = mkProcessEntries name appCfg wrappers;
-      scriptsCfg = appCfg.scripts;
-    }
-  ) apps;
+      ${processName} = {
+        exec = devCommand;
+        process-compose = {
+          working_dir = app.path or null;
+        };
+      };
+    };
+
+  appDevenvProcessEntries = lib.foldl' (
+    acc: name: acc // (mkDevenvProcessEntry name apps.${name})
+  ) { } (lib.attrNames appsWithProcessCompose);
+
+  # Infrastructure processes for devenv format
+  infrastructureDevenvProcesses = lib.optionalAttrs (formatWatcherCfg.enable or true) {
+    format-watch = {
+      exec = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
+      process-compose = {
+        namespace = "infra";
+        availability = {
+          restart = "always";
+          backoff_seconds = 2;
+        };
+      };
+    };
+  };
+
+  allDevenvProcessEntries = appDevenvProcessEntries // infrastructureDevenvProcesses;
+
+  # ---------------------------------------------------------------------------
+  # Package generation
+  # ---------------------------------------------------------------------------
+
+  # Remove null values recursively for clean JSON
+  removeNulls = attrs: lib.filterAttrsRecursive (k: v: v != null && v != { }) attrs;
+
+  # Build the dev wrapper package
+  mkDevPackage =
+    { processes, environment }:
+    let
+      configFile = pkgs.writeText "process-compose.yaml" (
+        builtins.toJSON (removeNulls {
+          version = "0.5";
+          inherit environment processes;
+        })
+      );
+    in
+    pkgs.writeShellApplication {
+      name = "dev";
+      runtimeInputs = [
+        pkgs.process-compose
+        pkgs.watchexec
+        pkgs.turbo
+      ];
+      text = ''
+        exec process-compose up -f ${configFile} "$@"
+      '';
+    };
+
 in
 {
+  # ===========================================================================
+  # Options
+  # ===========================================================================
+  options.stackpanel.process-compose = {
+    enable = lib.mkEnableOption "process-compose integration" // {
+      default = true;
+    };
+
+    formatWatcher = {
+      enable = lib.mkEnableOption "format watcher process" // {
+        default = true;
+      };
+
+      extensions = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [
+          "ts"
+          "tsx"
+          "js"
+          "jsx"
+          "json"
+          "md"
+          "css"
+          "scss"
+          "html"
+          "nix"
+          "go"
+          "rs"
+          "py"
+        ];
+        description = "File extensions to watch for format changes.";
+      };
+
+      command = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          Custom format command. If null, uses `turbo run format --continue`.
+        '';
+      };
+    };
+
+    processes = lib.mkOption {
+      type = lib.types.attrsOf lib.types.unspecified;
+      default = { };
+      description = ''
+        Process definitions for process-compose.
+
+        This is auto-populated from apps. Each app gets a process using
+        `turbo run -F <name> dev` by default, or the explicit command from
+        `tasks.dev.command` if defined.
+      '';
+      example = lib.literalExpression ''
+        {
+          web = {
+            command = "turbo run -F web dev";
+            working_dir = "apps/web";
+          };
+          api = {
+            command = "go run ./cmd/api";
+            working_dir = "apps/api";
+          };
+        }
+      '';
+    };
+
+    environment = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = ''
+        Environment variables for process-compose.
+
+        These are passed to all processes.
+      '';
+      example = lib.literalExpression ''
+        {
+          STACKPANEL_PORTS = builtins.toJSON config.stackpanel.ports;
+          NODE_ENV = "development";
+        }
+      '';
+    };
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      readOnly = true;
+      description = ''
+        The process-compose wrapper package.
+
+        This is a script named `dev` that runs `process-compose up` with the
+        generated configuration. Added to devshell automatically.
+      '';
+    };
+  };
+
+  # ===========================================================================
+  # Config
+  # ===========================================================================
   config = lib.mkMerge [
+    # Add the per-app process-compose options to all apps
     {
-      stackpanel.appModules = [
-        scriptsModule
-      ];
+      stackpanel.appModules = [ processComposeAppModule ];
     }
-    (lib.mkIf cfg.enable (
-      {
-        stackpanel.devshell.packages = lib.mkMerge (
-          map (entry: lib.filter (x: x != null) (lib.attrValues entry.wrappers)) appEntries
-        );
-      }
-      // lib.optionalAttrs hasFilesOption {
-        stackpanel.files.enable = true;
-        stackpanel.files.entries = lib.mkMerge (
-          map (
-            entry:
-            let
-              scriptsCfg = entry.scriptsCfg;
-            in
-            lib.optionalAttrs
-              (scriptsCfg.enable && scriptsCfg.package-json.enable && entry.packageJsonPath != null)
-              {
-                "${entry.packageJsonPath}" = {
-                  type = "derivation";
-                  drv = entry.packageJsonDrv;
-                };
-              }
-          ) appEntries
-        );
-      }
-      // lib.optionalAttrs hasProcessesOption {
-        processes = lib.mkMerge (
-          map (
-            entry:
-            let
-              scriptsCfg = entry.scriptsCfg;
-            in
-            lib.optionalAttrs (scriptsCfg.enable && scriptsCfg.process-compose.enable) entry.processEntries
-          ) appEntries
-        );
+
+    # When stackpanel is enabled, populate process-compose from apps
+    (lib.mkIf cfg.enable {
+      # Populate process-compose.processes from apps
+      stackpanel.process-compose.processes = allProcessEntries;
+
+      # Default environment with ports
+      stackpanel.process-compose.environment = {
+        STACKPANEL_PORTS = builtins.toJSON (cfg.ports or { });
+      };
+    })
+
+    # When process-compose is enabled, build the wrapper package and add to devshell
+    (lib.mkIf (cfg.enable && pcCfg.enable) {
+      stackpanel.process-compose.package = mkDevPackage {
+        processes = pcCfg.processes;
+        environment = pcCfg.environment;
+      };
+
+      # Add both process-compose CLI and our wrapper to devshell
+      stackpanel.devshell.packages = [
+        pkgs.process-compose
+        pcCfg.package
+      ];
+    })
+
+    # Devenv compatibility: if `processes` option exists at top level, populate it
+    (lib.optionalAttrs hasDevenvProcessesOption (
+      lib.mkIf (cfg.enable && pcCfg.enable) {
+        processes = allDevenvProcessEntries;
       }
     ))
   ];

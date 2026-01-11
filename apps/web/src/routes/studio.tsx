@@ -37,10 +37,10 @@ function EnsureAgent() {
   const location = useLocation();
   const isOverview = location.pathname === "/studio";
   return (
-    <div>
+    <div className="flex flex-1 flex-col min-h-0 max-w-7xl">
       <div
         className={cn(
-          "duration-300 ease-in-out z-10 m-6 ",
+          "duration-300 ease-in-out z-10 mx-6 my-6",
           isConnected &&
             !isOverview &&
             "animate-out slide-out-to-top fade-out hidden",
@@ -51,7 +51,7 @@ function EnsureAgent() {
       </div>
       <main
         className={cn(
-          "flex-1 overflow-auto p-6",
+          "flex-1 overflow-auto px-6 py-4 min-h-0",
           isConnected
             ? "animate-in blur-in"
             : "animate-out blur-out blur-sm -mt-32 opacity-50 z-0 pointer-events-none",

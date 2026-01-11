@@ -19,6 +19,9 @@
   inputs,
 }:
 let
+  # Import serialization helpers
+  serializeLib = import ../../nix/stackpanel/lib/serialize.nix { inherit lib; };
+
   # Import stackpanel config from .stackpanel/config.nix
   # Returns { stackpanel = {...}; }
   stackpanelConfigModule = import ../../.stackpanel/config.nix;
@@ -47,10 +50,19 @@ let
 
   # Extract validated and computed stackpanel config
   stackpanelConfig = stackpanelEval.config.stackpanel;
+
+  # Create a JSON-safe version by filtering out non-serializable values
+  # (derivations, functions, paths, internal module system attributes)
+  stackpanelSerializableConfig = serializeLib.filterSerializable stackpanelConfig;
 in
 {
   # Stackpanel config (validated and computed via module system)
+  # May contain non-serializable values (derivations, functions, etc.)
   stackpanel = stackpanelConfig;
+
+  # JSON-safe version of stackpanel config
+  # All non-serializable values are filtered out
+  stackpanelSerializable = stackpanelSerializableConfig;
 
   # Raw config module (for native shell that needs to evaluate modules itself)
   stackpanelConfigModule = stackpanelConfigModule;

@@ -108,6 +108,15 @@
               overlays = [ inputs.gomod2nix.overlays.default ];
             };
             debug = true;
+
+            # Expose stackpanel config via legacyPackages for flake-level access
+            # This avoids re-evaluating shell.nix multiple times
+            legacyPackages = {
+              stackpanelConfig = localShell.nativeDevshell.passthru.stackpanelSerializable;
+              stackpanelFullConfig = localShell.nativeDevshell.passthru.stackpanelConfig;
+              # Pre-serialized packages for fast access (separate from full config eval)
+              stackpanelPackages = localShell.nativeDevshell.passthru.stackpanelPackages;
+            };
             # combine devenv packages and devshell-bin which contains stackpanel
             # packages
             packages = packages // {
@@ -115,7 +124,7 @@
             };
 
             checks = {
-              stackpanel-go = config.packages.stackpanel-go;
+              stackpanel = config.packages.stackpanel;
               default-package = config.packages.default;
 
               # Smoke tests for devenv and native shells
@@ -195,29 +204,27 @@
             ;
           stackpanelOptions = exports.mkStackpanelOptions nixpkgs;
 
-          # Evaluated stackpanel config for agent/CLI access
-          # Usage: nix eval --impure --json .#stackpanelConfig
-          # Only includes serializable attributes (no functions, derivations, etc.)
-          stackpanelConfig =
-            let
-              pkgs = import nixpkgs { system = "aarch64-darwin"; };
-              lib = pkgs.lib;
-              mergedConfig = import ./nix/flake/merged-config.nix { inherit pkgs lib inputs; };
-              cfg = mergedConfig.stackpanel;
+          # Fully evaluated stackpanel config (JSON-safe)
+          # Accesses via legacyPackages to avoid re-evaluating shell.nix
+          # Non-serializable values (derivations, functions) are filtered out
+          # Usage: nix eval .#stackpanelConfig --json
+          stackpanelConfig = withSystem "aarch64-darwin" (
+            { config, ... }: config.legacyPackages.stackpanelConfig
+          );
 
-              # Filter to only serializable attributes for the UI
-              # Exclude: appModules (functions), devshell (has derivations), go.packages, users (has external file)
-              serializableKeys = [
-                "name"
-                "github"
-                "debug"
-                "enable"
-                "extensions"
-                "ports"
-                "motd"
-              ];
-            in
-            lib.filterAttrs (k: _: builtins.elem k serializableKeys) cfg;
+          # Full evaluated config (may contain non-serializable values)
+          # Use this for programmatic access when you need derivations, etc.
+          # Usage: nix eval .#stackpanelFullConfig.devshell.packages
+          stackpanelFullConfig = withSystem "aarch64-darwin" (
+            { config, ... }: config.legacyPackages.stackpanelFullConfig
+          );
+
+          # Pre-serialized installed packages for fast access
+          # Separate from stackpanelConfig to avoid slow package resolution when not needed
+          # Usage: nix eval .#stackpanelPackages --json
+          stackpanelPackages = withSystem "aarch64-darwin" (
+            { config, ... }: config.legacyPackages.stackpanelPackages
+          );
         };
       }
     );

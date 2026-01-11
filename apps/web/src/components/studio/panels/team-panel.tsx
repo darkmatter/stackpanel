@@ -69,7 +69,7 @@ export function TeamPanel() {
   const { data: usersData, isLoading: usersLoading } =
     useNixData<Record<string, User>>("users");
   const { data: githubData, isLoading: githubLoading } =
-    useNixData<GithubCollaboratorsData>("_github-collaborators");
+    useNixData<GithubCollaboratorsData>("external-github-collaborators");
 
   const members = useMemo(() => {
     const users = usersData ?? {};

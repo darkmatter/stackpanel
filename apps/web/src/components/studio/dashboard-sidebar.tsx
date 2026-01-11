@@ -11,6 +11,7 @@ import {
   Network,
   Puzzle,
   Server,
+  Settings,
   SquareTerminal,
   Terminal,
   Users,
@@ -43,6 +44,7 @@ export type PanelType =
   | "secrets"
   | "tasks"
   | "variables"
+  | "configuration"
   | "databases"
   | "devshells"
   | "team"
@@ -59,6 +61,7 @@ const navItems: { id: string; label: string; icon: React.ElementType }[] = [
   { id: "packages", label: "Packages", icon: Package },
   // { id: "secrets", label: "Secrets", icon: KeyRound },
   { id: "variables", label: "Variables / Secrets", icon: Variable },
+  { id: "configuration", label: "Configuration", icon: Settings },
   // rest
   { id: "divider", label: "", icon: React.Fragment },
   { id: "tasks", label: "Tasks", icon: Play },
