@@ -59,6 +59,9 @@ func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dataPath := s.nixDataPath(entity)
+	if isExternalEntity(entity) {
+		dataPath = s.nixExternalDataPath(entity)
+	}
 
 	// Check if file exists
 	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
@@ -126,6 +129,11 @@ func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if isExternalEntity(req.Entity) {
+		s.writeAPIError(w, http.StatusBadRequest, "external entities are read-only")
+		return
+	}
+
 	if req.Data == nil {
 		log.Error().Msg("handleNixDataWrite: data is required")
 		s.writeAPIError(w, http.StatusBadRequest, "data is required")
@@ -185,6 +193,11 @@ func (s *Server) handleNixDataDelete(w http.ResponseWriter, r *http.Request) {
 
 	if err := validateEntityName(entity); err != nil {
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if isExternalEntity(entity) {
+		s.writeAPIError(w, http.StatusBadRequest, "external entities are read-only")
 		return
 	}
 
@@ -252,9 +265,18 @@ func (s *Server) nixDataDir() string {
 	return filepath.Join(s.config.ProjectRoot, ".stackpanel", "data")
 }
 
+func (s *Server) nixExternalDataDir() string {
+	return filepath.Join(s.nixDataDir(), "external")
+}
+
 // nixDataPath returns the path to a specific data file.
 func (s *Server) nixDataPath(entity string) string {
 	return filepath.Join(s.nixDataDir(), entity+".nix")
+}
+
+func (s *Server) nixExternalDataPath(entity string) string {
+	name := strings.TrimPrefix(entity, "external-")
+	return filepath.Join(s.nixExternalDataDir(), name+".nix")
 }
 
 // validateEntityName checks if an entity name is valid.
@@ -278,4 +300,8 @@ func validateEntityName(name string) error {
 		}
 	}
 	return nil
+}
+
+func isExternalEntity(name string) bool {
+	return strings.HasPrefix(name, "external-")
 }

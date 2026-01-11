@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -41,6 +42,30 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 	// Check if force refresh is requested via query param
 	forceRefresh := r.URL.Query().Get("refresh") == "true"
 
+	// Try FlakeWatcher first (preferred - has file watching and smart caching)
+	if s.flakeWatcher != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer cancel()
+
+		if forceRefresh {
+			s.flakeWatcher.InvalidateAll()
+		}
+
+		config, err := s.flakeWatcher.GetConfig(ctx)
+		if err == nil {
+			updated, cached := s.flakeWatcher.ConfigStatus()
+			s.writeAPI(w, http.StatusOK, map[string]any{
+				"config":       config,
+				"last_updated": updated.Format(time.RFC3339),
+				"cached":       cached,
+				"source":       "flake_watcher",
+			})
+			return
+		}
+		log.Debug().Err(err).Msg("FlakeWatcher config evaluation failed, falling back to legacy")
+	}
+
+	// Fallback to legacy cache/evaluation
 	if !forceRefresh {
 		// Try to get from cache first
 		globalConfigCache.mu.RLock()
@@ -53,6 +78,7 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 				"config":       config,
 				"last_updated": lastUpdated.Format(time.RFC3339),
 				"cached":       true,
+				"source":       "legacy_cache",
 			})
 			return
 		}
@@ -70,6 +96,7 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 		"config":       config,
 		"last_updated": time.Now().Format(time.RFC3339),
 		"cached":       false,
+		"source":       "fresh_eval",
 	})
 }
 
@@ -77,6 +104,34 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleNixConfigRefresh(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("Refreshing Stackpanel config from flake")
 
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	// Try FlakeWatcher first
+	if s.flakeWatcher != nil {
+		if err := s.flakeWatcher.ForceRefresh(ctx); err != nil {
+			log.Warn().Err(err).Msg("FlakeWatcher refresh failed, falling back to legacy")
+		} else {
+			config, _ := s.flakeWatcher.GetConfig(ctx)
+			s.writeAPI(w, http.StatusOK, map[string]any{
+				"config":       config,
+				"last_updated": time.Now().Format(time.RFC3339),
+				"refreshed":    true,
+				"source":       "flake_watcher",
+			})
+
+			// Notify SSE subscribers that config has changed
+			s.broadcastSSE(SSEEvent{
+				Event: "config.refreshed",
+				Data: map[string]any{
+					"timestamp": time.Now().Format(time.RFC3339),
+				},
+			})
+			return
+		}
+	}
+
+	// Fallback to legacy evaluation
 	config, err := s.evaluateConfig()
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate config: "+err.Error())
@@ -87,6 +142,7 @@ func (s *Server) handleNixConfigRefresh(w http.ResponseWriter, r *http.Request) 
 		"config":       config,
 		"last_updated": time.Now().Format(time.RFC3339),
 		"refreshed":    true,
+		"source":       "fresh_eval",
 	})
 
 	// Notify SSE subscribers that config has changed

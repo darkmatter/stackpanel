@@ -74,6 +74,7 @@ type Evaluator struct {
 	projectRoot string
 	nixFile     string            // Path to nix eval file - unused if expression is set
 	nixExpr     string            // Nix expression to evaluate
+	flakeAttr   string            // Flake attribute to evaluate (e.g., ".#stackpanelConfig")
 	nixArgs     map[string]string // Additional Nix arguments
 	timeout     time.Duration
 
@@ -126,6 +127,14 @@ func WithArgs(args map[string]string) Option {
 func WithExpression(expr string) Option {
 	return func(e *Evaluator) {
 		e.nixExpr = expr
+	}
+}
+
+// WithFlakeAttr sets a flake attribute to evaluate (e.g., ".#stackpanelConfig")
+// This takes precedence over WithExpression and WithNixFile
+func WithFlakeAttr(attr string) Option {
+	return func(e *Evaluator) {
+		e.flakeAttr = attr
 	}
 }
 
@@ -245,11 +254,17 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	defer cancel()
 
 	args := []string{"eval", "--impure", "--json"}
-	if e.nixExpr != "" {
+
+	// Priority: flakeAttr > nixExpr > nixFile
+	if e.flakeAttr != "" {
+		// Flake attribute (e.g., ".#stackpanelConfig") - append directly
+		args = append(args, e.flakeAttr)
+	} else if e.nixExpr != "" {
 		args = append(args, "--expr", e.nixExpr)
 	} else if e.nixFile != "" {
 		args = append(args, "-f", e.nixFile)
 	}
+
 	for k, v := range e.nixArgs {
 		args = append(args, "--argstr", k, v)
 	}

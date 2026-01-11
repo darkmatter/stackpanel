@@ -30,6 +30,7 @@ let
     "commands.nix"
     "apps.nix"
     "tasks.nix"
+    "packages.nix" # Contains strings, resolved by user-packages.nix
   ];
 
   loadDataTables =
