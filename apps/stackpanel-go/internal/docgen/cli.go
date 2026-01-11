@@ -121,8 +121,8 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 func escapeMDX(text string) string {
 	// Order matters: escape backslashes first so you don't double-escape later
 	// text = strings.ReplaceAll(text, "\\", "\\\\") // Escape literal backslashes
-	// text = strings.ReplaceAll(text, "{", "\\{")   // Escape JS expression braces
-	// text = strings.ReplaceAll(text, "}", "\\}")
+	text = strings.ReplaceAll(text, "{", "\\{") // Escape JS expression braces
+	text = strings.ReplaceAll(text, "}", "\\}")
 	text = strings.ReplaceAll(text, ".<", "\\<") // Escape JSX tags
 	text = strings.ReplaceAll(text, ">.", "\\>")
 	// text = strings.ReplaceAll(text, "*", "\\*") // Escape bold/italic

@@ -46,6 +46,7 @@ in
     ./modules/ci-formatters.nix # CI formatter checks
     ./modules/go.nix # Go app support
     ./modules/process-compose.nix # App scripts + process-compose
+    ./modules/example-extension.nix # Example extension demonstrating panels
   ];
 
   config.stackpanel.devshell.hooks.after = [

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	nixeval "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval"
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	nixeval "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 	"github.com/spf13/cobra"
 )
 

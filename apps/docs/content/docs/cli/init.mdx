@@ -6,13 +6,13 @@ icon: Terminal
 
 # stackpanel init
 
-Initialize stackpanel by generating files from Nix configuration.
+Initialize stackpanel by validating configuration from Nix.
 
-This command is typically called by Nix during  shell entry.
-It reads configuration JSON and generates:
-  - IDE integration files (VS Code workspace, terminal integration)
-  - JSON schemas for YAML intellisense
-  - State file for runtime queries
+This command is typically called by Nix during shell entry.
+It validates the configuration JSON and confirms stackpanel is ready.
+
+File generation is handled by Nix's write-files script, so this
+command now primarily serves as a validation checkpoint.
 
 Configuration can be passed via:
   - --config-file [path]   Read from a JSON file

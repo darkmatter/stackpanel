@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	cp "github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )

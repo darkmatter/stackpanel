@@ -31,10 +31,18 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate a JWT token for this pairing request
+	token, err := s.jwtManager.GenerateToken(origin)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to generate JWT token")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	data := pairTemplateData{
 		ProjectRoot:  s.config.ProjectRoot,
 		TargetOrigin: template.JS(fmt.Sprintf("%q", origin)),
-		Token:        template.JS(fmt.Sprintf("%q", s.pairToken)),
+		Token:        template.JS(fmt.Sprintf("%q", token)),
 	}
 
 	var buf bytes.Buffer

@@ -2,6 +2,90 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+function Headline() {
+  return (
+    <h1 className="text-balance font-bold text-4xl text-foreground tracking-tight sm:text-5xl lg:text-6xl font-[Montserrat] -mt-4">
+      <span
+        style={{
+          fontVariationSettings: '"wght" 210',
+          fontWeight: "unset",
+          fontFamily: "Montserrat",
+          letterSpacing: "-0.15rem",
+          lineHeight: "5.4rem",
+        }}
+      >
+        Build{" "}
+      </span>
+      <span
+        className="text-accent font-bold italic"
+        style={{
+          fontWeight: "unset",
+          fontVariationSettings: '"wght" 807',
+          textDecoration: "underline",
+          textUnderlineOffset: "5px",
+          textDecorationThickness: "from-font",
+          letterSpacing: "-0.05rem",
+        }}
+      >
+        products,
+      </span>
+      <br />
+      <span
+        className="font-bold text-primary"
+        style={{
+          fontVariationSettings: '"wght" 220',
+          letterSpacing: "0.01rem",
+          fontStyle: "normal",
+        }}
+      >
+        not{" "}
+      </span>
+      <span
+        className="font-bold italic"
+        style={{
+          fontVariationSettings: '"wght" 482',
+          textUnderlineOffset: "5px",
+          textDecorationThickness: "from-font",
+          letterSpacing: "-0.1rem",
+        }}
+      >
+        plumbing.
+      </span>
+    </h1>
+  );
+}
+//   {/*// style="
+//   //   font-variation-settings: &quot;wght&quot; 210;
+//   //   font-weight: unset;
+//   //   font-feature-settings: &quot;calt&quot; 1;
+//   //   font-family: &quot;Montserrat&quot;;
+//   //   letter-spacing: -0.15rem;
+//   //   line-height: 4.6rem;
+// // ">Build <span class="font-bold text-accent" style="
+// //     font-weight: unset;
+// //     font-variation-settings: &quot;wght&quot; 807;
+// //     font-style: italic;
+// //     text-decoration: underline;
+// //     text-underline-offset: 5px;
+// //     text-decoration-thickness: from-font;
+// //     letter-spacing: -0.05rem;
+// //     /* color: hsl(0,0%,90%); */
+// // ">products,</span><span class="font-bold text-accent" style="
+// //     font-weight: unset;
+// //     font-variation-settings: &quot;wght&quot; 592;
+// //     /* font-style: italic; */
+// //     /* text-decoration: underline; */
+// //     text-underline-offset: 5px;
+// //     text-decoration-thickness: from-font;
+// //     letter-spacing: -0.10rem;
+// //     color: hsl(0,0%,90%);
+// // "> <span style="
+// //     font-variation-settings: &quot;wght&quot; 398;
+// //     letter-spacing: -0.1rem;
+// //     font-style: normal;
+// //     color: hsl(0,0%,90%);
+// // ">not</span> plumbing.</span></h1>*/}
+
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-border border-b">
@@ -16,11 +100,11 @@ export function HeroSection() {
                 The new localhost:3001
               </span>
             </div>
-
-            <h1 className="text-balance font-bold text-4xl text-foreground tracking-tight sm:text-5xl lg:text-6xl">
+            <Headline />
+            {/*<h1 className="text-balance font-bold text-4xl text-foreground tracking-tight sm:text-5xl lg:text-6xl">
               Build <span className="font-bold text-accent">products</span> not
               plumbing.
-            </h1>
+            </h1>*/}
 
             <p className="mt-6 max-w-xl text-pretty text-lg text-muted-foreground leading-relaxed">
               From idea to production-ready app. StackPanel unifies

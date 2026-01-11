@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
 // AgentView provides a split-screen view with streaming logs and command menu

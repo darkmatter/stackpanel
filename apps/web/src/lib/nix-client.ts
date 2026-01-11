@@ -18,11 +18,19 @@ import type {
   WriteResponse,
   DeleteResponse,
   ListResponse,
+  GeneratedFileWithStatus,
+  GeneratedFilesResponse,
 } from "./types";
 import { kebabToSnake, snakeToKebab } from "./nix-data";
 
 // Re-export types for convenience
-export type { App, Service, StackpanelConfig };
+export type {
+  App,
+  Service,
+  StackpanelConfig,
+  GeneratedFileWithStatus,
+  GeneratedFilesResponse,
+};
 
 // =============================================================================
 // Entity Builder - Provides typed CRUD for a specific entity
@@ -312,6 +320,14 @@ export class NixClient {
   }
 
   /**
+   * Get metadata about generated files from stackpanel.files.entries.
+   * Includes staleness detection by comparing disk files with expected content.
+   */
+  async getGeneratedFiles(): Promise<GeneratedFilesResponse> {
+    return this.fetch<GeneratedFilesResponse>("/api/nix/files");
+  }
+
+  /**
    * Evaluate an arbitrary Nix expression.
    */
   async eval<T = unknown>(expression: string): Promise<T> {
@@ -393,3 +409,7 @@ export class NixClient {
 
 /** Default NixClient instance */
 export const nixClient = new NixClient();
+
+if (typeof window !== "undefined") {
+  (window as any)._nixClient = nixClient;
+}

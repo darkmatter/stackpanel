@@ -1,0 +1,63 @@
+---
+title: tasks
+description: Configuration options for stackpanel.tasks
+icon: Settings
+---
+
+# Tasks Options
+
+## `tasks`
+
+Task definitions forwarded to devenv tasks.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `tasks.<name>.cwd`
+
+Working directory for the task
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `tasks.<name>.description`
+
+Optional description for the task
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `tasks.<name>.env`
+
+Environment variables for the task
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `tasks.<name>.exec`
+
+Task command to execute
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+

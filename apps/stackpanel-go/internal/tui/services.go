@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
 // ServiceStartState represents the state of a service being started

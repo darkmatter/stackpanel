@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+enum VariableType {
+  VARIABLE = 0;
+  SECRET = 1;
+  VALS = 2;
+}
+
+// Configuration for a single variable in the workspace
+message Variable {
+  string key = 1; // value will be passed to app using this key
+  optional string description = 2; // (optional) Description of the variable
+  VariableType type = 3; // Type of the variable
+  /*
+   * - When type = "LITERAL", the value will be passed as is.
+   * - When type = "VARIABLE", should refer to the key of the variable or secret.
+   * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
+   *   compatible descriptor, for example if you want to get a value from AWS Parameter
+   *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
+   * 
+   */
+  string value = 4;
+}
+
+// Map of variable identifier to variable configuration
+message Variables {
+  map<string, Variable> variables = 1; // Map of variable ID to variable config
+}

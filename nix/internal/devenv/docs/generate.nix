@@ -31,8 +31,20 @@
   ...
 }:
 let
-  # Get stackpanel options from the evaluated module system
-  stackpanelOptions = options.stackpanel or { };
+  # Get stackpanel options from the evaluated module system.
+  # Devenv no longer exposes stackpanel options in its module context, so
+  # evaluate the core options module directly to ensure docs stay in sync.
+  stackpanelOptions =
+    let
+      evalResult = lib.evalModules {
+        modules = [
+          ../../../stackpanel/core/options/default.nix
+          { _module.args = { inherit pkgs lib; }; }
+          { stackpanel.enable = true; }
+        ];
+      };
+    in
+    evalResult.options.stackpanel or { };
 
   # Transform option declarations to readable paths
   transformOptions =

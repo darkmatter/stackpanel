@@ -14,7 +14,7 @@ import (
 	"strings"
 	"syscall"
 
-	nixeval "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval"
+	nixeval "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
 const (

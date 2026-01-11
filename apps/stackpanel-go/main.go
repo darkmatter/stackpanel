@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	cmd "github.com/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli"
+	cmd "github.com/darkmatter/stackpanel/stackpanel-go/cmd/cli"
 )
 
 func main() {

@@ -347,6 +347,21 @@ func (e *Executor) ClearDevshellEnv() {
 	e.devshellEnv = nil
 }
 
+// GetEnv retrieves an environment variable value from the devshell environment.
+// It first checks the cached devshell env, then falls back to os.Getenv.
+// Returns empty string if the variable is not found.
+func (e *Executor) GetEnv(key string) string {
+	// Check devshell env first
+	prefix := key + "="
+	for _, env := range e.devshellEnv {
+		if strings.HasPrefix(env, prefix) {
+			return env[len(prefix):]
+		}
+	}
+	// Fall back to process environment
+	return os.Getenv(key)
+}
+
 // SetProjectRoot updates the project root and optionally reloads the devshell environment.
 func (e *Executor) SetProjectRoot(projectRoot string, reloadDevshell bool) error {
 	e.projectRoot = projectRoot

@@ -3,25 +3,48 @@ syntax = "proto3";
 package stackpanel.db;
 option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
 
-// Environments an app can be associated with
-enum AppEnvironment {
-  APP_ENVIRONMENT_UNSPECIFIED = 0;
-  APP_ENVIRONMENT_DEV = 1;
-  APP_ENVIRONMENT_STAGING = 2;
-  APP_ENVIRONMENT_PRODUCTION = 3;
+// Type of environment variable
+enum AppVariableType {
+  APP_VARIABLE_TYPE_UNSPECIFIED = 0;
+  APP_VARIABLE_TYPE_LITERAL = 1;
+  APP_VARIABLE_TYPE_VARIABLE = 2;
+  APP_VARIABLE_TYPE_VALS = 3;
 }
 
 // Configuration for a single application in the workspace
 message App {
   string name = 1; // Display name of the app
-  string path = 2; // Relative path to the app directory
-  optional string install_command = 3; // Custom install command (overrides default behavior)
-  optional string build_command = 4; // Custom build command (overrides default behavior)
-  optional string format_command = 5; // Custom code formatting command
-  optional string lint_command = 6; // Custom linting command
-  optional string test_command = 7; // Custom test command
-  optional string start_command = 8; // Custom start/development command
-  repeated AppEnvironment environments = 9; // Environments associated with this app
+  optional string description = 2; // Description of the app
+  string path = 3; // Relative path to the app directory
+  optional string type = 4; // App type/runtime (bun, go, python, rust, etc.)
+  optional int32 port = 5; // Development server port
+  optional string domain = 6; // Local development domain
+  map<string, AppTask> tasks = 7; // Tasks for this app (key = task name)
+  map<string, AppVariable> variables = 8; // Environment variables (key = variable name)
+}
+
+// Command configuration
+message AppTask {
+  string key = 1; // Corresponds to CMD in  `turbo task run CMD`
+  optional string description = 2; // (optional) Description of the command
+  string command = 3; // Command to run
+  map<string, AppVariable> env = 4; // Environment variables to set
+}
+
+// Environment variable configuration
+message AppVariable {
+  string key = 1; // value will be passed to app using this key
+  optional string description = 2; // (optional) Description of the variable
+  AppVariableType type = 3; // Type of environment variable
+  /*
+   * - When type = "LITERAL", the value will be passed as is.
+   * - When type = "VARIABLE", should refer to the key of the variable or secret.
+   * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
+   *   compatible descriptor, for example if you want to get a value from AWS Parameter
+   *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
+   * 
+   */
+  string value = 4;
 }
 
 // Map of app identifier to app configuration

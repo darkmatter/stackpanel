@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
 // ViewerModel is a Bubble Tea model for displaying command output

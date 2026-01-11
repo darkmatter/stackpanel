@@ -18,6 +18,20 @@
 }:
 let
   cfg = config.stackpanel.devshell;
+  scriptsCfg = config.stackpanel.scripts or { };
+
+  mkEnvExports =
+    env:
+    lib.concatStringsSep "\n" (lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') env);
+
+  mkTaskScript = cmd: ''
+    set -euo pipefail
+    ${lib.optionalString (cmd.runtimeInputs != [ ]) ''
+      export PATH="${lib.makeBinPath cmd.runtimeInputs}:$PATH"
+    ''}
+    ${mkEnvExports cmd.env}
+    ${cmd.exec}
+  '';
 
   mkCmd =
     name: cmd:
@@ -26,18 +40,25 @@ let
       runtimeInputs = cmd.runtimeInputs;
       text = ''
         set -euo pipefail
-        ${lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') cmd.env
-        )}
+        ${mkEnvExports cmd.env}
         ${cmd.exec}
       '';
     };
 
-  cmdPkgs = lib.mapAttrsToList mkCmd cfg.commands;
+  mkTask = name: cmd: {
+    exec = mkTaskScript cmd;
+  };
+
+  pkgDefs = cfg.commands // scriptsCfg;
+  cmdPkgs = lib.mapAttrsToList mkCmd pkgDefs;
+  taskDefs = lib.mapAttrs mkTask cfg.commands;
+  scriptDefs = lib.mapAttrs mkTask scriptsCfg;
 in
 {
   imports = [
     ../core/options
   ];
   config.stackpanel.devshell._commandPkgs = cmdPkgs;
+  config.stackpanel.devshell._tasks = taskDefs;
+  config.stackpanel.devshell._scripts = scriptDefs;
 }

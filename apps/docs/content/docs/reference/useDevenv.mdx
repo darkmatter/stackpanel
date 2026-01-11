@@ -1,0 +1,25 @@
+---
+title: useDevenv
+description: Configuration options for stackpanel.useDevenv
+icon: Settings
+---
+
+# UseDevenv Options
+
+## `useDevenv`
+
+For internal use:
+
+Whether to use devenv as the shell backend. When true, devenv features
+like languages, processes, and tasks are available. When false, uses a
+lean native nix shell with only stackpanel features.
+
+Defaults to true unless SKIP_DEVENV environment variable is set.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+

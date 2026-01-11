@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/spf13/cobra"
 )
 

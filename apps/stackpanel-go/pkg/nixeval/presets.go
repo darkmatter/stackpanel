@@ -72,6 +72,51 @@ in
 `
 )
 
+// InstalledPackagesExpr builds a Nix expression to get installed packages from a flake's devshell.
+// The projectRoot is baked directly into the expression to avoid relying on environment variables.
+func InstalledPackagesExpr(projectRoot string) string {
+	return fmt.Sprintf(`
+let
+  system = builtins.currentSystem;
+
+  # Get the flake and extract devshell packages
+  flake = builtins.getFlake "%s";
+
+  # Try to get packages from the devshell's passthru
+  devShell = flake.devShells.${system}.default or null;
+  devshellConfig = if devShell != null then devShell.passthru.devshellConfig or null else null;
+  extraPackages = if devShell != null then devShell.passthru.extraPackages or [] else [];
+
+  # Get packages from devshellConfig (this is stackpanel.devshell config)
+  configPackages = if devshellConfig != null then devshellConfig.packages or [] else [];
+  commandPkgs = if devshellConfig != null then devshellConfig._commandPkgs or [] else [];
+
+  # Combine all package sources
+  allPkgs = configPackages ++ commandPkgs ++ extraPackages;
+
+  # Convert a package derivation to serializable form
+  mkPackageInfo = pkg:
+    if builtins.isAttrs pkg then {
+      name = pkg.pname or pkg.name or "unknown";
+      version = pkg.version or "";
+      attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
+    } else if builtins.isString pkg then {
+      name = pkg;
+      version = "";
+      attrPath = pkg;
+    } else {
+      name = "unknown";
+      version = "";
+      attrPath = "";
+    };
+
+in
+  if devshellConfig != null
+  then builtins.map mkPackageInfo allPkgs
+  else []
+`, projectRoot)
+}
+
 // EvalExprResult holds the raw JSON result of a Nix expression evaluation
 type EvalExprResult struct {
 	Raw json.RawMessage
@@ -264,4 +309,189 @@ func BuildExpr(template string, vars map[string]string) string {
 		result = strings.ReplaceAll(result, "${"+k+"}", escaped)
 	}
 	return result
+}
+
+// InstalledPackage represents a package installed in the devenv/stackpanel config
+type InstalledPackage struct {
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	AttrPath string `json:"attrPath"`
+	Source   string `json:"source,omitempty"` // "devshell" or "user"
+}
+
+// GetInstalledPackagesOptions configures how GetInstalledPackages retrieves packages
+type GetInstalledPackagesOptions struct {
+	// ProjectRoot is the root directory of the project (for file lookups and nix eval)
+	ProjectRoot string
+	// ConfigJSONPath is an explicit path to the config JSON file (highest priority)
+	ConfigJSONPath string
+}
+
+// GetInstalledPackages returns the list of installed packages from the devshell configuration.
+// It tries multiple fast paths before falling back to slow nix eval:
+//  1. Explicit configJSONPath (if provided in options)
+//  2. STACKPANEL_CONFIG_JSON env var (pre-computed at shell entry)
+//  3. State file at .stackpanel/state/stackpanel.json
+//  4. Generated config at .stackpanel/gen/config.json
+//  5. Nix eval against the flake (slow, last resort)
+//
+// If projectRoot is empty, it will attempt to find it from STACKPANEL_ROOT env var
+// or by searching up from the current directory.
+func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions) ([]InstalledPackage, error) {
+	projectRoot := opts.ProjectRoot
+
+	// Resolve project root first (needed for file-based lookups)
+	if projectRoot == "" {
+		projectRoot = findProjectRoot()
+	}
+
+	// Fast path 1: explicit config JSON path (e.g., from executor's devshell env)
+	if opts.ConfigJSONPath != "" {
+		packages, err := getInstalledPackagesFromJSON(opts.ConfigJSONPath)
+		if err == nil && len(packages) > 0 {
+			return packages, nil
+		}
+	}
+
+	// Fast path 2: try to read from STACKPANEL_CONFIG_JSON env var
+	if configPath := os.Getenv("STACKPANEL_CONFIG_JSON"); configPath != "" {
+		packages, err := getInstalledPackagesFromJSON(configPath)
+		if err == nil && len(packages) > 0 {
+			return packages, nil
+		}
+	}
+
+	// Fast path 3: try state file
+	if projectRoot != "" {
+		stateFile := projectRoot + "/.stackpanel/state/stackpanel.json"
+		packages, err := getInstalledPackagesFromJSON(stateFile)
+		if err == nil && len(packages) > 0 {
+			return packages, nil
+		}
+	}
+
+	// Fast path 4: try generated config
+	if projectRoot != "" {
+		genConfig := projectRoot + "/.stackpanel/gen/config.json"
+		packages, err := getInstalledPackagesFromJSON(genConfig)
+		if err == nil && len(packages) > 0 {
+			return packages, nil
+		}
+	}
+
+	// Fast path 5: try reading user packages directly from data file
+	if projectRoot != "" {
+		userPackages, err := getUserPackagesFromDataFile(projectRoot)
+		if err == nil && len(userPackages) > 0 {
+			// Return user packages if we can't get the full list from config
+			return userPackages, nil
+		}
+	}
+
+	// Slow path: evaluate from flake
+	if projectRoot == "" {
+		return nil, fmt.Errorf("no project root found - set STACKPANEL_ROOT or pass projectRoot")
+	}
+
+	expr := InstalledPackagesExpr(projectRoot)
+	result, err := EvalExprWithTimeout(ctx, expr, 60*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate installed packages: %w", err)
+	}
+
+	var packages []InstalledPackage
+	if err := result.Unmarshal(&packages); err != nil {
+		return nil, fmt.Errorf("failed to parse installed packages: %w", err)
+	}
+
+	return packages, nil
+}
+
+// getInstalledPackagesFromJSON reads packages from a JSON config file.
+// The file should have a "packages" field with an array of package objects.
+func getInstalledPackagesFromJSON(configPath string) ([]InstalledPackage, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var config struct {
+		Packages []InstalledPackage `json:"packages"`
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+
+	return config.Packages, nil
+}
+
+// getUserPackagesFromDataFile reads user-installed packages from .stackpanel/data/packages.nix
+// This is a fallback when the config JSON doesn't have packages or doesn't exist yet.
+// The file format is a simple Nix list of attribute path strings:
+//
+//	[ "ripgrep" "jq" "htop" ]
+func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error) {
+	packagesFile := projectRoot + "/.stackpanel/data/packages.nix"
+
+	// Check if file exists
+	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	// Use nix eval to read the file (it's a Nix expression, not JSON)
+	nixBin, err := findNixBin()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, nixBin, "eval", "--json", "-f", packagesFile)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
+	}
+
+	// Parse as list of strings (attribute paths)
+	var attrPaths []string
+	if err := json.Unmarshal(stdout.Bytes(), &attrPaths); err != nil {
+		return nil, fmt.Errorf("failed to parse packages.nix: %w", err)
+	}
+
+	// Convert to InstalledPackage structs
+	packages := make([]InstalledPackage, 0, len(attrPaths))
+	for _, attrPath := range attrPaths {
+		packages = append(packages, InstalledPackage{
+			Name:     attrPath, // Use attr path as name (will be resolved by Nix)
+			AttrPath: attrPath,
+			Source:   "user",
+		})
+	}
+
+	return packages, nil
+}
+
+// GetInstalledPackageNames returns just the package names as a set for fast lookup.
+// If projectRoot is empty, it will attempt to find it automatically.
+func GetInstalledPackageNames(ctx context.Context, opts GetInstalledPackagesOptions) (map[string]bool, error) {
+	packages, err := GetInstalledPackages(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	nameSet := make(map[string]bool, len(packages)*2)
+	for _, pkg := range packages {
+		if pkg.Name != "" {
+			nameSet[strings.ToLower(pkg.Name)] = true
+		}
+		if pkg.AttrPath != "" {
+			nameSet[strings.ToLower(pkg.AttrPath)] = true
+		}
+	}
+
+	return nameSet, nil
 }

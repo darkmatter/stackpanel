@@ -245,6 +245,27 @@ var (
 		Example:     "/home/user/.config/stackpanel/stackpanel.yaml",
 		GoField:     "UserConfigPath",
 	}
+
+	// StackpanelBindAddress is the address the agent binds to
+	StackpanelBindAddress = EnvVar{
+		Name:        "STACKPANEL_BIND_ADDRESS",
+		Description: "Address the agent binds to (use 0.0.0.0 for remote/Tailscale access)",
+		Category:    CategoryAgent,
+		Source:      SourceDynamic,
+		Default:     "127.0.0.1",
+		Example:     "0.0.0.0",
+		GoField:     "BindAddress",
+	}
+
+	// StackpanelAllowedOrigins is a comma-separated list of allowed CORS origins
+	StackpanelAllowedOrigins = EnvVar{
+		Name:        "STACKPANEL_ALLOWED_ORIGINS",
+		Description: "Comma-separated list of allowed CORS origins for remote access",
+		Category:    CategoryAgent,
+		Source:      SourceDynamic,
+		Example:     "https://myhost.tail1234.ts.net,http://192.168.1.100:3000",
+		GoField:     "AllowedOrigins",
+	}
 )
 
 // ===========================================================================

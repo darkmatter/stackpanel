@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// A workspace task definition
+message Task {
+  string exec = 1; // Default task command to execute
+  optional string description = 2; // Optional description for the task
+  optional string cwd = 3; // Working directory for the task
+  map<string, string> env = 4; // Environment variables for the task
+}
+
+// Primary workspace tasks configuration
+message Tasks {
+  map<string, Task> tasks = 1; // Map of task name to task config
+}

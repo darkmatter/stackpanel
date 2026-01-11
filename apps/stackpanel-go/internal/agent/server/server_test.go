@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/config"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
 )
 
 // TestHandleHealth verifies the basic happy-path server wiring.
