@@ -28,8 +28,47 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const ADD_PROJECT_VALUE = "__add_project__";
 
-export function ProjectSelector() {
-  const { host, port, token, healthStatus } = useAgentContext();
+const unwrapQueryData = <T,>(value: T | { data: T } | null | undefined) => {
+  let current: T | { data: T } | null | undefined = value;
+  let depth = 0;
+
+  while (
+    current &&
+    typeof current === "object" &&
+    "data" in current &&
+    depth < 3
+  ) {
+    current = (current as { data: T }).data;
+    depth += 1;
+  }
+
+  return (current ?? null) as T | null;
+};
+
+const extractRepoSlug = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed
+    .replace(/^github:/, "")
+    .replace(/^git@github\.com:/, "")
+    .replace(/^https?:\/\/github\.com\//, "")
+    .replace(/\.git$/, "");
+
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]}/${parts[1]}`;
+  }
+
+  return normalized || null;
+};
+
+interface ProjectSelectorProps {
+  variant?: "default" | "sidebar";
+}
+
+export function ProjectSelector({ variant = "default" }: ProjectSelectorProps) {
+  const { host, port, token, healthStatus, isConnected } = useAgentContext();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newProjectPath, setNewProjectPath] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);

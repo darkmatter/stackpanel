@@ -1,0 +1,222 @@
+---
+title: theme
+description: Configuration options for stackpanel.theme
+icon: Settings
+---
+
+# Theme Options
+
+## `theme.colors`
+
+Color scheme configuration
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `theme.colors.error`
+
+Error/negative color
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.colors.muted`
+
+Muted/subtle color
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.colors.primary`
+
+Primary accent color
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.colors.secondary`
+
+Secondary accent color
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.colors.success`
+
+Success/positive color
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.colors.warning`
+
+Warning color
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.config-file`
+
+Custom starship.toml config file (uses stackpanel default if not set)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or absolute path` |
+| **Default** | `null` |
+
+---
+
+## `theme.enable`
+
+Whether to enable Starship prompt for stackpanel devenv.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `theme.minimal`
+
+Use minimal prompt (fewer segments)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `theme.name`
+
+Theme name
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.nerd-font`
+
+Use Nerd Font icons in prompt
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `theme.starship`
+
+Starship prompt configuration
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `theme.starship.add-newline`
+
+Add blank line before prompt
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `theme.starship.command-timeout`
+
+Timeout for commands (ms)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `0` |
+
+---
+
+## `theme.starship.continuation-prompt`
+
+Continuation prompt for multi-line input
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `theme.starship.format`
+
+Custom prompt format string
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `theme.starship.right-format`
+
+Right-side prompt format
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `theme.starship.scan-timeout`
+
+Timeout for directory scanning (ms)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `0` |
+
+---
+

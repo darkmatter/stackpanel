@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+
+// Type of file content source
+enum FileType {
+  FILE_TYPE_UNSPECIFIED = 0;
+  FILE_TYPE_TEXT = 1;
+  FILE_TYPE_DERIVATION = 2;
+}
+
+// A file to be generated into the project workspace
+message GeneratedFile {
+  string path = 1; // Relative path from project root where file will be written
+  FileType type = 2; // Type of content source (text or derivation)
+  bool enable = 3; // Whether this file should be generated
+  optional string mode = 4; // File permissions (e.g., '0755')
+  optional string source = 5; // Module or component that generated this file
+  optional string description = 6; // Human-readable description of the file's purpose
+  optional string store_path = 7; // Nix store path containing the file content (for derivation type)
+  optional string text = 8; // Inline text content (for text type, may be truncated for large files)
+}
+
+// Collection of all generated file entries
+message GeneratedFiles {
+  bool enable = 1; // Whether file generation is enabled globally
+  map<string, GeneratedFile> entries = 2; // Map of file path to file configuration
+}

@@ -120,6 +120,8 @@ in
           type = "derivation";
           drv = pkgs.writeText "devshell-loader.sh" devshellLoaderScript;
           mode = "0755";
+          source = "ide";
+          description = "Shell script that loads the Nix devshell environment for VS Code terminal";
         };
       }
       // lib.optionalAttrs (cfg.vscode.output-mode == "workspace") {
@@ -129,6 +131,8 @@ in
           drv = pkgs.writeText "${cfg.vscode.workspace-name}.code-workspace" (
             builtins.toJSON workspaceContent
           );
+          source = "ide";
+          description = "VS Code workspace configuration with integrated terminal settings";
         };
       }
       // lib.optionalAttrs (cfg.vscode.output-mode == "settingsJson") {
@@ -136,6 +140,8 @@ in
         ".vscode/settings.json" = {
           type = "derivation";
           drv = pkgs.writeText "settings.json" (builtins.toJSON mergedSettings);
+          source = "ide";
+          description = "VS Code settings with terminal integration";
         };
       };
     }

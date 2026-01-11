@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/config"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/project"
-	sharedexec "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/exec"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
+	sharedexec "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )
@@ -23,9 +23,8 @@ type Server struct {
 	// Project manager for handling project selection and validation
 	projectMgr *project.Manager
 
-	// pairToken is a per-process token used by the hosted UI to authenticate.
-	// It is only delivered to an allowed origin via the /pair handshake page.
-	pairToken    string
+	// jwtManager handles JWT token generation and validation
+	jwtManager   *JWTManager
 	pairTemplate *template.Template
 
 	// SSE subscribers for config change notifications
@@ -114,11 +113,17 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create file watcher: %w", err)
 	}
 
+	// Initialize JWT manager for token auth
+	jwtMgr, err := NewJWTManager()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JWT manager: %w", err)
+	}
+
 	s := &Server{
 		config:         cfg,
 		exec:           exec,
 		projectMgr:     projectMgr,
-		pairToken:      generateToken(32),
+		jwtManager:     jwtMgr,
 		pairTemplate:   pairTmpl,
 		sseSubscribers: make(map[chan SSEEvent]struct{}),
 		watcher:        watcher,
@@ -130,6 +135,9 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/health", s.withCORS(s.handleHealth))
 	mux.HandleFunc("/status", s.withCORS(s.handleStatus))
 	mux.HandleFunc("/pair", s.handlePair)
+
+	// Token validation endpoint (requires auth but no project)
+	mux.HandleFunc("/api/auth/validate", s.withCORS(s.requireAuth(s.handleValidateToken)))
 
 	// Project management endpoints - list and current are public for UI discovery
 	mux.HandleFunc("/api/project/current", s.withCORS(s.handleProjectCurrent))
@@ -145,11 +153,24 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/exec", s.withCORS(s.requireAuth(s.requireProject(s.handleExec))))
 	mux.HandleFunc("/api/nix/eval", s.withCORS(s.requireAuth(s.requireProject(s.handleNixEval))))
 	mux.HandleFunc("/api/nix/generate", s.withCORS(s.requireAuth(s.requireProject(s.handleNixGenerate))))
+	mux.HandleFunc("/api/nix/ui/runtime", s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIRuntime))))
+	mux.HandleFunc("/api/nix/ui/extensions", s.withCORS(s.requireAuth(s.requireProject(s.handleNixUIExtensions))))
 	mux.HandleFunc("/api/nix/config", s.withCORS(s.requireAuth(s.requireProject(s.handleNixConfig))))
+	mux.HandleFunc("/api/nix/files", s.withCORS(s.requireAuth(s.requireProject(s.handleNixFiles))))
 	mux.HandleFunc("/api/nix/data", s.withCORS(s.requireAuth(s.requireProject(s.handleNixData))))
 	mux.HandleFunc("/api/nix/data/list", s.withCORS(s.requireAuth(s.requireProject(s.handleNixDataList))))
 	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))))
 	mux.HandleFunc("/api/secrets/set", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsSet))))
+
+	// Security status endpoints (AWS session and certificate status)
+	mux.HandleFunc("/api/security/status", s.withCORS(s.requireAuth(s.handleSecurityStatus)))
+	mux.HandleFunc("/api/security/aws", s.withCORS(s.requireAuth(s.handleAWSStatus)))
+	mux.HandleFunc("/api/security/certificate", s.withCORS(s.requireAuth(s.handleCertificateStatus)))
+
+	// Nixpkgs package search and installed packages
+	mux.HandleFunc("/api/nixpkgs/search", s.withCORS(s.requireAuth(s.handleNixpkgsSearch)))
+	mux.HandleFunc("/api/nixpkgs/installed", s.withCORS(s.requireAuth(s.handleInstalledPackages)))
+	mux.HandleFunc("/api/nixpkgs/meta", s.withCORS(s.requireAuth(s.handleNixpkgsPackageMeta)))
 
 	// SSE endpoint for real-time config updates
 	mux.HandleFunc("/api/events", s.withCORS(s.requireAuth(s.handleSSE)))
@@ -158,7 +179,7 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/ws", s.withCORS(s.requireAuth(s.requireProject(s.handleWS))))
 
 	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf("127.0.0.1:%d", cfg.Port),
+		Addr:    fmt.Sprintf("%s:%d", cfg.BindAddress, cfg.Port),
 		Handler: s.withLogging(mux.ServeHTTP),
 	}
 
@@ -167,10 +188,15 @@ func New(cfg *config.Config) (*Server, error) {
 		projectInfo = "(no project selected)"
 	}
 
+	bindMode := "loopback only"
+	if cfg.BindAddress == "0.0.0.0" {
+		bindMode = "all interfaces (remote access enabled)"
+	}
+
 	log.Info().
 		Str("addr", s.httpServer.Addr).
 		Str("project_root", projectInfo).
-		Msg("Agent server configured (loopback only)")
+		Msgf("Agent server configured (%s)", bindMode)
 
 	return s, nil
 }

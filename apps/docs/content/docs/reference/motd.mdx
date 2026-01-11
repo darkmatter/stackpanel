@@ -1,0 +1,74 @@
+---
+title: motd
+description: Configuration options for stackpanel.motd
+icon: MessageSquare
+---
+
+# Motd Options
+
+## `motd.commands`
+
+List of available commands to show in MOTD
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `motd.commands.*.description`
+
+Command description
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `motd.commands.*.name`
+
+Command name
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `motd.enable`
+
+Show MOTD with help text on shell entry
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `motd.features`
+
+List of enabled features to show in MOTD
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `motd.hints`
+
+List of hints to show in MOTD
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+

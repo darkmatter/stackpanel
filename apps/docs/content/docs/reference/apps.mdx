@@ -1,0 +1,884 @@
+---
+title: apps
+description: Configuration options for stackpanel.apps
+icon: AppWindow
+---
+
+# Apps Options
+
+## `apps`
+
+# Stackpanel apps
+
+Configuration options for defining and managing applications within
+the Stackpanel environment. This module allows you to declare app-specific
+settings, dependencies, and runtime configurations that integrate with the
+Stackpanel orchestration system.
+
+Core configuration options are defined here. These options are extended
+by other modules to add functionality such as scaffolding, IDE support,
+and deployment settings. These are typically configured at
+`stackpanel.apps..`.
+
+A core stackpanel feature and convention is that each app is assigned a stable,
+deterministic port based on the repo (`organization/repo`) and app/service
+name. This allows the port to be known ahead of time without having to
+pass it around manually.
+
+This key will also be used as the default value by other modules lke Caddy
+to create virtual hosts for the app.
+
+If you encounter a collision in the port calculation, you can set
+`` to a different name to get a different port range.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  web = {
+    name = "web";
+    path = "apps/web";
+    tls = true;
+    # Go app example - enable go features
+    go = {
+      enable = true;
+      # Watch directories for live reload
+      watchDirs = [ "cmd" "pkg" "internal" ];
+      # tools.go will be automatically created, add dev tools here
+      tools = [
+        "github.com/golangci/golangci-lint/cmd/golangci-lint"
+      ];
+      # By default, turborepo integration (package.json), air live reload (.air.toml),
+      # tools.go is all scaffolded automatically, but can be suppressed here
+      generateFiles = true;
+    };
+  };
+  server = { offset = 1; };
+  docs = { domain = "docs"; };
+  api = { domain = "api"; tls = true; };
+}
+```
+
+
+---
+
+## `apps.<name>.build-command`
+
+Custom build command (overrides default behavior)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.commands`
+
+Commands associated with this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.description`
+
+Description of the app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.domain`
+
+Domain prefix for .localhost vhost.
+If set, a Caddy vhost will be created at .localhost
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"api"`
+
+
+---
+
+## `apps.<name>.environments`
+
+Environments associated with this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (attribute set)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.format-command`
+
+Custom code formatting command
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.install-command`
+
+Custom install command (overrides default behavior)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.lint-command`
+
+Custom linting command
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.name`
+
+Display name of the app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.offset`
+
+Port offset from base port.
+If null, offset is determined by position in apps attrset.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `null` |
+
+**Example:**
+
+`5`
+
+
+---
+
+## `apps.<name>.path`
+
+Relative path to the app directory
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.port`
+
+Port number for the app.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `8080` |
+
+---
+
+## `apps.<name>.start-command`
+
+Custom start/development command
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.test-command`
+
+Custom test command
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tls`
+
+Enable TLS for the vhost (requires Step CA)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `apps.<name>.tooling.build`
+
+Build tool definition (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps`
+
+Additional build steps (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.build.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.build.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.build.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.dev`
+
+Dev tool definition (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.dev.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.dev.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.formatters`
+
+Formatter definitions (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.install`
+
+Install tool definition (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.install.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.install.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.linters`
+
+Linter definitions (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.linters.*.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.linters.*.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.linters.*.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.test`
+
+Test tool definition (wrapped).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.args`
+
+Arguments passed to the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.test.bin`
+
+Optional binary name if the package provides multiple executables.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.configArg`
+
+Argument prefix inserted before configPath (e.g. ["--config"]).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.configPath`
+
+Repo-relative config file path for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.cwd`
+
+Override working directory (repo-relative). Defaults to app path.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.env`
+
+Environment variables for the tool.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.test.package`
+
+Package that provides the tool binary.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.type`
+
+Type of the app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.variables`
+
+Variables associated with this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+

@@ -1,6 +1,7 @@
-@import "@stackpanel/ui-core/styles/base.css";
+@import "./base.css";
 
 @theme inline {
+  --font-sans: "Montserrat";
   --color-background: var(--color-fd-background);
   --color-foreground: var(--color-fd-foreground);
   --color-card: var(--color-fd-card);
@@ -39,3 +40,6 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+:root {
+  --font-sans: "Montserrat";
+}

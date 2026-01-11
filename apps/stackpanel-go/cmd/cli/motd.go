@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/nixconfig"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/spf13/cobra"
 )
 

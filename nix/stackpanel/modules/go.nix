@@ -493,6 +493,74 @@ in
             };
           }) goApps
         );
+
+        # Register Go extension with panels and per-app data for UI
+        stackpanel.extensions.go = {
+          name = "Go";
+          enabled = true;
+          priority = 10;
+          tags = [
+            "language"
+            "backend"
+          ];
+
+          # UI panels for the extensions page
+          panels = [
+            {
+              id = "go-apps-grid";
+              title = "Go Applications";
+              type = "PANEL_TYPE_APPS_GRID";
+              order = 1;
+              fields = [
+                {
+                  name = "columns";
+                  type = "FIELD_TYPE_COLUMNS";
+                  value = builtins.toJSON [
+                    "name"
+                    "path"
+                    "version"
+                    "port"
+                  ];
+                }
+              ];
+            }
+            {
+              id = "go-status";
+              title = "Go Environment";
+              type = "PANEL_TYPE_STATUS";
+              order = 2;
+              fields = [
+                {
+                  name = "metrics";
+                  type = "FIELD_TYPE_STRING";
+                  value = builtins.toJSON [
+                    {
+                      label = "Go Version";
+                      value = pkgs.go.version;
+                      status = "ok";
+                    }
+                    {
+                      label = "Apps";
+                      value = toString (lib.length (lib.attrNames goApps));
+                      status = "ok";
+                    }
+                  ];
+                }
+              ];
+            }
+          ];
+
+          # Per-app computed data (serializable subset)
+          apps = lib.mapAttrs (name: app: {
+            enabled = true;
+            config = {
+              path = app.path or "";
+              version = app.go.version or "0.1.0";
+              binaryName = app.go.binaryName or name;
+              mainPackage = app.go.mainPackage or ".";
+            };
+          }) goApps;
+        };
       }
     ))
   ];

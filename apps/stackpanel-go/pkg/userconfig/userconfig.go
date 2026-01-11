@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )

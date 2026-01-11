@@ -16,7 +16,10 @@ import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "@fontsource-variable/montserrat";
+import "@fontsource-variable/source-code-pro";
 import appCss from "@/styles.css?url";
+// import baseCss from "@stackpanel/ui/base.css?url";
+import webcss from "@stackpanel/ui/web.css?url";
 
 export interface RouterAppContext {
   trpc: TRPCOptionsProxy<AppRouter>;
@@ -38,11 +41,19 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     links: [
       {
         rel: "icon",
-        href: "/favicon.ico",
+        href: "/img/favicon/favicon.ico",
       },
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      // {
+      //   rel: "stylesheet",
+      //   href: baseCss,
+      // },
+      {
+        rel: "stylesheet",
+        href: webcss,
       },
     ],
   }),
@@ -62,6 +73,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const isFullScreenPage = [/^\/$/, /^\/(demo|studio)\/?/].some((regex) =>
     regex.test(pathname),
   );
+  const isStudio = /^\/studio\/?/.test(pathname);
 
   return (
     <ThemeProvider
@@ -75,7 +87,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <HeadContent />
           <Scripts />
         </head>
-        <body>
+        <body className={isStudio ? "studio" : ""}>
           {!isFullScreenPage && <Header />}
           <div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
           <Toaster richColors />

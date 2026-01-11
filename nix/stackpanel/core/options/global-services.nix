@@ -21,14 +21,19 @@
 #     postgres.enable = true;
 #     postgres.databases = ["myapp" "myapp_test"];
 #   };
+#
+# Note: pkgs is optional. Package defaults are set in config when pkgs is available.
 # ==============================================================================
 {
   lib,
   config,
-  pkgs,
   ...
-}:
+}@args:
 let
+  # Check if pkgs was provided without triggering a lookup error
+  hasPkgs = args ? pkgs;
+  pkgs = args.pkgs or null;
+
   cfg = config.stackpanel.globalServices;
 in
 {
@@ -63,7 +68,6 @@ in
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.postgresql_17;
         description = "PostgreSQL package to use";
       };
     };
@@ -79,7 +83,6 @@ in
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.redis;
         description = "Redis package to use";
       };
     };
@@ -101,7 +104,6 @@ in
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.minio;
         description = "Minio package to use";
       };
     };
@@ -118,6 +120,15 @@ in
           "api.localhost" = "localhost:8080";
         };
       };
+    };
+  };
+
+  # Set package defaults when pkgs is available
+  config = lib.mkIf hasPkgs {
+    stackpanel.globalServices = {
+      postgres.package = lib.mkDefault pkgs.postgresql_17;
+      redis.package = lib.mkDefault pkgs.redis;
+      minio.package = lib.mkDefault pkgs.minio;
     };
   };
 }

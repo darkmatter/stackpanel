@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/nixconfig"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 	"github.com/spf13/cobra"
 )
 

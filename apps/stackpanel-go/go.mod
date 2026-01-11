@@ -1,4 +1,4 @@
-module github.com/darkmatter/stackpanel/apps/stackpanel-go
+module github.com/darkmatter/stackpanel/stackpanel-go
 
 go 1.25
 
@@ -11,11 +11,12 @@ require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-isatty v0.0.20
-	github.com/otiai10/copy v1.14.1
-	github.com/rs/zerolog v1.33.0
+	github.com/otiai10/copy v1.14.0
+	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
 	github.com/stretchr/testify v1.11.1
@@ -159,7 +160,6 @@ require (
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.0.9 // indirect
 	github.com/olekukonko/tablewriter v1.0.9 // indirect
-	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

@@ -128,6 +128,7 @@ export function useAgentHealth(
   >("checking");
   const [projectRoot, setProjectRoot] = useState<string | null>(null);
   const [hasProject, setHasProject] = useState<boolean>(false);
+  const [agentId, setAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     const client = new AgentHttpClient(host, port);
@@ -140,10 +141,12 @@ export function useAgentHealth(
           setStatus("available");
           setProjectRoot(data.project_root ?? null);
           setHasProject(data.has_project ?? !!data.project_root);
+          setAgentId((data as { agent_id?: string }).agent_id ?? null);
         } else {
           setStatus("unavailable");
           setProjectRoot(null);
           setHasProject(false);
+          setAgentId(null);
         }
       });
     };
@@ -157,5 +160,5 @@ export function useAgentHealth(
     };
   }, [host, port, intervalMs]);
 
-  return { status, projectRoot, hasProject };
+  return { status, projectRoot, hasProject, agentId };
 }

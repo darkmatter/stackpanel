@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 )
 
 // Config represents the Nix-generated stackpanel configuration.

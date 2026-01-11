@@ -28,19 +28,19 @@ For VS Code, this module creates:
 
 ```nix
 # devenv.nix
-stackpanel.ide = {
+stackpanel.ide = \{
   enable = true;
-  vscode = {
+  vscode = \{
     enable = true;
     workspace-name = "myproject";
-    settings = {
+    settings = \{
       # Additional VS Code settings
-    };
+    \};
     extensions = [
       "ms-vscode-remote.remote-containers"
     ];
-  };
-};
+  \};
+\};
 ```
 
 ## How It Works

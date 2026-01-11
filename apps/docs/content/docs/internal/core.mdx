@@ -44,20 +44,20 @@ The core module is typically imported by a devenv adapter:
 
 ```nix
 # In devenv.nix or a flake module
-{
+\{
   imports = [
     ./nix/stackpanel/core
   ];
 
-  stackpanel = {
+  stackpanel = \{
     enable = true;
     ports.project-name = "myproject";
-    apps = {
-      web = {};
-      api = { domain = "api"; tls = true; };
-    };
-  };
-}
+    apps = \{
+      web = \{\};
+      api = \{ domain = "api"; tls = true; \};
+    \};
+  \};
+\}
 ```
 
 ## Key Concepts

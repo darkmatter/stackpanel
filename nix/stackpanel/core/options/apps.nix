@@ -26,26 +26,29 @@
 # Access computed values:
 #   config.stackpanel.appsComputed.<name>.port
 #   config.stackpanel.appsComputed.<name>.url
+#
+# Note: pkgs is optional. When not available (e.g., flake-parts top-level),
+# wrappedTooling will be null. Full computation happens when pkgs is provided.
 # ==============================================================================
 {
   lib,
   config,
-  pkgs,
   ...
-}:
+}@args:
 let
+  # Check if pkgs was provided without triggering a lookup error
+  hasPkgs = args ? pkgs;
+  pkgs = args.pkgs or null;
+
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
   repoKey = rawApps.github or "darkmatter/stackpanel";
   portsLib = import ../../lib/ports.nix { inherit lib; };
+  ports = portsLib.mkPorts { inherit lib; };
   db = import ../../db { inherit lib; };
-  # Apps use offset 0-9 (services use 10+)
-  appsBaseOffset = 0;
 
-  # Get the project base port
-  projectBasePort = portsCfg.base-port;
-
+  # Tool step submodule - defines schema for tooling configuration
   toolStepModule =
     { lib, ... }:
     {
@@ -87,47 +90,9 @@ let
       };
     };
 
-  mkToolWrapper =
-    appName: appCfg: label: stepCfg:
-    let
-      exe =
-        if stepCfg.bin != null then "${stepCfg.package}/bin/${stepCfg.bin}" else lib.getExe stepCfg.package;
-      appPath = stepCfg.cwd or appCfg.path or null;
-      args = lib.escapeShellArgs stepCfg.args;
-      configArgs =
-        if stepCfg.configPath == null then
-          ""
-        else if stepCfg.configArg == null then
-          ''"$ROOT/${stepCfg.configPath}"''
-        else
-          ''${lib.escapeShellArgs stepCfg.configArg} "$ROOT/${stepCfg.configPath}"'';
-      envLines = lib.concatMapStringsSep "\n" (
-        name:
-        let
-          value = stepCfg.env.${name};
-        in
-        "export ${name}=${lib.escapeShellArg value}"
-      ) (lib.attrNames stepCfg.env);
-      cdLine = if appPath != null then ''cd "$ROOT/${appPath}"'' else "";
-    in
-    pkgs.writeShellApplication {
-      name = "${appName}-${label}";
-      runtimeInputs = [ stepCfg.package ];
-      text = lib.concatStringsSep "\n" [
-        "set -euo pipefail"
-        ''ROOT="''${STACKPANEL_ROOT:-$(pwd)}"''
-        envLines
-        cdLine
-        "exec ${exe} ${args} ${configArgs}"
-      ];
-    };
-
-  wrapToolList =
-    appName: appCfg: label: tools:
-    lib.imap0 (idx: step: mkToolWrapper appName appCfg "${label}-${toString idx}" step) tools;
-
   # Nix-specific app options (not in proto schema)
   # These are runtime/devenv options that don't belong in serialized data
+  # Note: port and domain are defined in the proto schema (db.extend.app)
   nixAppOptionsModule =
     { lib, ... }:
     {
@@ -178,15 +143,6 @@ let
           default = null;
           example = 5;
         };
-        domain = lib.mkOption {
-          description = ''
-            Domain prefix for .localhost vhost.
-            If set, a Caddy vhost will be created at <domain>.localhost
-          '';
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          example = "api";
-        };
         tls = lib.mkOption {
           description = "Enable TLS for the vhost (requires Step CA)";
           type = lib.types.bool;
@@ -195,8 +151,81 @@ let
       };
     };
 
-  # Compute full app configurations with ports
+  # ===========================================================================
+  # Tool wrapper generation (requires pkgs)
+  # Only define these functions when pkgs is available to avoid evaluation errors
+  # ===========================================================================
+  mkToolWrapper =
+    if !hasPkgs then
+      null
+    else
+      appName: appCfg: label: stepCfg:
+      let
+        exe =
+          if stepCfg.bin != null then "${stepCfg.package}/bin/${stepCfg.bin}" else lib.getExe stepCfg.package;
+        appPath = stepCfg.cwd or appCfg.path or null;
+        args = lib.escapeShellArgs stepCfg.args;
+        configArgs =
+          if stepCfg.configPath == null then
+            ""
+          else if stepCfg.configArg == null then
+            ''"$ROOT/${stepCfg.configPath}"''
+          else
+            ''${lib.escapeShellArgs stepCfg.configArg} "$ROOT/${stepCfg.configPath}"'';
+        envLines = lib.concatMapStringsSep "\n" (
+          name:
+          let
+            value = stepCfg.env.${name};
+          in
+          "export ${name}=${lib.escapeShellArg value}"
+        ) (lib.attrNames stepCfg.env);
+        cdLine = if appPath != null then ''cd "$ROOT/${appPath}"'' else "";
+      in
+      pkgs.writeShellApplication {
+        name = "${appName}-${label}";
+        runtimeInputs = [ stepCfg.package ];
+        text = lib.concatStringsSep "\n" [
+          "set -euo pipefail"
+          ''ROOT="''${STACKPANEL_ROOT:-$(pwd)}"''
+          envLines
+          cdLine
+          "exec ${exe} ${args} ${configArgs}"
+        ];
+      };
+
+  wrapToolList =
+    if mkToolWrapper == null then
+      null
+    else
+      appName: appCfg: label: tools:
+      lib.imap0 (idx: step: mkToolWrapper appName appCfg "${label}-${toString idx}" step) tools;
+
+  # ===========================================================================
+  # Computed app configurations
+  # ===========================================================================
   appNames = lib.attrNames rawApps;
+
+  # Compute wrappedTooling for a single app (only when pkgs available)
+  mkWrappedTooling =
+    if mkToolWrapper == null then
+      null
+    else
+      name: appCfg:
+      let
+        tooling = appCfg.tooling;
+      in
+      {
+        install =
+          if tooling.install != null then mkToolWrapper name appCfg "install" tooling.install else null;
+        build = if tooling.build != null then mkToolWrapper name appCfg "build" tooling.build else null;
+        test = if tooling.test != null then mkToolWrapper name appCfg "test" tooling.test else null;
+        dev = if tooling.dev != null then mkToolWrapper name appCfg "dev" tooling.dev else null;
+        build-steps = wrapToolList name appCfg "build" tooling.build-steps;
+        formatters = wrapToolList name appCfg "format" tooling.formatters;
+        linters = wrapToolList name appCfg "lint" tooling.linters;
+      };
+
+  # Compute full app configurations with ports
   computedApps = lib.listToAttrs (
     lib.imap0 (
       idx: name:
@@ -211,16 +240,8 @@ let
         protocol = if appCfg.tls then "https" else "http";
         url = if domain != null then "${protocol}://${domain}" else null;
         tooling = appCfg.tooling;
-        wrappedTooling = {
-          install =
-            if tooling.install != null then mkToolWrapper name appCfg "install" tooling.install else null;
-          build = if tooling.build != null then mkToolWrapper name appCfg "build" tooling.build else null;
-          test = if tooling.test != null then mkToolWrapper name appCfg "test" tooling.test else null;
-          dev = if tooling.dev != null then mkToolWrapper name appCfg "dev" tooling.dev else null;
-          build-steps = wrapToolList name appCfg "build" tooling.build-steps;
-          formatters = wrapToolList name appCfg "format" tooling.formatters;
-          linters = wrapToolList name appCfg "lint" tooling.linters;
-        };
+        # Only compute wrappedTooling when pkgs is available
+        wrappedTooling = if mkWrappedTooling != null then mkWrappedTooling name appCfg else null;
       in
       {
         inherit name;
@@ -251,8 +272,8 @@ in
       These modules are applied to each app under `stackpanel.apps.<appName>.<module>`.
     '';
   };
+
   options.stackpanel.apps = lib.mkOption {
-    # type = lib.types.attrsOf appType;
     type = lib.types.attrsOf (
       lib.types.submoduleWith {
         modules = [
@@ -321,7 +342,14 @@ in
   options.stackpanel.appsComputed = lib.mkOption {
     type = lib.types.attrsOf (lib.types.attrsOf lib.types.unspecified);
     readOnly = true;
-    default = computedApps;
-    description = "Computed app configurations with ports and URLs";
+    description = ''
+      Computed app configurations with ports and URLs.
+
+      When pkgs is available, includes wrappedTooling derivations.
+      When pkgs is not available (e.g., flake-parts top-level), wrappedTooling is null.
+    '';
   };
+
+  # Set computed values in config
+  config.stackpanel.appsComputed = computedApps;
 }

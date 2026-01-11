@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	envvars "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars"
+	envvars "github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )

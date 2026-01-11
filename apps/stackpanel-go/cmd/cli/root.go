@@ -7,9 +7,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	_ "github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/services" // register built-in dev services
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui/navigation"
+	_ "github.com/darkmatter/stackpanel/stackpanel-go/internal/services" // register built-in dev services
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui/navigation"
 )
 
 var (

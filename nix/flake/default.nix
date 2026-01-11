@@ -50,11 +50,7 @@
 #
 # This uses the "importApply" pattern to get the localFlake reference.
 # The outer function receives args from importApply in flake.nix.
-{
-  localFlake,
-  withSystem,
-  devshell,
-}:
+localFlake:
 # The inner function is the actual flake-parts module.
 # These args (self, inputs, lib, etc.) refer to the USER's flake.
 {
@@ -65,12 +61,16 @@
   ...
 }:
 {
-  imports =
-    lib.optional (inputs ? process-compose-flake) inputs.process-compose-flake.flakeModule
-    ++ lib.optional (inputs ? devenv) inputs.devenv.flakeModule
-    ++ lib.optional (inputs ? git-hooks) inputs.git-hooks.flakeModule;
+  imports = [
+    # Import stackpanel options (pkgs-free, safe for flake-parts top-level)
+    ../stackpanel/core/options
+  ]
+  ++ lib.optional (inputs ? process-compose-flake) inputs.process-compose-flake.flakeModule
+  ++ lib.optional (inputs ? devenv) inputs.devenv.flakeModule
+  ++ lib.optional (inputs ? git-hooks) inputs.git-hooks.flakeModule;
 
   config = lib.mkMerge [
+    # conditionally build process-compose if enabled
     (lib.mkIf (inputs ? process-compose-flake) {
       perSystem =
         { lib, ... }:
@@ -78,6 +78,28 @@
           process-compose = lib.mkDefault { };
         };
     })
+
+    # Validate: secrets.enable requires agenix input
+    # This check runs at flake evaluation time
+    (
+      let
+        secretsEnabled = config.stackpanel.secrets.enable;
+        hasAgenix = inputs ? agenix;
+        check =
+          if secretsEnabled && !hasAgenix then
+            throw ''
+              stackpanel.secrets.enable requires agenix.
+
+              Add to your flake inputs:
+                agenix.url = "github:ryantm/agenix";
+            ''
+          else
+            true;
+      in
+      # Force evaluation of check by using it in the condition
+      lib.mkIf (secretsEnabled && check) { }
+    )
+
     {
       perSystem =
         {
@@ -91,24 +113,9 @@
           _module.args.stackpanel = {
             inherit localFlake;
             # Access packages from the stackpanel flake itself
-            packages = withSystem system ({ config, ... }: config.packages or { });
+            packages = localFlake.withSystem system ({ config, ... }: config.packages or { });
           };
         };
     }
   ];
-
-  # This flake module doesn't need to define any flake-parts options.
-  # All the real work is done by the devenv module (devenvModules.default).
-  #
-  # However, we could add flake-level options here if needed, for example:
-  #
-  # options.flake = {
-  #   stackpanel = {
-  #     someFlakeLevelOption = lib.mkOption { ... };
-  #   };
-  # };
-
-  # Provide a way for perSystem to access the stackpanel flake's packages
-  # This is useful for things like the stackpanel CLI
-  # perSystem is now defined under config to avoid top-level/config mixing.
 }

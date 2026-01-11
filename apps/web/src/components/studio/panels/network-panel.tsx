@@ -13,10 +13,38 @@ import {
 	Shield,
 	Smartphone,
 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNixConfig, useNixData } from "@/lib/use-nix-config";
+
+type StepCaData = {
+	enable?: boolean;
+	ca_url?: string;
+	ca_fingerprint?: string;
+	cert_name?: string;
+	provisioner?: string;
+	prompt_on_shell?: boolean;
+};
+
+type DnsRecord = {
+	type?: string;
+	name?: string;
+	value?: string;
+	ttl?: number;
+	comment?: string;
+};
+
+type DnsZone = {
+	domain?: string;
+	records?: DnsRecord[];
+};
+
+type DnsData = {
+	zones?: Record<string, DnsZone>;
+};
 
 const tailscaleDevices = [
 	{
@@ -63,40 +91,89 @@ const tailscaleDevices = [
 	},
 ];
 
-const certificates = [
-	{
-		name: "*.internal.acme.com",
-		type: "Wildcard",
-		issued: "2024-01-15",
-		expires: "2025-01-15",
-		status: "valid",
-	},
-	{
-		name: "api.acme.com",
-		type: "Single",
-		issued: "2024-02-01",
-		expires: "2025-02-01",
-		status: "valid",
-	},
-	{
-		name: "db.internal.acme.com",
-		type: "Single",
-		issued: "2024-01-20",
-		expires: "2025-01-20",
-		status: "valid",
-	},
-];
-
-const internalDomains = [
-	{ domain: "stackpanel.internal", target: "Dashboard", ip: "100.64.0.100" },
-	{ domain: "api.internal", target: "API Gateway", ip: "100.64.0.10" },
-	{ domain: "db.internal", target: "PostgreSQL", ip: "100.64.0.20" },
-	{ domain: "redis.internal", target: "Redis Cache", ip: "100.64.0.21" },
-	{ domain: "logs.internal", target: "ELK Stack", ip: "100.64.0.30" },
-	{ domain: "metrics.internal", target: "Prometheus", ip: "100.64.0.31" },
-];
+type CertificateItem = {
+	name: string;
+	type: string;
+	detail: string;
+};
 
 export function NetworkPanel() {
+	const { data: config } = useNixConfig();
+	const { data: stepCaData, mutate: setStepCa } =
+		useNixData<StepCaData>("step-ca");
+	const { data: dnsData } = useNixData<DnsData>("dns");
+	const [isEnabling, setIsEnabling] = useState(false);
+
+	const stepConfig = config?.stepCa?.["step-ca"];
+	const stepEnabled = stepConfig?.enable ?? stepCaData?.enable ?? false;
+	const caUrl = stepConfig?.["ca-url"] ?? stepCaData?.ca_url;
+	const caFingerprint =
+		stepConfig?.["ca-fingerprint"] ?? stepCaData?.ca_fingerprint;
+	const certName = stepConfig?.["cert-name"] ?? stepCaData?.cert_name;
+	const awsRolesAnywhere = config?.aws?.["roles-anywhere"];
+
+	const certificates = useMemo(() => {
+		const items: CertificateItem[] = [];
+
+		if (stepEnabled) {
+			items.push({
+				name: certName ?? "Device certificate",
+				type: "Step CA",
+				detail: caUrl
+					? `CA: ${caUrl}`
+					: "Managed by Step CA",
+			});
+		}
+
+		if (awsRolesAnywhere?.enable) {
+			items.push({
+				name: awsRolesAnywhere["role-name"] ?? "AWS Roles Anywhere",
+				type: "AWS Roles Anywhere",
+				detail: awsRolesAnywhere["profile-arn"]
+					? `Profile: ${awsRolesAnywhere["profile-arn"]}`
+					: "Certificate auth enabled",
+			});
+		}
+
+		return items;
+	}, [awsRolesAnywhere, caUrl, certName, stepEnabled]);
+
+	const dnsRecords = useMemo(() => {
+		const zones = dnsData?.zones ?? {};
+		return Object.values(zones).flatMap((zone) => {
+			const domain = zone.domain ?? "";
+			return (zone.records ?? []).map((record) => {
+				const host = record.name && record.name !== "@"
+					? `${record.name}.${domain}`
+					: domain;
+				return {
+					domain: host || domain,
+					target: record.value ?? "",
+					type: record.type ?? "",
+					comment: record.comment ?? "",
+				};
+			});
+		});
+	}, [dnsData]);
+
+	const dnsZoneLabel = useMemo(() => {
+		const zones = Object.values(dnsData?.zones ?? {});
+		return zones[0]?.domain ?? null;
+	}, [dnsData]);
+
+	const handleEnableStepCa = useCallback(async () => {
+		if (isEnabling) return;
+		setIsEnabling(true);
+		try {
+			await setStepCa({
+				...(stepCaData ?? {}),
+				enable: true,
+			});
+		} finally {
+			setIsEnabling(false);
+		}
+	}, [isEnabling, setStepCa, stepCaData]);
+
 	return (
 		<div className="space-y-6">
 			<div>
@@ -130,7 +207,7 @@ export function NetworkPanel() {
 							</div>
 							<div>
 								<p className="font-bold text-2xl text-foreground">
-									{certificates.length}
+									{stepEnabled ? certificates.length : 0}
 								</p>
 								<p className="text-muted-foreground text-sm">
 									Active Certificates
@@ -147,7 +224,7 @@ export function NetworkPanel() {
 							</div>
 							<div>
 								<p className="font-bold text-2xl text-foreground">
-									{internalDomains.length}
+									{stepEnabled ? dnsRecords.length : 0}
 								</p>
 								<p className="text-muted-foreground text-sm">
 									Internal Domains
@@ -236,25 +313,55 @@ export function NetworkPanel() {
 				</TabsContent>
 
 				<TabsContent className="mt-6 space-y-4" value="certificates">
-					<Card className="border-accent/20 bg-accent/5">
-						<CardContent className="flex items-center gap-4 p-4">
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-								<Lock className="h-5 w-5 text-accent" />
-							</div>
-							<div className="flex-1">
-								<p className="font-medium text-foreground text-sm">
-									Internal Certificate Authority
-								</p>
-								<p className="text-muted-foreground text-xs">
-									Certificates are automatically issued to all machines and team
-									members via the internal CA.
-								</p>
-							</div>
-							<Button size="sm" variant="outline">
-								View CA Config
-							</Button>
-						</CardContent>
-					</Card>
+					{!stepEnabled ? (
+						<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
+							<CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+								<div>
+									<p className="font-medium text-foreground text-sm">
+										Step CA is not enabled yet
+									</p>
+									<p className="text-muted-foreground text-xs">
+										Enable Step CA to issue device and Roles Anywhere
+										certificates.
+									</p>
+								</div>
+								<Button
+									onClick={handleEnableStepCa}
+									disabled={isEnabling}
+									size="sm"
+									variant="outline"
+								>
+									{isEnabling ? "Enabling..." : "Enable Step CA"}
+								</Button>
+							</CardContent>
+						</Card>
+					) : (
+						<Card className="border-accent/20 bg-accent/5">
+							<CardContent className="flex items-center gap-4 p-4">
+								<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
+									<Lock className="h-5 w-5 text-accent" />
+								</div>
+								<div className="flex-1">
+									<p className="font-medium text-foreground text-sm">
+										Internal Certificate Authority
+									</p>
+									<p className="text-muted-foreground text-xs">
+										{caUrl
+											? `CA URL: ${caUrl}`
+											: "Certificates are issued automatically for the team."}
+									</p>
+									{caFingerprint && (
+										<p className="text-muted-foreground text-xs">
+											Fingerprint: {caFingerprint}
+										</p>
+									)}
+								</div>
+								<Button size="sm" variant="outline">
+									View CA Config
+								</Button>
+							</CardContent>
+						</Card>
+					)}
 
 					<Card>
 						<CardHeader>
@@ -263,37 +370,47 @@ export function NetworkPanel() {
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="space-y-3">
-								{certificates.map((cert) => (
-									<div
-										className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"
-										key={cert.name}
-									>
-										<div className="flex items-center gap-3">
-											<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-												<Shield className="h-5 w-5 text-accent" />
-											</div>
-											<div>
-												<div className="flex items-center gap-2">
-													<code className="font-medium text-foreground text-sm">
-														{cert.name}
-													</code>
-													<Badge className="text-xs" variant="outline">
-														{cert.type}
-													</Badge>
+							{!stepEnabled ? (
+								<p className="text-muted-foreground text-sm">
+									Enable Step CA to view certificate inventory.
+								</p>
+							) : certificates.length === 0 ? (
+								<p className="text-muted-foreground text-sm">
+									No certificates detected yet.
+								</p>
+							) : (
+								<div className="space-y-3">
+									{certificates.map((cert) => (
+										<div
+											className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"
+											key={`${cert.name}-${cert.type}`}
+										>
+											<div className="flex items-center gap-3">
+												<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+													<Shield className="h-5 w-5 text-accent" />
 												</div>
-												<p className="text-muted-foreground text-xs">
-													Expires {cert.expires}
-												</p>
+												<div>
+													<div className="flex items-center gap-2">
+														<code className="font-medium text-foreground text-sm">
+															{cert.name}
+														</code>
+														<Badge className="text-xs" variant="outline">
+															{cert.type}
+														</Badge>
+													</div>
+													<p className="text-muted-foreground text-xs">
+														{cert.detail}
+													</p>
+												</div>
+											</div>
+											<div className="flex items-center gap-2">
+												<CheckCircle2 className="h-4 w-4 text-accent" />
+												<span className="text-accent text-sm">Enabled</span>
 											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											<CheckCircle2 className="h-4 w-4 text-accent" />
-											<span className="text-accent text-sm">Valid</span>
-										</div>
-									</div>
-								))}
-							</div>
+									))}
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</TabsContent>
@@ -305,46 +422,67 @@ export function NetworkPanel() {
 								<CardTitle className="font-medium text-base">
 									Internal DNS Records
 								</CardTitle>
-								<p className="mt-1 text-muted-foreground text-sm">
-									Search domain:{" "}
-									<code className="text-accent">internal.acme.com</code>
-								</p>
+								{stepEnabled ? (
+									<p className="mt-1 text-muted-foreground text-sm">
+										Zone:{" "}
+										<code className="text-accent">
+											{dnsZoneLabel ?? "No zones configured"}
+										</code>
+									</p>
+								) : (
+									<p className="mt-1 text-muted-foreground text-sm">
+										Enable Step CA to manage internal DNS.
+									</p>
+								)}
 							</div>
-							<Button size="sm" variant="outline">
+							<Button size="sm" variant="outline" disabled={!stepEnabled}>
 								Add Record
 							</Button>
 						</CardHeader>
 						<CardContent>
-							<div className="space-y-3">
-								{internalDomains.map((record) => (
-									<div
-										className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"
-										key={record.domain}
-									>
-										<div className="flex items-center gap-3">
-											<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-												<Globe className="h-5 w-5 text-muted-foreground" />
+							{!stepEnabled ? (
+								<p className="text-muted-foreground text-sm">
+									Enable Step CA to view DNS records.
+								</p>
+							) : dnsRecords.length === 0 ? (
+								<p className="text-muted-foreground text-sm">
+									No DNS records configured yet.
+								</p>
+							) : (
+								<div className="space-y-3">
+									{dnsRecords.map((record) => (
+										<div
+											className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"
+											key={`${record.domain}-${record.target}-${record.type}`}
+										>
+											<div className="flex items-center gap-3">
+												<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+													<Globe className="h-5 w-5 text-muted-foreground" />
+												</div>
+												<div>
+													<code className="font-medium text-foreground text-sm">
+														{record.domain}
+													</code>
+													<p className="text-muted-foreground text-xs">
+														{record.comment || "No description"}
+													</p>
+												</div>
 											</div>
-											<div>
-												<code className="font-medium text-foreground text-sm">
-													{record.domain}
-												</code>
-												<p className="text-muted-foreground text-xs">
+											<div className="flex items-center gap-4">
+												<Badge className="text-xs" variant="outline">
+													{record.type || "record"}
+												</Badge>
+												<code className="text-muted-foreground text-sm">
 													{record.target}
-												</p>
+												</code>
+												<Button className="h-8 w-8" size="icon" variant="ghost">
+													<ExternalLink className="h-4 w-4" />
+												</Button>
 											</div>
 										</div>
-										<div className="flex items-center gap-4">
-											<code className="text-muted-foreground text-sm">
-												{record.ip}
-											</code>
-											<Button className="h-8 w-8" size="icon" variant="ghost">
-												<ExternalLink className="h-4 w-4" />
-											</Button>
-										</div>
-									</div>
-								))}
-							</div>
+									))}
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</TabsContent>

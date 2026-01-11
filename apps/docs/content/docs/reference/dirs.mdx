@@ -1,0 +1,98 @@
+---
+title: dirs
+description: Configuration options for stackpanel.dirs
+icon: Folder
+---
+
+# Dirs Options
+
+## `dirs`
+
+Directories used by stackpanel.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `dirs.config`
+
+Directory for stackpanel configuration files.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `absolute path` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+/nix/store/wyv3wm2dsn74xz8myphx0qsq4hkcnrly-source/.stackpanel/config.nix
+```
+
+
+---
+
+## `dirs.data`
+
+Full data directory path (relative to project root).
+Computed as: dirs.home + "/data"
+This is read-only - configure dirs.home instead.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel/data"` |
+| **Read Only** | `true` |
+
+---
+
+## `dirs.gen`
+
+Full generated files directory path (relative to project root).
+Computed as: dirs.home + "/gen"
+This is read-only - configure dirs.home instead.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel/gen"` |
+| **Read Only** | `true` |
+
+---
+
+## `dirs.home`
+
+Root directory for stackpanel files (relative to project root).
+This is the ONLY configurable directory option.
+
+Subdirectories are automatically computed:
+  - state/ (gitignored) - runtime state files
+  - gen/   (checked in) - generated IDE configs, schemas
+  - data/ (checked in) -  nix-backed configuration db
+
+Example: ".stackpanel" → state at ".stackpanel/state"
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel"` |
+
+---
+
+## `dirs.state`
+
+Full state directory path (relative to project root).
+Computed as: dirs.home + "/state"
+This is read-only - configure dirs.home instead.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel/state"` |
+| **Read Only** | `true` |
+
+---
+

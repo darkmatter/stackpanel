@@ -1,115 +1,115 @@
 # ==============================================================================
 # commands.nix
 #
-# Standalone command definitions that can be linked to apps.
-# Commands are defined once and referenced by ID in app definitions.
+# Workspace-level command definitions for tooling configuration.
+# Each command matches the proto Command shape with package, bin, args, env, cwd.
 # ==============================================================================
 {
-  # Development commands
-  dev = {
-    name = "dev";
-    description = "Start development server with hot reload";
-    category = "development";
+  # Linting
+  eslint = {
+    package = "eslint";
+    args = [ "." ];
+    config-path = "eslint.config.js";
+    config-arg = [ "--config" ];
+    env = { };
   };
 
-  build = {
-    name = "build";
-    description = "Build for production";
-    category = "build";
+  biome = {
+    package = "biome";
+    bin = "biome";
+    args = [
+      "check"
+      "."
+    ];
+    env = { };
   };
 
-  start = {
-    name = "start";
-    description = "Start production server";
-    category = "production";
+  # Formatting
+  prettier = {
+    package = "prettier";
+    args = [
+      "--write"
+      "."
+    ];
+    config-path = ".prettierrc";
+    env = { };
   };
 
-  # Testing commands
-  test = {
-    name = "test";
-    description = "Run test suite";
-    category = "testing";
+  # Type checking
+  tsc = {
+    package = "typescript";
+    bin = "tsc";
+    args = [ "--noEmit" ];
+    env = { };
   };
 
-  "test:watch" = {
-    name = "test:watch";
-    description = "Run tests in watch mode";
-    category = "testing";
+  # Testing
+  vitest = {
+    package = "vitest";
+    args = [ "run" ];
+    env = { };
   };
 
-  "test:coverage" = {
-    name = "test:coverage";
-    description = "Run tests with coverage report";
-    category = "testing";
+  "vitest:watch" = {
+    package = "vitest";
+    args = [ ];
+    env = { };
   };
 
-  # Code quality commands
-  lint = {
-    name = "lint";
-    description = "Run linter";
-    category = "quality";
+  "vitest:coverage" = {
+    package = "vitest";
+    args = [
+      "run"
+      "--coverage"
+    ];
+    env = { };
   };
 
-  format = {
-    name = "format";
-    description = "Format code";
-    category = "quality";
+  # Build tools
+  turbo = {
+    package = "turbo";
+    args = [ ];
+    env = { };
   };
 
-  typecheck = {
-    name = "typecheck";
-    description = "Run type checker";
-    category = "quality";
+  # Database
+  drizzle-kit = {
+    package = "drizzle-kit";
+    args = [ ];
+    cwd = "apps/server";
+    env = { };
   };
 
-  # Database commands
-  "db:migrate" = {
-    name = "db:migrate";
-    description = "Run database migrations";
-    category = "database";
+  # Go tools
+  go-build = {
+    package = "go";
+    bin = "go";
+    args = [
+      "build"
+      "-o"
+      "stackpanel"
+      "./cmd/stackpanel"
+    ];
+    cwd = "apps/stackpanel-go";
+    env = { };
   };
 
-  "db:seed" = {
-    name = "db:seed";
-    description = "Seed database with sample data";
-    category = "database";
+  go-test = {
+    package = "go";
+    bin = "go";
+    args = [
+      "test"
+      "./..."
+    ];
+    cwd = "apps/stackpanel-go";
+    env = { };
   };
 
-  "db:reset" = {
-    name = "db:reset";
-    description = "Reset database (drop, create, migrate, seed)";
-    category = "database";
-  };
-
-  "db:studio" = {
-    name = "db:studio";
-    description = "Open database studio/GUI";
-    category = "database";
-  };
-
-  # Deployment commands
-  deploy = {
-    name = "deploy";
-    description = "Deploy to production";
-    category = "deployment";
-  };
-
-  "deploy:staging" = {
-    name = "deploy:staging";
-    description = "Deploy to staging environment";
-    category = "deployment";
-  };
-
-  # Code generation commands
-  generate = {
-    name = "generate";
-    description = "Run code generators";
-    category = "codegen";
-  };
-
-  "generate:types" = {
-    name = "generate:types";
-    description = "Generate TypeScript types";
-    category = "codegen";
+  # Proto generation
+  buf = {
+    package = "buf";
+    args = [ "generate" ];
+    cwd = "packages/proto";
+    env = { };
   };
 }

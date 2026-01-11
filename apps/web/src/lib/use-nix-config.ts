@@ -3,16 +3,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAgentSSEEvent } from "./agent-sse-provider";
 import { NixClient, type NixClientConfig } from "./nix-client";
-import type { App } from "@stackpanel/proto";
+import { AgentHttpClient, type TurboPackage } from "./agent";
+import type {
+  App,
+  AppTask,
+  AppVariable,
+  Task,
+  Tasks,
+  Variable,
+  Variables,
+  Command,
+  Commands,
+} from "@stackpanel/proto";
 import type {
   Service,
   StackpanelConfig,
-  Command,
-  Commands,
-  Variable,
-  Variables,
   AppEntity,
-  AppEntities,
   ResolvedApp,
 } from "./types";
 
@@ -454,15 +460,40 @@ export function useNixMapData<V>(
   );
 }
 
-// =============================================================================
-// Convenience hooks for common entities
-// =============================================================================
-
 /**
- * Hook for managing apps configuration.
+ * Hook for resolved apps with IDs included.
+ * This is a convenience wrapper that adds the map key as `id` to each app.
  */
-export function useApps(options: UseNixConfigOptions = {}) {
-  return useNixMapData<App>("apps", options);
+export function useResolvedApps(options: UseNixConfigOptions = {}) {
+  const { data, isLoading, isError, error, refetch, ...rest } =
+    useApps(options);
+
+  const resolvedApps = useMemo(() => {
+    if (!data) return null;
+
+    const result: Record<string, ResolvedApp> = {};
+    for (const [id, app] of Object.entries(data)) {
+      result[id] = {
+        ...app,
+        id,
+        stablePort: app.port ?? 3000,
+        isRunning: false, // TODO: Query process-compose
+      };
+    }
+    return result;
+  }, [data]);
+
+  return useMemo(
+    () => ({
+      data: resolvedApps,
+      isLoading,
+      isError,
+      error,
+      refetch,
+      ...rest,
+    }),
+    [resolvedApps, isLoading, isError, error, refetch, rest],
+  );
 }
 
 /**
@@ -567,121 +598,48 @@ export function useDeleteApp(options: MutationOptions = {}) {
 }
 
 // =============================================================================
-// Relational Entity Hooks
+// Entity Hooks - Using Proto Types
 // =============================================================================
 
 /**
- * Hook for accessing command definitions from commands.nix
+ * Hook for accessing workspace-level task definitions from tasks.nix
+ * Task = { exec, description?, cwd?, env }
  */
-export function useCommands(options: UseNixConfigOptions = {}) {
-  return useNixMapData<Command>("commands", options);
+export function useTasks(options: UseNixConfigOptions = {}) {
+  return useNixMapData<Task>("tasks", options);
 }
 
 /**
- * Hook for accessing variable definitions from variables.nix
+ * Hook for accessing workspace-level variable definitions from variables.nix
+ * Variable = { key, description?, type, value }
  */
 export function useVariables(options: UseNixConfigOptions = {}) {
   return useNixMapData<Variable>("variables", options);
 }
 
 /**
- * Hook for accessing app entities from apps.nix (with command/variable IDs)
+ * Hook for accessing workspace-level command definitions from commands.nix
+ * Command = { package, bin?, args, config_path?, config_arg, env, cwd? }
  */
-export function useAppEntities(options: UseNixConfigOptions = {}) {
-  return useNixMapData<AppEntity>("apps", options);
+export function useCommands(options: UseNixConfigOptions = {}) {
+  return useNixMapData<Command>("commands", options);
 }
 
 /**
- * Hook for accessing resolved apps with full command and variable definitions.
- * This joins app data with commands.nix and variables.nix to provide complete entities.
+ * Hook for accessing apps from apps.nix
+ * App = { name, description?, path, type?, port?, domain?, tasks, variables }
+ * - tasks is a map where key = task name, value = AppTask
+ * - variables is a map where key = variable name, value = AppVariable
  */
-export function useResolvedApps(options: UseNixConfigOptions = {}) {
-  const {
-    data: apps,
-    isLoading: appsLoading,
-    error: appsError,
-    refetch: refetchApps,
-  } = useAppEntities(options);
-  const {
-    data: commands,
-    isLoading: commandsLoading,
-    error: commandsError,
-    refetch: refetchCommands,
-  } = useCommands(options);
-  const {
-    data: variables,
-    isLoading: variablesLoading,
-    error: variablesError,
-    refetch: refetchVariables,
-  } = useVariables(options);
-
-  const isLoading = appsLoading || commandsLoading || variablesLoading;
-  const error = appsError || commandsError || variablesError;
-
-  const resolvedApps = useMemo(() => {
-    if (!apps || !commands || !variables) return null;
-
-    const result: Record<string, ResolvedApp> = {};
-
-    for (const [appId, app] of Object.entries(apps)) {
-      // Resolve command IDs to full command objects
-      const resolvedCommands: Command[] = (app.commands ?? [])
-        .map((cmdId) => {
-          const cmd = commands[cmdId];
-          return cmd ? { ...cmd, id: cmdId } : null;
-        })
-        .filter((cmd): cmd is Command & { id: string } => cmd !== null);
-
-      // Resolve variable IDs to full variable objects
-      const resolvedVariables: Variable[] = (app.variables ?? [])
-        .map((varId) => {
-          const variable = variables[varId];
-          return variable ? { ...variable, id: varId } : null;
-        })
-        .filter((v): v is Variable & { id: string } => v !== null);
-
-      result[appId] = {
-        ...app,
-        id: appId,
-        commands: resolvedCommands,
-        variables: resolvedVariables,
-      };
-    }
-
-    return result;
-  }, [apps, commands, variables]);
-
-  const refetch = useCallback(async () => {
-    await Promise.all([refetchApps(), refetchCommands(), refetchVariables()]);
-  }, [refetchApps, refetchCommands, refetchVariables]);
-
-  return useMemo(
-    () => ({
-      data: resolvedApps,
-      isLoading,
-      isError: !!error,
-      isSuccess: !!resolvedApps,
-      error,
-      refetch,
-    }),
-    [resolvedApps, isLoading, error, refetch],
-  );
+export function useApps(options: UseNixConfigOptions = {}) {
+  return useNixMapData<App>("apps", options);
 }
 
 /**
- * Hook to get a single resolved app by ID
+ * Hook to get a single app by ID
  */
-export function useResolvedApp(
-  appId: string,
-  options: UseNixConfigOptions = {},
-) {
-  const {
-    data: apps,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useResolvedApps(options);
+export function useApp(appId: string, options: UseNixConfigOptions = {}) {
+  const { data: apps, isLoading, isError, error, refetch } = useApps(options);
 
   const app = useMemo(() => {
     if (!apps) return null;
@@ -702,21 +660,21 @@ export function useResolvedApp(
 }
 
 /**
- * Hook to find which apps use a specific variable
+ * Hook to find which apps have a specific task
  */
-export function useAppsUsingVariable(
-  variableId: string,
+export function useAppsWithTask(
+  taskName: string,
   options: UseNixConfigOptions = {},
 ) {
-  const { data: apps, isLoading, error, refetch } = useAppEntities(options);
+  const { data: apps, isLoading, error, refetch } = useApps(options);
 
   const matchingApps = useMemo(() => {
     if (!apps) return null;
 
     return Object.entries(apps)
-      .filter(([_, app]) => app.variables?.includes(variableId))
+      .filter(([_, app]) => taskName in (app.tasks ?? {}))
       .map(([id, app]) => ({ ...app, id }));
-  }, [apps, variableId]);
+  }, [apps, taskName]);
 
   return useMemo(
     () => ({
@@ -732,21 +690,21 @@ export function useAppsUsingVariable(
 }
 
 /**
- * Hook to find which apps have a specific command
+ * Hook to find which apps have a specific variable
  */
-export function useAppsWithCommand(
-  commandId: string,
+export function useAppsWithVariable(
+  variableName: string,
   options: UseNixConfigOptions = {},
 ) {
-  const { data: apps, isLoading, error, refetch } = useAppEntities(options);
+  const { data: apps, isLoading, error, refetch } = useApps(options);
 
   const matchingApps = useMemo(() => {
     if (!apps) return null;
 
     return Object.entries(apps)
-      .filter(([_, app]) => app.commands?.includes(commandId))
+      .filter(([_, app]) => variableName in (app.variables ?? {}))
       .map(([id, app]) => ({ ...app, id }));
-  }, [apps, commandId]);
+  }, [apps, variableName]);
 
   return useMemo(
     () => ({
@@ -762,72 +720,233 @@ export function useAppsWithCommand(
 }
 
 /**
- * Hook to get commands grouped by category
+ * Hook to get all tasks across all apps, with app context
  */
-export function useCommandsByCategory(options: UseNixConfigOptions = {}) {
-  const { data: commands, isLoading, error, refetch } = useCommands(options);
+export function useAllAppTasks(options: UseNixConfigOptions = {}) {
+  const { data: apps, isLoading, error, refetch } = useApps(options);
 
-  const grouped = useMemo(() => {
-    if (!commands) return null;
+  const allTasks = useMemo(() => {
+    if (!apps) return null;
 
-    const result: Record<string, Command[]> = {};
+    const result: Array<{ appId: string; taskName: string; task: AppTask }> =
+      [];
 
-    for (const [id, cmd] of Object.entries(commands)) {
-      const category = cmd.category ?? "other";
-      if (!result[category]) {
-        result[category] = [];
+    for (const [appId, app] of Object.entries(apps)) {
+      for (const [taskName, task] of Object.entries(app.tasks ?? {})) {
+        result.push({ appId, taskName, task });
       }
-      result[category].push({ ...cmd, id });
     }
 
     return result;
-  }, [commands]);
+  }, [apps]);
 
   return useMemo(
     () => ({
-      data: grouped,
+      data: allTasks,
       isLoading,
       isError: !!error,
-      isSuccess: !!grouped,
+      isSuccess: !!allTasks,
       error,
       refetch,
     }),
-    [grouped, isLoading, error, refetch],
+    [allTasks, isLoading, error, refetch],
   );
 }
 
 /**
- * Hook to get variables grouped by type
+ * Hook to get all variables across all apps, with app context
  */
-export function useVariablesByType(options: UseNixConfigOptions = {}) {
-  const { data: variables, isLoading, error, refetch } = useVariables(options);
+export function useAllAppVariables(options: UseNixConfigOptions = {}) {
+  const { data: apps, isLoading, error, refetch } = useApps(options);
 
-  const grouped = useMemo(() => {
-    if (!variables) return null;
+  const allVariables = useMemo(() => {
+    if (!apps) return null;
 
-    const result: Record<string, Variable[]> = {};
+    const result: Array<{
+      appId: string;
+      variableName: string;
+      variable: AppVariable;
+    }> = [];
 
-    for (const [id, variable] of Object.entries(variables)) {
-      const type = variable.type ?? "config";
-      if (!result[type]) {
-        result[type] = [];
+    for (const [appId, app] of Object.entries(apps)) {
+      for (const [variableName, variable] of Object.entries(
+        app.variables ?? {},
+      )) {
+        result.push({ appId, variableName, variable });
       }
-      result[type].push({ ...variable, id });
     }
 
     return result;
-  }, [variables]);
+  }, [apps]);
 
   return useMemo(
     () => ({
-      data: grouped,
+      data: allVariables,
       isLoading,
       isError: !!error,
-      isSuccess: !!grouped,
+      isSuccess: !!allVariables,
       error,
       refetch,
     }),
-    [grouped, isLoading, error, refetch],
+    [allVariables, isLoading, error, refetch],
+  );
+}
+
+// =============================================================================
+// Turbo Package Graph Hooks
+// =============================================================================
+
+/**
+ * Hook for fetching the turbo package graph with tasks.
+ * This is the source of truth for available tasks in the monorepo.
+ *
+ * @example
+ * ```tsx
+ * function TasksList() {
+ *   const { packages, allTasks, isLoading, refetch } = useTurboPackages();
+ *
+ *   return (
+ *     <ul>
+ *       {allTasks.map(task => <li key={task}>{task}</li>)}
+ *     </ul>
+ *   );
+ * }
+ * ```
+ */
+export function useTurboPackages(options: UseNixConfigOptions = {}) {
+  const { autoRefetch = true, token: optionToken, baseUrl } = options;
+  const storedToken = getStoredToken();
+  const token = optionToken ?? storedToken;
+
+  const [packages, setPackages] = useState<TurboPackage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchPackages = useCallback(async () => {
+    if (!token) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const [host, portStr] = (baseUrl ?? "localhost:9876")
+        .replace(/^https?:\/\//, "")
+        .split(":");
+      const port = portStr ? parseInt(portStr, 10) : 9876;
+      const client = new AgentHttpClient(host, port, token);
+      const result = await client.getPackageGraph({ excludeRoot: true });
+      setPackages(result);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err : new Error("Failed to fetch packages"),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, baseUrl]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
+
+  // Subscribe to turbo.changed events for auto-refetch
+  useAgentSSEEvent("turbo.changed", () => {
+    if (autoRefetch) {
+      fetchPackages();
+    }
+  });
+
+  // Also refetch on config changes since turbo.json might be generated
+  useAgentSSEEvent("config.changed", () => {
+    if (autoRefetch) {
+      fetchPackages();
+    }
+  });
+
+  // Get all unique tasks from the package graph
+  const allTasks = useMemo(() => {
+    const taskSet = new Set<string>();
+    for (const pkg of packages) {
+      for (const task of pkg.tasks) {
+        taskSet.add(task.name);
+      }
+    }
+    return Array.from(taskSet).sort();
+  }, [packages]);
+
+  // Get tasks as a map for easier lookup (simple string -> name map for UI)
+  const tasksMap = useMemo((): Record<string, { name: string }> => {
+    const map: Record<string, { name: string }> = {};
+    for (const taskName of allTasks) {
+      map[taskName] = { name: taskName };
+    }
+    return map;
+  }, [allTasks]);
+
+  // Get tasks for a specific package
+  const getTasksForPackage = useCallback(
+    (packageName: string): Array<{ name: string }> => {
+      const pkg = packages.find((p) => p.name === packageName);
+      if (!pkg) return [];
+      return pkg.tasks.map((t) => ({ name: t.name }));
+    },
+    [packages],
+  );
+
+  return useMemo(
+    () => ({
+      /** All packages with their tasks */
+      packages,
+      /** All unique task names across all packages */
+      allTasks,
+      /** Tasks as a map for compatibility with existing code */
+      tasksMap,
+      /** Get tasks for a specific package */
+      getTasksForPackage,
+      /** Loading state */
+      isLoading,
+      /** Error state */
+      isError: !!error,
+      /** Success state */
+      isSuccess: packages.length > 0 && !isLoading && !error,
+      /** Error object */
+      error,
+      /** Refetch the package graph */
+      refetch: fetchPackages,
+    }),
+    [
+      packages,
+      allTasks,
+      tasksMap,
+      getTasksForPackage,
+      isLoading,
+      error,
+      fetchPackages,
+    ],
+  );
+}
+
+/**
+ * Hook for accessing turbo tasks from the package graph.
+ * This is a convenience wrapper around useTurboPackages that returns just the tasks.
+ *
+ * Note: For Nix-based task definitions, use the useTasks hook from Entity Hooks section.
+ */
+export function useTurboTasks(options: UseNixConfigOptions = {}) {
+  const { tasksMap, isLoading, isError, isSuccess, error, refetch } =
+    useTurboPackages(options);
+
+  return useMemo(
+    () => ({
+      data: tasksMap,
+      isLoading,
+      isError,
+      isSuccess,
+      error,
+      refetch,
+    }),
+    [tasksMap, isLoading, isError, isSuccess, error, refetch],
   );
 }
 
@@ -844,6 +963,8 @@ export type {
   Variable,
   Variables,
   AppEntity,
-  AppEntities,
   ResolvedApp,
+  Task,
+  Tasks,
+  TurboPackage,
 };

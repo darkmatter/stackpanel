@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/project"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
 	"github.com/rs/zerolog/log"
 )
 

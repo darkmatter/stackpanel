@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/spf13/cobra"
 )
 

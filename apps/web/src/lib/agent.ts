@@ -80,6 +80,7 @@ export interface AgentHealth {
   status: string;
   project_root?: string;
   has_project?: boolean;
+  agent_id?: string;
 }
 
 export type SecretEnv = "dev" | "staging" | "prod";
@@ -92,6 +93,85 @@ export interface SetSecretRequest {
 
 export interface SetSecretResult {
   path: string;
+}
+
+/** Installed package information from devenv/stackpanel config */
+export interface InstalledPackageInfo {
+  name: string;
+  version?: string;
+  attrPath?: string;
+  source?: "devshell" | "user";
+}
+
+/** Response from /api/nixpkgs/installed endpoint */
+export interface InstalledPackagesResponse {
+  packages: InstalledPackageInfo[];
+  count: number;
+}
+
+/** Nixpkgs package for search results */
+export interface NixpkgsPackage {
+  name: string;
+  attr_path: string;
+  version: string;
+  description: string;
+  installed: boolean;
+  license?: string;
+  homepage?: string;
+  nixpkgs_url: string;
+}
+
+/** Task from turbo query */
+export interface TurboTask {
+  name: string;
+}
+
+/** Package node from turbo packageGraph query */
+export interface TurboPackage {
+  /** Package name (e.g., "//", "@stackpanel/api", "web") */
+  name: string;
+  /** Package path relative to root */
+  path: string;
+  /** Tasks available for this package */
+  tasks: TurboTask[];
+}
+
+/** Result type for turbo query { packageGraph { nodes { items { name path tasks { items { name } } } } } } */
+export interface TurboPackageGraphResult {
+  data: {
+    packageGraph: {
+      nodes: {
+        items: Array<{
+          name: string;
+          path: string;
+          tasks: {
+            items: Array<{ name: string }>;
+          };
+        }>;
+      };
+    };
+  };
+}
+
+/** @deprecated Use TurboPackageGraphResult instead */
+export interface TurboPackagesQueryResult {
+  data: {
+    packages: {
+      items: Array<{ name: string }>;
+    };
+  };
+}
+
+/** Options for getPackages method */
+export interface GetPackagesOptions {
+  /** Exclude the root package "//" from results */
+  excludeRoot?: boolean;
+}
+
+/** Options for getPackageGraph method */
+export interface GetPackageGraphOptions {
+  /** Exclude the root package "//" from results */
+  excludeRoot?: boolean;
 }
 
 type MessageType =
@@ -179,7 +259,7 @@ export class AgentClient {
         this.attemptReconnect();
       };
 
-      this.ws.onerror = (event) => {
+      this.ws.onerror = (_event) => {
         const error = new Error("WebSocket error");
         this.config.onError(error);
         reject(error);
@@ -263,6 +343,71 @@ export class AgentClient {
    */
   async setSecret(request: SetSecretRequest): Promise<SetSecretResult> {
     return this.send<SetSecretResult>("secrets.set", request);
+  }
+
+  // Turbo monorepo methods
+
+  /**
+   * Execute a turbo query and return the parsed JSON result.
+   * @see https://turbo.build/repo/docs/reference/query
+   */
+  async turboQuery<T = unknown>(query: string): Promise<T> {
+    const result = await this.exec({
+      command: "turbo",
+      args: ["query", query],
+    });
+
+    if (result.exit_code !== 0) {
+      throw new Error(`turbo query failed: ${result.stderr || result.stdout}`);
+    }
+
+    try {
+      return JSON.parse(result.stdout) as T;
+    } catch {
+      throw new Error(`Failed to parse turbo query response: ${result.stdout}`);
+    }
+  }
+
+  /**
+   * Get all package names in the monorepo using turbo query.
+   */
+  async getPackages(options?: GetPackagesOptions): Promise<string[]> {
+    const result = await this.turboQuery<TurboPackageGraphResult>(
+      "query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
+    );
+
+    let packages = result.data.packageGraph.nodes.items.map(
+      (item) => item.name,
+    );
+
+    if (options?.excludeRoot) {
+      packages = packages.filter((name) => name !== "//");
+    }
+
+    return packages;
+  }
+
+  /**
+   * Get the full package graph including paths and tasks.
+   */
+  async getPackageGraph(
+    options?: GetPackageGraphOptions,
+  ): Promise<TurboPackage[]> {
+    const result = await this.turboQuery<TurboPackageGraphResult>(
+      "query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
+    );
+
+    let packages = result.data.packageGraph.nodes.items.map((item) => ({
+      name: item.name,
+      path: item.path,
+      tasks: item.tasks.items.map((t) => ({ name: t.name })),
+    }));
+
+    if (options?.excludeRoot) {
+      packages = packages.filter((pkg) => pkg.name !== "//");
+    }
+
+    return packages;
   }
 
   // Private methods
@@ -435,6 +580,50 @@ export class AgentHttpClient {
 
   // Project management methods
 
+  /**
+   * Get installed packages from the devenv/stackpanel config
+   */
+  async getInstalledPackages(): Promise<InstalledPackagesResponse> {
+    const res = await fetch(`${this.baseUrl}/api/nixpkgs/installed`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * Search nixpkgs packages via the agent API
+   */
+  async searchNixpkgs(options: {
+    query: string;
+    channel?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    packages: NixpkgsPackage[];
+    total: number;
+    query: string;
+    channel: string;
+  }> {
+    const params = new URLSearchParams();
+    params.set("q", options.query);
+    if (options.channel) params.set("channel", options.channel);
+    if (options.limit !== undefined) params.set("limit", String(options.limit));
+    if (options.offset !== undefined)
+      params.set("offset", String(options.offset));
+
+    const res = await fetch(
+      `${this.baseUrl}/api/nixpkgs/search?${params.toString()}`,
+      {
+        headers: this.getHeaders(false),
+      },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
   async listProjects(): Promise<Project[]> {
     const res = await fetch(`${this.baseUrl}/api/project/list`, {
       headers: this.getHeaders(false),
@@ -492,7 +681,80 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
   }
+
+  // Turbo monorepo methods
+
+  /**
+   * Execute a turbo query and return the parsed JSON result.
+   * @see https://turbo.build/repo/docs/reference/query
+   */
+  async turboQuery<T = unknown>(query: string): Promise<T> {
+    const result = await this.exec({
+      command: "turbo",
+      args: ["query", query],
+    });
+
+    if (result.exit_code !== 0) {
+      throw new Error(`turbo query failed: ${result.stderr || result.stdout}`);
+    }
+
+    try {
+      return JSON.parse(result.stdout) as T;
+    } catch {
+      throw new Error(`Failed to parse turbo query response: ${result.stdout}`);
+    }
+  }
+
+  /**
+   * Get all package names in the monorepo using turbo query.
+   */
+  async getPackages(options?: GetPackagesOptions): Promise<string[]> {
+    const result = await this.turboQuery<TurboPackageGraphResult>(
+      "query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
+    );
+
+    let packages = result.data.packageGraph.nodes.items.map(
+      (item) => item.name,
+    );
+
+    if (options?.excludeRoot) {
+      packages = packages.filter((name) => name !== "//");
+    }
+
+    return packages;
+  }
+
+  /**
+   * Get the full package graph including paths and tasks.
+   */
+  async getPackageGraph(
+    options?: GetPackageGraphOptions,
+  ): Promise<TurboPackage[]> {
+    const result = await this.turboQuery<TurboPackageGraphResult>(
+      "query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
+    );
+
+    let packages = result.data.packageGraph.nodes.items.map((item) => ({
+      name: item.name,
+      path: item.path,
+      tasks: item.tasks.items.map((t) => ({ name: t.name })),
+    }));
+
+    if (options?.excludeRoot) {
+      packages = packages.filter((pkg) => pkg.name !== "//");
+    }
+
+    return packages;
+  }
 }
 
 // Default export singleton
 export const agent = new AgentClient();
+
+if (typeof window !== "undefined") {
+  (window as any)._agent = agent;
+  const token = localStorage.getItem("stackpanel.agent.token");
+  if (token) {
+    (window as any)._agent.setToken(token);
+  }
+}

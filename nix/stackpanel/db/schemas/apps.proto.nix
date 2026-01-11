@@ -20,37 +20,61 @@ proto.mkProtoFile {
   };
 
   enums = {
-    AppEnvironment = proto.mkEnum {
-      name = "AppEnvironment";
-      description = "Environments an app can be associated with";
+    AppVariableType = proto.mkEnum {
+      name = "AppVariableType";
+      description = "Type of environment variable";
       values = [
-        "APP_ENVIRONMENT_UNSPECIFIED"
-        "APP_ENVIRONMENT_DEV"
-        "APP_ENVIRONMENT_STAGING"
-        "APP_ENVIRONMENT_PRODUCTION"
+        "APP_VARIABLE_TYPE_UNSPECIFIED"
+        "APP_VARIABLE_TYPE_LITERAL"
+        "APP_VARIABLE_TYPE_VARIABLE"
+        "APP_VARIABLE_TYPE_VALS"
       ];
     };
   };
 
   messages = {
+    # Environment variables
+    AppVariable = proto.mkMessage {
+      name = "AppVariable";
+      description = "Environment variable configuration";
+      fields = {
+        key = proto.string 1 "value will be passed to app using this key";
+        description = proto.optional (proto.string 2 "(optional) Description of the variable");
+        type = proto.message "AppVariableType" 3 "Type of environment variable";
+        value = proto.string 4 ''
+          - When type = "LITERAL", the value will be passed as is.
+          - When type = "VARIABLE", should refer to the key of the variable or secret.
+          - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
+            compatible descriptor, for example if you want to get a value from AWS Parameter
+            Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
+        '';
+      };
+    };
+    # App Tasks, corresponds to npm package scripts
+    AppTask = proto.mkMessage {
+      name = "AppTask";
+      description = "Command configuration";
+      fields = {
+        key = proto.string 1 "Corresponds to CMD in  `turbo task run CMD`";
+        description = proto.optional (proto.string 2 "(optional) Description of the command");
+        command = proto.string 3 "Command to run";
+        env = proto.map "string" "AppVariable" 4 "Environment variables to set";
+      };
+    };
     # Individual app configuration (data only, not runtime config)
+    # Uses embedded model: tasks/variables are maps where key = ID/name
     App = proto.mkMessage {
       name = "App";
       description = "Configuration for a single application in the workspace";
       fields = {
         name = proto.string 1 "Display name of the app";
-        path = proto.string 2 "Relative path to the app directory";
-        install_command = proto.optional (
-          proto.string 3 "Custom install command (overrides default behavior)"
-        );
-        build_command = proto.optional (proto.string 4 "Custom build command (overrides default behavior)");
-        format_command = proto.optional (proto.string 5 "Custom code formatting command");
-        lint_command = proto.optional (proto.string 6 "Custom linting command");
-        test_command = proto.optional (proto.string 7 "Custom test command");
-        start_command = proto.optional (proto.string 8 "Custom start/development command");
-        environments = proto.repeated (
-          proto.message "AppEnvironment" 9 "Environments associated with this app"
-        );
+        description = proto.optional (proto.string 2 "Description of the app");
+        path = proto.string 3 "Relative path to the app directory";
+        type = proto.optional (proto.string 4 "App type/runtime (bun, go, python, rust, etc.)");
+        port = proto.optional (proto.int32 5 "Development server port");
+        domain = proto.optional (proto.string 6 "Local development domain");
+        tasks = proto.map "string" "AppTask" 7 "Tasks for this app (key = task name)";
+        variables = proto.map "string" "AppVariable" 8 "Environment variables (key = variable name)";
       };
     };
 

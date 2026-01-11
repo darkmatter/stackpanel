@@ -125,12 +125,17 @@ func (s *Server) isValidToken(token string) bool {
 	if token == "" {
 		return false
 	}
-	if token == s.pairToken {
+
+	// Check JWT token first
+	if s.jwtManager.IsValidToken(token) {
 		return true
 	}
+
+	// Also allow static auth token from config (for CLI/scripts)
 	if s.config.AuthToken != "" && token == s.config.AuthToken {
 		return true
 	}
+
 	return false
 }
 
@@ -139,6 +144,10 @@ func (s *Server) isOriginAllowed(origin string) bool {
 	if u, err := url.Parse(origin); err == nil {
 		host := strings.ToLower(u.Hostname())
 		if host == "localhost" || host == "127.0.0.1" || host == "::1" || strings.HasSuffix(host, ".localhost") {
+			return true
+		}
+		// Allow Tailscale domains (*.ts.net) for remote access
+		if strings.HasSuffix(host, ".ts.net") {
 			return true
 		}
 	}

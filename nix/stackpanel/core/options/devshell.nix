@@ -17,7 +17,7 @@
 # Files options (stackpanel.files):
 #   - enable: Enable file generation
 #   - exeFilename: Name of the writer executable
-#   - files: List of { path, drv, mode } for files to generate
+#   - files: List of \{ path, drv, mode \} for files to generate
 #
 # This module is adapter-agnostic; the actual shell creation happens in
 # the devenv or flake adapter modules.
@@ -38,6 +38,32 @@ in
     type = types.listOf types.package;
     default = [ ];
     description = "Packages to include in the devshell. Preferred over devshell.packages.";
+  };
+
+  # ----------------------------------------------------------------------------
+  # Top-level scripts (devenv-compatible)
+  # ----------------------------------------------------------------------------
+  options.stackpanel.scripts = lib.mkOption {
+    type = types.attrsOf (
+      types.submodule (
+        { ... }:
+        {
+          options = {
+            exec = lib.mkOption { type = types.str; };
+            runtimeInputs = lib.mkOption {
+              type = types.listOf types.package;
+              default = [ ];
+            };
+            env = lib.mkOption {
+              type = types.attrsOf types.str;
+              default = { };
+            };
+          };
+        }
+      )
+    );
+    default = { };
+    description = "Script commands exposed in the devshell (devenv.scripts compatible).";
   };
 
   # ----------------------------------------------------------------------------
@@ -113,6 +139,20 @@ in
       default = [ ];
       internal = true;
     };
+
+    _tasks = lib.mkOption {
+      description = "Internal: Devenv task definitions for commands.";
+      type = types.attrsOf types.attrs;
+      default = { };
+      internal = true;
+    };
+
+    _scripts = lib.mkOption {
+      description = "Internal: Devenv script definitions for stackpanel scripts.";
+      type = types.attrsOf types.attrs;
+      default = { };
+      internal = true;
+    };
   };
 
   # ----------------------------------------------------------------------------
@@ -128,15 +168,15 @@ in
         Files to generate into the repo. Keys are file paths relative to repo root.
 
         Example:
-          stackpanel.files.entries.".github/workflows/ci.yml" = {
+          stackpanel.files.entries.".github/workflows/ci.yml" = `\{
             type = "text";
             text = "name: CI\n...";
-          };
-          stackpanel.files.entries."scripts/deploy.sh" = {
+          \};
+          stackpanel.files.entries."scripts/deploy.sh" = \{
             type = "derivation";
             drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
             mode = "0755";
-          };
+          \};
       '';
       type = types.attrsOf (
         types.submodule (
@@ -173,6 +213,20 @@ in
                 default = null;
                 description = "Optional chmod mode (e.g. '0644', '0755').";
                 example = "0755";
+              };
+
+              source = lib.mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Module or component that generated this file (for UI display).";
+                example = "ide.nix";
+              };
+
+              description = lib.mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Human-readable description of the file's purpose.";
+                example = "VS Code workspace configuration";
               };
             };
           }

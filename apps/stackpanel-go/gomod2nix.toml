@@ -238,6 +238,9 @@ schema = 3
   [mod."github.com/gohugoio/hugo"]
     version = "v0.149.1"
     hash = "sha256-mz/C8TS+HXIom7zb8xFIhjCjk9iUlLjt1NniIkCagk4="
+  [mod."github.com/golang-jwt/jwt/v5"]
+    version = "v5.3.0"
+    hash = "sha256-VdN9Eo74ncMFJEVUSiJ1VRPMbC09FdVGno8wAReseXU="
   [mod."github.com/golang/protobuf"]
     version = "v1.5.3"
     hash = "sha256-svogITcP4orUIsJFjMtp+Uv1+fKJv2Q5Zwf2dMqnpOQ="
@@ -437,11 +440,8 @@ schema = 3
     version = "v1.0.9"
     hash = "sha256-zYF6yY2nYKv9VrS0vjBBbXJzLnBTZyJWU1xgZb9VE48="
   [mod."github.com/otiai10/copy"]
-    version = "v1.14.1"
-    hash = "sha256-8RR7u17SbYg9AeBXVHIv5ZMU+kHmOcx0rLUKyz6YtU0="
-  [mod."github.com/otiai10/mint"]
-    version = "v1.6.3"
-    hash = "sha256-/FT3dYP2+UiW/qe1pxQ7HiS8et4+KHGPIMhc+8mHvzw="
+    version = "v1.14.0"
+    hash = "sha256-xsaL1ddkPS544y0Jv7u/INUALBYmYq29ddWvysLXk4A="
   [mod."github.com/pelletier/go-toml"]
     version = "v1.9.5"
     hash = "sha256-RJ9K1BTId0Mled7S66iGgxHkZ5JKEIsrrNaEfM8aImc="
@@ -491,8 +491,8 @@ schema = 3
     version = "v1.14.1"
     hash = "sha256-6NzhXCCD1Qhj05WHbCDxH5hwfNM6psoAk7uIxm7N55E="
   [mod."github.com/rs/zerolog"]
-    version = "v1.33.0"
-    hash = "sha256-jT/Y/izhZiCdrDbC/ty83FGs8UQavTU+OW03O4vKFkY="
+    version = "v1.34.0"
+    hash = "sha256-M503WwzPvqbOas3f70FQNXoWG17eV/XU6FubtB6P0uo="
   [mod."github.com/ryancurrah/gomodguard"]
     version = "v1.3.5"
     hash = "sha256-SbVlYJENSlZKoqO09m3cBCKqrgL3sQMV9h0lJy378CQ="

@@ -13,8 +13,8 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
 // ServiceInfo holds status information for a service

@@ -1,8 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DashboardShell } from "@/components/studio/dashboard-shell";
-import { AgentProvider } from "@/lib/agent-provider";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/demo")({
+  beforeLoad: () => {
+    // Redirect /demo to /studio
+    throw redirect({ to: "/studio" });
+  },
   loader: async ({ context }) => {
     // Prefetch project data on the server
     // These will be cached and available immediately on client
@@ -28,13 +30,5 @@ export const Route = createFileRoute("/demo")({
 
     return {};
   },
-  component: DemoPage,
+  component: () => null,
 });
-
-function DemoPage() {
-  return (
-    <AgentProvider>
-      <DashboardShell />
-    </AgentProvider>
-  );
-}

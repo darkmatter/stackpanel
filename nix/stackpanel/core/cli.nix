@@ -56,6 +56,49 @@ let
   schemasLib = import ../secrets/schemas.nix { inherit lib; };
   schemas = schemasLib.allSchemas;
 
+  # Extract serializable package info from devshell packages
+  # This avoids slow nix eval at runtime by pre-computing during shell entry
+  devshellPackages = cfg.devshell.packages or [ ];
+  commandPkgs = cfg.devshell._commandPkgs or [ ];
+  allPackages = devshellPackages ++ commandPkgs;
+
+  # User-installed packages from .stackpanel/data/packages.nix
+  userPackagesCfg =
+    cfg.userPackages or {
+      enable = false;
+      serialized = [ ];
+    };
+  userPackagesSerialized =
+    if userPackagesCfg.enable or false then userPackagesCfg.serialized or [ ] else [ ];
+
+  serializePackage =
+    pkg:
+    if builtins.isAttrs pkg then
+      {
+        name = pkg.pname or pkg.name or "unknown";
+        version = pkg.version or "";
+        attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
+        source = "devshell"; # From Nix config
+      }
+    else if builtins.isString pkg then
+      {
+        name = pkg;
+        version = "";
+        attrPath = pkg;
+        source = "devshell";
+      }
+    else
+      {
+        name = "unknown";
+        version = "";
+        attrPath = "";
+        source = "devshell";
+      };
+
+  serializedDevshellPackages = map serializePackage allPackages;
+  # Combine devshell packages with user packages (user packages already have source = "user")
+  serializedPackages = serializedDevshellPackages ++ userPackagesSerialized;
+
   # The schema expected by the CLI should not be coupled to the actual Nix
   # options structure. We build a separate config object here.
   fullConfig = {
@@ -130,6 +173,9 @@ let
       features = cfg.motd.features;
       hints = cfg.motd.hints;
     };
+
+    # Installed packages (pre-serialized for fast runtime access)
+    packages = serializedPackages;
   };
 
   # Serialize config to JSON
@@ -162,6 +208,10 @@ in
         export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/stackpanel.json"
         _sp_config=$(cat ${configFile} | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
         echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel init ${lib.optionalString cfg.cli.quiet "--quiet"}
+
+        # Write the state file for Go agent/CLI consumption
+        mkdir -p "$STACKPANEL_STATE_DIR"
+        echo "$_sp_config" > "$STACKPANEL_STATE_FILE"
       ''
     ];
 

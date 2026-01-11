@@ -9,6 +9,21 @@ import (
 	"strings"
 )
 
+// handleValidateToken checks if the provided token is valid.
+// GET /api/auth/validate
+// This endpoint requires auth, so if it succeeds, the token is valid.
+func (s *Server) handleValidateToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// If we get here, the token is valid (requireAuth middleware passed)
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"valid": true,
+	})
+}
+
 // -----------------------------
 // HTTP endpoints
 // -----------------------------
@@ -47,6 +62,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{
 		"status":      "ok",
 		"has_project": hasProject,
+		"agent_id":    s.jwtManager.GetAgentID(),
 	}
 	if hasProject {
 		resp["project_root"] = s.config.ProjectRoot

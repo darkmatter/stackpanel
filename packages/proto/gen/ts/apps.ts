@@ -3,10 +3,10 @@
 // tslint:disable
 import type { BinaryWriteOptions } from "@protobuf-ts/runtime";
 import type { IBinaryWriter } from "@protobuf-ts/runtime";
+import { WireType } from "@protobuf-ts/runtime";
 import type { BinaryReadOptions } from "@protobuf-ts/runtime";
 import type { IBinaryReader } from "@protobuf-ts/runtime";
 import { UnknownFieldHandler } from "@protobuf-ts/runtime";
-import { WireType } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
@@ -21,37 +21,93 @@ export interface App {
      */
     name: string; // Display name of the app
     /**
-     * @generated from protobuf field: string path = 2
+     * @generated from protobuf field: optional string description = 2
+     */
+    description?: string; // Description of the app
+    /**
+     * @generated from protobuf field: string path = 3
      */
     path: string; // Relative path to the app directory
     /**
-     * @generated from protobuf field: optional string install_command = 3
+     * @generated from protobuf field: optional string type = 4
      */
-    install_command?: string; // Custom install command (overrides default behavior)
+    type?: string; // App type/runtime (bun, go, python, rust, etc.)
     /**
-     * @generated from protobuf field: optional string build_command = 4
+     * @generated from protobuf field: optional int32 port = 5
      */
-    build_command?: string; // Custom build command (overrides default behavior)
+    port?: number; // Development server port
     /**
-     * @generated from protobuf field: optional string format_command = 5
+     * @generated from protobuf field: optional string domain = 6
      */
-    format_command?: string; // Custom code formatting command
+    domain?: string; // Local development domain
     /**
-     * @generated from protobuf field: optional string lint_command = 6
+     * @generated from protobuf field: map<string, stackpanel.db.AppTask> tasks = 7
      */
-    lint_command?: string; // Custom linting command
+    tasks: {
+        [key: string]: AppTask;
+    }; // Tasks for this app (key = task name)
     /**
-     * @generated from protobuf field: optional string test_command = 7
+     * @generated from protobuf field: map<string, stackpanel.db.AppVariable> variables = 8
      */
-    test_command?: string; // Custom test command
+    variables: {
+        [key: string]: AppVariable;
+    }; // Environment variables (key = variable name)
+}
+/**
+ * Command configuration
+ *
+ * @generated from protobuf message stackpanel.db.AppTask
+ */
+export interface AppTask {
     /**
-     * @generated from protobuf field: optional string start_command = 8
+     * @generated from protobuf field: string key = 1
      */
-    start_command?: string; // Custom start/development command
+    key: string; // Corresponds to CMD in  `turbo task run CMD`
     /**
-     * @generated from protobuf field: repeated stackpanel.db.AppEnvironment environments = 9
+     * @generated from protobuf field: optional string description = 2
      */
-    environments: AppEnvironment[]; // Environments associated with this app
+    description?: string; // (optional) Description of the command
+    /**
+     * @generated from protobuf field: string command = 3
+     */
+    command: string; // Command to run
+    /**
+     * @generated from protobuf field: map<string, stackpanel.db.AppVariable> env = 4
+     */
+    env: {
+        [key: string]: AppVariable;
+    }; // Environment variables to set
+}
+/**
+ * Environment variable configuration
+ *
+ * @generated from protobuf message stackpanel.db.AppVariable
+ */
+export interface AppVariable {
+    /**
+     * @generated from protobuf field: string key = 1
+     */
+    key: string; // value will be passed to app using this key
+    /**
+     * @generated from protobuf field: optional string description = 2
+     */
+    description?: string; // (optional) Description of the variable
+    /**
+     * @generated from protobuf field: stackpanel.db.AppVariableType type = 3
+     */
+    type: AppVariableType; // Type of environment variable
+    /**
+     *
+     * - When type = "LITERAL", the value will be passed as is.
+     * - When type = "VARIABLE", should refer to the key of the variable or secret.
+     * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
+     *   compatible descriptor, for example if you want to get a value from AWS Parameter
+     *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
+     *
+     *
+     * @generated from protobuf field: string value = 4
+     */
+    value: string;
 }
 /**
  * Map of app identifier to app configuration
@@ -67,48 +123,48 @@ export interface Apps {
     }; // Map of app ID to app config
 }
 /**
- * Environments an app can be associated with
+ * Type of environment variable
  *
- * @generated from protobuf enum stackpanel.db.AppEnvironment
+ * @generated from protobuf enum stackpanel.db.AppVariableType
  */
-export enum AppEnvironment {
+export enum AppVariableType {
     /**
-     * @generated from protobuf enum value: APP_ENVIRONMENT_UNSPECIFIED = 0;
+     * @generated from protobuf enum value: APP_VARIABLE_TYPE_UNSPECIFIED = 0;
      */
     UNSPECIFIED = 0,
     /**
-     * @generated from protobuf enum value: APP_ENVIRONMENT_DEV = 1;
+     * @generated from protobuf enum value: APP_VARIABLE_TYPE_LITERAL = 1;
      */
-    DEV = 1,
+    LITERAL = 1,
     /**
-     * @generated from protobuf enum value: APP_ENVIRONMENT_STAGING = 2;
+     * @generated from protobuf enum value: APP_VARIABLE_TYPE_VARIABLE = 2;
      */
-    STAGING = 2,
+    VARIABLE = 2,
     /**
-     * @generated from protobuf enum value: APP_ENVIRONMENT_PRODUCTION = 3;
+     * @generated from protobuf enum value: APP_VARIABLE_TYPE_VALS = 3;
      */
-    PRODUCTION = 3
+    VALS = 3
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class App$Type extends MessageType<App> {
     constructor() {
         super("stackpanel.db.App", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "install_command", kind: "scalar", localName: "install_command", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "build_command", kind: "scalar", localName: "build_command", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "format_command", kind: "scalar", localName: "format_command", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "lint_command", kind: "scalar", localName: "lint_command", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "test_command", kind: "scalar", localName: "test_command", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "start_command", kind: "scalar", localName: "start_command", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "environments", kind: "enum", repeat: 1 /*RepeatType.PACKED*/, T: () => ["stackpanel.db.AppEnvironment", AppEnvironment, "APP_ENVIRONMENT_"] }
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "type", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "port", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 6, name: "domain", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "tasks", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppTask } },
+            { no: 8, name: "variables", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } }
         ]);
     }
     create(value?: PartialMessage<App>): App {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
         message.path = "";
-        message.environments = [];
+        message.tasks = {};
+        message.variables = {};
         if (value !== undefined)
             reflectionMergePartial<App>(this, message, value);
         return message;
@@ -121,33 +177,26 @@ class App$Type extends MessageType<App> {
                 case /* string name */ 1:
                     message.name = reader.string();
                     break;
-                case /* string path */ 2:
+                case /* optional string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* string path */ 3:
                     message.path = reader.string();
                     break;
-                case /* optional string install_command */ 3:
-                    message.install_command = reader.string();
+                case /* optional string type */ 4:
+                    message.type = reader.string();
                     break;
-                case /* optional string build_command */ 4:
-                    message.build_command = reader.string();
+                case /* optional int32 port */ 5:
+                    message.port = reader.int32();
                     break;
-                case /* optional string format_command */ 5:
-                    message.format_command = reader.string();
+                case /* optional string domain */ 6:
+                    message.domain = reader.string();
                     break;
-                case /* optional string lint_command */ 6:
-                    message.lint_command = reader.string();
+                case /* map<string, stackpanel.db.AppTask> tasks */ 7:
+                    this.binaryReadMap7(message.tasks, reader, options);
                     break;
-                case /* optional string test_command */ 7:
-                    message.test_command = reader.string();
-                    break;
-                case /* optional string start_command */ 8:
-                    message.start_command = reader.string();
-                    break;
-                case /* repeated stackpanel.db.AppEnvironment environments */ 9:
-                    if (wireType === WireType.LengthDelimited)
-                        for (let e = reader.int32() + reader.pos; reader.pos < e;)
-                            message.environments.push(reader.int32());
-                    else
-                        message.environments.push(reader.int32());
+                case /* map<string, stackpanel.db.AppVariable> variables */ 8:
+                    this.binaryReadMap8(message.variables, reader, options);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -160,37 +209,70 @@ class App$Type extends MessageType<App> {
         }
         return message;
     }
+    private binaryReadMap7(map: App["tasks"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof App["tasks"] | undefined, val: App["tasks"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = AppTask.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.App.tasks");
+            }
+        }
+        map[key ?? ""] = val ?? AppTask.create();
+    }
+    private binaryReadMap8(map: App["variables"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof App["variables"] | undefined, val: App["variables"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = AppVariable.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.App.variables");
+            }
+        }
+        map[key ?? ""] = val ?? AppVariable.create();
+    }
     internalBinaryWrite(message: App, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string name = 1; */
         if (message.name !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.name);
-        /* string path = 2; */
+        /* optional string description = 2; */
+        if (message.description !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* string path = 3; */
         if (message.path !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.path);
-        /* optional string install_command = 3; */
-        if (message.install_command !== undefined)
-            writer.tag(3, WireType.LengthDelimited).string(message.install_command);
-        /* optional string build_command = 4; */
-        if (message.build_command !== undefined)
-            writer.tag(4, WireType.LengthDelimited).string(message.build_command);
-        /* optional string format_command = 5; */
-        if (message.format_command !== undefined)
-            writer.tag(5, WireType.LengthDelimited).string(message.format_command);
-        /* optional string lint_command = 6; */
-        if (message.lint_command !== undefined)
-            writer.tag(6, WireType.LengthDelimited).string(message.lint_command);
-        /* optional string test_command = 7; */
-        if (message.test_command !== undefined)
-            writer.tag(7, WireType.LengthDelimited).string(message.test_command);
-        /* optional string start_command = 8; */
-        if (message.start_command !== undefined)
-            writer.tag(8, WireType.LengthDelimited).string(message.start_command);
-        /* repeated stackpanel.db.AppEnvironment environments = 9; */
-        if (message.environments.length) {
-            writer.tag(9, WireType.LengthDelimited).fork();
-            for (let i = 0; i < message.environments.length; i++)
-                writer.int32(message.environments[i]);
-            writer.join();
+            writer.tag(3, WireType.LengthDelimited).string(message.path);
+        /* optional string type = 4; */
+        if (message.type !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.type);
+        /* optional int32 port = 5; */
+        if (message.port !== undefined)
+            writer.tag(5, WireType.Varint).int32(message.port);
+        /* optional string domain = 6; */
+        if (message.domain !== undefined)
+            writer.tag(6, WireType.LengthDelimited).string(message.domain);
+        /* map<string, stackpanel.db.AppTask> tasks = 7; */
+        for (let k of globalThis.Object.keys(message.tasks)) {
+            writer.tag(7, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            AppTask.internalBinaryWrite(message.tasks[k], writer, options);
+            writer.join().join();
+        }
+        /* map<string, stackpanel.db.AppVariable> variables = 8; */
+        for (let k of globalThis.Object.keys(message.variables)) {
+            writer.tag(8, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            AppVariable.internalBinaryWrite(message.variables[k], writer, options);
+            writer.join().join();
         }
         let u = options.writeUnknownFields;
         if (u !== false)
@@ -202,6 +284,166 @@ class App$Type extends MessageType<App> {
  * @generated MessageType for protobuf message stackpanel.db.App
  */
 export const App = new App$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AppTask$Type extends MessageType<AppTask> {
+    constructor() {
+        super("stackpanel.db.AppTask", [
+            { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "command", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } }
+        ]);
+    }
+    create(value?: PartialMessage<AppTask>): AppTask {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.key = "";
+        message.command = "";
+        message.env = {};
+        if (value !== undefined)
+            reflectionMergePartial<AppTask>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AppTask): AppTask {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string key */ 1:
+                    message.key = reader.string();
+                    break;
+                case /* optional string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* string command */ 3:
+                    message.command = reader.string();
+                    break;
+                case /* map<string, stackpanel.db.AppVariable> env */ 4:
+                    this.binaryReadMap4(message.env, reader, options);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    private binaryReadMap4(map: AppTask["env"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof AppTask["env"] | undefined, val: AppTask["env"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = AppVariable.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.AppTask.env");
+            }
+        }
+        map[key ?? ""] = val ?? AppVariable.create();
+    }
+    internalBinaryWrite(message: AppTask, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string key = 1; */
+        if (message.key !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.key);
+        /* optional string description = 2; */
+        if (message.description !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* string command = 3; */
+        if (message.command !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.command);
+        /* map<string, stackpanel.db.AppVariable> env = 4; */
+        for (let k of globalThis.Object.keys(message.env)) {
+            writer.tag(4, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            AppVariable.internalBinaryWrite(message.env[k], writer, options);
+            writer.join().join();
+        }
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.AppTask
+ */
+export const AppTask = new AppTask$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AppVariable$Type extends MessageType<AppVariable> {
+    constructor() {
+        super("stackpanel.db.AppVariable", [
+            { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "type", kind: "enum", T: () => ["stackpanel.db.AppVariableType", AppVariableType, "APP_VARIABLE_TYPE_"] },
+            { no: 4, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<AppVariable>): AppVariable {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.key = "";
+        message.type = 0;
+        message.value = "";
+        if (value !== undefined)
+            reflectionMergePartial<AppVariable>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AppVariable): AppVariable {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string key */ 1:
+                    message.key = reader.string();
+                    break;
+                case /* optional string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* stackpanel.db.AppVariableType type */ 3:
+                    message.type = reader.int32();
+                    break;
+                case /* string value */ 4:
+                    message.value = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AppVariable, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string key = 1; */
+        if (message.key !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.key);
+        /* optional string description = 2; */
+        if (message.description !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* stackpanel.db.AppVariableType type = 3; */
+        if (message.type !== 0)
+            writer.tag(3, WireType.Varint).int32(message.type);
+        /* string value = 4; */
+        if (message.value !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.value);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.AppVariable
+ */
+export const AppVariable = new AppVariable$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Apps$Type extends MessageType<Apps> {
     constructor() {

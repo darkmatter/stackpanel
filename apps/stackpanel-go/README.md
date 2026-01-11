@@ -16,7 +16,7 @@ This package combines:
 go build -o stackpanel .
 
 # Or install directly
-go install github.com/darkmatter/stackpanel/apps/stackpanel-go@latest
+go install github.com/darkmatter/stackpanel@latest
 ```
 
 ## Usage

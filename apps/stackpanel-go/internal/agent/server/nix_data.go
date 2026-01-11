@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	nixser "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/nix"
+	nixser "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nix"
 	"github.com/rs/zerolog/log"
 )
 

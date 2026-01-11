@@ -16,7 +16,8 @@
 			"default": "./src/native.ts"
 		},
 		"./docs.css": "./src/styles/docs.css",
-		"./web.css": "./src/styles/web.css"
+		"./web.css": "./src/styles/web.css",
+		"./base.css": "./src/styles/base.css"
 	},
 	"peerDependencies": {
 		"react": "^19",
@@ -30,6 +31,7 @@
 	},
 	"devDependencies": {
 		"@stackpanel/config": "workspace:*",
-		"@types/react": "^19.2.7"
+		"@types/react": "^19.2.7",
+		"tailwindcss": "^4.1.18"
 	}
 }

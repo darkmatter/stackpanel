@@ -1,237 +1,176 @@
-# ==============================================================================
-# variables.nix
-#
-# Standalone environment variable definitions that can be linked to apps.
-# Variables are defined once and referenced by ID in app definitions.
-#
-# Types:
-#   - secret: Sensitive value stored encrypted (via sops/age)
-#   - config: Non-sensitive configuration value
-#   - computed: Derived from other config (e.g., URLs from ports)
-#   - service: Auto-generated from service config (e.g., DATABASE_URL)
-# ==============================================================================
 {
-  # Database variables
-  DATABASE_URL = {
-    name = "DATABASE_URL";
-    description = "PostgreSQL connection string";
-    type = "service";
-    service = "postgres";
-    required = true;
-    sensitive = true;
-  };
-
-  DATABASE_HOST = {
-    name = "DATABASE_HOST";
-    description = "PostgreSQL host";
+  AOU-KEY = {
+    description = "ad";
+    name = "AOU_KEY";
     type = "config";
-    default = "localhost";
-    required = false;
   };
-
-  DATABASE_PORT = {
-    name = "DATABASE_PORT";
-    description = "PostgreSQL port";
-    type = "service";
-    service = "postgres";
-    required = false;
-  };
-
-  DATABASE_NAME = {
-    name = "DATABASE_NAME";
-    description = "PostgreSQL database name";
-    type = "config";
-    required = true;
-  };
-
-  # Redis variables
-  REDIS_URL = {
-    name = "REDIS_URL";
-    description = "Redis connection string";
-    type = "service";
-    service = "redis";
-    required = false;
-    sensitive = false;
-  };
-
-  # Authentication variables
-  AUTH_SECRET = {
-    name = "AUTH_SECRET";
-    description = "Secret key for session signing";
-    type = "secret";
-    required = true;
-    sensitive = true;
-  };
-
-  AUTH_URL = {
-    name = "AUTH_URL";
-    description = "Authentication service URL";
-    type = "computed";
-    required = false;
-  };
-
-  # API keys
-  OPENAI_API_KEY = {
-    name = "OPENAI_API_KEY";
-    description = "OpenAI API key for AI features";
-    type = "secret";
-    required = false;
-    sensitive = true;
-  };
-
-  STRIPE_SECRET_KEY = {
-    name = "STRIPE_SECRET_KEY";
-    description = "Stripe secret API key";
-    type = "secret";
-    required = false;
-    sensitive = true;
-  };
-
-  STRIPE_PUBLISHABLE_KEY = {
-    name = "STRIPE_PUBLISHABLE_KEY";
-    description = "Stripe publishable API key";
-    type = "config";
-    required = false;
-    sensitive = false;
-  };
-
-  STRIPE_WEBHOOK_SECRET = {
-    name = "STRIPE_WEBHOOK_SECRET";
-    description = "Stripe webhook signing secret";
-    type = "secret";
-    required = false;
-    sensitive = true;
-  };
-
-  # Application config
-  NODE_ENV = {
-    name = "NODE_ENV";
-    description = "Node.js environment";
-    type = "config";
-    required = true;
-    default = "development";
-    options = [
-      "development"
-      "staging"
-      "production"
-      "test"
-    ];
-  };
-
-  PORT = {
-    name = "PORT";
-    description = "Application port";
-    type = "computed";
-    required = false;
-  };
-
-  HOST = {
-    name = "HOST";
-    description = "Application host";
-    type = "config";
-    default = "localhost";
-    required = false;
-  };
-
-  APP_URL = {
-    name = "APP_URL";
-    description = "Public application URL";
-    type = "computed";
-    required = false;
-  };
-
-  API_URL = {
-    name = "API_URL";
+  API-URL = {
     description = "Backend API URL";
-    type = "computed";
-    required = false;
+    key = "API_URL";
+    type = "VARIABLE";
+    value = "http://localhost:3001";
   };
-
-  # Email
-  SMTP_HOST = {
-    name = "SMTP_HOST";
-    description = "SMTP server host";
-    type = "config";
-    required = false;
+  APP-URL = {
+    description = "Public application URL";
+    key = "APP_URL";
+    type = "VARIABLE";
+    value = "http://localhost:3000";
   };
-
-  SMTP_PORT = {
-    name = "SMTP_PORT";
-    description = "SMTP server port";
-    type = "config";
-    default = "587";
-    required = false;
+  AUTH-SECRET = {
+    description = "Secret key for session signing";
+    key = "AUTH_SECRET";
+    type = "SECRET";
+    value = "";
   };
-
-  SMTP_USER = {
-    name = "SMTP_USER";
-    description = "SMTP username";
-    type = "secret";
-    required = false;
-    sensitive = false;
+  AUTH-URL = {
+    description = "Authentication service URL";
+    key = "AUTH_URL";
+    type = "VARIABLE";
+    value = "http://localhost:3000/api/auth";
   };
-
-  SMTP_PASSWORD = {
-    name = "SMTP_PASSWORD";
-    description = "SMTP password";
-    type = "secret";
-    required = false;
+  COOL-VAR = {
+    default = "asd";
+    description = "cool var";
+    name = "COOL_VAR";
     sensitive = true;
-  };
-
-  # Storage
-  S3_BUCKET = {
-    name = "S3_BUCKET";
-    description = "S3 bucket name for file storage";
-    type = "config";
-    required = false;
-  };
-
-  S3_REGION = {
-    name = "S3_REGION";
-    description = "S3 bucket region";
-    type = "config";
-    default = "us-east-1";
-    required = false;
-  };
-
-  S3_ACCESS_KEY = {
-    name = "S3_ACCESS_KEY";
-    description = "S3 access key ID";
     type = "secret";
-    required = false;
-    sensitive = true;
   };
-
-  S3_SECRET_KEY = {
-    name = "S3_SECRET_KEY";
-    description = "S3 secret access key";
-    type = "secret";
-    required = false;
-    sensitive = true;
+  DATABASE-HOST = {
+    description = "PostgreSQL host";
+    key = "DATABASE_HOST";
+    type = "VARIABLE";
+    value = "localhost";
   };
-
-  # Logging
-  LOG_LEVEL = {
-    name = "LOG_LEVEL";
-    description = "Application log level";
-    type = "config";
-    default = "info";
-    options = [
-      "debug"
-      "info"
-      "warn"
-      "error"
-    ];
-    required = false;
+  DATABASE-NAME = {
+    description = "PostgreSQL database name";
+    key = "DATABASE_NAME";
+    type = "VARIABLE";
+    value = "stackpanel";
   };
-
-  # Feature flags
-  ENABLE_DEBUG = {
-    name = "ENABLE_DEBUG";
+  DATABASE-PORT = {
+    description = "PostgreSQL port";
+    key = "DATABASE_PORT";
+    type = "VARIABLE";
+    value = "5432";
+  };
+  DATABASE-URL = {
+    description = "PostgreSQL connection string";
+    key = "DATABASE_URL";
+    type = "SECRET";
+    value = "";
+  };
+  ENABLE-DEBUG = {
     description = "Enable debug mode";
-    type = "config";
-    default = "false";
-    required = false;
+    key = "ENABLE_DEBUG";
+    type = "VARIABLE";
+    value = "false";
+  };
+  HOST = {
+    description = "Application host";
+    key = "HOST";
+    type = "VARIABLE";
+    value = "localhost";
+  };
+  LOG-LEVEL = {
+    description = "Application log level";
+    key = "LOG_LEVEL";
+    type = "VARIABLE";
+    value = "info";
+  };
+  NODE-ENV = {
+    description = "Node.js environment";
+    key = "NODE_ENV";
+    type = "VARIABLE";
+    value = "development";
+  };
+  OPENAI-API-KEY = {
+    description = "OpenAI API key for AI features";
+    key = "OPENAI_API_KEY";
+    type = "SECRET";
+    value = "";
+  };
+  PORT = {
+    description = "Application port";
+    key = "PORT";
+    type = "VARIABLE";
+    value = "3000";
+  };
+  REDIS-URL = {
+    description = "Redis connection string";
+    key = "REDIS_URL";
+    type = "VARIABLE";
+    value = "redis://localhost:6379";
+  };
+  REDIS-URL-PRODUCTION = {
+    default = "postgresql://guser:password@localhost:5432/app";
+    description = "stable port";
+    name = "REDIS_URL_PRODUCTION";
+    type = "secret";
+  };
+  S3-ACCESS-KEY = {
+    description = "S3 access key ID";
+    key = "S3_ACCESS_KEY";
+    type = "SECRET";
+    value = "";
+  };
+  S3-BUCKET = {
+    description = "S3 bucket name for file storage";
+    key = "S3_BUCKET";
+    type = "VARIABLE";
+    value = "";
+  };
+  S3-REGION = {
+    description = "S3 bucket region";
+    key = "S3_REGION";
+    type = "VARIABLE";
+    value = "us-east-1";
+  };
+  S3-SECRET-KEY = {
+    description = "S3 secret access key";
+    key = "S3_SECRET_KEY";
+    type = "SECRET";
+    value = "";
+  };
+  SMTP-HOST = {
+    description = "SMTP server host";
+    key = "SMTP_HOST";
+    type = "VARIABLE";
+    value = "";
+  };
+  SMTP-PASSWORD = {
+    description = "SMTP password";
+    key = "SMTP_PASSWORD";
+    type = "SECRET";
+    value = "";
+  };
+  SMTP-PORT = {
+    description = "SMTP server port";
+    key = "SMTP_PORT";
+    type = "VARIABLE";
+    value = "587";
+  };
+  SMTP-USER = {
+    description = "SMTP username";
+    key = "SMTP_USER";
+    type = "SECRET";
+    value = "";
+  };
+  STRIPE-PUBLISHABLE-KEY = {
+    description = "Stripe publishable API key";
+    key = "STRIPE_PUBLISHABLE_KEY";
+    type = "VARIABLE";
+    value = "";
+  };
+  STRIPE-SECRET-KEY = {
+    description = "Stripe secret API key";
+    key = "STRIPE_SECRET_KEY";
+    type = "SECRET";
+    value = "";
+  };
+  STRIPE-WEBHOOK-SECRET = {
+    description = "Stripe webhook signing secret";
+    key = "STRIPE_WEBHOOK_SECRET";
+    type = "SECRET";
+    value = "";
   };
 }

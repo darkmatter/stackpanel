@@ -4,7 +4,7 @@
 package cmd
 
 import (
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/docgen"
 	"github.com/spf13/cobra"
 )
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"syscall"
 
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
 // MinioService manages the Minio S3-compatible service

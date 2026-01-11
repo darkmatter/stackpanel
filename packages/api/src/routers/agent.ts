@@ -46,6 +46,36 @@ const AgentHealthSchema = z.object({
   project_root: z.string().optional(),
 });
 
+const AWSSessionStatusSchema = z.object({
+  enabled: z.boolean(),
+  valid: z.boolean(),
+  expires_at: z.string().optional(),
+  expires_in: z.string().optional(),
+  profile_arn: z.string().optional(),
+  role_arn: z.string().optional(),
+  region: z.string().optional(),
+  error: z.string().optional(),
+  has_credentials: z.boolean(),
+});
+
+const CertificateStatusSchema = z.object({
+  enabled: z.boolean(),
+  valid: z.boolean(),
+  expires_at: z.string().optional(),
+  expires_in: z.string().optional(),
+  subject: z.string().optional(),
+  issuer: z.string().optional(),
+  cert_path: z.string().optional(),
+  error: z.string().optional(),
+  ca_reachable: z.boolean(),
+  ca_url: z.string().optional(),
+});
+
+const SecurityStatusSchema = z.object({
+  aws: AWSSessionStatusSchema,
+  certificate: CertificateStatusSchema,
+});
+
 const ConfigResponseSchema = z.object({
   config: z.record(z.string(), z.unknown()),
   last_updated: z.string(),
@@ -64,6 +94,15 @@ function getAgentBaseUrl(host = "localhost", port = 9876): string {
 /**
  * Helper to make authenticated requests to the agent
  */
+/**
+ * Agent API response wrapper type
+ */
+type AgentApiResponse<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+
 async function agentFetch<T>(
   path: string,
   options: {
@@ -105,7 +144,22 @@ async function agentFetch<T>(
     });
   }
 
-  return res.json() as Promise<T>;
+  const json = (await res.json()) as AgentApiResponse<T> | T;
+
+  // Agent API wraps responses in { success: true, data: ... }
+  // Unwrap if needed
+  if (json && typeof json === "object" && "success" in json && "data" in json) {
+    const wrapped = json as AgentApiResponse<T>;
+    if (!wrapped.success) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: wrapped.error || "Agent request failed",
+      });
+    }
+    return wrapped.data as T;
+  }
+
+  return json as T;
 }
 
 /**
@@ -342,6 +396,69 @@ export const agentRouter = createTRPCRouter({
           host,
           port,
         },
+      );
+      return data;
+    }),
+
+  /**
+   * Get combined security status (AWS session and certificate)
+   */
+  getSecurityStatus: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1, "Agent token is required"),
+        host: z.string().default("localhost"),
+        port: z.number().default(9876),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { token, host, port } = input;
+
+      const data = await agentFetch<z.infer<typeof SecurityStatusSchema>>(
+        "/api/security/status",
+        { token, host, port },
+      );
+      return data;
+    }),
+
+  /**
+   * Get AWS session status only
+   */
+  getAWSStatus: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1, "Agent token is required"),
+        host: z.string().default("localhost"),
+        port: z.number().default(9876),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { token, host, port } = input;
+
+      const data = await agentFetch<z.infer<typeof AWSSessionStatusSchema>>(
+        "/api/security/aws",
+        { token, host, port },
+      );
+      return data;
+    }),
+
+  /**
+   * Get certificate status only
+   */
+  getCertificateStatus: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1, "Agent token is required"),
+        host: z.string().default("localhost"),
+        port: z.number().default(9876),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { token, host, port } = input;
+
+      const data = await agentFetch<z.infer<typeof CertificateStatusSchema>>(
+        "/api/security/certificate",
+        { token, host, port },
       );
       return data;
     }),

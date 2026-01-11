@@ -14,10 +14,12 @@
 {
   config,
   lib,
-  pkgs,
   ...
-}:
+}@args:
 let
+  # Check if pkgs was provided without triggering a lookup error
+  hasPkgs = args ? pkgs;
+  pkgs = args.pkgs or null;
   cfg = config.stackpanel;
   pathsLib = import ../lib/paths.nix { inherit lib; };
 in

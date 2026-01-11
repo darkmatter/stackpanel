@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	svc "github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/services"
+	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
 // RedisService manages the Redis service

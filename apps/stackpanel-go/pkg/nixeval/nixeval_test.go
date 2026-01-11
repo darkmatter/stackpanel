@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

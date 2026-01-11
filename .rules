@@ -86,6 +86,99 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ---
 
+## Proto Schema & Type Generation
+
+Stackpanel uses **Protocol Buffers** as the source of truth for data entity types. Types are generated from Nix schema definitions and should **never be manually written** in TypeScript or Go.
+
+### Pipeline Overview
+
+```
+Nix Schema (.proto.nix)
+    ↓ ./packages/proto/generate.sh proto
+Proto File (.proto)
+    ↓ ./packages/proto/generate.sh buf
+Generated Types (TypeScript + Go)
+    ↓
+Import in application code
+```
+
+### Adding a New Entity Type
+
+1. **Create the Nix schema** in `nix/stackpanel/db/schemas/<entity>.proto.nix`
+2. **Add to db/default.nix** in the appropriate category (dataSchemas, pendingSchemas, etc.)
+3. **Generate proto and types**:
+   ```bash
+   cd packages/proto && ./generate.sh
+   ```
+4. **Add exports** to `packages/proto/gen/ts/index.ts` and `packages/proto/package.json`
+5. **Import in frontend** via `@stackpanel/proto`:
+   ```typescript
+   import type { MyEntity, MyEntityType } from "@stackpanel/proto";
+   ```
+
+### Schema Syntax
+
+```nix
+# nix/stackpanel/db/schemas/example.proto.nix
+{ lib }:
+let
+  proto = import ../lib/proto.nix { inherit lib; };
+in
+proto.mkProtoFile {
+  name = "example.proto";
+  package = "stackpanel.db";
+  
+  enums = {
+    ExampleType = proto.mkEnum {
+      name = "ExampleType";
+      values = [ "EXAMPLE_TYPE_UNSPECIFIED" "EXAMPLE_TYPE_FOO" "EXAMPLE_TYPE_BAR" ];
+    };
+  };
+  
+  messages = {
+    Example = proto.mkMessage {
+      name = "Example";
+      fields = {
+        id = proto.string 1 "Unique identifier";
+        type = proto.message "ExampleType" 2 "Type of example";
+        name = proto.optional (proto.string 3 "Display name");
+        tags = proto.repeated (proto.string 4 "Tags");
+        metadata = proto.map "string" "string" 5 "Key-value metadata";
+      };
+    };
+  };
+}
+```
+
+### Key Rules
+
+- **NEVER manually define types** that should come from proto schemas
+- **Proto fields use snake_case** (`store_path`), runtime-only fields use camelCase (`isStale`)
+- **Enum values** must use list format: `[ "PREFIX_UNSPECIFIED" "PREFIX_VALUE" ]`
+- **Reference enums/messages** with `proto.message "TypeName" fieldNum "description"`
+- **Extend proto types** for runtime-only fields (e.g., `GeneratedFileWithStatus` extends `GeneratedFile`)
+
+### Files Location
+
+- Nix schemas: `nix/stackpanel/db/schemas/*.proto.nix`
+- Generated .proto: `packages/proto/proto/*.proto`
+- Generated TypeScript: `packages/proto/gen/ts/*.ts`
+- Generated Go: `packages/proto/gen/go/*.go`
+
+### When to Extend vs. Use Directly
+
+- **Use proto types directly** when the API returns exactly the proto shape
+- **Create extended types** when the API adds runtime-computed fields:
+  ```typescript
+  // In types.ts - extends proto type with runtime fields
+  export interface GeneratedFileWithStatus extends GeneratedFile {
+    existsOnDisk: boolean;
+    isStale: boolean;
+  }
+  ```
+
+---
+
 ## Nix-Backed Database (Core Architecture)
 
 Stackpanel uses a **Nix-first schema system** as the single source of truth for configuration data types. This is a core architectural pattern - not a traditional database, but a type-safe configuration system.
@@ -175,9 +268,91 @@ mkSchema {
 
 ## Testing
 
+### Test-Driven Development (TDD)
+
+**Prefer a test-driven approach when implementing new features or fixing bugs:**
+
+1. **Write the test first** - Define the expected behavior before writing implementation code
+2. **Watch it fail** - Verify the test fails for the right reason (not a syntax error)
+3. **Write minimal code** - Implement just enough to make the test pass
+4. **Refactor** - Clean up the code while keeping tests green
+5. **Repeat** - Continue with the next test case
+
+**Benefits of TDD:**
+- Forces clear thinking about requirements and edge cases upfront
+- Produces naturally testable, modular code
+- Provides instant feedback during development
+- Creates documentation through test descriptions
+- Catches regressions early
+
+### Test Organization
+
 - Write assertions inside `it()` or `test()` blocks
 - Avoid done callbacks in async tests - use async/await instead
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
+- Name test files with `.test.ts` or `.spec.ts` suffix
+- Co-locate tests with source files or in a `__tests__` directory
+
+### Running Tests
+
+```bash
+bun run test           # Run all tests once
+bun run test:watch     # Run tests in watch mode
+bun run test:coverage  # Run tests with coverage report
+turbo test             # Run tests across all packages
+```
+
+### What to Test
+
+- **Unit tests**: Pure functions, utilities, hooks, and business logic
+- **Integration tests**: API clients, data transformations, component interactions
+- **Avoid testing**: Implementation details, third-party libraries, trivial code
+
+### Mocking Guidelines
+
+- Mock external dependencies (network, filesystem, databases)
+- Prefer dependency injection over global mocks when possible
+- Use `vi.mock()` for module-level mocks
+- Use `vi.fn()` for function mocks
+- Reset mocks between tests with `vi.clearAllMocks()`
+
+### Integration Testing
+
+For tests that need real agent behavior, use the `TestProject` helper:
+
+```typescript
+import { withTestProject, createSharedTestProject } from "@/test/integration";
+
+// One-off test with automatic cleanup
+await withTestProject({ template: "minimal" }, async (project) => {
+  const packages = await project.client.getPackages();
+  expect(packages).toContain("//");
+});
+
+// Shared project for a test suite (better performance)
+describe("my integration tests", () => {
+  const projectRef = createSharedTestProject({ template: "minimal" });
+  afterAll(() => projectRef.cleanup());
+
+  it("works", async () => {
+    const project = await projectRef.get();
+    const health = await project.client.ping();
+    expect(health).not.toBeNull();
+  });
+});
+```
+
+**Available templates:** `default`, `minimal`, `native`, `devenv`
+
+**Running integration tests:**
+```bash
+bun run test:integration           # Run only integration tests
+bun run test:all                   # Run all tests including integration
+DEBUG_AGENT=1 bun run test:integration  # With agent output logging
+KEEP_TEST_PROJECTS=1 bun run test:integration  # Keep temp dirs for debugging
+```
+
+**Note:** Integration tests create real temporary projects and start actual agent servers. They are slower than unit tests and are excluded from the default `test` command to keep the feedback loop fast.
 
 ---

@@ -100,5 +100,8 @@ devenv.local.yaml
 
 # Stackpanel root marker (machine-specific)
 .stackpanel-root
+
+# Stackpanel generated files (cache)
+.stackpanel/gen/
 .sst
 .tmp

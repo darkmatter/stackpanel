@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/config"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server"
-	"github.com/darkmatter/stackpanel/apps/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/server"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -31,12 +31,18 @@ func init() {
 	agentCmd.Flags().Bool("debug", false, "Enable debug logging")
 	agentCmd.Flags().StringP("project-root", "p", "", "Project root (defaults to auto-detect from current directory)")
 	agentCmd.Flags().Int("port", 9876, "Port to listen on")
+	agentCmd.Flags().Bool("remote", false, "Enable remote access (binds to 0.0.0.0 and allows Tailscale origins)")
+	agentCmd.Flags().String("bind", "", "Bind address (default 127.0.0.1, or 0.0.0.0 with --remote)")
+	agentCmd.Flags().StringArray("host", []string{}, "Allowed CORS origins (can be specified multiple times, e.g., --host https://myapp.example.com)")
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
 	debug, _ := cmd.Flags().GetBool("debug")
 	projectRoot, _ := cmd.Flags().GetString("project-root")
 	port, _ := cmd.Flags().GetInt("port")
+	remote, _ := cmd.Flags().GetBool("remote")
+	bindAddr, _ := cmd.Flags().GetString("bind")
+	allowedHosts, _ := cmd.Flags().GetStringArray("host")
 
 	// Setup logging
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
@@ -61,6 +67,26 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	// Override port if specified
 	if port != 9876 {
 		cfg.Port = port
+	}
+
+	// Handle remote access mode
+	if remote {
+		cfg.RemoteAccess = true
+		if bindAddr == "" {
+			cfg.BindAddress = "0.0.0.0"
+		}
+		log.Info().Msg("Remote access enabled - binding to all interfaces and allowing Tailscale origins")
+	}
+
+	// Override bind address if explicitly specified
+	if bindAddr != "" {
+		cfg.BindAddress = bindAddr
+	}
+
+	// Add allowed origins from --host flags
+	if len(allowedHosts) > 0 {
+		cfg.AllowedOrigins = append(cfg.AllowedOrigins, allowedHosts...)
+		log.Info().Strs("hosts", allowedHosts).Msg("Added allowed CORS origins")
 	}
 
 	// Print banner
