@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
+	"github.com/rs/zerolog/log"
 )
 
 // NixpkgsSearchRequest is the request body for searching nixpkgs
@@ -126,6 +127,8 @@ func (s *Server) handleNixpkgsSearch(w http.ResponseWriter, r *http.Request) {
 type InstalledPackagesResponse struct {
 	Packages []nixeval.InstalledPackage `json:"packages"`
 	Count    int                        `json:"count"`
+	Source   string                     `json:"source,omitempty"`
+	Cached   bool                       `json:"cached,omitempty"`
 }
 
 // handleInstalledPackages returns the list of installed packages from devenv/stackpanel config
@@ -135,26 +138,83 @@ func (s *Server) handleInstalledPackages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	limit := 0
+	offset := 0
+	forceRefresh := r.URL.Query().Get("refresh") == "true"
+
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsed, err := parseIntParam(limitStr); err == nil {
+			limit = parsed
+		}
+	}
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsed, err := parseIntParam(offsetStr); err == nil {
+			offset = parsed
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
-	opts := nixeval.GetInstalledPackagesOptions{
-		ProjectRoot:    s.config.ProjectRoot,
-		ConfigJSONPath: s.exec.GetEnv("STACKPANEL_CONFIG_JSON"),
+	var packages []nixeval.InstalledPackage
+	var source string
+	var cached bool
+
+	// Try FlakeWatcher first (preferred - has file watching and smart caching)
+	if s.flakeWatcher != nil {
+		if forceRefresh {
+			s.flakeWatcher.InvalidatePackages()
+		}
+
+		flakePackages, err := s.flakeWatcher.GetPackages(ctx)
+		if err == nil {
+			packages = flakePackages
+			_, _, cached = s.flakeWatcher.PackagesStatus()
+			source = "flake_watcher"
+		} else {
+			log.Debug().Err(err).Msg("FlakeWatcher packages evaluation failed, falling back to legacy")
+		}
 	}
-	packages, err := nixeval.GetInstalledPackages(ctx, opts)
-	if err != nil {
-		// Fall back to empty list on error (config might not be available)
-		s.writeAPI(w, http.StatusOK, InstalledPackagesResponse{
-			Packages: []nixeval.InstalledPackage{},
-			Count:    0,
-		})
-		return
+
+	// Fallback to legacy GetInstalledPackages if FlakeWatcher didn't work
+	if packages == nil {
+		opts := nixeval.GetInstalledPackagesOptions{
+			ProjectRoot:    s.config.ProjectRoot,
+			ConfigJSONPath: s.exec.GetEnv("STACKPANEL_CONFIG_JSON"),
+		}
+		var err error
+		packages, err = nixeval.GetInstalledPackages(ctx, opts)
+		if err != nil {
+			// Fall back to empty list on error (config might not be available)
+			s.writeAPI(w, http.StatusOK, InstalledPackagesResponse{
+				Packages: []nixeval.InstalledPackage{},
+				Count:    0,
+				Source:   "error",
+			})
+			return
+		}
+		source = "legacy"
+		cached = false
+	}
+
+	total := len(packages)
+	if limit > 0 {
+		if offset >= total {
+			packages = []nixeval.InstalledPackage{}
+		} else {
+			endIdx := offset + limit
+			if endIdx > total {
+				endIdx = total
+			}
+			packages = packages[offset:endIdx]
+		}
 	}
 
 	s.writeAPI(w, http.StatusOK, InstalledPackagesResponse{
 		Packages: packages,
-		Count:    len(packages),
+		Count:    total,
+		Source:   source,
+		Cached:   cached,
 	})
 }
 

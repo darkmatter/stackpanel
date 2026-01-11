@@ -21,6 +21,15 @@ in
     # Nix-specific extension: enable option (not in data schema)
     enable = lib.mkEnableOption "Starship prompt for stackpanel devenv";
 
+    preset = lib.mkOption {
+      type = lib.types.enum [
+        "stackpanel"
+        "starship-default"
+      ];
+      default = "stackpanel";
+      description = "Starship preset to apply when no custom config file is provided";
+    };
+
     # Nix-specific extension: path to custom config file
     config-file = lib.mkOption {
       type = lib.types.nullOr lib.types.path;

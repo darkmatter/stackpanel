@@ -23,6 +23,7 @@
   imports = [
     ./apps.nix
     ./aws.nix
+    ./binary-cache.nix
     ./caddy.nix
     ./ci.nix
     ./cli.nix

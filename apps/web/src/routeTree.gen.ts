@@ -28,6 +28,7 @@ import { Route as StudioFilesRouteImport } from './routes/studio/files'
 import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions'
 import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
 import { Route as StudioDatabasesRouteImport } from './routes/studio/databases'
+import { Route as StudioConfigurationRouteImport } from './routes/studio/configuration'
 import { Route as StudioCommandsRouteImport } from './routes/studio/commands'
 import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
@@ -130,6 +131,11 @@ const StudioDatabasesRoute = StudioDatabasesRouteImport.update({
   path: '/databases',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioConfigurationRoute = StudioConfigurationRouteImport.update({
+  id: '/configuration',
+  path: '/configuration',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioCommandsRoute = StudioCommandsRouteImport.update({
   id: '/commands',
   path: '/commands',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/commands': typeof StudioCommandsRoute
+  '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/commands': typeof StudioCommandsRoute
+  '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/commands': typeof StudioCommandsRoute
+  '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/studio/apps'
     | '/studio/commands'
+    | '/studio/configuration'
     | '/studio/databases'
     | '/studio/devshells'
     | '/studio/extensions'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/studio/apps'
     | '/studio/commands'
+    | '/studio/configuration'
     | '/studio/databases'
     | '/studio/devshells'
     | '/studio/extensions'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/studio/apps'
     | '/studio/commands'
+    | '/studio/configuration'
     | '/studio/databases'
     | '/studio/devshells'
     | '/studio/extensions'
@@ -473,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioDatabasesRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/configuration': {
+      id: '/studio/configuration'
+      path: '/configuration'
+      fullPath: '/studio/configuration'
+      preLoaderRoute: typeof StudioConfigurationRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/commands': {
       id: '/studio/commands'
       path: '/commands'
@@ -521,6 +540,7 @@ declare module '@tanstack/react-router' {
 interface StudioRouteChildren {
   StudioAppsRoute: typeof StudioAppsRoute
   StudioCommandsRoute: typeof StudioCommandsRoute
+  StudioConfigurationRoute: typeof StudioConfigurationRoute
   StudioDatabasesRoute: typeof StudioDatabasesRoute
   StudioDevshellsRoute: typeof StudioDevshellsRoute
   StudioExtensionsRoute: typeof StudioExtensionsRoute
@@ -539,6 +559,7 @@ interface StudioRouteChildren {
 const StudioRouteChildren: StudioRouteChildren = {
   StudioAppsRoute: StudioAppsRoute,
   StudioCommandsRoute: StudioCommandsRoute,
+  StudioConfigurationRoute: StudioConfigurationRoute,
   StudioDatabasesRoute: StudioDatabasesRoute,
   StudioDevshellsRoute: StudioDevshellsRoute,
   StudioExtensionsRoute: StudioExtensionsRoute,

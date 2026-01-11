@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -158,6 +160,7 @@ interface PackageCardProps {
   isUserInstalled?: boolean;
   isAdding?: boolean;
   isRemoving?: boolean;
+  isCompact?: boolean;
   onAdd?: (pkg: NixpkgsPackage) => void;
   onRemove?: (pkg: NixpkgsPackage) => void;
 }
@@ -168,6 +171,7 @@ function PackageCard({
   isUserInstalled = false,
   isAdding = false,
   isRemoving = false,
+  isCompact = false,
   onAdd,
   onRemove,
 }: PackageCardProps) {
@@ -175,23 +179,39 @@ function PackageCard({
 
   return (
     <Card
-      className={`transition-colors ${isInstalled ? "border-green-500/30 bg-green-500/5" : "hover:border-accent/50"}`}
+      className={`transition-colors ${isInstalled ? "border-green-500/30 bg-green-600/2" : "hover:border-accent/50"}`}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
+      <CardContent className={isCompact ? "p-2.5" : "p-4"}>
+        <div
+          className={`flex items-start justify-between ${isCompact ? "gap-3" : "gap-4"}`}
+        >
+          <div
+            className={`flex items-start min-w-0 flex-1 ${isCompact ? "gap-2.5" : "gap-3"}`}
+          >
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${isInstalled ? "bg-green-500/10" : "bg-accent/10"}`}
+              className={`flex shrink-0 items-center justify-center rounded-lg ${isCompact ? "h-8 w-8" : "h-10 w-10"} ${isInstalled ? "bg-green-500/10" : "bg-accent/10"}`}
             >
               {isInstalled ? (
-                <Check className="h-5 w-5 text-green-500" />
+                <Check
+                  className={
+                    isCompact
+                      ? "h-4 w-4 text-green-500"
+                      : "h-5 w-5 text-green-500"
+                  }
+                />
               ) : (
-                <Package className="h-5 w-5 text-accent" />
+                <Package
+                  className={
+                    isCompact ? "h-4 w-4 text-accent" : "h-5 w-5 text-accent"
+                  }
+                />
               )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-medium text-foreground truncate">
+                <h3
+                  className={`font-medium text-foreground truncate ${isCompact ? "text-sm" : ""}`}
+                >
                   {pkg.name}
                 </h3>
                 <Badge variant="secondary" className="text-xs shrink-0">
@@ -200,7 +220,7 @@ function PackageCard({
                 {isInstalled && (
                   <Badge
                     variant="outline"
-                    className="text-xs shrink-0 border-green-500/50 text-green-600 dark:text-green-400"
+                    className="text-xs shrink-0 border-green-500/50 text-green-600 dark:text-green-600"
                   >
                     {isUserInstalled ? "User Installed" : "From Config"}
                   </Badge>
@@ -210,11 +230,15 @@ function PackageCard({
                 {pkg.attr_path}
               </p>
               {pkg.description && (
-                <p className="mt-2 text-muted-foreground text-sm line-clamp-2">
+                <p
+                  className={`text-muted-foreground line-clamp-2 ${isCompact ? "mt-1 text-xs" : "mt-2 text-sm"}`}
+                >
                   {pkg.description}
                 </p>
               )}
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <div
+                className={`flex items-center gap-2 flex-wrap ${isCompact ? "mt-1" : "mt-2"}`}
+              >
                 {pkg.license && (
                   <Badge variant="outline" className="text-xs">
                     {pkg.license}
@@ -335,6 +359,7 @@ export function PackagesPanel() {
   const [processingPackages, setProcessingPackages] = useState<
     Map<string, "adding" | "removing">
   >(new Map());
+  const [showInstalled, setShowInstalled] = useState(true);
 
   // Add a package to user packages
   const handleAddPackage = useCallback(
@@ -423,95 +448,32 @@ export function PackagesPanel() {
             Search and add packages from nixpkgs to your development environment
           </p>
         </div>
-        {!query && (
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {installedCount > 0 && (
-              <span className="text-green-600 dark:text-green-400">
-                {installedCount} installed
-              </span>
-            )}
-            {cacheStats && cacheStats.packageCount > 0 && (
-              <span>{cacheStats.packageCount.toLocaleString()} cached</span>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          {!query && installedCount > 0 && (
+            <span className="text-green-600 dark:text-green-400">
+              {installedCount} installed
+            </span>
+          )}
+          {cacheStats && cacheStats.packageCount > 0 && (
+            <span>{cacheStats.packageCount.toLocaleString()} cached</span>
+          )}
+          {!query && (
+            <div className="flex items-center gap-2">
+              <Label
+                htmlFor="show-installed-packages"
+                className="text-xs text-muted-foreground"
+              >
+                Show installed
+              </Label>
+              <Switch
+                id="show-installed-packages"
+                checked={showInstalled}
+                onCheckedChange={setShowInstalled}
+              />
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* User-installed packages section */}
-      {userInstalledPackages.length > 0 && !query && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              User-installed packages
-            </h3>
-            <Badge variant="secondary" className="text-xs">
-              {userInstalledPackages.length}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {userInstalledPackages.map((pkg) => {
-              const attrPath = pkg.attrPath || pkg.name;
-              const processing = processingPackages.get(attrPath);
-              return (
-                <PackageCard
-                  key={attrPath}
-                  pkg={{
-                    name: pkg.name,
-                    attr_path: attrPath,
-                    version: pkg.version || "",
-                    description: "",
-                  }}
-                  isInstalled={true}
-                  isUserInstalled={true}
-                  isRemoving={processing === "removing"}
-                  onRemove={(p) => handleRemovePackage(p)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Devshell packages section */}
-      {devshellPackages.length > 0 && !query && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              From devshell config
-            </h3>
-            <Badge variant="secondary" className="text-xs">
-              {devshellPackages.length}
-            </Badge>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            These packages are defined in your Nix configuration and cannot be
-            removed from the UI.
-          </div>
-          <div className="space-y-2">
-            {devshellPackages.slice(0, 5).map((pkg) => {
-              const attrPath = pkg.attrPath || pkg.name;
-              return (
-                <PackageCard
-                  key={attrPath}
-                  pkg={{
-                    name: pkg.name,
-                    attr_path: attrPath,
-                    version: pkg.version || "",
-                    description: "",
-                  }}
-                  isInstalled={true}
-                  isUserInstalled={false}
-                />
-              );
-            })}
-            {devshellPackages.length > 5 && (
-              <div className="text-xs text-muted-foreground text-center py-2">
-                +{devshellPackages.length - 5} more packages from config
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Search Controls */}
       <div className="relative">
@@ -571,23 +533,105 @@ export function PackagesPanel() {
       )}
 
       {/* Empty State */}
-      {!query && !isLoading && !error && installedCount === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
-            <Package className="h-8 w-8 text-accent" />
-          </div>
-          <h3 className="mt-4 font-medium text-foreground">Search Nixpkgs</h3>
-          <p className="mt-2 max-w-sm text-muted-foreground text-sm">
-            Search over 100,000 packages in the Nix package collection. Find
-            tools, libraries, and applications for your development environment.
-          </p>
-          {cacheStats && cacheStats.packageCount > 0 && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              <Database className="inline h-3 w-3 mr-1" />
-              {cacheStats.packageCount.toLocaleString()} packages cached for
-              instant results
+      {!query &&
+        !isLoading &&
+        !error &&
+        (!showInstalled || installedCount === 0) && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
+              <Package className="h-8 w-8 text-accent" />
+            </div>
+            <h3 className="mt-4 font-medium text-foreground">Search Nixpkgs</h3>
+            <p className="mt-2 max-w-sm text-muted-foreground text-sm">
+              Search over 100,000 packages in the Nix package collection. Find
+              tools, libraries, and applications for your development
+              environment.
             </p>
-          )}
+            {installedCount > 0 && !showInstalled && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Toggle “Show installed” to view your current packages.
+              </p>
+            )}
+            {cacheStats && cacheStats.packageCount > 0 && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                <Database className="inline h-3 w-3 mr-1" />
+                {cacheStats.packageCount.toLocaleString()} packages cached for
+                instant results
+              </p>
+            )}
+          </div>
+        )}
+
+      {/* User-installed packages section */}
+      {showInstalled && userInstalledPackages.length > 0 && !query && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              User-installed packages
+            </h3>
+            <Badge variant="secondary" className="text-xs">
+              {userInstalledPackages.length}
+            </Badge>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {userInstalledPackages.map((pkg) => {
+              const attrPath = pkg.attrPath || pkg.name;
+              const processing = processingPackages.get(attrPath);
+              return (
+                <PackageCard
+                  key={attrPath}
+                  pkg={{
+                    name: pkg.name,
+                    attr_path: attrPath,
+                    version: pkg.version || "",
+                    description: "",
+                  }}
+                  isInstalled={true}
+                  isUserInstalled={true}
+                  isCompact={true}
+                  isRemoving={processing === "removing"}
+                  onRemove={(p) => handleRemovePackage(p)}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Devshell packages section */}
+      {showInstalled && devshellPackages.length > 0 && !query && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              From devshell config
+            </h3>
+            <Badge variant="secondary" className="text-xs">
+              {devshellPackages.length}
+            </Badge>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            These packages are defined in your Nix configuration and cannot be
+            removed from the UI.
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {devshellPackages.map((pkg) => {
+              const attrPath = pkg.attrPath || pkg.name;
+              return (
+                <PackageCard
+                  key={attrPath}
+                  pkg={{
+                    name: pkg.name,
+                    attr_path: attrPath,
+                    version: pkg.version || "",
+                    description: "",
+                  }}
+                  isInstalled={true}
+                  isUserInstalled={false}
+                  isCompact={true}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
 
