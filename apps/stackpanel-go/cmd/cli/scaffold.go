@@ -20,10 +20,11 @@ then writes them to the appropriate locations. Existing files are NOT overwritte
 unless --force is specified.
 
 The scaffolded structure includes:
-  - .stackpanel/config.nix      Main configuration file
-  - .stackpanel/data/           Data directory for user-managed files
-  - .stackpanel/data/default.nix  Auto-loader for data files
-  - .stackpanel/data/users.nix  User definitions
+  - .stackpanel/config.nix       User-editable configuration file
+  - .stackpanel/_internal.nix    Internal merging logic (do not edit)
+  - .stackpanel/data/            Data directory for user-managed files
+  - .stackpanel/data/default.nix Auto-loader for data files
+  - .stackpanel/data/users.nix   User definitions
 
 Example:
   stackpanel scaffold                 # Create files in current directory

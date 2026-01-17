@@ -15,8 +15,9 @@
 {
   # ---------------------------------------------------------------------------
   # Stackpanel Configuration (edit ./.stackpanel/config.nix)
+  # _internal.nix handles merging with data tables and GitHub collaborators
   # ---------------------------------------------------------------------------
-  stackpanel = import ./.stackpanel/config.nix;
+  stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
 
   # ---------------------------------------------------------------------------
   # Packages - Available in the dev shell

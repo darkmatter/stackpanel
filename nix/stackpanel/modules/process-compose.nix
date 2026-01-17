@@ -206,7 +206,10 @@ let
 
   # Build the dev wrapper package
   mkDevPackage =
-    { processes, environment }:
+    {
+      processes,
+      environment,
+    }:
     let
       configFile = pkgs.writeText "process-compose.yaml" (
         builtins.toJSON (removeNulls {
@@ -226,7 +229,6 @@ let
         exec process-compose up -f ${configFile} "$@"
       '';
     };
-
 in
 {
   # ===========================================================================

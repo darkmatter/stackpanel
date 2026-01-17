@@ -180,6 +180,16 @@ var (
 		GoField:     "StateFile",
 	}
 
+	// StackpanelShellLog is the log file capturing shell entry output
+	StackpanelShellLog = EnvVar{
+		Name:        "STACKPANEL_SHELL_LOG",
+		Description: "Log file capturing shell entry output",
+		Category:    CategoryPaths,
+		Source:      SourceNix,
+		Example:     "/home/user/my-project/.stackpanel/state/shell.log",
+		GoField:     "ShellLog",
+	}
+
 	// StackpanelGenDir is the directory for generated files
 	StackpanelGenDir = EnvVar{
 		Name:        "STACKPANEL_GEN_DIR",

@@ -46,23 +46,40 @@ let
     path: fileConfig:
     let
       mode = fileConfig.mode;
+      fileType = fileConfig.type;
+
       # Get the source content based on type
       source =
-        if fileConfig.type == "text" then
+        if fileType == "text" then
           pkgs.writeText (builtins.baseNameOf path) fileConfig.text
+        else if fileType == "derivation" then
+          fileConfig.drv
         else
-          fileConfig.drv;
+          null; # symlink doesn't use source
+
+      # For symlinks, get the target
+      symlinkTarget = fileConfig.target or null;
     in
-    ''
-      ${util.log.debug "files: writing ${path}"}
-      echo "• ${path}"
-      mkdir -p "$(dirname ${q path})"
-      cat ${source} > ${q path}
-      ${lib.optionalString (mode != null) ''
-        ${util.log.debug "files: setting mode ${mode} on ${path}"}
-        chmod ${q mode} ${q path}
-      ''}
-    '';
+    if fileType == "symlink" then
+      ''
+        ${util.log.debug "files: creating symlink ${path} -> ${symlinkTarget}"}
+        echo "• ${path} -> ${symlinkTarget}"
+        mkdir -p "$(dirname ${q path})"
+        # Remove existing file/symlink if present
+        rm -f ${q path} 2>/dev/null || true
+        ln -s ${q symlinkTarget} ${q path}
+      ''
+    else
+      ''
+        ${util.log.debug "files: writing ${path}"}
+        echo "• ${path}"
+        mkdir -p "$(dirname ${q path})"
+        cat ${source} > ${q path}
+        ${lib.optionalString (mode != null) ''
+          ${util.log.debug "files: setting mode ${mode} on ${path}"}
+          chmod ${q mode} ${q path}
+        ''}
+      '';
 
   writerDrv = pkgs.writeShellApplication {
     name = "write-files";

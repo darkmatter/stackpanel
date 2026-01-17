@@ -1,5 +1,25 @@
 "use client";
 
+import { Button } from "@ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@ui/dialog";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";
 import {
   AlertCircle,
   CheckCircle2,
@@ -10,30 +30,6 @@ import {
   Wifi,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useAgentContext } from "@/lib/agent-provider";
 
 const AGENT_CONFIG_KEY = "stackpanel-agent-config";
@@ -402,8 +398,8 @@ export function AgentStatus() {
   // Agent available and we have a valid token (paired)
   if (token) {
     return (
-      <div className="flex items-center gap-2 text-accent text-xs">
-        <div className="h-2 w-2 rounded-full bg-accent" />
+      <div className="flex items-center gap-2 text-emerald-500 text-xs">
+        <div className="h-2 w-2 rounded-full bg-emerald-500" />
         <span>Connected</span>
       </div>
     );

@@ -1,7 +1,10 @@
 @import "./base.css";
 
 @theme inline {
-  --font-sans: "Inter", "Geist Fallback";
+  --font-montserrat:
+    "Montserrat Variable", "Montserrat", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --font-sans: "Inter Variable", "Inter", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -36,7 +36,10 @@ let
   # Helper to evaluate full stackpanel config from a config module
   # This evaluates the complete module system with user's config
   mkEvaluatedConfig =
-    { pkgs, configModule }:
+    {
+      pkgs,
+      configModule,
+    }:
     let
       evaluated = lib.evalModules {
         modules = [

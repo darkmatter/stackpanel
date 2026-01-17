@@ -22,7 +22,13 @@ This includes:
 By default, opens an interactive dashboard. Use --static for non-interactive output.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		static, _ := cmd.Flags().GetBool("static")
-		if static {
+		noTui, _ := cmd.Flags().GetBool("no-tui")
+		if !noTui {
+			if inherited := cmd.InheritedFlags().Lookup("no-tui"); inherited != nil && inherited.Value.String() == "true" {
+				noTui = true
+			}
+		}
+		if static || noTui {
 			showFullStatus()
 		} else {
 			if err := tui.RunStatusDashboard(); err != nil {

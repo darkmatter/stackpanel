@@ -170,6 +170,16 @@ var (
 	ProgressEmpty  = ColorMuted
 )
 
+var FrameStyle = lipgloss.NewStyle().
+	Border(lipgloss.RoundedBorder()).
+	BorderForeground(ColorPrimary).
+	Padding(1, 2).
+	Margin(1, 2)
+
+func RenderFrame(content string) string {
+	return FrameStyle.Render(content)
+}
+
 const Banner = `
        |                 |                                |
   __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |

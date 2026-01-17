@@ -155,6 +155,15 @@ rec {
       goField = "StateFile";
     };
 
+    STACKPANEL_SHELL_LOG = mkEnvVar {
+      name = "STACKPANEL_SHELL_LOG";
+      description = "Log file capturing shell entry output";
+      category = categories.paths;
+      source = "nix";
+      example = "/home/user/my-project/.stackpanel/state/shell.log";
+      goField = "ShellLog";
+    };
+
     STACKPANEL_GEN_DIR = mkEnvVar {
       name = "STACKPANEL_GEN_DIR";
       description = "Directory for generated files (configs, scripts)";

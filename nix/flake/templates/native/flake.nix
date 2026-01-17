@@ -45,15 +45,15 @@
       perSystem =
         {
           pkgs,
+          lib,
           system,
           ...
         }:
         {
-          # Stackpanel configuration
+          # Stackpanel configuration (edit ./.stackpanel/config.nix)
+          # _internal.nix handles merging with data tables and GitHub collaborators
           # The flakeModules.native creates devShells.default automatically
-          stackpanel = import ./.stackpanel/config.nix // {
-            enable = true;
-          };
+          stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
 
           # Your project's packages
           packages.default = pkgs.hello;

@@ -1,12 +1,12 @@
 "use client";
 
+import { Button } from "@ui/button";
+import { Card, CardContent } from "@ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@ui/tabs";
 import { Maximize2, Minimize2, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAgentContext } from "@/lib/agent-provider";
 import type { ExecResult } from "@/lib/agent";
+import { useAgentContext } from "@/lib/agent-provider";
 
 interface TerminalLine {
 	type: "input" | "output" | "error" | "success";
@@ -23,11 +23,11 @@ const initialTabs: Tab[] = [
 	{
 		id: "1",
 		name: "main",
-			lines: [
-				{ type: "output", content: "Welcome to the Stackpanel terminal." },
-				{ type: "output", content: "Run any shell command via the agent." },
-				{ type: "output", content: "" },
-			],
+		lines: [
+			{ type: "output", content: "Welcome to the Stackpanel terminal." },
+			{ type: "output", content: "Run any shell command via the agent." },
+			{ type: "output", content: "" },
+		],
 	},
 ];
 
@@ -47,18 +47,13 @@ export function TerminalPanel() {
 		}
 	}, [currentTab?.lines]);
 
-	const appendLines = useCallback(
-		(tabId: string, lines: TerminalLine[]) => {
-			setTabs((prev) =>
-				prev.map((tab) =>
-					tab.id === tabId
-						? { ...tab, lines: [...tab.lines, ...lines] }
-						: tab,
-				),
-			);
-		},
-		[],
-	);
+	const appendLines = useCallback((tabId: string, lines: TerminalLine[]) => {
+		setTabs((prev) =>
+			prev.map((tab) =>
+				tab.id === tabId ? { ...tab, lines: [...tab.lines, ...lines] } : tab,
+			),
+		);
+	}, []);
 
 	const setTabLines = useCallback((tabId: string, lines: TerminalLine[]) => {
 		setTabs((prev) =>
@@ -106,9 +101,7 @@ export function TerminalPanel() {
 			if (!trimmedCommand) return;
 
 			const tabId = currentTab.id;
-			appendLines(tabId, [
-				{ type: "input" as const, content: `$ ${command}` },
-			]);
+			appendLines(tabId, [{ type: "input" as const, content: `$ ${command}` }]);
 			setInput("");
 
 			if (trimmedCommand.toLowerCase() === "clear") {
@@ -116,31 +109,26 @@ export function TerminalPanel() {
 				return;
 			}
 
-				try {
-					if (!isConnected) {
-						throw new Error("Not connected to the agent");
-					}
+			try {
+				if (!isConnected) {
+					throw new Error("Not connected to the agent");
+				}
 
-					const result = (await exec("bash", ["-lc", trimmedCommand])) as ExecResult;
-					await streamExecOutput(tabId, result);
-				} catch (err) {
-				const message =
-					err instanceof Error ? err.message : "Command failed";
+				const result = (await exec("bash", [
+					"-lc",
+					trimmedCommand,
+				])) as ExecResult;
+				await streamExecOutput(tabId, result);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : "Command failed";
 				appendLines(tabId, [
 					{ type: "error", content: message },
 					{ type: "output", content: "" },
 				]);
 			}
 		},
-		[
-				appendLines,
-				currentTab,
-				exec,
-				isConnected,
-				setTabLines,
-				streamExecOutput,
-			],
-		);
+		[appendLines, currentTab, exec, isConnected, setTabLines, streamExecOutput],
+	);
 
 	const addTab = () => {
 		const newId = String(tabs.length + 1);
@@ -262,10 +250,10 @@ export function TerminalPanel() {
 								className="flex-1 bg-transparent text-foreground outline-none"
 								onChange={(e) => setInput(e.target.value)}
 								onKeyDown={(e) => {
-								if (e.key === "Enter" && input.trim()) {
-									handleCommand(input);
-								}
-							}}
+									if (e.key === "Enter" && input.trim()) {
+										handleCommand(input);
+									}
+								}}
 								ref={inputRef}
 								type="text"
 								value={input}

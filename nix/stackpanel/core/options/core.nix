@@ -199,6 +199,18 @@
       default = { };
       description = "Additional flake checks contributed by stackpanel modules.";
     };
+
+    # Serializable configuration for the agent/CLI
+    # Modules can add their config here for JSON serialization
+    serializable = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = { };
+      description = ''
+        Serializable configuration data for the agent and CLI.
+        Modules can contribute their JSON-safe config here.
+        This data is included in stackpanelConfig for external tools.
+      '';
+    };
   };
 
   # ============================================================================

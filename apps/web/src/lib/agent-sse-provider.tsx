@@ -82,34 +82,37 @@ export function AgentSSEProvider({
 		return () => window.removeEventListener("storage", onStorage);
 	}, [token]);
 
-	const dispatchEvent = useCallback((eventName: string, rawEvent: MessageEvent) => {
-		const data = parseEventData(String(rawEvent.data));
-		const event: AgentSSEEvent = {
-			event: eventName,
-			data,
-			receivedAt: Date.now(),
-			rawEvent: rawEvent as MessageEvent<string>,
-		};
-		setLastEvent(event);
+	const dispatchEvent = useCallback(
+		(eventName: string, rawEvent: MessageEvent) => {
+			const data = parseEventData(String(rawEvent.data));
+			const event: AgentSSEEvent = {
+				event: eventName,
+				data,
+				receivedAt: Date.now(),
+				rawEvent: rawEvent as MessageEvent<string>,
+			};
+			setLastEvent(event);
 
-		const listeners = listenersRef.current.get(eventName);
-		if (listeners) {
-			for (const listener of listeners) {
-				listener(event);
+			const listeners = listenersRef.current.get(eventName);
+			if (listeners) {
+				for (const listener of listeners) {
+					listener(event);
+				}
 			}
-		}
 
-		const wildcardListeners = listenersRef.current.get("*");
-		if (wildcardListeners) {
-			for (const listener of wildcardListeners) {
-				listener(event);
+			const wildcardListeners = listenersRef.current.get("*");
+			if (wildcardListeners) {
+				for (const listener of wildcardListeners) {
+					listener(event);
+				}
 			}
-		}
 
-		if (eventName === "connected") {
-			setStatus("connected");
-		}
-	}, []);
+			if (eventName === "connected") {
+				setStatus("connected");
+			}
+		},
+		[],
+	);
 
 	const attachEventListener = useCallback(
 		(eventName: string) => {

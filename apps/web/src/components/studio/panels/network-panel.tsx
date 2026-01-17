@@ -1,5 +1,9 @@
 "use client";
 
+import { Badge } from "@ui/badge";
+import { Button } from "@ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import {
 	CheckCircle2,
 	Copy,
@@ -14,10 +18,6 @@ import {
 	Smartphone,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNixConfig, useNixData } from "@/lib/use-nix-config";
 
 type StepCaData = {
@@ -119,9 +119,7 @@ export function NetworkPanel() {
 			items.push({
 				name: certName ?? "Device certificate",
 				type: "Step CA",
-				detail: caUrl
-					? `CA: ${caUrl}`
-					: "Managed by Step CA",
+				detail: caUrl ? `CA: ${caUrl}` : "Managed by Step CA",
 			});
 		}
 
@@ -143,9 +141,10 @@ export function NetworkPanel() {
 		return Object.values(zones).flatMap((zone) => {
 			const domain = zone.domain ?? "";
 			return (zone.records ?? []).map((record) => {
-				const host = record.name && record.name !== "@"
-					? `${record.name}.${domain}`
-					: domain;
+				const host =
+					record.name && record.name !== "@"
+						? `${record.name}.${domain}`
+						: domain;
 				return {
 					domain: host || domain,
 					target: record.value ?? "",

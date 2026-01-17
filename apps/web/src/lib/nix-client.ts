@@ -10,26 +10,31 @@
  * - This client handles the transformation at the boundary
  */
 
+import {
+	kebabToSnake,
+	kebabToSnakeValues,
+	snakeToKebab,
+	snakeToKebabValues,
+} from "./nix-data";
 import type {
-  App,
-  Service,
-  StackpanelConfig,
-  DataResponse,
-  WriteResponse,
-  DeleteResponse,
-  ListResponse,
-  GeneratedFileWithStatus,
-  GeneratedFilesResponse,
+	App,
+	DataResponse,
+	DeleteResponse,
+	GeneratedFilesResponse,
+	GeneratedFileWithStatus,
+	ListResponse,
+	Service,
+	StackpanelConfig,
+	WriteResponse,
 } from "./types";
-import { kebabToSnake, snakeToKebab } from "./nix-data";
 
 // Re-export types for convenience
 export type {
-  App,
-  Service,
-  StackpanelConfig,
-  GeneratedFileWithStatus,
-  GeneratedFilesResponse,
+	App,
+	Service,
+	StackpanelConfig,
+	GeneratedFileWithStatus,
+	GeneratedFilesResponse,
 };
 
 // =============================================================================
@@ -41,61 +46,61 @@ export type {
  * Similar to Drizzle's table interface.
  */
 export class EntityClient<T> {
-  constructor(
-    private readonly client: NixClient,
-    private readonly entityName: string,
-  ) {}
+	constructor(
+		private readonly client: NixClient,
+		private readonly entityName: string,
+	) {}
 
-  /**
-   * Get the entity data, or null if it doesn't exist.
-   * Transforms kebab-case keys from Nix to snake_case for proto types.
-   */
-  async get(): Promise<T | null> {
-    const res = await this.client.fetch<DataResponse<T>>(
-      `/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
-    );
-    return res.exists && res.data ? kebabToSnake(res.data) : null;
-  }
+	/**
+	 * Get the entity data, or null if it doesn't exist.
+	 * Transforms kebab-case keys from Nix to snake_case for proto types.
+	 */
+	async get(): Promise<T | null> {
+		const res = await this.client.fetch<DataResponse<T>>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+		return res.exists && res.data ? kebabToSnake(res.data) : null;
+	}
 
-  /**
-   * Check if the entity exists.
-   */
-  async exists(): Promise<boolean> {
-    const res = await this.client.fetch<DataResponse<T>>(
-      `/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
-    );
-    return res.exists;
-  }
+	/**
+	 * Check if the entity exists.
+	 */
+	async exists(): Promise<boolean> {
+		const res = await this.client.fetch<DataResponse<T>>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+		return res.exists;
+	}
 
-  /**
-   * Set the entity data (full replacement).
-   * Transforms snake_case keys to kebab-case for Nix.
-   */
-  async set(data: T): Promise<WriteResponse> {
-    return this.client.post<WriteResponse>("/api/nix/data", {
-      entity: this.entityName,
-      data: snakeToKebab(data),
-    });
-  }
+	/**
+	 * Set the entity data (full replacement).
+	 * Transforms snake_case keys to kebab-case for Nix.
+	 */
+	async set(data: T): Promise<WriteResponse> {
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebab(data),
+		});
+	}
 
-  /**
-   * Delete the entity.
-   */
-  async delete(): Promise<DeleteResponse> {
-    return this.client.delete<DeleteResponse>(
-      `/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
-    );
-  }
+	/**
+	 * Delete the entity.
+	 */
+	async delete(): Promise<DeleteResponse> {
+		return this.client.delete<DeleteResponse>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+	}
 
-  /**
-   * Update entity data by merging with existing data.
-   * Fetches current data, merges with updates, then writes back.
-   */
-  async update(updates: Partial<T>): Promise<WriteResponse> {
-    const current = await this.get();
-    const merged = { ...current, ...updates } as T;
-    return this.set(merged);
-  }
+	/**
+	 * Update entity data by merging with existing data.
+	 * Fetches current data, merges with updates, then writes back.
+	 */
+	async update(updates: Partial<T>): Promise<WriteResponse> {
+		const current = await this.get();
+		const merged = { ...current, ...updates } as T;
+		return this.set(merged);
+	}
 }
 
 /**
@@ -103,136 +108,141 @@ export class EntityClient<T> {
  * Useful for apps, services, etc. where each key is an identifier.
  */
 export class MapEntityClient<V> {
-  constructor(
-    private readonly client: NixClient,
-    private readonly entityName: string,
-  ) {}
+	constructor(
+		private readonly client: NixClient,
+		private readonly entityName: string,
+	) {}
 
-  /**
-   * Get all entries.
-   * Transforms kebab-case keys from Nix to snake_case for proto types.
-   */
-  async all(): Promise<Record<string, V>> {
-    console.log("[NixClient] fetching all", { entity: this.entityName });
-    const res = await this.client.fetch<DataResponse<Record<string, V>>>(
-      `/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
-    );
-    console.log("[NixClient] raw response", res);
-    const result = res.exists && res.data ? kebabToSnake(res.data) : {};
-    console.log("[NixClient] transformed result", result);
-    return result;
-  }
+	/**
+	 * Get all entries.
+	 * Transforms kebab-case field names to snake_case for proto types.
+	 * Map keys (IDs) are preserved as-is.
+	 */
+	async all(): Promise<Record<string, V>> {
+		console.log("[NixClient] fetching all", { entity: this.entityName });
+		const res = await this.client.fetch<DataResponse<Record<string, V>>>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+		console.log("[NixClient] raw response", res);
+		const result = res.exists && res.data ? kebabToSnakeValues(res.data) : {};
+		console.log("[NixClient] transformed result", result);
+		return result;
+	}
 
-  /**
-   * Get a single entry by key.
-   */
-  async get(key: string): Promise<V | null> {
-    const all = await this.all();
-    return all[key] ?? null;
-  }
+	/**
+	 * Get a single entry by key.
+	 */
+	async get(key: string): Promise<V | null> {
+		const all = await this.all();
+		return all[key] ?? null;
+	}
 
-  /**
-   * Check if a key exists.
-   */
-  async has(key: string): Promise<boolean> {
-    const all = await this.all();
-    return key in all;
-  }
+	/**
+	 * Check if a key exists.
+	 */
+	async has(key: string): Promise<boolean> {
+		const all = await this.all();
+		return key in all;
+	}
 
-  /**
-   * Set a single entry (upsert).
-   * Transforms snake_case keys to kebab-case for Nix.
-   */
-  async set(key: string, value: V): Promise<WriteResponse> {
-    const all = await this.all();
-    all[key] = value;
-    return this.client.post<WriteResponse>("/api/nix/data", {
-      entity: this.entityName,
-      data: snakeToKebab(all),
-    });
-  }
+	/**
+	 * Set a single entry (upsert).
+	 * Transforms snake_case field names to kebab-case for Nix.
+	 * Map keys (IDs) are preserved as-is.
+	 */
+	async set(key: string, value: V): Promise<WriteResponse> {
+		const all = await this.all();
+		all[key] = value;
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebabValues(all),
+		});
+	}
 
-  /**
-   * Update a single entry by merging.
-   * Transforms snake_case keys to kebab-case for Nix.
-   */
-  async update(key: string, updates: Partial<V>): Promise<WriteResponse> {
-    console.log("[NixClient] update called", {
-      entity: this.entityName,
-      key,
-      updates,
-    });
-    const all = await this.all();
-    console.log("[NixClient] current data (snake_case)", all);
-    const current = all[key] ?? ({} as V);
-    all[key] = { ...current, ...updates };
-    console.log("[NixClient] merged data (snake_case)", all);
-    const kebabData = snakeToKebab(all);
-    console.log("[NixClient] data to write (kebab-case)", kebabData);
-    const result = await this.client.post<WriteResponse>("/api/nix/data", {
-      entity: this.entityName,
-      data: kebabData,
-    });
-    console.log("[NixClient] write result", result);
-    return result;
-  }
+	/**
+	 * Update a single entry by merging.
+	 * Transforms snake_case field names to kebab-case for Nix.
+	 * Map keys (IDs) are preserved as-is.
+	 */
+	async update(key: string, updates: Partial<V>): Promise<WriteResponse> {
+		console.log("[NixClient] update called", {
+			entity: this.entityName,
+			key,
+			updates,
+		});
+		const all = await this.all();
+		console.log("[NixClient] current data (snake_case)", all);
+		const current = all[key] ?? ({} as V);
+		all[key] = { ...current, ...updates };
+		console.log("[NixClient] merged data (snake_case)", all);
+		const kebabData = snakeToKebabValues(all);
+		console.log("[NixClient] data to write (kebab-case)", kebabData);
+		const result = await this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: kebabData,
+		});
+		console.log("[NixClient] write result", result);
+		return result;
+	}
 
-  /**
-   * Delete a single entry.
-   * Transforms snake_case keys to kebab-case for Nix.
-   */
-  async remove(key: string): Promise<WriteResponse> {
-    const all = await this.all();
-    delete all[key];
-    return this.client.post<WriteResponse>("/api/nix/data", {
-      entity: this.entityName,
-      data: snakeToKebab(all),
-    });
-  }
+	/**
+	 * Delete a single entry.
+	 * Transforms snake_case field names to kebab-case for Nix.
+	 * Map keys (IDs) are preserved as-is.
+	 */
+	async remove(key: string): Promise<WriteResponse> {
+		const all = await this.all();
+		delete all[key];
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebabValues(all),
+		});
+	}
 
-  /**
-   * Set all entries (full replacement).
-   * Transforms snake_case keys to kebab-case for Nix.
-   */
-  async setAll(data: Record<string, V>): Promise<WriteResponse> {
-    return this.client.post<WriteResponse>("/api/nix/data", {
-      entity: this.entityName,
-      data: snakeToKebab(data),
-    });
-  }
+	/**
+	 * Set all entries (full replacement).
+	 * Transforms snake_case field names to kebab-case for Nix.
+	 * Map keys (IDs) are preserved as-is.
+	 */
+	async setAll(data: Record<string, V>): Promise<WriteResponse> {
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebabValues(data),
+		});
+	}
 
-  /**
-   * Delete the entire entity file.
-   */
-  async deleteAll(): Promise<DeleteResponse> {
-    return this.client.delete<DeleteResponse>(
-      `/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
-    );
-  }
+	/**
+	 * Delete the entire entity file.
+	 */
+	async deleteAll(): Promise<DeleteResponse> {
+		return this.client.delete<DeleteResponse>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+	}
 
-  /**
-   * List all keys.
-   */
-  async keys(): Promise<string[]> {
-    const all = await this.all();
-    return Object.keys(all);
-  }
+	/**
+	 * List all keys.
+	 */
+	async keys(): Promise<string[]> {
+		const all = await this.all();
+		return Object.keys(all);
+	}
 
-  /**
-   * List all values.
-   */
-  async values(): Promise<V[]> {
-    const all = await this.all();
-    return Object.values(all);
-  }
+	/**
+	 * List all values.
+	 */
+	async values(): Promise<V[]> {
+		const all = await this.all();
+		return Object.values(all);
+	}
 
-  /**
-   * List all entries as [key, value] pairs.
-   */
-  async entries(): Promise<[string, V][]> {
-    const all = await this.all();
-    return Object.entries(all);
-  }
+	/**
+	 * List all entries as [key, value] pairs.
+	 */
+	async entries(): Promise<[string, V][]> {
+		const all = await this.all();
+		return Object.entries(all);
+	}
 }
 
 // =============================================================================
@@ -240,8 +250,8 @@ export class MapEntityClient<V> {
 // =============================================================================
 
 export interface NixClientConfig {
-  baseUrl?: string;
-  token?: string;
+	baseUrl?: string;
+	token?: string;
 }
 
 /**
@@ -264,143 +274,143 @@ export interface NixClientConfig {
  * ```
  */
 export class NixClient {
-  private readonly baseUrl: string;
-  private token?: string;
+	private readonly baseUrl: string;
+	private token?: string;
 
-  // Pre-configured data entity clients
-  readonly data = {
-    /** App configurations (map of name -> App) */
-    apps: new MapEntityClient<App>(this, "apps"),
+	// Pre-configured data entity clients
+	readonly data = {
+		/** App configurations (map of name -> App) */
+		apps: new MapEntityClient<App>(this, "apps"),
 
-    /** Service configurations (map of key -> Service) */
-    services: new MapEntityClient<Service>(this, "services"),
-  };
+		/** Service configurations (map of key -> Service) */
+		services: new MapEntityClient<Service>(this, "services"),
+	};
 
-  constructor(config: NixClientConfig = {}) {
-    this.baseUrl = config.baseUrl ?? "http://localhost:9876";
-    this.token = config.token;
-  }
+	constructor(config: NixClientConfig = {}) {
+		this.baseUrl = config.baseUrl ?? "http://localhost:9876";
+		this.token = config.token;
+	}
 
-  /**
-   * Set the auth token.
-   */
-  setToken(token?: string): void {
-    this.token = token;
-  }
+	/**
+	 * Set the auth token.
+	 */
+	setToken(token?: string): void {
+		this.token = token;
+	}
 
-  /**
-   * Get the full stackpanel config.
-   *
-   * This uses the /api/nix/config endpoint which:
-   * - Returns cached config for fast access (GET)
-   * - Can force refresh by re-evaluating the flake (GET ?refresh=true or POST)
-   *
-   * For dynamic data that changes frequently, use the entity hooks
-   * (useNixData, useApps, useServices) which read from .stackpanel/data/
-   * and are always fresh.
-   */
-  async config(options?: { refresh?: boolean }): Promise<StackpanelConfig> {
-    const url = options?.refresh
-      ? "/api/nix/config?refresh=true"
-      : "/api/nix/config";
-    const res = await this.fetch<{ config: StackpanelConfig }>(url);
-    return res.config;
-  }
+	/**
+	 * Get the full stackpanel config.
+	 *
+	 * This uses the /api/nix/config endpoint which:
+	 * - Returns cached config for fast access (GET)
+	 * - Can force refresh by re-evaluating the flake (GET ?refresh=true or POST)
+	 *
+	 * For dynamic data that changes frequently, use the entity hooks
+	 * (useNixData, useApps, useServices) which read from .stackpanel/data/
+	 * and are always fresh.
+	 */
+	async config(options?: { refresh?: boolean }): Promise<StackpanelConfig> {
+		const url = options?.refresh
+			? "/api/nix/config?refresh=true"
+			: "/api/nix/config";
+		const res = await this.fetch<{ config: StackpanelConfig }>(url);
+		return res.config;
+	}
 
-  /**
-   * Force refresh the config by re-evaluating the flake.
-   * This is slower but ensures you get the latest computed values.
-   */
-  async refreshConfig(): Promise<StackpanelConfig> {
-    const res = await this.post<{ config: StackpanelConfig }>(
-      "/api/nix/config",
-      {},
-    );
-    return res.config;
-  }
+	/**
+	 * Force refresh the config by re-evaluating the flake.
+	 * This is slower but ensures you get the latest computed values.
+	 */
+	async refreshConfig(): Promise<StackpanelConfig> {
+		const res = await this.post<{ config: StackpanelConfig }>(
+			"/api/nix/config",
+			{},
+		);
+		return res.config;
+	}
 
-  /**
-   * Get metadata about generated files from stackpanel.files.entries.
-   * Includes staleness detection by comparing disk files with expected content.
-   */
-  async getGeneratedFiles(): Promise<GeneratedFilesResponse> {
-    return this.fetch<GeneratedFilesResponse>("/api/nix/files");
-  }
+	/**
+	 * Get metadata about generated files from stackpanel.files.entries.
+	 * Includes staleness detection by comparing disk files with expected content.
+	 */
+	async getGeneratedFiles(): Promise<GeneratedFilesResponse> {
+		return this.fetch<GeneratedFilesResponse>("/api/nix/files");
+	}
 
-  /**
-   * Evaluate an arbitrary Nix expression.
-   */
-  async eval<T = unknown>(expression: string): Promise<T> {
-    return this.post<T>("/api/nix/eval", { expression });
-  }
+	/**
+	 * Evaluate an arbitrary Nix expression.
+	 */
+	async eval<T = unknown>(expression: string): Promise<T> {
+		return this.post<T>("/api/nix/eval", { expression });
+	}
 
-  /**
-   * List all data entities (files in .stackpanel/data/).
-   */
-  async listEntities(): Promise<string[]> {
-    const res = await this.fetch<ListResponse>("/api/nix/data/list");
-    return res.entities;
-  }
+	/**
+	 * List all data entities (files in .stackpanel/data/).
+	 */
+	async listEntities(): Promise<string[]> {
+		const res = await this.fetch<ListResponse>("/api/nix/data/list");
+		return res.entities;
+	}
 
-  /**
-   * Create a typed entity client for custom data.
-   */
-  entity<T>(name: string): EntityClient<T> {
-    return new EntityClient<T>(this, name);
-  }
+	/**
+	 * Create a typed entity client for custom data.
+	 */
+	entity<T>(name: string): EntityClient<T> {
+		return new EntityClient<T>(this, name);
+	}
 
-  /**
-   * Create a typed map entity client for custom key-value data.
-   */
-  mapEntity<V>(name: string): MapEntityClient<V> {
-    return new MapEntityClient<V>(this, name);
-  }
+	/**
+	 * Create a typed map entity client for custom key-value data.
+	 */
+	mapEntity<V>(name: string): MapEntityClient<V> {
+		return new MapEntityClient<V>(this, name);
+	}
 
-  // =========================================================================
-  // Internal HTTP helpers
-  // =========================================================================
+	// =========================================================================
+	// Internal HTTP helpers
+	// =========================================================================
 
-  /** @internal */
-  async fetch<T>(path: string): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      headers: this.headers(),
-    });
-    return this.handleResponse<T>(res);
-  }
+	/** @internal */
+	async fetch<T>(path: string): Promise<T> {
+		const res = await fetch(`${this.baseUrl}${path}`, {
+			headers: this.headers(),
+		});
+		return this.handleResponse<T>(res);
+	}
 
-  /** @internal */
-  async post<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: this.headers(true),
-      body: JSON.stringify(body),
-    });
-    return this.handleResponse<T>(res);
-  }
+	/** @internal */
+	async post<T>(path: string, body: unknown): Promise<T> {
+		const res = await fetch(`${this.baseUrl}${path}`, {
+			method: "POST",
+			headers: this.headers(true),
+			body: JSON.stringify(body),
+		});
+		return this.handleResponse<T>(res);
+	}
 
-  /** @internal */
-  async delete<T>(path: string): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "DELETE",
-      headers: this.headers(),
-    });
-    return this.handleResponse<T>(res);
-  }
+	/** @internal */
+	async delete<T>(path: string): Promise<T> {
+		const res = await fetch(`${this.baseUrl}${path}`, {
+			method: "DELETE",
+			headers: this.headers(),
+		});
+		return this.handleResponse<T>(res);
+	}
 
-  private headers(json = false): Record<string, string> {
-    const h: Record<string, string> = {};
-    if (json) h["Content-Type"] = "application/json";
-    if (this.token) h["X-Stackpanel-Token"] = this.token;
-    return h;
-  }
+	private headers(json = false): Record<string, string> {
+		const h: Record<string, string> = {};
+		if (json) h["Content-Type"] = "application/json";
+		if (this.token) h["X-Stackpanel-Token"] = this.token;
+		return h;
+	}
 
-  private async handleResponse<T>(res: Response): Promise<T> {
-    const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.error ?? "Unknown error");
-    }
-    return data.data as T;
-  }
+	private async handleResponse<T>(res: Response): Promise<T> {
+		const data = await res.json();
+		if (!data.success) {
+			throw new Error(data.error ?? "Unknown error");
+		}
+		return data.data as T;
+	}
 }
 
 // =============================================================================
@@ -411,5 +421,5 @@ export class NixClient {
 export const nixClient = new NixClient();
 
 if (typeof window !== "undefined") {
-  (window as any)._nixClient = nixClient;
+	(window as any)._nixClient = nixClient;
 }

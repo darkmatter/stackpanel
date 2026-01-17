@@ -32,7 +32,7 @@
     # App-specific modules for this project
     ./web/devenv.nix
     ./docs/devenv.nix
-    ./docs/generate.nix
+    # ./docs/generate.nix
     ./tools/devenv.nix
   ];
 

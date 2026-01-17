@@ -1,3 +1,4 @@
+import { Button } from "@ui/button";
 import {
 	BarChart3,
 	Database,
@@ -6,7 +7,6 @@ import {
 	Network,
 	Search,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export function InfrastructureSection() {
 	const services = [

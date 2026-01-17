@@ -21,7 +21,8 @@ func TestSerialize_Primitives(t *testing.T) {
 		{"int64", int64(9223372036854775807), "9223372036854775807"},
 		{"uint", uint(100), "100"},
 		{"float", 3.14, "3.14"},
-		{"float whole", 42.0, "42.0"},
+		{"float whole", 42.0, "42"},            // Whole floats serialize as integers
+		{"float64 from json", float64(2), "2"}, // JSON-decoded integers come as float64
 		{"string", "hello", `"hello"`},
 		{"empty string", "", `""`},
 	}
@@ -220,6 +221,46 @@ func TestSerialize_InvalidMapKey(t *testing.T) {
 }
 
 // Test with actual stackpanel-like types
+func TestSerialize_NullValues(t *testing.T) {
+	// Test data similar to what was causing the panic with null values
+	data := map[string]interface{}{
+		"docs": map[string]interface{}{
+			"name": "docs",
+			"path": "apps/docs",
+			"variables": map[string]interface{}{
+				"NODE-ENV": map[string]interface{}{
+					"environments": []interface{}{"staging", "dev"},
+					"variable-id":  nil, // This was causing the issue
+				},
+			},
+		},
+	}
+
+	// Should not panic
+	result, err := SerializeIndented(data, "  ")
+	require.NoError(t, err)
+	assert.Contains(t, result, "variable-id = null")
+	assert.Contains(t, result, "docs")
+}
+
+// TestSerialize_JSONDecodedEnums tests that enum values (which JSON decodes as float64)
+// are serialized as integers, not floats like "2.0"
+func TestSerialize_JSONDecodedEnums(t *testing.T) {
+	// Simulate what happens when JSON decodes {"type": 2} - the 2 becomes float64(2)
+	data := map[string]interface{}{
+		"key":         "POSTGRES_URL",
+		"type":        float64(2), // AppVariableType.VARIABLE = 2, JSON decodes as float64
+		"variable_id": "postgres-url",
+	}
+
+	result, err := Serialize(data)
+	require.NoError(t, err)
+
+	// Should contain "type = 2" not "type = 2.0"
+	assert.Contains(t, result, "type = 2;")
+	assert.NotContains(t, result, "type = 2.0")
+}
+
 func TestSerialize_StackpanelTypes(t *testing.T) {
 	type App struct {
 		Port   int     `json:"port"`

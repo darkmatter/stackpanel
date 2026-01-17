@@ -55,6 +55,18 @@ export interface Secrets {
     codegen: {
         [key: string]: Codegen;
     }; // Code generation settings per target
+    /**
+     * @generated from protobuf field: repeated string system_keys = 5
+     */
+    system_keys: string[]; // AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions.
+    /**
+     * @generated from protobuf field: optional string secrets_dir = 6
+     */
+    secrets_dir?: string; // Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)
+    /**
+     * @generated from protobuf field: repeated string age_key_files = 7
+     */
+    age_key_files: string[]; // Paths to AGE key files to check for decryption (checked in order, first existing file wins)
 }
 /**
  * Environment-specific secrets configuration
@@ -164,7 +176,10 @@ class Secrets$Type extends MessageType<Secrets> {
             { no: 1, name: "enable", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 2, name: "input_directory", kind: "scalar", localName: "input_directory", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => SecretsEnvironment } },
-            { no: 4, name: "codegen", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Codegen } }
+            { no: 4, name: "codegen", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Codegen } },
+            { no: 5, name: "system_keys", kind: "scalar", localName: "system_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "secrets_dir", kind: "scalar", localName: "secrets_dir", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "age_key_files", kind: "scalar", localName: "age_key_files", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Secrets>): Secrets {
@@ -173,6 +188,8 @@ class Secrets$Type extends MessageType<Secrets> {
         message.input_directory = "";
         message.environments = {};
         message.codegen = {};
+        message.system_keys = [];
+        message.age_key_files = [];
         if (value !== undefined)
             reflectionMergePartial<Secrets>(this, message, value);
         return message;
@@ -193,6 +210,15 @@ class Secrets$Type extends MessageType<Secrets> {
                     break;
                 case /* map<string, stackpanel.db.Codegen> codegen */ 4:
                     this.binaryReadMap4(message.codegen, reader, options);
+                    break;
+                case /* repeated string system_keys */ 5:
+                    message.system_keys.push(reader.string());
+                    break;
+                case /* optional string secrets_dir */ 6:
+                    message.secrets_dir = reader.string();
+                    break;
+                case /* repeated string age_key_files */ 7:
+                    message.age_key_files.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -258,6 +284,15 @@ class Secrets$Type extends MessageType<Secrets> {
             Codegen.internalBinaryWrite(message.codegen[k], writer, options);
             writer.join().join();
         }
+        /* repeated string system_keys = 5; */
+        for (let i = 0; i < message.system_keys.length; i++)
+            writer.tag(5, WireType.LengthDelimited).string(message.system_keys[i]);
+        /* optional string secrets_dir = 6; */
+        if (message.secrets_dir !== undefined)
+            writer.tag(6, WireType.LengthDelimited).string(message.secrets_dir);
+        /* repeated string age_key_files = 7; */
+        for (let i = 0; i < message.age_key_files.length; i++)
+            writer.tag(7, WireType.LengthDelimited).string(message.age_key_files[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

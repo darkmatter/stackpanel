@@ -125,6 +125,79 @@ Attribute set defining code generation targets:
 3. Add it to `~/.config/sops/age/keys.txt`
 4. Run `ensure-age-key` to verify setup
 
+## Wrapped Packages
+
+The secrets module can create wrapped versions of packages that automatically inject secrets as environment variables at runtime. This is useful for running applications with their secrets without manually exporting environment variables.
+
+### Configuration
+
+```nix
+{
+  stackpanel.secrets = {
+    enable = true;
+    
+    wrapped = {
+      enable = true;
+      projectRoot = ".";  # Path to project root for finding secrets
+      
+      apps.myapp = {
+        # Packages to wrap with this app's secrets
+        packages = [ pkgs.nodejs pkgs.python3 ];
+        # Environments to create wrapped packages for (default: dev, staging, prod)
+        environments = [ "dev" "staging" "prod" ];
+      };
+      
+      # Optionally add wrapped packages to devshell
+      addToDevshell = true;
+      devshellEnvironment = "dev";  # Which environment's packages to add
+    };
+  };
+}
+```
+
+### Accessing Wrapped Packages
+
+Wrapped packages are accessible via the `config.stackpanel.secrets.wrapped.packages` attribute:
+
+```nix
+# Access a specific wrapped package
+config.stackpanel.secrets.wrapped.packages.myapp.dev.nodejs
+config.stackpanel.secrets.wrapped.packages.myapp.prod.python3
+
+# Use in another derivation
+{
+  buildInputs = [
+    config.stackpanel.secrets.wrapped.packages.myapp.dev.nodejs
+  ];
+}
+```
+
+### Running Commands with Secrets
+
+You can also run any command with secrets from an app environment using the `secrets:run` command:
+
+```bash
+# Run a command with secrets loaded
+secrets:run myapp dev node server.js
+secrets:run myapp prod python app.py
+```
+
+### How It Works
+
+1. Each wrapped package uses `makeWrapper` to inject a runtime script
+2. At execution time, the script:
+   - Locates the combined secrets file for the app/environment
+   - Decrypts it using the AGE key from `~/.config/sops/age/keys.txt`
+   - Exports all secrets as environment variables
+   - Executes the original program
+3. The `PROJECT_ROOT` environment variable can override the secrets file location
+
+### Requirements
+
+- The combined secrets file must exist at `.stackpanel/secrets/apps/<app>/<env>.yaml`
+- The AGE decryption key must be available at runtime
+- Generate combined secrets first with `secrets:combine` or `secrets:regenerate-all`
+
 ## Related Documentation
 
 - [SOPS Documentation](https://github.com/getsops/sops)
