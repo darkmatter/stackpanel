@@ -1,5 +1,27 @@
 "use client";
 
+import { Badge } from "@ui/badge";
+import { Button } from "@ui/button";
+import { Card, CardContent } from "@ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@ui/dropdown-menu";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@ui/tabs";
+import { Textarea } from "@ui/textarea";
 import {
 	AlertCircle,
 	CheckCircle2,
@@ -19,28 +41,6 @@ import {
 	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useAgent, useAgentHealth } from "@/lib/use-agent";
 
 // Demo secrets for when agent is not connected

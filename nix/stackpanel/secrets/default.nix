@@ -4,9 +4,10 @@
 # Unified entry point for the StackPanel secrets module.
 # Auto-detects whether running in devenv or standalone context.
 #
-# This module provides SOPS-based secrets management with:
+# This module provides secrets management with:
 # - Automatic AGE key detection and validation
 # - SOPS wrapper scripts for transparent encryption/decryption
+# - Agenix/agenix-rekey integration for per-secret encryption
 # - Code generation for type-safe secrets access (TypeScript/Go)
 # - Environment-specific secrets merging
 #
@@ -29,7 +30,10 @@
 }:
 let
   cfg = config.stackpanel.secrets;
-  secretsLib = import ./lib.nix { inherit lib pkgs; };
+  secretsLib = import ./lib.nix {
+    inherit lib pkgs;
+    ageKeyFiles = cfg.age-key-files;
+  };
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # Standalone packages (for flake users who need derivations)
@@ -75,12 +79,50 @@ let
     ];
     text = secretsLib.generateSecretsPackageScript {
       inputDir = cfg.input-directory;
-      environments = cfg.environments;
+      environments = cfg.environmentsComputed;
       codegen = cfg.codegen;
+    };
+  };
+
+  generate-sops-secrets = pkgs.writeShellApplication {
+    name = "generate-sops-secrets";
+    runtimeInputs = [
+      pkgs.nix
+      pkgs.age
+      pkgs.yq-go
+      pkgs.sops
+      pkgs.jq
+    ];
+    text = secretsLib.generateSopsSecretsScript {
+      secretsDir = ".stackpanel/secrets";
+      dataDir = ".stackpanel/data";
+      ageIdentityFile = cfg.age-identity-file;
+    };
+  };
+
+  generate-sops-config = pkgs.writeShellApplication {
+    name = "generate-sops-config";
+    runtimeInputs = [
+      pkgs.nix
+      pkgs.age
+      pkgs.jq
+      pkgs.ssh-to-age
+    ];
+    text = secretsLib.generateSopsConfigScript {
+      secretsDir = ".stackpanel/secrets";
+      dataDir = ".stackpanel/data";
+      kmsConfig = cfg.kms;
     };
   };
 in
 {
+  # Import the agenix integration module, combined secrets module, and wrapped packages module
+  imports = [
+    ./agenix.nix
+    ./combined.nix
+    ./wrapped.nix
+  ];
+
   # Options are now centralized in core/options/secrets.nix
 
   config = lib.mkMerge [
@@ -95,6 +137,8 @@ in
           sops-wrapped
           generate-secrets-schema
           generate-secrets-package
+          generate-sops-secrets
+          generate-sops-config
           ;
       };
 
@@ -105,6 +149,7 @@ in
         pkgs.yq
         pkgs.jq
         pkgs.bun
+        pkgs.nix  # For generate-sops-secrets (nix eval)
       ];
 
       # Commands using stackpanel abstraction
@@ -121,8 +166,22 @@ in
         generate-secrets-package = {
           exec = secretsLib.generateSecretsPackageScript {
             inputDir = cfg.input-directory;
-            environments = cfg.environments;
+            environments = cfg.environmentsComputed;
             codegen = cfg.codegen;
+          };
+        };
+        generate-sops-secrets = {
+          exec = secretsLib.generateSopsSecretsScript {
+            secretsDir = ".stackpanel/secrets";
+            dataDir = ".stackpanel/data";
+            ageIdentityFile = cfg.age-identity-file;
+          };
+        };
+        generate-sops-config = {
+          exec = secretsLib.generateSopsConfigScript {
+            secretsDir = ".stackpanel/secrets";
+            dataDir = ".stackpanel/data";
+            kmsConfig = cfg.kms;
           };
         };
       };

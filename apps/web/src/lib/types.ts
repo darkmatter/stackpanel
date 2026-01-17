@@ -17,25 +17,28 @@ import type {
 // Re-export proto types for data entities (snake_case field names)
 export type {
   App,
+  AppEnvironment,
   Apps,
   AppTask,
   AppVariable,
   AppVariableType,
-} from "@stackpanel/proto";
-export type { Task, Tasks } from "@stackpanel/proto";
-export type { Variable, Variables, VariableType } from "@stackpanel/proto";
-export type { User, Users } from "@stackpanel/proto";
-export type { Config } from "@stackpanel/proto";
-export type {
+  Config,
+  FileType,
   GeneratedFile,
   GeneratedFiles,
-  FileType,
+  Task,
+  Tasks,
+  User,
+  Users,
+  Variable,
+  Variables,
+  VariableType,
 } from "@stackpanel/proto";
-export type { Command, Commands } from "@stackpanel/proto";
-
 // Re-export generated Nix types for evaluated config
-export type { StackpanelDB as StackpanelConfig } from "./generated/nix-types";
-export type { ServicesServices as Service } from "./generated/nix-types";
+export type {
+  ServicesServices as Service,
+  StackpanelDB as StackpanelConfig,
+} from "./generated/nix-types";
 
 // Also export the raw generated names for consumers who prefer them
 export * from "./generated/nix-types";

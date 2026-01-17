@@ -12,6 +12,32 @@ proto.mkProtoFile {
   name = "theme.proto";
   package = "stackpanel.db";
 
+  boilerplate = ''
+    # theme.nix - Shell theme configuration
+    # type: stackpanel.theme
+    # See: https://stackpanel.dev/docs/theme
+    {
+      # name = "default";
+      # nerd-font = true;
+      # minimal = false;
+      #
+      # colors = {
+      #   primary = "#7aa2f7";
+      #   secondary = "#bb9af7";
+      #   success = "#9ece6a";
+      #   warning = "#e0af68";
+      #   error = "#f7768e";
+      #   muted = "#565f89";
+      # };
+      #
+      # starship = {
+      #   add-newline = true;
+      #   scan-timeout = 30;
+      #   command-timeout = 500;
+      # };
+    }
+  '';
+
   options = {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
   };

@@ -77,6 +77,27 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
    * @generated from field: map<string, stackpanel.db.Codegen> codegen = 4;
    */
   codegen: { [key: string]: Codegen };
+
+  /**
+   * AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions.
+   *
+   * @generated from field: repeated string system_keys = 5;
+   */
+  systemKeys: string[];
+
+  /**
+   * Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)
+   *
+   * @generated from field: optional string secrets_dir = 6;
+   */
+  secretsDir?: string;
+
+  /**
+   * Paths to AGE key files to check for decryption (checked in order, first existing file wins)
+   *
+   * @generated from field: repeated string age_key_files = 7;
+   */
+  ageKeyFiles: string[];
 };
 
 /**

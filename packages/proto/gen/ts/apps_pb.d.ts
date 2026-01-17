@@ -66,11 +66,18 @@ export declare type App = Message<"stackpanel.db.App"> & {
   tasks: { [key: string]: AppTask };
 
   /**
-   * Environment variables (key = variable name)
+   * Environment variables (key = env var key)
    *
    * @generated from field: map<string, stackpanel.db.AppVariable> variables = 8;
    */
   variables: { [key: string]: AppVariable };
+
+  /**
+   * Environments associated with this app
+   *
+   * @generated from field: map<string, stackpanel.db.AppEnvironment> environments = 9;
+   */
+  environments: { [key: string]: AppEnvironment };
 };
 
 /**
@@ -78,6 +85,40 @@ export declare type App = Message<"stackpanel.db.App"> & {
  * Use `create(AppSchema)` to create a new message.
  */
 export declare const AppSchema: GenMessage<App>;
+
+/**
+ * Environment configuration
+ *
+ * @generated from message stackpanel.db.AppEnvironment
+ */
+export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
+  /**
+   * Name of the environment
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * (optional) Description of the environment
+   *
+   * @generated from field: optional string description = 2;
+   */
+  description?: string;
+
+  /**
+   * Environment variables (key = env var key)
+   *
+   * @generated from field: map<string, stackpanel.db.AppVariable> variables = 3;
+   */
+  variables: { [key: string]: AppVariable };
+};
+
+/**
+ * Describes the message stackpanel.db.AppEnvironment.
+ * Use `create(AppEnvironmentSchema)` to create a new message.
+ */
+export declare const AppEnvironmentSchema: GenMessage<AppEnvironment>;
 
 /**
  * Command configuration
@@ -127,38 +168,39 @@ export declare const AppTaskSchema: GenMessage<AppTask>;
  */
 export declare type AppVariable = Message<"stackpanel.db.AppVariable"> & {
   /**
-   * value will be passed to app using this key
+   * Environment variable key
    *
    * @generated from field: string key = 1;
    */
   key: string;
 
   /**
-   * (optional) Description of the variable
-   *
-   * @generated from field: optional string description = 2;
-   */
-  description?: string;
-
-  /**
    * Type of environment variable
    *
-   * @generated from field: stackpanel.db.AppVariableType type = 3;
+   * @generated from field: stackpanel.db.AppVariableType type = 2;
    */
   type: AppVariableType;
 
   /**
+   * ID of the variable from variables.nix
    *
-   * - When type = "LITERAL", the value will be passed as is.
-   * - When type = "VARIABLE", should refer to the key of the variable or secret.
-   * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-   *   compatible descriptor, for example if you want to get a value from AWS Parameter
-   *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
-   *
-   *
-   * @generated from field: string value = 4;
+   * @generated from field: string variable_id = 3;
    */
-  value: string;
+  variableId: string;
+
+  /**
+   * Environments this mapping applies to
+   *
+   * @generated from field: map<string, stackpanel.db.AppEnvironment> environments = 4;
+   */
+  environments: { [key: string]: AppEnvironment };
+
+  /**
+   * Literal value (used when variable_id is empty)
+   *
+   * @generated from field: optional string value = 5;
+   */
+  value?: string;
 };
 
 /**

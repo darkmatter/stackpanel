@@ -1,5 +1,6 @@
 # ==============================================================================
 # commands.nix
+# type: sp-command
 #
 # Workspace-level command definitions for tooling configuration.
 # Each command matches the proto Command shape with package, bin, args, env, cwd.

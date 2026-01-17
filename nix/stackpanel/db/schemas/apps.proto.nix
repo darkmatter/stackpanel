@@ -15,6 +15,30 @@ proto.mkProtoFile {
   name = "apps.proto";
   package = "stackpanel.db";
 
+  boilerplate = ''
+    # apps.nix - Application configuration
+    # type: sp-app
+    # See: https://stackpanel.dev/docs/apps
+    {
+      # Example app:
+      # web = {
+      #   name = "Web App";
+      #   description = "Frontend web application";
+      #   path = "apps/web";
+      #   type = "bun";
+      #   port = 3000;
+      #   domain = "web.local";
+      # };
+      #
+      # api = {
+      #   name = "API Server";
+      #   path = "apps/api";
+      #   type = "go";
+      #   port = 8080;
+      # };
+    }
+  '';
+
   options = {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
   };
@@ -38,16 +62,11 @@ proto.mkProtoFile {
       name = "AppVariable";
       description = "Environment variable configuration";
       fields = {
-        key = proto.string 1 "value will be passed to app using this key";
-        description = proto.optional (proto.string 2 "(optional) Description of the variable");
-        type = proto.message "AppVariableType" 3 "Type of environment variable";
-        value = proto.string 4 ''
-          - When type = "LITERAL", the value will be passed as is.
-          - When type = "VARIABLE", should refer to the key of the variable or secret.
-          - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-            compatible descriptor, for example if you want to get a value from AWS Parameter
-            Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
-        '';
+        key = proto.string 1 "Environment variable key";
+        type = proto.message "AppVariableType" 2 "Type of environment variable";
+        variable_id = proto.string 3 "ID of the variable from variables.nix";
+        environments = proto.map "string" "AppEnvironment" 4 "Environments this mapping applies to";
+        value = proto.optional (proto.string 5 "Literal value (used when variable_id is empty)");
       };
     };
     # App Tasks, corresponds to npm package scripts
@@ -59,6 +78,29 @@ proto.mkProtoFile {
         description = proto.optional (proto.string 2 "(optional) Description of the command");
         command = proto.string 3 "Command to run";
         env = proto.map "string" "AppVariable" 4 "Environment variables to set";
+      };
+    };
+    AppEnvironment = proto.mkMessage {
+      name = "AppEnvironment";
+      description = "Environment configuration (e.g., dev, staging, production)";
+      fields = {
+        name = proto.string 1 "Name of the environment";
+        description = proto.optional (proto.string 2 "(optional) Description of the environment");
+        variables = proto.map "string" "AppVariable" 3 "Environment variables (key = env var key)";
+        # Secrets-related fields for SOPS/agenix integration
+        sources = proto.repeated (
+          proto.string 4 ''
+            List of SOPS-encrypted source files for this environment (without .yaml extension).
+            These files are decrypted and merged to provide secrets for the environment.
+            Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+          ''
+        );
+        public-keys = proto.repeated (
+          proto.string 5 ''
+            List of AGE/SSH public keys that can decrypt secrets for this environment.
+            These keys are used when encrypting new secrets.
+          ''
+        );
       };
     };
     # Individual app configuration (data only, not runtime config)
@@ -74,7 +116,8 @@ proto.mkProtoFile {
         port = proto.optional (proto.int32 5 "Development server port");
         domain = proto.optional (proto.string 6 "Local development domain");
         tasks = proto.map "string" "AppTask" 7 "Tasks for this app (key = task name)";
-        variables = proto.map "string" "AppVariable" 8 "Environment variables (key = variable name)";
+        variables = proto.map "string" "AppVariable" 8 "Environment variables (key = env var key)";
+        environments = proto.map "string" "AppEnvironment" 9 "Environments associated with this app";
       };
     };
 

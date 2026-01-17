@@ -2,7 +2,9 @@
 package nix
 
 import (
+	"bytes"
 	"fmt"
+	"os/exec"
 	"reflect"
 	"sort"
 	"strconv"
@@ -63,6 +65,11 @@ func serializeValue(v reflect.Value, depth int) (string, error) {
 
 	case reflect.Float32, reflect.Float64:
 		f := v.Float()
+		// Check if this float is actually a whole number (common when JSON decodes integers as float64)
+		if f == float64(int64(f)) {
+			// It's a whole number, serialize as integer to avoid "1.0" in Nix
+			return strconv.FormatInt(int64(f), 10), nil
+		}
 		// Nix requires floats to have a decimal point
 		s := strconv.FormatFloat(f, 'f', -1, 64)
 		if !strings.Contains(s, ".") {
@@ -279,13 +286,53 @@ func isZero(v reflect.Value) bool {
 	}
 }
 
-// formatNix adds indentation to a Nix expression.
-// This is a simple formatter that indents based on braces.
+// formatNix formats a Nix expression using nixfmt-rfc-style if available,
+// otherwise falls back to a simple indentation-based formatter.
 func formatNix(s string, indent string) string {
 	if indent == "" {
 		return s
 	}
 
+	// Try to use nixfmt-rfc-style for proper formatting
+	if formatted, err := formatWithNixfmt(s); err == nil {
+		return formatted
+	}
+
+	// Fallback to simple formatter
+	return formatNixSimple(s, indent)
+}
+
+// formatWithNixfmt uses the external nixfmt-rfc-style command to format Nix code.
+func formatWithNixfmt(s string) (string, error) {
+	// Try nixfmt-rfc-style first (newer name), then nixfmt
+	for _, cmd := range []string{"nixfmt"} {
+		formatted, err := runFormatter(cmd, s)
+		if err == nil {
+			return formatted, nil
+		}
+	}
+	return "", fmt.Errorf("no nix formatter available")
+}
+
+// runFormatter runs an external formatter command.
+func runFormatter(cmdName string, input string) (string, error) {
+	cmd := exec.Command(cmdName)
+	cmd.Stdin = strings.NewReader(input)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("%s failed: %w: %s", cmdName, err, stderr.String())
+	}
+
+	return stdout.String(), nil
+}
+
+// formatNixSimple is a simple fallback formatter that indents based on braces.
+// It's less accurate than nixfmt but doesn't require external tools.
+func formatNixSimple(s string, indent string) string {
 	var b strings.Builder
 	depth := 0
 	inString := false
@@ -343,6 +390,9 @@ func formatNix(s string, indent string) string {
 			}
 		case '}', ']':
 			depth--
+			if depth < 0 {
+				depth = 0
+			}
 			b.WriteByte('\n')
 			b.WriteString(strings.Repeat(indent, depth))
 			b.WriteByte(c)

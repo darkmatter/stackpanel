@@ -25,6 +25,11 @@ func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 
 		next(wrapped, r)
 
+		// Skip logging for health checks to reduce noise
+		if r.URL.Path == "/health" {
+			return
+		}
+
 		duration := time.Since(start)
 
 		log.Debug().

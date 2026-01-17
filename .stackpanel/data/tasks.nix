@@ -1,5 +1,6 @@
 # ==============================================================================
 # tasks.nix
+# type: sp-task
 #
 # Workspace-level task definitions (not app-specific).
 # Each task matches the proto Task shape with exec, description, cwd, env.

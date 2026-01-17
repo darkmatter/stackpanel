@@ -20,7 +20,15 @@ message App {
   optional int32 port = 5; // Development server port
   optional string domain = 6; // Local development domain
   map<string, AppTask> tasks = 7; // Tasks for this app (key = task name)
-  map<string, AppVariable> variables = 8; // Environment variables (key = variable name)
+  map<string, AppVariable> variables = 8; // Environment variables (key = env var key)
+  map<string, AppEnvironment> environments = 9; // Environments associated with this app
+}
+
+// Environment configuration
+message AppEnvironment {
+  string name = 1; // Name of the environment
+  optional string description = 2; // (optional) Description of the environment
+  map<string, AppVariable> variables = 3; // Environment variables (key = env var key)
 }
 
 // Command configuration
@@ -33,18 +41,11 @@ message AppTask {
 
 // Environment variable configuration
 message AppVariable {
-  string key = 1; // value will be passed to app using this key
-  optional string description = 2; // (optional) Description of the variable
-  AppVariableType type = 3; // Type of environment variable
-  /*
-   * - When type = "LITERAL", the value will be passed as is.
-   * - When type = "VARIABLE", should refer to the key of the variable or secret.
-   * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-   *   compatible descriptor, for example if you want to get a value from AWS Parameter
-   *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]
-   * 
-   */
-  string value = 4;
+  string key = 1; // Environment variable key
+  AppVariableType type = 2; // Type of environment variable
+  string variable_id = 3; // ID of the variable from variables.nix
+  map<string, AppEnvironment> environments = 4; // Environments this mapping applies to
+  optional string value = 5; // Literal value (used when variable_id is empty)
 }
 
 // Map of app identifier to app configuration

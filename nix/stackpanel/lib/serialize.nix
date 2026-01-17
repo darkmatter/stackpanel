@@ -77,7 +77,6 @@ let
   # (contain module system internals, circular refs, or type validation errors)
   defaultSkipAttrs = [
     "users"
-    "devshell"
     "appModules"
     "commandModules"
     "appsComputed"
@@ -85,6 +84,17 @@ let
     "extensionsComputed"
     "userPackages"
   ];
+
+  # Attributes within devshell that should be serialized
+  # (most devshell attrs contain packages which aren't serializable)
+  devshellSerializableAttrs = [
+    "_commandsSerializable"
+    "env"
+  ];
+
+  # Special handling for devshell - only serialize specific attributes
+  filterDevshell =
+    devshell: lib.filterAttrs (name: _: builtins.elem name devshellSerializableAttrs) devshell;
 
   # Recursively filter an attrset to only include serializable values
   # Non-serializable values are removed entirely
@@ -95,8 +105,10 @@ let
       # First, filter to only attributes we can safely access
       accessiblePairs = lib.filterAttrs (
         name: value:
-        # Skip internal/private attributes, skip list, and inaccessible values
-        !(lib.hasPrefix "_" name) && !(builtins.elem name skipAttrs) && canAccess value
+        # Skip internal/private attributes (except _commandsSerializable), skip list, and inaccessible values
+        !(lib.hasPrefix "_" name && name != "_commandsSerializable")
+        && !(builtins.elem name skipAttrs)
+        && canAccess value
       ) attrs;
       # Then filter to only serializable values
       filteredPairs = lib.filterAttrs (name: value: isSerializable value) accessiblePairs;
@@ -108,6 +120,9 @@ let
       in
       if safeValue == null then
         null
+      # Special handling for devshell - only serialize specific attributes
+      else if name == "devshell" && builtins.typeOf safeValue == "set" then
+        filterSerializableAttrsWithSkip skipAttrs (filterDevshell safeValue)
       else if
         builtins.typeOf safeValue == "set" && !(safeValue ? type && safeValue.type == "derivation")
       then
@@ -211,7 +226,6 @@ let
       result = builtins.tryEval (builtins.toJSON value);
     in
     if result.success then result.value else null;
-
 in
 {
   inherit

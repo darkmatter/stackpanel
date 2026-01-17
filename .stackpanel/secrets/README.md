@@ -1,162 +1,326 @@
 # Stackpanel Secrets Configuration
 
-Configuration files for the stackpanel secrets module.
+Configuration files for the stackpanel secrets module with agenix integration.
 
 ## Directory Structure
 
 ```
 .stackpanel/secrets/
-├── config.yaml          # Global settings (backend, secretsDir)
-├── users.yaml           # Team members and AGE keys
+├── secrets.nix          # Agenix secrets definition (auto-generated)
+├── config.nix           # Global settings
+├── users.nix            # Team members (legacy, prefer .stackpanel/data/users.nix)
+├── vars/                # Individual secret .age files
+│   ├── database-url.age
+│   └── api-key.age
 └── apps/
     ├── _example/        # Example app (ignored by module)
     └── {appName}/
-        ├── config.yaml  # App codegen settings (language, path)
-        ├── common.yaml  # Shared schema across all environments
-        ├── dev.yaml     # Dev-specific schema + access control
-        ├── staging.yaml # Staging-specific schema + access control
-        └── prod.yaml    # Production-specific schema + access control
+        ├── config.nix   # App codegen settings
+        ├── common.nix   # Shared schema across all environments
+        ├── dev.nix      # Dev-specific schema + access control
+        ├── dev.yaml     # Combined encrypted secrets for dev
+        ├── staging.nix  # Staging-specific schema + access control
+        ├── staging.yaml # Combined encrypted secrets for staging
+        ├── prod.nix     # Production-specific schema + access control
+        └── prod.yaml    # Combined encrypted secrets for prod
+```
+
+## How It Works
+
+### Individual Secrets (vars/)
+
+Each secret is stored as an individual `.age` file in the `vars/` directory:
+
+```
+vars/
+├── database-url.age     # Encrypted DATABASE_URL
+├── api-key.age          # Encrypted API_KEY
+└── stripe-secret.age    # Encrypted STRIPE_SECRET
+```
+
+These are encrypted using [age](https://github.com/FiloSottile/age) and managed via:
+- The StackPanel UI
+- API endpoint: `POST /api/secrets/write`
+- CLI: `age -e -r <recipient> -o vars/my-secret.age`
+
+### Combined Secrets (apps/{appName}/{env}.yaml)
+
+For each app environment, individual secrets are combined into a single encrypted YAML:
+
+```yaml
+# Decrypted view of apps/myapp/dev.yaml
+DATABASE_URL: |
+  postgres://user:pass@localhost:5432/mydb
+API_KEY: |
+  sk_test_abc123
+```
+
+This combined format is what applications load at runtime via SOPS or vals.
+
+### secrets.nix (Agenix)
+
+The `secrets.nix` file tells agenix which public keys can decrypt each secret:
+
+```nix
+let
+  allKeys = [
+    "age1..."  # Alice
+    "age1..."  # Bob
+    "age1..."  # CI system
+  ];
+in
+{
+  "vars/database-url.age".publicKeys = allKeys;
+  "vars/api-key.age".publicKeys = allKeys;
+}
+```
+
+This file is auto-generated. Regenerate it with:
+
+```bash
+nix eval --raw .#stackpanelFullConfig.secrets.secrets-nix-content > .stackpanel/secrets/secrets.nix
 ```
 
 ## Getting Started
 
-1. Copy example files:
-   ```bash
-   cp config.example.yaml config.yaml
-   cp users.example.yaml users.yaml
-   cp -r apps/_example apps/myapp
-   ```
+### 1. Configure Users
 
-2. Edit `users.yaml` with your team's AGE public keys
+Edit `.stackpanel/data/users.nix`:
 
-3. Edit `apps/myapp/config.yaml` for your app's codegen settings
-
-4. Define your secrets schema in `apps/myapp/common.yaml`
-
-5. Configure per-environment access in `dev.yaml`, `staging.yaml`, `prod.yaml`
-
-## IDE Support
-
-When using the VS Code workspace (`.stackpanel/gen/ide/vscode/stackpanel.code-workspace`),
-you'll get intellisense and validation for all YAML files automatically.
-
-**Required extension:** [Red Hat YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)
-
-## Schema Files
-
-JSON Schema files for validation are in `.stackpanel/gen/schemas/secrets/`:
-
-| Schema | Used For |
-|--------|----------|
-| `config.schema.json` | `config.yaml` |
-| `users.schema.json` | `users.yaml` |
-| `app-config.schema.json` | `apps/*/config.yaml` |
-| `schema.schema.json` | `apps/*/common.yaml` |
-| `env.schema.json` | `apps/*/{dev,staging,prod}.yaml` |
-
-## How It Works
-
-1. **Apps**: Each app has its own secrets and codegen config
-2. **Common**: Shared schema inherited by all environments
-3. **Environments**: Override/extend common schema, plus access control
-4. **Codegen**: Each app generates typed env access for its language
-
-### Adding a Team Member
-
-Edit `users.yaml`:
-
-```yaml
-# Team members with access to secrets
-alice:
-  pubkey: "age1abc123..."
-  github: alice
-  admin: true  # Admins can decrypt all secrets
-
-bob:
-  pubkey: "age1xyz789..."
-  github: bobdev
+```nix
+{
+  alice = {
+    name = "Alice";
+    github = "alice";
+    public-keys = [
+      "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq"
+    ];
+    secrets-allowed-environments = [ "dev" "staging" "prod" ];  # or [] for all
+  };
+  
+  bob = {
+    name = "Bob";
+    github = "bobdev";
+    public-keys = [
+      "age1..."
+    ];
+    secrets-allowed-environments = [ "dev" "staging" ];  # No prod access
+  };
+}
 ```
 
-### Creating an App
+### 2. Add System Keys (Optional)
 
-Create `apps/{appName}/config.yaml`:
+Configure CI/deploy server keys in your Nix config:
 
-```yaml
-codegen:
-  language: typescript  # "typescript" | "python" | "go" | null
-  path: packages/api/src/env.ts
+```nix
+{
+  stackpanel.secrets = {
+    enable = true;
+    system-keys = [
+      "age1..."  # CI system
+      "age1..."  # Deploy server
+    ];
+  };
+}
 ```
 
-Create `apps/{appName}/common.yaml` (shared schema):
+### 3. Write Secrets
 
-```yaml
-# Schema shared across all environments
-DATABASE_URL:
-  required: true
-  sensitive: true
-  description: PostgreSQL connection string
+Via API:
 
-LOG_LEVEL:
-  required: false
-  sensitive: false
-  default: info
+```bash
+curl -X POST http://localhost:3100/api/secrets/write \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "database-url",
+    "key": "DATABASE_URL",
+    "value": "postgres://...",
+    "environments": ["dev", "staging"]
+  }'
 ```
 
-Create `apps/{appName}/dev.yaml`:
+Via CLI (direct age encryption):
 
-```yaml
-# Schema additions/overrides for dev
-schema:
-  DEBUG:
-    required: false
-    sensitive: false
-  # Override common value
-  LOG_LEVEL:
-    default: debug
-
-# Who can access dev secrets
-users:
-  - alice
-  - bob
-  - charlie
-
-extraKeys: []
+```bash
+echo "postgres://..." | age -e -r "age1..." -o vars/database-url.age
 ```
 
-Create `apps/{appName}/prod.yaml`:
+### 4. Generate Combined Secrets
 
-```yaml
-schema:
-  SENTRY_DSN:
-    required: true
-    sensitive: true
+For each app environment:
 
-users:
-  - alice  # Only admin for prod
+```bash
+combine-app-secrets . myapp dev
+combine-app-secrets . myapp staging
+combine-app-secrets . myapp prod
+```
 
-extraKeys:
-  - age1ci...  # CI system
+Or regenerate all:
+
+```bash
+regenerate-all-secrets .
+```
+
+### 5. Decrypt for Use
+
+```bash
+# YAML format
+decrypt-app-secrets apps/myapp/dev.yaml
+
+# JSON format
+decrypt-app-secrets apps/myapp/dev.yaml json
+
+# Env format (KEY=value)
+decrypt-app-secrets apps/myapp/dev.yaml env
+```
+
+## Creating an App
+
+### 1. Create App Directory
+
+```bash
+mkdir -p apps/myapp
+```
+
+### 2. Create config.nix
+
+```nix
+# apps/myapp/config.nix
+{
+  codegen = {
+    language = "typescript";  # "typescript" | "go" | null
+    path = "packages/api/src/env.ts";
+  };
+}
+```
+
+### 3. Create common.nix (Shared Schema)
+
+```nix
+# apps/myapp/common.nix
+{
+  DATABASE_URL = {
+    required = true;
+    sensitive = true;
+    description = "PostgreSQL connection string";
+  };
+
+  LOG_LEVEL = {
+    required = false;
+    sensitive = false;
+    default = "info";
+  };
+}
+```
+
+### 4. Create Environment Configs
+
+```nix
+# apps/myapp/dev.nix
+{
+  schema = {
+    DEBUG = {
+      required = false;
+      sensitive = false;
+      default = "true";
+    };
+    LOG_LEVEL = {
+      default = "debug";  # Override common
+    };
+  };
+
+  # Users who can access dev secrets
+  users = [ "alice" "bob" "charlie" ];
+
+  # Additional AGE keys
+  extraKeys = [ ];
+}
+```
+
+```nix
+# apps/myapp/prod.nix
+{
+  schema = {
+    SENTRY_DSN = {
+      required = true;
+      sensitive = true;
+    };
+  };
+
+  # Restrict prod access
+  users = [ "alice" ];  # Only admin
+
+  extraKeys = [
+    "age1..."  # CI system for deploys
+  ];
+}
+```
+
+## Agenix / Agenix-Rekey Integration
+
+This module integrates with:
+- [agenix](https://github.com/ryantm/agenix) - Age-encrypted secrets for NixOS
+- [agenix-rekey](https://github.com/oddlama/agenix-rekey) - Automatic rekeying with YubiKey support
+
+### Using with Agenix
+
+The generated `secrets.nix` is compatible with the agenix CLI:
+
+```bash
+# Edit a secret (opens in $EDITOR)
+agenix -e vars/database-url.age
+
+# Rekey all secrets (after changing recipients)
+agenix -r
+```
+
+### Using with Agenix-Rekey
+
+For YubiKey or FIDO2 key support, configure agenix-rekey in your flake:
+
+```nix
+{
+  inputs.agenix-rekey.url = "github:oddlama/agenix-rekey";
+
+  # In your NixOS config:
+  age.rekey = {
+    hostPubkey = "ssh-ed25519 AAAAC3...";
+    masterIdentities = [ ./yubikey-identity.pub ];
+    storageMode = "local";
+    localStorageDir = ./. + "/secrets/rekeyed/${config.networking.hostName}";
+  };
+}
 ```
 
 ## vals Integration
 
-StackPanel uses [vals](https://github.com/helmfile/vals) for secret resolution,
+StackPanel uses [vals](https://github.com/helmfile/vals) for secret resolution at runtime,
 which supports multiple backends:
 
 - **SOPS** (default) - `ref+sops://secrets/api/dev.yaml#/database/password`
+- **Age files** - Direct age-encrypted files
 - **AWS Secrets Manager** - `ref+awssecrets://my-secret`
 - **1Password** - `ref+op://vault/item/field`
 - **HashiCorp Vault** - `ref+vault://secret/data/myapp#/password`
-- **Doppler** - `ref+doppler://MYPROJECT/MYCONFIG#/MY_SECRET`
 
-vals is backwards-compatible with SOPS-encrypted files, so existing workflows
-continue to work.
+## Commands
 
-## Generated Files
+Available in the devshell:
 
-The module generates:
+| Command | Description |
+|---------|-------------|
+| `secrets:write` | Info about writing secrets via API |
+| `secrets:list` | List all .age files in vars/ |
+| `secrets:regenerate-nix` | Regenerate secrets.nix from config |
+| `secrets:combine` | Combine secrets for an app environment |
+| `secrets:decrypt` | Decrypt combined secrets |
+| `secrets:regenerate-all` | Regenerate combined secrets for all apps |
 
-- `.sops.yaml` - SOPS configuration with rules for each app/env
-- `secrets/{app}/common.yaml` - Common secrets placeholder
-- `secrets/{app}/{env}.yaml` - Per-environment secrets placeholder
-- `{codegen.path}` - Type-safe env access for each app
+## Security Considerations
+
+1. **Never commit plaintext secrets** - Only `.age` encrypted files should be in git
+2. **Limit prod access** - Use `secrets-allowed-environments` to restrict who can access production secrets
+3. **Rotate secrets regularly** - Rekey when team members leave or keys are compromised
+4. **Use hardware keys** - Consider YubiKey/FIDO2 for master identities via agenix-rekey
+5. **Audit access** - Review users.nix periodically to ensure correct access levels

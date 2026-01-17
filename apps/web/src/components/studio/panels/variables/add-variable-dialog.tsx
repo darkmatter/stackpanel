@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { VariableType } from "@stackpanel/proto";
+import { Button } from "@ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +9,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@ui/dialog";
+import { Loader2, Plus } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { AgentHttpClient } from "@/lib/agent";
 import { useAgentContext } from "@/lib/agent-provider";
 import { NixClient } from "@/lib/nix-client";
 import type { Variable } from "@/lib/types";
-
-import { VariableFormFields } from "./variable-form-fields";
-import { type VariableFormState, defaultFormState } from "./types";
+import { type VariableForm, VariableFormFields } from "./variable-form-fields";
 
 interface AddVariableDialogProps {
   onSuccess: () => void;
@@ -26,62 +26,87 @@ interface AddVariableDialogProps {
 export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
   const { token } = useAgentContext();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [variableId, setVariableId] = useState("");
-  const [formState, setFormState] =
-    useState<VariableFormState>(defaultFormState);
   const [isSaving, setIsSaving] = useState(false);
-
-  const handleFormChange = (updates: Partial<VariableFormState>) => {
-    setFormState((prev) => ({ ...prev, ...updates }));
-  };
+  const formRef = useRef<VariableForm | null>(null);
 
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
     if (!open) {
       // Reset form when closing
-      setVariableId("");
-      setFormState(defaultFormState);
+      formRef.current?.reset();
     }
   };
 
   const handleSubmit = async () => {
-    if (!variableId.trim() || !token) {
-      toast.error(
-        !token ? "Not connected to agent" : "Please enter a variable name",
-      );
+    if (!formRef.current || !token) {
+      toast.error(!token ? "Not connected to agent" : "Form not ready");
+      return;
+    }
+
+    const values = formRef.current.getValues();
+
+    // Validate required fields
+    if (!values.id?.trim()) {
+      toast.error("Please enter a variable ID");
+      return;
+    }
+
+    if (!values.value?.trim()) {
+      toast.error("Please enter a variable value");
       return;
     }
 
     setIsSaving(true);
     try {
-      const client = new NixClient({ token });
-      const variablesClient = client.mapEntity<Variable>("variables");
+      const nixClient = new NixClient({ token });
+      const variablesClient = nixClient.mapEntity<Variable>("variables");
 
-      const exists = await variablesClient.has(variableId);
+      console.log("[AddVariable] Checking if variable exists:", values.id);
+      console.log("[AddVariable] Form values:", values);
+      console.log("[AddVariable] VariableType.SECRET =", VariableType.SECRET, "values.type =", values.type);
+
+      const exists = await variablesClient.has(values.id);
+      console.log("[AddVariable] Variable exists:", exists);
+      
       if (exists) {
-        toast.error(`Variable "${variableId}" already exists`);
+        toast.error(`Variable "${values.id}" already exists`);
         setIsSaving(false);
         return;
       }
 
+      // Check if this is a SECRET type - needs agenix encryption
+      const isSecret = values.type === VariableType.SECRET;
+      console.log("[AddVariable] isSecret:", isSecret);
+
+      if (isSecret) {
+        // Use the agenix endpoint to encrypt and write the secret
+        console.log("[AddVariable] Creating secret via agenix...");
+        const agentClient = new AgentHttpClient({ token });
+        const result = await agentClient.writeAgenixSecret({
+          id: values.id,
+          key: values.key || values.id,
+          value: values.value,
+          description: values.description || undefined,
+        });
+        console.log("[AddVariable] Secret created:", result);
+        toast.success(`Created secret "${values.id}" (encrypted with age)`);
+      } else {
+        // Regular variable - write directly to variables.nix
       const newVariable: Variable = {
-        name: formState.name || variableId,
-        description: formState.description || "",
-        type: formState.type,
-        required: formState.required || undefined,
-        sensitive: formState.sensitive || undefined,
-        default: formState.default || undefined,
-        options: formState.options
-          ? formState.options.split(",").map((s) => s.trim())
-          : undefined,
-        service: formState.type === "service" ? formState.service : undefined,
+        key: values.key || values.id,
+        description: values.description || "",
+        type: values.type,
+        value: values.value,
       };
 
-      await variablesClient.set(variableId, newVariable);
-      toast.success(`Created variable "${variableId}"`);
+      await variablesClient.set(values.id, newVariable);
+      toast.success(`Created variable "${values.id}"`);
+      }
+
       handleOpenChange(false);
       onSuccess();
     } catch (err) {
+      console.error("[AddVariable] Error:", err);
       toast.error(
         err instanceof Error ? err.message : "Failed to create variable",
       );
@@ -93,6 +118,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
   return (
     <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       <button
+        type="button"
         onClick={() => setDialogOpen(true)}
         disabled={!token}
         className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-dashed border-border bg-background text-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -100,7 +126,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
         <Plus className="h-3 w-3 text-blue-500" />
         <span className="font-medium">Add Variable</span>
       </button>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Add New Variable</DialogTitle>
           <DialogDescription>
@@ -109,12 +135,10 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
         </DialogHeader>
         <div className="py-4">
           <VariableFormFields
-            formState={formState}
-            onFormChange={handleFormChange}
             showIdField
-            variableId={variableId}
-            onVariableIdChange={setVariableId}
-            idPrefix="new-variable"
+            onFormReady={(form) => {
+              formRef.current = form;
+            }}
           />
         </div>
         <DialogFooter>
@@ -123,7 +147,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSaving || !variableId.trim()}
+            disabled={isSaving}
             className="bg-accent text-accent-foreground hover:bg-accent/90"
           >
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
