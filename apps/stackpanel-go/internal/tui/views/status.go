@@ -340,7 +340,7 @@ func (m StatusView) View() string {
 	if m.loading {
 		b.WriteString(m.spinner.View())
 		b.WriteString(" Loading services...")
-		return b.String()
+		return tui.RenderFrame(b.String())
 	}
 
 	// Services section
@@ -407,7 +407,7 @@ func (m StatusView) View() string {
 	help := tui.HelpStyle.Render("\n\nr: refresh • esc: back • q: quit")
 	b.WriteString(help)
 
-	return b.String()
+	return tui.RenderFrame(b.String())
 }
 
 // Helper functions

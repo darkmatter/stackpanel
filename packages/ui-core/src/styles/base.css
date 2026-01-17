@@ -4,24 +4,30 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
 /* google-sans-code-latin-wght-normal */
 @font-face {
-  font-family: 'Google Sans Code Variable';
+  font-family: "Google Sans Code Variable";
   font-style: normal;
   font-display: swap;
   font-weight: 300 800;
-  src: url(@fontsource-variable/google-sans-code/files/google-sans-code-latin-wght-normal.woff2) format('woff2-variations');
-  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  src: url(@fontsource-variable/google-sans-code/files/google-sans-code-latin-wght-normal.woff2)
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 /**
  * Default
  */
 
 :root {
-  --font-sans: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif,
+  --font-sans:
+    "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: "Google Sans Code Variable", "Monaspace Neon", "Geist Mono", "Geist Mono Fallback";
+  --font-mono:
+    "Google Sans Code Variable", "Monaspace Neon", "Geist Mono",
+    "Geist Mono Fallback";
 
   --background: oklch(0.2 0 0);
   --foreground: oklch(0.98 0 0);
@@ -29,7 +35,7 @@
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.12 0 0);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.98 0 0);
+  --primary: oklch(0.9 0 0);
   --primary-foreground: oklch(0.08 0 0);
   --secondary: oklch(0.18 0 0);
   --secondary-foreground: oklch(0.98 0 0);
@@ -41,8 +47,8 @@
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.22 0 0);
   --input: oklch(0.18 0 0);
-  --ring: oklch(0.7 0.15 160);
-  --chart-1: oklch(0.7 0.15 160);
+  --ring: oklch(0.8 0.12 160);
+  --chart-1: oklch(0.8 0.12 160);
   --chart-2: oklch(0.6 0.15 250);
   --chart-3: oklch(0.65 0.2 30);
   --chart-4: oklch(0.75 0.15 60);
@@ -50,12 +56,12 @@
   --radius: 0.5rem;
   --sidebar: oklch(0.1 0 0);
   --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.7 0.15 160);
+  --sidebar-primary: oklch(0.8 0.12 160);
   --sidebar-primary-foreground: oklch(0.08 0 0);
   --sidebar-accent: oklch(0.18 0 0);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.7 0.15 160);
+  --sidebar-ring: oklch(0.8 0.12 160);
 }
 
 .dark {
@@ -65,34 +71,33 @@
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.12 0 0);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.98 0 0);
+  --primary: oklch(0.9 0 0);
   --primary-foreground: oklch(0.08 0 0);
   --secondary: oklch(0.18 0 0);
   --secondary-foreground: oklch(0.98 0 0);
   --muted: oklch(0.18 0 0);
   --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.7 0.15 160);
+  --accent: oklch(0.8 0.12 160);
   --accent-foreground: oklch(0.08 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.22 0 0);
   --input: oklch(0.18 0 0);
-  --ring: oklch(0.7 0.15 160);
-  --chart-1: oklch(0.7 0.15 160);
+  --ring: oklch(0.8 0.12 160);
+  --chart-1: oklch(0.8 0.12 160);
   --chart-2: oklch(0.6 0.15 250);
   --chart-3: oklch(0.65 0.2 30);
   --chart-4: oklch(0.75 0.15 60);
   --chart-5: oklch(0.55 0.2 300);
   --sidebar: oklch(0.1 0 0);
   --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.7 0.15 160);
+  --sidebar-primary: oklch(0.8 0.12 160);
   --sidebar-primary-foreground: oklch(0.08 0 0);
   --sidebar-accent: oklch(0.18 0 0);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.7 0.15 160);
+  --sidebar-ring: oklch(0.8 0.12 160);
 }
-
 
 /**
  * Fuma docs
@@ -133,10 +138,8 @@
   --color-fd-accent: hsla(0, 0%, 40.9%, 30%);
   --color-fd-accent-foreground: hsl(0, 0%, 90%);
   --color-fd-ring: hsl(0, 0%, 54.9%);
-  --sidebar-border: hsl(0,0%,15%);
+  --sidebar-border: hsl(0, 0%, 15%);
 }
-
-
 
 @layer base {
   * {
@@ -149,7 +152,12 @@
     font-weight: 400;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-sans);
     font-weight: 700;
   }
@@ -162,7 +170,8 @@
     font-weight: 700;
   }
 
-  button, a {
+  button,
+  a {
     font-family: var(--font-sans);
     font-weight: 400;
   }

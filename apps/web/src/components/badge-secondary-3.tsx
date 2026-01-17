@@ -1,0 +1,13 @@
+import { Badge } from "@ui/badge";
+import { Star } from "lucide-react";
+
+export const title = "Badge with Icon on Left";
+
+const Example = () => (
+	<Badge variant="secondary">
+		<Star className="mr-1 size-3" />
+		Badge
+	</Badge>
+);
+
+export default Example;

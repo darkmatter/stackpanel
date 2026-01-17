@@ -1,59 +1,59 @@
 {
-  "apps": {
-    "docs": {
-      "port": 6400,
-      "domain": "docs.localhost",
-      "url": "http://docs.localhost",
-      "tls": false
-    },
-    "server": {
-      "port": 6401,
-      "tls": false
-    },
-    "web": {
-      "port": 6402,
-      "domain": "stackpanel.localhost",
-      "url": "http://stackpanel.localhost",
-      "tls": false
-    }
-  },
-  "basePort": 6400,
-  "network": {
-    "step": {
-      "enable": true
-    }
-  },
-  "paths": {
-    "state": ".stackpanel/state",
-    "gen": ".stackpanel/gen",
-    "data": ".stackpanel"
-  },
-  "projectName": "stackpanel",
-  "services": {
-    "minio": {
-      "key": "MINIO",
-      "name": "Minio",
-      "port": 6412,
-      "envVar": "STACKPANEL_MINIO_PORT"
-    },
-    "minio_console": {
-      "key": "MINIO_CONSOLE",
-      "name": "Minio Console",
-      "port": 6413,
-      "envVar": "STACKPANEL_MINIO_CONSOLE_PORT"
-    },
-    "postgres": {
-      "key": "POSTGRES",
-      "name": "PostgreSQL",
-      "port": 6410,
-      "envVar": "STACKPANEL_POSTGRES_PORT"
-    },
-    "redis": {
-      "key": "REDIS",
-      "name": "Redis",
-      "port": 6411,
-      "envVar": "STACKPANEL_REDIS_PORT"
-    }
-  },
-  "version": 1
+	"apps": {
+		"docs": {
+			"port": 6400,
+			"domain": "docs.localhost",
+			"url": "http://docs.localhost",
+			"tls": false
+		},
+		"server": {
+			"port": 6401,
+			"tls": false
+		},
+		"web": {
+			"port": 6402,
+			"domain": "stackpanel.localhost",
+			"url": "http://stackpanel.localhost",
+			"tls": false
+		}
+	},
+	"basePort": 6400,
+	"network": {
+		"step": {
+			"enable": true
+		}
+	},
+	"paths": {
+		"state": ".stackpanel/state",
+		"gen": ".stackpanel/gen",
+		"data": ".stackpanel"
+	},
+	"projectName": "stackpanel",
+	"services": {
+		"minio": {
+			"key": "MINIO",
+			"name": "Minio",
+			"port": 6412,
+			"envVar": "STACKPANEL_MINIO_PORT"
+		},
+		"minio_console": {
+			"key": "MINIO_CONSOLE",
+			"name": "Minio Console",
+			"port": 6413,
+			"envVar": "STACKPANEL_MINIO_CONSOLE_PORT"
+		},
+		"postgres": {
+			"key": "POSTGRES",
+			"name": "PostgreSQL",
+			"port": 6410,
+			"envVar": "STACKPANEL_POSTGRES_PORT"
+		},
+		"redis": {
+			"key": "REDIS",
+			"name": "Redis",
+			"port": 6411,
+			"envVar": "STACKPANEL_REDIS_PORT"
+		}
+	},
+	"version": 1
 }

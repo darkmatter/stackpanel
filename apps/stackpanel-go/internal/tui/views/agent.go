@@ -322,7 +322,7 @@ func (m AgentView) View() string {
 
 	// Handle zero dimensions (before window size message)
 	if m.width < 20 || m.height < 10 {
-		return "Initializing..."
+		return tui.RenderFrame("Initializing...")
 	}
 
 	// Calculate panel widths
@@ -354,7 +354,7 @@ func (m AgentView) View() string {
 	// Footer
 	footer := m.renderFooter()
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, content, footer)
+	return tui.RenderFrame(lipgloss.JoinVertical(lipgloss.Left, header, content, footer))
 }
 
 func (m AgentView) renderHeader() string {

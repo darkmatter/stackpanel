@@ -48,6 +48,10 @@ in
   else {}
 `
 
+	// StackpanelSerializablePreset evaluates the serializable config from the flake output
+	// This includes computed values like devshell._commandsSerializable
+	StackpanelSerializablePreset = `.#stackpanelConfig`
+
 	// ActiveConfig returns the current active stackpanel configuration as JSON (evaluated)
 	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
 
@@ -75,10 +79,11 @@ in
 // InstalledPackagesExpr builds a Nix expression to get installed packages from a flake.
 // Uses the pre-computed .#stackpanelPackages flake output for fast evaluation.
 // The projectRoot is baked directly into the expression to avoid relying on environment variables.
+// Uses git+file:// protocol to avoid copying untracked files (node_modules, etc.)
 func InstalledPackagesExpr(projectRoot string) string {
 	return fmt.Sprintf(`
 let
-  flake = builtins.getFlake "%s";
+  flake = builtins.getFlake "git+file://%s";
 in
   # Use pre-computed stackpanelPackages if available (fast path)
   if flake ? stackpanelPackages then

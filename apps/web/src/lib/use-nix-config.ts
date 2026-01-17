@@ -1,25 +1,23 @@
 "use client";
 
+import type {
+	App,
+	AppTask,
+	AppVariable,
+	Task,
+	Tasks,
+	Variable,
+	Variables,
+} from "@stackpanel/proto";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AgentHttpClient, type TurboPackage } from "./agent";
 import { useAgentSSEEvent } from "./agent-sse-provider";
 import { NixClient, type NixClientConfig } from "./nix-client";
-import { AgentHttpClient, type TurboPackage } from "./agent";
 import type {
-  App,
-  AppTask,
-  AppVariable,
-  Task,
-  Tasks,
-  Variable,
-  Variables,
-  Command,
-  Commands,
-} from "@stackpanel/proto";
-import type {
-  Service,
-  StackpanelConfig,
-  AppEntity,
-  ResolvedApp,
+	AppEntity,
+	ResolvedApp,
+	Service,
+	StackpanelConfig,
 } from "./types";
 
 // =============================================================================
@@ -29,38 +27,38 @@ import type {
 type QueryStatus = "idle" | "loading" | "success" | "error";
 
 interface QueryState<T> {
-  data: T | null;
-  error: Error | null;
-  status: QueryStatus;
-  isLoading: boolean;
-  isError: boolean;
-  isSuccess: boolean;
-  /** Timestamp of last successful fetch */
-  dataUpdatedAt: number | null;
+	data: T | null;
+	error: Error | null;
+	status: QueryStatus;
+	isLoading: boolean;
+	isError: boolean;
+	isSuccess: boolean;
+	/** Timestamp of last successful fetch */
+	dataUpdatedAt: number | null;
 }
 
 interface UseNixConfigOptions {
-  /** Whether to automatically refetch when config.changed events are received */
-  autoRefetch?: boolean;
-  /** Base URL for the agent */
-  baseUrl?: string;
-  /** Auth token (if not using provider) */
-  token?: string;
+	/** Whether to automatically refetch when config.changed events are received */
+	autoRefetch?: boolean;
+	/** Base URL for the agent */
+	baseUrl?: string;
+	/** Auth token (if not using provider) */
+	token?: string;
 }
 
 interface UseNixDataOptions<T> extends UseNixConfigOptions {
-  /** Initial data before first fetch */
-  initialData?: T;
+	/** Initial data before first fetch */
+	initialData?: T;
 }
 
 interface MutationOptions {
-  onSuccess?: () => void;
-  onError?: (error: Error) => void;
+	onSuccess?: () => void;
+	onError?: (error: Error) => void;
 }
 
 interface MutationState {
-  isPending: boolean;
-  error: Error | null;
+	isPending: boolean;
+	error: Error | null;
 }
 
 // =============================================================================
@@ -70,29 +68,29 @@ interface MutationState {
 const STORAGE_KEY = "stackpanel.agent.token";
 
 function getStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEY);
+	if (typeof window === "undefined") return null;
+	return localStorage.getItem(STORAGE_KEY);
 }
 
 function useNixClient(options: NixClientConfig = {}): NixClient {
-  const clientRef = useRef<NixClient | null>(null);
-  const token = options.token ?? getStoredToken();
+	const clientRef = useRef<NixClient | null>(null);
+	const token = options.token ?? getStoredToken();
 
-  if (!clientRef.current) {
-    clientRef.current = new NixClient({
-      baseUrl: options.baseUrl,
-      token: token ?? undefined,
-    });
-  }
+	if (!clientRef.current) {
+		clientRef.current = new NixClient({
+			baseUrl: options.baseUrl,
+			token: token ?? undefined,
+		});
+	}
 
-  // Update token if it changes
-  useEffect(() => {
-    if (clientRef.current && token) {
-      clientRef.current.setToken(token);
-    }
-  }, [token]);
+	// Update token if it changes
+	useEffect(() => {
+		if (clientRef.current && token) {
+			clientRef.current.setToken(token);
+		}
+	}, [token]);
 
-  return clientRef.current;
+	return clientRef.current;
 }
 
 // =============================================================================
@@ -119,109 +117,109 @@ function useNixClient(options: NixClientConfig = {}): NixClient {
  * ```
  */
 export function useNixConfig(options: UseNixConfigOptions = {}) {
-  const { autoRefetch = true } = options;
-  const client = useNixClient(options);
-  const [state, setState] = useState<QueryState<StackpanelConfig>>({
-    data: null,
-    error: null,
-    status: "idle",
-    isLoading: false,
-    isError: false,
-    isSuccess: false,
-    dataUpdatedAt: null,
-  });
-  const [isRefreshing, setIsRefreshing] = useState(false);
+	const { autoRefetch = true } = options;
+	const client = useNixClient(options);
+	const [state, setState] = useState<QueryState<StackpanelConfig>>({
+		data: null,
+		error: null,
+		status: "idle",
+		isLoading: false,
+		isError: false,
+		isSuccess: false,
+		dataUpdatedAt: null,
+	});
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchConfig = useCallback(
-    async (forceRefresh = false) => {
-      setState((s) => ({
-        ...s,
-        status: "loading",
-        isLoading: true,
-        error: null,
-      }));
+	const fetchConfig = useCallback(
+		async (forceRefresh = false) => {
+			setState((s) => ({
+				...s,
+				status: "loading",
+				isLoading: true,
+				error: null,
+			}));
 
-      try {
-        const config = await client.config({ refresh: forceRefresh });
-        setState({
-          data: config,
-          error: null,
-          status: "success",
-          isLoading: false,
-          isError: false,
-          isSuccess: true,
-          dataUpdatedAt: Date.now(),
-        });
-      } catch (err) {
-        setState((s) => ({
-          ...s,
-          error: err instanceof Error ? err : new Error(String(err)),
-          status: "error",
-          isLoading: false,
-          isError: true,
-          isSuccess: false,
-        }));
-      }
-    },
-    [client],
-  );
+			try {
+				const config = await client.config({ refresh: forceRefresh });
+				setState({
+					data: config,
+					error: null,
+					status: "success",
+					isLoading: false,
+					isError: false,
+					isSuccess: true,
+					dataUpdatedAt: Date.now(),
+				});
+			} catch (err) {
+				setState((s) => ({
+					...s,
+					error: err instanceof Error ? err : new Error(String(err)),
+					status: "error",
+					isLoading: false,
+					isError: true,
+					isSuccess: false,
+				}));
+			}
+		},
+		[client],
+	);
 
-  // Force refresh by re-evaluating the flake (slower but guaranteed fresh)
-  const forceRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const config = await client.refreshConfig();
-      setState({
-        data: config,
-        error: null,
-        status: "success",
-        isLoading: false,
-        isError: false,
-        isSuccess: true,
-        dataUpdatedAt: Date.now(),
-      });
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        error: err instanceof Error ? err : new Error(String(err)),
-        status: "error",
-        isLoading: false,
-        isError: true,
-        isSuccess: false,
-      }));
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [client]);
+	// Force refresh by re-evaluating the flake (slower but guaranteed fresh)
+	const forceRefresh = useCallback(async () => {
+		setIsRefreshing(true);
+		try {
+			const config = await client.refreshConfig();
+			setState({
+				data: config,
+				error: null,
+				status: "success",
+				isLoading: false,
+				isError: false,
+				isSuccess: true,
+				dataUpdatedAt: Date.now(),
+			});
+		} catch (err) {
+			setState((s) => ({
+				...s,
+				error: err instanceof Error ? err : new Error(String(err)),
+				status: "error",
+				isLoading: false,
+				isError: true,
+				isSuccess: false,
+			}));
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, [client]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+	// Initial fetch
+	useEffect(() => {
+		fetchConfig();
+	}, [fetchConfig]);
 
-  // Subscribe to config.changed events for auto-refetch
-  useAgentSSEEvent("config.changed", () => {
-    if (autoRefetch) {
-      fetchConfig();
-    }
-  });
+	// Subscribe to config.changed events for auto-refetch
+	useAgentSSEEvent("config.changed", () => {
+		if (autoRefetch) {
+			fetchConfig();
+		}
+	});
 
-  // Also listen for config.refreshed events (triggered by POST /api/nix/config)
-  useAgentSSEEvent("config.refreshed", () => {
-    if (autoRefetch) {
-      fetchConfig();
-    }
-  });
+	// Also listen for config.refreshed events (triggered by POST /api/nix/config)
+	useAgentSSEEvent("config.refreshed", () => {
+		if (autoRefetch) {
+			fetchConfig();
+		}
+	});
 
-  return useMemo(
-    () => ({
-      ...state,
-      refetch: () => fetchConfig(false),
-      forceRefresh,
-      isRefreshing,
-    }),
-    [state, fetchConfig, forceRefresh, isRefreshing],
-  );
+	return useMemo(
+		() => ({
+			...state,
+			refetch: () => fetchConfig(false),
+			forceRefresh,
+			isRefreshing,
+		}),
+		[state, fetchConfig, forceRefresh, isRefreshing],
+	);
 }
 
 // =============================================================================
@@ -248,86 +246,86 @@ export function useNixConfig(options: UseNixConfigOptions = {}) {
  * ```
  */
 export function useNixData<T>(
-  entity: string,
-  options: UseNixDataOptions<T> = {},
+	entity: string,
+	options: UseNixDataOptions<T> = {},
 ) {
-  const { autoRefetch = true, initialData } = options;
-  const client = useNixClient(options);
-  const entityClient = useMemo(
-    () => client.entity<T>(entity),
-    [client, entity],
-  );
+	const { autoRefetch = true, initialData } = options;
+	const client = useNixClient(options);
+	const entityClient = useMemo(
+		() => client.entity<T>(entity),
+		[client, entity],
+	);
 
-  const [state, setState] = useState<QueryState<T>>({
-    data: initialData ?? null,
-    error: null,
-    status: initialData ? "success" : "idle",
-    isLoading: false,
-    isError: false,
-    isSuccess: !!initialData,
-    dataUpdatedAt: initialData ? Date.now() : null,
-  });
+	const [state, setState] = useState<QueryState<T>>({
+		data: initialData ?? null,
+		error: null,
+		status: initialData ? "success" : "idle",
+		isLoading: false,
+		isError: false,
+		isSuccess: !!initialData,
+		dataUpdatedAt: initialData ? Date.now() : null,
+	});
 
-  const fetchData = useCallback(async () => {
-    setState((s) => ({
-      ...s,
-      status: "loading",
-      isLoading: true,
-      error: null,
-    }));
+	const fetchData = useCallback(async () => {
+		setState((s) => ({
+			...s,
+			status: "loading",
+			isLoading: true,
+			error: null,
+		}));
 
-    try {
-      const data = await entityClient.get();
-      setState({
-        data,
-        error: null,
-        status: "success",
-        isLoading: false,
-        isError: false,
-        isSuccess: true,
-        dataUpdatedAt: Date.now(),
-      });
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        error: err instanceof Error ? err : new Error(String(err)),
-        status: "error",
-        isLoading: false,
-        isError: true,
-        isSuccess: false,
-      }));
-    }
-  }, [entityClient]);
+		try {
+			const data = await entityClient.get();
+			setState({
+				data,
+				error: null,
+				status: "success",
+				isLoading: false,
+				isError: false,
+				isSuccess: true,
+				dataUpdatedAt: Date.now(),
+			});
+		} catch (err) {
+			setState((s) => ({
+				...s,
+				error: err instanceof Error ? err : new Error(String(err)),
+				status: "error",
+				isLoading: false,
+				isError: true,
+				isSuccess: false,
+			}));
+		}
+	}, [entityClient]);
 
-  // Mutate and refetch
-  const mutate = useCallback(
-    async (data: T) => {
-      await entityClient.set(data);
-      await fetchData();
-    },
-    [entityClient, fetchData],
-  );
+	// Mutate and refetch
+	const mutate = useCallback(
+		async (data: T) => {
+			await entityClient.set(data);
+			await fetchData();
+		},
+		[entityClient, fetchData],
+	);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+	// Initial fetch
+	useEffect(() => {
+		fetchData();
+	}, [fetchData]);
 
-  // Subscribe to config.changed events (data files trigger this too)
-  useAgentSSEEvent("config.changed", () => {
-    if (autoRefetch) {
-      fetchData();
-    }
-  });
+	// Subscribe to config.changed events (data files trigger this too)
+	useAgentSSEEvent("config.changed", () => {
+		if (autoRefetch) {
+			fetchData();
+		}
+	});
 
-  return useMemo(
-    () => ({
-      ...state,
-      refetch: fetchData,
-      mutate,
-    }),
-    [state, fetchData, mutate],
-  );
+	return useMemo(
+		() => ({
+			...state,
+			refetch: fetchData,
+			mutate,
+		}),
+		[state, fetchData, mutate],
+	);
 }
 
 // =============================================================================
@@ -360,104 +358,104 @@ export function useNixData<T>(
  * ```
  */
 export function useNixMapData<V>(
-  entity: string,
-  options: UseNixDataOptions<Record<string, V>> = {},
+	entity: string,
+	options: UseNixDataOptions<Record<string, V>> = {},
 ) {
-  const { autoRefetch = true, initialData } = options;
-  const client = useNixClient(options);
-  const mapClient = useMemo(
-    () => client.mapEntity<V>(entity),
-    [client, entity],
-  );
+	const { autoRefetch = true, initialData } = options;
+	const client = useNixClient(options);
+	const mapClient = useMemo(
+		() => client.mapEntity<V>(entity),
+		[client, entity],
+	);
 
-  const [state, setState] = useState<QueryState<Record<string, V>>>({
-    data: initialData ?? null,
-    error: null,
-    status: initialData ? "success" : "idle",
-    isLoading: false,
-    isError: false,
-    isSuccess: !!initialData,
-    dataUpdatedAt: initialData ? Date.now() : null,
-  });
+	const [state, setState] = useState<QueryState<Record<string, V>>>({
+		data: initialData ?? null,
+		error: null,
+		status: initialData ? "success" : "idle",
+		isLoading: false,
+		isError: false,
+		isSuccess: !!initialData,
+		dataUpdatedAt: initialData ? Date.now() : null,
+	});
 
-  const fetchData = useCallback(async () => {
-    setState((s) => ({
-      ...s,
-      status: "loading",
-      isLoading: true,
-      error: null,
-    }));
+	const fetchData = useCallback(async () => {
+		setState((s) => ({
+			...s,
+			status: "loading",
+			isLoading: true,
+			error: null,
+		}));
 
-    try {
-      const data = await mapClient.all();
-      setState({
-        data,
-        error: null,
-        status: "success",
-        isLoading: false,
-        isError: false,
-        isSuccess: true,
-        dataUpdatedAt: Date.now(),
-      });
-    } catch (err) {
-      setState((s) => ({
-        ...s,
-        error: err instanceof Error ? err : new Error(String(err)),
-        status: "error",
-        isLoading: false,
-        isError: true,
-        isSuccess: false,
-      }));
-    }
-  }, [mapClient]);
+		try {
+			const data = await mapClient.all();
+			setState({
+				data,
+				error: null,
+				status: "success",
+				isLoading: false,
+				isError: false,
+				isSuccess: true,
+				dataUpdatedAt: Date.now(),
+			});
+		} catch (err) {
+			setState((s) => ({
+				...s,
+				error: err instanceof Error ? err : new Error(String(err)),
+				status: "error",
+				isLoading: false,
+				isError: true,
+				isSuccess: false,
+			}));
+		}
+	}, [mapClient]);
 
-  // Key-level operations
-  const set = useCallback(
-    async (key: string, value: V) => {
-      await mapClient.set(key, value);
-      await fetchData();
-    },
-    [mapClient, fetchData],
-  );
+	// Key-level operations
+	const set = useCallback(
+		async (key: string, value: V) => {
+			await mapClient.set(key, value);
+			await fetchData();
+		},
+		[mapClient, fetchData],
+	);
 
-  const update = useCallback(
-    async (key: string, updates: Partial<V>) => {
-      await mapClient.update(key, updates);
-      await fetchData();
-    },
-    [mapClient, fetchData],
-  );
+	const update = useCallback(
+		async (key: string, updates: Partial<V>) => {
+			await mapClient.update(key, updates);
+			await fetchData();
+		},
+		[mapClient, fetchData],
+	);
 
-  const remove = useCallback(
-    async (key: string) => {
-      await mapClient.remove(key);
-      await fetchData();
-    },
-    [mapClient, fetchData],
-  );
+	const remove = useCallback(
+		async (key: string) => {
+			await mapClient.remove(key);
+			await fetchData();
+		},
+		[mapClient, fetchData],
+	);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+	// Initial fetch
+	useEffect(() => {
+		fetchData();
+	}, [fetchData]);
 
-  // Subscribe to config.changed events
-  useAgentSSEEvent("config.changed", () => {
-    if (autoRefetch) {
-      fetchData();
-    }
-  });
+	// Subscribe to config.changed events
+	useAgentSSEEvent("config.changed", () => {
+		if (autoRefetch) {
+			fetchData();
+		}
+	});
 
-  return useMemo(
-    () => ({
-      ...state,
-      refetch: fetchData,
-      set,
-      update,
-      remove,
-    }),
-    [state, fetchData, set, update, remove],
-  );
+	return useMemo(
+		() => ({
+			...state,
+			refetch: fetchData,
+			set,
+			update,
+			remove,
+		}),
+		[state, fetchData, set, update, remove],
+	);
 }
 
 /**
@@ -465,42 +463,42 @@ export function useNixMapData<V>(
  * This is a convenience wrapper that adds the map key as `id` to each app.
  */
 export function useResolvedApps(options: UseNixConfigOptions = {}) {
-  const { data, isLoading, isError, error, refetch, ...rest } =
-    useApps(options);
+	const { data, isLoading, isError, error, refetch, ...rest } =
+		useApps(options);
 
-  const resolvedApps = useMemo(() => {
-    if (!data) return null;
+	const resolvedApps = useMemo(() => {
+		if (!data) return null;
 
-    const result: Record<string, ResolvedApp> = {};
-    for (const [id, app] of Object.entries(data)) {
-      result[id] = {
-        ...app,
-        id,
-        stablePort: app.port ?? 3000,
-        isRunning: false, // TODO: Query process-compose
-      };
-    }
-    return result;
-  }, [data]);
+		const result: Record<string, ResolvedApp> = {};
+		for (const [id, app] of Object.entries(data)) {
+			result[id] = {
+				...app,
+				id,
+				stablePort: app.port ?? 3000,
+				isRunning: false, // TODO: Query process-compose
+			};
+		}
+		return result;
+	}, [data]);
 
-  return useMemo(
-    () => ({
-      data: resolvedApps,
-      isLoading,
-      isError,
-      error,
-      refetch,
-      ...rest,
-    }),
-    [resolvedApps, isLoading, isError, error, refetch, rest],
-  );
+	return useMemo(
+		() => ({
+			data: resolvedApps,
+			isLoading,
+			isError,
+			error,
+			refetch,
+			...rest,
+		}),
+		[resolvedApps, isLoading, isError, error, refetch, rest],
+	);
 }
 
 /**
  * Hook for managing services configuration.
  */
 export function useServices(options: UseNixConfigOptions = {}) {
-  return useNixMapData<Service>("services", options);
+	return useNixMapData<Service>("services", options);
 }
 
 // =============================================================================
@@ -520,36 +518,36 @@ export function useServices(options: UseNixConfigOptions = {}) {
  * ```
  */
 export function useUpdateApp(options: MutationOptions = {}) {
-  const client = useNixClient();
-  const mapClient = useMemo(() => client.mapEntity<App>("apps"), [client]);
-  const [state, setState] = useState<MutationState>({
-    isPending: false,
-    error: null,
-  });
+	const client = useNixClient();
+	const mapClient = useMemo(() => client.mapEntity<App>("apps"), [client]);
+	const [state, setState] = useState<MutationState>({
+		isPending: false,
+		error: null,
+	});
 
-  const mutate = useCallback(
-    async ({ key, data }: { key: string; data: Partial<App> }) => {
-      setState({ isPending: true, error: null });
-      try {
-        await mapClient.update(key, data);
-        setState({ isPending: false, error: null });
-        options.onSuccess?.();
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setState({ isPending: false, error });
-        options.onError?.(error);
-      }
-    },
-    [mapClient, options],
-  );
+	const mutate = useCallback(
+		async ({ key, data }: { key: string; data: Partial<App> }) => {
+			setState({ isPending: true, error: null });
+			try {
+				await mapClient.update(key, data);
+				setState({ isPending: false, error: null });
+				options.onSuccess?.();
+			} catch (err) {
+				const error = err instanceof Error ? err : new Error(String(err));
+				setState({ isPending: false, error });
+				options.onError?.(error);
+			}
+		},
+		[mapClient, options],
+	);
 
-  return useMemo(
-    () => ({
-      ...state,
-      mutate,
-    }),
-    [state, mutate],
-  );
+	return useMemo(
+		() => ({
+			...state,
+			mutate,
+		}),
+		[state, mutate],
+	);
 }
 
 /**
@@ -565,36 +563,36 @@ export function useUpdateApp(options: MutationOptions = {}) {
  * ```
  */
 export function useDeleteApp(options: MutationOptions = {}) {
-  const client = useNixClient();
-  const mapClient = useMemo(() => client.mapEntity<App>("apps"), [client]);
-  const [state, setState] = useState<MutationState>({
-    isPending: false,
-    error: null,
-  });
+	const client = useNixClient();
+	const mapClient = useMemo(() => client.mapEntity<App>("apps"), [client]);
+	const [state, setState] = useState<MutationState>({
+		isPending: false,
+		error: null,
+	});
 
-  const mutate = useCallback(
-    async (key: string) => {
-      setState({ isPending: true, error: null });
-      try {
-        await mapClient.remove(key);
-        setState({ isPending: false, error: null });
-        options.onSuccess?.();
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setState({ isPending: false, error });
-        options.onError?.(error);
-      }
-    },
-    [mapClient, options],
-  );
+	const mutate = useCallback(
+		async (key: string) => {
+			setState({ isPending: true, error: null });
+			try {
+				await mapClient.remove(key);
+				setState({ isPending: false, error: null });
+				options.onSuccess?.();
+			} catch (err) {
+				const error = err instanceof Error ? err : new Error(String(err));
+				setState({ isPending: false, error });
+				options.onError?.(error);
+			}
+		},
+		[mapClient, options],
+	);
 
-  return useMemo(
-    () => ({
-      ...state,
-      mutate,
-    }),
-    [state, mutate],
-  );
+	return useMemo(
+		() => ({
+			...state,
+			mutate,
+		}),
+		[state, mutate],
+	);
 }
 
 // =============================================================================
@@ -606,7 +604,7 @@ export function useDeleteApp(options: MutationOptions = {}) {
  * Task = { exec, description?, cwd?, env }
  */
 export function useTasks(options: UseNixConfigOptions = {}) {
-  return useNixMapData<Task>("tasks", options);
+	return useNixMapData<Task>("tasks", options);
 }
 
 /**
@@ -614,15 +612,7 @@ export function useTasks(options: UseNixConfigOptions = {}) {
  * Variable = { key, description?, type, value }
  */
 export function useVariables(options: UseNixConfigOptions = {}) {
-  return useNixMapData<Variable>("variables", options);
-}
-
-/**
- * Hook for accessing workspace-level command definitions from commands.nix
- * Command = { package, bin?, args, config_path?, config_arg, env, cwd? }
- */
-export function useCommands(options: UseNixConfigOptions = {}) {
-  return useNixMapData<Command>("commands", options);
+	return useNixMapData<Variable>("variables", options);
 }
 
 /**
@@ -632,164 +622,164 @@ export function useCommands(options: UseNixConfigOptions = {}) {
  * - variables is a map where key = variable name, value = AppVariable
  */
 export function useApps(options: UseNixConfigOptions = {}) {
-  return useNixMapData<App>("apps", options);
+	return useNixMapData<App>("apps", options);
 }
 
 /**
  * Hook to get a single app by ID
  */
 export function useApp(appId: string, options: UseNixConfigOptions = {}) {
-  const { data: apps, isLoading, isError, error, refetch } = useApps(options);
+	const { data: apps, isLoading, isError, error, refetch } = useApps(options);
 
-  const app = useMemo(() => {
-    if (!apps) return null;
-    return apps[appId] ?? null;
-  }, [apps, appId]);
+	const app = useMemo(() => {
+		if (!apps) return null;
+		return apps[appId] ?? null;
+	}, [apps, appId]);
 
-  return useMemo(
-    () => ({
-      data: app,
-      isLoading,
-      isError,
-      isSuccess: !!app,
-      error,
-      refetch,
-    }),
-    [app, isLoading, isError, error, refetch],
-  );
+	return useMemo(
+		() => ({
+			data: app,
+			isLoading,
+			isError,
+			isSuccess: !!app,
+			error,
+			refetch,
+		}),
+		[app, isLoading, isError, error, refetch],
+	);
 }
 
 /**
  * Hook to find which apps have a specific task
  */
 export function useAppsWithTask(
-  taskName: string,
-  options: UseNixConfigOptions = {},
+	taskName: string,
+	options: UseNixConfigOptions = {},
 ) {
-  const { data: apps, isLoading, error, refetch } = useApps(options);
+	const { data: apps, isLoading, error, refetch } = useApps(options);
 
-  const matchingApps = useMemo(() => {
-    if (!apps) return null;
+	const matchingApps = useMemo(() => {
+		if (!apps) return null;
 
-    return Object.entries(apps)
-      .filter(([_, app]) => taskName in (app.tasks ?? {}))
-      .map(([id, app]) => ({ ...app, id }));
-  }, [apps, taskName]);
+		return Object.entries(apps)
+			.filter(([_, app]) => taskName in (app.tasks ?? {}))
+			.map(([id, app]) => ({ ...app, id }));
+	}, [apps, taskName]);
 
-  return useMemo(
-    () => ({
-      data: matchingApps,
-      isLoading,
-      isError: !!error,
-      isSuccess: !!matchingApps,
-      error,
-      refetch,
-    }),
-    [matchingApps, isLoading, error, refetch],
-  );
+	return useMemo(
+		() => ({
+			data: matchingApps,
+			isLoading,
+			isError: !!error,
+			isSuccess: !!matchingApps,
+			error,
+			refetch,
+		}),
+		[matchingApps, isLoading, error, refetch],
+	);
 }
 
 /**
  * Hook to find which apps have a specific variable
  */
 export function useAppsWithVariable(
-  variableName: string,
-  options: UseNixConfigOptions = {},
+	variableName: string,
+	options: UseNixConfigOptions = {},
 ) {
-  const { data: apps, isLoading, error, refetch } = useApps(options);
+	const { data: apps, isLoading, error, refetch } = useApps(options);
 
-  const matchingApps = useMemo(() => {
-    if (!apps) return null;
+	const matchingApps = useMemo(() => {
+		if (!apps) return null;
 
-    return Object.entries(apps)
-      .filter(([_, app]) => variableName in (app.variables ?? {}))
-      .map(([id, app]) => ({ ...app, id }));
-  }, [apps, variableName]);
+		return Object.entries(apps)
+			.filter(([_, app]) => variableName in (app.variables ?? {}))
+			.map(([id, app]) => ({ ...app, id }));
+	}, [apps, variableName]);
 
-  return useMemo(
-    () => ({
-      data: matchingApps,
-      isLoading,
-      isError: !!error,
-      isSuccess: !!matchingApps,
-      error,
-      refetch,
-    }),
-    [matchingApps, isLoading, error, refetch],
-  );
+	return useMemo(
+		() => ({
+			data: matchingApps,
+			isLoading,
+			isError: !!error,
+			isSuccess: !!matchingApps,
+			error,
+			refetch,
+		}),
+		[matchingApps, isLoading, error, refetch],
+	);
 }
 
 /**
  * Hook to get all tasks across all apps, with app context
  */
 export function useAllAppTasks(options: UseNixConfigOptions = {}) {
-  const { data: apps, isLoading, error, refetch } = useApps(options);
+	const { data: apps, isLoading, error, refetch } = useApps(options);
 
-  const allTasks = useMemo(() => {
-    if (!apps) return null;
+	const allTasks = useMemo(() => {
+		if (!apps) return null;
 
-    const result: Array<{ appId: string; taskName: string; task: AppTask }> =
-      [];
+		const result: Array<{ appId: string; taskName: string; task: AppTask }> =
+			[];
 
-    for (const [appId, app] of Object.entries(apps)) {
-      for (const [taskName, task] of Object.entries(app.tasks ?? {})) {
-        result.push({ appId, taskName, task });
-      }
-    }
+		for (const [appId, app] of Object.entries(apps)) {
+			for (const [taskName, task] of Object.entries(app.tasks ?? {})) {
+				result.push({ appId, taskName, task });
+			}
+		}
 
-    return result;
-  }, [apps]);
+		return result;
+	}, [apps]);
 
-  return useMemo(
-    () => ({
-      data: allTasks,
-      isLoading,
-      isError: !!error,
-      isSuccess: !!allTasks,
-      error,
-      refetch,
-    }),
-    [allTasks, isLoading, error, refetch],
-  );
+	return useMemo(
+		() => ({
+			data: allTasks,
+			isLoading,
+			isError: !!error,
+			isSuccess: !!allTasks,
+			error,
+			refetch,
+		}),
+		[allTasks, isLoading, error, refetch],
+	);
 }
 
 /**
  * Hook to get all variables across all apps, with app context
  */
 export function useAllAppVariables(options: UseNixConfigOptions = {}) {
-  const { data: apps, isLoading, error, refetch } = useApps(options);
+	const { data: apps, isLoading, error, refetch } = useApps(options);
 
-  const allVariables = useMemo(() => {
-    if (!apps) return null;
+	const allVariables = useMemo(() => {
+		if (!apps) return null;
 
-    const result: Array<{
-      appId: string;
-      variableName: string;
-      variable: AppVariable;
-    }> = [];
+		const result: Array<{
+			appId: string;
+			variableName: string;
+			variable: AppVariable;
+		}> = [];
 
-    for (const [appId, app] of Object.entries(apps)) {
-      for (const [variableName, variable] of Object.entries(
-        app.variables ?? {},
-      )) {
-        result.push({ appId, variableName, variable });
-      }
-    }
+		for (const [appId, app] of Object.entries(apps)) {
+			for (const [variableName, variable] of Object.entries(
+				app.variables ?? {},
+			)) {
+				result.push({ appId, variableName, variable });
+			}
+		}
 
-    return result;
-  }, [apps]);
+		return result;
+	}, [apps]);
 
-  return useMemo(
-    () => ({
-      data: allVariables,
-      isLoading,
-      isError: !!error,
-      isSuccess: !!allVariables,
-      error,
-      refetch,
-    }),
-    [allVariables, isLoading, error, refetch],
-  );
+	return useMemo(
+		() => ({
+			data: allVariables,
+			isLoading,
+			isError: !!error,
+			isSuccess: !!allVariables,
+			error,
+			refetch,
+		}),
+		[allVariables, isLoading, error, refetch],
+	);
 }
 
 // =============================================================================
@@ -814,117 +804,117 @@ export function useAllAppVariables(options: UseNixConfigOptions = {}) {
  * ```
  */
 export function useTurboPackages(options: UseNixConfigOptions = {}) {
-  const { autoRefetch = true, token: optionToken, baseUrl } = options;
-  const storedToken = getStoredToken();
-  const token = optionToken ?? storedToken;
+	const { autoRefetch = true, token: optionToken, baseUrl } = options;
+	const storedToken = getStoredToken();
+	const token = optionToken ?? storedToken;
 
-  const [packages, setPackages] = useState<TurboPackage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+	const [packages, setPackages] = useState<TurboPackage[]>([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<Error | null>(null);
 
-  const fetchPackages = useCallback(async () => {
-    if (!token) return;
+	const fetchPackages = useCallback(async () => {
+		if (!token) return;
 
-    setIsLoading(true);
-    setError(null);
+		setIsLoading(true);
+		setError(null);
 
-    try {
-      const [host, portStr] = (baseUrl ?? "localhost:9876")
-        .replace(/^https?:\/\//, "")
-        .split(":");
-      const port = portStr ? parseInt(portStr, 10) : 9876;
-      const client = new AgentHttpClient(host, port, token);
-      const result = await client.getPackageGraph({ excludeRoot: true });
-      setPackages(result);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error("Failed to fetch packages"),
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, baseUrl]);
+		try {
+			const [host, portStr] = (baseUrl ?? "localhost:9876")
+				.replace(/^https?:\/\//, "")
+				.split(":");
+			const port = portStr ? parseInt(portStr, 10) : 9876;
+			const client = new AgentHttpClient(host, port, token);
+			const result = await client.getPackageGraph({ excludeRoot: true });
+			setPackages(result);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err : new Error("Failed to fetch packages"),
+			);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [token, baseUrl]);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchPackages();
-  }, [fetchPackages]);
+	// Initial fetch
+	useEffect(() => {
+		fetchPackages();
+	}, [fetchPackages]);
 
-  // Subscribe to turbo.changed events for auto-refetch
-  useAgentSSEEvent("turbo.changed", () => {
-    if (autoRefetch) {
-      fetchPackages();
-    }
-  });
+	// Subscribe to turbo.changed events for auto-refetch
+	useAgentSSEEvent("turbo.changed", () => {
+		if (autoRefetch) {
+			fetchPackages();
+		}
+	});
 
-  // Also refetch on config changes since turbo.json might be generated
-  useAgentSSEEvent("config.changed", () => {
-    if (autoRefetch) {
-      fetchPackages();
-    }
-  });
+	// Also refetch on config changes since turbo.json might be generated
+	useAgentSSEEvent("config.changed", () => {
+		if (autoRefetch) {
+			fetchPackages();
+		}
+	});
 
-  // Get all unique tasks from the package graph
-  const allTasks = useMemo(() => {
-    const taskSet = new Set<string>();
-    for (const pkg of packages) {
-      for (const task of pkg.tasks) {
-        taskSet.add(task.name);
-      }
-    }
-    return Array.from(taskSet).sort();
-  }, [packages]);
+	// Get all unique tasks from the package graph
+	const allTasks = useMemo(() => {
+		const taskSet = new Set<string>();
+		for (const pkg of packages) {
+			for (const task of pkg.tasks) {
+				taskSet.add(task.name);
+			}
+		}
+		return Array.from(taskSet).sort();
+	}, [packages]);
 
-  // Get tasks as a map for easier lookup (simple string -> name map for UI)
-  const tasksMap = useMemo((): Record<string, { name: string }> => {
-    const map: Record<string, { name: string }> = {};
-    for (const taskName of allTasks) {
-      map[taskName] = { name: taskName };
-    }
-    return map;
-  }, [allTasks]);
+	// Get tasks as a map for easier lookup (simple string -> name map for UI)
+	const tasksMap = useMemo((): Record<string, { name: string }> => {
+		const map: Record<string, { name: string }> = {};
+		for (const taskName of allTasks) {
+			map[taskName] = { name: taskName };
+		}
+		return map;
+	}, [allTasks]);
 
-  // Get tasks for a specific package
-  const getTasksForPackage = useCallback(
-    (packageName: string): Array<{ name: string }> => {
-      const pkg = packages.find((p) => p.name === packageName);
-      if (!pkg) return [];
-      return pkg.tasks.map((t) => ({ name: t.name }));
-    },
-    [packages],
-  );
+	// Get tasks for a specific package
+	const getTasksForPackage = useCallback(
+		(packageName: string): Array<{ name: string }> => {
+			const pkg = packages.find((p) => p.name === packageName);
+			if (!pkg) return [];
+			return pkg.tasks.map((t) => ({ name: t.name }));
+		},
+		[packages],
+	);
 
-  return useMemo(
-    () => ({
-      /** All packages with their tasks */
-      packages,
-      /** All unique task names across all packages */
-      allTasks,
-      /** Tasks as a map for compatibility with existing code */
-      tasksMap,
-      /** Get tasks for a specific package */
-      getTasksForPackage,
-      /** Loading state */
-      isLoading,
-      /** Error state */
-      isError: !!error,
-      /** Success state */
-      isSuccess: packages.length > 0 && !isLoading && !error,
-      /** Error object */
-      error,
-      /** Refetch the package graph */
-      refetch: fetchPackages,
-    }),
-    [
-      packages,
-      allTasks,
-      tasksMap,
-      getTasksForPackage,
-      isLoading,
-      error,
-      fetchPackages,
-    ],
-  );
+	return useMemo(
+		() => ({
+			/** All packages with their tasks */
+			packages,
+			/** All unique task names across all packages */
+			allTasks,
+			/** Tasks as a map for compatibility with existing code */
+			tasksMap,
+			/** Get tasks for a specific package */
+			getTasksForPackage,
+			/** Loading state */
+			isLoading,
+			/** Error state */
+			isError: !!error,
+			/** Success state */
+			isSuccess: packages.length > 0 && !isLoading && !error,
+			/** Error object */
+			error,
+			/** Refetch the package graph */
+			refetch: fetchPackages,
+		}),
+		[
+			packages,
+			allTasks,
+			tasksMap,
+			getTasksForPackage,
+			isLoading,
+			error,
+			fetchPackages,
+		],
+	);
 }
 
 /**
@@ -934,20 +924,20 @@ export function useTurboPackages(options: UseNixConfigOptions = {}) {
  * Note: For Nix-based task definitions, use the useTasks hook from Entity Hooks section.
  */
 export function useTurboTasks(options: UseNixConfigOptions = {}) {
-  const { tasksMap, isLoading, isError, isSuccess, error, refetch } =
-    useTurboPackages(options);
+	const { tasksMap, isLoading, isError, isSuccess, error, refetch } =
+		useTurboPackages(options);
 
-  return useMemo(
-    () => ({
-      data: tasksMap,
-      isLoading,
-      isError,
-      isSuccess,
-      error,
-      refetch,
-    }),
-    [tasksMap, isLoading, isError, isSuccess, error, refetch],
-  );
+	return useMemo(
+		() => ({
+			data: tasksMap,
+			isLoading,
+			isError,
+			isSuccess,
+			error,
+			refetch,
+		}),
+		[tasksMap, isLoading, isError, isSuccess, error, refetch],
+	);
 }
 
 // =============================================================================
@@ -955,16 +945,14 @@ export function useTurboTasks(options: UseNixConfigOptions = {}) {
 // =============================================================================
 
 export type {
-  App,
-  Service,
-  StackpanelConfig,
-  Command,
-  Commands,
-  Variable,
-  Variables,
-  AppEntity,
-  ResolvedApp,
-  Task,
-  Tasks,
-  TurboPackage,
+	App,
+	Service,
+	StackpanelConfig,
+	Variable,
+	Variables,
+	AppEntity,
+	ResolvedApp,
+	Task,
+	Tasks,
+	TurboPackage,
 };

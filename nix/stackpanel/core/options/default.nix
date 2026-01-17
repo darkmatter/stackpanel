@@ -28,13 +28,13 @@
     ./ci.nix
     ./cli.nix
     ./codegen.nix
-    ./commands.nix
     ./core.nix
     ./devshell.nix
     ./extensions.nix
     ./global-services.nix
     ./ide.nix
     ./motd.nix
+    ./outputs.nix
     ./step-ca.nix
     ./tasks.nix
     ./ports.nix

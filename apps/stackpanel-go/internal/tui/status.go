@@ -316,7 +316,7 @@ func (m StatusModel) View() string {
 	if m.loading {
 		b.WriteString(m.spinner.View())
 		b.WriteString(" Loading svc...")
-		return b.String()
+		return RenderFrame(b.String())
 	}
 
 	// Services section
@@ -374,7 +374,7 @@ func (m StatusModel) View() string {
 	b.WriteString(help)
 	b.WriteString("\n")
 
-	return b.String()
+	return RenderFrame(b.String())
 }
 
 // Helper functions for Caddy and Certs (services use the services package now)

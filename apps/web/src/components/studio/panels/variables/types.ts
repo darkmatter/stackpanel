@@ -1,8 +1,5 @@
-export interface VariableFormState {
-  name: string;
-  description: string;
-  type: "secret" | "config" | "computed" | "service";
-  required: boolean;
+import { type Variable, VariableType } from "@stackpanel/proto";
+export interface VariableFormState extends Variable {
   sensitive: boolean;
   default: string;
   options: string;
@@ -10,11 +7,13 @@ export interface VariableFormState {
 }
 
 export const defaultFormState: VariableFormState = {
-  name: "",
+  id: "",
+  key: "",
+  value: "",
   description: "",
-  type: "config",
-  required: false,
-  sensitive: false,
+  type: VariableType.SECRET,
+  environments: [],
+  sensitive: true,
   default: "",
   options: "",
   service: "",

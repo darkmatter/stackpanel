@@ -1,0 +1,283 @@
+---
+title: Tasks
+description: Declarative task definitions with Turborepo integration
+---
+
+# Tasks
+
+Tasks are build pipeline steps with dependencies, caching, and outputs. They integrate with [Turborepo](https://turbo.build) to provide intelligent task scheduling and caching.
+
+## Tasks vs Commands
+
+Stackpanel distinguishes between two types of executable definitions:
+
+| Concept | Purpose | Defined In | Invoked Via |
+|---------|---------|-----------|-------------|
+| **Commands** | Ad-hoc utility scripts | `stackpanel.devshell.commands` | `stackpanel commands <name>` |
+| **Tasks** | Build pipeline with deps | `stackpanel.tasks` | `turbo run <task>` |
+
+**Commands** are standalone utilities like `db:seed`, `secrets:list`, or `generate-types`.
+
+**Tasks** have dependencies and participate in the build DAG like `build`, `test`, `lint`, and `dev`.
+
+## The Problem
+
+Complex task logic doesn't belong in `package.json`:
+
+```json
+{
+  "scripts": {
+    "build": "go mod tidy && HASH=$(md5 -q go.sum) && if [ ! -f .hash ] ... (100 chars later)"
+  }
+}
+```
+
+## The Solution: Nix-Built Task Scripts
+
+Tasks with `exec` or `runtimeInputs` become `writeShellApplication` derivations:
+
+```nix
+stackpanel.tasks.build = {
+  exec = ''
+    go mod tidy
+    gomod2nix generate
+    go build -o ./dist/app ./cmd/app
+  '';
+  runtimeInputs = [ pkgs.go pkgs.gomod2nix ];
+  outputs = [ "dist/**" ];
+};
+```
+
+This generates:
+
+1. **Nix derivation**: `/nix/store/abc123-build/bin/build`
+2. **Symlink**: `.tasks/bin/build` → `/nix/store/abc123-build/bin/build`
+3. **package.json script**: `"build": "./.tasks/bin/build"`
+4. **turbo.json task**: `"build": { "outputs": ["dist/**"] }`
+
+## Directory Structure
+
+```
+project/
+├── .tasks/                    # gitignored, generated on shell entry
+│   └── bin/
+│       ├── build -> /nix/store/abc123-build/bin/build
+│       ├── test -> /nix/store/def456-test/bin/test
+│       └── lint -> /nix/store/ghi789-lint/bin/lint
+├── apps/
+│   └── web/
+│       ├── .tasks/            # per-app task scripts
+│       │   └── bin/
+│       │       └── compile -> /nix/store/xyz-compile/bin/compile
+│       ├── turbo.json         # extends root, adds compile task
+│       └── package.json       # scripts call .tasks/bin/*
+├── turbo.json                 # generated, references task names
+└── package.json               # root scripts call .tasks/bin/*
+```
+
+## Benefits
+
+- **Hermetic execution** - pinned dependencies via `runtimeInputs`
+- **Complex logic in Nix** - version controlled, reproducible
+- **Clean package.json** - just one-liners calling the script
+- **Direct invocation** - `.tasks/bin/build` works standalone
+- **Turbo orchestrates** - handles deps/caching, doesn't run complex logic
+- **IDE-friendly** - symlinks are real paths, editors can navigate
+
+## When Scripts Are Generated
+
+**Shell entry** (via `stackpanel.files`):
+- Symlinks created in `.tasks/bin/`
+- `package.json` updated with script entries
+- `turbo.json` regenerated
+
+**On rebuild**:
+- Nix store paths may change
+- Symlinks updated to new paths
+- Scripts remain stable (call via relative path)
+
+## Option Schema
+
+### Workspace-Level Tasks
+
+```nix
+stackpanel.tasks = {
+  build = {
+    # Script definition
+    exec = ''
+      echo "Building..."
+      npm run compile
+    '';
+    runtimeInputs = [ pkgs.nodejs ];  # Dependencies for the script
+    
+    # Turbo configuration
+    description = "Build all packages";
+    dependsOn = [ "deps" ];        # Task dependencies
+    outputs = [ "dist/**" ];      # Turbo outputs
+    inputs = [ "$TURBO_DEFAULT$" ];  # Turbo inputs
+    cache = true;                 # Enable caching (default)
+    persistent = false;           # Not a long-running process
+  };
+
+  dev = {
+    # No exec = uses default turbo behavior (calls package.json script)
+    description = "Start development servers";
+    persistent = true;            # Long-running process
+    cache = false;
+    interactive = false;
+  };
+
+  test = {
+    exec = "vitest run";
+    runtimeInputs = [ pkgs.nodejs ];
+    dependsOn = [ "^build" ];      # Run after dependencies' build
+    outputs = [ "coverage/**" ];
+  };
+};
+```
+
+### App-Level Tasks
+
+Per-package task overrides generate their own `turbo.json` with `extends: ["//"]`:
+
+```nix
+stackpanel.apps.web.tasks = {
+  compile = {
+    exec = "tsc --noEmit";
+    runtimeInputs = [ pkgs.typescript ];
+    outputs = [ "dist/**" ];
+  };
+  build = {
+    dependsOn = [ "compile" ];  # Local dependency
+  };
+};
+```
+
+## Task Options Reference
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `exec` | `string` | Shell script to execute (compiled to Nix derivation) |
+| `description` | `string` | Human-readable description |
+| `runtimeInputs` | `[package]` | Packages to include in PATH |
+| `dependsOn` | `[string]` | Tasks that must complete first (matches turbo.json) |
+| `before` | `[string]` | Tasks that depend on this task |
+| `outputs` | `[string]` | Output file globs for caching |
+| `inputs` | `[string]` | Input file globs for cache key |
+| `cache` | `bool` | Enable Turborepo caching (default: `true`) |
+| `persistent` | `bool` | Long-running process (default: `false`) |
+| `interactive` | `bool` | Task accepts stdin input |
+| `cwd` | `string` | Working directory (relative to repo root) |
+| `env` | `{string: string}` | Environment variables |
+
+## Generated Files
+
+### `.tasks/bin/build` (symlink)
+
+Points to `/nix/store/abc123-build/bin/build`, which contains:
+
+```bash
+#!/nix/store/.../bash
+set -euo pipefail
+export PATH="/nix/store/.../nodejs/bin:$PATH"
+
+echo "Building..."
+npm run compile
+```
+
+### `package.json` (scripts section)
+
+```json
+{
+  "scripts": {
+    "build": "./.tasks/bin/build",
+    "test": "./.tasks/bin/test",
+    "dev": "vite dev"
+  }
+}
+```
+
+Tasks without `exec` don't generate scripts (assumes existing script).
+
+### `turbo.json`
+
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["deps", "^build"],
+      "outputs": ["dist/**"],
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    }
+  }
+}
+```
+
+### `apps/web/turbo.json`
+
+```json
+{
+  "extends": ["//"],
+  "tasks": {
+    "compile": {
+      "outputs": ["dist/**"]
+    },
+    "build": {
+      "dependsOn": ["compile"]
+    }
+  }
+}
+```
+
+## Usage
+
+Once tasks are defined, run them via Turborepo:
+
+```bash
+# Run a single task
+turbo run build
+
+# Run multiple tasks
+turbo run build test lint
+
+# Run with specific filter
+turbo run build --filter=web
+
+# Run in watch mode (for persistent tasks)
+turbo run dev
+```
+
+## Migration from stackpanel.commands
+
+If you were using the deprecated `stackpanel.commands` schema:
+
+```nix
+# OLD (deprecated)
+stackpanel.commands.lint = {
+  package = "eslint";
+  args = [ "." ];
+};
+
+# NEW - for ad-hoc scripts
+stackpanel.devshell.commands.lint = {
+  exec = "eslint .";
+  runtimeInputs = [ pkgs.nodePackages.eslint ];
+};
+
+# NEW - for build pipeline tasks
+stackpanel.tasks.lint = {
+  exec = "eslint .";
+  runtimeInputs = [ pkgs.nodePackages.eslint ];
+  dependsOn = [ "deps" ];
+};
+```

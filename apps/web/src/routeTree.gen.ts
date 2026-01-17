@@ -20,6 +20,7 @@ import { Route as StudioVariablesRouteImport } from './routes/studio/variables'
 import { Route as StudioTerminalRouteImport } from './routes/studio/terminal'
 import { Route as StudioTeamRouteImport } from './routes/studio/team'
 import { Route as StudioTasksRouteImport } from './routes/studio/tasks'
+import { Route as StudioSetupRouteImport } from './routes/studio/setup'
 import { Route as StudioServicesRouteImport } from './routes/studio/services'
 import { Route as StudioSecretsRouteImport } from './routes/studio/secrets'
 import { Route as StudioPackagesRouteImport } from './routes/studio/packages'
@@ -29,7 +30,6 @@ import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions
 import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
 import { Route as StudioDatabasesRouteImport } from './routes/studio/databases'
 import { Route as StudioConfigurationRouteImport } from './routes/studio/configuration'
-import { Route as StudioCommandsRouteImport } from './routes/studio/commands'
 import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
 import { Route as ApiProvisionDbRouteImport } from './routes/api/provision-db'
@@ -91,6 +91,11 @@ const StudioTasksRoute = StudioTasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioSetupRoute = StudioSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioServicesRoute = StudioServicesRouteImport.update({
   id: '/services',
   path: '/services',
@@ -136,11 +141,6 @@ const StudioConfigurationRoute = StudioConfigurationRouteImport.update({
   path: '/configuration',
   getParentRoute: () => StudioRoute,
 } as any)
-const StudioCommandsRoute = StudioCommandsRouteImport.update({
-  id: '/commands',
-  path: '/commands',
-  getParentRoute: () => StudioRoute,
-} as any)
 const StudioAppsRoute = StudioAppsRouteImport.update({
   id: '/apps',
   path: '/apps',
@@ -177,7 +177,6 @@ export interface FileRoutesByFullPath {
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
-  '/studio/commands': typeof StudioCommandsRoute
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
@@ -187,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/studio/packages': typeof StudioPackagesRoute
   '/studio/secrets': typeof StudioSecretsRoute
   '/studio/services': typeof StudioServicesRoute
+  '/studio/setup': typeof StudioSetupRoute
   '/studio/tasks': typeof StudioTasksRoute
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
@@ -204,7 +204,6 @@ export interface FileRoutesByTo {
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
-  '/studio/commands': typeof StudioCommandsRoute
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
@@ -214,6 +213,7 @@ export interface FileRoutesByTo {
   '/studio/packages': typeof StudioPackagesRoute
   '/studio/secrets': typeof StudioSecretsRoute
   '/studio/services': typeof StudioServicesRoute
+  '/studio/setup': typeof StudioSetupRoute
   '/studio/tasks': typeof StudioTasksRoute
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
@@ -233,7 +233,6 @@ export interface FileRoutesById {
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
-  '/studio/commands': typeof StudioCommandsRoute
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
@@ -243,6 +242,7 @@ export interface FileRoutesById {
   '/studio/packages': typeof StudioPackagesRoute
   '/studio/secrets': typeof StudioSecretsRoute
   '/studio/services': typeof StudioServicesRoute
+  '/studio/setup': typeof StudioSetupRoute
   '/studio/tasks': typeof StudioTasksRoute
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
@@ -263,7 +263,6 @@ export interface FileRouteTypes {
     | '/api/provision-db'
     | '/api/seed-snapshots'
     | '/studio/apps'
-    | '/studio/commands'
     | '/studio/configuration'
     | '/studio/databases'
     | '/studio/devshells'
@@ -273,6 +272,7 @@ export interface FileRouteTypes {
     | '/studio/packages'
     | '/studio/secrets'
     | '/studio/services'
+    | '/studio/setup'
     | '/studio/tasks'
     | '/studio/team'
     | '/studio/terminal'
@@ -290,7 +290,6 @@ export interface FileRouteTypes {
     | '/api/provision-db'
     | '/api/seed-snapshots'
     | '/studio/apps'
-    | '/studio/commands'
     | '/studio/configuration'
     | '/studio/databases'
     | '/studio/devshells'
@@ -300,6 +299,7 @@ export interface FileRouteTypes {
     | '/studio/packages'
     | '/studio/secrets'
     | '/studio/services'
+    | '/studio/setup'
     | '/studio/tasks'
     | '/studio/team'
     | '/studio/terminal'
@@ -318,7 +318,6 @@ export interface FileRouteTypes {
     | '/api/provision-db'
     | '/api/seed-snapshots'
     | '/studio/apps'
-    | '/studio/commands'
     | '/studio/configuration'
     | '/studio/databases'
     | '/studio/devshells'
@@ -328,6 +327,7 @@ export interface FileRouteTypes {
     | '/studio/packages'
     | '/studio/secrets'
     | '/studio/services'
+    | '/studio/setup'
     | '/studio/tasks'
     | '/studio/team'
     | '/studio/terminal'
@@ -429,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioTasksRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/setup': {
+      id: '/studio/setup'
+      path: '/setup'
+      fullPath: '/studio/setup'
+      preLoaderRoute: typeof StudioSetupRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/services': {
       id: '/studio/services'
       path: '/services'
@@ -492,13 +499,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioConfigurationRouteImport
       parentRoute: typeof StudioRoute
     }
-    '/studio/commands': {
-      id: '/studio/commands'
-      path: '/commands'
-      fullPath: '/studio/commands'
-      preLoaderRoute: typeof StudioCommandsRouteImport
-      parentRoute: typeof StudioRoute
-    }
     '/studio/apps': {
       id: '/studio/apps'
       path: '/apps'
@@ -539,7 +539,6 @@ declare module '@tanstack/react-router' {
 
 interface StudioRouteChildren {
   StudioAppsRoute: typeof StudioAppsRoute
-  StudioCommandsRoute: typeof StudioCommandsRoute
   StudioConfigurationRoute: typeof StudioConfigurationRoute
   StudioDatabasesRoute: typeof StudioDatabasesRoute
   StudioDevshellsRoute: typeof StudioDevshellsRoute
@@ -549,6 +548,7 @@ interface StudioRouteChildren {
   StudioPackagesRoute: typeof StudioPackagesRoute
   StudioSecretsRoute: typeof StudioSecretsRoute
   StudioServicesRoute: typeof StudioServicesRoute
+  StudioSetupRoute: typeof StudioSetupRoute
   StudioTasksRoute: typeof StudioTasksRoute
   StudioTeamRoute: typeof StudioTeamRoute
   StudioTerminalRoute: typeof StudioTerminalRoute
@@ -558,7 +558,6 @@ interface StudioRouteChildren {
 
 const StudioRouteChildren: StudioRouteChildren = {
   StudioAppsRoute: StudioAppsRoute,
-  StudioCommandsRoute: StudioCommandsRoute,
   StudioConfigurationRoute: StudioConfigurationRoute,
   StudioDatabasesRoute: StudioDatabasesRoute,
   StudioDevshellsRoute: StudioDevshellsRoute,
@@ -568,6 +567,7 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioPackagesRoute: StudioPackagesRoute,
   StudioSecretsRoute: StudioSecretsRoute,
   StudioServicesRoute: StudioServicesRoute,
+  StudioSetupRoute: StudioSetupRoute,
   StudioTasksRoute: StudioTasksRoute,
   StudioTeamRoute: StudioTeamRoute,
   StudioTerminalRoute: StudioTerminalRoute,

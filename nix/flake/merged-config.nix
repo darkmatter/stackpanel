@@ -22,9 +22,15 @@ let
   # Import serialization helpers
   serializeLib = import ../../nix/stackpanel/lib/serialize.nix { inherit lib; };
 
-  # Import stackpanel config from .stackpanel/config.nix
-  # Returns { stackpanel = {...}; }
-  stackpanelConfigModule = import ../../.stackpanel/config.nix;
+  # Import stackpanel config from .stackpanel/_internal.nix
+  # _internal.nix is the entry point that imports config.nix and handles merging
+  # Returns the merged config attrset directly
+  mergedStackpanelConfig = import ../../.stackpanel/_internal.nix { inherit pkgs lib; };
+
+  # Wrap as a module for evalModules
+  stackpanelConfigModule = {
+    stackpanel = mergedStackpanelConfig;
+  };
 
   # Import devenv and git-hooks config from .stackpanel/devenv.nix
   # Returns { packages = [...]; languages = {...}; env = {...}; git-hooks = {...}; }
@@ -38,13 +44,19 @@ let
     else
       devenvConfigData.git-hooks or { };
 
-  # Evaluate stackpanel modules with user config
+  # User modules from .stackpanel/modules/ (with full NixOS module context)
+  userModulesPath = ../../.stackpanel/modules;
+  hasUserModules = builtins.pathExists userModulesPath;
+
+  # Evaluate stackpanel modules with user config and user modules
   # This validates stackpanel config and computes derived values
   stackpanelEval = lib.evalModules {
     modules = [
       ../../nix/stackpanel
       stackpanelConfigModule
-    ];
+    ]
+    # Include user modules if they exist
+    ++ lib.optionals hasUserModules [ userModulesPath ];
     specialArgs = { inherit pkgs lib inputs; };
   };
 

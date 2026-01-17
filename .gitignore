@@ -102,6 +102,6 @@ devenv.local.yaml
 .stackpanel-root
 
 # Stackpanel generated files (cache)
-.stackpanel/gen/
+.stackpanel/state/
 .sst
 .tmp

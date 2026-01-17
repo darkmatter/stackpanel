@@ -9,13 +9,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { FilesPanel } from "@/components/studio/panels/files-panel";
 
 export const Route = createFileRoute("/studio/files")({
-  component: FilesPage,
+	component: FilesPage,
 });
 
 function FilesPage() {
-  return (
-    <div className="container mx-auto py-8">
-      <FilesPanel />
-    </div>
-  );
+	return (
+		<div className="container mx-auto py-8">
+			<FilesPanel />
+		</div>
+	);
 }

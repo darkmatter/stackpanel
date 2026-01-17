@@ -22,8 +22,9 @@ let
 in
 {
   imports = [
-    # Compatibility adapter
+    # Compatibility adapter (includes stackpanel modules)
     ./nix/flake/modules/devenv.nix
+    # NOTE: User modules from .stackpanel/modules/ are now included via merged-config.nix
     # Configuration for our own devenv
     # ./nix/internal/devenv/devenv.nix
   ];

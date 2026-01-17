@@ -17,29 +17,58 @@ import { MessageType } from "@protobuf-ts/runtime";
  */
 export interface Variable {
     /**
-     * @generated from protobuf field: string key = 1
+     *
+     * Globally unique identifier for the variable. You can reference a single
+     * variable in multiple apps and environments, so to avoid confusion, it's
+     * recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
+     * You can also use `/path/based/variable-name` for organization. If a variable should
+     * only be used in a specific environment or app, you should include that detail in
+     * this field.
+     *
+     *
+     * @generated from protobuf field: string id = 1
      */
-    key: string; // value will be passed to app using this key
+    id: string;
     /**
-     * @generated from protobuf field: optional string description = 2
+     *
+     * Default key to use when passing the variable to the app. This is the key that will be used
+     * in the environment variables of the app.
+     *
+     *
+     * @generated from protobuf field: string key = 2
+     */
+    key: string;
+    /**
+     * @generated from protobuf field: optional string description = 3
      */
     description?: string; // (optional) Description of the variable
     /**
-     * @generated from protobuf field: stackpanel.db.VariableType type = 3
+     * @generated from protobuf field: stackpanel.db.VariableType type = 4
      */
     type: VariableType; // Type of the variable
     /**
      *
-     * - When type = "LITERAL", the value will be passed as is.
-     * - When type = "VARIABLE", should refer to the key of the variable or secret.
+     * - When type = "VARIABLE", the value wil be provided as-is.
+     * - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
      * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
      *   compatible descriptor, for example if you want to get a value from AWS Parameter
      *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
      *
      *
-     * @generated from protobuf field: string value = 4
+     * @generated from protobuf field: string value = 5
      */
     value: string;
+    /**
+     *
+     * List of environments this variable/secret is available in.
+     * If empty, the variable is available in all environments.
+     * Used for access control with secrets - only users with access to
+     * these environments can decrypt the secret.
+     *
+     *
+     * @generated from protobuf field: repeated string environments = 6
+     */
+    environments: string[];
 }
 /**
  * Map of variable identifier to variable configuration
@@ -75,17 +104,21 @@ export enum VariableType {
 class Variable$Type extends MessageType<Variable> {
     constructor() {
         super("stackpanel.db.Variable", [
-            { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "type", kind: "enum", T: () => ["stackpanel.db.VariableType", VariableType] },
-            { no: 4, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "type", kind: "enum", T: () => ["stackpanel.db.VariableType", VariableType] },
+            { no: 5, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "environments", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Variable>): Variable {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.id = "";
         message.key = "";
         message.type = 0;
         message.value = "";
+        message.environments = [];
         if (value !== undefined)
             reflectionMergePartial<Variable>(this, message, value);
         return message;
@@ -95,17 +128,23 @@ class Variable$Type extends MessageType<Variable> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string key */ 1:
+                case /* string id */ 1:
+                    message.id = reader.string();
+                    break;
+                case /* string key */ 2:
                     message.key = reader.string();
                     break;
-                case /* optional string description */ 2:
+                case /* optional string description */ 3:
                     message.description = reader.string();
                     break;
-                case /* stackpanel.db.VariableType type */ 3:
+                case /* stackpanel.db.VariableType type */ 4:
                     message.type = reader.int32();
                     break;
-                case /* string value */ 4:
+                case /* string value */ 5:
                     message.value = reader.string();
+                    break;
+                case /* repeated string environments */ 6:
+                    message.environments.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -119,18 +158,24 @@ class Variable$Type extends MessageType<Variable> {
         return message;
     }
     internalBinaryWrite(message: Variable, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string key = 1; */
+        /* string id = 1; */
+        if (message.id !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.id);
+        /* string key = 2; */
         if (message.key !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.key);
-        /* optional string description = 2; */
+            writer.tag(2, WireType.LengthDelimited).string(message.key);
+        /* optional string description = 3; */
         if (message.description !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.description);
-        /* stackpanel.db.VariableType type = 3; */
+            writer.tag(3, WireType.LengthDelimited).string(message.description);
+        /* stackpanel.db.VariableType type = 4; */
         if (message.type !== 0)
-            writer.tag(3, WireType.Varint).int32(message.type);
-        /* string value = 4; */
+            writer.tag(4, WireType.Varint).int32(message.type);
+        /* string value = 5; */
         if (message.value !== "")
-            writer.tag(4, WireType.LengthDelimited).string(message.value);
+            writer.tag(5, WireType.LengthDelimited).string(message.value);
+        /* repeated string environments = 6; */
+        for (let i = 0; i < message.environments.length; i++)
+            writer.tag(6, WireType.LengthDelimited).string(message.environments[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

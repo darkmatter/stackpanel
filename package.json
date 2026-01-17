@@ -58,6 +58,7 @@
     "@aws-sdk/client-s3": "^3.953.0",
     "@aws-sdk/client-ssm": "^3.953.0",
     "@cloudflare/workers-types": "^4.20250822.0",
+    "@mdx-js/rollup": "^3.1.1",
     "@pulumi/pulumi": "^3.213.0",
     "@types/node": "^22.13.11",
     "alchemy": "^0.77.0",

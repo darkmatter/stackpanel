@@ -13,6 +13,23 @@ proto.mkProtoFile {
   name = "users.proto";
   package = "stackpanel.db";
 
+  boilerplate = ''
+    # users.nix - Team members with project access
+    # type: sp-user
+    # See: https://stackpanel.dev/docs/users
+    {
+      # Example user:
+      # johndoe = {
+      #   name = "John Doe";
+      #   github = "johndoe";
+      #   public-keys = [
+      #     "age1..."  # AGE public key for secrets
+      #   ];
+      #   secrets-allowed-environments = [ "dev" "staging" ];
+      # };
+    }
+  '';
+
   options = {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
   };

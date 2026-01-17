@@ -277,7 +277,7 @@ func (m StartServicesModel) View() string {
 		b.WriteString("\n")
 	}
 
-	return b.String()
+	return RenderFrame(b.String())
 }
 
 // RunStartServices launches the interactive service start TUI

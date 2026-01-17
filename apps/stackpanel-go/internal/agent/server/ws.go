@@ -216,6 +216,126 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 		}
 		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"path": path}}
 
+	case "secrets.write":
+		var req AgenixSecretRequest
+		if err := json.Unmarshal(msg.Payload, &req); err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.write payload"}
+		}
+		if strings.TrimSpace(req.ID) == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "id is required"}
+		}
+		if strings.TrimSpace(req.Key) == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "key is required"}
+		}
+		safeID := sanitizeSecretID(req.ID)
+		if safeID == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secret id"}
+		}
+		recipients, err := s.getAgenixRecipients(req.Environments)
+		if err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
+		}
+		if len(recipients) == 0 {
+			return wsResponse{ID: msg.ID, Success: false, Error: "no recipients found"}
+		}
+		secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
+		if err := os.MkdirAll(secretsDir, 0o755); err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "failed to create secrets directory"}
+		}
+		agePath := filepath.Join(secretsDir, safeID+".age")
+		if err := s.writeAgeSecret(agePath, req.Value, recipients); err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
+		}
+		_ = s.updateVariableEntry(req.ID, req.Key, req.Description, req.Environments)
+		_ = s.updateSecretsNix()
+		relPath, _ := filepath.Rel(s.config.ProjectRoot, agePath)
+		return wsResponse{ID: msg.ID, Success: true, Data: AgenixSecretResponse{
+			ID:       req.ID,
+			Path:     relPath,
+			AgePath:  agePath,
+			KeyCount: len(recipients),
+		}}
+
+	case "secrets.read":
+		var req AgenixDecryptRequest
+		if err := json.Unmarshal(msg.Payload, &req); err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.read payload"}
+		}
+		if strings.TrimSpace(req.ID) == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "id is required"}
+		}
+		safeID := sanitizeSecretID(req.ID)
+		if safeID == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secret id"}
+		}
+		agePath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars", safeID+".age")
+		if _, err := os.Stat(agePath); os.IsNotExist(err) {
+			return wsResponse{ID: msg.ID, Success: false, Error: "secret not found"}
+		}
+		identityPath := req.IdentityPath
+		if identityPath == "" {
+			identityPath = s.findAgeIdentity()
+		}
+		if identityPath == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "no identity file found - specify identityPath or create ~/.config/age/key.txt"}
+		}
+		if strings.HasPrefix(identityPath, "~/") {
+			home, _ := os.UserHomeDir()
+			identityPath = filepath.Join(home, identityPath[2:])
+		}
+		value, err := s.decryptAgeSecret(agePath, identityPath)
+		if err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "failed to decrypt: " + err.Error()}
+		}
+		return wsResponse{ID: msg.ID, Success: true, Data: AgenixDecryptResponse{ID: req.ID, Value: value}}
+
+	case "secrets.delete":
+		var req struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(msg.Payload, &req); err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.delete payload"}
+		}
+		if strings.TrimSpace(req.ID) == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "id is required"}
+		}
+		safeID := sanitizeSecretID(req.ID)
+		if safeID == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secret id"}
+		}
+		agePath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars", safeID+".age")
+		if err := os.Remove(agePath); err != nil && !os.IsNotExist(err) {
+			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
+		}
+		_ = s.removeVariableEntry(req.ID)
+		_ = s.updateSecretsNix()
+		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"deleted": true, "id": req.ID}}
+
+	case "secrets.list":
+		secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
+		entries, err := os.ReadDir(secretsDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"secrets": []string{}}}
+			}
+			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
+		}
+		var secrets []map[string]any
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".age") {
+				continue
+			}
+			id := strings.TrimSuffix(entry.Name(), ".age")
+			info, _ := entry.Info()
+			secret := map[string]any{"id": id, "file": entry.Name()}
+			if info != nil {
+				secret["modTime"] = info.ModTime().Unix()
+				secret["size"] = info.Size()
+			}
+			secrets = append(secrets, secret)
+		}
+		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"secrets": secrets}}
+
 	default:
 		return wsResponse{ID: msg.ID, Success: false, Error: "unknown message type"}
 	}

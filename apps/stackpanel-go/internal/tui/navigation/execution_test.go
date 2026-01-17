@@ -161,11 +161,14 @@ func TestViewStateTransitions(t *testing.T) {
 	if ViewMenu != 0 {
 		t.Error("ViewMenu should be 0")
 	}
-	if ViewOutput != 1 {
-		t.Error("ViewOutput should be 1")
+	if ViewExecuting != 1 {
+		t.Error("ViewExecuting should be 1")
 	}
-	if ViewCustom != 2 {
-		t.Error("ViewCustom should be 2")
+	if ViewOutput != 2 {
+		t.Error("ViewOutput should be 2")
+	}
+	if ViewCustom != 3 {
+		t.Error("ViewCustom should be 3")
 	}
 }
 

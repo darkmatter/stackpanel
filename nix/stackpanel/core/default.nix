@@ -38,6 +38,8 @@ in
     stackpanel.devshell.env.STACKPANEL_ROOT = lib.mkDefault (if cfg.root != null then cfg.root else "");
 
     # Core hook: define funcs, resolve paths, ensure dirs + marker + gitignore
+    # NOTE: Shell logging with process substitution is disabled because it breaks
+    # in direnv/zsh contexts. The feature can be re-enabled via a separate script.
     stackpanel.devshell.hooks.before = lib.mkBefore [
       ''
                 set -euo pipefail
@@ -59,6 +61,10 @@ in
 
                 mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
 
+                # Shell logging is disabled for direnv/zsh compatibility
+                # Use 'nix develop --impure' for full shell logging
+                export STACKPANEL_SHELL_LOG=""
+
                 # Ensure marker exists at repo root
                 if [[ ! -f "$STACKPANEL_ROOT/${cfg.root-marker}" ]]; then
                   echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
@@ -67,10 +73,7 @@ in
                 # Ensure .stackpanel/.gitignore exists and ignores state/ and config.local.nix
                 _sp_gitignore="$STACKPANEL_ROOT_DIR/.gitignore"
                 if [[ ! -f "$_sp_gitignore" ]]; then
-                  cat > "$_sp_gitignore" << 'EOF'
-        ${cfg.dirs.state}/
-        config.local.nix
-        EOF
+                  printf '%s\n' "${cfg.dirs.state}/" "config.local.nix" > "$_sp_gitignore"
                 else
                   if ! grep -q "^${cfg.dirs.state}/$" "$_sp_gitignore" 2>/dev/null; then
                     echo "${cfg.dirs.state}/" >> "$_sp_gitignore"
@@ -95,6 +98,9 @@ in
                 set +euo pipefail
       ''
     ];
+
+    # No after hook needed since shell logging is disabled
+    stackpanel.devshell.hooks.after = lib.mkAfter [ ];
 
     # local overrides
   };

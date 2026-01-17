@@ -1,3 +1,4 @@
 [
-  "oxlint" "oxfmt" 
+  "oxlint"
+  "oxfmt"
 ]

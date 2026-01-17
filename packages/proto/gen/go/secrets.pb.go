@@ -139,6 +139,9 @@ type Secrets struct {
 	InputDirectory string                         `protobuf:"bytes,2,opt,name=input_directory,json=inputDirectory,proto3" json:"input_directory,omitempty"`                                                 // Directory where SOPS-encrypted secrets are stored
 	Environments   map[string]*SecretsEnvironment `protobuf:"bytes,3,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment-specific secrets configurations
 	Codegen        map[string]*Codegen            `protobuf:"bytes,4,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // Code generation settings per target
+	SystemKeys     []string                       `protobuf:"bytes,5,rep,name=system_keys,json=systemKeys,proto3" json:"system_keys,omitempty"`                                                             // AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions.
+	SecretsDir     *string                        `protobuf:"bytes,6,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"`                                                       // Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)
+	AgeKeyFiles    []string                       `protobuf:"bytes,7,rep,name=age_key_files,json=ageKeyFiles,proto3" json:"age_key_files,omitempty"`                                                        // Paths to AGE key files to check for decryption (checked in order, first existing file wins)
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -197,6 +200,27 @@ func (x *Secrets) GetEnvironments() map[string]*SecretsEnvironment {
 func (x *Secrets) GetCodegen() map[string]*Codegen {
 	if x != nil {
 		return x.Codegen
+	}
+	return nil
+}
+
+func (x *Secrets) GetSystemKeys() []string {
+	if x != nil {
+		return x.SystemKeys
+	}
+	return nil
+}
+
+func (x *Secrets) GetSecretsDir() string {
+	if x != nil && x.SecretsDir != nil {
+		return *x.SecretsDir
+	}
+	return ""
+}
+
+func (x *Secrets) GetAgeKeyFiles() []string {
+	if x != nil {
+		return x.AgeKeyFiles
 	}
 	return nil
 }
@@ -270,18 +294,24 @@ const file_secrets_proto_rawDesc = "" +
 	"\aCodegen\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
 	"\tdirectory\x18\x02 \x01(\tR\tdirectory\x12:\n" +
-	"\blanguage\x18\x03 \x01(\x0e2\x1e.stackpanel.db.CodegenLanguageR\blanguage\"\x8f\x03\n" +
+	"\blanguage\x18\x03 \x01(\x0e2\x1e.stackpanel.db.CodegenLanguageR\blanguage\"\x8a\x04\n" +
 	"\aSecrets\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12'\n" +
 	"\x0finput_directory\x18\x02 \x01(\tR\x0einputDirectory\x12L\n" +
 	"\fenvironments\x18\x03 \x03(\v2(.stackpanel.db.Secrets.EnvironmentsEntryR\fenvironments\x12=\n" +
-	"\acodegen\x18\x04 \x03(\v2#.stackpanel.db.Secrets.CodegenEntryR\acodegen\x1ab\n" +
+	"\acodegen\x18\x04 \x03(\v2#.stackpanel.db.Secrets.CodegenEntryR\acodegen\x12\x1f\n" +
+	"\vsystem_keys\x18\x05 \x03(\tR\n" +
+	"systemKeys\x12$\n" +
+	"\vsecrets_dir\x18\x06 \x01(\tH\x00R\n" +
+	"secretsDir\x88\x01\x01\x12\"\n" +
+	"\rage_key_files\x18\a \x03(\tR\vageKeyFiles\x1ab\n" +
 	"\x11EnvironmentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x127\n" +
 	"\x05value\x18\x02 \x01(\v2!.stackpanel.db.SecretsEnvironmentR\x05value:\x028\x01\x1aR\n" +
 	"\fCodegenEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.stackpanel.db.CodegenR\x05value:\x028\x01\"c\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.stackpanel.db.CodegenR\x05value:\x028\x01B\x0e\n" +
+	"\f_secrets_dir\"c\n" +
 	"\x12SecretsEnvironment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vpublic_keys\x18\x02 \x03(\tR\n" +
@@ -333,6 +363,7 @@ func file_secrets_proto_init() {
 	if File_secrets_proto != nil {
 		return
 	}
+	file_secrets_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

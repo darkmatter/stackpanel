@@ -110,7 +110,7 @@ in
       default = [ ];
     };
 
-    # commands: name -> { exec = "..." ; packages = [...] ; env = {...}; }
+    # commands: name -> { exec = "..." ; packages = [...] ; env = {...}; description = "..."; }
     commands = lib.mkOption {
       type = types.attrsOf (
         types.submodule (
@@ -118,6 +118,11 @@ in
           {
             options = {
               exec = lib.mkOption { type = types.str; };
+              description = lib.mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Human-readable description of the command.";
+              };
               runtimeInputs = lib.mkOption {
                 type = types.listOf types.package;
                 default = [ ];
@@ -150,6 +155,28 @@ in
     _scripts = lib.mkOption {
       description = "Internal: Devenv script definitions for stackpanel scripts.";
       type = types.attrsOf types.attrs;
+      default = { };
+      internal = true;
+    };
+
+    _commandsSerializable = lib.mkOption {
+      description = "Internal: Serializable command definitions for CLI access.";
+      type = types.attrsOf (
+        types.submodule {
+          options = {
+            name = lib.mkOption { type = types.str; };
+            exec = lib.mkOption { type = types.str; };
+            description = lib.mkOption {
+              type = types.nullOr types.str;
+              default = null;
+            };
+            env = lib.mkOption {
+              type = types.attrsOf types.str;
+              default = { };
+            };
+          };
+        }
+      );
       default = { };
       internal = true;
     };
@@ -191,9 +218,15 @@ in
                 type = types.enum [
                   "text"
                   "derivation"
+                  "symlink"
                 ];
                 default = "text";
-                description = "Type of file content: 'text' for inline text, 'derivation' for a derivation.";
+                description = ''
+                  Type of file content:
+                  - 'text': inline text content
+                  - 'derivation': copy from a derivation
+                  - 'symlink': create a symbolic link
+                '';
               };
 
               text = lib.mkOption {
@@ -206,6 +239,13 @@ in
                 type = types.nullOr types.package;
                 default = null;
                 description = "Derivation whose outPath contains the file content (when type = 'derivation').";
+              };
+
+              target = lib.mkOption {
+                type = types.nullOr types.str;
+                default = null;
+                description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
+                example = "/nix/store/abc123-task/bin/task";
               };
 
               mode = lib.mkOption {
@@ -238,8 +278,17 @@ in
 
   # ----------------------------------------------------------------------------
   # Config: merge top-level packages into devshell.packages
+  # and generate serializable command definitions
   # ----------------------------------------------------------------------------
   config = {
     stackpanel.devshell.packages = config.stackpanel.packages;
+
+    # Generate serializable command definitions from commands
+    stackpanel.devshell._commandsSerializable = lib.mapAttrs (name: cmd: {
+      inherit name;
+      exec = cmd.exec;
+      description = cmd.description;
+      env = cmd.env;
+    }) config.stackpanel.devshell.commands;
   };
 }

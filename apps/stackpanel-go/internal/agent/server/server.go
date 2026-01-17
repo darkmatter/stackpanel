@@ -165,6 +165,14 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))))
 	mux.HandleFunc("/api/secrets/set", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsSet))))
 
+	// Agenix secret management endpoints
+	mux.HandleFunc("/api/secrets/write", s.withCORS(s.requireAuth(s.requireProject(s.handleAgenixSecretWrite))))
+	mux.HandleFunc("/api/secrets/read", s.withCORS(s.requireAuth(s.requireProject(s.handleAgenixSecretRead))))
+	mux.HandleFunc("/api/secrets/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleAgenixSecretDelete))))
+	mux.HandleFunc("/api/secrets/list", s.withCORS(s.requireAuth(s.requireProject(s.handleAgenixSecretsList))))
+	mux.HandleFunc("/api/secrets/identity", s.withCORS(s.requireAuth(s.requireProject(s.handleAgeIdentity))))
+	mux.HandleFunc("/api/secrets/kms", s.withCORS(s.requireAuth(s.requireProject(s.handleKMSConfig))))
+
 	// Security status endpoints (AWS session and certificate status)
 	mux.HandleFunc("/api/security/status", s.withCORS(s.requireAuth(s.handleSecurityStatus)))
 	mux.HandleFunc("/api/security/aws", s.withCORS(s.requireAuth(s.handleAWSStatus)))

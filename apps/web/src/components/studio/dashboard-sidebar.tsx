@@ -1,36 +1,39 @@
 "use client";
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  Database,
-  FileCode,
-  KeyRound,
-  Layers,
-  LayoutDashboard,
-  Network,
-  Puzzle,
-  Server,
-  Settings,
-  SquareTerminal,
-  Terminal,
-  Users,
-  AppWindow,
-  Play,
-  Variable,
-  Package,
-} from "lucide-react";
-import React from "react";
-import { Button } from "@/components/ui/button";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Button } from "@ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@ui/tooltip";
+import {
+  AppWindow,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  FileCode,
+  Layers,
+  LayoutDashboard,
+  Network,
+  Package,
+  Play,
+  Puzzle,
+  Rocket,
+  Server,
+  Settings,
+  SquareTerminal,
+  Terminal,
+  Users,
+  Variable,
+} from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Link, useRouterState } from "@tanstack/react-router";
 import { ProjectSelector } from "../project-selector";
+import { AgentHttpClient } from "@/lib/agent";
+import { useAgentContext } from "@/lib/agent-provider";
 
 interface DashboardSidebarProps {
   collapsed: boolean;
@@ -39,6 +42,7 @@ interface DashboardSidebarProps {
 
 export type PanelType =
   | "overview"
+  | "setup"
   | "apps"
   | "packages"
   | "secrets"
@@ -54,17 +58,19 @@ export type PanelType =
   | "terminal"
   | "services";
 
-const navItems: { id: string; label: string; icon: React.ElementType }[] = [
+const navItems: { id: string; label: string; icon: React.ElementType; special?: boolean }[] = [
   // required: maybe create onboarding flow
   { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "setup", label: "Setup", icon: Rocket, special: true },
+  { id: "divider", label: "", icon: React.Fragment },
   { id: "apps", label: "Apps", icon: AppWindow },
   { id: "packages", label: "Packages", icon: Package },
   // { id: "secrets", label: "Secrets", icon: KeyRound },
   { id: "variables", label: "Variables / Secrets", icon: Variable },
   { id: "configuration", label: "Configuration", icon: Settings },
   // rest
-  { id: "divider", label: "", icon: React.Fragment },
   { id: "tasks", label: "Tasks", icon: Play },
+  { id: "divider", label: "", icon: React.Fragment },
   { id: "databases", label: "Databases", icon: Database },
   { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
@@ -77,12 +83,58 @@ const navItems: { id: string; label: string; icon: React.ElementType }[] = [
   { id: "services", label: "Services", icon: Server },
 ];
 
+// Setup progress hook
+function useSetupProgress() {
+  const { token } = useAgentContext();
+  const [progress, setProgress] = useState<{ complete: number; total: number } | null>(null);
+
+  const loadProgress = useCallback(async () => {
+    if (!token) return;
+    try {
+      const client = new AgentHttpClient("localhost", 9876, token);
+      
+      // Check if project was confirmed
+      const projectConfirmed = localStorage.getItem("stackpanel-project-confirmed") === "true";
+      
+      // Check identity config
+      const identity = await client.getAgeIdentity();
+      const hasIdentity = identity.type !== "";
+      
+      // Check if .sops.yaml exists
+      let hasSopsConfig = false;
+      try {
+        await client.readFile(".sops.yaml");
+        hasSopsConfig = true;
+      } catch {
+        // File doesn't exist
+      }
+      
+      // Required steps: project confirmed + identity + sops config
+      const complete = (projectConfirmed ? 1 : 0) + (hasIdentity ? 1 : 0) + (hasSopsConfig ? 1 : 0);
+      const total = 3;
+      
+      setProgress({ complete, total });
+    } catch (err) {
+      console.warn("Failed to load setup progress:", err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadProgress();
+  }, [loadProgress]);
+
+  return progress;
+}
+
 export function DashboardSidebar({
   collapsed,
   onToggleCollapse,
 }: DashboardSidebarProps) {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
+  const setupProgress = useSetupProgress();
+  const isSetupComplete = setupProgress?.complete === setupProgress?.total;
+  
   return (
     <TooltipProvider delayDuration={0}>
       <aside
@@ -115,6 +167,10 @@ export function DashboardSidebar({
                 ? pathname === "/studio" || pathname === "/studio/"
                 : pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 
+            // Special handling for setup item with progress
+            const isSetupItem = item.id === "setup";
+            const showProgressBadge = isSetupItem && setupProgress && !isSetupComplete;
+
             const linkContent = (
               <Link
                 to={itemPath}
@@ -123,16 +179,37 @@ export function DashboardSidebar({
                   className: "bg-sidebar-accent text-sidebar-accent-foreground",
                 }}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-medium text-sm transition-colors",
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-medium text-sm tracking-tight font-montserrat transition-colors",
                   isActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  // Highlight setup if incomplete
+                  isSetupItem && !isSetupComplete && !isActive && "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20",
+                  // Green when complete
+                  isSetupItem && isSetupComplete && !isActive && "text-emerald-600 dark:text-emerald-400",
                 )}
               >
-                <Icon
-                  className={cn("h-5 w-5 shrink-0", isActive && "text-accent")}
-                />
-                {!collapsed && <span>{item.label}</span>}
+                {isSetupItem && isSetupComplete ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                ) : (
+                  <Icon
+                    className={cn(
+                      "h-5 w-5 shrink-0",
+                      isActive && "text-sidebar-accent-foreground",
+                    )}
+                  />
+                )}
+                {!collapsed && (
+                  <span className="flex-1">{item.label}</span>
+                )}
+                {!collapsed && showProgressBadge && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium">
+                    {setupProgress.complete}/{setupProgress.total}
+                  </span>
+                )}
+                {!collapsed && isSetupItem && isSetupComplete && (
+                  <span className="text-xs text-emerald-600">✓</span>
+                )}
               </Link>
             );
 
@@ -140,7 +217,14 @@ export function DashboardSidebar({
               return (
                 <Tooltip key={item.id}>
                   <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                  <TooltipContent side="right">{item.label}</TooltipContent>
+                  <TooltipContent side="right" className="flex items-center gap-2">
+                    {item.label}
+                    {showProgressBadge && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700">
+                        {setupProgress.complete}/{setupProgress.total}
+                      </span>
+                    )}
+                  </TooltipContent>
                 </Tooltip>
               );
             }

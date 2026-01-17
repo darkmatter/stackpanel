@@ -72,16 +72,30 @@ func (VariableType) EnumDescriptor() ([]byte, []int) {
 
 // Configuration for a single variable in the workspace
 type Variable struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Key         string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                    // value will be passed to app using this key
-	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`              // (optional) Description of the variable
-	Type        VariableType           `protobuf:"varint,3,opt,name=type,proto3,enum=stackpanel.db.VariableType" json:"type,omitempty"` // Type of the variable
-	//   - When type = "LITERAL", the value will be passed as is.
-	//   - When type = "VARIABLE", should refer to the key of the variable or secret.
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Globally unique identifier for the variable. You can reference a single
+	// variable in multiple apps and environments, so to avoid confusion, it's
+	// recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
+	// You can also use `/path/based/variable-name` for organization. If a variable should
+	// only be used in a specific environment or app, you should include that detail in
+	// this field.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Default key to use when passing the variable to the app. This is the key that will be used
+	// in the environment variables of the app.
+	Key         string       `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Description *string      `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`              // (optional) Description of the variable
+	Type        VariableType `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.VariableType" json:"type,omitempty"` // Type of the variable
+	//   - When type = "VARIABLE", the value wil be provided as-is.
+	//   - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
 	//   - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
 	//     compatible descriptor, for example if you want to get a value from AWS Parameter
 	//     Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
-	Value         string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
+	Value string `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
+	// List of environments this variable/secret is available in.
+	// If empty, the variable is available in all environments.
+	// Used for access control with secrets - only users with access to
+	// these environments can decrypt the secret.
+	Environments  []string `protobuf:"bytes,6,rep,name=environments,proto3" json:"environments,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -116,6 +130,13 @@ func (*Variable) Descriptor() ([]byte, []int) {
 	return file_variables_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *Variable) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 func (x *Variable) GetKey() string {
 	if x != nil {
 		return x.Key
@@ -142,6 +163,13 @@ func (x *Variable) GetValue() string {
 		return x.Value
 	}
 	return ""
+}
+
+func (x *Variable) GetEnvironments() []string {
+	if x != nil {
+		return x.Environments
+	}
+	return nil
 }
 
 // Map of variable identifier to variable configuration
@@ -193,12 +221,14 @@ var File_variables_proto protoreflect.FileDescriptor
 
 const file_variables_proto_rawDesc = "" +
 	"\n" +
-	"\x0fvariables.proto\x12\rstackpanel.db\"\x9a\x01\n" +
-	"\bVariable\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
-	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12/\n" +
-	"\x04type\x18\x03 \x01(\x0e2\x1b.stackpanel.db.VariableTypeR\x04type\x12\x14\n" +
-	"\x05value\x18\x04 \x01(\tR\x05valueB\x0e\n" +
+	"\x0fvariables.proto\x12\rstackpanel.db\"\xce\x01\n" +
+	"\bVariable\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12/\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x1b.stackpanel.db.VariableTypeR\x04type\x12\x14\n" +
+	"\x05value\x18\x05 \x01(\tR\x05value\x12\"\n" +
+	"\fenvironments\x18\x06 \x03(\tR\fenvironmentsB\x0e\n" +
 	"\f_description\"\xa9\x01\n" +
 	"\tVariables\x12E\n" +
 	"\tvariables\x18\x01 \x03(\v2'.stackpanel.db.Variables.VariablesEntryR\tvariables\x1aU\n" +

@@ -1,8 +1,10 @@
 package navigation
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
@@ -16,6 +18,8 @@ type ViewState int
 const (
 	// ViewMenu shows the navigation menu
 	ViewMenu ViewState = iota
+	// ViewExecuting shows command execution spinner
+	ViewExecuting
 	// ViewOutput shows command output
 	ViewOutput
 	// ViewCustom shows a custom view (like status dashboard)
@@ -39,12 +43,17 @@ type NavigationModel struct {
 	height int
 	// Whether we're quitting
 	quitting bool
-	// Output buffer for command output display
-	output string
+	// Output viewer for command output
+	outputViewer output.ViewerModel
+	hasOutput    bool
 	// Custom view model (for views like status dashboard)
 	customView tea.Model
 	// Help text to display
 	helpText string
+	// Spinner for command execution
+	spinner spinner.Model
+	// Currently running command label
+	runningCommand string
 }
 
 // Command execution messages
@@ -62,6 +71,9 @@ type (
 func NewNavigationModel(rootCmd *cobra.Command) NavigationModel {
 	tree := BuildTree(rootCmd)
 	menu := NewMenu(tree.Root)
+	spin := spinner.New()
+	spin.Spinner = spinner.Dot
+	spin.Style = tui.SpinnerStyle
 
 	return NavigationModel{
 		tree:        tree,
@@ -69,6 +81,7 @@ func NewNavigationModel(rootCmd *cobra.Command) NavigationModel {
 		menu:        menu,
 		viewState:   ViewMenu,
 		helpText:    "↑/↓: navigate • enter: select • esc: back • q: quit",
+		spinner:     spin,
 	}
 }
 
@@ -81,6 +94,9 @@ func (m NavigationModel) Init() tea.Cmd {
 func (m NavigationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.viewState == ViewOutput && m.hasOutput {
+			break
+		}
 		return m.handleKeyMsg(msg)
 
 	case tea.WindowSizeMsg:
@@ -88,21 +104,50 @@ func (m NavigationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.menu.Width = msg.Width
 		m.menu.Height = msg.Height
-		return m, nil
+		if m.viewState == ViewOutput && m.hasOutput {
+			m.updateOutputViewerSize(msg)
+		}
 
 	case CommandExecutedMsg:
-		m.output = msg.Output
+		content := msg.Output
 		if msg.Err != nil {
-			m.output = tui.RenderError(msg.Err.Error()) + "\n\n" + m.output
+			content = tui.RenderError(msg.Err.Error()) + "\n\n" + content
 		}
+		viewer := output.NewViewerModel(
+			content,
+			output.WithTitle("Command Output"),
+			output.WithReturnMsg(ReturnToMenuMsg{}),
+		)
+		m.outputViewer = viewer
+		m.hasOutput = true
 		m.viewState = ViewOutput
-		m.helpText = "press any key to return"
+		m.runningCommand = ""
+		if m.width > 0 && m.height > 0 {
+			m.updateOutputViewerSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		}
 		return m, nil
 
 	case ReturnToMenuMsg:
 		m.viewState = ViewMenu
 		m.helpText = "↑/↓: navigate • enter: select • esc: back • q: quit"
+		m.hasOutput = false
 		return m, nil
+	}
+
+	if m.viewState == ViewExecuting {
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	}
+
+	if m.viewState == ViewOutput && m.hasOutput {
+		var cmd tea.Cmd
+		var updated tea.Model
+		updated, cmd = m.outputViewer.Update(msg)
+		if viewer, ok := updated.(output.ViewerModel); ok {
+			m.outputViewer = viewer
+		}
+		return m, cmd
 	}
 
 	// If we have a custom view, update it
@@ -117,11 +162,12 @@ func (m NavigationModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKeyMsg handles keyboard input
 func (m NavigationModel) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Handle output view - any key returns to menu
-	if m.viewState == ViewOutput {
-		m.viewState = ViewMenu
-		m.output = ""
-		m.helpText = "↑/↓: navigate • enter: select • esc: back • q: quit"
+	if m.viewState == ViewExecuting {
+		switch msg.String() {
+		case "q", "ctrl+c":
+			m.quitting = true
+			return m, tea.Quit
+		}
 		return m, nil
 	}
 
@@ -203,33 +249,14 @@ func (m NavigationModel) selectCurrentItem() (tea.Model, tea.Cmd) {
 	}
 
 	if selected.IsLeaf {
-		// Execute the leaf command
-		cmd := selected.CobraCmd
-		if cmd == nil {
-			return m, func() tea.Msg {
-				return CommandExecutedMsg{
-					Output: "Error: No command to execute",
-				}
-			}
+		if selected.HasRequiredArgs() {
+			return m.showCommandArgsRequired(selected)
 		}
 
-		// Return a command that executes the cobra command and captures output
-		return m, func() tea.Msg {
-			var execErr error
-			buf := output.Capture(func() {
-				execErr = cmd.Execute()
-			})
-
-			result := buf.Combined()
-			if result == "" && execErr == nil {
-				result = "Command completed successfully (no output)"
-			}
-
-			return CommandExecutedMsg{
-				Output: result,
-				Err:    execErr,
-			}
-		}
+		m.viewState = ViewExecuting
+		m.runningCommand = m.renderCommandLabel(selected)
+		m.helpText = "running command..."
+		return m, tea.Batch(m.spinner.Tick, m.executeCommand(selected))
 	}
 
 	// Navigate into the selected node
@@ -247,17 +274,27 @@ func (m NavigationModel) View() string {
 		return ""
 	}
 
+	var content string
 	switch m.viewState {
+	case ViewExecuting:
+		content = m.renderExecutingView()
 	case ViewOutput:
-		return m.renderOutputView()
+		if m.hasOutput {
+			content = m.outputViewer.View()
+			break
+		}
+		content = m.renderMenuView()
 	case ViewCustom:
 		if m.customView != nil {
-			return m.customView.View()
+			content = m.customView.View()
+			break
 		}
-		return m.renderMenuView()
+		content = m.renderMenuView()
 	default:
-		return m.renderMenuView()
+		content = m.renderMenuView()
 	}
+
+	return tui.RenderFrame(content)
 }
 
 // renderMenuView renders the main menu view
@@ -308,35 +345,96 @@ func (m NavigationModel) renderMenuView() string {
 	return b.String()
 }
 
-// renderOutputView renders command output
-func (m NavigationModel) renderOutputView() string {
+// renderExecutingView shows an execution spinner
+func (m NavigationModel) renderExecutingView() string {
 	var b strings.Builder
 
 	// Header
 	header := lipgloss.NewStyle().
 		Foreground(tui.ColorSecondary).
 		Bold(true).
-		Render("Command Output")
+		Render("Running Command")
 	b.WriteString(header)
 	b.WriteString("\n\n")
 
 	// Breadcrumbs showing what was executed
-	breadcrumbs := RenderBreadcrumbs(m.currentNode)
-	b.WriteString(breadcrumbs)
+	b.WriteString(RenderBreadcrumbs(m.currentNode))
 	b.WriteString("\n\n")
 
-	// Output content
-	outputStyle := lipgloss.NewStyle().
+	line := fmt.Sprintf("%s %s", m.spinner.View(), m.runningCommand)
+	rendered := lipgloss.NewStyle().
 		PaddingLeft(2).
-		Foreground(tui.ColorWhite)
-	b.WriteString(outputStyle.Render(m.output))
-	b.WriteString("\n")
-
-	// Help text
-	help := tui.HelpStyle.Render("\n" + m.helpText)
-	b.WriteString(help)
+		Foreground(tui.ColorWhite).
+		Render(line)
+	b.WriteString(rendered)
 
 	return b.String()
+}
+
+func (m NavigationModel) renderCommandLabel(node *CommandNode) string {
+	if node == nil {
+		return "command"
+	}
+	path := node.GetPath()
+	if len(path) > 1 {
+		return fmt.Sprintf("stackpanel %s", strings.Join(path[1:], " "))
+	}
+	return "stackpanel"
+}
+
+func (m NavigationModel) showCommandArgsRequired(node *CommandNode) (tea.Model, tea.Cmd) {
+	command := m.renderCommandLabel(node)
+	msg := fmt.Sprintf("%s requires arguments.\n\nRun it directly:\n  %s <args>", command, command)
+	viewer := output.NewViewerModel(
+		msg,
+		output.WithTitle("Command Requires Arguments"),
+		output.WithReturnMsg(ReturnToMenuMsg{}),
+	)
+	m.outputViewer = viewer
+	m.hasOutput = true
+	m.viewState = ViewOutput
+	return m, nil
+}
+
+func (m NavigationModel) executeCommand(node *CommandNode) tea.Cmd {
+	return func() tea.Msg {
+		root := m.tree.Root.CobraCmd
+		if root == nil {
+			return CommandExecutedMsg{Output: "Error: No root command to execute"}
+		}
+
+		path := node.GetPath()
+		if len(path) == 0 {
+			return CommandExecutedMsg{Output: "Error: Command path is empty"}
+		}
+
+		args := append([]string{}, path[1:]...)
+		args = append(args, "--no-tui")
+		root.SetArgs(args)
+
+		var execErr error
+		buf := output.Capture(func() {
+			execErr = root.Execute()
+		})
+		root.SetArgs([]string{})
+
+		result := buf.Combined()
+		if strings.TrimSpace(result) == "" && execErr == nil {
+			result = "Command completed successfully (no output)"
+		}
+
+		return CommandExecutedMsg{
+			Output: result,
+			Err:    execErr,
+		}
+	}
+}
+
+func (m *NavigationModel) updateOutputViewerSize(msg tea.WindowSizeMsg) {
+	updated, _ := m.outputViewer.Update(msg)
+	if viewer, ok := updated.(output.ViewerModel); ok {
+		m.outputViewer = viewer
+	}
 }
 
 // SetCustomView sets a custom view to display (like status dashboard)

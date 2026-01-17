@@ -86,10 +86,13 @@ func (s *Server) evaluateStackpanelFiles() (*nixFilesOutput, error) {
 	// 1. Gets the devshell's moduleConfig (which has the evaluated stackpanel config)
 	// 2. Extracts stackpanel.files with serializable attributes only
 	// 3. For derivations, extracts the store path as a string
+	// Use git+file:// protocol to avoid copying untracked files (node_modules, etc.)
+	// This tells Nix to use git to determine which files to include, which is much faster
+	// for repos with large untracked directories.
 	nixExpr := fmt.Sprintf(`
 let
   system = builtins.currentSystem;
-  flake = builtins.getFlake "%s";
+  flake = builtins.getFlake "git+file://%s";
 
   # Try to get the devshell with passthru.moduleConfig
   devShell = flake.devShells.${system}.default or null;
@@ -149,9 +152,10 @@ in
 func (s *Server) evaluateStackpanelFilesSimple() (*nixFilesOutput, error) {
 	// Fallback: try evaluating directly from flake outputs if available
 	// This handles cases where the flake exposes stackpanelConfig directly
+	// Use git+file:// protocol to avoid copying untracked files
 	nixExpr := fmt.Sprintf(`
 let
-  flake = builtins.getFlake "%s";
+  flake = builtins.getFlake "git+file://%s";
 
   # Try various paths to find the files config
   tryPaths = [

@@ -14,6 +14,8 @@
 #   config.stackpanel.devshell.env         → devenv env
 #   config.stackpanel.devshell.hooks.*     → devenv enterShell (before/main/after phases)
 #   config.stackpanel.devshell.commands    → devenv scripts
+#   config.stackpanel.scripts              → devenv scripts
+#   config.stackpanel.outputs              → devenv outputs
 #
 # Usage in flake-parts:
 #   devenv.shells.default = {
@@ -43,6 +45,9 @@ let
 
   scriptsFromStackpanel = config.stackpanel.devshell._scripts or { };
 
+  # Top-level stackpanel.scripts (user-defined)
+  userScripts = config.stackpanel.scripts or { };
+
   mkTaskCommand = name: {
     exec = ''
       if command -v tasks >/dev/null 2>&1; then
@@ -59,7 +64,12 @@ let
   };
 
   scriptsFromCommands = lib.mapAttrs (name: _cmd: mkTaskCommand name) tasksFromCommands;
-  scripts = scriptsFromCommands // scriptsFromStackpanel;
+  
+  # Merge all script sources: commands → internal scripts → user scripts
+  scripts = scriptsFromCommands // scriptsFromStackpanel // userScripts;
+
+  # Outputs from stackpanel.outputs
+  outputs = config.stackpanel.outputs or { };
 in
 {
   # Single entrypoint - imports all stackpanel modules
@@ -74,5 +84,6 @@ in
     enterShell = enterShell;
     tasks = tasks;
     scripts = scripts;
+    outputs = outputs;
   };
 }

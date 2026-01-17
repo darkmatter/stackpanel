@@ -1,13 +1,14 @@
 # ==============================================================================
-# .stackpanel/config.nix
+# config.nix
 #
-# Stackpanel configuration for this project.
-# All options here are under the `stackpanel.*` namespace.
-#
-# Documentation: https://stackpanel.dev/docs
+# Stackpanel project configuration.
+# Edit this file to configure your project.
 # ==============================================================================
 {
   enable = true;
+  name = "my-project";
+  github = "owner/repo";
+  # debug = false;
 
   # ---------------------------------------------------------------------------
   # CLI - Stackpanel command-line tools
@@ -39,6 +40,19 @@
       description = "Build the project";
     }
   ];
+
+  # ---------------------------------------------------------------------------
+  # Users
+  # GitHub team members are auto-imported via _internal.nix.
+  # Add overrides or additional users here.
+  # ---------------------------------------------------------------------------
+  # users = {
+  #   example = {
+  #     name = "Example User";
+  #     github = "example";
+  #     public-keys = [];
+  #   };
+  # };
 
   # ---------------------------------------------------------------------------
   # AWS Certificate Auth - Passwordless AWS access via Roles Anywhere

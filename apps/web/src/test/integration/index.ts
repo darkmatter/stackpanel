@@ -26,9 +26,9 @@
  */
 
 export {
-  TestProject,
-  withTestProject,
-  createSharedTestProject,
-  type TestProjectOptions,
-  type TemplateName,
+	createSharedTestProject,
+	type TemplateName,
+	TestProject,
+	type TestProjectOptions,
+	withTestProject,
 } from "./test-project";

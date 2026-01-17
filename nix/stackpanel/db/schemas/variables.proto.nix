@@ -35,16 +35,35 @@ proto.mkProtoFile {
       name = "Variable";
       description = "Configuration for a single variable in the workspace";
       fields = {
-        key = proto.string 1 "value will be passed to app using this key";
-        description = proto.optional (proto.string 2 "(optional) Description of the variable");
-        type = proto.message "VariableType" 3 "Type of the variable";
-        value = proto.string 4 ''
+        id = proto.string 1 ''
+          Globally unique identifier for the variable. You can reference a single
+          variable in multiple apps and environments, so to avoid confusion, it's
+          recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
+          You can also use `/path/based/variable-name` for organization. If a variable should
+          only be used in a specific environment or app, you should include that detail in
+          this field.
+        '';
+        key = proto.string 2 ''
+          Default key to use when passing the variable to the app. This is the key that will be used
+          in the environment variables of the app.
+        '';
+        description = proto.optional (proto.string 3 "(optional) Description of the variable");
+        type = proto.message "VariableType" 4 "Type of the variable";
+        value = proto.string 5 ''
           - When type = "VARIABLE", the value wil be provided as-is.
-          - When type = "SECRET", should refer to the key of the secret.
+          - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
           - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
             compatible descriptor, for example if you want to get a value from AWS Parameter
             Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
         '';
+        environments = proto.repeated (
+          proto.string 6 ''
+            List of environments this variable/secret is available in.
+            If empty, the variable is available in all environments.
+            Used for access control with secrets - only users with access to
+            these environments can decrypt the secret.
+          ''
+        );
       };
     };
 

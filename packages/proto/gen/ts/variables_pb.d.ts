@@ -17,38 +17,67 @@ export declare const file_variables: GenFile;
  */
 export declare type Variable = Message<"stackpanel.db.Variable"> & {
   /**
-   * value will be passed to app using this key
    *
-   * @generated from field: string key = 1;
+   * Globally unique identifier for the variable. You can reference a single
+   * variable in multiple apps and environments, so to avoid confusion, it's
+   * recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
+   * You can also use `/path/based/variable-name` for organization. If a variable should
+   * only be used in a specific environment or app, you should include that detail in
+   * this field.
+   *
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   *
+   * Default key to use when passing the variable to the app. This is the key that will be used
+   * in the environment variables of the app.
+   *
+   *
+   * @generated from field: string key = 2;
    */
   key: string;
 
   /**
    * (optional) Description of the variable
    *
-   * @generated from field: optional string description = 2;
+   * @generated from field: optional string description = 3;
    */
   description?: string;
 
   /**
    * Type of the variable
    *
-   * @generated from field: stackpanel.db.VariableType type = 3;
+   * @generated from field: stackpanel.db.VariableType type = 4;
    */
   type: VariableType;
 
   /**
    *
-   * - When type = "LITERAL", the value will be passed as is.
-   * - When type = "VARIABLE", should refer to the key of the variable or secret.
+   * - When type = "VARIABLE", the value wil be provided as-is.
+   * - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
    * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
    *   compatible descriptor, for example if you want to get a value from AWS Parameter
    *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
    *
    *
-   * @generated from field: string value = 4;
+   * @generated from field: string value = 5;
    */
   value: string;
+
+  /**
+   *
+   * List of environments this variable/secret is available in.
+   * If empty, the variable is available in all environments.
+   * Used for access control with secrets - only users with access to
+   * these environments can decrypt the secret.
+   *
+   *
+   * @generated from field: repeated string environments = 6;
+   */
+  environments: string[];
 };
 
 /**

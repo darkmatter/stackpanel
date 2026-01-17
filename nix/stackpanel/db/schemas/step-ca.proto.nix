@@ -12,6 +12,22 @@ proto.mkProtoFile {
   name = "step_ca.proto";
   package = "stackpanel.db";
 
+  boilerplate = ''
+    # step-ca.nix - Step CA certificate configuration
+    # type: stackpanel.step-ca
+    # See: https://stackpanel.dev/docs/step-ca
+    {
+      # config = {
+      #   enable = true;
+      #   ca-url = "https://ca.internal:443";
+      #   ca-fingerprint = "abc123...";  # Root CA fingerprint for verification
+      #   provisioner = "admin";
+      #   cert-name = "dev-workstation";
+      #   prompt-on-shell = true;
+      # };
+    }
+  '';
+
   options = {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
   };

@@ -5,6 +5,11 @@
   ...
 }:
 {
+  # NOTE: Stackpanel modules are now in ./modules/ and evaluated by _internal.nix
+  # with full module context (config, options, lib.mkIf, etc.)
+  # 
+  # Only use this file for devenv-specific features that aren't supported by stackpanel.
+
   packages = with pkgs; [
     bun
     nodejs_22

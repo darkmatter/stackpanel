@@ -468,7 +468,7 @@ func (m ServicesView) View() string {
 		b.WriteString(help)
 	}
 
-	return b.String()
+	return tui.RenderFrame(b.String())
 }
 
 // RunServicesStart launches the service start view

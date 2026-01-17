@@ -52,7 +52,8 @@
             imports = [ inputs.stackpanel.devenvModules.default ];
 
             # Stackpanel config - edit ./.stackpanel/config.nix
-            stackpanel = import ./.stackpanel/config.nix;
+            # _internal.nix handles merging with data tables and GitHub collaborators
+            stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
 
             # Devenv config - edit ./nix/devenv.nix
           }
