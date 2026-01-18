@@ -1,4 +1,5 @@
 // Re-export all proto types
+export * from "./agent";
 export * from "./apps";
 export * from "./aws";
 export * from "./commands";
@@ -17,3 +18,6 @@ export * from "./tasks";
 export * from "./theme";
 export * from "./users";
 export * from "./variables";
+
+// Re-export Connect-RPC query hooks
+export * from "./agent-AgentService_connectquery";

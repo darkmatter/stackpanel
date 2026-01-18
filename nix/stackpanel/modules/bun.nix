@@ -1,10 +1,10 @@
 # ==============================================================================
-# go.nix
+# bun.nix
 #
-# Go application module for stackpanel.
+# Bun application module for stackpanel.
 #
-# Automatically provides tooling and packages for Go apps defined in
-# config.stackpanel.apps with go.enable = true.
+# Automatically provides tooling and packages for Bun apps defined in
+# config.stackpanel.apps with bun.enable = true.
 #
 # Prerequisites:
 #   - Root go.mod at repository root (monorepo/workspace style)
@@ -54,7 +54,6 @@
 }:
 let
   cfg = config.stackpanel;
-  util = import ../lib/util.nix { inherit pkgs lib; };
 
   # Generate package.json for a Go app
   generatePackageJson =

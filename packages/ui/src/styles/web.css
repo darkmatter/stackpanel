@@ -45,3 +45,21 @@
   --default-font-feature-settings: var(--font-feature-settings);
   --default-mono-font-feature-settings: var(--mono-font-feature-settings);
 }
+
+.studio input {
+  @apply font-mono;
+  @apply text-sm;
+}
+
+.studio label {
+  @apply text-xs text-muted-foreground;
+}
+
+.studio h2 {
+  @apply font-sans font-bold;
+  letter-spacing: -0.02em;
+}
+
+body {
+  font-weight: 300;
+}

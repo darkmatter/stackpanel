@@ -7,6 +7,9 @@ schema = 3
   [mod."4d63.com/gochecknoglobals"]
     version = "v0.2.2"
     hash = "sha256-GjEz83jQzNO+MFn8wqM7NLq17HND/cxHz9TnkjSTPPA="
+  [mod."connectrpc.com/connect"]
+    version = "v1.19.1"
+    hash = "sha256-/4RSe5DuN/JprX5yZxndd3s2GcFn1Er/Mgh4JftO9Fo="
   [mod."dario.cat/mergo"]
     version = "v1.0.2"
     hash = "sha256-p6jdiHlLEfZES8vJnDywG4aVzIe16p0CU6iglglIweA="
@@ -662,8 +665,8 @@ schema = 3
     version = "v0.38.0"
     hash = "sha256-GeIkpuKtUfxxrOZLikNlZA3lMKhdyO++PVvXppBGmbw="
   [mod."google.golang.org/protobuf"]
-    version = "v1.36.8"
-    hash = "sha256-yZN8ZON0b5HjUNUSubHst7zbvnMsOzd81tDPYQRtPgM="
+    version = "v1.36.9"
+    hash = "sha256-i4zQhGFR6KprA5elLw33bA1VdMLAnL+Du3gBmrea+3Y="
   [mod."gopkg.in/ini.v1"]
     version = "v1.67.0"
     hash = "sha256-V10ahGNGT+NLRdKUyRg1dos5RxLBXBk1xutcnquc/+4="

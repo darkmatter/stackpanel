@@ -176,6 +176,10 @@ let
 
     # Installed packages (pre-serialized for fast runtime access)
     packages = serializedPackages;
+
+    # Module requirements (what variables each module needs)
+    # Serialized for agent/UI to show missing variables
+    moduleRequirements = cfg.moduleRequirements;
   };
 
   # Serialize config to JSON
@@ -190,19 +194,21 @@ in
     ./options
   ];
 
-  config = lib.mkIf (cfg.enable && builtins.getEnv "STACKPANEL_SKIP_CLI" != "true") {
+  config = lib.mkIf cfg.enable {
     # Add the CLI to packages
     stackpanel.devshell.packages = [ stackpanel-cli ];
 
-    # Add hints about IDE integration (if enabled)
-    stackpanel.motd.hints = lib.mkIf (ideCfg.enable && ideCfg.vscode.enable) [
-      "Open ${dirs.gen}/ide/vscode/${ideCfg.vscode.workspace-name}.code-workspace in VS Code for integrated terminal"
-    ];
+    # NOTE: MOTD hint for VS Code workspace is added by ide.nix
 
     # Call the CLI in enterShell to generate all files
     # Use mkBefore to ensure this runs early but after directory setup
     stackpanel.devshell.hooks.before = [
       ''
+        # Warn if using STACKPANEL_CONFIG_OVERRIDE (prefer config.local.nix)
+        if [[ -n "''${STACKPANEL_CONFIG_OVERRIDE:-}" ]]; then
+          echo "⚠️  STACKPANEL_CONFIG_OVERRIDE is set - config.local.nix is preferred for local development" >&2
+        fi
+
         # Generate stackpanel files via CLI
         # Read config from nix store, replace $STACKPANEL_ROOT with actual value
         export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/stackpanel.json"

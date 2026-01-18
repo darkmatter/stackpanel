@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 	"github.com/spf13/cobra"
@@ -60,7 +61,7 @@ Examples:
 		} else {
 			// Interactive TUI mode
 			if err := tui.RunStartServices(svcNames); err != nil {
-				printError(fmt.Sprintf("TUI error: %v", err))
+				output.Error(fmt.Sprintf("TUI error: %v", err))
 				// Fallback to non-interactive
 				for _, name := range svcNames {
 					startService(name)
@@ -151,9 +152,9 @@ var servicesListCmd = &cobra.Command{
 		fmt.Println("Available services:")
 		for _, svc := range svc.All() {
 			status := svc.Status()
-			statusIcon := dim.Sprint("○")
+			statusIcon := output.DimC.Sprint("○")
 			if status.Running {
-				statusIcon = green.Sprint("●")
+				statusIcon = output.Green.Sprint("●")
 			}
 			fmt.Printf("  %s %s (%s)\n", statusIcon, svc.Name(), svc.DisplayName())
 		}
@@ -186,91 +187,91 @@ func init() {
 func startService(name string) {
 	svc := svc.Get(name)
 	if svc == nil {
-		printError(fmt.Sprintf("Unknown service: %s", name))
+		output.Error(fmt.Sprintf("Unknown service: %s", name))
 		return
 	}
 
-	fmt.Printf("\n%s %s\n", purple.Sprint("==>"), svc.DisplayName())
+	fmt.Printf("\n%s %s\n", output.Purple.Sprint("==>"), svc.DisplayName())
 
 	// Check if already running
 	status := svc.Status()
 	if status.Running {
-		printSuccess(fmt.Sprintf("Already running (PID: %d)", status.PID))
-		printDim(fmt.Sprintf("  Port: %d", svc.Port()))
+		output.Success(fmt.Sprintf("Already running (PID: %d)", status.PID))
+		output.Dimmed(fmt.Sprintf("  Port: %d", svc.Port()))
 		return
 	}
 
-	printInfo("Starting...")
+	output.Info("Starting...")
 	if err := svc.Start(); err != nil {
-		printError(fmt.Sprintf("Failed to start: %v", err))
+		output.Error(fmt.Sprintf("Failed to start: %v", err))
 		return
 	}
 
-	printSuccess("Started")
-	printDim(fmt.Sprintf("  Port: %d", svc.Port()))
+	output.Success("Started")
+	output.Dimmed(fmt.Sprintf("  Port: %d", svc.Port()))
 
 	// Show additional info
 	for key, value := range svc.StatusInfo() {
-		printDim(fmt.Sprintf("  %s: %s", key, value))
+		output.Dimmed(fmt.Sprintf("  %s: %s", key, value))
 	}
 }
 
 func stopService(name string) {
 	svc := svc.Get(name)
 	if svc == nil {
-		printError(fmt.Sprintf("Unknown service: %s", name))
+		output.Error(fmt.Sprintf("Unknown service: %s", name))
 		return
 	}
 
-	fmt.Printf("\n%s %s\n", purple.Sprint("==>"), svc.DisplayName())
+	fmt.Printf("\n%s %s\n", output.Purple.Sprint("==>"), svc.DisplayName())
 
 	status := svc.Status()
 	if !status.Running {
-		printDim("Not running")
+		output.Dimmed("Not running")
 		return
 	}
 
 	if err := svc.Stop(); err != nil {
-		printError(fmt.Sprintf("Failed to stop: %v", err))
+		output.Error(fmt.Sprintf("Failed to stop: %v", err))
 	} else {
-		printSuccess("Stopped")
+		output.Success("Stopped")
 	}
 }
 
 func showServiceStatus(name string) {
 	svc := svc.Get(name)
 	if svc == nil {
-		printError(fmt.Sprintf("Unknown service: %s", name))
+		output.Error(fmt.Sprintf("Unknown service: %s", name))
 		return
 	}
 
-	fmt.Printf("\n%s %s\n", purple.Sprint("==>"), svc.DisplayName())
+	fmt.Printf("\n%s %s\n", output.Purple.Sprint("==>"), svc.DisplayName())
 
 	status := svc.Status()
 	if status.Running {
-		green.Printf("  ● Running")
+		output.Green.Printf("  ● Running")
 		fmt.Printf(" (PID: %d)\n", status.PID)
-		printDim(fmt.Sprintf("    Port: %d", svc.Port()))
+		output.Dimmed(fmt.Sprintf("    Port: %d", svc.Port()))
 
 		// Show additional info
 		for key, value := range svc.StatusInfo() {
-			printDim(fmt.Sprintf("    %s: %s", key, value))
+			output.Dimmed(fmt.Sprintf("    %s: %s", key, value))
 		}
 	} else {
-		dim.Println("  ○ Stopped")
+		output.DimC.Println("  ○ Stopped")
 	}
 }
 
 func showServiceLogs(name string, follow bool, lines int) {
 	svc := svc.Get(name)
 	if svc == nil {
-		printError(fmt.Sprintf("Unknown service: %s", name))
+		output.Error(fmt.Sprintf("Unknown service: %s", name))
 		return
 	}
 
 	logFile := svc.LogFile()
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
-		printWarning("No log file found")
+		output.Warning("No log file found")
 		return
 	}
 

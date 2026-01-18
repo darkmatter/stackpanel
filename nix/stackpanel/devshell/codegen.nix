@@ -25,10 +25,9 @@
 }:
 let
   cfg = config.stackpanel.codegen;
-  types = lib.types;
 
   # Import util for debug logging
-  util = import ../lib/util.nix { inherit pkgs lib config; };
+  util = config.stackpanel.util;
 
   mkGenCmd = _name: gen: {
     exec = lib.concatStringsSep "\n" (

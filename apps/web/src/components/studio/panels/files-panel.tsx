@@ -19,7 +19,8 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
-import type { GeneratedFileWithStatus } from "@/lib/nix-client";
+import { StatusBadge } from "@/components/ui/status-badge";
+import type { GeneratedFileWithStatus } from "@/lib/types";
 import { useGeneratedFiles } from "@/lib/use-generated-files";
 import { cn } from "@/lib/utils";
 
@@ -41,42 +42,23 @@ function getSourceDisplayName(source: string | null): string {
 }
 
 // =============================================================================
-// Status Badge
+// File Status Badge
 // =============================================================================
 
-function StatusBadge({ file }: { file: GeneratedFileWithStatus }) {
+function FileStatusBadge({ file }: { file: GeneratedFileWithStatus }) {
 	if (!file.enable) {
-		return (
-			<span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-				Disabled
-			</span>
-		);
+		return <StatusBadge status="fileDisabled" />;
 	}
 
 	if (!file.existsOnDisk) {
-		return (
-			<span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-				<AlertTriangle className="h-3 w-3" />
-				Missing
-			</span>
-		);
+		return <StatusBadge status="fileMissing" />;
 	}
 
 	if (file.isStale) {
-		return (
-			<span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-600 dark:text-yellow-400">
-				<AlertTriangle className="h-3 w-3" />
-				Stale
-			</span>
-		);
+		return <StatusBadge status="fileStale" />;
 	}
 
-	return (
-		<span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-600 dark:text-green-400">
-			<Check className="h-3 w-3" />
-			Up to date
-		</span>
-	);
+	return <StatusBadge status={{ text: "Up to date", variant: "success" }} />;
 }
 
 // =============================================================================
@@ -119,7 +101,7 @@ function FileRow({ file, onPreview }: FileRowProps) {
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2">
 						<span className="truncate font-mono text-sm">{fileName}</span>
-						<StatusBadge file={file} />
+						<FileStatusBadge file={file} />
 					</div>
 					{directory && (
 						<div className="flex items-center gap-1 text-xs text-muted-foreground">

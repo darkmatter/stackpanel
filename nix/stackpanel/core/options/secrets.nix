@@ -47,6 +47,21 @@ in
   # The proto defines: enable, input_directory, environments, codegen
   # These are converted to kebab-case: input-directory
   options.stackpanel.secrets = db.extend.secrets // {
+    # Auto-generate a local AGE key if none exists
+    auto-generate-key = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Automatically generate a local AGE key on first shell entry if none exists.
+        
+        This ensures there's always at least one decryption method available,
+        which is required for encrypting secrets. The generated key is stored in
+        .stackpanel/state/age-key.txt (gitignored) and is local to your machine.
+        
+        For team-wide secrets, configure shared keys via the UI or .sops.yaml.
+      '';
+    };
+
     # AGE key file locations to check for decryption
     age-key-files = lib.mkOption {
       type = lib.types.listOf lib.types.str;

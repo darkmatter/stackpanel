@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTurboPackages } from "@/lib/use-nix-config";
+import { PanelHeader } from "./shared/panel-header";
 
 /**
  * TasksPanel displays tasks discovered from the turbo package graph.
@@ -111,20 +112,16 @@ export function TasksPanel() {
 	return (
 		<TooltipProvider>
 			<div className="space-y-4">
-				{/* Header */}
-				<div className="flex items-center justify-between">
-					<div>
-						<h2 className="text-lg font-semibold">Tasks</h2>
-						<p className="text-muted-foreground text-sm">
-							{allTasks.length} task{allTasks.length !== 1 ? "s" : ""}{" "}
-							discovered from turbo.json across {packages.length} package
-							{packages.length !== 1 ? "s" : ""}
-						</p>
-					</div>
-					<Button variant="outline" size="sm" onClick={refetch}>
-						Refresh
-					</Button>
-				</div>
+				<PanelHeader
+					title="Tasks"
+					description={`${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} discovered from turbo.json across ${packages.length} package${packages.length !== 1 ? "s" : ""}`}
+					guideKey="tasks"
+					actions={
+						<Button variant="outline" size="sm" onClick={refetch}>
+							Refresh
+						</Button>
+					}
+				/>
 
 				{/* Search and Filter */}
 				<div className="flex gap-2">

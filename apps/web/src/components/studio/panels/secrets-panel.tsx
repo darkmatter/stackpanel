@@ -24,7 +24,6 @@ import { Tabs, TabsList, TabsTrigger } from "@ui/tabs";
 import { Textarea } from "@ui/textarea";
 import {
 	AlertCircle,
-	CheckCircle2,
 	Clock,
 	Copy,
 	Eye,
@@ -38,177 +37,38 @@ import {
 	Search,
 	Shield,
 	Trash2,
-	Users,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { useAgent, useAgentHealth } from "@/lib/use-agent";
-
-// Demo secrets for when agent is not connected
-const demoSecrets = [
-	{
-		key: "DATABASE_URL",
-		environment: "dev",
-		type: "connection-string",
-	},
-	{
-		key: "REDIS_URL",
-		environment: "dev",
-		type: "connection-string",
-	},
-	{
-		key: "JWT_SECRET",
-		environment: "dev",
-		type: "secret",
-	},
-	{
-		key: "STRIPE_SECRET_KEY",
-		environment: "dev",
-		type: "api-key",
-	},
-];
-
-interface Secret {
-	key: string;
-	value?: string;
-	environment: string;
-	type?: string;
-}
+import { getTypeColor, useSecrets } from "./secrets";
 
 export function SecretsPanel() {
-	const [searchQuery, setSearchQuery] = useState("");
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [selectedEnvironment, setSelectedEnvironment] = useState("dev");
-	const [newSecretKey, setNewSecretKey] = useState("");
-	const [newSecretValue, setNewSecretValue] = useState("");
-	const [showSecret, setShowSecret] = useState<string | null>(null);
-	const [secrets, setSecrets] = useState<Secret[]>([]);
-	const [secretValues, setSecretValues] = useState<Record<string, string>>({});
-	const [isLoading, setIsLoading] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const {
+		// State
+		searchQuery,
+		setSearchQuery,
+		dialogOpen,
+		setDialogOpen,
+		selectedEnvironment,
+		setSelectedEnvironment,
+		newSecretKey,
+		setNewSecretKey,
+		newSecretValue,
+		setNewSecretValue,
+		showSecret,
+		setShowSecret,
+		secretValues,
+		isLoading,
+		isSaving,
+		error,
+		isPaired,
 
-	const { isPaired } = useAgentHealth();
-	const agent = useAgent({ autoConnect: false });
+		// Computed
+		filteredSecrets,
 
-	// Load secrets from agent when paired
-	const loadSecrets = useCallback(async () => {
-		if (!isPaired || !agent.isConnected) {
-			setSecrets(demoSecrets);
-			return;
-		}
-
-		setIsLoading(true);
-		setError(null);
-
-		try {
-			const result = await agent.readSecrets(selectedEnvironment);
-			if (result.exists && result.secrets) {
-				const secretsList = Object.entries(result.secrets)
-					.filter(([key]) => !key.startsWith("sops"))
-					.map(([key, value]) => ({
-						key,
-						value: String(value),
-						environment: selectedEnvironment,
-						type: inferSecretType(key),
-					}));
-				setSecrets(secretsList);
-
-				// Store values for reveal
-				const values: Record<string, string> = {};
-				for (const [key, value] of Object.entries(result.secrets)) {
-					if (!key.startsWith("sops")) {
-						values[key] = String(value);
-					}
-				}
-				setSecretValues(values);
-			} else {
-				setSecrets([]);
-				setSecretValues({});
-			}
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load secrets");
-			setSecrets(demoSecrets);
-		} finally {
-			setIsLoading(false);
-		}
-	}, [isPaired, agent, selectedEnvironment]);
-
-	// Connect agent and load secrets when environment changes
-	useEffect(() => {
-		if (isPaired && !agent.isConnected) {
-			agent.connect().then(() => {
-				loadSecrets();
-			});
-		} else if (isPaired && agent.isConnected) {
-			loadSecrets();
-		} else {
-			setSecrets(demoSecrets);
-		}
-	}, [isPaired, agent.isConnected, selectedEnvironment, loadSecrets, agent]);
-
-	const handleAddSecret = async () => {
-		if (!newSecretKey.trim() || !newSecretValue.trim()) {
-			setError("Both key and value are required");
-			return;
-		}
-
-		if (!isPaired || !agent.isConnected) {
-			setError("Connect to the local agent to add secrets");
-			return;
-		}
-
-		setIsSaving(true);
-		setError(null);
-
-		try {
-			await agent.writeSecret(
-				selectedEnvironment,
-				newSecretKey,
-				newSecretValue,
-			);
-			setDialogOpen(false);
-			setNewSecretKey("");
-			setNewSecretValue("");
-			await loadSecrets();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to save secret");
-		} finally {
-			setIsSaving(false);
-		}
-	};
-
-	const handleDeleteSecret = async (key: string) => {
-		if (!isPaired || !agent.isConnected) {
-			setError("Connect to the local agent to delete secrets");
-			return;
-		}
-
-		try {
-			await agent.deleteSecret(selectedEnvironment, key);
-			await loadSecrets();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to delete secret");
-		}
-	};
-
-	const filteredSecrets = secrets.filter((secret) =>
-		secret.key.toLowerCase().includes(searchQuery.toLowerCase()),
-	);
-
-	const getTypeColor = (type: string | undefined) => {
-		switch (type) {
-			case "connection-string":
-				return "bg-blue-500/10 text-blue-400";
-			case "api-key":
-				return "bg-purple-500/10 text-purple-400";
-			case "secret":
-				return "bg-accent/10 text-accent";
-			case "token":
-				return "bg-orange-500/10 text-orange-400";
-			default:
-				return "bg-muted text-muted-foreground";
-		}
-	};
+		// Handlers
+		loadSecrets,
+		handleAddSecret,
+		handleDeleteSecret,
+	} = useSecrets();
 
 	return (
 		<div className="space-y-6">
@@ -503,22 +363,4 @@ export function SecretsPanel() {
 			)}
 		</div>
 	);
-}
-
-// Helper to infer secret type from key name
-function inferSecretType(key: string): string {
-	const keyLower = key.toLowerCase();
-	if (keyLower.includes("url") || keyLower.includes("connection")) {
-		return "connection-string";
-	}
-	if (keyLower.includes("api_key") || keyLower.includes("apikey")) {
-		return "api-key";
-	}
-	if (keyLower.includes("token")) {
-		return "token";
-	}
-	if (keyLower.includes("password") || keyLower.includes("pwd")) {
-		return "password";
-	}
-	return "secret";
 }

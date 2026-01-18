@@ -8,7 +8,7 @@ import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
  * Describes the file config.proto.
  */
 export const file_config = /*@__PURE__*/
-  fileDesc("Cgxjb25maWcucHJvdG8SDXN0YWNrcGFuZWwuZGIiRQoGQ29uZmlnEg4KBmVuYWJsZRgBIAEoCBIMCgRuYW1lGAIgASgJEg4KBmdpdGh1YhgDIAEoCRINCgVkZWJ1ZxgEIAEoCEKqAQoRY29tLnN0YWNrcGFuZWwuZGJCC0NvbmZpZ1Byb3RvUAFaM2dpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbqICA1NEWKoCDVN0YWNrcGFuZWwuRGLKAg1TdGFja3BhbmVsXERi4gIZU3RhY2twYW5lbFxEYlxHUEJNZXRhZGF0YeoCDlN0YWNrcGFuZWw6OkRiYgZwcm90bzM");
+  fileDesc("Cgxjb25maWcucHJvdG8SDXN0YWNrcGFuZWwuZGIiRQoGQ29uZmlnEg4KBmVuYWJsZRgBIAEoCBIMCgRuYW1lGAIgASgJEg4KBmdpdGh1YhgDIAEoCRINCgVkZWJ1ZxgEIAEoCEI6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
 
 /**
  * Describes the message stackpanel.db.Config.

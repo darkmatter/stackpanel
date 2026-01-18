@@ -10,6 +10,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { AgentHttpClient } from "./agent";
 import { useAgent, useAgentHealth } from "@/lib/use-agent";
 
 const STORAGE_KEY = "stackpanel.agent.token";
@@ -266,4 +267,16 @@ export function useAgentContext(): AgentContextValue {
 		throw new Error("useAgentContext must be used within <AgentProvider>");
 	}
 	return ctx;
+}
+
+/**
+ * Hook to get a shared AgentHttpClient instance.
+ * Uses the host, port, and token from the AgentProvider context.
+ */
+export function useAgentClient(): AgentHttpClient {
+	const { host, port, token } = useAgentContext();
+	return useMemo(
+		() => new AgentHttpClient({ host, port, token: token ?? undefined }),
+		[host, port, token],
+	);
 }

@@ -14,19 +14,22 @@
 {
   config,
   lib,
+  pkgs ? null,
   ...
-}@args:
+}:
 let
-  # Check if pkgs was provided without triggering a lookup error
-  hasPkgs = args ? pkgs;
-  pkgs = args.pkgs or null;
+  # pkgs is optional - provided by devenv/flakeModule via _module.args
+  # or passed directly in specialArgs
+  hasPkgs = pkgs != null;
   cfg = config.stackpanel;
   pathsLib = import ../lib/paths.nix { inherit lib; };
 in
 {
   imports = [
     ./options
+    ./aliases.nix
     ./cli.nix
+    ./util.nix
   ];
 
   config = lib.mkIf cfg.enable {
@@ -38,69 +41,84 @@ in
     stackpanel.devshell.env.STACKPANEL_ROOT = lib.mkDefault (if cfg.root != null then cfg.root else "");
 
     # Core hook: define funcs, resolve paths, ensure dirs + marker + gitignore
-    # NOTE: Shell logging with process substitution is disabled because it breaks
-    # in direnv/zsh contexts. The feature can be re-enabled via a separate script.
-    stackpanel.devshell.hooks.before = lib.mkBefore [
+    stackpanel.devshell.hooks.before = lib.mkBefore (
+      # Clean conflicting aliases (runs first, before strict mode)
+      lib.optional (cfg.devshell.clean.aliases != [ ]) ''
+        # Unset conflicting aliases
+        ${lib.concatMapStringsSep "\n" (
+          alias: "unalias ${alias} 2>/dev/null || true"
+        ) cfg.devshell.clean.aliases}
       ''
-                set -euo pipefail
+      ++ [
+        ''
+                  set -euo pipefail
 
-                ${pathsLib.mkShellPathUtils {
-                  rootDir = cfg.dirs.home;
-                  rootMarker = cfg.root-marker;
-                  # Hardcoded subdirectory names - these are not configurable
-                  stateDir = "state";
-                  genDir = "gen";
-                }}
+                  ${pathsLib.mkShellPathUtils {
+                    rootDir = cfg.dirs.home;
+                    rootMarker = cfg.root-marker;
+                    # Hardcoded subdirectory names - these are not configurable
+                    stateDir = "state";
+                    genDir = "gen";
+                  }}
 
-                # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking
-                if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
-                  stackpanel_resolve_paths "$STACKPANEL_ROOT"
-                else
-                  stackpanel_resolve_paths
-                fi
-
-                mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
-
-                # Shell logging is disabled for direnv/zsh compatibility
-                # Use 'nix develop --impure' for full shell logging
-                export STACKPANEL_SHELL_LOG=""
-
-                # Ensure marker exists at repo root
-                if [[ ! -f "$STACKPANEL_ROOT/${cfg.root-marker}" ]]; then
-                  echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
-                fi
-
-                # Ensure .stackpanel/.gitignore exists and ignores state/ and config.local.nix
-                _sp_gitignore="$STACKPANEL_ROOT_DIR/.gitignore"
-                if [[ ! -f "$_sp_gitignore" ]]; then
-                  printf '%s\n' "${cfg.dirs.state}/" "config.local.nix" > "$_sp_gitignore"
-                else
-                  if ! grep -q "^${cfg.dirs.state}/$" "$_sp_gitignore" 2>/dev/null; then
-                    echo "${cfg.dirs.state}/" >> "$_sp_gitignore"
+                  # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking
+                  if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
+                    stackpanel_resolve_paths "$STACKPANEL_ROOT"
+                  else
+                    stackpanel_resolve_paths
                   fi
-                  if ! grep -q "^config\.local\.nix$" "$_sp_gitignore" 2>/dev/null; then
-                    echo "config.local.nix" >> "$_sp_gitignore"
-                  fi
-                fi
 
-                ${lib.optionalString cfg.gitignore.addProjectMarker ''
-                  _root_gitignore="$STACKPANEL_ROOT/.gitignore"
-                  if [[ -f "$_root_gitignore" ]]; then
-                    if ! grep -q "^${cfg.root-marker}$" "$_root_gitignore" 2>/dev/null; then
-                      echo "" >> "$_root_gitignore"
-                      echo "# Stackpanel root marker (machine-specific)" >> "$_root_gitignore"
-                      echo "${cfg.root-marker}" >> "$_root_gitignore"
+                  mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
+
+                  # Shell logging disabled by default (requires bash for process substitution)
+                  # Set STACKPANEL_SHELL_LOG before entering shell to enable
+                  # if [[ -z "''${STACKPANEL_SHELL_LOG:-}" ]]; then
+                  #   export STACKPANEL_SHELL_LOG="$STACKPANEL_STATE_DIR/shell.log"
+                  # fi
+
+                  # Ensure marker exists at repo root
+                  if [[ ! -f "$STACKPANEL_ROOT/${cfg.root-marker}" ]]; then
+                    echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
+                  fi
+
+                  # Ensure .stackpanel/.gitignore exists and ignores state/ and config.local.nix
+                  _sp_gitignore="$STACKPANEL_ROOT_DIR/.gitignore"
+                  if [[ ! -f "$_sp_gitignore" ]]; then
+                    cat > "$_sp_gitignore" << 'EOF'
+          ${cfg.dirs.state}/
+          config.local.nix
+          EOF
+                  else
+                    if ! grep -q "^${cfg.dirs.state}/$" "$_sp_gitignore" 2>/dev/null; then
+                      echo "${cfg.dirs.state}/" >> "$_sp_gitignore"
+                    fi
+                    if ! grep -q "^config\.local\.nix$" "$_sp_gitignore" 2>/dev/null; then
+                      echo "config.local.nix" >> "$_sp_gitignore"
                     fi
                   fi
-                ''}
 
-                # Restore default interactive shell behavior (disable strict error handling)
-                set +euo pipefail
+                  ${lib.optionalString cfg.gitignore.addProjectMarker ''
+                    _root_gitignore="$STACKPANEL_ROOT/.gitignore"
+                    if [[ -f "$_root_gitignore" ]]; then
+                      if ! grep -q "^${cfg.root-marker}$" "$_root_gitignore" 2>/dev/null; then
+                        echo "" >> "$_root_gitignore"
+                        echo "# Stackpanel root marker (machine-specific)" >> "$_root_gitignore"
+                        echo "${cfg.root-marker}" >> "$_root_gitignore"
+                      fi
+                    fi
+                  ''}
+
+                  # Restore default interactive shell behavior (disable strict error handling)
+                  set +euo pipefail
+        ''
+      ]
+    );
+
+    stackpanel.devshell.hooks.after = lib.mkAfter [
+      ''
+        echo "stackpanel core initialized"
       ''
     ];
-
-    # No after hook needed since shell logging is disabled
-    stackpanel.devshell.hooks.after = lib.mkAfter [ ];
 
     # local overrides
   };

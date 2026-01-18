@@ -1,0 +1,49 @@
+---
+title: Apps
+description: Define and manage applications in your monorepo
+---
+
+# Apps
+
+Apps are the building blocks of your project. Each app gets a deterministic port, optional domain, and integrates with the build pipeline.
+
+## Key Features
+
+- **Deterministic ports** — Each app gets a stable port based on project name
+- **Local domains** — Optional `.localhost` domains via Caddy reverse proxy
+- **TLS support** — Enable HTTPS with Step CA integration
+- **Tooling** — Define build, dev, test, and lint tools per app
+
+## Configuration
+
+Apps are defined in `.stackpanel/data/apps.nix`:
+
+```nix
+{
+  web = {
+    path = "apps/web";
+    domain = "app";  # → app.localhost
+    tls = true;
+  };
+  server = {
+    path = "apps/server";
+    offset = 1;  # Port offset from base
+  };
+}
+```
+
+## Port Allocation
+
+Ports are computed deterministically from the project name:
+
+| App | Port | Domain |
+|-----|------|--------|
+| web | 6400 | app.localhost |
+| server | 6401 | — |
+| docs | 6402 | docs.localhost |
+
+## Tips
+
+- Use `domain` to create a friendly local URL
+- Set `offset` to control port ordering
+- Enable `tls` for apps that need HTTPS locally

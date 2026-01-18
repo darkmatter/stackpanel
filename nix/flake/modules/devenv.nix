@@ -27,6 +27,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 let
@@ -64,7 +65,7 @@ let
   };
 
   scriptsFromCommands = lib.mapAttrs (name: _cmd: mkTaskCommand name) tasksFromCommands;
-  
+
   # Merge all script sources: commands → internal scripts → user scripts
   scripts = scriptsFromCommands // scriptsFromStackpanel // userScripts;
 
@@ -74,6 +75,7 @@ in
 {
   # Single entrypoint - imports all stackpanel modules
   # Features only activate when their .enable option is set
+  # Note: devenv provides pkgs via its module system
   imports = [
     ../../stackpanel
   ];

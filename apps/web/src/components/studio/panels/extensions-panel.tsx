@@ -13,247 +13,35 @@ import {
 } from "@/lib/extension-panels";
 import { useNixConfig } from "@/lib/use-nix-config";
 
-const _data = {
-	debug: true,
-	enable: true,
-	extensions: {
-		caddy: {
-			apps: {
-				docs: {
-					config: { domain: "docs", tls: "false", url: "" },
-					enabled: true,
-				},
-				web: {
-					config: { domain: "stackpanel", tls: "true", url: "" },
-					enabled: true,
-				},
-			},
-			enabled: true,
-			name: "Caddy",
-			panels: [
-				{
-					description: null,
-					fields: [
-						{
-							name: "metrics",
-							options: [],
-							type: "FIELD_TYPE_STRING",
-							value:
-								'[{"label":"Project","status":"ok","value":"stackpanel"},{"label":"Port","status":"ok","value":"6493"},{"label":"TLS","status":"warning","value":"Disabled"},{"label":"Virtual Hosts","status":"ok","value":"2"}]',
-						},
-					],
-					id: "caddy-status",
-					order: 1,
-					title: "Caddy Reverse Proxy",
-					type: "PANEL_TYPE_STATUS",
-				},
-				{
-					description: null,
-					fields: [
-						{
-							name: "columns",
-							options: [],
-							type: "FIELD_TYPE_COLUMNS",
-							value: '["name","port"]',
-						},
-					],
-					id: "caddy-apps",
-					order: 2,
-					title: "Virtual Hosts",
-					type: "PANEL_TYPE_APPS_GRID",
-				},
-			],
-			priority: 20,
-			tags: ["networking", "proxy"],
-		},
-		example: {
-			apps: {
-				docs: { config: { hasUrl: "no", path: "" }, enabled: true },
-				server: { config: { hasUrl: "no", path: "" }, enabled: true },
-				"stackpanel-go": {
-					config: { hasUrl: "no", path: "apps/stackpanel-go" },
-					enabled: true,
-				},
-				web: { config: { hasUrl: "no", path: "" }, enabled: true },
-			},
-			enabled: true,
-			name: "Example Extension",
-			panels: [
-				{
-					description: "Shows basic system and Nix information",
-					fields: [
-						{
-							name: "metrics",
-							options: [],
-							type: "FIELD_TYPE_STRING",
-							value:
-								'[{"label":"Nix Version","status":"ok","value":"2.33.0"},{"label":"System","status":"ok","value":"aarch64-darwin"},{"label":"Custom Message","status":"ok","value":"Welcome to Stackpanel!"},{"label":"Extension Status","status":"ok","value":"Active"}]',
-						},
-					],
-					id: "example-status",
-					order: 1,
-					title: "System Information",
-					type: "PANEL_TYPE_STATUS",
-				},
-				{
-					description: "Shows all apps in the stackpanel configuration",
-					fields: [
-						{
-							name: "columns",
-							options: [],
-							type: "FIELD_TYPE_COLUMNS",
-							value: '["name","path","port","config"]',
-						},
-					],
-					id: "example-apps",
-					order: 2,
-					title: "All Applications",
-					type: "PANEL_TYPE_APPS_GRID",
-				},
-			],
-			priority: 999,
-			tags: ["example", "demo"],
-		},
-		go: {
-			apps: {
-				"stackpanel-go": {
-					config: {
-						binaryName: "stackpanel",
-						mainPackage: ".",
-						path: "apps/stackpanel-go",
-						version: "0.1.0",
-					},
-					enabled: true,
-				},
-			},
-			enabled: true,
-			name: "Go",
-			panels: [
-				{
-					description: null,
-					fields: [
-						{
-							name: "columns",
-							options: [],
-							type: "FIELD_TYPE_COLUMNS",
-							value: '["name","path","version","port"]',
-						},
-					],
-					id: "go-apps-grid",
-					order: 1,
-					title: "Go Applications",
-					type: "PANEL_TYPE_APPS_GRID",
-				},
-				{
-					description: null,
-					fields: [
-						{
-							name: "metrics",
-							options: [],
-							type: "FIELD_TYPE_STRING",
-							value:
-								'[{"label":"Go Version","status":"ok","value":"1.25.5"},{"label":"Apps","status":"ok","value":"1"}]',
-						},
-					],
-					id: "go-status",
-					order: 2,
-					title: "Go Environment",
-					type: "PANEL_TYPE_STATUS",
-				},
-			],
-			priority: 10,
-			tags: ["language", "backend"],
-		},
-	},
-	github: "darkmatter/stackpanel",
-	motd: {
-		commands: [
-			{ description: "Export AWS credentials to env", name: "aws-creds-env" },
-			{ description: "Verify AWS cert-auth status", name: "check-aws-cert" },
-			{
-				description: "Request/renew device certificate",
-				name: "ensure-device-cert",
-			},
-			{ description: "Verify certificate status", name: "check-device-cert" },
-			{
-				description: "Export AWS credentials to environment",
-				name: "aws-creds-env",
-			},
-		],
-		enable: true,
-		features: [
-			"Starship prompt theme",
-			"AWS Roles Anywhere (darkmatter-dev)",
-			"Step CA certificates (https://ca.internal:443)",
-		],
-		hints: [
-			"Open .stackpanel/gen/vscode/stackpanel.code-workspace in VS Code for integrated terminal",
-			"Open .stackpanel/gen/ide/vscode/stackpanel.code-workspace in VS Code for integrated terminal",
-			"Run './test' to test both devenv and native shells",
-			"Run './test devenv' or './test native' to test individual shells",
-			"Run 'nix flake check --impure' to run all checks including smoke tests",
-		],
-	},
-	name: "stackpanel",
-	ports: {
-		"base-port": 6400,
-		enable: true,
-		"project-name": "stackpanel",
-		service: {
-			MINIO: { displayName: "Minio", key: "MINIO", name: "Minio", port: 6498 },
-			MINIO_CONSOLE: {
-				displayName: "Minio Console",
-				key: "MINIO_CONSOLE",
-				name: "Minio Console",
-				port: 6436,
-			},
-			POSTGRES: {
-				displayName: "PostgreSQL",
-				key: "POSTGRES",
-				name: "PostgreSQL",
-				port: 6404,
-			},
-			REDIS: { displayName: "Redis", key: "REDIS", name: "Redis", port: 6494 },
-		},
-		services: {
-			MINIO: { name: "Minio" },
-			MINIO_CONSOLE: { name: "Minio Console" },
-			POSTGRES: { name: "PostgreSQL" },
-			REDIS: { name: "Redis" },
-		},
-	},
-};
-
 export function ExtensionsPanel() {
-	const { data: _config, isLoading, isError, error, refetch } = useNixConfig();
-	const config = _data; // TODO: Remove when not mocking
+	const { data: config, isLoading, isError, error, refetch } = useNixConfig();
 
-	// if (isLoading) {
-	//   return (
-	//     <div className="flex min-h-[400px] items-center justify-center">
-	//       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-	//     </div>
-	//   );
-	// }
+	if (isLoading) {
+		return (
+			<div className="flex min-h-[400px] items-center justify-center">
+				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+			</div>
+		);
+	}
 
-	// if (isError) {
-	//   return (
-	//     <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-	//       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-	//         <p className="text-sm text-destructive">
-	//           Failed to load extensions: {error?.message || "Unknown error"}
-	//         </p>
-	//       </div>
-	//       <button
-	//         type="button"
-	//         onClick={() => refetch()}
-	//         className="text-sm text-primary underline-offset-4 hover:underline"
-	//       >
-	//         Try again
-	//       </button>
-	//     </div>
-	//   );
-	// }
+	if (isError) {
+		return (
+			<div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+				<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+					<p className="text-sm text-destructive">
+						Failed to load extensions: {error?.message || "Unknown error"}
+					</p>
+				</div>
+				<button
+					type="button"
+					onClick={() => refetch()}
+					className="text-sm text-primary underline-offset-4 hover:underline"
+				>
+					Try again
+				</button>
+			</div>
+		);
+	}
 
 	// Extract extensions from config
 	const extensions = (config as Record<string, unknown>)?.extensions as

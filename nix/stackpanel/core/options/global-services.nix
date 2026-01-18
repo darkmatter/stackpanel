@@ -27,12 +27,13 @@
 {
   lib,
   config,
+  pkgs ? null,
   ...
-}@args:
+}:
 let
-  # Check if pkgs was provided without triggering a lookup error
-  hasPkgs = args ? pkgs;
-  pkgs = args.pkgs or null;
+  # pkgs is optional - provided by devenv/flakeModule via _module.args
+  # or passed directly in specialArgs
+  hasPkgs = pkgs != null;
 
   cfg = config.stackpanel.globalServices;
 in

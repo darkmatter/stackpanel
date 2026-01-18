@@ -179,7 +179,21 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 	// Build nix eval command - only pass projectRoot if we have it
 	args := []string{"eval", "--impure", "--json"}
 	if opts.Expression != "" {
-		args = append(args, "--expr", opts.Expression)
+		// Check if expression is an installable (flake reference) vs a Nix expression
+		// Installables start with .# (current flake), path# or flake:
+		isInstallable := strings.HasPrefix(opts.Expression, ".#") ||
+			strings.HasPrefix(opts.Expression, "path:") ||
+			strings.HasPrefix(opts.Expression, "git+") ||
+			strings.HasPrefix(opts.Expression, "github:") ||
+			strings.HasPrefix(opts.Expression, "nixpkgs#")
+		
+		if isInstallable {
+			// Pass installable directly without --expr
+			args = append(args, opts.Expression)
+		} else {
+			// It's a Nix expression, use --expr
+			args = append(args, "--expr", opts.Expression)
+		}
 	} else if opts.File != "" {
 		args = append(args, "-f", opts.File)
 	}

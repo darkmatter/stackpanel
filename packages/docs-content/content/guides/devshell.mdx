@@ -1,0 +1,67 @@
+---
+title: Dev Shell
+description: Your reproducible development environment
+---
+
+# Dev Shell
+
+The devshell is your development environment. It provides packages, environment variables, and commands—all reproducible across machines.
+
+## Entering the Shell
+
+```bash
+# With direnv (recommended)
+cd my-project  # Auto-enters when .envrc exists
+
+# Or manually
+nix develop --impure
+```
+
+## Configuration
+
+```nix
+# .stackpanel/config.nix
+{
+  devshell = {
+    # Packages available in PATH
+    packages = with pkgs; [
+      nodejs
+      bun
+      go
+    ];
+    
+    # Environment variables
+    env = {
+      NODE_ENV = "development";
+      DEBUG = "true";
+    };
+    
+    # Shell hooks
+    hooks.main = [
+      "echo 'Welcome to the devshell!'"
+    ];
+  };
+}
+```
+
+## Commands
+
+Add custom commands to your devshell:
+
+```nix
+devshell.commands.db-seed = {
+  exec = ''
+    echo "Seeding database..."
+    bun run db:seed
+  '';
+  runtimeInputs = [ pkgs.bun ];
+};
+```
+
+Then run: `stackpanel commands db-seed`
+
+## Tips
+
+- Use direnv for automatic shell activation
+- Add `runtimeInputs` to ensure dependencies are available
+- Shell hooks run every time you enter the shell

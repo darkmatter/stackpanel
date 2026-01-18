@@ -209,6 +209,7 @@ let
     {
       processes,
       environment,
+      commandName,
     }:
     let
       configFile = pkgs.writeText "process-compose.yaml" (
@@ -219,7 +220,7 @@ let
       );
     in
     pkgs.writeShellApplication {
-      name = "dev";
+      name = commandName;
       runtimeInputs = [
         pkgs.process-compose
         pkgs.watchexec
@@ -237,6 +238,16 @@ in
   options.stackpanel.process-compose = {
     enable = lib.mkEnableOption "process-compose integration" // {
       default = true;
+    };
+
+    commandName = lib.mkOption {
+      type = lib.types.str;
+      default = "dev";
+      description = ''
+        Name of the command to start all processes.
+        Change this if `dev` conflicts with an alias on your machine.
+      '';
+      example = "start";
     };
 
     formatWatcher = {
@@ -319,8 +330,9 @@ in
       description = ''
         The process-compose wrapper package.
 
-        This is a script named `dev` that runs `process-compose up` with the
-        generated configuration. Added to devshell automatically.
+        This is a script (named by `commandName`, default "dev") that runs
+        `process-compose up` with the generated configuration.
+        Added to devshell automatically.
       '';
     };
   };
@@ -348,6 +360,7 @@ in
     # When process-compose is enabled, build the wrapper package and add to devshell
     (lib.mkIf (cfg.enable && pcCfg.enable) {
       stackpanel.process-compose.package = mkDevPackage {
+        commandName = pcCfg.commandName;
         processes = pcCfg.processes;
         environment = pcCfg.environment;
       };
@@ -357,6 +370,9 @@ in
         pkgs.process-compose
         pcCfg.package
       ];
+
+      # Auto-clean the command alias to avoid conflicts with user's shell aliases
+      stackpanel.devshell.clean.aliases = [ pcCfg.commandName ];
     })
 
     # Devenv compatibility: if `processes` option exists at top level, populate it

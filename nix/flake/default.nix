@@ -1,77 +1,124 @@
 # ==============================================================================
-# flake-module.nix
+# default.nix - Stackpanel Flake Module
 #
-# Stackpanel flake-parts module for external users to import into their flakes.
-# Provides stackpanel options when used with devenv + flake-parts.
+# THE single flake-parts module for stackpanel. This module:
+#   1. Auto-loads config from .stackpanel/_internal.nix or .stackpanel/config.nix
+#   2. Uses devenv.flakeModule for languages/services evaluation (when available)
+#   3. Creates devShells.default via pkgs.mkShell with OUR passthru
+#   4. Full control over passthru, shellHook ordering, packages
 #
-# This module uses the "importApply" pattern to get the localFlake reference.
-# The outer function receives args from importApply in flake.nix, while the
-# inner function is the actual flake-parts module with user's flake context.
+# Architecture:
+#   - Devenv evaluates modules (languages.*, services.*, processes.*)
+#   - We extract computed packages/env from devenv's evaluation
+#   - We create the final shell with pkgs.mkShell for full control
 #
-# Usage in user's flake.nix:
-#   imports = [
-#     inputs.devenv.flakeModule
-#     inputs.stackpanel.flakeModules.default
-#   ];
-#
-# Outputs provided:
-#   - stackpanelConfig: Serializable config for agent/CLI access
-#     Usage: nix eval --impure --json .#stackpanelConfig
+# Usage:
+#   imports = [ inputs.stackpanel.flakeModules.default ];
 # ==============================================================================
 {
   localFlake,
   withSystem,
-  devshell,
 }:
-# The inner function is the actual flake-parts module.
-# These args (self, inputs, lib, etc.) refer to the USER's flake.
 {
   lib,
   self,
   inputs,
   config,
+  flake-parts-lib,
   ...
 }:
 let
-  # Helper to evaluate full stackpanel config from a config module
-  # This evaluates the complete module system with user's config
-  mkEvaluatedConfig =
-    {
-      pkgs,
-      configModule,
-    }:
-    let
-      evaluated = lib.evalModules {
-        modules = [
-          ../stackpanel
-          configModule
-        ];
-        specialArgs = { inherit pkgs lib inputs; };
+  inherit (flake-parts-lib) mkPerSystemOption;
+
+  # Serialization helpers for JSON-safe config
+  serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
+
+  # Helper to serialize a package derivation to JSON-safe format
+  serializePackage =
+    pkg:
+    if builtins.isAttrs pkg && pkg ? name then
+      {
+        name = pkg.pname or pkg.name or "unknown";
+        version = pkg.version or "";
+        attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
+        source = "devshell";
+      }
+    else if builtins.isString pkg then
+      {
+        name = pkg;
+        version = "";
+        attrPath = pkg;
+        source = "devshell";
+      }
+    else
+      {
+        name = "unknown";
+        version = "";
+        attrPath = "";
+        source = "devshell";
       };
-    in
-    evaluated.config.stackpanel;
+
+  # Check if user's flake has these optional inputs
+  hasDevenv = inputs ? devenv;
+  hasProcessCompose = inputs ? process-compose-flake;
+  hasGitHooks = inputs ? git-hooks;
+
+  # Get devenv-tasks-fast-build from stackpanel's inputs
+  stackpanelInputs = localFlake.inputs or { };
+  hasStackpanelDevenv = stackpanelInputs ? devenv;
 in
 {
+  # ===========================================================================
+  # Imports - include devenv.flakeModule for proper evaluation
+  # ===========================================================================
   imports = [
-    # Import stackpanel options (pkgs-free, safe for flake-parts top-level)
+    # Stackpanel options (pkgs-free, safe for flake-parts top-level)
     ../stackpanel/core/options
   ]
-  ++ lib.optional (inputs ? process-compose-flake) inputs.process-compose-flake.flakeModule
-  ++ lib.optional (inputs ? devenv) inputs.devenv.flakeModule
-  ++ lib.optional (inputs ? git-hooks) inputs.git-hooks.flakeModule;
+  ++ lib.optional hasDevenv inputs.devenv.flakeModule
+  ++ lib.optional hasProcessCompose inputs.process-compose-flake.flakeModule
+  ++ lib.optional hasGitHooks inputs.git-hooks.flakeModule;
 
+  # ===========================================================================
+  # Flake-level options
+  # ===========================================================================
+  options.stackpanel = {
+    projectRoot = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Project root path. Defaults to self (flake root).";
+    };
+  };
+
+  # ===========================================================================
+  # perSystem options
+  # ===========================================================================
+  options.perSystem = mkPerSystemOption (
+    { lib, ... }:
+    {
+      options.stackpanel = {
+        imports = lib.mkOption {
+          type = lib.types.listOf lib.types.unspecified;
+          default = [ ];
+          description = "Additional stackpanel module imports.";
+        };
+
+        devenvImports = lib.mkOption {
+          type = lib.types.listOf lib.types.unspecified;
+          default = [ ];
+          description = "Additional devenv module imports (for languages, services, etc.).";
+        };
+      };
+    }
+  );
+
+  # ===========================================================================
+  # Configuration
+  # ===========================================================================
   config = lib.mkMerge [
-    # NOTE: stackpanelConfig and stackpanelFullConfig are NOT provided by this module.
-    # Users should define them in their flake using the shell's passthru:
-    #
-    #   legacyPackages.stackpanelConfig = shell.passthru.stackpanelSerializable;
-    #   legacyPackages.stackpanelFullConfig = shell.passthru.stackpanelConfig;
-    #
-    # Then in flake outputs:
-    #   stackpanelConfig = withSystem "aarch64-darwin" ({ config, ... }: config.legacyPackages.stackpanelConfig);
-
-    # Validate: secrets.enable requires agenix input
-    # This check runs at flake evaluation time
+    # -------------------------------------------------------------------------
+    # Validation checks
+    # -------------------------------------------------------------------------
     (
       let
         secretsEnabled = config.stackpanel.secrets.enable or false;
@@ -80,66 +127,331 @@ in
           if secretsEnabled && !hasAgenix then
             throw ''
               stackpanel.secrets.enable requires agenix.
-
               Add to your flake inputs:
                 agenix.url = "github:ryantm/agenix";
             ''
           else
             true;
       in
-      # Force evaluation of check by using it in the condition
       lib.mkIf (secretsEnabled && check) { }
     )
 
-    # Base perSystem config - always applied
+    # -------------------------------------------------------------------------
+    # perSystem configuration
+    # -------------------------------------------------------------------------
     {
       perSystem =
         {
           system,
           pkgs,
           lib,
+          config,
           ...
         }:
-        {
-          # Make stackpanel's packages and helpers available to users
-          _module.args.stackpanel = {
-            inherit localFlake mkEvaluatedConfig;
-            # Access packages from the stackpanel flake itself
-            packages = withSystem system ({ config, ... }: config.packages or { });
-          };
-        };
-    }
+        let
+          # Top-level flake config
+          flakeCfg = self.config.stackpanel or { };
 
-    # =========================================================================
-    # Process-compose integration (optional, for process-compose-flake users)
-    #
-    # The `dev` command is built-in via stackpanel.process-compose.package.
-    # This section only wires to process-compose-flake if users have it.
-    # =========================================================================
-    (lib.optionalAttrs (inputs ? process-compose-flake) (
-      lib.mkIf (inputs ? process-compose-flake) {
-        perSystem =
-          {
-            config,
-            lib,
-            ...
-          }:
-          let
-            sp = config.legacyPackages.stackpanelFullConfig or null;
-            pc = sp.process-compose or null;
-            hasProcesses = pc != null && (pc.processes or { }) != { };
-            enabled = pc != null && (pc.enable or false) && hasProcesses;
-          in
-          lib.mkIf enabled {
-            # Wire to process-compose-flake for users who want its features
-            process-compose.dev = {
-              settings = {
-                environment = pc.environment or { };
-                processes = pc.processes;
+          # perSystem stackpanel config
+          perSystemCfg = config.stackpanel or { };
+
+          # Project root for loading config files
+          projectRoot = flakeCfg.projectRoot or self;
+
+          # ===================================================================
+          # Auto-load stackpanel config from .stackpanel/
+          # ===================================================================
+          internalConfigPath = projectRoot + "/.stackpanel/_internal.nix";
+          simpleConfigPath = projectRoot + "/.stackpanel/config.nix";
+
+          hasInternalConfig = builtins.pathExists internalConfigPath;
+          hasSimpleConfig = builtins.pathExists simpleConfigPath;
+
+          loadConfig =
+            path:
+            let
+              raw = import path;
+            in
+            if builtins.isFunction raw then raw { inherit pkgs lib; } else raw;
+
+          loadedConfig =
+            if hasInternalConfig then
+              loadConfig internalConfigPath
+            else if hasSimpleConfig then
+              loadConfig simpleConfigPath
+            else
+              { };
+
+          stackpanelConfigModule = {
+            stackpanel = loadedConfig;
+          };
+
+          # ===================================================================
+          # Load devenv.nix for simple extraction (fallback)
+          # ===================================================================
+          devenvConfigPath = projectRoot + "/.stackpanel/devenv.nix";
+          hasDevenvConfig = builtins.pathExists devenvConfigPath;
+
+          loadedDevenvConfig =
+            if hasDevenvConfig then
+              let
+                raw = import devenvConfigPath;
+              in
+              if builtins.isFunction raw then
+                raw {
+                  inherit pkgs lib inputs;
+                  config = { };
+                }
+              else
+                raw
+            else
+              { };
+
+          # Simple devenv config extraction (for when devenv modules not available)
+          simpleDevenvPackages = loadedDevenvConfig.packages or [ ];
+          simpleDevenvEnv = loadedDevenvConfig.env or { };
+          simpleDevenvEnterShell = loadedDevenvConfig.enterShell or "";
+
+          # Git hooks config
+          gitHooksConfig = loadedDevenvConfig.git-hooks or loadedConfig.git-hooks or { };
+
+          # ===================================================================
+          # Evaluate stackpanel modules
+          # ===================================================================
+          stackpanelEval = lib.evalModules {
+            modules = [
+              ../stackpanel
+              stackpanelConfigModule
+            ]
+            ++ (perSystemCfg.imports or [ ]);
+            specialArgs = { inherit pkgs lib inputs; };
+          };
+
+          spConfig = stackpanelEval.config.stackpanel;
+          devshellOutputs = spConfig.devshell;
+
+          # ===================================================================
+          # Extract from devenv evaluation (if devenv.flakeModule is loaded)
+          # ===================================================================
+          devenvShell = config.devenv.shells.default or null;
+          devenvConfig = if devenvShell != null then devenvShell else null;
+
+          # Get packages from devenv (includes languages.* computed packages)
+          devenvPackages =
+            if devenvConfig != null then (devenvConfig.packages or [ ]) else simpleDevenvPackages;
+
+          # Get env from devenv
+          devenvEnv = if devenvConfig != null then (devenvConfig.env or { }) else simpleDevenvEnv;
+
+          # Get enterShell from devenv
+          devenvEnterShell =
+            if devenvConfig != null then (devenvConfig.enterShell or "") else simpleDevenvEnterShell;
+
+          # Get processes from devenv
+          devenvProcesses = if devenvConfig != null then (devenvConfig.processes or { }) else { };
+
+          # ===================================================================
+          # Get devenv-tasks-fast-build
+          # ===================================================================
+          devenvTasksPkg =
+            if hasStackpanelDevenv && stackpanelInputs.devenv ? packages.${system}.devenv-tasks-fast-build then
+              [ stackpanelInputs.devenv.packages.${system}.devenv-tasks-fast-build ]
+            else
+              [ ];
+
+          # ===================================================================
+          # Build shell hook from stackpanel hooks
+          # ===================================================================
+          hooks =
+            devshellOutputs.hooks or {
+              before = [ ];
+              main = [ ];
+              after = [ ];
+            };
+
+          stackpanelHook = lib.concatStringsSep "\n\n" (
+            lib.flatten [
+              hooks.before
+              hooks.main
+              hooks.after
+            ]
+          );
+
+          # ===================================================================
+          # Combine all packages
+          # ===================================================================
+          allPackages =
+            (devshellOutputs.packages or [ ])
+            ++ (devshellOutputs._commandPkgs or [ ])
+            ++ devenvPackages
+            ++ devenvTasksPkg;
+
+          # ===================================================================
+          # Combine all env vars
+          # ===================================================================
+          allEnv = (devshellOutputs.env or { }) // devenvEnv;
+
+          # ===================================================================
+          # JSON-safe serialized config
+          # ===================================================================
+          stackpanelSerializable = serializeLib.filterSerializable spConfig;
+
+          serializedPackages = map serializePackage allPackages;
+
+          userPackagesCfg =
+            spConfig.userPackages or {
+              enable = false;
+              serialized = [ ];
+            };
+          userPackagesSerialized =
+            if userPackagesCfg.enable or false then userPackagesCfg.serialized or [ ] else [ ];
+
+          allSerializedPackages = serializedPackages ++ userPackagesSerialized;
+
+          # ===================================================================
+          # Create OUR shell with pkgs.mkShell
+          # ===================================================================
+          stackpanelShell = pkgs.mkShell {
+            name = "stackpanel-${spConfig.name or "dev"}";
+
+            packages = allPackages;
+            nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
+            buildInputs = devshellOutputs.buildInputs or [ ];
+
+            shellHook = ''
+              # Export environment variables
+              ${lib.concatStringsSep "\n" (
+                lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
+              )}
+
+              # Stackpanel hooks (devenvEnterShell excluded - it duplicates these)
+              ${stackpanelHook}
+            '';
+
+            # FULL CONTROL over passthru
+            passthru = {
+              # Stackpanel config (full, may contain non-serializable values)
+              stackpanelConfig = spConfig;
+
+              # JSON-safe serialized config for CLI/agent
+              stackpanelSerializable = stackpanelSerializable;
+
+              # Pre-serialized packages for fast access
+              stackpanelPackages = allSerializedPackages;
+
+              # Devshell outputs for introspection
+              devshellConfig = devshellOutputs;
+
+              # All packages in the shell
+              packages = allPackages;
+
+              # All env vars
+              env = allEnv;
+
+              # Process definitions (for process-compose integration)
+              processes = devenvProcesses // (spConfig.process-compose.processes or { });
+
+              # Devenv info
+              devenv = {
+                evaluated = devenvConfig != null;
+                packages = devenvPackages;
+                env = devenvEnv;
+                processes = devenvProcesses;
               };
             };
           };
-      }
-    ))
+
+        in
+        lib.mkMerge [
+          # Make stackpanel helpers available
+          {
+            _module.args.stackpanel = {
+              inherit localFlake;
+              packages = withSystem system ({ config, ... }: config.packages or { });
+            };
+          }
+
+          # Expose config via legacyPackages
+          {
+            legacyPackages = {
+              stackpanelConfig = stackpanelSerializable;
+              stackpanelFullConfig = spConfig;
+              stackpanelPackages = allSerializedPackages;
+            };
+          }
+
+          # Configure devenv shell (for module evaluation) when devenv is available
+          (lib.mkIf (hasDevenv && hasDevenvConfig && (spConfig.enable or false)) {
+            devenv.shells.default = {
+              imports = [
+                # Import the devenv adapter to get stackpanel options in devenv
+                ../flake/modules/devenv.nix
+              ]
+              ++ (perSystemCfg.devenvImports or [ ]);
+
+              # Apply stackpanel config
+              stackpanel = loadedConfig;
+            };
+          })
+
+          # Override devShells.default with OUR shell (has proper passthru)
+          (lib.mkIf (spConfig.enable or false) {
+            devShells.default = lib.mkForce stackpanelShell;
+          })
+
+          # Git hooks check
+          (lib.mkIf (hasGitHooks && (gitHooksConfig.enable or false)) {
+            checks.pre-commit-check = inputs.git-hooks.lib.${system}.run {
+              src = projectRoot;
+              hooks = builtins.removeAttrs gitHooksConfig [ "enable" ];
+            };
+          })
+        ];
+    }
+
+    # -------------------------------------------------------------------------
+    # Process-compose integration
+    # -------------------------------------------------------------------------
+    (lib.mkIf hasProcessCompose {
+      perSystem =
+        { config, lib, ... }:
+        let
+          shell = config.devShells.default or null;
+          processes = if shell != null then shell.passthru.processes or { } else { };
+          hasProcesses = processes != { };
+          sp = config.legacyPackages.stackpanelFullConfig or null;
+          enabled = sp != null && (sp.enable or false) && hasProcesses;
+        in
+        lib.mkIf enabled {
+          process-compose.dev = {
+            settings = {
+              environment = sp.process-compose.environment or { };
+              processes = processes;
+            };
+          };
+        };
+    })
+
+    # -------------------------------------------------------------------------
+    # Flake-level outputs
+    # -------------------------------------------------------------------------
+    {
+      flake = {
+        # Serializable stackpanel config (for CLI/agent access)
+        stackpanelConfig = withSystem "aarch64-darwin" (
+          { config, ... }: config.legacyPackages.stackpanelConfig or { }
+        );
+
+        # Full stackpanel config (may contain non-serializable values)
+        stackpanelFullConfig = withSystem "aarch64-darwin" (
+          { config, ... }: config.legacyPackages.stackpanelFullConfig or { }
+        );
+
+        # Pre-serialized packages for fast access
+        stackpanelPackages = withSystem "aarch64-darwin" (
+          { config, ... }: config.legacyPackages.stackpanelPackages or [ ]
+        );
+      };
+    }
   ];
 }

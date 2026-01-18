@@ -61,4 +61,10 @@ in
   config.stackpanel.devshell._commandPkgs = cmdPkgs;
   config.stackpanel.devshell._tasks = taskDefs;
   config.stackpanel.devshell._scripts = scriptDefs;
+  config.stackpanel.devshell.hooks.after = [
+    '' 
+      echo "stackpanel commands loaded"
+      stackpanel commands
+    ''
+  ];
 }

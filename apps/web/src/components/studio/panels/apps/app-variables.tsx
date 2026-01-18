@@ -197,18 +197,15 @@ function LinkVariablePopover({
 }: LinkVariablePopoverProps) {
 	return (
 		<Popover open={open} onOpenChange={onOpenChange}>
-			<PopoverTrigger
-				render={(props) => (
-					<button
-						{...props}
-						type="button"
-						className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-border bg-background text-xs hover:border-accent/50 hover:bg-accent/5 transition-colors"
-					>
-						<Plus className="h-3 w-3 text-accent" />
-						<span>Link</span>
-					</button>
-				)}
-			/>
+			<PopoverTrigger asChild>
+				<button
+					type="button"
+					className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-border bg-background text-xs hover:border-accent/50 hover:bg-accent/5 transition-colors"
+				>
+					<Plus className="h-3 w-3 text-accent" />
+					<span>Link</span>
+				</button>
+			</PopoverTrigger>
 			<PopoverContent className="w-56 p-2" align="start">
 				<div className="space-y-1">
 					<p className="text-xs font-medium text-muted-foreground px-2 pb-1">

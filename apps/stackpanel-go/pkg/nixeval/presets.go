@@ -77,25 +77,26 @@ in
 )
 
 // InstalledPackagesExpr builds a Nix expression to get installed packages from a flake.
-// Uses the pre-computed .#stackpanelPackages flake output for fast evaluation.
+// Tries devshell passthru first (for user projects consuming stackpanel), then falls back
+// to flake outputs (for stackpanel repo itself).
 // The projectRoot is baked directly into the expression to avoid relying on environment variables.
 // Uses git+file:// protocol to avoid copying untracked files (node_modules, etc.)
 func InstalledPackagesExpr(projectRoot string) string {
 	return fmt.Sprintf(`
 let
+  system = builtins.currentSystem;
   flake = builtins.getFlake "git+file://%s";
+
+  # Priority 1: devshell passthru (for user projects consuming stackpanel)
+  devShell = flake.devShells.${system}.default or null;
+  passthruPackages = if devShell != null then devShell.passthru.stackpanelPackages or null else null;
+
+  # Priority 2: flake output (for stackpanel repo itself)
+  flakePackages = flake.stackpanelPackages or null;
 in
-  # Use pre-computed stackpanelPackages if available (fast path)
-  if flake ? stackpanelPackages then
-    flake.stackpanelPackages
-  # Fallback: try to get from devshell passthru (slower)
-  else
-    let
-      system = builtins.currentSystem;
-      devShell = flake.devShells.${system}.default or null;
-      stackpanelPackages = if devShell != null then devShell.passthru.stackpanelPackages or null else null;
-    in
-      if stackpanelPackages != null then stackpanelPackages else []
+  if passthruPackages != null then passthruPackages
+  else if flakePackages != null then flakePackages
+  else []
 `, projectRoot)
 }
 

@@ -32,6 +32,7 @@
     ./devshell.nix
     ./extensions.nix
     ./global-services.nix
+    ./healthchecks.nix
     ./ide.nix
     ./motd.nix
     ./outputs.nix

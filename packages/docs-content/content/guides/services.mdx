@@ -1,0 +1,55 @@
+---
+title: Services
+description: Background services like databases and caches
+---
+
+# Services
+
+Services are long-running processes that your apps depend on, like databases, caches, and message queues.
+
+## Available Services
+
+| Service | Description | Default Port |
+|---------|-------------|--------------|
+| **PostgreSQL** | Relational database | basePort + 10 |
+| **Redis** | In-memory cache | basePort + 11 |
+| **Minio** | S3-compatible storage | basePort + 12 |
+
+## Configuration
+
+Services are configured in `.stackpanel/config.nix`:
+
+```nix
+{
+  services.postgres = {
+    enable = true;
+    initialDatabases = [{ name = "myapp"; }];
+  };
+  
+  services.redis.enable = true;
+}
+```
+
+## Managing Services
+
+```bash
+stackpanel services start    # Start all services
+stackpanel services stop     # Stop all services
+stackpanel services status   # Check status
+```
+
+## Environment Variables
+
+Service ports are exposed as environment variables:
+
+```bash
+STACKPANEL_POSTGRES_PORT=6410
+STACKPANEL_REDIS_PORT=6411
+DATABASE_URL=postgresql://localhost:6410/myapp
+```
+
+## Tips
+
+- Services start automatically when entering the devshell
+- Data persists in `.stackpanel/data/` between sessions
+- Use `initialDatabases` to auto-create databases

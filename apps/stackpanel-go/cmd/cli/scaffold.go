@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/spf13/cobra"
 )
@@ -59,11 +60,11 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 	}
 
 	if verbose {
-		printInfo(fmt.Sprintf("Project root: %s", projectRoot))
+		output.Info(fmt.Sprintf("Project root: %s", projectRoot))
 	}
 
 	// Evaluate the db module to get init files
-	printInfo("Evaluating Nix db module...")
+	output.Info("Evaluating Nix db module...")
 
 	initFiles, err := getInitFiles(ctx, projectRoot)
 	if err != nil {
@@ -71,7 +72,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(initFiles) == 0 {
-		printInfo("No files to create")
+		output.Info("No files to create")
 		return nil
 	}
 
@@ -90,13 +91,13 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 
 		if scaffoldDryRun {
 			if exists && !scaffoldForce {
-				printDim(fmt.Sprintf("  skip: %s (exists)", relPath))
+				output.Dimmed(fmt.Sprintf("  skip: %s (exists)", relPath))
 				skipped++
 			} else if exists && scaffoldForce {
-				yellow.Printf("  overwrite: %s\n", relPath)
+				output.Yellow.Printf("  overwrite: %s\n", relPath)
 				created++
 			} else {
-				green.Printf("  create: %s\n", relPath)
+				output.Green.Printf("  create: %s\n", relPath)
 				created++
 			}
 			continue
@@ -105,7 +106,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		// Skip existing files unless force
 		if exists && !scaffoldForce {
 			if verbose {
-				printDim(fmt.Sprintf("Skipping %s (exists)", relPath))
+				output.Dimmed(fmt.Sprintf("Skipping %s (exists)", relPath))
 			}
 			skipped++
 			continue
@@ -123,9 +124,9 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		}
 
 		if exists {
-			yellow.Printf("  overwritten: %s\n", relPath)
+			output.Yellow.Printf("  overwritten: %s\n", relPath)
 		} else {
-			green.Printf("  created: %s\n", relPath)
+			output.Green.Printf("  created: %s\n", relPath)
 		}
 		created++
 	}
@@ -133,17 +134,17 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 	// Summary
 	fmt.Println()
 	if scaffoldDryRun {
-		printInfo(fmt.Sprintf("Dry run: would create %d files, skip %d", created, skipped))
+		output.Info(fmt.Sprintf("Dry run: would create %d files, skip %d", created, skipped))
 	} else {
-		printSuccess(fmt.Sprintf("Scaffolded %d files (%d skipped)", created, skipped))
+		output.Success(fmt.Sprintf("Scaffolded %d files (%d skipped)", created, skipped))
 
 		if created > 0 {
 			fmt.Println()
-			printInfo("Next steps:")
-			printDim("  1. Review the generated files in .stackpanel/")
-			printDim("  2. Edit .stackpanel/config.nix to configure your project")
-			printDim("  3. Add users to .stackpanel/data/users.nix")
-			printDim("  4. Run 'nix develop --impure' to enter the dev shell")
+			output.Info("Next steps:")
+			output.Dimmed("  1. Review the generated files in .stackpanel/")
+			output.Dimmed("  2. Edit .stackpanel/config.nix to configure your project")
+			output.Dimmed("  3. Add users to .stackpanel/data/users.nix")
+			output.Dimmed("  4. Run 'nix develop --impure' to enter the dev shell")
 		}
 	}
 

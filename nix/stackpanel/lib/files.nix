@@ -23,8 +23,6 @@
   lib,
 }:
 let
-  types = lib.types;
-
   # ensure paths are safe to pass into shell
   q = lib.escapeShellArg;
 

@@ -12,8 +12,7 @@ import {
 import { Loader2, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useAgentContext } from "@/lib/agent-provider";
-import { NixClient } from "@/lib/nix-client";
+import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import type { AppEntity } from "@/lib/types";
 
 import {
@@ -72,8 +71,9 @@ export function AddAppDialog({ onSuccess }: AddAppDialogProps) {
 
 		setIsSaving(true);
 		try {
-			const client = new NixClient({ token });
-			const appsClient = client.mapEntity<AppEntity>("apps");
+			const client = useAgentClient();
+			if (token) client.setToken(token);
+			const appsClient = client.nix.mapEntity<AppEntity>("apps");
 
 			const exists = await appsClient.has(values.id);
 			if (exists) {

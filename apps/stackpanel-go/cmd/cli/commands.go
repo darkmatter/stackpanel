@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -52,7 +53,7 @@ Examples:
 		// Get config from nix eval
 		config, err := getStackpanelConfig(ctx)
 		if err != nil {
-			printError(fmt.Sprintf("Failed to get config: %v", err))
+			output.Error(fmt.Sprintf("Failed to get config: %v", err))
 			os.Exit(1)
 		}
 
@@ -70,7 +71,7 @@ Examples:
 
 		cmdDef, ok := commands[cmdName]
 		if !ok {
-			printError(fmt.Sprintf("Unknown command: %s", cmdName))
+			output.Error(fmt.Sprintf("Unknown command: %s", cmdName))
 			fmt.Println()
 			fmt.Println("Available commands:")
 			listCommands(commands)
@@ -78,7 +79,7 @@ Examples:
 		}
 
 		if err := runCommand(cmdDef, cmdArgs, config.Devshell.Env); err != nil {
-			printError(fmt.Sprintf("Command failed: %v", err))
+			output.Error(fmt.Sprintf("Command failed: %v", err))
 			os.Exit(1)
 		}
 	},
@@ -93,7 +94,7 @@ var commandsListCmd = &cobra.Command{
 
 		config, err := getStackpanelConfig(ctx)
 		if err != nil {
-			printError(fmt.Sprintf("Failed to get config: %v", err))
+			output.Error(fmt.Sprintf("Failed to get config: %v", err))
 			os.Exit(1)
 		}
 
@@ -126,7 +127,7 @@ func getStackpanelConfig(ctx context.Context) (*StackpanelConfig, error) {
 
 func listCommands(commands map[string]SerializableCommand) {
 	if len(commands) == 0 {
-		printWarning("No commands defined in devshell")
+		output.Warning("No commands defined in devshell")
 		return
 	}
 

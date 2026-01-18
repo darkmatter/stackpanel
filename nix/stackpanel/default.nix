@@ -40,6 +40,7 @@ in
     ./network # step-ca, ports
     ./services # aws, caddy, global-services
     ./secrets # SOPS helper
+    ./sst # SST infrastructure provisioning
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
     ./modules/git-hooks.nix # git-hooks integration

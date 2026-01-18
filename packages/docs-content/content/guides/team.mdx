@@ -1,0 +1,62 @@
+---
+title: Team
+description: Team members and access control
+---
+
+# Team
+
+Team management syncs collaborator information from GitHub and manages who can decrypt secrets.
+
+## How It Works
+
+1. **Sync from GitHub** — Public keys fetched from repository collaborators
+2. **Store locally** — Keys saved in `.stackpanel/data/external/users.nix`
+3. **Encrypt secrets** — Secrets encrypted with all team members' keys
+
+## Syncing Keys
+
+```bash
+stackpanel users sync
+```
+
+This fetches SSH public keys from all repository collaborators on GitHub.
+
+## User Data
+
+```nix
+# .stackpanel/data/external/users.nix
+{
+  alice = {
+    github = "alice";
+    keys = [
+      "ssh-ed25519 AAAA..."
+    ];
+  };
+  bob = {
+    github = "bob";
+    keys = [
+      "ssh-ed25519 AAAA..."
+    ];
+  };
+}
+```
+
+## Access Control
+
+Control who can decrypt secrets per environment:
+
+```nix
+apps.web.environments = [{
+  name = "production";
+  public_keys = [
+    users.alice.keys
+    users.bob.keys
+  ];
+}];
+```
+
+## Tips
+
+- Run `stackpanel users sync` after adding new collaborators
+- Each team member needs their private key to decrypt secrets
+- Re-encrypt secrets after changing team membership

@@ -75,6 +75,7 @@ type Evaluator struct {
 	nixFile     string            // Path to nix eval file - unused if expression is set
 	nixExpr     string            // Nix expression to evaluate
 	flakeAttr   string            // Flake attribute to evaluate (e.g., ".#stackpanelConfig")
+	flakeAttrs  []string          // Multiple flake attributes to try in order (fallbacks)
 	nixArgs     map[string]string // Additional Nix arguments
 	timeout     time.Duration
 
@@ -135,6 +136,15 @@ func WithExpression(expr string) Option {
 func WithFlakeAttr(attr string) Option {
 	return func(e *Evaluator) {
 		e.flakeAttr = attr
+	}
+}
+
+// WithFlakeAttrFallbacks sets multiple flake attributes to try in order
+// The first one that succeeds will be used. This is useful for supporting
+// both user projects (devshell passthru) and the stackpanel repo itself.
+func WithFlakeAttrFallbacks(attrs []string) Option {
+	return func(e *Evaluator) {
+		e.flakeAttrs = attrs
 	}
 }
 
@@ -253,6 +263,11 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
+	// If we have fallback attributes, try each one in order
+	if len(e.flakeAttrs) > 0 {
+		return e.evalNixWithFallbacks(ctx, e.flakeAttrs)
+	}
+
 	args := []string{"eval", "--impure", "--json"}
 
 	// Priority: flakeAttr > nixExpr > nixFile
@@ -284,6 +299,39 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	}
 
 	return stdout.Bytes(), nil
+}
+
+// evalNixWithFallbacks tries multiple flake attributes in order, returning the first success
+func (e *Evaluator) evalNixWithFallbacks(ctx context.Context, attrs []string) ([]byte, error) {
+	var lastErr error
+
+	for _, attr := range attrs {
+		args := []string{"eval", "--impure", "--json", attr}
+
+		for k, v := range e.nixArgs {
+			args = append(args, "--argstr", k, v)
+		}
+
+		cmd := exec.CommandContext(ctx, "nix", args...)
+		cmd.Dir = e.projectRoot
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		if err := cmd.Run(); err != nil {
+			if ctx.Err() == context.DeadlineExceeded {
+				return nil, fmt.Errorf("nix eval timed out after %v", e.timeout)
+			}
+			lastErr = fmt.Errorf("nix eval %s failed: %w\nstderr: %s", attr, err, stderr.String())
+			continue // Try next fallback
+		}
+
+		// Success!
+		return stdout.Bytes(), nil
+	}
+
+	return nil, fmt.Errorf("all flake attribute paths failed, last error: %w", lastErr)
 }
 
 // StartWatching begins watching files for changes

@@ -30,7 +30,7 @@ let
   cfg = config.stackpanel.files;
 
   # Import util for debug logging
-  util = import ../lib/util.nix { inherit pkgs lib config; };
+  util = config.stackpanel.util;
 
   q = lib.escapeShellArg;
 
@@ -41,6 +41,27 @@ let
   hasFiles = enabledFiles != { };
 
   fileCount = builtins.length (builtins.attrNames enabledFiles);
+
+  manifestEntries = lib.mapAttrsToList (
+    path: fileConfig: {
+      inherit path;
+      type = fileConfig.type or "text";
+      mode = fileConfig.mode or null;
+      source = fileConfig.source or null;
+      description = fileConfig.description or null;
+      target = fileConfig.target or null;
+      storePath =
+        if (fileConfig.type or "text") == "derivation" && fileConfig.drv != null then
+          builtins.toString fileConfig.drv
+        else
+          null;
+    }
+  ) enabledFiles;
+
+  manifestJson = builtins.toJSON {
+    version = 1;
+    files = manifestEntries;
+  };
 
   mkWriteSnippet =
     path: fileConfig:
@@ -99,6 +120,12 @@ let
       cd "$ROOT"
 
       ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet enabledFiles)}
+
+      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+      mkdir -p "$STATE_DIR"
+      cat > "$STATE_DIR/files.json" << 'STACKPANEL_FILES_EOF'
+      ${manifestJson}
+      STACKPANEL_FILES_EOF
 
       ${util.log.debug "files: completed writing ${toString fileCount} file(s)"}
       echo "✅ wrote ${toString fileCount} file(s) into $ROOT"

@@ -97,6 +97,20 @@ in
       default = [ ];
     };
 
+    # Clean up conflicting aliases when entering shell
+    clean.aliases = lib.mkOption {
+      type = types.listOf types.str;
+      default = [ ];
+      description = ''
+        List of shell aliases to unset when entering the devshell.
+        Use this if you have aliases that conflict with stackpanel commands (e.g., "dev").
+      '';
+      example = [
+        "dev"
+        "start"
+      ];
+    };
+
     hooks.before = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];

@@ -1,23 +1,23 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import {
-	config,
-	createDocs,
-	createSecrets,
-	createWebApp,
-	SopsOutput,
-} from "./infra/sst";
-
 export default $config({
 	app(input) {
 		return {
-			name: config.name,
+			name: "stackpanel",
 			removal: input?.stage === "prod" ? "retain" : "remove",
 			protect: ["prod"].includes(input?.stage),
 			home: "cloudflare",
 		};
 	},
 	async run() {
+		const {
+			config,
+			createDocs,
+			createSecrets,
+			createWebApp,
+			SopsOutput,
+		} = await import("./infra/sst");
+
 		const stage = $app.stage;
 		const isProd = stage === "prod";
 

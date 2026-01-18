@@ -48,8 +48,14 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 	}
 
 	// Create evaluator for stackpanelConfig
+	// Try devshell passthru first (for user projects), then flake outputs (for stackpanel repo)
 	configEval, err := nixeval.New(cfg.ProjectRoot,
-		nixeval.WithFlakeAttr(".#stackpanelConfig"),
+		nixeval.WithFlakeAttrFallbacks([]string{
+			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
+			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
+			".#stackpanelConfig",
+			".#stackpanelFullConfig",
+		}),
 		nixeval.WithTimeout(30*time.Second),
 		nixeval.WithCacheTTL(10*time.Second),
 	)
@@ -59,8 +65,12 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 	}
 
 	// Create evaluator for stackpanelPackages
+	// Try devshell passthru first (for user projects), then flake outputs (for stackpanel repo)
 	packagesEval, err := nixeval.New(cfg.ProjectRoot,
-		nixeval.WithFlakeAttr(".#stackpanelPackages"),
+		nixeval.WithFlakeAttrFallbacks([]string{
+			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelPackages",
+			".#stackpanelPackages",
+		}),
 		nixeval.WithTimeout(30*time.Second),
 		nixeval.WithCacheTTL(10*time.Second),
 	)

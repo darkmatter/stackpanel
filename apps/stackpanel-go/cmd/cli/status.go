@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 	"github.com/spf13/cobra"
@@ -32,7 +33,7 @@ By default, opens an interactive dashboard. Use --static for non-interactive out
 			showFullStatus()
 		} else {
 			if err := tui.RunStatusDashboard(); err != nil {
-				printError(fmt.Sprintf("TUI error: %v", err))
+				output.Error(fmt.Sprintf("TUI error: %v", err))
 				// Fallback to static
 				showFullStatus()
 			}
@@ -54,34 +55,34 @@ ____/ \__| \__,_| \___| _|\_\  .__/  \__,_| _|  _| \___| _|
 
 func showFullStatus() {
 	fmt.Println()
-	purple.Print(Banner)
+	output.Purple.Print(Banner)
 
 	// Load config from Nix
 	cfg, cfgErr := nixconfig.Load()
 
 	// Show project info from config
 	if cfgErr == nil && cfg != nil {
-		fmt.Printf("\n%s Project: %s (base port: %d)\n", yellow.Sprint("■"), purple.Sprint(cfg.ProjectName), cfg.BasePort)
+		fmt.Printf("\n%s Project: %s (base port: %d)\n", output.Yellow.Sprint("■"), output.Purple.Sprint(cfg.ProjectName), cfg.BasePort)
 	}
 
 	// Apps (from config)
 	if cfgErr == nil && cfg != nil && len(cfg.Apps) > 0 {
-		fmt.Printf("\n%s Apps\n", yellow.Sprint("■"))
+		fmt.Printf("\n%s Apps\n", output.Yellow.Sprint("■"))
 		// Sort app names for consistent output
 		appNames := cfg.AppNames()
 		sort.Strings(appNames)
 		for _, name := range appNames {
 			app := cfg.Apps[name]
 			if app.URL != nil && *app.URL != "" {
-				fmt.Printf("  %s %s → %s\n", green.Sprint("●"), name, dim.Sprint(*app.URL))
+				fmt.Printf("  %s %s → %s\n", output.Green.Sprint("●"), name, output.DimC.Sprint(*app.URL))
 			} else {
-				fmt.Printf("  %s %s (port %d)\n", dim.Sprint("○"), name, app.Port)
+				fmt.Printf("  %s %s (port %d)\n", output.DimC.Sprint("○"), name, app.Port)
 			}
 		}
 	}
 
 	// Services (from config if available, fallback to hardcoded)
-	fmt.Printf("\n%s Development Services\n", yellow.Sprint("■"))
+	fmt.Printf("\n%s Development Services\n", output.Yellow.Sprint("■"))
 	if cfgErr == nil && cfg != nil && len(cfg.Services) > 0 {
 		// Show services from config
 		serviceNames := cfg.ServiceNames()
@@ -98,7 +99,7 @@ func showFullStatus() {
 	}
 
 	// Caddy
-	fmt.Printf("\n%s Reverse Proxy\n", yellow.Sprint("■"))
+	fmt.Printf("\n%s Reverse Proxy\n", output.Yellow.Sprint("■"))
 	showCaddyStatusCompact()
 
 	fmt.Println()
@@ -108,25 +109,25 @@ func showFullStatus() {
 func showServiceStatusWithPort(name, displayName string, port int) {
 	s := svc.Get(name)
 	if s == nil {
-		dim.Printf("  ○ %s (not registered)\n", displayName)
+		output.DimC.Printf("  ○ %s (not registered)\n", displayName)
 		return
 	}
 
 	status := s.Status()
 	if status.Running {
-		green.Printf("  ● %s", displayName)
-		dim.Printf(" (port %d, PID %d)\n", port, status.PID)
+		output.Green.Printf("  ● %s", displayName)
+		output.DimC.Printf(" (port %d, PID %d)\n", port, status.PID)
 	} else {
-		dim.Printf("  ○ %s (port %d, stopped)\n", displayName, port)
+		output.DimC.Printf("  ○ %s (port %d, stopped)\n", displayName, port)
 	}
 }
 
 func showCaddyStatusCompact() {
 	pid := readCaddyPidFile(caddyPidFile)
 	if pid > 0 && svc.IsProcessRunning(pid) {
-		green.Print("  ● Caddy")
-		dim.Printf(" (PID: %d)\n", pid)
+		output.Green.Print("  ● Caddy")
+		output.DimC.Printf(" (PID: %d)\n", pid)
 	} else {
-		dim.Println("  ○ Caddy (stopped)")
+		output.DimC.Println("  ○ Caddy (stopped)")
 	}
 }
