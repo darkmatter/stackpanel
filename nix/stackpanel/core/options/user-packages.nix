@@ -23,17 +23,19 @@
 {
   lib,
   config,
+  pkgs ? null,
   ...
-}@args:
+}:
 let
-  # Check if pkgs was provided without triggering a lookup error
-  hasPkgs = args ? pkgs;
-  pkgs = args.pkgs or null;
+  # pkgs is optional - provided by devenv/flakeModule via _module.args
+  # or passed directly in specialArgs
+  hasPkgs = pkgs != null;
   cfg = config.stackpanel.userPackages;
 
   # Path to the user packages data file
-  dataDir = config.stackpanel.dirs.home or ".stackpanel";
-  packagesFile = "${builtins.getEnv "STACKPANEL_ROOT"}/${dataDir}/data/packages.nix";
+  # Use relative path from the config file location (avoids impure getEnv)
+  configDir = builtins.dirOf config.stackpanel.dirs.config;
+  packagesFile = configDir + "/data/packages.nix";
 
   # Read the packages file if it exists
   # Returns a list of attribute path strings

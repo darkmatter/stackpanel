@@ -40,6 +40,50 @@ rec {
     }
   '';
 
+  # Script to auto-generate an AGE key if none exists (for bootstrap)
+  # Returns 0 if key exists or was created, 1 on failure
+  autoGenerateAgeKeyScript = ''
+    STATE_DIR=".stackpanel/state"
+    KEY_FILE="$STATE_DIR/age-key.txt"
+    IDENTITY_FILE="$STATE_DIR/age-identity"
+    
+    # Check if we already have a key configured
+    if [[ -f "$IDENTITY_FILE" ]]; then
+      exit 0
+    fi
+    
+    # Check default locations
+    for loc in "''${SOPS_AGE_KEY_FILE:-}" "$HOME/.config/sops/age/keys.txt" "$HOME/.age/keys.txt" "$HOME/.config/age/keys.txt"; do
+      [[ -z "$loc" ]] && continue
+      if [[ -f "$loc" ]]; then
+        exit 0
+      fi
+    done
+    
+    # No key found - auto-generate one
+    echo "🔐 No AGE key found. Generating a new one for local development..." >&2
+    mkdir -p "$STATE_DIR"
+    chmod 700 "$STATE_DIR"
+    
+    # Generate new AGE key
+    ${pkgs.age}/bin/age-keygen -o "$KEY_FILE" 2>/dev/null
+    chmod 600 "$KEY_FILE"
+    
+    # Store marker in identity file
+    echo "AGE-SECRET-KEY-..." > "$IDENTITY_FILE"
+    chmod 600 "$IDENTITY_FILE"
+    
+    # Extract public key
+    PUBLIC_KEY=$(${pkgs.age}/bin/age-keygen -y "$KEY_FILE" 2>/dev/null)
+    
+    echo "✅ Generated new AGE key:" >&2
+    echo "   Private key: $KEY_FILE" >&2
+    echo "   Public key:  $PUBLIC_KEY" >&2
+    echo "" >&2
+    echo "⚠️  This key is local to your machine. Add it to .sops.yaml to encrypt secrets." >&2
+    echo "   Or configure a team-wide key in the Stackpanel UI." >&2
+  '';
+
   # Build the ensure-age-key script body
   ensureAgeKeyScript = ''
     # Check configured locations for AGE key file

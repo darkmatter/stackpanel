@@ -17,7 +17,6 @@
   ...
 }:
 let
-  types = lib.types;
   cfg = config.stackpanel.devshell;
 in
 {

@@ -1,0 +1,54 @@
+---
+title: Network
+description: Local domains, TLS, and reverse proxy with Caddy
+---
+
+# Network
+
+Stackpanel uses Caddy as a reverse proxy to provide local domains and TLS certificates for development.
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Local domains** | `myapp.localhost` instead of `localhost:3000` |
+| **Auto TLS** | HTTPS with locally-trusted certificates |
+| **Reverse proxy** | Route domains to app ports |
+
+## Setting Up Domains
+
+```nix
+# .stackpanel/config.nix
+apps.web = {
+  domain = "app";     # → app.localhost
+  tls = true;         # Enable HTTPS
+};
+
+apps.api = {
+  domain = "api";     # → api.localhost
+  tls = true;
+};
+```
+
+## Managing Caddy
+
+```bash
+stackpanel caddy start   # Start reverse proxy
+stackpanel caddy stop    # Stop reverse proxy
+stackpanel caddy status  # Check status
+stackpanel caddy list    # List all routes
+```
+
+## TLS with Step CA
+
+For HTTPS to work, you need a local Certificate Authority:
+
+1. Enable Step CA in config
+2. Install the root certificate in your browser/system
+3. Apps with `tls = true` will serve over HTTPS
+
+## Tips
+
+- Use `domain` for user-facing apps
+- Skip `domain` for internal services
+- TLS requires Step CA to be configured

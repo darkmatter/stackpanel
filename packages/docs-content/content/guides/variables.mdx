@@ -1,9 +1,53 @@
+---
+title: Variables
+description: Shared configuration values for your apps
+---
+
 # Variables
 
-Variables hold shared configuration values for your apps. Use secrets for
-sensitive values that should stay encrypted.
+Variables are shared configuration values that can be referenced across your apps. Use secrets for sensitive values that should stay encrypted.
+
+## Variable Types
+
+| Type | Description | Storage |
+|------|-------------|---------|
+| **Config** | Plain text values | `.stackpanel/data/variables.nix` |
+| **Secret** | Encrypted values | `.stackpanel/secrets/vars/*.age` |
+| **Computed** | Generated at build time | Nix expressions |
+
+## Adding Variables
+
+### Via Studio UI
+
+1. Navigate to **Variables / Secrets** panel
+2. Click **Add Variable**
+3. Choose type (config, secret, computed)
+4. Enter key, value, and description
+
+### Via Configuration
+
+```nix
+# .stackpanel/data/variables.nix
+{
+  API_URL = {
+    key = "API_URL";
+    value = "https://api.example.com";
+    description = "Backend API endpoint";
+  };
+}
+```
+
+## Using Variables
+
+Variables are available as environment variables in your apps:
+
+```typescript
+const apiUrl = process.env.API_URL;
+```
 
 ## Tips
 
-- Keep descriptions short and specific.
-- Use computed/service variables for generated values.
+- Keep descriptions short and specific
+- Use secrets for API keys, passwords, and tokens
+- Computed variables are useful for derived values
+- Variables are shared across all apps by default

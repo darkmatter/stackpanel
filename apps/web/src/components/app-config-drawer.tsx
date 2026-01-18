@@ -12,266 +12,54 @@ import {
 	Variable,
 	X,
 } from "lucide-react";
-import { useState } from "react";
-
-type Environment = "development" | "staging" | "production";
-
-type AvailableTask = {
-	name: string;
-	defaultScript: string;
-	description?: string;
-};
-
-type TaskConfig = {
-	key: string;
-	command: string;
-};
-
-type AvailableSecret = {
-	id: string;
-	name: string;
-	type: "secret" | "variable";
-	value?: string; // Only for non-secrets
-};
-
-type VariableConfig = {
-	secretId: string;
-	environments: Environment[];
-};
-
-type App = {
-	id: string;
-	name: string;
-	badge?: string;
-	path: string;
-	domain: string;
-	tasks: { name: string; description: string }[];
-	variables: { name: string; type: "secret" | "variable"; computed: boolean }[];
-};
-
-interface AppConfigDrawerProps {
-	app: App | null;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-}
+import type { AppConfigDrawerProps, Environment } from "./app-config-drawer";
+import {
+	AVAILABLE_TASKS,
+	formatEnvironments,
+	useAppConfigDrawer,
+} from "./app-config-drawer";
 
 export function AppConfigDrawer({
 	app,
 	open,
 	onOpenChange,
 }: AppConfigDrawerProps) {
-	const [activeTab, setActiveTab] = useState<"tasks" | "variables">("tasks");
-	const [selectedEnvironments, setSelectedEnvironments] = useState<
-		Environment[]
-	>(["development"]);
-	const [environment, setEnvironment] = useState<Environment>("development");
+	const {
+		// Tab state
+		activeTab,
+		setActiveTab,
+		selectedEnvironments,
+		setSelectedEnvironments,
 
-	const availableTasks: AvailableTask[] = [
-		{
-			name: "build",
-			defaultScript: "npm run build",
-			description: "Build for production",
-		},
-		{
-			name: "dev",
-			defaultScript: "npm run dev",
-			description: "Start dev server",
-		},
-		{ name: "test", defaultScript: "npm test", description: "Run test suite" },
-		{ name: "lint", defaultScript: "npm run lint", description: "Lint code" },
-		{
-			name: "type-check",
-			defaultScript: "tsc --noEmit",
-			description: "Type checking",
-		},
-	];
+		// Task state
+		taskConfigs,
+		showTaskSuggestions,
+		setShowTaskSuggestions,
+		taskKeyInput,
+		displayTasks,
 
-	const [taskConfigs, setTaskConfigs] = useState<TaskConfig[]>([
-		{ key: "build", command: "npm run build" },
-		{ key: "dev", command: "npm run dev -- --turbo" },
-	]);
+		// Task handlers
+		removeTask,
+		updateTaskKey,
+		updateTaskCommand,
+		selectPredefinedTask,
+		getDefaultScript,
+		getFilteredTasks,
 
-	const [showTaskSuggestions, setShowTaskSuggestions] = useState<number | null>(
-		null,
-	);
-	const [taskKeyInput, setTaskKeyInput] = useState<{ [index: number]: string }>(
-		{},
-	);
+		// Variable state
+		variableConfigs,
+		showVariableSuggestions,
+		setShowVariableSuggestions,
+		variableNameInput,
 
-	const availableSecrets: AvailableSecret[] = [
-		{
-			id: "1",
-			name: "APP_URL",
-			type: "variable",
-			value: "https://app.example.com",
-		},
-		{ id: "2", name: "AUTH_SECRET", type: "secret" },
-		{
-			id: "3",
-			name: "API_URL",
-			type: "variable",
-			value: "https://api.example.com",
-		},
-		{
-			id: "4",
-			name: "DATABASE_URL",
-			type: "variable",
-			value: "postgres://localhost:5432/db",
-		},
-		{ id: "5", name: "STRIPE_KEY", type: "secret" },
-		{
-			id: "6",
-			name: "REDIS_URL",
-			type: "variable",
-			value: "redis://localhost:6379",
-		},
-	];
-
-	const [variableConfigs, setVariableConfigs] = useState<VariableConfig[]>([
-		{ secretId: "1", environments: ["development", "staging", "production"] },
-		{ secretId: "2", environments: ["development", "staging"] },
-		{ secretId: "3", environments: ["production"] },
-	]);
-
-	const [showVariableSuggestions, setShowVariableSuggestions] = useState<
-		number | null
-	>(null);
-	const [variableNameInput, setVariableNameInput] = useState<{
-		[index: number]: string;
-	}>({});
-
-	const removeTask = (index: number) => {
-		setTaskConfigs(taskConfigs.filter((_, i) => i !== index));
-	};
-
-	const updateTaskKey = (index: number, key: string) => {
-		if (index === taskConfigs.length) {
-			setTaskConfigs([...taskConfigs, { key, command: "" }]);
-		} else {
-			const updated = [...taskConfigs];
-			updated[index] = { ...updated[index], key };
-			setTaskConfigs(updated);
-		}
-		setTaskKeyInput({ ...taskKeyInput, [index]: key });
-	};
-
-	const updateTaskCommand = (index: number, command: string) => {
-		if (index === taskConfigs.length) {
-			setTaskConfigs([...taskConfigs, { key: "", command }]);
-		} else {
-			const updated = [...taskConfigs];
-			updated[index] = { ...updated[index], command };
-			setTaskConfigs(updated);
-		}
-	};
-
-	const selectPredefinedTask = (index: number, task: AvailableTask) => {
-		if (index === taskConfigs.length) {
-			setTaskConfigs([
-				...taskConfigs,
-				{ key: task.name, command: task.defaultScript },
-			]);
-		} else {
-			const updated = [...taskConfigs];
-			updated[index] = { key: task.name, command: task.defaultScript };
-			setTaskConfigs(updated);
-		}
-		setTaskKeyInput({ ...taskKeyInput, [index]: task.name });
-		setShowTaskSuggestions(null);
-	};
-
-	const getDefaultScript = (key: string): string => {
-		const task = availableTasks.find((t) => t.name === key);
-		return task?.defaultScript || "";
-	};
-
-	const getFilteredTasks = (index: number): AvailableTask[] => {
-		const input = taskKeyInput[index] || taskConfigs[index]?.key || "";
-		if (!input) return availableTasks;
-		return availableTasks.filter((t) =>
-			t.name.toLowerCase().includes(input.toLowerCase()),
-		);
-	};
-
-	const removeVariable = (index: number) => {
-		setVariableConfigs(variableConfigs.filter((_, i) => i !== index));
-	};
-
-	const updateVariableName = (index: number, name: string) => {
-		const secret = availableSecrets.find((s) => s.name === name);
-		if (index === variableConfigs.length) {
-			if (secret) {
-				setVariableConfigs([
-					...variableConfigs,
-					{ secretId: secret.id, environments: [] },
-				]);
-			}
-		} else {
-			if (secret) {
-				const updated = [...variableConfigs];
-				updated[index] = { ...updated[index], secretId: secret.id };
-				setVariableConfigs(updated);
-			}
-		}
-		setVariableNameInput({ ...variableNameInput, [index]: name });
-	};
-
-	const selectPredefinedVariable = (index: number, secret: AvailableSecret) => {
-		if (index === variableConfigs.length) {
-			setVariableConfigs([
-				...variableConfigs,
-				{ secretId: secret.id, environments: [] },
-			]);
-		} else {
-			const updated = [...variableConfigs];
-			updated[index] = { ...updated[index], secretId: secret.id };
-			setVariableConfigs(updated);
-		}
-		setVariableNameInput({ ...variableNameInput, [index]: secret.name });
-		setShowVariableSuggestions(null);
-	};
-
-	const getFilteredVariables = (index: number): AvailableSecret[] => {
-		const input = variableNameInput[index] || "";
-		const usedSecretIds = variableConfigs
-			.filter((_, i) => i !== index)
-			.map((v) => v.secretId);
-		const availableToAdd = availableSecrets.filter(
-			(s) => !usedSecretIds.includes(s.id),
-		);
-
-		if (!input) return availableToAdd;
-		return availableToAdd.filter((s) =>
-			s.name.toLowerCase().includes(input.toLowerCase()),
-		);
-	};
-
-	const getSecretById = (id: string): AvailableSecret | undefined => {
-		return availableSecrets.find((s) => s.id === id);
-	};
-
-	const formatEnvironments = (envs: Environment[]): string => {
-		if (envs.length === 0) return "No environments";
-		const shortNames = {
-			development: "dev",
-			staging: "stg",
-			production: "prod",
-		};
-		return envs.map((e) => shortNames[e]).join(", ");
-	};
-
-	const displayTasks = [...taskConfigs, { key: "", command: "" }];
-	const displayVariables = [
-		...variableConfigs,
-		{ secretId: "", environments: [] as Environment[] },
-	];
-
-	const getFilteredVariablesForEnvironments = (): VariableConfig[] => {
-		if (selectedEnvironments.length === 0) return [];
-		return variableConfigs.filter((config) =>
-			selectedEnvironments.every((env) => config.environments.includes(env)),
-		);
-	};
+		// Variable handlers
+		removeVariable,
+		getFilteredVariables,
+		getSecretById,
+		getFilteredVariablesForEnvironments,
+		addVariableWithEnvironments,
+		handleAddVariableInput,
+	} = useAppConfigDrawer();
 
 	if (!app) return null;
 
@@ -327,7 +115,7 @@ export function AppConfigDrawer({
 				{/* Tabs */}
 				<Tabs
 					value={activeTab}
-					onValueChange={(v) => setActiveTab(v as any)}
+					onValueChange={(v) => setActiveTab(v as "tasks" | "variables")}
 					className="flex-1 flex flex-col"
 				>
 					<div className="px-6 pt-4">
@@ -499,87 +287,65 @@ export function AppConfigDrawer({
 							</div>
 
 							<div className="space-y-2">
-								{getFilteredVariablesForEnvironments().map(
-									(variable, index) => {
-										const secret = getSecretById(variable.secretId);
-										if (!secret) return null;
+								{getFilteredVariablesForEnvironments().map((variable) => {
+									const secret = getSecretById(variable.secretId);
+									if (!secret) return null;
 
-										return (
-											<div
-												key={variable.secretId}
-												className="flex items-start gap-3 p-3 bg-muted/30 rounded-md border border-border group"
-											>
-												<div className="flex-shrink-0 mt-0.5">
-													{secret.type === "secret" ? (
-														<Lock className="h-4 w-4 text-orange-500" />
-													) : (
-														<Variable className="h-4 w-4 text-blue-500" />
+									return (
+										<div
+											key={variable.secretId}
+											className="flex items-start gap-3 p-3 bg-muted/30 rounded-md border border-border group"
+										>
+											<div className="flex-shrink-0 mt-0.5">
+												{secret.type === "secret" ? (
+													<Lock className="h-4 w-4 text-orange-500" />
+												) : (
+													<Variable className="h-4 w-4 text-blue-500" />
+												)}
+											</div>
+											<div className="flex-1 min-w-0">
+												<div className="flex items-baseline gap-2 mb-0.5">
+													<span className="font-mono text-sm font-medium">
+														{secret.name}
+													</span>
+													{secret.type === "variable" && secret.value && (
+														<>
+															<span className="text-muted-foreground text-xs">
+																=
+															</span>
+															<span className="text-xs text-muted-foreground font-mono truncate">
+																{secret.value}
+															</span>
+														</>
 													)}
 												</div>
-												<div className="flex-1 min-w-0">
-													<div className="flex items-baseline gap-2 mb-0.5">
-														<span className="font-mono text-sm font-medium">
-															{secret.name}
-														</span>
-														{secret.type === "variable" && secret.value && (
-															<>
-																<span className="text-muted-foreground text-xs">
-																	=
-																</span>
-																<span className="text-xs text-muted-foreground font-mono truncate">
-																	{secret.value}
-																</span>
-															</>
-														)}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														{formatEnvironments(variable.environments)}
-													</div>
+												<div className="text-xs text-muted-foreground">
+													{formatEnvironments(variable.environments)}
 												</div>
-												<Button
-													variant="ghost"
-													size="icon"
-													onClick={() => {
-														const index = variableConfigs.findIndex(
-															(v) => v.secretId === variable.secretId,
-														);
-														if (index !== -1) removeVariable(index);
-													}}
-													className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
 											</div>
-										);
-									},
-								)}
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => {
+													const index = variableConfigs.findIndex(
+														(v) => v.secretId === variable.secretId,
+													);
+													if (index !== -1) removeVariable(index);
+												}}
+												className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+											>
+												<Trash2 className="h-4 w-4" />
+											</Button>
+										</div>
+									);
+								})}
 
 								<div className="flex items-start gap-2">
 									<div className="flex-1 relative">
 										<div className="relative">
 											<Input
 												value={variableNameInput[variableConfigs.length] ?? ""}
-												onChange={(e) => {
-													const name = e.target.value;
-													const secret = availableSecrets.find(
-														(s) => s.name === name,
-													);
-													if (secret) {
-														setVariableConfigs([
-															...variableConfigs,
-															{
-																secretId: secret.id,
-																environments: selectedEnvironments,
-															},
-														]);
-														setVariableNameInput({});
-													} else {
-														setVariableNameInput({
-															...variableNameInput,
-															[variableConfigs.length]: name,
-														});
-													}
-												}}
+												onChange={(e) => handleAddVariableInput(e.target.value)}
 												onFocus={() =>
 													setShowVariableSuggestions(variableConfigs.length)
 												}
@@ -617,17 +383,9 @@ export function AppConfigDrawer({
 													(availableSecret) => (
 														<button
 															key={availableSecret.id}
-															onClick={() => {
-																setVariableConfigs([
-																	...variableConfigs,
-																	{
-																		secretId: availableSecret.id,
-																		environments: selectedEnvironments,
-																	},
-																]);
-																setVariableNameInput({});
-																setShowVariableSuggestions(null);
-															}}
+															onClick={() =>
+																addVariableWithEnvironments(availableSecret.id)
+															}
 															className="w-full px-3 py-2 text-left hover:bg-accent text-sm flex flex-col gap-1"
 														>
 															<div className="flex items-center justify-between gap-2">

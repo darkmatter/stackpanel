@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	_ "github.com/darkmatter/stackpanel/stackpanel-go/internal/services" // register built-in dev services
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui/navigation"
@@ -16,12 +16,6 @@ var (
 	// Version info (set at build time)
 	Version   = "dev"
 	BuildDate = "unknown"
-
-	// Colors (kept for backward compatibility with non-TUI commands)
-	purple = color.New(color.Attribute(38), color.Attribute(5), color.Attribute(99)) // 256-color purple (code 99)
-	green  = color.New(color.FgGreen)
-	yellow = color.New(color.FgYellow)
-	dim    = color.New(color.Faint)
 )
 
 var rootCmd = &cobra.Command{
@@ -46,12 +40,12 @@ Run without arguments to launch the interactive TUI.`,
 		case tui.RunModeInteractive:
 			// Launch the TUI navigator
 			if err := navigation.RunNavigation(cmd); err != nil {
-				printError(fmt.Sprintf("TUI error: %v", err))
+				output.Error(fmt.Sprintf("TUI error: %v", err))
 				os.Exit(1)
 			}
 		case tui.RunModeDaemon:
 			// Daemon mode - just print status and stay running (or exit)
-			printInfo("Running in daemon mode (no TUI)")
+			output.Info("Running in daemon mode (no TUI)")
 			// For now, just show help in daemon mode without TUI
 			cmd.Help()
 		case tui.RunModeDirect:
@@ -83,32 +77,7 @@ func init() {
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		noColor, _ := cmd.Flags().GetBool("no-color")
 		if noColor {
-			color.NoColor = true
+			output.SetNoColor(true)
 		}
 	}
-}
-
-// Helper functions for common output patterns
-func printSuccess(msg string) {
-	green.Print("✓ ")
-	fmt.Println(msg)
-}
-
-func printInfo(msg string) {
-	purple.Print("→ ")
-	fmt.Println(msg)
-}
-
-func printWarning(msg string) {
-	yellow.Print("⚠ ")
-	fmt.Println(msg)
-}
-
-func printError(msg string) {
-	color.New(color.FgRed).Print("✗ ")
-	fmt.Fprintln(os.Stderr, msg)
-}
-
-func printDim(msg string) {
-	dim.Println(msg)
 }

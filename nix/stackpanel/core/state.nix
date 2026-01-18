@@ -44,7 +44,7 @@ let
     };
 
   # Import util for debug logging
-  util = import ../lib/util.nix { inherit pkgs lib config; };
+  util = config.stackpanel.util;
 
   # Build the state object
   stateData = {

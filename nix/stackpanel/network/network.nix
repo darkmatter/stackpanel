@@ -29,9 +29,7 @@
 }:
 let
   cfg = config.stackpanel.step-ca;
-  util = import ../lib/util.nix {
-    inherit pkgs lib config;
-  };
+  util = config.stackpanel.util;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
   stateDir = "${dirs.state}/step";

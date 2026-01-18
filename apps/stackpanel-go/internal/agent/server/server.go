@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/darkmatter/stackpanel/packages/proto/gen/gopb/gopbconnect"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
 	sharedexec "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
@@ -163,6 +164,8 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/nix/data", s.withCORS(s.requireAuth(s.requireProject(s.handleNixData))))
 	mux.HandleFunc("/api/nix/data/list", s.withCORS(s.requireAuth(s.requireProject(s.handleNixDataList))))
 	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))))
+	mux.HandleFunc("/api/files/list", s.withCORS(s.requireAuth(s.requireProject(s.handleFilesList))))
+	mux.HandleFunc("/api/scripts/source", s.withCORS(s.requireAuth(s.requireProject(s.handleScriptSource))))
 	mux.HandleFunc("/api/secrets/set", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsSet))))
 
 	// Agenix secret management endpoints
@@ -182,6 +185,26 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/nixpkgs/search", s.withCORS(s.requireAuth(s.handleNixpkgsSearch)))
 	mux.HandleFunc("/api/nixpkgs/installed", s.withCORS(s.requireAuth(s.handleInstalledPackages)))
 	mux.HandleFunc("/api/nixpkgs/meta", s.withCORS(s.requireAuth(s.handleNixpkgsPackageMeta)))
+
+	// SST infrastructure management endpoints
+	mux.HandleFunc("/api/sst/config", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTConfig))))
+	mux.HandleFunc("/api/sst/status", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTStatus))))
+	mux.HandleFunc("/api/sst/deploy", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTDeploy))))
+	mux.HandleFunc("/api/sst/outputs", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTOutputs))))
+	mux.HandleFunc("/api/sst/resources", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTResources))))
+	mux.HandleFunc("/api/sst/remove", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTRemove))))
+
+	// Process-compose process management endpoints
+	mux.HandleFunc("/api/process-compose/processes", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcesses))))
+
+	// Healthchecks endpoint for module health status
+	mux.HandleFunc("/api/healthchecks", s.withCORS(s.requireAuth(s.requireProject(s.handleHealthchecks))))
+
+	// Connect-RPC service (type-safe gRPC-Web compatible API)
+	// This provides fully typed endpoints generated from proto definitions
+	agentService := NewAgentServiceServer(s)
+	path, handler := gopbconnect.NewAgentServiceHandler(agentService)
+	mux.Handle(path, s.withCORS(s.requireAuth(handler.ServeHTTP)))
 
 	// SSE endpoint for real-time config updates
 	mux.HandleFunc("/api/events", s.withCORS(s.requireAuth(s.handleSSE)))

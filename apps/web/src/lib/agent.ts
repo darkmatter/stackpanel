@@ -1,98 +1,138 @@
-/**
- * StackPanel Agent Client
- *
- * Connects to the local agent running on the developer's machine
- * to execute commands and manage files.
- */
+import {
+	kebabToSnake,
+	kebabToSnakeValues,
+	snakeToKebab,
+	snakeToKebabValues,
+} from "./nix-data";
+import type {
+	App,
+	AppVariable,
+	Config,
+	GeneratedFile,
+	GeneratedFilesResponse,
+	Service,
+	Task,
+	User,
+} from "./types";
 
-export interface Project {
-	path: string;
-	name: string;
-	last_opened: string;
-	active: boolean;
-}
+// =============================================================================
+// Nix Data API Types (from nix-client.ts)
+// =============================================================================
 
-export interface ProjectListResponse {
-	projects: Project[];
-}
-
-export interface ProjectCurrentResponse {
-	has_project: boolean;
-	project: Project | null;
-}
-
-export interface ProjectOpenResponse {
-	success: boolean;
-	project: Project;
-	devshell?: {
-		in_devshell: boolean;
-		has_devshell_env: boolean;
-		error?: string;
-	};
-}
-
-export interface ProjectValidateResponse {
-	valid: boolean;
-	error?: string;
-	message?: string;
-}
-
-export interface AgentConfig {
-	host?: string;
-	port?: number;
-	token?: string;
-	onConnect?: () => void;
-	onDisconnect?: () => void;
-	onError?: (error: Error) => void;
-}
-
-export interface ExecRequest {
-	command: string;
-	args?: string[];
-	cwd?: string;
-	env?: string[];
-}
-
-export interface ExecResult {
-	exit_code: number;
-	stdout: string;
-	stderr: string;
-}
-
-export interface NixEvalRequest {
-	expression: string;
-	file?: string;
-}
-
-export interface FileContent {
-	path: string;
-	content: string;
+export interface DataResponse<T> {
+	data: T | null;
 	exists: boolean;
-}
-
-export interface GenerateResult {
 	success: boolean;
-	output: string;
 	error?: string;
 }
 
-export interface AgentHealth {
-	status: string;
-	project_root?: string;
-	has_project?: boolean;
-	agent_id?: string;
+export interface ListResponse<T> {
+	data: T[];
+	success: boolean;
+	error?: string;
 }
 
-export type SecretEnv = "dev" | "staging" | "prod";
-
-export interface SetSecretRequest {
-	env: SecretEnv;
-	key: string;
-	value: string;
-}
-
-export interface SetSecretResult {
+export interface WriteResponse {
+	success: boolean;
 	path: string;
+	error?: string;
+}
+
+export interface DeleteResponse {
+	success: boolean;
+	path: string;
+	error?: string;
+}
+
+/**
+ * EntityClient - CRUD client for a specific Nix entity file.
+ */
+class EntityClient<T> {
+	constructor(
+		private client: AgentHttpClient,
+		private entityName: string,
+	) {}
+
+	async get(): Promise<T | null> {
+		const res = await this.client.get<DataResponse<T>>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+		return res.exists && res.data ? kebabToSnake(res.data) : null;
+	}
+
+	async set(data: T): Promise<WriteResponse> {
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebab(data),
+		});
+	}
+
+	async update(updates: Partial<T>): Promise<WriteResponse> {
+		const current = await this.get();
+		return this.set({ ...(current ?? ({} as T)), ...updates });
+	}
+
+	async delete(): Promise<DeleteResponse> {
+		return this.client.delete<DeleteResponse>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+	}
+}
+
+/**
+ * MapEntityClient - CRUD client for Nix entities stored as maps (e.g., apps, variables).
+ */
+class MapEntityClient<V> {
+	constructor(
+		private client: AgentHttpClient,
+		private entityName: string,
+	) {}
+
+	async all(): Promise<Record<string, V>> {
+		const res = await this.client.get<DataResponse<Record<string, V>>>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+		return res.exists && res.data ? kebabToSnakeValues(res.data) : {};
+	}
+
+	async get(key: string): Promise<V | null> {
+		const all = await this.all();
+		return all[key] ?? null;
+	}
+
+	async set(key: string, value: V): Promise<WriteResponse> {
+		const all = await this.all();
+		all[key] = value;
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebabValues(all),
+		});
+	}
+
+	async update(key: string, updates: Partial<V>): Promise<WriteResponse> {
+		const all = await this.all();
+		const current = all[key] ?? ({} as V);
+		all[key] = { ...current, ...updates };
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebabValues(all),
+		});
+	}
+
+	async remove(key: string): Promise<WriteResponse> {
+		const all = await this.all();
+		delete all[key];
+		return this.client.post<WriteResponse>("/api/nix/data", {
+			entity: this.entityName,
+			data: snakeToKebabValues(all),
+		});
+	}
+
+	async deleteAll(): Promise<DeleteResponse> {
+		return this.client.delete<DeleteResponse>(
+			`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`,
+		);
+	}
 }
 
 /** Request to write an age-encrypted secret using agenix */
@@ -157,6 +197,111 @@ export interface KMSConfigResponse {
 	source: "" | "state" | "nix";
 }
 
+// SST Infrastructure types
+
+/** SST configuration from Nix */
+export interface SSTConfig {
+	enable: boolean;
+	"project-name": string;
+	region: string;
+	"account-id": string;
+	"config-path": string;
+	kms: {
+		enable: boolean;
+		alias: string;
+	};
+	oidc: {
+		provider: string;
+		"github-actions": {
+			org: string;
+			repo: string;
+		};
+		flyio: {
+			"org-id": string;
+			"app-name": string;
+		};
+		"roles-anywhere": {
+			"trust-anchor-arn": string;
+		};
+	};
+	iam: {
+		"role-name": string;
+	};
+}
+
+/** SST deployment status */
+export interface SSTStatus {
+	configured: boolean;
+	configPath: string;
+	configValid: boolean;
+	deployed: boolean;
+	stage: string;
+	lastDeploy?: string;
+	outputs?: Record<string, unknown>;
+	error?: string;
+}
+
+/** SST deployed resource */
+export interface SSTResource {
+	type: string;
+	urn: string;
+	id: string;
+}
+
+// Module requirements types (from Nix moduleRequirements config)
+
+/** Action to resolve a missing variable */
+export interface VariableAction {
+	type: string;
+	label: string;
+	url?: string | null;
+}
+
+/** A required variable declared by a module */
+export interface ModuleRequiredVariable {
+	key: string;
+	description: string;
+	sensitive: boolean;
+	action?: VariableAction | null;
+}
+
+/** Requirements declared by a single module */
+export interface ModuleRequirements {
+	requires: ModuleRequiredVariable[];
+	provides: string[];
+}
+
+/** All module requirements from config */
+export type AllModuleRequirements = Record<string, ModuleRequirements>;
+
+/** SST deploy response */
+export interface SSTDeployResponse {
+	success: boolean;
+	output: string;
+	error?: string;
+	outputs?: Record<string, unknown>;
+}
+
+/** ProcessInfo represents information about a running process from process-compose. */
+export interface ProcessInfo {
+	name: string;
+	namespace?: string;
+	status: string;
+	pid?: number;
+	exit_code?: number;
+	is_running: boolean;
+	restarts?: number;
+	system_time?: string;
+}
+
+/** ProcessComposeStatusResponse represents the response from the processes endpoint. */
+export interface ProcessComposeStatusResponse {
+	available: boolean;
+	running: boolean;
+	processes: ProcessInfo[];
+	error?: string;
+}
+
 /** Installed package information from devenv/stackpanel config */
 export interface InstalledPackageInfo {
 	name: string;
@@ -215,15 +360,6 @@ export interface TurboPackageGraphResult {
 	};
 }
 
-/** @deprecated Use TurboPackageGraphResult instead */
-export interface TurboPackagesQueryResult {
-	data: {
-		packages: {
-			items: Array<{ name: string }>;
-		};
-	};
-}
-
 /** Options for getPackages method */
 export interface GetPackagesOptions {
 	/** Exclude the root package "//" from results */
@@ -236,350 +372,8 @@ export interface GetPackageGraphOptions {
 	excludeRoot?: boolean;
 }
 
-type MessageType =
-	| "exec"
-	| "nix.eval"
-	| "nix.generate"
-	| "file.read"
-	| "file.write"
-	| "secrets.set"
-	| "secrets.write"
-	| "secrets.read"
-	| "secrets.delete"
-	| "secrets.list";
-
-interface Message {
-	id: string;
-	type: MessageType;
-	payload: unknown;
-}
-
-interface Response<T = unknown> {
-	id: string;
-	success: boolean;
-	data?: T;
-	error?: string;
-}
-
-type PendingRequest<T> = {
-	resolve: (value: T) => void;
-	reject: (error: Error) => void;
-};
-
-export class AgentClient {
-	private ws: WebSocket | null = null;
-	private config: {
-		host: string;
-		port: number;
-		token?: string;
-		onConnect: () => void;
-		onDisconnect: () => void;
-		onError: (error: Error) => void;
-	};
-	private pendingRequests = new Map<string, PendingRequest<unknown>>();
-	private messageId = 0;
-	private reconnectAttempts = 0;
-	private maxReconnectAttempts = 5;
-	private reconnectDelay = 1000;
-
-	constructor(config: AgentConfig = {}) {
-		this.config = {
-			host: config.host ?? "localhost",
-			port: config.port ?? 9876,
-			token: config.token,
-			onConnect: config.onConnect ?? (() => {}),
-			onDisconnect: config.onDisconnect ?? (() => {}),
-			onError: config.onError ?? (() => {}),
-		};
-	}
-
-	setToken(token?: string): void {
-		this.config.token = token;
-	}
-
-	/**
-	 * Connect to the agent
-	 */
-	connect(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			const u = new URL(`ws://${this.config.host}:${this.config.port}/ws`);
-			if (this.config.token) {
-				u.searchParams.set("token", this.config.token);
-			}
-
-			try {
-				this.ws = new WebSocket(u.toString());
-			} catch (err) {
-				reject(new Error(`Failed to create WebSocket: ${err}`));
-				return;
-			}
-
-			this.ws.onopen = () => {
-				this.reconnectAttempts = 0;
-				this.config.onConnect();
-				resolve();
-			};
-
-			this.ws.onclose = () => {
-				this.config.onDisconnect();
-				this.attemptReconnect();
-			};
-
-			this.ws.onerror = (_event) => {
-				const error = new Error("WebSocket error");
-				this.config.onError(error);
-				reject(error);
-			};
-
-			this.ws.onmessage = (event) => {
-				this.handleMessage(event.data);
-			};
-		});
-	}
-
-	/**
-	 * Ping the agent over HTTP to see if it's available.
-	 */
-	async ping(): Promise<AgentHealth | null> {
-		try {
-			const res = await fetch(
-				`http://${this.config.host}:${this.config.port}/health`,
-			);
-			if (!res.ok) return null;
-			return (await res.json()) as AgentHealth;
-		} catch {
-			return null;
-		}
-	}
-
-	/**
-	 * Disconnect from the agent
-	 */
-	disconnect(): void {
-		if (this.ws) {
-			this.ws.close();
-			this.ws = null;
-		}
-	}
-
-	/**
-	 * Check if connected
-	 */
-	get isConnected(): boolean {
-		return this.ws?.readyState === WebSocket.OPEN;
-	}
-
-	/**
-	 * Execute a command
-	 */
-	async exec(request: ExecRequest): Promise<ExecResult> {
-		return this.send<ExecResult>("exec", request);
-	}
-
-	/**
-	 * Evaluate a Nix expression
-	 */
-	async nixEval<T = unknown>(expression: string): Promise<T> {
-		return this.send<T>("nix.eval", { expression });
-	}
-
-	/**
-	 * Run nix generate
-	 */
-	async nixGenerate(): Promise<GenerateResult> {
-		return this.send<GenerateResult>("nix.generate", {});
-	}
-
-	/**
-	 * Read a file
-	 */
-	async readFile(path: string): Promise<FileContent> {
-		return this.send<FileContent>("file.read", { path });
-	}
-
-	/**
-	 * Write a file
-	 */
-	async writeFile(path: string, content: string): Promise<void> {
-		await this.send("file.write", { path, content });
-	}
-
-	/**
-	 * Set a secret in .stackpanel/secrets/<env>.yaml (encrypted via sops + team recipients).
-	 * @deprecated Use writeAgenixSecret for age-encrypted secrets
-	 */
-	async setSecret(request: SetSecretRequest): Promise<SetSecretResult> {
-		return this.send<SetSecretResult>("secrets.set", request);
-	}
-
-	/**
-	 * Write an age-encrypted secret using agenix.
-	 * Creates a .age file in .stackpanel/secrets/vars/<id>.age
-	 * and updates variables.nix with secret metadata.
-	 */
-	async writeAgenixSecret(request: AgenixSecretRequest): Promise<AgenixSecretResponse> {
-		return this.send<AgenixSecretResponse>("secrets.write", request);
-	}
-
-	/**
-	 * Read (decrypt) an age-encrypted secret.
-	 * Requires the user's AGE private key.
-	 */
-	async readAgenixSecret(request: AgenixDecryptRequest): Promise<AgenixDecryptResponse> {
-		return this.send<AgenixDecryptResponse>("secrets.read", request);
-	}
-
-	/**
-	 * Delete an age-encrypted secret.
-	 * Removes the .age file and updates variables.nix.
-	 */
-	async deleteAgenixSecret(id: string): Promise<{ deleted: boolean; id: string }> {
-		return this.send<{ deleted: boolean; id: string }>("secrets.delete", { id });
-	}
-
-	/**
-	 * List all age-encrypted secrets.
-	 */
-	async listAgenixSecrets(): Promise<{ secrets: Array<{ id: string; file: string; modTime?: number; size?: number }> }> {
-		return this.send<{ secrets: Array<{ id: string; file: string; modTime?: number; size?: number }> }>("secrets.list", {});
-	}
-
-	// Turbo monorepo methods
-
-	/**
-	 * Execute a turbo query and return the parsed JSON result.
-	 * @see https://turbo.build/repo/docs/reference/query
-	 */
-	async turboQuery<T = unknown>(query: string): Promise<T> {
-		const result = await this.exec({
-			command: "turbo",
-			args: ["query", query],
-		});
-
-		if (result.exit_code !== 0) {
-			throw new Error(`turbo query failed: ${result.stderr || result.stdout}`);
-		}
-
-		try {
-			return JSON.parse(result.stdout) as T;
-		} catch {
-			throw new Error(`Failed to parse turbo query response: ${result.stdout}`);
-		}
-	}
-
-	/**
-	 * Get all package names in the monorepo using turbo query.
-	 */
-	async getPackages(options?: GetPackagesOptions): Promise<string[]> {
-		const result = await this.turboQuery<TurboPackageGraphResult>(
-			"query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
-		);
-
-		let packages = result.data.packageGraph.nodes.items.map(
-			(item) => item.name,
-		);
-
-		if (options?.excludeRoot) {
-			packages = packages.filter((name) => name !== "//");
-		}
-
-		return packages;
-	}
-
-	/**
-	 * Get the full package graph including paths and tasks.
-	 */
-	async getPackageGraph(
-		options?: GetPackageGraphOptions,
-	): Promise<TurboPackage[]> {
-		const result = await this.turboQuery<TurboPackageGraphResult>(
-			"query { packageGraph { nodes { items { name path tasks { items { name } } } } } }",
-		);
-
-		let packages = result.data.packageGraph.nodes.items.map((item) => ({
-			name: item.name,
-			path: item.path,
-			tasks: item.tasks.items.map((t) => ({ name: t.name })),
-		}));
-
-		if (options?.excludeRoot) {
-			packages = packages.filter((pkg) => pkg.name !== "//");
-		}
-
-		return packages;
-	}
-
-	// Private methods
-
-	private send<T>(type: MessageType, payload: unknown): Promise<T> {
-		return new Promise((resolve, reject) => {
-			if (!this.isConnected) {
-				reject(new Error("Not connected to agent"));
-				return;
-			}
-
-			const id = String(++this.messageId);
-			const message: Message = { id, type, payload };
-
-			this.pendingRequests.set(id, {
-				resolve: resolve as (value: unknown) => void,
-				reject,
-			});
-
-			this.ws!.send(JSON.stringify(message));
-
-			// Timeout after 30 seconds
-			setTimeout(() => {
-				if (this.pendingRequests.has(id)) {
-					this.pendingRequests.delete(id);
-					reject(new Error("Request timeout"));
-				}
-			}, 30_000);
-		});
-	}
-
-	private handleMessage(data: string): void {
-		try {
-			const response: Response = JSON.parse(data);
-			const pending = this.pendingRequests.get(response.id);
-
-			if (pending) {
-				this.pendingRequests.delete(response.id);
-
-				if (response.success) {
-					pending.resolve(response.data);
-				} else {
-					pending.reject(new Error(response.error ?? "Unknown error"));
-				}
-			}
-		} catch (err) {
-			console.error("Failed to parse agent response:", err);
-		}
-	}
-
-	private attemptReconnect(): void {
-		if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-			console.error("Max reconnection attempts reached");
-			return;
-		}
-
-		this.reconnectAttempts++;
-		const delay = this.reconnectDelay * 2 ** (this.reconnectAttempts - 1);
-
-		console.log(
-			`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`,
-		);
-
-		setTimeout(() => {
-			this.connect().catch(() => {
-				// Will trigger another reconnect via onclose
-			});
-		}, delay);
-	}
-}
-
 /**
- * HTTP client fallback when WebSocket is not available
+ * HTTP client to interact with the StackPanel agent.
  */
 export interface AgentHttpClientConfig {
 	host?: string;
@@ -591,13 +385,40 @@ export class AgentHttpClient {
 	private baseUrl: string;
 	private token?: string;
 
+	// Nix configuration data clients
+	public readonly nix = {
+		apps: new MapEntityClient<App>(this, "apps"),
+		services: new MapEntityClient<Service>(this, "services"),
+		users: new MapEntityClient<User>(this, "users"),
+		generatedFiles: new MapEntityClient<GeneratedFile>(this, "generated-files"),
+		variables: new MapEntityClient<AppVariable>(this, "variables"),
+		tasks: new MapEntityClient<Task>(this, "tasks"),
+
+		/** Generic entity client for custom paths */
+		entity: <T>(name: string) => new MapEntityClient<T>(this, name),
+
+		/** Alias for entity() to maintain compatibility with NixClient */
+		mapEntity: <T>(name: string) => new MapEntityClient<T>(this, name),
+
+		/** Get the full Nix configuration */
+		config: (options: { refresh?: boolean } = {}) =>
+			this.get<Config>(`/nix/config${options.refresh ? "?refresh=true" : ""}`),
+
+		/** Force a re-evaluation of the Nix config */
+		refreshConfig: () => this.post<Config>("/nix/config", {}),
+	};
+
 	/**
 	 * Create an AgentHttpClient.
 	 * @param configOrHost - Either a config object { host?, port?, token? } or host string
 	 * @param port - Port number (only used if first arg is a string)
 	 * @param token - Auth token (only used if first arg is a string)
 	 */
-	constructor(configOrHost: AgentHttpClientConfig | string = {}, port = 9876, token?: string) {
+	constructor(
+		configOrHost: AgentHttpClientConfig | string = {},
+		port = 9876,
+		token?: string,
+	) {
 		if (typeof configOrHost === "string") {
 			// Legacy positional args: (host, port, token)
 			this.baseUrl = `http://${configOrHost}:${port}`;
@@ -620,6 +441,76 @@ export class AgentHttpClient {
 		if (contentType) headers["Content-Type"] = "application/json";
 		if (this.token) headers["X-Stackpanel-Token"] = this.token;
 		return headers;
+	}
+
+	/**
+	 * Generic GET request
+	 */
+	public async get<T>(path: string): Promise<T> {
+		const res = await fetch(`${this.baseUrl}${path}`, {
+			headers: this.getHeaders(false),
+		});
+
+		if (!res.ok) {
+			throw new Error(`Agent request failed: ${res.statusText}`);
+		}
+
+		return res.json();
+	}
+
+	/**
+	 * Compatibility helper to fetch generated files metadata.
+	 */
+	public async getGeneratedFiles(): Promise<GeneratedFilesResponse> {
+		const res = await this.get<{
+			success: boolean;
+			data?: GeneratedFilesResponse;
+			error?: string;
+		}>("/api/nix/files");
+		if (!res.success) {
+			throw new Error(res.error ?? "Failed to get generated files");
+		}
+		return res.data as GeneratedFilesResponse;
+	}
+
+	/**
+	 * Compatibility helper to map Nix data entities.
+	 */
+	public mapEntity<T>(name: string) {
+		return this.nix.mapEntity<T>(name);
+	}
+
+	/**
+	 * Generic POST request
+	 */
+	public async post<T>(path: string, body: unknown): Promise<T> {
+		const res = await fetch(`${this.baseUrl}${path}`, {
+			method: "POST",
+			headers: this.getHeaders(true),
+			body: JSON.stringify(body),
+		});
+
+		if (!res.ok) {
+			throw new Error(`Agent request failed: ${res.statusText}`);
+		}
+
+		return res.json();
+	}
+
+	/**
+	 * Generic DELETE request
+	 */
+	public async delete<T>(path: string): Promise<T> {
+		const res = await fetch(`${this.baseUrl}${path}`, {
+			method: "DELETE",
+			headers: this.getHeaders(false),
+		});
+
+		if (!res.ok) {
+			throw new Error(`Agent request failed: ${res.statusText}`);
+		}
+
+		return res.json();
 	}
 
 	async health(): Promise<AgentHealth> {
@@ -702,7 +593,9 @@ export class AgentHttpClient {
 	 * Write an age-encrypted secret using agenix.
 	 * Creates a .age file in .stackpanel/secrets/vars/<id>.age
 	 */
-	async writeAgenixSecret(request: AgenixSecretRequest): Promise<AgenixSecretResponse> {
+	async writeAgenixSecret(
+		request: AgenixSecretRequest,
+	): Promise<AgenixSecretResponse> {
 		const res = await fetch(`${this.baseUrl}/api/secrets/write`, {
 			method: "POST",
 			headers: this.getHeaders(true),
@@ -717,7 +610,9 @@ export class AgentHttpClient {
 	 * Read (decrypt) an age-encrypted secret.
 	 * Requires the user's AGE private key.
 	 */
-	async readAgenixSecret(request: AgenixDecryptRequest): Promise<AgenixDecryptResponse> {
+	async readAgenixSecret(
+		request: AgenixDecryptRequest,
+	): Promise<AgenixDecryptResponse> {
 		const res = await fetch(`${this.baseUrl}/api/secrets/read`, {
 			method: "POST",
 			headers: this.getHeaders(true),
@@ -731,11 +626,16 @@ export class AgentHttpClient {
 	/**
 	 * Delete an age-encrypted secret.
 	 */
-	async deleteAgenixSecret(id: string): Promise<{ deleted: boolean; id: string }> {
-		const res = await fetch(`${this.baseUrl}/api/secrets/delete?id=${encodeURIComponent(id)}`, {
-			method: "DELETE",
-			headers: this.getHeaders(false),
-		});
+	async deleteAgenixSecret(
+		id: string,
+	): Promise<{ deleted: boolean; id: string }> {
+		const res = await fetch(
+			`${this.baseUrl}/api/secrets/delete?id=${encodeURIComponent(id)}`,
+			{
+				method: "DELETE",
+				headers: this.getHeaders(false),
+			},
+		);
 		const data = await res.json();
 		if (!data.success) throw new Error(data.error);
 		return data.data;
@@ -744,7 +644,14 @@ export class AgentHttpClient {
 	/**
 	 * List all age-encrypted secrets.
 	 */
-	async listAgenixSecrets(): Promise<{ secrets: Array<{ id: string; file: string; modTime?: number; size?: number }> }> {
+	async listAgenixSecrets(): Promise<{
+		secrets: Array<{
+			id: string;
+			file: string;
+			modTime?: number;
+			size?: number;
+		}>;
+	}> {
 		const res = await fetch(`${this.baseUrl}/api/secrets/list`, {
 			headers: this.getHeaders(false),
 		});
@@ -790,7 +697,9 @@ export class AgentHttpClient {
 		});
 		const data = await res.json();
 		if (!data.success) throw new Error(data.error);
-		return data.data ?? { enable: false, keyArn: "", awsProfile: "", source: "" };
+		return (
+			data.data ?? { enable: false, keyArn: "", awsProfile: "", source: "" }
+		);
 	}
 
 	/**
@@ -985,10 +894,108 @@ export class AgentHttpClient {
 
 		return packages;
 	}
+
+	// SST Infrastructure methods
+
+	/**
+	 * Get the SST configuration from Nix.
+	 */
+	async getSSTConfig(): Promise<SSTConfig | null> {
+		const res = await fetch(`${this.baseUrl}/api/sst/config`, {
+			headers: this.getHeaders(false),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data;
+	}
+
+	/**
+	 * Get the current SST deployment status.
+	 */
+	async getSSTStatus(): Promise<SSTStatus | null> {
+		const res = await fetch(`${this.baseUrl}/api/sst/status`, {
+			headers: this.getHeaders(false),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data;
+	}
+
+	/**
+	 * Get the SST stack outputs.
+	 */
+	async getSSTOutputs(): Promise<Record<string, unknown>> {
+		const res = await fetch(`${this.baseUrl}/api/sst/outputs`, {
+			headers: this.getHeaders(false),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data ?? {};
+	}
+
+	/**
+	 * Get the deployed SST resources.
+	 */
+	async getSSTResources(): Promise<SSTResource[]> {
+		const res = await fetch(`${this.baseUrl}/api/sst/resources`, {
+			headers: this.getHeaders(false),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data ?? [];
+	}
+
+	/**
+	 * Deploy SST infrastructure.
+	 */
+	async deploySSTInfra(stage: string = "dev"): Promise<SSTDeployResponse> {
+		const res = await fetch(`${this.baseUrl}/api/sst/deploy`, {
+			method: "POST",
+			headers: this.getHeaders(true),
+			body: JSON.stringify({ stage }),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data;
+	}
+
+	/**
+	 * Remove SST infrastructure.
+	 */
+	async removeSSTInfra(
+		stage: string = "dev",
+	): Promise<{ success: boolean; output: string; error?: string }> {
+		const res = await fetch(`${this.baseUrl}/api/sst/remove`, {
+			method: "POST",
+			headers: this.getHeaders(true),
+			body: JSON.stringify({ stage }),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data;
+	}
+
+	// Process-compose methods
+
+	/**
+	 * Get the list of processes from process-compose.
+	 * Returns info about process-compose availability and running processes.
+	 */
+	async getProcessComposeProcesses(): Promise<ProcessComposeStatusResponse> {
+		const res = await fetch(`${this.baseUrl}/api/process-compose/processes`, {
+			headers: this.getHeaders(false),
+		});
+		const data = await res.json();
+		if (!data.success) throw new Error(data.error);
+		return data.data ?? { available: false, running: false, processes: [] };
+	}
+
+	// Variables methods
+
 }
 
 // Default export singleton
-export const agent = new AgentClient();
+export const agent = new AgentHttpClient();
 
 if (typeof window !== "undefined") {
 	(window as any)._agent = agent;

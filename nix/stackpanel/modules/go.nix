@@ -53,7 +53,6 @@
 }:
 let
   cfg = config.stackpanel;
-  util = import ../lib/util.nix { inherit pkgs lib; };
 
   # Generate package.json for a Go app
   generatePackageJson =
@@ -560,6 +559,56 @@ in
               mainPackage = app.go.mainPackage or ".";
             };
           }) goApps;
+        };
+
+        # Register healthchecks for Go module
+        # These verify the Go development environment is properly configured
+        stackpanel.healthchecks.modules.go = {
+          enable = true;
+          displayName = "Go";
+          checks = {
+            go-installed = {
+              name = "Go Installed";
+              description = "Verify Go compiler is available in PATH";
+              type = "script";
+              script = "command -v go >/dev/null 2>&1";
+              severity = "critical";
+              timeout = 5;
+              tags = [
+                "toolchain"
+                "compiler"
+              ];
+            };
+            go-version = {
+              name = "Go Version";
+              description = "Verify Go version is 1.21 or newer";
+              type = "script";
+              script = ''
+                version=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
+                major=$(echo "$version" | cut -d. -f1)
+                minor=$(echo "$version" | cut -d. -f2)
+                [ "$major" -gt 1 ] || ([ "$major" -eq 1 ] && [ "$minor" -ge 21 ])
+              '';
+              severity = "warning";
+              timeout = 5;
+              tags = [
+                "toolchain"
+                "version"
+              ];
+            };
+            gomod2nix-installed = {
+              name = "gomod2nix Available";
+              description = "Verify gomod2nix tool is available for Nix builds";
+              type = "script";
+              script = "command -v gomod2nix >/dev/null 2>&1";
+              severity = "warning";
+              timeout = 5;
+              tags = [
+                "nix"
+                "tooling"
+              ];
+            };
+          };
         };
       }
     ))

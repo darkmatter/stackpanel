@@ -1,0 +1,47 @@
+---
+title: Packages
+description: Nix packages for reproducible development environments
+---
+
+# Packages
+
+Packages are tools and dependencies available in your development shell. Stackpanel uses Nix for reproducible, version-pinned packages.
+
+## Adding Packages
+
+Packages are configured in `.stackpanel/config.nix`:
+
+```nix
+{
+  devshell.packages = with pkgs; [
+    nodejs
+    bun
+    go
+    rustc
+    cargo
+  ];
+}
+```
+
+## Benefits of Nix Packages
+
+| Benefit | Description |
+|---------|-------------|
+| **Reproducible** | Same versions across all machines |
+| **Isolated** | No conflicts with system packages |
+| **Version-pinned** | Lock file ensures consistency |
+| **Fast switching** | Cached in `/nix/store` |
+
+## Finding Packages
+
+Search for packages at [search.nixos.org](https://search.nixos.org/packages) or use:
+
+```bash
+nix search nixpkgs nodejs
+```
+
+## Tips
+
+- Add language runtimes (node, go, python) as packages
+- Use `runtimeInputs` in tasks for build-time dependencies
+- Packages are available immediately after entering the devshell

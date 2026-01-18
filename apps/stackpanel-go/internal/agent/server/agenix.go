@@ -716,10 +716,33 @@ func (s *Server) getAgeIdentityKeyPath() string {
 	return filepath.Join(stateDir, "age-key.txt")
 }
 
+// isAgeKeyContent checks if the value appears to be AGE key content rather than a file path.
+// This handles:
+// - Raw AGE secret keys: AGE-SECRET-KEY-1...
+// - AGE identity files with comment headers (# created:... followed by key)
+// - SSH/PEM private keys: -----BEGIN...
+func isAgeKeyContent(value string) bool {
+	// Direct key content
+	if strings.HasPrefix(value, "AGE-SECRET-KEY-") || strings.HasPrefix(value, "-----BEGIN") {
+		return true
+	}
+
+	// AGE identity files often start with comment lines like:
+	// # created: 2023-01-01T00:00:00Z
+	// # public key: age1...
+	// AGE-SECRET-KEY-1...
+	if strings.HasPrefix(value, "#") {
+		// Check if it contains an AGE secret key somewhere in the content
+		return strings.Contains(value, "AGE-SECRET-KEY-")
+	}
+
+	return false
+}
+
 // handleAgeIdentityGet reads the current age identity configuration
 func (s *Server) handleAgeIdentityGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
@@ -734,23 +757,21 @@ func (s *Server) handleAgeIdentityGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No identity configured - return empty
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 			return
 		}
-		http.Error(w, fmt.Sprintf("Failed to read identity: %v", err), http.StatusInternalServerError)
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to read identity: %v", err))
 		return
 	}
 
 	value := strings.TrimSpace(string(data))
 	if value == "" {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 		return
 	}
 
 	// Determine if it's a path or key content
-	if strings.HasPrefix(value, "AGE-SECRET-KEY-") || strings.HasPrefix(value, "-----BEGIN") {
+	if isAgeKeyContent(value) {
 		// It's key content - the actual key is stored separately
 		resp.Type = "key"
 		resp.Value = "(key stored)"
@@ -771,26 +792,25 @@ func (s *Server) handleAgeIdentityGet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
 // handleAgeIdentitySet sets the age identity (path or key content)
 func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	var req AgeIdentityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+		s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
 
 	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to create state dir: %v", err), http.StatusInternalServerError)
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create state dir: %v", err))
 		return
 	}
 
@@ -807,15 +827,15 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		resp.Type = ""
 		resp.Value = ""
 		resp.KeyPath = ""
-	} else if strings.HasPrefix(value, "AGE-SECRET-KEY-") || strings.HasPrefix(value, "-----BEGIN") {
+	} else if isAgeKeyContent(value) {
 		// It's key content - store the key in a separate file
 		if err := os.WriteFile(keyFile, []byte(value), 0600); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to write key: %v", err), http.StatusInternalServerError)
+			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write key: %v", err))
 			return
 		}
 		// Store indicator in identity file
 		if err := os.WriteFile(identityFile, []byte("AGE-SECRET-KEY-..."), 0600); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to write identity: %v", err), http.StatusInternalServerError)
+			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write identity: %v", err))
 			return
 		}
 		resp.Type = "key"
@@ -832,13 +852,13 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if _, err := os.Stat(expandedPath); err != nil {
-			http.Error(w, fmt.Sprintf("Key file not found: %s", expandedPath), http.StatusBadRequest)
+			s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("Key file not found: %s", expandedPath))
 			return
 		}
 
 		// Store the path
 		if err := os.WriteFile(identityFile, []byte(value), 0600); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to write identity: %v", err), http.StatusInternalServerError)
+			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write identity: %v", err))
 			return
 		}
 		// Remove any stored key content
@@ -850,8 +870,7 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		log.Info().Str("path", value).Str("expanded", expandedPath).Msg("Age identity path stored")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
 // GetConfiguredIdentityPath returns the identity path for use by other handlers
@@ -869,7 +888,7 @@ func (s *Server) GetConfiguredIdentityPath() string {
 	}
 
 	// If it's key content, return the key file path
-	if strings.HasPrefix(value, "AGE-SECRET-KEY-") || strings.HasPrefix(value, "-----BEGIN") {
+	if isAgeKeyContent(value) {
 		return s.getAgeIdentityKeyPath()
 	}
 
@@ -891,7 +910,7 @@ func (s *Server) handleAgeIdentity(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleAgeIdentitySet(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
@@ -928,7 +947,7 @@ func (s *Server) getKMSConfigPath() string {
 // handleKMSConfigGet reads the current KMS configuration
 func (s *Server) handleKMSConfigGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
@@ -944,40 +963,38 @@ func (s *Server) handleKMSConfigGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// No state config - return empty (could try reading from Nix config here)
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 			return
 		}
-		http.Error(w, fmt.Sprintf("Failed to read KMS config: %v", err), http.StatusInternalServerError)
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to read KMS config: %v", err))
 		return
 	}
 
 	if err := json.Unmarshal(data, &resp); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to parse KMS config: %v", err), http.StatusInternalServerError)
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to parse KMS config: %v", err))
 		return
 	}
 
 	resp.Source = "state"
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
 // handleKMSConfigSet sets the KMS configuration
 func (s *Server) handleKMSConfigSet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	var req KMSConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+		s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
 
 	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to create state dir: %v", err), http.StatusInternalServerError)
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create state dir: %v", err))
 		return
 	}
 
@@ -986,7 +1003,7 @@ func (s *Server) handleKMSConfigSet(w http.ResponseWriter, r *http.Request) {
 	// Validate KMS ARN format if provided
 	if req.Enable && req.KeyArn != "" {
 		if !strings.HasPrefix(req.KeyArn, "arn:aws:kms:") {
-			http.Error(w, "Invalid KMS ARN format - must start with arn:aws:kms:", http.StatusBadRequest)
+			s.writeAPIError(w, http.StatusBadRequest, "Invalid KMS ARN format - must start with arn:aws:kms:")
 			return
 		}
 	}
@@ -1007,18 +1024,17 @@ func (s *Server) handleKMSConfigSet(w http.ResponseWriter, r *http.Request) {
 		// Save the config
 		data, err := json.MarshalIndent(resp, "", "  ")
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to marshal config: %v", err), http.StatusInternalServerError)
+			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to marshal config: %v", err))
 			return
 		}
 		if err := os.WriteFile(configFile, data, 0600); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to write config: %v", err), http.StatusInternalServerError)
+			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to write config: %v", err))
 			return
 		}
 		log.Info().Bool("enable", req.Enable).Str("keyArn", req.KeyArn).Msg("KMS config saved")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.writeJSON(w, http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
 // handleKMSConfig routes to GET or POST handlers
@@ -1029,6 +1045,6 @@ func (s *Server) handleKMSConfig(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleKMSConfigSet(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }

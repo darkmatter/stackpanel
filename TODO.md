@@ -4,40 +4,40 @@ Centralized task list for the Stackpanel project.
 
 ______________________________________________________________________
 
-## CLI (`apps/cli/`)
+## CLI (`apps/stackpanel-go/`)
+
+### Completed
+
+- [x] **Shell completion** - Cobra provides `completion` subcommand for zsh/bash/fish
+- [x] **git-hooks.nix** - Exists in `nix/stackpanel/modules/git-hooks.nix`
+- [x] **caddy** - Full module in `nix/stackpanel/services/caddy.nix` with commands
+- [x] **step** - Full module in `nix/stackpanel/network/network.nix`
+- [x] **auto infra (sst)** - Full SST module in `nix/stackpanel/sst/sst.nix`
+- [x] **Go tests** - 18+ test files covering TUI, navigation, services, nix eval, docgen
+- [x] **Services commands** - start, stop, status, restart, logs, list all implemented
+- [x] **Auto docgen** - `stackpanel gendocs` generates MDX from Nix options and CLI commands
+- [x] **Tasks** - `stackpanel.tasks` config with turbo.json generation and devenv-tasks integration
 
 ### High Priority
 
-- [ ] **Shell completion** - Add zsh/bash completion setup to the devenv
-  - Generate completions with `stackpanel completion zsh > ...`
-  - Auto-source in devenv enterShell
-- [ ] **Database subcommand** - Add `stackpanel db` for database operations
-  - `stackpanel db list` - List all databases
-  - `stackpanel db create <name>` - Create database
-  - `stackpanel db drop <name>` - Drop database
-  - `stackpanel db migrate` - Run migrations
-  - `stackpanel db seed` - Seed data
-- [ ] git-hooks.nix
-- [ ] aws hardening
-- [ ] caddy
-- [ ] step
-- [ ] tasks
-- [ ] auto docgen
-- [ ] auto infra (sst)
+- [ ] in setup,the project directory shows "unknown" and the github repository shows "uncofnigured"
+- [ ] the user-specific directory says .stackpanel but should be ~/.stackpanel
+- [ ] AWS auto deployment should probably tell you to run `stackpanel run sst:deploy` once configured
+- [ ] Create a healthchecks module - any module should be able to declare a "healthcheck" that can either be nix code or a script to check if that module is healthy. Each module that does this should have a traffic light in the UI, with a green light indicating that it is in a healthy state
+- [ ] Do a pass on all generated files and make sure they are going through stackpanel.files - most of them currently dont show up in the UI because they are not there when evaluated
+- [ ] services needs to be modular - there should be a serviceModule schema that services register to. There should be NO trace of the word "postgres" or "redis" or "minio" in the core stackpanel code
+- [ ] **AWS hardening** - Additional AWS security features beyond cert-based auth
+
+
 
 ### Medium Priority
 
-- [ ] **Go tests** - Add comprehensive tests for CLI commands
-  - Unit tests for TUI models
-  - Integration tests for service management
-  - Currently only `gendocs_test.go` exists
 - [ ] **Interactive stop** - Add TUI for `stackpanel services stop`
 - [ ] **Logs TUI** - Interactive log viewer with scrollback
 - [ ] **Service health checks** - Periodically check service health
 
 ### Low Priority
 
-- [ ] **Config file** - Support `~/.config/stackpanel/config.yaml`
 - [ ] **Plugin system** - Allow custom service definitions
 
 ______________________________________________________________________
@@ -101,12 +101,13 @@ ______________________________________________________________________
 - [ ] Auto-register services in DNS
 - [ ] mTLS between services
 
-### Devenv (`devenv/`)
+### Devenv (`nix/stackpanel/`)
 
 - [x] Create devenv wrapper module
 - [x] Service presets (postgres, redis, minio, caddy) - *Done via global-services.nix*
 - [x] Shell theming (starship presets)
 - [x] VSCode integration (terminal profile, workspace, YAML schemas) - *Done via ide.nix*
+- [x] Process-compose integration - *Done via modules/process-compose.nix*
 - [ ] Language detection (auto-enable based on project files)
 - [ ] Integrate secrets (auto-load decrypted secrets in devshell)
 
@@ -119,11 +120,12 @@ ______________________________________________________________________
 - [x] Non-flake compatibility (default.nix, shell.nix)
 - [x] Standalone modules (no flake-parts dependency)
 - [x] VSCode module - *Done via ide.nix with workspace generation, terminal integration, YAML schemas*
+- [x] Multiple templates (default, devenv, minimal, native)
 - [ ] Integration tests
 
 ______________________________________________________________________
 
-## Agent (`apps/agent/`)
+## Agent (`apps/stackpanel-go/internal/agent/`)
 
 - [ ] Implement proper authentication (currently localhost-only)
 - [ ] WebSocket connection improvements
@@ -143,20 +145,20 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## Documentation
+## Documentation (`apps/docs/`)
 
-- [ ] Getting started guide
-- [ ] CLI reference documentation
-- [ ] Nix modules reference
+- [x] Getting started guide - *Quick start at docs/quick-start.mdx*
+- [x] CLI reference documentation - *Full CLI docs at docs/cli/*
+- [x] Nix modules reference - *Reference docs at docs/reference/*
 - [ ] Contributing guide
 
 ______________________________________________________________________
 
 ## Completed
 
-- [x] Global singleton services architecture (`nix/lib/core/global-services.nix`)
-- [x] Devenv global services module (`nix/modules/global-services.nix`)
-- [x] Stackpanel CLI with Cobra (`apps/cli/`)
+- [x] Global singleton services architecture (`nix/stackpanel/core/`)
+- [x] Devenv global services module (`nix/stackpanel/services/global-services.nix`)
+- [x] Stackpanel CLI with Cobra (`apps/stackpanel-go/`)
 - [x] Bubble Tea TUI integration
 - [x] Interactive status dashboard
 - [x] Service start with progress indicators
@@ -168,3 +170,6 @@ ______________________________________________________________________
 - [x] Step-CA certificate management
 - [x] Starship prompt theming
 - [x] GitHub Actions CI workflow generation
+- [x] SST infrastructure module for AWS provisioning
+- [x] Git hooks integration
+- [x] Process-compose orchestration

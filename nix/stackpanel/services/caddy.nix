@@ -36,7 +36,7 @@ let
   stepCfg = config.stackpanel.network.step or { enable = false; };
 
   # Import util for debug logging
-  util = import ../lib/util.nix { inherit pkgs lib config; };
+  util = config.stackpanel.util;
 
   # Import shared caddy library
   caddyLib = import ../lib/services/caddy.nix { inherit pkgs lib; };

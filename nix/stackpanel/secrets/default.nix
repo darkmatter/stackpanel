@@ -152,10 +152,24 @@ in
         pkgs.nix  # For generate-sops-secrets (nix eval)
       ];
 
+      # Auto-generate AGE key on shell entry if none exists
+      # This ensures there's always at least one decryption method available
+      # NOTE: Wrapped in subshell () so that 'exit' statements don't terminate the entire shellHook
+      stackpanel.devshell.hooks.before = lib.mkIf cfg.auto-generate-key [
+        ''
+          (
+          ${secretsLib.autoGenerateAgeKeyScript}
+          )
+        ''
+      ];
+
       # Commands using stackpanel abstraction
       stackpanel.devshell.commands = {
         ensure-age-key = {
           exec = secretsLib.ensureAgeKeyScript;
+        };
+        auto-generate-age-key = {
+          exec = secretsLib.autoGenerateAgeKeyScript;
         };
         sops = {
           exec = secretsLib.sopsWrapperScript "ensure-age-key";
