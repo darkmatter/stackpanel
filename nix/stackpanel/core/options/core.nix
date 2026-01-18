@@ -42,6 +42,78 @@
       default = "my-project";
     };
 
+    # Module requirements - what variables each enabled module needs
+    # This is populated by modules and serialized to config JSON for agent/UI
+    moduleRequirements = lib.mkOption {
+      description = ''
+        Variable requirements declared by enabled modules.
+        Modules add entries here to declare what environment variables they need.
+        The agent/UI can query this to show what's missing.
+
+        Format: { moduleName = { requires = [ ... ]; provides = [ ... ]; }; }
+      '';
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            requires = lib.mkOption {
+              type = lib.types.listOf (
+                lib.types.submodule {
+                  options = {
+                    key = lib.mkOption {
+                      type = lib.types.str;
+                      description = "Environment variable name";
+                    };
+                    description = lib.mkOption {
+                      type = lib.types.str;
+                      default = "";
+                      description = "Description of the variable";
+                    };
+                    sensitive = lib.mkOption {
+                      type = lib.types.bool;
+                      default = false;
+                      description = "Whether the value should be treated as a secret";
+                    };
+                    action = lib.mkOption {
+                      type = lib.types.nullOr (
+                        lib.types.submodule {
+                          options = {
+                            type = lib.mkOption {
+                              type = lib.types.str;
+                              description = "Action type: add-secret, add-variable, external";
+                            };
+                            label = lib.mkOption {
+                              type = lib.types.str;
+                              default = "";
+                              description = "Button/link label";
+                            };
+                            url = lib.mkOption {
+                              type = lib.types.nullOr lib.types.str;
+                              default = null;
+                              description = "External URL for creating the value";
+                            };
+                          };
+                        }
+                      );
+                      default = null;
+                      description = "Action to resolve this variable if missing";
+                    };
+                  };
+                }
+              );
+              default = [ ];
+              description = "Variables required by this module";
+            };
+            provides = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = "Environment variables provided by this module after setup";
+            };
+          };
+        }
+      );
+      default = { };
+    };
+
     github = lib.mkOption {
       description = ''
         GitHub repository in 'owner/repo' format for this project. This value is
@@ -54,17 +126,14 @@
     };
     useDevenv = lib.mkOption {
       description = ''
+        DEPRECATED: This option is no longer used. Devenv is always the shell backend.
 
-        For internal use:
-
-        Whether to use devenv as the shell backend. When true, devenv features
-        like languages, processes, and tasks are available. When false, uses a
-        lean native nix shell with only stackpanel features.
-
-        Defaults to true unless SKIP_DEVENV environment variable is set.
+        The flakeModule now always uses devenv for shell creation.
+        This option is kept for backwards compatibility but has no effect.
       '';
       type = lib.types.bool;
-      default = builtins.getEnv "SKIP_DEVENV" != "true";
+      default = true;
+      visible = false;
     };
     # ----------------------------------------------------------------------------
     # Root Path
@@ -210,6 +279,21 @@
         Modules can contribute their JSON-safe config here.
         This data is included in stackpanelConfig for external tools.
       '';
+    };
+
+    util = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
+      visible = false; # Hide from documentation to avoid serialization issues
+      description = "Internal stackpanel utilities.";
+      default = {
+        log = {
+          debug = _: "";
+          info = _: "";
+          error = _: "";
+          log = _: "";
+        };
+      };
     };
   };
 

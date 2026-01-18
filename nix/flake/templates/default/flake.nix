@@ -1,14 +1,22 @@
 # ==============================================================================
 # flake.nix
 #
-# Starter flake template for projects using stackpanel with devenv + flake-parts.
-# This is the recommended setup for most projects.
+# Starter flake template for projects using stackpanel + flake-parts.
 #
 # Getting started:
 #   1. Run: nix flake init -t github:darkmatter/stackpanel
 #   2. Run: direnv allow
 #   3. Configure stackpanel in ./.stackpanel/config.nix
-#   4. Configure devenv options in ./nix/devenv.nix
+#
+# Shell options:
+#   nix develop     # Pure stackpanel shell (fast, reproducible)
+#   devenv shell    # Devenv shell with languages/services (if devenv.nix exists)
+#
+# The flakeModule:
+#   - Auto-loads .stackpanel/config.nix (and _internal.nix if present)
+#   - Auto-loads .stackpanel/devenv.nix for additional packages/env
+#   - Creates devShells.default via pkgs.mkShell (NOT devenv)
+#   - Exposes stackpanelConfig, stackpanelFullConfig, stackpanelPackages
 # ==============================================================================
 {
   description = "My project powered by stackpanel";
@@ -16,13 +24,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    devenv.url = "github:cachix/devenv";
     stackpanel.url = "github:darkmatter/stackpanel";
-
-    # Required for devenv
-    nix2container.url = "github:nlewo/nix2container";
-    nix2container.inputs.nixpkgs.follows = "nixpkgs";
-    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
 
     # For pure flake evaluation (nix flake check)
     stackpanel-root.url = "file+file:///dev/null";
@@ -33,7 +35,6 @@
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        inputs.devenv.flakeModule
         inputs.stackpanel.flakeModules.readStackpanelRoot
         inputs.stackpanel.flakeModules.default
       ];
@@ -48,16 +49,8 @@
       perSystem =
         { pkgs, ... }:
         {
-          devenv.shells.default = {
-            imports = [ inputs.stackpanel.devenvModules.default ];
-
-            # Stackpanel config - edit ./.stackpanel/config.nix
-            # _internal.nix handles merging with data tables and GitHub collaborators
-            stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
-
-            # Devenv config - edit ./nix/devenv.nix
-          }
-          // (import ./nix/devenv.nix { inherit pkgs; });
+          # The flakeModule auto-loads .stackpanel/config.nix
+          # and creates devShells.default automatically when stackpanel.enable = true
 
           packages.default = pkgs.hello;
         };

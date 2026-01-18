@@ -1,0 +1,252 @@
+syntax = "proto3";
+
+package stackpanel.agent;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+import "config.proto";
+import "secrets.proto";
+import "users.proto";
+import "aws.proto";
+import "files.proto";
+import "services.proto";
+import "apps.proto";
+import "variables.proto";
+
+// =============================================================================
+// Agent Service
+// =============================================================================
+
+// AgentService provides RPC methods for the Stackpanel agent.
+// This enables type-safe communication between the web UI and the local agent.
+service AgentService {
+  // Project
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  
+  // Config entities - generic CRUD for Nix data files
+  rpc GetConfig(GetConfigRequest) returns (stackpanel.db.Config);
+  rpc SetConfig(stackpanel.db.Config) returns (stackpanel.db.Config);
+  
+  rpc GetSecrets(GetSecretsRequest) returns (stackpanel.db.Secrets);
+  rpc SetSecrets(stackpanel.db.Secrets) returns (stackpanel.db.Secrets);
+  
+  rpc GetUsers(GetUsersRequest) returns (stackpanel.db.Users);
+  rpc SetUsers(stackpanel.db.Users) returns (stackpanel.db.Users);
+  
+  rpc GetAws(GetAwsRequest) returns (stackpanel.db.Aws);
+  rpc SetAws(stackpanel.db.Aws) returns (stackpanel.db.Aws);
+  
+  rpc GetApps(GetAppsRequest) returns (stackpanel.db.Apps);
+  rpc SetApps(stackpanel.db.Apps) returns (stackpanel.db.Apps);
+  
+  rpc GetVariables(GetVariablesRequest) returns (stackpanel.db.Variables);
+  rpc SetVariables(stackpanel.db.Variables) returns (stackpanel.db.Variables);
+  
+  // Identity management (local decryption key)
+  rpc GetAgeIdentity(GetAgeIdentityRequest) returns (AgeIdentityResponse);
+  rpc SetAgeIdentity(SetAgeIdentityRequest) returns (AgeIdentityResponse);
+  
+  // KMS configuration
+  rpc GetKMSConfig(GetKMSConfigRequest) returns (KMSConfigResponse);
+  rpc SetKMSConfig(SetKMSConfigRequest) returns (KMSConfigResponse);
+  
+  // File operations
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+  rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  
+  // Command execution
+  rpc Exec(ExecRequest) returns (ExecResponse);
+  
+  // Nix operations
+  rpc NixGenerate(NixGenerateRequest) returns (NixGenerateResponse);
+  rpc NixEval(NixEvalRequest) returns (NixEvalResponse);
+  
+  // Services (process-compose)
+  rpc GetServicesStatus(GetServicesStatusRequest) returns (GetServicesStatusResponse);
+  rpc StartService(ServiceRequest) returns (ServiceResponse);
+  rpc StopService(ServiceRequest) returns (ServiceResponse);
+  rpc RestartService(ServiceRequest) returns (ServiceResponse);
+}
+
+// =============================================================================
+// Project
+// =============================================================================
+
+message GetProjectRequest {}
+
+message GetProjectResponse {
+  Project project = 1;
+}
+
+message Project {
+  string path = 1;
+  string name = 2;
+  string github = 3;
+  Directories dirs = 4;
+}
+
+message Directories {
+  string home = 1;      // .stackpanel
+  string data = 2;      // .stackpanel/data
+  string gen = 3;       // .stackpanel/gen
+  string state = 4;     // .stackpanel/state
+  string secrets = 5;   // .stackpanel/secrets
+}
+
+// =============================================================================
+// Config Entity Requests (empty, just for RPC signature)
+// =============================================================================
+
+message GetConfigRequest {}
+message GetSecretsRequest {}
+message GetUsersRequest {}
+message GetAwsRequest {}
+message GetAppsRequest {}
+message GetVariablesRequest {}
+
+// =============================================================================
+// Identity Management
+// =============================================================================
+
+message GetAgeIdentityRequest {}
+
+message SetAgeIdentityRequest {
+  // Value can be a file path (e.g., ~/.ssh/id_ed25519) or key content
+  string value = 1;
+}
+
+message AgeIdentityResponse {
+  // Type is "path", "key", or "" (not configured)
+  string type = 1;
+  // Value is the path (if type=path) or "(key stored)" (if type=key)
+  string value = 2;
+  // KeyPath is the actual file path used for decryption
+  string key_path = 3;
+  // PublicKey is the derived public key (for AGE keys)
+  string public_key = 4;
+}
+
+// =============================================================================
+// KMS Configuration
+// =============================================================================
+
+message GetKMSConfigRequest {}
+
+message SetKMSConfigRequest {
+  bool enable = 1;
+  string key_arn = 2;
+  string aws_profile = 3;
+}
+
+message KMSConfigResponse {
+  bool enable = 1;
+  string key_arn = 2;
+  string aws_profile = 3;
+  // Source indicates where the config came from: "state" or "nix"
+  string source = 4;
+}
+
+// =============================================================================
+// File Operations
+// =============================================================================
+
+message ReadFileRequest {
+  string path = 1;
+}
+
+message ReadFileResponse {
+  string content = 1;
+  bool exists = 2;
+}
+
+message WriteFileRequest {
+  string path = 1;
+  string content = 2;
+  // Mode is the file permission (e.g., 0644). If 0, uses default.
+  uint32 mode = 3;
+}
+
+message WriteFileResponse {
+  bool success = 1;
+}
+
+message ListFilesRequest {
+  string path = 1;
+  string pattern = 2;  // Optional glob pattern
+}
+
+message ListFilesResponse {
+  repeated FileInfo files = 1;
+}
+
+message FileInfo {
+  string name = 1;
+  string path = 2;
+  bool is_dir = 3;
+  int64 size = 4;
+  int64 mod_time = 5;  // Unix timestamp
+}
+
+// =============================================================================
+// Command Execution
+// =============================================================================
+
+message ExecRequest {
+  string command = 1;
+  repeated string args = 2;
+  string cwd = 3;
+  map<string, string> env = 4;
+}
+
+message ExecResponse {
+  int32 exit_code = 1;
+  string stdout = 2;
+  string stderr = 3;
+}
+
+// =============================================================================
+// Nix Operations
+// =============================================================================
+
+message NixGenerateRequest {}
+
+message NixGenerateResponse {
+  bool success = 1;
+  string output = 2;
+}
+
+message NixEvalRequest {
+  string expression = 1;
+  bool json = 2;
+}
+
+message NixEvalResponse {
+  string result = 1;
+}
+
+// =============================================================================
+// Services (process-compose)
+// =============================================================================
+
+message GetServicesStatusRequest {}
+
+message GetServicesStatusResponse {
+  bool running = 1;
+  repeated ServiceStatus services = 2;
+}
+
+message ServiceStatus {
+  string name = 1;
+  string status = 2;  // "running", "stopped", "error"
+  int32 pid = 3;
+  int64 uptime = 4;   // Seconds
+}
+
+message ServiceRequest {
+  string name = 1;
+}
+
+message ServiceResponse {
+  bool success = 1;
+  string message = 2;
+}

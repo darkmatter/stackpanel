@@ -1,10 +1,10 @@
 import { createTRPCRouter } from "../trpc";
 import { agentRouter } from "./agent";
-import { todoRouter } from "./todo";
+import { githubRouter } from "./github";
 
 export const appRouter = createTRPCRouter({
   agent: agentRouter,
-  todo: todoRouter,
+  github: githubRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -73,7 +74,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	if !quiet {
 		fmt.Printf("Config validated for %s\n", cfg.ProjectName)
-		printSuccess("Stackpanel initialized")
+		output.Success("Stackpanel initialized")
 	}
 
 	return nil

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	sharedexec "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
 	"github.com/rs/zerolog/log"
 )
 
@@ -189,33 +190,36 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 
 // evaluateConfigFromFlake evaluates the config by running nix eval on the flake
 func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
-	// Try to evaluate .#stackpanelConfig or similar flake output
-	// This is the most accurate way to get fresh config
-	args := []string{"eval", "--impure", "--json", ".#stackpanelConfig"}
-
-	res, err := s.exec.RunNix(args...)
-	if err != nil {
-		return nil, err
+	// Try paths in priority order:
+	// 1. devshell passthru (for user projects consuming stackpanel)
+	// 2. stackpanelConfig flake output (for stackpanel repo itself)
+	// 3. stackpanelFullConfig flake output (alternative)
+	attributePaths := []string{
+		// User projects: devshell passthru has the stackpanel config
+		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
+		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
+		// Stackpanel repo: direct flake outputs
+		".#stackpanelConfig",
+		".#stackpanelFullConfig",
 	}
 
-	if res.ExitCode != 0 {
-		// Try alternative attribute paths
-		alternativePaths := []string{
-			".#devShells." + getCurrentSystem() + ".default.passthru.moduleConfig.stackpanel",
-			".#stackpanel",
-		}
+	var res *sharedexec.Result
+	var err error
 
-		for _, attrPath := range alternativePaths {
-			args = []string{"eval", "--impure", "--json", attrPath}
-			res, err = s.exec.RunNix(args...)
-			if err == nil && res.ExitCode == 0 {
-				break
-			}
+	for _, attrPath := range attributePaths {
+		args := []string{"eval", "--impure", "--json", attrPath}
+		res, err = s.exec.RunNix(args...)
+		if err == nil && res.ExitCode == 0 {
+			break
 		}
+	}
 
-		if res.ExitCode != 0 {
-			return nil, &evalError{stderr: strings.TrimSpace(res.Stderr)}
+	if res == nil || res.ExitCode != 0 {
+		errMsg := "all attribute paths failed"
+		if res != nil && res.Stderr != "" {
+			errMsg = strings.TrimSpace(res.Stderr)
 		}
+		return nil, &evalError{stderr: errMsg}
 	}
 
 	var config map[string]any

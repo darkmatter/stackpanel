@@ -1,0 +1,67 @@
+---
+title: Configuration
+description: Project configuration files and structure
+---
+
+# Configuration
+
+Stackpanel configuration is split between project-local and global settings.
+
+## File Structure
+
+```
+.stackpanel/                # Project root
+├── config.nix              # Main configuration
+├── data/                   # Data tables
+│   ├── apps.nix            # App definitions
+│   ├── variables.nix       # Variables and secrets metadata
+│   └── external/           # Synced data (users, etc.)
+├── modules/                # Custom modules
+├── secrets/                # Encrypted secrets
+└── state/                  # Local state (gitignored)
+
+~/.config/stackpanel/       # Global config
+├── config.yaml             # User preferences
+├── projects.json           # Known projects
+└── cache/                  # Cached data
+```
+
+## config.nix
+
+The main configuration file:
+
+```nix
+{
+  name = "my-project";
+  
+  apps.web = {
+    path = "apps/web";
+    domain = "app";
+  };
+  
+  devshell.packages = with pkgs; [
+    nodejs
+    bun
+  ];
+  
+  services.postgres.enable = true;
+}
+```
+
+## Custom Modules
+
+Add `.nix` files to `.stackpanel/modules/` for reusable configuration:
+
+```nix
+# .stackpanel/modules/my-feature.nix
+{ config, lib, pkgs, ... }:
+{
+  stackpanel.devshell.packages = [ pkgs.ripgrep ];
+}
+```
+
+## Tips
+
+- Keep `config.nix` minimal, use data tables for lists
+- Use modules to organize complex configurations
+- The `state/` directory is gitignored for local-only settings

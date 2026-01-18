@@ -10,6 +10,14 @@
       "types": "./gen/ts/index.ts",
       "import": "./gen/ts/index.ts"
     },
+    "./agent": {
+      "types": "./gen/ts/agent.ts",
+      "import": "./gen/ts/agent.ts"
+    },
+    "./agent-connect": {
+      "types": "./gen/ts/agent-AgentService_connectquery.d.ts",
+      "import": "./gen/ts/agent-AgentService_connectquery.js"
+    },
     "./apps": {
       "types": "./gen/ts/apps.ts",
       "import": "./gen/ts/apps.ts"
@@ -84,6 +92,8 @@
     }
   },
   "dependencies": {
-    "@protobuf-ts/runtime": "^2.11.1"
+    "@bufbuild/protobuf": "^2.10.2",
+    "@protobuf-ts/runtime": "^2.11.1",
+    "@protobuf-ts/runtime-rpc": "^2.11.1"
   }
 }

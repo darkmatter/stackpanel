@@ -82,22 +82,34 @@ func (s *Server) handleNixFiles(w http.ResponseWriter, r *http.Request) {
 // evaluateStackpanelFiles evaluates stackpanel.files from the user's flake config
 // by running a nix expression that extracts serializable metadata
 func (s *Server) evaluateStackpanelFiles() (*nixFilesOutput, error) {
-	// Nix expression that:
-	// 1. Gets the devshell's moduleConfig (which has the evaluated stackpanel config)
-	// 2. Extracts stackpanel.files with serializable attributes only
-	// 3. For derivations, extracts the store path as a string
+	// Nix expression that tries multiple paths to find the stackpanel config:
+	// 1. devShells.<system>.default.passthru.stackpanelConfig (user projects consuming stackpanel)
+	// 2. stackpanelFullConfig flake output (stackpanel repo itself)
+	// 3. stackpanelConfig flake output (fallback)
+	//
 	// Use git+file:// protocol to avoid copying untracked files (node_modules, etc.)
-	// This tells Nix to use git to determine which files to include, which is much faster
-	// for repos with large untracked directories.
 	nixExpr := fmt.Sprintf(`
 let
   system = builtins.currentSystem;
   flake = builtins.getFlake "git+file://%s";
 
-  # Try to get the devshell with passthru.moduleConfig
-  devShell = flake.devShells.${system}.default or null;
-  moduleConfig = if devShell != null then devShell.passthru.moduleConfig or null else null;
-  stackpanelCfg = if moduleConfig != null then moduleConfig.stackpanel or null else null;
+  # Try to get stackpanel config from various paths
+  # Priority 1: devshell passthru (for user projects consuming stackpanel)
+  devshell = flake.devShells.${system}.default or null;
+  passthruConfig = if devshell != null then devshell.passthru.stackpanelConfig or null else null;
+
+  # Priority 2: stackpanelFullConfig flake output (for stackpanel repo itself)
+  fullConfig = flake.stackpanelFullConfig or null;
+
+  # Priority 3: stackpanelConfig flake output (serialized version)
+  serializedConfig = flake.stackpanelConfig or null;
+
+  # Use first available config
+  stackpanelCfg =
+    if passthruConfig != null then passthruConfig
+    else if fullConfig != null then fullConfig
+    else serializedConfig;
+
   filesCfg = if stackpanelCfg != null then stackpanelCfg.files or null else null;
 
   # Convert a file entry to serializable form
@@ -150,17 +162,22 @@ in
 
 // evaluateStackpanelFilesSimple is a fallback that tries alternative attribute paths
 func (s *Server) evaluateStackpanelFilesSimple() (*nixFilesOutput, error) {
-	// Fallback: try evaluating directly from flake outputs if available
-	// This handles cases where the flake exposes stackpanelConfig directly
-	// Use git+file:// protocol to avoid copying untracked files
+	// Fallback: try additional paths to find the files config
+	// This handles edge cases where the main evaluation failed
 	nixExpr := fmt.Sprintf(`
 let
+  system = builtins.currentSystem;
   flake = builtins.getFlake "git+file://%s";
 
   # Try various paths to find the files config
+  devshell = flake.devShells.${system}.default or null;
+
   tryPaths = [
+    # User project: devshell passthru
+    (if devshell != null then (devshell.passthru.stackpanelConfig.files or null) else null)
+    # Stackpanel repo: flake outputs
+    (flake.stackpanelFullConfig.files or null)
     (flake.stackpanelConfig.files or null)
-    (flake.stackpanel.files or null)
   ];
 
   findFirst = list:

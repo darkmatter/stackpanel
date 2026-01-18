@@ -11,11 +11,10 @@ import type {
 } from "@stackpanel/proto";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentHttpClient, type TurboPackage } from "./agent";
+import { useAgentClient } from "./agent-provider";
 import { useAgentSSEEvent } from "./agent-sse-provider";
-import { NixClient, type NixClientConfig } from "./nix-client";
 import type {
 	AppEntity,
-	ResolvedApp,
 	Service,
 	StackpanelConfig,
 } from "./types";
@@ -65,33 +64,8 @@ interface MutationState {
 // Shared NixClient instance management
 // =============================================================================
 
-const STORAGE_KEY = "stackpanel.agent.token";
-
-function getStoredToken(): string | null {
-	if (typeof window === "undefined") return null;
-	return localStorage.getItem(STORAGE_KEY);
-}
-
-function useNixClient(options: NixClientConfig = {}): NixClient {
-	const clientRef = useRef<NixClient | null>(null);
-	const token = options.token ?? getStoredToken();
-
-	if (!clientRef.current) {
-		clientRef.current = new NixClient({
-			baseUrl: options.baseUrl,
-			token: token ?? undefined,
-		});
-	}
-
-	// Update token if it changes
-	useEffect(() => {
-		if (clientRef.current && token) {
-			clientRef.current.setToken(token);
-		}
-	}, [token]);
-
-	return clientRef.current;
-}
+// STORAGE_KEY and getStoredToken are no longer needed here as they are in AgentProvider
+// useNixClient is replaced by useAgentClient
 
 // =============================================================================
 // useNixConfig - Main config hook with SSE-driven reactivity
@@ -118,7 +92,8 @@ function useNixClient(options: NixClientConfig = {}): NixClient {
  */
 export function useNixConfig(options: UseNixConfigOptions = {}) {
 	const { autoRefetch = true } = options;
-	const client = useNixClient(options);
+	const client = useAgentClient();
+	if (options.token) client.setToken(options.token);
 	const [state, setState] = useState<QueryState<StackpanelConfig>>({
 		data: null,
 		error: null,
@@ -140,7 +115,7 @@ export function useNixConfig(options: UseNixConfigOptions = {}) {
 			}));
 
 			try {
-				const config = await client.config({ refresh: forceRefresh });
+				const config = await client.nix.config({ refresh: forceRefresh });
 				setState({
 					data: config,
 					error: null,
@@ -168,7 +143,7 @@ export function useNixConfig(options: UseNixConfigOptions = {}) {
 	const forceRefresh = useCallback(async () => {
 		setIsRefreshing(true);
 		try {
-			const config = await client.refreshConfig();
+			const config = await client.nix.refreshConfig();
 			setState({
 				data: config,
 				error: null,
@@ -250,9 +225,9 @@ export function useNixData<T>(
 	options: UseNixDataOptions<T> = {},
 ) {
 	const { autoRefetch = true, initialData } = options;
-	const client = useNixClient(options);
+	const client = useAgentClient();
 	const entityClient = useMemo(
-		() => client.entity<T>(entity),
+		() => client.nix.entity<T>(entity),
 		[client, entity],
 	);
 
@@ -362,7 +337,8 @@ export function useNixMapData<V>(
 	options: UseNixDataOptions<Record<string, V>> = {},
 ) {
 	const { autoRefetch = true, initialData } = options;
-	const client = useNixClient(options);
+	const client = useAgentClient();
+	if (options.token) client.setToken(options.token);
 	const mapClient = useMemo(
 		() => client.mapEntity<V>(entity),
 		[client, entity],
@@ -459,42 +435,6 @@ export function useNixMapData<V>(
 }
 
 /**
- * Hook for resolved apps with IDs included.
- * This is a convenience wrapper that adds the map key as `id` to each app.
- */
-export function useResolvedApps(options: UseNixConfigOptions = {}) {
-	const { data, isLoading, isError, error, refetch, ...rest } =
-		useApps(options);
-
-	const resolvedApps = useMemo(() => {
-		if (!data) return null;
-
-		const result: Record<string, ResolvedApp> = {};
-		for (const [id, app] of Object.entries(data)) {
-			result[id] = {
-				...app,
-				id,
-				stablePort: app.port ?? 3000,
-				isRunning: false, // TODO: Query process-compose
-			};
-		}
-		return result;
-	}, [data]);
-
-	return useMemo(
-		() => ({
-			data: resolvedApps,
-			isLoading,
-			isError,
-			error,
-			refetch,
-			...rest,
-		}),
-		[resolvedApps, isLoading, isError, error, refetch, rest],
-	);
-}
-
-/**
  * Hook for managing services configuration.
  */
 export function useServices(options: UseNixConfigOptions = {}) {
@@ -518,8 +458,8 @@ export function useServices(options: UseNixConfigOptions = {}) {
  * ```
  */
 export function useUpdateApp(options: MutationOptions = {}) {
-	const client = useNixClient();
-	const mapClient = useMemo(() => client.mapEntity<App>("apps"), [client]);
+	const client = useAgentClient();
+	const mapClient = useMemo(() => client.nix.mapEntity<App>("apps"), [client]);
 	const [state, setState] = useState<MutationState>({
 		isPending: false,
 		error: null,
@@ -563,8 +503,8 @@ export function useUpdateApp(options: MutationOptions = {}) {
  * ```
  */
 export function useDeleteApp(options: MutationOptions = {}) {
-	const client = useNixClient();
-	const mapClient = useMemo(() => client.mapEntity<App>("apps"), [client]);
+	const client = useAgentClient();
+	const mapClient = useMemo(() => client.nix.mapEntity<App>("apps"), [client]);
 	const [state, setState] = useState<MutationState>({
 		isPending: false,
 		error: null,
@@ -650,36 +590,6 @@ export function useApp(appId: string, options: UseNixConfigOptions = {}) {
 }
 
 /**
- * Hook to find which apps have a specific task
- */
-export function useAppsWithTask(
-	taskName: string,
-	options: UseNixConfigOptions = {},
-) {
-	const { data: apps, isLoading, error, refetch } = useApps(options);
-
-	const matchingApps = useMemo(() => {
-		if (!apps) return null;
-
-		return Object.entries(apps)
-			.filter(([_, app]) => taskName in (app.tasks ?? {}))
-			.map(([id, app]) => ({ ...app, id }));
-	}, [apps, taskName]);
-
-	return useMemo(
-		() => ({
-			data: matchingApps,
-			isLoading,
-			isError: !!error,
-			isSuccess: !!matchingApps,
-			error,
-			refetch,
-		}),
-		[matchingApps, isLoading, error, refetch],
-	);
-}
-
-/**
  * Hook to find which apps have a specific variable
  */
 export function useAppsWithVariable(
@@ -706,79 +616,6 @@ export function useAppsWithVariable(
 			refetch,
 		}),
 		[matchingApps, isLoading, error, refetch],
-	);
-}
-
-/**
- * Hook to get all tasks across all apps, with app context
- */
-export function useAllAppTasks(options: UseNixConfigOptions = {}) {
-	const { data: apps, isLoading, error, refetch } = useApps(options);
-
-	const allTasks = useMemo(() => {
-		if (!apps) return null;
-
-		const result: Array<{ appId: string; taskName: string; task: AppTask }> =
-			[];
-
-		for (const [appId, app] of Object.entries(apps)) {
-			for (const [taskName, task] of Object.entries(app.tasks ?? {})) {
-				result.push({ appId, taskName, task });
-			}
-		}
-
-		return result;
-	}, [apps]);
-
-	return useMemo(
-		() => ({
-			data: allTasks,
-			isLoading,
-			isError: !!error,
-			isSuccess: !!allTasks,
-			error,
-			refetch,
-		}),
-		[allTasks, isLoading, error, refetch],
-	);
-}
-
-/**
- * Hook to get all variables across all apps, with app context
- */
-export function useAllAppVariables(options: UseNixConfigOptions = {}) {
-	const { data: apps, isLoading, error, refetch } = useApps(options);
-
-	const allVariables = useMemo(() => {
-		if (!apps) return null;
-
-		const result: Array<{
-			appId: string;
-			variableName: string;
-			variable: AppVariable;
-		}> = [];
-
-		for (const [appId, app] of Object.entries(apps)) {
-			for (const [variableName, variable] of Object.entries(
-				app.variables ?? {},
-			)) {
-				result.push({ appId, variableName, variable });
-			}
-		}
-
-		return result;
-	}, [apps]);
-
-	return useMemo(
-		() => ({
-			data: allVariables,
-			isLoading,
-			isError: !!error,
-			isSuccess: !!allVariables,
-			error,
-			refetch,
-		}),
-		[allVariables, isLoading, error, refetch],
 	);
 }
 

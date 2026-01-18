@@ -7,7 +7,15 @@
 #   - Processing `imports` directive for config data
 #   - Auto-loading data tables from ./data/
 #   - Merging GitHub collaborators
+#   - Loading config.local.nix for per-user overrides (gitignored)
+#   - Applying STACKPANEL_CONFIG_OVERRIDE env var (JSON, for rare CI/scripting cases)
 #   - Combining everything into the final stackpanel config
+#
+# Merge priority (lowest to highest):
+#   1. Data tables (./data/*.nix)
+#   2. User config (config.nix)
+#   3. Local overrides (config.local.nix - gitignored, preferred for local dev)
+#   4. STACKPANEL_CONFIG_OVERRIDE (JSON env var - for CI/scripting, warns on use)
 #
 # Usage in templates:
 #   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
@@ -16,6 +24,7 @@
 # use .stackpanel/modules/ - these are imported directly by the devenv adapter.
 #
 # Users should edit config.nix instead.
+# For local overrides, use config.local.nix (gitignored).
 # ==============================================================================
 { pkgs, lib }:
 let
@@ -25,6 +34,14 @@ let
   # ---------------------------------------------------------------------------
   rawConfig = import ./config.nix;
   baseUserConfig = if builtins.isFunction rawConfig then rawConfig { inherit pkgs; } else rawConfig;
+
+  # ---------------------------------------------------------------------------
+  # Import local config overrides (per-user, gitignored)
+  # ---------------------------------------------------------------------------
+  localConfigPath = ./config.local.nix;
+  hasLocalConfig = builtins.pathExists localConfigPath;
+  rawLocalConfig = if hasLocalConfig then import localConfigPath else {};
+  localConfig = if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
 
   # ---------------------------------------------------------------------------
   # Process imports directive in config.nix
@@ -124,6 +141,39 @@ let
     users = lib.recursiveUpdate github-team (userConfig.users or { });
   };
 
+  # ---------------------------------------------------------------------------
+  # Environment variable override (JSON)
+  # For rare CI/scripting cases where config.local.nix isn't practical.
+  # Logs a warning when used to encourage using config.local.nix instead.
+  # ---------------------------------------------------------------------------
+  envOverrideRaw = builtins.getEnv "STACKPANEL_CONFIG_OVERRIDE";
+  hasEnvOverride = envOverrideRaw != "";
+  envOverride = 
+    if hasEnvOverride then
+      builtins.fromJSON envOverrideRaw
+    else
+      {};
+
+  # ---------------------------------------------------------------------------
+  # Final merge order:
+  #   1. Data tables (defaults)
+  #   2. User config (config.nix)
+  #   3. Local overrides (config.local.nix - gitignored)
+  #   4. STACKPANEL_CONFIG_OVERRIDE (JSON env var - highest priority)
+  # ---------------------------------------------------------------------------
+  baseConfig = lib.recursiveUpdate data configWithUsers;
+  configWithLocal = lib.recursiveUpdate baseConfig localConfig;
+  finalConfig = lib.recursiveUpdate configWithLocal envOverride;
+
+  # Add metadata about overrides for debugging
+  configMeta = {
+    _meta = {
+      hasLocalConfig = hasLocalConfig;
+      hasEnvOverride = hasEnvOverride;
+    };
+  };
+
 in
-# Data tables first (defaults), then user config on top (takes precedence)
-lib.recursiveUpdate data configWithUsers
+# Return final config (optionally with metadata for debugging)
+# Note: STACKPANEL_CONFIG_OVERRIDE usage will log a warning in shell hooks
+finalConfig

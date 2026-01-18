@@ -23,8 +23,6 @@
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
-    # pre-commit-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/0.1.1149";
-    # pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "https://flakehub.com/f/numtide/treefmt-nix/0.1.512";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.url = "github:nix-community/gomod2nix";
@@ -33,7 +31,7 @@
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    # read absolute path to repo without impure eval
+    # Read absolute path to repo without impure eval
     stackpanel-root.url = "file+file:///dev/null";
     stackpanel-root.flake = false;
   };
@@ -43,7 +41,6 @@
       self,
       nixpkgs,
       flake-parts,
-      git-hooks,
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } (
@@ -67,14 +64,16 @@
         systems = exports.supportedSystems;
 
         # =============================================================
-        # LOCAL DEVELOPMENT (dogfooding)
+        # DOGFOODING: Use our own flakeModule
         # =============================================================
         imports = [
           exports.flakeModules.readStackpanelRoot
           exports.flakeModules.default
-        ]
-        ++ nixpkgs.lib.optionals (builtins.getEnv "SKIP_DEVENV" != "true") [ ];
+        ];
 
+        # =============================================================
+        # PER-SYSTEM CONFIG
+        # =============================================================
         perSystem =
           {
             config,
@@ -85,111 +84,28 @@
           }:
           let
             packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
-
-            # Import local shell configuration
-            localShell = import ./shell.nix {
-              inherit
-                pkgs
-                lib
-                inputs
-                system
-                ;
-              git-hooks = git-hooks;
-            };
-
-            # Derivation that creates bin directory with all devshell packages
-            devshell-bin = pkgs.callPackage ./nix/flake/packages/devshell-bin.nix {
-              devShell = localShell.nativeDevshell;
-            };
           in
           {
             _module.args.pkgs = import nixpkgs {
               inherit system;
               overlays = [ inputs.gomod2nix.overlays.default ];
             };
-            debug = true;
 
-            # Expose stackpanel config via legacyPackages for flake-level access
-            # This avoids re-evaluating shell.nix multiple times
-            legacyPackages = {
-              stackpanelConfig = localShell.nativeDevshell.passthru.stackpanelSerializable;
-              stackpanelFullConfig = localShell.nativeDevshell.passthru.stackpanelConfig;
-              # Pre-serialized packages for fast access (separate from full config eval)
-              stackpanelPackages = localShell.nativeDevshell.passthru.stackpanelPackages;
-            };
-            # combine devenv packages and devshell-bin which contains stackpanel
-            # packages
-            packages = packages // {
-              inherit devshell-bin;
-            };
+            # stackpanel.enable is set in .stackpanel/config.nix
+            # The flakeModule auto-loads it and creates devShells.default
+            #
+            # For devenv features (languages, services, processes), use:
+            #   devenv shell  (with devenv.nix/devenv.yaml)
 
+            # Packages
+            packages = packages;
+
+            # Checks
             checks = {
               stackpanel = config.packages.stackpanel;
               default-package = config.packages.default;
-
-              # Smoke tests for devenv and native shells
-              smoke-test-devenv =
-                pkgs.runCommand "smoke-test-devenv"
-                  {
-                    nativeBuildInputs = [ pkgs.bash ];
-                  }
-                  ''
-                    cd ${./.}
-                    ${./tests/smoke-test.sh} --project . --devenv
-                    touch $out
-                  '';
-
-              smoke-test-native =
-                pkgs.runCommand "smoke-test-native"
-                  {
-                    nativeBuildInputs = [ pkgs.bash ];
-                  }
-                  ''
-                    cd ${./.}
-                    SKIP_DEVENV=true ${./tests/smoke-test.sh} --project . --native
-                    touch $out
-                  '';
-            }
-            // (localShell.stackpanelConfig.checks or { })
-            // lib.optionalAttrs (localShell.pre-commit-check != null) {
-              inherit (localShell) pre-commit-check;
             };
-          }
-          // (
-            # When useDevenv is true, use devenv
-            if localShell.useDevenv && builtins.getEnv "SKIP_DEVENV" != "true" then
-              {
-                # Devenv provides devShells.default via its flakeModule
-                devenv.shells.default = {
-                  imports = [ localShell.localDevshellModule ];
-                  # Install git hooks on shell entry
-                  enterShell = lib.optionalString (localShell.pre-commit-check != null) ''
-                    ${localShell.pre-commit-check.shellHook}
-                  '';
-                };
-                devenv.shells.ci-darwin = {
-                  imports = [ localShell.localDevshellModule ];
-                  containers = lib.mkForce { };
-                  devenv.flakesIntegration = true;
-                };
-              }
-            # When useDevenv is false but devenv flakeModule is loaded, use native + CI shell
-            else if builtins.getEnv "SKIP_DEVENV" != "true" then
-              {
-                # Native Nix devShell using stackpanel modules (not devenv)
-                devShells.default = localShell.nativeDevshell;
-                # CI shell still uses devenv for compatibility
-                devenv.shells.ci-darwin = {
-                  imports = [ localShell.localDevshellModule ];
-                  containers = lib.mkForce { };
-                };
-              }
-            # SKIP_DEVENV=true: pure native shell only
-            else
-              {
-                devShells.default = localShell.nativeDevshell;
-              }
-          );
+          };
 
         # =============================================================
         # EXPORTS (for users)
@@ -202,29 +118,8 @@
             lib
             templates
             ;
+
           stackpanelOptions = exports.mkStackpanelOptions nixpkgs;
-
-          # Fully evaluated stackpanel config (JSON-safe)
-          # Accesses via legacyPackages to avoid re-evaluating shell.nix
-          # Non-serializable values (derivations, functions) are filtered out
-          # Usage: nix eval .#stackpanelConfig --json
-          stackpanelConfig = withSystem "aarch64-darwin" (
-            { config, ... }: config.legacyPackages.stackpanelConfig
-          );
-
-          # Full evaluated config (may contain non-serializable values)
-          # Use this for programmatic access when you need derivations, etc.
-          # Usage: nix eval .#stackpanelFullConfig.devshell.packages
-          stackpanelFullConfig = withSystem "aarch64-darwin" (
-            { config, ... }: config.legacyPackages.stackpanelFullConfig
-          );
-
-          # Pre-serialized installed packages for fast access
-          # Separate from stackpanelConfig to avoid slow package resolution when not needed
-          # Usage: nix eval .#stackpanelPackages --json
-          stackpanelPackages = withSystem "aarch64-darwin" (
-            { config, ... }: config.legacyPackages.stackpanelPackages
-          );
         };
       }
     );

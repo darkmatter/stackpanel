@@ -11,7 +11,7 @@
 {
   # NOTE: Modules in ./modules/ are automatically loaded with full module context.
   # Use them for scripts, outputs, and conditional configuration.
-  
+
   enable = true;
   name = "stackpanel";
   github = "darkmatter/stackpanel";
@@ -76,12 +76,7 @@
   # MOTD (Message of the Day)
   # ---------------------------------------------------------------------------
   motd.enable = true;
-  motd.commands = [
-    {
-      name = "aws-creds-env";
-      description = "Export AWS credentials to environment";
-    }
-  ];
+  # Commands are added automatically by modules (aws.nix, network.nix, etc.)
   motd.hints = [
     "Run './test' to test both devenv and native shells"
     "Run './test devenv' or './test native' to test individual shells"
@@ -128,17 +123,26 @@
     environments = {
       dev = {
         name = "dev";
-        sources = [ "shared" "dev" ];
+        sources = [
+          "shared"
+          "dev"
+        ];
         public-keys = [ "age1..." ];
       };
       staging = {
         name = "staging";
-        sources = [ "shared" "staging" ];
+        sources = [
+          "shared"
+          "staging"
+        ];
         public-keys = [ "age1..." ];
       };
       production = {
         name = "production";
-        sources = [ "shared" "production" ];
+        sources = [
+          "shared"
+          "production"
+        ];
         public-keys = [ "age1..." ];
       };
     };
@@ -233,7 +237,7 @@
     #   - .stackpanel/secrets/vars/*.age (agenix secrets)
     #   - .stackpanel/data/variables.nix (variable definitions)
     input-directory = ".stackpanel/secrets";
-    
+
     # NOTE: environments are now defined in apps.<app>.environments
     # The secrets module computes environmentsComputed from apps automatically.
   };

@@ -9,6 +9,7 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/github"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixgen"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/spf13/cobra"
 )
@@ -68,13 +69,13 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 
 	if owner == "" || repo == "" {
 		if verbose {
-			printInfo("Detecting current repository...")
+			output.Info("Detecting current repository...")
 		}
 
 		detectedOwner, detectedRepo, err := github.GetCurrentRepo()
 		if err != nil {
-			printError(fmt.Sprintf("Failed to detect repository: %v", err))
-			printDim("Use --owner and --repo flags to specify the repository")
+			output.Error(fmt.Sprintf("Failed to detect repository: %v", err))
+			output.Dimmed("Use --owner and --repo flags to specify the repository")
 			os.Exit(1)
 		}
 
@@ -86,21 +87,21 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	printInfo(fmt.Sprintf("Syncing collaborators from %s/%s...", owner, repo))
+	output.Info(fmt.Sprintf("Syncing collaborators from %s/%s...", owner, repo))
 
 	// Fetch collaborators
 	users, err := github.SyncCollaborators(owner, repo, !syncNoKeys)
 	if err != nil {
-		printError(fmt.Sprintf("Failed to fetch collaborators: %v", err))
+		output.Error(fmt.Sprintf("Failed to fetch collaborators: %v", err))
 		os.Exit(1)
 	}
 
 	if len(users) == 0 {
-		printWarning("No collaborators found")
+		output.Warning("No collaborators found")
 		return
 	}
 
-	printSuccess(fmt.Sprintf("Found %d collaborators", len(users)))
+	output.Success(fmt.Sprintf("Found %d collaborators", len(users)))
 
 	// Determine data directory
 	dataDir := syncDataDir
@@ -129,14 +130,14 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 	collabsContent := nixgen.GenerateGitHubCollaboratorsNix(users, owner, repo)
 
 	if verbose {
-		printInfo(fmt.Sprintf("Writing %s...", collabsPath))
+		output.Info(fmt.Sprintf("Writing %s...", collabsPath))
 	}
 
 	if err := nixgen.WriteNixFile(collabsPath, collabsContent); err != nil {
-		printError(fmt.Sprintf("Failed to write %s: %v", collabsPath, err))
+		output.Error(fmt.Sprintf("Failed to write %s: %v", collabsPath, err))
 		os.Exit(1)
 	}
-	printSuccess(fmt.Sprintf("Generated %s", collabsPath))
+	output.Success(fmt.Sprintf("Generated %s", collabsPath))
 
 	// Generate users.nix if it doesn't exist
 	usersPath := filepath.Join(dataDir, "users.nix")
@@ -144,21 +145,21 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 		usersContent := nixgen.GenerateUsersNix()
 
 		if verbose {
-			printInfo(fmt.Sprintf("Writing %s...", usersPath))
+			output.Info(fmt.Sprintf("Writing %s...", usersPath))
 		}
 
 		if err := nixgen.WriteNixFile(usersPath, usersContent); err != nil {
-			printError(fmt.Sprintf("Failed to write %s: %v", usersPath, err))
+			output.Error(fmt.Sprintf("Failed to write %s: %v", usersPath, err))
 			os.Exit(1)
 		}
-		printSuccess(fmt.Sprintf("Generated %s", usersPath))
+		output.Success(fmt.Sprintf("Generated %s", usersPath))
 	} else {
-		printDim(fmt.Sprintf("Skipped %s (already exists)", usersPath))
+		output.Dimmed(fmt.Sprintf("Skipped %s (already exists)", usersPath))
 	}
 
 	// Print summary
 	fmt.Println()
-	printInfo("Summary:")
+	output.Info("Summary:")
 	for _, user := range users {
 		keyCount := len(user.PublicKeys)
 		role := user.RoleName
@@ -169,6 +170,6 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println()
-	printDim("To use these users in your stackpanel config:")
-	printDim("  stackpanel.users = import ./.stackpanel/data/users.nix;")
+	output.Dimmed("To use these users in your stackpanel config:")
+	output.Dimmed("  stackpanel.users = import ./.stackpanel/data/users.nix;")
 }

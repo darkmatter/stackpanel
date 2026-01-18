@@ -96,6 +96,7 @@ let
     step-ca = import ./schemas/step-ca.proto.nix { inherit lib; };
     tasks = import ./schemas/tasks.proto.nix { inherit lib; };
     theme = import ./schemas/theme.proto.nix { inherit lib; };
+    healthchecks = import ./schemas/healthchecks.proto.nix { inherit lib; };
 
     # ──────────────────────────────────────────────────────────────────────────
     # External schemas (synced from external sources, not user-edited)
@@ -147,6 +148,7 @@ let
       dns
       extensions
       files
+      healthchecks
       onboarding
       services
       shells

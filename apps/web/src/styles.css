@@ -1,10 +1,35 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@source "../node_modules/streamdown/dist/index.js";
+@source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant light (&:where(.light, .light *));
 @custom-variant auto (&:where(.auto, .auto *));
+
+/* Shiki dual-theme support for streamdown */
+/* Dark mode: use the CSS variables that Shiki injects inline */
+.dark [data-streamdown="code-block-body"] code span span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg, transparent) !important;
+}
+
+.dark [data-streamdown="code-block-body"] pre {
+  background-color: var(--shiki-dark-bg, oklch(0.15 0 0)) !important;
+}
+
+/* Ensure code blocks have proper styling */
+[data-streamdown="code-block"] {
+  background-color: var(--muted);
+}
+
+.dark [data-streamdown="code-block"] {
+  background-color: oklch(0.12 0 0);
+}
+
+[data-streamdown="code-block-body"] pre {
+  margin: 0;
+  overflow-x: auto;
+}
 
 @theme {
   --font-sans:
@@ -66,3 +91,25 @@
   }
 }
 @import "../node_modules/@stackpanel/ui/src/styles/web.css";
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}

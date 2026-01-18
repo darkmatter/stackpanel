@@ -2,13 +2,12 @@
 # exports.nix
 #
 # Consolidated flake exports for stackpanel.
-# All user-facing outputs (nixosModules, devenvModules, lib, templates) are
-# defined here and imported by flake.nix.
+# All user-facing outputs are defined here and imported by flake.nix.
 #
-# This keeps flake.nix focused on:
-#   - inputs/nixConfig (required to be in flake.nix)
-#   - local development configuration (dogfooding)
-#   - importing these exports
+# Simplified architecture:
+#   - ONE flakeModule (default) that handles everything
+#   - Devenv is the shell backend (always)
+#   - Config auto-loaded from .stackpanel/
 # ==============================================================================
 {
   inputs,
@@ -19,12 +18,6 @@
 let
   inherit (flake-parts-lib) importApply;
 
-  # Devshell utilities (core module, mkDevShell, features)
-  devshell = import ./devshells { inherit inputs; };
-
-  # Devenv module (stackpanel adapter for devenv)
-  devenv = import ./devenv.nix;
-
   supportedSystems = [
     "x86_64-linux"
     "aarch64-linux"
@@ -33,31 +26,22 @@ let
   ];
 in
 {
-  # Re-export for use in flake.nix
-  inherit devshell devenv supportedSystems;
+  inherit supportedSystems;
 
   # ===========================================================================
   # FLAKE MODULES (for flake-parts users)
   # ===========================================================================
   flakeModules = {
     # Main stackpanel flake-parts module
+    # This is THE module - auto-loads config, creates devenv shell, exposes outputs
     # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
     default = importApply ./default.nix {
       localFlake = self;
-      inherit withSystem devshell;
+      inherit withSystem;
     };
 
-    # Alias for devenv module (backwards compatibility)
-    # Usage: imports = [ inputs.stackpanel.flakeModules.devenv ];
+    # Alias for backwards compatibility
     devenv = importApply ./default.nix {
-      localFlake = self;
-      inherit withSystem devshell;
-    };
-
-    # Native Nix devShell module (without devenv dependency)
-    # Usage: imports = [ inputs.stackpanel.flakeModules.native ];
-    # Then set: perSystem = { ... }: { stackpanel.enable = true; };
-    native = importApply ./modules/native.nix {
       localFlake = self;
       inherit withSystem;
     };
@@ -91,7 +75,6 @@ in
   # ===========================================================================
   # NIXOS MODULES (for NixOS users)
   # ===========================================================================
-  # Usage: imports = [ inputs.stackpanel.nixosModules.default ];
   nixosModules = {
     default = ./modules/devenv.nix;
     aws = ../stackpanel/services/aws.nix;
@@ -105,10 +88,8 @@ in
   # ===========================================================================
   # DEVENV MODULES (for devenv users - yaml and flake-parts)
   # ===========================================================================
-  # Usage in flake-parts:
-  #   devenv.shells.default = {
-  #     imports = [ inputs.stackpanel.devenvModules.default ];
-  #   };
+  # Usage in devenv.shells.default:
+  #   imports = [ inputs.stackpanel.devenvModules.default ];
   devenvModules = {
     default = ./modules/devenv.nix;
     # Alias for backwards compatibility
@@ -124,21 +105,6 @@ in
 
     # Step CA certificate helpers
     mkStepScripts = import ../stackpanel/lib/services/step.nix;
-
-    # Create a development shell with stackpanel modules
-    # Usage: stackpanel.lib.mkDevShell { inherit pkgs; modules = [...]; }
-    mkDevShell =
-      {
-        pkgs,
-        modules ? [ ],
-        specialArgs ? { },
-      }:
-      (import ../stackpanel/devshell { inherit pkgs; }) {
-        inherit modules specialArgs;
-      };
-
-    # Export feature modules for consumers
-    devshellModules = devshell.devshellModules or { };
   };
 
   # ===========================================================================
@@ -149,24 +115,19 @@ in
       path = ./templates/default;
       description = "Stackpanel + devenv + flake-parts (recommended)";
     };
-    native = {
-      path = ./templates/native;
-      description = "Stackpanel + native Nix shell (no devenv)";
+    minimal = {
+      path = ./templates/minimal;
+      description = "Stackpanel minimal setup";
     };
     devenv = {
       path = ./templates/devenv;
       description = "Stackpanel + devenv standalone (devenv.yaml)";
-    };
-    minimal = {
-      path = ./templates/minimal;
-      description = "Stackpanel + devenv without flake-parts";
     };
   };
 
   # ===========================================================================
   # STACKPANEL OPTIONS (for IDE/language server support)
   # ===========================================================================
-  # Usage: (builtins.getFlake (toString ./.)).stackpanelOptions.${system}.all
   mkStackpanelOptions =
     nixpkgs:
     nixpkgs.lib.genAttrs supportedSystems (

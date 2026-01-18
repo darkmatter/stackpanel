@@ -1,0 +1,84 @@
+---
+title: Setup Wizard
+description: Complete initial project configuration
+---
+
+# Setup Wizard
+
+The Setup wizard guides you through configuring your Stackpanel project for secrets management and team collaboration.
+
+## Step 1: Install CLI
+
+Install the Stackpanel CLI for terminal-based management:
+
+```bash
+# Using Nix (recommended)
+nix profile install github:darkmatter/stackpanel
+
+# Using Homebrew
+brew install darkmatter/tap/stackpanel
+```
+
+Verify: `stackpanel --version`
+
+## Step 2: Directory Structure
+
+Stackpanel uses four key locations:
+
+| Location | Purpose | Shared? |
+|----------|---------|---------|
+| `.stackpanel/config.nix` | User-editable configuration | ✅ Git |
+| `.stackpanel/data/` | Managed data tables (apps, variables) | ✅ Git |
+| `.stackpanel/state/` | Local-only state (keys, settings) | ❌ Gitignored |
+| `.stackpanel/gen/` | Generated files (the value proposition!) | ✅ Git |
+| `~/.config/stackpanel/` | Global settings across projects | ❌ Not in project |
+
+### The Value of Generated Files
+
+Files in `.stackpanel/gen/` replace manually-maintained config:
+- IDE workspace settings
+- `turbo.json` task configuration
+- `package.json` script entries
+- VS Code debug configs
+
+## Step 3: Decryption Key
+
+Configure your private key for decrypting secrets:
+
+| Key Type | Path |
+|----------|------|
+| SSH (ed25519) | `~/.ssh/id_ed25519` |
+| SSH (RSA) | `~/.ssh/id_rsa` |
+| AGE | `~/.config/age/key.txt` |
+
+## Step 4: Generate SOPS Config
+
+Run in your terminal:
+
+```bash
+generate-sops-config
+```
+
+This creates `.sops.yaml` with encryption rules for your project.
+
+## Optional Steps
+
+### Team Public Keys
+
+Sync SSH keys from GitHub collaborators:
+
+```bash
+stackpanel users sync
+```
+
+### AWS KMS
+
+Add KMS as an additional encryption layer for CI/CD:
+- Secrets can be decrypted with either AGE keys or KMS
+- Useful for production environments without personal keys
+
+## Tips
+
+- Complete required steps before creating secrets
+- Re-run `generate-sops-config` after changing encryption settings
+- The setup progress is shown in the sidebar

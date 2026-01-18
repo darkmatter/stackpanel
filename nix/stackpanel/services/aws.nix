@@ -38,7 +38,7 @@ let
   baseStateDir = dirs.state;
 
   # Import util for debug logging
-  util = import ../lib/util.nix { inherit pkgs lib config; };
+  util = config.stackpanel.util;
 
   stateDir = "${baseStateDir}/aws";
   stepStateDir = "${baseStateDir}/step";

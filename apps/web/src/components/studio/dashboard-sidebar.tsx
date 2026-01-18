@@ -1,44 +1,71 @@
 "use client";
 
+import { Logo } from "@stackpanel/ui-core/logo";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Button } from "@ui/button";
+import { Badge } from "@ui/badge";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@ui/tooltip";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@ui/collapsible";
+import { Progress } from "@ui/progress";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarRail,
+  useSidebar,
+} from "@ui/sidebar";
 import {
   AppWindow,
+  BookOpen,
+  Check,
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  Cloud,
   Database,
   FileCode,
-  Layers,
   LayoutDashboard,
+  Map,
   Network,
   Package,
   Play,
   Puzzle,
   Rocket,
+  Search,
   Server,
   Settings,
   SquareTerminal,
   Terminal,
+  User2,
   Users,
   Variable,
 } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import type React from "react";
+import { type SetupStep, useSetupProgress } from "@/lib/use-setup-progress";
 import { cn } from "@/lib/utils";
 import { ProjectSelector } from "../project-selector";
-import { AgentHttpClient } from "@/lib/agent";
-import { useAgentContext } from "@/lib/agent-provider";
-
-interface DashboardSidebarProps {
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-}
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@ui/dropdown-menu";
+import {
+  CONFIGURATION_SECTIONS,
+  type ConfigurationSection,
+} from "./panels/configuration";
 
 export type PanelType =
   | "overview"
@@ -49,227 +76,445 @@ export type PanelType =
   | "tasks"
   | "variables"
   | "configuration"
+  | "local-config"
   | "databases"
   | "devshells"
   | "team"
   | "network"
+  | "infra"
   | "extensions"
   | "files"
   | "terminal"
-  | "services";
+  | "services"
+  | "inspector"
+  | "roadmap";
 
-const navItems: { id: string; label: string; icon: React.ElementType; special?: boolean }[] = [
-  // required: maybe create onboarding flow
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "setup", label: "Setup", icon: Rocket, special: true },
-  { id: "divider", label: "", icon: React.Fragment },
-  { id: "apps", label: "Apps", icon: AppWindow },
-  { id: "packages", label: "Packages", icon: Package },
-  // { id: "secrets", label: "Secrets", icon: KeyRound },
-  { id: "variables", label: "Variables / Secrets", icon: Variable },
-  { id: "configuration", label: "Configuration", icon: Settings },
-  // rest
-  { id: "tasks", label: "Tasks", icon: Play },
-  { id: "divider", label: "", icon: React.Fragment },
-  { id: "databases", label: "Databases", icon: Database },
-  { id: "devshells", label: "Dev Shells", icon: Terminal },
-  { id: "team", label: "Team", icon: Users },
-  { id: "network", label: "Network", icon: Network },
-  { id: "extensions", label: "Extensions", icon: Puzzle },
-  { id: "files", label: "Generated Files", icon: FileCode },
-  { id: "terminal", label: "Terminal", icon: SquareTerminal },
-  // consider removing
-  { id: "divider", label: "", icon: React.Fragment },
-  { id: "services", label: "Services", icon: Server },
-];
-
-// Setup progress hook
-function useSetupProgress() {
-  const { token } = useAgentContext();
-  const [progress, setProgress] = useState<{ complete: number; total: number } | null>(null);
-
-  const loadProgress = useCallback(async () => {
-    if (!token) return;
-    try {
-      const client = new AgentHttpClient("localhost", 9876, token);
-      
-      // Check if project was confirmed
-      const projectConfirmed = localStorage.getItem("stackpanel-project-confirmed") === "true";
-      
-      // Check identity config
-      const identity = await client.getAgeIdentity();
-      const hasIdentity = identity.type !== "";
-      
-      // Check if .sops.yaml exists
-      let hasSopsConfig = false;
-      try {
-        await client.readFile(".sops.yaml");
-        hasSopsConfig = true;
-      } catch {
-        // File doesn't exist
-      }
-      
-      // Required steps: project confirmed + identity + sops config
-      const complete = (projectConfirmed ? 1 : 0) + (hasIdentity ? 1 : 0) + (hasSopsConfig ? 1 : 0);
-      const total = 3;
-      
-      setProgress({ complete, total });
-    } catch (err) {
-      console.warn("Failed to load setup progress:", err);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    loadProgress();
-  }, [loadProgress]);
-
-  return progress;
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  special?: boolean;
 }
 
-export function DashboardSidebar({
-  collapsed,
-  onToggleCollapse,
-}: DashboardSidebarProps) {
+const navItems: NavItem[] = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+];
+
+const mainNavItems: NavItem[] = [
+  // Configuration has its own expandable menu item
+  { id: "variables", label: "Variables / Secrets", icon: Variable },
+  { id: "infra", label: "Infrastructure", icon: Cloud },
+  { id: "apps", label: "Apps", icon: AppWindow },
+  { id: "packages", label: "Packages", icon: Package },
+  { id: "tasks", label: "Tasks", icon: Play },
+  { id: "network", label: "Network", icon: Network },
+];
+
+const toolsNavItems: NavItem[] = [
+  // { id: "databases", label: "Databases", icon: Database },
+  // { id: "devshells", label: "Dev Shells", icon: Terminal },
+  { id: "team", label: "Team", icon: Users },
+  { id: "extensions", label: "Extensions", icon: Puzzle },
+  { id: "files", label: "Generated Files", icon: FileCode },
+  // { id: "local-config", label: "Local Config", icon: FileCode },
+  // { id: "terminal", label: "Terminal", icon: SquareTerminal },
+  { id: "services", label: "Services", icon: Server },
+  { id: "inspector", label: "Inspector", icon: Search },
+];
+
+const otherNavItems: NavItem[] = [
+  { id: "roadmap", label: "Roadmap", icon: Map },
+  { id: "docs", label: "Docs", icon: BookOpen },
+];
+
+function NavMenuItem({ item }: { item: NavItem }) {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
-  const setupProgress = useSetupProgress();
-  const isSetupComplete = setupProgress?.complete === setupProgress?.total;
-  
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  const itemPath = item.id === "overview" ? "/studio" : `/studio/${item.id}`;
+  const isActive =
+    item.id === "overview"
+      ? pathname === "/studio" || pathname === "/studio/"
+      : pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+
+  const Icon = item.icon;
+
   return (
-    <TooltipProvider delayDuration={0}>
-      <aside
-        className={cn(
-          "flex h-full flex-col border-sidebar-border border-r bg-sidebar transition-all duration-200",
-          collapsed ? "w-16" : "w-64",
-        )}
-      >
-        <div className="flex h-16 items-center justify-between border-sidebar-border border-b px-4">
-          {!collapsed && (
-            <div className="w-full">
-              <ProjectSelector variant="sidebar" />
-            </div>
+    <SidebarMenuItem>
+      <Link to={itemPath}>
+        <SidebarMenuButton
+          isActive={isActive}
+          tooltip={isCollapsed ? item.label : undefined}
+          className={cn("rounded-lg text-sm")}
+        >
+          <Icon className="size-3 text-sidebar-foreground" />
+          <span className="flex-1">{item.label}</span>
+        </SidebarMenuButton>
+      </Link>
+    </SidebarMenuItem>
+  );
+}
+
+// Setup step sub-item
+function SetupStepItem({
+  step,
+  isCollapsed,
+  active,
+}: {
+  step: SetupStep;
+  isCollapsed: boolean;
+  active: boolean;
+}) {
+  const Icon = step.icon;
+  const isComplete = step.status === "complete";
+  const isOptional = step.status === "optional";
+
+  return (
+    <SidebarMenuSubItem>
+      <Link to="/studio/setup" search={{ step: step.id }}>
+        <SidebarMenuSubButton
+          className={cn(
+            "gap-2 text-sidebar-foreground/50 text-[13px]",
+            isOptional && "text-muted-foreground",
+            active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
+            isComplete && " [&>svg]:text-emerald-300 text-emerald-300",
           )}
-          {collapsed && (
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-              <Layers className="h-4 w-4 text-accent-foreground" />
-            </div>
+        >
+          {isComplete ? (
+            <Check className="size-3 text-emerald-300 [&>svg]:text-emerald-300" />
+          ) : (
+            <Icon className="size-3" />
           )}
-        </div>
+          {!isCollapsed && <span className="truncate">{step.shortTitle}</span>}
+        </SidebarMenuSubButton>
+      </Link>
+    </SidebarMenuSubItem>
+  );
+}
 
-        <nav className="flex-1 space-y-1 p-2">
-          {navItems.map((item, i) => {
-            const Icon = item.icon;
-            // "overview" is the index route at /studio, others are at /studio/<id>
-            const itemPath =
-              item.id === "overview" ? "/studio" : `/studio/${item.id}`;
-            const isActive =
-              item.id === "overview"
-                ? pathname === "/studio" || pathname === "/studio/"
-                : pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+// Configuration section sub-item
+function ConfigurationSectionItem({
+  section,
+  isCollapsed,
+  active,
+}: {
+  section: ConfigurationSection;
+  isCollapsed: boolean;
+  active: boolean;
+}) {
+  const Icon = section.icon;
 
-            // Special handling for setup item with progress
-            const isSetupItem = item.id === "setup";
-            const showProgressBadge = isSetupItem && setupProgress && !isSetupComplete;
+  return (
+    <SidebarMenuSubItem>
+      <Link to="/studio/configuration" search={{ section: section.id }}>
+        <SidebarMenuSubButton
+          className={cn(
+            "gap-2 text-sidebar-foreground/70 text-[13px]",
+            active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
+          )}
+        >
+          <Icon className="size-3" />
+          {!isCollapsed && <span className="truncate">{section.label}</span>}
+        </SidebarMenuSubButton>
+      </Link>
+    </SidebarMenuSubItem>
+  );
+}
 
-            const linkContent = (
-              <Link
-                to={itemPath}
-                activeOptions={{ exact: item.id === "overview" }}
-                activeProps={{
-                  className: "bg-sidebar-accent text-sidebar-accent-foreground",
-                }}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-medium text-sm tracking-tight font-montserrat transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                  // Highlight setup if incomplete
-                  isSetupItem && !isSetupComplete && !isActive && "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20",
-                  // Green when complete
-                  isSetupItem && isSetupComplete && !isActive && "text-emerald-600 dark:text-emerald-400",
-                )}
-              >
-                {isSetupItem && isSetupComplete ? (
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                ) : (
-                  <Icon
-                    className={cn(
-                      "h-5 w-5 shrink-0",
-                      isActive && "text-sidebar-accent-foreground",
-                    )}
-                  />
-                )}
-                {!collapsed && (
-                  <span className="flex-1">{item.label}</span>
-                )}
-                {!collapsed && showProgressBadge && (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium">
-                    {setupProgress.complete}/{setupProgress.total}
-                  </span>
-                )}
-                {!collapsed && isSetupItem && isSetupComplete && (
-                  <span className="text-xs text-emerald-600">✓</span>
-                )}
-              </Link>
-            );
+// Configuration menu item with collapsible sections
+function ConfigurationMenuItem() {
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
+  const search = routerState.location.search;
+  const activeSectionId = search
+    ? new URLSearchParams(search).get("section")
+    : null;
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
-            if (collapsed) {
-              return (
-                <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                  <TooltipContent side="right" className="flex items-center gap-2">
-                    {item.label}
-                    {showProgressBadge && (
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700">
-                        {setupProgress.complete}/{setupProgress.total}
-                      </span>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            }
+  const isActive =
+    pathname === "/studio/configuration" ||
+    pathname.startsWith("/studio/configuration/");
 
-            if (item.id === "divider") {
-              return (
-                <div
-                  key={`${item.id}-${i}`}
-                  className="border-t border-sidebar-border my-2"
-                />
-              );
-            }
-
-            return <div key={item.id}>{linkContent}</div>;
-          })}
-        </nav>
-
-        <div className="border-sidebar-border border-t p-2">
-          <Button
-            className="w-full justify-center text-muted-foreground hover:text-foreground"
-            onClick={onToggleCollapse}
-            size="sm"
-            variant="ghost"
+  // When collapsed, just show a simple button
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItem>
+        <Link to="/studio/configuration">
+          <SidebarMenuButton
+            isActive={isActive}
+            tooltip="Configuration"
+            className="rounded-lg"
           >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+            <Settings className="size-4" />
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+    );
+  }
 
-        {!collapsed && (
-          <div className="border-sidebar-border border-t p-4">
-            <div className="rounded-lg bg-sidebar-accent/50 p-3">
-              <p className="font-medium text-sidebar-foreground text-xs">
-                Demo Mode
-              </p>
-              <p className="mt-1 text-muted-foreground text-xs">
-                This is a preview of your StackPanel dashboard.
-              </p>
+  return (
+    <Collapsible defaultOpen={isActive} className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={isActive} className="rounded-lg">
+            <Settings className="size-4" />
+            <span className="flex-1">Configuration</span>
+            <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {CONFIGURATION_SECTIONS.map((section) => (
+              <ConfigurationSectionItem
+                key={section.id}
+                section={section}
+                active={
+                  isActive &&
+                  (activeSectionId === section.id ||
+                    (!activeSectionId && section.id === "github"))
+                }
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
+// Setup menu item with collapsible steps
+function SetupMenuItem() {
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
+  const progress = useSetupProgress();
+  const search = routerState.location.search;
+  const activeStepId = search ? new URLSearchParams(search).get("step") : null;
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  const isActive =
+    pathname === "/studio/setup" || pathname.startsWith("/studio/setup/");
+  const isComplete = progress?.isComplete ?? false;
+  const progressPercent = progress
+    ? (progress.requiredComplete / progress.requiredTotal) * 100
+    : 0;
+
+  // When collapsed, just show a simple button
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItem>
+        <Link to="/studio/setup">
+          <SidebarMenuButton
+            isActive={isActive}
+            tooltip="Setup"
+            className={cn(
+              "rounded-lg",
+              !isComplete &&
+                "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+              isComplete && "text-emerald-600 dark:text-emerald-400",
+            )}
+          >
+            {isComplete ? (
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            ) : (
+              <Rocket className="size-4" />
+            )}
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <Collapsible defaultOpen={!isComplete} className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            isActive={isActive}
+            className={cn(
+              "rounded-lg ",
+              !isComplete &&
+                !isActive &&
+                "bg-sidebar-accent/10 text-sidebar-accent-foreground dark:text-sidebar-accent-foreground hover:bg-sidebar-accent/20",
+              isComplete &&
+                !isActive &&
+                "text-emerald-600 dark:text-emerald-400",
+            )}
+          >
+            {isComplete ? (
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            ) : (
+              <Rocket className="size-4" />
+            )}
+            <span className="flex-1">Setup</span>
+            <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {/* Progress bar */}
+          {!isComplete && (
+            <div className="px-2 py-2">
+              <Progress value={progressPercent} className="h-1" />
             </div>
+          )}
+          <SidebarMenuSub>
+            {progress?.steps.map((step) => (
+              <SetupStepItem
+                key={step.id}
+                step={step}
+                active={activeStepId === step.id}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
+export function DashboardSidebar() {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  return (
+    <Sidebar collapsible="icon">
+      {/* Header with logo */}
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex h-12 items-center justify-center">
+          {!isCollapsed ? (
+            <Link
+              to="/studio"
+              className="flex items-center gap-2 justify-center relative"
+            >
+              <Logo className="h-6 w-auto fill-sidebar-foreground" />
+              <Badge className="bg-emerald-300/10 text-slate-950-600 dark:text-slate-300 font-bold border-slate-500/30 text-[9px] px-1.5 py-0 absolute -bottom-3 -right-1">
+                Beta
+              </Badge>
+            </Link>
+          ) : (
+            <Link
+              to="/studio"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent relative"
+            >
+              <span className="font-bold text-accent-foreground text-sm">
+                S
+              </span>
+              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500" />
+            </Link>
+          )}
+        </div>
+      </SidebarHeader>
+
+      {/* Project Selector - only when expanded */}
+      {!isCollapsed && (
+        <div className="border-b border-sidebar-border px-3 py-3">
+          <ProjectSelector variant="sidebar" />
+        </div>
+      )}
+
+      {/* Main Navigation */}
+      <SidebarContent>
+        {/* Overview & Setup */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <NavMenuItem key={item.id} item={item} />
+              ))}
+              <SetupMenuItem />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Main Features */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Core</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <ConfigurationMenuItem />
+              {mainNavItems.map((item) => (
+                <NavMenuItem key={item.id} item={item} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Tools */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Modules</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {toolsNavItems.map((item) => (
+                <NavMenuItem key={item.id} item={item} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Other */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Other</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {otherNavItems.map((item) => (
+                <NavMenuItem key={item.id} item={item} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* Footer */}
+      <SidebarFooter>
+        {!isCollapsed && (
+          <div className="rounded-lg bg-sidebar-accent/50 p-3">
+            <p className="font-medium text-sidebar-foreground text-xs">
+              Demo Mode
+            </p>
+            <p className="mt-1 text-muted-foreground text-xs">
+              This is a preview of your StackPanel dashboard.
+            </p>
           </div>
         )}
-      </aside>
-    </TooltipProvider>
+      </SidebarFooter>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton>
+                  <User2 /> Username
+                  <ChevronUp className="ml-auto" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                className="w-[--radix-popper-anchor-width]"
+              >
+                {otherNavItems.map((item) => (
+                  <DropdownMenuItem>
+                    <Link
+                      to={item.id === "docs" ? "/docs" : "/studio/roadmap"}
+                      className="flex items-center"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
+      {/* Rail for collapse/expand on hover */}
+      <SidebarRail />
+    </Sidebar>
   );
 }

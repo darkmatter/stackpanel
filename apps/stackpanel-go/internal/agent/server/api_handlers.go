@@ -281,6 +281,139 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleFilesList lists files in a directory
+// GET /api/files/list?path=.stackpanel/state
+func (s *Server) handleFilesList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		s.writeAPIError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	abs, err := safeJoin(s.config.ProjectRoot, path)
+	if err != nil {
+		s.writeAPIError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+
+	entries, err := os.ReadDir(abs)
+	if err != nil {
+		if os.IsNotExist(err) {
+			s.writeAPI(w, http.StatusOK, map[string]any{
+				"path":   path,
+				"exists": false,
+				"files":  []string{},
+			})
+			return
+		}
+		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var files []map[string]any
+	for _, entry := range entries {
+		info, _ := entry.Info()
+		file := map[string]any{
+			"name":  entry.Name(),
+			"isDir": entry.IsDir(),
+		}
+		if info != nil {
+			file["size"] = info.Size()
+			file["modTime"] = info.ModTime().Unix()
+		}
+		files = append(files, file)
+	}
+
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"path":   path,
+		"exists": true,
+		"files":  files,
+	})
+}
+
+// handleScriptSource gets the source code of a script/command
+// GET /api/scripts/source?name=<script-name>
+func (s *Server) handleScriptSource(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	if name == "" {
+		s.writeAPIError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+
+	// Use 'which' to find the script path
+	result, err := s.exec.Run("which", name)
+	if err != nil || result.ExitCode != 0 {
+		s.writeAPI(w, http.StatusOK, map[string]any{
+			"name":   name,
+			"found":  false,
+			"reason": "not found in PATH",
+		})
+		return
+	}
+
+	scriptPath := strings.TrimSpace(result.Stdout)
+	if scriptPath == "" {
+		s.writeAPI(w, http.StatusOK, map[string]any{
+			"name":   name,
+			"found":  false,
+			"reason": "not found in PATH",
+		})
+		return
+	}
+
+	// Check if it's a binary or script by reading the first bytes
+	content, err := os.ReadFile(scriptPath)
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to read script: "+err.Error())
+		return
+	}
+
+	// Check if it's a binary (non-text file)
+	isBinary := false
+	if len(content) > 0 {
+		// Check for shebang or common text patterns
+		contentStr := string(content)
+		if !strings.HasPrefix(contentStr, "#!") && !strings.HasPrefix(contentStr, "//") {
+			// Check for null bytes which indicate binary
+			for i := 0; i < len(content) && i < 512; i++ {
+				if content[i] == 0 {
+					isBinary = true
+					break
+				}
+			}
+		}
+	}
+
+	if isBinary {
+		s.writeAPI(w, http.StatusOK, map[string]any{
+			"name":     name,
+			"found":    true,
+			"path":     scriptPath,
+			"isBinary": true,
+			"source":   "",
+		})
+		return
+	}
+
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"name":     name,
+		"found":    true,
+		"path":     scriptPath,
+		"isBinary": false,
+		"source":   string(content),
+	})
+}
+
 func (s *Server) handleSecretsSet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

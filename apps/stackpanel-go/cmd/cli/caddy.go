@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -130,10 +131,10 @@ import %s/*.caddy
 }
 
 func startCaddy() {
-	fmt.Printf("\n%s Caddy\n", purple.Sprint("==>"))
+	fmt.Printf("\n%s Caddy\n", output.Purple.Sprint("==>"))
 
 	if err := generateCaddyfile(); err != nil {
-		printError(fmt.Sprintf("Failed to generate Caddyfile: %v", err))
+		output.Error(fmt.Sprintf("Failed to generate Caddyfile: %v", err))
 		return
 	}
 
@@ -141,55 +142,55 @@ func startCaddy() {
 
 	// Check if already running
 	if pid := readCaddyPidFile(caddyPidFile); pid > 0 && svc.IsProcessRunning(pid) {
-		printInfo("Reloading configuration...")
+		output.Info("Reloading configuration...")
 		cmd := exec.Command("caddy", "reload", "--config", caddyfile, "--force")
-		if output, err := cmd.CombinedOutput(); err != nil {
-			printError(fmt.Sprintf("Reload failed: %v\n%s", err, output))
+		if cmdOutput, err := cmd.CombinedOutput(); err != nil {
+			output.Error(fmt.Sprintf("Reload failed: %v\n%s", err, cmdOutput))
 			return
 		}
-		printSuccess("Reloaded")
+		output.Success("Reloaded")
 		return
 	}
 
-	printInfo("Starting Caddy...")
+	output.Info("Starting Caddy...")
 	cmd := exec.Command("caddy", "start", "--config", caddyfile, "--pidfile", caddyPidFile)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		printError(fmt.Sprintf("Start failed: %v\n%s", err, output))
+	if cmdOutput, err := cmd.CombinedOutput(); err != nil {
+		output.Error(fmt.Sprintf("Start failed: %v\n%s", err, cmdOutput))
 		return
 	}
 
-	printSuccess("Started")
+	output.Success("Started")
 }
 
 func stopCaddy() {
-	fmt.Printf("\n%s Caddy\n", purple.Sprint("==>"))
+	fmt.Printf("\n%s Caddy\n", output.Purple.Sprint("==>"))
 
 	pid := readCaddyPidFile(caddyPidFile)
 	if pid == 0 || !svc.IsProcessRunning(pid) {
-		printDim("Not running")
+		output.Dimmed("Not running")
 		os.Remove(caddyPidFile)
 		return
 	}
 
 	cmd := exec.Command("caddy", "stop")
 	if err := cmd.Run(); err != nil {
-		printError(fmt.Sprintf("Stop failed: %v", err))
+		output.Error(fmt.Sprintf("Stop failed: %v", err))
 		return
 	}
 
 	os.Remove(caddyPidFile)
-	printSuccess("Stopped")
+	output.Success("Stopped")
 }
 
 func showCaddyStatus() {
-	fmt.Printf("\n%s Caddy\n", purple.Sprint("==>"))
+	fmt.Printf("\n%s Caddy\n", output.Purple.Sprint("==>"))
 
 	pid := readCaddyPidFile(caddyPidFile)
 	if pid > 0 && svc.IsProcessRunning(pid) {
-		green.Printf("  ● Running")
+		output.Green.Printf("  ● Running")
 		fmt.Printf(" (PID: %d)\n", pid)
 	} else {
-		dim.Println("  ○ Stopped")
+		output.DimC.Println("  ○ Stopped")
 		return
 	}
 
@@ -218,12 +219,12 @@ func addCaddySite(domain, upstream string, useTls bool) {
 `, domain, upstream, domain, tlsConfig, upstream)
 
 	if err := os.WriteFile(siteFile, []byte(content), 0644); err != nil {
-		printError(fmt.Sprintf("Failed to write site config: %v", err))
+		output.Error(fmt.Sprintf("Failed to write site config: %v", err))
 		return
 	}
 
-	printSuccess(fmt.Sprintf("Added site: %s -> %s", domain, upstream))
-	printDim(fmt.Sprintf("  Config: %s", siteFile))
+	output.Success(fmt.Sprintf("Added site: %s -> %s", domain, upstream))
+	output.Dimmed(fmt.Sprintf("  Config: %s", siteFile))
 
 	// Create symlink from project to global config
 	projectRoot := svc.GetProjectRoot()
@@ -234,12 +235,12 @@ func addCaddySite(domain, upstream string, useTls bool) {
 			// Remove existing symlink if it exists
 			os.Remove(symlinkPath)
 			if err := os.Symlink(siteFile, symlinkPath); err == nil {
-				printDim(fmt.Sprintf("  Symlink: %s", symlinkPath))
+				output.Dimmed(fmt.Sprintf("  Symlink: %s", symlinkPath))
 			}
 		}
 	}
 
-	printDim("  Run 'stackpanel caddy start' to apply")
+	output.Dimmed("  Run 'stackpanel caddy start' to apply")
 }
 
 func removeCaddySite(domain string) {
@@ -248,12 +249,12 @@ func removeCaddySite(domain string) {
 	siteFile := filepath.Join(caddySitesDir, filename+".caddy")
 
 	if _, err := os.Stat(siteFile); os.IsNotExist(err) {
-		printWarning(fmt.Sprintf("Site not found: %s", domain))
+		output.Warning(fmt.Sprintf("Site not found: %s", domain))
 		return
 	}
 
 	if err := os.Remove(siteFile); err != nil {
-		printError(fmt.Sprintf("Failed to remove site: %v", err))
+		output.Error(fmt.Sprintf("Failed to remove site: %v", err))
 		return
 	}
 
@@ -264,19 +265,19 @@ func removeCaddySite(domain string) {
 		os.Remove(symlinkPath) // Ignore error - might not exist
 	}
 
-	printSuccess(fmt.Sprintf("Removed site: %s", domain))
-	printDim("  Run 'stackpanel caddy start' to apply")
+	output.Success(fmt.Sprintf("Removed site: %s", domain))
+	output.Dimmed("  Run 'stackpanel caddy start' to apply")
 }
 
 func listCaddySites() {
 	entries, err := os.ReadDir(caddySitesDir)
 	if err != nil || len(entries) == 0 {
-		printDim("  No sites configured")
+		output.Dimmed("  No sites configured")
 		return
 	}
 
 	fmt.Println()
-	printDim("  Configured sites:")
+	output.Dimmed("  Configured sites:")
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".caddy") {
 			continue
@@ -288,7 +289,7 @@ func listCaddySites() {
 			line = strings.TrimSpace(line)
 			if strings.HasPrefix(line, "# Site:") {
 				parts := strings.TrimPrefix(line, "# Site: ")
-				printDim(fmt.Sprintf("    • %s", parts))
+				output.Dimmed(fmt.Sprintf("    • %s", parts))
 				break
 			}
 		}

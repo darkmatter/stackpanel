@@ -37,7 +37,7 @@
     "Source Code Pro Variable", "Monaspace Neon", "Geist Mono",
     "Geist Mono Fallback";
   --font-mono--font-variation-settings:
-    "wght" 400, "wdth" 100, "opsz" 12, "slnt" 0;
+    "wght" 400, "wdth" 100, "opsz" 10, "slnt" 0;
   --font-mono--font-feature-settings: "calt" 1, "kern" 1;
   --font-variation-settings: normal;
   --font-weight: 500;
@@ -174,7 +174,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-weight: 380;
   }
 
   h1,
@@ -198,7 +197,6 @@
   button,
   a {
     font-family: var(--font-sans);
-    font-weight: 400;
     cursor: pointer;
   }
 
@@ -283,7 +281,7 @@
   --secondary-foreground: oklch(1 0 0);
   --muted: oklch(0.1822 0 0);
   --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.70 0.15 162);
+  --accent: oklch(0.5 0.25 282);
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.69 0.2 23.91);
   --destructive-foreground: oklch(0 0 0);

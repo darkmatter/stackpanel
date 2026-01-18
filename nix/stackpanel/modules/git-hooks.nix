@@ -5,9 +5,8 @@
 # Consumes stackpanel.appsComputed.<app>.wrappedTooling.* and exposes a
 # git-hooks configuration fragment suitable for git-hooks.nix.
 #
-# Usage (in .stackpanel/devenv.nix):
+# Usage (in .stackpanel/config.nix):
 #   git-hooks.enable = true;
-#   # merged-config.nix will expose this as git-hooks config
 # ==============================================================================
 {
   lib,
