@@ -173,3 +173,144 @@ ______________________________________________________________________
 - [x] SST infrastructure module for AWS provisioning
 - [x] Git hooks integration
 - [x] Process-compose orchestration
+
+______________________________________________________________________
+
+## MOTD Improvements (`apps/stackpanel-go/internal/tui/motd.go`)
+
+Improve the `stackpanel motd` command to be more helpful for new users.
+
+### Layout
+
+```
+╭──────────────────────────────────────────────────────────────────────────╮
+│  [ASCII Banner]                                                          │
+│                                                                          │
+│  MyProject Shell                                    v1.2.3               │
+│  Your reproducible development environment is ready                      │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Status                                                                  │
+│    Agent     ● localhost:9876           Studio → localhost:3000/studio   │
+│    Services  ● postgres  ● redis  ○ minio                                │
+│    AWS       ⚠ credentials expired      Health ████████░░ 8/10           │
+│                                                                          │
+│  Environment                                                             │
+│    Node 20.11.0  •  Bun 1.1.8  •  Go 1.22  •  PostgreSQL 16              │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Quick Start                             Shortcuts                       │
+│    dev             Start services          sp   = stackpanel             │
+│    dev stop        Stop services           spx  = run devshell command   │
+│    sp status       Full dashboard          x    = spx (configurable)     │
+│                                                                          │
+│  Your Commands (12 available)                                            │
+│    db:migrate      Run database migrations                               │
+│    db:seed         Seed development data                                 │
+│    test            Run test suite                                        │
+│    ...             Run `sp commands` for full list                       │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  ⚠ Action Required                                                       │
+│    • Agent not running → stackpanel agent                                │
+│    • AWS session expired → stackpanel aws login                          │
+│    • 2 files stale → stackpanel files sync                               │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  💡 Update available: v1.3.0 (you have v1.2.3) → nix flake update        │
+│                                                                          │
+│  Resources                                                               │
+│    Docs     https://stackpanel.dev/docs                                  │
+│    Studio   http://localhost:3000/studio?project=myproject               │
+╰──────────────────────────────────────────────────────────────────────────╯
+```
+
+### P0 - Must Have
+
+- [x] **Agent status detection** - Check if localhost:9876/health responds, show fix instructions if not
+- [x] **Studio link** - Show clickable link to `http://localhost:3000/studio?project={id}`
+- [x] **Condensed commands list** - Show top 5 user commands with "run `sp commands` for full list"
+- [x] **Alias documentation** - Explain `sp`, `spx`, and `x` shortcuts
+- [x] **Docs link** - Show `https://stackpanel.dev/docs`
+
+### P1 - Should Have
+
+- [x] **AWS status with warnings** - Check `aws sts get-caller-identity`, show ⚠ if invalid
+- [x] **Generated files summary** - Show "X stale / Y total" with fix command
+- [x] **Action Required section** - Conditional section showing issues with fix commands
+- [x] **Environment info** - Show enabled languages/tools (Node version, Go version, etc.)
+- [x] **Health score** - Visual progress bar `████████░░ 8/10` from healthchecks
+
+### P2 - Nice to Have
+
+- [x] **Update notification** - Check for newer stackpanel version, show update command
+
+### Implementation
+
+#### Phase 1: Data Collection ✅
+
+Created `apps/stackpanel-go/internal/tui/motd_data.go`:
+
+```go
+type MOTDData struct {
+    // Project info
+    ProjectName string
+    Version     string
+    
+    // Status checks
+    Agent       AgentStatus
+    Services    []ServiceStatus
+    AWS         AWSStatus
+    Health      HealthSummary
+    Files       FilesStatus
+    Environment EnvironmentInfo
+    
+    // Commands
+    DefaultCommands []MOTDCommand
+    UserCommands    []MOTDCommand
+    TotalCommands   int
+    
+    // Configuration
+    ShortcutAlias   string
+    StudioURL       string
+    DocsURL         string
+    AgentPort       int
+    
+    // Computed
+    Issues          []Issue
+    UpdateAvailable *UpdateInfo
+}
+
+func CheckAgentStatus(port int) AgentStatus
+func CheckAWSStatus() AWSStatus
+func CheckFilesStatus(projectRoot string) FilesStatus
+func GetEnvironmentInfo() EnvironmentInfo
+func GetUserCommands(projectRoot string) ([]MOTDCommand, int)
+func CheckForUpdates(currentVersion string) *UpdateInfo
+func CollectMOTDData(cfg *nixconfig.Config) *MOTDData
+```
+
+#### Phase 2: Update Rendering ✅
+
+Modified `apps/stackpanel-go/internal/tui/motd.go`:
+- Added `RenderImprovedMOTD()` function with all new sections
+- Added new render functions for each section (status, environment, shortcuts, etc.)
+- Added conditional rendering for Issues section
+- Added health bar visualization
+- Preserved legacy `RenderMOTD()` for backward compatibility
+
+#### Phase 3: Update CLI Command ✅
+
+Modified `apps/stackpanel-go/cmd/cli/motd.go`:
+- Added `CollectMOTDData()` call to gather all info
+- Added `--json` flag for machine-readable output
+- Added `--force` flag to show MOTD even if disabled
+- Added `--legacy` flag to use old MOTD format
+
+### Files Modified ✅
+
+| File | Status |
+|------|--------|
+| `apps/stackpanel-go/internal/tui/motd_data.go` | ✅ Created - Data collection functions |
+| `apps/stackpanel-go/internal/tui/motd.go` | ✅ Updated - Added `RenderImprovedMOTD()` and new sections |
+| `apps/stackpanel-go/cmd/cli/motd.go` | ✅ Updated - Added flags and improved orchestration |

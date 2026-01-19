@@ -79,6 +79,14 @@ export interface InspectorGeneratedFile extends GeneratedFileWithStatus {
   relativePath: string;
 }
 
+export type InspectorContributorType = "module" | "extension";
+
+export interface InspectorContributor {
+  id: string;
+  label: string;
+  type: InspectorContributorType;
+}
+
 /** Complete inspector data */
 export interface InspectorData {
   /** Project information */
@@ -123,6 +131,9 @@ export interface InspectorData {
     state: string;
     secrets: string;
   } | null;
+
+  /** Contributors (modules/extensions) derived from config + files */
+  contributors: InspectorContributor[];
 }
 
 interface UseInspectorDataState {
@@ -230,6 +241,11 @@ export function useInspectorData(
         : null;
 
       // Build the inspector data
+      const filesWithRelative = generatedFilesRes.files.map((f) => ({
+        ...f,
+        relativePath: f.path,
+      }));
+      const contributors = deriveContributors(filesWithRelative, integrations);
       const data: InspectorData = {
         project: projectRoot
           ? {
@@ -238,10 +254,7 @@ export function useInspectorData(
             }
           : null,
         generatedFiles: {
-          files: generatedFilesRes.files.map((f) => ({
-            ...f,
-            relativePath: f.path,
-          })),
+          files: filesWithRelative,
           totalCount: generatedFilesRes.totalCount,
           staleCount: generatedFilesRes.staleCount,
           enabledCount: generatedFilesRes.enabledCount,
@@ -254,6 +267,7 @@ export function useInspectorData(
         dataFiles: entitiesRes,
         stateFiles: stateFilesRes,
         directories,
+        contributors,
       };
 
       setState({
@@ -283,14 +297,20 @@ export function useInspectorData(
       const configRes = await fetchConfig(baseUrl, token, true);
       setState((prev) => {
         if (!prev.data) return prev;
+        const integrations = extractIntegrations(configRes.config);
+        const scripts = extractScripts(configRes.config);
         return {
           ...prev,
           data: {
             ...prev.data,
             config: configRes.config,
             configSource: configRes.source,
-            scripts: extractScripts(configRes.config),
-            integrations: extractIntegrations(configRes.config),
+            scripts,
+            integrations,
+            contributors: deriveContributors(
+              prev.data.generatedFiles.files,
+              integrations,
+            ),
           },
           dataUpdatedAt: Date.now(),
         };
@@ -529,6 +549,41 @@ async function fetchScriptSources(
 // =============================================================================
 // Extraction Helpers
 // =============================================================================
+
+function deriveContributors(
+  files: InspectorGeneratedFile[],
+  integrations: InspectorIntegration[],
+): InspectorContributor[] {
+  const contributors = new Map<string, InspectorContributor>();
+
+  const add = (
+    id: string | null | undefined,
+    label: string | null | undefined,
+    type: InspectorContributorType,
+  ) => {
+    const cleanId = id?.trim();
+    const cleanLabel = label?.trim();
+    if (!cleanId || contributors.has(cleanId)) return;
+    contributors.set(cleanId, {
+      id: cleanId,
+      label: cleanLabel || cleanId,
+      type,
+    });
+  };
+
+  for (const file of files) {
+    add(file.source ?? null, file.source ?? null, "module");
+  }
+
+  for (const integration of integrations) {
+    add(integration.name, integration.displayName, "extension");
+    add(integration.source?.path, integration.source?.path, "extension");
+  }
+
+  return Array.from(contributors.values()).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+}
 
 function extractScripts(
   config: Record<string, unknown> | null,

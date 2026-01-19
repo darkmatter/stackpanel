@@ -8,7 +8,7 @@ import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/code
  * Describes the file extensions.proto.
  */
 export const file_extensions = /*@__PURE__*/
-  fileDesc("ChBleHRlbnNpb25zLnByb3RvEg1zdGFja3BhbmVsLmRiIqkBCglFeHRlbnNpb24SDAoEbmFtZRgBIAEoCRIPCgdlbmFibGVkGAIgASgIEiUKBnNvdXJjZRgDIAEoCzIVLnN0YWNrcGFuZWwuZGIuU291cmNlEhQKB3ZlcnNpb24YBCABKAlIAIgBARIQCghwcmlvcml0eRgFIAEoBRIUCgxkZXBlbmRlbmNpZXMYBiADKAkSDAoEdGFncxgHIAMoCUIKCghfdmVyc2lvbiLQAQoKRXh0ZW5zaW9ucxIPCgdlbmFibGVkGAEgASgIEhMKC2F1dG9fdXBkYXRlGAIgASgIEhAKCHJlZ2lzdHJ5GAMgASgJEj0KCmV4dGVuc2lvbnMYBCADKAsyKS5zdGFja3BhbmVsLmRiLkV4dGVuc2lvbnMuRXh0ZW5zaW9uc0VudHJ5GksKD0V4dGVuc2lvbnNFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5zdGFja3BhbmVsLmRiLkV4dGVuc2lvbjoCOAEivwEKBlNvdXJjZRInCgR0eXBlGAEgASgOMhkuc3RhY2twYW5lbC5kYi5Tb3VyY2VUeXBlEhEKBHJlcG8YAiABKAlIAIgBARIUCgdwYWNrYWdlGAMgASgJSAGIAQESEQoEcGF0aBgEIAEoCUgCiAEBEhAKA3VybBgFIAEoCUgDiAEBEhAKA3JlZhgGIAEoCUgEiAEBQgcKBV9yZXBvQgoKCF9wYWNrYWdlQgcKBV9wYXRoQgYKBF91cmxCBgoEX3JlZiqCAQoKU291cmNlVHlwZRIbChdTT1VSQ0VfVFlQRV9VTlNQRUNJRklFRBAAEhYKElNPVVJDRV9UWVBFX0dJVEhVQhABEhMKD1NPVVJDRV9UWVBFX05QTRACEhUKEVNPVVJDRV9UWVBFX0xPQ0FMEAMSEwoPU09VUkNFX1RZUEVfVVJMEARCOlo4Z2l0aHViLmNvbS9kYXJrbWF0dGVyL3N0YWNrcGFuZWwvcGFja2FnZXMvcHJvdG8vZ2VuL2dvcGJiBnByb3RvMw");
+  fileDesc("ChBleHRlbnNpb25zLnByb3RvEg1zdGFja3BhbmVsLmRiIoQECglFeHRlbnNpb24SDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEg8KB2VuYWJsZWQYAyABKAgSDwoHYnVpbHRpbhgEIAEoCBIuCgZzb3VyY2UYBSABKAsyHi5zdGFja3BhbmVsLmRiLkV4dGVuc2lvblNvdXJjZRIUCgd2ZXJzaW9uGAYgASgJSAGIAQESMgoIY2F0ZWdvcnkYByABKA4yIC5zdGFja3BhbmVsLmRiLkV4dGVuc2lvbkNhdGVnb3J5EhAKCHByaW9yaXR5GAggASgFEgwKBHRhZ3MYCSADKAkSFAoMZGVwZW5kZW5jaWVzGAogAygJEi0KBnBhbmVscxgLIAMoCzIdLnN0YWNrcGFuZWwuZGIuRXh0ZW5zaW9uUGFuZWwSMAoEYXBwcxgMIAMoCzIiLnN0YWNrcGFuZWwuZGIuRXh0ZW5zaW9uLkFwcHNFbnRyeRIyCghmZWF0dXJlcxgNIAEoCzIgLnN0YWNrcGFuZWwuZGIuRXh0ZW5zaW9uRmVhdHVyZXMaTAoJQXBwc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnN0YWNrcGFuZWwuZGIuRXh0ZW5zaW9uQXBwRGF0YToCOAFCDgoMX2Rlc2NyaXB0aW9uQgoKCF92ZXJzaW9uIo8BChBFeHRlbnNpb25BcHBEYXRhEg8KB2VuYWJsZWQYASABKAgSOwoGY29uZmlnGAIgAygLMisuc3RhY2twYW5lbC5kYi5FeHRlbnNpb25BcHBEYXRhLkNvbmZpZ0VudHJ5Gi0KC0NvbmZpZ0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEinAEKEUV4dGVuc2lvbkZlYXR1cmVzEg0KBWZpbGVzGAEgASgIEg8KB3NjcmlwdHMYAiABKAgSDQoFdGFza3MYAyABKAgSDwoHc2VjcmV0cxgEIAEoCBITCgtzaGVsbF9ob29rcxgFIAEoCBIQCghwYWNrYWdlcxgGIAEoCBIQCghzZXJ2aWNlcxgHIAEoCBIOCgZjaGVja3MYCCABKAgitwEKDkV4dGVuc2lvblBhbmVsEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhgKC2Rlc2NyaXB0aW9uGAMgASgJSACIAQESJgoEdHlwZRgEIAEoDjIYLnN0YWNrcGFuZWwuZGIuUGFuZWxUeXBlEg0KBW9yZGVyGAUgASgFEikKBmZpZWxkcxgGIAMoCzIZLnN0YWNrcGFuZWwuZGIuUGFuZWxGaWVsZEIOCgxfZGVzY3JpcHRpb24i+wEKD0V4dGVuc2lvblNvdXJjZRIwCgR0eXBlGAEgASgOMiIuc3RhY2twYW5lbC5kYi5FeHRlbnNpb25Tb3VyY2VUeXBlEhEKBHJlcG8YAiABKAlIAIgBARIUCgdwYWNrYWdlGAMgASgJSAGIAQESEQoEcGF0aBgEIAEoCUgCiAEBEhAKA3VybBgFIAEoCUgDiAEBEhAKA3JlZhgGIAEoCUgEiAEBEhgKC21vZHVsZV9wYXRoGAcgASgJSAWIAQFCBwoFX3JlcG9CCgoIX3BhY2thZ2VCBwoFX3BhdGhCBgoEX3VybEIGCgRfcmVmQg4KDF9tb2R1bGVfcGF0aCLiAQoKRXh0ZW5zaW9ucxIPCgdlbmFibGVkGAEgASgIEhMKC2F1dG9fdXBkYXRlGAIgASgIEhUKCHJlZ2lzdHJ5GAMgASgJSACIAQESPQoKZXh0ZW5zaW9ucxgEIAMoCzIpLnN0YWNrcGFuZWwuZGIuRXh0ZW5zaW9ucy5FeHRlbnNpb25zRW50cnkaSwoPRXh0ZW5zaW9uc0VudHJ5EgsKA2tleRgBIAEoCRInCgV2YWx1ZRgCIAEoCzIYLnN0YWNrcGFuZWwuZGIuRXh0ZW5zaW9uOgI4AUILCglfcmVnaXN0cnkiYgoKUGFuZWxGaWVsZBIMCgRuYW1lGAEgASgJEiYKBHR5cGUYAiABKA4yGC5zdGFja3BhbmVsLmRiLkZpZWxkVHlwZRINCgV2YWx1ZRgDIAEoCRIPCgdvcHRpb25zGAQgAygJKssCChFFeHRlbnNpb25DYXRlZ29yeRIiCh5FWFRFTlNJT05fQ0FURUdPUllfVU5TUEVDSUZJRUQQABIlCiFFWFRFTlNJT05fQ0FURUdPUllfSU5GUkFTVFJVQ1RVUkUQARIcChhFWFRFTlNJT05fQ0FURUdPUllfQ0lfQ0QQAhIfChtFWFRFTlNJT05fQ0FURUdPUllfREFUQUJBU0UQAxIeChpFWFRFTlNJT05fQ0FURUdPUllfU0VDUkVUUxAEEiEKHUVYVEVOU0lPTl9DQVRFR09SWV9ERVBMT1lNRU5UEAUSIgoeRVhURU5TSU9OX0NBVEVHT1JZX0RFVkVMT1BNRU5UEAYSIQodRVhURU5TSU9OX0NBVEVHT1JZX01PTklUT1JJTkcQBxIiCh5FWFRFTlNJT05fQ0FURUdPUllfSU5URUdSQVRJT04QCCrgAQoTRXh0ZW5zaW9uU291cmNlVHlwZRIlCiFFWFRFTlNJT05fU09VUkNFX1RZUEVfVU5TUEVDSUZJRUQQABIhCh1FWFRFTlNJT05fU09VUkNFX1RZUEVfQlVJTFRJThABEh8KG0VYVEVOU0lPTl9TT1VSQ0VfVFlQRV9MT0NBTBACEiAKHEVYVEVOU0lPTl9TT1VSQ0VfVFlQRV9HSVRIVUIQAxIdChlFWFRFTlNJT05fU09VUkNFX1RZUEVfTlBNEAQSHQoZRVhURU5TSU9OX1NPVVJDRV9UWVBFX1VSTBAFKugBCglGaWVsZFR5cGUSGgoWRklFTERfVFlQRV9VTlNQRUNJRklFRBAAEhUKEUZJRUxEX1RZUEVfU1RSSU5HEAESFQoRRklFTERfVFlQRV9OVU1CRVIQAhIWChJGSUVMRF9UWVBFX0JPT0xFQU4QAxIVChFGSUVMRF9UWVBFX1NFTEVDVBAEEhoKFkZJRUxEX1RZUEVfTVVMVElTRUxFQ1QQBRIZChVGSUVMRF9UWVBFX0FQUF9GSUxURVIQBhIWChJGSUVMRF9UWVBFX0NPTFVNTlMQBxITCg9GSUVMRF9UWVBFX0pTT04QCCqaAQoJUGFuZWxUeXBlEhoKFlBBTkVMX1RZUEVfVU5TUEVDSUZJRUQQABIVChFQQU5FTF9UWVBFX1NUQVRVUxABEhgKFFBBTkVMX1RZUEVfQVBQU19HUklEEAISEwoPUEFORUxfVFlQRV9GT1JNEAMSFAoQUEFORUxfVFlQRV9UQUJMRRAEEhUKEVBBTkVMX1RZUEVfQ1VTVE9NEAVCOlo4Z2l0aHViLmNvbS9kYXJrbWF0dGVyL3N0YWNrcGFuZWwvcGFja2FnZXMvcHJvdG8vZ2VuL2dvcGJiBnByb3RvMw");
 
 /**
  * Describes the message stackpanel.db.Extension.
@@ -18,30 +18,100 @@ export const ExtensionSchema = /*@__PURE__*/
   messageDesc(file_extensions, 0);
 
 /**
+ * Describes the message stackpanel.db.ExtensionAppData.
+ * Use `create(ExtensionAppDataSchema)` to create a new message.
+ */
+export const ExtensionAppDataSchema = /*@__PURE__*/
+  messageDesc(file_extensions, 1);
+
+/**
+ * Describes the message stackpanel.db.ExtensionFeatures.
+ * Use `create(ExtensionFeaturesSchema)` to create a new message.
+ */
+export const ExtensionFeaturesSchema = /*@__PURE__*/
+  messageDesc(file_extensions, 2);
+
+/**
+ * Describes the message stackpanel.db.ExtensionPanel.
+ * Use `create(ExtensionPanelSchema)` to create a new message.
+ */
+export const ExtensionPanelSchema = /*@__PURE__*/
+  messageDesc(file_extensions, 3);
+
+/**
+ * Describes the message stackpanel.db.ExtensionSource.
+ * Use `create(ExtensionSourceSchema)` to create a new message.
+ */
+export const ExtensionSourceSchema = /*@__PURE__*/
+  messageDesc(file_extensions, 4);
+
+/**
  * Describes the message stackpanel.db.Extensions.
  * Use `create(ExtensionsSchema)` to create a new message.
  */
 export const ExtensionsSchema = /*@__PURE__*/
-  messageDesc(file_extensions, 1);
+  messageDesc(file_extensions, 5);
 
 /**
- * Describes the message stackpanel.db.Source.
- * Use `create(SourceSchema)` to create a new message.
+ * Describes the message stackpanel.db.PanelField.
+ * Use `create(PanelFieldSchema)` to create a new message.
  */
-export const SourceSchema = /*@__PURE__*/
-  messageDesc(file_extensions, 2);
+export const PanelFieldSchema = /*@__PURE__*/
+  messageDesc(file_extensions, 6);
 
 /**
- * Describes the enum stackpanel.db.SourceType.
+ * Describes the enum stackpanel.db.ExtensionCategory.
  */
-export const SourceTypeSchema = /*@__PURE__*/
+export const ExtensionCategorySchema = /*@__PURE__*/
   enumDesc(file_extensions, 0);
+
+/**
+ * Category of extension for grouping in UI
+ *
+ * @generated from enum stackpanel.db.ExtensionCategory
+ */
+export const ExtensionCategory = /*@__PURE__*/
+  tsEnum(ExtensionCategorySchema);
+
+/**
+ * Describes the enum stackpanel.db.ExtensionSourceType.
+ */
+export const ExtensionSourceTypeSchema = /*@__PURE__*/
+  enumDesc(file_extensions, 1);
 
 /**
  * Source type for extensions
  *
- * @generated from enum stackpanel.db.SourceType
+ * @generated from enum stackpanel.db.ExtensionSourceType
  */
-export const SourceType = /*@__PURE__*/
-  tsEnum(SourceTypeSchema);
+export const ExtensionSourceType = /*@__PURE__*/
+  tsEnum(ExtensionSourceTypeSchema);
+
+/**
+ * Describes the enum stackpanel.db.FieldType.
+ */
+export const FieldTypeSchema = /*@__PURE__*/
+  enumDesc(file_extensions, 2);
+
+/**
+ * Type of configuration field
+ *
+ * @generated from enum stackpanel.db.FieldType
+ */
+export const FieldType = /*@__PURE__*/
+  tsEnum(FieldTypeSchema);
+
+/**
+ * Describes the enum stackpanel.db.PanelType.
+ */
+export const PanelTypeSchema = /*@__PURE__*/
+  enumDesc(file_extensions, 3);
+
+/**
+ * Type of UI panel component to render
+ *
+ * @generated from enum stackpanel.db.PanelType
+ */
+export const PanelType = /*@__PURE__*/
+  tsEnum(PanelTypeSchema);
 

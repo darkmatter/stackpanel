@@ -35,7 +35,10 @@ export function useAppVariablesSection(
 
 	// Display state
 	const [showEnvValues, setShowEnvValues] = useState(false);
-	const [environmentFilter, setEnvironmentFilter] = useState<string[]>([]);
+	// Default to "dev" if it exists in the environment options
+	const [environmentFilter, setEnvironmentFilter] = useState<string[]>(() => 
+		environmentOptions.includes("dev") ? ["dev"] : []
+	);
 
 	// Environment editing state
 	const [isEditingEnvironments, setIsEditingEnvironments] = useState(false);

@@ -274,8 +274,8 @@ in
       pkgs.age
     ];
 
-    # Add commands for secret management
-    stackpanel.devshell.commands = lib.mkIf (cfg.enable) {
+    # Add scripts for secret management
+    stackpanel.scripts = lib.mkIf (cfg.enable) {
       "secrets:write" = {
         description = "Write an age-encrypted secret (use API or UI)";
         exec = ''

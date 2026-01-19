@@ -56,10 +56,10 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 		}
 
 		setIsSaving(true);
-			try {
-				const client = agentClient;
-				if (token) client.setToken(token);
-				const variablesClient = client.nix.mapEntity<Variable>("variables");
+		try {
+			const client = agentClient;
+			if (token) client.setToken(token);
+			const variablesClient = client.nix.mapEntity<Variable>("variables");
 
 			console.log("[AddVariable] Checking if variable exists:", values.id);
 			console.log("[AddVariable] Form values:", values);
@@ -70,7 +70,8 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 				values.type,
 			);
 
-			const exists = await variablesClient.has(values.id);
+			const existing = await variablesClient.get(values.id);
+			const exists = Boolean(existing);
 			console.log("[AddVariable] Variable exists:", exists);
 
 			if (exists) {

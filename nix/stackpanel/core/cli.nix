@@ -180,6 +180,13 @@ let
     # Module requirements (what variables each module needs)
     # Serialized for agent/UI to show missing variables
     moduleRequirements = cfg.moduleRequirements;
+
+    # UI configuration for the web interface
+    ui = {
+      # Extensions registered by modules (e.g., SST, CI, etc.)
+      # Each extension can provide panels, feature flags, and per-app data
+      extensions = cfg.extensionsComputed or { };
+    };
   };
 
   # Serialize config to JSON

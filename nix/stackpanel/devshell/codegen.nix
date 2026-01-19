@@ -59,7 +59,7 @@ in
   ];
 
   config = lib.mkIf cfg.enable {
-    stackpanel.devshell.commands = lib.mkMerge [
+    stackpanel.scripts = lib.mkMerge [
       (lib.mapAttrs mkGenCmd cfg.generators)
     ];
 

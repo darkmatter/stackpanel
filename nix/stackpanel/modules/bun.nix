@@ -367,17 +367,19 @@ in
           ) goApps
         );
 
-        # Add run-<app> and test-<app> wrapper commands for each Go app
+        # Add run-<app> and test-<app> wrapper scripts for each Bun app
         # Uses STACKPANEL_ROOT env var which is set on shell entry
-        stackpanel.devshell.commands = lib.mkMerge (
+        stackpanel.scripts = lib.mkMerge (
           lib.mapAttrsToList (name: app: {
             "run-${name}" = {
-              exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.bun.mainPackage} "$@"'';
-              runtimeInputs = [ pkgs.go ];
+              exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
+              runtimeInputs = [ pkgs.bun ];
+              description = "Run ${name} Bun app";
             };
             "test-${name}" = {
-              exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
-              runtimeInputs = [ pkgs.go ];
+              exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun test "$@"'';
+              runtimeInputs = [ pkgs.bun ];
+              description = "Test ${name} Bun app";
             };
           }) goApps
         );

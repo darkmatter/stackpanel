@@ -44,7 +44,7 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 	} = options;
 
 	const client = useMemo(() => new AgentHttpClient({ host, port, token }), [host, port, token]);
-	
+
 	const { status } = useAgentHealth({ host, port });
 	const isConnected = status === "available";
 

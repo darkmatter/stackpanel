@@ -36,6 +36,7 @@
     ./ide.nix
     ./motd.nix
     ./outputs.nix
+    ./panels.nix
     ./step-ca.nix
     ./tasks.nix
     ./ports.nix
@@ -43,5 +44,6 @@
     ./theme.nix
     ./user-packages.nix
     ./users.nix
+    ./variables.nix
   ];
 }

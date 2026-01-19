@@ -48,7 +48,6 @@ in
     ./modules/go.nix # Go app support
     ./modules/process-compose.nix # App scripts + process-compose
     ./modules/turbo.nix # Turborepo task integration
-    ./modules/example-extension.nix # Example extension demonstrating panels
   ];
 
   config.stackpanel.devshell.hooks.after = [

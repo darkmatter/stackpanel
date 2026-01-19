@@ -16,16 +16,22 @@ proto.mkProtoFile {
   package = "stackpanel.db";
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
   enums = {
+    # VariableType indicates how the value is stored/retrieved AND its data type
+    # Storage types: VARIABLE (plain), SECRET (age-encrypted), VALS (external)
+    # Value types: STRING, NUMBER, BOOLEAN (for codegen)
     VariableType = proto.mkEnum {
       name = "VariableType";
       values = [
-        "VARIABLE"
-        "SECRET"
-        "VALS"
+        "VARIABLE"  # Plain variable with string value
+        "SECRET"    # Age-encrypted secret
+        "VALS"      # External value reference (vals syntax)
+        "STRING"    # Explicitly typed as string
+        "NUMBER"    # Explicitly typed as number (for codegen)
+        "BOOLEAN"   # Explicitly typed as boolean (for codegen)
       ];
     };
   };
@@ -85,19 +91,25 @@ proto.mkProtoFile {
             Used to show which features depend on this variable being set.
           ''
         );
-        providedBy = proto.optional (proto.string 8 ''
-          Module name that provides/creates this variable.
-          Used to understand where the variable comes from.
-        '');
-        level = proto.optional (proto.int32 9 ''
-          Bootstrap level (0 = always available, 1+ = requires dependencies).
-          Level 0: No dependencies (e.g., AGE key, env vars)
-          Level 1: Requires level 0 (e.g., encrypted secrets)
-          Level 2: Requires external setup (e.g., cloud API tokens)
-        '');
-        action = proto.optional (proto.message "VariableAction" 10 ''
-          Action to resolve this variable if missing.
-        '');
+        providedBy = proto.optional (
+          proto.string 8 ''
+            Module name that provides/creates this variable.
+            Used to understand where the variable comes from.
+          ''
+        );
+        level = proto.optional (
+          proto.int32 9 ''
+            Bootstrap level (0 = always available, 1+ = requires dependencies).
+            Level 0: No dependencies (e.g., AGE key, env vars)
+            Level 1: Requires level 0 (e.g., encrypted secrets)
+            Level 2: Requires external setup (e.g., cloud API tokens)
+          ''
+        );
+        action = proto.optional (
+          proto.message "VariableAction" 10 ''
+            Action to resolve this variable if missing.
+          ''
+        );
       };
     };
 

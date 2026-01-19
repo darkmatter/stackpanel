@@ -46,7 +46,7 @@ import { PanelHeader } from "./shared/panel-header";
 export function AppsPanelAlt() {
 	const { token } = useAgentContext();
 	const agentClient = useAgentClient();
-	const { data: apps, isLoading, error, refetch } = useApps();
+	const { data: rawApps, isLoading, error, refetch } = useApps();
 	const { data: nixConfig } = useNixConfig();
 	const { data: allVariables } = useVariables();
 
@@ -55,9 +55,9 @@ export function AppsPanelAlt() {
 
 	// Transform apps data to include id, stablePort, and isRunning fields
 	const resolvedApps = useMemo(() => {
-		if (!apps) return null;
+		if (!rawApps) return null;
 		const result: Record<string, App & { id: string; stablePort: number; isRunning: boolean }> = {};
-		for (const [id, app] of Object.entries(apps)) {
+		for (const [id, app] of Object.entries(rawApps)) {
 			result[id] = {
 				...app,
 				id,
@@ -66,7 +66,7 @@ export function AppsPanelAlt() {
 			};
 		}
 		return result;
-	}, [apps]);
+	}, [rawApps]);
 
 	// Turbo package graph state - source of truth for available tasks
 	const [packageGraph, setPackageGraph] = useState<TurboPackage[]>([]);

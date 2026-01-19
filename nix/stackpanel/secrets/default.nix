@@ -30,10 +30,30 @@
 }:
 let
   cfg = config.stackpanel.secrets;
+  
+  # AWS config for KMS integration
+  awsCfg = config.stackpanel.aws.roles-anywhere or { enable = false; };
+  sstCfg = config.stackpanel.sst or { enable = false; kms = { enable = false; }; };
+  
+  # Auto-compute KMS ARN from SST outputs if available
+  # Format: arn:aws:kms:REGION:ACCOUNT_ID:alias/ALIAS
+  computedKmsArn = 
+    if sstCfg.kms.enable or false && awsCfg.account-id or "" != "" then
+      "arn:aws:kms:${awsCfg.region or "us-west-2"}:${awsCfg.account-id}:alias/${sstCfg.kms.alias or "${config.stackpanel.name or "stackpanel"}-secrets"}"
+    else
+      cfg.kms.key-arn or "";
+  
+  # Check if KMS should be enabled (explicit config OR AWS is enabled with SST KMS)
+  kmsEnabled = cfg.kms.enable or false || (awsCfg.enable or false && sstCfg.kms.enable or false);
+  kmsArn = if cfg.kms.key-arn or "" != "" then cfg.kms.key-arn else computedKmsArn;
+  
   secretsLib = import ./lib.nix {
     inherit lib pkgs;
     ageKeyFiles = cfg.age-key-files;
   };
+
+  # Pure Nix TypeScript codegen - generates files via stackpanel.files
+  envTypescript = import ../lib/codegen/env-typescript.nix { inherit lib config; };
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # Standalone packages (for flake users who need derivations)
@@ -60,7 +80,7 @@ let
   generate-secrets-schema = pkgs.writeShellApplication {
     name = "generate-secrets-schema";
     runtimeInputs = [
-      pkgs.yq
+      pkgs.yq-go
       pkgs.sops
       pkgs.jq
       pkgs.bun
@@ -71,7 +91,7 @@ let
   generate-secrets-package = pkgs.writeShellApplication {
     name = "generate-secrets-package";
     runtimeInputs = [
-      pkgs.yq
+      pkgs.yq-go
       pkgs.sops
       pkgs.jq
       pkgs.bun
@@ -127,6 +147,17 @@ in
 
   config = lib.mkMerge [
     # ═══════════════════════════════════════════════════════════════════════════════
+    # Auto-enable SST KMS when secrets.kms is enabled and AWS is configured
+    # ═══════════════════════════════════════════════════════════════════════════════
+    (lib.mkIf (cfg.enable && cfg.kms.enable or false && awsCfg.enable or false) {
+      # Enable SST to provision KMS resources
+      stackpanel.sst = {
+        enable = lib.mkDefault true;
+        kms.enable = lib.mkDefault true;
+      };
+    })
+
+    # ═══════════════════════════════════════════════════════════════════════════════
     # Common config (both devenv and standalone)
     # ═══════════════════════════════════════════════════════════════════════════════
     (lib.mkIf cfg.enable {
@@ -141,6 +172,12 @@ in
           generate-sops-config
           ;
       };
+
+      # ═══════════════════════════════════════════════════════════════════════════
+      # Pure Nix TypeScript codegen - generates znv modules via stackpanel.files
+      # No shell scripts needed - files are generated on shell entry automatically
+      # ═══════════════════════════════════════════════════════════════════════════
+      stackpanel.files.entries = lib.mkIf envTypescript.enabled envTypescript.fileEntries;
 
       # Add required packages to devshell
       stackpanel.devshell.packages = [
@@ -163,19 +200,23 @@ in
         ''
       ];
 
-      # Commands using stackpanel abstraction
-      stackpanel.devshell.commands = {
+      # Scripts for secrets management
+      stackpanel.scripts = {
         ensure-age-key = {
           exec = secretsLib.ensureAgeKeyScript;
+          description = "Ensure an AGE key exists";
         };
         auto-generate-age-key = {
           exec = secretsLib.autoGenerateAgeKeyScript;
+          description = "Auto-generate an AGE key if missing";
         };
         sops = {
           exec = secretsLib.sopsWrapperScript "ensure-age-key";
+          description = "SOPS wrapper with AGE key management";
         };
         generate-secrets-schema = {
           exec = secretsLib.generateSecretsSchemaScript;
+          description = "Generate JSON schema for secrets";
         };
         generate-secrets-package = {
           exec = secretsLib.generateSecretsPackageScript {
@@ -183,6 +224,7 @@ in
             environments = cfg.environmentsComputed;
             codegen = cfg.codegen;
           };
+          description = "Generate secrets package code";
         };
         generate-sops-secrets = {
           exec = secretsLib.generateSopsSecretsScript {
@@ -190,6 +232,7 @@ in
             dataDir = ".stackpanel/data";
             ageIdentityFile = cfg.age-identity-file;
           };
+          description = "Generate SOPS secrets files";
         };
         generate-sops-config = {
           exec = secretsLib.generateSopsConfigScript {
@@ -197,6 +240,46 @@ in
             dataDir = ".stackpanel/data";
             kmsConfig = cfg.kms;
           };
+          description = "Generate SOPS configuration";
+        };
+        # User-friendly aliases for on-demand generation
+        "secrets:generate" = {
+          exec = ''
+            echo "🔐 Regenerating SOPS secrets..."
+            echo "📁 Step 1/2: Generating SOPS config (.sops.yaml)..."
+            ${generate-sops-config}/bin/generate-sops-config
+            echo "🔒 Step 2/2: Generating encrypted YAML files..."
+            ${generate-sops-secrets}/bin/generate-sops-secrets
+            echo ""
+            echo "✅ Secrets regenerated successfully"
+            echo ""
+            echo "💡 TypeScript types are generated via stackpanel.files on shell entry"
+            echo "   Run 'write-files' manually if you need to update them"
+          '';
+          description = "Regenerate SOPS-encrypted YAML files from app variables";
+        };
+
+        # =====================================================================
+        # Master Key Management (Envelope Encryption)
+        # =====================================================================
+        "secrets:init-master" = {
+          exec = secretsLib.initMasterKeyScript {
+            inherit kmsEnabled kmsArn;
+            kmsProfile = cfg.kms.aws-profile or "";
+          };
+          description = "Initialize master key for envelope encryption${lib.optionalString kmsEnabled " (with KMS)"}";
+        };
+        "secrets:add-user" = {
+          exec = secretsLib.addUserToMasterKeyScript;
+          description = "Add a user to master key recipients";
+        };
+        "secrets:remove-user" = {
+          exec = secretsLib.removeUserFromMasterKeyScript;
+          description = "Remove a user from master key recipients";
+        };
+        "secrets:migrate-to-master" = {
+          exec = secretsLib.migrateToMasterKeyScript;
+          description = "Migrate existing .age files to use master key";
         };
       };
     })

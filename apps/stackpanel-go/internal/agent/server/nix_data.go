@@ -18,8 +18,17 @@ type nixDataRequest struct {
 	// Maps to .stackpanel/data/<entity>.nix
 	Entity string `json:"entity"`
 
+	// Key is the specific key to update within the entity (optional).
+	// If set, only this key is updated/deleted instead of replacing the whole file.
+	Key string `json:"key,omitempty"`
+
+	// Delete indicates this is a key deletion (used with Key).
+	Delete bool `json:"delete,omitempty"`
+
 	// Data is the Go value to serialize to Nix (for writes only).
 	// Will be converted to a Nix expression.
+	// If Key is set, this is the value for that key.
+	// If Key is not set, this replaces the entire file content.
 	Data any `json:"data,omitempty"`
 }
 
@@ -46,6 +55,8 @@ func (s *Server) handleNixData(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleNixDataRead reads and evaluates a Nix data file.
+// For certain entities (like "variables"), it returns the merged config from
+// the evaluated flake, which includes both user-defined and module-contributed values.
 func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 	entity := strings.TrimSpace(r.URL.Query().Get("entity"))
 	if entity == "" {
@@ -55,6 +66,13 @@ func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 
 	if err := validateEntityName(entity); err != nil {
 		s.writeAPIError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// For certain entities, return the merged config from the evaluated flake.
+	// This includes both user-defined values and module-contributed values.
+	if isEvaluatedEntity(entity) {
+		s.handleNixDataReadEvaluated(w, r, entity)
 		return
 	}
 
@@ -75,6 +93,123 @@ func (s *Server) handleNixDataRead(w http.ResponseWriter, r *http.Request) {
 
 	// Evaluate the Nix file to get JSON
 	// Use --impure to allow reading files and environment variables
+	args := []string{"eval", "--impure", "--json", "-f", dataPath}
+	res, err := s.exec.RunNix(args...)
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if res.ExitCode != 0 {
+		s.writeAPIError(w, http.StatusBadRequest, strings.TrimSpace(res.Stderr))
+		return
+	}
+
+	// Parse the JSON output
+	var data any
+	if err := json.Unmarshal([]byte(res.Stdout), &data); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse nix eval output")
+		return
+	}
+
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"entity": entity,
+		"exists": true,
+		"data":   data,
+	})
+}
+
+// isEvaluatedEntity returns true if the entity should be read from the
+// evaluated flake config (which includes module-contributed values) rather
+// than just the data file.
+func isEvaluatedEntity(entity string) bool {
+	// These entities include values contributed by Nix modules
+	// (e.g., app ports, service ports) in addition to user-defined values.
+	evaluatedEntities := map[string]bool{
+		"variables": true,
+	}
+	return evaluatedEntities[entity]
+}
+
+// handleNixDataReadEvaluated reads an entity from the evaluated flake config.
+// This is used for entities like "variables" where the final value includes
+// both user-defined data and module-contributed values.
+func (s *Server) handleNixDataReadEvaluated(w http.ResponseWriter, r *http.Request, entity string) {
+	ctx := r.Context()
+
+	// Try to get from FlakeWatcher (has caching and file watching)
+	if s.flakeWatcher != nil {
+		config, err := s.flakeWatcher.GetConfig(ctx)
+		if err == nil {
+			// Extract the entity from the config
+			if data, ok := config[entity]; ok {
+				s.writeAPI(w, http.StatusOK, map[string]any{
+					"entity": entity,
+					"exists": true,
+					"data":   data,
+					"source": "evaluated",
+				})
+				return
+			}
+			// Entity not in config - return empty
+			s.writeAPI(w, http.StatusOK, map[string]any{
+				"entity": entity,
+				"exists": false,
+				"data":   nil,
+				"source": "evaluated",
+			})
+			return
+		}
+		log.Debug().Err(err).Str("entity", entity).Msg("FlakeWatcher failed, falling back to direct eval")
+	}
+
+	// Fallback: evaluate config directly
+	config, err := s.evaluateConfig()
+	if err != nil {
+		// If config evaluation fails, fall back to data file only
+		log.Warn().Err(err).Str("entity", entity).Msg("Config evaluation failed, falling back to data file")
+		s.handleNixDataReadFromFile(w, entity)
+		return
+	}
+
+	// Extract the entity from the config
+	if data, ok := config[entity]; ok {
+		s.writeAPI(w, http.StatusOK, map[string]any{
+			"entity": entity,
+			"exists": true,
+			"data":   data,
+			"source": "evaluated",
+		})
+		return
+	}
+
+	// Entity not in config - return empty
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"entity": entity,
+		"exists": false,
+		"data":   nil,
+		"source": "evaluated",
+	})
+}
+
+// handleNixDataReadFromFile reads an entity directly from the data file.
+// This is the fallback when config evaluation fails.
+func (s *Server) handleNixDataReadFromFile(w http.ResponseWriter, entity string) {
+	dataPath := s.nixDataPath(entity)
+	if isExternalEntity(entity) {
+		dataPath = s.nixExternalDataPath(entity)
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+		s.writeAPI(w, http.StatusOK, map[string]any{
+			"entity": entity,
+			"exists": false,
+			"data":   nil,
+		})
+		return
+	}
+
+	// Evaluate the Nix file to get JSON
 	args := []string{"eval", "--impure", "--json", "-f", dataPath}
 	res, err := s.exec.RunNix(args...)
 	if err != nil {
@@ -131,6 +266,12 @@ func (s *Server) handleNixDataWrite(w http.ResponseWriter, r *http.Request) {
 
 	if isExternalEntity(req.Entity) {
 		s.writeAPIError(w, http.StatusBadRequest, "external entities are read-only")
+		return
+	}
+
+	// Handle key-level updates
+	if req.Key != "" {
+		s.handleKeyLevelWrite(w, req)
 		return
 	}
 
@@ -304,4 +445,183 @@ func validateEntityName(name string) error {
 
 func isExternalEntity(name string) bool {
 	return strings.HasPrefix(name, "external-")
+}
+
+// =============================================================================
+// Connect Handler Helpers
+// =============================================================================
+// These methods are called by the generated Connect handlers in connect_entities_gen.go
+
+// readNixEntityJSON reads a Nix data entity and returns its JSON representation.
+// Used by generated Connect handlers for Get* methods.
+func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
+	if err := validateEntityName(entity); err != nil {
+		return nil, err
+	}
+
+	dataPath := s.nixDataPath(entity)
+	if isExternalEntity(entity) {
+		dataPath = s.nixExternalDataPath(entity)
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+		// Return empty JSON object for non-existent entities
+		return []byte("{}"), nil
+	}
+
+	// Evaluate the Nix file to get JSON
+	args := []string{"eval", "--impure", "--json", "-f", dataPath}
+	res, err := s.exec.RunNix(args...)
+	if err != nil {
+		return nil, err
+	}
+	if res.ExitCode != 0 {
+		return nil, errors.New(strings.TrimSpace(res.Stderr))
+	}
+
+	return []byte(res.Stdout), nil
+}
+
+// writeNixEntityJSON writes JSON data to a Nix data entity file.
+// Used by generated Connect handlers for Set* methods.
+func (s *Server) writeNixEntityJSON(entity string, data []byte) error {
+	if err := validateEntityName(entity); err != nil {
+		return err
+	}
+
+	if isExternalEntity(entity) {
+		return errors.New("external entities are read-only")
+	}
+
+	// Parse JSON to Go value
+	var value any
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	// Serialize to Nix
+	nixExpr, err := nixser.SerializeIndented(value, "  ")
+	if err != nil {
+		return err
+	}
+
+	// Ensure data directory exists
+	dataDir := s.nixDataDir()
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		return err
+	}
+
+	// Write the file
+	dataPath := s.nixDataPath(entity)
+	if err := os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644); err != nil {
+		return err
+	}
+
+	log.Info().
+		Str("entity", entity).
+		Str("path", dataPath).
+		Msg("writeNixEntityJSON: successfully wrote data file")
+
+	return nil
+}
+
+// handleKeyLevelWrite handles updating or deleting a single key in a data file.
+// This reads the existing file, updates/deletes the key, and writes back.
+func (s *Server) handleKeyLevelWrite(w http.ResponseWriter, req nixDataRequest) {
+	log.Debug().
+		Str("entity", req.Entity).
+		Str("key", req.Key).
+		Bool("delete", req.Delete).
+		Msg("handleKeyLevelWrite: processing key-level update")
+
+	// Read existing data from the data file (not evaluated config)
+	dataPath := s.nixDataPath(req.Entity)
+	existing := make(map[string]any)
+
+	// Try to read existing file
+	if _, err := os.Stat(dataPath); err == nil {
+		// File exists, read it
+		data, err := s.readNixDataFile(req.Entity)
+		if err != nil {
+			log.Error().Err(err).Str("entity", req.Entity).Msg("handleKeyLevelWrite: failed to read existing data")
+			s.writeAPIError(w, http.StatusInternalServerError, "failed to read existing data: "+err.Error())
+			return
+		}
+		if dataMap, ok := data.(map[string]any); ok {
+			existing = dataMap
+		}
+	}
+
+	// Apply the update
+	if req.Delete {
+		delete(existing, req.Key)
+		log.Debug().Str("key", req.Key).Msg("handleKeyLevelWrite: deleted key")
+	} else {
+		if req.Data == nil {
+			s.writeAPIError(w, http.StatusBadRequest, "data is required for key update")
+			return
+		}
+		existing[req.Key] = req.Data
+		log.Debug().Str("key", req.Key).Msg("handleKeyLevelWrite: set key")
+	}
+
+	// Serialize and write
+	nixExpr, err := nixser.SerializeIndented(existing, "  ")
+	if err != nil {
+		log.Error().Err(err).Msg("handleKeyLevelWrite: failed to serialize to Nix")
+		s.writeAPIError(w, http.StatusBadRequest, "failed to serialize data to Nix: "+err.Error())
+		return
+	}
+
+	// Ensure data directory exists
+	dataDir := s.nixDataDir()
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		log.Error().Err(err).Str("dataDir", dataDir).Msg("handleKeyLevelWrite: failed to create data directory")
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to create data directory: "+err.Error())
+		return
+	}
+
+	if err := os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644); err != nil {
+		log.Error().Err(err).Str("path", dataPath).Msg("handleKeyLevelWrite: failed to write file")
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to write data file: "+err.Error())
+		return
+	}
+
+	log.Info().
+		Str("entity", req.Entity).
+		Str("key", req.Key).
+		Bool("delete", req.Delete).
+		Str("path", dataPath).
+		Msg("handleKeyLevelWrite: successfully updated key")
+
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"entity":  req.Entity,
+		"key":     req.Key,
+		"path":    dataPath,
+		"success": true,
+	})
+}
+
+// readNixDataFile reads and evaluates a Nix data file, returning the Go value.
+func (s *Server) readNixDataFile(entity string) (any, error) {
+	dataPath := s.nixDataPath(entity)
+
+	// Use nix eval to evaluate the file
+	args := []string{"eval", "--impure", "--json", "--expr", "builtins.fromJSON (builtins.toJSON (import " + dataPath + "))"}
+	res, err := s.exec.RunNix(args...)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.ExitCode != 0 {
+		return nil, errors.New("nix eval failed: " + res.Stderr)
+	}
+
+	var data any
+	if err := json.Unmarshal([]byte(res.Stdout), &data); err != nil {
+		return nil, errors.New("failed to parse JSON: " + err.Error())
+	}
+
+	return data, nil
 }

@@ -31,7 +31,7 @@ proto.mkProtoFile {
   '';
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
   enums = {

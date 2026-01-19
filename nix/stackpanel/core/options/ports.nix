@@ -110,4 +110,37 @@ in
       '';
     };
   };
+
+  # ===========================================================================
+  # Contribute computed service ports to stackpanel.variables
+  # ===========================================================================
+  # Each infrastructure service gets a PORT variable that apps can reference.
+  # This allows apps to discover service ports at runtime.
+  #
+  # Example:
+  #   config.stackpanel.variables."/services/postgres/port".value  # "5432"
+  #   config.stackpanel.variables."/services/postgres/port".ref    # "5432"
+  # ===========================================================================
+  config.stackpanel.variables = lib.mkIf cfg.enable (
+    lib.mkMerge (
+      lib.mapAttrsToList (
+        serviceKey: serviceInfo:
+        let
+          # serviceKey is uppercase (e.g., "POSTGRES", "REDIS")
+          # Create a lowercase version for the variable path
+          lowerKey = lib.toLower serviceKey;
+        in
+        {
+          # Port variable for each service - NUMBER type for proper Zod codegen
+          "/services/${lowerKey}/port" = {
+            key = "STACKPANEL_${serviceKey}_PORT";
+            type = "NUMBER";  # Port numbers should be typed as numbers
+            value = toString serviceInfo.port;
+            description = "Port for ${serviceInfo.name or serviceKey}";
+            providedBy = "stackpanel.ports";
+          };
+        }
+      ) servicesByKey
+    )
+  );
 }

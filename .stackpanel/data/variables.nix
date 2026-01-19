@@ -1,10 +1,4 @@
 {
-  "/dev/postgres-url" = {
-    id = "/dev/postgres-url";
-    key = "POSTGRES_URL";
-    type = "SECRET";
-    value = "";
-  };
   "/prod/postgres-url" = {
     description = "Postgres URL";
     key = "POSTGRES_URL";
@@ -14,6 +8,12 @@
   asasd = {
     id = "asasd";
     key = "asasd";
+    type = "SECRET";
+    value = "";
+  };
+  openai-api-key = {
+    id = "openai-api-key";
+    key = "openai-api-key";
     type = "SECRET";
     value = "";
   };

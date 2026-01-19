@@ -189,22 +189,34 @@ A prioritized checklist of refactoring tasks for the stackpanel repository.
 - [x] Main component imports from extracted modules
 - [x] Result: 366 lines main file + 259 lines in extracted modules
 
-#### files-panel.tsx (504 lines)
-- [ ] Extract `FileTree.tsx` - Tree view
-- [ ] Extract `FileCard.tsx` - File display
-- [ ] Extract `FileActions.tsx` - File operations
+#### files-panel.tsx (504 lines) - REFACTORED
+- [x] Created modular structure in `panels/files/` directory:
+  - [x] `types.ts` - FileRowProps, SourceGroupProps, SummaryStatsProps, etc.
+  - [x] `constants.ts` - SOURCE_DISPLAY_NAMES, formatFileSize, formatRelativeTime, sortSources
+  - [x] `components.tsx` - FileStatusBadge, FileTypeIcon, FileRow, SourceGroup, SummaryStats, PreviewModal, EmptyState
+  - [x] `index.ts` - Barrel export
+- [x] Main component imports from extracted modules
+- [x] Result: 153 lines main file + 412 lines in extracted modules
 
-#### databases-panel.tsx (500 lines)
-- [ ] Extract `DatabaseList.tsx`
-- [ ] Extract `DatabaseCard.tsx`
-- [ ] Extract `DatabaseConnectionInfo.tsx`
-- [ ] Extract `useDatabases.ts` hook
+#### databases-panel.tsx (500 lines) - REFACTORED
+- [x] Created modular structure in `panels/databases/` directory:
+  - [x] `types.ts` - Database, CreateDatabaseDialogProps, DatabaseCardProps, ProvisioningStatusProps
+  - [x] `constants.ts` - MOCK_DATABASES, normalizeDatabaseName helper
+  - [x] `components.tsx` - DatabaseCard, ProvisioningStatus, CreateDatabaseDialog
+  - [x] `use-databases.ts` - Full state management hook (queries, mutations, provisioning logic)
+  - [x] `index.ts` - Barrel export
+- [x] Main component imports from extracted modules
+- [x] Result: 68 lines main file + 671 lines in extracted modules
 
-#### network-panel.tsx (494 lines)
-- [ ] Extract `NetworkOverview.tsx`
-- [ ] Extract `PortsList.tsx`
-- [ ] Extract `CaddyConfig.tsx`
-- [ ] Extract `StepCAStatus.tsx`
+#### network-panel.tsx (494 lines) - REFACTORED
+- [x] Created modular structure in `panels/network/` directory:
+  - [x] `types.ts` - StepCaData, DnsRecord, DnsZone, TailscaleDevice, CertificateItem, etc.
+  - [x] `constants.ts` - MOCK_TAILSCALE_DEVICES
+  - [x] `components.tsx` - NetworkStats, DevicesList, CertificatesTab, DnsTab
+  - [x] `use-network.ts` - Full state management hook (Step CA logic, DNS processing, certificate computation)
+  - [x] `index.ts` - Barrel export
+- [x] Main component imports from extracted modules
+- [x] Result: 79 lines main file + 596 lines in extracted modules
 
 #### agent-connect.tsx (446 lines)
 - [ ] Extract `ConnectionStatus.tsx`
@@ -612,7 +624,7 @@ After each refactor:
 | Medium Effort - TypeScript | 3 | 3 | 0 |
 | React Components (Critical) | 25 | 12 | 13 |
 | React Components (High) | 35 | 6 | 29 |
-| React Components (Medium) | 40 | 2 | 38 |
+| React Components (Medium) | 40 | 5 | 35 |
 | Hooks Consolidation | 12 | 0 | 12 |
 | Type Organization | 10 | 0 | 10 |
 | Component Patterns | 12 | 0 | 12 |
@@ -622,7 +634,7 @@ After each refactor:
 | Testing | 10 | 0 | 10 |
 | Go/Nix Refactors | 20 | 0 | 20 |
 | Code Quality | 4 | 0 | 4 |
-| **Total** | **241** | **47** | **194** |
+| **Total** | **241** | **50** | **191** |
 
 ### Impact Summary
 

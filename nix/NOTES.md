@@ -48,9 +48,8 @@ let
     hooks.before hooks.main hooks.after
   ]);
 
-  scripts =
-    lib.mapAttrs (_: cmd: { exec = cmd.exec; })
-      (config.devshell.commands or {});
+  # Scripts are now handled by nix/stackpanel/devshell/scripts.nix
+  # which creates a package with all scripts in bin/
 in
 {
   # import the schema so devshell.* exists

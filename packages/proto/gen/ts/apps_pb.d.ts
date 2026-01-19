@@ -87,7 +87,7 @@ export declare type App = Message<"stackpanel.db.App"> & {
 export declare const AppSchema: GenMessage<App>;
 
 /**
- * Environment configuration
+ * Environment configuration (e.g., dev, staging, production)
  *
  * @generated from message stackpanel.db.AppEnvironment
  */
@@ -112,6 +112,27 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
    * @generated from field: map<string, stackpanel.db.AppVariable> variables = 3;
    */
   variables: { [key: string]: AppVariable };
+
+  /**
+   *
+   * List of SOPS-encrypted source files for this environment (without .yaml extension).
+   * These files are decrypted and merged to provide secrets for the environment.
+   * Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+   *
+   *
+   * @generated from field: repeated string sources = 4;
+   */
+  sources: string[];
+
+  /**
+   *
+   * List of AGE/SSH public keys that can decrypt secrets for this environment.
+   * These keys are used when encrypting new secrets.
+   *
+   *
+   * @generated from field: repeated string public_keys = 5;
+   */
+  publicKeys: string[];
 };
 
 /**

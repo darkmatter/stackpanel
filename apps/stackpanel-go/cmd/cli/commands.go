@@ -26,7 +26,10 @@ type SerializableCommand struct {
 
 // StackpanelConfig represents the relevant parts of the serialized config
 type StackpanelConfig struct {
+	// New location: scripts are at the root level
+	Scripts map[string]SerializableCommand `json:"scripts"`
 	Devshell struct {
+		// Legacy: _commandsSerializable (kept for backwards compatibility)
 		CommandsSerializable map[string]SerializableCommand `json:"_commandsSerializable"`
 		Env                  map[string]string              `json:"env"`
 	} `json:"devshell"`
@@ -57,7 +60,11 @@ Examples:
 			os.Exit(1)
 		}
 
-		commands := config.Devshell.CommandsSerializable
+		// Use scripts (new location) with fallback to legacy _commandsSerializable
+		commands := config.Scripts
+		if len(commands) == 0 {
+			commands = config.Devshell.CommandsSerializable
+		}
 
 		if len(args) == 0 {
 			// List commands
@@ -98,7 +105,12 @@ var commandsListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		listCommands(config.Devshell.CommandsSerializable)
+		// Use scripts (new location) with fallback to legacy _commandsSerializable
+		commands := config.Scripts
+		if len(commands) == 0 {
+			commands = config.Devshell.CommandsSerializable
+		}
+		listCommands(commands)
 	},
 }
 
@@ -204,6 +216,11 @@ func runCommand(cmdDef SerializableCommand, args []string, devshellEnv map[strin
 
 	// Wrap in bash with error handling
 	fullScript := fmt.Sprintf("set -euo pipefail\n%s", script)
+
+	// Debug: print the script being executed
+	if os.Getenv("STACKPANEL_DEBUG") != "" {
+		fmt.Fprintf(os.Stderr, "[DEBUG] Executing script:\n%s\n", fullScript)
+	}
 
 	// Create the command
 	cmd := exec.Command("bash", "-c", fullScript)

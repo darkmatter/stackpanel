@@ -47,16 +47,21 @@ let
   # ---------------------------------------------------------------------------
 
   # Map proto field types to Nix types
-  # Handles scalars, message references, maps, repeated fields, and optionals
+  # Handles scalars, message references, enums, maps, repeated fields, and optionals
   protoTypeToNix =
     {
       field,
       allMessages ? { },
+      allEnums ? { },
     }:
     let
+      # Check if it's an enum reference
+      isEnumRef = allEnums ? ${field.type};
+
       # Check if it's a message reference (not a scalar type)
       isMessageRef =
-        !(builtins.elem field.type [
+        !isEnumRef
+        && !(builtins.elem field.type [
           "string"
           "int32"
           "int64"
@@ -68,14 +73,29 @@ let
           "bytes"
         ]);
 
+      # Get enum string values for type definition
+      enumValues =
+        if isEnumRef then
+          let
+            enumDef = allEnums.${field.type};
+            valuesAttr = enumDef.values or { };
+          in
+          builtins.attrNames valuesAttr
+        else
+          [ ];
+
       baseType =
-        if isMessageRef then
+        if isEnumRef then
+          # Enum type - accept both int (proto numeric) and string (enum name)
+          # This allows data serialized as numeric values (like from proto) to work
+          lib.types.either lib.types.int (lib.types.enum enumValues)
+        else if isMessageRef then
           # For message references, create a submodule if we have the message definition
           if allMessages ? ${field.type} then
             lib.types.submodule {
               options = mkOptionsFromMessage {
                 message = allMessages.${field.type};
-                inherit allMessages;
+                inherit allMessages allEnums;
               };
             }
           else
@@ -111,8 +131,15 @@ let
   # ---------------------------------------------------------------------------
 
   # Get default value for a proto field based on its type and modifiers
+  # For enum fields, we need to check allEnums to return 0 (proto enum default)
   getFieldDefault =
-    field:
+    {
+      field,
+      allEnums ? { },
+    }:
+    let
+      isEnumRef = allEnums ? ${field.type};
+    in
     if field.optional then
       null
     else if field.repeated then
@@ -139,6 +166,8 @@ let
       ]
     then
       0.0
+    else if isEnumRef then
+      0 # Proto enum default is always 0 (first value)
     else
       { }; # message type defaults to empty attrset
 
@@ -151,11 +180,12 @@ let
     {
       field,
       allMessages ? { },
+      allEnums ? { },
     }:
     lib.mkOption {
-      type = protoTypeToNix { inherit field allMessages; };
+      type = protoTypeToNix { inherit field allMessages allEnums; };
       description = field.description or "";
-      default = getFieldDefault field;
+      default = getFieldDefault { inherit field allEnums; };
     };
 
   # Build Nix options attrset from a proto message's fields
@@ -164,6 +194,7 @@ let
     {
       message,
       allMessages ? { },
+      allEnums ? { },
       useKebabCase ? true,
     }:
     lib.mapAttrs' (
@@ -173,7 +204,7 @@ let
       in
       {
         name = nixFieldName;
-        value = mkOptionFromField { inherit field allMessages; };
+        value = mkOptionFromField { inherit field allMessages allEnums; };
       }
     ) (message.fields or { });
 
@@ -182,10 +213,11 @@ let
     {
       message,
       allMessages ? { },
+      allEnums ? { },
       useKebabCase ? true,
     }:
     lib.types.submodule {
-      options = mkOptionsFromMessage { inherit message allMessages useKebabCase; };
+      options = mkOptionsFromMessage { inherit message allMessages allEnums useKebabCase; };
     };
 
   # Build a complete option (with type, description, default) from a proto message
@@ -194,13 +226,14 @@ let
     {
       message,
       allMessages ? { },
+      allEnums ? { },
       useKebabCase ? true,
       description ? message.description or "",
       default ? { },
       example ? null,
     }:
     lib.mkOption {
-      type = mkSubmoduleFromMessage { inherit message allMessages useKebabCase; };
+      type = mkSubmoduleFromMessage { inherit message allMessages allEnums useKebabCase; };
       inherit description default;
     }
     // (if example != null then { inherit example; } else { });
@@ -211,6 +244,7 @@ let
     {
       message, # The value message (e.g., User, App)
       allMessages ? { },
+      allEnums ? { },
       useKebabCase ? true,
       description ? "",
       default ? { },
@@ -218,7 +252,7 @@ let
     }:
     lib.mkOption {
       type = lib.types.attrsOf (mkSubmoduleFromMessage {
-        inherit message allMessages useKebabCase;
+        inherit message allMessages allEnums useKebabCase;
       });
       inherit description default;
     }
@@ -230,6 +264,9 @@ let
 
   # Extract messages from a schema for nested resolution
   getSchemaMessages = schema: schema.messages or { };
+
+  # Extract enums from a schema for nested resolution
+  getSchemaEnums = schema: schema.enums or { };
 
   # Build options for an entity given a schema and message name
   # This is a convenience function for the schema registry
@@ -246,10 +283,63 @@ let
     }:
     let
       allMessages = getSchemaMessages schema;
+      allEnums = getSchemaEnums schema;
     in
     mkOptionsFromMessage {
       message = schema.messages.${messageName} or { fields = { }; };
-      inherit allMessages;
+      inherit allMessages allEnums;
+    };
+
+  # ---------------------------------------------------------------------------
+  # Auto-extraction helpers
+  # ---------------------------------------------------------------------------
+
+  # Convert PascalCase to camelCase
+  # Example: "SstGithubActions" → "sstGithubActions"
+  pascalToCamel =
+    str:
+    let
+      chars = lib.stringToCharacters str;
+      firstChar = builtins.head chars;
+      rest = lib.concatStrings (builtins.tail chars);
+    in
+    (lib.toLower firstChar) + rest;
+
+  # Build options for ALL messages in a schema automatically
+  # Returns an attrset: { messageName = optionsForMessage; ... }
+  #
+  # Usage:
+  #   mkAllOptionsFromSchema schemas.users
+  #   # => { user = { name = mkOption {...}; ... }; users = { ... }; }
+  #
+  # The message name is converted to camelCase for the key.
+  mkAllOptionsFromSchema =
+    schema:
+    let
+      allMessages = getSchemaMessages schema;
+      allEnums = getSchemaEnums schema;
+    in
+    lib.mapAttrs' (
+      messageName: message:
+      lib.nameValuePair (pascalToCamel messageName) (mkOptionsFromMessage {
+        inherit message allMessages allEnums;
+      })
+    ) allMessages;
+
+  # Build a complete options + messages + enums bundle for a schema
+  # Returns { options = { ... }; messages = { ... }; enums = { ... }; }
+  #
+  # Usage:
+  #   schemaBundle = mkSchemaBundle schemas.users;
+  #   # schemaBundle.options.user => options for User message
+  #   # schemaBundle.messages => all messages for nested resolution
+  #   # schemaBundle.enums => all enums for type resolution
+  mkSchemaBundle =
+    schema:
+    {
+      options = mkAllOptionsFromSchema schema;
+      messages = getSchemaMessages schema;
+      enums = getSchemaEnums schema;
     };
 in
 {
@@ -269,5 +359,12 @@ in
     ;
 
   # Schema helpers
-  inherit getSchemaMessages mkEntityOptions;
+  inherit
+    getSchemaMessages
+    getSchemaEnums
+    mkEntityOptions
+    mkAllOptionsFromSchema
+    mkSchemaBundle
+    pascalToCamel
+    ;
 }

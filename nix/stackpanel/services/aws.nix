@@ -54,6 +54,9 @@ in
 {
   config = lib.mkIf cfg.enable (
     let
+      # Root-level AWS config
+      awsCfg = config.stackpanel.aws;
+
       # Create scripts using runtime paths (Step CA certs are generated at runtime)
       awsScripts = awsLib.mkRuntimeAwsScripts {
         # These are resolved at runtime via environment variables
@@ -65,6 +68,9 @@ in
         profileArn = cfg.profile-arn;
         region = cfg.region;
         debug = config.stackpanel.debug;
+        # Profile and extra config options from root-level stackpanel.aws
+        defaultProfile = if awsCfg.default-profile or "" == "" then "default" else awsCfg.default-profile;
+        extraConfig = awsCfg.extra-config or "";
       };
 
       # Check if AWS cert-auth is working
@@ -278,6 +284,7 @@ in
             ${awsScripts.generateAwsConfig}/bin/aws-generate-config "$AWS_CONFIG_FILE" 2>/dev/null || true
             ${util.log.debug "aws: AWS config generated at $AWS_CONFIG_FILE"}
           else
+            : # Step CA cert not found, skipping AWS config generation
             ${util.log.debug "aws: Step CA cert not found, skipping AWS config generation"}
           fi
 

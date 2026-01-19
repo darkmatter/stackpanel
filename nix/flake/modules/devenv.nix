@@ -10,12 +10,15 @@
 #       → nix/stackpanel/default.nix (core module system, devenv-agnostic)
 #
 # Mappings:
-#   config.stackpanel.devshell.packages    → devenv packages
+#   config.stackpanel.devshell.packages    → devenv packages (includes scripts package)
 #   config.stackpanel.devshell.env         → devenv env
 #   config.stackpanel.devshell.hooks.*     → devenv enterShell (before/main/after phases)
-#   config.stackpanel.devshell.commands    → devenv scripts
-#   config.stackpanel.scripts              → devenv scripts
+#   config.stackpanel.scripts              → scripts package in devshell (handled by scripts.nix)
 #   config.stackpanel.outputs              → devenv outputs
+#
+# Scripts are handled by nix/stackpanel/devshell/scripts.nix which creates a
+# single package containing all scripts in bin/. This package is automatically
+# added to devshell.packages when scriptsConfig.enable is true (default).
 #
 # Usage in flake-parts:
 #   devenv.shells.default = {
@@ -41,33 +44,9 @@ let
     ]
   );
 
-  tasksFromCommands = config.stackpanel.devshell._tasks or { };
-  tasks = tasksFromCommands // (config.stackpanel.tasks or { });
-
-  scriptsFromStackpanel = config.stackpanel.devshell._scripts or { };
-
-  # Top-level stackpanel.scripts (user-defined)
-  userScripts = config.stackpanel.scripts or { };
-
-  mkTaskCommand = name: {
-    exec = ''
-      if command -v tasks >/dev/null 2>&1; then
-        exec tasks run ${lib.escapeShellArg name} -- "$@"
-      elif command -v devenv-tasks-fast-build >/dev/null 2>&1; then
-        exec devenv-tasks-fast-build run ${lib.escapeShellArg name} -- "$@"
-      elif command -v devenv >/dev/null 2>&1; then
-        exec devenv tasks run ${lib.escapeShellArg name} -- "$@"
-      else
-        echo "error: no devenv task runner found (tasks or devenv)" >&2
-        exit 127
-      fi
-    '';
-  };
-
-  scriptsFromCommands = lib.mapAttrs (name: _cmd: mkTaskCommand name) tasksFromCommands;
-
-  # Merge all script sources: commands → internal scripts → user scripts
-  scripts = scriptsFromCommands // scriptsFromStackpanel // userScripts;
+  # Note: stackpanel.tasks are for Turborepo integration, not devenv tasks.
+  # Devenv tasks have a different schema (exec, before, after).
+  # If you need devenv-specific tasks, define them directly in your devenv.nix.
 
   # Outputs from stackpanel.outputs
   outputs = config.stackpanel.outputs or { };
@@ -84,8 +63,6 @@ in
     packages = config.stackpanel.devshell.packages;
     env = config.stackpanel.devshell.env;
     enterShell = enterShell;
-    tasks = tasks;
-    scripts = scripts;
     outputs = outputs;
   };
 }

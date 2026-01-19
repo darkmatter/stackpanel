@@ -114,7 +114,7 @@ export function EditInterface({
 									) : (
 										<VariableIcon className="h-3 w-3 text-blue-500 shrink-0" />
 									)}
-									<span className="truncate">{selectedVariable.key}</span>
+									<span className="truncate">{selectedVariable.id}</span>
 								</>
 							) : (
 								<span className="text-muted-foreground">
@@ -178,7 +178,7 @@ export function EditInterface({
 										) : (
 											<VariableIcon className="h-3 w-3 text-blue-500 shrink-0" />
 										)}
-										<span className="truncate font-medium">{variable.key}</span>
+										<span className="truncate font-medium">{variable.id}</span>
 									</button>
 								))
 							)}
@@ -270,7 +270,11 @@ export function VariableBadge({
 			) : (
 				<VariableIcon className="h-3 w-3 text-blue-500" />
 			)}
-			<span className="font-medium">{variable.envKey}</span>
+			<span className="font-medium">{variable.variableId || variable.envKey}</span>
+			{/* Show env key if different from variable ID */}
+			{variable.variableId && variable.envKey !== variable.variableId && (
+				<span className="text-muted-foreground text-[10px]">→ {variable.envKey}</span>
+			)}
 			{!isSecret && variable.value && (
 				<>
 					<span className="text-muted-foreground">=</span>

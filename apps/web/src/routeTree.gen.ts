@@ -32,6 +32,7 @@ import { Route as StudioFilesRouteImport } from './routes/studio/files'
 import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions'
 import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
 import { Route as StudioDatabasesRouteImport } from './routes/studio/databases'
+import { Route as StudioDashboardRouteImport } from './routes/studio/dashboard'
 import { Route as StudioConfigurationRouteImport } from './routes/studio/configuration'
 import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
@@ -154,6 +155,11 @@ const StudioDatabasesRoute = StudioDatabasesRouteImport.update({
   path: '/databases',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioDashboardRoute = StudioDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioConfigurationRoute = StudioConfigurationRouteImport.update({
   id: '/configuration',
   path: '/configuration',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/configuration': typeof StudioConfigurationRoute
+  '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/configuration': typeof StudioConfigurationRoute
+  '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/configuration': typeof StudioConfigurationRoute
+  '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/studio/apps'
     | '/studio/configuration'
+    | '/studio/dashboard'
     | '/studio/databases'
     | '/studio/devshells'
     | '/studio/extensions'
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/studio/apps'
     | '/studio/configuration'
+    | '/studio/dashboard'
     | '/studio/databases'
     | '/studio/devshells'
     | '/studio/extensions'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/studio/apps'
     | '/studio/configuration'
+    | '/studio/dashboard'
     | '/studio/databases'
     | '/studio/devshells'
     | '/studio/extensions'
@@ -548,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioDatabasesRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/dashboard': {
+      id: '/studio/dashboard'
+      path: '/dashboard'
+      fullPath: '/studio/dashboard'
+      preLoaderRoute: typeof StudioDashboardRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/configuration': {
       id: '/studio/configuration'
       path: '/configuration'
@@ -596,6 +615,7 @@ declare module '@tanstack/react-router' {
 interface StudioRouteChildren {
   StudioAppsRoute: typeof StudioAppsRoute
   StudioConfigurationRoute: typeof StudioConfigurationRoute
+  StudioDashboardRoute: typeof StudioDashboardRoute
   StudioDatabasesRoute: typeof StudioDatabasesRoute
   StudioDevshellsRoute: typeof StudioDevshellsRoute
   StudioExtensionsRoute: typeof StudioExtensionsRoute
@@ -619,6 +639,7 @@ interface StudioRouteChildren {
 const StudioRouteChildren: StudioRouteChildren = {
   StudioAppsRoute: StudioAppsRoute,
   StudioConfigurationRoute: StudioConfigurationRoute,
+  StudioDashboardRoute: StudioDashboardRoute,
   StudioDatabasesRoute: StudioDatabasesRoute,
   StudioDevshellsRoute: StudioDevshellsRoute,
   StudioExtensionsRoute: StudioExtensionsRoute,

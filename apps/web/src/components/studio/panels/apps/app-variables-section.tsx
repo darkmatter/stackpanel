@@ -3,12 +3,9 @@
 import { Input } from "@ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import { Check, Eye, EyeOff, Pencil, Plus, X } from "lucide-react";
-import type { AppVariablesSectionProps } from "./app-variables-section";
-import {
-	EditInterface,
-	useAppVariablesSection,
-	VariableBadge,
-} from "./app-variables-section";
+import type { AppVariablesSectionProps } from "./app-variables-section/types";
+import { EditInterface, VariableBadge } from "./app-variables-section/components";
+import { useAppVariablesSection } from "./app-variables-section/use-app-variables-section";
 
 /**
  * Component to display and manage the variables section for an app.

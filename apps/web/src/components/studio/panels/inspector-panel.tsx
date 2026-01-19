@@ -6,6 +6,8 @@
  * state files, and configuration data in organized tabs.
  */
 
+const ALL_CONTRIBUTORS_VALUE = "__all__";
+
 import { FileType } from "@stackpanel/proto";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
@@ -35,9 +37,18 @@ import {
   Search,
   Terminal,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@ui/select";
 import {
   type InspectorDataFile,
+  type InspectorData,
   type InspectorGeneratedFile,
   type InspectorIntegration,
   type InspectorScript,
@@ -199,6 +210,17 @@ function GeneratedFilesTab({
       f.path.toLowerCase().includes(filter.toLowerCase()) ||
       (f.source?.toLowerCase().includes(filter.toLowerCase()) ?? false),
   );
+
+  if (filteredFiles.length === 0) {
+    return (
+      <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed">
+        <FileCode className="h-5 w-5 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          No generated files match this filter
+        </p>
+      </div>
+    );
+  }
 
   // Group files by source
   const filesBySource = filteredFiles.reduce(
@@ -470,6 +492,17 @@ function ScriptsTab({ scripts }: { scripts: InspectorScript[] }) {
     s.name.toLowerCase().includes(filter.toLowerCase()),
   );
 
+  if (filteredScripts.length === 0) {
+    return (
+      <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed">
+        <Terminal className="h-5 w-5 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          No scripts match this filter
+        </p>
+      </div>
+    );
+  }
+
   // Group by source
   const scriptsBySource = filteredScripts.reduce(
     (acc, script) => {
@@ -682,9 +715,11 @@ function ConfigSourceBadge({ source }: { source: string | null }) {
 function ConfigTab({
   config,
   configSource,
+  contributorFilter,
 }: {
   config: Record<string, unknown> | null;
   configSource: string | null;
+  contributorFilter?: string | null;
 }) {
   const [filter, setFilter] = useState("");
 
@@ -700,12 +735,25 @@ function ConfigTab({
   }
 
   const configString = JSON.stringify(config, null, 2);
+  const contributorFilterLower = contributorFilter?.toLowerCase() ?? "";
   const filteredConfig = filter
     ? configString
         .split("\n")
-        .filter((line) => line.toLowerCase().includes(filter.toLowerCase()))
+        .filter((line) => {
+          const lower = line.toLowerCase();
+          const matchesFreeText = lower.includes(filter.toLowerCase());
+          const matchesContributor = contributorFilterLower
+            ? lower.includes(contributorFilterLower)
+            : true;
+          return matchesFreeText && matchesContributor;
+        })
         .join("\n")
-    : configString;
+    : contributorFilterLower
+      ? configString
+          .split("\n")
+          .filter((line) => line.toLowerCase().includes(contributorFilterLower))
+          .join("\n")
+      : configString;
 
   return (
     <div className="space-y-4">
@@ -755,6 +803,77 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function matchesContributor(
+  value: string | null | undefined,
+  contributor: string,
+): boolean {
+  return (value ?? "").toLowerCase() === contributor.toLowerCase();
+}
+
+function textContainsContributor(
+  value: string | null | undefined,
+  contributor: string,
+): boolean {
+  return (value ?? "").toLowerCase().includes(contributor.toLowerCase());
+}
+
+function filterInspectorDataByContributor(
+  data: InspectorData,
+  contributor: string,
+): InspectorData {
+  const files = data.generatedFiles.files.filter(
+    (file) =>
+      matchesContributor(file.source, contributor) ||
+      textContainsContributor(file.description, contributor),
+  );
+
+  const integrations = data.integrations.filter(
+    (integration) =>
+      matchesContributor(integration.name, contributor) ||
+      matchesContributor(integration.displayName, contributor) ||
+      matchesContributor(integration.source?.path, contributor) ||
+      textContainsContributor(integration.tags?.join(" "), contributor),
+  );
+
+  const scripts = data.scripts.filter(
+    (script) =>
+      matchesContributor(script.source, contributor) ||
+      matchesContributor(script.name, contributor) ||
+      textContainsContributor(script.description, contributor),
+  );
+
+  const dataFiles = data.dataFiles.filter(
+    (file) =>
+      textContainsContributor(file.name, contributor) ||
+      textContainsContributor(file.path, contributor),
+  );
+
+  const stateFiles = data.stateFiles.filter(
+    (file) =>
+      textContainsContributor(file.name, contributor) ||
+      textContainsContributor(file.path, contributor) ||
+      textContainsContributor(file.content, contributor),
+  );
+
+  const enabledCount = files.filter((f) => f.enable).length;
+  const staleCount = files.filter((f) => f.isStale).length;
+
+  return {
+    ...data,
+    generatedFiles: {
+      ...data.generatedFiles,
+      files,
+      totalCount: files.length,
+      enabledCount,
+      staleCount,
+    },
+    integrations,
+    scripts,
+    dataFiles,
+    stateFiles,
+  };
+}
+
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -762,8 +881,22 @@ function formatFileSize(bytes: number): string {
 export function InspectorPanel() {
   const { data, isLoading, isError, error, refetch } = useInspectorData();
 
+  const contributors = data?.contributors ?? [];
+  const [selectedContributor, setSelectedContributor] = useState<string | null>(
+    null,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [exportCopied, setExportCopied] = useState(false);
+
+  const displayData = useMemo(() => {
+    if (!data) return null;
+    if (!selectedContributor) return data;
+    return filterInspectorDataByContributor(data, selectedContributor);
+  }, [data, selectedContributor]);
+
+  const activeContributor =
+    contributors.find((c) => c.id === selectedContributor) ?? null;
+  const inspectorData = displayData;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -775,10 +908,11 @@ export function InspectorPanel() {
   };
 
   const handleExport = () => {
-    if (!data) return;
+    const exportSource = displayData ?? data;
+    if (!exportSource) return;
     const exportData = {
       exportedAt: new Date().toISOString(),
-      ...data,
+      ...exportSource,
     };
     navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
     setExportCopied(true);
@@ -814,42 +948,81 @@ export function InspectorPanel() {
         title="Environment Inspector"
         description="Comprehensive view of your Stackpanel environment for debugging and inspection"
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              disabled={!data}
-            >
-              {exportCopied ? (
-                <>
-                  <Check className="mr-2 h-4 w-4 text-green-500" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Export JSON
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw
-                className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
-              />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
-            </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedContributor ?? ALL_CONTRIBUTORS_VALUE}
+                onValueChange={(value) =>
+                  setSelectedContributor(
+                    value === ALL_CONTRIBUTORS_VALUE ? null : value,
+                  )
+                }
+              >
+                <SelectTrigger className="w-[240px]" aria-label="Filter by contributor">
+                  <SelectValue placeholder="All contributors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_CONTRIBUTORS_VALUE}>
+                    All contributors
+                  </SelectItem>
+                  <SelectSeparator />
+                  {contributors.map((contributor) => (
+                    <SelectItem key={contributor.id} value={contributor.id}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{contributor.label}</span>
+                        <Badge variant="secondary" className="ml-2 text-[10px]">
+                          {contributor.type === "extension"
+                            ? "Extension"
+                            : "Module"}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* {activeContributor && (
+                <Badge variant="outline" className="text-xs">
+                  Filtering by {activeContributor.label}
+                </Badge>
+              )} */}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={!data}
+              >
+                {exportCopied ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Export JSON
+                  </>
+                )}
+              </Button> */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw
+                  className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
+                />
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </Button>
+            </div>
           </div>
         }
       />
 
       {/* Project Info */}
-      {data?.project && (
+      {inspectorData?.project && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -861,37 +1034,41 @@ export function InspectorPanel() {
             <div className="grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-muted-foreground">Name:</span>{" "}
-                <span className="font-medium">{data.project.name}</span>
+                <span className="font-medium">
+                  {inspectorData.project.name}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Path:</span>{" "}
                 <span className="truncate font-mono text-xs">
-                  {data.project.path}
+                  {inspectorData.project.path}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Config Source:</span>{" "}
-                <ConfigSourceBadge source={data.configSource} />
+                <ConfigSourceBadge source={inspectorData.configSource} />
               </div>
             </div>
 
             {/* Directories */}
-            {data.directories && (
+            {inspectorData.directories && (
               <div className="border-t pt-4">
                 <div className="mb-2 text-xs font-medium text-muted-foreground">
                   Stackpanel Directories
                 </div>
                 <div className="grid gap-1 text-xs">
-                  {Object.entries(data.directories).map(([key, path]) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <span className="w-16 text-muted-foreground capitalize">
-                        {key}:
-                      </span>
-                      <code className="truncate rounded bg-muted px-1 font-mono text-xs">
-                        {path}
-                      </code>
-                    </div>
-                  ))}
+                  {Object.entries(inspectorData.directories).map(
+                    ([key, path]) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="w-16 text-muted-foreground capitalize">
+                          {key}:
+                        </span>
+                        <code className="truncate rounded bg-muted px-1 font-mono text-xs">
+                          {path}
+                        </code>
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
             )}
@@ -901,33 +1078,26 @@ export function InspectorPanel() {
 
       {/* Tabs */}
       <Tabs defaultValue="files">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="files" className="gap-1">
             <FileCode className="h-3 w-3" />
             <span className="hidden sm:inline">Files</span>
             <Badge variant="secondary" className="ml-1 text-xs">
-              {data?.generatedFiles.totalCount ?? 0}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-1">
-            <Puzzle className="h-3 w-3" />
-            <span className="hidden sm:inline">Integrations</span>
-            <Badge variant="secondary" className="ml-1 text-xs">
-              {data?.integrations.length ?? 0}
+              {inspectorData?.generatedFiles.totalCount ?? 0}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="scripts" className="gap-1">
             <Terminal className="h-3 w-3" />
             <span className="hidden sm:inline">Scripts</span>
             <Badge variant="secondary" className="ml-1 text-xs">
-              {data?.scripts.length ?? 0}
+              {inspectorData?.scripts.length ?? 0}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="state" className="gap-1">
             <FileJson className="h-3 w-3" />
             <span className="hidden sm:inline">State</span>
             <Badge variant="secondary" className="ml-1 text-xs">
-              {data?.stateFiles.length ?? 0}
+              {inspectorData?.stateFiles.length ?? 0}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="config" className="gap-1">
@@ -940,10 +1110,10 @@ export function InspectorPanel() {
           <Card>
             <CardContent className="pt-6">
               <GeneratedFilesTab
-                files={data?.generatedFiles.files ?? []}
-                totalCount={data?.generatedFiles.totalCount ?? 0}
-                staleCount={data?.generatedFiles.staleCount ?? 0}
-                enabledCount={data?.generatedFiles.enabledCount ?? 0}
+                files={inspectorData?.generatedFiles.files ?? []}
+                totalCount={inspectorData?.generatedFiles.totalCount ?? 0}
+                staleCount={inspectorData?.generatedFiles.staleCount ?? 0}
+                enabledCount={inspectorData?.generatedFiles.enabledCount ?? 0}
               />
             </CardContent>
           </Card>
@@ -952,7 +1122,7 @@ export function InspectorPanel() {
         <TabsContent value="integrations" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              <IntegrationsTab integrations={data?.integrations ?? []} />
+              <IntegrationsTab integrations={inspectorData?.integrations ?? []} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -960,7 +1130,7 @@ export function InspectorPanel() {
         <TabsContent value="scripts" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              <ScriptsTab scripts={data?.scripts ?? []} />
+              <ScriptsTab scripts={inspectorData?.scripts ?? []} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -974,14 +1144,14 @@ export function InspectorPanel() {
                     <FileJson className="h-4 w-4 text-orange-500" />
                     State Files
                   </h3>
-                  <StateFilesTab files={data?.stateFiles ?? []} />
+                  <StateFilesTab files={inspectorData?.stateFiles ?? []} />
                 </div>
                 <div>
                   <h3 className="mb-3 flex items-center gap-2 font-medium">
                     <Database className="h-4 w-4 text-purple-500" />
                     Data Files
                   </h3>
-                  <DataFilesTab files={data?.dataFiles ?? []} />
+                  <DataFilesTab files={inspectorData?.dataFiles ?? []} />
                 </div>
               </div>
             </CardContent>
@@ -992,8 +1162,9 @@ export function InspectorPanel() {
           <Card>
             <CardContent className="pt-6">
               <ConfigTab
-                config={data?.config ?? null}
-                configSource={data?.configSource ?? null}
+                config={inspectorData?.config ?? null}
+                configSource={inspectorData?.configSource ?? null}
+                contributorFilter={selectedContributor}
               />
             </CardContent>
           </Card>

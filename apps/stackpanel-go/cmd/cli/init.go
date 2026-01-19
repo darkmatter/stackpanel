@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/spf13/cobra"
 )
 
@@ -69,12 +70,40 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("projectName is required in configuration")
 	}
 
+	// Register this project in the user config
+	// This allows the agent to know about this project even when started from elsewhere
+	if cfg.ProjectRoot != "" {
+		if err := registerProject(cfg.ProjectRoot, cfg.ProjectName); err != nil {
+			// Don't fail init, just warn
+			if !quiet {
+				output.Warning(fmt.Sprintf("Could not register project: %v", err))
+			}
+		}
+	}
+
 	// File generation is now handled by Nix's write-files script.
 	// This command validates config and confirms initialization.
 
 	if !quiet {
 		fmt.Printf("Config validated for %s\n", cfg.ProjectName)
 		output.Success("Stackpanel initialized")
+	}
+
+	return nil
+}
+
+// registerProject adds or updates a project in the user config.
+// This is called during init to ensure the project is tracked.
+func registerProject(projectRoot, projectName string) error {
+	ucm, err := userconfig.NewManager()
+	if err != nil {
+		return fmt.Errorf("failed to create user config manager: %w", err)
+	}
+
+	// Add or update the project
+	_, err = ucm.AddProject(projectRoot, projectName)
+	if err != nil {
+		return fmt.Errorf("failed to add project: %w", err)
 	}
 
 	return nil

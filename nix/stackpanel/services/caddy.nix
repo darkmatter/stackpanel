@@ -111,69 +111,59 @@ in
       ''
     ];
 
-    # Register Caddy extension with UI panels
-    stackpanel.extensions.caddy = {
-      name = "Caddy";
-      enabled = true;
-      priority = 20;
-      tags = [
-        "networking"
-        "proxy"
-      ];
-
-      panels = [
+    # Register Caddy module panels for the UI (not an extension - core module)
+    stackpanel.panels.caddy-status = {
+      module = "caddy";
+      title = "Caddy Reverse Proxy";
+      icon = "server";
+      type = "PANEL_TYPE_STATUS";
+      order = 20;
+      fields = [
         {
-          id = "caddy-status";
-          title = "Caddy Reverse Proxy";
-          type = "PANEL_TYPE_STATUS";
-          order = 1;
-          fields = [
+          name = "metrics";
+          type = "FIELD_TYPE_STRING";
+          value = builtins.toJSON [
             {
-              name = "metrics";
-              type = "FIELD_TYPE_STRING";
-              value = builtins.toJSON [
-                {
-                  label = "Project";
-                  value = cfg.project-name;
-                  status = "ok";
-                }
-                {
-                  label = "Port";
-                  value = toString projectPort;
-                  status = "ok";
-                }
-                {
-                  label = "TLS";
-                  value = if cfg.use-step-tls && stepCfg.enable then "Enabled (Step CA)" else "Disabled";
-                  status = if cfg.use-step-tls && stepCfg.enable then "ok" else "warning";
-                }
-                {
-                  label = "Virtual Hosts";
-                  value = toString domainCount;
-                  status = "ok";
-                }
-              ];
+              label = "Project";
+              value = cfg.project-name;
+              status = "ok";
             }
-          ];
-        }
-        {
-          id = "caddy-apps";
-          title = "Virtual Hosts";
-          type = "PANEL_TYPE_APPS_GRID";
-          order = 2;
-          fields = [
             {
-              name = "columns";
-              type = "FIELD_TYPE_COLUMNS";
-              value = builtins.toJSON [
-                "name"
-                "port"
-              ];
+              label = "Port";
+              value = toString projectPort;
+              status = "ok";
+            }
+            {
+              label = "TLS";
+              value = if cfg.use-step-tls && stepCfg.enable then "Enabled (Step CA)" else "Disabled";
+              status = if cfg.use-step-tls && stepCfg.enable then "ok" else "warning";
+            }
+            {
+              label = "Virtual Hosts";
+              value = toString domainCount;
+              status = "ok";
             }
           ];
         }
       ];
+    };
 
+    stackpanel.panels.caddy-apps = {
+      module = "caddy";
+      title = "Virtual Hosts";
+      icon = "network";
+      type = "PANEL_TYPE_APPS_GRID";
+      order = 21;
+      fields = [
+        {
+          name = "columns";
+          type = "FIELD_TYPE_COLUMNS";
+          value = builtins.toJSON [
+            "name"
+            "port"
+          ];
+        }
+      ];
       # Per-app data for apps with domains
       apps = lib.mapAttrs (name: app: {
         enabled = true;

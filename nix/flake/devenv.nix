@@ -9,10 +9,12 @@
 #   - recommended settings module (stackpanel.devenv.recommended)
 #
 # Wires stackpanel.devshell config to native devenv options:
-#   - packages → devenv packages
+#   - packages → devenv packages (includes scripts package)
 #   - env → devenv env
 #   - hooks → devenv enterShell
-#   - commands → devenv scripts
+#
+# Scripts are handled by nix/stackpanel/devshell/scripts.nix which creates a
+# single package with all scripts in bin/, added to devshell.packages.
 #
 # Usage in devenv.nix:
 #   { inputs, ... }:
@@ -42,7 +44,8 @@ in
   # Wire stackpanel.devshell.* config to devenv's native options
   config = lib.mkIf (cfg.enable or false) {
     # Map stackpanel.devshell packages to devenv packages
-    packages = cfg.devshell.packages ++ (cfg.devshell._commandPkgs or [ ]);
+    # (scripts package is already included via scripts.nix)
+    packages = cfg.devshell.packages;
 
     # Map stackpanel.devshell env to devenv env
     env = cfg.devshell.env;
@@ -55,8 +58,5 @@ in
         (cfg.devshell.hooks.after or [ ])
       ]
     );
-
-    # Map stackpanel.devshell commands to devenv scripts
-    scripts = lib.mapAttrs (_: cmd: { exec = cmd.exec; }) (cfg.devshell.commands or { });
   };
 }
