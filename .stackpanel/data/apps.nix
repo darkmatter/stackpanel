@@ -6,48 +6,30 @@
       dev = {
         name = "dev";
         variables = {
-          HELLO = {
-            key = "HELLO";
-            type = 1;
-            value = "world";
-            variable-id = "";
-          };
-          POSTGRES-URL = {
-            key = "POSTGRES_URL";
-            type = 1;
-            variable-id = "";
+          PORT = {
+            key = "PORT";
+            type = 2;
+            variable-id = "/apps/docs/port";
           };
         };
       };
       prod = {
         name = "prod";
         variables = {
-          HELLO = {
-            key = "HELLO";
-            type = 1;
-            value = "world";
-            variable-id = "";
-          };
-          POSTGRES-URL = {
-            key = "POSTGRES_URL";
-            type = 1;
-            variable-id = "";
+          PORT = {
+            key = "PORT";
+            type = 2;
+            variable-id = "/apps/docs/port";
           };
         };
       };
       staging = {
         name = "staging";
         variables = {
-          HELLO = {
-            key = "HELLO";
-            type = 1;
-            value = "world";
-            variable-id = "";
-          };
-          POSTGRES-URL = {
-            key = "POSTGRES_URL";
-            type = 1;
-            variable-id = "";
+          PORT = {
+            key = "PORT";
+            type = 2;
+            variable-id = "/apps/docs/port";
           };
         };
       };
@@ -70,35 +52,7 @@
       };
     };
     type = "bun";
-    variables = {
-      APP-URL = {
-        environments = [ "dev" ];
-        variable-id = "APP_URL";
-      };
-      POSTGRES-URL = {
-        environments = {
-          "0" = {
-            name = "0";
-            variables = { };
-          };
-          dev = {
-            name = "dev";
-            variables = { };
-          };
-          prod = {
-            name = "prod";
-            variables = { };
-          };
-          staging = {
-            name = "staging";
-            variables = { };
-          };
-        };
-        key = "POSTGRES_URL";
-        type = 0;
-        variable-id = null;
-      };
-    };
+    variables = { };
   };
   server = {
     description = "Backend API server";
@@ -126,24 +80,7 @@
       };
     };
     type = "bun";
-    variables = {
-      AUTH-SECRET = {
-        environments = [ "dev" ];
-        variable-id = "AUTH_SECRET";
-      };
-      DATABASE-URL = {
-        environments = [ "dev" ];
-        variable-id = "DATABASE_URL";
-      };
-      REDIS-URL = {
-        environments = [ "dev" ];
-        variable-id = "REDIS_URL";
-      };
-      STRIPE-SECRET-KEY = {
-        environments = [ "dev" ];
-        variable-id = "STRIPE_SECRET_KEY";
-      };
-    };
+    variables = { };
   };
   stackpanel-go = {
     description = "Stackpanel CLI and agent (Go)";
@@ -169,6 +106,28 @@
   web = {
     description = "Main web application (Next.js)";
     domain = "stackpanel";
+    environments = {
+      dev = {
+        name = "dev";
+        variables = {
+          DOCS-PORT = {
+            key = "DOCS_PORT";
+            type = 2;
+            variable-id = "/apps/docs/port";
+          };
+          OPENAI-API-KEY = {
+            key = "OPENAI_API_KEY";
+            type = 2;
+            variable-id = "openai-api-key";
+          };
+          PORT = {
+            key = "PORT";
+            type = 2;
+            variable-id = "/apps/web/port";
+          };
+        };
+      };
+    };
     name = "web";
     path = "apps/web";
     port = 3000;
@@ -193,23 +152,7 @@
       };
     };
     type = "bun";
-    variables = {
-      API-URL = {
-        environments = [ "dev" ];
-        variable-id = "API_URL";
-      };
-      APP-URL = {
-        environments = [ "dev" ];
-        variable-id = "APP_URL";
-      };
-      AUTH-SECRET = {
-        environments = [ "dev" ];
-        variable-id = "AUTH_SECRET";
-      };
-      DATABASE-URL = {
-        environments = [ "dev" ];
-        variable-id = "DATABASE_URL";
-      };
-    };
+    variables = { };
   };
 }
+

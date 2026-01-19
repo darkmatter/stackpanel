@@ -176,4 +176,13 @@ in
 
   # Set computed environments value
   config.stackpanel.secrets.environmentsComputed = lib.mkDefault mergedEnvironments;
+
+  # Default codegen configuration - outputs TypeScript to packages/secrets/src
+  config.stackpanel.secrets.codegen = lib.mkDefault {
+    typescript = {
+      name = "secrets";
+      directory = "packages/secrets/src";
+      language = "typescript";
+    };
+  };
 }

@@ -3,40 +3,120 @@ syntax = "proto3";
 package stackpanel.db;
 option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
-// Source type for extensions
-enum SourceType {
-  SOURCE_TYPE_UNSPECIFIED = 0;
-  SOURCE_TYPE_GITHUB = 1;
-  SOURCE_TYPE_NPM = 2;
-  SOURCE_TYPE_LOCAL = 3;
-  SOURCE_TYPE_URL = 4;
+// Category of extension for grouping in UI
+enum ExtensionCategory {
+  EXTENSION_CATEGORY_UNSPECIFIED = 0;
+  EXTENSION_CATEGORY_INFRASTRUCTURE = 1;
+  EXTENSION_CATEGORY_CI_CD = 2;
+  EXTENSION_CATEGORY_DATABASE = 3;
+  EXTENSION_CATEGORY_SECRETS = 4;
+  EXTENSION_CATEGORY_DEPLOYMENT = 5;
+  EXTENSION_CATEGORY_DEVELOPMENT = 6;
+  EXTENSION_CATEGORY_MONITORING = 7;
+  EXTENSION_CATEGORY_INTEGRATION = 8;
 }
 
-// Extension configuration
+// Source type for extensions
+enum ExtensionSourceType {
+  EXTENSION_SOURCE_TYPE_UNSPECIFIED = 0;
+  EXTENSION_SOURCE_TYPE_BUILTIN = 1;
+  EXTENSION_SOURCE_TYPE_LOCAL = 2;
+  EXTENSION_SOURCE_TYPE_GITHUB = 3;
+  EXTENSION_SOURCE_TYPE_NPM = 4;
+  EXTENSION_SOURCE_TYPE_URL = 5;
+}
+
+// Type of configuration field
+enum FieldType {
+  FIELD_TYPE_UNSPECIFIED = 0;
+  FIELD_TYPE_STRING = 1;
+  FIELD_TYPE_NUMBER = 2;
+  FIELD_TYPE_BOOLEAN = 3;
+  FIELD_TYPE_SELECT = 4;
+  FIELD_TYPE_MULTISELECT = 5;
+  FIELD_TYPE_APP_FILTER = 6;
+  FIELD_TYPE_COLUMNS = 7;
+  FIELD_TYPE_JSON = 8;
+}
+
+// Type of UI panel component to render
+enum PanelType {
+  PANEL_TYPE_UNSPECIFIED = 0;
+  PANEL_TYPE_STATUS = 1;
+  PANEL_TYPE_APPS_GRID = 2;
+  PANEL_TYPE_FORM = 3;
+  PANEL_TYPE_TABLE = 4;
+  PANEL_TYPE_CUSTOM = 5;
+}
+
+// Extension configuration and metadata
 message Extension {
   string name = 1; // Display name of the extension
-  bool enabled = 2; // Whether this extension is enabled
-  Source source = 3; // Extension source configuration
-  optional string version = 4; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
-  int32 priority = 5; // Load order priority (lower = earlier)
-  repeated string dependencies = 6; // Other extensions this depends on
-  repeated string tags = 7; // Tags for categorizing/filtering extensions
+  optional string description = 2; // Human-readable description of what the extension does
+  bool enabled = 3; // Whether this extension is enabled
+  bool builtin = 4; // Whether this is a built-in extension shipped with stackpanel
+  ExtensionSource source = 5; // Extension source configuration
+  optional string version = 6; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+  ExtensionCategory category = 7; // Category for grouping in UI
+  int32 priority = 8; // Load order priority (lower = earlier)
+  repeated string tags = 9; // Tags for filtering extensions
+  repeated string dependencies = 10; // Other extensions this depends on
+  repeated ExtensionPanel panels = 11; // UI panels provided by this extension
+  map<string, ExtensionAppData> apps = 12; // Per-app extension data (app name -> extension data)
+  ExtensionFeatures features = 13; // Core features this extension configures
+}
+
+// Extension data specific to an application
+message ExtensionAppData {
+  bool enabled = 1; // Whether extension is enabled for this app
+  map<string, string> config = 2; // Extension config for this app (string key-value pairs)
+}
+
+// Flags indicating which core stackpanel features this extension configures
+message ExtensionFeatures {
+  bool files = 1; // Extension generates files via stackpanel.files
+  bool scripts = 2; // Extension provides shell scripts/commands
+  bool tasks = 3; // Extension defines tasks
+  bool secrets = 4; // Extension manages secrets/variables
+  bool shell_hooks = 5; // Extension adds shell hooks
+  bool packages = 6; // Extension adds devshell packages
+  bool services = 7; // Extension configures services/processes
+  bool checks = 8; // Extension defines checks/validations
+}
+
+// UI panel configuration for the web interface
+message ExtensionPanel {
+  string id = 1; // Unique panel identifier
+  string title = 2; // Display title
+  optional string description = 3; // Panel description
+  PanelType type = 4; // Panel type (determines which component to render)
+  int32 order = 5; // Display order (lower = first)
+  repeated PanelField fields = 6; // Panel configuration fields
+}
+
+// Extension source configuration
+message ExtensionSource {
+  ExtensionSourceType type = 1; // Source type for the extension
+  optional string repo = 2; // GitHub repository (owner/repo) for github source type
+  optional string package = 3; // NPM package name for npm source type
+  optional string path = 4; // Local path for local source type
+  optional string url = 5; // URL for url source type
+  optional string ref = 6; // Git ref (branch, tag, commit) for github source type
+  optional string module_path = 7; // Path to the Nix module within the source
 }
 
 // Extensions and plugins configuration
 message Extensions {
   bool enabled = 1; // Enable extensions system
   bool auto_update = 2; // Automatically check for extension updates
-  string registry = 3; // Default extension registry URL
+  optional string registry = 3; // Default extension registry URL
   map<string, Extension> extensions = 4; // Installed extensions by key
 }
 
-// Extension source configuration
-message Source {
-  SourceType type = 1; // Source type for the extension
-  optional string repo = 2; // GitHub repository (owner/repo) for github source type
-  optional string package = 3; // NPM package name for npm source type
-  optional string path = 4; // Local path for local source type
-  optional string url = 5; // URL for url source type
-  optional string ref = 6; // Git ref (branch, tag, commit) for github source type
+// Configuration field for a panel
+message PanelField {
+  string name = 1; // Field name (maps to component prop)
+  FieldType type = 2; // Field type
+  string value = 3; // Field value (JSON-encoded for complex types)
+  repeated string options = 4; // Options for select fields
 }

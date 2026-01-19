@@ -4,8 +4,9 @@
 # Shell aliases and shortcuts for stackpanel commands.
 #
 # Provides convenient aliases for common stackpanel CLI operations:
-#   - `x` - List available commands (stackpanel commands list)
-#   - `x <cmd> [args...]` - Run a command (stackpanel run <cmd> [args...])
+#   - `sp` - Direct alias for the stackpanel CLI
+#   - `spx` - Run stackpanel commands (`stackpanel commands run`, lists when empty)
+#   - `x` - Legacy/custom shortcut for commands (configurable via stackpanel.aliases.shortcut)
 #
 # The aliases are automatically available in the devshell and forward all
 # arguments correctly to the underlying stackpanel commands.
@@ -17,6 +18,34 @@
 }:
 let
   cfg = config.stackpanel.aliases;
+
+  commandsRunner = ''
+    if [ $# -eq 0 ]; then
+      stackpanel commands list
+    else
+      stackpanel commands "$@"
+    fi
+  '';
+
+  aliasScript = ''
+    # Internal helper shared by shortcuts
+    _stackpanel_commands_runner() {
+      ${commandsRunner}
+    }
+
+    # Stackpanel command shortcut: ${cfg.shortcut}
+    ${cfg.shortcut}() {
+      _stackpanel_commands_runner "$@"
+    }
+
+    # Short alias for the stackpanel CLI
+    alias sp="stackpanel"
+
+    # Explicit commands runner shortcut
+    spx() {
+      _stackpanel_commands_runner "$@"
+    }
+  '';
 in
 {
   options.stackpanel.aliases = {
@@ -40,31 +69,14 @@ in
   };
 
   config = lib.mkIf (config.stackpanel.enable && cfg.enable) {
-    # Add function to enterShell hooks for nix develop/devenv shell
+    # Add alias definitions to enterShell hooks for nix develop/devenv shell
     stackpanel.devshell.hooks.after = lib.mkAfter [
-      ''
-        # Stackpanel command shortcut: ${cfg.shortcut}
-        ${cfg.shortcut}() {
-          if [ $# -eq 0 ]; then
-            stackpanel commands list
-          else
-            stackpanel run "$@"
-          fi
-        }
-      ''
+      ''eval "$STACKPANEL_ALIAS_FUNC"''
     ];
 
     # Export function definition for direnv
     # This allows the function to be available even when using `use flake`
-    stackpanel.devshell.env.STACKPANEL_ALIAS_FUNC = ''
-      ${cfg.shortcut}() {
-        if [ $# -eq 0 ]; then
-          stackpanel commands list
-        else
-          stackpanel run "$@"
-        fi
-      }
-    '';
+    stackpanel.devshell.env.STACKPANEL_ALIAS_FUNC = aliasScript;
 
     # Add to hooks.before to source the function early
     stackpanel.devshell.hooks.before = lib.mkAfter [

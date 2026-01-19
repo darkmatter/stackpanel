@@ -11,32 +11,63 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * A workspace task definition
+ *
+ * A workspace task definition for Turborepo integration.
+ *
+ * Tasks with `exec` are compiled to Nix derivations and symlinked to
+ * `.tasks/bin/<task>`. Turborepo invokes these via package.json scripts.
+ *
+ * Tasks without `exec` assume the script already exists in package.json.
+ *
  *
  * @generated from protobuf message stackpanel.db.Task
  */
 export interface Task {
     /**
-     * @generated from protobuf field: string exec = 1
+     * @generated from protobuf field: optional string exec = 1
      */
-    exec: string; // Default task command to execute
+    exec?: string; // Shell script to execute (compiled to Nix derivation)
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Optional description for the task
+    description?: string; // Human-readable description of the task
     /**
      * @generated from protobuf field: optional string cwd = 3
      */
-    cwd?: string; // Working directory for the task
+    cwd?: string; // Working directory for the task (relative to repo root)
     /**
      * @generated from protobuf field: map<string, string> env = 4
      */
     env: {
         [key: string]: string;
     }; // Environment variables for the task
+    /**
+     * @generated from protobuf field: repeated string depends_on = 5
+     */
+    depends_on: string[]; // Tasks that must complete first (use ^ for deps)
+    /**
+     * @generated from protobuf field: repeated string outputs = 6
+     */
+    outputs: string[]; // Output file globs for caching (e.g. dist/**)
+    /**
+     * @generated from protobuf field: repeated string inputs = 7
+     */
+    inputs: string[]; // Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+    /**
+     * @generated from protobuf field: optional bool persistent = 8
+     */
+    persistent?: boolean; // Long-running process (e.g. dev server)
+    /**
+     * @generated from protobuf field: optional bool cache = 9
+     */
+    cache?: boolean; // Enable Turborepo caching (default: true)
+    /**
+     * @generated from protobuf field: optional bool interactive = 10
+     */
+    interactive?: boolean; // Task accepts stdin input
 }
 /**
- * Primary workspace tasks configuration
+ * Primary workspace tasks configuration for Turborepo
  *
  * @generated from protobuf message stackpanel.db.Tasks
  */
@@ -52,16 +83,24 @@ export interface Tasks {
 class Task$Type extends MessageType<Task> {
     constructor() {
         super("stackpanel.db.Task", [
-            { no: 1, name: "exec", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 1, name: "exec", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "cwd", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
+            { no: 4, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
+            { no: 5, name: "depends_on", kind: "scalar", localName: "depends_on", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "outputs", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "inputs", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 8, name: "persistent", kind: "scalar", opt: true, T: 8 /*ScalarType.BOOL*/ },
+            { no: 9, name: "cache", kind: "scalar", opt: true, T: 8 /*ScalarType.BOOL*/ },
+            { no: 10, name: "interactive", kind: "scalar", opt: true, T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<Task>): Task {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.exec = "";
         message.env = {};
+        message.depends_on = [];
+        message.outputs = [];
+        message.inputs = [];
         if (value !== undefined)
             reflectionMergePartial<Task>(this, message, value);
         return message;
@@ -71,7 +110,7 @@ class Task$Type extends MessageType<Task> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string exec */ 1:
+                case /* optional string exec */ 1:
                     message.exec = reader.string();
                     break;
                 case /* optional string description */ 2:
@@ -82,6 +121,24 @@ class Task$Type extends MessageType<Task> {
                     break;
                 case /* map<string, string> env */ 4:
                     this.binaryReadMap4(message.env, reader, options);
+                    break;
+                case /* repeated string depends_on */ 5:
+                    message.depends_on.push(reader.string());
+                    break;
+                case /* repeated string outputs */ 6:
+                    message.outputs.push(reader.string());
+                    break;
+                case /* repeated string inputs */ 7:
+                    message.inputs.push(reader.string());
+                    break;
+                case /* optional bool persistent */ 8:
+                    message.persistent = reader.bool();
+                    break;
+                case /* optional bool cache */ 9:
+                    message.cache = reader.bool();
+                    break;
+                case /* optional bool interactive */ 10:
+                    message.interactive = reader.bool();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -111,8 +168,8 @@ class Task$Type extends MessageType<Task> {
         map[key ?? ""] = val ?? "";
     }
     internalBinaryWrite(message: Task, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string exec = 1; */
-        if (message.exec !== "")
+        /* optional string exec = 1; */
+        if (message.exec !== undefined)
             writer.tag(1, WireType.LengthDelimited).string(message.exec);
         /* optional string description = 2; */
         if (message.description !== undefined)
@@ -123,6 +180,24 @@ class Task$Type extends MessageType<Task> {
         /* map<string, string> env = 4; */
         for (let k of globalThis.Object.keys(message.env))
             writer.tag(4, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.env[k]).join();
+        /* repeated string depends_on = 5; */
+        for (let i = 0; i < message.depends_on.length; i++)
+            writer.tag(5, WireType.LengthDelimited).string(message.depends_on[i]);
+        /* repeated string outputs = 6; */
+        for (let i = 0; i < message.outputs.length; i++)
+            writer.tag(6, WireType.LengthDelimited).string(message.outputs[i]);
+        /* repeated string inputs = 7; */
+        for (let i = 0; i < message.inputs.length; i++)
+            writer.tag(7, WireType.LengthDelimited).string(message.inputs[i]);
+        /* optional bool persistent = 8; */
+        if (message.persistent !== undefined)
+            writer.tag(8, WireType.Varint).bool(message.persistent);
+        /* optional bool cache = 9; */
+        if (message.cache !== undefined)
+            writer.tag(9, WireType.Varint).bool(message.cache);
+        /* optional bool interactive = 10; */
+        if (message.interactive !== undefined)
+            writer.tag(10, WireType.Varint).bool(message.interactive);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -333,8 +333,8 @@ in
         flattenWrappedPackages mkAllWrappedPackages
     );
 
-    # Add helper command to run any package with secrets from an app/env
-    stackpanel.devshell.commands = {
+    # Add helper script to run any package with secrets from an app/env
+    stackpanel.scripts = {
       "secrets:run" = {
         description = "Run a command with secrets loaded from an app environment (args: <app> <env> <command...>)";
         exec = ''

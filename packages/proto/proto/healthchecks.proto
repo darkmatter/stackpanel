@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// The current health status of a module or check
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_HEALTHY = 1;
+  HEALTH_STATUS_DEGRADED = 2;
+  HEALTH_STATUS_UNHEALTHY = 3;
+  HEALTH_STATUS_UNKNOWN = 4;
+  HEALTH_STATUS_DISABLED = 5;
+}
+
+// How critical a healthcheck is
+enum HealthcheckSeverity {
+  HEALTHCHECK_SEVERITY_UNSPECIFIED = 0;
+  HEALTHCHECK_SEVERITY_CRITICAL = 1;
+  HEALTHCHECK_SEVERITY_WARNING = 2;
+  HEALTHCHECK_SEVERITY_INFO = 3;
+}
+
+// The type of healthcheck evaluation
+enum HealthcheckType {
+  HEALTHCHECK_TYPE_UNSPECIFIED = 0;
+  HEALTHCHECK_TYPE_SCRIPT = 1;
+  HEALTHCHECK_TYPE_NIX = 2;
+  HEALTHCHECK_TYPE_HTTP = 3;
+  HEALTHCHECK_TYPE_TCP = 4;
+}
+
+// Overall health summary across all modules
+message HealthSummary {
+  HealthStatus overall_status = 1; // Overall system health status
+  map<string, ModuleHealth> modules = 2; // Health status per module
+  int32 total_healthy = 3; // Total healthy checks across all modules
+  int32 total_checks = 4; // Total checks across all modules
+  string last_updated = 5; // When summary was last computed (RFC3339)
+}
+
+// A healthcheck definition that can verify module functionality
+message Healthcheck {
+  string id = 1; // Unique identifier for the healthcheck
+  string name = 2; // Display name for the healthcheck
+  optional string description = 3; // Description of what this check verifies
+  HealthcheckType type = 4; // Type of healthcheck (script, nix, http, tcp)
+  HealthcheckSeverity severity = 5; // How critical this check is
+  optional string script = 6; // Shell script content (for SCRIPT type)
+  optional string script_path = 7; // Path to script derivation (resolved from Nix)
+  optional string nix_expr = 8; // Nix expression to evaluate (for NIX type)
+  optional string http_url = 9; // URL to check (for HTTP type)
+  optional string http_method = 10; // HTTP method (GET, POST, etc.)
+  optional int32 http_expected_status = 11; // Expected HTTP status code
+  optional string tcp_host = 12; // Host to connect to (for TCP type)
+  optional int32 tcp_port = 13; // Port to connect to (for TCP type)
+  int32 timeout_seconds = 14; // Timeout for the check in seconds
+  optional int32 interval_seconds = 15; // How often to run this check (optional)
+  string module = 16; // Module that registered this healthcheck
+  repeated string tags = 17; // Tags for filtering/grouping checks
+}
+
+// The result of executing a healthcheck
+message HealthcheckResult {
+  string check_id = 1; // ID of the healthcheck that was run
+  HealthStatus status = 2; // Result status of this check
+  optional string message = 3; // Human-readable result message
+  optional string error = 4; // Error message if check failed to execute
+  optional string output = 5; // Raw output from script/command
+  int64 duration_ms = 6; // How long the check took to run in milliseconds
+  string timestamp = 7; // When the check was run (RFC3339)
+}
+
+// Aggregated health status for a module
+message ModuleHealth {
+  string module = 1; // Module name
+  HealthStatus status = 2; // Aggregated health status
+  repeated HealthcheckResult checks = 3; // Individual check results
+  int32 healthy_count = 4; // Number of passing checks
+  int32 total_count = 5; // Total number of checks
+  string last_updated = 6; // When health was last evaluated (RFC3339)
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 	"github.com/spf13/cobra"
 )
 
@@ -138,6 +139,17 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 	} else {
 		output.Success(fmt.Sprintf("Scaffolded %d files (%d skipped)", created, skipped))
 
+		// Register this project in the user config so the agent knows about it
+		if created > 0 {
+			if err := registerScaffoldedProject(projectRoot); err != nil {
+				if verbose {
+					output.Warning(fmt.Sprintf("Could not register project: %v", err))
+				}
+			} else if verbose {
+				output.Info("Project registered in ~/.config/stackpanel/stackpanel.yaml")
+			}
+		}
+
 		if created > 0 {
 			fmt.Println()
 			output.Info("Next steps:")
@@ -146,6 +158,24 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 			output.Dimmed("  3. Add users to .stackpanel/data/users.nix")
 			output.Dimmed("  4. Run 'nix develop --impure' to enter the dev shell")
 		}
+	}
+
+	return nil
+}
+
+// registerScaffoldedProject adds the scaffolded project to the user config.
+func registerScaffoldedProject(projectRoot string) error {
+	ucm, err := userconfig.NewManager()
+	if err != nil {
+		return fmt.Errorf("failed to create user config manager: %w", err)
+	}
+
+	// Use directory name as project name
+	name := filepath.Base(projectRoot)
+
+	_, err = ucm.AddProject(projectRoot, name)
+	if err != nil {
+		return fmt.Errorf("failed to add project: %w", err)
 	}
 
 	return nil

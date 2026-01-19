@@ -11,7 +11,7 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * Extension configuration
+ * Extension configuration and metadata
  *
  * @generated from protobuf message stackpanel.db.Extension
  */
@@ -21,65 +21,153 @@ export interface Extension {
      */
     name: string; // Display name of the extension
     /**
-     * @generated from protobuf field: bool enabled = 2
+     * @generated from protobuf field: optional string description = 2
+     */
+    description?: string; // Human-readable description of what the extension does
+    /**
+     * @generated from protobuf field: bool enabled = 3
      */
     enabled: boolean; // Whether this extension is enabled
     /**
-     * @generated from protobuf field: stackpanel.db.Source source = 3
+     * @generated from protobuf field: bool builtin = 4
      */
-    source?: Source; // Extension source configuration
+    builtin: boolean; // Whether this is a built-in extension shipped with stackpanel
     /**
-     * @generated from protobuf field: optional string version = 4
+     * @generated from protobuf field: stackpanel.db.ExtensionSource source = 5
+     */
+    source?: ExtensionSource; // Extension source configuration
+    /**
+     * @generated from protobuf field: optional string version = 6
      */
     version?: string; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
     /**
-     * @generated from protobuf field: int32 priority = 5
+     * @generated from protobuf field: stackpanel.db.ExtensionCategory category = 7
+     */
+    category: ExtensionCategory; // Category for grouping in UI
+    /**
+     * @generated from protobuf field: int32 priority = 8
      */
     priority: number; // Load order priority (lower = earlier)
     /**
-     * @generated from protobuf field: repeated string dependencies = 6
+     * @generated from protobuf field: repeated string tags = 9
+     */
+    tags: string[]; // Tags for filtering extensions
+    /**
+     * @generated from protobuf field: repeated string dependencies = 10
      */
     dependencies: string[]; // Other extensions this depends on
     /**
-     * @generated from protobuf field: repeated string tags = 7
+     * @generated from protobuf field: repeated stackpanel.db.ExtensionPanel panels = 11
      */
-    tags: string[]; // Tags for categorizing/filtering extensions
+    panels: ExtensionPanel[]; // UI panels provided by this extension
+    /**
+     * @generated from protobuf field: map<string, stackpanel.db.ExtensionAppData> apps = 12
+     */
+    apps: {
+        [key: string]: ExtensionAppData;
+    }; // Per-app extension data (app name -> extension data)
+    /**
+     * @generated from protobuf field: stackpanel.db.ExtensionFeatures features = 13
+     */
+    features?: ExtensionFeatures; // Core features this extension configures
 }
 /**
- * Extensions and plugins configuration
+ * Extension data specific to an application
  *
- * @generated from protobuf message stackpanel.db.Extensions
+ * @generated from protobuf message stackpanel.db.ExtensionAppData
  */
-export interface Extensions {
+export interface ExtensionAppData {
     /**
      * @generated from protobuf field: bool enabled = 1
      */
-    enabled: boolean; // Enable extensions system
+    enabled: boolean; // Whether extension is enabled for this app
     /**
-     * @generated from protobuf field: bool auto_update = 2
+     * @generated from protobuf field: map<string, string> config = 2
      */
-    auto_update: boolean; // Automatically check for extension updates
+    config: {
+        [key: string]: string;
+    }; // Extension config for this app (string key-value pairs)
+}
+/**
+ * Flags indicating which core stackpanel features this extension configures
+ *
+ * @generated from protobuf message stackpanel.db.ExtensionFeatures
+ */
+export interface ExtensionFeatures {
     /**
-     * @generated from protobuf field: string registry = 3
+     * @generated from protobuf field: bool files = 1
      */
-    registry: string; // Default extension registry URL
+    files: boolean; // Extension generates files via stackpanel.files
     /**
-     * @generated from protobuf field: map<string, stackpanel.db.Extension> extensions = 4
+     * @generated from protobuf field: bool scripts = 2
      */
-    extensions: {
-        [key: string]: Extension;
-    }; // Installed extensions by key
+    scripts: boolean; // Extension provides shell scripts/commands
+    /**
+     * @generated from protobuf field: bool tasks = 3
+     */
+    tasks: boolean; // Extension defines tasks
+    /**
+     * @generated from protobuf field: bool secrets = 4
+     */
+    secrets: boolean; // Extension manages secrets/variables
+    /**
+     * @generated from protobuf field: bool shell_hooks = 5
+     */
+    shell_hooks: boolean; // Extension adds shell hooks
+    /**
+     * @generated from protobuf field: bool packages = 6
+     */
+    packages: boolean; // Extension adds devshell packages
+    /**
+     * @generated from protobuf field: bool services = 7
+     */
+    services: boolean; // Extension configures services/processes
+    /**
+     * @generated from protobuf field: bool checks = 8
+     */
+    checks: boolean; // Extension defines checks/validations
+}
+/**
+ * UI panel configuration for the web interface
+ *
+ * @generated from protobuf message stackpanel.db.ExtensionPanel
+ */
+export interface ExtensionPanel {
+    /**
+     * @generated from protobuf field: string id = 1
+     */
+    id: string; // Unique panel identifier
+    /**
+     * @generated from protobuf field: string title = 2
+     */
+    title: string; // Display title
+    /**
+     * @generated from protobuf field: optional string description = 3
+     */
+    description?: string; // Panel description
+    /**
+     * @generated from protobuf field: stackpanel.db.PanelType type = 4
+     */
+    type: PanelType; // Panel type (determines which component to render)
+    /**
+     * @generated from protobuf field: int32 order = 5
+     */
+    order: number; // Display order (lower = first)
+    /**
+     * @generated from protobuf field: repeated stackpanel.db.PanelField fields = 6
+     */
+    fields: PanelField[]; // Panel configuration fields
 }
 /**
  * Extension source configuration
  *
- * @generated from protobuf message stackpanel.db.Source
+ * @generated from protobuf message stackpanel.db.ExtensionSource
  */
-export interface Source {
+export interface ExtensionSource {
     /**
-     * @generated from protobuf field: stackpanel.db.SourceType type = 1
+     * @generated from protobuf field: stackpanel.db.ExtensionSourceType type = 1
      */
-    type: SourceType; // Source type for the extension
+    type: ExtensionSourceType; // Source type for the extension
     /**
      * @generated from protobuf field: optional string repo = 2
      */
@@ -100,54 +188,237 @@ export interface Source {
      * @generated from protobuf field: optional string ref = 6
      */
     ref?: string; // Git ref (branch, tag, commit) for github source type
+    /**
+     * @generated from protobuf field: optional string module_path = 7
+     */
+    module_path?: string; // Path to the Nix module within the source
+}
+/**
+ * Extensions and plugins configuration
+ *
+ * @generated from protobuf message stackpanel.db.Extensions
+ */
+export interface Extensions {
+    /**
+     * @generated from protobuf field: bool enabled = 1
+     */
+    enabled: boolean; // Enable extensions system
+    /**
+     * @generated from protobuf field: bool auto_update = 2
+     */
+    auto_update: boolean; // Automatically check for extension updates
+    /**
+     * @generated from protobuf field: optional string registry = 3
+     */
+    registry?: string; // Default extension registry URL
+    /**
+     * @generated from protobuf field: map<string, stackpanel.db.Extension> extensions = 4
+     */
+    extensions: {
+        [key: string]: Extension;
+    }; // Installed extensions by key
+}
+/**
+ * Configuration field for a panel
+ *
+ * @generated from protobuf message stackpanel.db.PanelField
+ */
+export interface PanelField {
+    /**
+     * @generated from protobuf field: string name = 1
+     */
+    name: string; // Field name (maps to component prop)
+    /**
+     * @generated from protobuf field: stackpanel.db.FieldType type = 2
+     */
+    type: FieldType; // Field type
+    /**
+     * @generated from protobuf field: string value = 3
+     */
+    value: string; // Field value (JSON-encoded for complex types)
+    /**
+     * @generated from protobuf field: repeated string options = 4
+     */
+    options: string[]; // Options for select fields
+}
+/**
+ * Category of extension for grouping in UI
+ *
+ * @generated from protobuf enum stackpanel.db.ExtensionCategory
+ */
+export enum ExtensionCategory {
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_INFRASTRUCTURE = 1;
+     */
+    INFRASTRUCTURE = 1,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_CI_CD = 2;
+     */
+    CI_CD = 2,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_DATABASE = 3;
+     */
+    DATABASE = 3,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_SECRETS = 4;
+     */
+    SECRETS = 4,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_DEPLOYMENT = 5;
+     */
+    DEPLOYMENT = 5,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_DEVELOPMENT = 6;
+     */
+    DEVELOPMENT = 6,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_MONITORING = 7;
+     */
+    MONITORING = 7,
+    /**
+     * @generated from protobuf enum value: EXTENSION_CATEGORY_INTEGRATION = 8;
+     */
+    INTEGRATION = 8
 }
 /**
  * Source type for extensions
  *
- * @generated from protobuf enum stackpanel.db.SourceType
+ * @generated from protobuf enum stackpanel.db.ExtensionSourceType
  */
-export enum SourceType {
+export enum ExtensionSourceType {
     /**
-     * @generated from protobuf enum value: SOURCE_TYPE_UNSPECIFIED = 0;
+     * @generated from protobuf enum value: EXTENSION_SOURCE_TYPE_UNSPECIFIED = 0;
      */
     UNSPECIFIED = 0,
     /**
-     * @generated from protobuf enum value: SOURCE_TYPE_GITHUB = 1;
+     * @generated from protobuf enum value: EXTENSION_SOURCE_TYPE_BUILTIN = 1;
      */
-    GITHUB = 1,
+    BUILTIN = 1,
     /**
-     * @generated from protobuf enum value: SOURCE_TYPE_NPM = 2;
+     * @generated from protobuf enum value: EXTENSION_SOURCE_TYPE_LOCAL = 2;
      */
-    NPM = 2,
+    LOCAL = 2,
     /**
-     * @generated from protobuf enum value: SOURCE_TYPE_LOCAL = 3;
+     * @generated from protobuf enum value: EXTENSION_SOURCE_TYPE_GITHUB = 3;
      */
-    LOCAL = 3,
+    GITHUB = 3,
     /**
-     * @generated from protobuf enum value: SOURCE_TYPE_URL = 4;
+     * @generated from protobuf enum value: EXTENSION_SOURCE_TYPE_NPM = 4;
      */
-    URL = 4
+    NPM = 4,
+    /**
+     * @generated from protobuf enum value: EXTENSION_SOURCE_TYPE_URL = 5;
+     */
+    URL = 5
+}
+/**
+ * Type of configuration field
+ *
+ * @generated from protobuf enum stackpanel.db.FieldType
+ */
+export enum FieldType {
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_STRING = 1;
+     */
+    STRING = 1,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_NUMBER = 2;
+     */
+    NUMBER = 2,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_BOOLEAN = 3;
+     */
+    BOOLEAN = 3,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_SELECT = 4;
+     */
+    SELECT = 4,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_MULTISELECT = 5;
+     */
+    MULTISELECT = 5,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_APP_FILTER = 6;
+     */
+    APP_FILTER = 6,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_COLUMNS = 7;
+     */
+    COLUMNS = 7,
+    /**
+     * @generated from protobuf enum value: FIELD_TYPE_JSON = 8;
+     */
+    JSON = 8
+}
+/**
+ * Type of UI panel component to render
+ *
+ * @generated from protobuf enum stackpanel.db.PanelType
+ */
+export enum PanelType {
+    /**
+     * @generated from protobuf enum value: PANEL_TYPE_UNSPECIFIED = 0;
+     */
+    UNSPECIFIED = 0,
+    /**
+     * @generated from protobuf enum value: PANEL_TYPE_STATUS = 1;
+     */
+    STATUS = 1,
+    /**
+     * @generated from protobuf enum value: PANEL_TYPE_APPS_GRID = 2;
+     */
+    APPS_GRID = 2,
+    /**
+     * @generated from protobuf enum value: PANEL_TYPE_FORM = 3;
+     */
+    FORM = 3,
+    /**
+     * @generated from protobuf enum value: PANEL_TYPE_TABLE = 4;
+     */
+    TABLE = 4,
+    /**
+     * @generated from protobuf enum value: PANEL_TYPE_CUSTOM = 5;
+     */
+    CUSTOM = 5
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Extension$Type extends MessageType<Extension> {
     constructor() {
         super("stackpanel.db.Extension", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "enabled", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 3, name: "source", kind: "message", T: () => Source },
-            { no: 4, name: "version", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "priority", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 6, name: "dependencies", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "tags", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "enabled", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 4, name: "builtin", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 5, name: "source", kind: "message", T: () => ExtensionSource },
+            { no: 6, name: "version", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "category", kind: "enum", T: () => ["stackpanel.db.ExtensionCategory", ExtensionCategory, "EXTENSION_CATEGORY_"] },
+            { no: 8, name: "priority", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 9, name: "tags", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 10, name: "dependencies", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 11, name: "panels", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ExtensionPanel },
+            { no: 12, name: "apps", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => ExtensionAppData } },
+            { no: 13, name: "features", kind: "message", T: () => ExtensionFeatures }
         ]);
     }
     create(value?: PartialMessage<Extension>): Extension {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
         message.enabled = false;
+        message.builtin = false;
+        message.category = 0;
         message.priority = 0;
-        message.dependencies = [];
         message.tags = [];
+        message.dependencies = [];
+        message.panels = [];
+        message.apps = {};
         if (value !== undefined)
             reflectionMergePartial<Extension>(this, message, value);
         return message;
@@ -160,23 +431,41 @@ class Extension$Type extends MessageType<Extension> {
                 case /* string name */ 1:
                     message.name = reader.string();
                     break;
-                case /* bool enabled */ 2:
+                case /* optional string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* bool enabled */ 3:
                     message.enabled = reader.bool();
                     break;
-                case /* stackpanel.db.Source source */ 3:
-                    message.source = Source.internalBinaryRead(reader, reader.uint32(), options, message.source);
+                case /* bool builtin */ 4:
+                    message.builtin = reader.bool();
                     break;
-                case /* optional string version */ 4:
+                case /* stackpanel.db.ExtensionSource source */ 5:
+                    message.source = ExtensionSource.internalBinaryRead(reader, reader.uint32(), options, message.source);
+                    break;
+                case /* optional string version */ 6:
                     message.version = reader.string();
                     break;
-                case /* int32 priority */ 5:
+                case /* stackpanel.db.ExtensionCategory category */ 7:
+                    message.category = reader.int32();
+                    break;
+                case /* int32 priority */ 8:
                     message.priority = reader.int32();
                     break;
-                case /* repeated string dependencies */ 6:
+                case /* repeated string tags */ 9:
+                    message.tags.push(reader.string());
+                    break;
+                case /* repeated string dependencies */ 10:
                     message.dependencies.push(reader.string());
                     break;
-                case /* repeated string tags */ 7:
-                    message.tags.push(reader.string());
+                case /* repeated stackpanel.db.ExtensionPanel panels */ 11:
+                    message.panels.push(ExtensionPanel.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* map<string, stackpanel.db.ExtensionAppData> apps */ 12:
+                    this.binaryReadMap12(message.apps, reader, options);
+                    break;
+                case /* stackpanel.db.ExtensionFeatures features */ 13:
+                    message.features = ExtensionFeatures.internalBinaryRead(reader, reader.uint32(), options, message.features);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -189,28 +478,66 @@ class Extension$Type extends MessageType<Extension> {
         }
         return message;
     }
+    private binaryReadMap12(map: Extension["apps"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof Extension["apps"] | undefined, val: Extension["apps"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = ExtensionAppData.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.Extension.apps");
+            }
+        }
+        map[key ?? ""] = val ?? ExtensionAppData.create();
+    }
     internalBinaryWrite(message: Extension, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string name = 1; */
         if (message.name !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.name);
-        /* bool enabled = 2; */
+        /* optional string description = 2; */
+        if (message.description !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* bool enabled = 3; */
         if (message.enabled !== false)
-            writer.tag(2, WireType.Varint).bool(message.enabled);
-        /* stackpanel.db.Source source = 3; */
+            writer.tag(3, WireType.Varint).bool(message.enabled);
+        /* bool builtin = 4; */
+        if (message.builtin !== false)
+            writer.tag(4, WireType.Varint).bool(message.builtin);
+        /* stackpanel.db.ExtensionSource source = 5; */
         if (message.source)
-            Source.internalBinaryWrite(message.source, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
-        /* optional string version = 4; */
+            ExtensionSource.internalBinaryWrite(message.source, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+        /* optional string version = 6; */
         if (message.version !== undefined)
-            writer.tag(4, WireType.LengthDelimited).string(message.version);
-        /* int32 priority = 5; */
+            writer.tag(6, WireType.LengthDelimited).string(message.version);
+        /* stackpanel.db.ExtensionCategory category = 7; */
+        if (message.category !== 0)
+            writer.tag(7, WireType.Varint).int32(message.category);
+        /* int32 priority = 8; */
         if (message.priority !== 0)
-            writer.tag(5, WireType.Varint).int32(message.priority);
-        /* repeated string dependencies = 6; */
-        for (let i = 0; i < message.dependencies.length; i++)
-            writer.tag(6, WireType.LengthDelimited).string(message.dependencies[i]);
-        /* repeated string tags = 7; */
+            writer.tag(8, WireType.Varint).int32(message.priority);
+        /* repeated string tags = 9; */
         for (let i = 0; i < message.tags.length; i++)
-            writer.tag(7, WireType.LengthDelimited).string(message.tags[i]);
+            writer.tag(9, WireType.LengthDelimited).string(message.tags[i]);
+        /* repeated string dependencies = 10; */
+        for (let i = 0; i < message.dependencies.length; i++)
+            writer.tag(10, WireType.LengthDelimited).string(message.dependencies[i]);
+        /* repeated stackpanel.db.ExtensionPanel panels = 11; */
+        for (let i = 0; i < message.panels.length; i++)
+            ExtensionPanel.internalBinaryWrite(message.panels[i], writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+        /* map<string, stackpanel.db.ExtensionAppData> apps = 12; */
+        for (let k of globalThis.Object.keys(message.apps)) {
+            writer.tag(12, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            ExtensionAppData.internalBinaryWrite(message.apps[k], writer, options);
+            writer.join().join();
+        }
+        /* stackpanel.db.ExtensionFeatures features = 13; */
+        if (message.features)
+            ExtensionFeatures.internalBinaryWrite(message.features, writer.tag(13, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -222,12 +549,361 @@ class Extension$Type extends MessageType<Extension> {
  */
 export const Extension = new Extension$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class ExtensionAppData$Type extends MessageType<ExtensionAppData> {
+    constructor() {
+        super("stackpanel.db.ExtensionAppData", [
+            { no: 1, name: "enabled", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "config", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
+        ]);
+    }
+    create(value?: PartialMessage<ExtensionAppData>): ExtensionAppData {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.enabled = false;
+        message.config = {};
+        if (value !== undefined)
+            reflectionMergePartial<ExtensionAppData>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ExtensionAppData): ExtensionAppData {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool enabled */ 1:
+                    message.enabled = reader.bool();
+                    break;
+                case /* map<string, string> config */ 2:
+                    this.binaryReadMap2(message.config, reader, options);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    private binaryReadMap2(map: ExtensionAppData["config"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof ExtensionAppData["config"] | undefined, val: ExtensionAppData["config"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = reader.string();
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.ExtensionAppData.config");
+            }
+        }
+        map[key ?? ""] = val ?? "";
+    }
+    internalBinaryWrite(message: ExtensionAppData, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool enabled = 1; */
+        if (message.enabled !== false)
+            writer.tag(1, WireType.Varint).bool(message.enabled);
+        /* map<string, string> config = 2; */
+        for (let k of globalThis.Object.keys(message.config))
+            writer.tag(2, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.config[k]).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.ExtensionAppData
+ */
+export const ExtensionAppData = new ExtensionAppData$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ExtensionFeatures$Type extends MessageType<ExtensionFeatures> {
+    constructor() {
+        super("stackpanel.db.ExtensionFeatures", [
+            { no: 1, name: "files", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "scripts", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 3, name: "tasks", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 4, name: "secrets", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 5, name: "shell_hooks", kind: "scalar", localName: "shell_hooks", T: 8 /*ScalarType.BOOL*/ },
+            { no: 6, name: "packages", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 7, name: "services", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 8, name: "checks", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ExtensionFeatures>): ExtensionFeatures {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.files = false;
+        message.scripts = false;
+        message.tasks = false;
+        message.secrets = false;
+        message.shell_hooks = false;
+        message.packages = false;
+        message.services = false;
+        message.checks = false;
+        if (value !== undefined)
+            reflectionMergePartial<ExtensionFeatures>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ExtensionFeatures): ExtensionFeatures {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool files */ 1:
+                    message.files = reader.bool();
+                    break;
+                case /* bool scripts */ 2:
+                    message.scripts = reader.bool();
+                    break;
+                case /* bool tasks */ 3:
+                    message.tasks = reader.bool();
+                    break;
+                case /* bool secrets */ 4:
+                    message.secrets = reader.bool();
+                    break;
+                case /* bool shell_hooks */ 5:
+                    message.shell_hooks = reader.bool();
+                    break;
+                case /* bool packages */ 6:
+                    message.packages = reader.bool();
+                    break;
+                case /* bool services */ 7:
+                    message.services = reader.bool();
+                    break;
+                case /* bool checks */ 8:
+                    message.checks = reader.bool();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ExtensionFeatures, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool files = 1; */
+        if (message.files !== false)
+            writer.tag(1, WireType.Varint).bool(message.files);
+        /* bool scripts = 2; */
+        if (message.scripts !== false)
+            writer.tag(2, WireType.Varint).bool(message.scripts);
+        /* bool tasks = 3; */
+        if (message.tasks !== false)
+            writer.tag(3, WireType.Varint).bool(message.tasks);
+        /* bool secrets = 4; */
+        if (message.secrets !== false)
+            writer.tag(4, WireType.Varint).bool(message.secrets);
+        /* bool shell_hooks = 5; */
+        if (message.shell_hooks !== false)
+            writer.tag(5, WireType.Varint).bool(message.shell_hooks);
+        /* bool packages = 6; */
+        if (message.packages !== false)
+            writer.tag(6, WireType.Varint).bool(message.packages);
+        /* bool services = 7; */
+        if (message.services !== false)
+            writer.tag(7, WireType.Varint).bool(message.services);
+        /* bool checks = 8; */
+        if (message.checks !== false)
+            writer.tag(8, WireType.Varint).bool(message.checks);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.ExtensionFeatures
+ */
+export const ExtensionFeatures = new ExtensionFeatures$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ExtensionPanel$Type extends MessageType<ExtensionPanel> {
+    constructor() {
+        super("stackpanel.db.ExtensionPanel", [
+            { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "type", kind: "enum", T: () => ["stackpanel.db.PanelType", PanelType, "PANEL_TYPE_"] },
+            { no: 5, name: "order", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 6, name: "fields", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PanelField }
+        ]);
+    }
+    create(value?: PartialMessage<ExtensionPanel>): ExtensionPanel {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.id = "";
+        message.title = "";
+        message.type = 0;
+        message.order = 0;
+        message.fields = [];
+        if (value !== undefined)
+            reflectionMergePartial<ExtensionPanel>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ExtensionPanel): ExtensionPanel {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string id */ 1:
+                    message.id = reader.string();
+                    break;
+                case /* string title */ 2:
+                    message.title = reader.string();
+                    break;
+                case /* optional string description */ 3:
+                    message.description = reader.string();
+                    break;
+                case /* stackpanel.db.PanelType type */ 4:
+                    message.type = reader.int32();
+                    break;
+                case /* int32 order */ 5:
+                    message.order = reader.int32();
+                    break;
+                case /* repeated stackpanel.db.PanelField fields */ 6:
+                    message.fields.push(PanelField.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ExtensionPanel, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string id = 1; */
+        if (message.id !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.id);
+        /* string title = 2; */
+        if (message.title !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.title);
+        /* optional string description = 3; */
+        if (message.description !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.description);
+        /* stackpanel.db.PanelType type = 4; */
+        if (message.type !== 0)
+            writer.tag(4, WireType.Varint).int32(message.type);
+        /* int32 order = 5; */
+        if (message.order !== 0)
+            writer.tag(5, WireType.Varint).int32(message.order);
+        /* repeated stackpanel.db.PanelField fields = 6; */
+        for (let i = 0; i < message.fields.length; i++)
+            PanelField.internalBinaryWrite(message.fields[i], writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.ExtensionPanel
+ */
+export const ExtensionPanel = new ExtensionPanel$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ExtensionSource$Type extends MessageType<ExtensionSource> {
+    constructor() {
+        super("stackpanel.db.ExtensionSource", [
+            { no: 1, name: "type", kind: "enum", T: () => ["stackpanel.db.ExtensionSourceType", ExtensionSourceType, "EXTENSION_SOURCE_TYPE_"] },
+            { no: 2, name: "repo", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "package", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "path", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "url", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "ref", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "module_path", kind: "scalar", localName: "module_path", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ExtensionSource>): ExtensionSource {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.type = 0;
+        if (value !== undefined)
+            reflectionMergePartial<ExtensionSource>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ExtensionSource): ExtensionSource {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* stackpanel.db.ExtensionSourceType type */ 1:
+                    message.type = reader.int32();
+                    break;
+                case /* optional string repo */ 2:
+                    message.repo = reader.string();
+                    break;
+                case /* optional string package */ 3:
+                    message.package = reader.string();
+                    break;
+                case /* optional string path */ 4:
+                    message.path = reader.string();
+                    break;
+                case /* optional string url */ 5:
+                    message.url = reader.string();
+                    break;
+                case /* optional string ref */ 6:
+                    message.ref = reader.string();
+                    break;
+                case /* optional string module_path */ 7:
+                    message.module_path = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ExtensionSource, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* stackpanel.db.ExtensionSourceType type = 1; */
+        if (message.type !== 0)
+            writer.tag(1, WireType.Varint).int32(message.type);
+        /* optional string repo = 2; */
+        if (message.repo !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.repo);
+        /* optional string package = 3; */
+        if (message.package !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.package);
+        /* optional string path = 4; */
+        if (message.path !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.path);
+        /* optional string url = 5; */
+        if (message.url !== undefined)
+            writer.tag(5, WireType.LengthDelimited).string(message.url);
+        /* optional string ref = 6; */
+        if (message.ref !== undefined)
+            writer.tag(6, WireType.LengthDelimited).string(message.ref);
+        /* optional string module_path = 7; */
+        if (message.module_path !== undefined)
+            writer.tag(7, WireType.LengthDelimited).string(message.module_path);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.ExtensionSource
+ */
+export const ExtensionSource = new ExtensionSource$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class Extensions$Type extends MessageType<Extensions> {
     constructor() {
         super("stackpanel.db.Extensions", [
             { no: 1, name: "enabled", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 2, name: "auto_update", kind: "scalar", localName: "auto_update", T: 8 /*ScalarType.BOOL*/ },
-            { no: 3, name: "registry", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "registry", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "extensions", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Extension } }
         ]);
     }
@@ -235,7 +911,6 @@ class Extensions$Type extends MessageType<Extensions> {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.enabled = false;
         message.auto_update = false;
-        message.registry = "";
         message.extensions = {};
         if (value !== undefined)
             reflectionMergePartial<Extensions>(this, message, value);
@@ -252,7 +927,7 @@ class Extensions$Type extends MessageType<Extensions> {
                 case /* bool auto_update */ 2:
                     message.auto_update = reader.bool();
                     break;
-                case /* string registry */ 3:
+                case /* optional string registry */ 3:
                     message.registry = reader.string();
                     break;
                 case /* map<string, stackpanel.db.Extension> extensions */ 4:
@@ -292,8 +967,8 @@ class Extensions$Type extends MessageType<Extensions> {
         /* bool auto_update = 2; */
         if (message.auto_update !== false)
             writer.tag(2, WireType.Varint).bool(message.auto_update);
-        /* string registry = 3; */
-        if (message.registry !== "")
+        /* optional string registry = 3; */
+        if (message.registry !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.registry);
         /* map<string, stackpanel.db.Extension> extensions = 4; */
         for (let k of globalThis.Object.keys(message.extensions)) {
@@ -313,46 +988,41 @@ class Extensions$Type extends MessageType<Extensions> {
  */
 export const Extensions = new Extensions$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Source$Type extends MessageType<Source> {
+class PanelField$Type extends MessageType<PanelField> {
     constructor() {
-        super("stackpanel.db.Source", [
-            { no: 1, name: "type", kind: "enum", T: () => ["stackpanel.db.SourceType", SourceType, "SOURCE_TYPE_"] },
-            { no: 2, name: "repo", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "package", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "path", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "url", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "ref", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        super("stackpanel.db.PanelField", [
+            { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "type", kind: "enum", T: () => ["stackpanel.db.FieldType", FieldType, "FIELD_TYPE_"] },
+            { no: 3, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "options", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<Source>): Source {
+    create(value?: PartialMessage<PanelField>): PanelField {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.name = "";
         message.type = 0;
+        message.value = "";
+        message.options = [];
         if (value !== undefined)
-            reflectionMergePartial<Source>(this, message, value);
+            reflectionMergePartial<PanelField>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Source): Source {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PanelField): PanelField {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* stackpanel.db.SourceType type */ 1:
+                case /* string name */ 1:
+                    message.name = reader.string();
+                    break;
+                case /* stackpanel.db.FieldType type */ 2:
                     message.type = reader.int32();
                     break;
-                case /* optional string repo */ 2:
-                    message.repo = reader.string();
+                case /* string value */ 3:
+                    message.value = reader.string();
                     break;
-                case /* optional string package */ 3:
-                    message.package = reader.string();
-                    break;
-                case /* optional string path */ 4:
-                    message.path = reader.string();
-                    break;
-                case /* optional string url */ 5:
-                    message.url = reader.string();
-                    break;
-                case /* optional string ref */ 6:
-                    message.ref = reader.string();
+                case /* repeated string options */ 4:
+                    message.options.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -365,25 +1035,19 @@ class Source$Type extends MessageType<Source> {
         }
         return message;
     }
-    internalBinaryWrite(message: Source, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* stackpanel.db.SourceType type = 1; */
+    internalBinaryWrite(message: PanelField, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string name = 1; */
+        if (message.name !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.name);
+        /* stackpanel.db.FieldType type = 2; */
         if (message.type !== 0)
-            writer.tag(1, WireType.Varint).int32(message.type);
-        /* optional string repo = 2; */
-        if (message.repo !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.repo);
-        /* optional string package = 3; */
-        if (message.package !== undefined)
-            writer.tag(3, WireType.LengthDelimited).string(message.package);
-        /* optional string path = 4; */
-        if (message.path !== undefined)
-            writer.tag(4, WireType.LengthDelimited).string(message.path);
-        /* optional string url = 5; */
-        if (message.url !== undefined)
-            writer.tag(5, WireType.LengthDelimited).string(message.url);
-        /* optional string ref = 6; */
-        if (message.ref !== undefined)
-            writer.tag(6, WireType.LengthDelimited).string(message.ref);
+            writer.tag(2, WireType.Varint).int32(message.type);
+        /* string value = 3; */
+        if (message.value !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.value);
+        /* repeated string options = 4; */
+        for (let i = 0; i < message.options.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.options[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -391,6 +1055,6 @@ class Source$Type extends MessageType<Source> {
     }
 }
 /**
- * @generated MessageType for protobuf message stackpanel.db.Source
+ * @generated MessageType for protobuf message stackpanel.db.PanelField
  */
-export const Source = new Source$Type();
+export const PanelField = new PanelField$Type();

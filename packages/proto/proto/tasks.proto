@@ -3,15 +3,29 @@ syntax = "proto3";
 package stackpanel.db;
 option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
-// A workspace task definition
+/*
+ * A workspace task definition for Turborepo integration.
+ * 
+ * Tasks with `exec` are compiled to Nix derivations and symlinked to
+ * `.tasks/bin/<task>`. Turborepo invokes these via package.json scripts.
+ * 
+ * Tasks without `exec` assume the script already exists in package.json.
+ * 
+ */
 message Task {
-  string exec = 1; // Default task command to execute
-  optional string description = 2; // Optional description for the task
-  optional string cwd = 3; // Working directory for the task
+  optional string exec = 1; // Shell script to execute (compiled to Nix derivation)
+  optional string description = 2; // Human-readable description of the task
+  optional string cwd = 3; // Working directory for the task (relative to repo root)
   map<string, string> env = 4; // Environment variables for the task
+  repeated string depends_on = 5; // Tasks that must complete first (use ^ for deps)
+  repeated string outputs = 6; // Output file globs for caching (e.g. dist/**)
+  repeated string inputs = 7; // Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+  optional bool persistent = 8; // Long-running process (e.g. dev server)
+  optional bool cache = 9; // Enable Turborepo caching (default: true)
+  optional bool interactive = 10; // Task accepts stdin input
 }
 
-// Primary workspace tasks configuration
+// Primary workspace tasks configuration for Turborepo
 message Tasks {
   map<string, Task> tasks = 1; // Map of task name to task config
 }

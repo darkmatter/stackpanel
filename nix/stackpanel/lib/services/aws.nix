@@ -319,6 +319,10 @@ in
       roleSessionName ? null,
       # Enable debug logging
       debug ? false,
+      # AWS profile name to use (default: "default")
+      defaultProfile ? "default",
+      # Additional AWS config to append (raw INI format)
+      extraConfig ? "",
     }:
     let
       roleArn = "arn:aws:iam::${accountId}:role/${roleName}";
@@ -364,14 +368,19 @@ in
           ${lib.optionalString debug "--debug"}
       '';
 
+      # Profile header: [default] for default, [profile NAME] for named profiles
+      profileHeader = if defaultProfile == "default" then "[default]" else "[profile ${defaultProfile}]";
+
       # =========================================================================
       # AWS Config File - a store path referencing the credential_process
       # The credential_process will read cert/key from env vars at runtime.
       # =========================================================================
       awsConfigFile = pkgs.writeText "aws-config" ''
-        [default]
+        ${profileHeader}
         region = ${region}
         credential_process = ${credentialProcess}/bin/aws-credential-process
+
+        ${extraConfig}
       '';
 
       # =========================================================================
@@ -384,9 +393,11 @@ in
               OUTPUT="''${1:-/dev/stdout}"
 
               cat > "$OUTPUT" << EOF
-        [default]
+        ${profileHeader}
         region = ${region}
         credential_process = ${credentialProcess}/bin/aws-credential-process
+
+        ${extraConfig}
         EOF
 
               if [[ "$OUTPUT" != "/dev/stdout" ]]; then
@@ -405,6 +416,7 @@ in
         echo "export AWS_CONFIG_FILE=${awsConfigFile}"
         echo "export AWS_SHARED_CREDENTIALS_FILE=/dev/null"
         echo "export AWS_REGION=${region}"
+        ${lib.optionalString (defaultProfile != "default") ''echo "export AWS_PROFILE=${defaultProfile}"''}
       '';
 
       # =========================================================================
@@ -414,6 +426,7 @@ in
         export AWS_CONFIG_FILE="${awsConfigFile}"
         export AWS_SHARED_CREDENTIALS_FILE="/dev/null"
         export AWS_REGION="${region}"
+        ${lib.optionalString (defaultProfile != "default") ''export AWS_PROFILE="${defaultProfile}"''}
         exec ${pkgs.awscli2}/bin/aws "$@"
       '';
 
@@ -424,6 +437,7 @@ in
         export AWS_CONFIG_FILE="${awsConfigFile}"
         export AWS_SHARED_CREDENTIALS_FILE="/dev/null"
         export AWS_REGION="${region}"
+        ${lib.optionalString (defaultProfile != "default") ''export AWS_PROFILE="${defaultProfile}"''}
         exec "$@"
       '';
 

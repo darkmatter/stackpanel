@@ -40,7 +40,7 @@ proto.mkProtoFile {
   '';
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
   enums = {
@@ -65,8 +65,7 @@ proto.mkProtoFile {
         key = proto.string 1 "Environment variable key";
         type = proto.message "AppVariableType" 2 "Type of environment variable";
         variable_id = proto.string 3 "ID of the variable from variables.nix";
-        environments = proto.map "string" "AppEnvironment" 4 "Environments this mapping applies to";
-        value = proto.optional (proto.string 5 "Literal value (used when variable_id is empty)");
+        value = proto.optional (proto.string 4 "Literal value (used when variable_id is empty)");
       };
     };
     # App Tasks, corresponds to npm package scripts
@@ -95,7 +94,7 @@ proto.mkProtoFile {
             Example: ["shared", "dev"] merges shared.yaml + dev.yaml
           ''
         );
-        public-keys = proto.repeated (
+        public_keys = proto.repeated (
           proto.string 5 ''
             List of AGE/SSH public keys that can decrypt secrets for this environment.
             These keys are used when encrypting new secrets.

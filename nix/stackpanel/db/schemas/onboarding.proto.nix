@@ -13,7 +13,7 @@ proto.mkProtoFile {
   package = "stackpanel.db";
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
   enums = {

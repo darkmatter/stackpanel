@@ -379,46 +379,34 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Register healthchecks extension for the UI
-    stackpanel.extensions.healthchecks = {
-      name = "Healthchecks";
-      enabled = true;
-      priority = 5; # Show near the top
-      tags = [
-        "system"
-        "monitoring"
-      ];
-
-      panels = [
+    # Register healthchecks module panel for the UI (not an extension - core module)
+    stackpanel.panels.healthchecks-overview = {
+      module = "healthchecks";
+      title = "System Health";
+      description = "Overview of module health status";
+      icon = "activity";
+      type = "PANEL_TYPE_STATUS";
+      order = 5;
+      fields = [
         {
-          id = "healthchecks-overview";
-          title = "System Health";
-          description = "Overview of module health status";
-          type = "PANEL_TYPE_STATUS";
-          order = 0;
-          fields = [
-            {
-              name = "metrics";
-              type = "FIELD_TYPE_STRING";
-              value = builtins.toJSON (
-                lib.mapAttrsToList (
-                  moduleName: moduleConfig:
-                  let
-                    enabledChecks = lib.filterAttrs (_: c: c.enable) moduleConfig.checks;
-                    enabledCount = lib.length (lib.attrNames enabledChecks);
-                  in
-                  {
-                    label = moduleConfig.displayName;
-                    value = "${toString enabledCount} checks";
-                    status = if enabledCount > 0 then "ok" else "warning";
-                  }
-                ) enabledModules
-              );
-            }
-          ];
+          name = "metrics";
+          type = "FIELD_TYPE_STRING";
+          value = builtins.toJSON (
+            lib.mapAttrsToList (
+              moduleName: moduleConfig:
+              let
+                enabledChecks = lib.filterAttrs (_: c: c.enable) moduleConfig.checks;
+                enabledCount = lib.length (lib.attrNames enabledChecks);
+              in
+              {
+                label = moduleConfig.displayName;
+                value = "${toString enabledCount} checks";
+                status = if enabledCount > 0 then "ok" else "warning";
+              }
+            ) enabledModules
+          );
         }
       ];
-
       # Include module summary as app data
       apps = lib.mapAttrs (moduleName: moduleConfig: {
         enabled = moduleConfig.enable;

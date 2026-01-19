@@ -24,11 +24,24 @@ message App {
   map<string, AppEnvironment> environments = 9; // Environments associated with this app
 }
 
-// Environment configuration
+// Environment configuration (e.g., dev, staging, production)
 message AppEnvironment {
   string name = 1; // Name of the environment
   optional string description = 2; // (optional) Description of the environment
   map<string, AppVariable> variables = 3; // Environment variables (key = env var key)
+  /*
+   * List of SOPS-encrypted source files for this environment (without .yaml extension).
+   * These files are decrypted and merged to provide secrets for the environment.
+   * Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+   * 
+   */
+  repeated string sources = 4;
+  /*
+   * List of AGE/SSH public keys that can decrypt secrets for this environment.
+   * These keys are used when encrypting new secrets.
+   * 
+   */
+  repeated string public_keys = 5;
 }
 
 // Command configuration

@@ -117,6 +117,10 @@ in
     stackpanel.devshell.hooks.after = lib.mkAfter [
       ''
         echo "stackpanel core initialized"
+        # Display MOTD if enabled
+        if command -v stackpanel &> /dev/null; then
+          stackpanel motd
+        fi
       ''
     ];
 

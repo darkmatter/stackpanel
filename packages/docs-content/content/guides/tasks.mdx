@@ -7,16 +7,16 @@ description: Declarative task definitions with Turborepo integration
 
 Tasks are build pipeline steps with dependencies, caching, and outputs. They integrate with [Turborepo](https://turbo.build) to provide intelligent task scheduling and caching.
 
-## Tasks vs Commands
+## Tasks vs Scripts
 
 Stackpanel distinguishes between two types of executable definitions:
 
 | Concept | Purpose | Defined In | Invoked Via |
 |---------|---------|-----------|-------------|
-| **Commands** | Ad-hoc utility scripts | `stackpanel.devshell.commands` | `stackpanel commands <name>` |
+| **Scripts** | Ad-hoc utility scripts | `stackpanel.scripts` | `<script-name>` (directly in PATH) |
 | **Tasks** | Build pipeline with deps | `stackpanel.tasks` | `turbo run <task>` |
 
-**Commands** are standalone utilities like `db:seed`, `secrets:list`, or `generate-types`.
+**Scripts** are standalone utilities like `db-seed`, `secrets-list`, or `generate-types`.
 
 **Tasks** have dependencies and participate in the build DAG like `build`, `test`, `lint`, and `dev`.
 
@@ -262,19 +262,14 @@ turbo run dev
 If you were using the deprecated `stackpanel.commands` schema:
 
 ```nix
-# OLD (deprecated)
-stackpanel.commands.lint = {
-  package = "eslint";
-  args = [ "." ];
-};
-
-# NEW - for ad-hoc scripts
-stackpanel.devshell.commands.lint = {
+# For ad-hoc scripts (available in PATH)
+stackpanel.scripts.lint = {
   exec = "eslint .";
+  description = "Run ESLint on the codebase";
   runtimeInputs = [ pkgs.nodePackages.eslint ];
 };
 
-# NEW - for build pipeline tasks
+# For build pipeline tasks (run via Turborepo)
 stackpanel.tasks.lint = {
   exec = "eslint .";
   runtimeInputs = [ pkgs.nodePackages.eslint ];

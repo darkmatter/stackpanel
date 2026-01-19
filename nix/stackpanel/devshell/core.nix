@@ -11,7 +11,7 @@
 {
   imports = [
     ./schema.nix
-    ./commands.nix
+    ./scripts.nix
     ./codegen.nix
     ./files.nix
   ];

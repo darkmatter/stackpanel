@@ -16,17 +16,17 @@ import { describe, expect, it } from "vitest";
 
 describe("use-inspector-data helpers", () => {
   describe("script extraction logic", () => {
-    it("should extract scripts from devshell.scripts", () => {
+    it("should extract scripts from stackpanel.scripts (top-level)", () => {
       const config = {
         stackpanel: {
-          devshell: {
-            scripts: {
-              "my-script": {
-                exec: "echo hello",
-              },
-              "another-script": {
-                exec: "npm run build",
-              },
+          scripts: {
+            "my-script": {
+              exec: "echo hello",
+              description: "A test script",
+            },
+            "another-script": {
+              exec: "npm run build",
+              description: "Build the project",
             },
           },
         },
@@ -46,14 +46,12 @@ describe("use-inspector-data helpers", () => {
       });
     });
 
-    it("should extract scripts from devshell.commands", () => {
+    it("should extract scripts from stackpanel.scripts", () => {
       const config = {
         stackpanel: {
-          devshell: {
-            commands: [
-              { name: "dev", command: "npm run dev" },
-              { name: "build", command: "npm run build" },
-            ],
+          scripts: {
+            dev: { exec: "npm run dev", description: "Start dev server" },
+            build: { exec: "npm run build", description: "Build project" },
           },
         },
       };
@@ -63,7 +61,7 @@ describe("use-inspector-data helpers", () => {
       expect(scripts).toContainEqual({
         name: "dev",
         command: "npm run dev",
-        source: "commands",
+        source: "scripts",
       });
     });
 
@@ -81,11 +79,13 @@ describe("use-inspector-data helpers", () => {
     it("should deduplicate scripts by name", () => {
       const config = {
         stackpanel: {
+          scripts: {
+            "my-script": { exec: "echo v1" },
+          },
           devshell: {
-            scripts: {
-              "my-script": { exec: "echo v1" },
+            _scripts: {
+              "my-script": { exec: "echo v2" },
             },
-            commands: [{ name: "my-script", command: "echo v2" }],
           },
         },
       };
@@ -196,7 +196,7 @@ describe("use-inspector-data helpers", () => {
 interface InspectorScript {
   name: string;
   command: string;
-  source: "scripts" | "commands" | "_scripts" | "_tasks";
+  source: "scripts" | "_scripts" | "_tasks";
 }
 
 interface InspectorIntegration {
@@ -224,17 +224,18 @@ function extractScriptsFromConfig(
   const devshell = (stackpanel?.devshell ?? {}) as Record<string, unknown>;
 
   // Define sources to check
+  // Scripts are now at stackpanel.scripts (top-level), not devshell.commands
   const sources: Array<{
     data: Record<string, unknown> | Array<unknown> | undefined;
     source: InspectorScript["source"];
   }> = [
     {
-      data: devshell.scripts as Record<string, unknown> | undefined,
+      data: stackpanel?.scripts as Record<string, unknown> | undefined,
       source: "scripts",
     },
     {
-      data: devshell.commands as Array<unknown> | undefined,
-      source: "commands",
+      data: devshell.scripts as Record<string, unknown> | undefined,
+      source: "scripts",
     },
     {
       data: devshell._scripts as Record<string, unknown> | undefined,

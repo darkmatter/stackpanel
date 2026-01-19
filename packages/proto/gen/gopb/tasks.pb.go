@@ -21,13 +21,24 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A workspace task definition
+// A workspace task definition for Turborepo integration.
+//
+// Tasks with `exec` are compiled to Nix derivations and symlinked to
+// `.tasks/bin/<task>`. Turborepo invokes these via package.json scripts.
+//
+// Tasks without `exec` assume the script already exists in package.json.
 type Task struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Exec          string                 `protobuf:"bytes,1,opt,name=exec,proto3" json:"exec,omitempty"`                                                                         // Default task command to execute
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Optional description for the task
-	Cwd           *string                `protobuf:"bytes,3,opt,name=cwd,proto3,oneof" json:"cwd,omitempty"`                                                                     // Working directory for the task
+	Exec          *string                `protobuf:"bytes,1,opt,name=exec,proto3,oneof" json:"exec,omitempty"`                                                                   // Shell script to execute (compiled to Nix derivation)
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Human-readable description of the task
+	Cwd           *string                `protobuf:"bytes,3,opt,name=cwd,proto3,oneof" json:"cwd,omitempty"`                                                                     // Working directory for the task (relative to repo root)
 	Env           map[string]string      `protobuf:"bytes,4,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables for the task
+	DependsOn     []string               `protobuf:"bytes,5,rep,name=depends_on,json=dependsOn,proto3" json:"depends_on,omitempty"`                                              // Tasks that must complete first (use ^ for deps)
+	Outputs       []string               `protobuf:"bytes,6,rep,name=outputs,proto3" json:"outputs,omitempty"`                                                                   // Output file globs for caching (e.g. dist/**)
+	Inputs        []string               `protobuf:"bytes,7,rep,name=inputs,proto3" json:"inputs,omitempty"`                                                                     // Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+	Persistent    *bool                  `protobuf:"varint,8,opt,name=persistent,proto3,oneof" json:"persistent,omitempty"`                                                      // Long-running process (e.g. dev server)
+	Cache         *bool                  `protobuf:"varint,9,opt,name=cache,proto3,oneof" json:"cache,omitempty"`                                                                // Enable Turborepo caching (default: true)
+	Interactive   *bool                  `protobuf:"varint,10,opt,name=interactive,proto3,oneof" json:"interactive,omitempty"`                                                   // Task accepts stdin input
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -63,8 +74,8 @@ func (*Task) Descriptor() ([]byte, []int) {
 }
 
 func (x *Task) GetExec() string {
-	if x != nil {
-		return x.Exec
+	if x != nil && x.Exec != nil {
+		return *x.Exec
 	}
 	return ""
 }
@@ -90,7 +101,49 @@ func (x *Task) GetEnv() map[string]string {
 	return nil
 }
 
-// Primary workspace tasks configuration
+func (x *Task) GetDependsOn() []string {
+	if x != nil {
+		return x.DependsOn
+	}
+	return nil
+}
+
+func (x *Task) GetOutputs() []string {
+	if x != nil {
+		return x.Outputs
+	}
+	return nil
+}
+
+func (x *Task) GetInputs() []string {
+	if x != nil {
+		return x.Inputs
+	}
+	return nil
+}
+
+func (x *Task) GetPersistent() bool {
+	if x != nil && x.Persistent != nil {
+		return *x.Persistent
+	}
+	return false
+}
+
+func (x *Task) GetCache() bool {
+	if x != nil && x.Cache != nil {
+		return *x.Cache
+	}
+	return false
+}
+
+func (x *Task) GetInteractive() bool {
+	if x != nil && x.Interactive != nil {
+		return *x.Interactive
+	}
+	return false
+}
+
+// Primary workspace tasks configuration for Turborepo
 type Tasks struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tasks         map[string]*Task       `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Map of task name to task config
@@ -139,17 +192,31 @@ var File_tasks_proto protoreflect.FileDescriptor
 
 const file_tasks_proto_rawDesc = "" +
 	"\n" +
-	"\vtasks.proto\x12\rstackpanel.db\"\xd8\x01\n" +
-	"\x04Task\x12\x12\n" +
-	"\x04exec\x18\x01 \x01(\tR\x04exec\x12%\n" +
-	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x15\n" +
-	"\x03cwd\x18\x03 \x01(\tH\x01R\x03cwd\x88\x01\x01\x12.\n" +
-	"\x03env\x18\x04 \x03(\v2\x1c.stackpanel.db.Task.EnvEntryR\x03env\x1a6\n" +
+	"\vtasks.proto\x12\rstackpanel.db\"\xc7\x03\n" +
+	"\x04Task\x12\x17\n" +
+	"\x04exec\x18\x01 \x01(\tH\x00R\x04exec\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x15\n" +
+	"\x03cwd\x18\x03 \x01(\tH\x02R\x03cwd\x88\x01\x01\x12.\n" +
+	"\x03env\x18\x04 \x03(\v2\x1c.stackpanel.db.Task.EnvEntryR\x03env\x12\x1d\n" +
+	"\n" +
+	"depends_on\x18\x05 \x03(\tR\tdependsOn\x12\x18\n" +
+	"\aoutputs\x18\x06 \x03(\tR\aoutputs\x12\x16\n" +
+	"\x06inputs\x18\a \x03(\tR\x06inputs\x12#\n" +
+	"\n" +
+	"persistent\x18\b \x01(\bH\x03R\n" +
+	"persistent\x88\x01\x01\x12\x19\n" +
+	"\x05cache\x18\t \x01(\bH\x04R\x05cache\x88\x01\x01\x12%\n" +
+	"\vinteractive\x18\n" +
+	" \x01(\bH\x05R\vinteractive\x88\x01\x01\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\a\n" +
+	"\x05_execB\x0e\n" +
 	"\f_descriptionB\x06\n" +
-	"\x04_cwd\"\x8d\x01\n" +
+	"\x04_cwdB\r\n" +
+	"\v_persistentB\b\n" +
+	"\x06_cacheB\x0e\n" +
+	"\f_interactive\"\x8d\x01\n" +
 	"\x05Tasks\x125\n" +
 	"\x05tasks\x18\x01 \x03(\v2\x1f.stackpanel.db.Tasks.TasksEntryR\x05tasks\x1aM\n" +
 	"\n" +

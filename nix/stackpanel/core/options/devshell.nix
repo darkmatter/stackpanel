@@ -1,7 +1,7 @@
 # ==============================================================================
 # devshell.nix
 #
-# Devshell configuration options - packages, hooks, commands, and files.
+# Devshell configuration options - packages, hooks, and files.
 #
 # Central configuration for the development shell environment. These options
 # are translated to devenv/nix-shell configuration by adapter modules.
@@ -12,12 +12,12 @@
 #   - env: Environment variables to set
 #   - path.prepend/append: Modify PATH
 #   - hooks.before/main/after: Shell initialization hooks (ordered)
-#   - commands: Named commands with exec, runtimeInputs, and env
+#
+# Scripts are defined via stackpanel.scripts (see devshell/scripts.nix).
 #
 # Files options (stackpanel.files):
 #   - enable: Enable file generation
-#   - exeFilename: Name of the writer executable
-#   - files: List of \{ path, drv, mode \} for files to generate
+#   - entries: Attrset of files to generate
 #
 # This module is adapter-agnostic; the actual shell creation happens in
 # the devenv or flake adapter modules.
@@ -38,32 +38,6 @@ in
     type = types.listOf types.package;
     default = [ ];
     description = "Packages to include in the devshell. Preferred over devshell.packages.";
-  };
-
-  # ----------------------------------------------------------------------------
-  # Top-level scripts (devenv-compatible)
-  # ----------------------------------------------------------------------------
-  options.stackpanel.scripts = lib.mkOption {
-    type = types.attrsOf (
-      types.submodule (
-        { ... }:
-        {
-          options = {
-            exec = lib.mkOption { type = types.str; };
-            runtimeInputs = lib.mkOption {
-              type = types.listOf types.package;
-              default = [ ];
-            };
-            env = lib.mkOption {
-              type = types.attrsOf types.str;
-              default = { };
-            };
-          };
-        }
-      )
-    );
-    default = { };
-    description = "Script commands exposed in the devshell (devenv.scripts compatible).";
   };
 
   # ----------------------------------------------------------------------------
@@ -103,7 +77,7 @@ in
       default = [ ];
       description = ''
         List of shell aliases to unset when entering the devshell.
-        Use this if you have aliases that conflict with stackpanel commands (e.g., "dev").
+        Use this if you have aliases that conflict with stackpanel scripts (e.g., "dev").
       '';
       example = [
         "dev"
@@ -124,57 +98,9 @@ in
       default = [ ];
     };
 
-    # commands: name -> { exec = "..." ; packages = [...] ; env = {...}; description = "..."; }
-    commands = lib.mkOption {
-      type = types.attrsOf (
-        types.submodule (
-          { ... }:
-          {
-            options = {
-              exec = lib.mkOption { type = types.str; };
-              description = lib.mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = "Human-readable description of the command.";
-              };
-              runtimeInputs = lib.mkOption {
-                type = types.listOf types.package;
-                default = [ ];
-              };
-              env = lib.mkOption {
-                type = types.attrsOf types.str;
-                default = { };
-              };
-            };
-          }
-        )
-      );
-      default = { };
-    };
-
-    _commandPkgs = lib.mkOption {
-      description = "Internal: Packages for devshell commands.";
-      type = lib.types.listOf lib.types.package;
-      default = [ ];
-      internal = true;
-    };
-
-    _tasks = lib.mkOption {
-      description = "Internal: Devenv task definitions for commands.";
-      type = types.attrsOf types.attrs;
-      default = { };
-      internal = true;
-    };
-
-    _scripts = lib.mkOption {
-      description = "Internal: Devenv script definitions for stackpanel scripts.";
-      type = types.attrsOf types.attrs;
-      default = { };
-      internal = true;
-    };
-
+    # Internal: Serializable script definitions for CLI/TUI access
     _commandsSerializable = lib.mkOption {
-      description = "Internal: Serializable command definitions for CLI access.";
+      description = "Internal: Serializable script definitions for CLI access.";
       type = types.attrsOf (
         types.submodule {
           options = {
@@ -292,17 +218,8 @@ in
 
   # ----------------------------------------------------------------------------
   # Config: merge top-level packages into devshell.packages
-  # and generate serializable command definitions
   # ----------------------------------------------------------------------------
   config = {
     stackpanel.devshell.packages = config.stackpanel.packages;
-
-    # Generate serializable command definitions from commands
-    stackpanel.devshell._commandsSerializable = lib.mapAttrs (name: cmd: {
-      inherit name;
-      exec = cmd.exec;
-      description = cmd.description;
-      env = cmd.env;
-    }) config.stackpanel.devshell.commands;
   };
 }

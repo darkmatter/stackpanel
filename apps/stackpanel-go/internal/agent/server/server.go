@@ -146,11 +146,13 @@ func New(cfg *config.Config) (*Server, error) {
 	// Project management endpoints - list and current are public for UI discovery
 	mux.HandleFunc("/api/project/current", s.withCORS(s.handleProjectCurrent))
 	mux.HandleFunc("/api/project/list", s.withCORS(s.handleProjectList))
+	mux.HandleFunc("/api/project/resolve", s.withCORS(s.handleProjectResolve))
 	// These require auth since they modify state
 	mux.HandleFunc("/api/project/open", s.withCORS(s.requireAuth(s.handleProjectOpen)))
 	mux.HandleFunc("/api/project/close", s.withCORS(s.requireAuth(s.handleProjectClose)))
 	mux.HandleFunc("/api/project/validate", s.withCORS(s.requireAuth(s.handleProjectValidate)))
 	mux.HandleFunc("/api/project/remove", s.withCORS(s.requireAuth(s.handleProjectRemove)))
+	mux.HandleFunc("/api/project/default", s.withCORS(s.requireAuth(s.handleProjectDefault)))
 
 	// HTTP API (used by apps/web fallback client and by other tools)
 	// These require a project to be open

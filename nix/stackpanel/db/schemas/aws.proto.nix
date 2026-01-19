@@ -31,7 +31,7 @@ proto.mkProtoFile {
   '';
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
   messages = {
@@ -41,6 +41,8 @@ proto.mkProtoFile {
       description = "AWS configuration including Roles Anywhere for certificate-based authentication";
       fields = {
         roles_anywhere = proto.message "RolesAnywhere" 1 "AWS Roles Anywhere configuration";
+        default_profile = proto.string 2 "AWS profile name to use as default (default: 'default')";
+        extra_config = proto.string 3 "Additional AWS config to append (raw INI format)";
       };
     };
 

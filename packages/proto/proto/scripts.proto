@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+/*
+ * A development shell script definition.
+ * 
+ * Scripts are compiled to Nix derivations via writeShellApplication and
+ * bundled into a single package with all scripts in bin/. The script
+ * name (attribute key) becomes the command name.
+ * 
+ * Scripts are simpler than tasks - they don't have build dependencies,
+ * caching, or pipeline integration. Use them for ad-hoc utilities like
+ * `db-seed`, `format`, or `generate-types`.
+ * 
+ */
+message Script {
+  string exec = 1; // Shell command to execute
+  optional string description = 2; // Human-readable description of the script
+  map<string, string> env = 3; // Environment variables to set when running the script
+}
+
+// Collection of development shell scripts
+message Scripts {
+  map<string, Script> scripts = 1; // Map of script name to script config
+}
+
+// Configuration for scripts package generation
+message ScriptsConfig {
+  bool enable = 1; // Whether to add the scripts package to the devshell
+}

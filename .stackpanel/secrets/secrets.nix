@@ -3,6 +3,7 @@
 let
   # All recipients who can decrypt secrets
   allKeys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEijeq50HS1g27BTRfJ8XWIPrAX9UVkap5fgIOCOtA5+"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuzbgoXZccZ2w/9HGgUyT9nJH7lG2/jfQCZJudY4yAN"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFStro05R+CPmjWMHWtzXUKfGll+OosoZtXAyPtngN7T"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO5qner13Q0fm5NhdXMx2nkt5kxjC0/SVY2FXh01OiHN"
@@ -14,9 +15,9 @@ let
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINh0gA7reCRW+zQ5pPpIjoJGpaFQSbC/4K8B6vMXJVr+"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmYihgWHfnLw0f8uTfLokCwToLavzV/+k/GggBA4Sz/"
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEijeq50HS1g27BTRfJ8XWIPrAX9UVkap5fgIOCOtA5+"
   ];
 in
 {
   "vars/asasd.age".publicKeys = allKeys;
+  "vars/openai-api-key.age".publicKeys = allKeys;
 }

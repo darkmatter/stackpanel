@@ -44,21 +44,22 @@ nix develop --impure
 }
 ```
 
-## Commands
+## Scripts
 
-Add custom commands to your devshell:
+Add custom scripts to your devshell:
 
 ```nix
-devshell.commands.db-seed = {
+stackpanel.scripts.db-seed = {
   exec = ''
     echo "Seeding database..."
     bun run db:seed
   '';
+  description = "Seed the database with test data";
   runtimeInputs = [ pkgs.bun ];
 };
 ```
 
-Then run: `stackpanel commands db-seed`
+Then run: `db-seed` (scripts become commands in your PATH)
 
 ## Tips
 

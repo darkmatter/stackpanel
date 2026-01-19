@@ -36,6 +36,7 @@ import {
   Cloud,
   Database,
   FileCode,
+  Home,
   LayoutDashboard,
   Map,
   Network,
@@ -69,6 +70,7 @@ import {
 
 export type PanelType =
   | "overview"
+  | "dashboard"
   | "setup"
   | "apps"
   | "packages"
@@ -97,7 +99,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "overview", label: "Overview", icon: Home },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 
 const mainNavItems: NavItem[] = [
@@ -112,10 +115,10 @@ const mainNavItems: NavItem[] = [
 
 const toolsNavItems: NavItem[] = [
   // { id: "databases", label: "Databases", icon: Database },
-  // { id: "devshells", label: "Dev Shells", icon: Terminal },
+  { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
-  { id: "extensions", label: "Extensions", icon: Puzzle },
-  { id: "files", label: "Generated Files", icon: FileCode },
+  // { id: "extensions", label: "Extensions", icon: Puzzle },
+  // { id: "files", label: "Generated Files", icon: FileCode },
   // { id: "local-config", label: "Local Config", icon: FileCode },
   // { id: "terminal", label: "Terminal", icon: SquareTerminal },
   { id: "services", label: "Services", icon: Server },
@@ -333,26 +336,31 @@ function SetupMenuItem() {
     <Collapsible defaultOpen={!isComplete} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            isActive={isActive}
-            className={cn(
-              "rounded-lg ",
-              !isComplete &&
-                !isActive &&
-                "bg-sidebar-accent/10 text-sidebar-accent-foreground dark:text-sidebar-accent-foreground hover:bg-sidebar-accent/20",
-              isComplete &&
-                !isActive &&
-                "text-emerald-600 dark:text-emerald-400",
-            )}
-          >
-            {isComplete ? (
-              <CheckCircle2 className="size-4 text-emerald-500" />
-            ) : (
-              <Rocket className="size-4" />
-            )}
-            <span className="flex-1">Setup</span>
-            <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-          </SidebarMenuButton>
+          <Link to="/studio/setup">
+            <SidebarMenuButton
+              isActive={isActive}
+              className={cn(
+                "rounded-lg ",
+                !isComplete &&
+                  !isActive &&
+                  "bg-sidebar-accent/10 text-sidebar-accent-foreground dark:text-sidebar-accent-foreground hover:bg-sidebar-accent/20",
+                isComplete &&
+                  !isActive &&
+                  "text-emerald-600 dark:text-emerald-400",
+              )}
+            >
+              {isComplete ? (
+                <CheckCircle2 className="size-4 text-emerald-500" />
+              ) : (
+                <Rocket className="size-4" />
+              )}
+              <span className="flex-1">Setup</span>
+              <Badge variant={"default"}>
+                {progress?.requiredComplete}/{progress?.requiredTotal}
+              </Badge>
+              {/*<ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />*/}
+            </SidebarMenuButton>
+          </Link>
         </CollapsibleTrigger>
         <CollapsibleContent>
           {/* Progress bar */}
@@ -361,7 +369,7 @@ function SetupMenuItem() {
               <Progress value={progressPercent} className="h-1" />
             </div>
           )}
-          <SidebarMenuSub>
+          {/*<SidebarMenuSub>
             {progress?.steps.map((step) => (
               <SetupStepItem
                 key={step.id}
@@ -370,7 +378,7 @@ function SetupMenuItem() {
                 isCollapsed={isCollapsed}
               />
             ))}
-          </SidebarMenuSub>
+          </SidebarMenuSub>*/}
         </CollapsibleContent>
       </SidebarMenuItem>
     </Collapsible>
@@ -436,7 +444,6 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Core</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <ConfigurationMenuItem />
               {mainNavItems.map((item) => (
                 <NavMenuItem key={item.id} item={item} />
               ))}
@@ -453,6 +460,7 @@ export function DashboardSidebar() {
                 <NavMenuItem key={item.id} item={item} />
               ))}
             </SidebarMenu>
+            <ConfigurationMenuItem />
           </SidebarGroupContent>
         </SidebarGroup>
 

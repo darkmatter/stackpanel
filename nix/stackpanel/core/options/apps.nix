@@ -353,4 +353,46 @@ in
 
   # Set computed values in config
   config.stackpanel.appsComputed = computedApps;
+
+  # ===========================================================================
+  # Contribute computed app ports to stackpanel.variables
+  # ===========================================================================
+  # Each app gets a PORT variable that other apps/services can reference.
+  # This allows apps to discover each other's ports at runtime.
+  #
+  # Example:
+  #   config.stackpanel.variables."/apps/web/port".value  # "3000"
+  #   config.stackpanel.variables."/apps/web/port".ref    # "3000" (same for VARIABLE type)
+  #   config.stackpanel.variables."/apps/web/url".value   # "https://web.localhost"
+  # ===========================================================================
+  config.stackpanel.variables = lib.mkMerge (
+    lib.mapAttrsToList (
+      appName: appComputed:
+      let
+        # Convert app name to uppercase for env var key
+        # e.g., "web" -> "WEB", "my-app" -> "MY_APP"
+        upperName = lib.toUpper (builtins.replaceStrings [ "-" ] [ "_" ] appName);
+      in
+      {
+        # Port variable - NUMBER type for proper Zod codegen
+        "/apps/${appName}/port" = {
+          key = "${upperName}_PORT";
+          type = "NUMBER";  # Port numbers should be typed as numbers
+          value = toString appComputed.port;
+          description = "Port for the ${appName} app";
+          providedBy = "stackpanel.apps";
+        };
+      }
+      // lib.optionalAttrs (appComputed.url != null) {
+        # URL variable - STRING type (only if domain is configured)
+        "/apps/${appName}/url" = {
+          key = "${upperName}_URL";
+          type = "STRING";  # URLs are strings
+          value = appComputed.url;
+          description = "URL for the ${appName} app";
+          providedBy = "stackpanel.apps";
+        };
+      }
+    ) computedApps
+  );
 }
