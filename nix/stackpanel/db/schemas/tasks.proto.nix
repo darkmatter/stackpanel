@@ -7,7 +7,7 @@
 # Complex task logic is defined via `exec` and compiled to Nix derivations,
 # then symlinked to `.tasks/bin/<task>` for Turborepo to invoke.
 #
-# For ad-hoc utility scripts without dependencies, use stackpanel.devshell.commands.
+# For ad-hoc utility scripts without dependencies, use stackpanel.scripts.
 # ==============================================================================
 { lib }:
 let
@@ -46,7 +46,7 @@ proto.mkProtoFile {
   '';
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
   messages = {

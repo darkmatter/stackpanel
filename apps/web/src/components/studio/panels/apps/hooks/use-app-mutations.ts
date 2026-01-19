@@ -20,6 +20,9 @@ export function useAppMutations({
 	resolvedApps,
 	refetch,
 }: UseAppMutationsOptions) {
+	// Get the client at the top level (following Rules of Hooks)
+	const client = useAgentClient();
+
 	// Handler for adding a new variable mapping to an app
 	const handleAddVariableToApp = useCallback(
 		async (
@@ -35,7 +38,6 @@ export function useAppMutations({
 			}
 
 			try {
-				const client = useAgentClient();
 				if (token) client.setToken(token);
 				const appsClient = client.nix.mapEntity<App>("apps");
 
@@ -77,6 +79,14 @@ export function useAppMutations({
 					environments: newEnvironments,
 				});
 				toast.success(`Added ${envKey} to app`);
+
+				// Regenerate secrets package in background (works when agent is in devshell)
+				client.regenerateSecrets().then((result) => {
+					if (result && result.exitCode === 0) {
+						toast.success("Secrets package regenerated", { duration: 2000 });
+					}
+				});
+
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -84,7 +94,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[token, resolvedApps, refetch],
+		[client, token, resolvedApps, refetch],
 	);
 
 	// Handler for updating an existing variable mapping
@@ -103,7 +113,6 @@ export function useAppMutations({
 			}
 
 			try {
-				const client = useAgentClient();
 				if (token) client.setToken(token);
 				const appsClient = client.nix.mapEntity<App>("apps");
 
@@ -145,6 +154,14 @@ export function useAppMutations({
 					environments: newEnvironments,
 				});
 				toast.success(`Updated ${newEnvKey}`);
+
+				// Regenerate secrets package in background (works when agent is in devshell)
+				client.regenerateSecrets().then((result) => {
+					if (result && result.exitCode === 0) {
+						toast.success("Secrets package regenerated", { duration: 2000 });
+					}
+				});
+
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -152,7 +169,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[token, resolvedApps, refetch],
+		[client, token, resolvedApps, refetch],
 	);
 
 	// Handler for updating the environments list for an app
@@ -164,7 +181,6 @@ export function useAppMutations({
 			}
 
 			try {
-				const client = useAgentClient();
 				if (token) client.setToken(token);
 				const appsClient = client.nix.mapEntity<App>("apps");
 
@@ -194,7 +210,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[token, resolvedApps, refetch],
+		[client, token, resolvedApps, refetch],
 	);
 
 	// Handler for deleting a variable mapping from an app
@@ -206,7 +222,6 @@ export function useAppMutations({
 			}
 
 			try {
-				const client = useAgentClient();
 				if (token) client.setToken(token);
 				const appsClient = client.nix.mapEntity<App>("apps");
 
@@ -234,6 +249,14 @@ export function useAppMutations({
 					environments: newEnvironments,
 				});
 				toast.success(`Removed ${envKey}`);
+
+				// Regenerate secrets package in background (works when agent is in devshell)
+				client.regenerateSecrets().then((result) => {
+					if (result && result.exitCode === 0) {
+						toast.success("Secrets package regenerated", { duration: 2000 });
+					}
+				});
+
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -241,7 +264,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[token, resolvedApps, refetch],
+		[client, token, resolvedApps, refetch],
 	);
 
 	// Handler for deleting an app
@@ -257,7 +280,6 @@ export function useAppMutations({
 			}
 
 			try {
-				const client = useAgentClient();
 				if (token) client.setToken(token);
 				const appsClient = client.nix.mapEntity<App>("apps");
 
@@ -270,7 +292,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[token, refetch],
+		[client, token, refetch],
 	);
 
 	return {

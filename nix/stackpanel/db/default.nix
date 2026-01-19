@@ -60,6 +60,9 @@ let
     mkMapOptionFromMessage
     getSchemaMessages
     mkEntityOptions
+    mkAllOptionsFromSchema
+    mkSchemaBundle
+    pascalToCamel
     ;
 
   # ============================================================================
@@ -94,9 +97,12 @@ let
     services = import ./schemas/services.proto.nix { inherit lib; };
     shells = import ./schemas/shells.proto.nix { inherit lib; };
     step-ca = import ./schemas/step-ca.proto.nix { inherit lib; };
+    scripts = import ./schemas/scripts.proto.nix { inherit lib; };
     tasks = import ./schemas/tasks.proto.nix { inherit lib; };
     theme = import ./schemas/theme.proto.nix { inherit lib; };
+    variables = import ./schemas/variables.proto.nix { inherit lib; };
     healthchecks = import ./schemas/healthchecks.proto.nix { inherit lib; };
+    sst = import ./schemas/sst.proto.nix { inherit lib; };
 
     # ──────────────────────────────────────────────────────────────────────────
     # External schemas (synced from external sources, not user-edited)
@@ -114,12 +120,17 @@ let
   #   STEP 2: SCHEMA CATEGORIZATION
   #
   #   Assign your schema to the appropriate category. This determines:
-  #     - dataSchemas: Goes in .stackpanel/data/<name>.nix (user-editable data)
-  #     - rootSchemas: Goes in .stackpanel/ root (project config)
-  #     - externalSchemas: Synced from external sources (not user-edited)
+  #     - dataSchemas: User-editable data in .stackpanel/data/<name>.nix
+  #     - internalSchemas: Module-computed, not user-editable (no data file)
+  #     - rootSchemas: Project config in .stackpanel/ root
+  #     - externalSchemas: Synced from external sources (read-only)
+  #
+  #   ALL schemas get auto-generated Nix options via mkSchemaBundle.
+  #   The difference is whether users edit a data file for that schema.
   #
   #   Example:
-  #     dataSchemas = { inherit (schemas) myfeature; };
+  #     dataSchemas = { inherit (schemas) myfeature; };  # Has boilerplate
+  #     internalSchemas = { inherit (schemas) runtime; }; # No boilerplate
   #
   # ============================================================================
 
@@ -130,19 +141,29 @@ let
       users
       apps
       aws
+      scripts
       secrets
       step-ca
       tasks
       theme
+      variables
       ;
     # ADD NEW DATA SCHEMAS HERE (must also have options in core/options/):
     # myfeature
   };
 
-  # Schemas that exist but don't yet have Nix options defined.
-  # These are proto schemas only - no data files are generated for them.
-  # When you add options for these, move them to dataSchemas above.
-  pendingSchemas = {
+  # Internal/runtime schemas - not user-editable data files.
+  # These have proto definitions and auto-generated options, but no boilerplate
+  # because they're computed by modules at runtime, not edited by users.
+  #
+  # Examples:
+  #   - files: Generated files are defined in Nix modules, not data files
+  #   - healthchecks: Runtime state computed by modules
+  #   - services: Defined in Nix config (postgres, redis, etc.)
+  #
+  # If you're adding a schema that SHOULD have a user-editable data file,
+  # add a `boilerplate` definition to the .proto.nix and move it to dataSchemas.
+  internalSchemas = {
     inherit (schemas)
       databases
       dns
@@ -167,7 +188,34 @@ let
 
   # ============================================================================
   #
-  #   STEP 3: ENTITY OPTIONS EXTRACTION
+  #   AUTO-GENERATED OPTIONS
+  #
+  #   All options are now auto-generated from schemas using mkSchemaBundle.
+  #   This replaces the manual extraction that was previously required.
+  #
+  #   Access pattern:
+  #     allSchemaBundles.users.options.user   => User message options
+  #     allSchemaBundles.users.messages       => all messages for nested resolution
+  #
+  # ============================================================================
+  allSchemaBundles = lib.mapAttrs (_: mkSchemaBundle) schemas;
+
+  # Flatten all options from all schemas into a single attrset
+  # Keys are camelCase message names: user, app, sstKms, etc.
+  allOptions = lib.foldl' (
+    acc: bundle: acc // bundle.options
+  ) { } (lib.attrValues allSchemaBundles);
+
+  # Flatten all messages from all schemas
+  # Keys are schema names: users, apps, sst, etc.
+  allMessages = lib.mapAttrs (_: bundle: bundle.messages) allSchemaBundles;
+
+  # ============================================================================
+  #
+  #   LEGACY: MANUAL ENTITY OPTIONS EXTRACTION
+  #
+  #   These manual definitions are kept for backwards compatibility.
+  #   New code should use allOptions.{messageName} or allSchemaBundles.{schema}.
   #
   #   For each schema, extract the "top-level" message that represents a single
   #   entity. This is used to generate Nix module options.
@@ -231,6 +279,19 @@ let
   };
 
   # ──────────────────────────────────────────────────────────────────────────
+  # Scripts
+  # ──────────────────────────────────────────────────────────────────────────
+  scriptsMessages = getSchemaMessages schemas.scripts;
+  scriptOptions = mkOptionsFromMessage {
+    message = schemas.scripts.messages.Script or { fields = { }; };
+    allMessages = scriptsMessages;
+  };
+  scriptsConfigOptions = mkOptionsFromMessage {
+    message = schemas.scripts.messages.ScriptsConfig or { fields = { }; };
+    allMessages = scriptsMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
   # Tasks
   # ──────────────────────────────────────────────────────────────────────────
   tasksMessages = getSchemaMessages schemas.tasks;
@@ -281,6 +342,19 @@ let
   starshipOptions = mkOptionsFromMessage {
     message = schemas.theme.messages.Starship or { fields = { }; };
     allMessages = themeMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Variables
+  # ──────────────────────────────────────────────────────────────────────────
+  variablesMessages = getSchemaMessages schemas.variables;
+  variableOptions = mkOptionsFromMessage {
+    message = schemas.variables.messages.Variable or { fields = { }; };
+    allMessages = variablesMessages;
+  };
+  variableActionOptions = mkOptionsFromMessage {
+    message = schemas.variables.messages.VariableAction or { fields = { }; };
+    allMessages = variablesMessages;
   };
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -362,6 +436,73 @@ let
   };
 
   # ──────────────────────────────────────────────────────────────────────────
+  # Files
+  # ──────────────────────────────────────────────────────────────────────────
+  filesMessages = getSchemaMessages schemas.files;
+  generatedFileOptions = mkOptionsFromMessage {
+    message = schemas.files.messages.GeneratedFile or { fields = { }; };
+    allMessages = filesMessages;
+  };
+  generatedFilesOptions = mkOptionsFromMessage {
+    message = schemas.files.messages.GeneratedFiles or { fields = { }; };
+    allMessages = filesMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Healthchecks
+  # ──────────────────────────────────────────────────────────────────────────
+  healthchecksMessages = getSchemaMessages schemas.healthchecks;
+  healthcheckOptions = mkOptionsFromMessage {
+    message = schemas.healthchecks.messages.Healthcheck or { fields = { }; };
+    allMessages = healthchecksMessages;
+  };
+  healthcheckResultOptions = mkOptionsFromMessage {
+    message = schemas.healthchecks.messages.HealthcheckResult or { fields = { }; };
+    allMessages = healthchecksMessages;
+  };
+  moduleHealthOptions = mkOptionsFromMessage {
+    message = schemas.healthchecks.messages.ModuleHealth or { fields = { }; };
+    allMessages = healthchecksMessages;
+  };
+  healthSummaryOptions = mkOptionsFromMessage {
+    message = schemas.healthchecks.messages.HealthSummary or { fields = { }; };
+    allMessages = healthchecksMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # SST
+  # ──────────────────────────────────────────────────────────────────────────
+  sstMessages = getSchemaMessages schemas.sst;
+  sstOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.Sst or { fields = { }; };
+    allMessages = sstMessages;
+  };
+  sstKmsOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.SstKms or { fields = { }; };
+    allMessages = sstMessages;
+  };
+  sstOidcOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.SstOidc or { fields = { }; };
+    allMessages = sstMessages;
+  };
+  sstGithubActionsOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.SstGithubActions or { fields = { }; };
+    allMessages = sstMessages;
+  };
+  sstFlyioOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.SstFlyio or { fields = { }; };
+    allMessages = sstMessages;
+  };
+  sstRolesAnywhereOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.SstRolesAnywhere or { fields = { }; };
+    allMessages = sstMessages;
+  };
+  sstIamOptions = mkOptionsFromMessage {
+    message = schemas.sst.messages.SstIam or { fields = { }; };
+    allMessages = sstMessages;
+  };
+
+  # ──────────────────────────────────────────────────────────────────────────
   # ADD NEW ENTITY OPTIONS HERE
   # ──────────────────────────────────────────────────────────────────────────
   #
@@ -375,66 +516,29 @@ let
   #
   #   STEP 4: OPTIONS EXPORT (extend object)
   #
-  #   Export your options so they can be used in core/options/*.nix files.
-  #   This is what other parts of the codebase import to build Nix module options.
+  #   Options are now auto-generated from all schemas.
+  #   Use: db.extend.{messageName} to get options for any message.
+  #   Use: db.extend.messages.{schemaName} to get all messages from a schema.
   #
-  #   Example:
-  #     extend = {
-  #       myfeature = myfeatureOptions;
-  #       messages = {
-  #         myfeature = myfeatureMessages;
-  #       };
-  #     };
+  #   Examples:
+  #     db.extend.user           => User message options
+  #     db.extend.sstKms         => SstKms message options
+  #     db.extend.messages.users => all messages from users schema
   #
   # ============================================================================
-  extend = {
-    # Pre-built option sets (can be spread into options)
-    aws = awsRolesAnywhereOptions;
-    user = userOptions;
-    app = appOptions;
-    task = taskOptions;
-    secrets = secretsOptions;
-    secretsEnvironment = secretsEnvironmentOptions;
-    secretsCodegen = secretsCodegenOptions;
-    stepCa = stepCaOptions;
-    theme = themeOptions;
-    colorScheme = colorSchemeOptions;
-    starship = starshipOptions;
-    dns = dnsOptions;
-    database = databaseOptions;
-    service = serviceOptions;
-    shell = shellOptions;
-    extension = extensionOptions;
-    extensionPanel = extensionPanelOptions;
-    panelField = panelFieldOptions;
-    extensionAppData = extensionAppDataOptions;
-    onboarding = onboardingOptions;
-    config = configOptions;
+  extend =
+    # All auto-generated options (from all messages in all schemas)
+    allOptions
+    // {
+      # Legacy aliases for backwards compatibility
+      # (where the auto-generated name differs from the expected name)
+      aws = allOptions.rolesAnywhere or { }; # aws.RolesAnywhere -> extend.aws
+      stepCa = allOptions.stepCaConfig or { }; # step-ca.StepCaConfig -> extend.stepCa
+      dns = allOptions.dnsRecord or { }; # dns.DnsRecord -> extend.dns
 
-    # ADD NEW OPTIONS EXPORTS HERE:
-    # myfeature = myfeatureOptions;
-
-    # Message definitions for custom option building
-    messages = {
-      aws = awsMessages;
-      users = usersMessages;
-      apps = appsMessages;
-      tasks = tasksMessages;
-      secrets = secretsMessages;
-      stepCa = stepCaMessages;
-      theme = themeMessages;
-      dns = dnsMessages;
-      databases = databasesMessages;
-      services = servicesMessages;
-      shells = shellsMessages;
-      extensions = extensionsMessages;
-      onboarding = onboardingMessages;
-      config = configMessages;
-
-      # ADD NEW MESSAGE EXPORTS HERE:
-      # myfeature = myfeatureMessages;
+      # All messages by schema name
+      messages = allMessages;
     };
-  };
 
   # ============================================================================
   #
@@ -460,7 +564,7 @@ let
   getEnumNames = schema: lib.attrNames (schema.enums or { });
 
   # Get all message names across all schemas (prefixed with schema name)
-  allMessages = lib.concatLists (
+  allMessageNames = lib.concatLists (
     lib.mapAttrsToList (
       schemaName: schema: map (msgName: "${schemaName}.${msgName}") (getMessageNames schema)
     ) schemas
@@ -572,7 +676,7 @@ in
     dataSchemas
     rootSchemas
     externalSchemas
-    pendingSchemas
+    internalSchemas
     ;
 
   # Entity name lists

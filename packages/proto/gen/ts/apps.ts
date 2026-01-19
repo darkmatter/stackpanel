@@ -60,7 +60,7 @@ export interface App {
     }; // Environments associated with this app
 }
 /**
- * Environment configuration
+ * Environment configuration (e.g., dev, staging, production)
  *
  * @generated from protobuf message stackpanel.db.AppEnvironment
  */
@@ -79,6 +79,25 @@ export interface AppEnvironment {
     variables: {
         [key: string]: AppVariable;
     }; // Environment variables (key = env var key)
+    /**
+     *
+     * List of SOPS-encrypted source files for this environment (without .yaml extension).
+     * These files are decrypted and merged to provide secrets for the environment.
+     * Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+     *
+     *
+     * @generated from protobuf field: repeated string sources = 4
+     */
+    sources: string[];
+    /**
+     *
+     * List of AGE/SSH public keys that can decrypt secrets for this environment.
+     * These keys are used when encrypting new secrets.
+     *
+     *
+     * @generated from protobuf field: repeated string public_keys = 5
+     */
+    public_keys: string[];
 }
 /**
  * Command configuration
@@ -343,13 +362,17 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         super("stackpanel.db.AppEnvironment", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "variables", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } }
+            { no: 3, name: "variables", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } },
+            { no: 4, name: "sources", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "public_keys", kind: "scalar", localName: "public_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<AppEnvironment>): AppEnvironment {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
         message.variables = {};
+        message.sources = [];
+        message.public_keys = [];
         if (value !== undefined)
             reflectionMergePartial<AppEnvironment>(this, message, value);
         return message;
@@ -367,6 +390,12 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
                     break;
                 case /* map<string, stackpanel.db.AppVariable> variables */ 3:
                     this.binaryReadMap3(message.variables, reader, options);
+                    break;
+                case /* repeated string sources */ 4:
+                    message.sources.push(reader.string());
+                    break;
+                case /* repeated string public_keys */ 5:
+                    message.public_keys.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -409,6 +438,12 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
             AppVariable.internalBinaryWrite(message.variables[k], writer, options);
             writer.join().join();
         }
+        /* repeated string sources = 4; */
+        for (let i = 0; i < message.sources.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.sources[i]);
+        /* repeated string public_keys = 5; */
+        for (let i = 0; i < message.public_keys.length; i++)
+            writer.tag(5, WireType.LengthDelimited).string(message.public_keys[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

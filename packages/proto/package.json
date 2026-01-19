@@ -14,6 +14,10 @@
       "types": "./gen/ts/agent.ts",
       "import": "./gen/ts/agent.ts"
     },
+    "./agent-service": {
+      "types": "./gen/ts/agent_pb.d.ts",
+      "import": "./gen/ts/agent_pb.js"
+    },
     "./agent-connect": {
       "types": "./gen/ts/agent-AgentService_connectquery.d.ts",
       "import": "./gen/ts/agent-AgentService_connectquery.js"

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// SST infrastructure configuration for AWS provisioning
+message Sst {
+  bool enable = 1; // Enable SST infrastructure provisioning
+  string project_name = 2; // SST project name
+  string region = 3; // AWS region
+  string account_id = 4; // AWS account ID
+  string config_path = 5; // Path to generate sst.config.ts
+  SstKms kms = 6; // KMS configuration
+  SstOidc oidc = 7; // OIDC provider configuration
+  SstIam iam = 8; // IAM configuration
+}
+
+// Fly.io OIDC configuration
+message SstFlyio {
+  string org_id = 1; // Fly.io organization ID
+  string app_name = 2; // Fly.io app name (or * for all)
+}
+
+// GitHub Actions OIDC configuration
+message SstGithubActions {
+  string org = 1; // GitHub organization
+  string repo = 2; // GitHub repository (or * for all)
+}
+
+// IAM role configuration
+message SstIam {
+  string role_name = 1; // IAM role name
+}
+
+// KMS key configuration for secrets encryption
+message SstKms {
+  bool enable = 1; // Create a KMS key for secrets
+  string alias = 2; // KMS key alias
+  int32 deletion_window_days = 3; // Days before key deletion
+}
+
+// OIDC provider configuration for IAM role assumption
+message SstOidc {
+  string provider = 1; // OIDC provider type (github-actions, flyio, roles-anywhere)
+  SstGithubActions github_actions = 2; // GitHub Actions OIDC settings
+  SstFlyio flyio = 3; // Fly.io OIDC settings
+  SstRolesAnywhere roles_anywhere = 4; // Roles Anywhere settings
+}
+
+// AWS Roles Anywhere configuration
+message SstRolesAnywhere {
+  string trust_anchor_arn = 1; // Trust anchor ARN
+}

@@ -255,8 +255,38 @@ let
         exit 1
       fi
 
-      # Decrypt
-      DECRYPTED=$(age -d -i "$AGE_KEY_FILE" "$INPUT_FILE")
+      # Try to decrypt with AGE key first
+      DECRYPTED=$(age -d -i "$AGE_KEY_FILE" "$INPUT_FILE" 2>/dev/null) || {
+        # If AGE key fails, try SSH keys
+        echo "AGE key decryption failed, trying SSH keys..." >&2
+        
+        # Try common SSH key locations
+        SSH_KEYS=(
+          "$HOME/.ssh/id_ed25519"
+          "$HOME/.ssh/id_rsa"
+        )
+        
+        DECRYPTED=""
+        for ssh_key in "''${SSH_KEYS[@]}"; do
+          if [[ -f "$ssh_key" ]]; then
+            echo "  Trying $ssh_key..." >&2
+            if DECRYPTED=$(age -d -i "$ssh_key" "$INPUT_FILE" 2>/dev/null); then
+              echo "  ✓ Successfully decrypted with $ssh_key" >&2
+              break
+            fi
+          fi
+        done
+        
+        if [[ -z "$DECRYPTED" ]]; then
+          echo "Error: Could not decrypt file with AGE key or any SSH keys" >&2
+          echo "Tried:" >&2
+          echo "  - AGE key: $AGE_KEY_FILE" >&2
+          for ssh_key in "''${SSH_KEYS[@]}"; do
+            [[ -f "$ssh_key" ]] && echo "  - SSH key: $ssh_key" >&2
+          done
+          exit 1
+        fi
+      }
 
       case "$FORMAT" in
         yaml)
@@ -384,8 +414,8 @@ in
       generateRegenerateAllScript
     ];
 
-    # Add commands
-    stackpanel.devshell.commands = {
+    # Add scripts
+    stackpanel.scripts = {
       "secrets:combine" = {
         description = "Combine secrets for an app environment (args: <app-name> <environment>)";
         exec = ''
@@ -395,9 +425,7 @@ in
 
       "secrets:decrypt" = {
         description = "Decrypt and output combined secrets (args: <file> [format])";
-        exec = ''
-          decrypt-app-secrets "$@"
-        '';
+        exec = "decrypt-app-secrets";
       };
 
       "secrets:regenerate-all" = {

@@ -38,11 +38,12 @@
   };
 
   # Code generation settings
+  # Note: directory is ignored - types are always generated to packages/env/src/generated/
   codegen = {
-    # typescript = {
-    #   name = "secrets";
-    #   directory = "packages/secrets/src";
-    #   language = "typescript";
-    # };
+    typescript = {
+      name = "env";
+      directory = "packages/env/src/generated";
+      language = "CODEGEN_LANGUAGE_TYPESCRIPT";
+    };
   };
 }

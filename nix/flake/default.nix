@@ -330,8 +330,9 @@ in
 
             # FULL CONTROL over passthru
             passthru = {
-              # Stackpanel config (full, may contain non-serializable values)
-              stackpanelConfig = spConfig;
+              # Stackpanel config (serializable version for JSON/CLI access)
+              # Full config is available via legacyPackages.stackpanelFullConfig
+              stackpanelConfig = stackpanelSerializable;
 
               # JSON-safe serialized config for CLI/agent
               stackpanelSerializable = stackpanelSerializable;
@@ -398,6 +399,22 @@ in
           (lib.mkIf (spConfig.enable or false) {
             devShells.default = lib.mkForce stackpanelShell;
           })
+
+          # Expose stackpanel.outputs as flake packages
+          # Scripts are available via: nix run .#scripts.<script-name>
+          (lib.mkIf (spConfig.enable or false) (
+            let
+              outputs = spConfig.outputs or {};
+              # Separate derivations from nested attrsets
+              directPkgs = lib.filterAttrs (_: v: lib.isDerivation v) outputs;
+              nestedPkgs = lib.filterAttrs (_: v: builtins.isAttrs v && !(lib.isDerivation v)) outputs;
+            in {
+              # Direct packages go to packages.<name>
+              packages = directPkgs;
+              # Nested attrsets (like scripts) go to legacyPackages for nix run .#scripts.<name>
+              legacyPackages = nestedPkgs;
+            }
+          ))
 
           # Git hooks check
           (lib.mkIf (hasGitHooks && (gitHooksConfig.enable or false)) {

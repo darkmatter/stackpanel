@@ -21,72 +21,276 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Source type for extensions
-type SourceType int32
+// Category of extension for grouping in UI
+type ExtensionCategory int32
 
 const (
-	SourceType_SOURCE_TYPE_UNSPECIFIED SourceType = 0
-	SourceType_SOURCE_TYPE_GITHUB      SourceType = 1
-	SourceType_SOURCE_TYPE_NPM         SourceType = 2
-	SourceType_SOURCE_TYPE_LOCAL       SourceType = 3
-	SourceType_SOURCE_TYPE_URL         SourceType = 4
+	ExtensionCategory_EXTENSION_CATEGORY_UNSPECIFIED    ExtensionCategory = 0
+	ExtensionCategory_EXTENSION_CATEGORY_INFRASTRUCTURE ExtensionCategory = 1
+	ExtensionCategory_EXTENSION_CATEGORY_CI_CD          ExtensionCategory = 2
+	ExtensionCategory_EXTENSION_CATEGORY_DATABASE       ExtensionCategory = 3
+	ExtensionCategory_EXTENSION_CATEGORY_SECRETS        ExtensionCategory = 4
+	ExtensionCategory_EXTENSION_CATEGORY_DEPLOYMENT     ExtensionCategory = 5
+	ExtensionCategory_EXTENSION_CATEGORY_DEVELOPMENT    ExtensionCategory = 6
+	ExtensionCategory_EXTENSION_CATEGORY_MONITORING     ExtensionCategory = 7
+	ExtensionCategory_EXTENSION_CATEGORY_INTEGRATION    ExtensionCategory = 8
 )
 
-// Enum value maps for SourceType.
+// Enum value maps for ExtensionCategory.
 var (
-	SourceType_name = map[int32]string{
-		0: "SOURCE_TYPE_UNSPECIFIED",
-		1: "SOURCE_TYPE_GITHUB",
-		2: "SOURCE_TYPE_NPM",
-		3: "SOURCE_TYPE_LOCAL",
-		4: "SOURCE_TYPE_URL",
+	ExtensionCategory_name = map[int32]string{
+		0: "EXTENSION_CATEGORY_UNSPECIFIED",
+		1: "EXTENSION_CATEGORY_INFRASTRUCTURE",
+		2: "EXTENSION_CATEGORY_CI_CD",
+		3: "EXTENSION_CATEGORY_DATABASE",
+		4: "EXTENSION_CATEGORY_SECRETS",
+		5: "EXTENSION_CATEGORY_DEPLOYMENT",
+		6: "EXTENSION_CATEGORY_DEVELOPMENT",
+		7: "EXTENSION_CATEGORY_MONITORING",
+		8: "EXTENSION_CATEGORY_INTEGRATION",
 	}
-	SourceType_value = map[string]int32{
-		"SOURCE_TYPE_UNSPECIFIED": 0,
-		"SOURCE_TYPE_GITHUB":      1,
-		"SOURCE_TYPE_NPM":         2,
-		"SOURCE_TYPE_LOCAL":       3,
-		"SOURCE_TYPE_URL":         4,
+	ExtensionCategory_value = map[string]int32{
+		"EXTENSION_CATEGORY_UNSPECIFIED":    0,
+		"EXTENSION_CATEGORY_INFRASTRUCTURE": 1,
+		"EXTENSION_CATEGORY_CI_CD":          2,
+		"EXTENSION_CATEGORY_DATABASE":       3,
+		"EXTENSION_CATEGORY_SECRETS":        4,
+		"EXTENSION_CATEGORY_DEPLOYMENT":     5,
+		"EXTENSION_CATEGORY_DEVELOPMENT":    6,
+		"EXTENSION_CATEGORY_MONITORING":     7,
+		"EXTENSION_CATEGORY_INTEGRATION":    8,
 	}
 )
 
-func (x SourceType) Enum() *SourceType {
-	p := new(SourceType)
+func (x ExtensionCategory) Enum() *ExtensionCategory {
+	p := new(ExtensionCategory)
 	*p = x
 	return p
 }
 
-func (x SourceType) String() string {
+func (x ExtensionCategory) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (SourceType) Descriptor() protoreflect.EnumDescriptor {
+func (ExtensionCategory) Descriptor() protoreflect.EnumDescriptor {
 	return file_extensions_proto_enumTypes[0].Descriptor()
 }
 
-func (SourceType) Type() protoreflect.EnumType {
+func (ExtensionCategory) Type() protoreflect.EnumType {
 	return &file_extensions_proto_enumTypes[0]
 }
 
-func (x SourceType) Number() protoreflect.EnumNumber {
+func (x ExtensionCategory) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use SourceType.Descriptor instead.
-func (SourceType) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use ExtensionCategory.Descriptor instead.
+func (ExtensionCategory) EnumDescriptor() ([]byte, []int) {
 	return file_extensions_proto_rawDescGZIP(), []int{0}
 }
 
-// Extension configuration
+// Source type for extensions
+type ExtensionSourceType int32
+
+const (
+	ExtensionSourceType_EXTENSION_SOURCE_TYPE_UNSPECIFIED ExtensionSourceType = 0
+	ExtensionSourceType_EXTENSION_SOURCE_TYPE_BUILTIN     ExtensionSourceType = 1
+	ExtensionSourceType_EXTENSION_SOURCE_TYPE_LOCAL       ExtensionSourceType = 2
+	ExtensionSourceType_EXTENSION_SOURCE_TYPE_GITHUB      ExtensionSourceType = 3
+	ExtensionSourceType_EXTENSION_SOURCE_TYPE_NPM         ExtensionSourceType = 4
+	ExtensionSourceType_EXTENSION_SOURCE_TYPE_URL         ExtensionSourceType = 5
+)
+
+// Enum value maps for ExtensionSourceType.
+var (
+	ExtensionSourceType_name = map[int32]string{
+		0: "EXTENSION_SOURCE_TYPE_UNSPECIFIED",
+		1: "EXTENSION_SOURCE_TYPE_BUILTIN",
+		2: "EXTENSION_SOURCE_TYPE_LOCAL",
+		3: "EXTENSION_SOURCE_TYPE_GITHUB",
+		4: "EXTENSION_SOURCE_TYPE_NPM",
+		5: "EXTENSION_SOURCE_TYPE_URL",
+	}
+	ExtensionSourceType_value = map[string]int32{
+		"EXTENSION_SOURCE_TYPE_UNSPECIFIED": 0,
+		"EXTENSION_SOURCE_TYPE_BUILTIN":     1,
+		"EXTENSION_SOURCE_TYPE_LOCAL":       2,
+		"EXTENSION_SOURCE_TYPE_GITHUB":      3,
+		"EXTENSION_SOURCE_TYPE_NPM":         4,
+		"EXTENSION_SOURCE_TYPE_URL":         5,
+	}
+)
+
+func (x ExtensionSourceType) Enum() *ExtensionSourceType {
+	p := new(ExtensionSourceType)
+	*p = x
+	return p
+}
+
+func (x ExtensionSourceType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ExtensionSourceType) Descriptor() protoreflect.EnumDescriptor {
+	return file_extensions_proto_enumTypes[1].Descriptor()
+}
+
+func (ExtensionSourceType) Type() protoreflect.EnumType {
+	return &file_extensions_proto_enumTypes[1]
+}
+
+func (x ExtensionSourceType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ExtensionSourceType.Descriptor instead.
+func (ExtensionSourceType) EnumDescriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{1}
+}
+
+// Type of configuration field
+type FieldType int32
+
+const (
+	FieldType_FIELD_TYPE_UNSPECIFIED FieldType = 0
+	FieldType_FIELD_TYPE_STRING      FieldType = 1
+	FieldType_FIELD_TYPE_NUMBER      FieldType = 2
+	FieldType_FIELD_TYPE_BOOLEAN     FieldType = 3
+	FieldType_FIELD_TYPE_SELECT      FieldType = 4
+	FieldType_FIELD_TYPE_MULTISELECT FieldType = 5
+	FieldType_FIELD_TYPE_APP_FILTER  FieldType = 6
+	FieldType_FIELD_TYPE_COLUMNS     FieldType = 7
+	FieldType_FIELD_TYPE_JSON        FieldType = 8
+)
+
+// Enum value maps for FieldType.
+var (
+	FieldType_name = map[int32]string{
+		0: "FIELD_TYPE_UNSPECIFIED",
+		1: "FIELD_TYPE_STRING",
+		2: "FIELD_TYPE_NUMBER",
+		3: "FIELD_TYPE_BOOLEAN",
+		4: "FIELD_TYPE_SELECT",
+		5: "FIELD_TYPE_MULTISELECT",
+		6: "FIELD_TYPE_APP_FILTER",
+		7: "FIELD_TYPE_COLUMNS",
+		8: "FIELD_TYPE_JSON",
+	}
+	FieldType_value = map[string]int32{
+		"FIELD_TYPE_UNSPECIFIED": 0,
+		"FIELD_TYPE_STRING":      1,
+		"FIELD_TYPE_NUMBER":      2,
+		"FIELD_TYPE_BOOLEAN":     3,
+		"FIELD_TYPE_SELECT":      4,
+		"FIELD_TYPE_MULTISELECT": 5,
+		"FIELD_TYPE_APP_FILTER":  6,
+		"FIELD_TYPE_COLUMNS":     7,
+		"FIELD_TYPE_JSON":        8,
+	}
+)
+
+func (x FieldType) Enum() *FieldType {
+	p := new(FieldType)
+	*p = x
+	return p
+}
+
+func (x FieldType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FieldType) Descriptor() protoreflect.EnumDescriptor {
+	return file_extensions_proto_enumTypes[2].Descriptor()
+}
+
+func (FieldType) Type() protoreflect.EnumType {
+	return &file_extensions_proto_enumTypes[2]
+}
+
+func (x FieldType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FieldType.Descriptor instead.
+func (FieldType) EnumDescriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{2}
+}
+
+// Type of UI panel component to render
+type PanelType int32
+
+const (
+	PanelType_PANEL_TYPE_UNSPECIFIED PanelType = 0
+	PanelType_PANEL_TYPE_STATUS      PanelType = 1
+	PanelType_PANEL_TYPE_APPS_GRID   PanelType = 2
+	PanelType_PANEL_TYPE_FORM        PanelType = 3
+	PanelType_PANEL_TYPE_TABLE       PanelType = 4
+	PanelType_PANEL_TYPE_CUSTOM      PanelType = 5
+)
+
+// Enum value maps for PanelType.
+var (
+	PanelType_name = map[int32]string{
+		0: "PANEL_TYPE_UNSPECIFIED",
+		1: "PANEL_TYPE_STATUS",
+		2: "PANEL_TYPE_APPS_GRID",
+		3: "PANEL_TYPE_FORM",
+		4: "PANEL_TYPE_TABLE",
+		5: "PANEL_TYPE_CUSTOM",
+	}
+	PanelType_value = map[string]int32{
+		"PANEL_TYPE_UNSPECIFIED": 0,
+		"PANEL_TYPE_STATUS":      1,
+		"PANEL_TYPE_APPS_GRID":   2,
+		"PANEL_TYPE_FORM":        3,
+		"PANEL_TYPE_TABLE":       4,
+		"PANEL_TYPE_CUSTOM":      5,
+	}
+)
+
+func (x PanelType) Enum() *PanelType {
+	p := new(PanelType)
+	*p = x
+	return p
+}
+
+func (x PanelType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PanelType) Descriptor() protoreflect.EnumDescriptor {
+	return file_extensions_proto_enumTypes[3].Descriptor()
+}
+
+func (PanelType) Type() protoreflect.EnumType {
+	return &file_extensions_proto_enumTypes[3]
+}
+
+func (x PanelType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PanelType.Descriptor instead.
+func (PanelType) EnumDescriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{3}
+}
+
+// Extension configuration and metadata
 type Extension struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                 // Display name of the extension
-	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`          // Whether this extension is enabled
-	Source        *Source                `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`             // Extension source configuration
-	Version       *string                `protobuf:"bytes,4,opt,name=version,proto3,oneof" json:"version,omitempty"`     // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
-	Priority      int32                  `protobuf:"varint,5,opt,name=priority,proto3" json:"priority,omitempty"`        // Load order priority (lower = earlier)
-	Dependencies  []string               `protobuf:"bytes,6,rep,name=dependencies,proto3" json:"dependencies,omitempty"` // Other extensions this depends on
-	Tags          []string               `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`                 // Tags for categorizing/filtering extensions
+	state         protoimpl.MessageState       `protogen:"open.v1"`
+	Name          string                       `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                            // Display name of the extension
+	Description   *string                      `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                        // Human-readable description of what the extension does
+	Enabled       bool                         `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                     // Whether this extension is enabled
+	Builtin       bool                         `protobuf:"varint,4,opt,name=builtin,proto3" json:"builtin,omitempty"`                                                                     // Whether this is a built-in extension shipped with stackpanel
+	Source        *ExtensionSource             `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`                                                                        // Extension source configuration
+	Version       *string                      `protobuf:"bytes,6,opt,name=version,proto3,oneof" json:"version,omitempty"`                                                                // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+	Category      ExtensionCategory            `protobuf:"varint,7,opt,name=category,proto3,enum=stackpanel.db.ExtensionCategory" json:"category,omitempty"`                              // Category for grouping in UI
+	Priority      int32                        `protobuf:"varint,8,opt,name=priority,proto3" json:"priority,omitempty"`                                                                   // Load order priority (lower = earlier)
+	Tags          []string                     `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`                                                                            // Tags for filtering extensions
+	Dependencies  []string                     `protobuf:"bytes,10,rep,name=dependencies,proto3" json:"dependencies,omitempty"`                                                           // Other extensions this depends on
+	Panels        []*ExtensionPanel            `protobuf:"bytes,11,rep,name=panels,proto3" json:"panels,omitempty"`                                                                       // UI panels provided by this extension
+	Apps          map[string]*ExtensionAppData `protobuf:"bytes,12,rep,name=apps,proto3" json:"apps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Per-app extension data (app name -> extension data)
+	Features      *ExtensionFeatures           `protobuf:"bytes,13,opt,name=features,proto3" json:"features,omitempty"`                                                                   // Core features this extension configures
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -128,6 +332,13 @@ func (x *Extension) GetName() string {
 	return ""
 }
 
+func (x *Extension) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
 func (x *Extension) GetEnabled() bool {
 	if x != nil {
 		return x.Enabled
@@ -135,7 +346,14 @@ func (x *Extension) GetEnabled() bool {
 	return false
 }
 
-func (x *Extension) GetSource() *Source {
+func (x *Extension) GetBuiltin() bool {
+	if x != nil {
+		return x.Builtin
+	}
+	return false
+}
+
+func (x *Extension) GetSource() *ExtensionSource {
 	if x != nil {
 		return x.Source
 	}
@@ -149,18 +367,18 @@ func (x *Extension) GetVersion() string {
 	return ""
 }
 
+func (x *Extension) GetCategory() ExtensionCategory {
+	if x != nil {
+		return x.Category
+	}
+	return ExtensionCategory_EXTENSION_CATEGORY_UNSPECIFIED
+}
+
 func (x *Extension) GetPriority() int32 {
 	if x != nil {
 		return x.Priority
 	}
 	return 0
-}
-
-func (x *Extension) GetDependencies() []string {
-	if x != nil {
-		return x.Dependencies
-	}
-	return nil
 }
 
 func (x *Extension) GetTags() []string {
@@ -170,12 +388,372 @@ func (x *Extension) GetTags() []string {
 	return nil
 }
 
+func (x *Extension) GetDependencies() []string {
+	if x != nil {
+		return x.Dependencies
+	}
+	return nil
+}
+
+func (x *Extension) GetPanels() []*ExtensionPanel {
+	if x != nil {
+		return x.Panels
+	}
+	return nil
+}
+
+func (x *Extension) GetApps() map[string]*ExtensionAppData {
+	if x != nil {
+		return x.Apps
+	}
+	return nil
+}
+
+func (x *Extension) GetFeatures() *ExtensionFeatures {
+	if x != nil {
+		return x.Features
+	}
+	return nil
+}
+
+// Extension data specific to an application
+type ExtensionAppData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                        // Whether extension is enabled for this app
+	Config        map[string]string      `protobuf:"bytes,2,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Extension config for this app (string key-value pairs)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExtensionAppData) Reset() {
+	*x = ExtensionAppData{}
+	mi := &file_extensions_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExtensionAppData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtensionAppData) ProtoMessage() {}
+
+func (x *ExtensionAppData) ProtoReflect() protoreflect.Message {
+	mi := &file_extensions_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtensionAppData.ProtoReflect.Descriptor instead.
+func (*ExtensionAppData) Descriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ExtensionAppData) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *ExtensionAppData) GetConfig() map[string]string {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+// Flags indicating which core stackpanel features this extension configures
+type ExtensionFeatures struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Files         bool                   `protobuf:"varint,1,opt,name=files,proto3" json:"files,omitempty"`                             // Extension generates files via stackpanel.files
+	Scripts       bool                   `protobuf:"varint,2,opt,name=scripts,proto3" json:"scripts,omitempty"`                         // Extension provides shell scripts/commands
+	Tasks         bool                   `protobuf:"varint,3,opt,name=tasks,proto3" json:"tasks,omitempty"`                             // Extension defines tasks
+	Secrets       bool                   `protobuf:"varint,4,opt,name=secrets,proto3" json:"secrets,omitempty"`                         // Extension manages secrets/variables
+	ShellHooks    bool                   `protobuf:"varint,5,opt,name=shell_hooks,json=shellHooks,proto3" json:"shell_hooks,omitempty"` // Extension adds shell hooks
+	Packages      bool                   `protobuf:"varint,6,opt,name=packages,proto3" json:"packages,omitempty"`                       // Extension adds devshell packages
+	Services      bool                   `protobuf:"varint,7,opt,name=services,proto3" json:"services,omitempty"`                       // Extension configures services/processes
+	Checks        bool                   `protobuf:"varint,8,opt,name=checks,proto3" json:"checks,omitempty"`                           // Extension defines checks/validations
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExtensionFeatures) Reset() {
+	*x = ExtensionFeatures{}
+	mi := &file_extensions_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExtensionFeatures) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtensionFeatures) ProtoMessage() {}
+
+func (x *ExtensionFeatures) ProtoReflect() protoreflect.Message {
+	mi := &file_extensions_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtensionFeatures.ProtoReflect.Descriptor instead.
+func (*ExtensionFeatures) Descriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ExtensionFeatures) GetFiles() bool {
+	if x != nil {
+		return x.Files
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetScripts() bool {
+	if x != nil {
+		return x.Scripts
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetTasks() bool {
+	if x != nil {
+		return x.Tasks
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetSecrets() bool {
+	if x != nil {
+		return x.Secrets
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetShellHooks() bool {
+	if x != nil {
+		return x.ShellHooks
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetPackages() bool {
+	if x != nil {
+		return x.Packages
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetServices() bool {
+	if x != nil {
+		return x.Services
+	}
+	return false
+}
+
+func (x *ExtensionFeatures) GetChecks() bool {
+	if x != nil {
+		return x.Checks
+	}
+	return false
+}
+
+// UI panel configuration for the web interface
+type ExtensionPanel struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                   // Unique panel identifier
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`                             // Display title
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`           // Panel description
+	Type          PanelType              `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.PanelType" json:"type,omitempty"` // Panel type (determines which component to render)
+	Order         int32                  `protobuf:"varint,5,opt,name=order,proto3" json:"order,omitempty"`                            // Display order (lower = first)
+	Fields        []*PanelField          `protobuf:"bytes,6,rep,name=fields,proto3" json:"fields,omitempty"`                           // Panel configuration fields
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExtensionPanel) Reset() {
+	*x = ExtensionPanel{}
+	mi := &file_extensions_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExtensionPanel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtensionPanel) ProtoMessage() {}
+
+func (x *ExtensionPanel) ProtoReflect() protoreflect.Message {
+	mi := &file_extensions_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtensionPanel.ProtoReflect.Descriptor instead.
+func (*ExtensionPanel) Descriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ExtensionPanel) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ExtensionPanel) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *ExtensionPanel) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *ExtensionPanel) GetType() PanelType {
+	if x != nil {
+		return x.Type
+	}
+	return PanelType_PANEL_TYPE_UNSPECIFIED
+}
+
+func (x *ExtensionPanel) GetOrder() int32 {
+	if x != nil {
+		return x.Order
+	}
+	return 0
+}
+
+func (x *ExtensionPanel) GetFields() []*PanelField {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+// Extension source configuration
+type ExtensionSource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          ExtensionSourceType    `protobuf:"varint,1,opt,name=type,proto3,enum=stackpanel.db.ExtensionSourceType" json:"type,omitempty"` // Source type for the extension
+	Repo          *string                `protobuf:"bytes,2,opt,name=repo,proto3,oneof" json:"repo,omitempty"`                                   // GitHub repository (owner/repo) for github source type
+	Package       *string                `protobuf:"bytes,3,opt,name=package,proto3,oneof" json:"package,omitempty"`                             // NPM package name for npm source type
+	Path          *string                `protobuf:"bytes,4,opt,name=path,proto3,oneof" json:"path,omitempty"`                                   // Local path for local source type
+	Url           *string                `protobuf:"bytes,5,opt,name=url,proto3,oneof" json:"url,omitempty"`                                     // URL for url source type
+	Ref           *string                `protobuf:"bytes,6,opt,name=ref,proto3,oneof" json:"ref,omitempty"`                                     // Git ref (branch, tag, commit) for github source type
+	ModulePath    *string                `protobuf:"bytes,7,opt,name=module_path,json=modulePath,proto3,oneof" json:"module_path,omitempty"`     // Path to the Nix module within the source
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExtensionSource) Reset() {
+	*x = ExtensionSource{}
+	mi := &file_extensions_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExtensionSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtensionSource) ProtoMessage() {}
+
+func (x *ExtensionSource) ProtoReflect() protoreflect.Message {
+	mi := &file_extensions_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExtensionSource.ProtoReflect.Descriptor instead.
+func (*ExtensionSource) Descriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ExtensionSource) GetType() ExtensionSourceType {
+	if x != nil {
+		return x.Type
+	}
+	return ExtensionSourceType_EXTENSION_SOURCE_TYPE_UNSPECIFIED
+}
+
+func (x *ExtensionSource) GetRepo() string {
+	if x != nil && x.Repo != nil {
+		return *x.Repo
+	}
+	return ""
+}
+
+func (x *ExtensionSource) GetPackage() string {
+	if x != nil && x.Package != nil {
+		return *x.Package
+	}
+	return ""
+}
+
+func (x *ExtensionSource) GetPath() string {
+	if x != nil && x.Path != nil {
+		return *x.Path
+	}
+	return ""
+}
+
+func (x *ExtensionSource) GetUrl() string {
+	if x != nil && x.Url != nil {
+		return *x.Url
+	}
+	return ""
+}
+
+func (x *ExtensionSource) GetRef() string {
+	if x != nil && x.Ref != nil {
+		return *x.Ref
+	}
+	return ""
+}
+
+func (x *ExtensionSource) GetModulePath() string {
+	if x != nil && x.ModulePath != nil {
+		return *x.ModulePath
+	}
+	return ""
+}
+
 // Extensions and plugins configuration
 type Extensions struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                                                // Enable extensions system
 	AutoUpdate    bool                   `protobuf:"varint,2,opt,name=auto_update,json=autoUpdate,proto3" json:"auto_update,omitempty"`                                                        // Automatically check for extension updates
-	Registry      string                 `protobuf:"bytes,3,opt,name=registry,proto3" json:"registry,omitempty"`                                                                               // Default extension registry URL
+	Registry      *string                `protobuf:"bytes,3,opt,name=registry,proto3,oneof" json:"registry,omitempty"`                                                                         // Default extension registry URL
 	Extensions    map[string]*Extension  `protobuf:"bytes,4,rep,name=extensions,proto3" json:"extensions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Installed extensions by key
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -183,7 +761,7 @@ type Extensions struct {
 
 func (x *Extensions) Reset() {
 	*x = Extensions{}
-	mi := &file_extensions_proto_msgTypes[1]
+	mi := &file_extensions_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -195,7 +773,7 @@ func (x *Extensions) String() string {
 func (*Extensions) ProtoMessage() {}
 
 func (x *Extensions) ProtoReflect() protoreflect.Message {
-	mi := &file_extensions_proto_msgTypes[1]
+	mi := &file_extensions_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -208,7 +786,7 @@ func (x *Extensions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Extensions.ProtoReflect.Descriptor instead.
 func (*Extensions) Descriptor() ([]byte, []int) {
-	return file_extensions_proto_rawDescGZIP(), []int{1}
+	return file_extensions_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Extensions) GetEnabled() bool {
@@ -226,8 +804,8 @@ func (x *Extensions) GetAutoUpdate() bool {
 }
 
 func (x *Extensions) GetRegistry() string {
-	if x != nil {
-		return x.Registry
+	if x != nil && x.Registry != nil {
+		return *x.Registry
 	}
 	return ""
 }
@@ -239,34 +817,32 @@ func (x *Extensions) GetExtensions() map[string]*Extension {
 	return nil
 }
 
-// Extension source configuration
-type Source struct {
+// Configuration field for a panel
+type PanelField struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          SourceType             `protobuf:"varint,1,opt,name=type,proto3,enum=stackpanel.db.SourceType" json:"type,omitempty"` // Source type for the extension
-	Repo          *string                `protobuf:"bytes,2,opt,name=repo,proto3,oneof" json:"repo,omitempty"`                          // GitHub repository (owner/repo) for github source type
-	Package       *string                `protobuf:"bytes,3,opt,name=package,proto3,oneof" json:"package,omitempty"`                    // NPM package name for npm source type
-	Path          *string                `protobuf:"bytes,4,opt,name=path,proto3,oneof" json:"path,omitempty"`                          // Local path for local source type
-	Url           *string                `protobuf:"bytes,5,opt,name=url,proto3,oneof" json:"url,omitempty"`                            // URL for url source type
-	Ref           *string                `protobuf:"bytes,6,opt,name=ref,proto3,oneof" json:"ref,omitempty"`                            // Git ref (branch, tag, commit) for github source type
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                               // Field name (maps to component prop)
+	Type          FieldType              `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.FieldType" json:"type,omitempty"` // Field type
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`                             // Field value (JSON-encoded for complex types)
+	Options       []string               `protobuf:"bytes,4,rep,name=options,proto3" json:"options,omitempty"`                         // Options for select fields
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Source) Reset() {
-	*x = Source{}
-	mi := &file_extensions_proto_msgTypes[2]
+func (x *PanelField) Reset() {
+	*x = PanelField{}
+	mi := &file_extensions_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Source) String() string {
+func (x *PanelField) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Source) ProtoMessage() {}
+func (*PanelField) ProtoMessage() {}
 
-func (x *Source) ProtoReflect() protoreflect.Message {
-	mi := &file_extensions_proto_msgTypes[2]
+func (x *PanelField) ProtoReflect() protoreflect.Message {
+	mi := &file_extensions_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -277,100 +853,158 @@ func (x *Source) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Source.ProtoReflect.Descriptor instead.
-func (*Source) Descriptor() ([]byte, []int) {
-	return file_extensions_proto_rawDescGZIP(), []int{2}
+// Deprecated: Use PanelField.ProtoReflect.Descriptor instead.
+func (*PanelField) Descriptor() ([]byte, []int) {
+	return file_extensions_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *Source) GetType() SourceType {
+func (x *PanelField) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PanelField) GetType() FieldType {
 	if x != nil {
 		return x.Type
 	}
-	return SourceType_SOURCE_TYPE_UNSPECIFIED
+	return FieldType_FIELD_TYPE_UNSPECIFIED
 }
 
-func (x *Source) GetRepo() string {
-	if x != nil && x.Repo != nil {
-		return *x.Repo
+func (x *PanelField) GetValue() string {
+	if x != nil {
+		return x.Value
 	}
 	return ""
 }
 
-func (x *Source) GetPackage() string {
-	if x != nil && x.Package != nil {
-		return *x.Package
+func (x *PanelField) GetOptions() []string {
+	if x != nil {
+		return x.Options
 	}
-	return ""
-}
-
-func (x *Source) GetPath() string {
-	if x != nil && x.Path != nil {
-		return *x.Path
-	}
-	return ""
-}
-
-func (x *Source) GetUrl() string {
-	if x != nil && x.Url != nil {
-		return *x.Url
-	}
-	return ""
-}
-
-func (x *Source) GetRef() string {
-	if x != nil && x.Ref != nil {
-		return *x.Ref
-	}
-	return ""
+	return nil
 }
 
 var File_extensions_proto protoreflect.FileDescriptor
 
 const file_extensions_proto_rawDesc = "" +
 	"\n" +
-	"\x10extensions.proto\x12\rstackpanel.db\"\xe7\x01\n" +
+	"\x10extensions.proto\x12\rstackpanel.db\"\x86\x05\n" +
 	"\tExtension\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\aenabled\x18\x02 \x01(\bR\aenabled\x12-\n" +
-	"\x06source\x18\x03 \x01(\v2\x15.stackpanel.db.SourceR\x06source\x12\x1d\n" +
-	"\aversion\x18\x04 \x01(\tH\x00R\aversion\x88\x01\x01\x12\x1a\n" +
-	"\bpriority\x18\x05 \x01(\x05R\bpriority\x12\"\n" +
-	"\fdependencies\x18\x06 \x03(\tR\fdependencies\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tagsB\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
+	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x18\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabled\x12\x18\n" +
+	"\abuiltin\x18\x04 \x01(\bR\abuiltin\x126\n" +
+	"\x06source\x18\x05 \x01(\v2\x1e.stackpanel.db.ExtensionSourceR\x06source\x12\x1d\n" +
+	"\aversion\x18\x06 \x01(\tH\x01R\aversion\x88\x01\x01\x12<\n" +
+	"\bcategory\x18\a \x01(\x0e2 .stackpanel.db.ExtensionCategoryR\bcategory\x12\x1a\n" +
+	"\bpriority\x18\b \x01(\x05R\bpriority\x12\x12\n" +
+	"\x04tags\x18\t \x03(\tR\x04tags\x12\"\n" +
+	"\fdependencies\x18\n" +
+	" \x03(\tR\fdependencies\x125\n" +
+	"\x06panels\x18\v \x03(\v2\x1d.stackpanel.db.ExtensionPanelR\x06panels\x126\n" +
+	"\x04apps\x18\f \x03(\v2\".stackpanel.db.Extension.AppsEntryR\x04apps\x12<\n" +
+	"\bfeatures\x18\r \x01(\v2 .stackpanel.db.ExtensionFeaturesR\bfeatures\x1aX\n" +
+	"\tAppsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x125\n" +
+	"\x05value\x18\x02 \x01(\v2\x1f.stackpanel.db.ExtensionAppDataR\x05value:\x028\x01B\x0e\n" +
+	"\f_descriptionB\n" +
 	"\n" +
-	"\b_version\"\x87\x02\n" +
-	"\n" +
-	"Extensions\x12\x18\n" +
-	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1f\n" +
-	"\vauto_update\x18\x02 \x01(\bR\n" +
-	"autoUpdate\x12\x1a\n" +
-	"\bregistry\x18\x03 \x01(\tR\bregistry\x12I\n" +
-	"\n" +
-	"extensions\x18\x04 \x03(\v2).stackpanel.db.Extensions.ExtensionsEntryR\n" +
-	"extensions\x1aW\n" +
-	"\x0fExtensionsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
-	"\x05value\x18\x02 \x01(\v2\x18.stackpanel.db.ExtensionR\x05value:\x028\x01\"\xe4\x01\n" +
-	"\x06Source\x12-\n" +
-	"\x04type\x18\x01 \x01(\x0e2\x19.stackpanel.db.SourceTypeR\x04type\x12\x17\n" +
+	"\b_version\"\xac\x01\n" +
+	"\x10ExtensionAppData\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12C\n" +
+	"\x06config\x18\x02 \x03(\v2+.stackpanel.db.ExtensionAppData.ConfigEntryR\x06config\x1a9\n" +
+	"\vConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe4\x01\n" +
+	"\x11ExtensionFeatures\x12\x14\n" +
+	"\x05files\x18\x01 \x01(\bR\x05files\x12\x18\n" +
+	"\ascripts\x18\x02 \x01(\bR\ascripts\x12\x14\n" +
+	"\x05tasks\x18\x03 \x01(\bR\x05tasks\x12\x18\n" +
+	"\asecrets\x18\x04 \x01(\bR\asecrets\x12\x1f\n" +
+	"\vshell_hooks\x18\x05 \x01(\bR\n" +
+	"shellHooks\x12\x1a\n" +
+	"\bpackages\x18\x06 \x01(\bR\bpackages\x12\x1a\n" +
+	"\bservices\x18\a \x01(\bR\bservices\x12\x16\n" +
+	"\x06checks\x18\b \x01(\bR\x06checks\"\xe4\x01\n" +
+	"\x0eExtensionPanel\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12,\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x18.stackpanel.db.PanelTypeR\x04type\x12\x14\n" +
+	"\x05order\x18\x05 \x01(\x05R\x05order\x121\n" +
+	"\x06fields\x18\x06 \x03(\v2\x19.stackpanel.db.PanelFieldR\x06fieldsB\x0e\n" +
+	"\f_description\"\xac\x02\n" +
+	"\x0fExtensionSource\x126\n" +
+	"\x04type\x18\x01 \x01(\x0e2\".stackpanel.db.ExtensionSourceTypeR\x04type\x12\x17\n" +
 	"\x04repo\x18\x02 \x01(\tH\x00R\x04repo\x88\x01\x01\x12\x1d\n" +
 	"\apackage\x18\x03 \x01(\tH\x01R\apackage\x88\x01\x01\x12\x17\n" +
 	"\x04path\x18\x04 \x01(\tH\x02R\x04path\x88\x01\x01\x12\x15\n" +
 	"\x03url\x18\x05 \x01(\tH\x03R\x03url\x88\x01\x01\x12\x15\n" +
-	"\x03ref\x18\x06 \x01(\tH\x04R\x03ref\x88\x01\x01B\a\n" +
+	"\x03ref\x18\x06 \x01(\tH\x04R\x03ref\x88\x01\x01\x12$\n" +
+	"\vmodule_path\x18\a \x01(\tH\x05R\n" +
+	"modulePath\x88\x01\x01B\a\n" +
 	"\x05_repoB\n" +
 	"\n" +
 	"\b_packageB\a\n" +
 	"\x05_pathB\x06\n" +
 	"\x04_urlB\x06\n" +
-	"\x04_ref*\x82\x01\n" +
+	"\x04_refB\x0e\n" +
+	"\f_module_path\"\x99\x02\n" +
 	"\n" +
-	"SourceType\x12\x1b\n" +
-	"\x17SOURCE_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
-	"\x12SOURCE_TYPE_GITHUB\x10\x01\x12\x13\n" +
-	"\x0fSOURCE_TYPE_NPM\x10\x02\x12\x15\n" +
-	"\x11SOURCE_TYPE_LOCAL\x10\x03\x12\x13\n" +
-	"\x0fSOURCE_TYPE_URL\x10\x04B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"Extensions\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1f\n" +
+	"\vauto_update\x18\x02 \x01(\bR\n" +
+	"autoUpdate\x12\x1f\n" +
+	"\bregistry\x18\x03 \x01(\tH\x00R\bregistry\x88\x01\x01\x12I\n" +
+	"\n" +
+	"extensions\x18\x04 \x03(\v2).stackpanel.db.Extensions.ExtensionsEntryR\n" +
+	"extensions\x1aW\n" +
+	"\x0fExtensionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.stackpanel.db.ExtensionR\x05value:\x028\x01B\v\n" +
+	"\t_registry\"~\n" +
+	"\n" +
+	"PanelField\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x18.stackpanel.db.FieldTypeR\x04type\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\x12\x18\n" +
+	"\aoptions\x18\x04 \x03(\tR\aoptions*\xcb\x02\n" +
+	"\x11ExtensionCategory\x12\"\n" +
+	"\x1eEXTENSION_CATEGORY_UNSPECIFIED\x10\x00\x12%\n" +
+	"!EXTENSION_CATEGORY_INFRASTRUCTURE\x10\x01\x12\x1c\n" +
+	"\x18EXTENSION_CATEGORY_CI_CD\x10\x02\x12\x1f\n" +
+	"\x1bEXTENSION_CATEGORY_DATABASE\x10\x03\x12\x1e\n" +
+	"\x1aEXTENSION_CATEGORY_SECRETS\x10\x04\x12!\n" +
+	"\x1dEXTENSION_CATEGORY_DEPLOYMENT\x10\x05\x12\"\n" +
+	"\x1eEXTENSION_CATEGORY_DEVELOPMENT\x10\x06\x12!\n" +
+	"\x1dEXTENSION_CATEGORY_MONITORING\x10\a\x12\"\n" +
+	"\x1eEXTENSION_CATEGORY_INTEGRATION\x10\b*\xe0\x01\n" +
+	"\x13ExtensionSourceType\x12%\n" +
+	"!EXTENSION_SOURCE_TYPE_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dEXTENSION_SOURCE_TYPE_BUILTIN\x10\x01\x12\x1f\n" +
+	"\x1bEXTENSION_SOURCE_TYPE_LOCAL\x10\x02\x12 \n" +
+	"\x1cEXTENSION_SOURCE_TYPE_GITHUB\x10\x03\x12\x1d\n" +
+	"\x19EXTENSION_SOURCE_TYPE_NPM\x10\x04\x12\x1d\n" +
+	"\x19EXTENSION_SOURCE_TYPE_URL\x10\x05*\xe8\x01\n" +
+	"\tFieldType\x12\x1a\n" +
+	"\x16FIELD_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11FIELD_TYPE_STRING\x10\x01\x12\x15\n" +
+	"\x11FIELD_TYPE_NUMBER\x10\x02\x12\x16\n" +
+	"\x12FIELD_TYPE_BOOLEAN\x10\x03\x12\x15\n" +
+	"\x11FIELD_TYPE_SELECT\x10\x04\x12\x1a\n" +
+	"\x16FIELD_TYPE_MULTISELECT\x10\x05\x12\x19\n" +
+	"\x15FIELD_TYPE_APP_FILTER\x10\x06\x12\x16\n" +
+	"\x12FIELD_TYPE_COLUMNS\x10\a\x12\x13\n" +
+	"\x0fFIELD_TYPE_JSON\x10\b*\x9a\x01\n" +
+	"\tPanelType\x12\x1a\n" +
+	"\x16PANEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11PANEL_TYPE_STATUS\x10\x01\x12\x18\n" +
+	"\x14PANEL_TYPE_APPS_GRID\x10\x02\x12\x13\n" +
+	"\x0fPANEL_TYPE_FORM\x10\x03\x12\x14\n" +
+	"\x10PANEL_TYPE_TABLE\x10\x04\x12\x15\n" +
+	"\x11PANEL_TYPE_CUSTOM\x10\x05B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_extensions_proto_rawDescOnce sync.Once
@@ -384,25 +1018,43 @@ func file_extensions_proto_rawDescGZIP() []byte {
 	return file_extensions_proto_rawDescData
 }
 
-var file_extensions_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_extensions_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_extensions_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_extensions_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_extensions_proto_goTypes = []any{
-	(SourceType)(0),    // 0: stackpanel.db.SourceType
-	(*Extension)(nil),  // 1: stackpanel.db.Extension
-	(*Extensions)(nil), // 2: stackpanel.db.Extensions
-	(*Source)(nil),     // 3: stackpanel.db.Source
-	nil,                // 4: stackpanel.db.Extensions.ExtensionsEntry
+	(ExtensionCategory)(0),    // 0: stackpanel.db.ExtensionCategory
+	(ExtensionSourceType)(0),  // 1: stackpanel.db.ExtensionSourceType
+	(FieldType)(0),            // 2: stackpanel.db.FieldType
+	(PanelType)(0),            // 3: stackpanel.db.PanelType
+	(*Extension)(nil),         // 4: stackpanel.db.Extension
+	(*ExtensionAppData)(nil),  // 5: stackpanel.db.ExtensionAppData
+	(*ExtensionFeatures)(nil), // 6: stackpanel.db.ExtensionFeatures
+	(*ExtensionPanel)(nil),    // 7: stackpanel.db.ExtensionPanel
+	(*ExtensionSource)(nil),   // 8: stackpanel.db.ExtensionSource
+	(*Extensions)(nil),        // 9: stackpanel.db.Extensions
+	(*PanelField)(nil),        // 10: stackpanel.db.PanelField
+	nil,                       // 11: stackpanel.db.Extension.AppsEntry
+	nil,                       // 12: stackpanel.db.ExtensionAppData.ConfigEntry
+	nil,                       // 13: stackpanel.db.Extensions.ExtensionsEntry
 }
 var file_extensions_proto_depIdxs = []int32{
-	3, // 0: stackpanel.db.Extension.source:type_name -> stackpanel.db.Source
-	4, // 1: stackpanel.db.Extensions.extensions:type_name -> stackpanel.db.Extensions.ExtensionsEntry
-	0, // 2: stackpanel.db.Source.type:type_name -> stackpanel.db.SourceType
-	1, // 3: stackpanel.db.Extensions.ExtensionsEntry.value:type_name -> stackpanel.db.Extension
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	8,  // 0: stackpanel.db.Extension.source:type_name -> stackpanel.db.ExtensionSource
+	0,  // 1: stackpanel.db.Extension.category:type_name -> stackpanel.db.ExtensionCategory
+	7,  // 2: stackpanel.db.Extension.panels:type_name -> stackpanel.db.ExtensionPanel
+	11, // 3: stackpanel.db.Extension.apps:type_name -> stackpanel.db.Extension.AppsEntry
+	6,  // 4: stackpanel.db.Extension.features:type_name -> stackpanel.db.ExtensionFeatures
+	12, // 5: stackpanel.db.ExtensionAppData.config:type_name -> stackpanel.db.ExtensionAppData.ConfigEntry
+	3,  // 6: stackpanel.db.ExtensionPanel.type:type_name -> stackpanel.db.PanelType
+	10, // 7: stackpanel.db.ExtensionPanel.fields:type_name -> stackpanel.db.PanelField
+	1,  // 8: stackpanel.db.ExtensionSource.type:type_name -> stackpanel.db.ExtensionSourceType
+	13, // 9: stackpanel.db.Extensions.extensions:type_name -> stackpanel.db.Extensions.ExtensionsEntry
+	2,  // 10: stackpanel.db.PanelField.type:type_name -> stackpanel.db.FieldType
+	5,  // 11: stackpanel.db.Extension.AppsEntry.value:type_name -> stackpanel.db.ExtensionAppData
+	4,  // 12: stackpanel.db.Extensions.ExtensionsEntry.value:type_name -> stackpanel.db.Extension
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_extensions_proto_init() }
@@ -411,14 +1063,16 @@ func file_extensions_proto_init() {
 		return
 	}
 	file_extensions_proto_msgTypes[0].OneofWrappers = []any{}
-	file_extensions_proto_msgTypes[2].OneofWrappers = []any{}
+	file_extensions_proto_msgTypes[3].OneofWrappers = []any{}
+	file_extensions_proto_msgTypes[4].OneofWrappers = []any{}
+	file_extensions_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_extensions_proto_rawDesc), len(file_extensions_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      4,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

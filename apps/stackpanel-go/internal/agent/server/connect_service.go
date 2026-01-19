@@ -56,94 +56,20 @@ func (s *AgentServiceServer) GetProject(
 }
 
 // =============================================================================
-// Config Entity CRUD
+// Config Entity CRUD - Now generated in connect_entities_gen.go
 // =============================================================================
-
-func (s *AgentServiceServer) GetConfig(
-	ctx context.Context,
-	req *connect.Request[gopb.GetConfigRequest],
-) (*connect.Response[gopb.Config], error) {
-	// TODO: Read from .stackpanel/data/config.nix and parse
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) SetConfig(
-	ctx context.Context,
-	req *connect.Request[gopb.Config],
-) (*connect.Response[gopb.Config], error) {
-	// TODO: Write to .stackpanel/data/config.nix
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) GetSecrets(
-	ctx context.Context,
-	req *connect.Request[gopb.GetSecretsRequest],
-) (*connect.Response[gopb.Secrets], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) SetSecrets(
-	ctx context.Context,
-	req *connect.Request[gopb.Secrets],
-) (*connect.Response[gopb.Secrets], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) GetUsers(
-	ctx context.Context,
-	req *connect.Request[gopb.GetUsersRequest],
-) (*connect.Response[gopb.Users], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) SetUsers(
-	ctx context.Context,
-	req *connect.Request[gopb.Users],
-) (*connect.Response[gopb.Users], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) GetAws(
-	ctx context.Context,
-	req *connect.Request[gopb.GetAwsRequest],
-) (*connect.Response[gopb.Aws], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) SetAws(
-	ctx context.Context,
-	req *connect.Request[gopb.Aws],
-) (*connect.Response[gopb.Aws], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) GetApps(
-	ctx context.Context,
-	req *connect.Request[gopb.GetAppsRequest],
-) (*connect.Response[gopb.Apps], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) SetApps(
-	ctx context.Context,
-	req *connect.Request[gopb.Apps],
-) (*connect.Response[gopb.Apps], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) GetVariables(
-	ctx context.Context,
-	req *connect.Request[gopb.GetVariablesRequest],
-) (*connect.Response[gopb.Variables], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
-
-func (s *AgentServiceServer) SetVariables(
-	ctx context.Context,
-	req *connect.Request[gopb.Variables],
-) (*connect.Response[gopb.Variables], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
-}
+// The following methods are auto-generated from proto definitions:
+// - GetConfig, SetConfig
+// - GetSecrets, SetSecrets
+// - GetUsers, SetUsers
+// - GetAws, SetAws
+// - GetApps, SetApps
+// - GetVariables, SetVariables
+//
+// To add a new entity:
+// 1. Add the Get/Set RPC methods to agent.proto
+// 2. Run `./generate.sh` in packages/proto
+// 3. The handlers will be auto-generated
 
 // =============================================================================
 // Age Identity Management

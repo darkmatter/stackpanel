@@ -183,12 +183,19 @@ func (x *App) GetEnvironments() map[string]*AppEnvironment {
 	return nil
 }
 
-// Environment configuration
+// Environment configuration (e.g., dev, staging, production)
 type AppEnvironment struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Name          string                  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                                     // Name of the environment
-	Description   *string                 `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                                 // (optional) Description of the environment
-	Variables     map[string]*AppVariable `protobuf:"bytes,3,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables (key = env var key)
+	state       protoimpl.MessageState  `protogen:"open.v1"`
+	Name        string                  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                                     // Name of the environment
+	Description *string                 `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                                 // (optional) Description of the environment
+	Variables   map[string]*AppVariable `protobuf:"bytes,3,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables (key = env var key)
+	// List of SOPS-encrypted source files for this environment (without .yaml extension).
+	// These files are decrypted and merged to provide secrets for the environment.
+	// Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+	Sources []string `protobuf:"bytes,4,rep,name=sources,proto3" json:"sources,omitempty"`
+	// List of AGE/SSH public keys that can decrypt secrets for this environment.
+	// These keys are used when encrypting new secrets.
+	PublicKeys    []string `protobuf:"bytes,5,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -240,6 +247,20 @@ func (x *AppEnvironment) GetDescription() string {
 func (x *AppEnvironment) GetVariables() map[string]*AppVariable {
 	if x != nil {
 		return x.Variables
+	}
+	return nil
+}
+
+func (x *AppEnvironment) GetSources() []string {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *AppEnvironment) GetPublicKeys() []string {
+	if x != nil {
+		return x.PublicKeys
 	}
 	return nil
 }
@@ -464,11 +485,14 @@ const file_apps_proto_rawDesc = "" +
 	"\f_descriptionB\a\n" +
 	"\x05_typeB\a\n" +
 	"\x05_portB\t\n" +
-	"\a_domain\"\x81\x02\n" +
+	"\a_domain\"\xbc\x02\n" +
 	"\x0eAppEnvironment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12J\n" +
-	"\tvariables\x18\x03 \x03(\v2,.stackpanel.db.AppEnvironment.VariablesEntryR\tvariables\x1aX\n" +
+	"\tvariables\x18\x03 \x03(\v2,.stackpanel.db.AppEnvironment.VariablesEntryR\tvariables\x12\x18\n" +
+	"\asources\x18\x04 \x03(\tR\asources\x12\x1f\n" +
+	"\vpublic_keys\x18\x05 \x03(\tR\n" +
+	"publicKeys\x1aX\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.AppVariableR\x05value:\x028\x01B\x0e\n" +

@@ -41,15 +41,12 @@ export default $config({
 const githubOrg = "darkmatter";
 const githubRepo = "stackpanel";
 
-const githubOidcProvider = new aws.iam.OpenIdConnectProvider("github-oidc", {
-  url: "https://token.actions.githubusercontent.com",
-  clientIdLists: ["sts.amazonaws.com"],
-  thumbprintLists: ["6938fd4d98bab03faadb97b34396831e3780aea1"],
-  tags: {
-    Name: "github-actions-oidc",
-    ManagedBy: "sst",
-  },
-});
+// Check if GitHub OIDC provider already exists (it's a singleton per account)
+const existingOidcArn = `arn:aws:iam::950224716579:oidc-provider/token.actions.githubusercontent.com`;
+
+// Use aws.iam.OpenIdConnectProvider.get to adopt existing provider
+// This avoids the "EntityAlreadyExists" error when the provider was created outside SST
+const githubOidcProvider = aws.iam.OpenIdConnectProvider.get("github-oidc", existingOidcArn);
 
 const oidcProviderArn = githubOidcProvider.arn;
 const oidcProviderUrl = "token.actions.githubusercontent.com";

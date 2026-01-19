@@ -15,7 +15,7 @@
   enable = true;
   name = "stackpanel";
   github = "darkmatter/stackpanel";
-  debug = true;
+  debug = false;
 
   # ---------------------------------------------------------------------------
   # Theme & IDE
@@ -100,13 +100,8 @@
   };
 
   # ---------------------------------------------------------------------------
-  # Extensions
+  # Caddy Reverse Proxy
   # ---------------------------------------------------------------------------
-  example = {
-    enable = true;
-    message = "Welcome to Stackpanel!";
-  };
-
   caddy = {
     enable = true;
     project-name = "stackpanel";

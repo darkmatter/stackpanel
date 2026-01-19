@@ -78,6 +78,47 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
    * @generated from field: repeated string environments = 6;
    */
   environments: string[];
+
+  /**
+   *
+   * List of module names that require this variable (e.g., ["sst", "ci"]).
+   * Used to show which features depend on this variable being set.
+   *
+   *
+   * @generated from field: repeated string requiredBy = 7;
+   */
+  requiredBy: string[];
+
+  /**
+   *
+   * Module name that provides/creates this variable.
+   * Used to understand where the variable comes from.
+   *
+   *
+   * @generated from field: optional string providedBy = 8;
+   */
+  providedBy?: string;
+
+  /**
+   *
+   * Bootstrap level (0 = always available, 1+ = requires dependencies).
+   * Level 0: No dependencies (e.g., AGE key, env vars)
+   * Level 1: Requires level 0 (e.g., encrypted secrets)
+   * Level 2: Requires external setup (e.g., cloud API tokens)
+   *
+   *
+   * @generated from field: optional int32 level = 9;
+   */
+  level?: number;
+
+  /**
+   *
+   * Action to resolve this variable if missing.
+   *
+   *
+   * @generated from field: optional stackpanel.db.VariableAction action = 10;
+   */
+  action?: VariableAction;
 };
 
 /**
@@ -85,6 +126,49 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
  * Use `create(VariableSchema)` to create a new message.
  */
 export declare const VariableSchema: GenMessage<Variable>;
+
+/**
+ * Action to resolve a missing variable
+ *
+ * @generated from message stackpanel.db.VariableAction
+ */
+export declare type VariableAction = Message<"stackpanel.db.VariableAction"> & {
+  /**
+   *
+   * Type of action: "add-secret", "add-variable", "configure", "external"
+   *
+   *
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * Button/link label for the action
+   *
+   * @generated from field: optional string label = 2;
+   */
+  label?: string;
+
+  /**
+   * External URL (e.g., link to create API token)
+   *
+   * @generated from field: optional string url = 3;
+   */
+  url?: string;
+
+  /**
+   * Secret key name if type=add-secret
+   *
+   * @generated from field: optional string secretKey = 4;
+   */
+  secretKey?: string;
+};
+
+/**
+ * Describes the message stackpanel.db.VariableAction.
+ * Use `create(VariableActionSchema)` to create a new message.
+ */
+export declare const VariableActionSchema: GenMessage<VariableAction>;
 
 /**
  * Map of variable identifier to variable configuration

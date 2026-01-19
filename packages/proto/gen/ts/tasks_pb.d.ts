@@ -11,27 +11,34 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_tasks: GenFile;
 
 /**
- * A workspace task definition
+ *
+ * A workspace task definition for Turborepo integration.
+ *
+ * Tasks with `exec` are compiled to Nix derivations and symlinked to
+ * `.tasks/bin/<task>`. Turborepo invokes these via package.json scripts.
+ *
+ * Tasks without `exec` assume the script already exists in package.json.
+ *
  *
  * @generated from message stackpanel.db.Task
  */
 export declare type Task = Message<"stackpanel.db.Task"> & {
   /**
-   * Default task command to execute
+   * Shell script to execute (compiled to Nix derivation)
    *
-   * @generated from field: string exec = 1;
+   * @generated from field: optional string exec = 1;
    */
-  exec: string;
+  exec?: string;
 
   /**
-   * Optional description for the task
+   * Human-readable description of the task
    *
    * @generated from field: optional string description = 2;
    */
   description?: string;
 
   /**
-   * Working directory for the task
+   * Working directory for the task (relative to repo root)
    *
    * @generated from field: optional string cwd = 3;
    */
@@ -43,6 +50,48 @@ export declare type Task = Message<"stackpanel.db.Task"> & {
    * @generated from field: map<string, string> env = 4;
    */
   env: { [key: string]: string };
+
+  /**
+   * Tasks that must complete first (use ^ for deps)
+   *
+   * @generated from field: repeated string depends_on = 5;
+   */
+  dependsOn: string[];
+
+  /**
+   * Output file globs for caching (e.g. dist/**)
+   *
+   * @generated from field: repeated string outputs = 6;
+   */
+  outputs: string[];
+
+  /**
+   * Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+   *
+   * @generated from field: repeated string inputs = 7;
+   */
+  inputs: string[];
+
+  /**
+   * Long-running process (e.g. dev server)
+   *
+   * @generated from field: optional bool persistent = 8;
+   */
+  persistent?: boolean;
+
+  /**
+   * Enable Turborepo caching (default: true)
+   *
+   * @generated from field: optional bool cache = 9;
+   */
+  cache?: boolean;
+
+  /**
+   * Task accepts stdin input
+   *
+   * @generated from field: optional bool interactive = 10;
+   */
+  interactive?: boolean;
 };
 
 /**
@@ -52,7 +101,7 @@ export declare type Task = Message<"stackpanel.db.Task"> & {
 export declare const TaskSchema: GenMessage<Task>;
 
 /**
- * Primary workspace tasks configuration
+ * Primary workspace tasks configuration for Turborepo
  *
  * @generated from message stackpanel.db.Tasks
  */

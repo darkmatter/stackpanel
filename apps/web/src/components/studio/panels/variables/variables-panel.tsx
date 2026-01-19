@@ -9,13 +9,18 @@ import { TooltipProvider } from "@ui/tooltip";
 import {
 	ChevronDown,
 	ChevronRight,
+	Cpu,
+	Eye,
+	EyeOff,
 	Loader2,
 	Pencil,
 	Search,
 	Settings,
 	VariableIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
 import { useVariables } from "@/lib/use-nix-config";
 import { PanelHeader } from "../shared/panel-header";
 import { AddVariableDialog } from "./add-variable-dialog";
@@ -29,10 +34,13 @@ import {
 	EditSecretDialog,
 	KMSSettings,
 } from "./edit-secret-dialog";
+import { EditVariableDialog } from "./edit-variable-dialog";
 import { VariableUsageInfo } from "./variable-usage-info";
 
 export function VariablesPanel() {
 	const { data: variables, isLoading, error, refetch } = useVariables();
+	const { token } = useAgentContext();
+	const agentClient = useAgentClient();
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedType, setSelectedType] = useState<VariableTypeName | "all">(
@@ -44,6 +52,67 @@ export function VariablesPanel() {
 		key: string;
 		description?: string;
 	} | null>(null);
+
+	// State for revealed secrets: { [variableId]: { value: string, loading: boolean } }
+	const [revealedSecrets, setRevealedSecrets] = useState<
+		Record<string, { value: string; loading: boolean }>
+	>({});
+
+	// Decrypt and reveal a secret
+	const handleRevealSecret = useCallback(
+		async (variableId: string) => {
+			if (!token) {
+				toast.error("Not connected to agent");
+				return;
+			}
+
+			// Check if already revealed
+			if (revealedSecrets[variableId]?.value) {
+				// Hide it
+				setRevealedSecrets((prev) => {
+					const next = { ...prev };
+					delete next[variableId];
+					return next;
+				});
+				return;
+			}
+
+			// Set loading state
+			setRevealedSecrets((prev) => ({
+				...prev,
+				[variableId]: { value: "", loading: true },
+			}));
+
+			try {
+				agentClient.setToken(token);
+				const result = await agentClient.readAgenixSecret({ id: variableId });
+				setRevealedSecrets((prev) => ({
+					...prev,
+					[variableId]: { value: result.value, loading: false },
+				}));
+
+				// Auto-hide after 30 seconds
+				setTimeout(() => {
+					setRevealedSecrets((prev) => {
+						const next = { ...prev };
+						delete next[variableId];
+						return next;
+					});
+				}, 30000);
+			} catch (err) {
+				console.error("Failed to decrypt secret:", err);
+				toast.error(
+					err instanceof Error ? err.message : "Failed to decrypt secret",
+				);
+				setRevealedSecrets((prev) => {
+					const next = { ...prev };
+					delete next[variableId];
+					return next;
+				});
+			}
+		},
+		[token, agentClient, revealedSecrets],
+	);
 
 	const variablesList = useMemo(() => {
 		if (!variables) return [];
@@ -223,21 +292,43 @@ export function VariablesPanel() {
 													</button>
 													<div className="flex-1 min-w-0">
 														<div className="flex items-center gap-2 mb-1 flex-wrap">
-															<TypeIcon className="h-4 w-4 text-muted-foreground" />
+															<TypeIcon className={`h-6 w-6 text-muted-foreground ${typeConfig.color} rounded-full p-1`} />
 															<code className="text-sm font-semibold font-mono">
 																{variable.name}
 															</code>
-															<span
+															{/* <span
 																className={`px-2 py-0.5 text-xs rounded ${typeConfig.color}`}
 															>
 																{typeConfig.label}
-															</span>
+															</span> */}
+															{variable.providedBy && (
+																<span
+																	className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-none text-amber-600 dark:text-amber-400 border border-amber-500/20"
+																	title={`Provided by ${variable.providedBy}`}
+																>
+																	<Cpu className="h-3 w-3" />
+																	Computed
+																</span>
+															)}
 														</div>
 														<p className="text-sm text-muted-foreground">
 															{variable.description ||
 																"No description provided."}
 														</p>
 													</div>
+													{/* Edit button for non-computed variables */}
+													{!variable.providedBy && (
+														<EditVariableDialog
+															variable={{
+																id: variable.id,
+																key: variable.envKey,
+																description: variable.description,
+																type: variable.type,
+																value: variable.value,
+															}}
+															onSuccess={refetch}
+														/>
+													)}
 												</div>
 											</div>
 
@@ -257,46 +348,94 @@ export function VariablesPanel() {
 																Value
 															</p>
 															<div className="flex items-center gap-2">
-																<p className="text-sm font-mono">
-																	{typeConfig.value === "secret"
-																		? "••••••••"
-																		: variable.value || "—"}
-																</p>
-																{typeConfig.value === "secret" && (
-																	<Button
-																		variant="ghost"
-																		size="sm"
-																		className="h-6 px-2 text-xs"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			setEditingSecret({
-																				id: variable.id,
-																				key: variable.envKey,
-																				description: variable.description,
-																			});
-																		}}
-																	>
-																		<Pencil className="h-3 w-3 mr-1" />
-																		Edit
-																	</Button>
+																{typeConfig.value === "secret" ? (
+																	<>
+																		<p className="text-sm font-mono flex-1 break-all">
+																			{revealedSecrets[variable.id]?.value ||
+																				"••••••••••••••••"}
+																		</p>
+																		{/* Show/Hide button for secrets */}
+																		<Button
+																			variant="ghost"
+																			size="sm"
+																			className="h-6 px-2 text-xs shrink-0"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				handleRevealSecret(variable.id);
+																			}}
+																			disabled={
+																				revealedSecrets[variable.id]?.loading
+																			}
+																		>
+																			{revealedSecrets[variable.id]?.loading ? (
+																				<Loader2 className="h-3 w-3 animate-spin" />
+																			) : revealedSecrets[variable.id]?.value ? (
+																				<>
+																					<EyeOff className="h-3 w-3 mr-1" />
+																					Hide
+																				</>
+																			) : (
+																				<>
+																					<Eye className="h-3 w-3 mr-1" />
+																					Show
+																				</>
+																			)}
+																		</Button>
+																		{/* Edit button for secrets */}
+																		<Button
+																			variant="ghost"
+																			size="sm"
+																			className="h-6 px-2 text-xs shrink-0"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				setEditingSecret({
+																					id: variable.id,
+																					key: variable.envKey,
+																					description: variable.description,
+																				});
+																			}}
+																		>
+																			<Pencil className="h-3 w-3 mr-1" />
+																			Edit
+																		</Button>
+																	</>
+																) : (
+																	<p className="text-sm font-mono">
+																		{variable.value || "—"}
+																	</p>
 																)}
 															</div>
+															{revealedSecrets[variable.id]?.value && (
+																<p className="text-xs text-muted-foreground mt-1">
+																	Auto-hides in 30 seconds
+																</p>
+															)}
 														</div>
+													<div className="space-y-1">
+														<p className="text-xs font-medium text-muted-foreground">
+															Type Details
+														</p>
+														<p className="text-sm text-muted-foreground">
+															{typeConfig.description}
+														</p>
+													</div>
+													{variable.providedBy && (
 														<div className="space-y-1">
 															<p className="text-xs font-medium text-muted-foreground">
-																Type Details
+																Provided By
 															</p>
-															<p className="text-sm text-muted-foreground">
-																{typeConfig.description}
+															<p className="text-sm font-mono text-blue-600 dark:text-blue-400">
+																{variable.providedBy}
 															</p>
 														</div>
-													</div>
-													<div>
-														<p className="text-xs font-medium text-muted-foreground mb-2">
-															Used by
-														</p>
-														<VariableUsageInfo variableId={variable.id} />
-													</div>
+													)}
+												</div>
+												<div>
+													<p className="text-xs font-medium text-muted-foreground mb-2">
+														Used by
+													</p>
+													<VariableUsageInfo variableId={variable.id} />
+												</div>
 												</div>
 											)}
 										</div>

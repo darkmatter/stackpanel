@@ -276,6 +276,18 @@ var (
 		Example:     "https://myhost.tail1234.ts.net,http://192.168.1.100:3000",
 		GoField:     "AllowedOrigins",
 	}
+
+	// StackpanelDevRepo is the path to a local stackpanel repo for development mode.
+	// When set, the wrapper script will run 'go run' from this path instead of the installed binary.
+	// This is an alternative to using 'stackpanel dev enable <path>'.
+	StackpanelDevRepo = EnvVar{
+		Name:        "STACKPANEL_DEV_REPO",
+		Description: "Path to local stackpanel repo for dev mode (runs via 'go run' instead of installed binary)",
+		Category:    CategoryAgent,
+		Source:      SourceDynamic,
+		Example:     "~/projects/stackpanel",
+		GoField:     "DevRepoPath",
+	}
 )
 
 // ===========================================================================

@@ -149,11 +149,10 @@ in
       ''
     ];
 
-    # Also expose as a devshell command (nice for devenv scripts, too)
-    stackpanel.devshell.commands."write-files" = {
+    # Also expose as a stackpanel script
+    stackpanel.scripts."write-files" = {
       exec = ''${writerDrv}/bin/write-files "$@"'';
-      runtimeInputs = [ ];
-      env = { };
+      description = "Write generated files to the project";
     };
   };
 }

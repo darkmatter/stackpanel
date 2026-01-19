@@ -140,8 +140,8 @@ export function useGeneratedFiles(
     }));
 
     try {
-      const response =
-        await client.get<GeneratedFilesResponse>("/api/nix/files");
+      // Use the helper that handles the { success, data } wrapper
+      const response = await client.getGeneratedFiles();
 
       setState({
         data: response,

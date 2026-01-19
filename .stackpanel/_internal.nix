@@ -37,8 +37,26 @@ let
 
   # ---------------------------------------------------------------------------
   # Import local config overrides (per-user, gitignored)
+  # Uses absolute path to bypass flake's gitignore filtering
   # ---------------------------------------------------------------------------
-  localConfigPath = ./config.local.nix;
+  # Get absolute path to .stackpanel directory
+  # First try STACKPANEL_ROOT env var, then fall back to reading .stackpanel-root marker
+  stackpanelRoot = 
+    let
+      envRoot = builtins.getEnv "STACKPANEL_ROOT";
+      markerRoot = 
+        let
+          markerPath = ../.stackpanel-root;  # Marker is in repo root, one level up from .stackpanel/
+        in
+        if builtins.pathExists markerPath
+        then lib.removeSuffix "\n" (builtins.readFile markerPath)
+        else null;
+    in
+    if envRoot != "" then envRoot
+    else if markerRoot != null then markerRoot
+    else builtins.toString ./.;  # Fallback to relative path (won't work in flakes)
+  
+  localConfigPath = stackpanelRoot + "/.stackpanel/config.local.nix";
   hasLocalConfig = builtins.pathExists localConfigPath;
   rawLocalConfig = if hasLocalConfig then import localConfigPath else {};
   localConfig = if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
@@ -78,10 +96,9 @@ let
   # Files that are data-only (read by agent) and don't have corresponding module options
   # These should NOT be merged into stackpanel.* config
   dataOnlyFiles = [
-    "variables.nix"
-    "commands.nix"
-    "apps.nix"
-    "tasks.nix"
+    "commands.nix" # Tool configurations (eslint, biome, etc.) - read directly by agent
+    # "apps.nix"
+    # "tasks.nix"
     "packages.nix" # Contains strings, resolved by user-packages.nix
   ];
 

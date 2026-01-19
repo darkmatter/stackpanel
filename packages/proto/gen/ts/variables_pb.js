@@ -8,7 +8,7 @@ import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/code
  * Describes the file variables.proto.
  */
 export const file_variables = /*@__PURE__*/
-  fileDesc("Cg92YXJpYWJsZXMucHJvdG8SDXN0YWNrcGFuZWwuZGIinQEKCFZhcmlhYmxlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIYCgtkZXNjcmlwdGlvbhgDIAEoCUgAiAEBEikKBHR5cGUYBCABKA4yGy5zdGFja3BhbmVsLmRiLlZhcmlhYmxlVHlwZRINCgV2YWx1ZRgFIAEoCRIUCgxlbnZpcm9ubWVudHMYBiADKAlCDgoMX2Rlc2NyaXB0aW9uIpIBCglWYXJpYWJsZXMSOgoJdmFyaWFibGVzGAEgAygLMicuc3RhY2twYW5lbC5kYi5WYXJpYWJsZXMuVmFyaWFibGVzRW50cnkaSQoOVmFyaWFibGVzRW50cnkSCwoDa2V5GAEgASgJEiYKBXZhbHVlGAIgASgLMhcuc3RhY2twYW5lbC5kYi5WYXJpYWJsZToCOAEqMgoMVmFyaWFibGVUeXBlEgwKCFZBUklBQkxFEAASCgoGU0VDUkVUEAESCAoEVkFMUxACQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
+  fileDesc("Cg92YXJpYWJsZXMucHJvdG8SDXN0YWNrcGFuZWwuZGIitgIKCFZhcmlhYmxlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIYCgtkZXNjcmlwdGlvbhgDIAEoCUgAiAEBEikKBHR5cGUYBCABKA4yGy5zdGFja3BhbmVsLmRiLlZhcmlhYmxlVHlwZRINCgV2YWx1ZRgFIAEoCRIUCgxlbnZpcm9ubWVudHMYBiADKAkSEgoKcmVxdWlyZWRCeRgHIAMoCRIXCgpwcm92aWRlZEJ5GAggASgJSAGIAQESEgoFbGV2ZWwYCSABKAVIAogBARIyCgZhY3Rpb24YCiABKAsyHS5zdGFja3BhbmVsLmRiLlZhcmlhYmxlQWN0aW9uSAOIAQFCDgoMX2Rlc2NyaXB0aW9uQg0KC19wcm92aWRlZEJ5QggKBl9sZXZlbEIJCgdfYWN0aW9uInwKDlZhcmlhYmxlQWN0aW9uEgwKBHR5cGUYASABKAkSEgoFbGFiZWwYAiABKAlIAIgBARIQCgN1cmwYAyABKAlIAYgBARIWCglzZWNyZXRLZXkYBCABKAlIAogBAUIICgZfbGFiZWxCBgoEX3VybEIMCgpfc2VjcmV0S2V5IpIBCglWYXJpYWJsZXMSOgoJdmFyaWFibGVzGAEgAygLMicuc3RhY2twYW5lbC5kYi5WYXJpYWJsZXMuVmFyaWFibGVzRW50cnkaSQoOVmFyaWFibGVzRW50cnkSCwoDa2V5GAEgASgJEiYKBXZhbHVlGAIgASgLMhcuc3RhY2twYW5lbC5kYi5WYXJpYWJsZToCOAEqMgoMVmFyaWFibGVUeXBlEgwKCFZBUklBQkxFEAASCgoGU0VDUkVUEAESCAoEVkFMUxACQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
 
 /**
  * Describes the message stackpanel.db.Variable.
@@ -18,11 +18,18 @@ export const VariableSchema = /*@__PURE__*/
   messageDesc(file_variables, 0);
 
 /**
+ * Describes the message stackpanel.db.VariableAction.
+ * Use `create(VariableActionSchema)` to create a new message.
+ */
+export const VariableActionSchema = /*@__PURE__*/
+  messageDesc(file_variables, 1);
+
+/**
  * Describes the message stackpanel.db.Variables.
  * Use `create(VariablesSchema)` to create a new message.
  */
 export const VariablesSchema = /*@__PURE__*/
-  messageDesc(file_variables, 1);
+  messageDesc(file_variables, 2);
 
 /**
  * Describes the enum stackpanel.db.VariableType.

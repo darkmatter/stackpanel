@@ -13,6 +13,12 @@ plugins:
     out: gen/gopb
     opt:
       - paths=source_relative
+  # connect-handlers: Generates Connect handler implementations for Nix data entities
+  # Purpose: Zero-drift handler implementations that call the generic Nix data CRUD logic
+  # Output: connect_entities_gen.go with handler methods
+  # Note: Run `go build ./tools/protoc-gen-connect-handlers` first
+  - local: ./tools/protoc-gen-connect-handlers/protoc-gen-connect-handlers
+    out: ../../apps/stackpanel-go/internal/agent/server
   # bufbuild/es: Generates ES module protobuf messages using @bufbuild/protobuf
   # Purpose: Modern ES6+ message classes with full TypeScript support
   # Output: *_pb.js and *_pb.d.ts files with message classes

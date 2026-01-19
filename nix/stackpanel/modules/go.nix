@@ -478,78 +478,69 @@ in
           ) goApps
         );
 
-        # Add run-<app> and test-<app> wrapper commands for each Go app
+        # Add run-<app> and test-<app> wrapper scripts for each Go app
         # Uses STACKPANEL_ROOT env var which is set on shell entry
-        stackpanel.devshell.commands = lib.mkMerge (
+        stackpanel.scripts = lib.mkMerge (
           lib.mapAttrsToList (name: app: {
             "run-${name}" = {
               exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.go.mainPackage} "$@"'';
               runtimeInputs = [ pkgs.go ];
+              description = "Run ${name} Go app";
             };
             "test-${name}" = {
               exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
               runtimeInputs = [ pkgs.go ];
+              description = "Test ${name} Go app";
             };
           }) goApps
         );
 
-        # Register Go extension with panels and per-app data for UI
-        stackpanel.extensions.go = {
-          name = "Go";
-          enabled = true;
-          priority = 10;
-          tags = [
-            "language"
-            "backend"
-          ];
-
-          # UI panels for the extensions page
-          panels = [
+        # Register Go module panels for the UI (not an extension - core module)
+        stackpanel.panels.go-status = {
+          module = "go";
+          title = "Go Environment";
+          icon = "code";
+          type = "PANEL_TYPE_STATUS";
+          order = 10;
+          fields = [
             {
-              id = "go-apps-grid";
-              title = "Go Applications";
-              type = "PANEL_TYPE_APPS_GRID";
-              order = 1;
-              fields = [
+              name = "metrics";
+              type = "FIELD_TYPE_STRING";
+              value = builtins.toJSON [
                 {
-                  name = "columns";
-                  type = "FIELD_TYPE_COLUMNS";
-                  value = builtins.toJSON [
-                    "name"
-                    "path"
-                    "version"
-                    "port"
-                  ];
+                  label = "Go Version";
+                  value = pkgs.go.version;
+                  status = "ok";
                 }
-              ];
-            }
-            {
-              id = "go-status";
-              title = "Go Environment";
-              type = "PANEL_TYPE_STATUS";
-              order = 2;
-              fields = [
                 {
-                  name = "metrics";
-                  type = "FIELD_TYPE_STRING";
-                  value = builtins.toJSON [
-                    {
-                      label = "Go Version";
-                      value = pkgs.go.version;
-                      status = "ok";
-                    }
-                    {
-                      label = "Apps";
-                      value = toString (lib.length (lib.attrNames goApps));
-                      status = "ok";
-                    }
-                  ];
+                  label = "Apps";
+                  value = toString (lib.length (lib.attrNames goApps));
+                  status = "ok";
                 }
               ];
             }
           ];
+        };
 
-          # Per-app computed data (serializable subset)
+        stackpanel.panels.go-apps = {
+          module = "go";
+          title = "Go Applications";
+          icon = "boxes";
+          type = "PANEL_TYPE_APPS_GRID";
+          order = 11;
+          fields = [
+            {
+              name = "columns";
+              type = "FIELD_TYPE_COLUMNS";
+              value = builtins.toJSON [
+                "name"
+                "path"
+                "version"
+                "port"
+              ];
+            }
+          ];
+          # Per-app computed data
           apps = lib.mapAttrs (name: app: {
             enabled = true;
             config = {

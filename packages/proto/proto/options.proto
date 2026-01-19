@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package stackpanel.options;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// Method options for entity CRUD handlers
+extend google.protobuf.MethodOptions {
+  // Entity file name in .stackpanel/data/ (without .nix extension)
+  // If not set, derived from the return type (e.g., Apps → apps)
+  optional string entity = 50001;
+  
+  // Whether this entity is read-only (external entity)
+  optional bool readonly = 50002;
+  
+  // Skip handler generation for this method (use manual implementation)
+  optional bool skip_gen = 50003;
+}

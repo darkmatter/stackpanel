@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -10,6 +11,7 @@ import (
 	_ "github.com/darkmatter/stackpanel/stackpanel-go/internal/services" // register built-in dev services
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui/navigation"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 )
 
 var (
@@ -73,11 +75,96 @@ func init() {
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(usersCmd)
 
-	// Handle --no-color flag
+	// Handle --no-color flag and optional auto-register
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		noColor, _ := cmd.Flags().GetBool("no-color")
 		if noColor {
 			output.SetNoColor(true)
 		}
+
+		// Auto-detect and register project if explicitly enabled via environment variable.
+		// This is opt-in because automatic registration can be surprising.
+		// Set STACKPANEL_AUTO_REGISTER=1 to enable.
+		//
+		// Projects are still registered automatically by:
+		// - stackpanel agent (when started from a project directory)
+		// - stackpanel init (when Nix calls it during shell entry)
+		// - stackpanel scaffold (after creating project structure)
+		// - stackpanel project add (with user confirmation)
+		if os.Getenv("STACKPANEL_AUTO_REGISTER") == "1" {
+			// Skip for commands that handle registration themselves
+			skipCommands := map[string]bool{
+				"help":     true,
+				"version":  true,
+				"dev":      true,
+				"project":  true,
+				"agent":    true,
+				"init":     true,
+				"scaffold": true,
+			}
+
+			if !skipCommands[cmd.Name()] {
+				autoRegisterCurrentProject()
+			}
+		}
 	}
+}
+
+// autoRegisterCurrentProject detects if we're in a stackpanel project
+// and registers it in the user config if not already known.
+// This is only called when STACKPANEL_AUTO_REGISTER=1 is set.
+// It runs silently and doesn't fail the command if registration fails.
+func autoRegisterCurrentProject() {
+	projectPath := detectStackpanelProject()
+	if projectPath == "" {
+		return
+	}
+
+	ucm, err := userconfig.NewManager()
+	if err != nil {
+		return // Silently skip if config manager fails
+	}
+
+	// Only add if not already known
+	if !ucm.HasProject(projectPath) {
+		name := filepath.Base(projectPath)
+		_, _ = ucm.AddProject(projectPath, name)
+	}
+}
+
+// detectStackpanelProject looks for a stackpanel project in the current
+// directory or parent directories.
+func detectStackpanelProject() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	dir := cwd
+	for {
+		// Check for .stackpanel/config.nix
+		configPath := filepath.Join(dir, ".stackpanel", "config.nix")
+		if _, err := os.Stat(configPath); err == nil {
+			return dir
+		}
+
+		// Check for flake.nix with .git (likely a stackpanel project)
+		flakePath := filepath.Join(dir, "flake.nix")
+		gitPath := filepath.Join(dir, ".git")
+		if _, err := os.Stat(flakePath); err == nil {
+			if _, err := os.Stat(gitPath); err == nil {
+				return dir
+			}
+		}
+
+		// Move to parent directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root, no project found
+			break
+		}
+		dir = parent
+	}
+
+	return ""
 }

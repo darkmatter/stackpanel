@@ -212,10 +212,13 @@ let
       commandName,
     }:
     let
+      # process-compose expects environment as a list of KEY=VALUE strings
+      envList = lib.mapAttrsToList (k: v: "${k}=${v}") environment;
       configFile = pkgs.writeText "process-compose.yaml" (
         builtins.toJSON (removeNulls {
           version = "0.5";
-          inherit environment processes;
+          inherit processes;
+          environment = envList;
         })
       );
     in

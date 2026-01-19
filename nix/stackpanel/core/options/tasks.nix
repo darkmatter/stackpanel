@@ -122,7 +122,7 @@ in
       `.tasks/bin/<task>`. Turborepo invokes these via package.json scripts.
 
       For ad-hoc utility scripts without build dependencies, use
-      `stackpanel.devshell.commands` instead.
+      `stackpanel.scripts` instead.
     '';
     example = lib.literalExpression ''
       {
