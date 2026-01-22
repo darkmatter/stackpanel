@@ -30,6 +30,11 @@ type Config struct {
 	// Authentication token (from STACKPANEL_AUTH_TOKEN)
 	AuthToken string
 
+	// TestPairingToken enables deterministic pairing token mode for testing.
+	// When set, the agent uses a fixed signing key and agent ID derived from this value,
+	// making the generated pairing token predictable and valid across restarts.
+	TestPairingToken string
+
 	// Allowed commands (empty = all allowed)
 	AllowedCommands []string
 
@@ -110,6 +115,10 @@ func Load(_ string) (*Config, error) {
 
 	if v := envvars.StackpanelAuthToken.Get(); v != "" {
 		cfg.AuthToken = v
+	}
+
+	if v := envvars.StackpanelTestPairingToken.Get(); v != "" {
+		cfg.TestPairingToken = v
 	}
 
 	if v := envvars.StackpanelAPIEndpoint.Get(); v != "" {
