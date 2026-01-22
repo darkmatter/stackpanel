@@ -54,7 +54,7 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
 			".#stackpanelConfig",
-			".#stackpanelFullConfig",
+			// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values
 		}),
 		nixeval.WithTimeout(30*time.Second),
 		nixeval.WithCacheTTL(10*time.Second),

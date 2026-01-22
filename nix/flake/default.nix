@@ -358,6 +358,7 @@ in
                 packages = devenvPackages;
                 env = devenvEnv;
                 processes = devenvProcesses;
+                root = spConfig.root or null;
               };
             };
           };
@@ -378,6 +379,8 @@ in
               stackpanelConfig = stackpanelSerializable;
               stackpanelFullConfig = spConfig;
               stackpanelPackages = allSerializedPackages;
+              # Expose module options for introspection
+              stackpanelOptions = stackpanelEval.options.stackpanel or {};
             };
           }
 
@@ -413,6 +416,24 @@ in
               packages = directPkgs;
               # Nested attrsets (like scripts) go to legacyPackages for nix run .#scripts.<name>
               legacyPackages = nestedPkgs;
+            }
+          ))
+
+          # Expose stackpanel.checks as flake checks (for nix flake check)
+          (lib.mkIf (spConfig.enable or false) (
+            let
+              spChecks = spConfig.checks or {};
+            in lib.mkIf (spChecks != {}) {
+              checks = spChecks;
+            }
+          ))
+
+          # Expose stackpanel.flakeApps as flake apps (for nix run .#<name>)
+          (lib.mkIf (spConfig.enable or false) (
+            let
+              spApps = spConfig.flakeApps or {};
+            in lib.mkIf (spApps != {}) {
+              apps = spApps;
             }
           ))
 
@@ -467,6 +488,11 @@ in
         # Pre-serialized packages for fast access
         stackpanelPackages = withSystem "aarch64-darwin" (
           { config, ... }: config.legacyPackages.stackpanelPackages or [ ]
+        );
+
+        # Module options for introspection (documentation, tooling)
+        stackpanelOptions = withSystem "aarch64-darwin" (
+          { config, ... }: config.legacyPackages.stackpanelOptions or { }
         );
       };
     }

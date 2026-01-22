@@ -51,7 +51,7 @@
   --font-weight-semibold: 600;
   --font-weight-thin: 100;
   --tw-font-weight: 500;
-  --font-feature-settings-medium: "wght" 900, "wdth" 100;
+  --default-font-variation-settings: "wght" 350, "opsz" 12, "calt" 1, "kern" 1;
 
   --background: oklch(0.2 0 0);
   --foreground: oklch(0.9 0 0);
@@ -173,7 +173,8 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
+    /* font-family: var(--font-sans); */
+    letter-spacing: -0.02em;
   }
 
   h1,
@@ -184,15 +185,16 @@
   h6 {
     font-family: var(--font-sans);
     /*font-weight: 700;*/
+    font-variation-settings: "wght" 832, "opsz" 12;
   }
 
-  p {
+  /* p {
     font-weight: 400;
-  }
+  } */
 
-  strong {
+  /* strong {
     font-weight: 700;
-  }
+  } */
 
   button,
   a {
@@ -202,7 +204,27 @@
 
   code {
     font-family: var(--font-mono);
-    font-weight: 400;
+    /* font-weight: 400; */
+  }
+  
+
+  .font-bold, strong {
+    font-variation-settings: "wght" 832, "opsz" 12;
+    letter-spacing: -0.05em;
+  }
+  .font-semibold, b {
+    font-variation-settings: "wght" 600, "opsz" 12;
+    letter-spacing: -0.05em;
+  }
+
+  .font-light, em {
+    font-variation-settings: "wght" 300, "opsz" 12;
+    letter-spacing: -0.03em;
+  }
+
+  .font-medium, i {
+    font-variation-settings: "wght" 500, "opsz" 12;
+    letter-spacing: -0.03em;
   }
 }
 
@@ -281,7 +303,7 @@
   --secondary-foreground: oklch(1 0 0);
   --muted: oklch(0.1822 0 0);
   --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.5 0.25 282);
+  --accent: oklch(0.7808 0.1207 164.7599);
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.69 0.2 23.91);
   --destructive-foreground: oklch(0 0 0);

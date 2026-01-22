@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";
-import { useNixData } from "./use-nix-config";
+import { useNixData } from "./use-agent";
 
 // =============================================================================
 // Types

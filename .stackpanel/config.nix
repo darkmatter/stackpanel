@@ -44,7 +44,6 @@
     go
     gomod2nix
     quicktype
-    prek
     buf
   ];
 
@@ -93,6 +92,57 @@
   ];
 
   # ---------------------------------------------------------------------------
+  # Scripts (add wrapped prek)
+  # ---------------------------------------------------------------------------
+  scripts."stackpanel:prek" = {
+    description = "Run prek with on-demand .pre-commit-config.yaml (with noop hook)";
+    runtimeInputs = [ pkgs.prek ];
+    exec = ''
+      set -euo pipefail
+
+      ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
+      CONFIG_FILE="$ROOT/.pre-commit-config.yaml"
+
+      ensure_config() {
+        if [[ ! -f "$CONFIG_FILE" ]]; then
+          cat >"$CONFIG_FILE" <<'YAML'
+repos:
+  - repo: local
+    hooks:
+      - id: stackpanel-noop
+        name: Stackpanel noop hook
+        entry: bash -c 'echo "No pre-commit hooks configured yet (noop)."'
+        language: system
+        pass_filenames: false
+YAML
+          echo "🧰 Generated $CONFIG_FILE with a noop hook"
+          return
+        fi
+
+        if ! grep -q "stackpanel-noop" "$CONFIG_FILE"; then
+          if ! grep -q "^repos:" "$CONFIG_FILE"; then
+            echo "" >>"$CONFIG_FILE"
+            echo "repos:" >>"$CONFIG_FILE"
+          fi
+          cat >>"$CONFIG_FILE" <<'YAML'
+  - repo: local
+    hooks:
+      - id: stackpanel-noop
+        name: Stackpanel noop hook
+        entry: bash -c 'echo "No pre-commit hooks configured yet (noop)."'
+        language: system
+        pass_filenames: false
+YAML
+          echo "🧰 Added noop hook to $CONFIG_FILE"
+        fi
+      }
+
+      ensure_config
+      exec prek "$@"
+    '';
+  };
+
+  # ---------------------------------------------------------------------------
   # Git Hooks
   # ---------------------------------------------------------------------------
   git-hooks = {
@@ -114,6 +164,8 @@
     name = "web";
     domain = "stackpanel";
     tls = true;
+    path = "apps/web";
+    tasks.dev.command = "turbo run -F @stackpanel/web dev";
     # Environments with secrets configuration
     environments = {
       dev = {
@@ -144,14 +196,19 @@
   };
   apps.server = {
     name = "server";
+    path = "apps/server";
+    tasks.dev.command = "turbo run -F @stackpanel/server dev";
   };
   apps.docs = {
     name = "docs";
     domain = "docs";
+    path = "apps/docs";
+    tasks.dev.command = "turbo run -F @stackpanel/docs dev";
   };
   apps.stackpanel-go = {
     name = "stackpanel";
     path = "apps/stackpanel-go";
+    tasks.dev.command = "go run .";
     go = {
       enable = true;
       binaryName = "stackpanel";

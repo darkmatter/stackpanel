@@ -1,204 +1,166 @@
 # StackPanel Secrets Module
 
-SOPS-based secrets management for StackPanel projects.
+Master key-based secrets management for StackPanel projects.
 
 ## Overview
 
-This module provides a comprehensive secrets management solution using [SOPS](https://github.com/getsops/sops) (Secrets OPerationS) with [AGE](https://github.com/FiloSottile/age) encryption. It supports both devenv and standalone Nix flake contexts.
+This module provides a simplified secrets system using [AGE](https://github.com/FiloSottile/age) encryption with master keys. Instead of per-user keys, a few master keys encrypt all secrets, and each secret specifies which master keys can decrypt it.
 
-## Features
+## Key Concepts
 
-- **AGE Encryption**: Secure encryption using AGE public/private key pairs
-- **Environment Isolation**: Separate secrets per environment (dev, staging, prod)
-- **Type-Safe Code Generation**: Generate TypeScript or Go code from secrets schemas
-- **IDE Validation**: JSON schemas for YAML config file validation and autocompletion
-- **Dual Context Support**: Works in both devenv and standalone flake contexts
+### Master Keys
 
-## Module Structure
+Master keys are the **only** keys used for encrypting/decrypting secrets:
 
-| File | Purpose |
-|------|---------|
-| `default.nix` | Unified entry point, auto-detects context |
-| `core.nix` | Core script implementations for devenv |
-| `lib.nix` | Shared library functions for both adapters |
-| `options.nix` | Pure NixOS module option definitions |
-| `schemas.nix` | JSON schemas for YAML config validation |
+```nix
+stackpanel.secrets.master-keys = {
+  # Auto-generated local key - always works
+  local = {
+    age-pub = "age1...";  # computed from private key
+    ref = "ref+file://.stackpanel/state/keys/local.txt";
+  };
+  
+  # Team dev key - stored in AWS SSM
+  dev = {
+    age-pub = "age1...";
+    ref = "ref+awsssm://stackpanel/keys/dev";
+  };
+  
+  # Production key
+  prod = {
+    age-pub = "age1...";
+    ref = "ref+awsssm://stackpanel/keys/prod";
+  };
+};
+```
 
-## Quick Start
+### Variable Types
 
-### In devenv.nix
+Variables can be one of four types:
+
+| Type | Description | Value Field Contains | Resolved At |
+|------|-------------|---------------------|-------------|
+| `LITERAL` | Plain text value | The actual value | Eval time |
+| `SECRET` | Encrypted with master keys | Empty (value in .age file) | Runtime |
+| `VALS` | External secret store ref | `ref+awsssm://...` | Runtime |
+| `EXEC` | Shell command | Command to execute | Runtime |
+
+### Example Configuration
 
 ```nix
 {
-  imports = [ ./nix/stackpanel/secrets ];
-
-  stackpanel.secrets = {
-    enable = true;
-    input-directory = ".stackpanel/secrets";
-
-    environments = {
-      dev = {
-        name = "dev";
-        sources = [ "shared" "dev" ];
-        public-keys = [ "age1..." ];
-      };
-    };
-
-    codegen = {
-      api = {
-        name = "api";
-        directory = "packages/api/src";
-        language = "typescript";
-      };
+  # Master keys
+  stackpanel.secrets.master-keys = {
+    local = { ... };  # auto-configured
+    dev = {
+      age-pub = "age1...";
+      ref = "ref+awsssm://stackpanel/keys/dev";
     };
   };
-}
-```
 
-### In a standalone flake
-
-```nix
-{
-  imports = [ ./nix/stackpanel/secrets ];
-  _module.args.pkgs = nixpkgs.legacyPackages.x86_64-linux;
-
-  stackpanel.secrets.enable = true;
-
-  # Access generated packages via:
-  # config.stackpanel.secrets.packages.ensure-age-key
-  # config.stackpanel.secrets.packages.sops-wrapped
-  # config.stackpanel.secrets.packages.generate-secrets-schema
-  # config.stackpanel.secrets.packages.generate-secrets-package
-}
-```
-
-## Available Scripts
-
-| Script | Description |
-|--------|-------------|
-| `ensure-age-key` | Validates that the required AGE decryption key exists |
-| `sops` | Wrapped SOPS command with automatic key preflight check |
-| `generate-secrets-schema` | Generates typed code from a single SOPS-encrypted file |
-| `generate-secrets-package` | Orchestrates code generation for all configured environments |
-
-## Directory Structure
-
-The module expects secrets to be organized as:
-
-```
-.stackpanel/secrets/
-├── config.yaml          # Global secrets configuration
-├── users.yaml           # Team members with AGE public keys
-└── apps/
-    └── <app-name>/
-        ├── config.yaml  # Per-app codegen configuration
-        ├── common.yaml  # Shared secret schema
-        ├── dev.yaml     # Development secrets (SOPS-encrypted)
-        ├── staging.yaml # Staging secrets (SOPS-encrypted)
-        └── prod.yaml    # Production secrets (SOPS-encrypted)
-```
-
-## Configuration Options
-
-### `stackpanel.secrets.enable`
-Enable the secrets module. Default: `false`
-
-### `stackpanel.secrets.input-directory`
-Directory containing SOPS-encrypted secrets. Default: `.stackpanel/secrets`
-
-### `stackpanel.secrets.environments`
-Attribute set defining environment-specific configurations:
-- `name`: Environment name
-- `sources`: List of SOPS files to merge (without `.yaml` extension)
-- `public-keys`: AGE public keys that can decrypt this environment
-
-### `stackpanel.secrets.codegen`
-Attribute set defining code generation targets:
-- `name`: Target name
-- `directory`: Output directory for generated code
-- `language`: `"typescript"` or `"go"`
-
-## AGE Key Setup
-
-1. Find "SOPS (Dev)" in 1Password > Dev Vault
-2. Copy the AGE secret key (starts with `AGE-SECRET-KEY-`)
-3. Add it to `~/.config/sops/age/keys.txt`
-4. Run `ensure-age-key` to verify setup
-
-## Wrapped Packages
-
-The secrets module can create wrapped versions of packages that automatically inject secrets as environment variables at runtime. This is useful for running applications with their secrets without manually exporting environment variables.
-
-### Configuration
-
-```nix
-{
-  stackpanel.secrets = {
-    enable = true;
+  # Variables
+  stackpanel.variables = {
+    "/dev/postgres-url" = {
+      key = "POSTGRES_URL";
+      type = "LITERAL";
+      value = "postgresql://localhost:5432/dev";
+    };
     
-    wrapped = {
-      enable = true;
-      projectRoot = ".";  # Path to project root for finding secrets
-      
-      apps.myapp = {
-        # Packages to wrap with this app's secrets
-        packages = [ pkgs.nodejs pkgs.python3 ];
-        # Environments to create wrapped packages for (default: dev, staging, prod)
-        environments = [ "dev" "staging" "prod" ];
-      };
-      
-      # Optionally add wrapped packages to devshell
-      addToDevshell = true;
-      devshellEnvironment = "dev";  # Which environment's packages to add
+    "/prod/api-key" = {
+      key = "API_KEY";
+      type = "SECRET";
+      master-keys = [ "prod" ];  # only prod key can decrypt
+    };
+    
+    "/shared/openai-key" = {
+      key = "OPENAI_API_KEY";
+      type = "SECRET";
+      master-keys = [ "dev" "prod" ];  # both can decrypt
+    };
+    
+    "/dev/git-commit" = {
+      key = "GIT_COMMIT";
+      type = "EXEC";
+      value = "git rev-parse --short HEAD";
     };
   };
 }
 ```
 
-### Accessing Wrapped Packages
+## Available Commands
 
-Wrapped packages are accessible via the `config.stackpanel.secrets.wrapped.packages` attribute:
+| Command | Description |
+|---------|-------------|
+| `secrets:set <id> --keys k1,k2` | Set a secret (encrypt to master keys) |
+| `secrets:get <id>` | Get a decrypted secret |
+| `secrets:list` | List all encrypted secrets |
+| `secrets:rekey <id> --keys k1,k2` | Re-encrypt to different master keys |
+| `secrets:show-keys` | Show configured master keys |
+| `secrets:export --format env|json|yaml` | Export all secrets |
+| `secrets:env` | Load secrets into current shell |
+
+## How It Works
+
+### Encryption
+
+When you run `secrets:set /prod/api-key --keys prod`:
+
+1. Look up `master-keys.prod.age-pub`
+2. Encrypt the value: `age -r age1... -o .stackpanel/secrets/prod-api-key.age`
+
+For multiple keys: `age -r key1 -r key2 -o secret.age`
+
+### Decryption
+
+When decrypting at runtime:
+
+1. Try each configured master key in order
+2. Resolve the key using vals: `vals eval "ref+awsssm://..."`
+3. Decrypt with the resolved private key
+4. Return the decrypted value
+
+### Local Development
+
+A `local` master key is auto-generated on first shell entry:
+- Private key: `.stackpanel/state/keys/local.txt`
+- Public key: `.stackpanel/state/keys/local.pub`
+
+This ensures secrets can always be created without external configuration.
+
+## External Secret Stores
+
+Master key private keys can be stored anywhere that vals supports:
 
 ```nix
-# Access a specific wrapped package
-config.stackpanel.secrets.wrapped.packages.myapp.dev.nodejs
-config.stackpanel.secrets.wrapped.packages.myapp.prod.python3
+# AWS SSM Parameter Store
+ref = "ref+awsssm://stackpanel/keys/prod";
 
-# Use in another derivation
-{
-  buildInputs = [
-    config.stackpanel.secrets.wrapped.packages.myapp.dev.nodejs
-  ];
-}
+# HashiCorp Vault
+ref = "ref+vault://secret/data/stackpanel/prod#key";
+
+# GCP Secret Manager
+ref = "ref+gcpsecrets://project/stackpanel-prod";
+
+# Local file (default for local key)
+ref = "ref+file://.stackpanel/state/keys/local.txt";
 ```
 
-### Running Commands with Secrets
+For unsupported stores, use `resolve-cmd`:
 
-You can also run any command with secrets from an app environment using the `secrets:run` command:
-
-```bash
-# Run a command with secrets loaded
-secrets:run myapp dev node server.js
-secrets:run myapp prod python app.py
+```nix
+prod = {
+  age-pub = "age1...";
+  ref = "";  # not used
+  resolve-cmd = "op read 'op://vault/stackpanel/age-key'";
+};
 ```
 
-### How It Works
+## Migration from Per-User Keys
 
-1. Each wrapped package uses `makeWrapper` to inject a runtime script
-2. At execution time, the script:
-   - Locates the combined secrets file for the app/environment
-   - Decrypts it using the AGE key from `~/.config/sops/age/keys.txt`
-   - Exports all secrets as environment variables
-   - Executes the original program
-3. The `PROJECT_ROOT` environment variable can override the secrets file location
+If you previously used per-user keys:
 
-### Requirements
+1. Add master keys to your config
+2. Re-encrypt secrets: `secrets:rekey /my-secret --keys dev,prod`
+3. Remove old user key references
 
-- The combined secrets file must exist at `.stackpanel/secrets/apps/<app>/<env>.yaml`
-- The AGE decryption key must be available at runtime
-- Generate combined secrets first with `secrets:combine` or `secrets:regenerate-all`
-
-## Related Documentation
-
-- [SOPS Documentation](https://github.com/getsops/sops)
-- [AGE Encryption](https://github.com/FiloSottile/age)
+The user model no longer includes public keys - users are just team member metadata.

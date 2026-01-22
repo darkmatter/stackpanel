@@ -10,33 +10,37 @@
 #   - An HTTP endpoint check
 #   - A TCP port check
 #
+# Script-type checks support multiple content sources:
+#   - script: Inline shell script content
+#   - path: Path to script file (content read at eval time)
+#   - scriptRef: Reference to a stackpanel.scripts.* entry
+#
 # The UI displays a "traffic light" indicator for each module:
 #   🟢 Green  - All checks passing
 #   🟡 Yellow - Some non-critical checks failing
 #   🔴 Red    - Critical checks failing
 #   ⚪ Grey   - Checks haven't run or are disabled
 #
-# Usage:
-#   stackpanel.healthchecks.modules.go = {
-#     enable = true;
-#     checks = {
-#       go-installed = {
-#         name = "Go Installed";
-#         type = "script";
-#         script = "command -v go >/dev/null 2>&1";
-#         severity = "critical";
-#       };
-#       go-version = {
-#         name = "Go Version";
-#         type = "script";
-#         script = ''
-#           version=$(go version 2>/dev/null | grep -oP '\d+\.\d+')
-#           [ "$(printf '%s\n' "1.21" "$version" | sort -V | head -n1)" = "1.21" ]
-#         '';
-#         severity = "warning";
-#       };
-#     };
+# Usage (inline script):
+#   stackpanel.healthchecks.modules.go.checks.go-installed = {
+#     script = "command -v go >/dev/null 2>&1";
+#     severity = "critical";
 #   };
+#
+# Usage (path to file):
+#   stackpanel.healthchecks.modules.postgres.checks.can-connect = {
+#     path = ./.stackpanel/src/checks/postgres/can-connect.sh;
+#     severity = "critical";
+#   };
+#
+# Usage (reference to script):
+#   stackpanel.healthchecks.modules.db.checks.can-seed = {
+#     scriptRef = "db-seed";  # Uses stackpanel.scripts.db-seed
+#     severity = "warning";
+#   };
+#
+# Extension modules use the extension name as the module key:
+#   stackpanel.healthchecks.modules.sst.checks.configured = { ... };
 #
 # The healthchecks are exposed via the agent API for the web UI to consume
 # and display traffic light indicators.
@@ -108,15 +112,38 @@ let
           '';
         };
 
-        # Script-based checks
+        # Script-based checks - multiple ways to provide script content
         script = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
           description = ''
-            Shell script content for script-type checks.
+            Shell script content for script-type checks (inline).
             Should exit 0 for healthy, non-zero for unhealthy.
+            Mutually exclusive with `path` and `scriptRef`.
           '';
           example = "command -v go >/dev/null 2>&1";
+        };
+
+        path = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = ''
+            Path to script file for script-type checks.
+            Content is read and used as the script body.
+            Mutually exclusive with `script` and `scriptRef`.
+          '';
+          example = lib.literalExpression "./.stackpanel/src/checks/postgres/can-connect.sh";
+        };
+
+        scriptRef = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Reference to a stackpanel.scripts.* entry.
+            The referenced script is used as the healthcheck command.
+            Mutually exclusive with `script` and `path`.
+          '';
+          example = "db-connect";
         };
 
         scriptPackage = lib.mkOption {
@@ -231,15 +258,47 @@ let
   );
 
   # Build script derivation for a healthcheck
-  # Only use scriptPath for explicit scriptPackage - inline scripts are run directly by the agent
+  # All script-type checks become derivations for security (no sh -c with inline content)
   mkHealthcheckScript =
     moduleName: checkName: check:
+    let
+      hasScript = check.script or null != null;
+      hasScriptRef = check.scriptRef or null != null;
+      hasPath = check.path or null != null;
+      hasScriptPackage = check.scriptPackage or null != null;
+
+      checkName' = "${moduleName}-${checkName}";
+    in
     if !hasPkgs then
       null
-    else if check.scriptPackage != null then
+    else if hasScriptPackage then
+      # Explicit script package provided
       check.scriptPackage
+    else if hasScriptRef then
+      # Reference to a stackpanel.scripts.* entry - use its derivation
+      let
+        refName = check.scriptRef;
+        scriptPkgs = config.stackpanel.scriptsConfig.packages or { };
+        refPkg = scriptPkgs.${refName} or null;
+      in
+      if refPkg == null then
+        throw "Healthcheck '${checkName'}': scriptRef '${refName}' not found in stackpanel.scripts"
+      else
+        refPkg
+    else if hasPath then
+      # Build derivation from path content
+      pkgs.writeShellApplication {
+        name = "healthcheck-${checkName'}";
+        text = builtins.readFile check.path;
+      }
+    else if hasScript then
+      # Build derivation from inline script
+      pkgs.writeShellApplication {
+        name = "healthcheck-${checkName'}";
+        text = check.script;
+      }
     else
-      # Don't create derivations for inline scripts - the Go agent runs them via `sh -c`
+      # Non-script type check (http, tcp, nix) - no derivation needed
       null;
 
   # Compute serializable healthcheck data for the agent
@@ -248,7 +307,38 @@ let
     lib.mapAttrs (
       checkName: check:
       let
-        scriptPath = mkHealthcheckScript moduleName checkName check;
+        # Build the script derivation
+        scriptDrv = mkHealthcheckScript moduleName checkName check;
+
+        # Resolve script content based on source type
+        hasScript = check.script or null != null;
+        hasScriptRef = check.scriptRef or null != null;
+        hasPath = check.path or null != null;
+
+        # Validate mutually exclusive options
+        sourceCount = lib.count (x: x) [ hasScript hasPath hasScriptRef ];
+      in
+      assert sourceCount <= 1 || throw "Healthcheck '${moduleName}.${checkName}': specify only one of 'script', 'path', or 'scriptRef'";
+      let
+
+        # Determine the source type for debugging
+        scriptSource =
+          if check.scriptPackage or null != null then "package"
+          else if hasScriptRef then "scriptRef:${check.scriptRef}"
+          else if hasPath then "path"
+          else if hasScript then "inline"
+          else null;
+
+        # Get the binary path for script-type checks
+        checkName' = "${moduleName}-${checkName}";
+        scriptBinPath =
+          if scriptDrv != null then
+            if hasScriptRef then
+              "${scriptDrv}/bin/${check.scriptRef}"
+            else
+              "${scriptDrv}/bin/healthcheck-${checkName'}"
+          else
+            null;
       in
       {
         id = "${moduleName}-${checkName}";
@@ -269,8 +359,11 @@ let
             info = "HEALTHCHECK_SEVERITY_INFO";
           }
           .${check.severity};
-        script = check.script;
-        scriptPath = if scriptPath != null then toString scriptPath else null;
+        # For script-type checks: agent executes scriptPath directly (no sh -c)
+        scriptPath = scriptBinPath;
+        # Provide derivation path so agent can build if not realized
+        scriptDrvPath = if scriptDrv != null then builtins.toString scriptDrv.drvPath else null;
+        scriptSource = scriptSource;
         nixExpr = check.nixExpr;
         httpUrl = check.httpUrl;
         httpMethod = check.httpMethod;
@@ -318,26 +411,40 @@ in
       example = lib.literalExpression ''
         {
           go = {
-            enable = true;
             displayName = "Go";
             checks = {
+              # Inline script
               go-installed = {
-                name = "Go Installed";
-                type = "script";
                 script = "command -v go >/dev/null 2>&1";
                 severity = "critical";
               };
             };
           };
+
           postgres = {
-            enable = true;
             displayName = "PostgreSQL";
             checks = {
-              postgres-running = {
-                name = "PostgreSQL Running";
+              # TCP check
+              running = {
                 type = "tcp";
                 tcpHost = "localhost";
                 tcpPort = 5432;
+                severity = "critical";
+              };
+              # Path to script file
+              has-tables = {
+                path = ./.stackpanel/src/checks/postgres/has-tables.sh;
+                severity = "warning";
+              };
+            };
+          };
+
+          # Extension module
+          sst = {
+            displayName = "SST";
+            checks = {
+              configured = {
+                path = ./src/checks/configured.sh;
                 severity = "critical";
               };
             };

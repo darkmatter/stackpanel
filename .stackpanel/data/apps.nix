@@ -1,7 +1,23 @@
+# ==============================================================================
+# apps.nix - Application configuration
+#
+# Define your applications here. Commands (dev, build, test, lint, format)
+# are automatically provided based on the app type (bun, go, etc.).
+#
+# Flake outputs:
+#   nix build .#<app>       - Build for production
+#   nix run .#<app>-dev     - Run dev server
+#   nix run .#<app>         - Run production app
+#   nix flake check         - Run all tests and lints
+# ==============================================================================
 {
   docs = {
+    name = "docs";
     description = "Documentation site";
+    path = "apps/docs";
+    type = "bun";
     domain = "docs";
+    port = 3002;
     environments = {
       dev = {
         name = "dev";
@@ -34,78 +50,33 @@
         };
       };
     };
-    name = "docs";
-    path = "apps/docs";
-    port = 3002;
-    tasks = {
-      build = {
-        command = "bun run build";
-        description = "Build documentation site";
-        env = { };
-        key = "build";
-      };
-      dev = {
-        command = "bun run dev";
-        description = "Start documentation dev server";
-        env = { };
-        key = "dev";
-      };
-    };
-    type = "bun";
     variables = { };
   };
+
   server = {
-    description = "Backend API server";
     name = "server";
+    description = "Backend API server";
     path = "apps/server";
-    port = 3001;
-    tasks = {
-      build = {
-        command = "bun run build";
-        description = "Build API server";
-        env = { };
-        key = "build";
-      };
-      dev = {
-        command = "bun run dev";
-        description = "Start API server in development mode";
-        env = { };
-        key = "dev";
-      };
-      test = {
-        command = "bun run test";
-        description = "Run API tests";
-        env = { };
-        key = "test";
-      };
-    };
     type = "bun";
+    port = 3001;
     variables = { };
   };
+
   stackpanel-go = {
-    description = "Stackpanel CLI and agent (Go)";
     name = "stackpanel";
+    description = "Stackpanel CLI and agent (Go)";
     path = "apps/stackpanel-go";
-    tasks = {
-      build = {
-        command = "go build -o stackpanel ./cmd/stackpanel";
-        description = "Build Go binary";
-        env = { };
-        key = "build";
-      };
-      test = {
-        command = "go test ./...";
-        description = "Run Go tests";
-        env = { };
-        key = "test";
-      };
-    };
     type = "go";
     variables = { };
   };
+
   web = {
+    name = "web";
     description = "Main web application (Next.js)";
+    path = "apps/web";
+    type = "bun";
     domain = "stackpanel";
+    port = 3000;
     environments = {
       dev = {
         name = "dev";
@@ -128,31 +99,9 @@
         };
       };
     };
-    name = "web";
-    path = "apps/web";
-    port = 3000;
-    tasks = {
-      build = {
-        command = "bun run build";
-        description = "Build for production";
-        env = { };
-        key = "build";
-      };
-      dev = {
-        command = "bun run dev";
-        description = "Start development server with hot reload";
-        env = { };
-        key = "dev";
-      };
-      test = {
-        command = "bun run test";
-        description = "Run test suite";
-        env = { };
-        key = "test";
-      };
-    };
-    type = "bun";
     variables = { };
+    commands = {
+      dev = { command = "bun run -F web dev"; };
+    };
   };
 }
-

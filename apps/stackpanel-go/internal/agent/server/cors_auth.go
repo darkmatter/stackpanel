@@ -75,8 +75,11 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 		if origin != "" && s.isOriginAllowed(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
-			w.Header().Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token")
+			// Include Connect-RPC headers: connect-protocol-version, connect-timeout-ms
+			w.Header().Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, connect-protocol-version, connect-timeout-ms")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			// Expose Connect-RPC headers in responses
+			w.Header().Set("Access-Control-Expose-Headers", "connect-protocol-version, grpc-status, grpc-message")
 			// Private Network Access (PNA) preflight support (Chrome)
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		}

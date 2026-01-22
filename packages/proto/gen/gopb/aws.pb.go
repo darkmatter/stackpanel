@@ -23,10 +23,12 @@ const (
 
 // AWS configuration including Roles Anywhere for certificate-based authentication
 type Aws struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RolesAnywhere *RolesAnywhere         `protobuf:"bytes,1,opt,name=roles_anywhere,json=rolesAnywhere,proto3" json:"roles_anywhere,omitempty"` // AWS Roles Anywhere configuration
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	RolesAnywhere  *RolesAnywhere         `protobuf:"bytes,1,opt,name=roles_anywhere,json=rolesAnywhere,proto3" json:"roles_anywhere,omitempty"`    // AWS Roles Anywhere configuration
+	DefaultProfile string                 `protobuf:"bytes,2,opt,name=default_profile,json=defaultProfile,proto3" json:"default_profile,omitempty"` // AWS profile name to use as default (default: 'default')
+	ExtraConfig    string                 `protobuf:"bytes,3,opt,name=extra_config,json=extraConfig,proto3" json:"extra_config,omitempty"`          // Additional AWS config to append (raw INI format)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Aws) Reset() {
@@ -64,6 +66,20 @@ func (x *Aws) GetRolesAnywhere() *RolesAnywhere {
 		return x.RolesAnywhere
 	}
 	return nil
+}
+
+func (x *Aws) GetDefaultProfile() string {
+	if x != nil {
+		return x.DefaultProfile
+	}
+	return ""
+}
+
+func (x *Aws) GetExtraConfig() string {
+	if x != nil {
+		return x.ExtraConfig
+	}
+	return ""
 }
 
 // AWS Roles Anywhere configuration for certificate-based authentication
@@ -171,9 +187,11 @@ var File_aws_proto protoreflect.FileDescriptor
 
 const file_aws_proto_rawDesc = "" +
 	"\n" +
-	"\taws.proto\x12\rstackpanel.db\"J\n" +
+	"\taws.proto\x12\rstackpanel.db\"\x96\x01\n" +
 	"\x03Aws\x12C\n" +
-	"\x0eroles_anywhere\x18\x01 \x01(\v2\x1c.stackpanel.db.RolesAnywhereR\rrolesAnywhere\"\xa0\x02\n" +
+	"\x0eroles_anywhere\x18\x01 \x01(\v2\x1c.stackpanel.db.RolesAnywhereR\rrolesAnywhere\x12'\n" +
+	"\x0fdefault_profile\x18\x02 \x01(\tR\x0edefaultProfile\x12!\n" +
+	"\fextra_config\x18\x03 \x01(\tR\vextraConfig\"\xa0\x02\n" +
 	"\rRolesAnywhere\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x16\n" +
 	"\x06region\x18\x02 \x01(\tR\x06region\x12\x1d\n" +

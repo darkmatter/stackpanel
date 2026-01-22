@@ -4,6 +4,29 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { AgentService } from "./agent";
+import type { RefreshNixConfigRequest } from "./agent";
+import type { NixConfigResponse } from "./agent";
+import type { GetNixConfigRequest } from "./agent";
+import type { HealthchecksResponse } from "./agent";
+import type { GetHealthchecksRequest } from "./agent";
+import type { GetProcessesResponse } from "./agent";
+import type { GetProcessesRequest } from "./agent";
+import type { InstalledPackagesResponse } from "./agent";
+import type { GetInstalledPackagesRequest } from "./agent";
+import type { SearchNixpkgsResponse } from "./agent";
+import type { SearchNixpkgsRequest } from "./agent";
+import type { SSTResourcesResponse } from "./agent";
+import type { GetSSTResourcesRequest } from "./agent";
+import type { SSTOutputsResponse } from "./agent";
+import type { GetSSTOutputsRequest } from "./agent";
+import type { RemoveSSTResponse } from "./agent";
+import type { RemoveSSTRequest } from "./agent";
+import type { DeploySSTResponse } from "./agent";
+import type { DeploySSTRequest } from "./agent";
+import type { Sst } from "./sst";
+import type { GetSSTConfigRequest } from "./agent";
+import type { SSTStatusResponse } from "./agent";
+import type { GetSSTStatusRequest } from "./agent";
 import type { ServiceResponse } from "./agent";
 import type { ServiceRequest } from "./agent";
 import type { GetServicesStatusResponse } from "./agent";
@@ -178,6 +201,64 @@ export interface IAgentServiceClient {
      * @generated from protobuf rpc: RestartService
      */
     restartService(input: ServiceRequest, options?: RpcOptions): UnaryCall<ServiceRequest, ServiceResponse>;
+    /**
+     * SST Infrastructure
+     *
+     * @generated from protobuf rpc: GetSSTStatus
+     */
+    getSSTStatus(input: GetSSTStatusRequest, options?: RpcOptions): UnaryCall<GetSSTStatusRequest, SSTStatusResponse>;
+    /**
+     * @generated from protobuf rpc: GetSSTConfig
+     */
+    getSSTConfig(input: GetSSTConfigRequest, options?: RpcOptions): UnaryCall<GetSSTConfigRequest, Sst>;
+    /**
+     * @generated from protobuf rpc: DeploySST
+     */
+    deploySST(input: DeploySSTRequest, options?: RpcOptions): UnaryCall<DeploySSTRequest, DeploySSTResponse>;
+    /**
+     * @generated from protobuf rpc: RemoveSST
+     */
+    removeSST(input: RemoveSSTRequest, options?: RpcOptions): UnaryCall<RemoveSSTRequest, RemoveSSTResponse>;
+    /**
+     * @generated from protobuf rpc: GetSSTOutputs
+     */
+    getSSTOutputs(input: GetSSTOutputsRequest, options?: RpcOptions): UnaryCall<GetSSTOutputsRequest, SSTOutputsResponse>;
+    /**
+     * @generated from protobuf rpc: GetSSTResources
+     */
+    getSSTResources(input: GetSSTResourcesRequest, options?: RpcOptions): UnaryCall<GetSSTResourcesRequest, SSTResourcesResponse>;
+    /**
+     * Nixpkgs package management
+     *
+     * @generated from protobuf rpc: SearchNixpkgs
+     */
+    searchNixpkgs(input: SearchNixpkgsRequest, options?: RpcOptions): UnaryCall<SearchNixpkgsRequest, SearchNixpkgsResponse>;
+    /**
+     * @generated from protobuf rpc: GetInstalledPackages
+     */
+    getInstalledPackages(input: GetInstalledPackagesRequest, options?: RpcOptions): UnaryCall<GetInstalledPackagesRequest, InstalledPackagesResponse>;
+    /**
+     * Process-compose processes
+     *
+     * @generated from protobuf rpc: GetProcesses
+     */
+    getProcesses(input: GetProcessesRequest, options?: RpcOptions): UnaryCall<GetProcessesRequest, GetProcessesResponse>;
+    /**
+     * Healthchecks
+     *
+     * @generated from protobuf rpc: GetHealthchecks
+     */
+    getHealthchecks(input: GetHealthchecksRequest, options?: RpcOptions): UnaryCall<GetHealthchecksRequest, HealthchecksResponse>;
+    /**
+     * Full Nix config (evaluated from flake)
+     *
+     * @generated from protobuf rpc: GetNixConfig
+     */
+    getNixConfig(input: GetNixConfigRequest, options?: RpcOptions): UnaryCall<GetNixConfigRequest, NixConfigResponse>;
+    /**
+     * @generated from protobuf rpc: RefreshNixConfig
+     */
+    refreshNixConfig(input: RefreshNixConfigRequest, options?: RpcOptions): UnaryCall<RefreshNixConfigRequest, NixConfigResponse>;
 }
 // =============================================================================
 // Agent Service
@@ -399,5 +480,99 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
     restartService(input: ServiceRequest, options?: RpcOptions): UnaryCall<ServiceRequest, ServiceResponse> {
         const method = this.methods[26], opt = this._transport.mergeOptions(options);
         return stackIntercept<ServiceRequest, ServiceResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * SST Infrastructure
+     *
+     * @generated from protobuf rpc: GetSSTStatus
+     */
+    getSSTStatus(input: GetSSTStatusRequest, options?: RpcOptions): UnaryCall<GetSSTStatusRequest, SSTStatusResponse> {
+        const method = this.methods[27], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetSSTStatusRequest, SSTStatusResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetSSTConfig
+     */
+    getSSTConfig(input: GetSSTConfigRequest, options?: RpcOptions): UnaryCall<GetSSTConfigRequest, Sst> {
+        const method = this.methods[28], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetSSTConfigRequest, Sst>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: DeploySST
+     */
+    deploySST(input: DeploySSTRequest, options?: RpcOptions): UnaryCall<DeploySSTRequest, DeploySSTResponse> {
+        const method = this.methods[29], opt = this._transport.mergeOptions(options);
+        return stackIntercept<DeploySSTRequest, DeploySSTResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: RemoveSST
+     */
+    removeSST(input: RemoveSSTRequest, options?: RpcOptions): UnaryCall<RemoveSSTRequest, RemoveSSTResponse> {
+        const method = this.methods[30], opt = this._transport.mergeOptions(options);
+        return stackIntercept<RemoveSSTRequest, RemoveSSTResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetSSTOutputs
+     */
+    getSSTOutputs(input: GetSSTOutputsRequest, options?: RpcOptions): UnaryCall<GetSSTOutputsRequest, SSTOutputsResponse> {
+        const method = this.methods[31], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetSSTOutputsRequest, SSTOutputsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetSSTResources
+     */
+    getSSTResources(input: GetSSTResourcesRequest, options?: RpcOptions): UnaryCall<GetSSTResourcesRequest, SSTResourcesResponse> {
+        const method = this.methods[32], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetSSTResourcesRequest, SSTResourcesResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Nixpkgs package management
+     *
+     * @generated from protobuf rpc: SearchNixpkgs
+     */
+    searchNixpkgs(input: SearchNixpkgsRequest, options?: RpcOptions): UnaryCall<SearchNixpkgsRequest, SearchNixpkgsResponse> {
+        const method = this.methods[33], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SearchNixpkgsRequest, SearchNixpkgsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetInstalledPackages
+     */
+    getInstalledPackages(input: GetInstalledPackagesRequest, options?: RpcOptions): UnaryCall<GetInstalledPackagesRequest, InstalledPackagesResponse> {
+        const method = this.methods[34], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetInstalledPackagesRequest, InstalledPackagesResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Process-compose processes
+     *
+     * @generated from protobuf rpc: GetProcesses
+     */
+    getProcesses(input: GetProcessesRequest, options?: RpcOptions): UnaryCall<GetProcessesRequest, GetProcessesResponse> {
+        const method = this.methods[35], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetProcessesRequest, GetProcessesResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Healthchecks
+     *
+     * @generated from protobuf rpc: GetHealthchecks
+     */
+    getHealthchecks(input: GetHealthchecksRequest, options?: RpcOptions): UnaryCall<GetHealthchecksRequest, HealthchecksResponse> {
+        const method = this.methods[36], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetHealthchecksRequest, HealthchecksResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Full Nix config (evaluated from flake)
+     *
+     * @generated from protobuf rpc: GetNixConfig
+     */
+    getNixConfig(input: GetNixConfigRequest, options?: RpcOptions): UnaryCall<GetNixConfigRequest, NixConfigResponse> {
+        const method = this.methods[37], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetNixConfigRequest, NixConfigResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: RefreshNixConfig
+     */
+    refreshNixConfig(input: RefreshNixConfigRequest, options?: RpcOptions): UnaryCall<RefreshNixConfigRequest, NixConfigResponse> {
+        const method = this.methods[38], opt = this._transport.mergeOptions(options);
+        return stackIntercept<RefreshNixConfigRequest, NixConfigResponse>("unary", this._transport, method, opt, input);
     }
 }

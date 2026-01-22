@@ -24,22 +24,25 @@ const (
 type VariableType int32
 
 const (
-	VariableType_VARIABLE VariableType = 0
-	VariableType_SECRET   VariableType = 1
-	VariableType_VALS     VariableType = 2
+	VariableType_LITERAL VariableType = 0
+	VariableType_SECRET  VariableType = 1
+	VariableType_VALS    VariableType = 2
+	VariableType_EXEC    VariableType = 3
 )
 
 // Enum value maps for VariableType.
 var (
 	VariableType_name = map[int32]string{
-		0: "VARIABLE",
+		0: "LITERAL",
 		1: "SECRET",
 		2: "VALS",
+		3: "EXEC",
 	}
 	VariableType_value = map[string]int32{
-		"VARIABLE": 0,
-		"SECRET":   1,
-		"VALS":     2,
+		"LITERAL": 0,
+		"SECRET":  1,
+		"VALS":    2,
+		"EXEC":    3,
 	}
 )
 
@@ -73,39 +76,29 @@ func (VariableType) EnumDescriptor() ([]byte, []int) {
 // Configuration for a single variable in the workspace
 type Variable struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Globally unique identifier for the variable. You can reference a single
-	// variable in multiple apps and environments, so to avoid confusion, it's
-	// recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
-	// You can also use `/path/based/variable-name` for organization. If a variable should
-	// only be used in a specific environment or app, you should include that detail in
-	// this field.
+	// Globally unique identifier for the variable. Recommended format:
+	// `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Default key to use when passing the variable to the app. This is the key that will be used
-	// in the environment variables of the app.
+	// Environment variable name when passing to apps (e.g., POSTGRES_URL).
 	Key         string       `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	Description *string      `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`              // (optional) Description of the variable
-	Type        VariableType `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.VariableType" json:"type,omitempty"` // Type of the variable
-	//   - When type = "VARIABLE", the value wil be provided as-is.
-	//   - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
-	//   - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-	//     compatible descriptor, for example if you want to get a value from AWS Parameter
-	//     Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
+	Description *string      `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`              // Description of the variable
+	Type        VariableType `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.VariableType" json:"type,omitempty"` // How the variable value is resolved
+	// The value field meaning depends on type:
+	// - LITERAL: The actual value (embedded directly)
+	// - SECRET: Empty (value lives in encrypted .age file)
+	// - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
+	// - EXEC: Shell command to execute (stdout becomes the value)
 	Value string `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
-	// List of environments this variable/secret is available in.
-	// If empty, the variable is available in all environments.
-	// Used for access control with secrets - only users with access to
-	// these environments can decrypt the secret.
-	Environments []string `protobuf:"bytes,6,rep,name=environments,proto3" json:"environments,omitempty"`
+	// Master keys that can decrypt this secret. Only used when type=SECRET.
+	// The .age file is encrypted to ALL listed master keys.
+	// Default: ["local"] (auto-generated local key).
+	// Example: ["dev", "prod"] for team-accessible secrets.
+	MasterKeys []string `protobuf:"bytes,6,rep,name=masterKeys,proto3" json:"masterKeys,omitempty"`
 	// List of module names that require this variable (e.g., ["sst", "ci"]).
-	// Used to show which features depend on this variable being set.
 	RequiredBy []string `protobuf:"bytes,7,rep,name=requiredBy,proto3" json:"requiredBy,omitempty"`
 	// Module name that provides/creates this variable.
-	// Used to understand where the variable comes from.
 	ProvidedBy *string `protobuf:"bytes,8,opt,name=providedBy,proto3,oneof" json:"providedBy,omitempty"`
 	// Bootstrap level (0 = always available, 1+ = requires dependencies).
-	// Level 0: No dependencies (e.g., AGE key, env vars)
-	// Level 1: Requires level 0 (e.g., encrypted secrets)
-	// Level 2: Requires external setup (e.g., cloud API tokens)
 	Level *int32 `protobuf:"varint,9,opt,name=level,proto3,oneof" json:"level,omitempty"`
 	// Action to resolve this variable if missing.
 	Action        *VariableAction `protobuf:"bytes,10,opt,name=action,proto3,oneof" json:"action,omitempty"`
@@ -168,7 +161,7 @@ func (x *Variable) GetType() VariableType {
 	if x != nil {
 		return x.Type
 	}
-	return VariableType_VARIABLE
+	return VariableType_LITERAL
 }
 
 func (x *Variable) GetValue() string {
@@ -178,9 +171,9 @@ func (x *Variable) GetValue() string {
 	return ""
 }
 
-func (x *Variable) GetEnvironments() []string {
+func (x *Variable) GetMasterKeys() []string {
 	if x != nil {
-		return x.Environments
+		return x.MasterKeys
 	}
 	return nil
 }
@@ -332,14 +325,16 @@ var File_variables_proto protoreflect.FileDescriptor
 
 const file_variables_proto_rawDesc = "" +
 	"\n" +
-	"\x0fvariables.proto\x12\rstackpanel.db\"\x8e\x03\n" +
+	"\x0fvariables.proto\x12\rstackpanel.db\"\x8a\x03\n" +
 	"\bVariable\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12/\n" +
 	"\x04type\x18\x04 \x01(\x0e2\x1b.stackpanel.db.VariableTypeR\x04type\x12\x14\n" +
-	"\x05value\x18\x05 \x01(\tR\x05value\x12\"\n" +
-	"\fenvironments\x18\x06 \x03(\tR\fenvironments\x12\x1e\n" +
+	"\x05value\x18\x05 \x01(\tR\x05value\x12\x1e\n" +
+	"\n" +
+	"masterKeys\x18\x06 \x03(\tR\n" +
+	"masterKeys\x12\x1e\n" +
 	"\n" +
 	"requiredBy\x18\a \x03(\tR\n" +
 	"requiredBy\x12#\n" +
@@ -366,12 +361,13 @@ const file_variables_proto_rawDesc = "" +
 	"\tvariables\x18\x01 \x03(\v2'.stackpanel.db.Variables.VariablesEntryR\tvariables\x1aU\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12-\n" +
-	"\x05value\x18\x02 \x01(\v2\x17.stackpanel.db.VariableR\x05value:\x028\x01*2\n" +
-	"\fVariableType\x12\f\n" +
-	"\bVARIABLE\x10\x00\x12\n" +
+	"\x05value\x18\x02 \x01(\v2\x17.stackpanel.db.VariableR\x05value:\x028\x01*;\n" +
+	"\fVariableType\x12\v\n" +
+	"\aLITERAL\x10\x00\x12\n" +
 	"\n" +
 	"\x06SECRET\x10\x01\x12\b\n" +
-	"\x04VALS\x10\x02B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x04VALS\x10\x02\x12\b\n" +
+	"\x04EXEC\x10\x03B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_variables_proto_rawDescOnce sync.Once

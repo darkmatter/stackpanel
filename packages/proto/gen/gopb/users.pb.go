@@ -21,68 +21,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Environments a user can access secrets for
-type Environment int32
-
-const (
-	Environment_ENVIRONMENT_UNSPECIFIED Environment = 0
-	Environment_ENVIRONMENT_DEV         Environment = 1
-	Environment_ENVIRONMENT_STAGING     Environment = 2
-	Environment_ENVIRONMENT_PRODUCTION  Environment = 3
-)
-
-// Enum value maps for Environment.
-var (
-	Environment_name = map[int32]string{
-		0: "ENVIRONMENT_UNSPECIFIED",
-		1: "ENVIRONMENT_DEV",
-		2: "ENVIRONMENT_STAGING",
-		3: "ENVIRONMENT_PRODUCTION",
-	}
-	Environment_value = map[string]int32{
-		"ENVIRONMENT_UNSPECIFIED": 0,
-		"ENVIRONMENT_DEV":         1,
-		"ENVIRONMENT_STAGING":     2,
-		"ENVIRONMENT_PRODUCTION":  3,
-	}
-)
-
-func (x Environment) Enum() *Environment {
-	p := new(Environment)
-	*p = x
-	return p
-}
-
-func (x Environment) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Environment) Descriptor() protoreflect.EnumDescriptor {
-	return file_users_proto_enumTypes[0].Descriptor()
-}
-
-func (Environment) Type() protoreflect.EnumType {
-	return &file_users_proto_enumTypes[0]
-}
-
-func (x Environment) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Environment.Descriptor instead.
-func (Environment) EnumDescriptor() ([]byte, []int) {
-	return file_users_proto_rawDescGZIP(), []int{0}
-}
-
 // A team member with access to the project
 type User struct {
-	state                      protoimpl.MessageState `protogen:"open.v1"`
-	Name                       string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                                                                        // Display name of the user
-	Github                     *string                `protobuf:"bytes,2,opt,name=github,proto3,oneof" json:"github,omitempty"`                                                                                                              // GitHub username
-	PublicKeys                 []string               `protobuf:"bytes,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`                                                                                          // SSH or AGE public keys for encryption
-	SecretsAllowedEnvironments []Environment          `protobuf:"varint,4,rep,packed,name=secrets_allowed_environments,json=secretsAllowedEnvironments,proto3,enum=stackpanel.db.Environment" json:"secrets_allowed_environments,omitempty"` // Environments this user can access secrets for
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`           // Display name of the user
+	Github        *string                `protobuf:"bytes,2,opt,name=github,proto3,oneof" json:"github,omitempty"` // GitHub username
+	Email         *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`   // Email address
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -129,18 +75,11 @@ func (x *User) GetGithub() string {
 	return ""
 }
 
-func (x *User) GetPublicKeys() []string {
-	if x != nil {
-		return x.PublicKeys
+func (x *User) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
 	}
-	return nil
-}
-
-func (x *User) GetSecretsAllowedEnvironments() []Environment {
-	if x != nil {
-		return x.SecretsAllowedEnvironments
-	}
-	return nil
+	return ""
 }
 
 // Map of username to user configuration
@@ -192,25 +131,19 @@ var File_users_proto protoreflect.FileDescriptor
 
 const file_users_proto_rawDesc = "" +
 	"\n" +
-	"\vusers.proto\x12\rstackpanel.db\"\xc1\x01\n" +
+	"\vusers.proto\x12\rstackpanel.db\"g\n" +
 	"\x04User\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
-	"\x06github\x18\x02 \x01(\tH\x00R\x06github\x88\x01\x01\x12\x1f\n" +
-	"\vpublic_keys\x18\x03 \x03(\tR\n" +
-	"publicKeys\x12\\\n" +
-	"\x1csecrets_allowed_environments\x18\x04 \x03(\x0e2\x1a.stackpanel.db.EnvironmentR\x1asecretsAllowedEnvironmentsB\t\n" +
-	"\a_github\"\x8d\x01\n" +
+	"\x06github\x18\x02 \x01(\tH\x00R\x06github\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01B\t\n" +
+	"\a_githubB\b\n" +
+	"\x06_email\"\x8d\x01\n" +
 	"\x05Users\x125\n" +
 	"\x05users\x18\x01 \x03(\v2\x1f.stackpanel.db.Users.UsersEntryR\x05users\x1aM\n" +
 	"\n" +
 	"UsersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12)\n" +
-	"\x05value\x18\x02 \x01(\v2\x13.stackpanel.db.UserR\x05value:\x028\x01*t\n" +
-	"\vEnvironment\x12\x1b\n" +
-	"\x17ENVIRONMENT_UNSPECIFIED\x10\x00\x12\x13\n" +
-	"\x0fENVIRONMENT_DEV\x10\x01\x12\x17\n" +
-	"\x13ENVIRONMENT_STAGING\x10\x02\x12\x1a\n" +
-	"\x16ENVIRONMENT_PRODUCTION\x10\x03B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x05value\x18\x02 \x01(\v2\x13.stackpanel.db.UserR\x05value:\x028\x01B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_users_proto_rawDescOnce sync.Once
@@ -224,23 +157,20 @@ func file_users_proto_rawDescGZIP() []byte {
 	return file_users_proto_rawDescData
 }
 
-var file_users_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_users_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_users_proto_goTypes = []any{
-	(Environment)(0), // 0: stackpanel.db.Environment
-	(*User)(nil),     // 1: stackpanel.db.User
-	(*Users)(nil),    // 2: stackpanel.db.Users
-	nil,              // 3: stackpanel.db.Users.UsersEntry
+	(*User)(nil),  // 0: stackpanel.db.User
+	(*Users)(nil), // 1: stackpanel.db.Users
+	nil,           // 2: stackpanel.db.Users.UsersEntry
 }
 var file_users_proto_depIdxs = []int32{
-	0, // 0: stackpanel.db.User.secrets_allowed_environments:type_name -> stackpanel.db.Environment
-	3, // 1: stackpanel.db.Users.users:type_name -> stackpanel.db.Users.UsersEntry
-	1, // 2: stackpanel.db.Users.UsersEntry.value:type_name -> stackpanel.db.User
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2, // 0: stackpanel.db.Users.users:type_name -> stackpanel.db.Users.UsersEntry
+	0, // 1: stackpanel.db.Users.UsersEntry.value:type_name -> stackpanel.db.User
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_users_proto_init() }
@@ -254,14 +184,13 @@ func file_users_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_users_proto_rawDesc), len(file_users_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_users_proto_goTypes,
 		DependencyIndexes: file_users_proto_depIdxs,
-		EnumInfos:         file_users_proto_enumTypes,
 		MessageInfos:      file_users_proto_msgTypes,
 	}.Build()
 	File_users_proto = out.File

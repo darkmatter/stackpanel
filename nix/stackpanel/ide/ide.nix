@@ -7,7 +7,6 @@
 # shell with editor terminals. For VS Code, it creates:
 #   - A devshell loader script that initializes the nix environment
 #   - A .code-workspace file with proper terminal integration
-#   - YAML schema associations for secrets/config file intellisense
 #
 # Usage:
 #   stackpanel.ide = {
@@ -47,22 +46,6 @@ let
   # Loader path as VS Code sees it (with ${workspaceFolder} variable)
   loaderPath = "\${workspaceFolder}/${baseDir}/devshell-loader.sh";
 
-  # Schema paths (relative to workspace root)
-  schemasDir = "${dirs.gen}/schemas/secrets";
-
-  # YAML schema associations for intellisense
-  yamlSchemas = {
-    "./${schemasDir}/config.schema.json" = ".stackpanel/secrets/config.yaml";
-    "./${schemasDir}/users.schema.json" = ".stackpanel/secrets/users.yaml";
-    "./${schemasDir}/app-config.schema.json" = ".stackpanel/secrets/apps/*/config.yaml";
-    "./${schemasDir}/schema.schema.json" = ".stackpanel/secrets/apps/*/common.yaml";
-    "./${schemasDir}/env.schema.json" = [
-      ".stackpanel/secrets/apps/*/dev.yaml"
-      ".stackpanel/secrets/apps/*/staging.yaml"
-      ".stackpanel/secrets/apps/*/prod.yaml"
-    ];
-  };
-
   # Read existing settings if path is provided (IMPURE)
   existingSettings =
     if
@@ -73,14 +56,7 @@ let
       { };
 
   # Generate terminal integration settings using shared lib
-  generatedSettings = ideLib.mkVscodeSettings { inherit loaderPath; } // {
-    # YAML extension settings
-    "yaml.schemas" = yamlSchemas;
-    "yaml.customTags" = [ ];
-    "yaml.validate" = true;
-    "yaml.completion" = true;
-    "yaml.hover" = true;
-  };
+  generatedSettings = ideLib.mkVscodeSettings { inherit loaderPath; };
 
   # Merge settings: existing -> generated -> user overrides
   mergedSettings = existingSettings // generatedSettings // cfg.vscode.settings;
@@ -95,13 +71,12 @@ let
   workspaceName = stackpanelCfg.name or cfg.vscode.workspace-name or "stackpanel";
 
   # Generate workspace content using shared lib
-  # Always include redhat.vscode-yaml for schema intellisense
-  # rootPath is relative from .stackpanel/gen/ide/vscode/ to repo root
+  # rootPath is relative from .stackpanel/gen/vscode/ to repo root
   workspaceContent = ideLib.mkWorkspaceContent {
     settings = mergedSettings;
     extraFolders = cfg.vscode.extra-folders;
-    extensions = [ "redhat.vscode-yaml" ] ++ cfg.vscode.extensions;
-    rootPath = "../../../..";
+    extensions = cfg.vscode.extensions;
+    rootPath = "../../..";
   };
 in
 {

@@ -2,7 +2,7 @@
  * Hook for managing configuration panel state.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNixConfig, useNixData } from "@/lib/use-nix-config";
+import { useNixConfig, useNixData } from "@/lib/use-agent";
 import { useAgentClient } from "@/lib/agent-provider";
 import { optionalValue } from "./constants";
 import type {
@@ -33,6 +33,7 @@ export interface UseConfigurationResult {
   setStepCaFingerprint: (value: string) => void;
   fetchingFingerprint: boolean;
   fetchFingerprint: () => Promise<void>;
+  stepCaError: string | null;
   stepProvisioner: string;
   setStepProvisioner: (value: string) => void;
   stepCertName: string;
@@ -75,6 +76,8 @@ export interface UseConfigurationResult {
   setIdeEnabled: (value: boolean) => void;
   vscodeEnabled: boolean;
   setVscodeEnabled: (value: boolean) => void;
+  vscodeOutputMode: "workspace" | "settingsJson";
+  setVscodeOutputMode: (value: "workspace" | "settingsJson") => void;
   savingIde: boolean;
   saveIde: () => Promise<void>;
 
@@ -156,8 +159,21 @@ export function useConfiguration(): UseConfigurationResult {
 
   // Step CA state
   const [stepEnabled, setStepEnabled] = useState(false);
-  const [stepCaUrl, setStepCaUrl] = useState("");
-  const [stepCaFingerprint, setStepCaFingerprint] = useState("");
+  const [stepCaUrl, setStepCaUrlState] = useState("");
+  const [stepCaFingerprint, setStepCaFingerprintState] = useState("");
+  const [stepCaError, setStepCaError] = useState<string | null>(null);
+  const setStepCaUrl = useCallback(
+    (value: string) => {
+      setStepCaUrlState(value);
+      setStepCaError(null);
+      if (stepCaFingerprint) setStepCaFingerprintState("");
+    },
+    [stepCaFingerprint],
+  );
+  const setStepCaFingerprint = useCallback((value: string) => {
+    setStepCaFingerprintState(value);
+    setStepCaError(null);
+  }, []);
   const [fetchingFingerprint, setFetchingFingerprint] = useState(false);
   const [stepProvisioner, setStepProvisioner] = useState("");
   const [stepCertName, setStepCertName] = useState("");
@@ -183,6 +199,9 @@ export function useConfiguration(): UseConfigurationResult {
   // IDE state
   const [ideEnabled, setIdeEnabled] = useState(false);
   const [vscodeEnabled, setVscodeEnabled] = useState(false);
+  const [vscodeOutputMode, setVscodeOutputMode] = useState<
+    "workspace" | "settingsJson"
+  >("workspace");
   const [savingIde, setSavingIde] = useState(false);
 
   // Binary Cache state
@@ -205,8 +224,8 @@ export function useConfiguration(): UseConfigurationResult {
     githubInitialized.current = true;
     const repoValue = githubData ?? githubConfig ?? "";
     setGithubRepo(repoValue);
-    setGithubSyncEnabled(!(usersSettingsData?.disable_github_sync ?? false));
-  }, [githubData, githubConfig, usersSettingsData?.disable_github_sync]);
+    setGithubSyncEnabled(!(usersSettingsData?.["disable-github-sync"] ?? false));
+  }, [githubData, githubConfig, usersSettingsData?.["disable-github-sync"]]);
 
   useEffect(() => {
     if (stepCaInitialized.current) return;
@@ -215,16 +234,16 @@ export function useConfiguration(): UseConfigurationResult {
 
     stepCaInitialized.current = true;
     setStepEnabled(stepCaData?.enable ?? stepConfig?.enable ?? false);
-    setStepCaUrl(stepCaData?.ca_url ?? stepConfig?.["ca-url"] ?? "");
+    setStepCaUrl(stepCaData?.["ca-url"] ?? stepConfig?.["ca-url"] ?? "");
     setStepCaFingerprint(
-      stepCaData?.ca_fingerprint ?? stepConfig?.["ca-fingerprint"] ?? "",
+      stepCaData?.["ca-fingerprint"] ?? stepConfig?.["ca-fingerprint"] ?? "",
     );
     setStepProvisioner(
       stepCaData?.provisioner ?? stepConfig?.provisioner ?? "",
     );
-    setStepCertName(stepCaData?.cert_name ?? stepConfig?.["cert-name"] ?? "");
+    setStepCertName(stepCaData?.["cert-name"] ?? stepConfig?.["cert-name"] ?? "");
     setStepPromptOnShell(
-      stepCaData?.prompt_on_shell ?? stepConfig?.["prompt-on-shell"] ?? false,
+      stepCaData?.["prompt-on-shell"] ?? stepConfig?.["prompt-on-shell"] ?? false,
     );
   }, [stepCaData, stepConfig, config]);
 
@@ -234,26 +253,26 @@ export function useConfiguration(): UseConfigurationResult {
     if (!hasData && !config) return;
 
     awsInitialized.current = true;
-    const rolesAnywhere = awsData?.roles_anywhere ?? {};
+    const rolesAnywhere = awsData?.["roles-anywhere"] ?? {};
     setAwsEnabled(rolesAnywhere.enable ?? awsConfig?.enable ?? false);
     setAwsRegion(rolesAnywhere.region ?? awsConfig?.region ?? "");
     setAwsAccountId(
-      rolesAnywhere.account_id ?? awsConfig?.["account-id"] ?? "",
+      rolesAnywhere["account-id"] ?? awsConfig?.["account-id"] ?? "",
     );
-    setAwsRoleName(rolesAnywhere.role_name ?? awsConfig?.["role-name"] ?? "");
+    setAwsRoleName(rolesAnywhere["role-name"] ?? awsConfig?.["role-name"] ?? "");
     setAwsTrustAnchorArn(
-      rolesAnywhere.trust_anchor_arn ?? awsConfig?.["trust-anchor-arn"] ?? "",
+      rolesAnywhere["trust-anchor-arn"] ?? awsConfig?.["trust-anchor-arn"] ?? "",
     );
     setAwsProfileArn(
-      rolesAnywhere.profile_arn ?? awsConfig?.["profile-arn"] ?? "",
+      rolesAnywhere["profile-arn"] ?? awsConfig?.["profile-arn"] ?? "",
     );
     setAwsCacheBufferSeconds(
-      rolesAnywhere.cache_buffer_seconds ??
+      rolesAnywhere["cache-buffer-seconds"] ??
         awsConfig?.["cache-buffer-seconds"] ??
         "",
     );
     setAwsPromptOnShell(
-      rolesAnywhere.prompt_on_shell ?? awsConfig?.["prompt-on-shell"] ?? false,
+      rolesAnywhere["prompt-on-shell"] ?? awsConfig?.["prompt-on-shell"] ?? false,
     );
   }, [awsData, awsConfig, config]);
 
@@ -277,6 +296,11 @@ export function useConfiguration(): UseConfigurationResult {
     setVscodeEnabled(
       ideData?.vscode?.enable ?? ideConfig?.vscode?.enable ?? false,
     );
+    setVscodeOutputMode(
+      ideData?.vscode?.["output-mode"] ??
+        ideConfig?.vscode?.["output-mode"] ??
+        "workspace",
+    );
   }, [ideData, ideConfig, config]);
 
   useEffect(() => {
@@ -287,7 +311,7 @@ export function useConfiguration(): UseConfigurationResult {
     setCacheEnabled(cacheData?.enable ?? false);
     setCachixEnabled(cacheData?.cachix?.enable ?? false);
     setCachixCache(cacheData?.cachix?.cache ?? "");
-    setCachixTokenPath(cacheData?.cachix?.token_path ?? "");
+    setCachixTokenPath(cacheData?.cachix?.["token-path"] ?? "");
   }, [cacheData]);
 
   // Fetch CA fingerprint from Step CA server
@@ -302,25 +326,70 @@ export function useConfiguration(): UseConfigurationResult {
     }
 
     setFetchingFingerprint(true);
+    setStepCaError(null);
     try {
       // Call the agent to fetch the fingerprint from the CA
       const response = await client.post<{
+        success?: boolean;
+        data?: {
+          fingerprint?: string;
+          error?: string;
+          stdout?: string;
+          stderr?: string;
+          exit_code?: number;
+        };
         fingerprint?: string;
         error?: string;
+        stdout?: string;
+        stderr?: string;
+        exit_code?: number;
       }>("/api/exec", {
         command: "step",
         args: ["ca", "root", stepCaUrl, "--fingerprint"],
       });
 
-      // The fingerprint is usually in stdout
-      if (response && typeof response === "object" && "stdout" in response) {
-        const stdout = (response as { stdout?: string }).stdout?.trim();
-        if (stdout && stdout.length > 0 && !stdout.includes("error")) {
-          setStepCaFingerprint(stdout);
-        }
+      const payload =
+        response && typeof response === "object" && "data" in response
+          ? (response as { data?: unknown }).data ?? {}
+          : response ?? {};
+
+      if ("success" in (response as { success?: boolean }) && !(response as { success?: boolean }).success) {
+        const responseError = (response as { error?: string }).error;
+        setStepCaError(responseError || "Failed to fetch fingerprint.");
+        return;
+      }
+
+      const stdout =
+        (payload as { stdout?: string }).stdout?.trim() ??
+        (payload as { fingerprint?: string }).fingerprint?.trim() ??
+        "";
+      const stderr = (payload as { stderr?: string }).stderr?.trim() ?? "";
+      const exitCode = (payload as { exit_code?: number }).exit_code ?? 0;
+      const directError = (payload as { error?: string }).error ?? "";
+
+      if (exitCode !== 0) {
+        setStepCaError(
+          stderr || directError || `Failed to fetch fingerprint (exit code ${exitCode}).`,
+        );
+        return;
+      }
+
+      if (stdout) {
+        setStepCaFingerprint(stdout);
+        setStepCaError(null);
+        return;
+      }
+
+      if (directError || stderr) {
+        setStepCaError(directError || stderr);
+      } else {
+        setStepCaError("No fingerprint returned by Step CA.");
       }
     } catch (err) {
       console.warn("Failed to fetch CA fingerprint:", err);
+      const message =
+        err instanceof Error ? err.message : "Unable to fetch fingerprint.";
+      setStepCaError(message);
     } finally {
       setFetchingFingerprint(false);
     }
@@ -328,7 +397,14 @@ export function useConfiguration(): UseConfigurationResult {
 
   // Auto-fetch fingerprint when CA URL changes and looks valid
   useEffect(() => {
-    if (!stepCaUrl || stepCaFingerprint) return;
+    if (
+      !stepCaUrl ||
+      stepCaFingerprint ||
+      stepCaError ||
+      fetchingFingerprint
+    ) {
+      return;
+    }
 
     // Validate URL format
     try {
@@ -344,7 +420,7 @@ export function useConfiguration(): UseConfigurationResult {
     } catch {
       // Invalid URL, don't fetch
     }
-  }, [stepCaUrl, stepCaFingerprint, fetchFingerprint]);
+  }, [stepCaUrl, stepCaFingerprint, stepCaError, fetchingFingerprint, fetchFingerprint]);
 
   // Save callbacks
   const saveGithub = useCallback(async () => {
@@ -353,7 +429,7 @@ export function useConfiguration(): UseConfigurationResult {
     try {
       await setGithub(githubRepo.trim());
       await setUsersSettings({
-        disable_github_sync: !githubSyncEnabled,
+        "disable-github-sync": !githubSyncEnabled,
       });
     } finally {
       setSavingGithub(false);
@@ -373,11 +449,11 @@ export function useConfiguration(): UseConfigurationResult {
       await setStepCa({
         ...(stepCaData ?? {}),
         enable: stepEnabled,
-        ca_url: optionalValue(stepCaUrl),
-        ca_fingerprint: optionalValue(stepCaFingerprint),
+        "ca-url": optionalValue(stepCaUrl),
+        "ca-fingerprint": optionalValue(stepCaFingerprint),
         provisioner: optionalValue(stepProvisioner),
-        cert_name: optionalValue(stepCertName),
-        prompt_on_shell: stepPromptOnShell,
+        "cert-name": optionalValue(stepCertName),
+        "prompt-on-shell": stepPromptOnShell,
       });
     } finally {
       setSavingStepCa(false);
@@ -400,16 +476,16 @@ export function useConfiguration(): UseConfigurationResult {
     try {
       await setAws({
         ...(awsData ?? {}),
-        roles_anywhere: {
-          ...(awsData?.roles_anywhere ?? {}),
+        "roles-anywhere": {
+          ...(awsData?.["roles-anywhere"] ?? {}),
           enable: awsEnabled,
           region: optionalValue(awsRegion),
-          account_id: optionalValue(awsAccountId),
-          role_name: optionalValue(awsRoleName),
-          trust_anchor_arn: optionalValue(awsTrustAnchorArn),
-          profile_arn: optionalValue(awsProfileArn),
-          cache_buffer_seconds: optionalValue(awsCacheBufferSeconds),
-          prompt_on_shell: awsPromptOnShell,
+          "account-id": optionalValue(awsAccountId),
+          "role-name": optionalValue(awsRoleName),
+          "trust-anchor-arn": optionalValue(awsTrustAnchorArn),
+          "profile-arn": optionalValue(awsProfileArn),
+          "cache-buffer-seconds": optionalValue(awsCacheBufferSeconds),
+          "prompt-on-shell": awsPromptOnShell,
         },
       });
     } finally {
@@ -453,12 +529,13 @@ export function useConfiguration(): UseConfigurationResult {
         vscode: {
           ...(ideData?.vscode ?? {}),
           enable: vscodeEnabled,
+          "output-mode": vscodeOutputMode,
         },
       });
     } finally {
       setSavingIde(false);
     }
-  }, [ideData, ideEnabled, savingIde, setIde, vscodeEnabled]);
+  }, [ideData, ideEnabled, savingIde, setIde, vscodeEnabled, vscodeOutputMode]);
 
   const saveCache = useCallback(async () => {
     if (savingCache) return;
@@ -471,7 +548,7 @@ export function useConfiguration(): UseConfigurationResult {
           ...(cacheData?.cachix ?? {}),
           enable: cachixEnabled,
           cache: optionalValue(cachixCache),
-          token_path: optionalValue(cachixTokenPath),
+          "token-path": optionalValue(cachixTokenPath),
         },
       });
     } finally {
@@ -503,6 +580,7 @@ export function useConfiguration(): UseConfigurationResult {
     setStepCaUrl,
     stepCaFingerprint,
     setStepCaFingerprint,
+    stepCaError,
     fetchingFingerprint,
     fetchFingerprint,
     stepProvisioner,
@@ -547,6 +625,8 @@ export function useConfiguration(): UseConfigurationResult {
     setIdeEnabled,
     vscodeEnabled,
     setVscodeEnabled,
+    vscodeOutputMode,
+    setVscodeOutputMode,
     savingIde,
     saveIde,
 

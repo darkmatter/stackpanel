@@ -14,10 +14,10 @@
 #   proto.mkMessage {
 #     name = "User";
 #     fields = {
-#       name = proto.string "Display name";
-#       email = proto.string "Email address";
-#       age = proto.optional proto.int32 "User age";
-#       roles = proto.repeated proto.string "User roles";
+#       name = proto.string 1 "Display name";
+#       email = proto.withExample "john@example.com" (proto.string 2 "Email address");
+#       age = proto.optional (proto.int32 3 "User age");
+#       roles = proto.repeated (proto.string 4 "User roles");
 #     };
 #   }
 #
@@ -71,6 +71,7 @@ let
       optional ? false,
       repeated ? false,
       mapKey ? null, # If set, this is a map<mapKey, type>
+      example ? null, # Example value for documentation/boilerplate generation
     }:
     assert
       builtins.isInt number && number >= 1
@@ -83,6 +84,7 @@ let
         optional
         repeated
         mapKey
+        example
         ;
       _isProtoField = true;
     };
@@ -165,6 +167,15 @@ let
         type = field;
         repeated = true;
       };
+
+  # Wrapper to add an example value to a field
+  # Usage: proto.withExample "john@example.com" (proto.string 1 "Email address")
+  withExample =
+    exampleValue: field:
+    if field ? _isProtoField then
+      field // { example = exampleValue; }
+    else
+      throw "withExample can only be applied to a proto field";
 
   # Map field constructor
   # Usage: proto.map "string" "User" 1 "description"
@@ -524,6 +535,7 @@ in
     repeated
     map
     message
+    withExample
     ;
 
   # Type constructors

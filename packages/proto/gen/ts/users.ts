@@ -3,10 +3,10 @@
 // tslint:disable
 import type { BinaryWriteOptions } from "@protobuf-ts/runtime";
 import type { IBinaryWriter } from "@protobuf-ts/runtime";
+import { WireType } from "@protobuf-ts/runtime";
 import type { BinaryReadOptions } from "@protobuf-ts/runtime";
 import type { IBinaryReader } from "@protobuf-ts/runtime";
 import { UnknownFieldHandler } from "@protobuf-ts/runtime";
-import { WireType } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
@@ -25,13 +25,9 @@ export interface User {
      */
     github?: string; // GitHub username
     /**
-     * @generated from protobuf field: repeated string public_keys = 3
+     * @generated from protobuf field: optional string email = 3
      */
-    public_keys: string[]; // SSH or AGE public keys for encryption
-    /**
-     * @generated from protobuf field: repeated stackpanel.db.Environment secrets_allowed_environments = 4
-     */
-    secrets_allowed_environments: Environment[]; // Environments this user can access secrets for
+    email?: string; // Email address
 }
 /**
  * Map of username to user configuration
@@ -46,44 +42,18 @@ export interface Users {
         [key: string]: User;
     }; // Map of username to user config
 }
-/**
- * Environments a user can access secrets for
- *
- * @generated from protobuf enum stackpanel.db.Environment
- */
-export enum Environment {
-    /**
-     * @generated from protobuf enum value: ENVIRONMENT_UNSPECIFIED = 0;
-     */
-    UNSPECIFIED = 0,
-    /**
-     * @generated from protobuf enum value: ENVIRONMENT_DEV = 1;
-     */
-    DEV = 1,
-    /**
-     * @generated from protobuf enum value: ENVIRONMENT_STAGING = 2;
-     */
-    STAGING = 2,
-    /**
-     * @generated from protobuf enum value: ENVIRONMENT_PRODUCTION = 3;
-     */
-    PRODUCTION = 3
-}
 // @generated message type with reflection information, may provide speed optimized methods
 class User$Type extends MessageType<User> {
     constructor() {
         super("stackpanel.db.User", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "github", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "public_keys", kind: "scalar", localName: "public_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "secrets_allowed_environments", kind: "enum", localName: "secrets_allowed_environments", repeat: 1 /*RepeatType.PACKED*/, T: () => ["stackpanel.db.Environment", Environment, "ENVIRONMENT_"] }
+            { no: 3, name: "email", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<User>): User {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
-        message.public_keys = [];
-        message.secrets_allowed_environments = [];
         if (value !== undefined)
             reflectionMergePartial<User>(this, message, value);
         return message;
@@ -99,15 +69,8 @@ class User$Type extends MessageType<User> {
                 case /* optional string github */ 2:
                     message.github = reader.string();
                     break;
-                case /* repeated string public_keys */ 3:
-                    message.public_keys.push(reader.string());
-                    break;
-                case /* repeated stackpanel.db.Environment secrets_allowed_environments */ 4:
-                    if (wireType === WireType.LengthDelimited)
-                        for (let e = reader.int32() + reader.pos; reader.pos < e;)
-                            message.secrets_allowed_environments.push(reader.int32());
-                    else
-                        message.secrets_allowed_environments.push(reader.int32());
+                case /* optional string email */ 3:
+                    message.email = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -127,16 +90,9 @@ class User$Type extends MessageType<User> {
         /* optional string github = 2; */
         if (message.github !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.github);
-        /* repeated string public_keys = 3; */
-        for (let i = 0; i < message.public_keys.length; i++)
-            writer.tag(3, WireType.LengthDelimited).string(message.public_keys[i]);
-        /* repeated stackpanel.db.Environment secrets_allowed_environments = 4; */
-        if (message.secrets_allowed_environments.length) {
-            writer.tag(4, WireType.LengthDelimited).fork();
-            for (let i = 0; i < message.secrets_allowed_environments.length; i++)
-                writer.int32(message.secrets_allowed_environments[i]);
-            writer.join();
-        }
+        /* optional string email = 3; */
+        if (message.email !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.email);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

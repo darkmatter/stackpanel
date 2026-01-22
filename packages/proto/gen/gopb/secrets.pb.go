@@ -21,80 +21,32 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Programming language for generated code
-type CodegenLanguage int32
-
-const (
-	CodegenLanguage_CODEGEN_LANGUAGE_UNSPECIFIED CodegenLanguage = 0
-	CodegenLanguage_CODEGEN_LANGUAGE_TYPESCRIPT  CodegenLanguage = 1
-	CodegenLanguage_CODEGEN_LANGUAGE_GO          CodegenLanguage = 2
-)
-
-// Enum value maps for CodegenLanguage.
-var (
-	CodegenLanguage_name = map[int32]string{
-		0: "CODEGEN_LANGUAGE_UNSPECIFIED",
-		1: "CODEGEN_LANGUAGE_TYPESCRIPT",
-		2: "CODEGEN_LANGUAGE_GO",
-	}
-	CodegenLanguage_value = map[string]int32{
-		"CODEGEN_LANGUAGE_UNSPECIFIED": 0,
-		"CODEGEN_LANGUAGE_TYPESCRIPT":  1,
-		"CODEGEN_LANGUAGE_GO":          2,
-	}
-)
-
-func (x CodegenLanguage) Enum() *CodegenLanguage {
-	p := new(CodegenLanguage)
-	*p = x
-	return p
-}
-
-func (x CodegenLanguage) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (CodegenLanguage) Descriptor() protoreflect.EnumDescriptor {
-	return file_secrets_proto_enumTypes[0].Descriptor()
-}
-
-func (CodegenLanguage) Type() protoreflect.EnumType {
-	return &file_secrets_proto_enumTypes[0]
-}
-
-func (x CodegenLanguage) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use CodegenLanguage.Descriptor instead.
-func (CodegenLanguage) EnumDescriptor() ([]byte, []int) {
-	return file_secrets_proto_rawDescGZIP(), []int{0}
-}
-
-// Code generation settings for a target language
-type Codegen struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                             // Name of the generated code package
-	Directory     string                 `protobuf:"bytes,2,opt,name=directory,proto3" json:"directory,omitempty"`                                   // Output directory for generated code (relative to project root)
-	Language      CodegenLanguage        `protobuf:"varint,3,opt,name=language,proto3,enum=stackpanel.db.CodegenLanguage" json:"language,omitempty"` // Programming language for generated code
+// Code generation target for secrets/env access
+type CodegenTarget struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Name      *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`           // Name of the generated package/module (defaults to the target key)
+	Directory *string                `protobuf:"bytes,2,opt,name=directory,proto3,oneof" json:"directory,omitempty"` // Output directory for generated code (repo-relative)
+	// Target language for generated code (e.g., "typescript", "go", "python").
+	// Informational only for now; codegen selection is based on the target key.
+	Language      *string `protobuf:"bytes,3,opt,name=language,proto3,oneof" json:"language,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Codegen) Reset() {
-	*x = Codegen{}
+func (x *CodegenTarget) Reset() {
+	*x = CodegenTarget{}
 	mi := &file_secrets_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Codegen) String() string {
+func (x *CodegenTarget) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Codegen) ProtoMessage() {}
+func (*CodegenTarget) ProtoMessage() {}
 
-func (x *Codegen) ProtoReflect() protoreflect.Message {
+func (x *CodegenTarget) ProtoReflect() protoreflect.Message {
 	mi := &file_secrets_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -106,49 +58,196 @@ func (x *Codegen) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Codegen.ProtoReflect.Descriptor instead.
-func (*Codegen) Descriptor() ([]byte, []int) {
+// Deprecated: Use CodegenTarget.ProtoReflect.Descriptor instead.
+func (*CodegenTarget) Descriptor() ([]byte, []int) {
 	return file_secrets_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Codegen) GetName() string {
-	if x != nil {
-		return x.Name
+func (x *CodegenTarget) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
 	}
 	return ""
 }
 
-func (x *Codegen) GetDirectory() string {
-	if x != nil {
-		return x.Directory
+func (x *CodegenTarget) GetDirectory() string {
+	if x != nil && x.Directory != nil {
+		return *x.Directory
 	}
 	return ""
 }
 
-func (x *Codegen) GetLanguage() CodegenLanguage {
-	if x != nil {
-		return x.Language
+func (x *CodegenTarget) GetLanguage() string {
+	if x != nil && x.Language != nil {
+		return *x.Language
 	}
-	return CodegenLanguage_CODEGEN_LANGUAGE_UNSPECIFIED
+	return ""
+}
+
+// Environment-specific secrets configuration
+type Environment struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"` // Name of the environment (e.g., dev, staging, production)
+	// List of SOPS-encrypted source files for this environment (without .yaml extension).
+	// These files are decrypted and merged to provide secrets for the environment.
+	Sources []string `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
+	// AGE public keys that can decrypt secrets for this environment.
+	// New secrets for this env are encrypted to these recipients.
+	PublicKeys    []string `protobuf:"bytes,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Environment) Reset() {
+	*x = Environment{}
+	mi := &file_secrets_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Environment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Environment) ProtoMessage() {}
+
+func (x *Environment) ProtoReflect() protoreflect.Message {
+	mi := &file_secrets_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Environment.ProtoReflect.Descriptor instead.
+func (*Environment) Descriptor() ([]byte, []int) {
+	return file_secrets_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Environment) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *Environment) GetSources() []string {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *Environment) GetPublicKeys() []string {
+	if x != nil {
+		return x.PublicKeys
+	}
+	return nil
+}
+
+// A master key for encrypting/decrypting secrets
+type MasterKey struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AGE public key for encrypting secrets to this key.
+	// Format: age1... (bech32-encoded)
+	AgePub string `protobuf:"bytes,1,opt,name=age_pub,json=agePub,proto3" json:"age_pub,omitempty"`
+	// Vals reference that resolves to the AGE private key.
+	// Examples:
+	//   - ref+file://.stackpanel/state/keys/local.txt (local file)
+	//   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
+	//   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+	Ref string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
+	// Custom command to resolve the private key (overrides ref).
+	// The command should output the AGE private key to stdout.
+	// Example: op read 'op://vault/stackpanel/age-key'
+	ResolveCmd    *string `protobuf:"bytes,3,opt,name=resolve_cmd,json=resolveCmd,proto3,oneof" json:"resolve_cmd,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MasterKey) Reset() {
+	*x = MasterKey{}
+	mi := &file_secrets_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MasterKey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MasterKey) ProtoMessage() {}
+
+func (x *MasterKey) ProtoReflect() protoreflect.Message {
+	mi := &file_secrets_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MasterKey.ProtoReflect.Descriptor instead.
+func (*MasterKey) Descriptor() ([]byte, []int) {
+	return file_secrets_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *MasterKey) GetAgePub() string {
+	if x != nil {
+		return x.AgePub
+	}
+	return ""
+}
+
+func (x *MasterKey) GetRef() string {
+	if x != nil {
+		return x.Ref
+	}
+	return ""
+}
+
+func (x *MasterKey) GetResolveCmd() string {
+	if x != nil && x.ResolveCmd != nil {
+		return *x.ResolveCmd
+	}
+	return ""
 }
 
 // Secrets management configuration
 type Secrets struct {
-	state          protoimpl.MessageState         `protogen:"open.v1"`
-	Enable         bool                           `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                                                                      // Enable secrets management
-	InputDirectory string                         `protobuf:"bytes,2,opt,name=input_directory,json=inputDirectory,proto3" json:"input_directory,omitempty"`                                                 // Directory where SOPS-encrypted secrets are stored
-	Environments   map[string]*SecretsEnvironment `protobuf:"bytes,3,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment-specific secrets configurations
-	Codegen        map[string]*Codegen            `protobuf:"bytes,4,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`           // Code generation settings per target
-	SystemKeys     []string                       `protobuf:"bytes,5,rep,name=system_keys,json=systemKeys,proto3" json:"system_keys,omitempty"`                                                             // AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions.
-	SecretsDir     *string                        `protobuf:"bytes,6,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"`                                                       // Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)
-	AgeKeyFiles    []string                       `protobuf:"bytes,7,rep,name=age_key_files,json=ageKeyFiles,proto3" json:"age_key_files,omitempty"`                                                        // Paths to AGE key files to check for decryption (checked in order, first existing file wins)
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Enable bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Enable secrets management
+	// Master keys for encrypting/decrypting secrets.
+	// Each secret specifies which master keys can decrypt it via the master-keys field.
+	// A default "local" key is auto-generated if no keys are configured.
+	MasterKeys map[string]*MasterKey `protobuf:"bytes,2,rep,name=master_keys,json=masterKeys,proto3" json:"master_keys,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Directory containing SOPS-encrypted secrets (legacy SOPS layout).
+	// Used when decrypting/merging YAML sources defined under environments.
+	InputDirectory *string `protobuf:"bytes,3,opt,name=input_directory,json=inputDirectory,proto3,oneof" json:"input_directory,omitempty"`
+	SecretsDir     *string `protobuf:"bytes,4,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"` // Directory where secret .age files are stored (default: .stackpanel/secrets)
+	// System-level AGE public keys (CI, deploy servers, etc.).
+	// These keys can decrypt all secrets regardless of environment restrictions.
+	SystemKeys []string `protobuf:"bytes,5,rep,name=system_keys,json=systemKeys,proto3" json:"system_keys,omitempty"`
+	// Environment-specific secrets configuration (SOPS sources + recipients).
+	// Keyed by environment identifier (e.g., dev, staging, prod).
+	Environments map[string]*Environment `protobuf:"bytes,6,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Code generation targets keyed by name (e.g., typescript, go, python).
+	// Used to drive language-specific env/secret helpers.
+	Codegen       map[string]*CodegenTarget `protobuf:"bytes,7,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Secrets) Reset() {
 	*x = Secrets{}
-	mi := &file_secrets_proto_msgTypes[1]
+	mi := &file_secrets_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -160,7 +259,7 @@ func (x *Secrets) String() string {
 func (*Secrets) ProtoMessage() {}
 
 func (x *Secrets) ProtoReflect() protoreflect.Message {
-	mi := &file_secrets_proto_msgTypes[1]
+	mi := &file_secrets_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -173,7 +272,7 @@ func (x *Secrets) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Secrets.ProtoReflect.Descriptor instead.
 func (*Secrets) Descriptor() ([]byte, []int) {
-	return file_secrets_proto_rawDescGZIP(), []int{1}
+	return file_secrets_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Secrets) GetEnable() bool {
@@ -183,32 +282,18 @@ func (x *Secrets) GetEnable() bool {
 	return false
 }
 
-func (x *Secrets) GetInputDirectory() string {
+func (x *Secrets) GetMasterKeys() map[string]*MasterKey {
 	if x != nil {
-		return x.InputDirectory
+		return x.MasterKeys
+	}
+	return nil
+}
+
+func (x *Secrets) GetInputDirectory() string {
+	if x != nil && x.InputDirectory != nil {
+		return *x.InputDirectory
 	}
 	return ""
-}
-
-func (x *Secrets) GetEnvironments() map[string]*SecretsEnvironment {
-	if x != nil {
-		return x.Environments
-	}
-	return nil
-}
-
-func (x *Secrets) GetCodegen() map[string]*Codegen {
-	if x != nil {
-		return x.Codegen
-	}
-	return nil
-}
-
-func (x *Secrets) GetSystemKeys() []string {
-	if x != nil {
-		return x.SystemKeys
-	}
-	return nil
 }
 
 func (x *Secrets) GetSecretsDir() string {
@@ -218,70 +303,23 @@ func (x *Secrets) GetSecretsDir() string {
 	return ""
 }
 
-func (x *Secrets) GetAgeKeyFiles() []string {
+func (x *Secrets) GetSystemKeys() []string {
 	if x != nil {
-		return x.AgeKeyFiles
+		return x.SystemKeys
 	}
 	return nil
 }
 
-// Environment-specific secrets configuration
-type SecretsEnvironment struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                               // Name of the environment (e.g., 'production', 'staging')
-	PublicKeys    []string               `protobuf:"bytes,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"` // AGE public keys that can decrypt secrets for this environment
-	Sources       []string               `protobuf:"bytes,3,rep,name=sources,proto3" json:"sources,omitempty"`                         // List of SOPS-encrypted source files for this environment (without .yaml extension)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SecretsEnvironment) Reset() {
-	*x = SecretsEnvironment{}
-	mi := &file_secrets_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SecretsEnvironment) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SecretsEnvironment) ProtoMessage() {}
-
-func (x *SecretsEnvironment) ProtoReflect() protoreflect.Message {
-	mi := &file_secrets_proto_msgTypes[2]
+func (x *Secrets) GetEnvironments() map[string]*Environment {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SecretsEnvironment.ProtoReflect.Descriptor instead.
-func (*SecretsEnvironment) Descriptor() ([]byte, []int) {
-	return file_secrets_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *SecretsEnvironment) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *SecretsEnvironment) GetPublicKeys() []string {
-	if x != nil {
-		return x.PublicKeys
+		return x.Environments
 	}
 	return nil
 }
 
-func (x *SecretsEnvironment) GetSources() []string {
+func (x *Secrets) GetCodegen() map[string]*CodegenTarget {
 	if x != nil {
-		return x.Sources
+		return x.Codegen
 	}
 	return nil
 }
@@ -290,37 +328,49 @@ var File_secrets_proto protoreflect.FileDescriptor
 
 const file_secrets_proto_rawDesc = "" +
 	"\n" +
-	"\rsecrets.proto\x12\rstackpanel.db\"w\n" +
-	"\aCodegen\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
-	"\tdirectory\x18\x02 \x01(\tR\tdirectory\x12:\n" +
-	"\blanguage\x18\x03 \x01(\x0e2\x1e.stackpanel.db.CodegenLanguageR\blanguage\"\x8a\x04\n" +
+	"\rsecrets.proto\x12\rstackpanel.db\"\x90\x01\n" +
+	"\rCodegenTarget\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12!\n" +
+	"\tdirectory\x18\x02 \x01(\tH\x01R\tdirectory\x88\x01\x01\x12\x1f\n" +
+	"\blanguage\x18\x03 \x01(\tH\x02R\blanguage\x88\x01\x01B\a\n" +
+	"\x05_nameB\f\n" +
+	"\n" +
+	"_directoryB\v\n" +
+	"\t_language\"j\n" +
+	"\vEnvironment\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x18\n" +
+	"\asources\x18\x02 \x03(\tR\asources\x12\x1f\n" +
+	"\vpublic_keys\x18\x03 \x03(\tR\n" +
+	"publicKeysB\a\n" +
+	"\x05_name\"l\n" +
+	"\tMasterKey\x12\x17\n" +
+	"\aage_pub\x18\x01 \x01(\tR\x06agePub\x12\x10\n" +
+	"\x03ref\x18\x02 \x01(\tR\x03ref\x12$\n" +
+	"\vresolve_cmd\x18\x03 \x01(\tH\x00R\n" +
+	"resolveCmd\x88\x01\x01B\x0e\n" +
+	"\f_resolve_cmd\"\xa0\x05\n" +
 	"\aSecrets\x12\x16\n" +
-	"\x06enable\x18\x01 \x01(\bR\x06enable\x12'\n" +
-	"\x0finput_directory\x18\x02 \x01(\tR\x0einputDirectory\x12L\n" +
-	"\fenvironments\x18\x03 \x03(\v2(.stackpanel.db.Secrets.EnvironmentsEntryR\fenvironments\x12=\n" +
-	"\acodegen\x18\x04 \x03(\v2#.stackpanel.db.Secrets.CodegenEntryR\acodegen\x12\x1f\n" +
+	"\x06enable\x18\x01 \x01(\bR\x06enable\x12G\n" +
+	"\vmaster_keys\x18\x02 \x03(\v2&.stackpanel.db.Secrets.MasterKeysEntryR\n" +
+	"masterKeys\x12,\n" +
+	"\x0finput_directory\x18\x03 \x01(\tH\x00R\x0einputDirectory\x88\x01\x01\x12$\n" +
+	"\vsecrets_dir\x18\x04 \x01(\tH\x01R\n" +
+	"secretsDir\x88\x01\x01\x12\x1f\n" +
 	"\vsystem_keys\x18\x05 \x03(\tR\n" +
-	"systemKeys\x12$\n" +
-	"\vsecrets_dir\x18\x06 \x01(\tH\x00R\n" +
-	"secretsDir\x88\x01\x01\x12\"\n" +
-	"\rage_key_files\x18\a \x03(\tR\vageKeyFiles\x1ab\n" +
+	"systemKeys\x12L\n" +
+	"\fenvironments\x18\x06 \x03(\v2(.stackpanel.db.Secrets.EnvironmentsEntryR\fenvironments\x12=\n" +
+	"\acodegen\x18\a \x03(\v2#.stackpanel.db.Secrets.CodegenEntryR\acodegen\x1aW\n" +
+	"\x0fMasterKeysEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.stackpanel.db.MasterKeyR\x05value:\x028\x01\x1a[\n" +
 	"\x11EnvironmentsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x127\n" +
-	"\x05value\x18\x02 \x01(\v2!.stackpanel.db.SecretsEnvironmentR\x05value:\x028\x01\x1aR\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.EnvironmentR\x05value:\x028\x01\x1aX\n" +
 	"\fCodegenEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.stackpanel.db.CodegenR\x05value:\x028\x01B\x0e\n" +
-	"\f_secrets_dir\"c\n" +
-	"\x12SecretsEnvironment\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
-	"\vpublic_keys\x18\x02 \x03(\tR\n" +
-	"publicKeys\x12\x18\n" +
-	"\asources\x18\x03 \x03(\tR\asources*m\n" +
-	"\x0fCodegenLanguage\x12 \n" +
-	"\x1cCODEGEN_LANGUAGE_UNSPECIFIED\x10\x00\x12\x1f\n" +
-	"\x1bCODEGEN_LANGUAGE_TYPESCRIPT\x10\x01\x12\x17\n" +
-	"\x13CODEGEN_LANGUAGE_GO\x10\x02B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.stackpanel.db.CodegenTargetR\x05value:\x028\x01B\x12\n" +
+	"\x10_input_directoryB\x0e\n" +
+	"\f_secrets_dirB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_secrets_proto_rawDescOnce sync.Once
@@ -334,27 +384,28 @@ func file_secrets_proto_rawDescGZIP() []byte {
 	return file_secrets_proto_rawDescData
 }
 
-var file_secrets_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_secrets_proto_goTypes = []any{
-	(CodegenLanguage)(0),       // 0: stackpanel.db.CodegenLanguage
-	(*Codegen)(nil),            // 1: stackpanel.db.Codegen
-	(*Secrets)(nil),            // 2: stackpanel.db.Secrets
-	(*SecretsEnvironment)(nil), // 3: stackpanel.db.SecretsEnvironment
-	nil,                        // 4: stackpanel.db.Secrets.EnvironmentsEntry
-	nil,                        // 5: stackpanel.db.Secrets.CodegenEntry
+	(*CodegenTarget)(nil), // 0: stackpanel.db.CodegenTarget
+	(*Environment)(nil),   // 1: stackpanel.db.Environment
+	(*MasterKey)(nil),     // 2: stackpanel.db.MasterKey
+	(*Secrets)(nil),       // 3: stackpanel.db.Secrets
+	nil,                   // 4: stackpanel.db.Secrets.MasterKeysEntry
+	nil,                   // 5: stackpanel.db.Secrets.EnvironmentsEntry
+	nil,                   // 6: stackpanel.db.Secrets.CodegenEntry
 }
 var file_secrets_proto_depIdxs = []int32{
-	0, // 0: stackpanel.db.Codegen.language:type_name -> stackpanel.db.CodegenLanguage
-	4, // 1: stackpanel.db.Secrets.environments:type_name -> stackpanel.db.Secrets.EnvironmentsEntry
-	5, // 2: stackpanel.db.Secrets.codegen:type_name -> stackpanel.db.Secrets.CodegenEntry
-	3, // 3: stackpanel.db.Secrets.EnvironmentsEntry.value:type_name -> stackpanel.db.SecretsEnvironment
-	1, // 4: stackpanel.db.Secrets.CodegenEntry.value:type_name -> stackpanel.db.Codegen
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // 0: stackpanel.db.Secrets.master_keys:type_name -> stackpanel.db.Secrets.MasterKeysEntry
+	5, // 1: stackpanel.db.Secrets.environments:type_name -> stackpanel.db.Secrets.EnvironmentsEntry
+	6, // 2: stackpanel.db.Secrets.codegen:type_name -> stackpanel.db.Secrets.CodegenEntry
+	2, // 3: stackpanel.db.Secrets.MasterKeysEntry.value:type_name -> stackpanel.db.MasterKey
+	1, // 4: stackpanel.db.Secrets.EnvironmentsEntry.value:type_name -> stackpanel.db.Environment
+	0, // 5: stackpanel.db.Secrets.CodegenEntry.value:type_name -> stackpanel.db.CodegenTarget
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_secrets_proto_init() }
@@ -362,20 +413,22 @@ func file_secrets_proto_init() {
 	if File_secrets_proto != nil {
 		return
 	}
+	file_secrets_proto_msgTypes[0].OneofWrappers = []any{}
 	file_secrets_proto_msgTypes[1].OneofWrappers = []any{}
+	file_secrets_proto_msgTypes[2].OneofWrappers = []any{}
+	file_secrets_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_secrets_proto_rawDesc), len(file_secrets_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   5,
+			NumEnums:      0,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_secrets_proto_goTypes,
 		DependencyIndexes: file_secrets_proto_depIdxs,
-		EnumInfos:         file_secrets_proto_enumTypes,
 		MessageInfos:      file_secrets_proto_msgTypes,
 	}.Build()
 	File_secrets_proto = out.File

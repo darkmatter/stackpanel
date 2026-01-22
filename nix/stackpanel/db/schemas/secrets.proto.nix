@@ -2,7 +2,7 @@
 # secrets.proto.nix
 #
 # Protobuf schema for secrets management configuration.
-# Defines the structure for secrets management and code generation.
+# Simplified to use master keys only - no per-user or per-environment keys.
 # ==============================================================================
 { lib }:
 let
@@ -18,37 +18,55 @@ proto.mkProtoFile {
     # See: https://stackpanel.dev/docs/secrets
     {
       # enable = true;
-      # input-directory = ".secrets";
       #
-      # # AGE key file locations to check (in order, first existing wins)
-      # # Defaults: $SOPS_AGE_KEY_FILE, ~/.config/sops/age/keys.txt,
-      # #           ~/.age/keys.txt, ~/.config/age/keys.txt, /etc/sops/age/keys.txt
-      # age-key-files = [
-      #   "''${SOPS_AGE_KEY_FILE:-}"
-      #   "''${HOME}/.config/sops/age/keys.txt"
-      #   "/run/secrets/age-key"  # For NixOS/systemd secrets
-      # ];
+      # # Directory containing SOPS-encrypted secrets (legacy layout)
+      # # Usually .stackpanel/secrets
+      # input-directory = ".stackpanel/secrets";
       #
-      # environments = {
-      #   dev = {
-      #     name = "dev";
-      #     public-keys = [
-      #       "age1..."  # Developer AGE public keys
-      #     ];
-      #     sources = [ "dev" ];  # SOPS files without .yaml extension
+      # # Master keys for encrypting/decrypting secrets
+      # # Each secret specifies which master keys can decrypt it
+      # master-keys = {
+      #   # Default local key - auto-generated, always works
+      #   local = {
+      #     age-pub = "age1...";  # computed from private key
+      #     ref = "ref+file://.stackpanel/state/keys/local.txt";
       #   };
-      #   production = {
-      #     name = "production";
-      #     public-keys = [ "age1..." ];
-      #     sources = [ "production" ];
+      #   
+      #   # Team dev key - stored in AWS SSM
+      #   dev = {
+      #     age-pub = "age1...";
+      #     ref = "ref+awsssm://stackpanel/keys/dev";
+      #   };
+      #   
+      #   # Production key
+      #   prod = {
+      #     age-pub = "age1...";
+      #     ref = "ref+awsssm://stackpanel/keys/prod";
       #   };
       # };
       #
+      # # System-level AGE public keys (CI/deploy)
+      # system-keys = [
+      #   # "age1..."
+      # ];
+      #
+      # # Code generation targets for type-safe env access
       # codegen = {
       #   typescript = {
-      #     name = "secrets";
-      #     directory = "packages/secrets/src";
+      #     name = "env";
+      #     directory = "packages/env/src/generated";
       #     language = "typescript";
+      #   };
+      # };
+      #
+      # # Environment-specific configs (SOPS sources + recipients)
+      # environments = {
+      #   dev = {
+      #     name = "dev";
+      #     sources = [ "shared" "dev" ];
+      #     public-keys = [
+      #       "age1..."
+      #     ];
       #   };
       # };
     }
@@ -58,65 +76,110 @@ proto.mkProtoFile {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
-  enums = {
-    CodegenLanguage = proto.mkEnum {
-      name = "CodegenLanguage";
-      description = "Programming language for generated code";
-      values = [
-        "CODEGEN_LANGUAGE_UNSPECIFIED"
-        "CODEGEN_LANGUAGE_TYPESCRIPT"
-        "CODEGEN_LANGUAGE_GO"
-      ];
-    };
-  };
+  enums = { };
 
   messages = {
+    CodegenTarget = proto.mkMessage {
+      name = "CodegenTarget";
+      description = "Code generation target for secrets/env access";
+      fields = {
+        name = proto.optional (
+          proto.string 1 "Name of the generated package/module (defaults to the target key)"
+        );
+        directory = proto.optional (
+          proto.string 2 "Output directory for generated code (repo-relative)"
+        );
+        language = proto.optional (
+          proto.string 3 ''
+            Target language for generated code (e.g., "typescript", "go", "python").
+            Informational only for now; codegen selection is based on the target key.
+          ''
+        );
+      };
+    };
+
+    Environment = proto.mkMessage {
+      name = "Environment";
+      description = "Environment-specific secrets configuration";
+      fields = {
+        name = proto.optional (
+          proto.string 1 "Name of the environment (e.g., dev, staging, production)"
+        );
+        sources = proto.repeated (
+          proto.string 2 ''
+            List of SOPS-encrypted source files for this environment (without .yaml extension).
+            These files are decrypted and merged to provide secrets for the environment.
+          ''
+        );
+        public_keys = proto.repeated (
+          proto.string 3 ''
+            AGE public keys that can decrypt secrets for this environment.
+            New secrets for this env are encrypted to these recipients.
+          ''
+        );
+      };
+    };
+
     # Root secrets configuration
     Secrets = proto.mkMessage {
       name = "Secrets";
       description = "Secrets management configuration";
       fields = {
         enable = proto.bool 1 "Enable secrets management";
-        input_directory = proto.string 2 "Directory where SOPS-encrypted secrets are stored";
-        environments =
-          proto.map "string" "SecretsEnvironment" 3
-            "Environment-specific secrets configurations";
-        codegen = proto.map "string" "Codegen" 4 "Code generation settings per target";
-        system_keys = proto.repeated (
-          proto.string 5 "AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions."
+        master_keys = proto.map "string" "MasterKey" 2 ''
+          Master keys for encrypting/decrypting secrets.
+          Each secret specifies which master keys can decrypt it via the master-keys field.
+          A default "local" key is auto-generated if no keys are configured.
+        '';
+        input_directory = proto.optional (
+          proto.string 3 ''
+            Directory containing SOPS-encrypted secrets (legacy SOPS layout).
+            Used when decrypting/merging YAML sources defined under environments.
+          ''
         );
         secrets_dir = proto.optional (
-          proto.string 6 "Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)"
+          proto.string 4 "Directory where secret .age files are stored (default: .stackpanel/secrets)"
         );
-        age_key_files = proto.repeated (
-          proto.string 7 "Paths to AGE key files to check for decryption (checked in order, first existing file wins)"
+        system_keys = proto.repeated (
+          proto.string 5 ''
+            System-level AGE public keys (CI, deploy servers, etc.).
+            These keys can decrypt all secrets regardless of environment restrictions.
+          ''
         );
+        environments = proto.map "string" "Environment" 6 ''
+          Environment-specific secrets configuration (SOPS sources + recipients).
+          Keyed by environment identifier (e.g., dev, staging, prod).
+        '';
+        codegen = proto.map "string" "CodegenTarget" 7 ''
+          Code generation targets keyed by name (e.g., typescript, go, python).
+          Used to drive language-specific env/secret helpers.
+        '';
       };
     };
 
-    # Environment-specific secrets configuration
-    SecretsEnvironment = proto.mkMessage {
-      name = "SecretsEnvironment";
-      description = "Environment-specific secrets configuration";
+    # Master key configuration
+    MasterKey = proto.mkMessage {
+      name = "MasterKey";
+      description = "A master key for encrypting/decrypting secrets";
       fields = {
-        name = proto.string 1 "Name of the environment (e.g., 'production', 'staging')";
-        public_keys = proto.repeated (
-          proto.string 2 "AGE public keys that can decrypt secrets for this environment"
+        age_pub = proto.string 1 ''
+          AGE public key for encrypting secrets to this key.
+          Format: age1... (bech32-encoded)
+        '';
+        ref = proto.string 2 ''
+          Vals reference that resolves to the AGE private key.
+          Examples:
+            - ref+file://.stackpanel/state/keys/local.txt (local file)
+            - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
+            - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+        '';
+        resolve_cmd = proto.optional (
+          proto.string 3 ''
+            Custom command to resolve the private key (overrides ref).
+            The command should output the AGE private key to stdout.
+            Example: op read 'op://vault/stackpanel/age-key'
+          ''
         );
-        sources = proto.repeated (
-          proto.string 3 "List of SOPS-encrypted source files for this environment (without .yaml extension)"
-        );
-      };
-    };
-
-    # Code generation settings
-    Codegen = proto.mkMessage {
-      name = "Codegen";
-      description = "Code generation settings for a target language";
-      fields = {
-        name = proto.string 1 "Name of the generated code package";
-        directory = proto.string 2 "Output directory for generated code (relative to project root)";
-        language = proto.message "CodegenLanguage" 3 "Programming language for generated code";
       };
     };
   };

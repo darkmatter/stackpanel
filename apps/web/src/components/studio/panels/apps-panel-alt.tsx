@@ -31,7 +31,7 @@ import {
 	useApps,
 	useNixConfig,
 	useVariables,
-} from "@/lib/use-nix-config";
+} from "@/lib/use-agent";
 import { AddAppDialog } from "./apps/add-app-dialog";
 import { AppVariablesSection } from "./apps/app-variables-section";
 import { useAppMutations } from "./apps/hooks";

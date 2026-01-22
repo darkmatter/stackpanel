@@ -1,1 +1,1 @@
-{"extends":["//"],"tasks":{"build":{},"dev":{},"test":{}}}
+{"extends":["//"],"tasks":{"dev":{}}}
