@@ -193,14 +193,13 @@ func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	// Try paths in priority order:
 	// 1. devshell passthru (for user projects consuming stackpanel)
 	// 2. stackpanelConfig flake output (for stackpanel repo itself)
-	// 3. stackpanelFullConfig flake output (alternative)
+	// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values (functions, modules)
 	attributePaths := []string{
 		// User projects: devshell passthru has the stackpanel config
 		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
 		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
 		// Stackpanel repo: direct flake outputs
 		".#stackpanelConfig",
-		".#stackpanelFullConfig",
 	}
 
 	var res *sharedexec.Result

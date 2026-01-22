@@ -98,6 +98,40 @@ const (
 	// AgentServiceRestartServiceProcedure is the fully-qualified name of the AgentService's
 	// RestartService RPC.
 	AgentServiceRestartServiceProcedure = "/stackpanel.agent.AgentService/RestartService"
+	// AgentServiceGetSSTStatusProcedure is the fully-qualified name of the AgentService's GetSSTStatus
+	// RPC.
+	AgentServiceGetSSTStatusProcedure = "/stackpanel.agent.AgentService/GetSSTStatus"
+	// AgentServiceGetSSTConfigProcedure is the fully-qualified name of the AgentService's GetSSTConfig
+	// RPC.
+	AgentServiceGetSSTConfigProcedure = "/stackpanel.agent.AgentService/GetSSTConfig"
+	// AgentServiceDeploySSTProcedure is the fully-qualified name of the AgentService's DeploySST RPC.
+	AgentServiceDeploySSTProcedure = "/stackpanel.agent.AgentService/DeploySST"
+	// AgentServiceRemoveSSTProcedure is the fully-qualified name of the AgentService's RemoveSST RPC.
+	AgentServiceRemoveSSTProcedure = "/stackpanel.agent.AgentService/RemoveSST"
+	// AgentServiceGetSSTOutputsProcedure is the fully-qualified name of the AgentService's
+	// GetSSTOutputs RPC.
+	AgentServiceGetSSTOutputsProcedure = "/stackpanel.agent.AgentService/GetSSTOutputs"
+	// AgentServiceGetSSTResourcesProcedure is the fully-qualified name of the AgentService's
+	// GetSSTResources RPC.
+	AgentServiceGetSSTResourcesProcedure = "/stackpanel.agent.AgentService/GetSSTResources"
+	// AgentServiceSearchNixpkgsProcedure is the fully-qualified name of the AgentService's
+	// SearchNixpkgs RPC.
+	AgentServiceSearchNixpkgsProcedure = "/stackpanel.agent.AgentService/SearchNixpkgs"
+	// AgentServiceGetInstalledPackagesProcedure is the fully-qualified name of the AgentService's
+	// GetInstalledPackages RPC.
+	AgentServiceGetInstalledPackagesProcedure = "/stackpanel.agent.AgentService/GetInstalledPackages"
+	// AgentServiceGetProcessesProcedure is the fully-qualified name of the AgentService's GetProcesses
+	// RPC.
+	AgentServiceGetProcessesProcedure = "/stackpanel.agent.AgentService/GetProcesses"
+	// AgentServiceGetHealthchecksProcedure is the fully-qualified name of the AgentService's
+	// GetHealthchecks RPC.
+	AgentServiceGetHealthchecksProcedure = "/stackpanel.agent.AgentService/GetHealthchecks"
+	// AgentServiceGetNixConfigProcedure is the fully-qualified name of the AgentService's GetNixConfig
+	// RPC.
+	AgentServiceGetNixConfigProcedure = "/stackpanel.agent.AgentService/GetNixConfig"
+	// AgentServiceRefreshNixConfigProcedure is the fully-qualified name of the AgentService's
+	// RefreshNixConfig RPC.
+	AgentServiceRefreshNixConfigProcedure = "/stackpanel.agent.AgentService/RefreshNixConfig"
 )
 
 // AgentServiceClient is a client for the stackpanel.agent.AgentService service.
@@ -137,6 +171,23 @@ type AgentServiceClient interface {
 	StartService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error)
 	StopService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error)
 	RestartService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error)
+	// SST Infrastructure
+	GetSSTStatus(context.Context, *connect.Request[gopb.GetSSTStatusRequest]) (*connect.Response[gopb.SSTStatusResponse], error)
+	GetSSTConfig(context.Context, *connect.Request[gopb.GetSSTConfigRequest]) (*connect.Response[gopb.Sst], error)
+	DeploySST(context.Context, *connect.Request[gopb.DeploySSTRequest]) (*connect.Response[gopb.DeploySSTResponse], error)
+	RemoveSST(context.Context, *connect.Request[gopb.RemoveSSTRequest]) (*connect.Response[gopb.RemoveSSTResponse], error)
+	GetSSTOutputs(context.Context, *connect.Request[gopb.GetSSTOutputsRequest]) (*connect.Response[gopb.SSTOutputsResponse], error)
+	GetSSTResources(context.Context, *connect.Request[gopb.GetSSTResourcesRequest]) (*connect.Response[gopb.SSTResourcesResponse], error)
+	// Nixpkgs package management
+	SearchNixpkgs(context.Context, *connect.Request[gopb.SearchNixpkgsRequest]) (*connect.Response[gopb.SearchNixpkgsResponse], error)
+	GetInstalledPackages(context.Context, *connect.Request[gopb.GetInstalledPackagesRequest]) (*connect.Response[gopb.InstalledPackagesResponse], error)
+	// Process-compose processes
+	GetProcesses(context.Context, *connect.Request[gopb.GetProcessesRequest]) (*connect.Response[gopb.GetProcessesResponse], error)
+	// Healthchecks
+	GetHealthchecks(context.Context, *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error)
+	// Full Nix config (evaluated from flake)
+	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
+	RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
 }
 
 // NewAgentServiceClient constructs a client for the stackpanel.agent.AgentService service. By
@@ -312,38 +363,122 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(agentServiceMethods.ByName("RestartService")),
 			connect.WithClientOptions(opts...),
 		),
+		getSSTStatus: connect.NewClient[gopb.GetSSTStatusRequest, gopb.SSTStatusResponse](
+			httpClient,
+			baseURL+AgentServiceGetSSTStatusProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetSSTStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		getSSTConfig: connect.NewClient[gopb.GetSSTConfigRequest, gopb.Sst](
+			httpClient,
+			baseURL+AgentServiceGetSSTConfigProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetSSTConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		deploySST: connect.NewClient[gopb.DeploySSTRequest, gopb.DeploySSTResponse](
+			httpClient,
+			baseURL+AgentServiceDeploySSTProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("DeploySST")),
+			connect.WithClientOptions(opts...),
+		),
+		removeSST: connect.NewClient[gopb.RemoveSSTRequest, gopb.RemoveSSTResponse](
+			httpClient,
+			baseURL+AgentServiceRemoveSSTProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("RemoveSST")),
+			connect.WithClientOptions(opts...),
+		),
+		getSSTOutputs: connect.NewClient[gopb.GetSSTOutputsRequest, gopb.SSTOutputsResponse](
+			httpClient,
+			baseURL+AgentServiceGetSSTOutputsProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetSSTOutputs")),
+			connect.WithClientOptions(opts...),
+		),
+		getSSTResources: connect.NewClient[gopb.GetSSTResourcesRequest, gopb.SSTResourcesResponse](
+			httpClient,
+			baseURL+AgentServiceGetSSTResourcesProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetSSTResources")),
+			connect.WithClientOptions(opts...),
+		),
+		searchNixpkgs: connect.NewClient[gopb.SearchNixpkgsRequest, gopb.SearchNixpkgsResponse](
+			httpClient,
+			baseURL+AgentServiceSearchNixpkgsProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("SearchNixpkgs")),
+			connect.WithClientOptions(opts...),
+		),
+		getInstalledPackages: connect.NewClient[gopb.GetInstalledPackagesRequest, gopb.InstalledPackagesResponse](
+			httpClient,
+			baseURL+AgentServiceGetInstalledPackagesProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetInstalledPackages")),
+			connect.WithClientOptions(opts...),
+		),
+		getProcesses: connect.NewClient[gopb.GetProcessesRequest, gopb.GetProcessesResponse](
+			httpClient,
+			baseURL+AgentServiceGetProcessesProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetProcesses")),
+			connect.WithClientOptions(opts...),
+		),
+		getHealthchecks: connect.NewClient[gopb.GetHealthchecksRequest, gopb.HealthchecksResponse](
+			httpClient,
+			baseURL+AgentServiceGetHealthchecksProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetHealthchecks")),
+			connect.WithClientOptions(opts...),
+		),
+		getNixConfig: connect.NewClient[gopb.GetNixConfigRequest, gopb.NixConfigResponse](
+			httpClient,
+			baseURL+AgentServiceGetNixConfigProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetNixConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		refreshNixConfig: connect.NewClient[gopb.RefreshNixConfigRequest, gopb.NixConfigResponse](
+			httpClient,
+			baseURL+AgentServiceRefreshNixConfigProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("RefreshNixConfig")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // agentServiceClient implements AgentServiceClient.
 type agentServiceClient struct {
-	getProject        *connect.Client[gopb.GetProjectRequest, gopb.GetProjectResponse]
-	getConfig         *connect.Client[gopb.GetConfigRequest, gopb.Config]
-	setConfig         *connect.Client[gopb.Config, gopb.Config]
-	getSecrets        *connect.Client[gopb.GetSecretsRequest, gopb.Secrets]
-	setSecrets        *connect.Client[gopb.Secrets, gopb.Secrets]
-	getUsers          *connect.Client[gopb.GetUsersRequest, gopb.Users]
-	setUsers          *connect.Client[gopb.Users, gopb.Users]
-	getAws            *connect.Client[gopb.GetAwsRequest, gopb.Aws]
-	setAws            *connect.Client[gopb.Aws, gopb.Aws]
-	getApps           *connect.Client[gopb.GetAppsRequest, gopb.Apps]
-	setApps           *connect.Client[gopb.Apps, gopb.Apps]
-	getVariables      *connect.Client[gopb.GetVariablesRequest, gopb.Variables]
-	setVariables      *connect.Client[gopb.Variables, gopb.Variables]
-	getAgeIdentity    *connect.Client[gopb.GetAgeIdentityRequest, gopb.AgeIdentityResponse]
-	setAgeIdentity    *connect.Client[gopb.SetAgeIdentityRequest, gopb.AgeIdentityResponse]
-	getKMSConfig      *connect.Client[gopb.GetKMSConfigRequest, gopb.KMSConfigResponse]
-	setKMSConfig      *connect.Client[gopb.SetKMSConfigRequest, gopb.KMSConfigResponse]
-	readFile          *connect.Client[gopb.ReadFileRequest, gopb.ReadFileResponse]
-	writeFile         *connect.Client[gopb.WriteFileRequest, gopb.WriteFileResponse]
-	listFiles         *connect.Client[gopb.ListFilesRequest, gopb.ListFilesResponse]
-	exec              *connect.Client[gopb.ExecRequest, gopb.ExecResponse]
-	nixGenerate       *connect.Client[gopb.NixGenerateRequest, gopb.NixGenerateResponse]
-	nixEval           *connect.Client[gopb.NixEvalRequest, gopb.NixEvalResponse]
-	getServicesStatus *connect.Client[gopb.GetServicesStatusRequest, gopb.GetServicesStatusResponse]
-	startService      *connect.Client[gopb.ServiceRequest, gopb.ServiceResponse]
-	stopService       *connect.Client[gopb.ServiceRequest, gopb.ServiceResponse]
-	restartService    *connect.Client[gopb.ServiceRequest, gopb.ServiceResponse]
+	getProject           *connect.Client[gopb.GetProjectRequest, gopb.GetProjectResponse]
+	getConfig            *connect.Client[gopb.GetConfigRequest, gopb.Config]
+	setConfig            *connect.Client[gopb.Config, gopb.Config]
+	getSecrets           *connect.Client[gopb.GetSecretsRequest, gopb.Secrets]
+	setSecrets           *connect.Client[gopb.Secrets, gopb.Secrets]
+	getUsers             *connect.Client[gopb.GetUsersRequest, gopb.Users]
+	setUsers             *connect.Client[gopb.Users, gopb.Users]
+	getAws               *connect.Client[gopb.GetAwsRequest, gopb.Aws]
+	setAws               *connect.Client[gopb.Aws, gopb.Aws]
+	getApps              *connect.Client[gopb.GetAppsRequest, gopb.Apps]
+	setApps              *connect.Client[gopb.Apps, gopb.Apps]
+	getVariables         *connect.Client[gopb.GetVariablesRequest, gopb.Variables]
+	setVariables         *connect.Client[gopb.Variables, gopb.Variables]
+	getAgeIdentity       *connect.Client[gopb.GetAgeIdentityRequest, gopb.AgeIdentityResponse]
+	setAgeIdentity       *connect.Client[gopb.SetAgeIdentityRequest, gopb.AgeIdentityResponse]
+	getKMSConfig         *connect.Client[gopb.GetKMSConfigRequest, gopb.KMSConfigResponse]
+	setKMSConfig         *connect.Client[gopb.SetKMSConfigRequest, gopb.KMSConfigResponse]
+	readFile             *connect.Client[gopb.ReadFileRequest, gopb.ReadFileResponse]
+	writeFile            *connect.Client[gopb.WriteFileRequest, gopb.WriteFileResponse]
+	listFiles            *connect.Client[gopb.ListFilesRequest, gopb.ListFilesResponse]
+	exec                 *connect.Client[gopb.ExecRequest, gopb.ExecResponse]
+	nixGenerate          *connect.Client[gopb.NixGenerateRequest, gopb.NixGenerateResponse]
+	nixEval              *connect.Client[gopb.NixEvalRequest, gopb.NixEvalResponse]
+	getServicesStatus    *connect.Client[gopb.GetServicesStatusRequest, gopb.GetServicesStatusResponse]
+	startService         *connect.Client[gopb.ServiceRequest, gopb.ServiceResponse]
+	stopService          *connect.Client[gopb.ServiceRequest, gopb.ServiceResponse]
+	restartService       *connect.Client[gopb.ServiceRequest, gopb.ServiceResponse]
+	getSSTStatus         *connect.Client[gopb.GetSSTStatusRequest, gopb.SSTStatusResponse]
+	getSSTConfig         *connect.Client[gopb.GetSSTConfigRequest, gopb.Sst]
+	deploySST            *connect.Client[gopb.DeploySSTRequest, gopb.DeploySSTResponse]
+	removeSST            *connect.Client[gopb.RemoveSSTRequest, gopb.RemoveSSTResponse]
+	getSSTOutputs        *connect.Client[gopb.GetSSTOutputsRequest, gopb.SSTOutputsResponse]
+	getSSTResources      *connect.Client[gopb.GetSSTResourcesRequest, gopb.SSTResourcesResponse]
+	searchNixpkgs        *connect.Client[gopb.SearchNixpkgsRequest, gopb.SearchNixpkgsResponse]
+	getInstalledPackages *connect.Client[gopb.GetInstalledPackagesRequest, gopb.InstalledPackagesResponse]
+	getProcesses         *connect.Client[gopb.GetProcessesRequest, gopb.GetProcessesResponse]
+	getHealthchecks      *connect.Client[gopb.GetHealthchecksRequest, gopb.HealthchecksResponse]
+	getNixConfig         *connect.Client[gopb.GetNixConfigRequest, gopb.NixConfigResponse]
+	refreshNixConfig     *connect.Client[gopb.RefreshNixConfigRequest, gopb.NixConfigResponse]
 }
 
 // GetProject calls stackpanel.agent.AgentService.GetProject.
@@ -481,6 +616,66 @@ func (c *agentServiceClient) RestartService(ctx context.Context, req *connect.Re
 	return c.restartService.CallUnary(ctx, req)
 }
 
+// GetSSTStatus calls stackpanel.agent.AgentService.GetSSTStatus.
+func (c *agentServiceClient) GetSSTStatus(ctx context.Context, req *connect.Request[gopb.GetSSTStatusRequest]) (*connect.Response[gopb.SSTStatusResponse], error) {
+	return c.getSSTStatus.CallUnary(ctx, req)
+}
+
+// GetSSTConfig calls stackpanel.agent.AgentService.GetSSTConfig.
+func (c *agentServiceClient) GetSSTConfig(ctx context.Context, req *connect.Request[gopb.GetSSTConfigRequest]) (*connect.Response[gopb.Sst], error) {
+	return c.getSSTConfig.CallUnary(ctx, req)
+}
+
+// DeploySST calls stackpanel.agent.AgentService.DeploySST.
+func (c *agentServiceClient) DeploySST(ctx context.Context, req *connect.Request[gopb.DeploySSTRequest]) (*connect.Response[gopb.DeploySSTResponse], error) {
+	return c.deploySST.CallUnary(ctx, req)
+}
+
+// RemoveSST calls stackpanel.agent.AgentService.RemoveSST.
+func (c *agentServiceClient) RemoveSST(ctx context.Context, req *connect.Request[gopb.RemoveSSTRequest]) (*connect.Response[gopb.RemoveSSTResponse], error) {
+	return c.removeSST.CallUnary(ctx, req)
+}
+
+// GetSSTOutputs calls stackpanel.agent.AgentService.GetSSTOutputs.
+func (c *agentServiceClient) GetSSTOutputs(ctx context.Context, req *connect.Request[gopb.GetSSTOutputsRequest]) (*connect.Response[gopb.SSTOutputsResponse], error) {
+	return c.getSSTOutputs.CallUnary(ctx, req)
+}
+
+// GetSSTResources calls stackpanel.agent.AgentService.GetSSTResources.
+func (c *agentServiceClient) GetSSTResources(ctx context.Context, req *connect.Request[gopb.GetSSTResourcesRequest]) (*connect.Response[gopb.SSTResourcesResponse], error) {
+	return c.getSSTResources.CallUnary(ctx, req)
+}
+
+// SearchNixpkgs calls stackpanel.agent.AgentService.SearchNixpkgs.
+func (c *agentServiceClient) SearchNixpkgs(ctx context.Context, req *connect.Request[gopb.SearchNixpkgsRequest]) (*connect.Response[gopb.SearchNixpkgsResponse], error) {
+	return c.searchNixpkgs.CallUnary(ctx, req)
+}
+
+// GetInstalledPackages calls stackpanel.agent.AgentService.GetInstalledPackages.
+func (c *agentServiceClient) GetInstalledPackages(ctx context.Context, req *connect.Request[gopb.GetInstalledPackagesRequest]) (*connect.Response[gopb.InstalledPackagesResponse], error) {
+	return c.getInstalledPackages.CallUnary(ctx, req)
+}
+
+// GetProcesses calls stackpanel.agent.AgentService.GetProcesses.
+func (c *agentServiceClient) GetProcesses(ctx context.Context, req *connect.Request[gopb.GetProcessesRequest]) (*connect.Response[gopb.GetProcessesResponse], error) {
+	return c.getProcesses.CallUnary(ctx, req)
+}
+
+// GetHealthchecks calls stackpanel.agent.AgentService.GetHealthchecks.
+func (c *agentServiceClient) GetHealthchecks(ctx context.Context, req *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error) {
+	return c.getHealthchecks.CallUnary(ctx, req)
+}
+
+// GetNixConfig calls stackpanel.agent.AgentService.GetNixConfig.
+func (c *agentServiceClient) GetNixConfig(ctx context.Context, req *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
+	return c.getNixConfig.CallUnary(ctx, req)
+}
+
+// RefreshNixConfig calls stackpanel.agent.AgentService.RefreshNixConfig.
+func (c *agentServiceClient) RefreshNixConfig(ctx context.Context, req *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
+	return c.refreshNixConfig.CallUnary(ctx, req)
+}
+
 // AgentServiceHandler is an implementation of the stackpanel.agent.AgentService service.
 type AgentServiceHandler interface {
 	// Project
@@ -518,6 +713,23 @@ type AgentServiceHandler interface {
 	StartService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error)
 	StopService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error)
 	RestartService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error)
+	// SST Infrastructure
+	GetSSTStatus(context.Context, *connect.Request[gopb.GetSSTStatusRequest]) (*connect.Response[gopb.SSTStatusResponse], error)
+	GetSSTConfig(context.Context, *connect.Request[gopb.GetSSTConfigRequest]) (*connect.Response[gopb.Sst], error)
+	DeploySST(context.Context, *connect.Request[gopb.DeploySSTRequest]) (*connect.Response[gopb.DeploySSTResponse], error)
+	RemoveSST(context.Context, *connect.Request[gopb.RemoveSSTRequest]) (*connect.Response[gopb.RemoveSSTResponse], error)
+	GetSSTOutputs(context.Context, *connect.Request[gopb.GetSSTOutputsRequest]) (*connect.Response[gopb.SSTOutputsResponse], error)
+	GetSSTResources(context.Context, *connect.Request[gopb.GetSSTResourcesRequest]) (*connect.Response[gopb.SSTResourcesResponse], error)
+	// Nixpkgs package management
+	SearchNixpkgs(context.Context, *connect.Request[gopb.SearchNixpkgsRequest]) (*connect.Response[gopb.SearchNixpkgsResponse], error)
+	GetInstalledPackages(context.Context, *connect.Request[gopb.GetInstalledPackagesRequest]) (*connect.Response[gopb.InstalledPackagesResponse], error)
+	// Process-compose processes
+	GetProcesses(context.Context, *connect.Request[gopb.GetProcessesRequest]) (*connect.Response[gopb.GetProcessesResponse], error)
+	// Healthchecks
+	GetHealthchecks(context.Context, *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error)
+	// Full Nix config (evaluated from flake)
+	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
+	RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
 }
 
 // NewAgentServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -689,6 +901,78 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(agentServiceMethods.ByName("RestartService")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentServiceGetSSTStatusHandler := connect.NewUnaryHandler(
+		AgentServiceGetSSTStatusProcedure,
+		svc.GetSSTStatus,
+		connect.WithSchema(agentServiceMethods.ByName("GetSSTStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetSSTConfigHandler := connect.NewUnaryHandler(
+		AgentServiceGetSSTConfigProcedure,
+		svc.GetSSTConfig,
+		connect.WithSchema(agentServiceMethods.ByName("GetSSTConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceDeploySSTHandler := connect.NewUnaryHandler(
+		AgentServiceDeploySSTProcedure,
+		svc.DeploySST,
+		connect.WithSchema(agentServiceMethods.ByName("DeploySST")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceRemoveSSTHandler := connect.NewUnaryHandler(
+		AgentServiceRemoveSSTProcedure,
+		svc.RemoveSST,
+		connect.WithSchema(agentServiceMethods.ByName("RemoveSST")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetSSTOutputsHandler := connect.NewUnaryHandler(
+		AgentServiceGetSSTOutputsProcedure,
+		svc.GetSSTOutputs,
+		connect.WithSchema(agentServiceMethods.ByName("GetSSTOutputs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetSSTResourcesHandler := connect.NewUnaryHandler(
+		AgentServiceGetSSTResourcesProcedure,
+		svc.GetSSTResources,
+		connect.WithSchema(agentServiceMethods.ByName("GetSSTResources")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceSearchNixpkgsHandler := connect.NewUnaryHandler(
+		AgentServiceSearchNixpkgsProcedure,
+		svc.SearchNixpkgs,
+		connect.WithSchema(agentServiceMethods.ByName("SearchNixpkgs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetInstalledPackagesHandler := connect.NewUnaryHandler(
+		AgentServiceGetInstalledPackagesProcedure,
+		svc.GetInstalledPackages,
+		connect.WithSchema(agentServiceMethods.ByName("GetInstalledPackages")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetProcessesHandler := connect.NewUnaryHandler(
+		AgentServiceGetProcessesProcedure,
+		svc.GetProcesses,
+		connect.WithSchema(agentServiceMethods.ByName("GetProcesses")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetHealthchecksHandler := connect.NewUnaryHandler(
+		AgentServiceGetHealthchecksProcedure,
+		svc.GetHealthchecks,
+		connect.WithSchema(agentServiceMethods.ByName("GetHealthchecks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetNixConfigHandler := connect.NewUnaryHandler(
+		AgentServiceGetNixConfigProcedure,
+		svc.GetNixConfig,
+		connect.WithSchema(agentServiceMethods.ByName("GetNixConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceRefreshNixConfigHandler := connect.NewUnaryHandler(
+		AgentServiceRefreshNixConfigProcedure,
+		svc.RefreshNixConfig,
+		connect.WithSchema(agentServiceMethods.ByName("RefreshNixConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/stackpanel.agent.AgentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentServiceGetProjectProcedure:
@@ -745,6 +1029,30 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceStopServiceHandler.ServeHTTP(w, r)
 		case AgentServiceRestartServiceProcedure:
 			agentServiceRestartServiceHandler.ServeHTTP(w, r)
+		case AgentServiceGetSSTStatusProcedure:
+			agentServiceGetSSTStatusHandler.ServeHTTP(w, r)
+		case AgentServiceGetSSTConfigProcedure:
+			agentServiceGetSSTConfigHandler.ServeHTTP(w, r)
+		case AgentServiceDeploySSTProcedure:
+			agentServiceDeploySSTHandler.ServeHTTP(w, r)
+		case AgentServiceRemoveSSTProcedure:
+			agentServiceRemoveSSTHandler.ServeHTTP(w, r)
+		case AgentServiceGetSSTOutputsProcedure:
+			agentServiceGetSSTOutputsHandler.ServeHTTP(w, r)
+		case AgentServiceGetSSTResourcesProcedure:
+			agentServiceGetSSTResourcesHandler.ServeHTTP(w, r)
+		case AgentServiceSearchNixpkgsProcedure:
+			agentServiceSearchNixpkgsHandler.ServeHTTP(w, r)
+		case AgentServiceGetInstalledPackagesProcedure:
+			agentServiceGetInstalledPackagesHandler.ServeHTTP(w, r)
+		case AgentServiceGetProcessesProcedure:
+			agentServiceGetProcessesHandler.ServeHTTP(w, r)
+		case AgentServiceGetHealthchecksProcedure:
+			agentServiceGetHealthchecksHandler.ServeHTTP(w, r)
+		case AgentServiceGetNixConfigProcedure:
+			agentServiceGetNixConfigHandler.ServeHTTP(w, r)
+		case AgentServiceRefreshNixConfigProcedure:
+			agentServiceRefreshNixConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -860,4 +1168,52 @@ func (UnimplementedAgentServiceHandler) StopService(context.Context, *connect.Re
 
 func (UnimplementedAgentServiceHandler) RestartService(context.Context, *connect.Request[gopb.ServiceRequest]) (*connect.Response[gopb.ServiceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.RestartService is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetSSTStatus(context.Context, *connect.Request[gopb.GetSSTStatusRequest]) (*connect.Response[gopb.SSTStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetSSTStatus is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetSSTConfig(context.Context, *connect.Request[gopb.GetSSTConfigRequest]) (*connect.Response[gopb.Sst], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetSSTConfig is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) DeploySST(context.Context, *connect.Request[gopb.DeploySSTRequest]) (*connect.Response[gopb.DeploySSTResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.DeploySST is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) RemoveSST(context.Context, *connect.Request[gopb.RemoveSSTRequest]) (*connect.Response[gopb.RemoveSSTResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.RemoveSST is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetSSTOutputs(context.Context, *connect.Request[gopb.GetSSTOutputsRequest]) (*connect.Response[gopb.SSTOutputsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetSSTOutputs is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetSSTResources(context.Context, *connect.Request[gopb.GetSSTResourcesRequest]) (*connect.Response[gopb.SSTResourcesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetSSTResources is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) SearchNixpkgs(context.Context, *connect.Request[gopb.SearchNixpkgsRequest]) (*connect.Response[gopb.SearchNixpkgsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.SearchNixpkgs is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetInstalledPackages(context.Context, *connect.Request[gopb.GetInstalledPackagesRequest]) (*connect.Response[gopb.InstalledPackagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetInstalledPackages is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetProcesses(context.Context, *connect.Request[gopb.GetProcessesRequest]) (*connect.Response[gopb.GetProcessesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetProcesses is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetHealthchecks(context.Context, *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetHealthchecks is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetNixConfig is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.RefreshNixConfig is not implemented"))
 }

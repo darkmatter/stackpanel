@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -54,6 +55,7 @@ type Healthcheck struct {
 	Severity           HealthcheckSeverity `json:"severity"`
 	Script             *string             `json:"script,omitempty"`
 	ScriptPath         *string             `json:"scriptPath,omitempty"`
+	ScriptDrvPath      *string             `json:"scriptDrvPath,omitempty"`
 	NixExpr            *string             `json:"nixExpr,omitempty"`
 	HTTPUrl            *string             `json:"httpUrl,omitempty"`
 	HTTPMethod         *string             `json:"httpMethod,omitempty"`
@@ -324,6 +326,9 @@ func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (b
 
 	var cmd *exec.Cmd
 	if check.ScriptPath != nil && *check.ScriptPath != "" {
+		if err := s.ensureScriptPath(*check.ScriptPath, check.ScriptDrvPath); err != nil {
+			return false, "", err
+		}
 		cmd = exec.CommandContext(ctx, *check.ScriptPath)
 	} else {
 		cmd = exec.CommandContext(ctx, "sh", "-c", script)
@@ -343,6 +348,32 @@ func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (b
 	}
 
 	return true, outputStr, nil
+}
+
+// ensureScriptPath ensures the scriptPath exists by attempting to build the derivation if needed.
+func (s *Server) ensureScriptPath(scriptPath string, scriptDrvPath *string) error {
+	if _, err := os.Stat(scriptPath); err == nil {
+		return nil
+	}
+
+	if scriptDrvPath == nil || *scriptDrvPath == "" {
+		return fmt.Errorf("script path not found: %s", scriptPath)
+	}
+
+	// Attempt to build the derivation to realize the script in the store.
+	res, err := s.exec.RunNix("build", "--no-link", *scriptDrvPath)
+	if err != nil {
+		return fmt.Errorf("failed to build healthcheck script derivation: %w", err)
+	}
+	if res.ExitCode != 0 {
+		return fmt.Errorf("failed to build healthcheck script derivation: %s", strings.TrimSpace(res.Stderr))
+	}
+
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("script path not found after build: %s", scriptPath)
+	}
+
+	return nil
 }
 
 // runHTTPHealthcheck runs an HTTP-based healthcheck

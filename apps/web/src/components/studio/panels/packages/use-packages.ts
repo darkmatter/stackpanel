@@ -4,7 +4,7 @@
 import { useCallback, useState } from "react";
 import type { NixpkgsPackage } from "@/lib/types";
 import { useInstalledPackages } from "@/lib/use-installed-packages";
-import { useNixData } from "@/lib/use-nix-config";
+import { useNixData } from "@/lib/use-agent";
 import { useNixpkgsSearch } from "@/lib/use-nixpkgs-search";
 import type { ProcessingStatus } from "./types";
 

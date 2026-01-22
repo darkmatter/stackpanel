@@ -143,13 +143,7 @@ export interface AppVariable {
      */
     variable_id: string; // ID of the variable from variables.nix
     /**
-     * @generated from protobuf field: map<string, stackpanel.db.AppEnvironment> environments = 4
-     */
-    environments: {
-        [key: string]: AppEnvironment;
-    }; // Environments this mapping applies to
-    /**
-     * @generated from protobuf field: optional string value = 5
+     * @generated from protobuf field: optional string value = 4
      */
     value?: string; // Literal value (used when variable_id is empty)
 }
@@ -551,8 +545,7 @@ class AppVariable$Type extends MessageType<AppVariable> {
             { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "type", kind: "enum", T: () => ["stackpanel.db.AppVariableType", AppVariableType, "APP_VARIABLE_TYPE_"] },
             { no: 3, name: "variable_id", kind: "scalar", localName: "variable_id", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppEnvironment } },
-            { no: 5, name: "value", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 4, name: "value", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<AppVariable>): AppVariable {
@@ -560,7 +553,6 @@ class AppVariable$Type extends MessageType<AppVariable> {
         message.key = "";
         message.type = 0;
         message.variable_id = "";
-        message.environments = {};
         if (value !== undefined)
             reflectionMergePartial<AppVariable>(this, message, value);
         return message;
@@ -579,10 +571,7 @@ class AppVariable$Type extends MessageType<AppVariable> {
                 case /* string variable_id */ 3:
                     message.variable_id = reader.string();
                     break;
-                case /* map<string, stackpanel.db.AppEnvironment> environments */ 4:
-                    this.binaryReadMap4(message.environments, reader, options);
-                    break;
-                case /* optional string value */ 5:
+                case /* optional string value */ 4:
                     message.value = reader.string();
                     break;
                 default:
@@ -596,22 +585,6 @@ class AppVariable$Type extends MessageType<AppVariable> {
         }
         return message;
     }
-    private binaryReadMap4(map: AppVariable["environments"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof AppVariable["environments"] | undefined, val: AppVariable["environments"][any] | undefined;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case 1:
-                    key = reader.string();
-                    break;
-                case 2:
-                    val = AppEnvironment.internalBinaryRead(reader, reader.uint32(), options);
-                    break;
-                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.AppVariable.environments");
-            }
-        }
-        map[key ?? ""] = val ?? AppEnvironment.create();
-    }
     internalBinaryWrite(message: AppVariable, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string key = 1; */
         if (message.key !== "")
@@ -622,16 +595,9 @@ class AppVariable$Type extends MessageType<AppVariable> {
         /* string variable_id = 3; */
         if (message.variable_id !== "")
             writer.tag(3, WireType.LengthDelimited).string(message.variable_id);
-        /* map<string, stackpanel.db.AppEnvironment> environments = 4; */
-        for (let k of globalThis.Object.keys(message.environments)) {
-            writer.tag(4, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
-            writer.tag(2, WireType.LengthDelimited).fork();
-            AppEnvironment.internalBinaryWrite(message.environments[k], writer, options);
-            writer.join().join();
-        }
-        /* optional string value = 5; */
+        /* optional string value = 4; */
         if (message.value !== undefined)
-            writer.tag(5, WireType.LengthDelimited).string(message.value);
+            writer.tag(4, WireType.LengthDelimited).string(message.value);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -57,8 +57,7 @@ message AppVariable {
   string key = 1; // Environment variable key
   AppVariableType type = 2; // Type of environment variable
   string variable_id = 3; // ID of the variable from variables.nix
-  map<string, AppEnvironment> environments = 4; // Environments this mapping applies to
-  optional string value = 5; // Literal value (used when variable_id is empty)
+  optional string value = 4; // Literal value (used when variable_id is empty)
 }
 
 // Map of app identifier to app configuration

@@ -46,8 +46,20 @@ in
     ./modules/git-hooks.nix # git-hooks integration
     ./modules/ci-formatters.nix # CI formatter checks
     ./modules/go.nix # Go app support
+    ./modules/app-commands.nix # Nix-native app commands (build, dev, test, etc.)
+    ./modules/entrypoints.nix # Per-app entrypoint scripts with secrets/devshell
     ./modules/process-compose.nix # App scripts + process-compose
     ./modules/turbo.nix # Turborepo task integration
+
+    # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,
+    # devenv-pre-commit.nix) are NOT auto-imported here. They require devenvSchema
+    # to be passed via specialArgs, which only happens when using wrapDevenv.
+    # Import them explicitly when using lib.wrapDevenv:
+    #
+    #   wrappedDevenv = inputs.stackpanel.lib.wrapDevenv { inherit inputs; };
+    #   devShells.default = wrappedDevenv.lib.mkShell { ... };
+    #
+    # The wrapped lib automatically includes these modules.
   ];
 
   config.stackpanel.devshell.hooks.after = [

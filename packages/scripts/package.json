@@ -3,6 +3,10 @@
 	"version": "0.0.0",
 	"private": true,
 	"bin": {
-		"check-devshell": "./bin/check-devshell.sh"
+		"check-devshell": "./bin/check-devshell.sh",
+		"entrypoint": "./bin/entrypoint.sh"
+	},
+	"scripts": {
+		"postinstall": "chmod +x ./bin/*.sh ./lib/*.sh 2>/dev/null || true"
 	}
 }

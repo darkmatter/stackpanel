@@ -1,12 +1,52 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
-import {
-	type AgentHealth,
-	AgentHttpClient,
-	type ExecResult,
-	type FileContent,
-	type GenerateResult,
-	type SetSecretResult,
-} from "./agent";
+/**
+ * Consolidated React hooks for type-safe RPC communication with the Stackpanel agent.
+ *
+ * This is the canonical file for all agent communication hooks.
+ * Uses Connect-RPC with proto-generated types - no manual type definitions needed.
+ *
+ * Migration Guide (from use-nix-config.ts):
+ * - useNixConfig() → useNixConfigQuery() or useNixConfig() (compatibility wrapper)
+ * - useNixData<T>('entity') → use specific hooks (useApps, useVariables, etc.)
+ * - useNixMapData<T>('entity') → use specific hooks with mutations
+ * - useTurboPackages() → (still available as re-export)
+ *
+ * @example
+ * ```tsx
+ * function Dashboard() {
+ *   const { data: apps, isLoading } = useApps();
+ *   const { data: sst } = useSSTStatus();
+ *
+ *   if (isLoading) return <Spinner />;
+ *
+ *   return (
+ *     <div>
+ *       <h1>Apps: {Object.keys(apps?.apps ?? {}).length}</h1>
+ *       <p>SST Deployed: {sst?.deployed ? 'Yes' : 'No'}</p>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+
+import { createClient } from "@connectrpc/connect";
+import { AgentService } from "@stackpanel/proto/agent-service";
+import type {
+	Apps,
+	Variables,
+	Users,
+	Config,
+	Secrets,
+	Aws,
+} from "@stackpanel/proto";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useAgentContext, useAgentClient } from "./agent-provider";
+import { createAgentTransport } from "./connect-transport";
+import { AgentHttpClient } from "./agent";
+
+// =============================================================================
+// Legacy Hooks (for backward compatibility)
+// =============================================================================
 
 interface UseAgentOptions {
 	host?: string;
@@ -14,29 +54,13 @@ interface UseAgentOptions {
 	token?: string;
 }
 
-interface UseAgentReturn {
-	isConnected: boolean;
-	isConnecting: boolean;
-	error: Error | null;
-	connect: () => Promise<void>;
-	disconnect: () => void;
-	exec: (command: string, args?: string[]) => Promise<ExecResult>;
-	nixEval: <T = unknown>(expression: string) => Promise<T>;
-	nixGenerate: () => Promise<GenerateResult>;
-	readFile: (path: string) => Promise<FileContent>;
-	writeFile: (path: string, content: string) => Promise<void>;
-	setSecret: (
-		env: "dev" | "staging" | "prod",
-		key: string,
-		value: string,
-	) => Promise<SetSecretResult>;
-}
-
 /**
  * React hook for interacting with the StackPanel agent.
- * Now uses AgentHttpClient (HTTP) instead of AgentClient (WebSocket).
+ * Uses AgentHttpClient (HTTP).
+ * 
+ * @deprecated Use the Connect-RPC based hooks (useApps, useVariables, etc.) instead.
  */
-export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
+export function useAgent(options: UseAgentOptions = {}) {
 	const {
 		host = "localhost",
 		port = 9876,
@@ -51,20 +75,23 @@ export function useAgent(options: UseAgentOptions = {}): UseAgentReturn {
 	return {
 		isConnected,
 		isConnecting: status === "checking",
-		error: null,
+		error: null as Error | null,
 		connect: async () => {}, // No-op for HTTP
 		disconnect: () => {},    // No-op for HTTP
-		exec: (command, args) => client.exec({ command, args }),
-		nixEval: (expression) => client.nixEval(expression),
+		exec: (command: string, args?: string[]) => client.exec({ command, args }),
+		nixEval: <T = unknown>(expression: string) => client.nixEval(expression) as Promise<T>,
 		nixGenerate: () => client.nixGenerate(),
-		readFile: (path) => client.readFile(path),
-		writeFile: (path, content) => client.writeFile(path, content),
-		setSecret: (env, key, value) => client.setSecret({ env, key, value }),
+		readFile: (path: string) => client.readFile(path),
+		writeFile: (path: string, content: string) => client.writeFile(path, content),
+		setSecret: (env: "dev" | "staging" | "prod", key: string, value: string) => 
+			client.setSecret({ env, key, value }),
 	};
 }
 
 /**
  * Hook for checking if agent is available (health check)
+ * 
+ * @deprecated Use the Connect-RPC based hooks instead.
  */
 export function useAgentHealth(
 	options: { host?: string; port?: number; intervalMs?: number } = {},
@@ -87,9 +114,9 @@ export function useAgentHealth(
 				if (!isMounted) return;
 				if (data) {
 					setStatus("available");
-					setProjectRoot(data.project_root ?? null);
-					setHasProject(data.has_project ?? !!data.project_root);
-					setAgentId((data as { agent_id?: string }).agent_id ?? null);
+					setProjectRoot(data.projectRoot ?? null);
+					setHasProject(data.hasProject ?? !!data.projectRoot);
+					setAgentId((data as { agentId?: string }).agentId ?? null);
 				} else {
 					setStatus("unavailable");
 					setProjectRoot(null);
@@ -110,3 +137,1025 @@ export function useAgentHealth(
 
 	return { status, projectRoot, hasProject, agentId };
 }
+
+// =============================================================================
+// Query Keys
+// =============================================================================
+
+/**
+ * Centralized query key management for cache invalidation.
+ */
+export const agentQueryKeys = {
+	// Base keys
+	all: ["agent"] as const,
+
+	// Project
+	project: () => [...agentQueryKeys.all, "project"] as const,
+
+	// Identity & KMS
+	ageIdentity: () => [...agentQueryKeys.all, "ageIdentity"] as const,
+	kmsConfig: () => [...agentQueryKeys.all, "kmsConfig"] as const,
+
+	// Entity CRUD
+	config: () => [...agentQueryKeys.all, "config"] as const,
+	secrets: () => [...agentQueryKeys.all, "secrets"] as const,
+	users: () => [...agentQueryKeys.all, "users"] as const,
+	aws: () => [...agentQueryKeys.all, "aws"] as const,
+	apps: () => [...agentQueryKeys.all, "apps"] as const,
+	variables: () => [...agentQueryKeys.all, "variables"] as const,
+
+	// Services
+	servicesStatus: () => [...agentQueryKeys.all, "servicesStatus"] as const,
+
+	// SST Infrastructure
+	sst: () => [...agentQueryKeys.all, "sst"] as const,
+	sstStatus: () => [...agentQueryKeys.sst(), "status"] as const,
+	sstConfig: () => [...agentQueryKeys.sst(), "config"] as const,
+	sstOutputs: () => [...agentQueryKeys.sst(), "outputs"] as const,
+	sstResources: () => [...agentQueryKeys.sst(), "resources"] as const,
+
+	// Nixpkgs
+	nixpkgs: () => [...agentQueryKeys.all, "nixpkgs"] as const,
+	nixpkgsSearch: (query: string) =>
+		[...agentQueryKeys.nixpkgs(), "search", query] as const,
+	installedPackages: () =>
+		[...agentQueryKeys.nixpkgs(), "installed"] as const,
+
+	// Process Compose
+	processes: () => [...agentQueryKeys.all, "processes"] as const,
+
+	// Healthchecks
+	healthchecks: () => [...agentQueryKeys.all, "healthchecks"] as const,
+
+	// Nix Config
+	nixConfig: () => [...agentQueryKeys.all, "nixConfig"] as const,
+} as const;
+
+// =============================================================================
+// Client Hook
+// =============================================================================
+
+/**
+ * Hook to get the Connect-RPC client for the agent.
+ * Returns null if not connected.
+ */
+export function useAgentRpcClient() {
+	const { token, isConnected } = useAgentContext();
+
+	return useMemo(() => {
+		if (!isConnected || !token) return null;
+		const transport = createAgentTransport(token);
+		return createClient(AgentService, transport);
+	}, [token, isConnected]);
+}
+
+// =============================================================================
+// Project
+// =============================================================================
+
+/**
+ * Query hook for getting the current project info.
+ */
+export function useProject() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.project(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			const res = await client.getProject({});
+			return res.project;
+		},
+		enabled: !!client,
+	});
+}
+
+// =============================================================================
+// Age Identity
+// =============================================================================
+
+/**
+ * Query hook for getting the configured age identity.
+ */
+export function useAgeIdentity() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.ageIdentity(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getAgeIdentity({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation hook for setting the age identity.
+ */
+export function useSetAgeIdentity() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (value: string) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setAgeIdentity({ value });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.ageIdentity() });
+		},
+	});
+}
+
+// =============================================================================
+// KMS Config
+// =============================================================================
+
+/**
+ * Query hook for getting the KMS configuration.
+ */
+export function useKMSConfig() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.kmsConfig(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getKMSConfig({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation hook for setting the KMS configuration.
+ */
+export function useSetKMSConfig() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (config: {
+			enable: boolean;
+			keyArn: string;
+			awsProfile?: string;
+		}) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setKMSConfig(config);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.kmsConfig() });
+		},
+	});
+}
+
+// =============================================================================
+// Entity Hooks (Apps, Variables, Users, Config, Secrets, AWS)
+// =============================================================================
+
+// For mutations, we accept the proto message type directly
+// (proto-es messages are already properly typed)
+
+/**
+ * Fetch all apps from the agent.
+ * Returns the apps map directly for compatibility with existing components.
+ */
+export function useApps() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.apps(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			const response = await client.getApps({});
+			// Return the apps map directly for compatibility
+			return response.apps ?? {};
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation to update apps.
+ */
+export function useSetApps() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (apps: Parameters<NonNullable<typeof client>["setApps"]>[0]) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setApps(apps);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.apps() });
+		},
+	});
+}
+
+/**
+ * Fetch all variables from the agent.
+ * Returns the variables map directly for compatibility with existing components.
+ */
+export function useVariables() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.variables(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			const response = await client.getVariables({});
+			// Return the variables map directly for compatibility
+			return response.variables ?? {};
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation to update variables.
+ */
+export function useSetVariables() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (variables: Parameters<NonNullable<typeof client>["setVariables"]>[0]) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setVariables(variables);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.variables() });
+		},
+	});
+}
+
+/**
+ * Fetch all users from the agent.
+ */
+export function useUsers() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.users(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getUsers({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation to update users.
+ */
+export function useSetUsers() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (users: Parameters<NonNullable<typeof client>["setUsers"]>[0]) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setUsers(users);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.users() });
+		},
+	});
+}
+
+/**
+ * Fetch the config from the agent.
+ */
+export function useConfig() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.config(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getConfig({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation to update config.
+ */
+export function useSetConfig() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (config: Parameters<NonNullable<typeof client>["setConfig"]>[0]) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setConfig(config);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.config() });
+		},
+	});
+}
+
+/**
+ * Fetch all secrets from the agent.
+ */
+export function useSecrets() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.secrets(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getSecrets({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation to update secrets.
+ */
+export function useSetSecrets() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (secrets: Parameters<NonNullable<typeof client>["setSecrets"]>[0]) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setSecrets(secrets);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.secrets() });
+		},
+	});
+}
+
+/**
+ * Fetch AWS config from the agent.
+ */
+export function useAws() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.aws(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getAws({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation to update AWS config.
+ */
+export function useSetAws() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (aws: Parameters<NonNullable<typeof client>["setAws"]>[0]) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.setAws(aws);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.aws() });
+		},
+	});
+}
+
+// =============================================================================
+// Services Status
+// =============================================================================
+
+/**
+ * Query hook for getting the services status.
+ */
+export function useServicesStatus() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.servicesStatus(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getServicesStatus({});
+		},
+		enabled: !!client,
+		refetchInterval: 5000, // Refresh every 5 seconds
+	});
+}
+
+// =============================================================================
+// Nix Operations
+// =============================================================================
+
+/**
+ * Mutation hook for running nix generate.
+ */
+export function useNixGenerate() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.nixGenerate({});
+		},
+		onSuccess: () => {
+			// Invalidate all agent queries after generation
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.all });
+		},
+	});
+}
+
+/**
+ * Mutation hook for running nix eval.
+ */
+export function useNixEval() {
+	const client = useAgentRpcClient();
+
+	return useMutation({
+		mutationFn: async (args: { expression: string; json?: boolean }) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.nixEval(args);
+		},
+	});
+}
+
+// =============================================================================
+// Command Execution
+// =============================================================================
+
+/**
+ * Mutation hook for executing commands.
+ */
+export function useExec() {
+	const client = useAgentRpcClient();
+
+	return useMutation({
+		mutationFn: async (args: {
+			command: string;
+			args?: string[];
+			cwd?: string;
+			env?: Record<string, string>;
+		}) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.exec(args);
+		},
+	});
+}
+
+// =============================================================================
+// SST Infrastructure
+// =============================================================================
+
+/**
+ * Query hook for getting the SST deployment status.
+ */
+export function useSSTStatus() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.sstStatus(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getSSTStatus({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Query hook for getting the SST configuration.
+ */
+export function useSSTConfig() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.sstConfig(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getSSTConfig({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Query hook for getting the SST outputs.
+ */
+export function useSSTOutputs() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.sstOutputs(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getSSTOutputs({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Query hook for getting the SST resources.
+ */
+export function useSSTResources() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.sstResources(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getSSTResources({});
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation hook for deploying SST infrastructure.
+ */
+export function useDeploySST() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (stage: string = "dev") => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.deploySST({ stage });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.sst() });
+		},
+	});
+}
+
+/**
+ * Mutation hook for removing SST infrastructure.
+ */
+export function useRemoveSST() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (stage: string = "dev") => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.removeSST({ stage });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.sst() });
+		},
+	});
+}
+
+// =============================================================================
+// Nixpkgs Package Management
+// =============================================================================
+
+/**
+ * Query hook for searching nixpkgs packages.
+ */
+export function useSearchNixpkgs(query: string, options?: { enabled?: boolean }) {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.nixpkgsSearch(query),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.searchNixpkgs({ query, limit: 20 });
+		},
+		enabled: !!client && !!query && (options?.enabled ?? true),
+	});
+}
+
+/**
+ * Query hook for getting installed packages.
+ */
+export function useInstalledPackages() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.installedPackages(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getInstalledPackages({});
+		},
+		enabled: !!client,
+	});
+}
+
+// =============================================================================
+// Process Compose
+// =============================================================================
+
+/**
+ * Query hook for getting process-compose processes.
+ */
+export function useProcesses() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.processes(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getProcesses({});
+		},
+		enabled: !!client,
+		refetchInterval: 5000, // Refresh every 5 seconds
+	});
+}
+
+// =============================================================================
+// Healthchecks
+// =============================================================================
+
+/**
+ * Query hook for getting healthcheck status.
+ */
+export function useHealthchecks() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.healthchecks(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getHealthchecks({});
+		},
+		enabled: !!client,
+	});
+}
+
+// =============================================================================
+// Full Nix Config
+// =============================================================================
+
+/**
+ * Query hook for getting the full Nix configuration.
+ */
+export function useNixConfigQuery(options?: { refresh?: boolean }) {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.nixConfig(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			const response = await client.getNixConfig({
+				refresh: options?.refresh ?? false,
+			});
+			// Parse the JSON config
+			if (response.configJson) {
+				return {
+					...response,
+					config: JSON.parse(response.configJson) as Record<string, unknown>,
+				};
+			}
+			return { ...response, config: null };
+		},
+		enabled: !!client,
+	});
+}
+
+/**
+ * Mutation hook for forcing a Nix config refresh.
+ */
+export function useRefreshNixConfig() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			const response = await client.refreshNixConfig({});
+			// Parse the JSON config
+			if (response.configJson) {
+				return {
+					...response,
+					config: JSON.parse(response.configJson) as Record<string, unknown>,
+				};
+			}
+			return { ...response, config: null };
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
+			// Also invalidate all agent queries since config affects everything
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.all });
+		},
+	});
+}
+
+// =============================================================================
+// Compatibility Layer (for gradual migration from use-nix-config.ts)
+// =============================================================================
+
+/**
+ * Compatibility wrapper for useNixConfig - matches the old API signature.
+ * 
+ * @deprecated Use useNixConfigQuery() for new code.
+ */
+export function useNixConfig(_options?: { autoRefetch?: boolean }) {
+	const query = useNixConfigQuery({ refresh: false });
+	const refreshMutation = useRefreshNixConfig();
+
+	return {
+		data: query.data?.config ?? null,
+		error: query.error,
+		isLoading: query.isLoading,
+		isError: query.isError,
+		isSuccess: query.isSuccess,
+		refetch: query.refetch,
+		forceRefresh: refreshMutation.mutateAsync,
+		isRefreshing: refreshMutation.isPending,
+	};
+}
+
+// =============================================================================
+// Compatibility Layer - Generic Entity Hooks
+// =============================================================================
+
+// Re-export kebab/snake case utilities for entity data transformation
+import { kebabToSnake, snakeToKebab } from "./nix-data";
+
+/**
+ * Generic hook for accessing Nix data entities (single objects).
+ * Uses the legacy HTTP client under the hood.
+ * 
+ * @deprecated For standard entities, prefer specific hooks:
+ * - apps → useApps()
+ * - variables → useVariables()
+ * - users → useUsers()
+ * - config → useConfig()
+ * - secrets → useSecrets()
+ * - aws → useAws()
+ */
+export function useNixData<T>(
+	entity: string,
+	options: { initialData?: T; autoRefetch?: boolean } = {},
+) {
+	const { initialData, autoRefetch = true } = options;
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+
+	const queryKey = [...agentQueryKeys.all, "entity", entity];
+
+	const query = useQuery({
+		queryKey,
+		queryFn: async () => {
+			// Use the underlying HTTP API to fetch entity data
+			const response = await client.get<{
+				success: boolean;
+				data: { entity: string; exists: boolean; data: T };
+			}>(`/api/nix/data?entity=${encodeURIComponent(entity)}`);
+			
+			if (!response.success || !response.data.exists) {
+				return null;
+			}
+			return kebabToSnake(response.data.data) as T;
+		},
+		initialData,
+		refetchOnWindowFocus: autoRefetch,
+	});
+
+	const mutation = useMutation({
+		mutationFn: async (data: T) => {
+			await client.post("/api/nix/data", {
+				entity,
+				data: snakeToKebab(data),
+			});
+			// Return the new data
+			return data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+	});
+
+	return {
+		...query,
+		mutate: mutation.mutateAsync,
+		refetch: query.refetch,
+	};
+}
+
+/**
+ * Generic hook for map-style Nix data entities with key-level operations.
+ * Uses the legacy HTTP client under the hood.
+ * 
+ * @deprecated For standard entities, prefer specific hooks:
+ * - apps → useApps() + useSetApps()
+ * - variables → useVariables() + useSetVariables()
+ */
+export function useNixMapData<V>(
+	entity: string,
+	options: { initialData?: Record<string, V>; autoRefetch?: boolean } = {},
+) {
+	const { initialData, autoRefetch = true } = options;
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+	const mapClient = useMemo(
+		() => client.mapEntity<V>(entity),
+		[client, entity],
+	);
+
+	const queryKey = [...agentQueryKeys.all, "mapEntity", entity];
+
+	const query = useQuery({
+		queryKey,
+		queryFn: async () => {
+			return mapClient.all();
+		},
+		initialData,
+		refetchOnWindowFocus: autoRefetch,
+	});
+
+	const setMutation = useMutation({
+		mutationFn: async ({ key, value }: { key: string; value: V }) => {
+			await mapClient.set(key, value);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+	});
+
+	const updateMutation = useMutation({
+		mutationFn: async ({ key, updates }: { key: string; updates: Partial<V> }) => {
+			await mapClient.update(key, updates);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+	});
+
+	const removeMutation = useMutation({
+		mutationFn: async (key: string) => {
+			await mapClient.remove(key);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+	});
+
+	return {
+		...query,
+		set: (key: string, value: V) => setMutation.mutateAsync({ key, value }),
+		update: (key: string, updates: Partial<V>) => updateMutation.mutateAsync({ key, updates }),
+		remove: (key: string) => removeMutation.mutateAsync(key),
+		refetch: query.refetch,
+	};
+}
+
+// =============================================================================
+// Turbo Package Graph
+// =============================================================================
+
+export interface TurboTask {
+	name: string;
+	command?: string;
+}
+
+export interface TurboPackage {
+	name: string;
+	path: string;
+	tasks: TurboTask[];
+}
+
+/**
+ * Hook for fetching the turbo package graph with tasks.
+ * This is the source of truth for available tasks in the monorepo.
+ */
+export function useTurboPackages() {
+	const client = useAgentClient();
+
+	const query = useQuery({
+		queryKey: [...agentQueryKeys.all, "turboPackages"],
+		queryFn: async () => {
+			const packages = await client.getPackageGraph({ excludeRoot: true });
+			return packages as TurboPackage[];
+		},
+	});
+
+	const allTasks = useMemo(() => {
+		const taskSet = new Set<string>();
+		for (const pkg of query.data ?? []) {
+			for (const task of pkg.tasks) {
+				taskSet.add(task.name);
+			}
+		}
+		return Array.from(taskSet).sort();
+	}, [query.data]);
+
+	const tasksMap = useMemo((): Record<string, { name: string }> => {
+		const map: Record<string, { name: string }> = {};
+		for (const taskName of allTasks) {
+			map[taskName] = { name: taskName };
+		}
+		return map;
+	}, [allTasks]);
+
+	const getTasksForPackage = (packageName: string): Array<{ name: string }> => {
+		const pkg = (query.data ?? []).find((p) => p.name === packageName);
+		if (!pkg) return [];
+		return pkg.tasks.map((t) => ({ name: t.name }));
+	};
+
+	return {
+		packages: query.data ?? [],
+		allTasks,
+		tasksMap,
+		getTasksForPackage,
+		isLoading: query.isLoading,
+		isError: query.isError,
+		isSuccess: query.isSuccess,
+		error: query.error,
+		refetch: query.refetch,
+	};
+}
+
+/**
+ * Hook for accessing turbo tasks from the package graph.
+ * This is a convenience wrapper around useTurboPackages that returns just the tasks.
+ */
+export function useTurboTasks() {
+	const { tasksMap, isLoading, isError, isSuccess, error, refetch } =
+		useTurboPackages();
+
+	return {
+		data: tasksMap,
+		isLoading,
+		isError,
+		isSuccess,
+		error,
+		refetch,
+	};
+}
+
+// =============================================================================
+// Derived Hooks
+// =============================================================================
+
+/**
+ * Hook to find which apps have a specific variable.
+ */
+export function useAppsWithVariable(variableName: string) {
+	const { data: apps, isLoading, error, refetch } = useApps();
+
+	const matchingApps = useMemo(() => {
+		if (!apps) return null;
+
+		return Object.entries(apps)
+			.filter(([_, app]) => variableName in (app.variables ?? {}))
+			.map(([id, app]) => ({ ...app, id }));
+	}, [apps, variableName]);
+
+	return {
+		data: matchingApps,
+		isLoading,
+		isError: !!error,
+		isSuccess: !!matchingApps,
+		error,
+		refetch,
+	};
+}
+
+/**
+ * Hook to get a single app by ID.
+ */
+export function useApp(appId: string) {
+	const { data: apps, isLoading, isError, error, refetch } = useApps();
+
+	const app = useMemo(() => {
+		if (!apps) return null;
+		return apps[appId] ?? null;
+	}, [apps, appId]);
+
+	return {
+		data: app,
+		isLoading,
+		isError,
+		isSuccess: !!app,
+		error,
+		refetch,
+	};
+}
+
+/**
+ * Hook for workspace-level task definitions.
+ */
+export function useTasks() {
+	return useNixMapData<{ exec: string; description?: string; cwd?: string }>("tasks");
+}
+
+/**
+ * Hook for managing services configuration.
+ */
+export function useServices() {
+	return useNixMapData<{ enable?: boolean; port?: number }>("services");
+}
+
+/**
+ * Re-export proto types for convenience.
+ */
+export type { Apps, Variables, Users, Config, Secrets, Aws };

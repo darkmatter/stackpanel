@@ -1,57 +1,59 @@
 /**
  * Type definitions for the configuration panel.
+ *
+ * These types are derived from the generated nix-types.ts which uses
+ * kebab-case to match the actual Nix config format from `nix eval`.
+ *
+ * We use Partial<> wrappers because config data may be incomplete when read.
+ *
+ * Regenerate nix-types.ts: ./nix/stackpanel/core/generate-types.sh ts
  */
 
-export type StepCaData = {
-	enable?: boolean;
-	ca_url?: string;
-	ca_fingerprint?: string;
-	cert_name?: string;
-	provisioner?: string;
-	prompt_on_shell?: boolean;
-};
+import type {
+  StepCA,
+  RolesAnywhere,
+  ThemeTheme,
+  SecretsSecrets,
+} from "@/lib/generated/nix-types";
 
-export type AwsRolesAnywhereData = {
-	enable?: boolean;
-	region?: string;
-	account_id?: string;
-	role_name?: string;
-	trust_anchor_arn?: string;
-	profile_arn?: string;
-	cache_buffer_seconds?: string;
-	prompt_on_shell?: boolean;
-};
-
+// Partial versions of generated types for reading incomplete config data
+export type StepCaData = Partial<StepCA>;
+export type AwsRolesAnywhereData = Partial<RolesAnywhere>;
 export type AwsData = {
-	roles_anywhere?: AwsRolesAnywhereData;
+  "roles-anywhere"?: Partial<RolesAnywhere>;
+  "default-profile"?: string;
+  "extra-config"?: string;
 };
+export type ThemeData = Partial<ThemeTheme>;
+export type SecretsData = Partial<SecretsSecrets>;
 
-export type ThemeData = {
-	enable?: boolean;
-	preset?: "stackpanel" | "starship-default";
-	config_file?: string | null;
-};
+// Types not yet in nix-types.ts - these should be added to the schema
+// TODO: Add IDE and BinaryCache schemas to nix/stackpanel/db/schemas/
 
 export type IdeData = {
-	enable?: boolean;
-	vscode?: {
-		enable?: boolean;
-	};
+  enable?: boolean;
+  vscode?: {
+    enable?: boolean;
+    "output-mode"?: "workspace" | "settingsJson";
+  };
 };
 
 export type UsersSettingsData = {
-	disable_github_sync?: boolean;
-};
-
-export type SecretsData = {
-	enable?: boolean;
+  "disable-github-sync"?: boolean;
 };
 
 export type BinaryCacheData = {
-	enable?: boolean;
-	cachix?: {
-		enable?: boolean;
-		cache?: string;
-		token_path?: string;
-	};
+  enable?: boolean;
+  cachix?: {
+    enable?: boolean;
+    cache?: string;
+    "token-path"?: string;
+  };
+};
+
+export type ProjectData = {
+  name?: string;
+  type?: string;
+  owner?: string;
+  repo?: string;
 };

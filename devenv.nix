@@ -41,9 +41,6 @@
     })
   ];
 
-  # Workaround for devenv bug: process-compose.nix accesses configFile
-  # before checking if enable is true
-  process.managers.process-compose.configFile = lib.mkForce (
-    pkgs.writeText "empty-pc.yaml" "version: '0.5'\nprocesses: {}"
-  );
+  # Disable devenv's process-compose manager to avoid injecting PC_CONFIG_FILES
+  process.managers.process-compose.enable = lib.mkForce false;
 }

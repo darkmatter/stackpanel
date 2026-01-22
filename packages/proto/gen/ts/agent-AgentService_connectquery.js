@@ -154,3 +154,73 @@ export const stopService = AgentService.method.stopService;
  * @generated from rpc stackpanel.agent.AgentService.RestartService
  */
 export const restartService = AgentService.method.restartService;
+
+/**
+ * SST Infrastructure
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTStatus
+ */
+export const getSSTStatus = AgentService.method.getSSTStatus;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTConfig
+ */
+export const getSSTConfig = AgentService.method.getSSTConfig;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.DeploySST
+ */
+export const deploySST = AgentService.method.deploySST;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.RemoveSST
+ */
+export const removeSST = AgentService.method.removeSST;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTOutputs
+ */
+export const getSSTOutputs = AgentService.method.getSSTOutputs;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTResources
+ */
+export const getSSTResources = AgentService.method.getSSTResources;
+
+/**
+ * Nixpkgs package management
+ *
+ * @generated from rpc stackpanel.agent.AgentService.SearchNixpkgs
+ */
+export const searchNixpkgs = AgentService.method.searchNixpkgs;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetInstalledPackages
+ */
+export const getInstalledPackages = AgentService.method.getInstalledPackages;
+
+/**
+ * Process-compose processes
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetProcesses
+ */
+export const getProcesses = AgentService.method.getProcesses;
+
+/**
+ * Healthchecks
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetHealthchecks
+ */
+export const getHealthchecks = AgentService.method.getHealthchecks;
+
+/**
+ * Full Nix config (evaluated from flake)
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetNixConfig
+ */
+export const getNixConfig = AgentService.method.getNixConfig;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.RefreshNixConfig
+ */
+export const refreshNixConfig = AgentService.method.refreshNixConfig;

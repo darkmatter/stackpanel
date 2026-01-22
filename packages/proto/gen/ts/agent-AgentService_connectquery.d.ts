@@ -128,3 +128,61 @@ export const stopService: typeof AgentService["method"]["stopService"];
  * @generated from rpc stackpanel.agent.AgentService.RestartService
  */
 export const restartService: typeof AgentService["method"]["restartService"];
+/**
+ * SST Infrastructure
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTStatus
+ */
+export const getSSTStatus: typeof AgentService["method"]["getSSTStatus"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTConfig
+ */
+export const getSSTConfig: typeof AgentService["method"]["getSSTConfig"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.DeploySST
+ */
+export const deploySST: typeof AgentService["method"]["deploySST"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.RemoveSST
+ */
+export const removeSST: typeof AgentService["method"]["removeSST"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTOutputs
+ */
+export const getSSTOutputs: typeof AgentService["method"]["getSSTOutputs"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetSSTResources
+ */
+export const getSSTResources: typeof AgentService["method"]["getSSTResources"];
+/**
+ * Nixpkgs package management
+ *
+ * @generated from rpc stackpanel.agent.AgentService.SearchNixpkgs
+ */
+export const searchNixpkgs: typeof AgentService["method"]["searchNixpkgs"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetInstalledPackages
+ */
+export const getInstalledPackages: typeof AgentService["method"]["getInstalledPackages"];
+/**
+ * Process-compose processes
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetProcesses
+ */
+export const getProcesses: typeof AgentService["method"]["getProcesses"];
+/**
+ * Healthchecks
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetHealthchecks
+ */
+export const getHealthchecks: typeof AgentService["method"]["getHealthchecks"];
+/**
+ * Full Nix config (evaluated from flake)
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetNixConfig
+ */
+export const getNixConfig: typeof AgentService["method"]["getNixConfig"];
+/**
+ * @generated from rpc stackpanel.agent.AgentService.RefreshNixConfig
+ */
+export const refreshNixConfig: typeof AgentService["method"]["refreshNixConfig"];

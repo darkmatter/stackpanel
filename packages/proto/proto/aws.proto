@@ -6,6 +6,8 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 // AWS configuration including Roles Anywhere for certificate-based authentication
 message Aws {
   RolesAnywhere roles_anywhere = 1; // AWS Roles Anywhere configuration
+  string default_profile = 2; // AWS profile name to use as default (default: 'default')
+  string extra_config = 3; // Additional AWS config to append (raw INI format)
 }
 
 // AWS Roles Anywhere configuration for certificate-based authentication

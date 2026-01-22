@@ -26,7 +26,7 @@ import {
 	Search,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useTurboPackages } from "@/lib/use-nix-config";
+import { useTurboPackages } from "@/lib/use-agent";
 import { PanelHeader } from "./shared/panel-header";
 
 /**

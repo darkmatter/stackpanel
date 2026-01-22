@@ -20,4 +20,6 @@ in
 {
   "vars/asasd.age".publicKeys = allKeys;
   "vars/openai-api-key.age".publicKeys = allKeys;
+  "vars/postgres-url-dev.age".publicKeys = allKeys;
+  "vars/postgres-url.age".publicKeys = allKeys;
 }

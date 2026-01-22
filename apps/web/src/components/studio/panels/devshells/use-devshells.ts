@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAgentContext } from "@/lib/agent-provider";
 import { useInstalledPackages } from "@/lib/use-installed-packages";
-import { useNixConfig } from "@/lib/use-nix-config";
+import { useNixConfig } from "@/lib/use-agent";
 import { categorizePackage, formatPackageLabel } from "./constants";
 import type {
 	AgentStatus,

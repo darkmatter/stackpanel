@@ -20,6 +20,14 @@ export interface Aws {
      * @generated from protobuf field: stackpanel.db.RolesAnywhere roles_anywhere = 1
      */
     roles_anywhere?: RolesAnywhere; // AWS Roles Anywhere configuration
+    /**
+     * @generated from protobuf field: string default_profile = 2
+     */
+    default_profile: string; // AWS profile name to use as default (default: 'default')
+    /**
+     * @generated from protobuf field: string extra_config = 3
+     */
+    extra_config: string; // Additional AWS config to append (raw INI format)
 }
 /**
  * AWS Roles Anywhere configuration for certificate-based authentication
@@ -64,11 +72,15 @@ export interface RolesAnywhere {
 class Aws$Type extends MessageType<Aws> {
     constructor() {
         super("stackpanel.db.Aws", [
-            { no: 1, name: "roles_anywhere", kind: "message", localName: "roles_anywhere", T: () => RolesAnywhere }
+            { no: 1, name: "roles_anywhere", kind: "message", localName: "roles_anywhere", T: () => RolesAnywhere },
+            { no: 2, name: "default_profile", kind: "scalar", localName: "default_profile", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "extra_config", kind: "scalar", localName: "extra_config", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Aws>): Aws {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.default_profile = "";
+        message.extra_config = "";
         if (value !== undefined)
             reflectionMergePartial<Aws>(this, message, value);
         return message;
@@ -80,6 +92,12 @@ class Aws$Type extends MessageType<Aws> {
             switch (fieldNo) {
                 case /* stackpanel.db.RolesAnywhere roles_anywhere */ 1:
                     message.roles_anywhere = RolesAnywhere.internalBinaryRead(reader, reader.uint32(), options, message.roles_anywhere);
+                    break;
+                case /* string default_profile */ 2:
+                    message.default_profile = reader.string();
+                    break;
+                case /* string extra_config */ 3:
+                    message.extra_config = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -96,6 +114,12 @@ class Aws$Type extends MessageType<Aws> {
         /* stackpanel.db.RolesAnywhere roles_anywhere = 1; */
         if (message.roles_anywhere)
             RolesAnywhere.internalBinaryWrite(message.roles_anywhere, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* string default_profile = 2; */
+        if (message.default_profile !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.default_profile);
+        /* string extra_config = 3; */
+        if (message.extra_config !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.extra_config);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -8,12 +8,24 @@
 # manually or on shell entry. Supports custom file modes and automatic
 # directory creation.
 #
-# Usage:
-#   stackpanel.files.enable = true;  # default
+# For type="text" files, content can be provided via:
+#   - text: Inline text content
+#   - path: Path to file (content read at eval time)
+#
+# Usage (inline text):
 #   stackpanel.files.entries.".github/workflows/ci.yml" = {
 #     type = "text";
 #     text = "name: CI\n...";
 #   };
+#
+# Usage (path to file):
+#   stackpanel.files.entries.".github/workflows/ci.yml" = {
+#     type = "text";
+#     path = ./.stackpanel/src/files/.github/workflows/ci.yml;
+#     description = "CI workflow";
+#   };
+#
+# Usage (derivation):
 #   stackpanel.files.entries."scripts/deploy.sh" = {
 #     type = "derivation";
 #     drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
@@ -43,15 +55,29 @@ let
   fileCount = builtins.length (builtins.attrNames enabledFiles);
 
   manifestEntries = lib.mapAttrsToList (
-    path: fileConfig: {
+    path: fileConfig:
+    let
+      fileType = fileConfig.type or "text";
+      # Determine content source for text files
+      contentSource =
+        if fileType == "text" then
+          if fileConfig.path or null != null then "path"
+          else if fileConfig.text or null != null then "inline"
+          else "unknown"
+        else if fileType == "derivation" then "derivation"
+        else if fileType == "symlink" then "symlink"
+        else "unknown";
+    in
+    {
       inherit path;
-      type = fileConfig.type or "text";
+      type = fileType;
       mode = fileConfig.mode or null;
       source = fileConfig.source or null;
       description = fileConfig.description or null;
       target = fileConfig.target or null;
+      contentSource = contentSource;
       storePath =
-        if (fileConfig.type or "text") == "derivation" && fileConfig.drv != null then
+        if fileType == "derivation" && fileConfig.drv != null then
           builtins.toString fileConfig.drv
         else
           null;
@@ -63,6 +89,21 @@ let
     files = manifestEntries;
   };
 
+  # Resolve text content from either text or path
+  resolveTextContent = path: fileConfig:
+    let
+      hasText = fileConfig.text or null != null;
+      hasPath = fileConfig.path or null != null;
+    in
+    if hasText && hasPath then
+      throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
+    else if hasPath then
+      builtins.readFile fileConfig.path
+    else if hasText then
+      fileConfig.text
+    else
+      throw "File '${path}': type 'text' requires either 'text' or 'path' to be set";
+
   mkWriteSnippet =
     path: fileConfig:
     let
@@ -72,7 +113,10 @@ let
       # Get the source content based on type
       source =
         if fileType == "text" then
-          pkgs.writeText (builtins.baseNameOf path) fileConfig.text
+          let
+            content = resolveTextContent path fileConfig;
+          in
+          pkgs.writeText (builtins.baseNameOf path) content
         else if fileType == "derivation" then
           fileConfig.drv
         else

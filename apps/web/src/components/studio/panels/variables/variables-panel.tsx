@@ -21,7 +21,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
-import { useVariables } from "@/lib/use-nix-config";
+import { useVariables } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { AddVariableDialog } from "./add-variable-dialog";
 import {
@@ -175,7 +175,7 @@ export function VariablesPanel() {
 					<p className="text-destructive">
 						Error loading variables: {error.message}
 					</p>
-					<Button variant="outline" onClick={refetch}>
+					<Button variant="outline" onClick={refetch.bind(null, undefined)}>
 						Retry
 					</Button>
 				</CardContent>

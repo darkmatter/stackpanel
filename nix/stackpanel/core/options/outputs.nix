@@ -42,4 +42,34 @@ in
       }
     '';
   };
+
+  # Flake apps - runnable via `nix run .#<name>`
+  options.stackpanel.flakeApps = lib.mkOption {
+    type = types.attrsOf (types.submodule {
+      options = {
+        type = lib.mkOption {
+          type = types.str;
+          default = "app";
+          description = "App type (always 'app' for Nix apps).";
+        };
+        program = lib.mkOption {
+          type = types.str;
+          description = "Path to the executable.";
+        };
+      };
+    });
+    default = { };
+    description = ''
+      Flake apps to expose via `nix run .#<name>`.
+      
+      Each app must have:
+        - type: "app"
+        - program: Path to executable (usually from a derivation)
+      
+      Example:
+        stackpanel.flakeApps = {
+          web = { type = "app"; program = "''${myPackage}/bin/web"; };
+        };
+    '';
+  };
 }

@@ -18,12 +18,8 @@ export declare const file_variables: GenFile;
 export declare type Variable = Message<"stackpanel.db.Variable"> & {
   /**
    *
-   * Globally unique identifier for the variable. You can reference a single
-   * variable in multiple apps and environments, so to avoid confusion, it's
-   * recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
-   * You can also use `/path/based/variable-name` for organization. If a variable should
-   * only be used in a specific environment or app, you should include that detail in
-   * this field.
+   * Globally unique identifier for the variable. Recommended format:
+   * `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
    *
    *
    * @generated from field: string id = 1;
@@ -32,8 +28,7 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
 
   /**
    *
-   * Default key to use when passing the variable to the app. This is the key that will be used
-   * in the environment variables of the app.
+   * Environment variable name when passing to apps (e.g., POSTGRES_URL).
    *
    *
    * @generated from field: string key = 2;
@@ -41,14 +36,14 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
   key: string;
 
   /**
-   * (optional) Description of the variable
+   * Description of the variable
    *
    * @generated from field: optional string description = 3;
    */
   description?: string;
 
   /**
-   * Type of the variable
+   * How the variable value is resolved
    *
    * @generated from field: stackpanel.db.VariableType type = 4;
    */
@@ -56,11 +51,11 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
 
   /**
    *
-   * - When type = "VARIABLE", the value wil be provided as-is.
-   * - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
-   * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-   *   compatible descriptor, for example if you want to get a value from AWS Parameter
-   *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
+   * The value field meaning depends on type:
+   * - LITERAL: The actual value (embedded directly)
+   * - SECRET: Empty (value lives in encrypted .age file)
+   * - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
+   * - EXEC: Shell command to execute (stdout becomes the value)
    *
    *
    * @generated from field: string value = 5;
@@ -69,20 +64,19 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
 
   /**
    *
-   * List of environments this variable/secret is available in.
-   * If empty, the variable is available in all environments.
-   * Used for access control with secrets - only users with access to
-   * these environments can decrypt the secret.
+   * Master keys that can decrypt this secret. Only used when type=SECRET.
+   * The .age file is encrypted to ALL listed master keys.
+   * Default: ["local"] (auto-generated local key).
+   * Example: ["dev", "prod"] for team-accessible secrets.
    *
    *
-   * @generated from field: repeated string environments = 6;
+   * @generated from field: repeated string masterKeys = 6;
    */
-  environments: string[];
+  masterKeys: string[];
 
   /**
    *
    * List of module names that require this variable (e.g., ["sst", "ci"]).
-   * Used to show which features depend on this variable being set.
    *
    *
    * @generated from field: repeated string requiredBy = 7;
@@ -92,7 +86,6 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
   /**
    *
    * Module name that provides/creates this variable.
-   * Used to understand where the variable comes from.
    *
    *
    * @generated from field: optional string providedBy = 8;
@@ -102,9 +95,6 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
   /**
    *
    * Bootstrap level (0 = always available, 1+ = requires dependencies).
-   * Level 0: No dependencies (e.g., AGE key, env vars)
-   * Level 1: Requires level 0 (e.g., encrypted secrets)
-   * Level 2: Requires external setup (e.g., cloud API tokens)
    *
    *
    * @generated from field: optional int32 level = 9;
@@ -195,9 +185,9 @@ export declare const VariablesSchema: GenMessage<Variables>;
  */
 export enum VariableType {
   /**
-   * @generated from enum value: VARIABLE = 0;
+   * @generated from enum value: LITERAL = 0;
    */
-  VARIABLE = 0,
+  LITERAL = 0,
 
   /**
    * @generated from enum value: SECRET = 1;
@@ -208,6 +198,11 @@ export enum VariableType {
    * @generated from enum value: VALS = 2;
    */
   VALS = 2,
+
+  /**
+   * @generated from enum value: EXEC = 3;
+   */
+  EXEC = 3,
 }
 
 /**

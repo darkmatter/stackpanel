@@ -1,6 +1,16 @@
 import { Link } from "@tanstack/react-router";
+import { Avatar, AvatarFallback } from "@ui/avatar";
+import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
-import { ArrowRight, Terminal } from "lucide-react";
+import { Card, CardContent } from "@ui/card";
+import { ArrowRight, CheckCircle2, Code, Globe2, Layers, Server } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { AppTasks } from "@/components/studio/panels/apps";
+import { PanelHeader } from "@/components/studio/panels/shared/panel-header";
+import { PackageCard } from "@/components/studio/panels/packages/components";
+import { getTypeConfig } from "@/components/studio/panels/variables/constants";
+import type { AppTask, NixpkgsPackage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function Headline() {
 	return (
@@ -14,7 +24,7 @@ function Headline() {
 					lineHeight: "5.4rem",
 				}}
 			>
-				Build{" "}
+				Ship{" "}
 			</span>
 			<span
 				className="text-accent font-bold italic"
@@ -33,15 +43,15 @@ function Headline() {
 			<span
 				className="font-bold text-primary"
 				style={{
-					fontVariationSettings: '"wght" 220',
+					fontVariationSettings: '"wght" 420',
 					letterSpacing: "0.01rem",
 					fontStyle: "normal",
 				}}
 			>
-				not{" "}
+				not{" "}plumbing.
 			</span>
-			<span
-				className="font-bold italic"
+			{/* <span
+				className="font-bold "
 				style={{
 					fontVariationSettings: '"wght" 482',
 					textUnderlineOffset: "5px",
@@ -49,8 +59,8 @@ function Headline() {
 					letterSpacing: "-0.1rem",
 				}}
 			>
-				plumbing.
-			</span>
+				plumbing
+			</span> */}
 		</h1>
 	);
 }
@@ -85,6 +95,398 @@ function Headline() {
 // //     font-style: normal;
 // //     color: hsl(0,0%,90%);
 // // ">not</span> plumbing.</span></h1>*/}
+
+const PACKAGE_PREVIEW: NixpkgsPackage[] = [
+	{
+		name: "postgresql",
+		attr_path: "pkgs.postgresql_16",
+		version: "16.3",
+		description: "Production-grade relational database with extensions support.",
+		license: "PostgreSQL",
+		homepage: "https://www.postgresql.org/",
+	},
+	{
+		name: "redis",
+		attr_path: "pkgs.redis",
+		version: "7.2.4",
+		description: "In-memory data structure store used as a cache, database, and message broker.",
+		license: "BSD-3-Clause",
+		homepage: "https://redis.io/",
+	},
+	{
+		name: "bun",
+		attr_path: "pkgs.bun",
+		version: "1.1.8",
+		description: "Fast JavaScript runtime, bundler, and test runner.",
+		license: "MIT",
+		homepage: "https://bun.sh/",
+	},
+	{
+		name: "caddy",
+		attr_path: "pkgs.caddy",
+		version: "2.7.6",
+		description: "Extensible web server with automatic HTTPS and great defaults.",
+		license: "Apache-2.0",
+		homepage: "https://caddyserver.com/",
+	},
+];
+
+type AppPreview = {
+	id: string;
+	name: string;
+	stack: string;
+	status: "running" | "staging" | "deploying";
+	domain: string;
+	port: number;
+	tasks: Record<string, AppTask>;
+};
+
+const APP_PREVIEW: AppPreview[] = [
+	{
+		id: "api",
+		name: "api-gateway",
+		stack: "Bun · SST",
+		status: "running",
+		domain: "api.stackpanel.local",
+		port: 6401,
+		tasks: {
+			dev: { key: "dev", command: "bun run dev", env: {} },
+			test: { key: "test", command: "bun test", env: {} },
+		},
+	},
+	{
+		id: "web",
+		name: "web",
+		stack: "React · TanStack",
+		status: "staging",
+		domain: "web.stackpanel.local",
+		port: 6402,
+		tasks: {
+			dev: { key: "dev", command: "bun run dev -- --host", env: {} },
+			lint: { key: "lint", command: "bun run lint", env: {} },
+		},
+	},
+	{
+		id: "worker",
+		name: "queue-worker",
+		stack: "Go · Temporal",
+		status: "deploying",
+		domain: "worker.stackpanel.local",
+		port: 6410,
+		tasks: {
+			dev: { key: "dev", command: "go run ./cmd/worker", env: {} },
+		},
+	},
+];
+
+type VariablePreview = {
+	id: string;
+	key: string;
+	type: string;
+	description: string;
+	environments: string[];
+	linkedApps: string[];
+};
+
+const VARIABLE_PREVIEW: VariablePreview[] = [
+	{
+		id: "DATABASE_URL",
+		key: "DATABASE_URL",
+		type: "secret",
+		description: "Encrypted connection string for primary Postgres cluster.",
+		environments: ["dev", "staging", "prod"],
+		linkedApps: ["api-gateway", "queue-worker"],
+	},
+	{
+		id: "NEXT_PUBLIC_API_URL",
+		key: "NEXT_PUBLIC_API_URL",
+		type: "config",
+		description: "Public API endpoint exposed to frontend clients.",
+		environments: ["dev", "staging"],
+		linkedApps: ["web"],
+	},
+	{
+		id: "TS_AUTH_DOMAIN",
+		key: "TS_AUTH_DOMAIN",
+		type: "service",
+		description: "Tailscale auth domain issued by Stackpanel network.",
+		environments: ["dev"],
+		linkedApps: ["web", "api-gateway"],
+	},
+];
+
+type PreviewSlide = {
+	id: string;
+	label: string;
+	tagline: string;
+	content: ReactNode;
+};
+
+const ROTATION_MS = 6200;
+
+function PackagesPreview() {
+	return (
+		<div className="space-y-4 rounded-xl border border-border/70 bg-card p-5">
+			<PanelHeader
+				title="Packages"
+				description="Pinned runtimes, services, and tooling from nixpkgs"
+				guideKey="packages"
+			/>
+			<div className="grid gap-3 md:grid-cols-2">
+				{PACKAGE_PREVIEW.map((pkg) => (
+					<PackageCard key={pkg.name} pkg={pkg} isCompact />
+				))}
+			</div>
+			<div className="flex flex-wrap items-center gap-3 text-muted-foreground text-xs">
+				<span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 font-medium text-foreground">
+					<CheckCircle2 className="h-3 w-3 text-accent" />
+					Cached in devshell
+				</span>
+				<span className="inline-flex items-center gap-1">
+					<Server className="h-3 w-3" />
+					Services + runtimes, side-by-side
+				</span>
+				<span className="inline-flex items-center gap-1">
+					<Layers className="h-3 w-3" />
+					Deterministic channels
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function AppsPreview() {
+	const statusStyles: Record<AppPreview["status"], string> = {
+		running: "border-emerald-400/40 bg-emerald-500/15 text-emerald-300",
+		staging: "border-amber-400/30 bg-amber-500/10 text-amber-300",
+		deploying: "border-blue-400/30 bg-blue-500/10 text-blue-300",
+	};
+
+	return (
+		<div className="space-y-4 rounded-xl border border-border/70 bg-card p-5">
+			<PanelHeader
+				title="Apps"
+				description="Monorepo-aware tasks with stable ports"
+				guideKey="apps"
+			/>
+			<div className="grid gap-3">
+				{APP_PREVIEW.map((app) => (
+					<Card key={app.id}>
+						<CardContent className="p-4 space-y-3">
+							<div className="flex items-center justify-between gap-3">
+								<div className="flex items-center gap-3">
+									<Avatar className="h-10 w-10">
+										<AvatarFallback className="bg-secondary text-foreground">
+											{app.name
+												.split("-")
+												.map((part) => part[0])
+												.join("")
+												.slice(0, 2)
+												.toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+									<div>
+										<p className="font-medium text-foreground">{app.name}</p>
+										<p className="text-muted-foreground text-xs">{app.stack}</p>
+									</div>
+								</div>
+								<Badge
+									className={cn(
+										"border text-xs",
+										statusStyles[app.status],
+									)}
+									variant="outline"
+								>
+									{app.status}
+								</Badge>
+							</div>
+
+							<div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+								<span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-foreground">
+									<Globe2 className="h-3 w-3" />
+									{app.domain}
+								</span>
+								<span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-foreground">
+									<Code className="h-3 w-3" />
+									Port {app.port}
+								</span>
+							</div>
+
+							<div className="border-t border-border/60 pt-3">
+								<AppTasks tasks={app.tasks} />
+							</div>
+						</CardContent>
+					</Card>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function VariablesPreview() {
+	return (
+		<div className="space-y-4 rounded-xl border border-border/70 bg-card p-5">
+			<PanelHeader
+				title="Variables"
+				description="Secrets, config, and service values with scoped access"
+				guideKey="variables"
+			/>
+			<div className="grid gap-3">
+				{VARIABLE_PREVIEW.map((variable) => {
+					const typeConfig = getTypeConfig(variable.type);
+					const Icon = typeConfig.icon;
+
+					return (
+						<Card key={variable.id}>
+							<CardContent className="space-y-3 p-4">
+								<div className="flex items-center justify-between gap-3">
+									<div className="flex items-center gap-3">
+										<div
+											className={cn(
+												"flex h-10 w-10 items-center justify-center rounded-lg",
+												typeConfig.color,
+											)}
+										>
+											<Icon className="h-4 w-4" />
+										</div>
+										<div>
+											<p className="font-semibold text-foreground">
+												{variable.key}
+											</p>
+											<p className="text-muted-foreground text-xs">
+												{variable.description}
+											</p>
+										</div>
+									</div>
+									<Badge variant="outline" className="text-xs capitalize">
+										{typeConfig.label}
+									</Badge>
+								</div>
+
+								<div className="flex flex-wrap items-center gap-2 text-xs">
+									<div className="inline-flex items-center gap-1 rounded-full border border-border/80 px-2 py-1">
+										<CheckCircle2 className="h-3 w-3 text-accent" />
+										<span className="text-muted-foreground">Environments</span>
+										<div className="flex gap-1">
+											{variable.environments.map((env) => (
+												<Badge key={env} variant="secondary" className="text-[10px]">
+													{env}
+												</Badge>
+											))}
+										</div>
+									</div>
+									<div className="inline-flex items-center gap-1 rounded-full border border-border/80 px-2 py-1">
+										<span className="text-muted-foreground">Linked apps</span>
+										<div className="flex gap-1">
+											{variable.linkedApps.map((app) => (
+												<Badge key={app} variant="outline" className="text-[10px]">
+													{app}
+												</Badge>
+											))}
+										</div>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function StudioPreviewRotator() {
+	const previews = useMemo<PreviewSlide[]>(
+		() => [
+			{
+				id: "packages",
+				label: "Packages",
+				tagline: "Pin runtimes, services, and tools to devshell",
+				content: <PackagesPreview />,
+			},
+			{
+				id: "apps",
+				label: "Apps",
+				tagline: "Ports, domains, and tasks ready to ship",
+				content: <AppsPreview />,
+			},
+			{
+				id: "variables",
+				label: "Variables",
+				tagline: "Secrets + config scoped per environment",
+				content: <VariablesPreview />,
+			},
+		],
+		[],
+	);
+	const [activeIndex, setActiveIndex] = useState(0);
+
+	useEffect(() => {
+		const timer = window.setInterval(() => {
+			setActiveIndex((prev) => (prev + 1) % previews.length);
+		}, ROTATION_MS);
+		return () => window.clearInterval(timer);
+	}, [previews.length]);
+
+	return (
+		<div className="relative">
+			<div className="mb-4 flex items-center justify-between">
+				<div className="flex items-center gap-2 text-muted-foreground text-sm">
+					<span className="rounded-full bg-accent/10 px-3 py-1 text-accent text-xs font-semibold tracking-[0.1em]">
+						Studio previews
+					</span>
+					<span className="text-muted-foreground">
+						{previews[activeIndex]?.tagline}
+					</span>
+				</div>
+				<Link
+					className="text-accent text-sm underline-offset-4 hover:underline"
+					to="/studio"
+				>
+					Open the studio
+				</Link>
+			</div>
+			<div className="relative min-h-[560px] overflow-hidden rounded-2xl border border-border/70 bg-secondary/40 p-2 shadow-2xl">
+				{previews.map((preview, index) => (
+					<div
+						className={cn(
+							"absolute inset-2 transition-all duration-500",
+							index === activeIndex
+								? "opacity-100 translate-y-0"
+								: "pointer-events-none opacity-0 translate-y-6",
+						)}
+						key={preview.id}
+					>
+						{preview.content}
+					</div>
+				))}
+			</div>
+			<div className="mt-4 flex flex-wrap gap-2">
+				{previews.map((preview, index) => (
+					<button
+						className={cn(
+							"group relative overflow-hidden rounded-full border px-3 py-1.5 text-sm transition-colors",
+							index === activeIndex
+								? "border-accent/60 bg-accent/10 text-foreground"
+								: "border-border bg-background/60 text-muted-foreground hover:text-foreground",
+						)}
+						key={preview.id}
+						onClick={() => setActiveIndex(index)}
+						type="button"
+					>
+						<span
+							className={cn(
+								"absolute inset-0 z-0 bg-accent/10 transition-opacity",
+								index === activeIndex ? "opacity-100" : "opacity-0",
+							)}
+						/>
+						<span className="relative z-10">{preview.label}</span>
+					</button>
+				))}
+			</div>
+		</div>
+	);
+}
 
 export function HeroSection() {
 	return (
@@ -143,82 +545,7 @@ export function HeroSection() {
 						</div>
 					</div>
 
-					<Link className="group relative block" to="/dashboard">
-						<div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl transition-all group-hover:border-accent/50 group-hover:shadow-accent/10">
-							<div className="flex items-center gap-2 border-border border-b bg-secondary/50 px-4 py-3">
-								<div className="flex gap-1.5">
-									<div className="h-3 w-3 rounded-full bg-red-500/80" />
-									<div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-									<div className="h-3 w-3 rounded-full bg-green-500/80" />
-								</div>
-								<div className="flex-1 text-center">
-									<span className="text-muted-foreground text-xs">
-										stackpanel.internal
-									</span>
-								</div>
-							</div>
-							<div className="p-4">
-								<div className="mb-4 flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-											<Terminal className="h-5 w-5 text-accent" />
-										</div>
-										<div>
-											<p className="font-medium text-foreground text-sm">
-												acme-corp
-											</p>
-											<p className="text-muted-foreground text-xs">
-												12 services · 8 team members
-											</p>
-										</div>
-									</div>
-									<span className="rounded-full bg-accent/20 px-2.5 py-1 text-accent text-xs">
-										Active
-									</span>
-								</div>
-
-								<div className="grid grid-cols-2 gap-3">
-									{[
-										{ label: "Infrastructure", count: "6 nodes" },
-										{ label: "Databases", count: "3 active" },
-										{ label: "Secrets", count: "24 keys" },
-										{ label: "Dev Shells", count: "4 envs" },
-									].map((item) => (
-										<div
-											className="rounded-lg border border-border bg-secondary/30 p-3"
-											key={item.label}
-										>
-											<p className="text-muted-foreground text-xs">
-												{item.label}
-											</p>
-											<p className="font-medium text-foreground text-sm">
-												{item.count}
-											</p>
-										</div>
-									))}
-								</div>
-
-								<div className="mt-4 rounded-lg bg-background p-3 font-mono text-xs">
-									<div className="flex items-center gap-2 text-muted-foreground">
-										<span className="text-accent">$</span>
-										<span>create-app my-service --template=turborepo</span>
-									</div>
-									<div className="mt-2 text-accent">
-										✓ Created repo acme-corp/my-service
-									</div>
-									<div className="text-accent">
-										✓ Applied stack configuration
-									</div>
-									<div className="text-accent">✓ Enabled CI/CD pipeline</div>
-								</div>
-							</div>
-						</div>
-						<div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/80 opacity-0 transition-opacity group-hover:opacity-100">
-							<span className="font-medium text-foreground text-lg">
-								Click to try the demo
-							</span>
-						</div>
-					</Link>
+					<StudioPreviewRotator />
 				</div>
 			</div>
 		</section>

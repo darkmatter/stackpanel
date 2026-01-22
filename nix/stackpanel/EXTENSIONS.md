@@ -82,6 +82,10 @@ Each extension has these fields:
   enabled = true;                           # Whether the extension is active
   builtin = false;                          # Whether shipped with stackpanel
 
+  # Source directory for file-based resources
+  srcDir = ./src;                           # Optional: Path to src/ directory
+                                            # Enables auto-discovery of scripts/checks
+
   # Source (for non-builtin extensions)
   source = {
     type = "EXTENSION_SOURCE_TYPE_GITHUB";  # builtin, local, github, npm, url
@@ -131,6 +135,23 @@ Each extension has these fields:
   };
 }
 ```
+
+### srcDir Directory Structure
+
+When `srcDir` is specified, the extension system can discover resources:
+
+```
+src/
+  scripts/           # Shell scripts -> stackpanel.scripts
+    deploy.sh        # -> <extName>:deploy
+    build.sh         # -> <extName>:build
+  checks/            # Healthchecks -> stackpanel.healthchecks
+    aws-creds.sh     # -> <extName>:aws-creds
+  files/             # Available for stackpanel.files.entries
+    config.ts        # Content source for file generation
+```
+
+Resources are automatically namespaced with the extension name using `:` as separator.
 
 ## Creating a Builtin Extension
 
@@ -226,7 +247,55 @@ in
 
 Add the import to `nix/stackpanel/core/default.nix` or wherever modules are aggregated.
 
-### 3. Create Proto Schema (Optional)
+### 3. Using File-Based Scripts (Recommended)
+
+Instead of inline scripts, use the `path` option to load script content from files:
+
+```
+nix/stackpanel/my-extension/
+  my-extension.nix      # Extension module
+  src/
+    scripts/
+      run.sh            # -> my-extension:run
+      build.sh          # -> my-extension:build
+    checks/
+      health.sh         # -> my-extension:health
+```
+
+```nix
+# my-extension.nix
+config = lib.mkIf cfg.enable {
+  # Register extension with srcDir for discovery
+  stackpanel.extensions.my-extension = {
+    name = "My Extension";
+    srcDir = ./src;  # Points to src/ directory
+    # ...
+  };
+
+  # Scripts using path option (file-based)
+  stackpanel.scripts."my-extension:run" = {
+    description = "Run my extension command";
+    path = ./src/scripts/run.sh;  # Load from file
+    env.MY_SETTING = cfg.some-setting;  # Pass config via env
+  };
+
+  # Or use inline exec for simple commands
+  stackpanel.scripts."my-extension:status" = {
+    description = "Show status";
+    exec = "echo 'Status: OK'";
+  };
+};
+```
+
+Benefits of file-based scripts:
+- Better editor support (syntax highlighting, linting)
+- Easier to test scripts in isolation
+- Cleaner separation of Nix config and shell logic
+- Scripts become Nix derivations (immutable, cached)
+
+The `srcDir` option enables auto-discovery - scripts in `src/scripts/` are automatically namespaced with the extension name (e.g., `run.sh` becomes `my-extension:run`).
+
+### 4. Create Proto Schema (Optional)
 
 If your extension has user-editable data, create a proto schema:
 
@@ -297,3 +366,6 @@ The agent can query extensions via the Nix evaluator and serve them to the web U
 4. **Keep options minimal** - Only expose what users need to configure
 5. **Use sensible defaults** - Extensions should work with minimal configuration
 6. **Register MOTD entries** - Help users discover commands and features
+7. **Use file-based scripts** - Prefer `path = ./src/scripts/foo.sh` over inline `exec` for complex scripts
+8. **Set srcDir** - Enable auto-discovery by setting `srcDir = ./src` in your extension registration
+9. **Pass config via env** - Use `env.MY_VAR = cfg.some-value` to pass Nix config to file-based scripts

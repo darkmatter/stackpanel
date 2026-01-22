@@ -461,6 +461,42 @@ func (*GetVariablesRequest) Descriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{9}
 }
 
+type GetSstRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSstRequest) Reset() {
+	*x = GetSstRequest{}
+	mi := &file_agent_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSstRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSstRequest) ProtoMessage() {}
+
+func (x *GetSstRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSstRequest.ProtoReflect.Descriptor instead.
+func (*GetSstRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{10}
+}
+
 type GetAgeIdentityRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -469,7 +505,7 @@ type GetAgeIdentityRequest struct {
 
 func (x *GetAgeIdentityRequest) Reset() {
 	*x = GetAgeIdentityRequest{}
-	mi := &file_agent_proto_msgTypes[10]
+	mi := &file_agent_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -481,7 +517,7 @@ func (x *GetAgeIdentityRequest) String() string {
 func (*GetAgeIdentityRequest) ProtoMessage() {}
 
 func (x *GetAgeIdentityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[10]
+	mi := &file_agent_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +530,7 @@ func (x *GetAgeIdentityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgeIdentityRequest.ProtoReflect.Descriptor instead.
 func (*GetAgeIdentityRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{10}
+	return file_agent_proto_rawDescGZIP(), []int{11}
 }
 
 type SetAgeIdentityRequest struct {
@@ -507,7 +543,7 @@ type SetAgeIdentityRequest struct {
 
 func (x *SetAgeIdentityRequest) Reset() {
 	*x = SetAgeIdentityRequest{}
-	mi := &file_agent_proto_msgTypes[11]
+	mi := &file_agent_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +555,7 @@ func (x *SetAgeIdentityRequest) String() string {
 func (*SetAgeIdentityRequest) ProtoMessage() {}
 
 func (x *SetAgeIdentityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[11]
+	mi := &file_agent_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +568,7 @@ func (x *SetAgeIdentityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgeIdentityRequest.ProtoReflect.Descriptor instead.
 func (*SetAgeIdentityRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{11}
+	return file_agent_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SetAgeIdentityRequest) GetValue() string {
@@ -558,7 +594,7 @@ type AgeIdentityResponse struct {
 
 func (x *AgeIdentityResponse) Reset() {
 	*x = AgeIdentityResponse{}
-	mi := &file_agent_proto_msgTypes[12]
+	mi := &file_agent_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -570,7 +606,7 @@ func (x *AgeIdentityResponse) String() string {
 func (*AgeIdentityResponse) ProtoMessage() {}
 
 func (x *AgeIdentityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[12]
+	mi := &file_agent_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -583,7 +619,7 @@ func (x *AgeIdentityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgeIdentityResponse.ProtoReflect.Descriptor instead.
 func (*AgeIdentityResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{12}
+	return file_agent_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AgeIdentityResponse) GetType() string {
@@ -622,7 +658,7 @@ type GetKMSConfigRequest struct {
 
 func (x *GetKMSConfigRequest) Reset() {
 	*x = GetKMSConfigRequest{}
-	mi := &file_agent_proto_msgTypes[13]
+	mi := &file_agent_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +670,7 @@ func (x *GetKMSConfigRequest) String() string {
 func (*GetKMSConfigRequest) ProtoMessage() {}
 
 func (x *GetKMSConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[13]
+	mi := &file_agent_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +683,7 @@ func (x *GetKMSConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKMSConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetKMSConfigRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{13}
+	return file_agent_proto_rawDescGZIP(), []int{14}
 }
 
 type SetKMSConfigRequest struct {
@@ -661,7 +697,7 @@ type SetKMSConfigRequest struct {
 
 func (x *SetKMSConfigRequest) Reset() {
 	*x = SetKMSConfigRequest{}
-	mi := &file_agent_proto_msgTypes[14]
+	mi := &file_agent_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -673,7 +709,7 @@ func (x *SetKMSConfigRequest) String() string {
 func (*SetKMSConfigRequest) ProtoMessage() {}
 
 func (x *SetKMSConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[14]
+	mi := &file_agent_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -686,7 +722,7 @@ func (x *SetKMSConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetKMSConfigRequest.ProtoReflect.Descriptor instead.
 func (*SetKMSConfigRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{14}
+	return file_agent_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SetKMSConfigRequest) GetEnable() bool {
@@ -723,7 +759,7 @@ type KMSConfigResponse struct {
 
 func (x *KMSConfigResponse) Reset() {
 	*x = KMSConfigResponse{}
-	mi := &file_agent_proto_msgTypes[15]
+	mi := &file_agent_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +771,7 @@ func (x *KMSConfigResponse) String() string {
 func (*KMSConfigResponse) ProtoMessage() {}
 
 func (x *KMSConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[15]
+	mi := &file_agent_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +784,7 @@ func (x *KMSConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KMSConfigResponse.ProtoReflect.Descriptor instead.
 func (*KMSConfigResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{15}
+	return file_agent_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *KMSConfigResponse) GetEnable() bool {
@@ -788,7 +824,7 @@ type ReadFileRequest struct {
 
 func (x *ReadFileRequest) Reset() {
 	*x = ReadFileRequest{}
-	mi := &file_agent_proto_msgTypes[16]
+	mi := &file_agent_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -800,7 +836,7 @@ func (x *ReadFileRequest) String() string {
 func (*ReadFileRequest) ProtoMessage() {}
 
 func (x *ReadFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[16]
+	mi := &file_agent_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -813,7 +849,7 @@ func (x *ReadFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadFileRequest.ProtoReflect.Descriptor instead.
 func (*ReadFileRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{16}
+	return file_agent_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ReadFileRequest) GetPath() string {
@@ -833,7 +869,7 @@ type ReadFileResponse struct {
 
 func (x *ReadFileResponse) Reset() {
 	*x = ReadFileResponse{}
-	mi := &file_agent_proto_msgTypes[17]
+	mi := &file_agent_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -845,7 +881,7 @@ func (x *ReadFileResponse) String() string {
 func (*ReadFileResponse) ProtoMessage() {}
 
 func (x *ReadFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[17]
+	mi := &file_agent_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -858,7 +894,7 @@ func (x *ReadFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadFileResponse.ProtoReflect.Descriptor instead.
 func (*ReadFileResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{17}
+	return file_agent_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ReadFileResponse) GetContent() string {
@@ -887,7 +923,7 @@ type WriteFileRequest struct {
 
 func (x *WriteFileRequest) Reset() {
 	*x = WriteFileRequest{}
-	mi := &file_agent_proto_msgTypes[18]
+	mi := &file_agent_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -899,7 +935,7 @@ func (x *WriteFileRequest) String() string {
 func (*WriteFileRequest) ProtoMessage() {}
 
 func (x *WriteFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[18]
+	mi := &file_agent_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -912,7 +948,7 @@ func (x *WriteFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteFileRequest.ProtoReflect.Descriptor instead.
 func (*WriteFileRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{18}
+	return file_agent_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *WriteFileRequest) GetPath() string {
@@ -945,7 +981,7 @@ type WriteFileResponse struct {
 
 func (x *WriteFileResponse) Reset() {
 	*x = WriteFileResponse{}
-	mi := &file_agent_proto_msgTypes[19]
+	mi := &file_agent_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -957,7 +993,7 @@ func (x *WriteFileResponse) String() string {
 func (*WriteFileResponse) ProtoMessage() {}
 
 func (x *WriteFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[19]
+	mi := &file_agent_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -970,7 +1006,7 @@ func (x *WriteFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteFileResponse.ProtoReflect.Descriptor instead.
 func (*WriteFileResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{19}
+	return file_agent_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *WriteFileResponse) GetSuccess() bool {
@@ -990,7 +1026,7 @@ type ListFilesRequest struct {
 
 func (x *ListFilesRequest) Reset() {
 	*x = ListFilesRequest{}
-	mi := &file_agent_proto_msgTypes[20]
+	mi := &file_agent_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1002,7 +1038,7 @@ func (x *ListFilesRequest) String() string {
 func (*ListFilesRequest) ProtoMessage() {}
 
 func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[20]
+	mi := &file_agent_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1015,7 +1051,7 @@ func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListFilesRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{20}
+	return file_agent_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListFilesRequest) GetPath() string {
@@ -1041,7 +1077,7 @@ type ListFilesResponse struct {
 
 func (x *ListFilesResponse) Reset() {
 	*x = ListFilesResponse{}
-	mi := &file_agent_proto_msgTypes[21]
+	mi := &file_agent_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1053,7 +1089,7 @@ func (x *ListFilesResponse) String() string {
 func (*ListFilesResponse) ProtoMessage() {}
 
 func (x *ListFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[21]
+	mi := &file_agent_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1066,7 +1102,7 @@ func (x *ListFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesResponse.ProtoReflect.Descriptor instead.
 func (*ListFilesResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{21}
+	return file_agent_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListFilesResponse) GetFiles() []*FileInfo {
@@ -1089,7 +1125,7 @@ type FileInfo struct {
 
 func (x *FileInfo) Reset() {
 	*x = FileInfo{}
-	mi := &file_agent_proto_msgTypes[22]
+	mi := &file_agent_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1101,7 +1137,7 @@ func (x *FileInfo) String() string {
 func (*FileInfo) ProtoMessage() {}
 
 func (x *FileInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[22]
+	mi := &file_agent_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1114,7 +1150,7 @@ func (x *FileInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileInfo.ProtoReflect.Descriptor instead.
 func (*FileInfo) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{22}
+	return file_agent_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *FileInfo) GetName() string {
@@ -1164,7 +1200,7 @@ type ExecRequest struct {
 
 func (x *ExecRequest) Reset() {
 	*x = ExecRequest{}
-	mi := &file_agent_proto_msgTypes[23]
+	mi := &file_agent_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1176,7 +1212,7 @@ func (x *ExecRequest) String() string {
 func (*ExecRequest) ProtoMessage() {}
 
 func (x *ExecRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[23]
+	mi := &file_agent_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1189,7 +1225,7 @@ func (x *ExecRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecRequest.ProtoReflect.Descriptor instead.
 func (*ExecRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{23}
+	return file_agent_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ExecRequest) GetCommand() string {
@@ -1231,7 +1267,7 @@ type ExecResponse struct {
 
 func (x *ExecResponse) Reset() {
 	*x = ExecResponse{}
-	mi := &file_agent_proto_msgTypes[24]
+	mi := &file_agent_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1243,7 +1279,7 @@ func (x *ExecResponse) String() string {
 func (*ExecResponse) ProtoMessage() {}
 
 func (x *ExecResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[24]
+	mi := &file_agent_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1256,7 +1292,7 @@ func (x *ExecResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecResponse.ProtoReflect.Descriptor instead.
 func (*ExecResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{24}
+	return file_agent_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ExecResponse) GetExitCode() int32 {
@@ -1288,7 +1324,7 @@ type NixGenerateRequest struct {
 
 func (x *NixGenerateRequest) Reset() {
 	*x = NixGenerateRequest{}
-	mi := &file_agent_proto_msgTypes[25]
+	mi := &file_agent_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1300,7 +1336,7 @@ func (x *NixGenerateRequest) String() string {
 func (*NixGenerateRequest) ProtoMessage() {}
 
 func (x *NixGenerateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[25]
+	mi := &file_agent_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1313,7 +1349,7 @@ func (x *NixGenerateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NixGenerateRequest.ProtoReflect.Descriptor instead.
 func (*NixGenerateRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{25}
+	return file_agent_proto_rawDescGZIP(), []int{26}
 }
 
 type NixGenerateResponse struct {
@@ -1326,7 +1362,7 @@ type NixGenerateResponse struct {
 
 func (x *NixGenerateResponse) Reset() {
 	*x = NixGenerateResponse{}
-	mi := &file_agent_proto_msgTypes[26]
+	mi := &file_agent_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1338,7 +1374,7 @@ func (x *NixGenerateResponse) String() string {
 func (*NixGenerateResponse) ProtoMessage() {}
 
 func (x *NixGenerateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[26]
+	mi := &file_agent_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1351,7 +1387,7 @@ func (x *NixGenerateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NixGenerateResponse.ProtoReflect.Descriptor instead.
 func (*NixGenerateResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{26}
+	return file_agent_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *NixGenerateResponse) GetSuccess() bool {
@@ -1378,7 +1414,7 @@ type NixEvalRequest struct {
 
 func (x *NixEvalRequest) Reset() {
 	*x = NixEvalRequest{}
-	mi := &file_agent_proto_msgTypes[27]
+	mi := &file_agent_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1390,7 +1426,7 @@ func (x *NixEvalRequest) String() string {
 func (*NixEvalRequest) ProtoMessage() {}
 
 func (x *NixEvalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[27]
+	mi := &file_agent_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1403,7 +1439,7 @@ func (x *NixEvalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NixEvalRequest.ProtoReflect.Descriptor instead.
 func (*NixEvalRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{27}
+	return file_agent_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *NixEvalRequest) GetExpression() string {
@@ -1429,7 +1465,7 @@ type NixEvalResponse struct {
 
 func (x *NixEvalResponse) Reset() {
 	*x = NixEvalResponse{}
-	mi := &file_agent_proto_msgTypes[28]
+	mi := &file_agent_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1441,7 +1477,7 @@ func (x *NixEvalResponse) String() string {
 func (*NixEvalResponse) ProtoMessage() {}
 
 func (x *NixEvalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[28]
+	mi := &file_agent_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1454,7 +1490,7 @@ func (x *NixEvalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NixEvalResponse.ProtoReflect.Descriptor instead.
 func (*NixEvalResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{28}
+	return file_agent_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *NixEvalResponse) GetResult() string {
@@ -1472,7 +1508,7 @@ type GetServicesStatusRequest struct {
 
 func (x *GetServicesStatusRequest) Reset() {
 	*x = GetServicesStatusRequest{}
-	mi := &file_agent_proto_msgTypes[29]
+	mi := &file_agent_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1484,7 +1520,7 @@ func (x *GetServicesStatusRequest) String() string {
 func (*GetServicesStatusRequest) ProtoMessage() {}
 
 func (x *GetServicesStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[29]
+	mi := &file_agent_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1497,7 +1533,7 @@ func (x *GetServicesStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServicesStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetServicesStatusRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{29}
+	return file_agent_proto_rawDescGZIP(), []int{30}
 }
 
 type GetServicesStatusResponse struct {
@@ -1510,7 +1546,7 @@ type GetServicesStatusResponse struct {
 
 func (x *GetServicesStatusResponse) Reset() {
 	*x = GetServicesStatusResponse{}
-	mi := &file_agent_proto_msgTypes[30]
+	mi := &file_agent_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1522,7 +1558,7 @@ func (x *GetServicesStatusResponse) String() string {
 func (*GetServicesStatusResponse) ProtoMessage() {}
 
 func (x *GetServicesStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[30]
+	mi := &file_agent_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1535,7 +1571,7 @@ func (x *GetServicesStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServicesStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetServicesStatusResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{30}
+	return file_agent_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetServicesStatusResponse) GetRunning() bool {
@@ -1564,7 +1600,7 @@ type ServiceStatus struct {
 
 func (x *ServiceStatus) Reset() {
 	*x = ServiceStatus{}
-	mi := &file_agent_proto_msgTypes[31]
+	mi := &file_agent_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1576,7 +1612,7 @@ func (x *ServiceStatus) String() string {
 func (*ServiceStatus) ProtoMessage() {}
 
 func (x *ServiceStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[31]
+	mi := &file_agent_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1589,7 +1625,7 @@ func (x *ServiceStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceStatus.ProtoReflect.Descriptor instead.
 func (*ServiceStatus) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{31}
+	return file_agent_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ServiceStatus) GetName() string {
@@ -1629,7 +1665,7 @@ type ServiceRequest struct {
 
 func (x *ServiceRequest) Reset() {
 	*x = ServiceRequest{}
-	mi := &file_agent_proto_msgTypes[32]
+	mi := &file_agent_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1641,7 +1677,7 @@ func (x *ServiceRequest) String() string {
 func (*ServiceRequest) ProtoMessage() {}
 
 func (x *ServiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[32]
+	mi := &file_agent_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1654,7 +1690,7 @@ func (x *ServiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceRequest.ProtoReflect.Descriptor instead.
 func (*ServiceRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{32}
+	return file_agent_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ServiceRequest) GetName() string {
@@ -1674,7 +1710,7 @@ type ServiceResponse struct {
 
 func (x *ServiceResponse) Reset() {
 	*x = ServiceResponse{}
-	mi := &file_agent_proto_msgTypes[33]
+	mi := &file_agent_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1686,7 +1722,7 @@ func (x *ServiceResponse) String() string {
 func (*ServiceResponse) ProtoMessage() {}
 
 func (x *ServiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[33]
+	mi := &file_agent_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1699,7 +1735,7 @@ func (x *ServiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceResponse.ProtoReflect.Descriptor instead.
 func (*ServiceResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{33}
+	return file_agent_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ServiceResponse) GetSuccess() bool {
@@ -1716,12 +1752,1482 @@ func (x *ServiceResponse) GetMessage() string {
 	return ""
 }
 
+type GetSSTStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSSTStatusRequest) Reset() {
+	*x = GetSSTStatusRequest{}
+	mi := &file_agent_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSSTStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSSTStatusRequest) ProtoMessage() {}
+
+func (x *GetSSTStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSSTStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetSSTStatusRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{35}
+}
+
+type SSTStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Configured    bool                   `protobuf:"varint,1,opt,name=configured,proto3" json:"configured,omitempty"`
+	ConfigPath    string                 `protobuf:"bytes,2,opt,name=config_path,json=configPath,proto3" json:"config_path,omitempty"`
+	ConfigValid   bool                   `protobuf:"varint,3,opt,name=config_valid,json=configValid,proto3" json:"config_valid,omitempty"`
+	Deployed      bool                   `protobuf:"varint,4,opt,name=deployed,proto3" json:"deployed,omitempty"`
+	Stage         string                 `protobuf:"bytes,5,opt,name=stage,proto3" json:"stage,omitempty"`
+	LastDeploy    string                 `protobuf:"bytes,6,opt,name=last_deploy,json=lastDeploy,proto3" json:"last_deploy,omitempty"`
+	Error         string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SSTStatusResponse) Reset() {
+	*x = SSTStatusResponse{}
+	mi := &file_agent_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SSTStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SSTStatusResponse) ProtoMessage() {}
+
+func (x *SSTStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SSTStatusResponse.ProtoReflect.Descriptor instead.
+func (*SSTStatusResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *SSTStatusResponse) GetConfigured() bool {
+	if x != nil {
+		return x.Configured
+	}
+	return false
+}
+
+func (x *SSTStatusResponse) GetConfigPath() string {
+	if x != nil {
+		return x.ConfigPath
+	}
+	return ""
+}
+
+func (x *SSTStatusResponse) GetConfigValid() bool {
+	if x != nil {
+		return x.ConfigValid
+	}
+	return false
+}
+
+func (x *SSTStatusResponse) GetDeployed() bool {
+	if x != nil {
+		return x.Deployed
+	}
+	return false
+}
+
+func (x *SSTStatusResponse) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+func (x *SSTStatusResponse) GetLastDeploy() string {
+	if x != nil {
+		return x.LastDeploy
+	}
+	return ""
+}
+
+func (x *SSTStatusResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type GetSSTConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSSTConfigRequest) Reset() {
+	*x = GetSSTConfigRequest{}
+	mi := &file_agent_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSSTConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSSTConfigRequest) ProtoMessage() {}
+
+func (x *GetSSTConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSSTConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetSSTConfigRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{37}
+}
+
+type DeploySSTRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stage         string                 `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"` // dev, staging, production
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeploySSTRequest) Reset() {
+	*x = DeploySSTRequest{}
+	mi := &file_agent_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeploySSTRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeploySSTRequest) ProtoMessage() {}
+
+func (x *DeploySSTRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeploySSTRequest.ProtoReflect.Descriptor instead.
+func (*DeploySSTRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *DeploySSTRequest) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+type DeploySSTResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Output        string                 `protobuf:"bytes,2,opt,name=output,proto3" json:"output,omitempty"`
+	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Outputs       map[string]string      `protobuf:"bytes,4,rep,name=outputs,proto3" json:"outputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeploySSTResponse) Reset() {
+	*x = DeploySSTResponse{}
+	mi := &file_agent_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeploySSTResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeploySSTResponse) ProtoMessage() {}
+
+func (x *DeploySSTResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeploySSTResponse.ProtoReflect.Descriptor instead.
+func (*DeploySSTResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *DeploySSTResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DeploySSTResponse) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+func (x *DeploySSTResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *DeploySSTResponse) GetOutputs() map[string]string {
+	if x != nil {
+		return x.Outputs
+	}
+	return nil
+}
+
+type RemoveSSTRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stage         string                 `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveSSTRequest) Reset() {
+	*x = RemoveSSTRequest{}
+	mi := &file_agent_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveSSTRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveSSTRequest) ProtoMessage() {}
+
+func (x *RemoveSSTRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveSSTRequest.ProtoReflect.Descriptor instead.
+func (*RemoveSSTRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *RemoveSSTRequest) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+type RemoveSSTResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Output        string                 `protobuf:"bytes,2,opt,name=output,proto3" json:"output,omitempty"`
+	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveSSTResponse) Reset() {
+	*x = RemoveSSTResponse{}
+	mi := &file_agent_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveSSTResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveSSTResponse) ProtoMessage() {}
+
+func (x *RemoveSSTResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveSSTResponse.ProtoReflect.Descriptor instead.
+func (*RemoveSSTResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *RemoveSSTResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RemoveSSTResponse) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+func (x *RemoveSSTResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type GetSSTOutputsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSSTOutputsRequest) Reset() {
+	*x = GetSSTOutputsRequest{}
+	mi := &file_agent_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSSTOutputsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSSTOutputsRequest) ProtoMessage() {}
+
+func (x *GetSSTOutputsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSSTOutputsRequest.ProtoReflect.Descriptor instead.
+func (*GetSSTOutputsRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{42}
+}
+
+type SSTOutputsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Outputs       map[string]string      `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SSTOutputsResponse) Reset() {
+	*x = SSTOutputsResponse{}
+	mi := &file_agent_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SSTOutputsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SSTOutputsResponse) ProtoMessage() {}
+
+func (x *SSTOutputsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SSTOutputsResponse.ProtoReflect.Descriptor instead.
+func (*SSTOutputsResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *SSTOutputsResponse) GetOutputs() map[string]string {
+	if x != nil {
+		return x.Outputs
+	}
+	return nil
+}
+
+type GetSSTResourcesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSSTResourcesRequest) Reset() {
+	*x = GetSSTResourcesRequest{}
+	mi := &file_agent_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSSTResourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSSTResourcesRequest) ProtoMessage() {}
+
+func (x *GetSSTResourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSSTResourcesRequest.ProtoReflect.Descriptor instead.
+func (*GetSSTResourcesRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{44}
+}
+
+type SSTResource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Urn           string                 `protobuf:"bytes,2,opt,name=urn,proto3" json:"urn,omitempty"`
+	Id            string                 `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SSTResource) Reset() {
+	*x = SSTResource{}
+	mi := &file_agent_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SSTResource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SSTResource) ProtoMessage() {}
+
+func (x *SSTResource) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SSTResource.ProtoReflect.Descriptor instead.
+func (*SSTResource) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *SSTResource) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *SSTResource) GetUrn() string {
+	if x != nil {
+		return x.Urn
+	}
+	return ""
+}
+
+func (x *SSTResource) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type SSTResourcesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Resources     []*SSTResource         `protobuf:"bytes,1,rep,name=resources,proto3" json:"resources,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SSTResourcesResponse) Reset() {
+	*x = SSTResourcesResponse{}
+	mi := &file_agent_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SSTResourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SSTResourcesResponse) ProtoMessage() {}
+
+func (x *SSTResourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SSTResourcesResponse.ProtoReflect.Descriptor instead.
+func (*SSTResourcesResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *SSTResourcesResponse) GetResources() []*SSTResource {
+	if x != nil {
+		return x.Resources
+	}
+	return nil
+}
+
+type SearchNixpkgsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"` // Max results to return
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchNixpkgsRequest) Reset() {
+	*x = SearchNixpkgsRequest{}
+	mi := &file_agent_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchNixpkgsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchNixpkgsRequest) ProtoMessage() {}
+
+func (x *SearchNixpkgsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchNixpkgsRequest.ProtoReflect.Descriptor instead.
+func (*SearchNixpkgsRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *SearchNixpkgsRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *SearchNixpkgsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type NixpkgsPackage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	AttrPath      string                 `protobuf:"bytes,2,opt,name=attr_path,json=attrPath,proto3" json:"attr_path,omitempty"`
+	Version       string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Installed     bool                   `protobuf:"varint,5,opt,name=installed,proto3" json:"installed,omitempty"`
+	License       string                 `protobuf:"bytes,6,opt,name=license,proto3" json:"license,omitempty"`
+	Homepage      string                 `protobuf:"bytes,7,opt,name=homepage,proto3" json:"homepage,omitempty"`
+	NixpkgsUrl    string                 `protobuf:"bytes,8,opt,name=nixpkgs_url,json=nixpkgsUrl,proto3" json:"nixpkgs_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NixpkgsPackage) Reset() {
+	*x = NixpkgsPackage{}
+	mi := &file_agent_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NixpkgsPackage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NixpkgsPackage) ProtoMessage() {}
+
+func (x *NixpkgsPackage) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NixpkgsPackage.ProtoReflect.Descriptor instead.
+func (*NixpkgsPackage) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *NixpkgsPackage) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *NixpkgsPackage) GetAttrPath() string {
+	if x != nil {
+		return x.AttrPath
+	}
+	return ""
+}
+
+func (x *NixpkgsPackage) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *NixpkgsPackage) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *NixpkgsPackage) GetInstalled() bool {
+	if x != nil {
+		return x.Installed
+	}
+	return false
+}
+
+func (x *NixpkgsPackage) GetLicense() string {
+	if x != nil {
+		return x.License
+	}
+	return ""
+}
+
+func (x *NixpkgsPackage) GetHomepage() string {
+	if x != nil {
+		return x.Homepage
+	}
+	return ""
+}
+
+func (x *NixpkgsPackage) GetNixpkgsUrl() string {
+	if x != nil {
+		return x.NixpkgsUrl
+	}
+	return ""
+}
+
+type SearchNixpkgsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Packages      []*NixpkgsPackage      `protobuf:"bytes,1,rep,name=packages,proto3" json:"packages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchNixpkgsResponse) Reset() {
+	*x = SearchNixpkgsResponse{}
+	mi := &file_agent_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchNixpkgsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchNixpkgsResponse) ProtoMessage() {}
+
+func (x *SearchNixpkgsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchNixpkgsResponse.ProtoReflect.Descriptor instead.
+func (*SearchNixpkgsResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *SearchNixpkgsResponse) GetPackages() []*NixpkgsPackage {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
+type GetInstalledPackagesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInstalledPackagesRequest) Reset() {
+	*x = GetInstalledPackagesRequest{}
+	mi := &file_agent_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInstalledPackagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInstalledPackagesRequest) ProtoMessage() {}
+
+func (x *GetInstalledPackagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInstalledPackagesRequest.ProtoReflect.Descriptor instead.
+func (*GetInstalledPackagesRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{50}
+}
+
+type InstalledPackage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	AttrPath      string                 `protobuf:"bytes,3,opt,name=attr_path,json=attrPath,proto3" json:"attr_path,omitempty"`
+	Source        string                 `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"` // "devshell" or "user"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstalledPackage) Reset() {
+	*x = InstalledPackage{}
+	mi := &file_agent_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstalledPackage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstalledPackage) ProtoMessage() {}
+
+func (x *InstalledPackage) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstalledPackage.ProtoReflect.Descriptor instead.
+func (*InstalledPackage) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *InstalledPackage) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *InstalledPackage) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *InstalledPackage) GetAttrPath() string {
+	if x != nil {
+		return x.AttrPath
+	}
+	return ""
+}
+
+func (x *InstalledPackage) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+type InstalledPackagesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Packages      []*InstalledPackage    `protobuf:"bytes,1,rep,name=packages,proto3" json:"packages,omitempty"`
+	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstalledPackagesResponse) Reset() {
+	*x = InstalledPackagesResponse{}
+	mi := &file_agent_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstalledPackagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstalledPackagesResponse) ProtoMessage() {}
+
+func (x *InstalledPackagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstalledPackagesResponse.ProtoReflect.Descriptor instead.
+func (*InstalledPackagesResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *InstalledPackagesResponse) GetPackages() []*InstalledPackage {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
+func (x *InstalledPackagesResponse) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+type GetProcessesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProcessesRequest) Reset() {
+	*x = GetProcessesRequest{}
+	mi := &file_agent_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProcessesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProcessesRequest) ProtoMessage() {}
+
+func (x *GetProcessesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProcessesRequest.ProtoReflect.Descriptor instead.
+func (*GetProcessesRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{53}
+}
+
+type ProcessInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Pid           int32                  `protobuf:"varint,4,opt,name=pid,proto3" json:"pid,omitempty"`
+	ExitCode      int32                  `protobuf:"varint,5,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	IsRunning     bool                   `protobuf:"varint,6,opt,name=is_running,json=isRunning,proto3" json:"is_running,omitempty"`
+	Restarts      int32                  `protobuf:"varint,7,opt,name=restarts,proto3" json:"restarts,omitempty"`
+	SystemTime    string                 `protobuf:"bytes,8,opt,name=system_time,json=systemTime,proto3" json:"system_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProcessInfo) Reset() {
+	*x = ProcessInfo{}
+	mi := &file_agent_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProcessInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProcessInfo) ProtoMessage() {}
+
+func (x *ProcessInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProcessInfo.ProtoReflect.Descriptor instead.
+func (*ProcessInfo) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *ProcessInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ProcessInfo) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ProcessInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ProcessInfo) GetPid() int32 {
+	if x != nil {
+		return x.Pid
+	}
+	return 0
+}
+
+func (x *ProcessInfo) GetExitCode() int32 {
+	if x != nil {
+		return x.ExitCode
+	}
+	return 0
+}
+
+func (x *ProcessInfo) GetIsRunning() bool {
+	if x != nil {
+		return x.IsRunning
+	}
+	return false
+}
+
+func (x *ProcessInfo) GetRestarts() int32 {
+	if x != nil {
+		return x.Restarts
+	}
+	return 0
+}
+
+func (x *ProcessInfo) GetSystemTime() string {
+	if x != nil {
+		return x.SystemTime
+	}
+	return ""
+}
+
+type GetProcessesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Available     bool                   `protobuf:"varint,1,opt,name=available,proto3" json:"available,omitempty"`
+	Running       bool                   `protobuf:"varint,2,opt,name=running,proto3" json:"running,omitempty"`
+	Processes     []*ProcessInfo         `protobuf:"bytes,3,rep,name=processes,proto3" json:"processes,omitempty"`
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProcessesResponse) Reset() {
+	*x = GetProcessesResponse{}
+	mi := &file_agent_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProcessesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProcessesResponse) ProtoMessage() {}
+
+func (x *GetProcessesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProcessesResponse.ProtoReflect.Descriptor instead.
+func (*GetProcessesResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *GetProcessesResponse) GetAvailable() bool {
+	if x != nil {
+		return x.Available
+	}
+	return false
+}
+
+func (x *GetProcessesResponse) GetRunning() bool {
+	if x != nil {
+		return x.Running
+	}
+	return false
+}
+
+func (x *GetProcessesResponse) GetProcesses() []*ProcessInfo {
+	if x != nil {
+		return x.Processes
+	}
+	return nil
+}
+
+func (x *GetProcessesResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type GetHealthchecksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHealthchecksRequest) Reset() {
+	*x = GetHealthchecksRequest{}
+	mi := &file_agent_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHealthchecksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHealthchecksRequest) ProtoMessage() {}
+
+func (x *GetHealthchecksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHealthchecksRequest.ProtoReflect.Descriptor instead.
+func (*GetHealthchecksRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{56}
+}
+
+// Simple healthcheck info for RPC responses (distinct from db.HealthcheckResult)
+type HealthcheckInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"` // service, port, http, etc.
+	Healthy       bool                   `protobuf:"varint,3,opt,name=healthy,proto3" json:"healthy,omitempty"`
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Details       string                 `protobuf:"bytes,5,opt,name=details,proto3" json:"details,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthcheckInfo) Reset() {
+	*x = HealthcheckInfo{}
+	mi := &file_agent_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthcheckInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthcheckInfo) ProtoMessage() {}
+
+func (x *HealthcheckInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthcheckInfo.ProtoReflect.Descriptor instead.
+func (*HealthcheckInfo) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *HealthcheckInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *HealthcheckInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *HealthcheckInfo) GetHealthy() bool {
+	if x != nil {
+		return x.Healthy
+	}
+	return false
+}
+
+func (x *HealthcheckInfo) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *HealthcheckInfo) GetDetails() string {
+	if x != nil {
+		return x.Details
+	}
+	return ""
+}
+
+type HealthchecksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AllHealthy    bool                   `protobuf:"varint,1,opt,name=all_healthy,json=allHealthy,proto3" json:"all_healthy,omitempty"`
+	Checks        []*HealthcheckInfo     `protobuf:"bytes,2,rep,name=checks,proto3" json:"checks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthchecksResponse) Reset() {
+	*x = HealthchecksResponse{}
+	mi := &file_agent_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthchecksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthchecksResponse) ProtoMessage() {}
+
+func (x *HealthchecksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthchecksResponse.ProtoReflect.Descriptor instead.
+func (*HealthchecksResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *HealthchecksResponse) GetAllHealthy() bool {
+	if x != nil {
+		return x.AllHealthy
+	}
+	return false
+}
+
+func (x *HealthchecksResponse) GetChecks() []*HealthcheckInfo {
+	if x != nil {
+		return x.Checks
+	}
+	return nil
+}
+
+type GetNixConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Refresh       bool                   `protobuf:"varint,1,opt,name=refresh,proto3" json:"refresh,omitempty"` // Force re-evaluation
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNixConfigRequest) Reset() {
+	*x = GetNixConfigRequest{}
+	mi := &file_agent_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNixConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNixConfigRequest) ProtoMessage() {}
+
+func (x *GetNixConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNixConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetNixConfigRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *GetNixConfigRequest) GetRefresh() bool {
+	if x != nil {
+		return x.Refresh
+	}
+	return false
+}
+
+type RefreshNixConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshNixConfigRequest) Reset() {
+	*x = RefreshNixConfigRequest{}
+	mi := &file_agent_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshNixConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshNixConfigRequest) ProtoMessage() {}
+
+func (x *RefreshNixConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshNixConfigRequest.ProtoReflect.Descriptor instead.
+func (*RefreshNixConfigRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{60}
+}
+
+type NixConfigResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The full config is a dynamic JSON object, stored as string
+	ConfigJson    string `protobuf:"bytes,1,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	LastUpdated   string `protobuf:"bytes,2,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	Cached        bool   `protobuf:"varint,3,opt,name=cached,proto3" json:"cached,omitempty"`
+	Source        string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"` // "cache" or "eval"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NixConfigResponse) Reset() {
+	*x = NixConfigResponse{}
+	mi := &file_agent_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NixConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NixConfigResponse) ProtoMessage() {}
+
+func (x *NixConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NixConfigResponse.ProtoReflect.Descriptor instead.
+func (*NixConfigResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *NixConfigResponse) GetConfigJson() string {
+	if x != nil {
+		return x.ConfigJson
+	}
+	return ""
+}
+
+func (x *NixConfigResponse) GetLastUpdated() string {
+	if x != nil {
+		return x.LastUpdated
+	}
+	return ""
+}
+
+func (x *NixConfigResponse) GetCached() bool {
+	if x != nil {
+		return x.Cached
+	}
+	return false
+}
+
+func (x *NixConfigResponse) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
 var File_agent_proto protoreflect.FileDescriptor
 
 const file_agent_proto_rawDesc = "" +
 	"\n" +
 	"\vagent.proto\x12\x10stackpanel.agent\x1a\fconfig.proto\x1a\rsecrets.proto\x1a\vusers.proto\x1a\taws.proto\x1a\vfiles.proto\x1a\x0eservices.proto\x1a\n" +
-	"apps.proto\x1a\x0fvariables.proto\"\x13\n" +
+	"apps.proto\x1a\x0fvariables.proto\x1a\tsst.proto\"\x13\n" +
 	"\x11GetProjectRequest\"I\n" +
 	"\x12GetProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.stackpanel.agent.ProjectR\aproject\"|\n" +
@@ -1741,7 +3247,8 @@ const file_agent_proto_rawDesc = "" +
 	"\x0fGetUsersRequest\"\x0f\n" +
 	"\rGetAwsRequest\"\x10\n" +
 	"\x0eGetAppsRequest\"\x15\n" +
-	"\x13GetVariablesRequest\"\x17\n" +
+	"\x13GetVariablesRequest\"\x0f\n" +
+	"\rGetSstRequest\"\x17\n" +
 	"\x15GetAgeIdentityRequest\"-\n" +
 	"\x15SetAgeIdentityRequest\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\"y\n" +
@@ -1821,7 +3328,111 @@ const file_agent_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"E\n" +
 	"\x0fServiceResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xc9\x10\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x15\n" +
+	"\x13GetSSTStatusRequest\"\xe0\x01\n" +
+	"\x11SSTStatusResponse\x12\x1e\n" +
+	"\n" +
+	"configured\x18\x01 \x01(\bR\n" +
+	"configured\x12\x1f\n" +
+	"\vconfig_path\x18\x02 \x01(\tR\n" +
+	"configPath\x12!\n" +
+	"\fconfig_valid\x18\x03 \x01(\bR\vconfigValid\x12\x1a\n" +
+	"\bdeployed\x18\x04 \x01(\bR\bdeployed\x12\x14\n" +
+	"\x05stage\x18\x05 \x01(\tR\x05stage\x12\x1f\n" +
+	"\vlast_deploy\x18\x06 \x01(\tR\n" +
+	"lastDeploy\x12\x14\n" +
+	"\x05error\x18\a \x01(\tR\x05error\"\x15\n" +
+	"\x13GetSSTConfigRequest\"(\n" +
+	"\x10DeploySSTRequest\x12\x14\n" +
+	"\x05stage\x18\x01 \x01(\tR\x05stage\"\xe3\x01\n" +
+	"\x11DeploySSTResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06output\x18\x02 \x01(\tR\x06output\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12J\n" +
+	"\aoutputs\x18\x04 \x03(\v20.stackpanel.agent.DeploySSTResponse.OutputsEntryR\aoutputs\x1a:\n" +
+	"\fOutputsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"(\n" +
+	"\x10RemoveSSTRequest\x12\x14\n" +
+	"\x05stage\x18\x01 \x01(\tR\x05stage\"[\n" +
+	"\x11RemoveSSTResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06output\x18\x02 \x01(\tR\x06output\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\x16\n" +
+	"\x14GetSSTOutputsRequest\"\x9d\x01\n" +
+	"\x12SSTOutputsResponse\x12K\n" +
+	"\aoutputs\x18\x01 \x03(\v21.stackpanel.agent.SSTOutputsResponse.OutputsEntryR\aoutputs\x1a:\n" +
+	"\fOutputsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x18\n" +
+	"\x16GetSSTResourcesRequest\"C\n" +
+	"\vSSTResource\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x10\n" +
+	"\x03urn\x18\x02 \x01(\tR\x03urn\x12\x0e\n" +
+	"\x02id\x18\x03 \x01(\tR\x02id\"S\n" +
+	"\x14SSTResourcesResponse\x12;\n" +
+	"\tresources\x18\x01 \x03(\v2\x1d.stackpanel.agent.SSTResourceR\tresources\"B\n" +
+	"\x14SearchNixpkgsRequest\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"\xf2\x01\n" +
+	"\x0eNixpkgsPackage\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
+	"\tattr_path\x18\x02 \x01(\tR\battrPath\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1c\n" +
+	"\tinstalled\x18\x05 \x01(\bR\tinstalled\x12\x18\n" +
+	"\alicense\x18\x06 \x01(\tR\alicense\x12\x1a\n" +
+	"\bhomepage\x18\a \x01(\tR\bhomepage\x12\x1f\n" +
+	"\vnixpkgs_url\x18\b \x01(\tR\n" +
+	"nixpkgsUrl\"U\n" +
+	"\x15SearchNixpkgsResponse\x12<\n" +
+	"\bpackages\x18\x01 \x03(\v2 .stackpanel.agent.NixpkgsPackageR\bpackages\"\x1d\n" +
+	"\x1bGetInstalledPackagesRequest\"u\n" +
+	"\x10InstalledPackage\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\x1b\n" +
+	"\tattr_path\x18\x03 \x01(\tR\battrPath\x12\x16\n" +
+	"\x06source\x18\x04 \x01(\tR\x06source\"q\n" +
+	"\x19InstalledPackagesResponse\x12>\n" +
+	"\bpackages\x18\x01 \x03(\v2\".stackpanel.agent.InstalledPackageR\bpackages\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\"\x15\n" +
+	"\x13GetProcessesRequest\"\xe2\x01\n" +
+	"\vProcessInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x10\n" +
+	"\x03pid\x18\x04 \x01(\x05R\x03pid\x12\x1b\n" +
+	"\texit_code\x18\x05 \x01(\x05R\bexitCode\x12\x1d\n" +
+	"\n" +
+	"is_running\x18\x06 \x01(\bR\tisRunning\x12\x1a\n" +
+	"\brestarts\x18\a \x01(\x05R\brestarts\x12\x1f\n" +
+	"\vsystem_time\x18\b \x01(\tR\n" +
+	"systemTime\"\xa1\x01\n" +
+	"\x14GetProcessesResponse\x12\x1c\n" +
+	"\tavailable\x18\x01 \x01(\bR\tavailable\x12\x18\n" +
+	"\arunning\x18\x02 \x01(\bR\arunning\x12;\n" +
+	"\tprocesses\x18\x03 \x03(\v2\x1d.stackpanel.agent.ProcessInfoR\tprocesses\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"\x18\n" +
+	"\x16GetHealthchecksRequest\"\x87\x01\n" +
+	"\x0fHealthcheckInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x18\n" +
+	"\ahealthy\x18\x03 \x01(\bR\ahealthy\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12\x18\n" +
+	"\adetails\x18\x05 \x01(\tR\adetails\"r\n" +
+	"\x14HealthchecksResponse\x12\x1f\n" +
+	"\vall_healthy\x18\x01 \x01(\bR\n" +
+	"allHealthy\x129\n" +
+	"\x06checks\x18\x02 \x03(\v2!.stackpanel.agent.HealthcheckInfoR\x06checks\"/\n" +
+	"\x13GetNixConfigRequest\x12\x18\n" +
+	"\arefresh\x18\x01 \x01(\bR\arefresh\"\x19\n" +
+	"\x17RefreshNixConfigRequest\"\x87\x01\n" +
+	"\x11NixConfigResponse\x12\x1f\n" +
+	"\vconfig_json\x18\x01 \x01(\tR\n" +
+	"configJson\x12!\n" +
+	"\flast_updated\x18\x02 \x01(\tR\vlastUpdated\x12\x16\n" +
+	"\x06cached\x18\x03 \x01(\bR\x06cached\x12\x16\n" +
+	"\x06source\x18\x04 \x01(\tR\x06source2\xba\x19\n" +
 	"\fAgentService\x12W\n" +
 	"\n" +
 	"GetProject\x12#.stackpanel.agent.GetProjectRequest\x1a$.stackpanel.agent.GetProjectResponse\x12F\n" +
@@ -1852,7 +3463,19 @@ const file_agent_proto_rawDesc = "" +
 	"\x11GetServicesStatus\x12*.stackpanel.agent.GetServicesStatusRequest\x1a+.stackpanel.agent.GetServicesStatusResponse\x12S\n" +
 	"\fStartService\x12 .stackpanel.agent.ServiceRequest\x1a!.stackpanel.agent.ServiceResponse\x12R\n" +
 	"\vStopService\x12 .stackpanel.agent.ServiceRequest\x1a!.stackpanel.agent.ServiceResponse\x12U\n" +
-	"\x0eRestartService\x12 .stackpanel.agent.ServiceRequest\x1a!.stackpanel.agent.ServiceResponseB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x0eRestartService\x12 .stackpanel.agent.ServiceRequest\x1a!.stackpanel.agent.ServiceResponse\x12Z\n" +
+	"\fGetSSTStatus\x12%.stackpanel.agent.GetSSTStatusRequest\x1a#.stackpanel.agent.SSTStatusResponse\x12I\n" +
+	"\fGetSSTConfig\x12%.stackpanel.agent.GetSSTConfigRequest\x1a\x12.stackpanel.db.Sst\x12T\n" +
+	"\tDeploySST\x12\".stackpanel.agent.DeploySSTRequest\x1a#.stackpanel.agent.DeploySSTResponse\x12T\n" +
+	"\tRemoveSST\x12\".stackpanel.agent.RemoveSSTRequest\x1a#.stackpanel.agent.RemoveSSTResponse\x12]\n" +
+	"\rGetSSTOutputs\x12&.stackpanel.agent.GetSSTOutputsRequest\x1a$.stackpanel.agent.SSTOutputsResponse\x12c\n" +
+	"\x0fGetSSTResources\x12(.stackpanel.agent.GetSSTResourcesRequest\x1a&.stackpanel.agent.SSTResourcesResponse\x12`\n" +
+	"\rSearchNixpkgs\x12&.stackpanel.agent.SearchNixpkgsRequest\x1a'.stackpanel.agent.SearchNixpkgsResponse\x12r\n" +
+	"\x14GetInstalledPackages\x12-.stackpanel.agent.GetInstalledPackagesRequest\x1a+.stackpanel.agent.InstalledPackagesResponse\x12]\n" +
+	"\fGetProcesses\x12%.stackpanel.agent.GetProcessesRequest\x1a&.stackpanel.agent.GetProcessesResponse\x12c\n" +
+	"\x0fGetHealthchecks\x12(.stackpanel.agent.GetHealthchecksRequest\x1a&.stackpanel.agent.HealthchecksResponse\x12Z\n" +
+	"\fGetNixConfig\x12%.stackpanel.agent.GetNixConfigRequest\x1a#.stackpanel.agent.NixConfigResponse\x12b\n" +
+	"\x10RefreshNixConfig\x12).stackpanel.agent.RefreshNixConfigRequest\x1a#.stackpanel.agent.NixConfigResponseB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_agent_proto_rawDescOnce sync.Once
@@ -1866,115 +3489,177 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 65)
 var file_agent_proto_goTypes = []any{
-	(*GetProjectRequest)(nil),         // 0: stackpanel.agent.GetProjectRequest
-	(*GetProjectResponse)(nil),        // 1: stackpanel.agent.GetProjectResponse
-	(*Project)(nil),                   // 2: stackpanel.agent.Project
-	(*Directories)(nil),               // 3: stackpanel.agent.Directories
-	(*GetConfigRequest)(nil),          // 4: stackpanel.agent.GetConfigRequest
-	(*GetSecretsRequest)(nil),         // 5: stackpanel.agent.GetSecretsRequest
-	(*GetUsersRequest)(nil),           // 6: stackpanel.agent.GetUsersRequest
-	(*GetAwsRequest)(nil),             // 7: stackpanel.agent.GetAwsRequest
-	(*GetAppsRequest)(nil),            // 8: stackpanel.agent.GetAppsRequest
-	(*GetVariablesRequest)(nil),       // 9: stackpanel.agent.GetVariablesRequest
-	(*GetAgeIdentityRequest)(nil),     // 10: stackpanel.agent.GetAgeIdentityRequest
-	(*SetAgeIdentityRequest)(nil),     // 11: stackpanel.agent.SetAgeIdentityRequest
-	(*AgeIdentityResponse)(nil),       // 12: stackpanel.agent.AgeIdentityResponse
-	(*GetKMSConfigRequest)(nil),       // 13: stackpanel.agent.GetKMSConfigRequest
-	(*SetKMSConfigRequest)(nil),       // 14: stackpanel.agent.SetKMSConfigRequest
-	(*KMSConfigResponse)(nil),         // 15: stackpanel.agent.KMSConfigResponse
-	(*ReadFileRequest)(nil),           // 16: stackpanel.agent.ReadFileRequest
-	(*ReadFileResponse)(nil),          // 17: stackpanel.agent.ReadFileResponse
-	(*WriteFileRequest)(nil),          // 18: stackpanel.agent.WriteFileRequest
-	(*WriteFileResponse)(nil),         // 19: stackpanel.agent.WriteFileResponse
-	(*ListFilesRequest)(nil),          // 20: stackpanel.agent.ListFilesRequest
-	(*ListFilesResponse)(nil),         // 21: stackpanel.agent.ListFilesResponse
-	(*FileInfo)(nil),                  // 22: stackpanel.agent.FileInfo
-	(*ExecRequest)(nil),               // 23: stackpanel.agent.ExecRequest
-	(*ExecResponse)(nil),              // 24: stackpanel.agent.ExecResponse
-	(*NixGenerateRequest)(nil),        // 25: stackpanel.agent.NixGenerateRequest
-	(*NixGenerateResponse)(nil),       // 26: stackpanel.agent.NixGenerateResponse
-	(*NixEvalRequest)(nil),            // 27: stackpanel.agent.NixEvalRequest
-	(*NixEvalResponse)(nil),           // 28: stackpanel.agent.NixEvalResponse
-	(*GetServicesStatusRequest)(nil),  // 29: stackpanel.agent.GetServicesStatusRequest
-	(*GetServicesStatusResponse)(nil), // 30: stackpanel.agent.GetServicesStatusResponse
-	(*ServiceStatus)(nil),             // 31: stackpanel.agent.ServiceStatus
-	(*ServiceRequest)(nil),            // 32: stackpanel.agent.ServiceRequest
-	(*ServiceResponse)(nil),           // 33: stackpanel.agent.ServiceResponse
-	nil,                               // 34: stackpanel.agent.ExecRequest.EnvEntry
-	(*Config)(nil),                    // 35: stackpanel.db.Config
-	(*Secrets)(nil),                   // 36: stackpanel.db.Secrets
-	(*Users)(nil),                     // 37: stackpanel.db.Users
-	(*Aws)(nil),                       // 38: stackpanel.db.Aws
-	(*Apps)(nil),                      // 39: stackpanel.db.Apps
-	(*Variables)(nil),                 // 40: stackpanel.db.Variables
+	(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
+	(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
+	(*Project)(nil),                     // 2: stackpanel.agent.Project
+	(*Directories)(nil),                 // 3: stackpanel.agent.Directories
+	(*GetConfigRequest)(nil),            // 4: stackpanel.agent.GetConfigRequest
+	(*GetSecretsRequest)(nil),           // 5: stackpanel.agent.GetSecretsRequest
+	(*GetUsersRequest)(nil),             // 6: stackpanel.agent.GetUsersRequest
+	(*GetAwsRequest)(nil),               // 7: stackpanel.agent.GetAwsRequest
+	(*GetAppsRequest)(nil),              // 8: stackpanel.agent.GetAppsRequest
+	(*GetVariablesRequest)(nil),         // 9: stackpanel.agent.GetVariablesRequest
+	(*GetSstRequest)(nil),               // 10: stackpanel.agent.GetSstRequest
+	(*GetAgeIdentityRequest)(nil),       // 11: stackpanel.agent.GetAgeIdentityRequest
+	(*SetAgeIdentityRequest)(nil),       // 12: stackpanel.agent.SetAgeIdentityRequest
+	(*AgeIdentityResponse)(nil),         // 13: stackpanel.agent.AgeIdentityResponse
+	(*GetKMSConfigRequest)(nil),         // 14: stackpanel.agent.GetKMSConfigRequest
+	(*SetKMSConfigRequest)(nil),         // 15: stackpanel.agent.SetKMSConfigRequest
+	(*KMSConfigResponse)(nil),           // 16: stackpanel.agent.KMSConfigResponse
+	(*ReadFileRequest)(nil),             // 17: stackpanel.agent.ReadFileRequest
+	(*ReadFileResponse)(nil),            // 18: stackpanel.agent.ReadFileResponse
+	(*WriteFileRequest)(nil),            // 19: stackpanel.agent.WriteFileRequest
+	(*WriteFileResponse)(nil),           // 20: stackpanel.agent.WriteFileResponse
+	(*ListFilesRequest)(nil),            // 21: stackpanel.agent.ListFilesRequest
+	(*ListFilesResponse)(nil),           // 22: stackpanel.agent.ListFilesResponse
+	(*FileInfo)(nil),                    // 23: stackpanel.agent.FileInfo
+	(*ExecRequest)(nil),                 // 24: stackpanel.agent.ExecRequest
+	(*ExecResponse)(nil),                // 25: stackpanel.agent.ExecResponse
+	(*NixGenerateRequest)(nil),          // 26: stackpanel.agent.NixGenerateRequest
+	(*NixGenerateResponse)(nil),         // 27: stackpanel.agent.NixGenerateResponse
+	(*NixEvalRequest)(nil),              // 28: stackpanel.agent.NixEvalRequest
+	(*NixEvalResponse)(nil),             // 29: stackpanel.agent.NixEvalResponse
+	(*GetServicesStatusRequest)(nil),    // 30: stackpanel.agent.GetServicesStatusRequest
+	(*GetServicesStatusResponse)(nil),   // 31: stackpanel.agent.GetServicesStatusResponse
+	(*ServiceStatus)(nil),               // 32: stackpanel.agent.ServiceStatus
+	(*ServiceRequest)(nil),              // 33: stackpanel.agent.ServiceRequest
+	(*ServiceResponse)(nil),             // 34: stackpanel.agent.ServiceResponse
+	(*GetSSTStatusRequest)(nil),         // 35: stackpanel.agent.GetSSTStatusRequest
+	(*SSTStatusResponse)(nil),           // 36: stackpanel.agent.SSTStatusResponse
+	(*GetSSTConfigRequest)(nil),         // 37: stackpanel.agent.GetSSTConfigRequest
+	(*DeploySSTRequest)(nil),            // 38: stackpanel.agent.DeploySSTRequest
+	(*DeploySSTResponse)(nil),           // 39: stackpanel.agent.DeploySSTResponse
+	(*RemoveSSTRequest)(nil),            // 40: stackpanel.agent.RemoveSSTRequest
+	(*RemoveSSTResponse)(nil),           // 41: stackpanel.agent.RemoveSSTResponse
+	(*GetSSTOutputsRequest)(nil),        // 42: stackpanel.agent.GetSSTOutputsRequest
+	(*SSTOutputsResponse)(nil),          // 43: stackpanel.agent.SSTOutputsResponse
+	(*GetSSTResourcesRequest)(nil),      // 44: stackpanel.agent.GetSSTResourcesRequest
+	(*SSTResource)(nil),                 // 45: stackpanel.agent.SSTResource
+	(*SSTResourcesResponse)(nil),        // 46: stackpanel.agent.SSTResourcesResponse
+	(*SearchNixpkgsRequest)(nil),        // 47: stackpanel.agent.SearchNixpkgsRequest
+	(*NixpkgsPackage)(nil),              // 48: stackpanel.agent.NixpkgsPackage
+	(*SearchNixpkgsResponse)(nil),       // 49: stackpanel.agent.SearchNixpkgsResponse
+	(*GetInstalledPackagesRequest)(nil), // 50: stackpanel.agent.GetInstalledPackagesRequest
+	(*InstalledPackage)(nil),            // 51: stackpanel.agent.InstalledPackage
+	(*InstalledPackagesResponse)(nil),   // 52: stackpanel.agent.InstalledPackagesResponse
+	(*GetProcessesRequest)(nil),         // 53: stackpanel.agent.GetProcessesRequest
+	(*ProcessInfo)(nil),                 // 54: stackpanel.agent.ProcessInfo
+	(*GetProcessesResponse)(nil),        // 55: stackpanel.agent.GetProcessesResponse
+	(*GetHealthchecksRequest)(nil),      // 56: stackpanel.agent.GetHealthchecksRequest
+	(*HealthcheckInfo)(nil),             // 57: stackpanel.agent.HealthcheckInfo
+	(*HealthchecksResponse)(nil),        // 58: stackpanel.agent.HealthchecksResponse
+	(*GetNixConfigRequest)(nil),         // 59: stackpanel.agent.GetNixConfigRequest
+	(*RefreshNixConfigRequest)(nil),     // 60: stackpanel.agent.RefreshNixConfigRequest
+	(*NixConfigResponse)(nil),           // 61: stackpanel.agent.NixConfigResponse
+	nil,                                 // 62: stackpanel.agent.ExecRequest.EnvEntry
+	nil,                                 // 63: stackpanel.agent.DeploySSTResponse.OutputsEntry
+	nil,                                 // 64: stackpanel.agent.SSTOutputsResponse.OutputsEntry
+	(*Config)(nil),                      // 65: stackpanel.db.Config
+	(*Secrets)(nil),                     // 66: stackpanel.db.Secrets
+	(*Users)(nil),                       // 67: stackpanel.db.Users
+	(*Aws)(nil),                         // 68: stackpanel.db.Aws
+	(*Apps)(nil),                        // 69: stackpanel.db.Apps
+	(*Variables)(nil),                   // 70: stackpanel.db.Variables
+	(*Sst)(nil),                         // 71: stackpanel.db.Sst
 }
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
 	3,  // 1: stackpanel.agent.Project.dirs:type_name -> stackpanel.agent.Directories
-	22, // 2: stackpanel.agent.ListFilesResponse.files:type_name -> stackpanel.agent.FileInfo
-	34, // 3: stackpanel.agent.ExecRequest.env:type_name -> stackpanel.agent.ExecRequest.EnvEntry
-	31, // 4: stackpanel.agent.GetServicesStatusResponse.services:type_name -> stackpanel.agent.ServiceStatus
-	0,  // 5: stackpanel.agent.AgentService.GetProject:input_type -> stackpanel.agent.GetProjectRequest
-	4,  // 6: stackpanel.agent.AgentService.GetConfig:input_type -> stackpanel.agent.GetConfigRequest
-	35, // 7: stackpanel.agent.AgentService.SetConfig:input_type -> stackpanel.db.Config
-	5,  // 8: stackpanel.agent.AgentService.GetSecrets:input_type -> stackpanel.agent.GetSecretsRequest
-	36, // 9: stackpanel.agent.AgentService.SetSecrets:input_type -> stackpanel.db.Secrets
-	6,  // 10: stackpanel.agent.AgentService.GetUsers:input_type -> stackpanel.agent.GetUsersRequest
-	37, // 11: stackpanel.agent.AgentService.SetUsers:input_type -> stackpanel.db.Users
-	7,  // 12: stackpanel.agent.AgentService.GetAws:input_type -> stackpanel.agent.GetAwsRequest
-	38, // 13: stackpanel.agent.AgentService.SetAws:input_type -> stackpanel.db.Aws
-	8,  // 14: stackpanel.agent.AgentService.GetApps:input_type -> stackpanel.agent.GetAppsRequest
-	39, // 15: stackpanel.agent.AgentService.SetApps:input_type -> stackpanel.db.Apps
-	9,  // 16: stackpanel.agent.AgentService.GetVariables:input_type -> stackpanel.agent.GetVariablesRequest
-	40, // 17: stackpanel.agent.AgentService.SetVariables:input_type -> stackpanel.db.Variables
-	10, // 18: stackpanel.agent.AgentService.GetAgeIdentity:input_type -> stackpanel.agent.GetAgeIdentityRequest
-	11, // 19: stackpanel.agent.AgentService.SetAgeIdentity:input_type -> stackpanel.agent.SetAgeIdentityRequest
-	13, // 20: stackpanel.agent.AgentService.GetKMSConfig:input_type -> stackpanel.agent.GetKMSConfigRequest
-	14, // 21: stackpanel.agent.AgentService.SetKMSConfig:input_type -> stackpanel.agent.SetKMSConfigRequest
-	16, // 22: stackpanel.agent.AgentService.ReadFile:input_type -> stackpanel.agent.ReadFileRequest
-	18, // 23: stackpanel.agent.AgentService.WriteFile:input_type -> stackpanel.agent.WriteFileRequest
-	20, // 24: stackpanel.agent.AgentService.ListFiles:input_type -> stackpanel.agent.ListFilesRequest
-	23, // 25: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
-	25, // 26: stackpanel.agent.AgentService.NixGenerate:input_type -> stackpanel.agent.NixGenerateRequest
-	27, // 27: stackpanel.agent.AgentService.NixEval:input_type -> stackpanel.agent.NixEvalRequest
-	29, // 28: stackpanel.agent.AgentService.GetServicesStatus:input_type -> stackpanel.agent.GetServicesStatusRequest
-	32, // 29: stackpanel.agent.AgentService.StartService:input_type -> stackpanel.agent.ServiceRequest
-	32, // 30: stackpanel.agent.AgentService.StopService:input_type -> stackpanel.agent.ServiceRequest
-	32, // 31: stackpanel.agent.AgentService.RestartService:input_type -> stackpanel.agent.ServiceRequest
-	1,  // 32: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
-	35, // 33: stackpanel.agent.AgentService.GetConfig:output_type -> stackpanel.db.Config
-	35, // 34: stackpanel.agent.AgentService.SetConfig:output_type -> stackpanel.db.Config
-	36, // 35: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
-	36, // 36: stackpanel.agent.AgentService.SetSecrets:output_type -> stackpanel.db.Secrets
-	37, // 37: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
-	37, // 38: stackpanel.agent.AgentService.SetUsers:output_type -> stackpanel.db.Users
-	38, // 39: stackpanel.agent.AgentService.GetAws:output_type -> stackpanel.db.Aws
-	38, // 40: stackpanel.agent.AgentService.SetAws:output_type -> stackpanel.db.Aws
-	39, // 41: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
-	39, // 42: stackpanel.agent.AgentService.SetApps:output_type -> stackpanel.db.Apps
-	40, // 43: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
-	40, // 44: stackpanel.agent.AgentService.SetVariables:output_type -> stackpanel.db.Variables
-	12, // 45: stackpanel.agent.AgentService.GetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
-	12, // 46: stackpanel.agent.AgentService.SetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
-	15, // 47: stackpanel.agent.AgentService.GetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
-	15, // 48: stackpanel.agent.AgentService.SetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
-	17, // 49: stackpanel.agent.AgentService.ReadFile:output_type -> stackpanel.agent.ReadFileResponse
-	19, // 50: stackpanel.agent.AgentService.WriteFile:output_type -> stackpanel.agent.WriteFileResponse
-	21, // 51: stackpanel.agent.AgentService.ListFiles:output_type -> stackpanel.agent.ListFilesResponse
-	24, // 52: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
-	26, // 53: stackpanel.agent.AgentService.NixGenerate:output_type -> stackpanel.agent.NixGenerateResponse
-	28, // 54: stackpanel.agent.AgentService.NixEval:output_type -> stackpanel.agent.NixEvalResponse
-	30, // 55: stackpanel.agent.AgentService.GetServicesStatus:output_type -> stackpanel.agent.GetServicesStatusResponse
-	33, // 56: stackpanel.agent.AgentService.StartService:output_type -> stackpanel.agent.ServiceResponse
-	33, // 57: stackpanel.agent.AgentService.StopService:output_type -> stackpanel.agent.ServiceResponse
-	33, // 58: stackpanel.agent.AgentService.RestartService:output_type -> stackpanel.agent.ServiceResponse
-	32, // [32:59] is the sub-list for method output_type
-	5,  // [5:32] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	23, // 2: stackpanel.agent.ListFilesResponse.files:type_name -> stackpanel.agent.FileInfo
+	62, // 3: stackpanel.agent.ExecRequest.env:type_name -> stackpanel.agent.ExecRequest.EnvEntry
+	32, // 4: stackpanel.agent.GetServicesStatusResponse.services:type_name -> stackpanel.agent.ServiceStatus
+	63, // 5: stackpanel.agent.DeploySSTResponse.outputs:type_name -> stackpanel.agent.DeploySSTResponse.OutputsEntry
+	64, // 6: stackpanel.agent.SSTOutputsResponse.outputs:type_name -> stackpanel.agent.SSTOutputsResponse.OutputsEntry
+	45, // 7: stackpanel.agent.SSTResourcesResponse.resources:type_name -> stackpanel.agent.SSTResource
+	48, // 8: stackpanel.agent.SearchNixpkgsResponse.packages:type_name -> stackpanel.agent.NixpkgsPackage
+	51, // 9: stackpanel.agent.InstalledPackagesResponse.packages:type_name -> stackpanel.agent.InstalledPackage
+	54, // 10: stackpanel.agent.GetProcessesResponse.processes:type_name -> stackpanel.agent.ProcessInfo
+	57, // 11: stackpanel.agent.HealthchecksResponse.checks:type_name -> stackpanel.agent.HealthcheckInfo
+	0,  // 12: stackpanel.agent.AgentService.GetProject:input_type -> stackpanel.agent.GetProjectRequest
+	4,  // 13: stackpanel.agent.AgentService.GetConfig:input_type -> stackpanel.agent.GetConfigRequest
+	65, // 14: stackpanel.agent.AgentService.SetConfig:input_type -> stackpanel.db.Config
+	5,  // 15: stackpanel.agent.AgentService.GetSecrets:input_type -> stackpanel.agent.GetSecretsRequest
+	66, // 16: stackpanel.agent.AgentService.SetSecrets:input_type -> stackpanel.db.Secrets
+	6,  // 17: stackpanel.agent.AgentService.GetUsers:input_type -> stackpanel.agent.GetUsersRequest
+	67, // 18: stackpanel.agent.AgentService.SetUsers:input_type -> stackpanel.db.Users
+	7,  // 19: stackpanel.agent.AgentService.GetAws:input_type -> stackpanel.agent.GetAwsRequest
+	68, // 20: stackpanel.agent.AgentService.SetAws:input_type -> stackpanel.db.Aws
+	8,  // 21: stackpanel.agent.AgentService.GetApps:input_type -> stackpanel.agent.GetAppsRequest
+	69, // 22: stackpanel.agent.AgentService.SetApps:input_type -> stackpanel.db.Apps
+	9,  // 23: stackpanel.agent.AgentService.GetVariables:input_type -> stackpanel.agent.GetVariablesRequest
+	70, // 24: stackpanel.agent.AgentService.SetVariables:input_type -> stackpanel.db.Variables
+	11, // 25: stackpanel.agent.AgentService.GetAgeIdentity:input_type -> stackpanel.agent.GetAgeIdentityRequest
+	12, // 26: stackpanel.agent.AgentService.SetAgeIdentity:input_type -> stackpanel.agent.SetAgeIdentityRequest
+	14, // 27: stackpanel.agent.AgentService.GetKMSConfig:input_type -> stackpanel.agent.GetKMSConfigRequest
+	15, // 28: stackpanel.agent.AgentService.SetKMSConfig:input_type -> stackpanel.agent.SetKMSConfigRequest
+	17, // 29: stackpanel.agent.AgentService.ReadFile:input_type -> stackpanel.agent.ReadFileRequest
+	19, // 30: stackpanel.agent.AgentService.WriteFile:input_type -> stackpanel.agent.WriteFileRequest
+	21, // 31: stackpanel.agent.AgentService.ListFiles:input_type -> stackpanel.agent.ListFilesRequest
+	24, // 32: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
+	26, // 33: stackpanel.agent.AgentService.NixGenerate:input_type -> stackpanel.agent.NixGenerateRequest
+	28, // 34: stackpanel.agent.AgentService.NixEval:input_type -> stackpanel.agent.NixEvalRequest
+	30, // 35: stackpanel.agent.AgentService.GetServicesStatus:input_type -> stackpanel.agent.GetServicesStatusRequest
+	33, // 36: stackpanel.agent.AgentService.StartService:input_type -> stackpanel.agent.ServiceRequest
+	33, // 37: stackpanel.agent.AgentService.StopService:input_type -> stackpanel.agent.ServiceRequest
+	33, // 38: stackpanel.agent.AgentService.RestartService:input_type -> stackpanel.agent.ServiceRequest
+	35, // 39: stackpanel.agent.AgentService.GetSSTStatus:input_type -> stackpanel.agent.GetSSTStatusRequest
+	37, // 40: stackpanel.agent.AgentService.GetSSTConfig:input_type -> stackpanel.agent.GetSSTConfigRequest
+	38, // 41: stackpanel.agent.AgentService.DeploySST:input_type -> stackpanel.agent.DeploySSTRequest
+	40, // 42: stackpanel.agent.AgentService.RemoveSST:input_type -> stackpanel.agent.RemoveSSTRequest
+	42, // 43: stackpanel.agent.AgentService.GetSSTOutputs:input_type -> stackpanel.agent.GetSSTOutputsRequest
+	44, // 44: stackpanel.agent.AgentService.GetSSTResources:input_type -> stackpanel.agent.GetSSTResourcesRequest
+	47, // 45: stackpanel.agent.AgentService.SearchNixpkgs:input_type -> stackpanel.agent.SearchNixpkgsRequest
+	50, // 46: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
+	53, // 47: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
+	56, // 48: stackpanel.agent.AgentService.GetHealthchecks:input_type -> stackpanel.agent.GetHealthchecksRequest
+	59, // 49: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
+	60, // 50: stackpanel.agent.AgentService.RefreshNixConfig:input_type -> stackpanel.agent.RefreshNixConfigRequest
+	1,  // 51: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
+	65, // 52: stackpanel.agent.AgentService.GetConfig:output_type -> stackpanel.db.Config
+	65, // 53: stackpanel.agent.AgentService.SetConfig:output_type -> stackpanel.db.Config
+	66, // 54: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
+	66, // 55: stackpanel.agent.AgentService.SetSecrets:output_type -> stackpanel.db.Secrets
+	67, // 56: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
+	67, // 57: stackpanel.agent.AgentService.SetUsers:output_type -> stackpanel.db.Users
+	68, // 58: stackpanel.agent.AgentService.GetAws:output_type -> stackpanel.db.Aws
+	68, // 59: stackpanel.agent.AgentService.SetAws:output_type -> stackpanel.db.Aws
+	69, // 60: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
+	69, // 61: stackpanel.agent.AgentService.SetApps:output_type -> stackpanel.db.Apps
+	70, // 62: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
+	70, // 63: stackpanel.agent.AgentService.SetVariables:output_type -> stackpanel.db.Variables
+	13, // 64: stackpanel.agent.AgentService.GetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
+	13, // 65: stackpanel.agent.AgentService.SetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
+	16, // 66: stackpanel.agent.AgentService.GetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
+	16, // 67: stackpanel.agent.AgentService.SetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
+	18, // 68: stackpanel.agent.AgentService.ReadFile:output_type -> stackpanel.agent.ReadFileResponse
+	20, // 69: stackpanel.agent.AgentService.WriteFile:output_type -> stackpanel.agent.WriteFileResponse
+	22, // 70: stackpanel.agent.AgentService.ListFiles:output_type -> stackpanel.agent.ListFilesResponse
+	25, // 71: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
+	27, // 72: stackpanel.agent.AgentService.NixGenerate:output_type -> stackpanel.agent.NixGenerateResponse
+	29, // 73: stackpanel.agent.AgentService.NixEval:output_type -> stackpanel.agent.NixEvalResponse
+	31, // 74: stackpanel.agent.AgentService.GetServicesStatus:output_type -> stackpanel.agent.GetServicesStatusResponse
+	34, // 75: stackpanel.agent.AgentService.StartService:output_type -> stackpanel.agent.ServiceResponse
+	34, // 76: stackpanel.agent.AgentService.StopService:output_type -> stackpanel.agent.ServiceResponse
+	34, // 77: stackpanel.agent.AgentService.RestartService:output_type -> stackpanel.agent.ServiceResponse
+	36, // 78: stackpanel.agent.AgentService.GetSSTStatus:output_type -> stackpanel.agent.SSTStatusResponse
+	71, // 79: stackpanel.agent.AgentService.GetSSTConfig:output_type -> stackpanel.db.Sst
+	39, // 80: stackpanel.agent.AgentService.DeploySST:output_type -> stackpanel.agent.DeploySSTResponse
+	41, // 81: stackpanel.agent.AgentService.RemoveSST:output_type -> stackpanel.agent.RemoveSSTResponse
+	43, // 82: stackpanel.agent.AgentService.GetSSTOutputs:output_type -> stackpanel.agent.SSTOutputsResponse
+	46, // 83: stackpanel.agent.AgentService.GetSSTResources:output_type -> stackpanel.agent.SSTResourcesResponse
+	49, // 84: stackpanel.agent.AgentService.SearchNixpkgs:output_type -> stackpanel.agent.SearchNixpkgsResponse
+	52, // 85: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
+	55, // 86: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
+	58, // 87: stackpanel.agent.AgentService.GetHealthchecks:output_type -> stackpanel.agent.HealthchecksResponse
+	61, // 88: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	61, // 89: stackpanel.agent.AgentService.RefreshNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	51, // [51:90] is the sub-list for method output_type
+	12, // [12:51] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -1990,13 +3675,14 @@ func file_agent_proto_init() {
 	file_services_proto_init()
 	file_apps_proto_init()
 	file_variables_proto_init()
+	file_sst_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   35,
+			NumMessages:   65,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

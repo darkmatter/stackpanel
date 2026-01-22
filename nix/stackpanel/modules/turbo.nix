@@ -39,7 +39,8 @@
 let
   cfg = config.stackpanel;
   tasksCfg = cfg.tasks;
-  appsCfg = cfg.apps;
+  # NOTE: Do NOT define appsCfg here - it causes infinite recursion when
+  # combined with appModules. Access cfg.apps only inside mkIf blocks.
 
   # ---------------------------------------------------------------------------
   # Per-app task options module (added via appModules)
@@ -196,11 +197,9 @@ let
   ) taskScripts;
 
   # ---------------------------------------------------------------------------
-  # Generate per-app turbo.json and task scripts
+  # Helper functions for per-app turbo.json and task scripts
+  # NOTE: These are functions, not values - they're called lazily inside mkIf
   # ---------------------------------------------------------------------------
-  appsWithTasks = lib.filterAttrs (
-    _: appCfg: (appCfg.tasks or { }) != { } && (appCfg.turbo.enable or true)
-  ) appsCfg;
 
   # Per-app task scripts
   mkAppTaskScripts =
@@ -211,8 +210,6 @@ let
     lib.filterAttrs (_: v: v != null) (
       lib.mapAttrs (mkAppTaskScript appName appCfg) appTasks
     );
-
-  appTaskScripts = lib.mapAttrs mkAppTaskScripts appsWithTasks;
 
   # Per-app turbo.json content
   mkAppTurboConfig =
@@ -236,11 +233,9 @@ let
       tasks = appTaskConfigs;
     };
 
-  appTurboConfigs = lib.mapAttrs mkAppTurboConfig appsWithTasks;
-
-  # Per-app file entries
+  # Per-app file entries generator
   mkAppFileEntries =
-    appName: appCfg:
+    appsWithTasks: appTaskScripts: appTurboConfigs: appName: appCfg:
     let
       appPath = appCfg.path or "apps/${appName}";
       scripts = appTaskScripts.${appName} or { };
@@ -269,10 +264,6 @@ let
       ) scripts;
     in
     turboEntry // symlinkEntries;
-
-  appFileEntries = lib.foldl' (
-    acc: appName: acc // (mkAppFileEntries appName appsWithTasks.${appName})
-  ) { } (lib.attrNames appsWithTasks);
 
   # ---------------------------------------------------------------------------
   # Generate package.json script entries
@@ -360,7 +351,7 @@ in
         }
       ) tasksCfg;
 
-      # Generate files via stackpanel.files system
+      # Generate files via stackpanel.files system (workspace-level only)
       stackpanel.files.entries = lib.mkMerge [
         # Root turbo.json
         {
@@ -374,9 +365,6 @@ in
 
         # .tasks/bin/ symlinks for workspace-level tasks
         taskSymlinkEntries
-
-        # Per-app turbo.json and .tasks/bin/ symlinks
-        appFileEntries
       ];
 
       # Add turbo to devshell packages
@@ -390,5 +378,27 @@ in
         }
       ];
     })
+
+    # Per-app turbo files - computed lazily to avoid recursion with appModules
+    (
+      let
+        # Access cfg.apps here inside the config block, not at module top-level
+        appsWithTasks = lib.filterAttrs (
+          _: appCfg: (appCfg.tasks or { }) != { } && (appCfg.turbo.enable or true)
+        ) cfg.apps;
+
+        hasAppsWithTasks = appsWithTasks != { };
+
+        # Compute app-specific values only when needed
+        appTaskScripts = lib.mapAttrs mkAppTaskScripts appsWithTasks;
+        appTurboConfigs = lib.mapAttrs mkAppTurboConfig appsWithTasks;
+        appFileEntries = lib.foldl' (
+          acc: appName: acc // (mkAppFileEntries appsWithTasks appTaskScripts appTurboConfigs appName appsWithTasks.${appName})
+        ) { } (lib.attrNames appsWithTasks);
+      in
+      lib.mkIf (cfg.enable && hasAppsWithTasks) {
+        stackpanel.files.entries = appFileEntries;
+      }
+    )
   ];
 }

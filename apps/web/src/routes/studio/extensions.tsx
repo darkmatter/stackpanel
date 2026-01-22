@@ -40,7 +40,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { useNixConfig } from "@/lib/use-nix-config";
+import { useNixConfig } from "@/lib/use-agent";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/studio/extensions")({

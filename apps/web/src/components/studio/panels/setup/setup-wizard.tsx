@@ -23,7 +23,7 @@ import {
 	type Project,
 } from "@/lib/agent";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
-import { useNixConfig, useNixData } from "@/lib/use-nix-config";
+import { useNixConfig, useNixData } from "@/lib/use-agent";
 import { HelpButton } from "../shared/help-button";
 
 import { SetupProvider } from "./setup-context";

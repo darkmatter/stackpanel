@@ -11,7 +11,7 @@ import {
 	type Extension,
 	renderExtensionPanels,
 } from "@/lib/extension-panels";
-import { useNixConfig } from "@/lib/use-nix-config";
+import { useNixConfig } from "@/lib/use-agent";
 
 export function ExtensionsPanel() {
 	const { data: config, isLoading, isError, error, refetch } = useNixConfig();

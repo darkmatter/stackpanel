@@ -21,6 +21,9 @@
 #
 # This module is adapter-agnostic; the actual shell creation happens in
 # the devenv or flake adapter modules.
+#
+# NOTE: This module uses db.extend.none because devshell options are pure Nix
+# (no proto schema). The mkOpt pattern still applies for consistency.
 # ==============================================================================
 {
   lib,
@@ -29,6 +32,7 @@
 }:
 let
   types = lib.types;
+  db = import ../../db { inherit lib; };
 in
 {
   # ----------------------------------------------------------------------------
@@ -41,9 +45,9 @@ in
   };
 
   # ----------------------------------------------------------------------------
-  # Devshell
+  # Devshell - pure Nix options (no proto schema)
   # ----------------------------------------------------------------------------
-  options.stackpanel.devshell = {
+  options.stackpanel.devshell = db.mkOpt db.extend.none {
     packages = lib.mkOption {
       type = types.listOf types.package;
       default = [ ];
@@ -85,6 +89,126 @@ in
       ];
     };
 
+    # Clean environment mode - start with a minimal environment
+    clean.enable = lib.mkEnableOption "clean environment mode" // {
+      default = false;
+    };
+
+    clean.keep = lib.mkOption {
+      type = types.listOf types.str;
+      default = [
+        # Identity & shell
+        "HOME"
+        "USER"
+        "LOGNAME"
+        "SHELL"
+        "TMPDIR"
+        # Terminal functionality
+        "TERM"
+        "COLORTERM"
+        "TERM_PROGRAM"
+        "TERM_PROGRAM_VERSION"
+        # Locale
+        "LANG"
+        "LC_ALL"
+        "LC_CTYPE"
+        # Authentication
+        "SSH_AUTH_SOCK"
+        "SSH_SOCKET_DIR"
+        "GPG_AGENT_INFO"
+        "GNUPGHOME"
+        # Editor preferences
+        "EDITOR"
+        "VISUAL"
+        "PAGER"
+        # macOS specific
+        "__CF_USER_TEXT_ENCODING"
+        "COMMAND_MODE"
+      ];
+      description = ''
+        Environment variables to preserve when clean.enable is true.
+        These variables are passed through from the parent environment.
+
+        Use `nix develop --ignore-environment --impure` with `--keep` flags
+        for each variable in this list, or use the generated wrapper script.
+      '';
+      example = [
+        "HOME"
+        "USER"
+        "SSH_AUTH_SOCK"
+        "DISPLAY"
+      ];
+    };
+
+    clean.keepGui = lib.mkOption {
+      type = types.listOf types.str;
+      default = [
+        "DISPLAY"
+        "WAYLAND_DISPLAY"
+        "XDG_RUNTIME_DIR"
+        "DBUS_SESSION_BUS_ADDRESS"
+      ];
+      description = ''
+        Additional environment variables to keep for GUI applications.
+        These are NOT included by default. Add them to clean.keep if needed:
+
+          stackpanel.devshell.clean.keep = config.stackpanel.devshell.clean.keep
+            ++ config.stackpanel.devshell.clean.keepGui;
+      '';
+    };
+
+    clean.keepWarp = lib.mkOption {
+      type = types.listOf types.str;
+      default = [
+        "WARP_HONOR_PS1"
+        "WARP_IS_LOCAL_SHELL_SESSION"
+        "WARP_USE_SSH_WRAPPER"
+      ];
+      description = ''
+        Environment variables for Warp terminal features.
+        Add to clean.keep if using Warp terminal.
+      '';
+    };
+
+    clean.keepFzf = lib.mkOption {
+      type = types.listOf types.str;
+      default = [
+        "FZF_DEFAULT_COMMAND"
+        "FZF_DEFAULT_OPTS"
+        "FZF_CTRL_T_COMMAND"
+        "FZF_ALT_C_COMMAND"
+      ];
+      description = ''
+        Environment variables for fzf configuration.
+        Add to clean.keep if you want to preserve your fzf settings.
+      '';
+    };
+
+    clean.keepXdg = lib.mkOption {
+      type = types.listOf types.str;
+      default = [
+        "XDG_CACHE_HOME"
+        "XDG_CONFIG_HOME"
+        "XDG_DATA_HOME"
+        "XDG_STATE_HOME"
+      ];
+      description = ''
+        XDG base directory environment variables (often set by home-manager).
+        Add to clean.keep if you want to preserve these paths.
+      '';
+    };
+
+    clean.keepDirenv = lib.mkOption {
+      type = types.listOf types.str;
+      default = [
+        "DIRENV_DIR"
+        "DIRENV_FILE"
+      ];
+      description = ''
+        Direnv state variables. Only needed if using direnv inside the clean shell.
+      '';
+    };
+
     hooks.before = lib.mkOption {
       type = types.listOf types.str;
       default = [ ];
@@ -123,9 +247,9 @@ in
   };
 
   # ----------------------------------------------------------------------------
-  # Files
+  # Files - pure Nix options (no proto schema)
   # ----------------------------------------------------------------------------
-  options.stackpanel.files = {
+  options.stackpanel.files = db.mkOpt db.extend.none {
     enable = lib.mkEnableOption "file generation" // {
       default = true;
     };
@@ -134,16 +258,32 @@ in
       description = ''
         Files to generate into the repo. Keys are file paths relative to repo root.
 
+        For type="text" files, content can be provided via:
+          - text: Inline text content
+          - path: Path to file (content read at eval time)
+
+        These are mutually exclusive - use one or the other.
+
         Example:
-          stackpanel.files.entries.".github/workflows/ci.yml" = `\{
+          # Inline text
+          stackpanel.files.entries.".github/workflows/ci.yml" = {
             type = "text";
             text = "name: CI\n...";
-          \};
-          stackpanel.files.entries."scripts/deploy.sh" = \{
+          };
+
+          # Path to file
+          stackpanel.files.entries.".github/workflows/deploy.yml" = {
+            type = "text";
+            path = ./.stackpanel/src/files/.github/workflows/deploy.yml;
+            description = "Deployment workflow";
+          };
+
+          # Derivation
+          stackpanel.files.entries."scripts/deploy.sh" = {
             type = "derivation";
             drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
             mode = "0755";
-          \};
+          };
       '';
       type = types.attrsOf (
         types.submodule (
@@ -172,7 +312,21 @@ in
               text = lib.mkOption {
                 type = types.nullOr types.str;
                 default = null;
-                description = "Text content for the file (when type = 'text').";
+                description = ''
+                  Text content for the file (when type = 'text').
+                  Mutually exclusive with `path` - use one or the other.
+                '';
+              };
+
+              path = lib.mkOption {
+                type = types.nullOr types.path;
+                default = null;
+                description = ''
+                  Path to file content (when type = 'text').
+                  Content is read from this file at eval time.
+                  Mutually exclusive with `text` - use one or the other.
+                '';
+                example = lib.literalExpression "./.stackpanel/src/files/.github/workflows/ci.yml";
               };
 
               drv = lib.mkOption {

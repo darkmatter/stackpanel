@@ -31,7 +31,8 @@
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    # Read absolute path to repo without impure eval
+    # Note: stackpanel-root is read via impure builtins in exports.nix
+    # This empty flake input is kept for backwards compatibility with flake.lock
     stackpanel-root.url = "file+file:///dev/null";
     stackpanel-root.flake = false;
   };
@@ -118,8 +119,9 @@
             lib
             templates
             ;
-
-          stackpanelOptions = exports.mkStackpanelOptions nixpkgs;
+          # Note: stackpanelOptions is available via:
+          #   - inputs.stackpanel.lib.getOptions { inherit pkgs; }  (function)
+          #   - .#legacyPackages.${system}.stackpanelOptions  (per-project)
         };
       }
     );

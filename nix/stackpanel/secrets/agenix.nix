@@ -1,20 +1,14 @@
 # ==============================================================================
 # agenix.nix
 #
-# Integration module for agenix and agenix-rekey.
-# Generates the secrets.nix configuration that agenix uses to determine
-# which public keys can decrypt each secret.
+# Agenix compatibility layer (minimal).
 #
-# This module:
-# - Reads variables with type=SECRET from stackpanel.data.variables
-# - Generates publicKeys lists based on user access and system keys
-# - Supports per-environment access control
-# - Integrates with agenix-rekey for automatic rekeying
+# With the master key model, agenix integration is simpler:
+# - All secrets use master key public keys as recipients
+# - No per-user or per-environment key management needed
 #
-# Usage:
-#   imports = [ ./secrets/agenix.nix ];
-#   stackpanel.secrets.enable = true;
-#   stackpanel.secrets.system-keys = [ "age1..." ];  # CI, deploy servers
+# This module generates a secrets.nix file compatible with agenix CLI
+# if you want to use agenix tooling alongside stackpanel.
 # ==============================================================================
 {
   config,
@@ -24,302 +18,72 @@
 }:
 let
   cfg = config.stackpanel.secrets;
-  usersCfg = config.stackpanel.users or { };
 
-  # Get variables from data (if available)
-  variablesData = config.stackpanel.data.variables or { };
-
-  # Filter to only SECRET type variables
+  # Get all SECRET type variables
   secretVariables = lib.filterAttrs (
-    _: v: (v.type or "") == "SECRET" || (v.type or 0) == 1
-  ) variablesData;
+    _: v: v.type == "SECRET"
+  ) (config.stackpanel.variables or { });
 
-  # Get all AGE public keys from users
-  # Only include keys that start with "age1"
-  getUserKeys =
-    user: lib.filter (k: lib.hasPrefix "age1" k) (user.public-keys or user.publicKeys or [ ]);
-
-  # Filter users by environment access
-  getUsersForEnvironments =
-    envs:
-    if envs == [ ] || envs == null then
-      # No environment restriction - include all users
-      usersCfg
-    else
-      lib.filterAttrs (
-        _: user:
-        let
-          allowedEnvs = user.secrets-allowed-environments or user.secretsAllowedEnvironments or [ ];
-          # If user has no restrictions, they can access all environments
-          # Otherwise, check if any of their allowed envs match
-        in
-        allowedEnvs == [ ] || lib.any (e: lib.elem e envs) allowedEnvs
-      ) usersCfg;
-
-  # Collect all admin keys (users who can access all secrets)
-  adminKeys = lib.pipe usersCfg [
-    (lib.filterAttrs (_: u: u.admin or false))
-    (lib.mapAttrsToList (_: getUserKeys))
-    lib.flatten
-  ];
-
-  # System keys from config (CI, deploy servers, etc.)
-  systemKeys = cfg.system-keys or [ ];
-
-  # All keys that should be able to decrypt all secrets
-  globalKeys = lib.unique (adminKeys ++ systemKeys);
-
-  # Generate the publicKeys list for a specific secret
-  getPublicKeysForSecret =
-    id: secretCfg:
-    let
-      envs = secretCfg.environments or [ ];
-      eligibleUsers = getUsersForEnvironments envs;
-      userKeys = lib.pipe eligibleUsers [
-        (lib.mapAttrsToList (_: getUserKeys))
-        lib.flatten
-      ];
-    in
-    lib.unique (globalKeys ++ userKeys);
-
-  # Generate agenix secrets configuration
-  # Maps secret ID to { publicKeys = [...]; }
-  agenixSecretsConfig = lib.mapAttrs (
-    id: secretCfg:
-    let
-      publicKeys = getPublicKeysForSecret id secretCfg;
-      # Path relative to secrets.nix location
-      agePath = "vars/${lib.replaceStrings [ "/" ] [ "-" ] id}.age";
-    in
-    {
-      inherit publicKeys;
-      # Store the path for reference
-      path = agePath;
-    }
-  ) secretVariables;
-
-  # Generate the secrets.nix file content for agenix CLI
+  # Generate the secrets.nix content for agenix CLI compatibility
   secretsNixContent =
     let
-      # Collect all unique public keys
-      allKeys = lib.unique (
-        lib.flatten (lib.mapAttrsToList (_: cfg: cfg.publicKeys) agenixSecretsConfig)
-      );
-
-      # Format keys for Nix
-      formatKeys = keys: lib.concatMapStringsSep "\n    " (k: ''"${k}"'') keys;
+      # Get public keys for a secret based on its master-keys
+      getPublicKeysForSecret = secretCfg:
+        let
+          keyNames = secretCfg.master-keys or [ "local" ];
+          keys = map (name: cfg.master-keys.${name}.age-pub or "") keyNames;
+        in
+        lib.filter (k: k != "") keys;
 
       # Format each secret entry
-      formatSecret =
-        id: cfg:
+      formatSecret = id: secretCfg:
         let
-          safePath = cfg.path;
+          filename = builtins.replaceStrings [ "/" ] [ "-" ] (lib.removePrefix "/" id);
+          publicKeys = getPublicKeysForSecret secretCfg;
+          keysStr = lib.concatMapStringsSep "\n    " (k: ''"${k}"'') publicKeys;
         in
-        ''"${safePath}".publicKeys = allKeys;'';
+        ''
+          "${filename}.age".publicKeys = [
+            ${keysStr}
+          ];
+        '';
 
-      secretEntries = lib.concatStringsSep "\n" (lib.mapAttrsToList formatSecret agenixSecretsConfig);
+      secretEntries = lib.concatStringsSep "\n" (lib.mapAttrsToList formatSecret secretVariables);
     in
     ''
-      # Auto-generated by StackPanel - do not edit manually
-      # This file defines public keys for agenix secret encryption
-      # Regenerate with: stackpanel secrets regenerate
-      let
-        # All recipients who can decrypt secrets
-        allKeys = [
-          ${formatKeys allKeys}
-        ];
-      in
+      # Auto-generated by StackPanel for agenix CLI compatibility
+      # Regenerate with: nix eval --raw .#stackpanelConfig.secrets.secrets-nix-content
       {
       ${secretEntries}
       }
     '';
 
-  # Generate combined secrets YAML for each app environment
-  # This merges all relevant secrets into a single encrypted file
-  generateAppSecretsScript = pkgs.writeShellApplication {
-    name = "generate-app-secrets";
-    runtimeInputs = [
-      pkgs.age
-      pkgs.yq-go
-      pkgs.jq
-    ];
-    text = ''
-      set -euo pipefail
-
-      PROJECT_ROOT="''${1:-.}"
-      SECRETS_DIR="$PROJECT_ROOT/.stackpanel/secrets"
-      APPS_DIR="$SECRETS_DIR/apps"
-
-      # Get the AGE identity for decryption
-      AGE_KEY_FILE="''${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
-
-      if [[ ! -f "$AGE_KEY_FILE" ]]; then
-        echo "Error: AGE key file not found at $AGE_KEY_FILE" >&2
-        exit 1
-      fi
-
-      # Function to decrypt an age file
-      decrypt_age() {
-        age -d -i "$AGE_KEY_FILE" "$1"
-      }
-
-      # Function to encrypt with age for specific recipients
-      encrypt_age() {
-        local recipients="$1"
-        local output="$2"
-        local args=()
-
-        for r in $recipients; do
-          args+=(-r "$r")
-        done
-
-        age -e "''${args[@]}" -o "$output"
-      }
-
-      echo "Generating combined secrets for app environments..."
-
-      # For each app in apps directory
-      for app_dir in "$APPS_DIR"/*/; do
-        [[ -d "$app_dir" ]] || continue
-        app_name=$(basename "$app_dir")
-
-        # Skip example directories
-        [[ "$app_name" == _* ]] && continue
-
-        echo "Processing app: $app_name"
-
-        # For each environment config
-        for env_file in "$app_dir"/*.nix; do
-          [[ -f "$env_file" ]] || continue
-          env_name=$(basename "$env_file" .nix)
-
-          # Skip config.nix and common.nix
-          [[ "$env_name" == "config" || "$env_name" == "common" ]] && continue
-
-          echo "  Environment: $env_name"
-
-          # This would need proper Nix evaluation to get the actual secrets
-          # For now, just create a placeholder
-        done
-      done
-
-      echo "Done."
-    '';
-  };
-
 in
 {
   options.stackpanel.secrets = {
-    system-keys = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = ''
-        AGE public keys for system-level access (CI, deploy servers, etc.).
-        These keys can decrypt all secrets regardless of environment restrictions.
-      '';
-      example = [ "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq" ];
-    };
-
-    secrets-dir = lib.mkOption {
-      type = lib.types.str;
-      default = ".stackpanel/secrets/vars";
-      description = ''
-        Directory where individual secret .age files are stored.
-        Relative to project root.
-      '';
-    };
-
-    agenix-config = lib.mkOption {
-      type = lib.types.attrsOf (
-        lib.types.submodule {
-          options = {
-            publicKeys = lib.mkOption {
-              type = lib.types.listOf lib.types.str;
-              description = "Public keys that can decrypt this secret";
-            };
-            path = lib.mkOption {
-              type = lib.types.str;
-              description = "Path to the .age file relative to secrets.nix";
-            };
-          };
-        }
-      );
-      default = { };
-      description = ''
-        Generated agenix secrets configuration.
-        This is automatically populated based on variables with type=SECRET.
-      '';
-      internal = true;
-    };
-
     secrets-nix-content = lib.mkOption {
       type = lib.types.str;
-      default = "";
+      readOnly = true;
       description = ''
-        Generated content for secrets.nix file.
-        This can be written to .stackpanel/secrets/secrets.nix for agenix CLI use.
+        Generated content for secrets.nix file (agenix CLI compatibility).
       '';
-      internal = true;
     };
   };
 
   config = lib.mkIf cfg.enable {
-    # Expose the generated configuration
-    stackpanel.secrets.agenix-config = agenixSecretsConfig;
     stackpanel.secrets.secrets-nix-content = secretsNixContent;
 
-    # Add the generation script to devshell
-    stackpanel.devshell.packages = lib.mkIf (cfg.enable) [
-      generateAppSecretsScript
-      pkgs.age
-    ];
-
-    # Add scripts for secret management
-    stackpanel.scripts = lib.mkIf (cfg.enable) {
-      "secrets:write" = {
-        description = "Write an age-encrypted secret (use API or UI)";
+    stackpanel.scripts = {
+      "secrets:write-agenix-config" = {
+        description = "Write secrets.nix for agenix CLI compatibility";
         exec = ''
-          echo "Use the StackPanel UI or API to write secrets"
-          echo "API: POST /api/secrets/write"
-          echo ""
-          echo "Example:"
-          echo "  curl -X POST http://localhost:3100/api/secrets/write \\"
-          echo "    -H 'Content-Type: application/json' \\"
-          echo "    -d '{\"id\": \"my-secret\", \"key\": \"MY_SECRET\", \"value\": \"...\"}'"
+          echo "Writing ${cfg.secrets-dir}/secrets.nix..."
+          mkdir -p "${cfg.secrets-dir}"
+          cat > "${cfg.secrets-dir}/secrets.nix" << 'EOF'
+          ${secretsNixContent}
+          EOF
+          echo "✅ Done"
         '';
-      };
-
-      "secrets:list" = {
-        description = "List all age-encrypted secrets in vars/";
-        exec = ''
-          SECRETS_DIR=".stackpanel/secrets/vars"
-          if [[ -d "$SECRETS_DIR" ]]; then
-            echo "Secrets in $SECRETS_DIR:"
-            ls -la "$SECRETS_DIR"/*.age 2>/dev/null || echo "  (none)"
-          else
-            echo "No secrets directory found"
-          fi
-        '';
-      };
-
-      "secrets:regenerate-nix" = {
-        description = "Regenerate secrets.nix from config for agenix CLI";
-        exec = ''
-          echo "Regenerating secrets.nix..."
-          nix eval --raw .#stackpanelFullConfig.secrets.secrets-nix-content > .stackpanel/secrets/secrets.nix
-          echo "Done. secrets.nix updated."
-        '';
-      };
-    };
-
-    # Serializable config for the agent
-    stackpanel.serializable.secrets = {
-      inherit (cfg) enable system-keys secrets-dir;
-      # Include computed data for the agent
-      computed = {
-        adminKeys = adminKeys;
-        globalKeys = globalKeys;
-        secretCount = lib.length (lib.attrNames secretVariables);
       };
     };
   };

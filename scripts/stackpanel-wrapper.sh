@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # stackpanel-wrapper.sh
 #
-# Wrapper script for the stackpanel CLI that supports development mode.
-# When dev mode is enabled, it forwards commands to 'go run' in the local repo.
+# Wrapper script for the stackpanel CLI that supports debug mode.
+# When debug mode is enabled, it forwards commands to 'go run' in the local repo.
 #
 # Installation:
 #   1. Install this script as 'stackpanel' in your PATH (before any other stackpanel)
-#   2. Enable dev mode: stackpanel dev enable ~/path/to/stackpanel
+#   2. Enable debug mode: stackpanel debug enable ~/path/to/stackpanel
 #   3. All commands now run from source
 #
 # The actual installed binary should be named 'stackpanel-bin' or be at a known path.
@@ -18,7 +18,7 @@ CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/stackpanel"
 CONFIG_FILE="$CONFIG_DIR/stackpanel.yaml"
 
 # Environment variable override (takes precedence over config file)
-# Set STACKPANEL_DEV_REPO=/path/to/stackpanel to enable dev mode
+# Set STACKPANEL_DEV_REPO=/path/to/stackpanel to enable debug mode
 DEV_REPO_ENV="${STACKPANEL_DEV_REPO:-}"
 
 # Function to extract a value from YAML (simple parser for flat values)
@@ -40,7 +40,7 @@ yaml_get() {
     fi
 }
 
-# Check if dev mode is enabled
+# Check if debug mode is enabled
 check_dev_mode() {
     if [[ ! -f "$CONFIG_FILE" ]]; then
         return 1
@@ -71,7 +71,7 @@ get_dev_repo_path() {
     yaml_get "dev_mode.repo_path" "$CONFIG_FILE"
 }
 
-# Check if dev mode is enabled via env var
+# Check if debug mode is enabled via env var
 is_env_dev_mode() {
     [[ -n "$DEV_REPO_ENV" ]]
 }
@@ -121,15 +121,15 @@ find_real_binary() {
 
 # Main entry point
 main() {
-    # Special case: if running 'dev' subcommand, use dev mode if enabled
-    if [[ "${1:-}" == "dev" ]]; then
-        # For dev commands, use go run if dev mode is enabled (env var or config)
+    # Special case: if running 'debug' (or legacy 'dev') subcommand, use debug mode if enabled
+    if [[ "${1:-}" == "debug" || "${1:-}" == "dev" ]]; then
+        # For debug commands, use go run if debug mode is enabled (env var or config)
         if is_env_dev_mode || check_dev_mode; then
             local repo_path
             repo_path=$(get_dev_repo_path)
             if [[ -n "$repo_path" && -d "$repo_path/apps/stackpanel-go" ]]; then
                 if [[ "${STACKPANEL_DEBUG:-}" == "1" ]]; then
-                    echo "[dev-mode] Running: cd $repo_path/apps/stackpanel-go && go run . $*" >&2
+                    echo "[debug-mode] Running: cd $repo_path/apps/stackpanel-go && go run . $*" >&2
                 fi
                 cd "$repo_path/apps/stackpanel-go"
                 exec go run . "$@"
@@ -147,21 +147,21 @@ main() {
         fi
     fi
 
-    # Check if dev mode is enabled (env var or config file)
+    # Check if debug mode is enabled (env var or config file)
     if is_env_dev_mode || check_dev_mode; then
         local repo_path
         repo_path=$(get_dev_repo_path)
 
         if [[ -z "$repo_path" ]]; then
-            echo "Warning: Dev mode enabled but repo path not set. Using installed binary." >&2
+            echo "Warning: Debug mode enabled but repo path not set. Using installed binary." >&2
         elif [[ ! -d "$repo_path/apps/stackpanel-go" ]]; then
-            echo "Warning: Dev repo path invalid: $repo_path" >&2
+            echo "Warning: Debug repo path invalid: $repo_path" >&2
             echo "  Expected: $repo_path/apps/stackpanel-go" >&2
             echo "  Falling back to installed binary." >&2
         else
             # Run from source
             if [[ "${STACKPANEL_DEBUG:-}" == "1" ]]; then
-                echo "[dev-mode] Running: cd $repo_path/apps/stackpanel-go && go run . $*" >&2
+                echo "[debug-mode] Running: cd $repo_path/apps/stackpanel-go && go run . $*" >&2
             fi
             cd "$repo_path/apps/stackpanel-go"
             exec go run . "$@"
@@ -174,8 +174,8 @@ main() {
         exec "$real_binary" "$@"
     else
         echo "Error: Could not find stackpanel binary" >&2
-        echo "Make sure stackpanel is installed, or enable dev mode:" >&2
-        echo "  stackpanel dev enable <repo-path>" >&2
+        echo "Make sure stackpanel is installed, or enable debug mode:" >&2
+        echo "  stackpanel debug enable <repo-path>" >&2
         exit 1
     fi
 }

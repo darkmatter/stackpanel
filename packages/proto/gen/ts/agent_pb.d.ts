@@ -10,6 +10,7 @@ import type { UsersSchema } from "./users_pb";
 import type { AwsSchema } from "./aws_pb";
 import type { AppsSchema } from "./apps_pb";
 import type { VariablesSchema } from "./variables_pb";
+import type { SstSchema } from "./sst_pb";
 
 /**
  * Describes the file agent.proto.
@@ -192,6 +193,18 @@ export declare type GetVariablesRequest = Message<"stackpanel.agent.GetVariables
  * Use `create(GetVariablesRequestSchema)` to create a new message.
  */
 export declare const GetVariablesRequestSchema: GenMessage<GetVariablesRequest>;
+
+/**
+ * @generated from message stackpanel.agent.GetSstRequest
+ */
+export declare type GetSstRequest = Message<"stackpanel.agent.GetSstRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetSstRequest.
+ * Use `create(GetSstRequestSchema)` to create a new message.
+ */
+export declare const GetSstRequestSchema: GenMessage<GetSstRequest>;
 
 /**
  * @generated from message stackpanel.agent.GetAgeIdentityRequest
@@ -724,6 +737,637 @@ export declare type ServiceResponse = Message<"stackpanel.agent.ServiceResponse"
 export declare const ServiceResponseSchema: GenMessage<ServiceResponse>;
 
 /**
+ * @generated from message stackpanel.agent.GetSSTStatusRequest
+ */
+export declare type GetSSTStatusRequest = Message<"stackpanel.agent.GetSSTStatusRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetSSTStatusRequest.
+ * Use `create(GetSSTStatusRequestSchema)` to create a new message.
+ */
+export declare const GetSSTStatusRequestSchema: GenMessage<GetSSTStatusRequest>;
+
+/**
+ * @generated from message stackpanel.agent.SSTStatusResponse
+ */
+export declare type SSTStatusResponse = Message<"stackpanel.agent.SSTStatusResponse"> & {
+  /**
+   * @generated from field: bool configured = 1;
+   */
+  configured: boolean;
+
+  /**
+   * @generated from field: string config_path = 2;
+   */
+  configPath: string;
+
+  /**
+   * @generated from field: bool config_valid = 3;
+   */
+  configValid: boolean;
+
+  /**
+   * @generated from field: bool deployed = 4;
+   */
+  deployed: boolean;
+
+  /**
+   * @generated from field: string stage = 5;
+   */
+  stage: string;
+
+  /**
+   * @generated from field: string last_deploy = 6;
+   */
+  lastDeploy: string;
+
+  /**
+   * @generated from field: string error = 7;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.SSTStatusResponse.
+ * Use `create(SSTStatusResponseSchema)` to create a new message.
+ */
+export declare const SSTStatusResponseSchema: GenMessage<SSTStatusResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetSSTConfigRequest
+ */
+export declare type GetSSTConfigRequest = Message<"stackpanel.agent.GetSSTConfigRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetSSTConfigRequest.
+ * Use `create(GetSSTConfigRequestSchema)` to create a new message.
+ */
+export declare const GetSSTConfigRequestSchema: GenMessage<GetSSTConfigRequest>;
+
+/**
+ * @generated from message stackpanel.agent.DeploySSTRequest
+ */
+export declare type DeploySSTRequest = Message<"stackpanel.agent.DeploySSTRequest"> & {
+  /**
+   * dev, staging, production
+   *
+   * @generated from field: string stage = 1;
+   */
+  stage: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.DeploySSTRequest.
+ * Use `create(DeploySSTRequestSchema)` to create a new message.
+ */
+export declare const DeploySSTRequestSchema: GenMessage<DeploySSTRequest>;
+
+/**
+ * @generated from message stackpanel.agent.DeploySSTResponse
+ */
+export declare type DeploySSTResponse = Message<"stackpanel.agent.DeploySSTResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: string output = 2;
+   */
+  output: string;
+
+  /**
+   * @generated from field: string error = 3;
+   */
+  error: string;
+
+  /**
+   * @generated from field: map<string, string> outputs = 4;
+   */
+  outputs: { [key: string]: string };
+};
+
+/**
+ * Describes the message stackpanel.agent.DeploySSTResponse.
+ * Use `create(DeploySSTResponseSchema)` to create a new message.
+ */
+export declare const DeploySSTResponseSchema: GenMessage<DeploySSTResponse>;
+
+/**
+ * @generated from message stackpanel.agent.RemoveSSTRequest
+ */
+export declare type RemoveSSTRequest = Message<"stackpanel.agent.RemoveSSTRequest"> & {
+  /**
+   * @generated from field: string stage = 1;
+   */
+  stage: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.RemoveSSTRequest.
+ * Use `create(RemoveSSTRequestSchema)` to create a new message.
+ */
+export declare const RemoveSSTRequestSchema: GenMessage<RemoveSSTRequest>;
+
+/**
+ * @generated from message stackpanel.agent.RemoveSSTResponse
+ */
+export declare type RemoveSSTResponse = Message<"stackpanel.agent.RemoveSSTResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: string output = 2;
+   */
+  output: string;
+
+  /**
+   * @generated from field: string error = 3;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.RemoveSSTResponse.
+ * Use `create(RemoveSSTResponseSchema)` to create a new message.
+ */
+export declare const RemoveSSTResponseSchema: GenMessage<RemoveSSTResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetSSTOutputsRequest
+ */
+export declare type GetSSTOutputsRequest = Message<"stackpanel.agent.GetSSTOutputsRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetSSTOutputsRequest.
+ * Use `create(GetSSTOutputsRequestSchema)` to create a new message.
+ */
+export declare const GetSSTOutputsRequestSchema: GenMessage<GetSSTOutputsRequest>;
+
+/**
+ * @generated from message stackpanel.agent.SSTOutputsResponse
+ */
+export declare type SSTOutputsResponse = Message<"stackpanel.agent.SSTOutputsResponse"> & {
+  /**
+   * @generated from field: map<string, string> outputs = 1;
+   */
+  outputs: { [key: string]: string };
+};
+
+/**
+ * Describes the message stackpanel.agent.SSTOutputsResponse.
+ * Use `create(SSTOutputsResponseSchema)` to create a new message.
+ */
+export declare const SSTOutputsResponseSchema: GenMessage<SSTOutputsResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetSSTResourcesRequest
+ */
+export declare type GetSSTResourcesRequest = Message<"stackpanel.agent.GetSSTResourcesRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetSSTResourcesRequest.
+ * Use `create(GetSSTResourcesRequestSchema)` to create a new message.
+ */
+export declare const GetSSTResourcesRequestSchema: GenMessage<GetSSTResourcesRequest>;
+
+/**
+ * @generated from message stackpanel.agent.SSTResource
+ */
+export declare type SSTResource = Message<"stackpanel.agent.SSTResource"> & {
+  /**
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string urn = 2;
+   */
+  urn: string;
+
+  /**
+   * @generated from field: string id = 3;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.SSTResource.
+ * Use `create(SSTResourceSchema)` to create a new message.
+ */
+export declare const SSTResourceSchema: GenMessage<SSTResource>;
+
+/**
+ * @generated from message stackpanel.agent.SSTResourcesResponse
+ */
+export declare type SSTResourcesResponse = Message<"stackpanel.agent.SSTResourcesResponse"> & {
+  /**
+   * @generated from field: repeated stackpanel.agent.SSTResource resources = 1;
+   */
+  resources: SSTResource[];
+};
+
+/**
+ * Describes the message stackpanel.agent.SSTResourcesResponse.
+ * Use `create(SSTResourcesResponseSchema)` to create a new message.
+ */
+export declare const SSTResourcesResponseSchema: GenMessage<SSTResourcesResponse>;
+
+/**
+ * @generated from message stackpanel.agent.SearchNixpkgsRequest
+ */
+export declare type SearchNixpkgsRequest = Message<"stackpanel.agent.SearchNixpkgsRequest"> & {
+  /**
+   * @generated from field: string query = 1;
+   */
+  query: string;
+
+  /**
+   * Max results to return
+   *
+   * @generated from field: int32 limit = 2;
+   */
+  limit: number;
+};
+
+/**
+ * Describes the message stackpanel.agent.SearchNixpkgsRequest.
+ * Use `create(SearchNixpkgsRequestSchema)` to create a new message.
+ */
+export declare const SearchNixpkgsRequestSchema: GenMessage<SearchNixpkgsRequest>;
+
+/**
+ * @generated from message stackpanel.agent.NixpkgsPackage
+ */
+export declare type NixpkgsPackage = Message<"stackpanel.agent.NixpkgsPackage"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string attr_path = 2;
+   */
+  attrPath: string;
+
+  /**
+   * @generated from field: string version = 3;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string description = 4;
+   */
+  description: string;
+
+  /**
+   * @generated from field: bool installed = 5;
+   */
+  installed: boolean;
+
+  /**
+   * @generated from field: string license = 6;
+   */
+  license: string;
+
+  /**
+   * @generated from field: string homepage = 7;
+   */
+  homepage: string;
+
+  /**
+   * @generated from field: string nixpkgs_url = 8;
+   */
+  nixpkgsUrl: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.NixpkgsPackage.
+ * Use `create(NixpkgsPackageSchema)` to create a new message.
+ */
+export declare const NixpkgsPackageSchema: GenMessage<NixpkgsPackage>;
+
+/**
+ * @generated from message stackpanel.agent.SearchNixpkgsResponse
+ */
+export declare type SearchNixpkgsResponse = Message<"stackpanel.agent.SearchNixpkgsResponse"> & {
+  /**
+   * @generated from field: repeated stackpanel.agent.NixpkgsPackage packages = 1;
+   */
+  packages: NixpkgsPackage[];
+};
+
+/**
+ * Describes the message stackpanel.agent.SearchNixpkgsResponse.
+ * Use `create(SearchNixpkgsResponseSchema)` to create a new message.
+ */
+export declare const SearchNixpkgsResponseSchema: GenMessage<SearchNixpkgsResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetInstalledPackagesRequest
+ */
+export declare type GetInstalledPackagesRequest = Message<"stackpanel.agent.GetInstalledPackagesRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetInstalledPackagesRequest.
+ * Use `create(GetInstalledPackagesRequestSchema)` to create a new message.
+ */
+export declare const GetInstalledPackagesRequestSchema: GenMessage<GetInstalledPackagesRequest>;
+
+/**
+ * @generated from message stackpanel.agent.InstalledPackage
+ */
+export declare type InstalledPackage = Message<"stackpanel.agent.InstalledPackage"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string attr_path = 3;
+   */
+  attrPath: string;
+
+  /**
+   * "devshell" or "user"
+   *
+   * @generated from field: string source = 4;
+   */
+  source: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.InstalledPackage.
+ * Use `create(InstalledPackageSchema)` to create a new message.
+ */
+export declare const InstalledPackageSchema: GenMessage<InstalledPackage>;
+
+/**
+ * @generated from message stackpanel.agent.InstalledPackagesResponse
+ */
+export declare type InstalledPackagesResponse = Message<"stackpanel.agent.InstalledPackagesResponse"> & {
+  /**
+   * @generated from field: repeated stackpanel.agent.InstalledPackage packages = 1;
+   */
+  packages: InstalledPackage[];
+
+  /**
+   * @generated from field: int32 count = 2;
+   */
+  count: number;
+};
+
+/**
+ * Describes the message stackpanel.agent.InstalledPackagesResponse.
+ * Use `create(InstalledPackagesResponseSchema)` to create a new message.
+ */
+export declare const InstalledPackagesResponseSchema: GenMessage<InstalledPackagesResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetProcessesRequest
+ */
+export declare type GetProcessesRequest = Message<"stackpanel.agent.GetProcessesRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetProcessesRequest.
+ * Use `create(GetProcessesRequestSchema)` to create a new message.
+ */
+export declare const GetProcessesRequestSchema: GenMessage<GetProcessesRequest>;
+
+/**
+ * @generated from message stackpanel.agent.ProcessInfo
+ */
+export declare type ProcessInfo = Message<"stackpanel.agent.ProcessInfo"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string status = 3;
+   */
+  status: string;
+
+  /**
+   * @generated from field: int32 pid = 4;
+   */
+  pid: number;
+
+  /**
+   * @generated from field: int32 exit_code = 5;
+   */
+  exitCode: number;
+
+  /**
+   * @generated from field: bool is_running = 6;
+   */
+  isRunning: boolean;
+
+  /**
+   * @generated from field: int32 restarts = 7;
+   */
+  restarts: number;
+
+  /**
+   * @generated from field: string system_time = 8;
+   */
+  systemTime: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.ProcessInfo.
+ * Use `create(ProcessInfoSchema)` to create a new message.
+ */
+export declare const ProcessInfoSchema: GenMessage<ProcessInfo>;
+
+/**
+ * @generated from message stackpanel.agent.GetProcessesResponse
+ */
+export declare type GetProcessesResponse = Message<"stackpanel.agent.GetProcessesResponse"> & {
+  /**
+   * @generated from field: bool available = 1;
+   */
+  available: boolean;
+
+  /**
+   * @generated from field: bool running = 2;
+   */
+  running: boolean;
+
+  /**
+   * @generated from field: repeated stackpanel.agent.ProcessInfo processes = 3;
+   */
+  processes: ProcessInfo[];
+
+  /**
+   * @generated from field: string error = 4;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.GetProcessesResponse.
+ * Use `create(GetProcessesResponseSchema)` to create a new message.
+ */
+export declare const GetProcessesResponseSchema: GenMessage<GetProcessesResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetHealthchecksRequest
+ */
+export declare type GetHealthchecksRequest = Message<"stackpanel.agent.GetHealthchecksRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetHealthchecksRequest.
+ * Use `create(GetHealthchecksRequestSchema)` to create a new message.
+ */
+export declare const GetHealthchecksRequestSchema: GenMessage<GetHealthchecksRequest>;
+
+/**
+ * Simple healthcheck info for RPC responses (distinct from db.HealthcheckResult)
+ *
+ * @generated from message stackpanel.agent.HealthcheckInfo
+ */
+export declare type HealthcheckInfo = Message<"stackpanel.agent.HealthcheckInfo"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * service, port, http, etc.
+   *
+   * @generated from field: string type = 2;
+   */
+  type: string;
+
+  /**
+   * @generated from field: bool healthy = 3;
+   */
+  healthy: boolean;
+
+  /**
+   * @generated from field: string message = 4;
+   */
+  message: string;
+
+  /**
+   * @generated from field: string details = 5;
+   */
+  details: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.HealthcheckInfo.
+ * Use `create(HealthcheckInfoSchema)` to create a new message.
+ */
+export declare const HealthcheckInfoSchema: GenMessage<HealthcheckInfo>;
+
+/**
+ * @generated from message stackpanel.agent.HealthchecksResponse
+ */
+export declare type HealthchecksResponse = Message<"stackpanel.agent.HealthchecksResponse"> & {
+  /**
+   * @generated from field: bool all_healthy = 1;
+   */
+  allHealthy: boolean;
+
+  /**
+   * @generated from field: repeated stackpanel.agent.HealthcheckInfo checks = 2;
+   */
+  checks: HealthcheckInfo[];
+};
+
+/**
+ * Describes the message stackpanel.agent.HealthchecksResponse.
+ * Use `create(HealthchecksResponseSchema)` to create a new message.
+ */
+export declare const HealthchecksResponseSchema: GenMessage<HealthchecksResponse>;
+
+/**
+ * @generated from message stackpanel.agent.GetNixConfigRequest
+ */
+export declare type GetNixConfigRequest = Message<"stackpanel.agent.GetNixConfigRequest"> & {
+  /**
+   * Force re-evaluation
+   *
+   * @generated from field: bool refresh = 1;
+   */
+  refresh: boolean;
+};
+
+/**
+ * Describes the message stackpanel.agent.GetNixConfigRequest.
+ * Use `create(GetNixConfigRequestSchema)` to create a new message.
+ */
+export declare const GetNixConfigRequestSchema: GenMessage<GetNixConfigRequest>;
+
+/**
+ * @generated from message stackpanel.agent.RefreshNixConfigRequest
+ */
+export declare type RefreshNixConfigRequest = Message<"stackpanel.agent.RefreshNixConfigRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.RefreshNixConfigRequest.
+ * Use `create(RefreshNixConfigRequestSchema)` to create a new message.
+ */
+export declare const RefreshNixConfigRequestSchema: GenMessage<RefreshNixConfigRequest>;
+
+/**
+ * @generated from message stackpanel.agent.NixConfigResponse
+ */
+export declare type NixConfigResponse = Message<"stackpanel.agent.NixConfigResponse"> & {
+  /**
+   * The full config is a dynamic JSON object, stored as string
+   *
+   * @generated from field: string config_json = 1;
+   */
+  configJson: string;
+
+  /**
+   * @generated from field: string last_updated = 2;
+   */
+  lastUpdated: string;
+
+  /**
+   * @generated from field: bool cached = 3;
+   */
+  cached: boolean;
+
+  /**
+   * "cache" or "eval"
+   *
+   * @generated from field: string source = 4;
+   */
+  source: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.NixConfigResponse.
+ * Use `create(NixConfigResponseSchema)` to create a new message.
+ */
+export declare const NixConfigResponseSchema: GenMessage<NixConfigResponse>;
+
+/**
  * AgentService provides RPC methods for the Stackpanel agent.
  * This enables type-safe communication between the web UI and the local agent.
  *
@@ -961,6 +1605,112 @@ export declare const AgentService: GenService<{
     methodKind: "unary";
     input: typeof ServiceRequestSchema;
     output: typeof ServiceResponseSchema;
+  },
+  /**
+   * SST Infrastructure
+   *
+   * @generated from rpc stackpanel.agent.AgentService.GetSSTStatus
+   */
+  getSSTStatus: {
+    methodKind: "unary";
+    input: typeof GetSSTStatusRequestSchema;
+    output: typeof SSTStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.GetSSTConfig
+   */
+  getSSTConfig: {
+    methodKind: "unary";
+    input: typeof GetSSTConfigRequestSchema;
+    output: typeof SstSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.DeploySST
+   */
+  deploySST: {
+    methodKind: "unary";
+    input: typeof DeploySSTRequestSchema;
+    output: typeof DeploySSTResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.RemoveSST
+   */
+  removeSST: {
+    methodKind: "unary";
+    input: typeof RemoveSSTRequestSchema;
+    output: typeof RemoveSSTResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.GetSSTOutputs
+   */
+  getSSTOutputs: {
+    methodKind: "unary";
+    input: typeof GetSSTOutputsRequestSchema;
+    output: typeof SSTOutputsResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.GetSSTResources
+   */
+  getSSTResources: {
+    methodKind: "unary";
+    input: typeof GetSSTResourcesRequestSchema;
+    output: typeof SSTResourcesResponseSchema;
+  },
+  /**
+   * Nixpkgs package management
+   *
+   * @generated from rpc stackpanel.agent.AgentService.SearchNixpkgs
+   */
+  searchNixpkgs: {
+    methodKind: "unary";
+    input: typeof SearchNixpkgsRequestSchema;
+    output: typeof SearchNixpkgsResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.GetInstalledPackages
+   */
+  getInstalledPackages: {
+    methodKind: "unary";
+    input: typeof GetInstalledPackagesRequestSchema;
+    output: typeof InstalledPackagesResponseSchema;
+  },
+  /**
+   * Process-compose processes
+   *
+   * @generated from rpc stackpanel.agent.AgentService.GetProcesses
+   */
+  getProcesses: {
+    methodKind: "unary";
+    input: typeof GetProcessesRequestSchema;
+    output: typeof GetProcessesResponseSchema;
+  },
+  /**
+   * Healthchecks
+   *
+   * @generated from rpc stackpanel.agent.AgentService.GetHealthchecks
+   */
+  getHealthchecks: {
+    methodKind: "unary";
+    input: typeof GetHealthchecksRequestSchema;
+    output: typeof HealthchecksResponseSchema;
+  },
+  /**
+   * Full Nix config (evaluated from flake)
+   *
+   * @generated from rpc stackpanel.agent.AgentService.GetNixConfig
+   */
+  getNixConfig: {
+    methodKind: "unary";
+    input: typeof GetNixConfigRequestSchema;
+    output: typeof NixConfigResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.RefreshNixConfig
+   */
+  refreshNixConfig: {
+    methodKind: "unary";
+    input: typeof RefreshNixConfigRequestSchema;
+    output: typeof NixConfigResponseSchema;
   },
 }>;
 

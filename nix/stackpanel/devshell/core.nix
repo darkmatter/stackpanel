@@ -14,5 +14,6 @@
     ./scripts.nix
     ./codegen.nix
     ./files.nix
+    ./clean.nix
   ];
 }

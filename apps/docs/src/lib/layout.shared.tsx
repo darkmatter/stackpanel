@@ -10,7 +10,7 @@ export function baseOptions(): BaseLayoutProps {
             alt="StackPanel"
             width={120}
             height={40}
-            className="max-w-28 opacity-80 m-0 me-0 ml-2"
+            className="max-w-28 opacity-90 m-0 me-0 ml-2"
           />
         </div>
       ),

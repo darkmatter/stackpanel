@@ -11,6 +11,7 @@ import "files.proto";
 import "services.proto";
 import "apps.proto";
 import "variables.proto";
+import "sst.proto";
 
 // =============================================================================
 // Agent Service
@@ -66,6 +67,28 @@ service AgentService {
   rpc StartService(ServiceRequest) returns (ServiceResponse);
   rpc StopService(ServiceRequest) returns (ServiceResponse);
   rpc RestartService(ServiceRequest) returns (ServiceResponse);
+  
+  // SST Infrastructure
+  rpc GetSSTStatus(GetSSTStatusRequest) returns (SSTStatusResponse);
+  rpc GetSSTConfig(GetSSTConfigRequest) returns (stackpanel.db.Sst);
+  rpc DeploySST(DeploySSTRequest) returns (DeploySSTResponse);
+  rpc RemoveSST(RemoveSSTRequest) returns (RemoveSSTResponse);
+  rpc GetSSTOutputs(GetSSTOutputsRequest) returns (SSTOutputsResponse);
+  rpc GetSSTResources(GetSSTResourcesRequest) returns (SSTResourcesResponse);
+  
+  // Nixpkgs package management
+  rpc SearchNixpkgs(SearchNixpkgsRequest) returns (SearchNixpkgsResponse);
+  rpc GetInstalledPackages(GetInstalledPackagesRequest) returns (InstalledPackagesResponse);
+  
+  // Process-compose processes
+  rpc GetProcesses(GetProcessesRequest) returns (GetProcessesResponse);
+  
+  // Healthchecks
+  rpc GetHealthchecks(GetHealthchecksRequest) returns (HealthchecksResponse);
+  
+  // Full Nix config (evaluated from flake)
+  rpc GetNixConfig(GetNixConfigRequest) returns (NixConfigResponse);
+  rpc RefreshNixConfig(RefreshNixConfigRequest) returns (NixConfigResponse);
 }
 
 // =============================================================================
@@ -103,6 +126,7 @@ message GetUsersRequest {}
 message GetAwsRequest {}
 message GetAppsRequest {}
 message GetVariablesRequest {}
+message GetSstRequest {}
 
 // =============================================================================
 // Identity Management
@@ -249,4 +273,161 @@ message ServiceRequest {
 message ServiceResponse {
   bool success = 1;
   string message = 2;
+}
+
+// =============================================================================
+// SST Infrastructure
+// =============================================================================
+
+message GetSSTStatusRequest {}
+
+message SSTStatusResponse {
+  bool configured = 1;
+  string config_path = 2;
+  bool config_valid = 3;
+  bool deployed = 4;
+  string stage = 5;
+  string last_deploy = 6;
+  string error = 7;
+}
+
+message GetSSTConfigRequest {}
+
+message DeploySSTRequest {
+  string stage = 1;  // dev, staging, production
+}
+
+message DeploySSTResponse {
+  bool success = 1;
+  string output = 2;
+  string error = 3;
+  map<string, string> outputs = 4;
+}
+
+message RemoveSSTRequest {
+  string stage = 1;
+}
+
+message RemoveSSTResponse {
+  bool success = 1;
+  string output = 2;
+  string error = 3;
+}
+
+message GetSSTOutputsRequest {}
+
+message SSTOutputsResponse {
+  map<string, string> outputs = 1;
+}
+
+message GetSSTResourcesRequest {}
+
+message SSTResource {
+  string type = 1;
+  string urn = 2;
+  string id = 3;
+}
+
+message SSTResourcesResponse {
+  repeated SSTResource resources = 1;
+}
+
+// =============================================================================
+// Nixpkgs Package Management
+// =============================================================================
+
+message SearchNixpkgsRequest {
+  string query = 1;
+  int32 limit = 2;  // Max results to return
+}
+
+message NixpkgsPackage {
+  string name = 1;
+  string attr_path = 2;
+  string version = 3;
+  string description = 4;
+  bool installed = 5;
+  string license = 6;
+  string homepage = 7;
+  string nixpkgs_url = 8;
+}
+
+message SearchNixpkgsResponse {
+  repeated NixpkgsPackage packages = 1;
+}
+
+message GetInstalledPackagesRequest {}
+
+message InstalledPackage {
+  string name = 1;
+  string version = 2;
+  string attr_path = 3;
+  string source = 4;  // "devshell" or "user"
+}
+
+message InstalledPackagesResponse {
+  repeated InstalledPackage packages = 1;
+  int32 count = 2;
+}
+
+// =============================================================================
+// Process-Compose Processes
+// =============================================================================
+
+message GetProcessesRequest {}
+
+message ProcessInfo {
+  string name = 1;
+  string namespace = 2;
+  string status = 3;
+  int32 pid = 4;
+  int32 exit_code = 5;
+  bool is_running = 6;
+  int32 restarts = 7;
+  string system_time = 8;
+}
+
+message GetProcessesResponse {
+  bool available = 1;
+  bool running = 2;
+  repeated ProcessInfo processes = 3;
+  string error = 4;
+}
+
+// =============================================================================
+// Healthchecks
+// =============================================================================
+
+message GetHealthchecksRequest {}
+
+// Simple healthcheck info for RPC responses (distinct from db.HealthcheckResult)
+message HealthcheckInfo {
+  string name = 1;
+  string type = 2;  // service, port, http, etc.
+  bool healthy = 3;
+  string message = 4;
+  string details = 5;
+}
+
+message HealthchecksResponse {
+  bool all_healthy = 1;
+  repeated HealthcheckInfo checks = 2;
+}
+
+// =============================================================================
+// Full Nix Config
+// =============================================================================
+
+message GetNixConfigRequest {
+  bool refresh = 1;  // Force re-evaluation
+}
+
+message RefreshNixConfigRequest {}
+
+message NixConfigResponse {
+  // The full config is a dynamic JSON object, stored as string
+  string config_json = 1;
+  string last_updated = 2;
+  bool cached = 3;
+  string source = 4;  // "cache" or "eval"
 }

@@ -75,19 +75,16 @@ let
     };
 
   # ---------------------------------------------------------------------------
-  # Process entry generation
+  # Process entry generation (functions only - evaluation happens in config)
   # ---------------------------------------------------------------------------
-
-  # Get apps that have process-compose enabled
-  apps = cfg.apps or { };
-  appsWithProcessCompose = lib.filterAttrs (name: app: app.process-compose.enable or true) apps;
 
   # Generate process-compose process entries from an app
   mkProcessEntry =
     name: app:
     let
       pcAppCfg = app.process-compose or { };
-      processName = pcAppCfg.name or name;
+      # Use explicit null check since pcAppCfg.name can be null (not missing)
+      processName = if pcAppCfg.name or null != null then pcAppCfg.name else name;
 
       # Get task commands, falling back to turbo defaults
       devTask = app.tasks.dev or { };
@@ -103,58 +100,57 @@ let
       };
     };
 
-  # Collect all process entries from apps
-  appProcessEntries = lib.foldl' (acc: name: acc // (mkProcessEntry name apps.${name})) { } (
-    lib.attrNames appsWithProcessCompose
-  );
-
-  # App names for dependencies
-  appNames = lib.attrNames appsWithProcessCompose;
+  # Generate app process entries - must be called with apps from config
+  mkAppProcessEntries = apps:
+    let
+      appsWithProcessCompose = lib.filterAttrs (name: app: app.process-compose.enable or true) apps;
+    in
+    lib.foldl' (acc: name: acc // (mkProcessEntry name apps.${name})) { } (
+      lib.attrNames appsWithProcessCompose
+    );
 
   # ---------------------------------------------------------------------------
   # Infrastructure processes (format watcher, etc.)
   # ---------------------------------------------------------------------------
 
-  # Format watcher config
-  formatWatcherCfg = pcCfg.formatWatcher or { enable = true; };
-  formatExtensions =
-    formatWatcherCfg.extensions or [
-      "ts"
-      "tsx"
-      "js"
-      "jsx"
-      "json"
-      "md"
-      "css"
-      "scss"
-      "html"
-      "nix"
-      "go"
-      "rs"
-      "py"
-    ];
-  formatCommand =
-    if formatWatcherCfg.command or null != null then
-      formatWatcherCfg.command
-    else
-      "${turbo} run format --continue";
-  formatExtStr = lib.concatStringsSep "," formatExtensions;
-
-  infrastructureProcesses = lib.optionalAttrs (formatWatcherCfg.enable or true) {
-    # Format watcher - runs turbo format on file changes
-    format-watch = {
-      command = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
-      working_dir = null;
-      namespace = "infra";
-      availability = {
-        restart = "always";
-        backoff_seconds = 2;
+  # Build infrastructure processes (format watcher)
+  mkInfrastructureProcesses =
+    formatWatcherCfg:
+    let
+      formatExtensions =
+        formatWatcherCfg.extensions or [
+          "ts"
+          "tsx"
+          "js"
+          "jsx"
+          "json"
+          "md"
+          "css"
+          "scss"
+          "html"
+          "nix"
+          "go"
+          "rs"
+          "py"
+        ];
+      formatCommand =
+        if formatWatcherCfg.command or null != null then
+          formatWatcherCfg.command
+        else
+          "${turbo} run format --continue";
+      formatExtStr = lib.concatStringsSep "," formatExtensions;
+    in
+    lib.optionalAttrs (formatWatcherCfg.enable or true) {
+      format-watch = {
+        command = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
+        working_dir = null;
+        namespace = "infra";
+        availability = {
+          restart = "always";
+          backoff_seconds = 2;
+        };
       };
     };
-  };
-
-  # Combine app processes with infrastructure processes
-  allProcessEntries = appProcessEntries // infrastructureProcesses;
 
   # ---------------------------------------------------------------------------
   # Devenv-compatible process entries (uses exec instead of command)
@@ -163,7 +159,8 @@ let
     name: app:
     let
       pcAppCfg = app.process-compose or { };
-      processName = pcAppCfg.name or name;
+      # Use explicit null check since pcAppCfg.name can be null (not missing)
+      processName = if pcAppCfg.name or null != null then pcAppCfg.name else name;
 
       devTask = app.tasks.dev or { };
       devCommand = devTask.command or (mkDefaultCommand name "dev");
@@ -177,25 +174,54 @@ let
       };
     };
 
-  appDevenvProcessEntries = lib.foldl' (
-    acc: name: acc // (mkDevenvProcessEntry name apps.${name})
-  ) { } (lib.attrNames appsWithProcessCompose);
+  # Generate devenv process entries - must be called with apps from config
+  mkDevenvAppProcessEntries = apps:
+    let
+      appsWithProcessCompose = lib.filterAttrs (name: app: app.process-compose.enable or true) apps;
+    in
+    lib.foldl' (acc: name: acc // (mkDevenvProcessEntry name apps.${name})) { } (
+      lib.attrNames appsWithProcessCompose
+    );
 
   # Infrastructure processes for devenv format
-  infrastructureDevenvProcesses = lib.optionalAttrs (formatWatcherCfg.enable or true) {
-    format-watch = {
-      exec = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
-      process-compose = {
-        namespace = "infra";
-        availability = {
-          restart = "always";
-          backoff_seconds = 2;
+  mkInfrastructureDevenvProcesses =
+    formatWatcherCfg:
+    let
+      formatExtensions =
+        formatWatcherCfg.extensions or [
+          "ts"
+          "tsx"
+          "js"
+          "jsx"
+          "json"
+          "md"
+          "css"
+          "scss"
+          "html"
+          "nix"
+          "go"
+          "rs"
+          "py"
+        ];
+      formatCommand =
+        if formatWatcherCfg.command or null != null then
+          formatWatcherCfg.command
+        else
+          "${turbo} run format --continue";
+      formatExtStr = lib.concatStringsSep "," formatExtensions;
+    in
+    lib.optionalAttrs (formatWatcherCfg.enable or true) {
+      format-watch = {
+        exec = "${watchexec} --exts ${formatExtStr} -- ${formatCommand}";
+        process-compose = {
+          namespace = "infra";
+          availability = {
+            restart = "always";
+            backoff_seconds = 2;
+          };
         };
       };
     };
-  };
-
-  allDevenvProcessEntries = appDevenvProcessEntries // infrastructureDevenvProcesses;
 
   # ---------------------------------------------------------------------------
   # Package generation
@@ -212,10 +238,12 @@ let
       commandName,
     }:
     let
+      processCount = builtins.length (lib.attrNames processes);
+      processNames = lib.attrNames processes;
       # process-compose expects environment as a list of KEY=VALUE strings
       envList = lib.mapAttrsToList (k: v: "${k}=${v}") environment;
       configFile = pkgs.writeText "process-compose.yaml" (
-        builtins.toJSON (removeNulls {
+        lib.generators.toYAML { } (removeNulls {
           version = "0.5";
           inherit processes;
           environment = envList;
@@ -230,7 +258,33 @@ let
         pkgs.turbo
       ];
       text = ''
-        exec process-compose up -f ${configFile} "$@"
+        set -euo pipefail
+
+        CONFIG_PATH=${configFile}
+        PROCESS_COUNT=${toString processCount}
+        STATE_DIR="''${STACKPANEL_STATE_DIR:-$PWD/.stackpanel/state}/process-compose"
+
+        mkdir -p "$STATE_DIR"
+
+        # Force interactive TUI and ignore any devenv-provided configs
+        unset PC_NO_TUI PROCESS_COMPOSE_NO_TUI
+        export PC_CONFIG_FILES=
+        export PC_CONFIG=
+        export PROCESS_COMPOSE_FILE=
+        export PROCESS_COMPOSE_CONFIG=
+        export PC_TUI=1
+        export PROCESS_COMPOSE_DIR="$STATE_DIR"
+
+        if [[ "$PROCESS_COUNT" -eq 0 ]]; then
+          echo "⚠️  No processes configured for process-compose (config: $CONFIG_PATH)"
+          echo "   Define apps or set stackpanel.process-compose.processes."
+          exit 1
+        fi
+
+        echo "🚀 Starting process-compose with $PROCESS_COUNT process(es) from $CONFIG_PATH"
+        echo "    ${lib.concatStringsSep ", " processNames}"
+        exec env -u PC_CONFIG_FILES -u PC_CONFIG -u PROCESS_COMPOSE_FILE -u PROCESS_COMPOSE_CONFIG \
+          process-compose up -f "$CONFIG_PATH" "$@"
       '';
     };
 in
@@ -248,7 +302,7 @@ in
       default = "dev";
       description = ''
         Name of the command to start all processes.
-        Change this if `dev` conflicts with an alias on your machine.
+        Change this if it conflicts with a global alias or shell builtin.
       '';
       example = "start";
     };
@@ -351,8 +405,13 @@ in
 
     # When stackpanel is enabled, populate process-compose from apps
     (lib.mkIf cfg.enable {
-      # Populate process-compose.processes from apps
-      stackpanel.process-compose.processes = allProcessEntries;
+      # Populate process-compose.processes from apps (evaluated with cfg.apps available)
+      stackpanel.process-compose.processes =
+        let
+          appProcesses = mkAppProcessEntries cfg.apps;
+          infraProcesses = mkInfrastructureProcesses pcCfg.formatWatcher;
+        in
+        appProcesses // infraProcesses;
 
       # Default environment with ports
       stackpanel.process-compose.environment = {
@@ -362,6 +421,19 @@ in
 
     # When process-compose is enabled, build the wrapper package and add to devshell
     (lib.mkIf (cfg.enable && pcCfg.enable) {
+      # Ensure devshell environment does not inherit devenv process-compose vars
+      # Use mkOverride 50 (higher priority than mkForce which is 100) to override
+      # devenv's process-compose module settings
+      stackpanel.devshell.env = {
+        PC_CONFIG_FILES = lib.mkOverride 50 "";
+        PC_CONFIG = lib.mkOverride 50 "";
+        PROCESS_COMPOSE_FILE = lib.mkOverride 50 "";
+        PROCESS_COMPOSE_CONFIG = lib.mkOverride 50 "";
+        PROCESS_COMPOSE_DIR = lib.mkOverride 50 "";
+        PC_NO_TUI = lib.mkOverride 50 "";
+        PROCESS_COMPOSE_NO_TUI = lib.mkOverride 50 "";
+      };
+
       stackpanel.process-compose.package = mkDevPackage {
         commandName = pcCfg.commandName;
         processes = pcCfg.processes;
@@ -381,7 +453,12 @@ in
     # Devenv compatibility: if `processes` option exists at top level, populate it
     (lib.optionalAttrs hasDevenvProcessesOption (
       lib.mkIf (cfg.enable && pcCfg.enable) {
-        processes = allDevenvProcessEntries;
+        processes =
+          let
+            appProcesses = mkDevenvAppProcessEntries cfg.apps;
+            infraProcesses = mkInfrastructureDevenvProcesses pcCfg.formatWatcher;
+          in
+          appProcesses // infraProcesses;
       }
     ))
   ];

@@ -1,19 +1,25 @@
 {
+  "/dev/openai-api-key" = {
+    id = "/dev/openai-api-key";
+    key = "OPENAI_API_KEY";
+    master-keys = [ "local" ];
+    type = "SECRET";
+  };
   "/prod/postgres-url" = {
     description = "Postgres URL";
     key = "POSTGRES_URL";
-    type = 1;
-    value = "supersecret";
+    master-keys = [ "local" ];
+    type = "SECRET";
   };
-  asasd = {
-    id = "asasd";
-    key = "asasd";
+  postgres-url = {
+    id = "postgres-url";
+    key = "postgres-url";
     type = "SECRET";
     value = "";
   };
-  openai-api-key = {
-    id = "openai-api-key";
-    key = "openai-api-key";
+  postgres-url-dev = {
+    id = "postgres-url-dev";
+    key = "postgres-url-dev";
     type = "SECRET";
     value = "";
   };

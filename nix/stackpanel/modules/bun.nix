@@ -336,12 +336,17 @@ in
         )
       ];
     }
-    (lib.mkIf (cfg.apps != { }) (
+    # Bun app outputs - computed lazily inside config block to avoid recursion
+    (
       let
-        # Filter apps to only Go apps (evaluated lazily inside mkIf)
-        goApps = lib.filterAttrs (name: app: app.bun.enable or false) cfg.apps;
+        # Filter apps to only Bun apps
+        # NOTE: Access cfg.apps here inside the config block, not at module top-level
+        bunApps = lib.filterAttrs (name: app: app.bun.enable or false) cfg.apps;
+        hasBunApps = bunApps != { };
+        # Keep goApps alias for backwards compatibility with unchanged code
+        goApps = bunApps;
       in
-      lib.mkIf (goApps != { }) {
+      lib.mkIf hasBunApps {
         # Conditionally add packages/files only for apps with go.enable = true
         # assertions = lib.mapAttrsToList (name: app: {
         #   assertion = app.path != null;
@@ -383,7 +388,12 @@ in
             };
           }) goApps
         );
+
+        # NOTE: Default commands for Bun apps are now provided via bun.commands option
+        # rather than writing back to stackpanel.apps (which causes infinite recursion).
+        # Users can access these defaults by setting:
+        #   stackpanel.apps.<name>.bun.commands = { ... };
       }
-    ))
+    )
   ];
 }

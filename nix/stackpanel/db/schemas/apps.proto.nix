@@ -19,8 +19,14 @@ proto.mkProtoFile {
     # apps.nix - Application configuration
     # type: sp-app
     # See: https://stackpanel.dev/docs/apps
+    #
+    # Commands (dev, build, test, lint, format) are automatically provided
+    # based on app type (bun, go, etc.) via Nix-native flake outputs:
+    #   nix build .#<app>       - Build for production
+    #   nix run .#<app>-dev     - Run dev server
+    #   nix flake check         - Run all tests and lints
     {
-      # Example app:
+      # Example bun app:
       # web = {
       #   name = "Web App";
       #   description = "Frontend web application";
@@ -30,6 +36,7 @@ proto.mkProtoFile {
       #   domain = "web.local";
       # };
       #
+      # Example go app:
       # api = {
       #   name = "API Server";
       #   path = "apps/api";
@@ -68,10 +75,12 @@ proto.mkProtoFile {
         value = proto.optional (proto.string 4 "Literal value (used when variable_id is empty)");
       };
     };
-    # App Tasks, corresponds to npm package scripts
+    # DEPRECATED: Use stackpanel.apps.<name>.commands instead (Nix-native)
+    # App Tasks - legacy shell command format (npm script style)
+    # Will be removed in a future version
     AppTask = proto.mkMessage {
       name = "AppTask";
-      description = "Command configuration";
+      description = "DEPRECATED: Use commands option instead. Shell command configuration.";
       fields = {
         key = proto.string 1 "Corresponds to CMD in  `turbo task run CMD`";
         description = proto.optional (proto.string 2 "(optional) Description of the command");
@@ -103,7 +112,13 @@ proto.mkProtoFile {
       };
     };
     # Individual app configuration (data only, not runtime config)
-    # Uses embedded model: tasks/variables are maps where key = ID/name
+    # Uses embedded model: variables/environments are maps where key = ID/name
+    #
+    # Commands (build, dev, test, lint, format) are now defined via the Nix-native
+    # `commands` option, which provides proper flake integration:
+    #   nix build .#<app>       - Build for production
+    #   nix run .#<app>-dev     - Run dev server
+    #   nix flake check         - Run tests and lints
     App = proto.mkMessage {
       name = "App";
       description = "Configuration for a single application in the workspace";
@@ -114,7 +129,8 @@ proto.mkProtoFile {
         type = proto.optional (proto.string 4 "App type/runtime (bun, go, python, rust, etc.)");
         port = proto.optional (proto.int32 5 "Development server port");
         domain = proto.optional (proto.string 6 "Local development domain");
-        tasks = proto.map "string" "AppTask" 7 "Tasks for this app (key = task name)";
+        # DEPRECATED: Use Nix-native `commands` option instead
+        tasks = proto.optional (proto.map "string" "AppTask" 7 "DEPRECATED: Use commands option. Legacy tasks (key = task name)");
         variables = proto.map "string" "AppVariable" 8 "Environment variables (key = env var key)";
         environments = proto.map "string" "AppEnvironment" 9 "Environments associated with this app";
       };

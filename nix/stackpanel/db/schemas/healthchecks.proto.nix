@@ -72,9 +72,9 @@ proto.mkProtoFile {
         type = proto.message "HealthcheckType" 4 "Type of healthcheck (script, nix, http, tcp)";
         severity = proto.message "HealthcheckSeverity" 5 "How critical this check is";
 
-        # Script-based checks
-        script = proto.optional (proto.string 6 "Shell script content (for SCRIPT type)");
-        script_path = proto.optional (proto.string 7 "Path to script derivation (resolved from Nix)");
+        # Script-based checks - agent executes derivation path directly (secure, no sh -c)
+        script_bin_path = proto.optional (proto.string 6 "Path to script executable in Nix store");
+        script_source = proto.optional (proto.string 7 "Source type: inline, path, scriptRef, package");
 
         # Nix-based checks
         nix_expr = proto.optional (proto.string 8 "Nix expression to evaluate (for NIX type)");

@@ -5,16 +5,21 @@
 # Consumes stackpanel.appsComputed.<app>.wrappedTooling.* and exposes a
 # git-hooks configuration fragment suitable for git-hooks.nix.
 #
+# Also handles cleanup of stale git hooks that reference garbage-collected
+# nix store paths.
+#
 # Usage (in .stackpanel/config.nix):
 #   git-hooks.enable = true;
 # ==============================================================================
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 let
   cfg = config.stackpanel;
+  gitHooksCfg = cfg.git-hooks or { enable = false; };
   appsComputed = cfg.appsComputed or { };
 
   allTools =
@@ -34,15 +39,65 @@ let
         value = toolCommand tool;
       }) tools
     );
+
+  # Script to clean up stale git hooks that reference missing nix store paths
+  cleanStaleGitHooks = ''
+    # Clean up stale git hooks that reference garbage-collected nix store paths
+    _cleanup_stale_git_hooks() {
+      local git_dir hooks_dir
+      git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return 0
+      hooks_dir="$git_dir/hooks"
+      
+      [[ -d "$hooks_dir" ]] || return 0
+      
+      local hook_files=("pre-commit" "pre-push" "commit-msg" "prepare-commit-msg")
+      
+      for hook in "''${hook_files[@]}"; do
+        local hook_path="$hooks_dir/$hook"
+        [[ -f "$hook_path" ]] || continue
+        
+        # Check if hook references a nix store path
+        if grep -q '/nix/store/' "$hook_path" 2>/dev/null; then
+          # Extract nix store paths and check if they exist
+          local store_paths
+          store_paths=$(grep -oE '/nix/store/[a-z0-9]+-[^/"]+' "$hook_path" 2>/dev/null | head -5)
+          
+          local any_missing=false
+          while IFS= read -r store_path; do
+            [[ -z "$store_path" ]] && continue
+            if [[ ! -e "$store_path" ]]; then
+              any_missing=true
+              break
+            fi
+          done <<< "$store_paths"
+          
+          if [[ "$any_missing" == "true" ]]; then
+            rm -f "$hook_path"
+            echo "🧹 Removed stale git hook: $hook (referenced garbage-collected nix store path)"
+          fi
+        fi
+      done
+    }
+    _cleanup_stale_git_hooks
+  '';
+
 in
 {
-  config = lib.mkIf cfg.enable {
-    stackpanel.git-hooks = {
-      enable = lib.mkDefault true;
-      hooks = {
-        pre-commit = (mkHooks (allTools "formatters")) // (mkHooks (allTools "linters"));
-        pre-push = mkHooks (allTools "build-steps");
+  config = lib.mkMerge [
+    # Always clean up stale git hooks on shell entry
+    (lib.mkIf cfg.enable {
+      stackpanel.devshell.hooks.before = lib.mkBefore [ cleanStaleGitHooks ];
+    })
+
+    # Configure git-hooks when enabled
+    (lib.mkIf cfg.enable {
+      stackpanel.git-hooks = {
+        enable = lib.mkDefault true;
+        hooks = {
+          pre-commit = (mkHooks (allTools "formatters")) // (mkHooks (allTools "linters"));
+          pre-push = mkHooks (allTools "build-steps");
+        };
       };
-    };
-  };
+    })
+  ];
 }

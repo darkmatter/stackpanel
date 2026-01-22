@@ -96,6 +96,30 @@ func (s *AgentServiceServer) SetVariables(
 	return connect.NewResponse(req.Msg), nil
 }
 
+// GetSst retrieves the sst entity from Nix data.
+// Generated from proto - do not edit manually.
+func (s *AgentServiceServer) GetSst(
+	ctx context.Context,
+	req *connect.Request[gopb.GetSstRequest],
+) (*connect.Response[gopb.Sst], error) {
+	data, err := s.server.readNixEntityJSON("sst")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	var result gopb.Sst
+	if len(data) > 0 {
+		if err := protojson.Unmarshal(data, &result); err != nil {
+			// Fall back to standard JSON if protojson fails
+			if err := json.Unmarshal(data, &result); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+		}
+	}
+
+	return connect.NewResponse(&result), nil
+}
+
 // GetConfig retrieves the config entity from Nix data.
 // Generated from proto - do not edit manually.
 func (s *AgentServiceServer) GetConfig(

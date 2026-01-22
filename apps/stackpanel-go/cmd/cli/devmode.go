@@ -11,25 +11,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var devCmd = &cobra.Command{
-	Use:   "dev",
-	Short: "Manage development mode for running from source",
-	Long: `Manage development mode settings for the stackpanel CLI.
+var debugCmd = &cobra.Command{
+	Use:     "debug",
+	Aliases: []string{"dev"},
+	Short:   "Manage debug mode (run stackpanel from source)",
+	Long: `Manage debug mode settings for the stackpanel CLI.
 
-When dev mode is enabled, the CLI will forward all commands to 'go run'
+When debug mode is enabled, the CLI will forward all commands to 'go run'
 in your local stackpanel repository. This allows you to test changes
 without rebuilding or reinstalling the binary.
 
 Examples:
-  stackpanel dev status                    # Show current dev mode settings
-  stackpanel dev enable ~/projects/stackpanel  # Enable dev mode
-  stackpanel dev disable                   # Disable dev mode`,
+  stackpanel debug status                    # Show current debug mode settings
+  stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
+  stackpanel debug disable                   # Disable debug mode
+
+Alias:
+  stackpanel dev ... (legacy alias)`,
 }
 
-var devEnableCmd = &cobra.Command{
+var debugEnableCmd = &cobra.Command{
 	Use:   "enable <repo-path>",
-	Short: "Enable development mode with a local repository path",
-	Long: `Enable development mode to run stackpanel from source.
+	Short: "Enable debug mode with a local repository path",
+	Long: `Enable debug mode to run stackpanel from source.
 
 When enabled, all stackpanel commands will be forwarded to:
   go run <repo-path>/apps/stackpanel-go <args...>
@@ -37,9 +41,9 @@ When enabled, all stackpanel commands will be forwarded to:
 This allows you to test local changes without rebuilding the binary.
 
 Examples:
-  stackpanel dev enable ~/projects/stackpanel
-  stackpanel dev enable /absolute/path/to/stackpanel
-  stackpanel dev enable .   # Use current directory`,
+  stackpanel debug enable ~/projects/stackpanel
+  stackpanel debug enable /absolute/path/to/stackpanel
+  stackpanel debug enable .   # Use current directory`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		repoPath := args[0]
@@ -88,25 +92,25 @@ Examples:
 		}
 
 		if err := ucm.SetDevMode(true, absPath); err != nil {
-			output.Error(fmt.Sprintf("Failed to enable dev mode: %v", err))
+			output.Error(fmt.Sprintf("Failed to enable debug mode: %v", err))
 			os.Exit(1)
 		}
 
-		output.Success("Development mode enabled")
+		output.Success("Debug mode enabled")
 		fmt.Println()
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Repository:"), color.CyanString(absPath))
 		fmt.Printf("  %s %s\n", color.New(color.Faint).Sprint("Go app:"), color.CyanString(goAppPath))
 		fmt.Println()
 		output.Info("All stackpanel commands will now run from source via 'go run'")
 		fmt.Println()
-		fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel dev disable"))
+		fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel debug disable"))
 	},
 }
 
-var devDisableCmd = &cobra.Command{
+var debugDisableCmd = &cobra.Command{
 	Use:   "disable",
-	Short: "Disable development mode",
-	Long:  `Disable development mode and use the installed stackpanel binary.`,
+	Short: "Disable debug mode",
+	Long:  `Disable debug mode and use the installed stackpanel binary.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ucm, err := userconfig.NewManager()
 		if err != nil {
@@ -116,23 +120,23 @@ var devDisableCmd = &cobra.Command{
 
 		devMode := ucm.GetDevMode()
 		if !devMode.Enabled {
-			output.Info("Development mode is already disabled")
+			output.Info("Debug mode is already disabled")
 			return
 		}
 
 		if err := ucm.SetDevMode(false, ""); err != nil {
-			output.Error(fmt.Sprintf("Failed to disable dev mode: %v", err))
+			output.Error(fmt.Sprintf("Failed to disable debug mode: %v", err))
 			os.Exit(1)
 		}
 
-		output.Success("Development mode disabled")
+		output.Success("Debug mode disabled")
 		output.Info("Stackpanel will now use the installed binary")
 	},
 }
 
-var devStatusCmd = &cobra.Command{
+var debugStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show current development mode settings",
+	Short: "Show current debug mode settings",
 	Run: func(cmd *cobra.Command, args []string) {
 		ucm, err := userconfig.NewManager()
 		if err != nil {
@@ -143,7 +147,7 @@ var devStatusCmd = &cobra.Command{
 		devMode := ucm.GetDevMode()
 		configPath := ucm.ConfigPath()
 
-		fmt.Println(color.New(color.Bold).Sprint("Development Mode Status"))
+		fmt.Println(color.New(color.Bold).Sprint("Debug Mode Status"))
 		fmt.Println()
 
 		if devMode.Enabled {
@@ -164,16 +168,18 @@ var devStatusCmd = &cobra.Command{
 		fmt.Println()
 
 		if !devMode.Enabled {
-			fmt.Printf("  To enable: %s\n", color.CyanString("stackpanel dev enable <repo-path>"))
+			fmt.Printf("  To enable: %s\n", color.CyanString("stackpanel debug enable <repo-path>"))
+			fmt.Printf("  Alias: %s\n", color.CyanString("stackpanel dev enable <repo-path>"))
 		} else {
-			fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel dev disable"))
+			fmt.Printf("  To disable: %s\n", color.YellowString("stackpanel debug disable"))
+			fmt.Printf("  Alias: %s\n", color.YellowString("stackpanel dev disable"))
 		}
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(devCmd)
-	devCmd.AddCommand(devEnableCmd)
-	devCmd.AddCommand(devDisableCmd)
-	devCmd.AddCommand(devStatusCmd)
+	rootCmd.AddCommand(debugCmd)
+	debugCmd.AddCommand(debugEnableCmd)
+	debugCmd.AddCommand(debugDisableCmd)
+	debugCmd.AddCommand(debugStatusCmd)
 }

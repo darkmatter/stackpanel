@@ -2,7 +2,7 @@
 // @generated from file users.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
@@ -31,18 +31,11 @@ export declare type User = Message<"stackpanel.db.User"> & {
   github?: string;
 
   /**
-   * SSH or AGE public keys for encryption
+   * Email address
    *
-   * @generated from field: repeated string public_keys = 3;
+   * @generated from field: optional string email = 3;
    */
-  publicKeys: string[];
-
-  /**
-   * Environments this user can access secrets for
-   *
-   * @generated from field: repeated stackpanel.db.Environment secrets_allowed_environments = 4;
-   */
-  secretsAllowedEnvironments: Environment[];
+  email?: string;
 };
 
 /**
@@ -70,36 +63,4 @@ export declare type Users = Message<"stackpanel.db.Users"> & {
  * Use `create(UsersSchema)` to create a new message.
  */
 export declare const UsersSchema: GenMessage<Users>;
-
-/**
- * Environments a user can access secrets for
- *
- * @generated from enum stackpanel.db.Environment
- */
-export enum Environment {
-  /**
-   * @generated from enum value: ENVIRONMENT_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: ENVIRONMENT_DEV = 1;
-   */
-  DEV = 1,
-
-  /**
-   * @generated from enum value: ENVIRONMENT_STAGING = 2;
-   */
-  STAGING = 2,
-
-  /**
-   * @generated from enum value: ENVIRONMENT_PRODUCTION = 3;
-   */
-  PRODUCTION = 3,
-}
-
-/**
- * Describes the enum stackpanel.db.Environment.
- */
-export declare const EnvironmentSchema: GenEnum<Environment>;
 

@@ -3,7 +3,7 @@
  */
 import { useMemo, useState } from "react";
 import type { User } from "@/lib/types";
-import { useNixData } from "@/lib/use-nix-config";
+import { useNixData } from "@/lib/use-agent";
 import type { GithubCollaboratorsData, TeamMember } from "./types";
 
 export function useTeam() {

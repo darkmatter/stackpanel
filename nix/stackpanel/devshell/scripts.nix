@@ -14,15 +14,25 @@
 #   - Single package with all scripts in `bin/`
 #   - Optional devshell integration (enabled by default)
 #   - Support for runtimeInputs, env, and description
+#   - Load script content from files via `path` option
 #
-# Usage:
+# Usage (inline exec):
 #   stackpanel.scripts.db-seed = {
 #     exec = "npm run seed";
 #     description = "Seed the database with test data";
 #   };
-#   stackpanel.scripts."api:start" = {
-#     exec = "bun run dev";
-#     runtimeInputs = [ pkgs.bun ];
+#
+# Usage (path to file):
+#   stackpanel.scripts.db-seed = {
+#     path = ./.stackpanel/src/scripts/db-seed.sh;
+#     description = "Seed the database with test data";
+#     runtimeInputs = [ pkgs.nodejs ];
+#   };
+#
+# Extension scripts use namespace prefix:
+#   stackpanel.scripts."sst:deploy" = {
+#     path = ./src/scripts/deploy.sh;
+#     description = "Deploy SST infrastructure";
 #   };
 # ==============================================================================
 {
@@ -38,6 +48,21 @@ let
   cfg = config.stackpanel.scripts;
   scriptsCfg = config.stackpanel.scriptsConfig;
 
+  # Resolve script content from either exec or path
+  resolveScriptContent = name: script:
+    let
+      hasExec = script.exec or null != null && script.exec != "";
+      hasPath = script.path or null != null;
+    in
+    if hasExec && hasPath then
+      throw "Script '${name}': cannot specify both 'exec' and 'path' - use one or the other"
+    else if hasPath then
+      builtins.readFile script.path
+    else if hasExec then
+      script.exec
+    else
+      throw "Script '${name}': must specify either 'exec' or 'path'";
+
   # Build a single script executable
   mkScript =
     name: script:
@@ -45,6 +70,7 @@ let
       envExports = lib.concatStringsSep "\n" (
         lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (script.env or { })
       );
+      scriptContent = resolveScriptContent name script;
     in
     pkgs.writeShellApplication {
       inherit name;
@@ -52,7 +78,7 @@ let
       text = ''
         set -euo pipefail
         ${envExports}
-        ${script.exec}
+        ${scriptContent}
       '';
     };
 
@@ -68,26 +94,46 @@ let
     };
   };
 
-  # Generate serializable script definitions for CLI access
-  serializableScripts = lib.mapAttrs (name: script: {
-    inherit name;
-    exec = script.exec;
-    description = script.description or null;
-    env = script.env or { };
-  }) cfg;
+  # Generate serializable script definitions for CLI/agent access
+  # Uses derivation paths instead of inline content for security
+  serializableScripts = lib.mapAttrs (name: script:
+    let
+      pkg = scriptPackages.${name};
+    in
+    {
+      inherit name;
+      description = script.description or null;
+      env = script.env or { };
+      # Derivation path - agent executes this directly (no sh -c with inline content)
+      binPath = "${pkg}/bin/${name}";
+      # Source info for debugging
+      source = if script.path or null != null then "path" else "inline";
+    }
+  ) cfg;
 
   hasScripts = cfg != { };
 
-  # Nix-only script options (not serializable to proto - contains packages)
+  # Nix-only script options (not serializable to proto - contains packages/paths)
   nixScriptOptionsModule =
     { lib, ... }:
     {
       options = {
+        # Path is Nix-only because it uses types.path (not serializable as string)
+        path = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = ''
+            Path to script file. Content is read and used as the script body.
+            Mutually exclusive with `exec` - use one or the other.
+          '';
+          example = lib.literalExpression "./.stackpanel/src/scripts/my-script.sh";
+        };
+
         runtimeInputs = lib.mkOption {
           type = lib.types.listOf lib.types.package;
           default = [ ];
           description = ''
-            (Nix extension) Packages to include in PATH when running the script.
+            Packages to include in PATH when running the script.
             These are pinned to specific Nix store paths, ensuring reproducible execution.
           '';
           example = lib.literalExpression "[ pkgs.nodejs pkgs.jq ]";
@@ -109,7 +155,8 @@ in
       lib.types.submoduleWith {
         modules = [
           # Proto-derived options (exec, description, env)
-          { options = db.extend.script; }
+          # Note: Strip the __db_extend_marker__ when using db.extend.* directly as options
+          { options = removeAttrs db.extend.script [ "__db_extend_marker__" ]; }
           # Nix-only runtime options (runtimeInputs)
           nixScriptOptionsModule
         ]
@@ -124,29 +171,43 @@ in
       Each script becomes an executable command available in PATH.
       The attribute name determines the command name.
 
+      Script content can be provided via:
+        - exec: Inline shell command
+        - path: Path to script file (content is read at eval time)
+
+      These are mutually exclusive - use one or the other.
+
       Proto-derived options (from scripts.proto.nix):
         - exec: Shell command to execute
         - description: Human-readable description
         - env: Environment variables
 
       Nix extensions:
+        - path: Path to script file (alternative to inline exec)
         - runtimeInputs: Nix packages for PATH
-      
-      Example:
-        stackpanel.scripts.db-seed = {
-          exec = "npm run seed";
-          description = "Seed the database";
-        };
+
+      Extension scripts should use namespace prefix (e.g., "sst:deploy").
     '';
     example = lib.literalExpression ''
       {
+        # Inline exec
         db-seed = {
           exec = "npm run seed";
           description = "Seed the database with test data";
         };
-        "api:start" = {
-          exec = "bun run dev";
-          runtimeInputs = [ pkgs.bun ];
+
+        # Path to script file
+        deploy = {
+          path = ./.stackpanel/src/scripts/deploy.sh;
+          description = "Deploy the application";
+          runtimeInputs = [ pkgs.awscli2 ];
+        };
+
+        # Extension-namespaced script
+        "sst:dev" = {
+          exec = "sst dev";
+          description = "Start SST dev mode";
+          runtimeInputs = [ pkgs.nodejs ];
         };
       }
     '';
@@ -163,7 +224,17 @@ in
       type = lib.types.package;
       readOnly = true;
       default = scriptsPackage;
-      description = "The generated scripts package (read-only).";
+      description = "The generated combined scripts package (read-only).";
+    };
+
+    packages = lib.mkOption {
+      type = lib.types.attrsOf lib.types.package;
+      readOnly = true;
+      default = scriptPackages;
+      description = ''
+        Individual script packages (read-only).
+        Use to reference specific scripts: config.stackpanel.scriptsConfig.packages.my-script
+      '';
     };
   };
 

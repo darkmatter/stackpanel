@@ -210,16 +210,9 @@ export declare type AppVariable = Message<"stackpanel.db.AppVariable"> & {
   variableId: string;
 
   /**
-   * Environments this mapping applies to
-   *
-   * @generated from field: map<string, stackpanel.db.AppEnvironment> environments = 4;
-   */
-  environments: { [key: string]: AppEnvironment };
-
-  /**
    * Literal value (used when variable_id is empty)
    *
-   * @generated from field: optional string value = 5;
+   * @generated from field: optional string value = 4;
    */
   value?: string;
 };

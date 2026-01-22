@@ -114,14 +114,54 @@
       default = { };
     };
 
+    project = lib.mkOption {
+      description = ''
+        Project metadata including type, owner, and repository information.
+      '';
+      type = lib.types.submodule {
+        options = {
+          name = lib.mkOption {
+            description = "Project name (defaults to stackpanel.name)";
+            type = lib.types.str;
+            default = config.stackpanel.name;
+          };
+          type = lib.mkOption {
+            description = "Project type (e.g., 'github', 'gitlab', 'local')";
+            type = lib.types.str;
+            default = "github";
+          };
+          owner = lib.mkOption {
+            description = "Owner/organization of the project repository";
+            type = lib.types.str;
+            default = "";
+            example = "darkmatter";
+          };
+          repo = lib.mkOption {
+            description = "Repository name";
+            type = lib.types.str;
+            default = "";
+            example = "stackpanel";
+          };
+        };
+      };
+      default = { };
+    };
+
     github = lib.mkOption {
       description = ''
+        DEPRECATED: Use stackpanel.project.owner and stackpanel.project.repo instead.
+
         GitHub repository in 'owner/repo' format for this project. This value is
         used as a key for certain features like stable port calculation and
         user sync.
       '';
       type = lib.types.str;
-      default = "";
+      default =
+        let
+          owner = config.stackpanel.project.owner;
+          repo = config.stackpanel.project.repo;
+        in
+        if owner != "" && repo != "" then "${owner}/${repo}" else "";
       example = "darkmatter/stackpanel";
     };
     useDevenv = lib.mkOption {

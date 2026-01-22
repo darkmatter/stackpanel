@@ -17,7 +17,7 @@ in
   # Theme options derived from proto schema
   # The proto defines: name, colors, starship, nerd_font, minimal
   # These are converted to kebab-case: nerd-font
-  options.stackpanel.theme = db.extend.theme // {
+  options.stackpanel.theme = db.mkOpt db.extend.theme {
     # Nix-specific extension: enable option (not in data schema)
     enable = lib.mkEnableOption "Starship prompt for stackpanel devenv";
 

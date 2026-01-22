@@ -22,6 +22,20 @@ export declare type Aws = Message<"stackpanel.db.Aws"> & {
    * @generated from field: stackpanel.db.RolesAnywhere roles_anywhere = 1;
    */
   rolesAnywhere?: RolesAnywhere;
+
+  /**
+   * AWS profile name to use as default (default: 'default')
+   *
+   * @generated from field: string default_profile = 2;
+   */
+  defaultProfile: string;
+
+  /**
+   * Additional AWS config to append (raw INI format)
+   *
+   * @generated from field: string extra_config = 3;
+   */
+  extraConfig: string;
 };
 
 /**

@@ -39,10 +39,10 @@ let
   defaultRegion = awsCfg.region or "us-west-2";
   defaultAccountId = awsCfg.account-id or "";
 
-  # GitHub org/repo extracted from config.stackpanel.github (format: "org/repo")
-  githubParts = lib.splitString "/" (config.stackpanel.github or "");
-  defaultGithubOrg = if lib.length githubParts >= 1 then lib.elemAt githubParts 0 else "";
-  defaultGithubRepo = if lib.length githubParts >= 2 then lib.elemAt githubParts 1 else "*";
+  # GitHub org/repo from project config
+  projectCfg = config.stackpanel.project;
+  defaultGithubOrg = projectCfg.owner;
+  defaultGithubRepo = if projectCfg.repo != "" then projectCfg.repo else "*";
 
   # OIDC provider configurations
   oidcProviders = {
@@ -527,13 +527,13 @@ in
         org = lib.mkOption {
           type = lib.types.str;
           default = defaultGithubOrg;
-          description = "GitHub organization name (inherits from stackpanel.github)";
+          description = "GitHub organization name (inherits from stackpanel.project.owner)";
         };
 
         repo = lib.mkOption {
           type = lib.types.str;
           default = defaultGithubRepo;
-          description = "GitHub repository name (inherits from stackpanel.github, or * for all repos in org)";
+          description = "GitHub repository name (inherits from stackpanel.project.repo, or * for all repos in org)";
         };
 
         branch = lib.mkOption {
@@ -593,6 +593,11 @@ in
       enabled = true;
       builtin = true;
       priority = 10; # Load early since other extensions may depend on AWS infra
+
+      # Source directory for file-based scripts (reference implementation)
+      # Scripts in src/scripts/ are used via path option below
+      srcDir = ./src;
+
       tags = [
         "aws"
         "infrastructure"
@@ -690,37 +695,30 @@ in
     ];
 
     # Add scripts for SST
+    # Using path option for file-based scripts (reference implementation)
     stackpanel.scripts = {
       "sst:deploy" = {
         description = "Deploy SST infrastructure";
-        exec = ''
-          cd "$(dirname "${cfg.config-path}")"
-          bunx sst deploy "$@"
-        '';
+        path = ./src/scripts/deploy.sh;
+        env.SST_CONFIG_PATH = cfg.config-path;
       };
 
       "sst:dev" = {
         description = "Start SST dev mode";
-        exec = ''
-          cd "$(dirname "${cfg.config-path}")"
-          bunx sst dev "$@"
-        '';
+        path = ./src/scripts/dev.sh;
+        env.SST_CONFIG_PATH = cfg.config-path;
       };
 
       "sst:remove" = {
         description = "Remove SST infrastructure";
-        exec = ''
-          cd "$(dirname "${cfg.config-path}")"
-          bunx sst remove "$@"
-        '';
+        path = ./src/scripts/remove.sh;
+        env.SST_CONFIG_PATH = cfg.config-path;
       };
 
       "sst:outputs" = {
         description = "Show SST stack outputs";
-        exec = ''
-          cd "$(dirname "${cfg.config-path}")"
-          bunx sst outputs "$@"
-        '';
+        path = ./src/scripts/outputs.sh;
+        env.SST_CONFIG_PATH = cfg.config-path;
       };
     };
 
