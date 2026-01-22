@@ -66,13 +66,13 @@ export interface Healthcheck {
      */
     severity: HealthcheckSeverity; // How critical this check is
     /**
-     * @generated from protobuf field: optional string script = 6
+     * @generated from protobuf field: optional string script_bin_path = 6
      */
-    script?: string; // Shell script content (for SCRIPT type)
+    script_bin_path?: string; // Path to script executable in Nix store
     /**
-     * @generated from protobuf field: optional string script_path = 7
+     * @generated from protobuf field: optional string script_source = 7
      */
-    script_path?: string; // Path to script derivation (resolved from Nix)
+    script_source?: string; // Source type: inline, path, scriptRef, package
     /**
      * @generated from protobuf field: optional string nix_expr = 8
      */
@@ -369,8 +369,8 @@ class Healthcheck$Type extends MessageType<Healthcheck> {
             { no: 3, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "type", kind: "enum", T: () => ["stackpanel.db.HealthcheckType", HealthcheckType, "HEALTHCHECK_TYPE_"] },
             { no: 5, name: "severity", kind: "enum", T: () => ["stackpanel.db.HealthcheckSeverity", HealthcheckSeverity, "HEALTHCHECK_SEVERITY_"] },
-            { no: 6, name: "script", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "script_path", kind: "scalar", localName: "script_path", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "script_bin_path", kind: "scalar", localName: "script_bin_path", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "script_source", kind: "scalar", localName: "script_source", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "nix_expr", kind: "scalar", localName: "nix_expr", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 9, name: "http_url", kind: "scalar", localName: "http_url", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 10, name: "http_method", kind: "scalar", localName: "http_method", opt: true, T: 9 /*ScalarType.STRING*/ },
@@ -416,11 +416,11 @@ class Healthcheck$Type extends MessageType<Healthcheck> {
                 case /* stackpanel.db.HealthcheckSeverity severity */ 5:
                     message.severity = reader.int32();
                     break;
-                case /* optional string script */ 6:
-                    message.script = reader.string();
+                case /* optional string script_bin_path */ 6:
+                    message.script_bin_path = reader.string();
                     break;
-                case /* optional string script_path */ 7:
-                    message.script_path = reader.string();
+                case /* optional string script_source */ 7:
+                    message.script_source = reader.string();
                     break;
                 case /* optional string nix_expr */ 8:
                     message.nix_expr = reader.string();
@@ -479,12 +479,12 @@ class Healthcheck$Type extends MessageType<Healthcheck> {
         /* stackpanel.db.HealthcheckSeverity severity = 5; */
         if (message.severity !== 0)
             writer.tag(5, WireType.Varint).int32(message.severity);
-        /* optional string script = 6; */
-        if (message.script !== undefined)
-            writer.tag(6, WireType.LengthDelimited).string(message.script);
-        /* optional string script_path = 7; */
-        if (message.script_path !== undefined)
-            writer.tag(7, WireType.LengthDelimited).string(message.script_path);
+        /* optional string script_bin_path = 6; */
+        if (message.script_bin_path !== undefined)
+            writer.tag(6, WireType.LengthDelimited).string(message.script_bin_path);
+        /* optional string script_source = 7; */
+        if (message.script_source !== undefined)
+            writer.tag(7, WireType.LengthDelimited).string(message.script_source);
         /* optional string nix_expr = 8; */
         if (message.nix_expr !== undefined)
             writer.tag(8, WireType.LengthDelimited).string(message.nix_expr);

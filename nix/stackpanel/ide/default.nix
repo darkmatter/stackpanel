@@ -2,7 +2,7 @@
 {
   imports = [
     ./ide.nix
-    ./lib/vscode.nix
+    ./module.nix
     ./vscode-nix.nix
   ];
 }

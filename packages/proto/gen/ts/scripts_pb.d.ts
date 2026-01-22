@@ -27,11 +27,11 @@ export declare const file_scripts: GenFile;
  */
 export declare type Script = Message<"stackpanel.db.Script"> & {
   /**
-   * Shell command to execute
+   * Shell command to execute (mutually exclusive with path)
    *
-   * @generated from field: string exec = 1;
+   * @generated from field: optional string exec = 1;
    */
-  exec: string;
+  exec?: string;
 
   /**
    * Human-readable description of the script
@@ -46,6 +46,20 @@ export declare type Script = Message<"stackpanel.db.Script"> & {
    * @generated from field: map<string, string> env = 3;
    */
   env: { [key: string]: string };
+
+  /**
+   * Path to script executable in Nix store (computed)
+   *
+   * @generated from field: optional string bin_path = 4;
+   */
+  binPath?: string;
+
+  /**
+   * Source type: inline or path (for debugging)
+   *
+   * @generated from field: optional string source = 5;
+   */
+  source?: string;
 };
 
 /**

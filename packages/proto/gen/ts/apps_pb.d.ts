@@ -59,7 +59,7 @@ export declare type App = Message<"stackpanel.db.App"> & {
   domain?: string;
 
   /**
-   * Tasks for this app (key = task name)
+   * DEPRECATED: Use commands option. Legacy tasks (key = task name)
    *
    * @generated from field: map<string, stackpanel.db.AppTask> tasks = 7;
    */
@@ -142,7 +142,7 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
 export declare const AppEnvironmentSchema: GenMessage<AppEnvironment>;
 
 /**
- * Command configuration
+ * DEPRECATED: Use commands option instead. Shell command configuration.
  *
  * @generated from message stackpanel.db.AppTask
  */

@@ -51,9 +51,9 @@ temp
 
 # We deliberately ignore files that are usually checked in because we generate them
 /.claude
-/.codex
-/.cursor
-/.zed
+/.alchemy
+/.cache
+/.tasks
 # These files will be ignored once we finish the modules for them
 # /.github
 # /.ruler
@@ -99,9 +99,9 @@ devenv.local.yaml
 /result
 
 # Stackpanel root marker (machine-specific)
-.stackpanel-root
 
 # Stackpanel generated files (cache)
 .stackpanel/state/
+.stackpanel/bin/
 .sst
 .tmp
