@@ -19,7 +19,7 @@ message App {
   optional string type = 4; // App type/runtime (bun, go, python, rust, etc.)
   optional int32 port = 5; // Development server port
   optional string domain = 6; // Local development domain
-  map<string, AppTask> tasks = 7; // Tasks for this app (key = task name)
+  map<string, AppTask> tasks = 7; // DEPRECATED: Use commands option. Legacy tasks (key = task name)
   map<string, AppVariable> variables = 8; // Environment variables (key = env var key)
   map<string, AppEnvironment> environments = 9; // Environments associated with this app
 }
@@ -44,7 +44,7 @@ message AppEnvironment {
   repeated string public_keys = 5;
 }
 
-// Command configuration
+// DEPRECATED: Use commands option instead. Shell command configuration.
 message AppTask {
   string key = 1; // Corresponds to CMD in  `turbo task run CMD`
   optional string description = 2; // (optional) Description of the command

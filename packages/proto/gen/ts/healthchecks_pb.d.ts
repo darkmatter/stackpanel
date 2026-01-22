@@ -100,18 +100,18 @@ export declare type Healthcheck = Message<"stackpanel.db.Healthcheck"> & {
   severity: HealthcheckSeverity;
 
   /**
-   * Shell script content (for SCRIPT type)
+   * Path to script executable in Nix store
    *
-   * @generated from field: optional string script = 6;
+   * @generated from field: optional string script_bin_path = 6;
    */
-  script?: string;
+  scriptBinPath?: string;
 
   /**
-   * Path to script derivation (resolved from Nix)
+   * Source type: inline, path, scriptRef, package
    *
-   * @generated from field: optional string script_path = 7;
+   * @generated from field: optional string script_source = 7;
    */
-  scriptPath?: string;
+  scriptSource?: string;
 
   /**
    * Nix expression to evaluate (for NIX type)

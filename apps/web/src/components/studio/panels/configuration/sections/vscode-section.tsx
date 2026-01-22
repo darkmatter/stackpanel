@@ -81,15 +81,14 @@ export function VscodeSection({ config }: VscodeSectionProps) {
                   value as "workspace" | "settingsJson",
                 )
               }
-              className="grid gap-4 lg:grid-cols-2"
+              className="grid gap-4"
             >
               <Label
                 htmlFor="workspace-mode"
-                className={`group relative flex h-full w-full flex-col items-start gap-3 rounded-lg border bg-card p-4 text-left font-normal leading-normal transition-all hover:border-primary/70 hover:shadow-sm ${
-                  isWorkspaceMode
+                className={`group relative flex h-full w-full flex-col items-start gap-3 rounded-lg border bg-card p-4 text-left font-normal leading-normal transition-all hover:border-primary/70 hover:shadow-sm ${isWorkspaceMode
                     ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                     : "border-border"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <RadioGroupItem
@@ -130,11 +129,10 @@ export function VscodeSection({ config }: VscodeSectionProps) {
 
               <Label
                 htmlFor="settings-json-mode"
-                className={`group relative flex h-full w-full flex-col items-start gap-3 rounded-lg border bg-card p-4 text-left font-normal leading-normal transition-all hover:border-primary/70 hover:shadow-sm ${
-                  !isWorkspaceMode
+                className={`group relative flex h-full w-full flex-col items-start gap-3 rounded-lg border bg-card p-4 text-left font-normal leading-normal transition-all hover:border-primary/70 hover:shadow-sm ${!isWorkspaceMode
                     ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                     : "border-border"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <RadioGroupItem

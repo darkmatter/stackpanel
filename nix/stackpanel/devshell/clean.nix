@@ -84,6 +84,21 @@ let
 
     cd "$(dirname "$0")"
 
+    if [[ "''${1:-}" == "--direnv" ]]; then
+      shift
+      nix develop \
+        --ignore-environment \
+        --impure \
+        ${keepFlagsMultiLine} \
+        --command env -0 "$@" \
+      | while IFS= read -r -d ''' kv; do
+          key="''${kv%%=*}"
+          val="''${kv#*=}"
+          printf 'export %s=%q\n' "$key" "$val"
+        done
+      exit
+    fi
+
     if [[ "''${1:-}" == "--dirty" ]]; then
       shift
       echo "🔧 Entering devshell (inheriting host environment)..."
@@ -108,6 +123,9 @@ let
     '';
   };
 
+  # Write devScriptContent to a file in the store for the regen script to copy
+  devScriptFile = pkgs.writeText "devshell-script" devScriptContent;
+
   # Script to regenerate the ./devshell file
   devshellRegenScript = pkgs.writeShellApplication {
     name = "devshell-regen";
@@ -117,10 +135,7 @@ let
       FLAKE_ROOT="''${STACKPANEL_ROOT:-$PWD}"
       DEV_SCRIPT="$FLAKE_ROOT/devshell"
       
-      cat > "$DEV_SCRIPT" << 'DEVSCRIPT_EOF'
-      ${devScriptContent}
-      DEVSCRIPT_EOF
-      
+      cp "${devScriptFile}" "$DEV_SCRIPT"
       chmod +x "$DEV_SCRIPT"
       echo "✅ Generated $DEV_SCRIPT"
     '';

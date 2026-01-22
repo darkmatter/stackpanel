@@ -16,9 +16,11 @@ option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
  * 
  */
 message Script {
-  string exec = 1; // Shell command to execute
+  optional string exec = 1; // Shell command to execute (mutually exclusive with path)
   optional string description = 2; // Human-readable description of the script
   map<string, string> env = 3; // Environment variables to set when running the script
+  optional string bin_path = 4; // Path to script executable in Nix store (computed)
+  optional string source = 5; // Source type: inline or path (for debugging)
 }
 
 // Collection of development shell scripts

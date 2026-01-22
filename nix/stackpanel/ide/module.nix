@@ -33,6 +33,15 @@ in
       These modules are merged into `stackpanel.ide.vscode.settings` so their
       contents end up in the generated VS Code settings.json.
     '';
+    example = [
+      {
+        config = {
+          "[nix]" = {
+            "editor.defaultFormatter" = "jnoortheen.nix-ide";
+          };
+        };
+      }
+    ];
   };
 
   config.stackpanel.ide.vscode.settings = lib.mkDefault settingsFromModules;

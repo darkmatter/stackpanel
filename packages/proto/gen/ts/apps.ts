@@ -45,7 +45,7 @@ export interface App {
      */
     tasks: {
         [key: string]: AppTask;
-    }; // Tasks for this app (key = task name)
+    }; // DEPRECATED: Use commands option. Legacy tasks (key = task name)
     /**
      * @generated from protobuf field: map<string, stackpanel.db.AppVariable> variables = 8
      */
@@ -100,7 +100,7 @@ export interface AppEnvironment {
     public_keys: string[];
 }
 /**
- * Command configuration
+ * DEPRECATED: Use commands option instead. Shell command configuration.
  *
  * @generated from protobuf message stackpanel.db.AppTask
  */

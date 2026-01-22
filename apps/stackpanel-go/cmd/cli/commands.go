@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -27,7 +28,7 @@ type SerializableCommand struct {
 // StackpanelConfig represents the relevant parts of the serialized config
 type StackpanelConfig struct {
 	// New location: scripts are at the root level
-	Scripts map[string]SerializableCommand `json:"scripts"`
+	Scripts  map[string]SerializableCommand `json:"scripts"`
 	Devshell struct {
 		// Legacy: _commandsSerializable (kept for backwards compatibility)
 		CommandsSerializable map[string]SerializableCommand `json:"_commandsSerializable"`
@@ -54,21 +55,25 @@ Examples:
 		defer cancel()
 
 		// Get config from nix eval
-		config, err := getStackpanelConfig(ctx)
+		commandsData, err := loadCommands(ctx)
 		if err != nil {
 			output.Error(fmt.Sprintf("Failed to get config: %v", err))
 			os.Exit(1)
 		}
 
-		// Use scripts (new location) with fallback to legacy _commandsSerializable
-		commands := config.Scripts
-		if len(commands) == 0 {
-			commands = config.Devshell.CommandsSerializable
+		// Interactive TUI when no args and TTY (unless disabled)
+		noTUI, _ := cmd.Flags().GetBool("no-tui")
+		if len(args) == 0 && tui.IsInteractive() && !noTUI {
+			if err := runCommandsTUI(commandsData.commands, commandsData.devshellEnv); err != nil {
+				output.Error(fmt.Sprintf("Command TUI error: %v", err))
+				os.Exit(1)
+			}
+			return
 		}
 
 		if len(args) == 0 {
 			// List commands
-			listCommands(commands)
+			listCommands(commandsData.commands)
 			return
 		}
 
@@ -76,16 +81,16 @@ Examples:
 		cmdName := args[0]
 		cmdArgs := args[1:]
 
-		cmdDef, ok := commands[cmdName]
+		cmdDef, ok := commandsData.commands[cmdName]
 		if !ok {
 			output.Error(fmt.Sprintf("Unknown command: %s", cmdName))
 			fmt.Println()
 			fmt.Println("Available commands:")
-			listCommands(commands)
+			listCommands(commandsData.commands)
 			os.Exit(1)
 		}
 
-		if err := runCommand(cmdDef, cmdArgs, config.Devshell.Env); err != nil {
+		if err := runCommand(cmdDef, cmdArgs, commandsData.devshellEnv); err != nil {
 			output.Error(fmt.Sprintf("Command failed: %v", err))
 			os.Exit(1)
 		}
@@ -99,18 +104,13 @@ var commandsListCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		config, err := getStackpanelConfig(ctx)
+		commandsData, err := loadCommands(ctx)
 		if err != nil {
 			output.Error(fmt.Sprintf("Failed to get config: %v", err))
 			os.Exit(1)
 		}
 
-		// Use scripts (new location) with fallback to legacy _commandsSerializable
-		commands := config.Scripts
-		if len(commands) == 0 {
-			commands = config.Devshell.CommandsSerializable
-		}
-		listCommands(commands)
+		listCommands(commandsData.commands)
 	},
 }
 
@@ -135,6 +135,28 @@ func getStackpanelConfig(ctx context.Context) (*StackpanelConfig, error) {
 	}
 
 	return &config, nil
+}
+
+type commandsData struct {
+	commands    map[string]SerializableCommand
+	devshellEnv map[string]string
+}
+
+func loadCommands(ctx context.Context) (*commandsData, error) {
+	config, err := getStackpanelConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	commands := config.Scripts
+	if len(commands) == 0 {
+		commands = config.Devshell.CommandsSerializable
+	}
+
+	return &commandsData{
+		commands:    commands,
+		devshellEnv: config.Devshell.Env,
+	}, nil
 }
 
 func listCommands(commands map[string]SerializableCommand) {
@@ -199,14 +221,10 @@ func printCommandEntry(name string, cmd SerializableCommand) {
 	}
 }
 
-func runCommand(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) error {
-	// Build the script to execute
-	// The exec field contains the bash script to run
+func prepareCommand(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) (*exec.Cmd, string) {
 	script := cmdDef.Exec
 
-	// If there are args, append them to the script
 	if len(args) > 0 {
-		// Quote args properly
 		quotedArgs := make([]string, len(args))
 		for i, arg := range args {
 			quotedArgs[i] = shellescape(arg)
@@ -214,34 +232,40 @@ func runCommand(cmdDef SerializableCommand, args []string, devshellEnv map[strin
 		script = script + " " + strings.Join(quotedArgs, " ")
 	}
 
-	// Wrap in bash with error handling
 	fullScript := fmt.Sprintf("set -euo pipefail\n%s", script)
 
-	// Debug: print the script being executed
 	if os.Getenv("STACKPANEL_DEBUG") != "" {
 		fmt.Fprintf(os.Stderr, "[DEBUG] Executing script:\n%s\n", fullScript)
 	}
 
-	// Create the command
 	cmd := exec.Command("bash", "-c", fullScript)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Set up environment
 	cmd.Env = os.Environ()
 
-	// Add devshell env vars
 	for k, v := range devshellEnv {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	// Add command-specific env vars
 	for k, v := range cmdDef.Env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	return cmd, fullScript
+}
+
+func runCommand(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) error {
+	cmd, _ := prepareCommand(cmdDef, args, devshellEnv)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	return cmd.Run()
+}
+
+func runCommandCaptured(cmdDef SerializableCommand, args []string, devshellEnv map[string]string) (string, error) {
+	cmd, _ := prepareCommand(cmdDef, args, devshellEnv)
+	cmd.Stdin = os.Stdin
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }
 
 // shellescape escapes a string for safe use in a shell command

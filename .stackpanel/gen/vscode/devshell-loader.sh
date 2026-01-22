@@ -10,10 +10,16 @@
 # Lookup file: devenv.yaml
 #
 
-export DIRENV_DISABLE=1
 
 # --- small helpers
-die() { printf "devshell: %s\n" "$*" >&2; exit 1; }
+die() { printf "devshell: %s\\n" "$*" >&2; exit 1; }
+
+# Avoid recursion if VS Code reuses this profile inside itself
+if [[ "${DEVENV_VSCODE_SHELL:-}" == "1" ]]; then
+  # If we're already inside, just start a login shell.
+  exec "${SHELL:-/bin/bash}" -l
+fi
+export DEVENV_VSCODE_SHELL=1
 
 # Ensure nix is available
 if ! command -v nix >/dev/null 2>&1; then
@@ -33,8 +39,7 @@ command -v nix >/dev/null 2>&1 || die "nix not found, install it: https://instal
 # Find the right project root
 find_root() {
 if [[ -n "${STACKPANEL_ROOT:-}" ]]; then
-    printf "%s
-" "$STACKPANEL_ROOT"
+    printf "%s\\n" "$STACKPANEL_ROOT"
     return 0
   fi
   # Prefer git root if available
@@ -42,7 +47,7 @@ if [[ -n "${STACKPANEL_ROOT:-}" ]]; then
     local gr
 gr="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -n "$gr" && -f "$gr/devenv.yaml" ]]; then
-printf "%s\n" "$gr"
+printf "%s\\n" "$gr"
       return 0
     fi
   fi
@@ -51,7 +56,7 @@ printf "%s\n" "$gr"
 local d="$PWD"
 while [[ "$d" != "/" ]]; do
 if [[ -f "$d/devenv.yaml" ]]; then
-printf "%s\n" "$d"
+printf "%s\\n" "$d"
       return 0
     fi
 d="$(dirname "$d")"
@@ -63,4 +68,11 @@ die "couldn't find devenv.yaml (open VS Code at the repo root)"
 ROOT="$(find_root)"
 cd "$ROOT"
 
-. <(devenv print-dev-env --impure
+DEV_SCRIPT="$ROOT/devshell"
+
+if [[ -x "$DEV_SCRIPT" ]]; then
+  exec "$DEV_SCRIPT"
+fi
+
+# Fallback: enter the devshell directly (runs hooks that materialize ./devshell)
+exec nix develop --impure

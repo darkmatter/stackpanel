@@ -41,37 +41,48 @@ let
   # ---------------------------------------------------------------------------
   # Get absolute path to .stackpanel directory
   # First try STACKPANEL_ROOT env var, then fall back to reading .stackpanel-root marker
-  stackpanelRoot = 
+  # For pure evaluation (CI/FlakeHub), skip local config entirely
+  stackpanelRoot =
     let
       envRoot = builtins.getEnv "STACKPANEL_ROOT";
-      markerRoot = 
+      markerRoot =
         let
-          markerPath = ../.stackpanel-root;  # Marker is in repo root, one level up from .stackpanel/
+          markerPath = ../.stackpanel-root; # Marker is in repo root, one level up from .stackpanel/
         in
-        if builtins.pathExists markerPath
-        then lib.removeSuffix "\n" (builtins.readFile markerPath)
-        else null;
+        if builtins.pathExists markerPath then
+          lib.removeSuffix "\n" (builtins.readFile markerPath)
+        else
+          null;
     in
-    if envRoot != "" then envRoot
-    else if markerRoot != null then markerRoot
-    else builtins.toString ./.;  # Fallback to relative path (won't work in flakes)
-  
-  localConfigPath = stackpanelRoot + "/.stackpanel/config.local.nix";
-  hasLocalConfig = builtins.pathExists localConfigPath;
-  rawLocalConfig = if hasLocalConfig then import localConfigPath else {};
-  localConfig = if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
+    if envRoot != "" then
+      envRoot
+    else if markerRoot != null && markerRoot != "." then
+      markerRoot
+    else
+      null; # null indicates pure evaluation mode - skip local config
+
+  # Only try to load local config when we have an absolute path (impure evaluation)
+  # In pure evaluation (CI/FlakeHub), stackpanelRoot is null and we skip local config
+  localConfigPath =
+    if stackpanelRoot != null then stackpanelRoot + "/.stackpanel/config.local.nix" else null;
+  hasLocalConfig = localConfigPath != null && builtins.pathExists localConfigPath;
+  rawLocalConfig = if hasLocalConfig then import localConfigPath else { };
+  localConfig =
+    if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
 
   # ---------------------------------------------------------------------------
   # Process imports directive in config.nix
   # For simple config imports (plain attrsets, not full modules)
   # ---------------------------------------------------------------------------
-  processImports = config:
+  processImports =
+    config:
     let
-      imports = config.imports or [];
+      imports = config.imports or [ ];
       configWithoutImports = builtins.removeAttrs config [ "imports" ];
 
       # Import each module, handling both attrset and function forms
-      importModule = path:
+      importModule =
+        path:
         let
           imported = import path;
           result = if builtins.isFunction imported then imported { inherit pkgs lib; } else imported;
@@ -82,7 +93,7 @@ let
       # Merge all imported configs with the base config
       importedConfigs = map importModule imports;
     in
-    lib.foldl lib.recursiveUpdate {} (importedConfigs ++ [ configWithoutImports ]);
+    lib.foldl lib.recursiveUpdate { } (importedConfigs ++ [ configWithoutImports ]);
 
   # Process imports in the user config
   userConfig = processImports baseUserConfig;
@@ -165,11 +176,7 @@ let
   # ---------------------------------------------------------------------------
   envOverrideRaw = builtins.getEnv "STACKPANEL_CONFIG_OVERRIDE";
   hasEnvOverride = envOverrideRaw != "";
-  envOverride = 
-    if hasEnvOverride then
-      builtins.fromJSON envOverrideRaw
-    else
-      {};
+  envOverride = if hasEnvOverride then builtins.fromJSON envOverrideRaw else { };
 
   # ---------------------------------------------------------------------------
   # Final merge order:

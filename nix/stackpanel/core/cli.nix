@@ -177,8 +177,9 @@ let
   configJson = builtins.toJSON fullConfig;
 
   # Write config to a store path.
-  # Using builtins.toFile (no builder needed) since we no longer embed store path references.
-  configFile = builtins.toFile "stackpanel-config.json" configJson;
+  # Using pkgs.writeText instead of builtins.toFile to avoid store path issues
+  # during complex flake evaluation.
+  configFile = pkgs.writeText "stackpanel-config.json" configJson;
 in
 {
   imports = [

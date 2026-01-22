@@ -83,7 +83,7 @@ type App struct {
 	Type          *string                    `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`                                                                                     // App type/runtime (bun, go, python, rust, etc.)
 	Port          *int32                     `protobuf:"varint,5,opt,name=port,proto3,oneof" json:"port,omitempty"`                                                                                    // Development server port
 	Domain        *string                    `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`                                                                                 // Local development domain
-	Tasks         map[string]*AppTask        `protobuf:"bytes,7,rep,name=tasks,proto3" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`               // Tasks for this app (key = task name)
+	Tasks         map[string]*AppTask        `protobuf:"bytes,7,rep,name=tasks,proto3" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`               // DEPRECATED: Use commands option. Legacy tasks (key = task name)
 	Variables     map[string]*AppVariable    `protobuf:"bytes,8,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`       // Environment variables (key = env var key)
 	Environments  map[string]*AppEnvironment `protobuf:"bytes,9,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environments associated with this app
 	unknownFields protoimpl.UnknownFields
@@ -265,7 +265,7 @@ func (x *AppEnvironment) GetPublicKeys() []string {
 	return nil
 }
 
-// Command configuration
+// DEPRECATED: Use commands option instead. Shell command configuration.
 type AppTask struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
 	Key           string                  `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                                                           // Corresponds to CMD in  `turbo task run CMD`

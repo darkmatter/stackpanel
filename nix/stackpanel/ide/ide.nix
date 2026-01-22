@@ -40,6 +40,19 @@ let
   # Import the IDE lib for generating configuration
   ideLib = import ../lib/ide.nix { inherit pkgs lib; };
 
+  # Helper to create a pretty-printed JSON file
+  mkPrettyJson =
+    name: content:
+    pkgs.runCommand name
+      {
+        nativeBuildInputs = [ pkgs.jq ];
+        passAsFile = [ "json" ];
+        json = builtins.toJSON content;
+      }
+      ''
+        jq . "$jsonPath" > $out
+      '';
+
   # Base directory for VS Code files (in gen-dir since these are generated)
   baseDir = "${dirs.gen}/vscode";
 
@@ -103,9 +116,7 @@ in
         # Generate workspace file (default mode)
         "${baseDir}/${cfg.vscode.workspace-name}.code-workspace" = {
           type = "derivation";
-          drv = pkgs.writeText "${cfg.vscode.workspace-name}.code-workspace" (
-            builtins.toJSON workspaceContent
-          );
+          drv = mkPrettyJson "${cfg.vscode.workspace-name}.code-workspace" workspaceContent;
           source = "ide";
           description = "VS Code workspace configuration with integrated terminal settings";
         };
@@ -114,7 +125,7 @@ in
         # Generate settings.json (explicit opt-in)
         ".vscode/settings.json" = {
           type = "derivation";
-          drv = pkgs.writeText "settings.json" (builtins.toJSON mergedSettings);
+          drv = mkPrettyJson "settings.json" mergedSettings;
           source = "ide";
           description = "VS Code settings with terminal integration";
         };
