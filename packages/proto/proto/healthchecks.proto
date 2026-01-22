@@ -46,8 +46,8 @@ message Healthcheck {
   optional string description = 3; // Description of what this check verifies
   HealthcheckType type = 4; // Type of healthcheck (script, nix, http, tcp)
   HealthcheckSeverity severity = 5; // How critical this check is
-  optional string script = 6; // Shell script content (for SCRIPT type)
-  optional string script_path = 7; // Path to script derivation (resolved from Nix)
+  optional string script_bin_path = 6; // Path to script executable in Nix store
+  optional string script_source = 7; // Source type: inline, path, scriptRef, package
   optional string nix_expr = 8; // Nix expression to evaluate (for NIX type)
   optional string http_url = 9; // URL to check (for HTTP type)
   optional string http_method = 10; // HTTP method (GET, POST, etc.)

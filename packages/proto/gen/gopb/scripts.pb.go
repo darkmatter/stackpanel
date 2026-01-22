@@ -32,9 +32,11 @@ const (
 // `db-seed`, `format`, or `generate-types`.
 type Script struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Exec          string                 `protobuf:"bytes,1,opt,name=exec,proto3" json:"exec,omitempty"`                                                                         // Shell command to execute
+	Exec          *string                `protobuf:"bytes,1,opt,name=exec,proto3,oneof" json:"exec,omitempty"`                                                                   // Shell command to execute (mutually exclusive with path)
 	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // Human-readable description of the script
 	Env           map[string]string      `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables to set when running the script
+	BinPath       *string                `protobuf:"bytes,4,opt,name=bin_path,json=binPath,proto3,oneof" json:"bin_path,omitempty"`                                              // Path to script executable in Nix store (computed)
+	Source        *string                `protobuf:"bytes,5,opt,name=source,proto3,oneof" json:"source,omitempty"`                                                               // Source type: inline or path (for debugging)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -70,8 +72,8 @@ func (*Script) Descriptor() ([]byte, []int) {
 }
 
 func (x *Script) GetExec() string {
-	if x != nil {
-		return x.Exec
+	if x != nil && x.Exec != nil {
+		return *x.Exec
 	}
 	return ""
 }
@@ -88,6 +90,20 @@ func (x *Script) GetEnv() map[string]string {
 		return x.Env
 	}
 	return nil
+}
+
+func (x *Script) GetBinPath() string {
+	if x != nil && x.BinPath != nil {
+		return *x.BinPath
+	}
+	return ""
+}
+
+func (x *Script) GetSource() string {
+	if x != nil && x.Source != nil {
+		return *x.Source
+	}
+	return ""
 }
 
 // Collection of development shell scripts
@@ -184,15 +200,20 @@ var File_scripts_proto protoreflect.FileDescriptor
 
 const file_scripts_proto_rawDesc = "" +
 	"\n" +
-	"\rscripts.proto\x12\rstackpanel.db\"\xbd\x01\n" +
-	"\x06Script\x12\x12\n" +
-	"\x04exec\x18\x01 \x01(\tR\x04exec\x12%\n" +
-	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x120\n" +
-	"\x03env\x18\x03 \x03(\v2\x1e.stackpanel.db.Script.EnvEntryR\x03env\x1a6\n" +
+	"\rscripts.proto\x12\rstackpanel.db\"\xa0\x02\n" +
+	"\x06Script\x12\x17\n" +
+	"\x04exec\x18\x01 \x01(\tH\x00R\x04exec\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x120\n" +
+	"\x03env\x18\x03 \x03(\v2\x1e.stackpanel.db.Script.EnvEntryR\x03env\x12\x1e\n" +
+	"\bbin_path\x18\x04 \x01(\tH\x02R\abinPath\x88\x01\x01\x12\x1b\n" +
+	"\x06source\x18\x05 \x01(\tH\x03R\x06source\x88\x01\x01\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
-	"\f_description\"\x9b\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\a\n" +
+	"\x05_execB\x0e\n" +
+	"\f_descriptionB\v\n" +
+	"\t_bin_pathB\t\n" +
+	"\a_source\"\x9b\x01\n" +
 	"\aScripts\x12=\n" +
 	"\ascripts\x18\x01 \x03(\v2#.stackpanel.db.Scripts.ScriptsEntryR\ascripts\x1aQ\n" +
 	"\fScriptsEntry\x12\x10\n" +

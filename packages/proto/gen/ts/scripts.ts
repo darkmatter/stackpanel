@@ -27,9 +27,9 @@ import { MessageType } from "@protobuf-ts/runtime";
  */
 export interface Script {
     /**
-     * @generated from protobuf field: string exec = 1
+     * @generated from protobuf field: optional string exec = 1
      */
-    exec: string; // Shell command to execute
+    exec?: string; // Shell command to execute (mutually exclusive with path)
     /**
      * @generated from protobuf field: optional string description = 2
      */
@@ -40,6 +40,14 @@ export interface Script {
     env: {
         [key: string]: string;
     }; // Environment variables to set when running the script
+    /**
+     * @generated from protobuf field: optional string bin_path = 4
+     */
+    bin_path?: string; // Path to script executable in Nix store (computed)
+    /**
+     * @generated from protobuf field: optional string source = 5
+     */
+    source?: string; // Source type: inline or path (for debugging)
 }
 /**
  * Collection of development shell scripts
@@ -69,14 +77,15 @@ export interface ScriptsConfig {
 class Script$Type extends MessageType<Script> {
     constructor() {
         super("stackpanel.db.Script", [
-            { no: 1, name: "exec", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 1, name: "exec", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
+            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
+            { no: 4, name: "bin_path", kind: "scalar", localName: "bin_path", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "source", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Script>): Script {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.exec = "";
         message.env = {};
         if (value !== undefined)
             reflectionMergePartial<Script>(this, message, value);
@@ -87,7 +96,7 @@ class Script$Type extends MessageType<Script> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string exec */ 1:
+                case /* optional string exec */ 1:
                     message.exec = reader.string();
                     break;
                 case /* optional string description */ 2:
@@ -95,6 +104,12 @@ class Script$Type extends MessageType<Script> {
                     break;
                 case /* map<string, string> env */ 3:
                     this.binaryReadMap3(message.env, reader, options);
+                    break;
+                case /* optional string bin_path */ 4:
+                    message.bin_path = reader.string();
+                    break;
+                case /* optional string source */ 5:
+                    message.source = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -124,8 +139,8 @@ class Script$Type extends MessageType<Script> {
         map[key ?? ""] = val ?? "";
     }
     internalBinaryWrite(message: Script, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string exec = 1; */
-        if (message.exec !== "")
+        /* optional string exec = 1; */
+        if (message.exec !== undefined)
             writer.tag(1, WireType.LengthDelimited).string(message.exec);
         /* optional string description = 2; */
         if (message.description !== undefined)
@@ -133,6 +148,12 @@ class Script$Type extends MessageType<Script> {
         /* map<string, string> env = 3; */
         for (let k of globalThis.Object.keys(message.env))
             writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.env[k]).join();
+        /* optional string bin_path = 4; */
+        if (message.bin_path !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.bin_path);
+        /* optional string source = 5; */
+        if (message.source !== undefined)
+            writer.tag(5, WireType.LengthDelimited).string(message.source);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

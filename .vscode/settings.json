@@ -1,133 +1,75 @@
 {
-  // Rust Analyzer - configured to use devenv toolchain
-  "[rust]": {
-    "editor.defaultFormatter": "rust-lang.rust-analyzer"
-  },
-  "rust-analyzer.server.path": "${workspaceFolder}/.devenv/profile/bin/rust-analyzer",
-  "rust-analyzer.cargo.extraEnv": {
-    "PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}",
-    "CARGO_HOME": "${workspaceFolder}/.devenv/profile"
-  },
-  "go.testExplorer.enable": true,
-  "go.useLanguageServer": true,
-  "go.toolsManagement.go": "${workspaceFolder}/.devenv/profile/bin/go",
-  "go.toolsGopath": "${workspaceFolder}/.devenv/profile/bin",
-  "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.procMacro.enable": true,
-  "rust-analyzer.imports.granularity.group": "module",
-  "rust-analyzer.imports.prefix": "self",
-  "rust-analyzer.inlayHints.parameterHints.enable": true,
-  "rust-analyzer.inlayHints.typeHints.enable": true,
-  "rust-analyzer.inlayHints.chainingHints.enable": true,
-  "rust-analyzer.diagnostics.experimental.enable": true,
-  "css.lint.unknownAtRules": "ignore",
-  "editor.insertSpaces": true,
-  "editor.tabSize": 2,
-  "editor.detectIndentation": false,
-  "editor.defaultFormatter": "oxc.oxc-vscode",
-  "[javascript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[javascriptreact]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[json]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[jsonc]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[css]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
-  "[graphql]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide"
   },
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
-  "emmet.showExpandedAbbreviation": "never",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.oxc": "explicit"
-  },
-  "oxc.enable": true,
-  "oxc.configPath": "oxlint.json",
-  "explorer.excludeGitIgnore": true,
-  "terminal.integrated.defaultProfile.osx": "devenv",
-  "terminal.integrated.profiles.osx": {
-    "devenv": {
-      "path": ".vscode/devshell"
-    }
-  },
-  "terminal.integrated.automationProfile.osx": {
-    "path": "${workspaceFolder}/.vscode/devshell"
-  },
-  "terminal.integrated.developer.devMode": true,
-  "terminal.integrated.env.osx": {
-    "PATH": "${workspaceFolder}/.devenv/profile/bin:${env:PATH}"
-  },
-  "go.goroot": "${workspaceFolder}/.devenv/profile/share/go",
   "nix.enableLanguageServer": true,
-  "nix.serverPath": "/etc/profiles/per-user/coopermaruyama/bin/nixd",
-  "nix.formatterPath": "nixfmt",
+  "nix.formatterPath": "alejandra",
+  "nix.serverPath": "nil",
   "nix.serverSettings": {
+    "nil": {
+      "formatting": {
+        "command": [
+          "alejandra"
+        ]
+      },
+      "nix": {
+        "flake": {
+          "autoEvalInputs": true,
+          "nixpkgsInputName": "nixpkgs"
+        },
+        "maxMemoryMB": 8192
+      },
+      "options": {
+        "stackpanel": {
+          "expr": "(builtins.getFlake \"git+file:///Users/coopermaruyama/darkmatter/stackpanel\").legacyPackages.${builtins.currentSystem}.stackpanelOptions"
+        }
+      }
+    },
     "nixd": {
       "formatting": {
-        "command": ["nixfmt"]
+        "command": [
+          "nixfmt"
+        ]
       },
       "options": {
         "nixos": {
           "expr": "null"
         },
-        "stackpanel": {
-          "expr": "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; in (lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }).options.stackpanel"
-        },
-        "sp-user": {
-          "expr": "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; eval = lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.users.type.getSubOptions []"
-        },
         "sp-app": {
-          "expr": "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; eval = lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.apps.type.getSubOptions []"
-        },
-        "sp-command": {
-          "expr": "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; eval = lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.commands.type.getSubOptions []"
+          "expr": "(builtins.getFlake \"git+file:///Users/coopermaruyama/darkmatter/stackpanel\").legacyPackages.${builtins.currentSystem}.stackpanelOptions.apps.type.getSubOptions []"
         },
         "sp-task": {
-          "expr": "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; eval = lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.tasks.type.getSubOptions []"
+          "expr": "(builtins.getFlake \"git+file:///Users/coopermaruyama/darkmatter/stackpanel\").legacyPackages.${builtins.currentSystem}.stackpanelOptions.tasks.type.getSubOptions []"
+        },
+        "sp-user": {
+          "expr": "(builtins.getFlake \"git+file:///Users/coopermaruyama/darkmatter/stackpanel\").legacyPackages.${builtins.currentSystem}.stackpanelOptions.users.type.getSubOptions []"
+        },
+        "stackpanel": {
+          "expr": "(builtins.getFlake \"git+file:///Users/coopermaruyama/darkmatter/stackpanel\").legacyPackages.${builtins.currentSystem}.stackpanelOptions"
         }
       }
     }
   },
-  "terminal.integrated.shellIntegration.enabled": true,
-  "terminal.integrated.shellIntegration.environmentReporting": true,
-  "files.exclude": {
-    "**/.claude": true,
-    "**/.codex": true,
-    "**/.cursor": true,
-    "**/.zed": true,
-    "**/.git": true,
-    "**/gen": false,
-    "**/.stackpanel/gen": false,
-    "**/.svn": true,
-    "**/.hg": true,
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true,
-    "**/.goosehints": true,
-    "**/bts.jsonc": true,
-    "**/Cargo.lock": true,
-    "**/node_modules": true,
-    "**/devenv.lock": true
+  "terminal.integrated.defaultProfile.linux": "Devshell",
+  "terminal.integrated.defaultProfile.osx": "Devshell",
+  "terminal.integrated.profiles.linux": {
+    "Devshell": {
+      "args": [
+        "-c",
+        "${workspaceFolder}/.stackpanel/gen/vscode/devshell-loader.sh"
+      ],
+      "path": "/bin/bash"
+    }
   },
-  "[mdx]": {
-    "editor.defaultFormatter": "unifiedjs.vscode-mdx"
-  }
+  "terminal.integrated.profiles.osx": {
+    "Devshell": {
+      "args": [
+        "-c",
+        "${workspaceFolder}/.stackpanel/gen/vscode/devshell-loader.sh"
+      ],
+      "path": "/bin/bash"
+    }
+  },
+  "terminal.integrated.shellIntegration.enabled": true,
+  "explorer.excludeGitIgnore": true
 }

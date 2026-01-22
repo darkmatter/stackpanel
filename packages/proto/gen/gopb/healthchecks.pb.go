@@ -274,8 +274,8 @@ type Healthcheck struct {
 	Description        *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                                             // Description of what this check verifies
 	Type               HealthcheckType        `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.HealthcheckType" json:"type,omitempty"`                             // Type of healthcheck (script, nix, http, tcp)
 	Severity           HealthcheckSeverity    `protobuf:"varint,5,opt,name=severity,proto3,enum=stackpanel.db.HealthcheckSeverity" json:"severity,omitempty"`                 // How critical this check is
-	Script             *string                `protobuf:"bytes,6,opt,name=script,proto3,oneof" json:"script,omitempty"`                                                       // Shell script content (for SCRIPT type)
-	ScriptPath         *string                `protobuf:"bytes,7,opt,name=script_path,json=scriptPath,proto3,oneof" json:"script_path,omitempty"`                             // Path to script derivation (resolved from Nix)
+	ScriptBinPath      *string                `protobuf:"bytes,6,opt,name=script_bin_path,json=scriptBinPath,proto3,oneof" json:"script_bin_path,omitempty"`                  // Path to script executable in Nix store
+	ScriptSource       *string                `protobuf:"bytes,7,opt,name=script_source,json=scriptSource,proto3,oneof" json:"script_source,omitempty"`                       // Source type: inline, path, scriptRef, package
 	NixExpr            *string                `protobuf:"bytes,8,opt,name=nix_expr,json=nixExpr,proto3,oneof" json:"nix_expr,omitempty"`                                      // Nix expression to evaluate (for NIX type)
 	HttpUrl            *string                `protobuf:"bytes,9,opt,name=http_url,json=httpUrl,proto3,oneof" json:"http_url,omitempty"`                                      // URL to check (for HTTP type)
 	HttpMethod         *string                `protobuf:"bytes,10,opt,name=http_method,json=httpMethod,proto3,oneof" json:"http_method,omitempty"`                            // HTTP method (GET, POST, etc.)
@@ -355,16 +355,16 @@ func (x *Healthcheck) GetSeverity() HealthcheckSeverity {
 	return HealthcheckSeverity_HEALTHCHECK_SEVERITY_UNSPECIFIED
 }
 
-func (x *Healthcheck) GetScript() string {
-	if x != nil && x.Script != nil {
-		return *x.Script
+func (x *Healthcheck) GetScriptBinPath() string {
+	if x != nil && x.ScriptBinPath != nil {
+		return *x.ScriptBinPath
 	}
 	return ""
 }
 
-func (x *Healthcheck) GetScriptPath() string {
-	if x != nil && x.ScriptPath != nil {
-		return *x.ScriptPath
+func (x *Healthcheck) GetScriptSource() string {
+	if x != nil && x.ScriptSource != nil {
+		return *x.ScriptSource
 	}
 	return ""
 }
@@ -630,16 +630,15 @@ const file_healthchecks_proto_rawDesc = "" +
 	"\flast_updated\x18\x05 \x01(\tR\vlastUpdated\x1aW\n" +
 	"\fModulesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x121\n" +
-	"\x05value\x18\x02 \x01(\v2\x1b.stackpanel.db.ModuleHealthR\x05value:\x028\x01\"\x8e\x06\n" +
+	"\x05value\x18\x02 \x01(\v2\x1b.stackpanel.db.ModuleHealthR\x05value:\x028\x01\"\xad\x06\n" +
 	"\vHealthcheck\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x122\n" +
 	"\x04type\x18\x04 \x01(\x0e2\x1e.stackpanel.db.HealthcheckTypeR\x04type\x12>\n" +
-	"\bseverity\x18\x05 \x01(\x0e2\".stackpanel.db.HealthcheckSeverityR\bseverity\x12\x1b\n" +
-	"\x06script\x18\x06 \x01(\tH\x01R\x06script\x88\x01\x01\x12$\n" +
-	"\vscript_path\x18\a \x01(\tH\x02R\n" +
-	"scriptPath\x88\x01\x01\x12\x1e\n" +
+	"\bseverity\x18\x05 \x01(\x0e2\".stackpanel.db.HealthcheckSeverityR\bseverity\x12+\n" +
+	"\x0fscript_bin_path\x18\x06 \x01(\tH\x01R\rscriptBinPath\x88\x01\x01\x12(\n" +
+	"\rscript_source\x18\a \x01(\tH\x02R\fscriptSource\x88\x01\x01\x12\x1e\n" +
 	"\bnix_expr\x18\b \x01(\tH\x03R\anixExpr\x88\x01\x01\x12\x1e\n" +
 	"\bhttp_url\x18\t \x01(\tH\x04R\ahttpUrl\x88\x01\x01\x12$\n" +
 	"\vhttp_method\x18\n" +
@@ -652,9 +651,9 @@ const file_healthchecks_proto_rawDesc = "" +
 	"\x10interval_seconds\x18\x0f \x01(\x05H\tR\x0fintervalSeconds\x88\x01\x01\x12\x16\n" +
 	"\x06module\x18\x10 \x01(\tR\x06module\x12\x12\n" +
 	"\x04tags\x18\x11 \x03(\tR\x04tagsB\x0e\n" +
-	"\f_descriptionB\t\n" +
-	"\a_scriptB\x0e\n" +
-	"\f_script_pathB\v\n" +
+	"\f_descriptionB\x12\n" +
+	"\x10_script_bin_pathB\x10\n" +
+	"\x0e_script_sourceB\v\n" +
 	"\t_nix_exprB\v\n" +
 	"\t_http_urlB\x0e\n" +
 	"\f_http_methodB\x17\n" +

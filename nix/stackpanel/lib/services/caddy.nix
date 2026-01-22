@@ -26,27 +26,20 @@
   pkgs,
   lib,
 }:
-{
-  # Compute a stable port number from a string (project name or path)
-  # Uses first 4 chars of MD5 hash, maps to port range 3000-9999
-  # This is a pure function that can be used at Nix evaluation time
+rec {
+  portsLib = import ../ports.nix { inherit lib; };
+
   mkProjectPort =
     {
-      # The string to hash (typically project name or path)
       name,
-      # Minimum port number
-      minPort ? 3000,
-      # Port range size
-      portRange ? 7000,
+      minPort ? portsLib.defaults.minPort,
+      portRange ? portsLib.defaults.portRange,
+      modulus ? portsLib.defaults.modulus,
     }:
-    let
-      # Generate a dynamic port based on project path hash to avoid conflicts
-      # This creates a consistent port per project (range 3000-9999)
-      projectHash = builtins.hashString "md5" name;
-      portOffset = lib.trivial.fromHexString (builtins.substring 0 4 projectHash);
-      port = minPort + (lib.mod portOffset portRange);
-    in
-    port;
+    portsLib.computeBasePort {
+      inherit name minPort portRange modulus;
+    };
+
 
   # Create Caddy management scripts
   # Returns an attrset of derivations that can be added to packages

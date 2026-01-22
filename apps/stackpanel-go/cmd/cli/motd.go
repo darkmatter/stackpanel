@@ -145,7 +145,7 @@ func renderLegacyMOTD(cfg *nixconfig.Config) error {
 	}
 
 	// Default services to check if none configured
-	defaultServices := []string{"postgres", "redis"}
+	defaultServices := []string{}
 
 	// Render MOTD
 	legacyData := tui.MOTDData{

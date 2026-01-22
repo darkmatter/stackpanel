@@ -38,7 +38,13 @@ in
     stackpanel.devshell.env.STACKPANEL_ROOT_DIR_NAME = cfg.dirs.home;
 
     # If user provided an absolute root, expose it so stackpanel_find_root fallback works
-    stackpanel.devshell.env.STACKPANEL_ROOT = lib.mkDefault (if cfg.root != null then cfg.root else "");
+    # Don't set STACKPANEL_ROOT if it's a store path (pure evaluation) - let the shell hook handle it
+    stackpanel.devshell.env.STACKPANEL_ROOT = lib.mkDefault (
+      let
+        root = if cfg.root != null then cfg.root else "";
+      in
+      if lib.hasPrefix "/nix/store/" root then "" else root
+    );
 
     # Core hook: define funcs, resolve paths, ensure dirs + marker + gitignore
     stackpanel.devshell.hooks.before = lib.mkBefore (
