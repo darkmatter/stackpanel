@@ -336,12 +336,11 @@ func (x *AppTask) GetEnv() map[string]*AppVariable {
 
 // Environment variable configuration
 type AppVariable struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Key           string                     `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                                                                             // Environment variable key
-	Type          AppVariableType            `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.AppVariableType" json:"type,omitempty"`                                                       // Type of environment variable
-	VariableId    string                     `protobuf:"bytes,3,opt,name=variable_id,json=variableId,proto3" json:"variable_id,omitempty"`                                                             // ID of the variable from variables.nix
-	Environments  map[string]*AppEnvironment `protobuf:"bytes,4,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environments this mapping applies to
-	Value         *string                    `protobuf:"bytes,5,opt,name=value,proto3,oneof" json:"value,omitempty"`                                                                                   // Literal value (used when variable_id is empty)
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                       // Environment variable key
+	Type          AppVariableType        `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.AppVariableType" json:"type,omitempty"` // Type of environment variable
+	VariableId    string                 `protobuf:"bytes,3,opt,name=variable_id,json=variableId,proto3" json:"variable_id,omitempty"`       // ID of the variable from variables.nix
+	Value         *string                `protobuf:"bytes,4,opt,name=value,proto3,oneof" json:"value,omitempty"`                             // Literal value (used when variable_id is empty)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -395,13 +394,6 @@ func (x *AppVariable) GetVariableId() string {
 		return x.VariableId
 	}
 	return ""
-}
-
-func (x *AppVariable) GetEnvironments() map[string]*AppEnvironment {
-	if x != nil {
-		return x.Environments
-	}
-	return nil
 }
 
 func (x *AppVariable) GetValue() string {
@@ -505,17 +497,13 @@ const file_apps_proto_rawDesc = "" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.AppVariableR\x05value:\x028\x01B\x0e\n" +
-	"\f_description\"\xcb\x02\n" +
+	"\f_description\"\x99\x01\n" +
 	"\vAppVariable\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x1e.stackpanel.db.AppVariableTypeR\x04type\x12\x1f\n" +
 	"\vvariable_id\x18\x03 \x01(\tR\n" +
-	"variableId\x12P\n" +
-	"\fenvironments\x18\x04 \x03(\v2,.stackpanel.db.AppVariable.EnvironmentsEntryR\fenvironments\x12\x19\n" +
-	"\x05value\x18\x05 \x01(\tH\x00R\x05value\x88\x01\x01\x1a^\n" +
-	"\x11EnvironmentsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
-	"\x05value\x18\x02 \x01(\v2\x1d.stackpanel.db.AppEnvironmentR\x05value:\x028\x01B\b\n" +
+	"variableId\x12\x19\n" +
+	"\x05value\x18\x04 \x01(\tH\x00R\x05value\x88\x01\x01B\b\n" +
 	"\x06_value\"\x86\x01\n" +
 	"\x04Apps\x121\n" +
 	"\x04apps\x18\x01 \x03(\v2\x1d.stackpanel.db.Apps.AppsEntryR\x04apps\x1aK\n" +
@@ -541,7 +529,7 @@ func file_apps_proto_rawDescGZIP() []byte {
 }
 
 var file_apps_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_apps_proto_goTypes = []any{
 	(AppVariableType)(0),   // 0: stackpanel.db.AppVariableType
 	(*App)(nil),            // 1: stackpanel.db.App
@@ -554,8 +542,7 @@ var file_apps_proto_goTypes = []any{
 	nil,                    // 8: stackpanel.db.App.EnvironmentsEntry
 	nil,                    // 9: stackpanel.db.AppEnvironment.VariablesEntry
 	nil,                    // 10: stackpanel.db.AppTask.EnvEntry
-	nil,                    // 11: stackpanel.db.AppVariable.EnvironmentsEntry
-	nil,                    // 12: stackpanel.db.Apps.AppsEntry
+	nil,                    // 11: stackpanel.db.Apps.AppsEntry
 }
 var file_apps_proto_depIdxs = []int32{
 	6,  // 0: stackpanel.db.App.tasks:type_name -> stackpanel.db.App.TasksEntry
@@ -564,20 +551,18 @@ var file_apps_proto_depIdxs = []int32{
 	9,  // 3: stackpanel.db.AppEnvironment.variables:type_name -> stackpanel.db.AppEnvironment.VariablesEntry
 	10, // 4: stackpanel.db.AppTask.env:type_name -> stackpanel.db.AppTask.EnvEntry
 	0,  // 5: stackpanel.db.AppVariable.type:type_name -> stackpanel.db.AppVariableType
-	11, // 6: stackpanel.db.AppVariable.environments:type_name -> stackpanel.db.AppVariable.EnvironmentsEntry
-	12, // 7: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
-	3,  // 8: stackpanel.db.App.TasksEntry.value:type_name -> stackpanel.db.AppTask
-	4,  // 9: stackpanel.db.App.VariablesEntry.value:type_name -> stackpanel.db.AppVariable
-	2,  // 10: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
-	4,  // 11: stackpanel.db.AppEnvironment.VariablesEntry.value:type_name -> stackpanel.db.AppVariable
-	4,  // 12: stackpanel.db.AppTask.EnvEntry.value:type_name -> stackpanel.db.AppVariable
-	2,  // 13: stackpanel.db.AppVariable.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
-	1,  // 14: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	11, // 6: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
+	3,  // 7: stackpanel.db.App.TasksEntry.value:type_name -> stackpanel.db.AppTask
+	4,  // 8: stackpanel.db.App.VariablesEntry.value:type_name -> stackpanel.db.AppVariable
+	2,  // 9: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
+	4,  // 10: stackpanel.db.AppEnvironment.VariablesEntry.value:type_name -> stackpanel.db.AppVariable
+	4,  // 11: stackpanel.db.AppTask.EnvEntry.value:type_name -> stackpanel.db.AppVariable
+	1,  // 12: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_apps_proto_init() }
@@ -595,7 +580,7 @@ func file_apps_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_apps_proto_rawDesc), len(file_apps_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -2,6 +2,8 @@
 
 When developing Stackpanel while also using it in other projects, you need the `stackpanel` CLI to point to your local development version. This document explains how to set that up.
 
+> The `stackpanel dev ...` commands have been renamed to `stackpanel debug ...`. The old `dev` alias still works for compatibility.
+
 ## Quick Start
 
 The fastest way to enable dev mode:
@@ -11,7 +13,8 @@ The fastest way to enable dev mode:
 export STACKPANEL_DEV_REPO=~/path/to/stackpanel
 
 # Option 2: CLI config (persistent)
-stackpanel dev enable ~/path/to/stackpanel
+stackpanel debug enable ~/path/to/stackpanel
+# (Legacy alias: stackpanel dev enable ...)
 ```
 
 ## How It Works
@@ -43,17 +46,20 @@ The environment variable takes precedence over config file settings.
 
 ### Method 2: CLI Config (Recommended for Persistent Use)
 
-Use the built-in `dev` subcommand:
+Use the built-in `debug` subcommand (alias: `dev`):
 
 ```bash
 # Enable dev mode
-stackpanel dev enable ~/projects/stackpanel
+stackpanel debug enable ~/projects/stackpanel
+# Legacy alias:
+# stackpanel dev enable ~/projects/stackpanel
 
 # Check status
-stackpanel dev status
+stackpanel debug status
 
 # Disable dev mode
-stackpanel dev disable
+stackpanel debug disable
+# Legacy alias: stackpanel dev disable
 ```
 
 This stores the setting in `~/.config/stackpanel/stackpanel.yaml`:
@@ -79,7 +85,7 @@ mv /usr/local/bin/stackpanel /usr/local/bin/stackpanel-bin
 
 The wrapper script:
 1. Checks `STACKPANEL_DEV_REPO` environment variable
-2. Falls back to config file dev mode settings
+2. Falls back to config file debug mode settings
 3. Falls back to the installed binary (`stackpanel-bin`)
 
 ### Method 4: Shell Alias (Simplest)
@@ -108,7 +114,7 @@ Enable debug output to see which binary is being used:
 
 ```bash
 STACKPANEL_DEBUG=1 stackpanel status
-# Output: [dev-mode] Running: go run /path/to/stackpanel/apps/stackpanel-go status
+# Output: [debug-mode] Running: go run /path/to/stackpanel/apps/stackpanel-go status
 ```
 
 ## Performance Considerations
@@ -124,15 +130,17 @@ For long-running commands like `stackpanel agent`, the startup cost is amortized
 
 ```bash
 # Quick toggle via env var
-export STACKPANEL_DEV_REPO=~/projects/stackpanel  # Dev mode
+export STACKPANEL_DEV_REPO=~/projects/stackpanel  # Debug mode
 unset STACKPANEL_DEV_REPO                          # Production mode
 
 # Or use the CLI
-stackpanel dev enable ~/projects/stackpanel       # Dev mode
-stackpanel dev disable                             # Production mode
+stackpanel debug enable ~/projects/stackpanel       # Debug mode
+stackpanel debug disable                             # Production mode
+# Legacy alias: stackpanel dev enable/disable
 
 # Check current mode
-stackpanel dev status
+stackpanel debug status
+# Legacy alias: stackpanel dev status
 ```
 
 ## Troubleshooting

@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@ui/badge";
-import { useAppsWithVariable } from "@/lib/use-nix-config";
+import { useAppsWithVariable } from "@/lib/use-agent";
 
 interface VariableUsageInfoProps {
 	variableId: string;

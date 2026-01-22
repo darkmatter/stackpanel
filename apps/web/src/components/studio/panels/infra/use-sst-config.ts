@@ -3,7 +3,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
-import { useNixConfig, useNixData } from "@/lib/use-nix-config";
+import { useNixConfig, useNixData } from "@/lib/use-agent";
 import { DEFAULT_SST_DATA, mergeWithDefaults } from "./constants";
 import type { SSTData, SSTResource, SSTStatus } from "./types";
 
@@ -129,7 +129,7 @@ export function useSSTConfig(): UseSSTConfigResult {
 				};
 			}
 
-			// Prefill GitHub Actions org/repo from stackpanel.github
+			// Prefill GitHub Actions org/repo from stackpanel.project.owner/repo (via computed github field)
 			if (!merged.oidc?.["github-actions"]?.org && githubOrg) {
 				merged.oidc = {
 					...merged.oidc,

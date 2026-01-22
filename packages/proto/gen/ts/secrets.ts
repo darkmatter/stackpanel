@@ -11,23 +11,95 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * Code generation settings for a target language
+ * Code generation target for secrets/env access
  *
- * @generated from protobuf message stackpanel.db.Codegen
+ * @generated from protobuf message stackpanel.db.CodegenTarget
  */
-export interface Codegen {
+export interface CodegenTarget {
     /**
-     * @generated from protobuf field: string name = 1
+     * @generated from protobuf field: optional string name = 1
      */
-    name: string; // Name of the generated code package
+    name?: string; // Name of the generated package/module (defaults to the target key)
     /**
-     * @generated from protobuf field: string directory = 2
+     * @generated from protobuf field: optional string directory = 2
      */
-    directory: string; // Output directory for generated code (relative to project root)
+    directory?: string; // Output directory for generated code (repo-relative)
     /**
-     * @generated from protobuf field: stackpanel.db.CodegenLanguage language = 3
+     *
+     * Target language for generated code (e.g., "typescript", "go", "python").
+     * Informational only for now; codegen selection is based on the target key.
+     *
+     *
+     * @generated from protobuf field: optional string language = 3
      */
-    language: CodegenLanguage; // Programming language for generated code
+    language?: string;
+}
+/**
+ * Environment-specific secrets configuration
+ *
+ * @generated from protobuf message stackpanel.db.Environment
+ */
+export interface Environment {
+    /**
+     * @generated from protobuf field: optional string name = 1
+     */
+    name?: string; // Name of the environment (e.g., dev, staging, production)
+    /**
+     *
+     * List of SOPS-encrypted source files for this environment (without .yaml extension).
+     * These files are decrypted and merged to provide secrets for the environment.
+     *
+     *
+     * @generated from protobuf field: repeated string sources = 2
+     */
+    sources: string[];
+    /**
+     *
+     * AGE public keys that can decrypt secrets for this environment.
+     * New secrets for this env are encrypted to these recipients.
+     *
+     *
+     * @generated from protobuf field: repeated string public_keys = 3
+     */
+    public_keys: string[];
+}
+/**
+ * A master key for encrypting/decrypting secrets
+ *
+ * @generated from protobuf message stackpanel.db.MasterKey
+ */
+export interface MasterKey {
+    /**
+     *
+     * AGE public key for encrypting secrets to this key.
+     * Format: age1... (bech32-encoded)
+     *
+     *
+     * @generated from protobuf field: string age_pub = 1
+     */
+    age_pub: string;
+    /**
+     *
+     * Vals reference that resolves to the AGE private key.
+     * Examples:
+     *   - ref+file://.stackpanel/state/keys/local.txt (local file)
+     *   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
+     *   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+     *
+     *
+     * @generated from protobuf field: string ref = 2
+     */
+    ref: string;
+    /**
+     *
+     * Custom command to resolve the private key (overrides ref).
+     * The command should output the AGE private key to stdout.
+     * Example: op read 'op://vault/stackpanel/age-key'
+     *
+     *
+     * @generated from protobuf field: optional string resolve_cmd = 3
+     */
+    resolve_cmd?: string;
 }
 /**
  * Secrets management configuration
@@ -40,103 +112,90 @@ export interface Secrets {
      */
     enable: boolean; // Enable secrets management
     /**
-     * @generated from protobuf field: string input_directory = 2
+     *
+     * Master keys for encrypting/decrypting secrets.
+     * Each secret specifies which master keys can decrypt it via the master-keys field.
+     * A default "local" key is auto-generated if no keys are configured.
+     *
+     *
+     * @generated from protobuf field: map<string, stackpanel.db.MasterKey> master_keys = 2
      */
-    input_directory: string; // Directory where SOPS-encrypted secrets are stored
+    master_keys: {
+        [key: string]: MasterKey;
+    };
     /**
-     * @generated from protobuf field: map<string, stackpanel.db.SecretsEnvironment> environments = 3
+     *
+     * Directory containing SOPS-encrypted secrets (legacy SOPS layout).
+     * Used when decrypting/merging YAML sources defined under environments.
+     *
+     *
+     * @generated from protobuf field: optional string input_directory = 3
      */
-    environments: {
-        [key: string]: SecretsEnvironment;
-    }; // Environment-specific secrets configurations
+    input_directory?: string;
     /**
-     * @generated from protobuf field: map<string, stackpanel.db.Codegen> codegen = 4
+     * @generated from protobuf field: optional string secrets_dir = 4
      */
-    codegen: {
-        [key: string]: Codegen;
-    }; // Code generation settings per target
+    secrets_dir?: string; // Directory where secret .age files are stored (default: .stackpanel/secrets)
     /**
+     *
+     * System-level AGE public keys (CI, deploy servers, etc.).
+     * These keys can decrypt all secrets regardless of environment restrictions.
+     *
+     *
      * @generated from protobuf field: repeated string system_keys = 5
      */
-    system_keys: string[]; // AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions.
+    system_keys: string[];
     /**
-     * @generated from protobuf field: optional string secrets_dir = 6
+     *
+     * Environment-specific secrets configuration (SOPS sources + recipients).
+     * Keyed by environment identifier (e.g., dev, staging, prod).
+     *
+     *
+     * @generated from protobuf field: map<string, stackpanel.db.Environment> environments = 6
      */
-    secrets_dir?: string; // Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)
+    environments: {
+        [key: string]: Environment;
+    };
     /**
-     * @generated from protobuf field: repeated string age_key_files = 7
+     *
+     * Code generation targets keyed by name (e.g., typescript, go, python).
+     * Used to drive language-specific env/secret helpers.
+     *
+     *
+     * @generated from protobuf field: map<string, stackpanel.db.CodegenTarget> codegen = 7
      */
-    age_key_files: string[]; // Paths to AGE key files to check for decryption (checked in order, first existing file wins)
-}
-/**
- * Environment-specific secrets configuration
- *
- * @generated from protobuf message stackpanel.db.SecretsEnvironment
- */
-export interface SecretsEnvironment {
-    /**
-     * @generated from protobuf field: string name = 1
-     */
-    name: string; // Name of the environment (e.g., 'production', 'staging')
-    /**
-     * @generated from protobuf field: repeated string public_keys = 2
-     */
-    public_keys: string[]; // AGE public keys that can decrypt secrets for this environment
-    /**
-     * @generated from protobuf field: repeated string sources = 3
-     */
-    sources: string[]; // List of SOPS-encrypted source files for this environment (without .yaml extension)
-}
-/**
- * Programming language for generated code
- *
- * @generated from protobuf enum stackpanel.db.CodegenLanguage
- */
-export enum CodegenLanguage {
-    /**
-     * @generated from protobuf enum value: CODEGEN_LANGUAGE_UNSPECIFIED = 0;
-     */
-    UNSPECIFIED = 0,
-    /**
-     * @generated from protobuf enum value: CODEGEN_LANGUAGE_TYPESCRIPT = 1;
-     */
-    TYPESCRIPT = 1,
-    /**
-     * @generated from protobuf enum value: CODEGEN_LANGUAGE_GO = 2;
-     */
-    GO = 2
+    codegen: {
+        [key: string]: CodegenTarget;
+    };
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class Codegen$Type extends MessageType<Codegen> {
+class CodegenTarget$Type extends MessageType<CodegenTarget> {
     constructor() {
-        super("stackpanel.db.Codegen", [
-            { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "directory", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "language", kind: "enum", T: () => ["stackpanel.db.CodegenLanguage", CodegenLanguage, "CODEGEN_LANGUAGE_"] }
+        super("stackpanel.db.CodegenTarget", [
+            { no: 1, name: "name", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "directory", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "language", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<Codegen>): Codegen {
+    create(value?: PartialMessage<CodegenTarget>): CodegenTarget {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.name = "";
-        message.directory = "";
-        message.language = 0;
         if (value !== undefined)
-            reflectionMergePartial<Codegen>(this, message, value);
+            reflectionMergePartial<CodegenTarget>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Codegen): Codegen {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CodegenTarget): CodegenTarget {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string name */ 1:
+                case /* optional string name */ 1:
                     message.name = reader.string();
                     break;
-                case /* string directory */ 2:
+                case /* optional string directory */ 2:
                     message.directory = reader.string();
                     break;
-                case /* stackpanel.db.CodegenLanguage language */ 3:
-                    message.language = reader.int32();
+                case /* optional string language */ 3:
+                    message.language = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -149,16 +208,16 @@ class Codegen$Type extends MessageType<Codegen> {
         }
         return message;
     }
-    internalBinaryWrite(message: Codegen, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string name = 1; */
-        if (message.name !== "")
+    internalBinaryWrite(message: CodegenTarget, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional string name = 1; */
+        if (message.name !== undefined)
             writer.tag(1, WireType.LengthDelimited).string(message.name);
-        /* string directory = 2; */
-        if (message.directory !== "")
+        /* optional string directory = 2; */
+        if (message.directory !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.directory);
-        /* stackpanel.db.CodegenLanguage language = 3; */
-        if (message.language !== 0)
-            writer.tag(3, WireType.Varint).int32(message.language);
+        /* optional string language = 3; */
+        if (message.language !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.language);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -166,30 +225,153 @@ class Codegen$Type extends MessageType<Codegen> {
     }
 }
 /**
- * @generated MessageType for protobuf message stackpanel.db.Codegen
+ * @generated MessageType for protobuf message stackpanel.db.CodegenTarget
  */
-export const Codegen = new Codegen$Type();
+export const CodegenTarget = new CodegenTarget$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Environment$Type extends MessageType<Environment> {
+    constructor() {
+        super("stackpanel.db.Environment", [
+            { no: 1, name: "name", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "sources", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "public_keys", kind: "scalar", localName: "public_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<Environment>): Environment {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.sources = [];
+        message.public_keys = [];
+        if (value !== undefined)
+            reflectionMergePartial<Environment>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Environment): Environment {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional string name */ 1:
+                    message.name = reader.string();
+                    break;
+                case /* repeated string sources */ 2:
+                    message.sources.push(reader.string());
+                    break;
+                case /* repeated string public_keys */ 3:
+                    message.public_keys.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Environment, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional string name = 1; */
+        if (message.name !== undefined)
+            writer.tag(1, WireType.LengthDelimited).string(message.name);
+        /* repeated string sources = 2; */
+        for (let i = 0; i < message.sources.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.sources[i]);
+        /* repeated string public_keys = 3; */
+        for (let i = 0; i < message.public_keys.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.public_keys[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.Environment
+ */
+export const Environment = new Environment$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class MasterKey$Type extends MessageType<MasterKey> {
+    constructor() {
+        super("stackpanel.db.MasterKey", [
+            { no: 1, name: "age_pub", kind: "scalar", localName: "age_pub", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "ref", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "resolve_cmd", kind: "scalar", localName: "resolve_cmd", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<MasterKey>): MasterKey {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.age_pub = "";
+        message.ref = "";
+        if (value !== undefined)
+            reflectionMergePartial<MasterKey>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: MasterKey): MasterKey {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string age_pub */ 1:
+                    message.age_pub = reader.string();
+                    break;
+                case /* string ref */ 2:
+                    message.ref = reader.string();
+                    break;
+                case /* optional string resolve_cmd */ 3:
+                    message.resolve_cmd = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: MasterKey, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string age_pub = 1; */
+        if (message.age_pub !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.age_pub);
+        /* string ref = 2; */
+        if (message.ref !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.ref);
+        /* optional string resolve_cmd = 3; */
+        if (message.resolve_cmd !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.resolve_cmd);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.MasterKey
+ */
+export const MasterKey = new MasterKey$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Secrets$Type extends MessageType<Secrets> {
     constructor() {
         super("stackpanel.db.Secrets", [
             { no: 1, name: "enable", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 2, name: "input_directory", kind: "scalar", localName: "input_directory", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => SecretsEnvironment } },
-            { no: 4, name: "codegen", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Codegen } },
+            { no: 2, name: "master_keys", kind: "map", localName: "master_keys", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => MasterKey } },
+            { no: 3, name: "input_directory", kind: "scalar", localName: "input_directory", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "secrets_dir", kind: "scalar", localName: "secrets_dir", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "system_keys", kind: "scalar", localName: "system_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "secrets_dir", kind: "scalar", localName: "secrets_dir", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "age_key_files", kind: "scalar", localName: "age_key_files", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 6, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Environment } },
+            { no: 7, name: "codegen", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => CodegenTarget } }
         ]);
     }
     create(value?: PartialMessage<Secrets>): Secrets {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.enable = false;
-        message.input_directory = "";
+        message.master_keys = {};
+        message.system_keys = [];
         message.environments = {};
         message.codegen = {};
-        message.system_keys = [];
-        message.age_key_files = [];
         if (value !== undefined)
             reflectionMergePartial<Secrets>(this, message, value);
         return message;
@@ -202,23 +384,23 @@ class Secrets$Type extends MessageType<Secrets> {
                 case /* bool enable */ 1:
                     message.enable = reader.bool();
                     break;
-                case /* string input_directory */ 2:
+                case /* map<string, stackpanel.db.MasterKey> master_keys */ 2:
+                    this.binaryReadMap2(message.master_keys, reader, options);
+                    break;
+                case /* optional string input_directory */ 3:
                     message.input_directory = reader.string();
                     break;
-                case /* map<string, stackpanel.db.SecretsEnvironment> environments */ 3:
-                    this.binaryReadMap3(message.environments, reader, options);
-                    break;
-                case /* map<string, stackpanel.db.Codegen> codegen */ 4:
-                    this.binaryReadMap4(message.codegen, reader, options);
+                case /* optional string secrets_dir */ 4:
+                    message.secrets_dir = reader.string();
                     break;
                 case /* repeated string system_keys */ 5:
                     message.system_keys.push(reader.string());
                     break;
-                case /* optional string secrets_dir */ 6:
-                    message.secrets_dir = reader.string();
+                case /* map<string, stackpanel.db.Environment> environments */ 6:
+                    this.binaryReadMap6(message.environments, reader, options);
                     break;
-                case /* repeated string age_key_files */ 7:
-                    message.age_key_files.push(reader.string());
+                case /* map<string, stackpanel.db.CodegenTarget> codegen */ 7:
+                    this.binaryReadMap7(message.codegen, reader, options);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -231,7 +413,23 @@ class Secrets$Type extends MessageType<Secrets> {
         }
         return message;
     }
-    private binaryReadMap3(map: Secrets["environments"], reader: IBinaryReader, options: BinaryReadOptions): void {
+    private binaryReadMap2(map: Secrets["master_keys"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof Secrets["master_keys"] | undefined, val: Secrets["master_keys"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = MasterKey.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.Secrets.master_keys");
+            }
+        }
+        map[key ?? ""] = val ?? MasterKey.create();
+    }
+    private binaryReadMap6(map: Secrets["environments"], reader: IBinaryReader, options: BinaryReadOptions): void {
         let len = reader.uint32(), end = reader.pos + len, key: keyof Secrets["environments"] | undefined, val: Secrets["environments"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -240,14 +438,14 @@ class Secrets$Type extends MessageType<Secrets> {
                     key = reader.string();
                     break;
                 case 2:
-                    val = SecretsEnvironment.internalBinaryRead(reader, reader.uint32(), options);
+                    val = Environment.internalBinaryRead(reader, reader.uint32(), options);
                     break;
                 default: throw new globalThis.Error("unknown map entry field for stackpanel.db.Secrets.environments");
             }
         }
-        map[key ?? ""] = val ?? SecretsEnvironment.create();
+        map[key ?? ""] = val ?? Environment.create();
     }
-    private binaryReadMap4(map: Secrets["codegen"], reader: IBinaryReader, options: BinaryReadOptions): void {
+    private binaryReadMap7(map: Secrets["codegen"], reader: IBinaryReader, options: BinaryReadOptions): void {
         let len = reader.uint32(), end = reader.pos + len, key: keyof Secrets["codegen"] | undefined, val: Secrets["codegen"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -256,43 +454,47 @@ class Secrets$Type extends MessageType<Secrets> {
                     key = reader.string();
                     break;
                 case 2:
-                    val = Codegen.internalBinaryRead(reader, reader.uint32(), options);
+                    val = CodegenTarget.internalBinaryRead(reader, reader.uint32(), options);
                     break;
                 default: throw new globalThis.Error("unknown map entry field for stackpanel.db.Secrets.codegen");
             }
         }
-        map[key ?? ""] = val ?? Codegen.create();
+        map[key ?? ""] = val ?? CodegenTarget.create();
     }
     internalBinaryWrite(message: Secrets, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* bool enable = 1; */
         if (message.enable !== false)
             writer.tag(1, WireType.Varint).bool(message.enable);
-        /* string input_directory = 2; */
-        if (message.input_directory !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.input_directory);
-        /* map<string, stackpanel.db.SecretsEnvironment> environments = 3; */
-        for (let k of globalThis.Object.keys(message.environments)) {
-            writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+        /* map<string, stackpanel.db.MasterKey> master_keys = 2; */
+        for (let k of globalThis.Object.keys(message.master_keys)) {
+            writer.tag(2, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
             writer.tag(2, WireType.LengthDelimited).fork();
-            SecretsEnvironment.internalBinaryWrite(message.environments[k], writer, options);
+            MasterKey.internalBinaryWrite(message.master_keys[k], writer, options);
             writer.join().join();
         }
-        /* map<string, stackpanel.db.Codegen> codegen = 4; */
-        for (let k of globalThis.Object.keys(message.codegen)) {
-            writer.tag(4, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
-            writer.tag(2, WireType.LengthDelimited).fork();
-            Codegen.internalBinaryWrite(message.codegen[k], writer, options);
-            writer.join().join();
-        }
+        /* optional string input_directory = 3; */
+        if (message.input_directory !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.input_directory);
+        /* optional string secrets_dir = 4; */
+        if (message.secrets_dir !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.secrets_dir);
         /* repeated string system_keys = 5; */
         for (let i = 0; i < message.system_keys.length; i++)
             writer.tag(5, WireType.LengthDelimited).string(message.system_keys[i]);
-        /* optional string secrets_dir = 6; */
-        if (message.secrets_dir !== undefined)
-            writer.tag(6, WireType.LengthDelimited).string(message.secrets_dir);
-        /* repeated string age_key_files = 7; */
-        for (let i = 0; i < message.age_key_files.length; i++)
-            writer.tag(7, WireType.LengthDelimited).string(message.age_key_files[i]);
+        /* map<string, stackpanel.db.Environment> environments = 6; */
+        for (let k of globalThis.Object.keys(message.environments)) {
+            writer.tag(6, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            Environment.internalBinaryWrite(message.environments[k], writer, options);
+            writer.join().join();
+        }
+        /* map<string, stackpanel.db.CodegenTarget> codegen = 7; */
+        for (let k of globalThis.Object.keys(message.codegen)) {
+            writer.tag(7, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            CodegenTarget.internalBinaryWrite(message.codegen[k], writer, options);
+            writer.join().join();
+        }
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -303,66 +505,3 @@ class Secrets$Type extends MessageType<Secrets> {
  * @generated MessageType for protobuf message stackpanel.db.Secrets
  */
 export const Secrets = new Secrets$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class SecretsEnvironment$Type extends MessageType<SecretsEnvironment> {
-    constructor() {
-        super("stackpanel.db.SecretsEnvironment", [
-            { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "public_keys", kind: "scalar", localName: "public_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "sources", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    create(value?: PartialMessage<SecretsEnvironment>): SecretsEnvironment {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.name = "";
-        message.public_keys = [];
-        message.sources = [];
-        if (value !== undefined)
-            reflectionMergePartial<SecretsEnvironment>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SecretsEnvironment): SecretsEnvironment {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string name */ 1:
-                    message.name = reader.string();
-                    break;
-                case /* repeated string public_keys */ 2:
-                    message.public_keys.push(reader.string());
-                    break;
-                case /* repeated string sources */ 3:
-                    message.sources.push(reader.string());
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: SecretsEnvironment, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string name = 1; */
-        if (message.name !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.name);
-        /* repeated string public_keys = 2; */
-        for (let i = 0; i < message.public_keys.length; i++)
-            writer.tag(2, WireType.LengthDelimited).string(message.public_keys[i]);
-        /* repeated string sources = 3; */
-        for (let i = 0; i < message.sources.length; i++)
-            writer.tag(3, WireType.LengthDelimited).string(message.sources[i]);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message stackpanel.db.SecretsEnvironment
- */
-export const SecretsEnvironment = new SecretsEnvironment$Type();

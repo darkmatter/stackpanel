@@ -20,18 +20,14 @@ proto.mkProtoFile {
   };
 
   enums = {
-    # VariableType indicates how the value is stored/retrieved AND its data type
-    # Storage types: VARIABLE (plain), SECRET (age-encrypted), VALS (external)
-    # Value types: STRING, NUMBER, BOOLEAN (for codegen)
+    # VariableType indicates how the variable value is resolved
     VariableType = proto.mkEnum {
       name = "VariableType";
       values = [
-        "VARIABLE"  # Plain variable with string value
-        "SECRET"    # Age-encrypted secret
-        "VALS"      # External value reference (vals syntax)
-        "STRING"    # Explicitly typed as string
-        "NUMBER"    # Explicitly typed as number (for codegen)
-        "BOOLEAN"   # Explicitly typed as boolean (for codegen)
+        "LITERAL"   # Plain text value, embedded directly (resolved at eval time)
+        "SECRET"    # Encrypted with AGE master keys (resolved at runtime)
+        "VALS"      # External value reference using vals syntax (resolved at runtime)
+        "EXEC"      # Shell command that outputs the value (resolved at runtime)
       ];
     };
   };
@@ -56,53 +52,43 @@ proto.mkProtoFile {
       description = "Configuration for a single variable in the workspace";
       fields = {
         id = proto.string 1 ''
-          Globally unique identifier for the variable. You can reference a single
-          variable in multiple apps and environments, so to avoid confusion, it's
-          recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
-          You can also use `/path/based/variable-name` for organization. If a variable should
-          only be used in a specific environment or app, you should include that detail in
-          this field.
+          Globally unique identifier for the variable. Recommended format:
+          `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
         '';
         key = proto.string 2 ''
-          Default key to use when passing the variable to the app. This is the key that will be used
-          in the environment variables of the app.
+          Environment variable name when passing to apps (e.g., POSTGRES_URL).
         '';
-        description = proto.optional (proto.string 3 "(optional) Description of the variable");
-        type = proto.message "VariableType" 4 "Type of the variable";
+        description = proto.optional (proto.string 3 "Description of the variable");
+        type = proto.message "VariableType" 4 "How the variable value is resolved";
         value = proto.string 5 ''
-          - When type = "VARIABLE", the value wil be provided as-is.
-          - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
-          - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-            compatible descriptor, for example if you want to get a value from AWS Parameter
-            Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
+          The value field meaning depends on type:
+          - LITERAL: The actual value (embedded directly)
+          - SECRET: Empty (value lives in encrypted .age file)
+          - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
+          - EXEC: Shell command to execute (stdout becomes the value)
         '';
-        environments = proto.repeated (
+        masterKeys = proto.repeated (
           proto.string 6 ''
-            List of environments this variable/secret is available in.
-            If empty, the variable is available in all environments.
-            Used for access control with secrets - only users with access to
-            these environments can decrypt the secret.
+            Master keys that can decrypt this secret. Only used when type=SECRET.
+            The .age file is encrypted to ALL listed master keys.
+            Default: ["local"] (auto-generated local key).
+            Example: ["dev", "prod"] for team-accessible secrets.
           ''
         );
-        # New fields for module requirements
+        # Module dependency tracking
         requiredBy = proto.repeated (
           proto.string 7 ''
             List of module names that require this variable (e.g., ["sst", "ci"]).
-            Used to show which features depend on this variable being set.
           ''
         );
         providedBy = proto.optional (
           proto.string 8 ''
             Module name that provides/creates this variable.
-            Used to understand where the variable comes from.
           ''
         );
         level = proto.optional (
           proto.int32 9 ''
             Bootstrap level (0 = always available, 1+ = requires dependencies).
-            Level 0: No dependencies (e.g., AGE key, env vars)
-            Level 1: Requires level 0 (e.g., encrypted secrets)
-            Level 2: Requires external setup (e.g., cloud API tokens)
           ''
         );
         action = proto.optional (

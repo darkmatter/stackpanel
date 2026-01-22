@@ -11,12 +11,13 @@ import { file_files } from "./files_pb";
 import { file_services } from "./services_pb";
 import { file_apps } from "./apps_pb";
 import { file_variables } from "./variables_pb";
+import { file_sst } from "./sst_pb";
 
 /**
  * Describes the file agent.proto.
  */
 export const file_agent = /*@__PURE__*/
-  fileDesc("CgthZ2VudC5wcm90bxIQc3RhY2twYW5lbC5hZ2VudCITChFHZXRQcm9qZWN0UmVxdWVzdCJAChJHZXRQcm9qZWN0UmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnN0YWNrcGFuZWwuYWdlbnQuUHJvamVjdCJiCgdQcm9qZWN0EgwKBHBhdGgYASABKAkSDAoEbmFtZRgCIAEoCRIOCgZnaXRodWIYAyABKAkSKwoEZGlycxgEIAEoCzIdLnN0YWNrcGFuZWwuYWdlbnQuRGlyZWN0b3JpZXMiVgoLRGlyZWN0b3JpZXMSDAoEaG9tZRgBIAEoCRIMCgRkYXRhGAIgASgJEgsKA2dlbhgDIAEoCRINCgVzdGF0ZRgEIAEoCRIPCgdzZWNyZXRzGAUgASgJIhIKEEdldENvbmZpZ1JlcXVlc3QiEwoRR2V0U2VjcmV0c1JlcXVlc3QiEQoPR2V0VXNlcnNSZXF1ZXN0Ig8KDUdldEF3c1JlcXVlc3QiEAoOR2V0QXBwc1JlcXVlc3QiFQoTR2V0VmFyaWFibGVzUmVxdWVzdCIXChVHZXRBZ2VJZGVudGl0eVJlcXVlc3QiJgoVU2V0QWdlSWRlbnRpdHlSZXF1ZXN0Eg0KBXZhbHVlGAEgASgJIlgKE0FnZUlkZW50aXR5UmVzcG9uc2USDAoEdHlwZRgBIAEoCRINCgV2YWx1ZRgCIAEoCRIQCghrZXlfcGF0aBgDIAEoCRISCgpwdWJsaWNfa2V5GAQgASgJIhUKE0dldEtNU0NvbmZpZ1JlcXVlc3QiSwoTU2V0S01TQ29uZmlnUmVxdWVzdBIOCgZlbmFibGUYASABKAgSDwoHa2V5X2FybhgCIAEoCRITCgthd3NfcHJvZmlsZRgDIAEoCSJZChFLTVNDb25maWdSZXNwb25zZRIOCgZlbmFibGUYASABKAgSDwoHa2V5X2FybhgCIAEoCRITCgthd3NfcHJvZmlsZRgDIAEoCRIOCgZzb3VyY2UYBCABKAkiHwoPUmVhZEZpbGVSZXF1ZXN0EgwKBHBhdGgYASABKAkiMwoQUmVhZEZpbGVSZXNwb25zZRIPCgdjb250ZW50GAEgASgJEg4KBmV4aXN0cxgCIAEoCCI/ChBXcml0ZUZpbGVSZXF1ZXN0EgwKBHBhdGgYASABKAkSDwoHY29udGVudBgCIAEoCRIMCgRtb2RlGAMgASgNIiQKEVdyaXRlRmlsZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiMQoQTGlzdEZpbGVzUmVxdWVzdBIMCgRwYXRoGAEgASgJEg8KB3BhdHRlcm4YAiABKAkiPgoRTGlzdEZpbGVzUmVzcG9uc2USKQoFZmlsZXMYASADKAsyGi5zdGFja3BhbmVsLmFnZW50LkZpbGVJbmZvIlYKCEZpbGVJbmZvEgwKBG5hbWUYASABKAkSDAoEcGF0aBgCIAEoCRIOCgZpc19kaXIYAyABKAgSDAoEc2l6ZRgEIAEoAxIQCghtb2RfdGltZRgFIAEoAyKaAQoLRXhlY1JlcXVlc3QSDwoHY29tbWFuZBgBIAEoCRIMCgRhcmdzGAIgAygJEgsKA2N3ZBgDIAEoCRIzCgNlbnYYBCADKAsyJi5zdGFja3BhbmVsLmFnZW50LkV4ZWNSZXF1ZXN0LkVudkVudHJ5GioKCEVudkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiQQoMRXhlY1Jlc3BvbnNlEhEKCWV4aXRfY29kZRgBIAEoBRIOCgZzdGRvdXQYAiABKAkSDgoGc3RkZXJyGAMgASgJIhQKEk5peEdlbmVyYXRlUmVxdWVzdCI2ChNOaXhHZW5lcmF0ZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDgoGb3V0cHV0GAIgASgJIjIKDk5peEV2YWxSZXF1ZXN0EhIKCmV4cHJlc3Npb24YASABKAkSDAoEanNvbhgCIAEoCCIhCg9OaXhFdmFsUmVzcG9uc2USDgoGcmVzdWx0GAEgASgJIhoKGEdldFNlcnZpY2VzU3RhdHVzUmVxdWVzdCJfChlHZXRTZXJ2aWNlc1N0YXR1c1Jlc3BvbnNlEg8KB3J1bm5pbmcYASABKAgSMQoIc2VydmljZXMYAiADKAsyHy5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VTdGF0dXMiSgoNU2VydmljZVN0YXR1cxIMCgRuYW1lGAEgASgJEg4KBnN0YXR1cxgCIAEoCRILCgNwaWQYAyABKAUSDgoGdXB0aW1lGAQgASgDIh4KDlNlcnZpY2VSZXF1ZXN0EgwKBG5hbWUYASABKAkiMwoPU2VydmljZVJlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSDwoHbWVzc2FnZRgCIAEoCTLJEAoMQWdlbnRTZXJ2aWNlElcKCkdldFByb2plY3QSIy5zdGFja3BhbmVsLmFnZW50LkdldFByb2plY3RSZXF1ZXN0GiQuc3RhY2twYW5lbC5hZ2VudC5HZXRQcm9qZWN0UmVzcG9uc2USRgoJR2V0Q29uZmlnEiIuc3RhY2twYW5lbC5hZ2VudC5HZXRDb25maWdSZXF1ZXN0GhUuc3RhY2twYW5lbC5kYi5Db25maWcSOQoJU2V0Q29uZmlnEhUuc3RhY2twYW5lbC5kYi5Db25maWcaFS5zdGFja3BhbmVsLmRiLkNvbmZpZxJJCgpHZXRTZWNyZXRzEiMuc3RhY2twYW5lbC5hZ2VudC5HZXRTZWNyZXRzUmVxdWVzdBoWLnN0YWNrcGFuZWwuZGIuU2VjcmV0cxI8CgpTZXRTZWNyZXRzEhYuc3RhY2twYW5lbC5kYi5TZWNyZXRzGhYuc3RhY2twYW5lbC5kYi5TZWNyZXRzEkMKCEdldFVzZXJzEiEuc3RhY2twYW5lbC5hZ2VudC5HZXRVc2Vyc1JlcXVlc3QaFC5zdGFja3BhbmVsLmRiLlVzZXJzEjYKCFNldFVzZXJzEhQuc3RhY2twYW5lbC5kYi5Vc2VycxoULnN0YWNrcGFuZWwuZGIuVXNlcnMSPQoGR2V0QXdzEh8uc3RhY2twYW5lbC5hZ2VudC5HZXRBd3NSZXF1ZXN0GhIuc3RhY2twYW5lbC5kYi5Bd3MSMAoGU2V0QXdzEhIuc3RhY2twYW5lbC5kYi5Bd3MaEi5zdGFja3BhbmVsLmRiLkF3cxJACgdHZXRBcHBzEiAuc3RhY2twYW5lbC5hZ2VudC5HZXRBcHBzUmVxdWVzdBoTLnN0YWNrcGFuZWwuZGIuQXBwcxIzCgdTZXRBcHBzEhMuc3RhY2twYW5lbC5kYi5BcHBzGhMuc3RhY2twYW5lbC5kYi5BcHBzEk8KDEdldFZhcmlhYmxlcxIlLnN0YWNrcGFuZWwuYWdlbnQuR2V0VmFyaWFibGVzUmVxdWVzdBoYLnN0YWNrcGFuZWwuZGIuVmFyaWFibGVzEkIKDFNldFZhcmlhYmxlcxIYLnN0YWNrcGFuZWwuZGIuVmFyaWFibGVzGhguc3RhY2twYW5lbC5kYi5WYXJpYWJsZXMSYAoOR2V0QWdlSWRlbnRpdHkSJy5zdGFja3BhbmVsLmFnZW50LkdldEFnZUlkZW50aXR5UmVxdWVzdBolLnN0YWNrcGFuZWwuYWdlbnQuQWdlSWRlbnRpdHlSZXNwb25zZRJgCg5TZXRBZ2VJZGVudGl0eRInLnN0YWNrcGFuZWwuYWdlbnQuU2V0QWdlSWRlbnRpdHlSZXF1ZXN0GiUuc3RhY2twYW5lbC5hZ2VudC5BZ2VJZGVudGl0eVJlc3BvbnNlEloKDEdldEtNU0NvbmZpZxIlLnN0YWNrcGFuZWwuYWdlbnQuR2V0S01TQ29uZmlnUmVxdWVzdBojLnN0YWNrcGFuZWwuYWdlbnQuS01TQ29uZmlnUmVzcG9uc2USWgoMU2V0S01TQ29uZmlnEiUuc3RhY2twYW5lbC5hZ2VudC5TZXRLTVNDb25maWdSZXF1ZXN0GiMuc3RhY2twYW5lbC5hZ2VudC5LTVNDb25maWdSZXNwb25zZRJRCghSZWFkRmlsZRIhLnN0YWNrcGFuZWwuYWdlbnQuUmVhZEZpbGVSZXF1ZXN0GiIuc3RhY2twYW5lbC5hZ2VudC5SZWFkRmlsZVJlc3BvbnNlElQKCVdyaXRlRmlsZRIiLnN0YWNrcGFuZWwuYWdlbnQuV3JpdGVGaWxlUmVxdWVzdBojLnN0YWNrcGFuZWwuYWdlbnQuV3JpdGVGaWxlUmVzcG9uc2USVAoJTGlzdEZpbGVzEiIuc3RhY2twYW5lbC5hZ2VudC5MaXN0RmlsZXNSZXF1ZXN0GiMuc3RhY2twYW5lbC5hZ2VudC5MaXN0RmlsZXNSZXNwb25zZRJFCgRFeGVjEh0uc3RhY2twYW5lbC5hZ2VudC5FeGVjUmVxdWVzdBoeLnN0YWNrcGFuZWwuYWdlbnQuRXhlY1Jlc3BvbnNlEloKC05peEdlbmVyYXRlEiQuc3RhY2twYW5lbC5hZ2VudC5OaXhHZW5lcmF0ZVJlcXVlc3QaJS5zdGFja3BhbmVsLmFnZW50Lk5peEdlbmVyYXRlUmVzcG9uc2USTgoHTml4RXZhbBIgLnN0YWNrcGFuZWwuYWdlbnQuTml4RXZhbFJlcXVlc3QaIS5zdGFja3BhbmVsLmFnZW50Lk5peEV2YWxSZXNwb25zZRJsChFHZXRTZXJ2aWNlc1N0YXR1cxIqLnN0YWNrcGFuZWwuYWdlbnQuR2V0U2VydmljZXNTdGF0dXNSZXF1ZXN0Gisuc3RhY2twYW5lbC5hZ2VudC5HZXRTZXJ2aWNlc1N0YXR1c1Jlc3BvbnNlElMKDFN0YXJ0U2VydmljZRIgLnN0YWNrcGFuZWwuYWdlbnQuU2VydmljZVJlcXVlc3QaIS5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VSZXNwb25zZRJSCgtTdG9wU2VydmljZRIgLnN0YWNrcGFuZWwuYWdlbnQuU2VydmljZVJlcXVlc3QaIS5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VSZXNwb25zZRJVCg5SZXN0YXJ0U2VydmljZRIgLnN0YWNrcGFuZWwuYWdlbnQuU2VydmljZVJlcXVlc3QaIS5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VSZXNwb25zZUI6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z", [file_config, file_secrets, file_users, file_aws, file_files, file_services, file_apps, file_variables]);
+  fileDesc("CgthZ2VudC5wcm90bxIQc3RhY2twYW5lbC5hZ2VudCITChFHZXRQcm9qZWN0UmVxdWVzdCJAChJHZXRQcm9qZWN0UmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnN0YWNrcGFuZWwuYWdlbnQuUHJvamVjdCJiCgdQcm9qZWN0EgwKBHBhdGgYASABKAkSDAoEbmFtZRgCIAEoCRIOCgZnaXRodWIYAyABKAkSKwoEZGlycxgEIAEoCzIdLnN0YWNrcGFuZWwuYWdlbnQuRGlyZWN0b3JpZXMiVgoLRGlyZWN0b3JpZXMSDAoEaG9tZRgBIAEoCRIMCgRkYXRhGAIgASgJEgsKA2dlbhgDIAEoCRINCgVzdGF0ZRgEIAEoCRIPCgdzZWNyZXRzGAUgASgJIhIKEEdldENvbmZpZ1JlcXVlc3QiEwoRR2V0U2VjcmV0c1JlcXVlc3QiEQoPR2V0VXNlcnNSZXF1ZXN0Ig8KDUdldEF3c1JlcXVlc3QiEAoOR2V0QXBwc1JlcXVlc3QiFQoTR2V0VmFyaWFibGVzUmVxdWVzdCIPCg1HZXRTc3RSZXF1ZXN0IhcKFUdldEFnZUlkZW50aXR5UmVxdWVzdCImChVTZXRBZ2VJZGVudGl0eVJlcXVlc3QSDQoFdmFsdWUYASABKAkiWAoTQWdlSWRlbnRpdHlSZXNwb25zZRIMCgR0eXBlGAEgASgJEg0KBXZhbHVlGAIgASgJEhAKCGtleV9wYXRoGAMgASgJEhIKCnB1YmxpY19rZXkYBCABKAkiFQoTR2V0S01TQ29uZmlnUmVxdWVzdCJLChNTZXRLTVNDb25maWdSZXF1ZXN0Eg4KBmVuYWJsZRgBIAEoCBIPCgdrZXlfYXJuGAIgASgJEhMKC2F3c19wcm9maWxlGAMgASgJIlkKEUtNU0NvbmZpZ1Jlc3BvbnNlEg4KBmVuYWJsZRgBIAEoCBIPCgdrZXlfYXJuGAIgASgJEhMKC2F3c19wcm9maWxlGAMgASgJEg4KBnNvdXJjZRgEIAEoCSIfCg9SZWFkRmlsZVJlcXVlc3QSDAoEcGF0aBgBIAEoCSIzChBSZWFkRmlsZVJlc3BvbnNlEg8KB2NvbnRlbnQYASABKAkSDgoGZXhpc3RzGAIgASgIIj8KEFdyaXRlRmlsZVJlcXVlc3QSDAoEcGF0aBgBIAEoCRIPCgdjb250ZW50GAIgASgJEgwKBG1vZGUYAyABKA0iJAoRV3JpdGVGaWxlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCCIxChBMaXN0RmlsZXNSZXF1ZXN0EgwKBHBhdGgYASABKAkSDwoHcGF0dGVybhgCIAEoCSI+ChFMaXN0RmlsZXNSZXNwb25zZRIpCgVmaWxlcxgBIAMoCzIaLnN0YWNrcGFuZWwuYWdlbnQuRmlsZUluZm8iVgoIRmlsZUluZm8SDAoEbmFtZRgBIAEoCRIMCgRwYXRoGAIgASgJEg4KBmlzX2RpchgDIAEoCBIMCgRzaXplGAQgASgDEhAKCG1vZF90aW1lGAUgASgDIpoBCgtFeGVjUmVxdWVzdBIPCgdjb21tYW5kGAEgASgJEgwKBGFyZ3MYAiADKAkSCwoDY3dkGAMgASgJEjMKA2VudhgEIAMoCzImLnN0YWNrcGFuZWwuYWdlbnQuRXhlY1JlcXVlc3QuRW52RW50cnkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJBCgxFeGVjUmVzcG9uc2USEQoJZXhpdF9jb2RlGAEgASgFEg4KBnN0ZG91dBgCIAEoCRIOCgZzdGRlcnIYAyABKAkiFAoSTml4R2VuZXJhdGVSZXF1ZXN0IjYKE05peEdlbmVyYXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIOCgZvdXRwdXQYAiABKAkiMgoOTml4RXZhbFJlcXVlc3QSEgoKZXhwcmVzc2lvbhgBIAEoCRIMCgRqc29uGAIgASgIIiEKD05peEV2YWxSZXNwb25zZRIOCgZyZXN1bHQYASABKAkiGgoYR2V0U2VydmljZXNTdGF0dXNSZXF1ZXN0Il8KGUdldFNlcnZpY2VzU3RhdHVzUmVzcG9uc2USDwoHcnVubmluZxgBIAEoCBIxCghzZXJ2aWNlcxgCIAMoCzIfLnN0YWNrcGFuZWwuYWdlbnQuU2VydmljZVN0YXR1cyJKCg1TZXJ2aWNlU3RhdHVzEgwKBG5hbWUYASABKAkSDgoGc3RhdHVzGAIgASgJEgsKA3BpZBgDIAEoBRIOCgZ1cHRpbWUYBCABKAMiHgoOU2VydmljZVJlcXVlc3QSDAoEbmFtZRgBIAEoCSIzCg9TZXJ2aWNlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJIhUKE0dldFNTVFN0YXR1c1JlcXVlc3QilwEKEVNTVFN0YXR1c1Jlc3BvbnNlEhIKCmNvbmZpZ3VyZWQYASABKAgSEwoLY29uZmlnX3BhdGgYAiABKAkSFAoMY29uZmlnX3ZhbGlkGAMgASgIEhAKCGRlcGxveWVkGAQgASgIEg0KBXN0YWdlGAUgASgJEhMKC2xhc3RfZGVwbG95GAYgASgJEg0KBWVycm9yGAcgASgJIhUKE0dldFNTVENvbmZpZ1JlcXVlc3QiIQoQRGVwbG95U1NUUmVxdWVzdBINCgVzdGFnZRgBIAEoCSK2AQoRRGVwbG95U1NUUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIOCgZvdXRwdXQYAiABKAkSDQoFZXJyb3IYAyABKAkSQQoHb3V0cHV0cxgEIAMoCzIwLnN0YWNrcGFuZWwuYWdlbnQuRGVwbG95U1NUUmVzcG9uc2UuT3V0cHV0c0VudHJ5Gi4KDE91dHB1dHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIiEKEFJlbW92ZVNTVFJlcXVlc3QSDQoFc3RhZ2UYASABKAkiQwoRUmVtb3ZlU1NUUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIOCgZvdXRwdXQYAiABKAkSDQoFZXJyb3IYAyABKAkiFgoUR2V0U1NUT3V0cHV0c1JlcXVlc3QiiAEKElNTVE91dHB1dHNSZXNwb25zZRJCCgdvdXRwdXRzGAEgAygLMjEuc3RhY2twYW5lbC5hZ2VudC5TU1RPdXRwdXRzUmVzcG9uc2UuT3V0cHV0c0VudHJ5Gi4KDE91dHB1dHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIhgKFkdldFNTVFJlc291cmNlc1JlcXVlc3QiNAoLU1NUUmVzb3VyY2USDAoEdHlwZRgBIAEoCRILCgN1cm4YAiABKAkSCgoCaWQYAyABKAkiSAoUU1NUUmVzb3VyY2VzUmVzcG9uc2USMAoJcmVzb3VyY2VzGAEgAygLMh0uc3RhY2twYW5lbC5hZ2VudC5TU1RSZXNvdXJjZSI0ChRTZWFyY2hOaXhwa2dzUmVxdWVzdBINCgVxdWVyeRgBIAEoCRINCgVsaW1pdBgCIAEoBSKiAQoOTml4cGtnc1BhY2thZ2USDAoEbmFtZRgBIAEoCRIRCglhdHRyX3BhdGgYAiABKAkSDwoHdmVyc2lvbhgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIRCglpbnN0YWxsZWQYBSABKAgSDwoHbGljZW5zZRgGIAEoCRIQCghob21lcGFnZRgHIAEoCRITCgtuaXhwa2dzX3VybBgIIAEoCSJLChVTZWFyY2hOaXhwa2dzUmVzcG9uc2USMgoIcGFja2FnZXMYASADKAsyIC5zdGFja3BhbmVsLmFnZW50Lk5peHBrZ3NQYWNrYWdlIh0KG0dldEluc3RhbGxlZFBhY2thZ2VzUmVxdWVzdCJUChBJbnN0YWxsZWRQYWNrYWdlEgwKBG5hbWUYASABKAkSDwoHdmVyc2lvbhgCIAEoCRIRCglhdHRyX3BhdGgYAyABKAkSDgoGc291cmNlGAQgASgJImAKGUluc3RhbGxlZFBhY2thZ2VzUmVzcG9uc2USNAoIcGFja2FnZXMYASADKAsyIi5zdGFja3BhbmVsLmFnZW50Lkluc3RhbGxlZFBhY2thZ2USDQoFY291bnQYAiABKAUiFQoTR2V0UHJvY2Vzc2VzUmVxdWVzdCKZAQoLUHJvY2Vzc0luZm8SDAoEbmFtZRgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSDgoGc3RhdHVzGAMgASgJEgsKA3BpZBgEIAEoBRIRCglleGl0X2NvZGUYBSABKAUSEgoKaXNfcnVubmluZxgGIAEoCBIQCghyZXN0YXJ0cxgHIAEoBRITCgtzeXN0ZW1fdGltZRgIIAEoCSJ7ChRHZXRQcm9jZXNzZXNSZXNwb25zZRIRCglhdmFpbGFibGUYASABKAgSDwoHcnVubmluZxgCIAEoCBIwCglwcm9jZXNzZXMYAyADKAsyHS5zdGFja3BhbmVsLmFnZW50LlByb2Nlc3NJbmZvEg0KBWVycm9yGAQgASgJIhgKFkdldEhlYWx0aGNoZWNrc1JlcXVlc3QiYAoPSGVhbHRoY2hlY2tJbmZvEgwKBG5hbWUYASABKAkSDAoEdHlwZRgCIAEoCRIPCgdoZWFsdGh5GAMgASgIEg8KB21lc3NhZ2UYBCABKAkSDwoHZGV0YWlscxgFIAEoCSJeChRIZWFsdGhjaGVja3NSZXNwb25zZRITCgthbGxfaGVhbHRoeRgBIAEoCBIxCgZjaGVja3MYAiADKAsyIS5zdGFja3BhbmVsLmFnZW50LkhlYWx0aGNoZWNrSW5mbyImChNHZXROaXhDb25maWdSZXF1ZXN0Eg8KB3JlZnJlc2gYASABKAgiGQoXUmVmcmVzaE5peENvbmZpZ1JlcXVlc3QiXgoRTml4Q29uZmlnUmVzcG9uc2USEwoLY29uZmlnX2pzb24YASABKAkSFAoMbGFzdF91cGRhdGVkGAIgASgJEg4KBmNhY2hlZBgDIAEoCBIOCgZzb3VyY2UYBCABKAkyuhkKDEFnZW50U2VydmljZRJXCgpHZXRQcm9qZWN0EiMuc3RhY2twYW5lbC5hZ2VudC5HZXRQcm9qZWN0UmVxdWVzdBokLnN0YWNrcGFuZWwuYWdlbnQuR2V0UHJvamVjdFJlc3BvbnNlEkYKCUdldENvbmZpZxIiLnN0YWNrcGFuZWwuYWdlbnQuR2V0Q29uZmlnUmVxdWVzdBoVLnN0YWNrcGFuZWwuZGIuQ29uZmlnEjkKCVNldENvbmZpZxIVLnN0YWNrcGFuZWwuZGIuQ29uZmlnGhUuc3RhY2twYW5lbC5kYi5Db25maWcSSQoKR2V0U2VjcmV0cxIjLnN0YWNrcGFuZWwuYWdlbnQuR2V0U2VjcmV0c1JlcXVlc3QaFi5zdGFja3BhbmVsLmRiLlNlY3JldHMSPAoKU2V0U2VjcmV0cxIWLnN0YWNrcGFuZWwuZGIuU2VjcmV0cxoWLnN0YWNrcGFuZWwuZGIuU2VjcmV0cxJDCghHZXRVc2VycxIhLnN0YWNrcGFuZWwuYWdlbnQuR2V0VXNlcnNSZXF1ZXN0GhQuc3RhY2twYW5lbC5kYi5Vc2VycxI2CghTZXRVc2VycxIULnN0YWNrcGFuZWwuZGIuVXNlcnMaFC5zdGFja3BhbmVsLmRiLlVzZXJzEj0KBkdldEF3cxIfLnN0YWNrcGFuZWwuYWdlbnQuR2V0QXdzUmVxdWVzdBoSLnN0YWNrcGFuZWwuZGIuQXdzEjAKBlNldEF3cxISLnN0YWNrcGFuZWwuZGIuQXdzGhIuc3RhY2twYW5lbC5kYi5Bd3MSQAoHR2V0QXBwcxIgLnN0YWNrcGFuZWwuYWdlbnQuR2V0QXBwc1JlcXVlc3QaEy5zdGFja3BhbmVsLmRiLkFwcHMSMwoHU2V0QXBwcxITLnN0YWNrcGFuZWwuZGIuQXBwcxoTLnN0YWNrcGFuZWwuZGIuQXBwcxJPCgxHZXRWYXJpYWJsZXMSJS5zdGFja3BhbmVsLmFnZW50LkdldFZhcmlhYmxlc1JlcXVlc3QaGC5zdGFja3BhbmVsLmRiLlZhcmlhYmxlcxJCCgxTZXRWYXJpYWJsZXMSGC5zdGFja3BhbmVsLmRiLlZhcmlhYmxlcxoYLnN0YWNrcGFuZWwuZGIuVmFyaWFibGVzEmAKDkdldEFnZUlkZW50aXR5Eicuc3RhY2twYW5lbC5hZ2VudC5HZXRBZ2VJZGVudGl0eVJlcXVlc3QaJS5zdGFja3BhbmVsLmFnZW50LkFnZUlkZW50aXR5UmVzcG9uc2USYAoOU2V0QWdlSWRlbnRpdHkSJy5zdGFja3BhbmVsLmFnZW50LlNldEFnZUlkZW50aXR5UmVxdWVzdBolLnN0YWNrcGFuZWwuYWdlbnQuQWdlSWRlbnRpdHlSZXNwb25zZRJaCgxHZXRLTVNDb25maWcSJS5zdGFja3BhbmVsLmFnZW50LkdldEtNU0NvbmZpZ1JlcXVlc3QaIy5zdGFja3BhbmVsLmFnZW50LktNU0NvbmZpZ1Jlc3BvbnNlEloKDFNldEtNU0NvbmZpZxIlLnN0YWNrcGFuZWwuYWdlbnQuU2V0S01TQ29uZmlnUmVxdWVzdBojLnN0YWNrcGFuZWwuYWdlbnQuS01TQ29uZmlnUmVzcG9uc2USUQoIUmVhZEZpbGUSIS5zdGFja3BhbmVsLmFnZW50LlJlYWRGaWxlUmVxdWVzdBoiLnN0YWNrcGFuZWwuYWdlbnQuUmVhZEZpbGVSZXNwb25zZRJUCglXcml0ZUZpbGUSIi5zdGFja3BhbmVsLmFnZW50LldyaXRlRmlsZVJlcXVlc3QaIy5zdGFja3BhbmVsLmFnZW50LldyaXRlRmlsZVJlc3BvbnNlElQKCUxpc3RGaWxlcxIiLnN0YWNrcGFuZWwuYWdlbnQuTGlzdEZpbGVzUmVxdWVzdBojLnN0YWNrcGFuZWwuYWdlbnQuTGlzdEZpbGVzUmVzcG9uc2USRQoERXhlYxIdLnN0YWNrcGFuZWwuYWdlbnQuRXhlY1JlcXVlc3QaHi5zdGFja3BhbmVsLmFnZW50LkV4ZWNSZXNwb25zZRJaCgtOaXhHZW5lcmF0ZRIkLnN0YWNrcGFuZWwuYWdlbnQuTml4R2VuZXJhdGVSZXF1ZXN0GiUuc3RhY2twYW5lbC5hZ2VudC5OaXhHZW5lcmF0ZVJlc3BvbnNlEk4KB05peEV2YWwSIC5zdGFja3BhbmVsLmFnZW50Lk5peEV2YWxSZXF1ZXN0GiEuc3RhY2twYW5lbC5hZ2VudC5OaXhFdmFsUmVzcG9uc2USbAoRR2V0U2VydmljZXNTdGF0dXMSKi5zdGFja3BhbmVsLmFnZW50LkdldFNlcnZpY2VzU3RhdHVzUmVxdWVzdBorLnN0YWNrcGFuZWwuYWdlbnQuR2V0U2VydmljZXNTdGF0dXNSZXNwb25zZRJTCgxTdGFydFNlcnZpY2USIC5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VSZXF1ZXN0GiEuc3RhY2twYW5lbC5hZ2VudC5TZXJ2aWNlUmVzcG9uc2USUgoLU3RvcFNlcnZpY2USIC5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VSZXF1ZXN0GiEuc3RhY2twYW5lbC5hZ2VudC5TZXJ2aWNlUmVzcG9uc2USVQoOUmVzdGFydFNlcnZpY2USIC5zdGFja3BhbmVsLmFnZW50LlNlcnZpY2VSZXF1ZXN0GiEuc3RhY2twYW5lbC5hZ2VudC5TZXJ2aWNlUmVzcG9uc2USWgoMR2V0U1NUU3RhdHVzEiUuc3RhY2twYW5lbC5hZ2VudC5HZXRTU1RTdGF0dXNSZXF1ZXN0GiMuc3RhY2twYW5lbC5hZ2VudC5TU1RTdGF0dXNSZXNwb25zZRJJCgxHZXRTU1RDb25maWcSJS5zdGFja3BhbmVsLmFnZW50LkdldFNTVENvbmZpZ1JlcXVlc3QaEi5zdGFja3BhbmVsLmRiLlNzdBJUCglEZXBsb3lTU1QSIi5zdGFja3BhbmVsLmFnZW50LkRlcGxveVNTVFJlcXVlc3QaIy5zdGFja3BhbmVsLmFnZW50LkRlcGxveVNTVFJlc3BvbnNlElQKCVJlbW92ZVNTVBIiLnN0YWNrcGFuZWwuYWdlbnQuUmVtb3ZlU1NUUmVxdWVzdBojLnN0YWNrcGFuZWwuYWdlbnQuUmVtb3ZlU1NUUmVzcG9uc2USXQoNR2V0U1NUT3V0cHV0cxImLnN0YWNrcGFuZWwuYWdlbnQuR2V0U1NUT3V0cHV0c1JlcXVlc3QaJC5zdGFja3BhbmVsLmFnZW50LlNTVE91dHB1dHNSZXNwb25zZRJjCg9HZXRTU1RSZXNvdXJjZXMSKC5zdGFja3BhbmVsLmFnZW50LkdldFNTVFJlc291cmNlc1JlcXVlc3QaJi5zdGFja3BhbmVsLmFnZW50LlNTVFJlc291cmNlc1Jlc3BvbnNlEmAKDVNlYXJjaE5peHBrZ3MSJi5zdGFja3BhbmVsLmFnZW50LlNlYXJjaE5peHBrZ3NSZXF1ZXN0Gicuc3RhY2twYW5lbC5hZ2VudC5TZWFyY2hOaXhwa2dzUmVzcG9uc2UScgoUR2V0SW5zdGFsbGVkUGFja2FnZXMSLS5zdGFja3BhbmVsLmFnZW50LkdldEluc3RhbGxlZFBhY2thZ2VzUmVxdWVzdBorLnN0YWNrcGFuZWwuYWdlbnQuSW5zdGFsbGVkUGFja2FnZXNSZXNwb25zZRJdCgxHZXRQcm9jZXNzZXMSJS5zdGFja3BhbmVsLmFnZW50LkdldFByb2Nlc3Nlc1JlcXVlc3QaJi5zdGFja3BhbmVsLmFnZW50LkdldFByb2Nlc3Nlc1Jlc3BvbnNlEmMKD0dldEhlYWx0aGNoZWNrcxIoLnN0YWNrcGFuZWwuYWdlbnQuR2V0SGVhbHRoY2hlY2tzUmVxdWVzdBomLnN0YWNrcGFuZWwuYWdlbnQuSGVhbHRoY2hlY2tzUmVzcG9uc2USWgoMR2V0Tml4Q29uZmlnEiUuc3RhY2twYW5lbC5hZ2VudC5HZXROaXhDb25maWdSZXF1ZXN0GiMuc3RhY2twYW5lbC5hZ2VudC5OaXhDb25maWdSZXNwb25zZRJiChBSZWZyZXNoTml4Q29uZmlnEikuc3RhY2twYW5lbC5hZ2VudC5SZWZyZXNoTml4Q29uZmlnUmVxdWVzdBojLnN0YWNrcGFuZWwuYWdlbnQuTml4Q29uZmlnUmVzcG9uc2VCOlo4Z2l0aHViLmNvbS9kYXJrbWF0dGVyL3N0YWNrcGFuZWwvcGFja2FnZXMvcHJvdG8vZ2VuL2dvcGJiBnByb3RvMw", [file_config, file_secrets, file_users, file_aws, file_files, file_services, file_apps, file_variables, file_sst]);
 
 /**
  * Describes the message stackpanel.agent.GetProjectRequest.
@@ -89,172 +90,368 @@ export const GetVariablesRequestSchema = /*@__PURE__*/
   messageDesc(file_agent, 9);
 
 /**
+ * Describes the message stackpanel.agent.GetSstRequest.
+ * Use `create(GetSstRequestSchema)` to create a new message.
+ */
+export const GetSstRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 10);
+
+/**
  * Describes the message stackpanel.agent.GetAgeIdentityRequest.
  * Use `create(GetAgeIdentityRequestSchema)` to create a new message.
  */
 export const GetAgeIdentityRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 10);
+  messageDesc(file_agent, 11);
 
 /**
  * Describes the message stackpanel.agent.SetAgeIdentityRequest.
  * Use `create(SetAgeIdentityRequestSchema)` to create a new message.
  */
 export const SetAgeIdentityRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 11);
+  messageDesc(file_agent, 12);
 
 /**
  * Describes the message stackpanel.agent.AgeIdentityResponse.
  * Use `create(AgeIdentityResponseSchema)` to create a new message.
  */
 export const AgeIdentityResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 12);
+  messageDesc(file_agent, 13);
 
 /**
  * Describes the message stackpanel.agent.GetKMSConfigRequest.
  * Use `create(GetKMSConfigRequestSchema)` to create a new message.
  */
 export const GetKMSConfigRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 13);
+  messageDesc(file_agent, 14);
 
 /**
  * Describes the message stackpanel.agent.SetKMSConfigRequest.
  * Use `create(SetKMSConfigRequestSchema)` to create a new message.
  */
 export const SetKMSConfigRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 14);
+  messageDesc(file_agent, 15);
 
 /**
  * Describes the message stackpanel.agent.KMSConfigResponse.
  * Use `create(KMSConfigResponseSchema)` to create a new message.
  */
 export const KMSConfigResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 15);
+  messageDesc(file_agent, 16);
 
 /**
  * Describes the message stackpanel.agent.ReadFileRequest.
  * Use `create(ReadFileRequestSchema)` to create a new message.
  */
 export const ReadFileRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 16);
+  messageDesc(file_agent, 17);
 
 /**
  * Describes the message stackpanel.agent.ReadFileResponse.
  * Use `create(ReadFileResponseSchema)` to create a new message.
  */
 export const ReadFileResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 17);
+  messageDesc(file_agent, 18);
 
 /**
  * Describes the message stackpanel.agent.WriteFileRequest.
  * Use `create(WriteFileRequestSchema)` to create a new message.
  */
 export const WriteFileRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 18);
+  messageDesc(file_agent, 19);
 
 /**
  * Describes the message stackpanel.agent.WriteFileResponse.
  * Use `create(WriteFileResponseSchema)` to create a new message.
  */
 export const WriteFileResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 19);
+  messageDesc(file_agent, 20);
 
 /**
  * Describes the message stackpanel.agent.ListFilesRequest.
  * Use `create(ListFilesRequestSchema)` to create a new message.
  */
 export const ListFilesRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 20);
+  messageDesc(file_agent, 21);
 
 /**
  * Describes the message stackpanel.agent.ListFilesResponse.
  * Use `create(ListFilesResponseSchema)` to create a new message.
  */
 export const ListFilesResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 21);
+  messageDesc(file_agent, 22);
 
 /**
  * Describes the message stackpanel.agent.FileInfo.
  * Use `create(FileInfoSchema)` to create a new message.
  */
 export const FileInfoSchema = /*@__PURE__*/
-  messageDesc(file_agent, 22);
+  messageDesc(file_agent, 23);
 
 /**
  * Describes the message stackpanel.agent.ExecRequest.
  * Use `create(ExecRequestSchema)` to create a new message.
  */
 export const ExecRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 23);
+  messageDesc(file_agent, 24);
 
 /**
  * Describes the message stackpanel.agent.ExecResponse.
  * Use `create(ExecResponseSchema)` to create a new message.
  */
 export const ExecResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 24);
+  messageDesc(file_agent, 25);
 
 /**
  * Describes the message stackpanel.agent.NixGenerateRequest.
  * Use `create(NixGenerateRequestSchema)` to create a new message.
  */
 export const NixGenerateRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 25);
+  messageDesc(file_agent, 26);
 
 /**
  * Describes the message stackpanel.agent.NixGenerateResponse.
  * Use `create(NixGenerateResponseSchema)` to create a new message.
  */
 export const NixGenerateResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 26);
+  messageDesc(file_agent, 27);
 
 /**
  * Describes the message stackpanel.agent.NixEvalRequest.
  * Use `create(NixEvalRequestSchema)` to create a new message.
  */
 export const NixEvalRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 27);
+  messageDesc(file_agent, 28);
 
 /**
  * Describes the message stackpanel.agent.NixEvalResponse.
  * Use `create(NixEvalResponseSchema)` to create a new message.
  */
 export const NixEvalResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 28);
+  messageDesc(file_agent, 29);
 
 /**
  * Describes the message stackpanel.agent.GetServicesStatusRequest.
  * Use `create(GetServicesStatusRequestSchema)` to create a new message.
  */
 export const GetServicesStatusRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 29);
+  messageDesc(file_agent, 30);
 
 /**
  * Describes the message stackpanel.agent.GetServicesStatusResponse.
  * Use `create(GetServicesStatusResponseSchema)` to create a new message.
  */
 export const GetServicesStatusResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 30);
+  messageDesc(file_agent, 31);
 
 /**
  * Describes the message stackpanel.agent.ServiceStatus.
  * Use `create(ServiceStatusSchema)` to create a new message.
  */
 export const ServiceStatusSchema = /*@__PURE__*/
-  messageDesc(file_agent, 31);
+  messageDesc(file_agent, 32);
 
 /**
  * Describes the message stackpanel.agent.ServiceRequest.
  * Use `create(ServiceRequestSchema)` to create a new message.
  */
 export const ServiceRequestSchema = /*@__PURE__*/
-  messageDesc(file_agent, 32);
+  messageDesc(file_agent, 33);
 
 /**
  * Describes the message stackpanel.agent.ServiceResponse.
  * Use `create(ServiceResponseSchema)` to create a new message.
  */
 export const ServiceResponseSchema = /*@__PURE__*/
-  messageDesc(file_agent, 33);
+  messageDesc(file_agent, 34);
+
+/**
+ * Describes the message stackpanel.agent.GetSSTStatusRequest.
+ * Use `create(GetSSTStatusRequestSchema)` to create a new message.
+ */
+export const GetSSTStatusRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 35);
+
+/**
+ * Describes the message stackpanel.agent.SSTStatusResponse.
+ * Use `create(SSTStatusResponseSchema)` to create a new message.
+ */
+export const SSTStatusResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 36);
+
+/**
+ * Describes the message stackpanel.agent.GetSSTConfigRequest.
+ * Use `create(GetSSTConfigRequestSchema)` to create a new message.
+ */
+export const GetSSTConfigRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 37);
+
+/**
+ * Describes the message stackpanel.agent.DeploySSTRequest.
+ * Use `create(DeploySSTRequestSchema)` to create a new message.
+ */
+export const DeploySSTRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 38);
+
+/**
+ * Describes the message stackpanel.agent.DeploySSTResponse.
+ * Use `create(DeploySSTResponseSchema)` to create a new message.
+ */
+export const DeploySSTResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 39);
+
+/**
+ * Describes the message stackpanel.agent.RemoveSSTRequest.
+ * Use `create(RemoveSSTRequestSchema)` to create a new message.
+ */
+export const RemoveSSTRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 40);
+
+/**
+ * Describes the message stackpanel.agent.RemoveSSTResponse.
+ * Use `create(RemoveSSTResponseSchema)` to create a new message.
+ */
+export const RemoveSSTResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 41);
+
+/**
+ * Describes the message stackpanel.agent.GetSSTOutputsRequest.
+ * Use `create(GetSSTOutputsRequestSchema)` to create a new message.
+ */
+export const GetSSTOutputsRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 42);
+
+/**
+ * Describes the message stackpanel.agent.SSTOutputsResponse.
+ * Use `create(SSTOutputsResponseSchema)` to create a new message.
+ */
+export const SSTOutputsResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 43);
+
+/**
+ * Describes the message stackpanel.agent.GetSSTResourcesRequest.
+ * Use `create(GetSSTResourcesRequestSchema)` to create a new message.
+ */
+export const GetSSTResourcesRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 44);
+
+/**
+ * Describes the message stackpanel.agent.SSTResource.
+ * Use `create(SSTResourceSchema)` to create a new message.
+ */
+export const SSTResourceSchema = /*@__PURE__*/
+  messageDesc(file_agent, 45);
+
+/**
+ * Describes the message stackpanel.agent.SSTResourcesResponse.
+ * Use `create(SSTResourcesResponseSchema)` to create a new message.
+ */
+export const SSTResourcesResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 46);
+
+/**
+ * Describes the message stackpanel.agent.SearchNixpkgsRequest.
+ * Use `create(SearchNixpkgsRequestSchema)` to create a new message.
+ */
+export const SearchNixpkgsRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 47);
+
+/**
+ * Describes the message stackpanel.agent.NixpkgsPackage.
+ * Use `create(NixpkgsPackageSchema)` to create a new message.
+ */
+export const NixpkgsPackageSchema = /*@__PURE__*/
+  messageDesc(file_agent, 48);
+
+/**
+ * Describes the message stackpanel.agent.SearchNixpkgsResponse.
+ * Use `create(SearchNixpkgsResponseSchema)` to create a new message.
+ */
+export const SearchNixpkgsResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 49);
+
+/**
+ * Describes the message stackpanel.agent.GetInstalledPackagesRequest.
+ * Use `create(GetInstalledPackagesRequestSchema)` to create a new message.
+ */
+export const GetInstalledPackagesRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 50);
+
+/**
+ * Describes the message stackpanel.agent.InstalledPackage.
+ * Use `create(InstalledPackageSchema)` to create a new message.
+ */
+export const InstalledPackageSchema = /*@__PURE__*/
+  messageDesc(file_agent, 51);
+
+/**
+ * Describes the message stackpanel.agent.InstalledPackagesResponse.
+ * Use `create(InstalledPackagesResponseSchema)` to create a new message.
+ */
+export const InstalledPackagesResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 52);
+
+/**
+ * Describes the message stackpanel.agent.GetProcessesRequest.
+ * Use `create(GetProcessesRequestSchema)` to create a new message.
+ */
+export const GetProcessesRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 53);
+
+/**
+ * Describes the message stackpanel.agent.ProcessInfo.
+ * Use `create(ProcessInfoSchema)` to create a new message.
+ */
+export const ProcessInfoSchema = /*@__PURE__*/
+  messageDesc(file_agent, 54);
+
+/**
+ * Describes the message stackpanel.agent.GetProcessesResponse.
+ * Use `create(GetProcessesResponseSchema)` to create a new message.
+ */
+export const GetProcessesResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 55);
+
+/**
+ * Describes the message stackpanel.agent.GetHealthchecksRequest.
+ * Use `create(GetHealthchecksRequestSchema)` to create a new message.
+ */
+export const GetHealthchecksRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 56);
+
+/**
+ * Describes the message stackpanel.agent.HealthcheckInfo.
+ * Use `create(HealthcheckInfoSchema)` to create a new message.
+ */
+export const HealthcheckInfoSchema = /*@__PURE__*/
+  messageDesc(file_agent, 57);
+
+/**
+ * Describes the message stackpanel.agent.HealthchecksResponse.
+ * Use `create(HealthchecksResponseSchema)` to create a new message.
+ */
+export const HealthchecksResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 58);
+
+/**
+ * Describes the message stackpanel.agent.GetNixConfigRequest.
+ * Use `create(GetNixConfigRequestSchema)` to create a new message.
+ */
+export const GetNixConfigRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 59);
+
+/**
+ * Describes the message stackpanel.agent.RefreshNixConfigRequest.
+ * Use `create(RefreshNixConfigRequestSchema)` to create a new message.
+ */
+export const RefreshNixConfigRequestSchema = /*@__PURE__*/
+  messageDesc(file_agent, 60);
+
+/**
+ * Describes the message stackpanel.agent.NixConfigResponse.
+ * Use `create(NixConfigResponseSchema)` to create a new message.
+ */
+export const NixConfigResponseSchema = /*@__PURE__*/
+  messageDesc(file_agent, 61);
 
 /**
  * AgentService provides RPC methods for the Stackpanel agent.

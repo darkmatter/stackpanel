@@ -84,8 +84,8 @@ func (s *Server) handleNixFiles(w http.ResponseWriter, r *http.Request) {
 func (s *Server) evaluateStackpanelFiles() (*nixFilesOutput, error) {
 	// Nix expression that tries multiple paths to find the stackpanel config:
 	// 1. devShells.<system>.default.passthru.stackpanelConfig (user projects consuming stackpanel)
-	// 2. stackpanelFullConfig flake output (stackpanel repo itself)
-	// 3. stackpanelConfig flake output (fallback)
+	// 2. stackpanelConfig flake output (serialized version)
+	// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values (functions, modules)
 	//
 	// Use git+file:// protocol to avoid copying untracked files (node_modules, etc.)
 	nixExpr := fmt.Sprintf(`
@@ -98,37 +98,51 @@ let
   devshell = flake.devShells.${system}.default or null;
   passthruConfig = if devshell != null then devshell.passthru.stackpanelConfig or null else null;
 
-  # Priority 2: stackpanelFullConfig flake output (for stackpanel repo itself)
-  fullConfig = flake.stackpanelFullConfig or null;
-
-  # Priority 3: stackpanelConfig flake output (serialized version)
+  # Priority 2: stackpanelConfig flake output (serialized version)
+  # Note: Do NOT use stackpanelFullConfig - it contains non-serializable values
   serializedConfig = flake.stackpanelConfig or null;
 
   # Use first available config
   stackpanelCfg =
     if passthruConfig != null then passthruConfig
-    else if fullConfig != null then fullConfig
     else serializedConfig;
 
   filesCfg = if stackpanelCfg != null then stackpanelCfg.files or null else null;
 
   # Convert a file entry to serializable form
-  mkSerializable = path: entry: {
-    inherit path;
-    type = entry.type or "text";
-    mode = entry.mode or null;
-    source = entry.source or null;
-    description = entry.description or null;
-    enable = entry.enable or true;
-    # For derivations, get the store path as string
-    storePath = if entry.type == "derivation" && entry.drv != null
-                then builtins.toString entry.drv
-                else null;
-    # For text, include the content (truncated if too large)
-    text = if entry.type == "text" && entry.text != null
-           then (if builtins.stringLength entry.text <= 10000 then entry.text else null)
-           else null;
-  };
+  mkSerializable = path: entry:
+    if builtins.isAttrs entry then
+      let
+        entryType = entry.type or "text";
+        hasText = entry ? text && entry.text != null;
+        hasDrv = entry ? drv && entry.drv != null;
+      in {
+        inherit path;
+        type = entryType;
+        mode = entry.mode or null;
+        source = entry.source or null;
+        description = entry.description or null;
+        enable = entry.enable or true;
+        # For derivations, get the store path as string
+        storePath = if entryType == "derivation" && hasDrv
+                    then builtins.toString entry.drv
+                    else null;
+        # For text, include the content (truncated if too large)
+        text = if entryType == "text" && hasText
+               then (if builtins.stringLength entry.text <= 10000 then entry.text else null)
+               else null;
+      } else {
+      inherit path;
+      type = "text";
+      mode = null;
+      source = null;
+      description = null;
+      enable = true;
+      storePath = if builtins.isPath entry || builtins.isString entry then builtins.toString entry else null;
+      text = if builtins.isString entry
+             then (if builtins.stringLength entry <= 10000 then entry else null)
+             else null;
+    };
 
   entries = if filesCfg != null && filesCfg.entries != null
             then builtins.mapAttrs mkSerializable filesCfg.entries
@@ -175,8 +189,7 @@ let
   tryPaths = [
     # User project: devshell passthru
     (if devshell != null then (devshell.passthru.stackpanelConfig.files or null) else null)
-    # Stackpanel repo: flake outputs
-    (flake.stackpanelFullConfig.files or null)
+    # Stackpanel repo: flake outputs (use serializable version only)
     (flake.stackpanelConfig.files or null)
   ];
 
@@ -186,20 +199,37 @@ let
 
   filesCfg = findFirst tryPaths;
 
-  mkSerializable = path: entry: {
-    inherit path;
-    type = entry.type or "text";
-    mode = entry.mode or null;
-    source = entry.source or null;
-    description = entry.description or null;
-    enable = entry.enable or true;
-    storePath = if entry.type == "derivation" && entry.drv != null
-                then builtins.toString entry.drv
-                else null;
-    text = if entry.type == "text" && entry.text != null
-           then (if builtins.stringLength entry.text <= 10000 then entry.text else null)
-           else null;
-  };
+  mkSerializable = path: entry:
+    if builtins.isAttrs entry then
+      let
+        entryType = entry.type or "text";
+        hasText = entry ? text && entry.text != null;
+        hasDrv = entry ? drv && entry.drv != null;
+      in {
+        inherit path;
+        type = entryType;
+        mode = entry.mode or null;
+        source = entry.source or null;
+        description = entry.description or null;
+        enable = entry.enable or true;
+        storePath = if entryType == "derivation" && hasDrv
+                    then builtins.toString entry.drv
+                    else null;
+        text = if entryType == "text" && hasText
+               then (if builtins.stringLength entry.text <= 10000 then entry.text else null)
+               else null;
+      } else {
+      inherit path;
+      type = "text";
+      mode = null;
+      source = null;
+      description = null;
+      enable = true;
+      storePath = if builtins.isPath entry || builtins.isString entry then builtins.toString entry else null;
+      text = if builtins.isString entry
+             then (if builtins.stringLength entry <= 10000 then entry else null)
+             else null;
+    };
 
   entries = if filesCfg != null && filesCfg.entries != null
             then builtins.mapAttrs mkSerializable filesCfg.entries

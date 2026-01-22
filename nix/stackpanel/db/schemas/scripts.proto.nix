@@ -59,10 +59,16 @@ proto.mkProtoFile {
         `db-seed`, `format`, or `generate-types`.
       '';
       fields = {
-        exec = proto.string 1 "Shell command to execute";
+        # Input options (for defining scripts in Nix)
+        exec = proto.optional (proto.string 1 "Shell command to execute (mutually exclusive with path)");
         description = proto.optional (proto.string 2 "Human-readable description of the script");
         env = proto.map "string" "string" 3 "Environment variables to set when running the script";
-        # Note: runtimeInputs is Nix-only (packages), not serializable to proto
+
+        # Output options (serialized to agent - agent executes binPath directly)
+        bin_path = proto.optional (proto.string 4 "Path to script executable in Nix store (computed)");
+        source = proto.optional (proto.string 5 "Source type: inline or path (for debugging)");
+
+        # Note: path and runtimeInputs are Nix-only (path type, packages), not in proto
       };
     };
 

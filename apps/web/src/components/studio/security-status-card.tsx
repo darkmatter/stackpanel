@@ -16,7 +16,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useAgentContext } from "@/lib/agent-provider";
-import { useNixConfig } from "@/lib/use-nix-config";
+import { useNixConfig } from "@/lib/use-agent";
 import { useTRPC } from "@/utils/trpc";
 
 type AWSSessionStatus = {

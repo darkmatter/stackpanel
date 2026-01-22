@@ -2,7 +2,7 @@
 // @generated from file secrets.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
@@ -11,38 +11,128 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_secrets: GenFile;
 
 /**
- * Code generation settings for a target language
+ * Code generation target for secrets/env access
  *
- * @generated from message stackpanel.db.Codegen
+ * @generated from message stackpanel.db.CodegenTarget
  */
-export declare type Codegen = Message<"stackpanel.db.Codegen"> & {
+export declare type CodegenTarget = Message<"stackpanel.db.CodegenTarget"> & {
   /**
-   * Name of the generated code package
+   * Name of the generated package/module (defaults to the target key)
    *
-   * @generated from field: string name = 1;
+   * @generated from field: optional string name = 1;
    */
-  name: string;
+  name?: string;
 
   /**
-   * Output directory for generated code (relative to project root)
+   * Output directory for generated code (repo-relative)
    *
-   * @generated from field: string directory = 2;
+   * @generated from field: optional string directory = 2;
    */
-  directory: string;
+  directory?: string;
 
   /**
-   * Programming language for generated code
    *
-   * @generated from field: stackpanel.db.CodegenLanguage language = 3;
+   * Target language for generated code (e.g., "typescript", "go", "python").
+   * Informational only for now; codegen selection is based on the target key.
+   *
+   *
+   * @generated from field: optional string language = 3;
    */
-  language: CodegenLanguage;
+  language?: string;
 };
 
 /**
- * Describes the message stackpanel.db.Codegen.
- * Use `create(CodegenSchema)` to create a new message.
+ * Describes the message stackpanel.db.CodegenTarget.
+ * Use `create(CodegenTargetSchema)` to create a new message.
  */
-export declare const CodegenSchema: GenMessage<Codegen>;
+export declare const CodegenTargetSchema: GenMessage<CodegenTarget>;
+
+/**
+ * Environment-specific secrets configuration
+ *
+ * @generated from message stackpanel.db.Environment
+ */
+export declare type Environment = Message<"stackpanel.db.Environment"> & {
+  /**
+   * Name of the environment (e.g., dev, staging, production)
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   *
+   * List of SOPS-encrypted source files for this environment (without .yaml extension).
+   * These files are decrypted and merged to provide secrets for the environment.
+   *
+   *
+   * @generated from field: repeated string sources = 2;
+   */
+  sources: string[];
+
+  /**
+   *
+   * AGE public keys that can decrypt secrets for this environment.
+   * New secrets for this env are encrypted to these recipients.
+   *
+   *
+   * @generated from field: repeated string public_keys = 3;
+   */
+  publicKeys: string[];
+};
+
+/**
+ * Describes the message stackpanel.db.Environment.
+ * Use `create(EnvironmentSchema)` to create a new message.
+ */
+export declare const EnvironmentSchema: GenMessage<Environment>;
+
+/**
+ * A master key for encrypting/decrypting secrets
+ *
+ * @generated from message stackpanel.db.MasterKey
+ */
+export declare type MasterKey = Message<"stackpanel.db.MasterKey"> & {
+  /**
+   *
+   * AGE public key for encrypting secrets to this key.
+   * Format: age1... (bech32-encoded)
+   *
+   *
+   * @generated from field: string age_pub = 1;
+   */
+  agePub: string;
+
+  /**
+   *
+   * Vals reference that resolves to the AGE private key.
+   * Examples:
+   *   - ref+file://.stackpanel/state/keys/local.txt (local file)
+   *   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
+   *   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+   *
+   *
+   * @generated from field: string ref = 2;
+   */
+  ref: string;
+
+  /**
+   *
+   * Custom command to resolve the private key (overrides ref).
+   * The command should output the AGE private key to stdout.
+   * Example: op read 'op://vault/stackpanel/age-key'
+   *
+   *
+   * @generated from field: optional string resolve_cmd = 3;
+   */
+  resolveCmd?: string;
+};
+
+/**
+ * Describes the message stackpanel.db.MasterKey.
+ * Use `create(MasterKeySchema)` to create a new message.
+ */
+export declare const MasterKeySchema: GenMessage<MasterKey>;
 
 /**
  * Secrets management configuration
@@ -58,46 +148,62 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
   enable: boolean;
 
   /**
-   * Directory where SOPS-encrypted secrets are stored
    *
-   * @generated from field: string input_directory = 2;
+   * Master keys for encrypting/decrypting secrets.
+   * Each secret specifies which master keys can decrypt it via the master-keys field.
+   * A default "local" key is auto-generated if no keys are configured.
+   *
+   *
+   * @generated from field: map<string, stackpanel.db.MasterKey> master_keys = 2;
    */
-  inputDirectory: string;
+  masterKeys: { [key: string]: MasterKey };
 
   /**
-   * Environment-specific secrets configurations
    *
-   * @generated from field: map<string, stackpanel.db.SecretsEnvironment> environments = 3;
+   * Directory containing SOPS-encrypted secrets (legacy SOPS layout).
+   * Used when decrypting/merging YAML sources defined under environments.
+   *
+   *
+   * @generated from field: optional string input_directory = 3;
    */
-  environments: { [key: string]: SecretsEnvironment };
+  inputDirectory?: string;
 
   /**
-   * Code generation settings per target
+   * Directory where secret .age files are stored (default: .stackpanel/secrets)
    *
-   * @generated from field: map<string, stackpanel.db.Codegen> codegen = 4;
+   * @generated from field: optional string secrets_dir = 4;
    */
-  codegen: { [key: string]: Codegen };
+  secretsDir?: string;
 
   /**
-   * AGE public keys for system-level access (CI, deploy servers). These keys can decrypt all secrets regardless of environment restrictions.
+   *
+   * System-level AGE public keys (CI, deploy servers, etc.).
+   * These keys can decrypt all secrets regardless of environment restrictions.
+   *
    *
    * @generated from field: repeated string system_keys = 5;
    */
   systemKeys: string[];
 
   /**
-   * Directory where individual secret .age files are stored (default: .stackpanel/secrets/vars)
    *
-   * @generated from field: optional string secrets_dir = 6;
+   * Environment-specific secrets configuration (SOPS sources + recipients).
+   * Keyed by environment identifier (e.g., dev, staging, prod).
+   *
+   *
+   * @generated from field: map<string, stackpanel.db.Environment> environments = 6;
    */
-  secretsDir?: string;
+  environments: { [key: string]: Environment };
 
   /**
-   * Paths to AGE key files to check for decryption (checked in order, first existing file wins)
    *
-   * @generated from field: repeated string age_key_files = 7;
+   * Code generation targets keyed by name (e.g., typescript, go, python).
+   * Used to drive language-specific env/secret helpers.
+   *
+   *
+   * @generated from field: map<string, stackpanel.db.CodegenTarget> codegen = 7;
    */
-  ageKeyFiles: string[];
+  codegen: { [key: string]: CodegenTarget };
 };
 
 /**
@@ -105,65 +211,4 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
  * Use `create(SecretsSchema)` to create a new message.
  */
 export declare const SecretsSchema: GenMessage<Secrets>;
-
-/**
- * Environment-specific secrets configuration
- *
- * @generated from message stackpanel.db.SecretsEnvironment
- */
-export declare type SecretsEnvironment = Message<"stackpanel.db.SecretsEnvironment"> & {
-  /**
-   * Name of the environment (e.g., 'production', 'staging')
-   *
-   * @generated from field: string name = 1;
-   */
-  name: string;
-
-  /**
-   * AGE public keys that can decrypt secrets for this environment
-   *
-   * @generated from field: repeated string public_keys = 2;
-   */
-  publicKeys: string[];
-
-  /**
-   * List of SOPS-encrypted source files for this environment (without .yaml extension)
-   *
-   * @generated from field: repeated string sources = 3;
-   */
-  sources: string[];
-};
-
-/**
- * Describes the message stackpanel.db.SecretsEnvironment.
- * Use `create(SecretsEnvironmentSchema)` to create a new message.
- */
-export declare const SecretsEnvironmentSchema: GenMessage<SecretsEnvironment>;
-
-/**
- * Programming language for generated code
- *
- * @generated from enum stackpanel.db.CodegenLanguage
- */
-export enum CodegenLanguage {
-  /**
-   * @generated from enum value: CODEGEN_LANGUAGE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: CODEGEN_LANGUAGE_TYPESCRIPT = 1;
-   */
-  TYPESCRIPT = 1,
-
-  /**
-   * @generated from enum value: CODEGEN_LANGUAGE_GO = 2;
-   */
-  GO = 2,
-}
-
-/**
- * Describes the enum stackpanel.db.CodegenLanguage.
- */
-export declare const CodegenLanguageSchema: GenEnum<CodegenLanguage>;
 

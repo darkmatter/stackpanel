@@ -2,46 +2,39 @@
 // @generated from file secrets.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 
 /**
  * Describes the file secrets.proto.
  */
 export const file_secrets = /*@__PURE__*/
-  fileDesc("Cg1zZWNyZXRzLnByb3RvEg1zdGFja3BhbmVsLmRiIlwKB0NvZGVnZW4SDAoEbmFtZRgBIAEoCRIRCglkaXJlY3RvcnkYAiABKAkSMAoIbGFuZ3VhZ2UYAyABKA4yHi5zdGFja3BhbmVsLmRiLkNvZGVnZW5MYW5ndWFnZSKeAwoHU2VjcmV0cxIOCgZlbmFibGUYASABKAgSFwoPaW5wdXRfZGlyZWN0b3J5GAIgASgJEj4KDGVudmlyb25tZW50cxgDIAMoCzIoLnN0YWNrcGFuZWwuZGIuU2VjcmV0cy5FbnZpcm9ubWVudHNFbnRyeRI0Cgdjb2RlZ2VuGAQgAygLMiMuc3RhY2twYW5lbC5kYi5TZWNyZXRzLkNvZGVnZW5FbnRyeRITCgtzeXN0ZW1fa2V5cxgFIAMoCRIYCgtzZWNyZXRzX2RpchgGIAEoCUgAiAEBEhUKDWFnZV9rZXlfZmlsZXMYByADKAkaVgoRRW52aXJvbm1lbnRzRW50cnkSCwoDa2V5GAEgASgJEjAKBXZhbHVlGAIgASgLMiEuc3RhY2twYW5lbC5kYi5TZWNyZXRzRW52aXJvbm1lbnQ6AjgBGkYKDENvZGVnZW5FbnRyeRILCgNrZXkYASABKAkSJQoFdmFsdWUYAiABKAsyFi5zdGFja3BhbmVsLmRiLkNvZGVnZW46AjgBQg4KDF9zZWNyZXRzX2RpciJIChJTZWNyZXRzRW52aXJvbm1lbnQSDAoEbmFtZRgBIAEoCRITCgtwdWJsaWNfa2V5cxgCIAMoCRIPCgdzb3VyY2VzGAMgAygJKm0KD0NvZGVnZW5MYW5ndWFnZRIgChxDT0RFR0VOX0xBTkdVQUdFX1VOU1BFQ0lGSUVEEAASHwobQ09ERUdFTl9MQU5HVUFHRV9UWVBFU0NSSVBUEAESFwoTQ09ERUdFTl9MQU5HVUFHRV9HTxACQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
+  fileDesc("Cg1zZWNyZXRzLnByb3RvEg1zdGFja3BhbmVsLmRiInUKDUNvZGVnZW5UYXJnZXQSEQoEbmFtZRgBIAEoCUgAiAEBEhYKCWRpcmVjdG9yeRgCIAEoCUgBiAEBEhUKCGxhbmd1YWdlGAMgASgJSAKIAQFCBwoFX25hbWVCDAoKX2RpcmVjdG9yeUILCglfbGFuZ3VhZ2UiTwoLRW52aXJvbm1lbnQSEQoEbmFtZRgBIAEoCUgAiAEBEg8KB3NvdXJjZXMYAiADKAkSEwoLcHVibGljX2tleXMYAyADKAlCBwoFX25hbWUiUwoJTWFzdGVyS2V5Eg8KB2FnZV9wdWIYASABKAkSCwoDcmVmGAIgASgJEhgKC3Jlc29sdmVfY21kGAMgASgJSACIAQFCDgoMX3Jlc29sdmVfY21kIqkECgdTZWNyZXRzEg4KBmVuYWJsZRgBIAEoCBI7CgttYXN0ZXJfa2V5cxgCIAMoCzImLnN0YWNrcGFuZWwuZGIuU2VjcmV0cy5NYXN0ZXJLZXlzRW50cnkSHAoPaW5wdXRfZGlyZWN0b3J5GAMgASgJSACIAQESGAoLc2VjcmV0c19kaXIYBCABKAlIAYgBARITCgtzeXN0ZW1fa2V5cxgFIAMoCRI+CgxlbnZpcm9ubWVudHMYBiADKAsyKC5zdGFja3BhbmVsLmRiLlNlY3JldHMuRW52aXJvbm1lbnRzRW50cnkSNAoHY29kZWdlbhgHIAMoCzIjLnN0YWNrcGFuZWwuZGIuU2VjcmV0cy5Db2RlZ2VuRW50cnkaSwoPTWFzdGVyS2V5c0VudHJ5EgsKA2tleRgBIAEoCRInCgV2YWx1ZRgCIAEoCzIYLnN0YWNrcGFuZWwuZGIuTWFzdGVyS2V5OgI4ARpPChFFbnZpcm9ubWVudHNFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5zdGFja3BhbmVsLmRiLkVudmlyb25tZW50OgI4ARpMCgxDb2RlZ2VuRW50cnkSCwoDa2V5GAEgASgJEisKBXZhbHVlGAIgASgLMhwuc3RhY2twYW5lbC5kYi5Db2RlZ2VuVGFyZ2V0OgI4AUISChBfaW5wdXRfZGlyZWN0b3J5Qg4KDF9zZWNyZXRzX2RpckI6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
 
 /**
- * Describes the message stackpanel.db.Codegen.
- * Use `create(CodegenSchema)` to create a new message.
+ * Describes the message stackpanel.db.CodegenTarget.
+ * Use `create(CodegenTargetSchema)` to create a new message.
  */
-export const CodegenSchema = /*@__PURE__*/
+export const CodegenTargetSchema = /*@__PURE__*/
   messageDesc(file_secrets, 0);
+
+/**
+ * Describes the message stackpanel.db.Environment.
+ * Use `create(EnvironmentSchema)` to create a new message.
+ */
+export const EnvironmentSchema = /*@__PURE__*/
+  messageDesc(file_secrets, 1);
+
+/**
+ * Describes the message stackpanel.db.MasterKey.
+ * Use `create(MasterKeySchema)` to create a new message.
+ */
+export const MasterKeySchema = /*@__PURE__*/
+  messageDesc(file_secrets, 2);
 
 /**
  * Describes the message stackpanel.db.Secrets.
  * Use `create(SecretsSchema)` to create a new message.
  */
 export const SecretsSchema = /*@__PURE__*/
-  messageDesc(file_secrets, 1);
-
-/**
- * Describes the message stackpanel.db.SecretsEnvironment.
- * Use `create(SecretsEnvironmentSchema)` to create a new message.
- */
-export const SecretsEnvironmentSchema = /*@__PURE__*/
-  messageDesc(file_secrets, 2);
-
-/**
- * Describes the enum stackpanel.db.CodegenLanguage.
- */
-export const CodegenLanguageSchema = /*@__PURE__*/
-  enumDesc(file_secrets, 0);
-
-/**
- * Programming language for generated code
- *
- * @generated from enum stackpanel.db.CodegenLanguage
- */
-export const CodegenLanguage = /*@__PURE__*/
-  tsEnum(CodegenLanguageSchema);
+  messageDesc(file_secrets, 3);
 

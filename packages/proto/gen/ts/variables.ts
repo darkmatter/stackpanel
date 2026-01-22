@@ -18,12 +18,8 @@ import { MessageType } from "@protobuf-ts/runtime";
 export interface Variable {
     /**
      *
-     * Globally unique identifier for the variable. You can reference a single
-     * variable in multiple apps and environments, so to avoid confusion, it's
-     * recommended to use a format like `my-variable-name` rather than `MY_VARIABLE_NAME`.
-     * You can also use `/path/based/variable-name` for organization. If a variable should
-     * only be used in a specific environment or app, you should include that detail in
-     * this field.
+     * Globally unique identifier for the variable. Recommended format:
+     * `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
      *
      *
      * @generated from protobuf field: string id = 1
@@ -31,8 +27,7 @@ export interface Variable {
     id: string;
     /**
      *
-     * Default key to use when passing the variable to the app. This is the key that will be used
-     * in the environment variables of the app.
+     * Environment variable name when passing to apps (e.g., POSTGRES_URL).
      *
      *
      * @generated from protobuf field: string key = 2
@@ -41,18 +36,18 @@ export interface Variable {
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // (optional) Description of the variable
+    description?: string; // Description of the variable
     /**
      * @generated from protobuf field: stackpanel.db.VariableType type = 4
      */
-    type: VariableType; // Type of the variable
+    type: VariableType; // How the variable value is resolved
     /**
      *
-     * - When type = "VARIABLE", the value wil be provided as-is.
-     * - When type = "SECRET", then the value will be encrypted with age and store in <secrets-path>/<id>.age.
-     * - When type = "VALS", should contain a [vals](https://github.com/helmfile/vals)
-     *   compatible descriptor, for example if you want to get a value from AWS Parameter
-     *   Store: `ref+awsssm://PATH/TO/PARAM[?region=REGION&role_arn=ASSUMED_ROLE_ARN]`
+     * The value field meaning depends on type:
+     * - LITERAL: The actual value (embedded directly)
+     * - SECRET: Empty (value lives in encrypted .age file)
+     * - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
+     * - EXEC: Shell command to execute (stdout becomes the value)
      *
      *
      * @generated from protobuf field: string value = 5
@@ -60,19 +55,18 @@ export interface Variable {
     value: string;
     /**
      *
-     * List of environments this variable/secret is available in.
-     * If empty, the variable is available in all environments.
-     * Used for access control with secrets - only users with access to
-     * these environments can decrypt the secret.
+     * Master keys that can decrypt this secret. Only used when type=SECRET.
+     * The .age file is encrypted to ALL listed master keys.
+     * Default: ["local"] (auto-generated local key).
+     * Example: ["dev", "prod"] for team-accessible secrets.
      *
      *
-     * @generated from protobuf field: repeated string environments = 6
+     * @generated from protobuf field: repeated string masterKeys = 6
      */
-    environments: string[];
+    masterKeys: string[];
     /**
      *
      * List of module names that require this variable (e.g., ["sst", "ci"]).
-     * Used to show which features depend on this variable being set.
      *
      *
      * @generated from protobuf field: repeated string requiredBy = 7
@@ -81,7 +75,6 @@ export interface Variable {
     /**
      *
      * Module name that provides/creates this variable.
-     * Used to understand where the variable comes from.
      *
      *
      * @generated from protobuf field: optional string providedBy = 8
@@ -90,9 +83,6 @@ export interface Variable {
     /**
      *
      * Bootstrap level (0 = always available, 1+ = requires dependencies).
-     * Level 0: No dependencies (e.g., AGE key, env vars)
-     * Level 1: Requires level 0 (e.g., encrypted secrets)
-     * Level 2: Requires external setup (e.g., cloud API tokens)
      *
      *
      * @generated from protobuf field: optional int32 level = 9
@@ -152,9 +142,9 @@ export interface Variables {
  */
 export enum VariableType {
     /**
-     * @generated from protobuf enum value: VARIABLE = 0;
+     * @generated from protobuf enum value: LITERAL = 0;
      */
-    VARIABLE = 0,
+    LITERAL = 0,
     /**
      * @generated from protobuf enum value: SECRET = 1;
      */
@@ -162,7 +152,11 @@ export enum VariableType {
     /**
      * @generated from protobuf enum value: VALS = 2;
      */
-    VALS = 2
+    VALS = 2,
+    /**
+     * @generated from protobuf enum value: EXEC = 3;
+     */
+    EXEC = 3
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Variable$Type extends MessageType<Variable> {
@@ -173,7 +167,7 @@ class Variable$Type extends MessageType<Variable> {
             { no: 3, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "type", kind: "enum", T: () => ["stackpanel.db.VariableType", VariableType] },
             { no: 5, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "environments", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "masterKeys", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "requiredBy", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 8, name: "providedBy", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 9, name: "level", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
@@ -186,7 +180,7 @@ class Variable$Type extends MessageType<Variable> {
         message.key = "";
         message.type = 0;
         message.value = "";
-        message.environments = [];
+        message.masterKeys = [];
         message.requiredBy = [];
         if (value !== undefined)
             reflectionMergePartial<Variable>(this, message, value);
@@ -212,8 +206,8 @@ class Variable$Type extends MessageType<Variable> {
                 case /* string value */ 5:
                     message.value = reader.string();
                     break;
-                case /* repeated string environments */ 6:
-                    message.environments.push(reader.string());
+                case /* repeated string masterKeys */ 6:
+                    message.masterKeys.push(reader.string());
                     break;
                 case /* repeated string requiredBy */ 7:
                     message.requiredBy.push(reader.string());
@@ -254,9 +248,9 @@ class Variable$Type extends MessageType<Variable> {
         /* string value = 5; */
         if (message.value !== "")
             writer.tag(5, WireType.LengthDelimited).string(message.value);
-        /* repeated string environments = 6; */
-        for (let i = 0; i < message.environments.length; i++)
-            writer.tag(6, WireType.LengthDelimited).string(message.environments[i]);
+        /* repeated string masterKeys = 6; */
+        for (let i = 0; i < message.masterKeys.length; i++)
+            writer.tag(6, WireType.LengthDelimited).string(message.masterKeys[i]);
         /* repeated string requiredBy = 7; */
         for (let i = 0; i < message.requiredBy.length; i++)
             writer.tag(7, WireType.LengthDelimited).string(message.requiredBy[i]);

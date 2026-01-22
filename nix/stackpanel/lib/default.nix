@@ -52,9 +52,34 @@ in
   # Port computation utilities (pure, no pkgs needed)
   ports = import ./ports.nix { inherit lib; };
 
+  # Extension src/ directory discovery utilities (pure, no pkgs needed)
+  # Use this to discover scripts, healthchecks, and files from extension srcDir.
+  #
+  # Usage:
+  #   extensionSrc = stackpanelLib.extensionSrc;
+  #   scripts = extensionSrc.discoverScripts "my-ext" ./src;
+  #   # => { "my-ext:deploy" = { path = ./src/scripts/deploy.sh; }; ... }
+  #
+  extensionSrc = import ./extension-src.nix { inherit lib; };
+
   # Path utilities for finding project root and resolving paths
   # Works without pkgs - pure functions and shell script generators
   paths = import ./paths.nix { inherit lib; };
+
+  # Config value resolution with precedence (env var → CLI → default)
+  # Use this to generate shell code that resolves config values consistently.
+  # Pass config for automatic defaults, or use getWithDefault/getKnown.
+  #
+  # Usage:
+  #   cfg = stackpanelLib.cfg { inherit config; };  # with config
+  #   cfg = stackpanelLib.cfg { };                   # without config
+  #
+  #   myScript = ''
+  #     ${cfg.bashLib}
+  #     STATE_DIR=${cfg.getKnown "paths.state"}
+  #   '';
+  #
+  cfg = { config ? null }: import ./cfg.nix { inherit lib config; };
 
   # Helper for conditionally importing local config files
   # Use in your devenv.nix or flake imports:

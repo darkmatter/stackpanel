@@ -5,7 +5,7 @@
 # Provides nixd options so Stackpanel options are discoverable in editor.
 #
 # This generates nix.serverSettings for nixd with:
-#   - stackpanel: Full stackpanel options
+#   - stackpanel: Full stackpanel options (from flake output)
 #   - sp-user: Submodule options for stackpanel.users
 #   - sp-app: Submodule options for stackpanel.apps
 #   - sp-command: Submodule options for stackpanel.commands
@@ -21,15 +21,12 @@ let
   ideCfg = config.stackpanel.ide;
   vscodeCfg = ideCfg.vscode;
 
-  # Shared eval modules expression
-  evalModulesExpr = "lib.evalModules { modules = [ ./nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }";
+  # Use the flake's legacyPackages.stackpanelOptions for nixd
+  # This works in any project that uses stackpanel, evaluated with --impure
+  flakeOptionsExpr = "(builtins.getFlake (toString ./.)).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
 
-  # Main stackpanel options expression
-  stackpanelExpr = "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; in (${evalModulesExpr}).options.stackpanel";
-
-  # Helper to generate getSubOptions expression for a submodule option
-  # Uses same let binding pattern as user's config for consistency
-  mkSubOptionsExpr = optionPath: "let pkgs = import <nixpkgs> {}; lib = pkgs.lib; eval = ${evalModulesExpr}; in eval.options.stackpanel.${optionPath}.type.getSubOptions []";
+  # Helper to get submodule options from the flake output
+  mkSubOptionsExpr = optionPath: "${flakeOptionsExpr}.${optionPath}.type.getSubOptions []";
 in
 {
   config = lib.mkIf (ideCfg.enable && vscodeCfg.enable) {
@@ -61,9 +58,9 @@ in
                 "nixos" = {
                   "expr" = "null";
                 };
-                # Full stackpanel options
+                # Full stackpanel options (from flake output)
                 "stackpanel" = {
-                  "expr" = stackpanelExpr;
+                  "expr" = flakeOptionsExpr;
                 };
                 # Submodule options for common attrs
                 "sp-user" = {

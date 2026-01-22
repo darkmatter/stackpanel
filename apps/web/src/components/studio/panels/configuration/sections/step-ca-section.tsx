@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import { Switch } from "@ui/switch";
-import { Loader2, RefreshCw, Shield } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw, Shield } from "lucide-react";
 import type { UseConfigurationResult } from "../use-configuration";
 
 interface StepCaSectionProps {
@@ -75,6 +75,12 @@ export function StepCaSection({ config }: StepCaSectionProps) {
               <p className="text-xs text-muted-foreground">
                 Enter a CA URL and click refresh to fetch the fingerprint
               </p>
+            )}
+            {config.stepCaError && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p className="leading-5">{config.stepCaError}</p>
+              </div>
             )}
           </div>
           <div className="grid gap-2">

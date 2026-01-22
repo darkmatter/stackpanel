@@ -279,7 +279,7 @@ var (
 
 	// StackpanelDevRepo is the path to a local stackpanel repo for development mode.
 	// When set, the wrapper script will run 'go run' from this path instead of the installed binary.
-	// This is an alternative to using 'stackpanel dev enable <path>'.
+	// This is an alternative to using 'stackpanel debug enable <path>' (alias: 'stackpanel dev enable <path>').
 	StackpanelDevRepo = EnvVar{
 		Name:        "STACKPANEL_DEV_REPO",
 		Description: "Path to local stackpanel repo for dev mode (runs via 'go run' instead of installed binary)",

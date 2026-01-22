@@ -114,20 +114,25 @@ const mainNavItems: NavItem[] = [
 ];
 
 const toolsNavItems: NavItem[] = [
-  // { id: "databases", label: "Databases", icon: Database },
   { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
-  // { id: "extensions", label: "Extensions", icon: Puzzle },
-  // { id: "files", label: "Generated Files", icon: FileCode },
-  // { id: "local-config", label: "Local Config", icon: FileCode },
-  // { id: "terminal", label: "Terminal", icon: SquareTerminal },
-  { id: "services", label: "Services", icon: Server },
+  
+  
   { id: "inspector", label: "Inspector", icon: Search },
 ];
 
 const otherNavItems: NavItem[] = [
   { id: "roadmap", label: "Roadmap", icon: Map },
   { id: "docs", label: "Docs", icon: BookOpen },
+];
+
+const coceptsNavItems: NavItem[] = [
+  // { id: "databases", label: "Databases", icon: Database },
+  { id: "services", label: "Services", icon: Server },
+  { id: "extensions", label: "Extensions", icon: Puzzle },
+  // { id: "files", label: "Generated Files", icon: FileCode },
+  { id: "local-config", label: "Local Config", icon: FileCode },
+  { id: "terminal", label: "Terminal", icon: SquareTerminal },
 ];
 
 function NavMenuItem({ item }: { item: NavItem }) {
@@ -176,23 +181,24 @@ function SetupStepItem({
 
   return (
     <SidebarMenuSubItem>
-      <Link to="/studio/setup" search={{ step: step.id }}>
-        <SidebarMenuSubButton
-          className={cn(
-            "gap-2 text-sidebar-foreground/50 text-[13px]",
-            isOptional && "text-muted-foreground",
-            active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
-            isComplete && " [&>svg]:text-emerald-300 text-emerald-300",
-          )}
-        >
+      <SidebarMenuSubButton
+        asChild
+        className={cn(
+          "gap-2 text-sidebar-foreground/50 text-[13px]",
+          isOptional && "text-muted-foreground",
+          active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
+          isComplete && " [&>svg]:text-emerald-300 text-emerald-300",
+        )}
+      >
+        <Link to="/studio/setup" search={{ step: step.id }}>
           {isComplete ? (
             <Check className="size-3 text-emerald-300 [&>svg]:text-emerald-300" />
           ) : (
             <Icon className="size-3" />
           )}
           {!isCollapsed && <span className="truncate">{step.shortTitle}</span>}
-        </SidebarMenuSubButton>
-      </Link>
+        </Link>
+      </SidebarMenuSubButton>
     </SidebarMenuSubItem>
   );
 }
@@ -211,17 +217,18 @@ function ConfigurationSectionItem({
 
   return (
     <SidebarMenuSubItem>
-      <Link to="/studio/configuration" search={{ section: section.id }}>
-        <SidebarMenuSubButton
-          className={cn(
-            "gap-2 text-sidebar-foreground/70 text-[13px]",
-            active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
-          )}
-        >
+      <SidebarMenuSubButton
+        asChild
+        className={cn(
+          "gap-2 text-sidebar-foreground/70 text-[13px]",
+          active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
+        )}
+      >
+        <Link to="/studio/configuration" search={{ section: section.id }}>
           <Icon className="size-3" />
           {!isCollapsed && <span className="truncate">{section.label}</span>}
-        </SidebarMenuSubButton>
-      </Link>
+        </Link>
+      </SidebarMenuSubButton>
     </SidebarMenuSubItem>
   );
 }
@@ -470,6 +477,20 @@ export function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {otherNavItems.map((item) => (
+                <NavMenuItem key={item.id} item={item} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        {/* Other */}
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            Coming Soon
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {coceptsNavItems.map((item) => (
                 <NavMenuItem key={item.id} item={item} />
               ))}
             </SidebarMenu>

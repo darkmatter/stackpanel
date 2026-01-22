@@ -24,6 +24,30 @@ let
     "x86_64-darwin"
     "aarch64-darwin"
   ];
+
+  # Function to get stackpanel options.
+  # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
+  #
+  # Returns the full stackpanel options attrset for introspection.
+  getOptions =
+    { pkgs }:
+    let
+      lib = pkgs.lib;
+      evaluated = lib.evalModules {
+        modules = [
+          ../stackpanel
+          {
+            _module.args = {
+              inherit pkgs lib;
+              inputs = { };
+            };
+            stackpanel.enable = true;
+            stackpanel.name = "options-eval";
+          }
+        ];
+      };
+    in
+    evaluated.options.stackpanel;
 in
 {
   inherit supportedSystems;
@@ -64,6 +88,7 @@ in
             perSystem =
               { lib, ... }:
               {
+                devenv.root = lib.strings.trim rootContent;
                 devenv.shells = lib.mkDefault {
                   default.stackpanel.root = lib.strings.trim rootContent;
                 };
@@ -105,6 +130,27 @@ in
 
     # Step CA certificate helpers
     mkStepScripts = import ../stackpanel/lib/services/step.nix;
+
+    # Wrap devenv input to extract schema and inject into modules
+    # This enables bidirectional mapping: devenv options ↔ stackpanel state
+    #
+    # Usage in your flake.nix:
+    #   let
+    #     wrappedDevenv = inputs.stackpanel.lib.wrapDevenv { inherit inputs; };
+    #   in {
+    #     devShells.default = wrappedDevenv.lib.mkShell { ... };
+    #     # Access schema: wrappedDevenv.schema
+    #   }
+    #
+    # The wrapped devenv:
+    #   - Extracts available services, languages, pre-commit hooks
+    #   - Injects schema via specialArgs to all modules
+    #   - Exposes schema for state.json serialization
+    wrapDevenv = import ../lib/wrap-devenv.nix;
+
+    # Get stackpanel module options for introspection
+    # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
+    inherit getOptions;
   };
 
   # ===========================================================================
@@ -124,32 +170,4 @@ in
       description = "Stackpanel + devenv standalone (devenv.yaml)";
     };
   };
-
-  # ===========================================================================
-  # STACKPANEL OPTIONS (for IDE/language server support)
-  # ===========================================================================
-  mkStackpanelOptions =
-    nixpkgs:
-    nixpkgs.lib.genAttrs supportedSystems (
-      system:
-      withSystem system (
-        { pkgs, ... }:
-        let
-          lib = pkgs.lib;
-          mkOptions =
-            modules:
-            (lib.evalModules {
-              modules = modules ++ [
-                { _module.args = { inherit pkgs lib; }; }
-              ];
-            }).options;
-        in
-        {
-          all = mkOptions [
-            ../stackpanel/core/options/default.nix
-            { stackpanel.enable = true; }
-          ];
-        }
-      )
-    );
 }

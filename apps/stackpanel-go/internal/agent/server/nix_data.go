@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -454,9 +455,33 @@ func isExternalEntity(name string) bool {
 
 // readNixEntityJSON reads a Nix data entity and returns its JSON representation.
 // Used by generated Connect handlers for Get* methods.
+// Note: Nix uses kebab-case for attribute names, but protojson expects camelCase.
+// This function automatically transforms keys from kebab-case to camelCase.
 func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 	if err := validateEntityName(entity); err != nil {
 		return nil, err
+	}
+
+	// For evaluated entities (like variables), use the merged config first.
+	if isEvaluatedEntity(entity) {
+		if data, ok, err := s.readEvaluatedEntityData(entity); err == nil {
+			if !ok {
+				// Not present in evaluated config; return empty map/object
+				if isMapEntity(entity) {
+					return transformNixJSONToCamelCase(
+						mustMarshalJSON(map[string]any{entity: map[string]any{}}),
+						mapFieldNames(),
+					)
+				}
+				return transformNixJSONToCamelCase(mustMarshalJSON(map[string]any{}), mapFieldNames())
+			}
+
+			wrapped := data
+			if isMapEntity(entity) {
+				wrapped = map[string]any{entity: data}
+			}
+			return transformNixJSONToCamelCase(mustMarshalJSON(wrapped), mapFieldNames())
+		}
 	}
 
 	dataPath := s.nixDataPath(entity)
@@ -480,11 +505,25 @@ func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 		return nil, errors.New(strings.TrimSpace(res.Stderr))
 	}
 
-	return []byte(res.Stdout), nil
+	// Parse JSON into generic structure
+	var parsed any
+	if err := json.Unmarshal([]byte(res.Stdout), &parsed); err != nil {
+		return nil, err
+	}
+
+	// Wrap map entities to match proto envelope (e.g., Apps -> {apps: {...}})
+	if isMapEntity(entity) {
+		parsed = map[string]any{entity: parsed}
+	}
+
+	// Transform kebab-case keys to camelCase for protojson compatibility
+	return transformNixJSONToCamelCase(mustMarshalJSON(parsed), mapFieldNames())
 }
 
 // writeNixEntityJSON writes JSON data to a Nix data entity file.
 // Used by generated Connect handlers for Set* methods.
+// Note: protojson uses camelCase for attribute names, but Nix expects kebab-case.
+// This function automatically transforms keys from camelCase to kebab-case.
 func (s *Server) writeNixEntityJSON(entity string, data []byte) error {
 	if err := validateEntityName(entity); err != nil {
 		return err
@@ -494,10 +533,25 @@ func (s *Server) writeNixEntityJSON(entity string, data []byte) error {
 		return errors.New("external entities are read-only")
 	}
 
+	// Transform camelCase keys to kebab-case for Nix compatibility
+	transformedData, err := transformCamelCaseToNixJSON(data, mapFieldNames())
+	if err != nil {
+		return err
+	}
+
 	// Parse JSON to Go value
 	var value any
-	if err := json.Unmarshal(data, &value); err != nil {
+	if err := json.Unmarshal(transformedData, &value); err != nil {
 		return err
+	}
+
+	// Unwrap map entities to match Nix data files (store raw map)
+	if isMapEntity(entity) {
+		if obj, ok := value.(map[string]any); ok {
+			if inner, ok := obj[entity]; ok {
+				value = inner
+			}
+		}
 	}
 
 	// Serialize to Nix
@@ -524,6 +578,71 @@ func (s *Server) writeNixEntityJSON(entity string, data []byte) error {
 		Msg("writeNixEntityJSON: successfully wrote data file")
 
 	return nil
+}
+
+func isMapEntity(entity string) bool {
+	switch entity {
+	case "apps", "variables", "users":
+		return true
+	default:
+		return false
+	}
+}
+
+// readEvaluatedEntityData reads an entity from the evaluated config, using
+// flake watcher when available and falling back to direct evaluation.
+func (s *Server) readEvaluatedEntityData(entity string) (any, bool, error) {
+	ctx := context.Background()
+
+	if s.flakeWatcher != nil {
+		config, err := s.flakeWatcher.GetConfig(ctx)
+		if err == nil {
+			data, ok := config[entity]
+			return data, ok, nil
+		}
+	}
+
+	config, err := s.evaluateConfig()
+	if err != nil {
+		return nil, false, err
+	}
+
+	data, ok := config[entity]
+	return data, ok, nil
+}
+
+func mapFieldNames() map[string]struct{} {
+	return map[string]struct{}{
+		"aliases":       {},
+		"apps":          {},
+		"categories":    {},
+		"codegen":       {},
+		"collaborators": {},
+		"commands":      {},
+		"databases":     {},
+		"env":           {},
+		"environments":  {},
+		"entries":       {},
+		"extensions":    {},
+		"masterKeys":    {},
+		"modules":       {},
+		"outputs":       {},
+		"scripts":       {},
+		"sites":         {},
+		"steps":         {},
+		"tasks":         {},
+		"users":         {},
+		"variables":     {},
+		"zones":         {},
+	}
+}
+
+func mustMarshalJSON(value any) []byte {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return []byte("{}")
+	}
+	return data
 }
 
 // handleKeyLevelWrite handles updating or deleting a single key in a data file.

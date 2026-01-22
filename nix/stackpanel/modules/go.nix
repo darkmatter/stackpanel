@@ -447,12 +447,15 @@ in
         )
       ];
     }
-    (lib.mkIf (cfg.apps != { }) (
+    # Go app outputs - computed lazily inside config block to avoid recursion
+    (
       let
-        # Filter apps to only Go apps (evaluated lazily inside mkIf)
+        # Filter apps to only Go apps
+        # NOTE: Access cfg.apps here inside the config block, not at module top-level
         goApps = lib.filterAttrs (name: app: app.go.enable or false) cfg.apps;
+        hasGoApps = goApps != { };
       in
-      lib.mkIf (goApps != { }) {
+      lib.mkIf hasGoApps {
         # Conditionally add packages/files only for apps with go.enable = true
         # assertions = lib.mapAttrsToList (name: app: {
         #   assertion = app.path != null;
@@ -494,6 +497,11 @@ in
             };
           }) goApps
         );
+
+        # NOTE: Default commands for Go apps are now provided via go.commands option
+        # rather than writing back to stackpanel.apps (which causes infinite recursion).
+        # Users can access these defaults by setting:
+        #   stackpanel.apps.<name>.go.commands = { ... };
 
         # Register Go module panels for the UI (not an extension - core module)
         stackpanel.panels.go-status = {
@@ -602,6 +610,6 @@ in
           };
         };
       }
-    ))
+    )
   ];
 }

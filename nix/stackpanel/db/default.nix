@@ -46,6 +46,7 @@ let
   # Import libraries
   proto = import ./lib/proto.nix { inherit lib; };
   optionsLib = import ./lib/options.nix { inherit lib; };
+  mkOptLib = import ./lib/mkOpt.nix { inherit lib; };
 
   # Re-export commonly used functions from optionsLib for convenience
   inherit (optionsLib)
@@ -519,24 +520,33 @@ let
   #   Options are now auto-generated from all schemas.
   #   Use: db.extend.{messageName} to get options for any message.
   #   Use: db.extend.messages.{schemaName} to get all messages from a schema.
+  #   Use: db.extend.none for pure Nix options with no proto schema.
+  #
+  #   IMPORTANT: All db.extend.* options now include a marker that is validated
+  #   by db.mkOpt. This ensures deliberate option definition and prevents
+  #   accidental duplication of proto-defined fields.
   #
   #   Examples:
-  #     db.extend.user           => User message options
-  #     db.extend.sstKms         => SstKms message options
-  #     db.extend.messages.users => all messages from users schema
+  #     db.mkOpt db.extend.user { }        => User options (no extensions)
+  #     db.mkOpt db.extend.theme { ... }   => Theme options + extensions
+  #     db.mkOpt db.extend.none { ... }    => Pure Nix options
   #
   # ============================================================================
   extend =
     # All auto-generated options (from all messages in all schemas)
-    allOptions
+    # Each one gets a marker added for mkOpt validation
+    lib.mapAttrs (_: opts: mkOptLib.withMarker opts) allOptions
     // {
       # Legacy aliases for backwards compatibility
       # (where the auto-generated name differs from the expected name)
-      aws = allOptions.rolesAnywhere or { }; # aws.RolesAnywhere -> extend.aws
-      stepCa = allOptions.stepCaConfig or { }; # step-ca.StepCaConfig -> extend.stepCa
-      dns = allOptions.dnsRecord or { }; # dns.DnsRecord -> extend.dns
+      aws = mkOptLib.withMarker (allOptions.rolesAnywhere or { }); # aws.RolesAnywhere -> extend.aws
+      stepCa = mkOptLib.withMarker (allOptions.stepCaConfig or { }); # step-ca.StepCaConfig -> extend.stepCa
+      dns = mkOptLib.withMarker (allOptions.dnsRecord or { }); # dns.DnsRecord -> extend.dns
 
-      # All messages by schema name
+      # For pure Nix options with no proto schema
+      none = mkOptLib.none;
+
+      # All messages by schema name (no marker needed - these are for introspection)
       messages = allMessages;
     };
 
@@ -705,6 +715,12 @@ in
 
   # Options extension for core/options
   inherit extend;
+
+  # mkOpt: Helper for defining options that extend proto schemas
+  # Usage:
+  #   options.stackpanel.theme = db.mkOpt db.extend.theme { config-file = ...; };
+  #   options.stackpanel.devshell = db.mkOpt db.extend.none { packages = ...; };
+  inherit (mkOptLib) mkOpt;
 
   # Type conversion utilities (re-exported from optionsLib)
   inherit

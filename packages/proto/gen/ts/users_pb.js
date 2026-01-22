@@ -2,13 +2,13 @@
 // @generated from file users.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 
 /**
  * Describes the file users.proto.
  */
 export const file_users = /*@__PURE__*/
-  fileDesc("Cgt1c2Vycy5wcm90bxINc3RhY2twYW5lbC5kYiKLAQoEVXNlchIMCgRuYW1lGAEgASgJEhMKBmdpdGh1YhgCIAEoCUgAiAEBEhMKC3B1YmxpY19rZXlzGAMgAygJEkAKHHNlY3JldHNfYWxsb3dlZF9lbnZpcm9ubWVudHMYBCADKA4yGi5zdGFja3BhbmVsLmRiLkVudmlyb25tZW50QgkKB19naXRodWIiegoFVXNlcnMSLgoFdXNlcnMYASADKAsyHy5zdGFja3BhbmVsLmRiLlVzZXJzLlVzZXJzRW50cnkaQQoKVXNlcnNFbnRyeRILCgNrZXkYASABKAkSIgoFdmFsdWUYAiABKAsyEy5zdGFja3BhbmVsLmRiLlVzZXI6AjgBKnQKC0Vudmlyb25tZW50EhsKF0VOVklST05NRU5UX1VOU1BFQ0lGSUVEEAASEwoPRU5WSVJPTk1FTlRfREVWEAESFwoTRU5WSVJPTk1FTlRfU1RBR0lORxACEhoKFkVOVklST05NRU5UX1BST0RVQ1RJT04QA0I6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
+  fileDesc("Cgt1c2Vycy5wcm90bxINc3RhY2twYW5lbC5kYiJSCgRVc2VyEgwKBG5hbWUYASABKAkSEwoGZ2l0aHViGAIgASgJSACIAQESEgoFZW1haWwYAyABKAlIAYgBAUIJCgdfZ2l0aHViQggKBl9lbWFpbCJ6CgVVc2VycxIuCgV1c2VycxgBIAMoCzIfLnN0YWNrcGFuZWwuZGIuVXNlcnMuVXNlcnNFbnRyeRpBCgpVc2Vyc0VudHJ5EgsKA2tleRgBIAEoCRIiCgV2YWx1ZRgCIAEoCzITLnN0YWNrcGFuZWwuZGIuVXNlcjoCOAFCOlo4Z2l0aHViLmNvbS9kYXJrbWF0dGVyL3N0YWNrcGFuZWwvcGFja2FnZXMvcHJvdG8vZ2VuL2dvcGJiBnByb3RvMw");
 
 /**
  * Describes the message stackpanel.db.User.
@@ -23,18 +23,4 @@ export const UserSchema = /*@__PURE__*/
  */
 export const UsersSchema = /*@__PURE__*/
   messageDesc(file_users, 1);
-
-/**
- * Describes the enum stackpanel.db.Environment.
- */
-export const EnvironmentSchema = /*@__PURE__*/
-  enumDesc(file_users, 0);
-
-/**
- * Environments a user can access secrets for
- *
- * @generated from enum stackpanel.db.Environment
- */
-export const Environment = /*@__PURE__*/
-  tsEnum(EnvironmentSchema);
 

@@ -46,6 +46,9 @@
 let
   cfg = config.stackpanel;
 
+  # Import extension source discovery library
+  extensionSrc = import ../../lib/extension-src.nix { inherit lib; };
+
   # ============================================================================
   # Type Definitions (matching extensions.proto.nix)
   # ============================================================================
@@ -340,6 +343,27 @@ let
         default = { };
         description = "Per-app extension data (app name -> extension data)";
       };
+
+      # Source directory for file-based resources
+      srcDir = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to extension's src/ directory for scripts, checks, and files.
+
+          When specified, the extension system will auto-discover resources:
+            - src/scripts/*.sh -> stackpanel.scripts.<extName>:<scriptName>
+            - src/checks/*.sh -> stackpanel.healthchecks.<extName>:<checkName>
+            - src/files/* -> available for stackpanel.files.entries
+
+          Resources are automatically namespaced with the extension name.
+          Explicit Nix definitions take priority over auto-discovered resources.
+
+          Example:
+            srcDir = ./src;  # Relative to extension module
+        '';
+        example = "./src";
+      };
     };
   };
 
@@ -355,6 +379,35 @@ let
 
   # Get external/local extensions
   externalExtensions = lib.filterAttrs (_: ext: !ext.builtin) cfg.extensions;
+
+  # ============================================================================
+  # Auto-Discovery from srcDir
+  # ============================================================================
+
+  # Discover scripts from all enabled extensions with srcDir
+  discoveredScripts = lib.foldl' (
+    acc: extName:
+    let
+      ext = cfg.extensions.${extName};
+    in
+    if ext.enabled && ext.srcDir or null != null then
+      acc // (extensionSrc.discoverScripts extName ext.srcDir)
+    else
+      acc
+  ) { } (lib.attrNames cfg.extensions);
+
+  # Discover healthchecks from all enabled extensions with srcDir
+  discoveredHealthchecks = lib.foldl' (
+    acc: extName:
+    let
+      ext = cfg.extensions.${extName};
+    in
+    if ext.enabled && ext.srcDir or null != null then
+      acc // (extensionSrc.discoverHealthchecks extName ext.srcDir)
+    else
+      acc
+  ) { } (lib.attrNames cfg.extensions);
+
 in
 {
   # ============================================================================
@@ -447,4 +500,36 @@ in
     default = externalExtensions;
     description = "External/local extensions added by the project";
   };
+
+  # Expose discovered scripts for debugging/inspection
+  options.stackpanel.extensionsDiscoveredScripts = lib.mkOption {
+    type = lib.types.attrsOf lib.types.unspecified;
+    readOnly = true;
+    default = discoveredScripts;
+    description = "Scripts auto-discovered from extension srcDir directories";
+  };
+
+  # Expose discovered healthchecks for debugging/inspection
+  options.stackpanel.extensionsDiscoveredHealthchecks = lib.mkOption {
+    type = lib.types.attrsOf lib.types.unspecified;
+    readOnly = true;
+    default = discoveredHealthchecks;
+    description = "Healthchecks auto-discovered from extension srcDir directories";
+  };
+
+  # ============================================================================
+  # Config: Merge discovered resources
+  # ============================================================================
+
+  # Note: Auto-discovered resources are NOT automatically merged here.
+  # Instead, extensions should explicitly use the discovery library:
+  #
+  #   stackpanel.scripts = extensionSrc.discoverScripts "my-ext" ./src;
+  #
+  # Or use the exposed computed values:
+  #   config.stackpanel.extensionsDiscoveredScripts
+  #   config.stackpanel.extensionsDiscoveredHealthchecks
+  #
+  # This avoids module ordering issues where scripts/healthchecks options
+  # may not be defined yet when this module is evaluated.
 }

@@ -19,7 +19,7 @@ For VS Code, this module creates:
 
 - **devshell-loader.sh**: Script that initializes the nix environment
 - **\*.code-workspace**: Workspace file with terminal integration
-- **settings.json** (optional): VS Code settings with YAML schema associations
+- **settings.json** (optional): VS Code settings with terminal integration
 
 ## Usage
 
@@ -46,12 +46,3 @@ stackpanel.ide = {
 2. When you open a new terminal, it runs `devshell-loader.sh`
 3. The loader script initializes devenv and enters the development shell
 4. All your packages, environment variables, and services are available
-
-## YAML Intellisense
-
-The module automatically configures YAML schema associations for:
-
-- `.stackpanel/secrets/config.yaml`
-- `.stackpanel/secrets/users.yaml`
-- `.stackpanel/secrets/apps/*/config.yaml`
-- Environment files (dev.yaml, staging.yaml, prod.yaml)

@@ -361,7 +361,7 @@ export function PageBreadcrumb({
             {item.url ? (
               <Link
                 href={item.url}
-                className={cn(className, 'transition-opacity hover:opacity-80')}
+                className={cn(className, 'transition-opacity hover:opacity-90')}
               >
                 {item.name}
               </Link>

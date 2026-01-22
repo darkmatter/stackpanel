@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { useNixConfig, useNixData } from "@/lib/use-nix-config";
+import { useNixConfig, useNixData } from "@/lib/use-agent";
 import type {
 	StepCaData,
 	DnsData,

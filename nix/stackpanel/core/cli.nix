@@ -10,7 +10,6 @@
 # Generated files (by CLI):
 #   - .stackpanel/state/stackpanel.json (runtime state)
 #   - .stackpanel/gen/ide/vscode/* (VS Code workspace, loader script)
-#   - .stackpanel/gen/schemas/secrets/* (JSON schemas from Nix definitions)
 #
 # The configuration is serialized to JSON and passed to the CLI, which handles
 # the actual file generation. This keeps Nix pure while delegating imperative
@@ -51,10 +50,6 @@ let
 
   # Import the stackpanel CLI package
   stackpanel-cli = pkgs.callPackage ../packages/stackpanel-cli { };
-
-  # Import schemas from the secrets module (single source of truth)
-  schemasLib = import ../secrets/schemas.nix { inherit lib; };
-  schemas = schemasLib.allSchemas;
 
   # Extract serializable package info from devshell packages
   # This avoids slow nix eval at runtime by pre-computing during shell entry
@@ -152,17 +147,6 @@ let
         settings = ideCfg.vscode.settings;
         extensions = ideCfg.vscode.extensions;
         extraFolders = ideCfg.vscode.extra-folders;
-      };
-    };
-
-    # Schemas for YAML config validation (generated from Nix definitions)
-    schemas = {
-      secrets = {
-        config = schemas."config.schema.json";
-        users = schemas."users.schema.json";
-        appConfig = schemas."app-config.schema.json";
-        schema = schemas."schema.schema.json";
-        env = schemas."env.schema.json";
       };
     };
 

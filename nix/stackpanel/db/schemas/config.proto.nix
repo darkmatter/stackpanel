@@ -35,7 +35,7 @@ proto.mkProtoFile {
       #   example = {
       #     name = "Example User";
       #     github = "example";
-      #     public-keys = [];
+      #     email = "example@example.com";
       #   };
       # };
     }
@@ -118,17 +118,7 @@ proto.mkProtoFile {
       toUser = name: collab: {
         inherit name;
         github = collab.login or name;
-        public-keys = collab.publicKeys or [ ];
-        # Default environments based on admin status
-        secrets-allowed-environments =
-          if collab.isAdmin or false then
-            [
-              "dev"
-              "staging"
-              "production"
-            ]
-          else
-            [ "dev" ];
+        email = collab.email or null;
       };
 
       github-team = lib.mapAttrs (name: user: toUser name user) ghCollabs.collaborators;

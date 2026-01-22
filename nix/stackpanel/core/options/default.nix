@@ -38,6 +38,7 @@
     ./outputs.nix
     ./panels.nix
     ./step-ca.nix
+    ./state.nix
     ./tasks.nix
     ./ports.nix
     ./secrets.nix
