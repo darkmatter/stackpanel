@@ -118,7 +118,9 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	// Initialize JWT manager for token auth
-	jwtMgr, err := NewJWTManager()
+	jwtMgr, err := NewJWTManagerWithOptions(JWTManagerOptions{
+		TestPairingToken: cfg.TestPairingToken,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JWT manager: %w", err)
 	}

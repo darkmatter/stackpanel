@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,6 +10,7 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/server"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/envvars"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -27,6 +29,26 @@ directory or parent directories.`,
 	RunE: runAgent,
 }
 
+var agentTestTokenCmd = &cobra.Command{
+	Use:   "test-token",
+	Short: "Generate a deterministic test pairing token",
+	Long: `Generate a deterministic pairing token for testing and E2E automation.
+
+This command requires STACKPANEL_TEST_PAIRING_TOKEN to be set. The generated token
+will be valid as long as the agent is started with the same secret.
+
+The token is deterministic - running this command with the same secret and origin
+will always produce the same token, making it suitable for CI/CD pipelines.
+
+Example:
+  export STACKPANEL_TEST_PAIRING_TOKEN="my-e2e-test-secret"
+  stackpanel agent test-token --origin "http://localhost:3000"
+
+Then use the token in your tests:
+  curl -H "X-Stackpanel-Token: <token>" http://localhost:9876/api/...`,
+	RunE: runAgentTestToken,
+}
+
 func init() {
 	agentCmd.Flags().Bool("debug", false, "Enable debug logging")
 	agentCmd.Flags().StringP("project-root", "p", "", "Project root (defaults to auto-detect from current directory)")
@@ -34,6 +56,11 @@ func init() {
 	agentCmd.Flags().Bool("remote", false, "Enable remote access (binds to 0.0.0.0 and allows Tailscale origins)")
 	agentCmd.Flags().String("bind", "", "Bind address (default 127.0.0.1, or 0.0.0.0 with --remote)")
 	agentCmd.Flags().StringArray("host", []string{}, "Allowed CORS origins (can be specified multiple times, e.g., --host https://myapp.example.com)")
+
+	// test-token subcommand
+	agentTestTokenCmd.Flags().String("origin", "", "Origin to bind the token to (e.g., http://localhost:3000)")
+	agentTestTokenCmd.Flags().Bool("json", false, "Output in JSON format")
+	agentCmd.AddCommand(agentTestTokenCmd)
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
@@ -116,6 +143,54 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	<-quit
 	log.Info().Msg("Shutting down agent...")
 	srv.Stop()
+
+	return nil
+}
+
+func runAgentTestToken(cmd *cobra.Command, args []string) error {
+	origin, _ := cmd.Flags().GetString("origin")
+	jsonOutput, _ := cmd.Flags().GetBool("json")
+
+	// Get the test pairing token from environment
+	secret := envvars.StackpanelTestPairingToken.Get()
+	if secret == "" {
+		return fmt.Errorf("STACKPANEL_TEST_PAIRING_TOKEN environment variable is not set\n\nSet it to a secret string that will be used to derive the token:\n  export STACKPANEL_TEST_PAIRING_TOKEN=\"my-test-secret\"")
+	}
+
+	// Generate the test token
+	token, agentID, err := server.GenerateTestTokenStatic(secret, origin)
+	if err != nil {
+		return fmt.Errorf("failed to generate test token: %w", err)
+	}
+
+	if jsonOutput {
+		output := map[string]string{
+			"token":    token,
+			"agent_id": agentID,
+			"origin":   origin,
+		}
+		data, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", err)
+		}
+		fmt.Println(string(data))
+	} else {
+		fmt.Printf("Test Pairing Token Generated\n")
+		fmt.Printf("============================\n\n")
+		fmt.Printf("Agent ID: %s\n", agentID)
+		if origin != "" {
+			fmt.Printf("Origin:   %s\n", origin)
+		} else {
+			fmt.Printf("Origin:   (any)\n")
+		}
+		fmt.Printf("\nToken:\n%s\n", token)
+		fmt.Printf("\nUsage:\n")
+		fmt.Printf("  1. Start the agent with the same secret:\n")
+		fmt.Printf("     export STACKPANEL_TEST_PAIRING_TOKEN=\"%s\"\n", secret)
+		fmt.Printf("     stackpanel agent\n\n")
+		fmt.Printf("  2. Use the token in API requests:\n")
+		fmt.Printf("     curl -H \"X-Stackpanel-Token: %s\" http://localhost:9876/api/...\n", token)
+	}
 
 	return nil
 }

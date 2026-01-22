@@ -2,11 +2,13 @@ package server
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -36,27 +38,125 @@ type JWTManager struct {
 	// agentID is a unique identifier for this agent instance
 	// It changes each time the agent restarts, invalidating old tokens
 	agentID string
+
+	// testMode indicates if this manager is using deterministic keys for testing
+	testMode bool
+}
+
+// JWTManagerOptions configures the JWT manager
+type JWTManagerOptions struct {
+	// TestPairingToken enables test mode with deterministic signing key and agent ID.
+	// When set, the signing key and agent ID are derived from this secret,
+	// making tokens predictable and valid across agent restarts.
+	TestPairingToken string
 }
 
 // NewJWTManager creates a new JWT manager with a random signing key and agent ID
 func NewJWTManager() (*JWTManager, error) {
-	// Generate a random 32-byte signing key
-	signingKey := make([]byte, 32)
-	if _, err := rand.Read(signingKey); err != nil {
-		return nil, fmt.Errorf("failed to generate signing key: %w", err)
-	}
+	return NewJWTManagerWithOptions(JWTManagerOptions{})
+}
 
-	// Generate a random agent ID (16 bytes = 22 base64 chars)
-	agentIDBytes := make([]byte, 16)
-	if _, err := rand.Read(agentIDBytes); err != nil {
-		return nil, fmt.Errorf("failed to generate agent ID: %w", err)
+// NewJWTManagerWithOptions creates a JWT manager with the given options.
+// If TestPairingToken is set, uses deterministic keys for testing.
+func NewJWTManagerWithOptions(opts JWTManagerOptions) (*JWTManager, error) {
+	var signingKey []byte
+	var agentID string
+	var testMode bool
+
+	if opts.TestPairingToken != "" {
+		// Test mode: derive deterministic signing key and agent ID from the secret
+		testMode = true
+
+		// Derive signing key: SHA256(secret + "signing-key")
+		h := sha256.New()
+		h.Write([]byte(opts.TestPairingToken))
+		h.Write([]byte(":signing-key"))
+		signingKey = h.Sum(nil)
+
+		// Derive agent ID: SHA256(secret + "agent-id"), take first 16 bytes
+		h = sha256.New()
+		h.Write([]byte(opts.TestPairingToken))
+		h.Write([]byte(":agent-id"))
+		agentIDBytes := h.Sum(nil)[:16]
+		agentID = base64.RawURLEncoding.EncodeToString(agentIDBytes)
+
+		log.Warn().
+			Str("agent_id", agentID).
+			Msg("JWT manager initialized in TEST MODE with deterministic keys - do not use in production")
+	} else {
+		// Normal mode: generate random signing key and agent ID
+		testMode = false
+
+		// Generate a random 32-byte signing key
+		signingKey = make([]byte, 32)
+		if _, err := rand.Read(signingKey); err != nil {
+			return nil, fmt.Errorf("failed to generate signing key: %w", err)
+		}
+
+		// Generate a random agent ID (16 bytes = 22 base64 chars)
+		agentIDBytes := make([]byte, 16)
+		if _, err := rand.Read(agentIDBytes); err != nil {
+			return nil, fmt.Errorf("failed to generate agent ID: %w", err)
+		}
+		agentID = base64.RawURLEncoding.EncodeToString(agentIDBytes)
 	}
-	agentID := base64.RawURLEncoding.EncodeToString(agentIDBytes)
 
 	return &JWTManager{
 		signingKey: signingKey,
 		agentID:    agentID,
+		testMode:   testMode,
 	}, nil
+}
+
+// IsTestMode returns true if the manager is using deterministic keys for testing
+func (m *JWTManager) IsTestMode() bool {
+	return m.testMode
+}
+
+// GenerateTestToken generates a token for testing with a very long expiration (10 years).
+// This is only available in test mode and is intended for E2E tests and CI pipelines.
+// The token is deterministic based on the TestPairingToken secret.
+func (m *JWTManager) GenerateTestToken(origin string) (string, error) {
+	if !m.testMode {
+		return "", fmt.Errorf("GenerateTestToken is only available in test mode")
+	}
+
+	// Use a fixed "issued at" time for deterministic tokens
+	// We use Unix epoch + 1 day to avoid any edge cases with zero time
+	fixedTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	claims := AgentClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    TokenIssuer,
+			Subject:   "pair",
+			IssuedAt:  jwt.NewNumericDate(fixedTime),
+			ExpiresAt: jwt.NewNumericDate(fixedTime.Add(10 * 365 * 24 * time.Hour)), // 10 years
+			ID:        "test-token-id",                                              // Fixed JTI for deterministic output
+		},
+		AgentID: m.agentID,
+		Origin:  origin,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(m.signingKey)
+}
+
+// GenerateTestTokenStatic generates a deterministic test token without needing a JWTManager instance.
+// This is useful for CLI tools that need to output the test token.
+func GenerateTestTokenStatic(testPairingSecret, origin string) (string, string, error) {
+	mgr, err := NewJWTManagerWithOptions(JWTManagerOptions{
+		TestPairingToken: testPairingSecret,
+	})
+	if err != nil {
+		return "", "", err
+	}
+
+	token, err := mgr.GenerateTestToken(origin)
+	if err != nil {
+		return "", "", err
+	}
+
+	return token, mgr.GetAgentID(), nil
 }
 
 // GenerateToken creates a new JWT token for the given origin

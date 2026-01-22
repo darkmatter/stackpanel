@@ -288,6 +288,21 @@ var (
 		Example:     "~/projects/stackpanel",
 		GoField:     "DevRepoPath",
 	}
+
+	// StackpanelTestPairingToken enables test mode with a deterministic pairing token.
+	// When set, the agent uses a fixed signing key and agent ID derived from this token,
+	// making the token valid across agent restarts. This is useful for automated testing
+	// and E2E tests where the pairing flow needs to be bypassed.
+	// The value should be a secret string that will be used to derive the signing key.
+	// WARNING: Only use this in test/development environments, never in production.
+	StackpanelTestPairingToken = EnvVar{
+		Name:        "STACKPANEL_TEST_PAIRING_TOKEN",
+		Description: "Secret for deterministic pairing token (test mode only, enables predictable agent ID)",
+		Category:    CategoryAgent,
+		Source:      SourceDynamic,
+		Example:     "my-test-secret-for-e2e",
+		GoField:     "TestPairingToken",
+	}
 )
 
 // ===========================================================================
@@ -587,6 +602,7 @@ func All() []EnvVar {
 		StackpanelAuthToken,
 		StackpanelAPIEndpoint,
 		StackpanelUserConfig,
+		StackpanelTestPairingToken,
 		// Step CA
 		StepCAURL,
 		StepCAFingerprint,

@@ -63,6 +63,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"status":      "ok",
 		"has_project": hasProject,
 		"agent_id":    s.jwtManager.GetAgentID(),
+		"test_mode":   s.jwtManager.IsTestMode(),
 	}
 	if hasProject {
 		resp["project_root"] = s.config.ProjectRoot
