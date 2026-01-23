@@ -138,10 +138,10 @@ export function VariablesPanel() {
 					variable.description.toLowerCase().includes(query) ||
 					variable.id.toLowerCase().includes(query);
 
+				// Convert the variable's type to our UI type string for comparison
+				const variableUiType = getTypeConfig(variable.type).value;
 				const matchesType =
-					selectedType.includes("all") ||
-					// @ts-expect-error
-					selectedType.includes(variable.type as string);
+					selectedType === "all" || selectedType === variableUiType;
 
 				return matchesSearch && matchesType;
 			})

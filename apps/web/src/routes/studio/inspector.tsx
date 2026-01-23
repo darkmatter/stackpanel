@@ -9,14 +9,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { InspectorPanel } from "@/components/studio/panels/inspector-panel";
 
+interface InspectorSearchParams {
+  contributor?: string;
+}
+
 export const Route = createFileRoute("/studio/inspector")({
-	component: InspectorPage,
+  component: InspectorPage,
+  validateSearch: (search: Record<string, unknown>): InspectorSearchParams => {
+    return {
+      contributor: typeof search.contributor === "string" ? search.contributor : undefined,
+    };
+  },
 });
 
 function InspectorPage() {
-	return (
-		<div className="container mx-auto py-8">
-			<InspectorPanel />
-		</div>
-	);
+  const { contributor } = Route.useSearch();
+  return (
+    <div className="container mx-auto py-8">
+      <InspectorPanel initialContributor={contributor} />
+    </div>
+  );
 }

@@ -82,6 +82,12 @@ let
     "appsComputed"
     "commandsComputed"
     "extensionsComputed"
+    "modulesComputed"
+    "modulesComputedAll"
+    "modulesList"
+    "modulesListAll"
+    "modulesBuiltin"
+    "modulesExternal"
     "userPackages"
   ];
 

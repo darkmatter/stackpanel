@@ -10,6 +10,7 @@ import type { UsersSchema } from "./users_pb";
 import type { AwsSchema } from "./aws_pb";
 import type { AppsSchema } from "./apps_pb";
 import type { VariablesSchema } from "./variables_pb";
+import type { DisableModuleRequestSchema, EnableModuleRequestSchema, ModuleResponseSchema, ModuleSchema, ModulesSchema, UpdateModuleSettingsRequestSchema } from "./modules_pb";
 import type { SstSchema } from "./sst_pb";
 
 /**
@@ -205,6 +206,34 @@ export declare type GetSstRequest = Message<"stackpanel.agent.GetSstRequest"> & 
  * Use `create(GetSstRequestSchema)` to create a new message.
  */
 export declare const GetSstRequestSchema: GenMessage<GetSstRequest>;
+
+/**
+ * @generated from message stackpanel.agent.GetModulesRequest
+ */
+export declare type GetModulesRequest = Message<"stackpanel.agent.GetModulesRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetModulesRequest.
+ * Use `create(GetModulesRequestSchema)` to create a new message.
+ */
+export declare const GetModulesRequestSchema: GenMessage<GetModulesRequest>;
+
+/**
+ * @generated from message stackpanel.agent.GetModuleRequest
+ */
+export declare type GetModuleRequest = Message<"stackpanel.agent.GetModuleRequest"> & {
+  /**
+   * @generated from field: string module_id = 1;
+   */
+  moduleId: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.GetModuleRequest.
+ * Use `create(GetModuleRequestSchema)` to create a new message.
+ */
+export declare const GetModuleRequestSchema: GenMessage<GetModuleRequest>;
 
 /**
  * @generated from message stackpanel.agent.GetAgeIdentityRequest
@@ -1368,6 +1397,129 @@ export declare type NixConfigResponse = Message<"stackpanel.agent.NixConfigRespo
 export declare const NixConfigResponseSchema: GenMessage<NixConfigResponse>;
 
 /**
+ * @generated from message stackpanel.agent.GetShellStatusRequest
+ */
+export declare type GetShellStatusRequest = Message<"stackpanel.agent.GetShellStatusRequest"> & {
+};
+
+/**
+ * Describes the message stackpanel.agent.GetShellStatusRequest.
+ * Use `create(GetShellStatusRequestSchema)` to create a new message.
+ */
+export declare const GetShellStatusRequestSchema: GenMessage<GetShellStatusRequest>;
+
+/**
+ * @generated from message stackpanel.agent.ShellStatusResponse
+ */
+export declare type ShellStatusResponse = Message<"stackpanel.agent.ShellStatusResponse"> & {
+  /**
+   * Whether the shell is stale (nix files changed since last rebuild)
+   *
+   * @generated from field: bool stale = 1;
+   */
+  stale: boolean;
+
+  /**
+   * Whether a rebuild is currently in progress
+   *
+   * @generated from field: bool rebuilding = 2;
+   */
+  rebuilding: boolean;
+
+  /**
+   * Timestamp of when the shell was last built (RFC3339)
+   *
+   * @generated from field: string last_built = 3;
+   */
+  lastBuilt: string;
+
+  /**
+   * Timestamp of the most recent nix file change (RFC3339)
+   *
+   * @generated from field: string last_nix_change = 4;
+   */
+  lastNixChange: string;
+
+  /**
+   * List of files that changed since last build
+   *
+   * @generated from field: repeated string changed_files = 5;
+   */
+  changedFiles: string[];
+};
+
+/**
+ * Describes the message stackpanel.agent.ShellStatusResponse.
+ * Use `create(ShellStatusResponseSchema)` to create a new message.
+ */
+export declare const ShellStatusResponseSchema: GenMessage<ShellStatusResponse>;
+
+/**
+ * @generated from message stackpanel.agent.RebuildShellRequest
+ */
+export declare type RebuildShellRequest = Message<"stackpanel.agent.RebuildShellRequest"> & {
+  /**
+   * Which command to use: "devshell" (./devshell) or "nix" (nix develop --impure)
+   * Defaults to "devshell" if not specified
+   *
+   * @generated from field: string method = 1;
+   */
+  method: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.RebuildShellRequest.
+ * Use `create(RebuildShellRequestSchema)` to create a new message.
+ */
+export declare const RebuildShellRequestSchema: GenMessage<RebuildShellRequest>;
+
+/**
+ * @generated from message stackpanel.agent.RebuildShellEvent
+ */
+export declare type RebuildShellEvent = Message<"stackpanel.agent.RebuildShellEvent"> & {
+  /**
+   * Event type: "started", "output", "completed", "error"
+   *
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * Output line (for type="output")
+   *
+   * @generated from field: string output = 2;
+   */
+  output: string;
+
+  /**
+   * Exit code (for type="completed")
+   *
+   * @generated from field: int32 exit_code = 3;
+   */
+  exitCode: number;
+
+  /**
+   * Error message (for type="error")
+   *
+   * @generated from field: string error = 4;
+   */
+  error: string;
+
+  /**
+   * Timestamp
+   *
+   * @generated from field: string timestamp = 5;
+   */
+  timestamp: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.RebuildShellEvent.
+ * Use `create(RebuildShellEventSchema)` to create a new message.
+ */
+export declare const RebuildShellEventSchema: GenMessage<RebuildShellEvent>;
+
+/**
  * AgentService provides RPC methods for the Stackpanel agent.
  * This enables type-safe communication between the web UI and the local agent.
  *
@@ -1481,6 +1633,48 @@ export declare const AgentService: GenService<{
     methodKind: "unary";
     input: typeof VariablesSchema;
     output: typeof VariablesSchema;
+  },
+  /**
+   * Modules - module configuration management
+   *
+   * @generated from rpc stackpanel.agent.AgentService.GetModules
+   */
+  getModules: {
+    methodKind: "unary";
+    input: typeof GetModulesRequestSchema;
+    output: typeof ModulesSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.GetModule
+   */
+  getModule: {
+    methodKind: "unary";
+    input: typeof GetModuleRequestSchema;
+    output: typeof ModuleSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.EnableModule
+   */
+  enableModule: {
+    methodKind: "unary";
+    input: typeof EnableModuleRequestSchema;
+    output: typeof ModuleResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.DisableModule
+   */
+  disableModule: {
+    methodKind: "unary";
+    input: typeof DisableModuleRequestSchema;
+    output: typeof ModuleResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.UpdateModuleSettings
+   */
+  updateModuleSettings: {
+    methodKind: "unary";
+    input: typeof UpdateModuleSettingsRequestSchema;
+    output: typeof ModuleResponseSchema;
   },
   /**
    * Identity management (local decryption key)
@@ -1711,6 +1905,24 @@ export declare const AgentService: GenService<{
     methodKind: "unary";
     input: typeof RefreshNixConfigRequestSchema;
     output: typeof NixConfigResponseSchema;
+  },
+  /**
+   * Devshell management
+   *
+   * @generated from rpc stackpanel.agent.AgentService.GetShellStatus
+   */
+  getShellStatus: {
+    methodKind: "unary";
+    input: typeof GetShellStatusRequestSchema;
+    output: typeof ShellStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.RebuildShell
+   */
+  rebuildShell: {
+    methodKind: "server_streaming";
+    input: typeof RebuildShellRequestSchema;
+    output: typeof RebuildShellEventSchema;
   },
 }>;
 

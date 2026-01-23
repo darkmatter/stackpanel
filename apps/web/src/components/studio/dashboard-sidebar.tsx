@@ -85,6 +85,7 @@ export type PanelType =
   | "network"
   | "infra"
   | "extensions"
+  | "modules"
   | "files"
   | "terminal"
   | "services"
@@ -114,10 +115,9 @@ const mainNavItems: NavItem[] = [
 ];
 
 const toolsNavItems: NavItem[] = [
+  { id: "modules", label: "Modules", icon: Puzzle },
   { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
-  
-  
   { id: "inspector", label: "Inspector", icon: Search },
 ];
 

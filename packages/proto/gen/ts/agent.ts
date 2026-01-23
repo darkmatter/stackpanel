@@ -2,6 +2,12 @@
 // @generated from protobuf file "agent.proto" (package "stackpanel.agent", syntax proto3)
 // tslint:disable
 import { Sst } from "./sst";
+import { UpdateModuleSettingsRequest } from "./modules";
+import { DisableModuleRequest } from "./modules";
+import { ModuleResponse } from "./modules";
+import { EnableModuleRequest } from "./modules";
+import { Module } from "./modules";
+import { Modules } from "./modules";
 import { Variables } from "./variables";
 import { Apps } from "./apps";
 import { Aws } from "./aws";
@@ -120,6 +126,20 @@ export interface GetVariablesRequest {
  * @generated from protobuf message stackpanel.agent.GetSstRequest
  */
 export interface GetSstRequest {
+}
+/**
+ * @generated from protobuf message stackpanel.agent.GetModulesRequest
+ */
+export interface GetModulesRequest {
+}
+/**
+ * @generated from protobuf message stackpanel.agent.GetModuleRequest
+ */
+export interface GetModuleRequest {
+    /**
+     * @generated from protobuf field: string module_id = 1
+     */
+    module_id: string;
 }
 // =============================================================================
 // Identity Management
@@ -884,6 +904,97 @@ export interface NixConfigResponse {
      */
     source: string; // "cache" or "eval"
 }
+// =============================================================================
+// Devshell Management
+// =============================================================================
+
+/**
+ * @generated from protobuf message stackpanel.agent.GetShellStatusRequest
+ */
+export interface GetShellStatusRequest {
+}
+/**
+ * @generated from protobuf message stackpanel.agent.ShellStatusResponse
+ */
+export interface ShellStatusResponse {
+    /**
+     * Whether the shell is stale (nix files changed since last rebuild)
+     *
+     * @generated from protobuf field: bool stale = 1
+     */
+    stale: boolean;
+    /**
+     * Whether a rebuild is currently in progress
+     *
+     * @generated from protobuf field: bool rebuilding = 2
+     */
+    rebuilding: boolean;
+    /**
+     * Timestamp of when the shell was last built (RFC3339)
+     *
+     * @generated from protobuf field: string last_built = 3
+     */
+    last_built: string;
+    /**
+     * Timestamp of the most recent nix file change (RFC3339)
+     *
+     * @generated from protobuf field: string last_nix_change = 4
+     */
+    last_nix_change: string;
+    /**
+     * List of files that changed since last build
+     *
+     * @generated from protobuf field: repeated string changed_files = 5
+     */
+    changed_files: string[];
+}
+/**
+ * @generated from protobuf message stackpanel.agent.RebuildShellRequest
+ */
+export interface RebuildShellRequest {
+    /**
+     * Which command to use: "devshell" (./devshell) or "nix" (nix develop --impure)
+     * Defaults to "devshell" if not specified
+     *
+     * @generated from protobuf field: string method = 1
+     */
+    method: string;
+}
+/**
+ * @generated from protobuf message stackpanel.agent.RebuildShellEvent
+ */
+export interface RebuildShellEvent {
+    /**
+     * Event type: "started", "output", "completed", "error"
+     *
+     * @generated from protobuf field: string type = 1
+     */
+    type: string;
+    /**
+     * Output line (for type="output")
+     *
+     * @generated from protobuf field: string output = 2
+     */
+    output: string;
+    /**
+     * Exit code (for type="completed")
+     *
+     * @generated from protobuf field: int32 exit_code = 3
+     */
+    exit_code: number;
+    /**
+     * Error message (for type="error")
+     *
+     * @generated from protobuf field: string error = 4
+     */
+    error: string;
+    /**
+     * Timestamp
+     *
+     * @generated from protobuf field: string timestamp = 5
+     */
+    timestamp: string;
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class GetProjectRequest$Type extends MessageType<GetProjectRequest> {
     constructor() {
@@ -1383,6 +1494,91 @@ class GetSstRequest$Type extends MessageType<GetSstRequest> {
  * @generated MessageType for protobuf message stackpanel.agent.GetSstRequest
  */
 export const GetSstRequest = new GetSstRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetModulesRequest$Type extends MessageType<GetModulesRequest> {
+    constructor() {
+        super("stackpanel.agent.GetModulesRequest", []);
+    }
+    create(value?: PartialMessage<GetModulesRequest>): GetModulesRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<GetModulesRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetModulesRequest): GetModulesRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetModulesRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.GetModulesRequest
+ */
+export const GetModulesRequest = new GetModulesRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetModuleRequest$Type extends MessageType<GetModuleRequest> {
+    constructor() {
+        super("stackpanel.agent.GetModuleRequest", [
+            { no: 1, name: "module_id", kind: "scalar", localName: "module_id", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetModuleRequest>): GetModuleRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.module_id = "";
+        if (value !== undefined)
+            reflectionMergePartial<GetModuleRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetModuleRequest): GetModuleRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string module_id */ 1:
+                    message.module_id = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetModuleRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string module_id = 1; */
+        if (message.module_id !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.module_id);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.GetModuleRequest
+ */
+export const GetModuleRequest = new GetModuleRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GetAgeIdentityRequest$Type extends MessageType<GetAgeIdentityRequest> {
     constructor() {
@@ -4288,6 +4484,249 @@ class NixConfigResponse$Type extends MessageType<NixConfigResponse> {
  * @generated MessageType for protobuf message stackpanel.agent.NixConfigResponse
  */
 export const NixConfigResponse = new NixConfigResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetShellStatusRequest$Type extends MessageType<GetShellStatusRequest> {
+    constructor() {
+        super("stackpanel.agent.GetShellStatusRequest", []);
+    }
+    create(value?: PartialMessage<GetShellStatusRequest>): GetShellStatusRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<GetShellStatusRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetShellStatusRequest): GetShellStatusRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetShellStatusRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.GetShellStatusRequest
+ */
+export const GetShellStatusRequest = new GetShellStatusRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ShellStatusResponse$Type extends MessageType<ShellStatusResponse> {
+    constructor() {
+        super("stackpanel.agent.ShellStatusResponse", [
+            { no: 1, name: "stale", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "rebuilding", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 3, name: "last_built", kind: "scalar", localName: "last_built", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "last_nix_change", kind: "scalar", localName: "last_nix_change", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "changed_files", kind: "scalar", localName: "changed_files", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ShellStatusResponse>): ShellStatusResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.stale = false;
+        message.rebuilding = false;
+        message.last_built = "";
+        message.last_nix_change = "";
+        message.changed_files = [];
+        if (value !== undefined)
+            reflectionMergePartial<ShellStatusResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ShellStatusResponse): ShellStatusResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool stale */ 1:
+                    message.stale = reader.bool();
+                    break;
+                case /* bool rebuilding */ 2:
+                    message.rebuilding = reader.bool();
+                    break;
+                case /* string last_built */ 3:
+                    message.last_built = reader.string();
+                    break;
+                case /* string last_nix_change */ 4:
+                    message.last_nix_change = reader.string();
+                    break;
+                case /* repeated string changed_files */ 5:
+                    message.changed_files.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ShellStatusResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool stale = 1; */
+        if (message.stale !== false)
+            writer.tag(1, WireType.Varint).bool(message.stale);
+        /* bool rebuilding = 2; */
+        if (message.rebuilding !== false)
+            writer.tag(2, WireType.Varint).bool(message.rebuilding);
+        /* string last_built = 3; */
+        if (message.last_built !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.last_built);
+        /* string last_nix_change = 4; */
+        if (message.last_nix_change !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.last_nix_change);
+        /* repeated string changed_files = 5; */
+        for (let i = 0; i < message.changed_files.length; i++)
+            writer.tag(5, WireType.LengthDelimited).string(message.changed_files[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.ShellStatusResponse
+ */
+export const ShellStatusResponse = new ShellStatusResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RebuildShellRequest$Type extends MessageType<RebuildShellRequest> {
+    constructor() {
+        super("stackpanel.agent.RebuildShellRequest", [
+            { no: 1, name: "method", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<RebuildShellRequest>): RebuildShellRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.method = "";
+        if (value !== undefined)
+            reflectionMergePartial<RebuildShellRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RebuildShellRequest): RebuildShellRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string method */ 1:
+                    message.method = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RebuildShellRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string method = 1; */
+        if (message.method !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.method);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.RebuildShellRequest
+ */
+export const RebuildShellRequest = new RebuildShellRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RebuildShellEvent$Type extends MessageType<RebuildShellEvent> {
+    constructor() {
+        super("stackpanel.agent.RebuildShellEvent", [
+            { no: 1, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "output", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "exit_code", kind: "scalar", localName: "exit_code", T: 5 /*ScalarType.INT32*/ },
+            { no: 4, name: "error", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "timestamp", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<RebuildShellEvent>): RebuildShellEvent {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.type = "";
+        message.output = "";
+        message.exit_code = 0;
+        message.error = "";
+        message.timestamp = "";
+        if (value !== undefined)
+            reflectionMergePartial<RebuildShellEvent>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RebuildShellEvent): RebuildShellEvent {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string type */ 1:
+                    message.type = reader.string();
+                    break;
+                case /* string output */ 2:
+                    message.output = reader.string();
+                    break;
+                case /* int32 exit_code */ 3:
+                    message.exit_code = reader.int32();
+                    break;
+                case /* string error */ 4:
+                    message.error = reader.string();
+                    break;
+                case /* string timestamp */ 5:
+                    message.timestamp = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RebuildShellEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string type = 1; */
+        if (message.type !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.type);
+        /* string output = 2; */
+        if (message.output !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.output);
+        /* int32 exit_code = 3; */
+        if (message.exit_code !== 0)
+            writer.tag(3, WireType.Varint).int32(message.exit_code);
+        /* string error = 4; */
+        if (message.error !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.error);
+        /* string timestamp = 5; */
+        if (message.timestamp !== "")
+            writer.tag(5, WireType.LengthDelimited).string(message.timestamp);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.RebuildShellEvent
+ */
+export const RebuildShellEvent = new RebuildShellEvent$Type();
 /**
  * @generated ServiceType for protobuf service stackpanel.agent.AgentService
  */
@@ -4305,6 +4744,11 @@ export const AgentService = new ServiceType("stackpanel.agent.AgentService", [
     { name: "SetApps", options: {}, I: Apps, O: Apps },
     { name: "GetVariables", options: {}, I: GetVariablesRequest, O: Variables },
     { name: "SetVariables", options: {}, I: Variables, O: Variables },
+    { name: "GetModules", options: {}, I: GetModulesRequest, O: Modules },
+    { name: "GetModule", options: {}, I: GetModuleRequest, O: Module },
+    { name: "EnableModule", options: {}, I: EnableModuleRequest, O: ModuleResponse },
+    { name: "DisableModule", options: {}, I: DisableModuleRequest, O: ModuleResponse },
+    { name: "UpdateModuleSettings", options: {}, I: UpdateModuleSettingsRequest, O: ModuleResponse },
     { name: "GetAgeIdentity", options: {}, I: GetAgeIdentityRequest, O: AgeIdentityResponse },
     { name: "SetAgeIdentity", options: {}, I: SetAgeIdentityRequest, O: AgeIdentityResponse },
     { name: "GetKMSConfig", options: {}, I: GetKMSConfigRequest, O: KMSConfigResponse },
@@ -4330,5 +4774,7 @@ export const AgentService = new ServiceType("stackpanel.agent.AgentService", [
     { name: "GetProcesses", options: {}, I: GetProcessesRequest, O: GetProcessesResponse },
     { name: "GetHealthchecks", options: {}, I: GetHealthchecksRequest, O: HealthchecksResponse },
     { name: "GetNixConfig", options: {}, I: GetNixConfigRequest, O: NixConfigResponse },
-    { name: "RefreshNixConfig", options: {}, I: RefreshNixConfigRequest, O: NixConfigResponse }
+    { name: "RefreshNixConfig", options: {}, I: RefreshNixConfigRequest, O: NixConfigResponse },
+    { name: "GetShellStatus", options: {}, I: GetShellStatusRequest, O: ShellStatusResponse },
+    { name: "RebuildShell", serverStreaming: true, options: {}, I: RebuildShellRequest, O: RebuildShellEvent }
 ]);
