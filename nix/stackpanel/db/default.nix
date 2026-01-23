@@ -22,11 +22,9 @@
 # │                                                                             │
 # │  3. Categorize it in STEP 2 below (dataSchemas, rootSchemas, etc.)          │
 # │                                                                             │
-# │  4. Register options in STEP 3 below (entity options extraction)            │
+# │  4. Run `nix run .#generate-protos` to regenerate Go/TS types               │
 # │                                                                             │
-# │  5. Export options in STEP 4 below (extend = { ... })                       │
-# │                                                                             │
-# │  6. Run `nix run .#generate-protos` to regenerate Go/TS types               │
+# │  Options are auto-generated via mkSchemaBundle. Access via db.extend.*      │
 # └─────────────────────────────────────────────────────────────────────────────┘
 #
 # Usage:
@@ -213,323 +211,22 @@ let
 
   # ============================================================================
   #
-  #   LEGACY: MANUAL ENTITY OPTIONS EXTRACTION
+  #   OPTIONS EXPORT (extend object)
   #
-  #   These manual definitions are kept for backwards compatibility.
-  #   New code should use allOptions.{messageName} or allSchemaBundles.{schema}.
-  #
-  #   For each schema, extract the "top-level" message that represents a single
-  #   entity. This is used to generate Nix module options.
-  #
-  #   ┌─────────────────────────────────────────────────────────────────────────┐
-  #   │  IMPORTANT: Choosing the "Top-Level" Message                            │
-  #   │                                                                         │
-  #   │  Most schemas define two message types:                                 │
-  #   │                                                                         │
-  #   │    1. Singular (e.g., User, App) - defines ONE entity's fields          │
-  #   │    2. Plural wrapper (e.g., Users, Apps) - wraps in map<string, Entity> │
-  #   │                                                                         │
-  #   │  You should extract the SINGULAR form here, because Nix options         │
-  #   │  are structured as:                                                     │
-  #   │                                                                         │
-  #   │    stackpanel.users.<username>.name = "...";                            │
-  #   │                      ↑ key          ↑ User message fields               │
-  #   │                                                                         │
-  #   │  NOT:                                                                   │
-  #   │    stackpanel.users.users.<username>.name = "...";  # redundant!        │
-  #   └─────────────────────────────────────────────────────────────────────────┘
-  #
-  #   Example for a new schema:
-  #
-  #     # Get all messages from the schema (for nested type resolution)
-  #     myfeatureMessages = getSchemaMessages schemas.myfeature;
-  #
-  #     # Extract options from the singular entity message
-  #     myfeatureOptions = mkOptionsFromMessage {
-  #       message = schemas.myfeature.messages.MyFeature or { fields = { }; };
-  #       allMessages = myfeatureMessages;
-  #     };
-  #
-  # ============================================================================
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # AWS
-  # ──────────────────────────────────────────────────────────────────────────
-  awsMessages = getSchemaMessages schemas.aws;
-  awsRolesAnywhereOptions = mkOptionsFromMessage {
-    message = schemas.aws.messages.RolesAnywhere or { fields = { }; };
-    allMessages = awsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Users
-  # ──────────────────────────────────────────────────────────────────────────
-  usersMessages = getSchemaMessages schemas.users;
-  userOptions = mkOptionsFromMessage {
-    message = schemas.users.messages.User or { fields = { }; };
-    allMessages = usersMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Apps
-  # ──────────────────────────────────────────────────────────────────────────
-  appsMessages = getSchemaMessages schemas.apps;
-  appOptions = mkOptionsFromMessage {
-    message = schemas.apps.messages.App or { fields = { }; };
-    allMessages = appsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Scripts
-  # ──────────────────────────────────────────────────────────────────────────
-  scriptsMessages = getSchemaMessages schemas.scripts;
-  scriptOptions = mkOptionsFromMessage {
-    message = schemas.scripts.messages.Script or { fields = { }; };
-    allMessages = scriptsMessages;
-  };
-  scriptsConfigOptions = mkOptionsFromMessage {
-    message = schemas.scripts.messages.ScriptsConfig or { fields = { }; };
-    allMessages = scriptsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Tasks
-  # ──────────────────────────────────────────────────────────────────────────
-  tasksMessages = getSchemaMessages schemas.tasks;
-  taskOptions = mkOptionsFromMessage {
-    message = schemas.tasks.messages.Task or { fields = { }; };
-    allMessages = tasksMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Secrets
-  # ──────────────────────────────────────────────────────────────────────────
-  secretsMessages = getSchemaMessages schemas.secrets;
-  secretsOptions = mkOptionsFromMessage {
-    message = schemas.secrets.messages.Secrets or { fields = { }; };
-    allMessages = secretsMessages;
-  };
-  secretsEnvironmentOptions = mkOptionsFromMessage {
-    message = schemas.secrets.messages.SecretsEnvironment or { fields = { }; };
-    allMessages = secretsMessages;
-  };
-  secretsCodegenOptions = mkOptionsFromMessage {
-    message = schemas.secrets.messages.Codegen or { fields = { }; };
-    allMessages = secretsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Step CA
-  # Note: Use StepCaConfig (the flat fields) not StepCa (the wrapper)
-  # ──────────────────────────────────────────────────────────────────────────
-  stepCaMessages = getSchemaMessages schemas.step-ca;
-  stepCaOptions = mkOptionsFromMessage {
-    message = schemas.step-ca.messages.StepCaConfig or { fields = { }; };
-    allMessages = stepCaMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Theme
-  # ──────────────────────────────────────────────────────────────────────────
-  themeMessages = getSchemaMessages schemas.theme;
-  themeOptions = mkOptionsFromMessage {
-    message = schemas.theme.messages.Theme or { fields = { }; };
-    allMessages = themeMessages;
-  };
-  colorSchemeOptions = mkOptionsFromMessage {
-    message = schemas.theme.messages.ColorScheme or { fields = { }; };
-    allMessages = themeMessages;
-  };
-  starshipOptions = mkOptionsFromMessage {
-    message = schemas.theme.messages.Starship or { fields = { }; };
-    allMessages = themeMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Variables
-  # ──────────────────────────────────────────────────────────────────────────
-  variablesMessages = getSchemaMessages schemas.variables;
-  variableOptions = mkOptionsFromMessage {
-    message = schemas.variables.messages.Variable or { fields = { }; };
-    allMessages = variablesMessages;
-  };
-  variableActionOptions = mkOptionsFromMessage {
-    message = schemas.variables.messages.VariableAction or { fields = { }; };
-    allMessages = variablesMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # DNS
-  # ──────────────────────────────────────────────────────────────────────────
-  dnsMessages = getSchemaMessages schemas.dns;
-  dnsOptions = mkOptionsFromMessage {
-    message = schemas.dns.messages.DnsRecord or { fields = { }; };
-    allMessages = dnsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Databases
-  # ──────────────────────────────────────────────────────────────────────────
-  databasesMessages = getSchemaMessages schemas.databases;
-  databaseOptions = mkOptionsFromMessage {
-    message =
-      schemas.databases.messages.Database or {
-        fields = { };
-      };
-    allMessages = databasesMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Services
-  # ──────────────────────────────────────────────────────────────────────────
-  servicesMessages = getSchemaMessages schemas.services;
-  serviceOptions = mkOptionsFromMessage {
-    message = schemas.services.messages.Service or { fields = { }; };
-    allMessages = servicesMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Shells
-  # ──────────────────────────────────────────────────────────────────────────
-  shellsMessages = getSchemaMessages schemas.shells;
-  shellOptions = mkOptionsFromMessage {
-    message = schemas.shells.messages.Shell or { fields = { }; };
-    allMessages = shellsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Extensions
-  # ──────────────────────────────────────────────────────────────────────────
-  extensionsMessages = getSchemaMessages schemas.extensions;
-  extensionOptions = mkOptionsFromMessage {
-    message = schemas.extensions.messages.Extension or { fields = { }; };
-    allMessages = extensionsMessages;
-  };
-  extensionPanelOptions = mkOptionsFromMessage {
-    message = schemas.extensions.messages.ExtensionPanel or { fields = { }; };
-    allMessages = extensionsMessages;
-  };
-  panelFieldOptions = mkOptionsFromMessage {
-    message = schemas.extensions.messages.PanelField or { fields = { }; };
-    allMessages = extensionsMessages;
-  };
-  extensionAppDataOptions = mkOptionsFromMessage {
-    message = schemas.extensions.messages.ExtensionAppData or { fields = { }; };
-    allMessages = extensionsMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Onboarding
-  # ──────────────────────────────────────────────────────────────────────────
-  onboardingMessages = getSchemaMessages schemas.onboarding;
-  onboardingOptions = mkOptionsFromMessage {
-    message = schemas.onboarding.messages.OnboardingStep or { fields = { }; };
-    allMessages = onboardingMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Config
-  # ──────────────────────────────────────────────────────────────────────────
-  configMessages = getSchemaMessages schemas.config;
-  configOptions = mkOptionsFromMessage {
-    message = schemas.config.messages.Config or { fields = { }; };
-    allMessages = configMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Files
-  # ──────────────────────────────────────────────────────────────────────────
-  filesMessages = getSchemaMessages schemas.files;
-  generatedFileOptions = mkOptionsFromMessage {
-    message = schemas.files.messages.GeneratedFile or { fields = { }; };
-    allMessages = filesMessages;
-  };
-  generatedFilesOptions = mkOptionsFromMessage {
-    message = schemas.files.messages.GeneratedFiles or { fields = { }; };
-    allMessages = filesMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Healthchecks
-  # ──────────────────────────────────────────────────────────────────────────
-  healthchecksMessages = getSchemaMessages schemas.healthchecks;
-  healthcheckOptions = mkOptionsFromMessage {
-    message = schemas.healthchecks.messages.Healthcheck or { fields = { }; };
-    allMessages = healthchecksMessages;
-  };
-  healthcheckResultOptions = mkOptionsFromMessage {
-    message = schemas.healthchecks.messages.HealthcheckResult or { fields = { }; };
-    allMessages = healthchecksMessages;
-  };
-  moduleHealthOptions = mkOptionsFromMessage {
-    message = schemas.healthchecks.messages.ModuleHealth or { fields = { }; };
-    allMessages = healthchecksMessages;
-  };
-  healthSummaryOptions = mkOptionsFromMessage {
-    message = schemas.healthchecks.messages.HealthSummary or { fields = { }; };
-    allMessages = healthchecksMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # SST
-  # ──────────────────────────────────────────────────────────────────────────
-  sstMessages = getSchemaMessages schemas.sst;
-  sstOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.Sst or { fields = { }; };
-    allMessages = sstMessages;
-  };
-  sstKmsOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.SstKms or { fields = { }; };
-    allMessages = sstMessages;
-  };
-  sstOidcOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.SstOidc or { fields = { }; };
-    allMessages = sstMessages;
-  };
-  sstGithubActionsOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.SstGithubActions or { fields = { }; };
-    allMessages = sstMessages;
-  };
-  sstFlyioOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.SstFlyio or { fields = { }; };
-    allMessages = sstMessages;
-  };
-  sstRolesAnywhereOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.SstRolesAnywhere or { fields = { }; };
-    allMessages = sstMessages;
-  };
-  sstIamOptions = mkOptionsFromMessage {
-    message = schemas.sst.messages.SstIam or { fields = { }; };
-    allMessages = sstMessages;
-  };
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # ADD NEW ENTITY OPTIONS HERE
-  # ──────────────────────────────────────────────────────────────────────────
-  #
-  # myfeatureMessages = getSchemaMessages schemas.myfeature;
-  # myfeatureOptions = mkOptionsFromMessage {
-  #   message = schemas.myfeature.messages.MyFeature or { fields = { }; };
-  #   allMessages = myfeatureMessages;
-  # };
-
-  # ============================================================================
-  #
-  #   STEP 4: OPTIONS EXPORT (extend object)
-  #
-  #   Options are now auto-generated from all schemas.
+  #   All options are auto-generated from schemas via mkSchemaBundle.
   #   Use: db.extend.{messageName} to get options for any message.
   #   Use: db.extend.messages.{schemaName} to get all messages from a schema.
   #   Use: db.extend.none for pure Nix options with no proto schema.
+  #   Use: db.asOptions db.extend.X to get options without the marker (submodule use).
   #
-  #   IMPORTANT: All db.extend.* options now include a marker that is validated
-  #   by db.mkOpt. This ensures deliberate option definition and prevents
-  #   accidental duplication of proto-defined fields.
+  #   All db.extend.* options include a marker validated by db.mkOpt to ensure
+  #   deliberate option definition and prevent accidental field duplication.
   #
   #   Examples:
   #     db.mkOpt db.extend.user { }        => User options (no extensions)
   #     db.mkOpt db.extend.theme { ... }   => Theme options + extensions
   #     db.mkOpt db.extend.none { ... }    => Pure Nix options
+  #     db.asOptions db.extend.app         => Options for direct submodule use
   #
   # ============================================================================
   extend =
@@ -720,7 +417,8 @@ in
   # Usage:
   #   options.stackpanel.theme = db.mkOpt db.extend.theme { config-file = ...; };
   #   options.stackpanel.devshell = db.mkOpt db.extend.none { packages = ...; };
-  inherit (mkOptLib) mkOpt;
+  #   { options = db.asOptions db.extend.app; }  # For direct submodule use
+  inherit (mkOptLib) mkOpt asOptions mkSubmodule;
 
   # Type conversion utilities (re-exported from optionsLib)
   inherit
