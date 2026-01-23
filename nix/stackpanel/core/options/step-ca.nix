@@ -17,5 +17,5 @@ in
   # Step CA options derived from proto schema
   # The proto defines: enable, ca_url, ca_fingerprint, provisioner, cert_name, prompt_on_shell
   # These are converted to kebab-case: ca-url, ca-fingerprint, cert-name, prompt-on-shell
-  options.stackpanel.step-ca = db.extend.stepCa;
+  options.stackpanel.step-ca = db.asOptions db.extend.stepCa;
 }
