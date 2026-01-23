@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -285,20 +286,14 @@ func (s *Server) saveConfigToCache(config map[string]any) {
 
 // getCurrentSystem returns the current Nix system (e.g., "x86_64-linux", "aarch64-darwin")
 func getCurrentSystem() string {
-	// Try to get from environment first
+	// Try to get from environment first (allows override)
 	if system := os.Getenv("NIX_SYSTEM"); system != "" {
 		return system
 	}
 
-	// Default based on GOOS/GOARCH
-	goos := os.Getenv("GOOS")
-	if goos == "" {
-		goos = "linux" // default
-	}
-	goarch := os.Getenv("GOARCH")
-	if goarch == "" {
-		goarch = "amd64" // default
-	}
+	// Use runtime values (not env vars which may not be set)
+	goos := runtime.GOOS
+	goarch := runtime.GOARCH
 
 	// Map Go arch to Nix arch
 	nixArch := goarch
