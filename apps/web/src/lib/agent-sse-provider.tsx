@@ -246,14 +246,20 @@ export function useAgentSSEEvent<T = unknown>(
 	const { addEventListener } = useAgentSSE();
 	const [data, setData] = useState<T | null>(null);
 	const [event, setEvent] = useState<AgentSSEEvent | null>(null);
+	
+	// Use ref for handler to avoid re-subscribing when handler changes
+	const handlerRef = useRef(handler);
+	useEffect(() => {
+		handlerRef.current = handler;
+	}, [handler]);
 
 	useEffect(() => {
 		return addEventListener(eventName, (nextEvent) => {
 			setEvent(nextEvent);
 			setData(nextEvent.data as T);
-			handler?.(nextEvent.data as T, nextEvent);
+			handlerRef.current?.(nextEvent.data as T, nextEvent);
 		});
-	}, [addEventListener, eventName, handler]);
+	}, [addEventListener, eventName]);
 
 	return { data, event };
 }

@@ -49,21 +49,26 @@ function variableTypeToString(type: VariableType | string | number): string {
 		const lower = type.toLowerCase();
 		// Map common string values to our type names
 		if (lower === "secret") return "secret";
-		if (lower === "variable" || lower === "config") return "config";
-		if (lower === "vals" || lower === "computed") return "computed";
+		// LITERAL, STRING, NUMBER are all config types
+		if (lower === "literal" || lower === "variable" || lower === "config" || lower === "string" || lower === "number") return "config";
+		// VALS and EXEC are computed types
+		if (lower === "vals" || lower === "computed" || lower === "exec") return "computed";
 		if (lower === "service") return "service";
 		return "config"; // Default
 	}
-	// Handle numeric enum values
+	// Handle numeric enum values (proto VariableType: LITERAL=0, SECRET=1, VALS=2, EXEC=3)
 	switch (type) {
 		case VariableType.SECRET:
 		case 1:
 			return "secret";
-		case VariableType.VARIABLE:
+		case VariableType.LITERAL:
 		case 0:
 			return "config";
 		case VariableType.VALS:
 		case 2:
+			return "computed";
+		case VariableType.EXEC:
+		case 3:
 			return "computed";
 		default:
 			return "config";

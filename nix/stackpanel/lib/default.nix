@@ -79,7 +79,11 @@ in
   #     STATE_DIR=${cfg.getKnown "paths.state"}
   #   '';
   #
-  cfg = { config ? null }: import ./cfg.nix { inherit lib config; };
+  cfg =
+    {
+      config ? null,
+    }:
+    import ./cfg.nix { inherit lib config; };
 
   # Helper for conditionally importing local config files
   # Use in your devenv.nix or flake imports:
@@ -167,6 +171,23 @@ in
       }
     else
       throw "stackpanel.lib.integrations requires pkgs to be passed";
+
+  # ============================================================================
+  # MODULE CREATION HELPERS
+  # ============================================================================
+
+  # Helper functions for creating Stackpanel modules with less boilerplate.
+  # These are pure functions that don't require pkgs.
+  #
+  # Usage:
+  #   { lib, ... }:
+  #   lib.stackpanel.mkModule {
+  #     name = "myModule";
+  #     meta = { name = "My Module"; category = "development"; };
+  #     config = cfg: { stackpanel.scripts.my-cmd = { ... }; };
+  #   }
+  #
+  inherit (import ./mkModule.nix { inherit lib; }) mkModule mkSimpleModule;
 
   # ============================================================================
   # ADVANCED: Direct access to core modules

@@ -51,6 +51,7 @@
       };
     };
     variables = { };
+    linting.oxlint.enable = true;
   };
 
   server = {
@@ -101,7 +102,9 @@
     };
     variables = { };
     commands = {
-      dev = { command = "bun run -F web dev"; };
+      dev = {
+        command = "bun run -F web dev";
+      };
     };
   };
 }

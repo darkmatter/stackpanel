@@ -8,6 +8,10 @@
 # Also handles cleanup of stale git hooks that reference garbage-collected
 # nix store paths.
 #
+# Modules can contribute extra linters/formatters via:
+#   stackpanel.git-hooks.extraLinters = [ <derivation> ... ];
+#   stackpanel.git-hooks.extraFormatters = [ <derivation> ... ];
+#
 # Usage (in .stackpanel/config.nix):
 #   git-hooks.enable = true;
 # ==============================================================================
@@ -22,8 +26,18 @@ let
   gitHooksCfg = cfg.git-hooks or { enable = false; };
   appsComputed = cfg.appsComputed or { };
 
-  allTools =
+  # Get tools from app tooling configuration
+  allToolsFromApps =
     tools: lib.flatten (lib.mapAttrsToList (_: app: app.wrappedTooling.${tools} or [ ]) appsComputed);
+
+  # Get extra tools contributed by modules (avoids infinite recursion)
+  extraLinters = gitHooksCfg.extraLinters or [ ];
+  extraFormatters = gitHooksCfg.extraFormatters or [ ];
+
+  # Combine app tools with module-contributed extras
+  allLinters = (allToolsFromApps "linters") ++ extraLinters;
+  allFormatters = (allToolsFromApps "formatters") ++ extraFormatters;
+  allBuildSteps = allToolsFromApps "build-steps";
 
   toolCommand = tool: {
     entry = "${lib.getExe tool}";
@@ -32,10 +46,10 @@ let
   };
 
   mkHooks =
-    tools:
+    name: tools:
     lib.listToAttrs (
       lib.imap0 (idx: tool: {
-        name = "stackpanel-${tools}-${toString idx}";
+        name = "stackpanel-${name}-${toString idx}";
         value = toolCommand tool;
       }) tools
     );
@@ -94,8 +108,8 @@ in
       stackpanel.git-hooks = {
         enable = lib.mkDefault true;
         hooks = {
-          pre-commit = (mkHooks (allTools "formatters")) // (mkHooks (allTools "linters"));
-          pre-push = mkHooks (allTools "build-steps");
+          pre-commit = (mkHooks "formatters" allFormatters) // (mkHooks "linters" allLinters);
+          pre-push = mkHooks "build-steps" allBuildSteps;
         };
       };
     })

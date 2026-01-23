@@ -283,6 +283,11 @@ func (fw *FlakeWatcher) watchLoop() {
 func (fw *FlakeWatcher) handleFileChange(changedFile string) {
 	log.Info().Str("file", changedFile).Msg("Re-evaluating flake outputs due to file change")
 
+	// Notify shell manager that nix files changed (shell may be stale)
+	if fw.server != nil && fw.server.shellManager != nil {
+		fw.server.shellManager.MarkNixFileChanged(changedFile)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 

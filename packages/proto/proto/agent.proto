@@ -12,6 +12,7 @@ import "services.proto";
 import "apps.proto";
 import "variables.proto";
 import "sst.proto";
+import "modules.proto";
 
 // =============================================================================
 // Agent Service
@@ -41,6 +42,13 @@ service AgentService {
   
   rpc GetVariables(GetVariablesRequest) returns (stackpanel.db.Variables);
   rpc SetVariables(stackpanel.db.Variables) returns (stackpanel.db.Variables);
+  
+  // Modules - module configuration management
+  rpc GetModules(GetModulesRequest) returns (stackpanel.db.Modules);
+  rpc GetModule(GetModuleRequest) returns (stackpanel.db.Module);
+  rpc EnableModule(stackpanel.db.EnableModuleRequest) returns (stackpanel.db.ModuleResponse);
+  rpc DisableModule(stackpanel.db.DisableModuleRequest) returns (stackpanel.db.ModuleResponse);
+  rpc UpdateModuleSettings(stackpanel.db.UpdateModuleSettingsRequest) returns (stackpanel.db.ModuleResponse);
   
   // Identity management (local decryption key)
   rpc GetAgeIdentity(GetAgeIdentityRequest) returns (AgeIdentityResponse);
@@ -89,6 +97,10 @@ service AgentService {
   // Full Nix config (evaluated from flake)
   rpc GetNixConfig(GetNixConfigRequest) returns (NixConfigResponse);
   rpc RefreshNixConfig(RefreshNixConfigRequest) returns (NixConfigResponse);
+  
+  // Devshell management
+  rpc GetShellStatus(GetShellStatusRequest) returns (ShellStatusResponse);
+  rpc RebuildShell(RebuildShellRequest) returns (stream RebuildShellEvent);
 }
 
 // =============================================================================
@@ -127,6 +139,10 @@ message GetAwsRequest {}
 message GetAppsRequest {}
 message GetVariablesRequest {}
 message GetSstRequest {}
+message GetModulesRequest {}
+message GetModuleRequest {
+  string module_id = 1;
+}
 
 // =============================================================================
 // Identity Management
@@ -430,4 +446,42 @@ message NixConfigResponse {
   string last_updated = 2;
   bool cached = 3;
   string source = 4;  // "cache" or "eval"
+}
+
+// =============================================================================
+// Devshell Management
+// =============================================================================
+
+message GetShellStatusRequest {}
+
+message ShellStatusResponse {
+  // Whether the shell is stale (nix files changed since last rebuild)
+  bool stale = 1;
+  // Whether a rebuild is currently in progress
+  bool rebuilding = 2;
+  // Timestamp of when the shell was last built (RFC3339)
+  string last_built = 3;
+  // Timestamp of the most recent nix file change (RFC3339)
+  string last_nix_change = 4;
+  // List of files that changed since last build
+  repeated string changed_files = 5;
+}
+
+message RebuildShellRequest {
+  // Which command to use: "devshell" (./devshell) or "nix" (nix develop --impure)
+  // Defaults to "devshell" if not specified
+  string method = 1;
+}
+
+message RebuildShellEvent {
+  // Event type: "started", "output", "completed", "error"
+  string type = 1;
+  // Output line (for type="output")
+  string output = 2;
+  // Exit code (for type="completed")
+  int32 exit_code = 3;
+  // Error message (for type="error")
+  string error = 4;
+  // Timestamp
+  string timestamp = 5;
 }

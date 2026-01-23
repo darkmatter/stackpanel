@@ -50,6 +50,7 @@ in
     ./modules/entrypoints.nix # Per-app entrypoint scripts with secrets/devshell
     ./modules/process-compose.nix # App scripts + process-compose
     ./modules/turbo.nix # Turborepo task integration
+    ./modules/oxlint.nix # OxLint JavaScript/TypeScript linting
 
     # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,
     # devenv-pre-commit.nix) are NOT auto-imported here. They require devenvSchema

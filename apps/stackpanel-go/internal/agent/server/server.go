@@ -37,6 +37,9 @@ type Server struct {
 
 	// FlakeWatcher for monitoring .#stackpanelConfig and .#stackpanelPackages
 	flakeWatcher *FlakeWatcher
+
+	// ShellManager for tracking devshell state and rebuilds
+	shellManager *ShellManager
 }
 
 // New creates a new server instance.
@@ -135,6 +138,11 @@ func New(cfg *config.Config) (*Server, error) {
 		watcher:        watcher,
 	}
 
+	// Initialize shell manager for tracking devshell state
+	if cfg.ProjectRoot != "" {
+		s.shellManager = NewShellManager(cfg.ProjectRoot, s)
+	}
+
 	mux := http.NewServeMux()
 
 	// Public endpoints (still CORS-enabled so the web UI can health-check from a different origin)
@@ -203,6 +211,14 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Healthchecks endpoint for module health status
 	mux.HandleFunc("/api/healthchecks", s.withCORS(s.requireAuth(s.requireProject(s.handleHealthchecks))))
+
+	// Modules endpoint for the module browser
+	mux.HandleFunc("/api/modules", s.withCORS(s.requireAuth(s.requireProject(s.handleModules))))
+	mux.HandleFunc("/api/modules/", s.withCORS(s.requireAuth(s.requireProject(s.handleModules))))
+
+	// Module registry endpoint for browsing and installing external modules
+	mux.HandleFunc("/api/registry", s.withCORS(s.requireAuth(s.handleRegistry)))
+	mux.HandleFunc("/api/registry/", s.withCORS(s.requireAuth(s.handleRegistry)))
 
 	// Connect-RPC service (type-safe gRPC-Web compatible API)
 	// This provides fully typed endpoints generated from proto definitions
@@ -295,6 +311,7 @@ func (s *Server) requireProject(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) reinitializeExecutor() error {
 	if s.config.ProjectRoot == "" {
 		s.exec = nil
+		s.shellManager = nil
 		return nil
 	}
 
@@ -304,6 +321,7 @@ func (s *Server) reinitializeExecutor() error {
 	}
 
 	s.exec = exec
+	s.shellManager = NewShellManager(s.config.ProjectRoot, s)
 
 	log.Info().
 		Str("project_root", s.config.ProjectRoot).

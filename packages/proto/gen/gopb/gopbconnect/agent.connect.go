@@ -61,6 +61,19 @@ const (
 	// AgentServiceSetVariablesProcedure is the fully-qualified name of the AgentService's SetVariables
 	// RPC.
 	AgentServiceSetVariablesProcedure = "/stackpanel.agent.AgentService/SetVariables"
+	// AgentServiceGetModulesProcedure is the fully-qualified name of the AgentService's GetModules RPC.
+	AgentServiceGetModulesProcedure = "/stackpanel.agent.AgentService/GetModules"
+	// AgentServiceGetModuleProcedure is the fully-qualified name of the AgentService's GetModule RPC.
+	AgentServiceGetModuleProcedure = "/stackpanel.agent.AgentService/GetModule"
+	// AgentServiceEnableModuleProcedure is the fully-qualified name of the AgentService's EnableModule
+	// RPC.
+	AgentServiceEnableModuleProcedure = "/stackpanel.agent.AgentService/EnableModule"
+	// AgentServiceDisableModuleProcedure is the fully-qualified name of the AgentService's
+	// DisableModule RPC.
+	AgentServiceDisableModuleProcedure = "/stackpanel.agent.AgentService/DisableModule"
+	// AgentServiceUpdateModuleSettingsProcedure is the fully-qualified name of the AgentService's
+	// UpdateModuleSettings RPC.
+	AgentServiceUpdateModuleSettingsProcedure = "/stackpanel.agent.AgentService/UpdateModuleSettings"
 	// AgentServiceGetAgeIdentityProcedure is the fully-qualified name of the AgentService's
 	// GetAgeIdentity RPC.
 	AgentServiceGetAgeIdentityProcedure = "/stackpanel.agent.AgentService/GetAgeIdentity"
@@ -132,6 +145,12 @@ const (
 	// AgentServiceRefreshNixConfigProcedure is the fully-qualified name of the AgentService's
 	// RefreshNixConfig RPC.
 	AgentServiceRefreshNixConfigProcedure = "/stackpanel.agent.AgentService/RefreshNixConfig"
+	// AgentServiceGetShellStatusProcedure is the fully-qualified name of the AgentService's
+	// GetShellStatus RPC.
+	AgentServiceGetShellStatusProcedure = "/stackpanel.agent.AgentService/GetShellStatus"
+	// AgentServiceRebuildShellProcedure is the fully-qualified name of the AgentService's RebuildShell
+	// RPC.
+	AgentServiceRebuildShellProcedure = "/stackpanel.agent.AgentService/RebuildShell"
 )
 
 // AgentServiceClient is a client for the stackpanel.agent.AgentService service.
@@ -151,6 +170,12 @@ type AgentServiceClient interface {
 	SetApps(context.Context, *connect.Request[gopb.Apps]) (*connect.Response[gopb.Apps], error)
 	GetVariables(context.Context, *connect.Request[gopb.GetVariablesRequest]) (*connect.Response[gopb.Variables], error)
 	SetVariables(context.Context, *connect.Request[gopb.Variables]) (*connect.Response[gopb.Variables], error)
+	// Modules - module configuration management
+	GetModules(context.Context, *connect.Request[gopb.GetModulesRequest]) (*connect.Response[gopb.Modules], error)
+	GetModule(context.Context, *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error)
+	EnableModule(context.Context, *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
+	DisableModule(context.Context, *connect.Request[gopb.DisableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
+	UpdateModuleSettings(context.Context, *connect.Request[gopb.UpdateModuleSettingsRequest]) (*connect.Response[gopb.ModuleResponse], error)
 	// Identity management (local decryption key)
 	GetAgeIdentity(context.Context, *connect.Request[gopb.GetAgeIdentityRequest]) (*connect.Response[gopb.AgeIdentityResponse], error)
 	SetAgeIdentity(context.Context, *connect.Request[gopb.SetAgeIdentityRequest]) (*connect.Response[gopb.AgeIdentityResponse], error)
@@ -188,6 +213,9 @@ type AgentServiceClient interface {
 	// Full Nix config (evaluated from flake)
 	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
 	RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
+	// Devshell management
+	GetShellStatus(context.Context, *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error)
+	RebuildShell(context.Context, *connect.Request[gopb.RebuildShellRequest]) (*connect.ServerStreamForClient[gopb.RebuildShellEvent], error)
 }
 
 // NewAgentServiceClient constructs a client for the stackpanel.agent.AgentService service. By
@@ -277,6 +305,36 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+AgentServiceSetVariablesProcedure,
 			connect.WithSchema(agentServiceMethods.ByName("SetVariables")),
+			connect.WithClientOptions(opts...),
+		),
+		getModules: connect.NewClient[gopb.GetModulesRequest, gopb.Modules](
+			httpClient,
+			baseURL+AgentServiceGetModulesProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetModules")),
+			connect.WithClientOptions(opts...),
+		),
+		getModule: connect.NewClient[gopb.GetModuleRequest, gopb.Module](
+			httpClient,
+			baseURL+AgentServiceGetModuleProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetModule")),
+			connect.WithClientOptions(opts...),
+		),
+		enableModule: connect.NewClient[gopb.EnableModuleRequest, gopb.ModuleResponse](
+			httpClient,
+			baseURL+AgentServiceEnableModuleProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("EnableModule")),
+			connect.WithClientOptions(opts...),
+		),
+		disableModule: connect.NewClient[gopb.DisableModuleRequest, gopb.ModuleResponse](
+			httpClient,
+			baseURL+AgentServiceDisableModuleProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("DisableModule")),
+			connect.WithClientOptions(opts...),
+		),
+		updateModuleSettings: connect.NewClient[gopb.UpdateModuleSettingsRequest, gopb.ModuleResponse](
+			httpClient,
+			baseURL+AgentServiceUpdateModuleSettingsProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("UpdateModuleSettings")),
 			connect.WithClientOptions(opts...),
 		),
 		getAgeIdentity: connect.NewClient[gopb.GetAgeIdentityRequest, gopb.AgeIdentityResponse](
@@ -435,6 +493,18 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(agentServiceMethods.ByName("RefreshNixConfig")),
 			connect.WithClientOptions(opts...),
 		),
+		getShellStatus: connect.NewClient[gopb.GetShellStatusRequest, gopb.ShellStatusResponse](
+			httpClient,
+			baseURL+AgentServiceGetShellStatusProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetShellStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		rebuildShell: connect.NewClient[gopb.RebuildShellRequest, gopb.RebuildShellEvent](
+			httpClient,
+			baseURL+AgentServiceRebuildShellProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("RebuildShell")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -453,6 +523,11 @@ type agentServiceClient struct {
 	setApps              *connect.Client[gopb.Apps, gopb.Apps]
 	getVariables         *connect.Client[gopb.GetVariablesRequest, gopb.Variables]
 	setVariables         *connect.Client[gopb.Variables, gopb.Variables]
+	getModules           *connect.Client[gopb.GetModulesRequest, gopb.Modules]
+	getModule            *connect.Client[gopb.GetModuleRequest, gopb.Module]
+	enableModule         *connect.Client[gopb.EnableModuleRequest, gopb.ModuleResponse]
+	disableModule        *connect.Client[gopb.DisableModuleRequest, gopb.ModuleResponse]
+	updateModuleSettings *connect.Client[gopb.UpdateModuleSettingsRequest, gopb.ModuleResponse]
 	getAgeIdentity       *connect.Client[gopb.GetAgeIdentityRequest, gopb.AgeIdentityResponse]
 	setAgeIdentity       *connect.Client[gopb.SetAgeIdentityRequest, gopb.AgeIdentityResponse]
 	getKMSConfig         *connect.Client[gopb.GetKMSConfigRequest, gopb.KMSConfigResponse]
@@ -479,6 +554,8 @@ type agentServiceClient struct {
 	getHealthchecks      *connect.Client[gopb.GetHealthchecksRequest, gopb.HealthchecksResponse]
 	getNixConfig         *connect.Client[gopb.GetNixConfigRequest, gopb.NixConfigResponse]
 	refreshNixConfig     *connect.Client[gopb.RefreshNixConfigRequest, gopb.NixConfigResponse]
+	getShellStatus       *connect.Client[gopb.GetShellStatusRequest, gopb.ShellStatusResponse]
+	rebuildShell         *connect.Client[gopb.RebuildShellRequest, gopb.RebuildShellEvent]
 }
 
 // GetProject calls stackpanel.agent.AgentService.GetProject.
@@ -544,6 +621,31 @@ func (c *agentServiceClient) GetVariables(ctx context.Context, req *connect.Requ
 // SetVariables calls stackpanel.agent.AgentService.SetVariables.
 func (c *agentServiceClient) SetVariables(ctx context.Context, req *connect.Request[gopb.Variables]) (*connect.Response[gopb.Variables], error) {
 	return c.setVariables.CallUnary(ctx, req)
+}
+
+// GetModules calls stackpanel.agent.AgentService.GetModules.
+func (c *agentServiceClient) GetModules(ctx context.Context, req *connect.Request[gopb.GetModulesRequest]) (*connect.Response[gopb.Modules], error) {
+	return c.getModules.CallUnary(ctx, req)
+}
+
+// GetModule calls stackpanel.agent.AgentService.GetModule.
+func (c *agentServiceClient) GetModule(ctx context.Context, req *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error) {
+	return c.getModule.CallUnary(ctx, req)
+}
+
+// EnableModule calls stackpanel.agent.AgentService.EnableModule.
+func (c *agentServiceClient) EnableModule(ctx context.Context, req *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error) {
+	return c.enableModule.CallUnary(ctx, req)
+}
+
+// DisableModule calls stackpanel.agent.AgentService.DisableModule.
+func (c *agentServiceClient) DisableModule(ctx context.Context, req *connect.Request[gopb.DisableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error) {
+	return c.disableModule.CallUnary(ctx, req)
+}
+
+// UpdateModuleSettings calls stackpanel.agent.AgentService.UpdateModuleSettings.
+func (c *agentServiceClient) UpdateModuleSettings(ctx context.Context, req *connect.Request[gopb.UpdateModuleSettingsRequest]) (*connect.Response[gopb.ModuleResponse], error) {
+	return c.updateModuleSettings.CallUnary(ctx, req)
 }
 
 // GetAgeIdentity calls stackpanel.agent.AgentService.GetAgeIdentity.
@@ -676,6 +778,16 @@ func (c *agentServiceClient) RefreshNixConfig(ctx context.Context, req *connect.
 	return c.refreshNixConfig.CallUnary(ctx, req)
 }
 
+// GetShellStatus calls stackpanel.agent.AgentService.GetShellStatus.
+func (c *agentServiceClient) GetShellStatus(ctx context.Context, req *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error) {
+	return c.getShellStatus.CallUnary(ctx, req)
+}
+
+// RebuildShell calls stackpanel.agent.AgentService.RebuildShell.
+func (c *agentServiceClient) RebuildShell(ctx context.Context, req *connect.Request[gopb.RebuildShellRequest]) (*connect.ServerStreamForClient[gopb.RebuildShellEvent], error) {
+	return c.rebuildShell.CallServerStream(ctx, req)
+}
+
 // AgentServiceHandler is an implementation of the stackpanel.agent.AgentService service.
 type AgentServiceHandler interface {
 	// Project
@@ -693,6 +805,12 @@ type AgentServiceHandler interface {
 	SetApps(context.Context, *connect.Request[gopb.Apps]) (*connect.Response[gopb.Apps], error)
 	GetVariables(context.Context, *connect.Request[gopb.GetVariablesRequest]) (*connect.Response[gopb.Variables], error)
 	SetVariables(context.Context, *connect.Request[gopb.Variables]) (*connect.Response[gopb.Variables], error)
+	// Modules - module configuration management
+	GetModules(context.Context, *connect.Request[gopb.GetModulesRequest]) (*connect.Response[gopb.Modules], error)
+	GetModule(context.Context, *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error)
+	EnableModule(context.Context, *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
+	DisableModule(context.Context, *connect.Request[gopb.DisableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
+	UpdateModuleSettings(context.Context, *connect.Request[gopb.UpdateModuleSettingsRequest]) (*connect.Response[gopb.ModuleResponse], error)
 	// Identity management (local decryption key)
 	GetAgeIdentity(context.Context, *connect.Request[gopb.GetAgeIdentityRequest]) (*connect.Response[gopb.AgeIdentityResponse], error)
 	SetAgeIdentity(context.Context, *connect.Request[gopb.SetAgeIdentityRequest]) (*connect.Response[gopb.AgeIdentityResponse], error)
@@ -730,6 +848,9 @@ type AgentServiceHandler interface {
 	// Full Nix config (evaluated from flake)
 	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
 	RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
+	// Devshell management
+	GetShellStatus(context.Context, *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error)
+	RebuildShell(context.Context, *connect.Request[gopb.RebuildShellRequest], *connect.ServerStream[gopb.RebuildShellEvent]) error
 }
 
 // NewAgentServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -815,6 +936,36 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		AgentServiceSetVariablesProcedure,
 		svc.SetVariables,
 		connect.WithSchema(agentServiceMethods.ByName("SetVariables")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetModulesHandler := connect.NewUnaryHandler(
+		AgentServiceGetModulesProcedure,
+		svc.GetModules,
+		connect.WithSchema(agentServiceMethods.ByName("GetModules")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetModuleHandler := connect.NewUnaryHandler(
+		AgentServiceGetModuleProcedure,
+		svc.GetModule,
+		connect.WithSchema(agentServiceMethods.ByName("GetModule")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceEnableModuleHandler := connect.NewUnaryHandler(
+		AgentServiceEnableModuleProcedure,
+		svc.EnableModule,
+		connect.WithSchema(agentServiceMethods.ByName("EnableModule")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceDisableModuleHandler := connect.NewUnaryHandler(
+		AgentServiceDisableModuleProcedure,
+		svc.DisableModule,
+		connect.WithSchema(agentServiceMethods.ByName("DisableModule")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceUpdateModuleSettingsHandler := connect.NewUnaryHandler(
+		AgentServiceUpdateModuleSettingsProcedure,
+		svc.UpdateModuleSettings,
+		connect.WithSchema(agentServiceMethods.ByName("UpdateModuleSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentServiceGetAgeIdentityHandler := connect.NewUnaryHandler(
@@ -973,6 +1124,18 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(agentServiceMethods.ByName("RefreshNixConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentServiceGetShellStatusHandler := connect.NewUnaryHandler(
+		AgentServiceGetShellStatusProcedure,
+		svc.GetShellStatus,
+		connect.WithSchema(agentServiceMethods.ByName("GetShellStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceRebuildShellHandler := connect.NewServerStreamHandler(
+		AgentServiceRebuildShellProcedure,
+		svc.RebuildShell,
+		connect.WithSchema(agentServiceMethods.ByName("RebuildShell")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/stackpanel.agent.AgentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentServiceGetProjectProcedure:
@@ -1001,6 +1164,16 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceGetVariablesHandler.ServeHTTP(w, r)
 		case AgentServiceSetVariablesProcedure:
 			agentServiceSetVariablesHandler.ServeHTTP(w, r)
+		case AgentServiceGetModulesProcedure:
+			agentServiceGetModulesHandler.ServeHTTP(w, r)
+		case AgentServiceGetModuleProcedure:
+			agentServiceGetModuleHandler.ServeHTTP(w, r)
+		case AgentServiceEnableModuleProcedure:
+			agentServiceEnableModuleHandler.ServeHTTP(w, r)
+		case AgentServiceDisableModuleProcedure:
+			agentServiceDisableModuleHandler.ServeHTTP(w, r)
+		case AgentServiceUpdateModuleSettingsProcedure:
+			agentServiceUpdateModuleSettingsHandler.ServeHTTP(w, r)
 		case AgentServiceGetAgeIdentityProcedure:
 			agentServiceGetAgeIdentityHandler.ServeHTTP(w, r)
 		case AgentServiceSetAgeIdentityProcedure:
@@ -1053,6 +1226,10 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceGetNixConfigHandler.ServeHTTP(w, r)
 		case AgentServiceRefreshNixConfigProcedure:
 			agentServiceRefreshNixConfigHandler.ServeHTTP(w, r)
+		case AgentServiceGetShellStatusProcedure:
+			agentServiceGetShellStatusHandler.ServeHTTP(w, r)
+		case AgentServiceRebuildShellProcedure:
+			agentServiceRebuildShellHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1112,6 +1289,26 @@ func (UnimplementedAgentServiceHandler) GetVariables(context.Context, *connect.R
 
 func (UnimplementedAgentServiceHandler) SetVariables(context.Context, *connect.Request[gopb.Variables]) (*connect.Response[gopb.Variables], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.SetVariables is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetModules(context.Context, *connect.Request[gopb.GetModulesRequest]) (*connect.Response[gopb.Modules], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetModules is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetModule(context.Context, *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetModule is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) EnableModule(context.Context, *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.EnableModule is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) DisableModule(context.Context, *connect.Request[gopb.DisableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.DisableModule is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) UpdateModuleSettings(context.Context, *connect.Request[gopb.UpdateModuleSettingsRequest]) (*connect.Response[gopb.ModuleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.UpdateModuleSettings is not implemented"))
 }
 
 func (UnimplementedAgentServiceHandler) GetAgeIdentity(context.Context, *connect.Request[gopb.GetAgeIdentityRequest]) (*connect.Response[gopb.AgeIdentityResponse], error) {
@@ -1216,4 +1413,12 @@ func (UnimplementedAgentServiceHandler) GetNixConfig(context.Context, *connect.R
 
 func (UnimplementedAgentServiceHandler) RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.RefreshNixConfig is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetShellStatus(context.Context, *connect.Request[gopb.GetShellStatusRequest]) (*connect.Response[gopb.ShellStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetShellStatus is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) RebuildShell(context.Context, *connect.Request[gopb.RebuildShellRequest], *connect.ServerStream[gopb.RebuildShellEvent]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.RebuildShell is not implemented"))
 }
