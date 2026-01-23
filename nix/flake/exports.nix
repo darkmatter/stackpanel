@@ -145,6 +145,10 @@ in
     # Step CA certificate helpers
     mkStepScripts = import ../stackpanel/lib/services/step.nix;
 
+    # Fly.io OIDC to AWS authentication
+    # Usage: inputs.stackpanel.lib.flyOidc { pkgs = pkgsLinux; }
+    flyOidc = import ../stackpanel/lib/services/fly-oidc.nix;
+
     # Wrap devenv input to extract schema and inject into modules
     # This enables bidirectional mapping: devenv options ↔ stackpanel state
     #
