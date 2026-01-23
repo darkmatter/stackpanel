@@ -43,6 +43,6 @@ in
     # The proto defines: enable, region, account_id, role_name, trust_anchor_arn,
     # profile_arn, cache_buffer_seconds, prompt_on_shell
     # These are converted to kebab-case: account-id, role-name, etc.
-    roles-anywhere = db.extend.aws;
+    roles-anywhere = db.asOptions db.extend.aws;
   };
 }

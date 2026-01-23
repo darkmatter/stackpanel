@@ -279,8 +279,7 @@ in
       lib.types.submoduleWith {
         modules = [
           # Proto-derived options (name, path, install-command, etc.)
-          # Note: Strip the __db_extend_marker__ when using db.extend.* directly as options
-          { options = removeAttrs db.extend.app [ "__db_extend_marker__" ]; }
+          { options = db.asOptions db.extend.app; }
           # Nix-specific runtime options (tooling, offset, domain, tls)
           nixAppOptionsModule
         ]

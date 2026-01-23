@@ -23,6 +23,12 @@
 #     packages = lib.mkOption { ... };
 #   };
 #
+#   # For direct submodule use (strips marker):
+#   { options = db.asOptions db.extend.app; }
+#
+#   # Convenience for submodule with extensions:
+#   db.mkSubmodule db.extend.app { extra = lib.mkOption { ... }; }
+#
 # ==============================================================================
 { lib }:
 let
@@ -90,7 +96,38 @@ let
             (removeAttrs base [ marker ]) // extensions;
       in
       checkedResult;
+
+  # asOptions: Strip the marker from db.extend.* for direct use in submodules
+  #
+  # Use this when you need to use proto-derived options directly as a submodule's
+  # options, without going through mkOpt (e.g., when combining with other modules).
+  #
+  # Example:
+  #   { options = db.asOptions db.extend.app; }
+  #   # Instead of: { options = removeAttrs db.extend.app [ "__db_extend_marker__" ]; }
+  #
+  asOptions =
+    opts:
+    if !(opts ? ${marker}) then
+      throw ''
+        asOptions requires a db.extend.* as argument.
+
+        Use one of:
+          db.asOptions db.extend.app
+          db.asOptions db.extend.user
+      ''
+    else
+      removeAttrs opts [ marker ];
+
+  # mkSubmodule: Convenience for creating a submodule with proto options + extensions
+  #
+  # Returns { options = ...; } suitable for use in lib.types.submodule.
+  #
+  # Example:
+  #   lib.types.submodule (db.mkSubmodule db.extend.app { extra = lib.mkOption { ... }; })
+  #
+  mkSubmodule = base: extensions: { options = mkOpt base extensions; };
 in
 {
-  inherit mkOpt none withMarker marker;
+  inherit mkOpt none withMarker marker asOptions mkSubmodule;
 }

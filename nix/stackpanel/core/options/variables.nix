@@ -36,7 +36,7 @@ let
     {
       options =
         # Base options from proto schema (id, key, description, type, value, master-keys, etc.)
-        db.extend.variable
+        db.asOptions db.extend.variable
         // {
           # Computed: vals-compatible reference for runtime resolution
           ref = lib.mkOption {

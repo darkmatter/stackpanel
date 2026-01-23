@@ -19,21 +19,16 @@ let
     ref = "ref+file://.stackpanel/state/keys/local.txt";
   };
 
-  # Master key submodule using proto-derived options + extensions
+  # Master key submodule using proto-derived options
   masterKeyModule = { ... }: {
-    options =
-      # Base options from proto schema (age-pub, ref, resolve-cmd)
-      db.extend.masterKey
-      // {
-        # No additional extensions needed - proto covers everything
-      };
+    options = db.asOptions db.extend.masterKey;
   };
 in
 {
   options.stackpanel.secrets =
     # Base options from proto schema (enable, secrets-dir)
     # Note: We override master-keys to add our submodule and defaults
-    (lib.filterAttrs (n: _: n != "master-keys") (db.extend.secrets or {}))
+    (lib.filterAttrs (n: _: n != "master-keys") (db.asOptions db.extend.secrets))
     // {
       # Override master-keys with our submodule that uses proto-derived options
       master-keys = lib.mkOption {
