@@ -13,10 +13,12 @@ import {
 import { Input } from "@ui/input";
 import { ArrowLeft, Bell, LogOut, Search, Settings, User } from "lucide-react";
 import { AgentStatus } from "@/components/agent-connect";
+import { ShellStatus } from "./shell-status";
 import type { PanelType } from "./dashboard-sidebar";
 
 const panelTitles: Record<PanelType, string> = {
   overview: "Overview",
+  dashboard: "Dashboard",
   setup: "Setup",
   services: "Services",
   databases: "Databases",
@@ -31,6 +33,7 @@ const panelTitles: Record<PanelType, string> = {
   "local-config": "Local Config",
   network: "Network",
   extensions: "Extensions",
+  modules: "Modules",
   files: "Generated Files",
   terminal: "Terminal",
   roadmap: "Roadmap",
@@ -41,6 +44,7 @@ const panelTitles: Record<PanelType, string> = {
 const pathToPanelMap: Record<string, PanelType> = {
   "/studio": "overview",
   "/studio/": "overview",
+  "/studio/dashboard": "dashboard",
   "/studio/setup": "setup",
   "/studio/apps": "apps",
   "/studio/tasks": "tasks",
@@ -55,6 +59,7 @@ const pathToPanelMap: Record<string, PanelType> = {
   "/studio/team": "team",
   "/studio/network": "network",
   "/studio/extensions": "extensions",
+  "/studio/modules": "modules",
   "/studio/files": "files",
   "/studio/terminal": "terminal",
   "/studio/roadmap": "roadmap",
@@ -110,7 +115,9 @@ export function DashboardHeader() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-1.5">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/50 px-3 py-1.5">
+          <ShellStatus />
+          <div className="h-4 w-px bg-border" />
           <AgentStatus />
         </div>
 

@@ -25,6 +25,7 @@ import { Route as StudioSecretsRouteImport } from './routes/studio/secrets'
 import { Route as StudioRoadmapRouteImport } from './routes/studio/roadmap'
 import { Route as StudioPackagesRouteImport } from './routes/studio/packages'
 import { Route as StudioNetworkRouteImport } from './routes/studio/network'
+import { Route as StudioModulesRouteImport } from './routes/studio/modules'
 import { Route as StudioLocalConfigRouteImport } from './routes/studio/local-config'
 import { Route as StudioInspectorRouteImport } from './routes/studio/inspector'
 import { Route as StudioInfraRouteImport } from './routes/studio/infra'
@@ -120,6 +121,11 @@ const StudioNetworkRoute = StudioNetworkRouteImport.update({
   path: '/network',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioModulesRoute = StudioModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioLocalConfigRoute = StudioLocalConfigRouteImport.update({
   id: '/local-config',
   path: '/local-config',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/studio/infra': typeof StudioInfraRoute
   '/studio/inspector': typeof StudioInspectorRoute
   '/studio/local-config': typeof StudioLocalConfigRoute
+  '/studio/modules': typeof StudioModulesRoute
   '/studio/network': typeof StudioNetworkRoute
   '/studio/packages': typeof StudioPackagesRoute
   '/studio/roadmap': typeof StudioRoadmapRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/studio/infra': typeof StudioInfraRoute
   '/studio/inspector': typeof StudioInspectorRoute
   '/studio/local-config': typeof StudioLocalConfigRoute
+  '/studio/modules': typeof StudioModulesRoute
   '/studio/network': typeof StudioNetworkRoute
   '/studio/packages': typeof StudioPackagesRoute
   '/studio/roadmap': typeof StudioRoadmapRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/studio/infra': typeof StudioInfraRoute
   '/studio/inspector': typeof StudioInspectorRoute
   '/studio/local-config': typeof StudioLocalConfigRoute
+  '/studio/modules': typeof StudioModulesRoute
   '/studio/network': typeof StudioNetworkRoute
   '/studio/packages': typeof StudioPackagesRoute
   '/studio/roadmap': typeof StudioRoadmapRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/studio/infra'
     | '/studio/inspector'
     | '/studio/local-config'
+    | '/studio/modules'
     | '/studio/network'
     | '/studio/packages'
     | '/studio/roadmap'
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/studio/infra'
     | '/studio/inspector'
     | '/studio/local-config'
+    | '/studio/modules'
     | '/studio/network'
     | '/studio/packages'
     | '/studio/roadmap'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/studio/infra'
     | '/studio/inspector'
     | '/studio/local-config'
+    | '/studio/modules'
     | '/studio/network'
     | '/studio/packages'
     | '/studio/roadmap'
@@ -511,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioNetworkRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/modules': {
+      id: '/studio/modules'
+      path: '/modules'
+      fullPath: '/studio/modules'
+      preLoaderRoute: typeof StudioModulesRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/local-config': {
       id: '/studio/local-config'
       path: '/local-config'
@@ -623,6 +642,7 @@ interface StudioRouteChildren {
   StudioInfraRoute: typeof StudioInfraRoute
   StudioInspectorRoute: typeof StudioInspectorRoute
   StudioLocalConfigRoute: typeof StudioLocalConfigRoute
+  StudioModulesRoute: typeof StudioModulesRoute
   StudioNetworkRoute: typeof StudioNetworkRoute
   StudioPackagesRoute: typeof StudioPackagesRoute
   StudioRoadmapRoute: typeof StudioRoadmapRoute
@@ -647,6 +667,7 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioInfraRoute: StudioInfraRoute,
   StudioInspectorRoute: StudioInspectorRoute,
   StudioLocalConfigRoute: StudioLocalConfigRoute,
+  StudioModulesRoute: StudioModulesRoute,
   StudioNetworkRoute: StudioNetworkRoute,
   StudioPackagesRoute: StudioPackagesRoute,
   StudioRoadmapRoute: StudioRoadmapRoute,

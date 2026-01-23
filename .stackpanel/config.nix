@@ -166,6 +166,18 @@
     tls = true;
     path = "apps/web";
     tasks.dev.command = "turbo run -F @stackpanel/web dev";
+    # Enable OxLint for JavaScript/TypeScript linting
+    linting.oxlint = {
+      enable = true;
+      plugins = [
+        "react"
+        "typescript"
+      ];
+      categories = {
+        correctness = "error";
+        suspicious = "warn";
+      };
+    };
     # Environments with secrets configuration
     environments = {
       dev = {

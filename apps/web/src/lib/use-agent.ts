@@ -1155,7 +1155,234 @@ export function useServices() {
 	return useNixMapData<{ enable?: boolean; port?: number }>("services");
 }
 
+// =============================================================================
+// Shell Status (Devshell Management)
+// =============================================================================
+
+/**
+ * Query keys for shell status.
+ */
+export const shellQueryKeys = {
+	status: () => [...agentQueryKeys.all, "shell", "status"] as const,
+} as const;
+
+/**
+ * Query hook for getting the devshell status.
+ * Returns whether the shell is stale (nix files changed since last rebuild).
+ */
+export function useShellStatus() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: shellQueryKeys.status(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getShellStatus({});
+		},
+		enabled: !!client,
+		refetchInterval: 10000, // Poll every 10 seconds as backup
+	});
+}
+
+/**
+ * Mutation hook for rebuilding the devshell.
+ * Returns an async iterator that streams rebuild events.
+ */
+export function useRebuildShell() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+	const [isRebuilding, setIsRebuilding] = useState(false);
+	const [output, setOutput] = useState<string[]>([]);
+	const [error, setError] = useState<string | null>(null);
+
+	const rebuild = async (method: "devshell" | "nix" = "devshell") => {
+		if (!client) throw new Error("Not connected to agent");
+		
+		setIsRebuilding(true);
+		setOutput([]);
+		setError(null);
+
+		try {
+			const stream = client.rebuildShell({ method });
+			
+			for await (const event of stream) {
+				switch (event.type) {
+					case "started":
+						// Rebuild started
+						break;
+					case "output":
+						if (event.output) {
+							setOutput((prev) => [...prev, event.output]);
+						}
+						break;
+					case "completed":
+						// Invalidate shell status after successful rebuild
+						if (event.exitCode === 0) {
+							queryClient.invalidateQueries({ queryKey: shellQueryKeys.status() });
+						}
+						setIsRebuilding(false);
+						return { success: event.exitCode === 0, exitCode: event.exitCode };
+					case "error":
+						setError(event.error || "Unknown error");
+						setIsRebuilding(false);
+						return { success: false, error: event.error };
+				}
+			}
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to rebuild shell");
+			setIsRebuilding(false);
+			throw err;
+		}
+
+		setIsRebuilding(false);
+		return { success: false };
+	};
+
+	return {
+		rebuild,
+		isRebuilding,
+		output,
+		error,
+		clearOutput: () => setOutput([]),
+		clearError: () => setError(null),
+	};
+}
+
+// =============================================================================
+// Modules (Connect-RPC)
+// =============================================================================
+
+export const moduleRpcQueryKeys = {
+	all: ["modules-rpc"] as const,
+	list: () => [...moduleRpcQueryKeys.all, "list"] as const,
+	detail: (id: string) => [...moduleRpcQueryKeys.all, "detail", id] as const,
+};
+
+/**
+ * Query hook for getting all modules via Connect-RPC.
+ */
+export function useModulesRpc() {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: moduleRpcQueryKeys.list(),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			const res = await client.getModules({});
+			return res.modules ?? {};
+		},
+		enabled: !!client,
+		staleTime: 30 * 1000,
+	});
+}
+
+/**
+ * Query hook for getting a single module by ID via Connect-RPC.
+ */
+export function useModuleRpc(moduleId: string) {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: moduleRpcQueryKeys.detail(moduleId),
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getModule({ moduleId });
+		},
+		enabled: !!client && !!moduleId,
+		staleTime: 30 * 1000,
+	});
+}
+
+/**
+ * Mutation hook for enabling a module via Connect-RPC.
+ */
+export function useEnableModuleRpc() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			moduleId,
+			settings,
+		}: {
+			moduleId: string;
+			settings?: Record<string, string>;
+		}) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.enableModule({ moduleId, settings: settings ?? {} });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: moduleRpcQueryKeys.all });
+		},
+	});
+}
+
+/**
+ * Mutation hook for disabling a module via Connect-RPC.
+ */
+export function useDisableModuleRpc() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (moduleId: string) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.disableModule({ moduleId });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: moduleRpcQueryKeys.all });
+		},
+	});
+}
+
+/**
+ * Mutation hook for updating module settings via Connect-RPC.
+ */
+export function useUpdateModuleSettingsRpc() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			moduleId,
+			settings,
+		}: {
+			moduleId: string;
+			settings: Record<string, string>;
+		}) => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.updateModuleSettings({ moduleId, settings });
+		},
+		onSuccess: (_data, { moduleId }) => {
+			queryClient.invalidateQueries({ queryKey: moduleRpcQueryKeys.all });
+			queryClient.invalidateQueries({
+				queryKey: moduleRpcQueryKeys.detail(moduleId),
+			});
+		},
+	});
+}
+
 /**
  * Re-export proto types for convenience.
  */
 export type { Apps, Variables, Users, Config, Secrets, Aws };
+
+// Re-export module proto types
+export type {
+	Module,
+	Modules,
+	ModuleMeta,
+	ModuleSource,
+	ModuleFeatures,
+	ModulePanel,
+	ModulePanelField,
+	ModuleAppData,
+	ModuleCategory,
+	ModuleSourceType,
+	ModulePanelType,
+	ModuleFieldType,
+	EnableModuleRequest,
+	DisableModuleRequest,
+	UpdateModuleSettingsRequest,
+	ModuleResponse,
+} from "@stackpanel/proto";

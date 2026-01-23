@@ -34,6 +34,7 @@
     ./global-services.nix
     ./healthchecks.nix
     ./ide.nix
+    ./modules.nix
     ./motd.nix
     ./outputs.nix
     ./panels.nix

@@ -169,7 +169,13 @@ let
     ui = {
       # Extensions registered by modules (e.g., SST, CI, etc.)
       # Each extension can provide panels, feature flags, and per-app data
+      # DEPRECATED: Use modules instead
       extensions = cfg.extensionsComputed or { };
+
+      # Modules - the unified system for extending stackpanel
+      # Replaces extensions with a more comprehensive module system
+      modules = cfg.modulesComputed or { };
+      modulesList = cfg.modulesList or [ ];
     };
   };
 

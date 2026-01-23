@@ -6,53 +6,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"connectrpc.com/connect"
 	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
 	"google.golang.org/protobuf/encoding/protojson"
 )
-
-// GetSecrets retrieves the secrets entity from Nix data.
-// Generated from proto - do not edit manually.
-func (s *AgentServiceServer) GetSecrets(
-	ctx context.Context,
-	req *connect.Request[gopb.GetSecretsRequest],
-) (*connect.Response[gopb.Secrets], error) {
-	data, err := s.server.readNixEntityJSON("secrets")
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	var result gopb.Secrets
-	if len(data) > 0 {
-		if err := protojson.Unmarshal(data, &result); err != nil {
-			// Fall back to standard JSON if protojson fails
-			if err := json.Unmarshal(data, &result); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, err)
-			}
-		}
-	}
-
-	return connect.NewResponse(&result), nil
-}
-
-// SetSecrets updates the secrets entity in Nix data.
-// Generated from proto - do not edit manually.
-func (s *AgentServiceServer) SetSecrets(
-	ctx context.Context,
-	req *connect.Request[gopb.Secrets],
-) (*connect.Response[gopb.Secrets], error) {
-	data, err := protojson.Marshal(req.Msg)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	if err := s.server.writeNixEntityJSON("secrets", data); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	return connect.NewResponse(req.Msg), nil
-}
 
 // GetUsers retrieves the users entity from Nix data.
 // Generated from proto - do not edit manually.
@@ -90,48 +49,6 @@ func (s *AgentServiceServer) SetUsers(
 	}
 
 	if err := s.server.writeNixEntityJSON("users", data); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	return connect.NewResponse(req.Msg), nil
-}
-
-// GetAws retrieves the aws entity from Nix data.
-// Generated from proto - do not edit manually.
-func (s *AgentServiceServer) GetAws(
-	ctx context.Context,
-	req *connect.Request[gopb.GetAwsRequest],
-) (*connect.Response[gopb.Aws], error) {
-	data, err := s.server.readNixEntityJSON("aws")
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	var result gopb.Aws
-	if len(data) > 0 {
-		if err := protojson.Unmarshal(data, &result); err != nil {
-			// Fall back to standard JSON if protojson fails
-			if err := json.Unmarshal(data, &result); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, err)
-			}
-		}
-	}
-
-	return connect.NewResponse(&result), nil
-}
-
-// SetAws updates the aws entity in Nix data.
-// Generated from proto - do not edit manually.
-func (s *AgentServiceServer) SetAws(
-	ctx context.Context,
-	req *connect.Request[gopb.Aws],
-) (*connect.Response[gopb.Aws], error) {
-	data, err := protojson.Marshal(req.Msg)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	if err := s.server.writeNixEntityJSON("aws", data); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
@@ -180,6 +97,137 @@ func (s *AgentServiceServer) SetApps(
 	return connect.NewResponse(req.Msg), nil
 }
 
+// GetModules retrieves the modules entity from evaluated Nix config.
+// NOTE: Modified to read from evaluated config (ui.modulesList) instead of data file.
+func (s *AgentServiceServer) GetModules(
+	ctx context.Context,
+	req *connect.Request[gopb.GetModulesRequest],
+) (*connect.Response[gopb.Modules], error) {
+	// Use the same logic as the REST API - read from evaluated config
+	modules, err := s.server.getModules(true) // Include disabled
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Convert to proto format
+	protoModules := make(map[string]*gopb.Module)
+	for _, m := range modules {
+		protoModules[m.ID] = moduleToProto(m)
+	}
+
+	return connect.NewResponse(&gopb.Modules{
+		Modules: protoModules,
+	}), nil
+}
+
+// GetSst retrieves the sst entity from Nix data.
+// Generated from proto - do not edit manually.
+func (s *AgentServiceServer) GetSst(
+	ctx context.Context,
+	req *connect.Request[gopb.GetSstRequest],
+) (*connect.Response[gopb.Sst], error) {
+	data, err := s.server.readNixEntityJSON("sst")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	var result gopb.Sst
+	if len(data) > 0 {
+		if err := protojson.Unmarshal(data, &result); err != nil {
+			// Fall back to standard JSON if protojson fails
+			if err := json.Unmarshal(data, &result); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+		}
+	}
+
+	return connect.NewResponse(&result), nil
+}
+
+// GetSecrets retrieves the secrets entity from Nix data.
+// Generated from proto - do not edit manually.
+func (s *AgentServiceServer) GetSecrets(
+	ctx context.Context,
+	req *connect.Request[gopb.GetSecretsRequest],
+) (*connect.Response[gopb.Secrets], error) {
+	data, err := s.server.readNixEntityJSON("secrets")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	var result gopb.Secrets
+	if len(data) > 0 {
+		if err := protojson.Unmarshal(data, &result); err != nil {
+			// Fall back to standard JSON if protojson fails
+			if err := json.Unmarshal(data, &result); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+		}
+	}
+
+	return connect.NewResponse(&result), nil
+}
+
+// SetSecrets updates the secrets entity in Nix data.
+// Generated from proto - do not edit manually.
+func (s *AgentServiceServer) SetSecrets(
+	ctx context.Context,
+	req *connect.Request[gopb.Secrets],
+) (*connect.Response[gopb.Secrets], error) {
+	data, err := protojson.Marshal(req.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if err := s.server.writeNixEntityJSON("secrets", data); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(req.Msg), nil
+}
+
+// GetAws retrieves the aws entity from Nix data.
+// Generated from proto - do not edit manually.
+func (s *AgentServiceServer) GetAws(
+	ctx context.Context,
+	req *connect.Request[gopb.GetAwsRequest],
+) (*connect.Response[gopb.Aws], error) {
+	data, err := s.server.readNixEntityJSON("aws")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	var result gopb.Aws
+	if len(data) > 0 {
+		if err := protojson.Unmarshal(data, &result); err != nil {
+			// Fall back to standard JSON if protojson fails
+			if err := json.Unmarshal(data, &result); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+		}
+	}
+
+	return connect.NewResponse(&result), nil
+}
+
+// SetAws updates the aws entity in Nix data.
+// Generated from proto - do not edit manually.
+func (s *AgentServiceServer) SetAws(
+	ctx context.Context,
+	req *connect.Request[gopb.Aws],
+) (*connect.Response[gopb.Aws], error) {
+	data, err := protojson.Marshal(req.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	if err := s.server.writeNixEntityJSON("aws", data); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	return connect.NewResponse(req.Msg), nil
+}
+
 // GetVariables retrieves the variables entity from Nix data.
 // Generated from proto - do not edit manually.
 func (s *AgentServiceServer) GetVariables(
@@ -222,28 +270,31 @@ func (s *AgentServiceServer) SetVariables(
 	return connect.NewResponse(req.Msg), nil
 }
 
-// GetSst retrieves the sst entity from Nix data.
-// Generated from proto - do not edit manually.
-func (s *AgentServiceServer) GetSst(
+// GetModule retrieves a single module by ID from evaluated Nix config.
+// NOTE: Modified to read from evaluated config instead of data file.
+func (s *AgentServiceServer) GetModule(
 	ctx context.Context,
-	req *connect.Request[gopb.GetSstRequest],
-) (*connect.Response[gopb.Sst], error) {
-	data, err := s.server.readNixEntityJSON("sst")
+	req *connect.Request[gopb.GetModuleRequest],
+) (*connect.Response[gopb.Module], error) {
+	moduleID := req.Msg.GetModuleId()
+	if moduleID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("module_id is required"))
+	}
+
+	// Use the same logic as the REST API - read from evaluated config
+	modules, err := s.server.getModules(true) // Include disabled
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var result gopb.Sst
-	if len(data) > 0 {
-		if err := protojson.Unmarshal(data, &result); err != nil {
-			// Fall back to standard JSON if protojson fails
-			if err := json.Unmarshal(data, &result); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, err)
-			}
+	// Find the requested module
+	for _, m := range modules {
+		if m.ID == moduleID {
+			return connect.NewResponse(moduleToProto(m)), nil
 		}
 	}
 
-	return connect.NewResponse(&result), nil
+	return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module not found: %s", moduleID))
 }
 
 // GetConfig retrieves the config entity from Nix data.

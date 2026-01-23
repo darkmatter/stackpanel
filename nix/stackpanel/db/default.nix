@@ -109,9 +109,9 @@ let
     github-collaborators = import ./schemas/external/github-collaborators.proto.nix { inherit lib; };
 
     # ──────────────────────────────────────────────────────────────────────────
-    # ADD NEW SCHEMAS HERE
+    # Module system
     # ──────────────────────────────────────────────────────────────────────────
-    # myfeature = import ./schemas/myfeature.proto.nix { inherit lib; };
+    modules = import ./schemas/modules.proto.nix { inherit lib; };
   };
 
   # ============================================================================
@@ -169,6 +169,7 @@ let
       extensions
       files
       healthchecks
+      modules
       onboarding
       services
       shells

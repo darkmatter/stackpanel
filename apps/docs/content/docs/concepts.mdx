@@ -5,3 +5,54 @@ icon: lightbulb
 ---
 
 # Convepts
+
+
+
+## Convention-First
+
+We will do our best to support all the different configurations out there, but we will lean more towards convention-first rather than support-everything-first. We want to reduce the amount of time it takes to get an app live. But more importantly, we want to significantly improve an area that is often overlooked - what we call "Step Two". It's when a one-man project finds product market fit, and now needs to go to that next level of "production-ready". Things such as:
+
+- Internal Networked Services - Think a postgres db that exists at shared-pg.internal which team mates can fork a seeded db off of.
+- Internal CA for TLS - Anyone in your team can request a certificate for their local machine, and it will be automatically provisioned using a private CA.
+- Token-based auth - Short-lived tokens to achieve that next level of security.
+- Zero-click on/off boarding for team members - A new team member being created also creates a user on that GPU box everyone shares when training models.
+- GitOps infrastructure - Initalize a repo, run `stackpanel init`, and SST code is generated, which will execute and launch a KMS-encrypted S3 bucket, create all the IAM stuff needed to manage secrets for it, and even generate a wrapped `aws` CLI that bundles the proper credentials so that all your team mates can read and write secrets securely using AWS Roles Anywhere via mTLS.
+
+
+
+
+
+Configuration is not a problem in and of itself. But we felt that we can improve the experience of some common pain points that we experienced ourselves:
+
+- Configuration files tend to have constraints on where they are placed in the file system. Simply moving a file can break your entire app.
+- There's an invisible boundary between your source code and configuration files where type information is lost. Usually if you move a typescript file, your IDE will let you know if that caused any issues. The same is not true for configuration files.
+- For every new app we as developers create, we also have to repeat some amount of effort related to configuration.
+
+## First Principles Thinking
+
+Over the years the following questions kept coming up in our minds:
+
+- *"Wow, I've saved lots of time by using build tools that implement task caching - my machine no longer has to run the same build twice. And with remote caching - this applies across my entire team - but why does it end there? If I ran `npx create-react-app` right now, my machine will do some work that most likely, someone else has already done on their machine today. Why am I not just pulling that from a remote cache as well? Why should any two machines in the entire world have to repeat work?"*
+- *"Why can't I write all my configuration in a single language rather than have to deal with `pyproject.toml` for python, `package.json` for javascript, `Dockerfile` for docker, and so on? My application code is all in one language - Why does my configuration feel like it is in so many?"*
+- *"Why can't I write all my configuration in a single language rather than have to deal with `pyproject.toml` for python, `package.json` for javascript, `Dockerfile` for docker, and so on?  My application code is all in one language - Why does my configuration feel like it is in so many?"*"
+
+From a first principles perspective, there's no fundamental reason why these things have to be the way they are. We sort of just accepted them as "the way things are". But we can do better.
+
+Stackpanel is comprised of multiple tools that work together to make you more productive. Of all these tools though, majority of the credit goes to **Nix**. In the Nix ecosystem, many of these problems are actually solved. In fact, there are several amazing tools already ([devenv](https://devenv.sh), [flox](https://flox.dev), [devbox](https://www.jetify.com/devbox) to name a few) that tackle similar problems. Stackpanel is heavily inspired by these tools, and in fact uses them to provide some of its functionality.
+
+## The Stackpanel Approach
+
+At the face of it, Stackpanel may seem like many tools you've seen before. It provides things like reproducible development environments, service orchestration (launching a local postgres or redis server), secrets management, IDE integration, TLS support, and more. But we make sure the following constraints are always met:
+
+- All these things can be configured from a **single source of truth** - some nix file(s) anywhere in your repository.
+- A build step that executes code generation produces the same files that you would have had, in the same locations as they would have been if you didn't use Stackpanel at all.
+- If you choose to write Nix configuration files by hand, you won't need to know Nix beyond using it in a way that feels like writing JSON.
+- All configuration can be done using the stackpanel web UI that runs on your local machine.
+
+Part of the reason files are written in some specific format in some specific location is that the tools you use expect them to be there. Stackpanel embraces this reality, and ensures that this stays the same. By adding this generation step, we remove the constraints that configuration files usually impose.
+
+In the same sense that you don't consider `dist` or `build` as part of your source code, we do the same for configuration as well. You can set your IDE to hide these files from being visible, or you can "build" your codebase by having the build step copy your source code and the generated files into a temporary directory that looks like a regular codebase.
+
+## Getting Started
+
+If you've gotten this far, thanks for reading! We hope you find Stackpanel useful in your projects. Check out the [rest of the documentation to get started.](/docs/quick-start)

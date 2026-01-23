@@ -1,0 +1,5 @@
+# Stackpanel module configuration for oxlint
+# This file is managed by the Stackpanel UI
+# Re-enter devshell to apply changes
+
+enable: true

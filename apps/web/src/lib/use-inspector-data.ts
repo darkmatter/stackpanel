@@ -245,7 +245,7 @@ export function useInspectorData(
         ...f,
         relativePath: f.path,
       }));
-      const contributors = deriveContributors(filesWithRelative, integrations);
+      const contributors = deriveContributors(filesWithRelative, integrations, configRes.config);
       const data: InspectorData = {
         project: projectRoot
           ? {
@@ -310,6 +310,7 @@ export function useInspectorData(
             contributors: deriveContributors(
               prev.data.generatedFiles.files,
               integrations,
+              configRes.config,
             ),
           },
           dataUpdatedAt: Date.now(),
@@ -550,9 +551,23 @@ async function fetchScriptSources(
 // Extraction Helpers
 // =============================================================================
 
+interface ModuleFromConfig {
+  id?: string;
+  enabled?: boolean;
+  meta?: {
+    name?: string;
+    description?: string;
+    category?: string;
+  };
+  source?: {
+    type?: string;
+  };
+}
+
 function deriveContributors(
   files: InspectorGeneratedFile[],
   integrations: InspectorIntegration[],
+  config: Record<string, unknown> | null,
 ): InspectorContributor[] {
   const contributors = new Map<string, InspectorContributor>();
 
@@ -571,10 +586,35 @@ function deriveContributors(
     });
   };
 
+  // Add modules from config (primary source for module contributors)
+  if (config) {
+    const ui = (config as Record<string, unknown>)?.ui as Record<string, unknown> | undefined;
+    const modulesList = (ui?.modulesList ?? ui?.modules) as ModuleFromConfig[] | Record<string, ModuleFromConfig> | undefined;
+    
+    if (modulesList) {
+      // Handle both array and object formats
+      const modulesArray = Array.isArray(modulesList) 
+        ? modulesList 
+        : Object.values(modulesList);
+      
+      for (const mod of modulesArray) {
+        if (mod && typeof mod === "object") {
+          const moduleId = mod.id ?? (mod as Record<string, unknown>).name as string;
+          const moduleName = mod.meta?.name ?? moduleId;
+          if (moduleId) {
+            add(moduleId, moduleName, "module");
+          }
+        }
+      }
+    }
+  }
+
+  // Add file sources as modules (fallback for files without explicit module)
   for (const file of files) {
     add(file.source ?? null, file.source ?? null, "module");
   }
 
+  // Add integrations/extensions
   for (const integration of integrations) {
     add(integration.name, integration.displayName, "extension");
     add(integration.source?.path, integration.source?.path, "extension");

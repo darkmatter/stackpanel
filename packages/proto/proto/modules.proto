@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// Category for grouping modules in the UI
+enum ModuleCategory {
+  MODULE_CATEGORY_UNSPECIFIED = 0;
+  MODULE_CATEGORY_INFRASTRUCTURE = 1;
+  MODULE_CATEGORY_CI_CD = 2;
+  MODULE_CATEGORY_DATABASE = 3;
+  MODULE_CATEGORY_SECRETS = 4;
+  MODULE_CATEGORY_DEPLOYMENT = 5;
+  MODULE_CATEGORY_DEVELOPMENT = 6;
+  MODULE_CATEGORY_MONITORING = 7;
+  MODULE_CATEGORY_INTEGRATION = 8;
+  MODULE_CATEGORY_LANGUAGE = 9;
+  MODULE_CATEGORY_SERVICE = 10;
+}
+
+// Type of field in a panel
+enum ModuleFieldType {
+  MODULE_FIELD_TYPE_UNSPECIFIED = 0;
+  MODULE_FIELD_TYPE_STRING = 1;
+  MODULE_FIELD_TYPE_NUMBER = 2;
+  MODULE_FIELD_TYPE_BOOLEAN = 3;
+  MODULE_FIELD_TYPE_SELECT = 4;
+  MODULE_FIELD_TYPE_MULTISELECT = 5;
+  MODULE_FIELD_TYPE_APP_FILTER = 6;
+  MODULE_FIELD_TYPE_COLUMNS = 7;
+  MODULE_FIELD_TYPE_JSON = 8;
+}
+
+// Type of UI panel to render
+enum ModulePanelType {
+  MODULE_PANEL_TYPE_UNSPECIFIED = 0;
+  MODULE_PANEL_TYPE_STATUS = 1;
+  MODULE_PANEL_TYPE_APPS_GRID = 2;
+  MODULE_PANEL_TYPE_FORM = 3;
+  MODULE_PANEL_TYPE_TABLE = 4;
+  MODULE_PANEL_TYPE_CUSTOM = 5;
+}
+
+// Where the module comes from
+enum ModuleSourceType {
+  MODULE_SOURCE_TYPE_UNSPECIFIED = 0;
+  MODULE_SOURCE_TYPE_BUILTIN = 1;
+  MODULE_SOURCE_TYPE_LOCAL = 2;
+  MODULE_SOURCE_TYPE_FLAKE_INPUT = 3;
+  MODULE_SOURCE_TYPE_REGISTRY = 4;
+}
+
+// Request to disable a module
+message DisableModuleRequest {
+  string module_id = 1; // Module identifier to disable
+}
+
+// Request to enable a module
+message EnableModuleRequest {
+  string module_id = 1; // Module identifier to enable
+  map<string, string> settings = 2; // Initial settings (optional)
+}
+
+// Configuration for a stackpanel module
+message Module {
+  string id = 1; // Module identifier (e.g., 'oxlint', 'postgres')
+  bool enable = 2; // Whether the module is enabled
+  ModuleMeta meta = 3; // Display metadata
+  ModuleSource source = 4; // Source configuration
+  ModuleFeatures features = 5; // Feature flags
+  repeated string requires = 6; // Required modules
+  repeated string conflicts = 7; // Conflicting modules
+  int32 priority = 8; // Load order priority (lower = earlier)
+  repeated string tags = 9; // Tags for filtering
+  /*
+   * JSON Schema for generating configuration forms.
+   * Describes the module's configurable options.
+   * 
+   */
+  optional string config_schema = 10;
+  /*
+   * Module-level settings (key-value pairs).
+   * These are passed to the Nix module configuration.
+   * 
+   */
+  map<string, string> settings = 11;
+  repeated ModulePanel panels = 12; // UI panels
+  map<string, ModuleAppData> apps = 13; // Per-app module data
+  optional string healthcheck_module = 14; // Linked healthcheck module name
+}
+
+// Module data for a specific app
+message ModuleAppData {
+  bool enabled = 1; // Whether module is enabled for this app
+  map<string, string> config = 2; // Module config (string key-value pairs)
+}
+
+// Which stackpanel features this module uses
+message ModuleFeatures {
+  bool files = 1; // Generates files via stackpanel.files
+  bool scripts = 2; // Provides shell scripts/commands
+  bool tasks = 3; // Defines turborepo tasks
+  bool healthchecks = 4; // Defines health checks
+  bool services = 5; // Configures background services
+  bool secrets = 6; // Manages secrets/variables
+  bool packages = 7; // Adds devshell packages
+  bool app_module = 8; // Extends per-app configuration
+}
+
+// Display metadata for a module
+message ModuleMeta {
+  string name = 1; // Display name of the module
+  optional string description = 2; // Human-readable description
+  optional string icon = 3; // Lucide icon name (e.g., 'database', 'box')
+  ModuleCategory category = 4; // Category for UI grouping
+  optional string author = 5; // Author or maintainer
+  optional string version = 6; // Module version
+  optional string homepage = 7; // URL to documentation or repository
+}
+
+// A UI panel provided by a module
+message ModulePanel {
+  string id = 1; // Unique panel identifier
+  string title = 2; // Display title
+  optional string description = 3; // Panel description
+  ModulePanelType type = 4; // Panel type (determines component)
+  int32 order = 5; // Display order (lower = first)
+  repeated ModulePanelField fields = 6; // Panel configuration fields
+}
+
+// A field in a module panel
+message ModulePanelField {
+  string name = 1; // Field name (maps to component prop)
+  ModuleFieldType type = 2; // Field type
+  string value = 3; // Field value (JSON-encoded for complex types)
+  repeated string options = 4; // Options for select fields
+}
+
+// Response containing a single module
+message ModuleResponse {
+  Module module = 1; // The module
+  bool success = 2; // Whether the operation succeeded
+  optional string message = 3; // Status message
+}
+
+// Where the module comes from
+message ModuleSource {
+  ModuleSourceType type = 1; // Source type
+  optional string flake_input = 2; // Flake input name (for flake-input type)
+  optional string path = 3; // Local path (for local type)
+  optional string registry_id = 4; // Registry ID (e.g., 'stackpanel/docker')
+  optional string ref = 5; // Git ref (branch, tag, commit)
+}
+
+// Map of module ID to module configuration
+message Modules {
+  map<string, Module> modules = 1; // Map of module ID to config
+}
+
+// Request to update module settings
+message UpdateModuleSettingsRequest {
+  string module_id = 1; // Module identifier
+  map<string, string> settings = 2; // New settings
+}

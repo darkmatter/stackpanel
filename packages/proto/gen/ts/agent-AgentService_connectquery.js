@@ -74,6 +74,33 @@ export const getVariables = AgentService.method.getVariables;
 export const setVariables = AgentService.method.setVariables;
 
 /**
+ * Modules - module configuration management
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetModules
+ */
+export const getModules = AgentService.method.getModules;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.GetModule
+ */
+export const getModule = AgentService.method.getModule;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.EnableModule
+ */
+export const enableModule = AgentService.method.enableModule;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.DisableModule
+ */
+export const disableModule = AgentService.method.disableModule;
+
+/**
+ * @generated from rpc stackpanel.agent.AgentService.UpdateModuleSettings
+ */
+export const updateModuleSettings = AgentService.method.updateModuleSettings;
+
+/**
  * Identity management (local decryption key)
  *
  * @generated from rpc stackpanel.agent.AgentService.GetAgeIdentity
@@ -224,3 +251,10 @@ export const getNixConfig = AgentService.method.getNixConfig;
  * @generated from rpc stackpanel.agent.AgentService.RefreshNixConfig
  */
 export const refreshNixConfig = AgentService.method.refreshNixConfig;
+
+/**
+ * Devshell management
+ *
+ * @generated from rpc stackpanel.agent.AgentService.GetShellStatus
+ */
+export const getShellStatus = AgentService.method.getShellStatus;

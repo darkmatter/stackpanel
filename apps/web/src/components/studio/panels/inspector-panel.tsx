@@ -878,12 +878,17 @@ function filterInspectorDataByContributor(
 // Main Component
 // =============================================================================
 
-export function InspectorPanel() {
+interface InspectorPanelProps {
+  /** Initial contributor to filter by (from URL search params) */
+  initialContributor?: string;
+}
+
+export function InspectorPanel({ initialContributor }: InspectorPanelProps = {}) {
   const { data, isLoading, isError, error, refetch } = useInspectorData();
 
   const contributors = data?.contributors ?? [];
   const [selectedContributor, setSelectedContributor] = useState<string | null>(
-    null,
+    initialContributor ?? null,
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [exportCopied, setExportCopied] = useState(false);
