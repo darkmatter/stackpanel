@@ -361,7 +361,9 @@ func (s *Server) ensureScriptPath(scriptPath string, scriptDrvPath *string) erro
 	}
 
 	// Attempt to build the derivation to realize the script in the store.
-	res, err := s.exec.RunNix("build", "--no-link", *scriptDrvPath)
+	// Use ^* suffix to build all outputs of the derivation (required for .drv paths)
+	drvPathWithOutputs := *scriptDrvPath + "^*"
+	res, err := s.exec.RunNix("build", "--no-link", drvPathWithOutputs)
 	if err != nil {
 		return fmt.Errorf("failed to build healthcheck script derivation: %w", err)
 	}
