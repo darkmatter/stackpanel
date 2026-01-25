@@ -1,12 +1,12 @@
 name: "om ci"
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
+  # pull_request:
+  #   branches:
+  #     - main
   workflow_dispatch: # Allow manual triggers
 
 concurrency:
