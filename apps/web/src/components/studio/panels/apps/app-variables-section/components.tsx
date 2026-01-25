@@ -1,41 +1,40 @@
 /**
  * Sub-components for the app variables section.
+ * 
+ * Updated for simplified schema where variables are key-value pairs.
  */
 "use client";
 
-import { VariableType } from "@stackpanel/proto";
 import { Input } from "@ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@ui/select";
 import {
 	Calculator,
 	Check,
-	ChevronDown,
 	Lock,
 	Trash2,
-	Type,
 	VariableIcon,
 	X,
 } from "lucide-react";
 import type { RefObject } from "react";
 import type { AvailableVariable, DisplayVariable, EditMode } from "./types";
+import { isSopsReference, isValsReference } from "../utils";
 
 /**
  * Props for the EditInterface component.
+ * Simplified for key-value editing with optional variable selector.
  */
 interface EditInterfaceProps {
 	// State
 	newEnvKey: string;
 	setNewEnvKey: (value: string) => void;
-	isLiteralMode: boolean;
-	literalValue: string;
-	setLiteralValue: (value: string) => void;
-	variableSearchOpen: boolean;
-	setVariableSearchOpen: (open: boolean) => void;
-	variableSearch: string;
-	setVariableSearch: (value: string) => void;
-	selectedVariable: AvailableVariable | null;
-	filteredUnusedVariables: AvailableVariable[];
-	unusedVariables: AvailableVariable[];
+	editValue: string;
+	setEditValue: (value: string) => void;
 	canConfirm: boolean;
 	editMode: EditMode | null;
 
@@ -43,40 +42,73 @@ interface EditInterfaceProps {
 	envKeyInputRef: RefObject<HTMLInputElement | null>;
 	literalInputRef: RefObject<HTMLInputElement | null>;
 
+	// Optional: available variables for linking
+	availableVariables?: AvailableVariable[];
+
 	// Handlers
-	onSelectVariable: (variableId: string) => void;
-	onSelectLiteral: () => void;
 	onConfirm: () => void;
 	onCancel: () => void;
 	onDelete?: () => void;
 }
 
 /**
+ * Build a vals reference for a variable ID.
+ * E.g., "/dev/DATABASE_URL" → "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+ */
+function buildValsReference(variableId: string): string {
+	// Parse the variable ID: /<env>/<NAME>
+	const parts = variableId.split("/").filter(Boolean);
+	if (parts.length >= 2) {
+		const env = parts[0]; // e.g., "dev", "prod"
+		const name = parts.slice(1).join("/"); // e.g., "DATABASE_URL"
+		return `ref+sops://.stackpanel/secrets/${env}.yaml#/${name}`;
+	}
+	// Fallback for non-standard IDs
+	return `ref+sops://.stackpanel/secrets/dev.yaml#${variableId}`;
+}
+
+/**
+ * Extract env key suggestion from variable ID.
+ * E.g., "/dev/DATABASE_URL" → "DATABASE_URL"
+ */
+function suggestEnvKey(variableId: string): string {
+	const parts = variableId.split("/").filter(Boolean);
+	if (parts.length >= 2) {
+		return parts[parts.length - 1]; // Last part is the var name
+	}
+	return variableId.replace(/[^A-Z0-9_]/gi, "_").toUpperCase();
+}
+
+/**
  * Edit/add interface for variables.
+ * Includes a dropdown to select from available workspace variables.
  */
 export function EditInterface({
 	newEnvKey,
 	setNewEnvKey,
-	isLiteralMode,
-	literalValue,
-	setLiteralValue,
-	variableSearchOpen,
-	setVariableSearchOpen,
-	variableSearch,
-	setVariableSearch,
-	selectedVariable,
-	filteredUnusedVariables,
-	unusedVariables,
+	editValue,
+	setEditValue,
 	canConfirm,
 	editMode,
 	envKeyInputRef,
 	literalInputRef,
-	onSelectVariable,
-	onSelectLiteral,
+	availableVariables,
 	onConfirm,
 	onCancel,
 	onDelete,
 }: EditInterfaceProps) {
+	const handleSelectVariable = (variableId: string) => {
+		const variable = availableVariables?.find((v) => v.id === variableId);
+		if (!variable) return;
+		
+		// Set the value to the vals reference
+		setEditValue(buildValsReference(variable.id));
+		// Suggest an env key based on the variable name
+		if (!newEnvKey) {
+			setNewEnvKey(suggestEnvKey(variable.id));
+		}
+	};
+
 	return (
 		<div className="flex items-center gap-0.5 rounded-md border border-primary/10 bg-background text-xs overflow-hidden">
 			{/* Env Key Input */}
@@ -91,101 +123,42 @@ export function EditInterface({
 			{/* Subtle divider */}
 			<div className="w-px h-5 bg-border/50" />
 
-			{/* Variable Selector or Literal Input */}
-			{isLiteralMode ? (
-				<Input
-					ref={literalInputRef}
-					value={literalValue}
-					onChange={(e) => setLiteralValue(e.target.value)}
-					placeholder="Enter value..."
-					className="h-8 w-40 border-0 rounded-none bg-transparent text-xs font-mono focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
-				/>
-			) : (
-				<Popover open={variableSearchOpen} onOpenChange={setVariableSearchOpen}>
-					<PopoverTrigger asChild>
-						<button
-							type="button"
-							className="flex items-center gap-1.5 h-8 px-2 min-w-32 hover:bg-muted/50 transition-colors"
-						>
-							{selectedVariable ? (
-								<>
-									{selectedVariable.type === VariableType.SECRET ? (
-										<Lock className="h-3 w-3 text-orange-500 shrink-0" />
-									) : (
-										<VariableIcon className="h-3 w-3 text-blue-500 shrink-0" />
-									)}
-									<span className="truncate">{selectedVariable.id}</span>
-								</>
-							) : (
-								<span className="text-muted-foreground">
-									Select variable...
-								</span>
-							)}
-							<ChevronDown className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
-						</button>
-					</PopoverTrigger>
-					<PopoverContent className="w-56 p-0" align="start">
-						<div className="p-2 border-b border-border">
-							<Input
-								value={variableSearch}
-								onChange={(e) => setVariableSearch(e.target.value)}
-								placeholder="Search variables..."
-								className="h-7 text-xs"
-							/>
-						</div>
-						<div className="max-h-48 overflow-y-auto p-1">
-							{/* Add Literal option */}
-							<button
-								type="button"
-								onClick={onSelectLiteral}
-								className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors text-left mb-1 pb-2"
-							>
-								<Type className="h-3 w-3 text-emerald-500 shrink-0" />
-								<span className="font-medium">Add Literal</span>
-								<span className="text-muted-foreground ml-auto text-[10px]">
-									raw value
-								</span>
-							</button>
-							<button
-								type="button"
-								onClick={() => {
-									window.open("/studio/variables?action=new", "_blank");
-								}}
-								className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors text-left border-b border-border/50 mb-1 pb-2"
-							>
-								<VariableIcon className="h-3 w-3 text-blue-500 shrink-0" />
-								<span className="font-medium">Add Variable</span>
-								<span className="text-muted-foreground ml-auto text-[10px]">
-									Opens in new window
-								</span>
-							</button>
-							{filteredUnusedVariables.length === 0 ? (
-								<p className="text-xs text-muted-foreground px-2 py-3 text-center">
-									{unusedVariables.length === 0
-										? "No variables available"
-										: "No matching variables"}
-								</p>
-							) : (
-								filteredUnusedVariables.map((variable) => (
-									<button
-										key={variable.id}
-										type="button"
-										onClick={() => onSelectVariable(variable.id)}
-										className="w-full flex text-gray-300 text-shadow-accent-foreground items-center gap-2 px-2 py-1.5 rounded font-mono text-xs hover:bg-muted transition-colors text-left"
-									>
-										{variable.type === VariableType.SECRET ? (
-											<Lock className="h-3 w-3 text-orange-500 shrink-0" />
+			{/* Variable Selector Dropdown (when available variables exist) */}
+			{availableVariables && availableVariables.length > 0 && (
+				<>
+					<Select onValueChange={handleSelectVariable}>
+						<SelectTrigger className="h-8 w-32 border-0 rounded-none bg-transparent text-xs focus:ring-0">
+							<SelectValue placeholder="Link variable..." />
+						</SelectTrigger>
+						<SelectContent>
+							{availableVariables.map((variable) => (
+								<SelectItem key={variable.id} value={variable.id}>
+									<div className="flex items-center gap-2">
+										{variable.typeName === "secret" ? (
+											<Lock className="h-3 w-3 text-orange-500" />
+										) : variable.typeName === "computed" ? (
+											<Calculator className="h-3 w-3 text-purple-500" />
 										) : (
-											<VariableIcon className="h-3 w-3 text-blue-500 shrink-0" />
+											<VariableIcon className="h-3 w-3 text-blue-500" />
 										)}
-										<span className="truncate font-medium">{variable.id}</span>
-									</button>
-								))
-							)}
-						</div>
-					</PopoverContent>
-				</Popover>
+										<span className="font-mono text-xs">{variable.name}</span>
+									</div>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<div className="w-px h-5 bg-border/50" />
+				</>
 			)}
+
+			{/* Value Input */}
+			<Input
+				ref={literalInputRef}
+				value={editValue}
+				onChange={(e) => setEditValue(e.target.value)}
+				placeholder="value or ref+sops://..."
+				className="h-8 w-48 border-0 rounded-none bg-transparent text-xs font-mono focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
+			/>
 
 			{/* Action buttons */}
 			<div className="flex items-center border-l border-border/50">
@@ -248,7 +221,8 @@ export function VariableBadge({
 	onStartEditing,
 	renderEditInterface,
 }: VariableBadgeProps) {
-	const isComputed = variable.type === VariableType.VALS;
+	// Derive type from value
+	const isComputed = isValsReference(variable.value) && !isSopsReference(variable.value);
 
 	// If this variable is being edited, show the edit interface instead
 	if (isCurrentlyEditing) {
@@ -257,7 +231,7 @@ export function VariableBadge({
 
 	return (
 		<button
-			key={`${variable.envKey}-${variable.variableId}`}
+			key={variable.envKey}
 			type="button"
 			onClick={() => !disabled && onStartEditing(variable)}
 			disabled={disabled || isEditing}
@@ -270,11 +244,7 @@ export function VariableBadge({
 			) : (
 				<VariableIcon className="h-3 w-3 text-blue-500" />
 			)}
-			<span className="font-medium">{variable.variableId || variable.envKey}</span>
-			{/* Show env key if different from variable ID */}
-			{variable.variableId && variable.envKey !== variable.variableId && (
-				<span className="text-muted-foreground text-[10px]">→ {variable.envKey}</span>
-			)}
+			<span className="font-medium">{variable.envKey}</span>
 			{!isSecret && variable.value && (
 				<>
 					<span className="text-muted-foreground">=</span>

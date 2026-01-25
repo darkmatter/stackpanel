@@ -16,6 +16,7 @@ import {
 } from "@ui/sheet";
 import {
   Check,
+  ChevronRight,
   Cloud,
   Code,
   Copy,
@@ -36,6 +37,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useEnableModuleDynamic } from "./use-modules";
+import { useModuleOutputsRpc } from "@/lib/use-agent";
 import { type RegistryModule, getCategoryLabel } from "./types";
 
 // =============================================================================
@@ -217,6 +219,161 @@ function InstallCodeSection({ module }: { module: RegistryModule }) {
           <li>Re-enter your devshell to load the new module</li>
         </ol>
       </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Module Outputs Section
+// =============================================================================
+
+function ModuleOutputsSection({ moduleId }: { moduleId: string }) {
+  const { data: outputs, isLoading, error } = useModuleOutputsRpc(moduleId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Loading outputs...
+      </div>
+    );
+  }
+
+  if (error || !outputs) {
+    return null; // Silently fail - outputs are optional
+  }
+
+  const hasAnyOutputs =
+    (outputs.files?.length ?? 0) > 0 ||
+    (outputs.scripts?.length ?? 0) > 0 ||
+    (outputs.healthchecks?.length ?? 0) > 0 ||
+    (outputs.packages?.length ?? 0) > 0;
+
+  if (!hasAnyOutputs) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Files */}
+      {outputs.files && outputs.files.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <FileCode className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-medium">Generated Files</h4>
+            <Badge variant="secondary" className="text-xs">
+              {outputs.files.length}
+            </Badge>
+          </div>
+          <div className="space-y-1">
+            {outputs.files.map((file) => (
+              <div
+                key={file.path}
+                className="flex items-center gap-2 text-sm rounded-md bg-muted/50 px-3 py-2"
+              >
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                <code className="text-xs flex-1">{file.path}</code>
+                {file.description && (
+                  <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                    {file.description}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Scripts */}
+      {outputs.scripts && outputs.scripts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Terminal className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-medium">Shell Commands</h4>
+            <Badge variant="secondary" className="text-xs">
+              {outputs.scripts.length}
+            </Badge>
+          </div>
+          <div className="space-y-1">
+            {outputs.scripts.map((script) => (
+              <div
+                key={script.name}
+                className="flex items-center gap-2 text-sm rounded-md bg-muted/50 px-3 py-2"
+              >
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                <code className="text-xs font-medium">{script.name}</code>
+                {script.description && (
+                  <span className="text-xs text-muted-foreground truncate flex-1">
+                    - {script.description}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Health Checks */}
+      {outputs.healthchecks && outputs.healthchecks.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Heart className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-medium">Health Checks</h4>
+            <Badge variant="secondary" className="text-xs">
+              {outputs.healthchecks.length}
+            </Badge>
+          </div>
+          <div className="space-y-1">
+            {outputs.healthchecks.map((check) => (
+              <div
+                key={check.id}
+                className="flex items-center gap-2 text-sm rounded-md bg-muted/50 px-3 py-2"
+              >
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                <span className="font-medium text-xs">{check.name}</span>
+                <Badge
+                  variant={
+                    check.severity === "critical" ? "destructive" : "outline"
+                  }
+                  className="text-[10px] px-1.5 py-0"
+                >
+                  {check.severity}
+                </Badge>
+                {check.description && (
+                  <span className="text-xs text-muted-foreground truncate flex-1">
+                    {check.description}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Packages */}
+      {outputs.packages && outputs.packages.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-medium">Packages</h4>
+            <Badge variant="secondary" className="text-xs">
+              {outputs.packages.length}
+            </Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {outputs.packages.map((pkg) => (
+              <Badge key={pkg.name} variant="outline" className="text-xs">
+                {pkg.name}
+                {pkg.version && (
+                  <span className="text-muted-foreground ml-1">
+                    @{pkg.version}
+                  </span>
+                )}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -407,6 +564,16 @@ export function RegistryModuleDrawer({
             <h3 className="mb-3 text-sm font-semibold">Features</h3>
             <FeatureGrid features={module.features} />
           </div>
+
+          {/* What This Module Creates (only shown for enabled/installed modules) */}
+          {(isInstalled || isBuiltin) && (
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">
+                What This Module Creates
+              </h3>
+              <ModuleOutputsSection moduleId={module.id} />
+            </div>
+          )}
 
           {/* Tags */}
           {module.tags && module.tags.length > 0 && (

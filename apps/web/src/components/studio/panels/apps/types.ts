@@ -1,4 +1,4 @@
-import type { VariableType } from "@stackpanel/proto";
+import type { VariableTypeName } from "../variables/constants";
 
 export interface AppFormState {
 	name: string;
@@ -27,14 +27,19 @@ export interface TaskWithCommand {
 	isOverridden: boolean;
 }
 
-/** Variable with resolved details for display */
+/**
+ * Variable with resolved details for display.
+ * With simplified model, this shows key-value pairs from environments.
+ */
 export interface DisplayVariable {
+	/** Environment variable name (e.g., "DATABASE_URL") */
 	envKey: string;
-	variableId: string;
-	variableKey: string;
-	type: VariableType | null;
-	description: string;
-	value?: string;
+	/** The value - literal string or vals reference */
+	value: string;
+	/** Environment names this variable is set in */
 	environments: string[];
+	/** UI-derived: whether this is a secret (based on value pattern) */
 	isSecret: boolean;
+	/** UI-derived: type name for display */
+	typeName: VariableTypeName;
 }

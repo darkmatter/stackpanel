@@ -43,14 +43,11 @@ in
     ./sst # SST infrastructure provisioning
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
-    ./modules/git-hooks.nix # git-hooks integration
-    ./modules/ci-formatters.nix # CI formatter checks
-    ./modules/go.nix # Go app support
-    ./modules/app-commands.nix # Nix-native app commands (build, dev, test, etc.)
-    ./modules/entrypoints.nix # Per-app entrypoint scripts with secrets/devshell
-    ./modules/process-compose.nix # App scripts + process-compose
-    ./modules/turbo.nix # Turborepo task integration
-    ./modules/oxlint.nix # OxLint JavaScript/TypeScript linting
+
+    # Feature modules - auto-discovered from ./modules/
+    # Supports both single files (module.nix) and directories (module/default.nix)
+    # See modules/default.nix for the discovery logic
+    ./modules
 
     # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,
     # devenv-pre-commit.nix) are NOT auto-imported here. They require devenvSchema

@@ -6,6 +6,8 @@ import { UpdateModuleSettingsRequest } from "./modules";
 import { DisableModuleRequest } from "./modules";
 import { ModuleResponse } from "./modules";
 import { EnableModuleRequest } from "./modules";
+import { ModuleOutputs } from "./modules";
+import { GetModuleOutputsRequest } from "./modules";
 import { Module } from "./modules";
 import { Modules } from "./modules";
 import { Variables } from "./variables";
@@ -4746,6 +4748,7 @@ export const AgentService = new ServiceType("stackpanel.agent.AgentService", [
     { name: "SetVariables", options: {}, I: Variables, O: Variables },
     { name: "GetModules", options: {}, I: GetModulesRequest, O: Modules },
     { name: "GetModule", options: {}, I: GetModuleRequest, O: Module },
+    { name: "GetModuleOutputs", options: {}, I: GetModuleOutputsRequest, O: ModuleOutputs },
     { name: "EnableModule", options: {}, I: EnableModuleRequest, O: ModuleResponse },
     { name: "DisableModule", options: {}, I: DisableModuleRequest, O: ModuleResponse },
     { name: "UpdateModuleSettings", options: {}, I: UpdateModuleSettingsRequest, O: ModuleResponse },

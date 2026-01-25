@@ -5,15 +5,17 @@
   ...
 }:
 let
-  cfg = config.stackpanel.ide.vscode;
+  vscodeCfg = config.stackpanel.ide.vscode;
+  zedCfg = config.stackpanel.ide.zed;
 
-  settingsEval = lib.evalModules {
+  # VS Code settings evaluation
+  vscodeSettingsEval = lib.evalModules {
     modules = [
       {
         _module.freeformType = lib.types.attrsOf lib.types.anything;
       }
     ]
-    ++ cfg.settings-modules;
+    ++ vscodeCfg.settings-modules;
     specialArgs = {
       inherit lib;
       inherit pkgs;
@@ -21,7 +23,24 @@ let
     };
   };
 
-  settingsFromModules = settingsEval.config;
+  vscodeSettingsFromModules = vscodeSettingsEval.config;
+
+  # Zed settings evaluation
+  zedSettingsEval = lib.evalModules {
+    modules = [
+      {
+        _module.freeformType = lib.types.attrsOf lib.types.anything;
+      }
+    ]
+    ++ zedCfg.settings-modules;
+    specialArgs = {
+      inherit lib;
+      inherit pkgs;
+      stackpanelConfig = config.stackpanel;
+    };
+  };
+
+  zedSettingsFromModules = zedSettingsEval.config;
 in
 {
   options.stackpanel.ide.vscode.settings-modules = lib.mkOption {
@@ -44,5 +63,32 @@ in
     ];
   };
 
-  config.stackpanel.ide.vscode.settings = lib.mkDefault settingsFromModules;
+  options.stackpanel.ide.zed.settings-modules = lib.mkOption {
+    type = lib.types.listOf lib.types.deferredModule;
+    default = [ ];
+    description = ''
+      Modules that contribute Zed settings.
+
+      These modules are merged into `stackpanel.ide.zed.settings` so their contents
+      end up in the generated Zed settings.json.
+    '';
+    example = [
+      {
+        config = {
+          lsp = {
+            nixd = {
+              settings = {
+                diagnostic = {
+                  suppress = [ "sema-extra-with" ];
+                };
+              };
+            };
+          };
+        };
+      }
+    ];
+  };
+
+  config.stackpanel.ide.vscode.settings = lib.mkDefault vscodeSettingsFromModules;
+  config.stackpanel.ide.zed.settings = lib.mkDefault zedSettingsFromModules;
 }

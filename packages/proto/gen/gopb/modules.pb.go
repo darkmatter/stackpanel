@@ -376,6 +376,51 @@ func (x *EnableModuleRequest) GetSettings() map[string]string {
 	return nil
 }
 
+// Request to get module outputs
+type GetModuleOutputsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModuleId      string                 `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModuleOutputsRequest) Reset() {
+	*x = GetModuleOutputsRequest{}
+	mi := &file_modules_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModuleOutputsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModuleOutputsRequest) ProtoMessage() {}
+
+func (x *GetModuleOutputsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModuleOutputsRequest.ProtoReflect.Descriptor instead.
+func (*GetModuleOutputsRequest) Descriptor() ([]byte, []int) {
+	return file_modules_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetModuleOutputsRequest) GetModuleId() string {
+	if x != nil {
+		return x.ModuleId
+	}
+	return ""
+}
+
 // Configuration for a stackpanel module
 type Module struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
@@ -403,7 +448,7 @@ type Module struct {
 
 func (x *Module) Reset() {
 	*x = Module{}
-	mi := &file_modules_proto_msgTypes[2]
+	mi := &file_modules_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -415,7 +460,7 @@ func (x *Module) String() string {
 func (*Module) ProtoMessage() {}
 
 func (x *Module) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[2]
+	mi := &file_modules_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -428,7 +473,7 @@ func (x *Module) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Module.ProtoReflect.Descriptor instead.
 func (*Module) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{2}
+	return file_modules_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Module) GetId() string {
@@ -540,7 +585,7 @@ type ModuleAppData struct {
 
 func (x *ModuleAppData) Reset() {
 	*x = ModuleAppData{}
-	mi := &file_modules_proto_msgTypes[3]
+	mi := &file_modules_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -552,7 +597,7 @@ func (x *ModuleAppData) String() string {
 func (*ModuleAppData) ProtoMessage() {}
 
 func (x *ModuleAppData) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[3]
+	mi := &file_modules_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -565,7 +610,7 @@ func (x *ModuleAppData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModuleAppData.ProtoReflect.Descriptor instead.
 func (*ModuleAppData) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{3}
+	return file_modules_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ModuleAppData) GetEnabled() bool {
@@ -599,7 +644,7 @@ type ModuleFeatures struct {
 
 func (x *ModuleFeatures) Reset() {
 	*x = ModuleFeatures{}
-	mi := &file_modules_proto_msgTypes[4]
+	mi := &file_modules_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -611,7 +656,7 @@ func (x *ModuleFeatures) String() string {
 func (*ModuleFeatures) ProtoMessage() {}
 
 func (x *ModuleFeatures) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[4]
+	mi := &file_modules_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -624,7 +669,7 @@ func (x *ModuleFeatures) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModuleFeatures.ProtoReflect.Descriptor instead.
 func (*ModuleFeatures) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{4}
+	return file_modules_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ModuleFeatures) GetFiles() bool {
@@ -699,7 +744,7 @@ type ModuleMeta struct {
 
 func (x *ModuleMeta) Reset() {
 	*x = ModuleMeta{}
-	mi := &file_modules_proto_msgTypes[5]
+	mi := &file_modules_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -711,7 +756,7 @@ func (x *ModuleMeta) String() string {
 func (*ModuleMeta) ProtoMessage() {}
 
 func (x *ModuleMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[5]
+	mi := &file_modules_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -724,7 +769,7 @@ func (x *ModuleMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModuleMeta.ProtoReflect.Descriptor instead.
 func (*ModuleMeta) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{5}
+	return file_modules_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ModuleMeta) GetName() string {
@@ -776,6 +821,335 @@ func (x *ModuleMeta) GetHomepage() string {
 	return ""
 }
 
+// A file generated by a module
+type ModuleOutputFile struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`                     // File path relative to project root
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the file
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`                     // File type: text, derivation, symlink
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleOutputFile) Reset() {
+	*x = ModuleOutputFile{}
+	mi := &file_modules_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModuleOutputFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModuleOutputFile) ProtoMessage() {}
+
+func (x *ModuleOutputFile) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModuleOutputFile.ProtoReflect.Descriptor instead.
+func (*ModuleOutputFile) Descriptor() ([]byte, []int) {
+	return file_modules_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ModuleOutputFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *ModuleOutputFile) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *ModuleOutputFile) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+// A healthcheck defined by a module
+type ModuleOutputHealthcheck struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                         // Healthcheck ID
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                     // Display name
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what it checks
+	Severity      string                 `protobuf:"bytes,4,opt,name=severity,proto3" json:"severity,omitempty"`             // Severity: critical, warning, info
+	Type          string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`                     // Check type: script, http, tcp, nix
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleOutputHealthcheck) Reset() {
+	*x = ModuleOutputHealthcheck{}
+	mi := &file_modules_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModuleOutputHealthcheck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModuleOutputHealthcheck) ProtoMessage() {}
+
+func (x *ModuleOutputHealthcheck) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModuleOutputHealthcheck.ProtoReflect.Descriptor instead.
+func (*ModuleOutputHealthcheck) Descriptor() ([]byte, []int) {
+	return file_modules_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ModuleOutputHealthcheck) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ModuleOutputHealthcheck) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModuleOutputHealthcheck) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *ModuleOutputHealthcheck) GetSeverity() string {
+	if x != nil {
+		return x.Severity
+	}
+	return ""
+}
+
+func (x *ModuleOutputHealthcheck) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+// A package added by a module
+type ModuleOutputPackage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Package name
+	Version       *string                `protobuf:"bytes,2,opt,name=version,proto3,oneof" json:"version,omitempty"`         // Package version
+	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"` // Package description
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleOutputPackage) Reset() {
+	*x = ModuleOutputPackage{}
+	mi := &file_modules_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModuleOutputPackage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModuleOutputPackage) ProtoMessage() {}
+
+func (x *ModuleOutputPackage) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModuleOutputPackage.ProtoReflect.Descriptor instead.
+func (*ModuleOutputPackage) Descriptor() ([]byte, []int) {
+	return file_modules_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ModuleOutputPackage) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModuleOutputPackage) GetVersion() string {
+	if x != nil && x.Version != nil {
+		return *x.Version
+	}
+	return ""
+}
+
+func (x *ModuleOutputPackage) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+// A script provided by a module
+type ModuleOutputScript struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Script name (command)
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of what the script does
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleOutputScript) Reset() {
+	*x = ModuleOutputScript{}
+	mi := &file_modules_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModuleOutputScript) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModuleOutputScript) ProtoMessage() {}
+
+func (x *ModuleOutputScript) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModuleOutputScript.ProtoReflect.Descriptor instead.
+func (*ModuleOutputScript) Descriptor() ([]byte, []int) {
+	return file_modules_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ModuleOutputScript) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModuleOutputScript) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+// Aggregated outputs of what a module creates
+type ModuleOutputs struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	ModuleId      string                     `protobuf:"bytes,1,opt,name=module_id,json=moduleId,proto3" json:"module_id,omitempty"` // Module identifier
+	Files         []*ModuleOutputFile        `protobuf:"bytes,2,rep,name=files,proto3" json:"files,omitempty"`                       // Generated files
+	Scripts       []*ModuleOutputScript      `protobuf:"bytes,3,rep,name=scripts,proto3" json:"scripts,omitempty"`                   // Provided scripts
+	Healthchecks  []*ModuleOutputHealthcheck `protobuf:"bytes,4,rep,name=healthchecks,proto3" json:"healthchecks,omitempty"`         // Health checks
+	Packages      []*ModuleOutputPackage     `protobuf:"bytes,5,rep,name=packages,proto3" json:"packages,omitempty"`                 // Added packages
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModuleOutputs) Reset() {
+	*x = ModuleOutputs{}
+	mi := &file_modules_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModuleOutputs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModuleOutputs) ProtoMessage() {}
+
+func (x *ModuleOutputs) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModuleOutputs.ProtoReflect.Descriptor instead.
+func (*ModuleOutputs) Descriptor() ([]byte, []int) {
+	return file_modules_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ModuleOutputs) GetModuleId() string {
+	if x != nil {
+		return x.ModuleId
+	}
+	return ""
+}
+
+func (x *ModuleOutputs) GetFiles() []*ModuleOutputFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+func (x *ModuleOutputs) GetScripts() []*ModuleOutputScript {
+	if x != nil {
+		return x.Scripts
+	}
+	return nil
+}
+
+func (x *ModuleOutputs) GetHealthchecks() []*ModuleOutputHealthcheck {
+	if x != nil {
+		return x.Healthchecks
+	}
+	return nil
+}
+
+func (x *ModuleOutputs) GetPackages() []*ModuleOutputPackage {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
 // A UI panel provided by a module
 type ModulePanel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -791,7 +1165,7 @@ type ModulePanel struct {
 
 func (x *ModulePanel) Reset() {
 	*x = ModulePanel{}
-	mi := &file_modules_proto_msgTypes[6]
+	mi := &file_modules_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -803,7 +1177,7 @@ func (x *ModulePanel) String() string {
 func (*ModulePanel) ProtoMessage() {}
 
 func (x *ModulePanel) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[6]
+	mi := &file_modules_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -816,7 +1190,7 @@ func (x *ModulePanel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModulePanel.ProtoReflect.Descriptor instead.
 func (*ModulePanel) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{6}
+	return file_modules_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ModulePanel) GetId() string {
@@ -874,7 +1248,7 @@ type ModulePanelField struct {
 
 func (x *ModulePanelField) Reset() {
 	*x = ModulePanelField{}
-	mi := &file_modules_proto_msgTypes[7]
+	mi := &file_modules_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -886,7 +1260,7 @@ func (x *ModulePanelField) String() string {
 func (*ModulePanelField) ProtoMessage() {}
 
 func (x *ModulePanelField) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[7]
+	mi := &file_modules_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -899,7 +1273,7 @@ func (x *ModulePanelField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModulePanelField.ProtoReflect.Descriptor instead.
 func (*ModulePanelField) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{7}
+	return file_modules_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ModulePanelField) GetName() string {
@@ -942,7 +1316,7 @@ type ModuleResponse struct {
 
 func (x *ModuleResponse) Reset() {
 	*x = ModuleResponse{}
-	mi := &file_modules_proto_msgTypes[8]
+	mi := &file_modules_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -954,7 +1328,7 @@ func (x *ModuleResponse) String() string {
 func (*ModuleResponse) ProtoMessage() {}
 
 func (x *ModuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[8]
+	mi := &file_modules_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -967,7 +1341,7 @@ func (x *ModuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModuleResponse.ProtoReflect.Descriptor instead.
 func (*ModuleResponse) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{8}
+	return file_modules_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ModuleResponse) GetModule() *Module {
@@ -1005,7 +1379,7 @@ type ModuleSource struct {
 
 func (x *ModuleSource) Reset() {
 	*x = ModuleSource{}
-	mi := &file_modules_proto_msgTypes[9]
+	mi := &file_modules_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1017,7 +1391,7 @@ func (x *ModuleSource) String() string {
 func (*ModuleSource) ProtoMessage() {}
 
 func (x *ModuleSource) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[9]
+	mi := &file_modules_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1030,7 +1404,7 @@ func (x *ModuleSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModuleSource.ProtoReflect.Descriptor instead.
 func (*ModuleSource) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{9}
+	return file_modules_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ModuleSource) GetType() ModuleSourceType {
@@ -1078,7 +1452,7 @@ type Modules struct {
 
 func (x *Modules) Reset() {
 	*x = Modules{}
-	mi := &file_modules_proto_msgTypes[10]
+	mi := &file_modules_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1090,7 +1464,7 @@ func (x *Modules) String() string {
 func (*Modules) ProtoMessage() {}
 
 func (x *Modules) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[10]
+	mi := &file_modules_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1103,7 +1477,7 @@ func (x *Modules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Modules.ProtoReflect.Descriptor instead.
 func (*Modules) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{10}
+	return file_modules_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Modules) GetModules() map[string]*Module {
@@ -1124,7 +1498,7 @@ type UpdateModuleSettingsRequest struct {
 
 func (x *UpdateModuleSettingsRequest) Reset() {
 	*x = UpdateModuleSettingsRequest{}
-	mi := &file_modules_proto_msgTypes[11]
+	mi := &file_modules_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1136,7 +1510,7 @@ func (x *UpdateModuleSettingsRequest) String() string {
 func (*UpdateModuleSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateModuleSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_modules_proto_msgTypes[11]
+	mi := &file_modules_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1149,7 +1523,7 @@ func (x *UpdateModuleSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateModuleSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateModuleSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_modules_proto_rawDescGZIP(), []int{11}
+	return file_modules_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateModuleSettingsRequest) GetModuleId() string {
@@ -1178,7 +1552,9 @@ const file_modules_proto_rawDesc = "" +
 	"\bsettings\x18\x02 \x03(\v20.stackpanel.db.EnableModuleRequest.SettingsEntryR\bsettings\x1a;\n" +
 	"\rSettingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfe\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"6\n" +
+	"\x17GetModuleOutputsRequest\x12\x1b\n" +
+	"\tmodule_id\x18\x01 \x01(\tR\bmoduleId\"\xfe\x05\n" +
 	"\x06Module\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06enable\x18\x02 \x01(\bR\x06enable\x12-\n" +
@@ -1233,7 +1609,36 @@ const file_modules_proto_rawDesc = "" +
 	"\a_authorB\n" +
 	"\n" +
 	"\b_versionB\v\n" +
-	"\t_homepage\"\xed\x01\n" +
+	"\t_homepage\"q\n" +
+	"\x10ModuleOutputFile\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12%\n" +
+	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04typeB\x0e\n" +
+	"\f_description\"\xa4\x01\n" +
+	"\x17ModuleOutputHealthcheck\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1a\n" +
+	"\bseverity\x18\x04 \x01(\tR\bseverity\x12\x12\n" +
+	"\x04type\x18\x05 \x01(\tR\x04typeB\x0e\n" +
+	"\f_description\"\x8b\x01\n" +
+	"\x13ModuleOutputPackage\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
+	"\aversion\x18\x02 \x01(\tH\x00R\aversion\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01B\n" +
+	"\n" +
+	"\b_versionB\x0e\n" +
+	"\f_description\"_\n" +
+	"\x12ModuleOutputScript\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
+	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01B\x0e\n" +
+	"\f_description\"\xac\x02\n" +
+	"\rModuleOutputs\x12\x1b\n" +
+	"\tmodule_id\x18\x01 \x01(\tR\bmoduleId\x125\n" +
+	"\x05files\x18\x02 \x03(\v2\x1f.stackpanel.db.ModuleOutputFileR\x05files\x12;\n" +
+	"\ascripts\x18\x03 \x03(\v2!.stackpanel.db.ModuleOutputScriptR\ascripts\x12J\n" +
+	"\fhealthchecks\x18\x04 \x03(\v2&.stackpanel.db.ModuleOutputHealthcheckR\fhealthchecks\x12>\n" +
+	"\bpackages\x18\x05 \x03(\v2\".stackpanel.db.ModuleOutputPackageR\bpackages\"\xed\x01\n" +
 	"\vModulePanel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -1326,7 +1731,7 @@ func file_modules_proto_rawDescGZIP() []byte {
 }
 
 var file_modules_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_modules_proto_goTypes = []any{
 	(ModuleCategory)(0),                 // 0: stackpanel.db.ModuleCategory
 	(ModuleFieldType)(0),                // 1: stackpanel.db.ModuleFieldType
@@ -1334,47 +1739,57 @@ var file_modules_proto_goTypes = []any{
 	(ModuleSourceType)(0),               // 3: stackpanel.db.ModuleSourceType
 	(*DisableModuleRequest)(nil),        // 4: stackpanel.db.DisableModuleRequest
 	(*EnableModuleRequest)(nil),         // 5: stackpanel.db.EnableModuleRequest
-	(*Module)(nil),                      // 6: stackpanel.db.Module
-	(*ModuleAppData)(nil),               // 7: stackpanel.db.ModuleAppData
-	(*ModuleFeatures)(nil),              // 8: stackpanel.db.ModuleFeatures
-	(*ModuleMeta)(nil),                  // 9: stackpanel.db.ModuleMeta
-	(*ModulePanel)(nil),                 // 10: stackpanel.db.ModulePanel
-	(*ModulePanelField)(nil),            // 11: stackpanel.db.ModulePanelField
-	(*ModuleResponse)(nil),              // 12: stackpanel.db.ModuleResponse
-	(*ModuleSource)(nil),                // 13: stackpanel.db.ModuleSource
-	(*Modules)(nil),                     // 14: stackpanel.db.Modules
-	(*UpdateModuleSettingsRequest)(nil), // 15: stackpanel.db.UpdateModuleSettingsRequest
-	nil,                                 // 16: stackpanel.db.EnableModuleRequest.SettingsEntry
-	nil,                                 // 17: stackpanel.db.Module.SettingsEntry
-	nil,                                 // 18: stackpanel.db.Module.AppsEntry
-	nil,                                 // 19: stackpanel.db.ModuleAppData.ConfigEntry
-	nil,                                 // 20: stackpanel.db.Modules.ModulesEntry
-	nil,                                 // 21: stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
+	(*GetModuleOutputsRequest)(nil),     // 6: stackpanel.db.GetModuleOutputsRequest
+	(*Module)(nil),                      // 7: stackpanel.db.Module
+	(*ModuleAppData)(nil),               // 8: stackpanel.db.ModuleAppData
+	(*ModuleFeatures)(nil),              // 9: stackpanel.db.ModuleFeatures
+	(*ModuleMeta)(nil),                  // 10: stackpanel.db.ModuleMeta
+	(*ModuleOutputFile)(nil),            // 11: stackpanel.db.ModuleOutputFile
+	(*ModuleOutputHealthcheck)(nil),     // 12: stackpanel.db.ModuleOutputHealthcheck
+	(*ModuleOutputPackage)(nil),         // 13: stackpanel.db.ModuleOutputPackage
+	(*ModuleOutputScript)(nil),          // 14: stackpanel.db.ModuleOutputScript
+	(*ModuleOutputs)(nil),               // 15: stackpanel.db.ModuleOutputs
+	(*ModulePanel)(nil),                 // 16: stackpanel.db.ModulePanel
+	(*ModulePanelField)(nil),            // 17: stackpanel.db.ModulePanelField
+	(*ModuleResponse)(nil),              // 18: stackpanel.db.ModuleResponse
+	(*ModuleSource)(nil),                // 19: stackpanel.db.ModuleSource
+	(*Modules)(nil),                     // 20: stackpanel.db.Modules
+	(*UpdateModuleSettingsRequest)(nil), // 21: stackpanel.db.UpdateModuleSettingsRequest
+	nil,                                 // 22: stackpanel.db.EnableModuleRequest.SettingsEntry
+	nil,                                 // 23: stackpanel.db.Module.SettingsEntry
+	nil,                                 // 24: stackpanel.db.Module.AppsEntry
+	nil,                                 // 25: stackpanel.db.ModuleAppData.ConfigEntry
+	nil,                                 // 26: stackpanel.db.Modules.ModulesEntry
+	nil,                                 // 27: stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
 }
 var file_modules_proto_depIdxs = []int32{
-	16, // 0: stackpanel.db.EnableModuleRequest.settings:type_name -> stackpanel.db.EnableModuleRequest.SettingsEntry
-	9,  // 1: stackpanel.db.Module.meta:type_name -> stackpanel.db.ModuleMeta
-	13, // 2: stackpanel.db.Module.source:type_name -> stackpanel.db.ModuleSource
-	8,  // 3: stackpanel.db.Module.features:type_name -> stackpanel.db.ModuleFeatures
-	17, // 4: stackpanel.db.Module.settings:type_name -> stackpanel.db.Module.SettingsEntry
-	10, // 5: stackpanel.db.Module.panels:type_name -> stackpanel.db.ModulePanel
-	18, // 6: stackpanel.db.Module.apps:type_name -> stackpanel.db.Module.AppsEntry
-	19, // 7: stackpanel.db.ModuleAppData.config:type_name -> stackpanel.db.ModuleAppData.ConfigEntry
+	22, // 0: stackpanel.db.EnableModuleRequest.settings:type_name -> stackpanel.db.EnableModuleRequest.SettingsEntry
+	10, // 1: stackpanel.db.Module.meta:type_name -> stackpanel.db.ModuleMeta
+	19, // 2: stackpanel.db.Module.source:type_name -> stackpanel.db.ModuleSource
+	9,  // 3: stackpanel.db.Module.features:type_name -> stackpanel.db.ModuleFeatures
+	23, // 4: stackpanel.db.Module.settings:type_name -> stackpanel.db.Module.SettingsEntry
+	16, // 5: stackpanel.db.Module.panels:type_name -> stackpanel.db.ModulePanel
+	24, // 6: stackpanel.db.Module.apps:type_name -> stackpanel.db.Module.AppsEntry
+	25, // 7: stackpanel.db.ModuleAppData.config:type_name -> stackpanel.db.ModuleAppData.ConfigEntry
 	0,  // 8: stackpanel.db.ModuleMeta.category:type_name -> stackpanel.db.ModuleCategory
-	2,  // 9: stackpanel.db.ModulePanel.type:type_name -> stackpanel.db.ModulePanelType
-	11, // 10: stackpanel.db.ModulePanel.fields:type_name -> stackpanel.db.ModulePanelField
-	1,  // 11: stackpanel.db.ModulePanelField.type:type_name -> stackpanel.db.ModuleFieldType
-	6,  // 12: stackpanel.db.ModuleResponse.module:type_name -> stackpanel.db.Module
-	3,  // 13: stackpanel.db.ModuleSource.type:type_name -> stackpanel.db.ModuleSourceType
-	20, // 14: stackpanel.db.Modules.modules:type_name -> stackpanel.db.Modules.ModulesEntry
-	21, // 15: stackpanel.db.UpdateModuleSettingsRequest.settings:type_name -> stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
-	7,  // 16: stackpanel.db.Module.AppsEntry.value:type_name -> stackpanel.db.ModuleAppData
-	6,  // 17: stackpanel.db.Modules.ModulesEntry.value:type_name -> stackpanel.db.Module
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	11, // 9: stackpanel.db.ModuleOutputs.files:type_name -> stackpanel.db.ModuleOutputFile
+	14, // 10: stackpanel.db.ModuleOutputs.scripts:type_name -> stackpanel.db.ModuleOutputScript
+	12, // 11: stackpanel.db.ModuleOutputs.healthchecks:type_name -> stackpanel.db.ModuleOutputHealthcheck
+	13, // 12: stackpanel.db.ModuleOutputs.packages:type_name -> stackpanel.db.ModuleOutputPackage
+	2,  // 13: stackpanel.db.ModulePanel.type:type_name -> stackpanel.db.ModulePanelType
+	17, // 14: stackpanel.db.ModulePanel.fields:type_name -> stackpanel.db.ModulePanelField
+	1,  // 15: stackpanel.db.ModulePanelField.type:type_name -> stackpanel.db.ModuleFieldType
+	7,  // 16: stackpanel.db.ModuleResponse.module:type_name -> stackpanel.db.Module
+	3,  // 17: stackpanel.db.ModuleSource.type:type_name -> stackpanel.db.ModuleSourceType
+	26, // 18: stackpanel.db.Modules.modules:type_name -> stackpanel.db.Modules.ModulesEntry
+	27, // 19: stackpanel.db.UpdateModuleSettingsRequest.settings:type_name -> stackpanel.db.UpdateModuleSettingsRequest.SettingsEntry
+	8,  // 20: stackpanel.db.Module.AppsEntry.value:type_name -> stackpanel.db.ModuleAppData
+	7,  // 21: stackpanel.db.Modules.ModulesEntry.value:type_name -> stackpanel.db.Module
+	22, // [22:22] is the sub-list for method output_type
+	22, // [22:22] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_modules_proto_init() }
@@ -1382,18 +1797,22 @@ func file_modules_proto_init() {
 	if File_modules_proto != nil {
 		return
 	}
-	file_modules_proto_msgTypes[2].OneofWrappers = []any{}
-	file_modules_proto_msgTypes[5].OneofWrappers = []any{}
+	file_modules_proto_msgTypes[3].OneofWrappers = []any{}
 	file_modules_proto_msgTypes[6].OneofWrappers = []any{}
+	file_modules_proto_msgTypes[7].OneofWrappers = []any{}
 	file_modules_proto_msgTypes[8].OneofWrappers = []any{}
 	file_modules_proto_msgTypes[9].OneofWrappers = []any{}
+	file_modules_proto_msgTypes[10].OneofWrappers = []any{}
+	file_modules_proto_msgTypes[12].OneofWrappers = []any{}
+	file_modules_proto_msgTypes[14].OneofWrappers = []any{}
+	file_modules_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_modules_proto_rawDesc), len(file_modules_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   18,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -25,20 +25,17 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@ui/select";
-import { Globe, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Globe } from "lucide-react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import type { AppVariable, Variable as WorkspaceVariable } from "@/lib/types";
-import { MultiSelect } from "../shared/multi-select";
-import { AppVariableManager } from "./app-variable-manager";
 import { APP_TYPES } from "./constants";
 
-interface TaskItem {
-	id: string;
-	name: string;
-}
-
+/**
+ * App form schema - simplified for the new schema.
+ * Variables are now managed through the AppVariablesSection component,
+ * not through this form.
+ */
 export const appFormSchema = z.object({
 	id: z.string().min(1, "App ID is required").max(36),
 	name: z.string().max(100).optional(),
@@ -47,8 +44,6 @@ export const appFormSchema = z.object({
 	type: z.string().min(1),
 	port: z.string().optional(),
 	domain: z.string().max(100).optional(),
-	tasks: z.array(z.string()),
-	variables: z.record(z.any()), // Record<string, AppVariable>
 });
 
 export type AppFormValues = z.infer<typeof appFormSchema>;
@@ -63,15 +58,9 @@ export function parsePortValue(port: string | undefined): number | undefined {
 }
 
 interface AppFormFieldsProps {
-	/** Task items for selection (when showing tasks) */
-	taskItems?: TaskItem[];
-	/** All workspace variables available for linking */
-	workspaceVariables?: Record<string, WorkspaceVariable>;
-	/** Available environments */
-	environments?: string[];
 	/** Optional ID field for "add" mode - not shown in edit mode */
 	showIdField?: boolean;
-	/** Hide tasks and variables sections (used in Add App form) */
+	/** Hide tasks and variables sections (used in Add App form) - deprecated, always hidden now */
 	hideTasksAndVariables?: boolean;
 	/** Default values to populate the form */
 	defaultValues?: Partial<AppFormValues>;
@@ -82,18 +71,13 @@ interface AppFormFieldsProps {
 }
 
 export function AppFormFields({
-	taskItems = [],
-	workspaceVariables = {},
-	environments = ["dev", "staging", "prod"],
 	showIdField = false,
-	hideTasksAndVariables = false,
 	defaultValues,
 	onValuesChange,
 	onFormReady,
 }: AppFormFieldsProps) {
-	const [selectedEnvironment, setSelectedEnvironment] = useState("all");
-
 	const form = useForm<AppFormValues>({
+		// @ts-expect-error - zodResolver type mismatch between zod versions
 		resolver: zodResolver(appFormSchema),
 		defaultValues: {
 			id: "",
@@ -103,8 +87,6 @@ export function AppFormFields({
 			type: "bun",
 			port: "",
 			domain: "",
-			tasks: [],
-			variables: {},
 			...defaultValues,
 		},
 	});
@@ -278,57 +260,6 @@ export function AppFormFields({
 						)}
 					/>
 				</div>
-
-				{!hideTasksAndVariables && (
-					<>
-						<FormField
-							control={form.control}
-							name="tasks"
-							render={({ field }) => (
-								<FormItem>
-									<MultiSelect
-										label="Tasks"
-										items={taskItems}
-										selectedIds={field.value}
-										onSelectionChange={field.onChange}
-										renderItem={(item) => (
-											<span className="flex items-center gap-2">
-												<Play className="h-3 w-3 text-muted-foreground" />
-												{item.name}
-											</span>
-										)}
-									/>
-									<FormDescription>
-										Tasks from turbo.json that can be run for this app
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="variables"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Environment Variables</FormLabel>
-									<FormControl>
-										<AppVariableManager
-											appVariables={
-												(field.value as Record<string, AppVariable>) || {}
-											}
-											workspaceVariables={workspaceVariables}
-											environments={environments}
-											selectedEnvironment={selectedEnvironment}
-											onChange={field.onChange}
-											onEnvironmentChange={setSelectedEnvironment}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					</>
-				)}
 			</div>
 		</Form>
 	);

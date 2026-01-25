@@ -222,9 +222,13 @@ export function SecurityStatusCard() {
 	const { data: config } = useNixConfig();
 	const trpc = useTRPC();
 
+	// Type-safe access to optional config properties
+	const awsConfig = config as { aws?: { "roles-anywhere"?: { enable?: boolean } } } | null;
+	const stepCaConfig = config as { stepCa?: { "step-ca"?: { enable?: boolean } } } | null;
+
 	// Check if AWS or Step CA are configured in the nix config
-	const awsEnabled = config?.aws?.["roles-anywhere"]?.enable ?? false;
-	const stepCaEnabled = config?.stepCa?.["step-ca"]?.enable ?? false;
+	const awsEnabled = awsConfig?.aws?.["roles-anywhere"]?.enable ?? false;
+	const stepCaEnabled = stepCaConfig?.stepCa?.["step-ca"]?.enable ?? false;
 
 	// Don't show the card if neither feature is enabled
 	const shouldShow = awsEnabled || stepCaEnabled;

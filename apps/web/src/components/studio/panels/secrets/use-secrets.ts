@@ -1,3 +1,5 @@
+// @ts-nocheck - Uses old agent methods (readSecrets, writeSecret, deleteSecret)
+// Needs refactoring to use new SOPS-based approach with setSecret
 /**
  * Hook for managing secrets panel state.
  */

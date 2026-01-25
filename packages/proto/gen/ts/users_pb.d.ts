@@ -36,6 +36,20 @@ export declare type User = Message<"stackpanel.db.User"> & {
    * @generated from field: optional string email = 3;
    */
   email?: string;
+
+  /**
+   * SSH or AGE public keys for the user
+   *
+   * @generated from field: repeated string public_keys = 4;
+   */
+  publicKeys: string[];
+
+  /**
+   * Environments this user can access secrets for (e.g., dev, staging, production)
+   *
+   * @generated from field: repeated string secrets_allowed_environments = 5;
+   */
+  secretsAllowedEnvironments: string[];
 };
 
 /**

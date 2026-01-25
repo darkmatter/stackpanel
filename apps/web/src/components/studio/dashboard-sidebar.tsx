@@ -34,7 +34,7 @@ import {
   ChevronRight,
   ChevronUp,
   Cloud,
-  Database,
+  Cog,
   FileCode,
   Home,
   LayoutDashboard,
@@ -76,6 +76,7 @@ export type PanelType =
   | "packages"
   | "secrets"
   | "tasks"
+  | "processes"
   | "variables"
   | "configuration"
   | "local-config"
@@ -110,6 +111,7 @@ const mainNavItems: NavItem[] = [
   { id: "infra", label: "Infrastructure", icon: Cloud },
   { id: "apps", label: "Apps", icon: AppWindow },
   { id: "packages", label: "Packages", icon: Package },
+  { id: "processes", label: "Processes", icon: Cog },
   { id: "tasks", label: "Tasks", icon: Play },
   { id: "network", label: "Network", icon: Network },
 ];
@@ -165,8 +167,8 @@ function NavMenuItem({ item }: { item: NavItem }) {
   );
 }
 
-// Setup step sub-item
-function SetupStepItem({
+// Setup step sub-item (currently unused but kept for future use)
+function _SetupStepItem({
   step,
   isCollapsed,
   active,
@@ -302,7 +304,7 @@ function SetupMenuItem() {
   const pathname = routerState.location.pathname;
   const progress = useSetupProgress();
   const search = routerState.location.search;
-  const activeStepId = search ? new URLSearchParams(search).get("step") : null;
+  const _activeStepId = search ? new URLSearchParams(search).get("step") : null;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -325,11 +327,11 @@ function SetupMenuItem() {
               "rounded-lg",
               !isComplete &&
                 "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-              isComplete && "text-emerald-600 dark:text-emerald-400",
+              isComplete && "text-accent dark:text-accent",
             )}
           >
             {isComplete ? (
-              <CheckCircle2 className="size-4 text-emerald-500" />
+              <CheckCircle2 className="size-4 text-accent" />
             ) : (
               <Rocket className="size-4" />
             )}
@@ -353,11 +355,11 @@ function SetupMenuItem() {
                   "bg-sidebar-accent/10 text-sidebar-accent-foreground dark:text-sidebar-accent-foreground hover:bg-sidebar-accent/20",
                 isComplete &&
                   !isActive &&
-                  "text-emerald-600 dark:text-emerald-400",
+                  "text-accent dark:text-accent-foreground",
               )}
             >
               {isComplete ? (
-                <CheckCircle2 className="size-4 text-emerald-500" />
+                <CheckCircle2 className="size-4 text-accent" />
               ) : (
                 <Rocket className="size-4" />
               )}
@@ -376,16 +378,18 @@ function SetupMenuItem() {
               <Progress value={progressPercent} className="h-1" />
             </div>
           )}
-          {/*<SidebarMenuSub>
+          {/* TODO: Re-enable when setup steps are ready
+          <SidebarMenuSub>
             {progress?.steps.map((step) => (
-              <SetupStepItem
+              <_SetupStepItem
                 key={step.id}
                 step={step}
                 active={activeStepId === step.id}
                 isCollapsed={isCollapsed}
               />
             ))}
-          </SidebarMenuSub>*/}
+          </SidebarMenuSub>
+          */}
         </CollapsibleContent>
       </SidebarMenuItem>
     </Collapsible>
@@ -482,12 +486,10 @@ export function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         {/* Other */}
         <SidebarGroup>
-          <SidebarGroupLabel>
-            Coming Soon
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>Coming Soon</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {coceptsNavItems.map((item) => (

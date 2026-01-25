@@ -228,7 +228,10 @@ st, err := state.Load("", state.WithNixEval(false))
 
 ```bash
 # Enter development shell
-direnv allow  # or: devenv shell
+nix develop --impure  # or: direnv allow (with .envrc)
+
+# Start all dev processes (web, docs, server, etc.)
+dev                    # Uses process-compose
 
 # Individual commands
 bun install            # Install dependencies

@@ -36,6 +36,10 @@ export type IdeData = {
     enable?: boolean;
     "output-mode"?: "workspace" | "settingsJson";
   };
+  zed?: {
+    enable?: boolean;
+    "output-mode"?: "generated" | "dotZed";
+  };
 };
 
 export type UsersSettingsData = {

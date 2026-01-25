@@ -203,33 +203,13 @@ in
             };
 
             # ===================================================================
-            # Load devenv.nix for simple extraction (fallback)
+            # Devenv config path
             # ===================================================================
             devenvConfigPath = projectRoot + "/.stackpanel/devenv.nix";
             hasDevenvConfig = builtins.pathExists devenvConfigPath;
 
-            loadedDevenvConfig =
-              if hasDevenvConfig then
-                let
-                  raw = import devenvConfigPath;
-                in
-                if builtins.isFunction raw then
-                  raw {
-                    inherit pkgs lib inputs;
-                    config = { };
-                  }
-                else
-                  raw
-              else
-                { };
-
-            # Simple devenv config extraction (for when devenv modules not available)
-            simpleDevenvPackages = loadedDevenvConfig.packages or [ ];
-            simpleDevenvEnv = loadedDevenvConfig.env or { };
-            simpleDevenvEnterShell = loadedDevenvConfig.enterShell or "";
-
-            # Git hooks config
-            gitHooksConfig = loadedDevenvConfig.git-hooks or loadedConfig.git-hooks or { };
+            # Git hooks config (from stackpanel config)
+            gitHooksConfig = loadedConfig.git-hooks or { };
 
             # ===================================================================
             # Evaluate stackpanel modules
@@ -248,23 +228,24 @@ in
 
             # ===================================================================
             # Extract from devenv evaluation (if devenv.flakeModule is loaded)
+            # The devenv.shells.default is configured below to import user's devenv.nix
+            # This gives us properly evaluated languages.* config (GOPATH, GOROOT, etc.)
+            #
+            # IMPORTANT: We only extract `env` and `packages` from devenv.
+            # We do NOT use devenv's `enterShell` because it contains devenv-specific
+            # setup (PS1, DEVENV_STATE dirs, profile linking) that conflicts with ours.
             # ===================================================================
-            devenvShell = config.devenv.shells.default or null;
-            devenvConfig = if devenvShell != null then devenvShell else null;
+            devenvEval = config.devenv.shells.default or null;
 
-            # Get packages from devenv (includes languages.* computed packages)
-            devenvPackages =
-              if devenvConfig != null then (devenvConfig.packages or [ ]) else simpleDevenvPackages;
+            # Get packages from devenv (includes languages.* computed packages like delve, gopls)
+            devenvPackages = if devenvEval != null then (devenvEval.packages or [ ]) else [ ];
 
-            # Get env from devenv
-            devenvEnv = if devenvConfig != null then (devenvConfig.env or { }) else simpleDevenvEnv;
-
-            # Get enterShell from devenv
-            devenvEnterShell =
-              if devenvConfig != null then (devenvConfig.enterShell or "") else simpleDevenvEnterShell;
+            # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
+            # We extract this and merge it into our env, giving our values priority
+            devenvEnv = if devenvEval != null then (devenvEval.env or { }) else { };
 
             # Get processes from devenv
-            devenvProcesses = if devenvConfig != null then (devenvConfig.processes or { }) else { };
+            devenvProcesses = if devenvEval != null then (devenvEval.processes or { }) else { };
 
             # ===================================================================
             # Get devenv-tasks-fast-build
@@ -295,6 +276,8 @@ in
 
             # ===================================================================
             # Combine all packages
+            # NOTE: process-compose `dev` command is available via `nix run .#dev`
+            # We don't add it to devshell packages to avoid infinite recursion
             # ===================================================================
             allPackages =
               (devshellOutputs.packages or [ ])
@@ -304,8 +287,52 @@ in
 
             # ===================================================================
             # Combine all env vars
+            # Filter out devenv's process-compose vars - we use our own process-compose.yaml
             # ===================================================================
-            allEnv = (devshellOutputs.env or { }) // devenvEnv;
+            filteredDevenvEnv = builtins.removeAttrs devenvEnv [
+              "PC_CONFIG_FILES"
+              "PC_CONFIG"
+              "PC_SOCKET_PATH"
+              "PROCESS_COMPOSE_FILE"
+              "PROCESS_COMPOSE_CONFIG"
+            ];
+            # Our env (devshellOutputs) takes priority over devenv's
+            allEnv = filteredDevenvEnv // (devshellOutputs.env or { });
+
+            # ===================================================================
+            # Build complete shellHook content
+            # ===================================================================
+            shellHookContent = ''
+              # ================================================================
+              # Stackpanel Shell Hook
+              # Generated by: nix/flake/default.nix
+              # ================================================================
+
+              # Export environment variables (includes GOPATH, GOROOT from devenv languages.*)
+              ${lib.concatStringsSep "\n" (
+                lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
+              )}
+
+              # Add language bin directories to PATH (replaces devenv's enterShell PATH modifications)
+              # This handles languages.go ($GOPATH/bin), languages.rust ($CARGO_HOME/bin), etc.
+              if [[ -n "''${GOPATH:-}" ]]; then
+                export PATH="$GOPATH/bin:$PATH"
+              fi
+              if [[ -n "''${CARGO_HOME:-}" ]]; then
+                export PATH="$CARGO_HOME/bin:$PATH"
+              fi
+
+              # Stackpanel hooks
+              ${stackpanelHook}
+            '';
+
+            # Write shellHook to a file in the Nix store
+            shellHookFile = pkgs.writeTextFile {
+              name = "stackpanel-shellhook";
+              text = shellHookContent;
+              executable = true;
+              destination = "/shellhook.sh";
+            };
 
             # ===================================================================
             # JSON-safe serialized config
@@ -334,14 +361,20 @@ in
               nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
               buildInputs = devshellOutputs.buildInputs or [ ];
 
-              shellHook = ''
-                # Export environment variables
-                ${lib.concatStringsSep "\n" (
-                  lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
-                )}
+              # Export path to shellHook file for inspection/debugging
+              STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
 
-                # Stackpanel hooks (devenvEnterShell excluded - it duplicates these)
-                ${stackpanelHook}
+              # Minimal shellHook that sources the full hook from the store
+              # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stackpanel/state/shellhook.sh)
+              shellHook = ''
+                # Source the full shellHook from the Nix store
+                source "${shellHookFile}/shellhook.sh"
+
+                # Symlink to state dir for easy inspection (after STACKPANEL_STATE_DIR is set)
+                if [[ -n "''${STACKPANEL_STATE_DIR:-}" ]]; then
+                  mkdir -p "$STACKPANEL_STATE_DIR"
+                  ln -sf "${shellHookFile}/shellhook.sh" "$STACKPANEL_STATE_DIR/shellhook.sh"
+                fi
               '';
 
               # FULL CONTROL over passthru
@@ -370,7 +403,7 @@ in
 
                 # Devenv info
                 devenv = {
-                  evaluated = devenvConfig != null;
+                  evaluated = devenvEval != null;
                   packages = devenvPackages;
                   env = devenvEnv;
                   processes = devenvProcesses;
@@ -411,18 +444,36 @@ in
             })
 
             # Configure full devenv shell when stackpanel is enabled with devenv config
-            (lib.mkIf (hasDevenv && hasDevenvConfig && (spConfig.enable or false)) {
-              devenv.shells.default = {
-                imports = [
-                  # Import the devenv adapter to get stackpanel options in devenv
-                  ../flake/modules/devenv.nix
-                ]
-                ++ (perSystemCfg.devenvImports or [ ]);
+            # This imports the user's .stackpanel/devenv.nix so devenv properly evaluates
+            # languages.* modules (e.g., languages.go sets GOPATH, GOROOT)
+            (lib.mkIf (hasDevenv && hasDevenvConfig && (spConfig.enable or false)) (
+              let
+                # Detect which languages are used by stackpanel apps
+                apps = spConfig.apps or { };
+                hasGoApps = lib.any (app: app.go.enable or false) (lib.attrValues apps);
+                # Add more language detection here as needed:
+                # hasRustApps = lib.any (app: app.rust.enable or false) (lib.attrValues apps);
+              in
+              {
+                devenv.shells.default = {
+                  imports = [
+                    # Import the devenv adapter to get stackpanel options in devenv
+                    ../flake/modules/devenv.nix
+                    # Import user's devenv.nix for languages, services, etc.
+                    devenvConfigPath
+                  ]
+                  ++ (perSystemCfg.devenvImports or [ ]);
 
-                # Apply stackpanel config
-                stackpanel = loadedConfig;
-              };
-            })
+                  # Apply stackpanel config
+                  stackpanel = loadedConfig;
+
+                  # Auto-enable devenv languages based on stackpanel app configs
+                  # This ensures GOPATH, GOROOT, etc. are set when Go apps are defined
+                  languages.go.enable = lib.mkDefault hasGoApps;
+                  # languages.rust.enable = lib.mkDefault hasRustApps;
+                };
+              }
+            ))
 
             # Override devShells.default with OUR shell (has proper passthru)
             (lib.mkIf (spConfig.enable or false) {
@@ -446,13 +497,17 @@ in
               }
             ))
 
-            # Expose stackpanel.checks as flake checks (for nix flake check)
+            # Expose stackpanel.checks and stackpanel.moduleChecksFlattened as flake checks
+            # - stackpanel.checks: Simple checks (attrsOf package)
+            # - stackpanel.moduleChecksFlattened: Structured module checks with categories
             (lib.mkIf (spConfig.enable or false) (
               let
-                spChecks = spConfig.checks or { };
+                simpleChecks = spConfig.checks or { };
+                moduleChecks = spConfig.moduleChecksFlattened or { };
+                allChecks = simpleChecks // moduleChecks;
               in
-              lib.mkIf (spChecks != { }) {
-                checks = spChecks;
+              lib.mkIf (allChecks != { }) {
+                checks = allChecks;
               }
             ))
 
@@ -477,7 +532,9 @@ in
       }
 
       # -------------------------------------------------------------------------
-      # Process-compose integration
+      # Process-compose integration (for nix run .#dev)
+      # NOTE: The `dev` command in devshell comes from our stackpanel module
+      # This just provides a `nix run .#dev` option via process-compose-flake
       # -------------------------------------------------------------------------
       (lib.mkIf hasProcessCompose {
         perSystem =
@@ -490,11 +547,9 @@ in
             enabled = sp != null && (sp.enable or false) && hasProcesses;
           in
           lib.mkIf enabled {
-            process-compose.dev = {
-              settings = {
-                environment = sp.process-compose.environment or { };
-                processes = processes;
-              };
+            process-compose.dev.settings = {
+              environment = sp.process-compose.environment or { };
+              processes = processes;
             };
           };
       })

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@ui/tabs";
 import { Maximize2, Minimize2, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ExecResult } from "@/lib/agent";
+import type { ExecResult } from "@/lib/types";
 import { useAgentContext } from "@/lib/agent-provider";
 
 interface TerminalLine {
@@ -76,7 +76,7 @@ export function TerminalPanel() {
 				outputLines.length === 0 && errorLines.length === 0
 					? [
 							{
-								type: result.exit_code === 0 ? "success" : "error",
+								type: result.exit_code === 0 ? ("success" as const) : ("error" as const),
 								content:
 									result.exit_code === 0
 										? "✓ Command completed"

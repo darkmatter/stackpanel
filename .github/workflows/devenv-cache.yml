@@ -1,4 +1,4 @@
-# Build and cache the devenv shell to Cachix for faster CI and local builds.
+# Build and cache the nix devshell to Cachix for faster CI and local builds.
 #
 # Setup required:
 # 1. Create a cachix cache at https://app.cachix.org/cache (name: stackpanel)
@@ -6,7 +6,7 @@
 # 3. Add CACHIX_AUTH_TOKEN to GitHub repo secrets
 # 4. Update the public key below (find it at https://app.cachix.org/cache/stackpanel -> Settings)
 
-name: "Build and cache devenv"
+name: "Build and cache devshell"
 
 on:
   push:
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  devenv-build:
+  devshell-build:
     strategy:
       fail-fast: false
       matrix:
@@ -51,18 +51,11 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: devenv
 
-      - name: Install devenv
-        run: nix profile install nixpkgs#devenv --accept-flake-config
-
       - name: Create stackpanel root marker
         run: echo "${{ github.workspace }}" > .stackpanel-root
 
-      - name: Build devenv shell
-        run: devenv build
-        env:
-          DEVENV_ROOT: ${{ github.workspace }}
+      - name: Build devshell
+        run: nix build --impure '.#devShells.${{ matrix.system }}.default' --no-link
 
-      - name: Test devenv shell
-        run: devenv shell -- echo "Shell works!"
-        env:
-          DEVENV_ROOT: ${{ github.workspace }}
+      - name: Test devshell
+        run: nix develop --impure --command echo "Shell works!"

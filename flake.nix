@@ -92,7 +92,10 @@
           {
             _module.args.pkgs = import nixpkgs {
               inherit system;
-              overlays = [ inputs.gomod2nix.overlays.default ];
+              overlays = [
+                inputs.gomod2nix.overlays.default
+                inputs.bun2nix.overlays.default
+              ];
             };
 
             # stackpanel.enable is set in .stackpanel/config.nix

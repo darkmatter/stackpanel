@@ -1,0 +1,31 @@
+# ==============================================================================
+# default.nix - Go Module Entry Point
+#
+# Go application support using gomod2nix for hermetic packaging.
+#
+# Components:
+# - meta.nix: Static metadata for discovery
+# - module.nix: Options, packages, scripts, health checks
+# - ui.nix: UI panel definitions
+#
+# Usage:
+#   stackpanel.apps.my-app = {
+#     path = "apps/my-app";
+#     go.enable = true;
+#   };
+# ==============================================================================
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
+let
+  meta = import ./meta.nix;
+in
+{
+  imports = [
+    ./module.nix
+    ./ui.nix
+  ];
+}

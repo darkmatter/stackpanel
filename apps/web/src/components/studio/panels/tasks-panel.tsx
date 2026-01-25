@@ -100,7 +100,7 @@ export function TasksPanel() {
 						Failed to load tasks: {error?.message ?? "Unknown error"}
 					</p>
 					<div className="mt-4 flex justify-center">
-						<Button variant="outline" onClick={refetch}>
+						<Button variant="outline" onClick={() => refetch()}>
 							Retry
 						</Button>
 					</div>
@@ -117,7 +117,7 @@ export function TasksPanel() {
 					description={`${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} discovered from turbo.json across ${packages.length} package${packages.length !== 1 ? "s" : ""}`}
 					guideKey="tasks"
 					actions={
-						<Button variant="outline" size="sm" onClick={refetch}>
+						<Button variant="outline" size="sm" onClick={() => refetch()}>
 							Refresh
 						</Button>
 					}
