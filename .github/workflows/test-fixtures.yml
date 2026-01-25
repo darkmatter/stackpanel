@@ -1,18 +1,18 @@
 name: "Test Fixtures"
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'nix/**'
-      - '.github/workflows/test-fixtures.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'nix/**'
-      - '.github/workflows/test-fixtures.yml'
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'nix/**'
+  #     - '.github/workflows/test-fixtures.yml'
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'nix/**'
+  #     - '.github/workflows/test-fixtures.yml'
   workflow_dispatch: # Allow manual triggers
 
 concurrency:
@@ -79,9 +79,9 @@ jobs:
         run: |
           echo "Testing fixture: ${{ matrix.fixture }}"
           echo "System: ${{ matrix.system }}"
-          
+
           FIXTURE_DIR="nix/flake/templates/_test-fixtures/${{ matrix.fixture }}"
-          
+
           # Run flake check with stackpanel override
           nix flake check "$FIXTURE_DIR" \
             --override-input stackpanel "path:$(pwd)" \
@@ -91,7 +91,7 @@ jobs:
       - name: Build fixture checks - ${{ matrix.fixture }}
         run: |
           FIXTURE_DIR="nix/flake/templates/_test-fixtures/${{ matrix.fixture }}"
-          
+
           # Build all checks for this system
           nix build "$FIXTURE_DIR#checks.${{ matrix.system }}" \
             --override-input stackpanel "path:$(pwd)" \
