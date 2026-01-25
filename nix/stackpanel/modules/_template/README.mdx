@@ -1,0 +1,92 @@
+---
+title: My Module
+description: A brief description of what this module does
+---
+
+# My Module
+
+A longer description of what this module provides and why you'd want to use it.
+
+## Features
+
+- Feature 1: Brief description
+- Feature 2: Brief description
+- Feature 3: Brief description
+
+## Installation
+
+This is a built-in module. Enable it in your configuration:
+
+```nix
+stackpanel.modules.my-module.enable = true;
+```
+
+## Configuration
+
+### Basic Usage
+
+```nix
+{
+  stackpanel.modules.my-module = {
+    enable = true;
+    # Add configuration options here
+  };
+}
+```
+
+### Per-App Configuration
+
+If this module supports per-app configuration:
+
+```nix
+{
+  stackpanel.apps.web = {
+    myModule = {
+      enable = true;
+      # Per-app options
+    };
+  };
+}
+```
+
+## Options Reference
+
+### `stackpanel.modules.my-module.enable`
+
+**Type:** `boolean`
+**Default:** `false`
+
+Enable the My Module integration.
+
+<!-- Add more options documentation here -->
+
+## Scripts
+
+This module provides the following shell commands:
+
+| Command | Description |
+|---------|-------------|
+| `my-command` | Does something useful |
+| `my-command-fix` | Does something with auto-fix |
+
+## Health Checks
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| `installed` | critical | Verifies the tool is installed |
+| `config` | warning | Verifies configuration files exist |
+
+## Troubleshooting
+
+### Common Issue 1
+
+Description of the issue and how to fix it.
+
+### Common Issue 2
+
+Description of the issue and how to fix it.
+
+## See Also
+
+- [Official Documentation](https://example.com)
+- [Related Module](/docs/modules/related-module)

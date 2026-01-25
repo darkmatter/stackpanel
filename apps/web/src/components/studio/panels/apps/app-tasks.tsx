@@ -3,7 +3,13 @@
 import { Button } from "@ui/button";
 import { ChevronDown, ChevronRight, Play } from "lucide-react";
 import { useState } from "react";
-import type { AppTask } from "@/lib/types";
+// Task interface for display purposes
+// Tasks now come from turbo, not from the app config
+interface AppTask {
+	key?: string;
+	command?: string;
+	description?: string;
+}
 
 interface AppTasksProps {
 	/** Tasks linked to this app (map of task name to AppTask) */

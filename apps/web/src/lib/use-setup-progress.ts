@@ -4,13 +4,13 @@ import {
 	Cloud,
 	FileCog,
 	FolderOpen,
-	Github,
+	Github as _Github,
 	GithubIcon,
 	Key,
 	type LucideIcon,
 	Shield,
 	Terminal,
-	Users,
+	Users as _Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";

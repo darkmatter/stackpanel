@@ -1,6 +1,5 @@
 "use client";
 
-import { VariableType } from "@stackpanel/proto";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Input } from "@ui/input";
@@ -36,11 +35,14 @@ import { AddAppDialog } from "./apps/add-app-dialog";
 import { AppVariablesSection } from "./apps/app-variables-section";
 import { useAppMutations } from "./apps/hooks";
 import type { DisplayVariable, TaskWithCommand } from "./apps/types";
+import type { AvailableVariable } from "./apps/app-variables-section/types";
 import {
 	computeStablePort,
 	flattenEnvironmentVariables,
 	getEnvironmentNames,
+	isSopsReference,
 } from "./apps/utils";
+import { getVariableType } from "./variables/constants";
 import { PanelHeader } from "./shared/panel-header";
 
 export function AppsPanelAlt() {
@@ -48,10 +50,10 @@ export function AppsPanelAlt() {
 	const agentClient = useAgentClient();
 	const { data: rawApps, isLoading, error, refetch } = useApps();
 	const { data: nixConfig } = useNixConfig();
-	const { data: allVariables } = useVariables();
+	const { data: rawVariables } = useVariables();
 
 	// Get project name from config, fallback to "stackpanel"
-	const projectName = nixConfig?.projectName ?? "stackpanel";
+	const projectName = (typeof nixConfig?.projectName === 'string' ? nixConfig.projectName : null) ?? "stackpanel";
 
 	// Transform apps data to include id, stablePort, and isRunning fields
 	const resolvedApps = useMemo(() => {
@@ -105,15 +107,24 @@ export function AppsPanelAlt() {
 		return Array.from(new Set([...defaults, ...appDefined]));
 	}, [resolvedApps]);
 
-	// Available variables for the inline add UI
-	const availableVariablesForAdd = useMemo(() => {
-		if (!allVariables) return [];
-		return Object.entries(allVariables).map(([id, variable]) => ({
-			id,
-			key: variable.key || id,
-			type: variable.type ?? null,
-		}));
-	}, [allVariables]);
+	// Transform raw variables into AvailableVariable format for the dropdown
+	const availableVariables: AvailableVariable[] = useMemo(() => {
+		if (!rawVariables) return [];
+		return Object.entries(rawVariables).map(([id, variable]) => {
+			// Variable is now an object with { value: string }
+			const value = typeof variable === 'string' ? variable : variable?.value ?? '';
+			// Use the full ID as the display name (e.g., "/dev/DATABASE_URL")
+			// This avoids confusion when multiple vars have the same last segment (e.g., "port")
+			const name = id;
+			// Determine type from value pattern
+			const typeName = isSopsReference(value)
+				? "secret" as const
+				: value.startsWith("ref+")
+					? "computed" as const
+					: "config" as const;
+			return { id, name, typeName };
+		});
+	}, [rawVariables]);
 
 	// Fetch turbo package graph
 	const fetchPackageGraph = useCallback(async () => {
@@ -129,7 +140,7 @@ export function AppsPanelAlt() {
 		} finally {
 			setIsLoadingPackages(false);
 		}
-	}, [token]);
+	}, [token, agentClient]);
 
 	// Fetch process-compose status
 	const fetchProcessComposeStatus = useCallback(async () => {
@@ -142,7 +153,7 @@ export function AppsPanelAlt() {
 		} catch (err) {
 			console.error("Failed to fetch process-compose status:", err);
 		}
-	}, [token]);
+	}, [token, agentClient]);
 
 	// Initial fetch
 	useEffect(() => {
@@ -175,34 +186,19 @@ export function AppsPanelAlt() {
 		[packageGraph],
 	);
 
-	// Get all tasks for an app, merging turbo tasks with any configured overrides
+	// Get all tasks for an app from turbo (simplified - tasks come from turbo, not app config)
 	const getTasksForApp = useCallback(
 		(app: App): TaskWithCommand[] => {
 			const turboTasks = getTurboTasksForApp(app.path);
-			const configuredTasks = app.tasks ?? {};
 
-			// Start with turbo tasks
+			// Tasks come from turbo package graph only
 			const tasks: TaskWithCommand[] = Array.from(turboTasks.entries()).map(
-				([name, command]) => {
-					const turboCommand = configuredTasks[name]?.command;
-					return {
-						name,
-						command: turboCommand ?? command,
-						isOverridden: !!turboCommand,
-					};
-				},
+				([name, command]) => ({
+					name,
+					command,
+					isOverridden: false,
+				}),
 			);
-
-			// Add any configured tasks that aren't in turbo
-			for (const [name, task] of Object.entries(configuredTasks)) {
-				if (!turboTasks.has(name)) {
-					tasks.push({
-						name,
-						command: task.command,
-						isOverridden: true,
-					});
-				}
-			}
 
 			return tasks;
 		},
@@ -232,21 +228,18 @@ export function AppsPanelAlt() {
 			const stablePort = computeStablePort(projectName, appId);
 
 			// Convert environments to display format - flatten variables from all environments
+			// With simplified schema: env is map<string, string> (key -> value)
 			const flattenedVars = flattenEnvironmentVariables(app.environments);
 			const appVariables: DisplayVariable[] = flattenedVars.map((mapping) => {
-				const variableId = mapping.variableId;
-				const variable = variableId ? allVariables?.[variableId] : undefined;
-				const type = variable?.type ?? null;
-				const isSecret = type === VariableType.SECRET;
+				// Derive type from value (is it a SOPS reference = secret)
+				const isSecret = isSopsReference(mapping.value);
+				const typeName = getVariableType(`/${isSecret ? "dev" : "var"}/${mapping.envKey}`, mapping.value);
 				return {
 					envKey: mapping.envKey,
-					variableId,
-					variableKey: variable?.key ?? mapping.envKey,
-					type,
-					description: variable?.description ?? "",
-					value: mapping.literalValue ?? variable?.value,
+					value: mapping.value,
 					environments: mapping.environments,
 					isSecret,
+					typeName,
 				};
 			});
 
@@ -279,7 +272,6 @@ export function AppsPanelAlt() {
 		resolvedApps,
 		getTasksForApp,
 		projectName,
-		allVariables,
 		runningProcesses,
 	]);
 
@@ -570,36 +562,12 @@ export function AppsPanelAlt() {
 												variables={app.variables}
 												secrets={app.secrets}
 												environmentOptions={environmentOptions}
-												availableVariables={availableVariablesForAdd}
-												onAddVariable={(
-													envKey,
-													variableId,
-													environments,
-													literalValue,
-												) =>
-													handleAddVariableToApp(
-														app.id,
-														envKey,
-														variableId,
-														environments,
-														literalValue,
-													)
+												availableVariables={availableVariables}
+												onAddVariable={(envKey, value, environments) =>
+													handleAddVariableToApp(app.id, envKey, value, environments)
 												}
-												onUpdateVariable={(
-													oldEnvKey,
-													newEnvKey,
-													variableId,
-													environments,
-													literalValue,
-												) =>
-													handleUpdateVariableInApp(
-														app.id,
-														oldEnvKey,
-														newEnvKey,
-														variableId,
-														environments,
-														literalValue,
-													)
+												onUpdateVariable={(oldEnvKey, newEnvKey, value, environments) =>
+													handleUpdateVariableInApp(app.id, oldEnvKey, newEnvKey, value, environments)
 												}
 												onDeleteVariable={(envKey) =>
 													handleDeleteVariableFromApp(app.id, envKey)

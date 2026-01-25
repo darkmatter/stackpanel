@@ -90,7 +90,7 @@ export function ExtensionsPanel() {
  * Section for a single extension with its panels
  */
 function ExtensionSection({
-	extensionKey,
+	extensionKey: _extensionKey,
 	extension,
 	allApps,
 }: {

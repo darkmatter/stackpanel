@@ -8,6 +8,8 @@ message User {
   string name = 1; // Display name of the user
   optional string github = 2; // GitHub username
   optional string email = 3; // Email address
+  repeated string public_keys = 4; // SSH or AGE public keys for the user
+  repeated string secrets_allowed_environments = 5; // Environments this user can access secrets for (e.g., dev, staging, production)
 }
 
 // Map of username to user configuration

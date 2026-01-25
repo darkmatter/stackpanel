@@ -2,7 +2,7 @@
 // @generated from file apps.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
@@ -59,23 +59,11 @@ export declare type App = Message<"stackpanel.db.App"> & {
   domain?: string;
 
   /**
-   * DEPRECATED: Use commands option. Legacy tasks (key = task name)
    *
-   * @generated from field: map<string, stackpanel.db.AppTask> tasks = 7;
-   */
-  tasks: { [key: string]: AppTask };
-
-  /**
-   * Environment variables (key = env var key)
+   * Environment configurations (key = environment name like "dev", "prod").
    *
-   * @generated from field: map<string, stackpanel.db.AppVariable> variables = 8;
-   */
-  variables: { [key: string]: AppVariable };
-
-  /**
-   * Environments associated with this app
    *
-   * @generated from field: map<string, stackpanel.db.AppEnvironment> environments = 9;
+   * @generated from field: map<string, stackpanel.db.AppEnvironment> environments = 7;
    */
   environments: { [key: string]: AppEnvironment };
 };
@@ -107,32 +95,15 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
   description?: string;
 
   /**
-   * Environment variables (key = env var key)
    *
-   * @generated from field: map<string, stackpanel.db.AppVariable> variables = 3;
+   * Environment variables for this environment.
+   * Key: Environment variable name (e.g., DATABASE_URL)
+   * Value: Literal string or vals reference (e.g., ref+sops://...)
+   *
+   *
+   * @generated from field: map<string, string> env = 3;
    */
-  variables: { [key: string]: AppVariable };
-
-  /**
-   *
-   * List of SOPS-encrypted source files for this environment (without .yaml extension).
-   * These files are decrypted and merged to provide secrets for the environment.
-   * Example: ["shared", "dev"] merges shared.yaml + dev.yaml
-   *
-   *
-   * @generated from field: repeated string sources = 4;
-   */
-  sources: string[];
-
-  /**
-   *
-   * List of AGE/SSH public keys that can decrypt secrets for this environment.
-   * These keys are used when encrypting new secrets.
-   *
-   *
-   * @generated from field: repeated string public_keys = 5;
-   */
-  publicKeys: string[];
+  env: { [key: string]: string };
 };
 
 /**
@@ -140,88 +111,6 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
  * Use `create(AppEnvironmentSchema)` to create a new message.
  */
 export declare const AppEnvironmentSchema: GenMessage<AppEnvironment>;
-
-/**
- * DEPRECATED: Use commands option instead. Shell command configuration.
- *
- * @generated from message stackpanel.db.AppTask
- */
-export declare type AppTask = Message<"stackpanel.db.AppTask"> & {
-  /**
-   * Corresponds to CMD in  `turbo task run CMD`
-   *
-   * @generated from field: string key = 1;
-   */
-  key: string;
-
-  /**
-   * (optional) Description of the command
-   *
-   * @generated from field: optional string description = 2;
-   */
-  description?: string;
-
-  /**
-   * Command to run
-   *
-   * @generated from field: string command = 3;
-   */
-  command: string;
-
-  /**
-   * Environment variables to set
-   *
-   * @generated from field: map<string, stackpanel.db.AppVariable> env = 4;
-   */
-  env: { [key: string]: AppVariable };
-};
-
-/**
- * Describes the message stackpanel.db.AppTask.
- * Use `create(AppTaskSchema)` to create a new message.
- */
-export declare const AppTaskSchema: GenMessage<AppTask>;
-
-/**
- * Environment variable configuration
- *
- * @generated from message stackpanel.db.AppVariable
- */
-export declare type AppVariable = Message<"stackpanel.db.AppVariable"> & {
-  /**
-   * Environment variable key
-   *
-   * @generated from field: string key = 1;
-   */
-  key: string;
-
-  /**
-   * Type of environment variable
-   *
-   * @generated from field: stackpanel.db.AppVariableType type = 2;
-   */
-  type: AppVariableType;
-
-  /**
-   * ID of the variable from variables.nix
-   *
-   * @generated from field: string variable_id = 3;
-   */
-  variableId: string;
-
-  /**
-   * Literal value (used when variable_id is empty)
-   *
-   * @generated from field: optional string value = 4;
-   */
-  value?: string;
-};
-
-/**
- * Describes the message stackpanel.db.AppVariable.
- * Use `create(AppVariableSchema)` to create a new message.
- */
-export declare const AppVariableSchema: GenMessage<AppVariable>;
 
 /**
  * Map of app identifier to app configuration
@@ -242,36 +131,4 @@ export declare type Apps = Message<"stackpanel.db.Apps"> & {
  * Use `create(AppsSchema)` to create a new message.
  */
 export declare const AppsSchema: GenMessage<Apps>;
-
-/**
- * Type of environment variable
- *
- * @generated from enum stackpanel.db.AppVariableType
- */
-export enum AppVariableType {
-  /**
-   * @generated from enum value: APP_VARIABLE_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: APP_VARIABLE_TYPE_LITERAL = 1;
-   */
-  LITERAL = 1,
-
-  /**
-   * @generated from enum value: APP_VARIABLE_TYPE_VARIABLE = 2;
-   */
-  VARIABLE = 2,
-
-  /**
-   * @generated from enum value: APP_VARIABLE_TYPE_VALS = 3;
-   */
-  VALS = 3,
-}
-
-/**
- * Describes the enum stackpanel.db.AppVariableType.
- */
-export declare const AppVariableTypeSchema: GenEnum<AppVariableType>;
 

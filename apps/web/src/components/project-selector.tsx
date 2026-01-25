@@ -241,7 +241,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
               >
                 <div className="flex w-full items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <FolderOpen className="h-4 w-4" />
+                    <FolderOpen className="h-4 w-4 text-primary-foreground" />
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span>{project.name}</span>
@@ -262,7 +262,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
                           </Badge>
                         )}
                       </div>
-                      <span className="max-w-[180px] truncate text-muted-foreground text-xs">
+                      <span className="max-w-45 truncate text-primary-foreground text-xs">
                         {project.path}
                       </span>
                     </div>

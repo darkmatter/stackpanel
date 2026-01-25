@@ -1,0 +1,11 @@
+{
+  "terminal": {
+    "shell": {
+      "args": [
+        "-c",
+        ".stackpanel/gen/zed/devshell-loader.sh"
+      ],
+      "program": "/bin/bash"
+    }
+  }
+}

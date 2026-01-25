@@ -65,6 +65,9 @@ const (
 	AgentServiceGetModulesProcedure = "/stackpanel.agent.AgentService/GetModules"
 	// AgentServiceGetModuleProcedure is the fully-qualified name of the AgentService's GetModule RPC.
 	AgentServiceGetModuleProcedure = "/stackpanel.agent.AgentService/GetModule"
+	// AgentServiceGetModuleOutputsProcedure is the fully-qualified name of the AgentService's
+	// GetModuleOutputs RPC.
+	AgentServiceGetModuleOutputsProcedure = "/stackpanel.agent.AgentService/GetModuleOutputs"
 	// AgentServiceEnableModuleProcedure is the fully-qualified name of the AgentService's EnableModule
 	// RPC.
 	AgentServiceEnableModuleProcedure = "/stackpanel.agent.AgentService/EnableModule"
@@ -173,6 +176,7 @@ type AgentServiceClient interface {
 	// Modules - module configuration management
 	GetModules(context.Context, *connect.Request[gopb.GetModulesRequest]) (*connect.Response[gopb.Modules], error)
 	GetModule(context.Context, *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error)
+	GetModuleOutputs(context.Context, *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error)
 	EnableModule(context.Context, *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
 	DisableModule(context.Context, *connect.Request[gopb.DisableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
 	UpdateModuleSettings(context.Context, *connect.Request[gopb.UpdateModuleSettingsRequest]) (*connect.Response[gopb.ModuleResponse], error)
@@ -317,6 +321,12 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+AgentServiceGetModuleProcedure,
 			connect.WithSchema(agentServiceMethods.ByName("GetModule")),
+			connect.WithClientOptions(opts...),
+		),
+		getModuleOutputs: connect.NewClient[gopb.GetModuleOutputsRequest, gopb.ModuleOutputs](
+			httpClient,
+			baseURL+AgentServiceGetModuleOutputsProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("GetModuleOutputs")),
 			connect.WithClientOptions(opts...),
 		),
 		enableModule: connect.NewClient[gopb.EnableModuleRequest, gopb.ModuleResponse](
@@ -525,6 +535,7 @@ type agentServiceClient struct {
 	setVariables         *connect.Client[gopb.Variables, gopb.Variables]
 	getModules           *connect.Client[gopb.GetModulesRequest, gopb.Modules]
 	getModule            *connect.Client[gopb.GetModuleRequest, gopb.Module]
+	getModuleOutputs     *connect.Client[gopb.GetModuleOutputsRequest, gopb.ModuleOutputs]
 	enableModule         *connect.Client[gopb.EnableModuleRequest, gopb.ModuleResponse]
 	disableModule        *connect.Client[gopb.DisableModuleRequest, gopb.ModuleResponse]
 	updateModuleSettings *connect.Client[gopb.UpdateModuleSettingsRequest, gopb.ModuleResponse]
@@ -631,6 +642,11 @@ func (c *agentServiceClient) GetModules(ctx context.Context, req *connect.Reques
 // GetModule calls stackpanel.agent.AgentService.GetModule.
 func (c *agentServiceClient) GetModule(ctx context.Context, req *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error) {
 	return c.getModule.CallUnary(ctx, req)
+}
+
+// GetModuleOutputs calls stackpanel.agent.AgentService.GetModuleOutputs.
+func (c *agentServiceClient) GetModuleOutputs(ctx context.Context, req *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error) {
+	return c.getModuleOutputs.CallUnary(ctx, req)
 }
 
 // EnableModule calls stackpanel.agent.AgentService.EnableModule.
@@ -808,6 +824,7 @@ type AgentServiceHandler interface {
 	// Modules - module configuration management
 	GetModules(context.Context, *connect.Request[gopb.GetModulesRequest]) (*connect.Response[gopb.Modules], error)
 	GetModule(context.Context, *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error)
+	GetModuleOutputs(context.Context, *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error)
 	EnableModule(context.Context, *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
 	DisableModule(context.Context, *connect.Request[gopb.DisableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error)
 	UpdateModuleSettings(context.Context, *connect.Request[gopb.UpdateModuleSettingsRequest]) (*connect.Response[gopb.ModuleResponse], error)
@@ -948,6 +965,12 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		AgentServiceGetModuleProcedure,
 		svc.GetModule,
 		connect.WithSchema(agentServiceMethods.ByName("GetModule")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentServiceGetModuleOutputsHandler := connect.NewUnaryHandler(
+		AgentServiceGetModuleOutputsProcedure,
+		svc.GetModuleOutputs,
+		connect.WithSchema(agentServiceMethods.ByName("GetModuleOutputs")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentServiceEnableModuleHandler := connect.NewUnaryHandler(
@@ -1168,6 +1191,8 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceGetModulesHandler.ServeHTTP(w, r)
 		case AgentServiceGetModuleProcedure:
 			agentServiceGetModuleHandler.ServeHTTP(w, r)
+		case AgentServiceGetModuleOutputsProcedure:
+			agentServiceGetModuleOutputsHandler.ServeHTTP(w, r)
 		case AgentServiceEnableModuleProcedure:
 			agentServiceEnableModuleHandler.ServeHTTP(w, r)
 		case AgentServiceDisableModuleProcedure:
@@ -1297,6 +1322,10 @@ func (UnimplementedAgentServiceHandler) GetModules(context.Context, *connect.Req
 
 func (UnimplementedAgentServiceHandler) GetModule(context.Context, *connect.Request[gopb.GetModuleRequest]) (*connect.Response[gopb.Module], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetModule is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) GetModuleOutputs(context.Context, *connect.Request[gopb.GetModuleOutputsRequest]) (*connect.Response[gopb.ModuleOutputs], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetModuleOutputs is not implemented"))
 }
 
 func (UnimplementedAgentServiceHandler) EnableModule(context.Context, *connect.Request[gopb.EnableModuleRequest]) (*connect.Response[gopb.ModuleResponse], error) {

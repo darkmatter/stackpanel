@@ -41,23 +41,15 @@ export interface App {
      */
     domain?: string; // Local development domain
     /**
-     * @generated from protobuf field: map<string, stackpanel.db.AppTask> tasks = 7
-     */
-    tasks: {
-        [key: string]: AppTask;
-    }; // DEPRECATED: Use commands option. Legacy tasks (key = task name)
-    /**
-     * @generated from protobuf field: map<string, stackpanel.db.AppVariable> variables = 8
-     */
-    variables: {
-        [key: string]: AppVariable;
-    }; // Environment variables (key = env var key)
-    /**
-     * @generated from protobuf field: map<string, stackpanel.db.AppEnvironment> environments = 9
+     *
+     * Environment configurations (key = environment name like "dev", "prod").
+     *
+     *
+     * @generated from protobuf field: map<string, stackpanel.db.AppEnvironment> environments = 7
      */
     environments: {
         [key: string]: AppEnvironment;
-    }; // Environments associated with this app
+    };
 }
 /**
  * Environment configuration (e.g., dev, staging, production)
@@ -74,78 +66,17 @@ export interface AppEnvironment {
      */
     description?: string; // (optional) Description of the environment
     /**
-     * @generated from protobuf field: map<string, stackpanel.db.AppVariable> variables = 3
-     */
-    variables: {
-        [key: string]: AppVariable;
-    }; // Environment variables (key = env var key)
-    /**
      *
-     * List of SOPS-encrypted source files for this environment (without .yaml extension).
-     * These files are decrypted and merged to provide secrets for the environment.
-     * Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+     * Environment variables for this environment.
+     * Key: Environment variable name (e.g., DATABASE_URL)
+     * Value: Literal string or vals reference (e.g., ref+sops://...)
      *
      *
-     * @generated from protobuf field: repeated string sources = 4
-     */
-    sources: string[];
-    /**
-     *
-     * List of AGE/SSH public keys that can decrypt secrets for this environment.
-     * These keys are used when encrypting new secrets.
-     *
-     *
-     * @generated from protobuf field: repeated string public_keys = 5
-     */
-    public_keys: string[];
-}
-/**
- * DEPRECATED: Use commands option instead. Shell command configuration.
- *
- * @generated from protobuf message stackpanel.db.AppTask
- */
-export interface AppTask {
-    /**
-     * @generated from protobuf field: string key = 1
-     */
-    key: string; // Corresponds to CMD in  `turbo task run CMD`
-    /**
-     * @generated from protobuf field: optional string description = 2
-     */
-    description?: string; // (optional) Description of the command
-    /**
-     * @generated from protobuf field: string command = 3
-     */
-    command: string; // Command to run
-    /**
-     * @generated from protobuf field: map<string, stackpanel.db.AppVariable> env = 4
+     * @generated from protobuf field: map<string, string> env = 3
      */
     env: {
-        [key: string]: AppVariable;
-    }; // Environment variables to set
-}
-/**
- * Environment variable configuration
- *
- * @generated from protobuf message stackpanel.db.AppVariable
- */
-export interface AppVariable {
-    /**
-     * @generated from protobuf field: string key = 1
-     */
-    key: string; // Environment variable key
-    /**
-     * @generated from protobuf field: stackpanel.db.AppVariableType type = 2
-     */
-    type: AppVariableType; // Type of environment variable
-    /**
-     * @generated from protobuf field: string variable_id = 3
-     */
-    variable_id: string; // ID of the variable from variables.nix
-    /**
-     * @generated from protobuf field: optional string value = 4
-     */
-    value?: string; // Literal value (used when variable_id is empty)
+        [key: string]: string;
+    };
 }
 /**
  * Map of app identifier to app configuration
@@ -160,29 +91,6 @@ export interface Apps {
         [key: string]: App;
     }; // Map of app ID to app config
 }
-/**
- * Type of environment variable
- *
- * @generated from protobuf enum stackpanel.db.AppVariableType
- */
-export enum AppVariableType {
-    /**
-     * @generated from protobuf enum value: APP_VARIABLE_TYPE_UNSPECIFIED = 0;
-     */
-    UNSPECIFIED = 0,
-    /**
-     * @generated from protobuf enum value: APP_VARIABLE_TYPE_LITERAL = 1;
-     */
-    LITERAL = 1,
-    /**
-     * @generated from protobuf enum value: APP_VARIABLE_TYPE_VARIABLE = 2;
-     */
-    VARIABLE = 2,
-    /**
-     * @generated from protobuf enum value: APP_VARIABLE_TYPE_VALS = 3;
-     */
-    VALS = 3
-}
 // @generated message type with reflection information, may provide speed optimized methods
 class App$Type extends MessageType<App> {
     constructor() {
@@ -193,17 +101,13 @@ class App$Type extends MessageType<App> {
             { no: 4, name: "type", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "port", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
             { no: 6, name: "domain", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "tasks", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppTask } },
-            { no: 8, name: "variables", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } },
-            { no: 9, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppEnvironment } }
+            { no: 7, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppEnvironment } }
         ]);
     }
     create(value?: PartialMessage<App>): App {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
         message.path = "";
-        message.tasks = {};
-        message.variables = {};
         message.environments = {};
         if (value !== undefined)
             reflectionMergePartial<App>(this, message, value);
@@ -232,14 +136,8 @@ class App$Type extends MessageType<App> {
                 case /* optional string domain */ 6:
                     message.domain = reader.string();
                     break;
-                case /* map<string, stackpanel.db.AppTask> tasks */ 7:
-                    this.binaryReadMap7(message.tasks, reader, options);
-                    break;
-                case /* map<string, stackpanel.db.AppVariable> variables */ 8:
-                    this.binaryReadMap8(message.variables, reader, options);
-                    break;
-                case /* map<string, stackpanel.db.AppEnvironment> environments */ 9:
-                    this.binaryReadMap9(message.environments, reader, options);
+                case /* map<string, stackpanel.db.AppEnvironment> environments */ 7:
+                    this.binaryReadMap7(message.environments, reader, options);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -252,39 +150,7 @@ class App$Type extends MessageType<App> {
         }
         return message;
     }
-    private binaryReadMap7(map: App["tasks"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof App["tasks"] | undefined, val: App["tasks"][any] | undefined;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case 1:
-                    key = reader.string();
-                    break;
-                case 2:
-                    val = AppTask.internalBinaryRead(reader, reader.uint32(), options);
-                    break;
-                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.App.tasks");
-            }
-        }
-        map[key ?? ""] = val ?? AppTask.create();
-    }
-    private binaryReadMap8(map: App["variables"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof App["variables"] | undefined, val: App["variables"][any] | undefined;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case 1:
-                    key = reader.string();
-                    break;
-                case 2:
-                    val = AppVariable.internalBinaryRead(reader, reader.uint32(), options);
-                    break;
-                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.App.variables");
-            }
-        }
-        map[key ?? ""] = val ?? AppVariable.create();
-    }
-    private binaryReadMap9(map: App["environments"], reader: IBinaryReader, options: BinaryReadOptions): void {
+    private binaryReadMap7(map: App["environments"], reader: IBinaryReader, options: BinaryReadOptions): void {
         let len = reader.uint32(), end = reader.pos + len, key: keyof App["environments"] | undefined, val: App["environments"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -319,23 +185,9 @@ class App$Type extends MessageType<App> {
         /* optional string domain = 6; */
         if (message.domain !== undefined)
             writer.tag(6, WireType.LengthDelimited).string(message.domain);
-        /* map<string, stackpanel.db.AppTask> tasks = 7; */
-        for (let k of globalThis.Object.keys(message.tasks)) {
-            writer.tag(7, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
-            writer.tag(2, WireType.LengthDelimited).fork();
-            AppTask.internalBinaryWrite(message.tasks[k], writer, options);
-            writer.join().join();
-        }
-        /* map<string, stackpanel.db.AppVariable> variables = 8; */
-        for (let k of globalThis.Object.keys(message.variables)) {
-            writer.tag(8, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
-            writer.tag(2, WireType.LengthDelimited).fork();
-            AppVariable.internalBinaryWrite(message.variables[k], writer, options);
-            writer.join().join();
-        }
-        /* map<string, stackpanel.db.AppEnvironment> environments = 9; */
+        /* map<string, stackpanel.db.AppEnvironment> environments = 7; */
         for (let k of globalThis.Object.keys(message.environments)) {
-            writer.tag(9, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(7, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
             writer.tag(2, WireType.LengthDelimited).fork();
             AppEnvironment.internalBinaryWrite(message.environments[k], writer, options);
             writer.join().join();
@@ -356,17 +208,13 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         super("stackpanel.db.AppEnvironment", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "variables", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } },
-            { no: 4, name: "sources", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "public_keys", kind: "scalar", localName: "public_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
         ]);
     }
     create(value?: PartialMessage<AppEnvironment>): AppEnvironment {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
-        message.variables = {};
-        message.sources = [];
-        message.public_keys = [];
+        message.env = {};
         if (value !== undefined)
             reflectionMergePartial<AppEnvironment>(this, message, value);
         return message;
@@ -382,14 +230,8 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
                 case /* optional string description */ 2:
                     message.description = reader.string();
                     break;
-                case /* map<string, stackpanel.db.AppVariable> variables */ 3:
-                    this.binaryReadMap3(message.variables, reader, options);
-                    break;
-                case /* repeated string sources */ 4:
-                    message.sources.push(reader.string());
-                    break;
-                case /* repeated string public_keys */ 5:
-                    message.public_keys.push(reader.string());
+                case /* map<string, string> env */ 3:
+                    this.binaryReadMap3(message.env, reader, options);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -402,8 +244,8 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         }
         return message;
     }
-    private binaryReadMap3(map: AppEnvironment["variables"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof AppEnvironment["variables"] | undefined, val: AppEnvironment["variables"][any] | undefined;
+    private binaryReadMap3(map: AppEnvironment["env"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof AppEnvironment["env"] | undefined, val: AppEnvironment["env"][any] | undefined;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
@@ -411,12 +253,12 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
                     key = reader.string();
                     break;
                 case 2:
-                    val = AppVariable.internalBinaryRead(reader, reader.uint32(), options);
+                    val = reader.string();
                     break;
-                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.AppEnvironment.variables");
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.AppEnvironment.env");
             }
         }
-        map[key ?? ""] = val ?? AppVariable.create();
+        map[key ?? ""] = val ?? "";
     }
     internalBinaryWrite(message: AppEnvironment, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string name = 1; */
@@ -425,19 +267,9 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         /* optional string description = 2; */
         if (message.description !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.description);
-        /* map<string, stackpanel.db.AppVariable> variables = 3; */
-        for (let k of globalThis.Object.keys(message.variables)) {
-            writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
-            writer.tag(2, WireType.LengthDelimited).fork();
-            AppVariable.internalBinaryWrite(message.variables[k], writer, options);
-            writer.join().join();
-        }
-        /* repeated string sources = 4; */
-        for (let i = 0; i < message.sources.length; i++)
-            writer.tag(4, WireType.LengthDelimited).string(message.sources[i]);
-        /* repeated string public_keys = 5; */
-        for (let i = 0; i < message.public_keys.length; i++)
-            writer.tag(5, WireType.LengthDelimited).string(message.public_keys[i]);
+        /* map<string, string> env = 3; */
+        for (let k of globalThis.Object.keys(message.env))
+            writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.env[k]).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -448,166 +280,6 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
  * @generated MessageType for protobuf message stackpanel.db.AppEnvironment
  */
 export const AppEnvironment = new AppEnvironment$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class AppTask$Type extends MessageType<AppTask> {
-    constructor() {
-        super("stackpanel.db.AppTask", [
-            { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "command", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppVariable } }
-        ]);
-    }
-    create(value?: PartialMessage<AppTask>): AppTask {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.key = "";
-        message.command = "";
-        message.env = {};
-        if (value !== undefined)
-            reflectionMergePartial<AppTask>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AppTask): AppTask {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string key */ 1:
-                    message.key = reader.string();
-                    break;
-                case /* optional string description */ 2:
-                    message.description = reader.string();
-                    break;
-                case /* string command */ 3:
-                    message.command = reader.string();
-                    break;
-                case /* map<string, stackpanel.db.AppVariable> env */ 4:
-                    this.binaryReadMap4(message.env, reader, options);
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    private binaryReadMap4(map: AppTask["env"], reader: IBinaryReader, options: BinaryReadOptions): void {
-        let len = reader.uint32(), end = reader.pos + len, key: keyof AppTask["env"] | undefined, val: AppTask["env"][any] | undefined;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case 1:
-                    key = reader.string();
-                    break;
-                case 2:
-                    val = AppVariable.internalBinaryRead(reader, reader.uint32(), options);
-                    break;
-                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.AppTask.env");
-            }
-        }
-        map[key ?? ""] = val ?? AppVariable.create();
-    }
-    internalBinaryWrite(message: AppTask, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string key = 1; */
-        if (message.key !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.key);
-        /* optional string description = 2; */
-        if (message.description !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.description);
-        /* string command = 3; */
-        if (message.command !== "")
-            writer.tag(3, WireType.LengthDelimited).string(message.command);
-        /* map<string, stackpanel.db.AppVariable> env = 4; */
-        for (let k of globalThis.Object.keys(message.env)) {
-            writer.tag(4, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
-            writer.tag(2, WireType.LengthDelimited).fork();
-            AppVariable.internalBinaryWrite(message.env[k], writer, options);
-            writer.join().join();
-        }
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message stackpanel.db.AppTask
- */
-export const AppTask = new AppTask$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class AppVariable$Type extends MessageType<AppVariable> {
-    constructor() {
-        super("stackpanel.db.AppVariable", [
-            { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "type", kind: "enum", T: () => ["stackpanel.db.AppVariableType", AppVariableType, "APP_VARIABLE_TYPE_"] },
-            { no: 3, name: "variable_id", kind: "scalar", localName: "variable_id", T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "value", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    create(value?: PartialMessage<AppVariable>): AppVariable {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.key = "";
-        message.type = 0;
-        message.variable_id = "";
-        if (value !== undefined)
-            reflectionMergePartial<AppVariable>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AppVariable): AppVariable {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string key */ 1:
-                    message.key = reader.string();
-                    break;
-                case /* stackpanel.db.AppVariableType type */ 2:
-                    message.type = reader.int32();
-                    break;
-                case /* string variable_id */ 3:
-                    message.variable_id = reader.string();
-                    break;
-                case /* optional string value */ 4:
-                    message.value = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: AppVariable, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string key = 1; */
-        if (message.key !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.key);
-        /* stackpanel.db.AppVariableType type = 2; */
-        if (message.type !== 0)
-            writer.tag(2, WireType.Varint).int32(message.type);
-        /* string variable_id = 3; */
-        if (message.variable_id !== "")
-            writer.tag(3, WireType.LengthDelimited).string(message.variable_id);
-        /* optional string value = 4; */
-        if (message.value !== undefined)
-            writer.tag(4, WireType.LengthDelimited).string(message.value);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message stackpanel.db.AppVariable
- */
-export const AppVariable = new AppVariable$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Apps$Type extends MessageType<Apps> {
     constructor() {

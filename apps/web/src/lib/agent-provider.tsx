@@ -16,6 +16,24 @@ import { useAgent, useAgentHealth } from "@/lib/use-agent";
 const STORAGE_KEY = "stackpanel.agent.token";
 
 /**
+ * Get the initial token from localStorage (runs synchronously during useState init).
+ * This prevents a flash of "Connect to Agent" on page refresh.
+ */
+function getInitialToken(): string | null {
+	if (typeof window === "undefined") return null;
+	
+	// Check for token in query parameter first
+	const urlParams = new URLSearchParams(window.location.search);
+	const queryToken = urlParams.get("token");
+	if (queryToken && queryToken.length >= 10) {
+		return queryToken;
+	}
+	
+	// Otherwise try localStorage
+	return localStorage.getItem(STORAGE_KEY);
+}
+
+/**
  * Decode a JWT token without verifying the signature.
  * Returns the payload or null if invalid.
  */
@@ -36,22 +54,12 @@ function decodeJWT(token: string): { agent_id?: string; exp?: number } | null {
 }
 
 /**
- * Validate a token by checking the agent_id matches the current agent.
- * This avoids a network request by decoding the JWT locally.
+ * Check if a token is expired by decoding the JWT and checking the exp claim.
+ * Returns true if token is valid (not expired), false if expired or invalid.
  */
-function validateTokenLocally(
-	token: string,
-	currentAgentId: string | null,
-): boolean {
-	if (!token || !currentAgentId) return false;
-
+function isTokenNotExpired(token: string): boolean {
 	const payload = decodeJWT(token);
 	if (!payload) return false;
-
-	// Check if agent_id matches
-	if (payload.agent_id !== currentAgentId) {
-		return false;
-	}
 
 	// Check if token is expired
 	if (payload.exp) {
@@ -102,52 +110,46 @@ export function AgentProvider({
 	host = "localhost",
 	port = 9876,
 }: AgentProviderProps) {
-	const [token, setToken] = useState<string | null>(null);
-	const [tokenValidated, setTokenValidated] = useState(false);
+	// Initialize token synchronously to prevent flash of "Connect to Agent"
+	const [token, setToken] = useState<string | null>(getInitialToken);
 	const cleanupRef = useRef<(() => void) | null>(null);
 
+	// Handle query token persistence and URL cleanup (runs after initial render)
 	useEffect(() => {
-		setToken(localStorage.getItem(STORAGE_KEY));
+		const urlParams = new URLSearchParams(window.location.search);
+		const queryToken = urlParams.get("token");
+
+		if (queryToken && queryToken.length >= 10) {
+			// Token provided via query parameter - persist to localStorage
+			localStorage.setItem(STORAGE_KEY, queryToken);
+
+			// Clean up URL by removing the token parameter
+			urlParams.delete("token");
+			const newUrl =
+				urlParams.toString().length > 0
+					? `${window.location.pathname}?${urlParams.toString()}`
+					: window.location.pathname;
+			window.history.replaceState({}, "", newUrl);
+		} else if (token) {
+			// Check if stored token is expired
+			if (!isTokenNotExpired(token)) {
+				console.log("Stored token is expired, clearing...");
+				localStorage.removeItem(STORAGE_KEY);
+				setToken(null);
+			}
+		}
+
 		return () => {
 			cleanupRef.current?.();
 			cleanupRef.current = null;
 		};
-	}, []);
+	}, [token]);
 
-	const {
-		status: healthStatus,
-		projectRoot,
-		agentId,
-	} = useAgentHealth({
+	const { status: healthStatus, projectRoot } = useAgentHealth({
 		host,
 		port,
 	});
 
-	// Validate token locally when agent becomes available
-	// This uses JWT decoding to check if the token's agent_id matches
-	useEffect(() => {
-		if (healthStatus !== "available" || !token || !agentId) {
-			return;
-		}
-
-		const isValid = validateTokenLocally(token, agentId);
-		if (isValid) {
-			setTokenValidated(true);
-		} else {
-			// Token is invalid (agent probably restarted), clear it
-			console.log("Stored token is invalid (agent_id mismatch), clearing...");
-			localStorage.removeItem(STORAGE_KEY);
-			setToken(null);
-			setTokenValidated(false);
-		}
-	}, [healthStatus, token, agentId]);
-
-	// Reset validation state when token changes
-	useEffect(() => {
-		if (!token) {
-			setTokenValidated(false);
-		}
-	}, [token]);
 	const agent = useAgent({
 		host,
 		port,
@@ -158,7 +160,6 @@ export function AgentProvider({
 	const clearPairing = useCallback(() => {
 		localStorage.removeItem(STORAGE_KEY);
 		setToken(null);
-		setTokenValidated(false);
 		agent.disconnect();
 	}, [agent]);
 
@@ -192,7 +193,6 @@ export function AgentProvider({
 
 			localStorage.setItem(STORAGE_KEY, data.token);
 			setToken(data.token);
-			setTokenValidated(true); // New token from pairing is valid
 
 			window.removeEventListener("message", onMessage);
 			cleanupRef.current = null;
@@ -208,10 +208,11 @@ export function AgentProvider({
 		}, 5 * 60_000);
 	}, [host, port]);
 
-	// Consider "connected" if we have a validated token AND the agent is available.
-	// Most functionality uses HTTP+tRPC with token auth, not WebSocket.
-	// The WebSocket is only used for real-time features.
-	const isConnected = healthStatus === "available" && !!token && tokenValidated;
+	// Consider "connected" if we have a token AND the agent is available.
+	// The server validates the token on each request - if the token is invalid
+	// (e.g., agent was restarted), the server will reject it and we'll get an error.
+	// This avoids the UX issue of requiring re-pairing after every agent restart.
+	const isConnected = healthStatus === "available" && !!token;
 
 	const value = useMemo<AgentContextValue>(
 		() => ({

@@ -18,13 +18,17 @@ export function useNetwork() {
 	const { data: dnsData } = useNixData<DnsData>("dns");
 	const [isEnabling, setIsEnabling] = useState(false);
 
-	const stepConfig = config?.stepCa?.["step-ca"];
+	// Type-safe access to optional config properties
+	const stepCaConfig = config as { stepCa?: { "step-ca"?: { enable?: boolean; "ca-url"?: string; "ca-fingerprint"?: string; "cert-name"?: string } } } | null;
+	const awsConfig = config as { aws?: { "roles-anywhere"?: { enable?: boolean; "role-name"?: string; "profile-arn"?: string } } } | null;
+
+	const stepConfig = stepCaConfig?.stepCa?.["step-ca"];
 	const stepEnabled = stepConfig?.enable ?? stepCaData?.enable ?? false;
 	const caUrl = stepConfig?.["ca-url"] ?? stepCaData?.ca_url ?? null;
 	const caFingerprint =
 		stepConfig?.["ca-fingerprint"] ?? stepCaData?.ca_fingerprint ?? null;
 	const certName = stepConfig?.["cert-name"] ?? stepCaData?.cert_name;
-	const awsRolesAnywhere = config?.aws?.["roles-anywhere"];
+	const awsRolesAnywhere = awsConfig?.aws?.["roles-anywhere"];
 
 	const certificates = useMemo<CertificateItem[]>(() => {
 		const items: CertificateItem[] = [];

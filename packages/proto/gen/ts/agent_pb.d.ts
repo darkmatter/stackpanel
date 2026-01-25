@@ -10,7 +10,7 @@ import type { UsersSchema } from "./users_pb";
 import type { AwsSchema } from "./aws_pb";
 import type { AppsSchema } from "./apps_pb";
 import type { VariablesSchema } from "./variables_pb";
-import type { DisableModuleRequestSchema, EnableModuleRequestSchema, ModuleResponseSchema, ModuleSchema, ModulesSchema, UpdateModuleSettingsRequestSchema } from "./modules_pb";
+import type { DisableModuleRequestSchema, EnableModuleRequestSchema, GetModuleOutputsRequestSchema, ModuleOutputsSchema, ModuleResponseSchema, ModuleSchema, ModulesSchema, UpdateModuleSettingsRequestSchema } from "./modules_pb";
 import type { SstSchema } from "./sst_pb";
 
 /**
@@ -1651,6 +1651,14 @@ export declare const AgentService: GenService<{
     methodKind: "unary";
     input: typeof GetModuleRequestSchema;
     output: typeof ModuleSchema;
+  },
+  /**
+   * @generated from rpc stackpanel.agent.AgentService.GetModuleOutputs
+   */
+  getModuleOutputs: {
+    methodKind: "unary";
+    input: typeof GetModuleOutputsRequestSchema;
+    output: typeof ModuleOutputsSchema;
   },
   /**
    * @generated from rpc stackpanel.agent.AgentService.EnableModule

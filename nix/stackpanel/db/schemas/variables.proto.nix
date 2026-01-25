@@ -1,11 +1,20 @@
 # ==============================================================================
-# apps.proto.nix
+# variables.proto.nix
 #
-# Protobuf schema for application configuration.
-# Defines app-level settings for serialization/codegen.
+# Protobuf schema for workspace variables.
 #
-# Note: Complex tooling configuration (install, build, test, etc.) is
-# Nix-specific and defined in core/options/apps.nix, not here.
+# Variables are simple key-value pairs where:
+# - ID: Path-based identifier like /dev/DATABASE_URL or /computed/apps/web/port
+# - Value: Either a literal string or a vals reference (ref+sops://, ref+awsssm://, etc.)
+#
+# The ID format determines the source:
+# - /dev/*, /prod/*, /staging/* → SOPS-encrypted secrets in corresponding .yaml file
+# - /computed/* → Computed values from Nix modules (read-only)
+# - /literal/* → User-defined literal values (optional organization)
+#
+# Secrets are stored in SOPS-encrypted YAML files:
+# - .stackpanel/secrets/dev.yaml → All /dev/* variables
+# - .stackpanel/secrets/prod.yaml → All /prod/* variables
 # ==============================================================================
 { lib }:
 let
@@ -19,92 +28,46 @@ proto.mkProtoFile {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
   };
 
-  enums = {
-    # VariableType indicates how the variable value is resolved
-    VariableType = proto.mkEnum {
-      name = "VariableType";
-      values = [
-        "LITERAL"   # Plain text value, embedded directly (resolved at eval time)
-        "SECRET"    # Encrypted with AGE master keys (resolved at runtime)
-        "VALS"      # External value reference using vals syntax (resolved at runtime)
-        "EXEC"      # Shell command that outputs the value (resolved at runtime)
-      ];
-    };
-  };
+  enums = { };
 
   messages = {
-    # Action to take when a required variable is missing
-    VariableAction = proto.mkMessage {
-      name = "VariableAction";
-      description = "Action to resolve a missing variable";
-      fields = {
-        type = proto.string 1 ''
-          Type of action: "add-secret", "add-variable", "configure", "external"
-        '';
-        label = proto.optional (proto.string 2 "Button/link label for the action");
-        url = proto.optional (proto.string 3 "External URL (e.g., link to create API token)");
-        secretKey = proto.optional (proto.string 4 "Secret key name if type=add-secret");
-      };
-    };
-
+    # A single variable entry
     Variable = proto.mkMessage {
       name = "Variable";
-      description = "Configuration for a single variable in the workspace";
+      description = "A workspace variable (secret, literal, or vals reference)";
       fields = {
-        id = proto.string 1 ''
-          Globally unique identifier for the variable. Recommended format:
-          `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
+        id = proto.optional (proto.string 1 ''
+          Path-based identifier. Format: /<keygroup>/<VARNAME>
+          
+          Examples:
+            /dev/DATABASE_URL      → Secret in dev.yaml
+            /prod/API_KEY          → Secret in prod.yaml
+            /computed/apps/web/port → Computed by Nix module
+        '');
+        value = proto.string 2 ''
+          The value - either a literal string or a vals reference.
+          
+          Literals:
+            "postgresql://localhost:5432/dev"
+            "3000"
+          
+          Vals references:
+            "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+            "ref+awsssm://prod/api-key"
+            "ref+exec://echo $RANDOM"
         '';
-        key = proto.string 2 ''
-          Environment variable name when passing to apps (e.g., POSTGRES_URL).
-        '';
-        description = proto.optional (proto.string 3 "Description of the variable");
-        type = proto.message "VariableType" 4 "How the variable value is resolved";
-        value = proto.string 5 ''
-          The value field meaning depends on type:
-          - LITERAL: The actual value (embedded directly)
-          - SECRET: Empty (value lives in encrypted .age file)
-          - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
-          - EXEC: Shell command to execute (stdout becomes the value)
-        '';
-        masterKeys = proto.repeated (
-          proto.string 6 ''
-            Master keys that can decrypt this secret. Only used when type=SECRET.
-            The .age file is encrypted to ALL listed master keys.
-            Default: ["local"] (auto-generated local key).
-            Example: ["dev", "prod"] for team-accessible secrets.
-          ''
-        );
-        # Module dependency tracking
-        requiredBy = proto.repeated (
-          proto.string 7 ''
-            List of module names that require this variable (e.g., ["sst", "ci"]).
-          ''
-        );
-        providedBy = proto.optional (
-          proto.string 8 ''
-            Module name that provides/creates this variable.
-          ''
-        );
-        level = proto.optional (
-          proto.int32 9 ''
-            Bootstrap level (0 = always available, 1+ = requires dependencies).
-          ''
-        );
-        action = proto.optional (
-          proto.message "VariableAction" 10 ''
-            Action to resolve this variable if missing.
-          ''
-        );
       };
     };
 
-    # Collection of variables keyed by variable identifier
+    # Collection of variables
     Variables = proto.mkMessage {
       name = "Variables";
-      description = "Map of variable identifier to variable configuration";
+      description = "Map of variable ID to Variable";
       fields = {
-        variables = proto.map "string" "Variable" 1 "Map of variable ID to variable config";
+        variables = proto.map "string" "Variable" 1 ''
+          Map of variable ID to Variable object.
+          Each Variable contains at minimum a value field.
+        '';
       };
     };
   };

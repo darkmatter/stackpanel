@@ -6,12 +6,18 @@ import type { User } from "@/lib/types";
 import { useNixData } from "@/lib/use-agent";
 import type { GithubCollaboratorsData, TeamMember } from "./types";
 
+/** Extended User type with stackpanel-specific fields from Nix data */
+interface NixUser extends User {
+	public_keys?: string[];
+	secrets_allowed_environments?: string[];
+}
+
 export function useTeam() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [dialogOpen, setDialogOpen] = useState(false);
 
 	const { data: usersData, isLoading: usersLoading } =
-		useNixData<Record<string, User>>("users");
+		useNixData<Record<string, NixUser>>("users");
 	const { data: githubData, isLoading: githubLoading } =
 		useNixData<GithubCollaboratorsData>("external-github-collaborators");
 
@@ -29,9 +35,9 @@ export function useTeam() {
 			const displayName = user.name || user.github || key;
 			const handle = user.github ? `@${user.github}` : null;
 			const publicKeys = user.public_keys ?? [];
-			const secretsAccess = (user.secrets_allowed_environments ?? []).map(
-				(env) => String(env).toLowerCase(),
-			);
+		const secretsAccess = (user.secrets_allowed_environments ?? []).map(
+			(env: string) => String(env).toLowerCase(),
+		);
 
 			entries.push({
 				id: key,

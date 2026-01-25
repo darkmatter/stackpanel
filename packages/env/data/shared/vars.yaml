@@ -1,0 +1,5 @@
+# Shared configuration variables (NOT encrypted)
+# Add non-sensitive config shared across apps/environments
+
+LOG_LEVEL: info
+API_VERSION: v1

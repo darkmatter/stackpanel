@@ -75,13 +75,15 @@ export function AddAppDialog({ onSuccess }: AddAppDialogProps) {
 			if (token) client.setToken(token);
 			const appsClient = client.nix.mapEntity<AppEntity>("apps");
 
-			const exists = await appsClient.has(values.id);
-			if (exists) {
+			const existingApp = await appsClient.get(values.id);
+			if (existingApp) {
 				toast.error(`App "${values.id}" already exists`);
 				setIsSaving(false);
 				return;
 			}
 
+			// With simplified schema: environments is Record<string, AppEnvironment>
+			// Start with default "dev" environment
 			const newApp: AppEntity = {
 				id: values.id,
 				name: values.name || values.id,
@@ -90,9 +92,9 @@ export function AddAppDialog({ onSuccess }: AddAppDialogProps) {
 				type: values.type || "bun",
 				port: parsePortValue(values.port),
 				domain: values.domain || undefined,
-				environments: [],
-				tasks: {},
-				variables: {},
+				environments: {
+					dev: { name: "dev", env: {} },
+				},
 			};
 
 			await appsClient.set(values.id, newApp);

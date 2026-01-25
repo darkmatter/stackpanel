@@ -32,6 +32,10 @@
     ];
     extra-folders = [ ];
   };
+  ide.zed = {
+    enable = true;
+    output-mode = "generated";
+  };
 
   # ---------------------------------------------------------------------------
   # Devshell Packages
@@ -165,7 +169,6 @@
     domain = "stackpanel";
     tls = true;
     path = "apps/web";
-    tasks.dev.command = "turbo run -F @stackpanel/web dev";
     # Enable OxLint for JavaScript/TypeScript linting
     linting.oxlint = {
       enable = true;
@@ -178,49 +181,39 @@
         suspicious = "warn";
       };
     };
-    # Environments with secrets configuration
+    # Environments - simplified key-value env vars
     environments = {
       dev = {
         name = "dev";
-        sources = [
-          "shared"
-          "dev"
-        ];
-        public-keys = [ "age1..." ];
+        env = {
+          # Secrets via vals references
+          OPENAI_API_KEY = "ref+sops://packages/env/data/web/dev.yaml#/OPENAI_API_KEY";
+        };
       };
       staging = {
         name = "staging";
-        sources = [
-          "shared"
-          "staging"
-        ];
-        public-keys = [ "age1..." ];
+        env = { };
       };
-      production = {
-        name = "production";
-        sources = [
-          "shared"
-          "production"
-        ];
-        public-keys = [ "age1..." ];
+      prod = {
+        name = "prod";
+        env = {
+          OPENAI_API_KEY = "ref+sops://packages/env/data/web/prod.yaml#/OPENAI_API_KEY";
+        };
       };
     };
   };
   apps.server = {
     name = "server";
     path = "apps/server";
-    tasks.dev.command = "turbo run -F @stackpanel/server dev";
   };
   apps.docs = {
     name = "docs";
     domain = "docs";
     path = "apps/docs";
-    tasks.dev.command = "turbo run -F @stackpanel/docs dev";
   };
   apps.stackpanel-go = {
     name = "stackpanel";
     path = "apps/stackpanel-go";
-    tasks.dev.command = "go run .";
     go = {
       enable = true;
       binaryName = "stackpanel";

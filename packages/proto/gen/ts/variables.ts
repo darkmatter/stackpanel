@@ -11,177 +11,71 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * Configuration for a single variable in the workspace
+ * A workspace variable (secret, literal, or vals reference)
  *
  * @generated from protobuf message stackpanel.db.Variable
  */
 export interface Variable {
     /**
      *
-     * Globally unique identifier for the variable. Recommended format:
-     * `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
+     * Path-based identifier. Format: /<keygroup>/<VARNAME>
+     *
+     * Examples:
+     *   /dev/DATABASE_URL      → Secret in dev.yaml
+     *   /prod/API_KEY          → Secret in prod.yaml
+     *   /computed/apps/web/port → Computed by Nix module
      *
      *
-     * @generated from protobuf field: string id = 1
+     * @generated from protobuf field: optional string id = 1
      */
-    id: string;
+    id?: string;
     /**
      *
-     * Environment variable name when passing to apps (e.g., POSTGRES_URL).
+     * The value - either a literal string or a vals reference.
+     *
+     * Literals:
+     *   "postgresql://localhost:5432/dev"
+     *   "3000"
+     *
+     * Vals references:
+     *   "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+     *   "ref+awsssm://prod/api-key"
+     *   "ref+exec://echo $RANDOM"
      *
      *
-     * @generated from protobuf field: string key = 2
-     */
-    key: string;
-    /**
-     * @generated from protobuf field: optional string description = 3
-     */
-    description?: string; // Description of the variable
-    /**
-     * @generated from protobuf field: stackpanel.db.VariableType type = 4
-     */
-    type: VariableType; // How the variable value is resolved
-    /**
-     *
-     * The value field meaning depends on type:
-     * - LITERAL: The actual value (embedded directly)
-     * - SECRET: Empty (value lives in encrypted .age file)
-     * - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
-     * - EXEC: Shell command to execute (stdout becomes the value)
-     *
-     *
-     * @generated from protobuf field: string value = 5
+     * @generated from protobuf field: string value = 2
      */
     value: string;
-    /**
-     *
-     * Master keys that can decrypt this secret. Only used when type=SECRET.
-     * The .age file is encrypted to ALL listed master keys.
-     * Default: ["local"] (auto-generated local key).
-     * Example: ["dev", "prod"] for team-accessible secrets.
-     *
-     *
-     * @generated from protobuf field: repeated string masterKeys = 6
-     */
-    masterKeys: string[];
-    /**
-     *
-     * List of module names that require this variable (e.g., ["sst", "ci"]).
-     *
-     *
-     * @generated from protobuf field: repeated string requiredBy = 7
-     */
-    requiredBy: string[];
-    /**
-     *
-     * Module name that provides/creates this variable.
-     *
-     *
-     * @generated from protobuf field: optional string providedBy = 8
-     */
-    providedBy?: string;
-    /**
-     *
-     * Bootstrap level (0 = always available, 1+ = requires dependencies).
-     *
-     *
-     * @generated from protobuf field: optional int32 level = 9
-     */
-    level?: number;
-    /**
-     *
-     * Action to resolve this variable if missing.
-     *
-     *
-     * @generated from protobuf field: optional stackpanel.db.VariableAction action = 10
-     */
-    action?: VariableAction;
 }
 /**
- * Action to resolve a missing variable
- *
- * @generated from protobuf message stackpanel.db.VariableAction
- */
-export interface VariableAction {
-    /**
-     *
-     * Type of action: "add-secret", "add-variable", "configure", "external"
-     *
-     *
-     * @generated from protobuf field: string type = 1
-     */
-    type: string;
-    /**
-     * @generated from protobuf field: optional string label = 2
-     */
-    label?: string; // Button/link label for the action
-    /**
-     * @generated from protobuf field: optional string url = 3
-     */
-    url?: string; // External URL (e.g., link to create API token)
-    /**
-     * @generated from protobuf field: optional string secretKey = 4
-     */
-    secretKey?: string; // Secret key name if type=add-secret
-}
-/**
- * Map of variable identifier to variable configuration
+ * Map of variable ID to Variable
  *
  * @generated from protobuf message stackpanel.db.Variables
  */
 export interface Variables {
     /**
+     *
+     * Map of variable ID to Variable object.
+     * Each Variable contains at minimum a value field.
+     *
+     *
      * @generated from protobuf field: map<string, stackpanel.db.Variable> variables = 1
      */
     variables: {
         [key: string]: Variable;
-    }; // Map of variable ID to variable config
-}
-/**
- * @generated from protobuf enum stackpanel.db.VariableType
- */
-export enum VariableType {
-    /**
-     * @generated from protobuf enum value: LITERAL = 0;
-     */
-    LITERAL = 0,
-    /**
-     * @generated from protobuf enum value: SECRET = 1;
-     */
-    SECRET = 1,
-    /**
-     * @generated from protobuf enum value: VALS = 2;
-     */
-    VALS = 2,
-    /**
-     * @generated from protobuf enum value: EXEC = 3;
-     */
-    EXEC = 3
+    };
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Variable$Type extends MessageType<Variable> {
     constructor() {
         super("stackpanel.db.Variable", [
-            { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "type", kind: "enum", T: () => ["stackpanel.db.VariableType", VariableType] },
-            { no: 5, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "masterKeys", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "requiredBy", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 8, name: "providedBy", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 9, name: "level", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 10, name: "action", kind: "message", T: () => VariableAction }
+            { no: 1, name: "id", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Variable>): Variable {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.id = "";
-        message.key = "";
-        message.type = 0;
         message.value = "";
-        message.masterKeys = [];
-        message.requiredBy = [];
         if (value !== undefined)
             reflectionMergePartial<Variable>(this, message, value);
         return message;
@@ -191,35 +85,11 @@ class Variable$Type extends MessageType<Variable> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string id */ 1:
+                case /* optional string id */ 1:
                     message.id = reader.string();
                     break;
-                case /* string key */ 2:
-                    message.key = reader.string();
-                    break;
-                case /* optional string description */ 3:
-                    message.description = reader.string();
-                    break;
-                case /* stackpanel.db.VariableType type */ 4:
-                    message.type = reader.int32();
-                    break;
-                case /* string value */ 5:
+                case /* string value */ 2:
                     message.value = reader.string();
-                    break;
-                case /* repeated string masterKeys */ 6:
-                    message.masterKeys.push(reader.string());
-                    break;
-                case /* repeated string requiredBy */ 7:
-                    message.requiredBy.push(reader.string());
-                    break;
-                case /* optional string providedBy */ 8:
-                    message.providedBy = reader.string();
-                    break;
-                case /* optional int32 level */ 9:
-                    message.level = reader.int32();
-                    break;
-                case /* optional stackpanel.db.VariableAction action */ 10:
-                    message.action = VariableAction.internalBinaryRead(reader, reader.uint32(), options, message.action);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -233,36 +103,12 @@ class Variable$Type extends MessageType<Variable> {
         return message;
     }
     internalBinaryWrite(message: Variable, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string id = 1; */
-        if (message.id !== "")
+        /* optional string id = 1; */
+        if (message.id !== undefined)
             writer.tag(1, WireType.LengthDelimited).string(message.id);
-        /* string key = 2; */
-        if (message.key !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.key);
-        /* optional string description = 3; */
-        if (message.description !== undefined)
-            writer.tag(3, WireType.LengthDelimited).string(message.description);
-        /* stackpanel.db.VariableType type = 4; */
-        if (message.type !== 0)
-            writer.tag(4, WireType.Varint).int32(message.type);
-        /* string value = 5; */
+        /* string value = 2; */
         if (message.value !== "")
-            writer.tag(5, WireType.LengthDelimited).string(message.value);
-        /* repeated string masterKeys = 6; */
-        for (let i = 0; i < message.masterKeys.length; i++)
-            writer.tag(6, WireType.LengthDelimited).string(message.masterKeys[i]);
-        /* repeated string requiredBy = 7; */
-        for (let i = 0; i < message.requiredBy.length; i++)
-            writer.tag(7, WireType.LengthDelimited).string(message.requiredBy[i]);
-        /* optional string providedBy = 8; */
-        if (message.providedBy !== undefined)
-            writer.tag(8, WireType.LengthDelimited).string(message.providedBy);
-        /* optional int32 level = 9; */
-        if (message.level !== undefined)
-            writer.tag(9, WireType.Varint).int32(message.level);
-        /* optional stackpanel.db.VariableAction action = 10; */
-        if (message.action)
-            VariableAction.internalBinaryWrite(message.action, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
+            writer.tag(2, WireType.LengthDelimited).string(message.value);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -273,74 +119,6 @@ class Variable$Type extends MessageType<Variable> {
  * @generated MessageType for protobuf message stackpanel.db.Variable
  */
 export const Variable = new Variable$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class VariableAction$Type extends MessageType<VariableAction> {
-    constructor() {
-        super("stackpanel.db.VariableAction", [
-            { no: 1, name: "type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "label", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "url", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "secretKey", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
-        ]);
-    }
-    create(value?: PartialMessage<VariableAction>): VariableAction {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.type = "";
-        if (value !== undefined)
-            reflectionMergePartial<VariableAction>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: VariableAction): VariableAction {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* string type */ 1:
-                    message.type = reader.string();
-                    break;
-                case /* optional string label */ 2:
-                    message.label = reader.string();
-                    break;
-                case /* optional string url */ 3:
-                    message.url = reader.string();
-                    break;
-                case /* optional string secretKey */ 4:
-                    message.secretKey = reader.string();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: VariableAction, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string type = 1; */
-        if (message.type !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.type);
-        /* optional string label = 2; */
-        if (message.label !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.label);
-        /* optional string url = 3; */
-        if (message.url !== undefined)
-            writer.tag(3, WireType.LengthDelimited).string(message.url);
-        /* optional string secretKey = 4; */
-        if (message.secretKey !== undefined)
-            writer.tag(4, WireType.LengthDelimited).string(message.secretKey);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message stackpanel.db.VariableAction
- */
-export const VariableAction = new VariableAction$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Variables$Type extends MessageType<Variables> {
     constructor() {

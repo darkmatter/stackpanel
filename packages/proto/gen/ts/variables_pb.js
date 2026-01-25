@@ -2,13 +2,13 @@
 // @generated from file variables.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 
 /**
  * Describes the file variables.proto.
  */
 export const file_variables = /*@__PURE__*/
-  fileDesc("Cg92YXJpYWJsZXMucHJvdG8SDXN0YWNrcGFuZWwuZGIitAIKCFZhcmlhYmxlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIYCgtkZXNjcmlwdGlvbhgDIAEoCUgAiAEBEikKBHR5cGUYBCABKA4yGy5zdGFja3BhbmVsLmRiLlZhcmlhYmxlVHlwZRINCgV2YWx1ZRgFIAEoCRISCgptYXN0ZXJLZXlzGAYgAygJEhIKCnJlcXVpcmVkQnkYByADKAkSFwoKcHJvdmlkZWRCeRgIIAEoCUgBiAEBEhIKBWxldmVsGAkgASgFSAKIAQESMgoGYWN0aW9uGAogASgLMh0uc3RhY2twYW5lbC5kYi5WYXJpYWJsZUFjdGlvbkgDiAEBQg4KDF9kZXNjcmlwdGlvbkINCgtfcHJvdmlkZWRCeUIICgZfbGV2ZWxCCQoHX2FjdGlvbiJ8Cg5WYXJpYWJsZUFjdGlvbhIMCgR0eXBlGAEgASgJEhIKBWxhYmVsGAIgASgJSACIAQESEAoDdXJsGAMgASgJSAGIAQESFgoJc2VjcmV0S2V5GAQgASgJSAKIAQFCCAoGX2xhYmVsQgYKBF91cmxCDAoKX3NlY3JldEtleSKSAQoJVmFyaWFibGVzEjoKCXZhcmlhYmxlcxgBIAMoCzInLnN0YWNrcGFuZWwuZGIuVmFyaWFibGVzLlZhcmlhYmxlc0VudHJ5GkkKDlZhcmlhYmxlc0VudHJ5EgsKA2tleRgBIAEoCRImCgV2YWx1ZRgCIAEoCzIXLnN0YWNrcGFuZWwuZGIuVmFyaWFibGU6AjgBKjsKDFZhcmlhYmxlVHlwZRILCgdMSVRFUkFMEAASCgoGU0VDUkVUEAESCAoEVkFMUxACEggKBEVYRUMQA0I6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
+  fileDesc("Cg92YXJpYWJsZXMucHJvdG8SDXN0YWNrcGFuZWwuZGIiMQoIVmFyaWFibGUSDwoCaWQYASABKAlIAIgBARINCgV2YWx1ZRgCIAEoCUIFCgNfaWQikgEKCVZhcmlhYmxlcxI6Cgl2YXJpYWJsZXMYASADKAsyJy5zdGFja3BhbmVsLmRiLlZhcmlhYmxlcy5WYXJpYWJsZXNFbnRyeRpJCg5WYXJpYWJsZXNFbnRyeRILCgNrZXkYASABKAkSJgoFdmFsdWUYAiABKAsyFy5zdGFja3BhbmVsLmRiLlZhcmlhYmxlOgI4AUI6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
 
 /**
  * Describes the message stackpanel.db.Variable.
@@ -18,28 +18,9 @@ export const VariableSchema = /*@__PURE__*/
   messageDesc(file_variables, 0);
 
 /**
- * Describes the message stackpanel.db.VariableAction.
- * Use `create(VariableActionSchema)` to create a new message.
- */
-export const VariableActionSchema = /*@__PURE__*/
-  messageDesc(file_variables, 1);
-
-/**
  * Describes the message stackpanel.db.Variables.
  * Use `create(VariablesSchema)` to create a new message.
  */
 export const VariablesSchema = /*@__PURE__*/
-  messageDesc(file_variables, 2);
-
-/**
- * Describes the enum stackpanel.db.VariableType.
- */
-export const VariableTypeSchema = /*@__PURE__*/
-  enumDesc(file_variables, 0);
-
-/**
- * @generated from enum stackpanel.db.VariableType
- */
-export const VariableType = /*@__PURE__*/
-  tsEnum(VariableTypeSchema);
+  messageDesc(file_variables, 1);
 

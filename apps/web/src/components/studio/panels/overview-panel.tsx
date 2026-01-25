@@ -3,13 +3,8 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
-import {
-  Database,
-  KeyRound,
-  Server,
-  Terminal,
-} from "lucide-react";
-import { SecurityStatusCard } from "@/components/studio/security-status-card";
+import { Database, KeyRound, Server, Terminal } from "lucide-react";
+import { SecurityStatusCard as _SecurityStatusCard } from "@/components/studio/security-status-card";
 import { HealthSummaryPanel } from "@/lib/healthchecks";
 import { StatsGrid } from "@/components/studio/overview/stats-grid";
 import { ServicesStatusCard } from "@/components/studio/overview/services-status-card";
@@ -18,7 +13,7 @@ export function OverviewPanel() {
   return (
     <div className="space-y-6">
       {/* Security Status (AWS Session & Certificates) */}
-      <SecurityStatusCard />
+      {/*<SecurityStatusCard />*/}
 
       {/* Health Summary */}
       <HealthSummaryPanel />
@@ -34,7 +29,9 @@ export function OverviewPanel() {
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-medium text-base">Quick Actions</CardTitle>
+            <CardTitle className="font-medium text-base">
+              Quick Actions
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">

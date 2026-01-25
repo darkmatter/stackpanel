@@ -1,11 +1,11 @@
 {
-	"name": "stackpanel-go",
-	"private": true,
-	"scripts": {
-		"dev": "air --debug",
-		"build": "go build -o stackpanel .",
-		"lint": "golangci-lint run",
-		"fmt": "gofumpt -w .",
-		"test": "go test ./..."
-	}
+  "name": "stackpanel-go",
+  "private": true,
+  "scripts": {
+    "dev": "air",
+    "build": "go build -o stackpanel .",
+    "lint": "golangci-lint run",
+    "fmt": "gofumpt -w .",
+    "test": "go test ./..."
+  }
 }

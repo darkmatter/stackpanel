@@ -52,6 +52,8 @@ interface UseAgentOptions {
 	host?: string;
 	port?: number;
 	token?: string;
+	/** Automatically connect when mounted (currently unused, for future use) */
+	autoConnect?: boolean;
 }
 
 /**
@@ -135,7 +137,9 @@ export function useAgentHealth(
 		};
 	}, [host, port, intervalMs]);
 
-	return { status, projectRoot, hasProject, agentId };
+	// isPaired = agent has a project loaded and is available
+	const isPaired = status === "available" && hasProject;
+	return { status, projectRoot, hasProject, agentId, isPaired };
 }
 
 // =============================================================================
@@ -1097,7 +1101,8 @@ export function useTurboTasks() {
 // =============================================================================
 
 /**
- * Hook to find which apps have a specific variable.
+ * Hook to find which apps have a specific variable (by env key name).
+ * Searches across all environments in each app.
  */
 export function useAppsWithVariable(variableName: string) {
 	const { data: apps, isLoading, error, refetch } = useApps();
@@ -1106,7 +1111,13 @@ export function useAppsWithVariable(variableName: string) {
 		if (!apps) return null;
 
 		return Object.entries(apps)
-			.filter(([_, app]) => variableName in (app.variables ?? {}))
+			.filter(([_, app]) => {
+				// Check if any environment has this variable in its env object
+				const environments = app.environments ?? {};
+				return Object.values(environments).some(
+					(env) => variableName in (env.env ?? {}),
+				);
+			})
 			.map(([id, app]) => ({ ...app, id }));
 	}, [apps, variableName]);
 
@@ -1363,6 +1374,23 @@ export function useUpdateModuleSettingsRpc() {
 }
 
 /**
+ * Query hook for getting module outputs (files, scripts, healthchecks, packages).
+ */
+export function useModuleOutputsRpc(moduleId: string) {
+	const client = useAgentRpcClient();
+
+	return useQuery({
+		queryKey: [...moduleRpcQueryKeys.detail(moduleId), "outputs"],
+		queryFn: async () => {
+			if (!client) throw new Error("Not connected to agent");
+			return client.getModuleOutputs({ moduleId });
+		},
+		enabled: !!client && !!moduleId,
+		staleTime: 60 * 1000, // 1 minute - outputs don't change often
+	});
+}
+
+/**
  * Re-export proto types for convenience.
  */
 export type { Apps, Variables, Users, Config, Secrets, Aws };
@@ -1385,4 +1413,10 @@ export type {
 	DisableModuleRequest,
 	UpdateModuleSettingsRequest,
 	ModuleResponse,
+	ModuleOutputs,
+	ModuleOutputFile,
+	ModuleOutputScript,
+	ModuleOutputHealthcheck,
+	ModuleOutputPackage,
+	GetModuleOutputsRequest,
 } from "@stackpanel/proto";
