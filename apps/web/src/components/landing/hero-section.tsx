@@ -9,7 +9,14 @@ import { AppTasks } from "@/components/studio/panels/apps";
 import { PanelHeader } from "@/components/studio/panels/shared/panel-header";
 import { PackageCard } from "@/components/studio/panels/packages/components";
 import { getTypeConfig } from "@/components/studio/panels/variables/constants";
-import type { AppTask, NixpkgsPackage } from "@/lib/types";
+import type { NixpkgsPackage } from "@/lib/types";
+
+// AppTask interface for demo/preview data
+interface AppTask {
+	key: string;
+	command: string;
+	env?: Record<string, string>;
+}
 import { cn } from "@/lib/utils";
 
 function Headline() {
@@ -520,7 +527,7 @@ export function HeroSection() {
 								className="bg-foreground text-background hover:bg-foreground/90"
 								size="lg"
 							>
-								<Link to="/demo">
+								<Link to="/login">
 									Get Started <ArrowRight className="ml-2 h-4 w-4" />
 								</Link>
 							</Button>

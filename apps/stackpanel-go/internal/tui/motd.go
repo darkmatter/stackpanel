@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wordwrap"
@@ -201,6 +202,26 @@ func renderShortcutRow(shortcut, explanation string) string {
 	return fmt.Sprintf("  %s %s %s", sc, eq, exp)
 }
 
+// formatDuration formats a duration in a human-readable way
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		hours := int(d.Hours())
+		mins := int(d.Minutes()) % 60
+		if mins > 0 {
+			return fmt.Sprintf("%dh%dm", hours, mins)
+		}
+		return fmt.Sprintf("%dh", hours)
+	}
+	days := int(d.Hours() / 24)
+	return fmt.Sprintf("%dd", days)
+}
+
 // wrapText wraps text to fit within the MOTD width
 func wrapText(text string, indent int) string {
 	wrapped := wordwrap.String(text, motdWidth-indent-4)
@@ -383,6 +404,27 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 			content.WriteString(motdStatusRunning.Render("●"))
 			content.WriteString(" ")
 			content.WriteString(motdEnvVersionStyle.Render(fmt.Sprintf("%d synced", data.Files.TotalCount)))
+		}
+		content.WriteString("\n")
+	}
+
+	// Shell freshness status row
+	if data.ShellFreshness.Checked {
+		content.WriteString("  ")
+		content.WriteString(motdLabelStyle.Render("Shell     "))
+		if data.ShellFreshness.Fresh {
+			content.WriteString(motdStatusRunning.Render("●"))
+			content.WriteString(" ")
+			content.WriteString(motdEnvVersionStyle.Render("fresh"))
+			if data.ShellFreshness.ShellAge > 0 {
+				ageStr := formatDuration(data.ShellFreshness.ShellAge)
+				content.WriteString(motdLabelStyle.Render(" (" + ageStr + " ago)"))
+			}
+		} else {
+			content.WriteString(renderWarningDot())
+			content.WriteString(" ")
+			content.WriteString(motdStatusWarning.Render("stale"))
+			content.WriteString(motdLabelStyle.Render(" (config changed, reload shell)"))
 		}
 		content.WriteString("\n")
 	}

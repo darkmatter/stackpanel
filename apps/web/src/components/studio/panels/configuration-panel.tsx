@@ -12,9 +12,9 @@ import {
   AwsSection,
   CacheSection,
   GitHubSection,
+  IdeSection,
   StarshipSection,
   StepCaSection,
-  VscodeSection,
 } from "./configuration";
 
 export function ConfigurationPanel() {
@@ -39,8 +39,9 @@ export function ConfigurationPanel() {
         return <AwsSection config={config} />;
       case "starship":
         return <StarshipSection config={config} />;
-      case "vscode":
-        return <VscodeSection config={config} />;
+      case "ide":
+      case "vscode": // backward compatibility
+        return <IdeSection config={config} />;
       case "cache":
         return <CacheSection config={config} />;
       default:

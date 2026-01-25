@@ -39,8 +39,8 @@ describe.skipIf(SKIP_INTEGRATION)("Agent Integration Tests", () => {
 			const project = await sharedProject.get();
 			const health = await project.client.ping();
 
-			expect(health?.project_root).toBe(project.projectDir);
-			expect(health?.has_project).toBe(true);
+			expect(health?.projectRoot).toBe(project.projectDir);
+			expect(health?.hasProject).toBe(true);
 		});
 	});
 

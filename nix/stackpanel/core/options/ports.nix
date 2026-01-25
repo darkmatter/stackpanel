@@ -115,11 +115,10 @@ in
   # Contribute computed service ports to stackpanel.variables
   # ===========================================================================
   # Each infrastructure service gets a PORT variable that apps can reference.
-  # This allows apps to discover service ports at runtime.
+  # These use the /computed/ prefix to indicate they are read-only.
   #
   # Example:
-  #   config.stackpanel.variables."/services/postgres/port".value  # "5432"
-  #   config.stackpanel.variables."/services/postgres/port".ref    # "5432"
+  #   config.stackpanel.variables."/computed/services/postgres/port".value  # "5432"
   # ===========================================================================
   config.stackpanel.variables = lib.mkIf cfg.enable (
     lib.mkMerge (
@@ -131,13 +130,9 @@ in
           lowerKey = lib.toLower serviceKey;
         in
         {
-          # Port variable for each service - NUMBER type for proper Zod codegen
-          "/services/${lowerKey}/port" = {
-            key = "STACKPANEL_${serviceKey}_PORT";
-            type = "NUMBER";  # Port numbers should be typed as numbers
+          # Port variable for each service (computed, read-only)
+          "/computed/services/${lowerKey}/port" = {
             value = toString serviceInfo.port;
-            description = "Port for ${serviceInfo.name or serviceKey}";
-            providedBy = "stackpanel.ports";
           };
         }
       ) servicesByKey

@@ -17,20 +17,21 @@ const DefaultRegistryURL = "https://raw.githubusercontent.com/darkmatter/stackpa
 
 // RegistryModule represents a module available in the registry
 type RegistryModule struct {
-	ID        string         `json:"id"`
-	Meta      ModuleMeta     `json:"meta"`
-	Features  ModuleFeatures `json:"features"`
-	Requires  []string       `json:"requires,omitempty"`
-	Conflicts []string       `json:"conflicts,omitempty"`
-	Tags      []string       `json:"tags,omitempty"`
-	FlakeURL  string         `json:"flakeUrl"`
-	FlakePath string         `json:"flakePath,omitempty"`
-	Ref       string         `json:"ref,omitempty"`
-	Downloads int            `json:"downloads,omitempty"`
-	Rating    float64        `json:"rating,omitempty"`
-	UpdatedAt string         `json:"updatedAt,omitempty"`
-	Installed bool           `json:"installed,omitempty"`
-	Builtin   bool           `json:"builtin,omitempty"` // True for modules that are built into stackpanel
+	ID             string         `json:"id"`
+	Meta           ModuleMeta     `json:"meta"`
+	Features       ModuleFeatures `json:"features"`
+	Requires       []string       `json:"requires,omitempty"`
+	Conflicts      []string       `json:"conflicts,omitempty"`
+	Tags           []string       `json:"tags,omitempty"`
+	FlakeURL       string         `json:"flakeUrl"`
+	FlakePath      string         `json:"flakePath,omitempty"`
+	Ref            string         `json:"ref,omitempty"`
+	Downloads      int            `json:"downloads,omitempty"`
+	Rating         float64        `json:"rating,omitempty"`
+	UpdatedAt      string         `json:"updatedAt,omitempty"`
+	Installed      bool           `json:"installed,omitempty"`      // True if module is active in Nix config
+	PendingInstall bool           `json:"pendingInstall,omitempty"` // True if enabled but requires devshell re-entry
+	Builtin        bool           `json:"builtin,omitempty"`        // True for modules that are built into stackpanel
 }
 
 // RegistrySource represents a module registry source
@@ -140,6 +141,12 @@ func (s *Server) handleRegistryModules(w http.ResponseWriter, r *http.Request) {
 	installedSet := make(map[string]bool)
 	for _, m := range installedModules {
 		installedSet[m.ID] = true
+	}
+
+	// Also check pending enables from data files (not yet in Nix config)
+	pendingEnables := s.getPendingModuleEnables()
+	for moduleID := range pendingEnables {
+		installedSet[moduleID] = true
 	}
 
 	// Mark installed modules and filter

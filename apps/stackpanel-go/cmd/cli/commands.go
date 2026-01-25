@@ -48,11 +48,40 @@ With a command name, runs that command with any additional arguments.
 Examples:
   stackpanel commands                    # List all commands
   stackpanel commands secrets:list       # Run the secrets:list command
+  stackpanel commands secrets:list --help  # Show help for secrets:list
   stackpanel run generate-types          # Run generate-types (using alias)
   stackpanel cmd build --release         # Run build with --release flag`,
+	// Disable flag parsing so we can handle --help for subcommands ourselves
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
+
+		// Parse our own flags manually since we disabled flag parsing
+		noTUI := false
+		filteredArgs := []string{}
+		showHelp := false
+
+		for i := 0; i < len(args); i++ {
+			arg := args[i]
+			if arg == "--no-tui" {
+				noTUI = true
+			} else if arg == "-h" || arg == "--help" {
+				showHelp = true
+			} else if arg == "--" {
+				// Everything after -- goes to the command
+				filteredArgs = append(filteredArgs, args[i+1:]...)
+				break
+			} else {
+				filteredArgs = append(filteredArgs, arg)
+			}
+		}
+
+		// If --help with no command, show commands help
+		if showHelp && len(filteredArgs) == 0 {
+			cmd.Help()
+			return
+		}
 
 		// Get config from nix eval
 		commandsData, err := loadCommands(ctx)
@@ -62,8 +91,7 @@ Examples:
 		}
 
 		// Interactive TUI when no args and TTY (unless disabled)
-		noTUI, _ := cmd.Flags().GetBool("no-tui")
-		if len(args) == 0 && tui.IsInteractive() && !noTUI {
+		if len(filteredArgs) == 0 && tui.IsInteractive() && !noTUI {
 			if err := runCommandsTUI(commandsData.commands, commandsData.devshellEnv); err != nil {
 				output.Error(fmt.Sprintf("Command TUI error: %v", err))
 				os.Exit(1)
@@ -71,15 +99,21 @@ Examples:
 			return
 		}
 
-		if len(args) == 0 {
+		if len(filteredArgs) == 0 {
 			// List commands
 			listCommands(commandsData.commands)
 			return
 		}
 
-		// Run the specified command
-		cmdName := args[0]
-		cmdArgs := args[1:]
+		// Get the command name
+		cmdName := filteredArgs[0]
+		cmdArgs := filteredArgs[1:]
+
+		// Check if this is a special subcommand like "list"
+		if cmdName == "list" {
+			listCommands(commandsData.commands)
+			return
+		}
 
 		cmdDef, ok := commandsData.commands[cmdName]
 		if !ok {
@@ -88,6 +122,12 @@ Examples:
 			fmt.Println("Available commands:")
 			listCommands(commandsData.commands)
 			os.Exit(1)
+		}
+
+		// If --help was passed, show help for this specific command
+		if showHelp {
+			printCommandHelp(cmdName, cmdDef)
+			return
 		}
 
 		if err := runCommand(cmdDef, cmdArgs, commandsData.devshellEnv); err != nil {
@@ -218,6 +258,43 @@ func printCommandEntry(name string, cmd SerializableCommand) {
 		fmt.Printf("  %s  %s\n", nameColor.Sprint(name), descColor.Sprint(*cmd.Description))
 	} else {
 		fmt.Printf("  %s\n", nameColor.Sprint(name))
+	}
+}
+
+// printCommandHelp shows detailed help for a specific command
+func printCommandHelp(name string, cmd SerializableCommand) {
+	titleColor := color.New(color.FgCyan, color.Bold)
+	labelColor := color.New(color.Faint)
+	codeColor := color.New(color.FgGreen)
+
+	fmt.Println()
+	fmt.Printf("%s\n", titleColor.Sprint(name))
+	fmt.Println()
+
+	if cmd.Description != nil && *cmd.Description != "" {
+		fmt.Printf("%s\n\n", *cmd.Description)
+	}
+
+	fmt.Printf("%s\n", labelColor.Sprint("Usage:"))
+	fmt.Printf("  stackpanel commands %s [args...]\n", name)
+	fmt.Printf("  stackpanel run %s [args...]\n", name)
+	fmt.Printf("  spx %s [args...]\n", name)
+	fmt.Println()
+
+	fmt.Printf("%s\n", labelColor.Sprint("Script:"))
+	// Indent and display the script
+	lines := strings.Split(cmd.Exec, "\n")
+	for _, line := range lines {
+		fmt.Printf("  %s\n", codeColor.Sprint(line))
+	}
+	fmt.Println()
+
+	if len(cmd.Env) > 0 {
+		fmt.Printf("%s\n", labelColor.Sprint("Environment:"))
+		for k, v := range cmd.Env {
+			fmt.Printf("  %s=%s\n", k, v)
+		}
+		fmt.Println()
 	}
 }
 

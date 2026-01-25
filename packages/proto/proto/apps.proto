@@ -3,14 +3,6 @@ syntax = "proto3";
 package stackpanel.db;
 option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
-// Type of environment variable
-enum AppVariableType {
-  APP_VARIABLE_TYPE_UNSPECIFIED = 0;
-  APP_VARIABLE_TYPE_LITERAL = 1;
-  APP_VARIABLE_TYPE_VARIABLE = 2;
-  APP_VARIABLE_TYPE_VALS = 3;
-}
-
 // Configuration for a single application in the workspace
 message App {
   string name = 1; // Display name of the app
@@ -19,45 +11,24 @@ message App {
   optional string type = 4; // App type/runtime (bun, go, python, rust, etc.)
   optional int32 port = 5; // Development server port
   optional string domain = 6; // Local development domain
-  map<string, AppTask> tasks = 7; // DEPRECATED: Use commands option. Legacy tasks (key = task name)
-  map<string, AppVariable> variables = 8; // Environment variables (key = env var key)
-  map<string, AppEnvironment> environments = 9; // Environments associated with this app
+  /*
+   * Environment configurations (key = environment name like "dev", "prod").
+   * 
+   */
+  map<string, AppEnvironment> environments = 7;
 }
 
 // Environment configuration (e.g., dev, staging, production)
 message AppEnvironment {
   string name = 1; // Name of the environment
   optional string description = 2; // (optional) Description of the environment
-  map<string, AppVariable> variables = 3; // Environment variables (key = env var key)
   /*
-   * List of SOPS-encrypted source files for this environment (without .yaml extension).
-   * These files are decrypted and merged to provide secrets for the environment.
-   * Example: ["shared", "dev"] merges shared.yaml + dev.yaml
+   * Environment variables for this environment.
+   * Key: Environment variable name (e.g., DATABASE_URL)
+   * Value: Literal string or vals reference (e.g., ref+sops://...)
    * 
    */
-  repeated string sources = 4;
-  /*
-   * List of AGE/SSH public keys that can decrypt secrets for this environment.
-   * These keys are used when encrypting new secrets.
-   * 
-   */
-  repeated string public_keys = 5;
-}
-
-// DEPRECATED: Use commands option instead. Shell command configuration.
-message AppTask {
-  string key = 1; // Corresponds to CMD in  `turbo task run CMD`
-  optional string description = 2; // (optional) Description of the command
-  string command = 3; // Command to run
-  map<string, AppVariable> env = 4; // Environment variables to set
-}
-
-// Environment variable configuration
-message AppVariable {
-  string key = 1; // Environment variable key
-  AppVariableType type = 2; // Type of environment variable
-  string variable_id = 3; // ID of the variable from variables.nix
-  optional string value = 4; // Literal value (used when variable_id is empty)
+  map<string, string> env = 3;
 }
 
 // Map of app identifier to app configuration

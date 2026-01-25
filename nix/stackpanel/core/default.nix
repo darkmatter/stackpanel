@@ -114,6 +114,27 @@ in
                     fi
                   ''}
 
+                  # Compute shell freshness hash from config files
+                  # This is used to detect when the shell is stale (config changed but shell not reloaded)
+                  _sp_compute_shell_hash() {
+                    local files=(
+                      "$STACKPANEL_ROOT/flake.nix"
+                      "$STACKPANEL_ROOT/flake.lock"
+                      "$STACKPANEL_ROOT/.stackpanel/config.nix"
+                      "$STACKPANEL_ROOT/devenv.nix"
+                      "$STACKPANEL_ROOT/devenv.yaml"
+                    )
+                    local hash_input=""
+                    for f in "''${files[@]}"; do
+                      if [[ -f "$f" ]]; then
+                        hash_input+="$(cat "$f" 2>/dev/null)"
+                      fi
+                    done
+                    echo -n "$hash_input" | md5sum | cut -d' ' -f1
+                  }
+                  export STACKPANEL_SHELL_HASH="$(_sp_compute_shell_hash)"
+                  export STACKPANEL_SHELL_HASH_TIME="$(date +%s)"
+
                   # Restore default interactive shell behavior (disable strict error handling)
                   set +euo pipefail
         ''

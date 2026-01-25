@@ -45,10 +45,10 @@ export const CONFIGURATION_SECTIONS: ConfigurationSection[] = [
     description: "Shell prompt theme settings",
   },
   {
-    id: "vscode",
-    label: "VS Code Integration",
+    id: "ide",
+    label: "IDE Integration",
     icon: Settings,
-    description: "IDE workspace configuration",
+    description: "VS Code, Zed, and other IDE workspace configuration",
   },
   {
     id: "cache",

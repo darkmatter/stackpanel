@@ -1,9 +1,8 @@
 ## Nix refactor plan: shared core + thin adapters
 
 ### Goal
-- **Same functionality** in both entrypoints:
-  - `nix develop --impure --no-eval-cache`
-  - `devenv shell`
+- **Primary entrypoint**: `nix develop --impure` (or `direnv allow`)
+- **Devenv compatibility**: Stackpanel modules work in devenv.shells for external users
 - Make it **obvious** what is:
   - **core logic** (reusable)
   - **module adapter** (options + wiring)

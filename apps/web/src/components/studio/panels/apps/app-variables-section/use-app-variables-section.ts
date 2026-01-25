@@ -1,10 +1,13 @@
 /**
  * Hook for managing app variables section state.
+ * 
+ * Updated for simplified schema where variables are key-value pairs:
+ * - envKey: Environment variable name (e.g., "DATABASE_URL")
+ * - value: Literal string or vals reference (e.g., "ref+sops://...")
  */
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type {
 	AppVariablesSectionProps,
-	AvailableVariable,
 	DisplayVariable,
 	EditMode,
 } from "./types";
@@ -15,7 +18,6 @@ export function useAppVariablesSection(
 		| "variables"
 		| "secrets"
 		| "environmentOptions"
-		| "availableVariables"
 		| "onAddVariable"
 		| "onUpdateVariable"
 		| "onDeleteVariable"
@@ -26,7 +28,6 @@ export function useAppVariablesSection(
 		variables,
 		secrets,
 		environmentOptions,
-		availableVariables = [],
 		onAddVariable,
 		onUpdateVariable,
 		onDeleteVariable,
@@ -50,11 +51,8 @@ export function useAppVariablesSection(
 	const [editMode, setEditMode] = useState<EditMode | null>(null);
 	const [editingEnvKey, setEditingEnvKey] = useState<string | null>(null);
 	const [newEnvKey, setNewEnvKey] = useState("");
-	const [selectedVariableId, setSelectedVariableId] = useState<string | null>(
-		null,
-	);
-	const [isLiteralMode, setIsLiteralMode] = useState(false);
-	const [literalValue, setLiteralValue] = useState("");
+	// With simplified schema, we just have a value (literal or vals reference)
+	const [editValue, setEditValue] = useState("");
 	const [variableSearchOpen, setVariableSearchOpen] = useState(false);
 	const [variableSearch, setVariableSearch] = useState("");
 	const envKeyInputRef = useRef<HTMLInputElement>(null);
@@ -73,45 +71,8 @@ export function useAppVariablesSection(
 		return secret.environments.some((env) => environmentFilter.includes(env));
 	});
 
-	// Filter out already-linked variables from available options (except when editing that variable)
-	const linkedVariableIds = useMemo(() => {
-		const ids = new Set<string>();
-		for (const v of variables) {
-			// Don't exclude the currently editing variable
-			if (editMode === "edit" && editingEnvKey === v.envKey) continue;
-			ids.add(v.variableId);
-		}
-		for (const s of secrets) {
-			if (editMode === "edit" && editingEnvKey === s.envKey) continue;
-			ids.add(s.variableId);
-		}
-		return ids;
-	}, [variables, secrets, editMode, editingEnvKey]);
-
-	const unusedVariables = useMemo(() => {
-		return availableVariables.filter((v) => !linkedVariableIds.has(v.id));
-	}, [availableVariables, linkedVariableIds]);
-
-	const filteredUnusedVariables = useMemo(() => {
-		if (!variableSearch) return unusedVariables;
-		const search = variableSearch.toLowerCase();
-		return unusedVariables.filter(
-			(v) =>
-				v.key.toLowerCase().includes(search) ||
-				v.id.toLowerCase().includes(search),
-		);
-	}, [unusedVariables, variableSearch]);
-
-	const selectedVariable = useMemo(() => {
-		if (!selectedVariableId) return null;
-		return availableVariables.find((v) => v.id === selectedVariableId) ?? null;
-	}, [availableVariables, selectedVariableId]);
-
-	// Validation
-	const canConfirm =
-		newEnvKey.trim() &&
-		((isLiteralMode && literalValue.trim()) ||
-			(!isLiteralMode && selectedVariableId));
+	// Validation - simplified: just need envKey and value
+	const canConfirm = Boolean(newEnvKey.trim() && editValue.trim());
 
 	const isEditing = editMode !== null;
 
@@ -120,9 +81,7 @@ export function useAppVariablesSection(
 		setEditMode(null);
 		setEditingEnvKey(null);
 		setNewEnvKey("");
-		setSelectedVariableId(null);
-		setIsLiteralMode(false);
-		setLiteralValue("");
+		setEditValue("");
 		setVariableSearch("");
 		setVariableSearchOpen(false);
 	};
@@ -200,9 +159,7 @@ export function useAppVariablesSection(
 		setEditMode("add");
 		setEditingEnvKey(null);
 		setNewEnvKey("");
-		setSelectedVariableId(null);
-		setIsLiteralMode(false);
-		setLiteralValue("");
+		setEditValue("");
 		setVariableSearch("");
 		// Focus the input after render
 		setTimeout(() => envKeyInputRef.current?.focus(), 0);
@@ -212,18 +169,7 @@ export function useAppVariablesSection(
 		setEditMode("edit");
 		setEditingEnvKey(variable.envKey);
 		setNewEnvKey(variable.envKey);
-
-		// Check if it's a literal (no variableId) or linked variable
-		if (variable.variableId) {
-			setSelectedVariableId(variable.variableId);
-			setIsLiteralMode(false);
-			setLiteralValue("");
-		} else {
-			setSelectedVariableId(null);
-			setIsLiteralMode(true);
-			setLiteralValue(variable.value ?? "");
-		}
-
+		setEditValue(variable.value ?? "");
 		setVariableSearch("");
 		// Focus the input after render
 		setTimeout(() => envKeyInputRef.current?.focus(), 0);
@@ -235,8 +181,7 @@ export function useAppVariablesSection(
 
 	const handleConfirm = () => {
 		if (!newEnvKey.trim()) return;
-		if (!isLiteralMode && !selectedVariableId) return;
-		if (isLiteralMode && !literalValue.trim()) return;
+		if (!editValue.trim()) return;
 
 		// Use selected environments, or all if none selected
 		const envs =
@@ -244,40 +189,19 @@ export function useAppVariablesSection(
 
 		if (editMode === "add") {
 			if (!onAddVariable) return;
-
-			if (isLiteralMode) {
-				onAddVariable(
-					newEnvKey.trim().toUpperCase(),
-					null,
-					envs,
-					literalValue.trim(),
-				);
-			} else {
-				onAddVariable(
-					newEnvKey.trim().toUpperCase(),
-					selectedVariableId!,
-					envs,
-				);
-			}
+			onAddVariable(
+				newEnvKey.trim().toUpperCase(),
+				editValue.trim(),
+				envs,
+			);
 		} else if (editMode === "edit" && editingEnvKey) {
 			if (!onUpdateVariable) return;
-
-			if (isLiteralMode) {
-				onUpdateVariable(
-					editingEnvKey,
-					newEnvKey.trim().toUpperCase(),
-					null,
-					envs,
-					literalValue.trim(),
-				);
-			} else {
-				onUpdateVariable(
-					editingEnvKey,
-					newEnvKey.trim().toUpperCase(),
-					selectedVariableId!,
-					envs,
-				);
-			}
+			onUpdateVariable(
+				editingEnvKey,
+				newEnvKey.trim().toUpperCase(),
+				editValue.trim(),
+				envs,
+			);
 		}
 
 		resetEditState();
@@ -289,25 +213,9 @@ export function useAppVariablesSection(
 		resetEditState();
 	};
 
-	const handleSelectVariable = (variableId: string) => {
-		setSelectedVariableId(variableId);
-		setIsLiteralMode(false);
-		setLiteralValue("");
-		setVariableSearchOpen(false);
-		setVariableSearch("");
-
-		// Auto-fill env key from variable key if empty (only when adding)
-		if (!newEnvKey && editMode === "add") {
-			const variable = availableVariables.find((v) => v.id === variableId);
-			if (variable?.key) {
-				setNewEnvKey(variable.key.toUpperCase());
-			}
-		}
-	};
-
+	// No longer need handleSelectVariable since we removed availableVariables
+	// Users just enter a value directly now
 	const handleSelectLiteral = () => {
-		setIsLiteralMode(true);
-		setSelectedVariableId(null);
 		setVariableSearchOpen(false);
 		setVariableSearch("");
 		// Focus the literal input after render
@@ -333,10 +241,8 @@ export function useAppVariablesSection(
 		editingEnvKey,
 		newEnvKey,
 		setNewEnvKey,
-		selectedVariableId,
-		isLiteralMode,
-		literalValue,
-		setLiteralValue,
+		editValue,
+		setEditValue,
 		variableSearchOpen,
 		setVariableSearchOpen,
 		variableSearch,
@@ -347,9 +253,6 @@ export function useAppVariablesSection(
 		// Computed values
 		filteredVariables,
 		filteredSecrets,
-		filteredUnusedVariables,
-		unusedVariables,
-		selectedVariable,
 		canConfirm,
 		isEditing,
 
@@ -367,7 +270,6 @@ export function useAppVariablesSection(
 		handleCancelEditing,
 		handleConfirm,
 		handleDelete,
-		handleSelectVariable,
 		handleSelectLiteral,
 	};
 }

@@ -2,12 +2,17 @@ package tui
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -41,6 +46,7 @@ type MOTDFullData struct {
 	// Computed
 	Issues          []Issue
 	UpdateAvailable *UpdateInfo
+	ShellFreshness  ShellFreshness
 }
 
 // AgentStatus represents the status of the stackpanel agent
@@ -103,6 +109,16 @@ type Issue struct {
 	Severity   string // "error", "warning", "info"
 	Message    string
 	FixCommand string
+}
+
+// ShellFreshness represents the freshness status of the current shell
+type ShellFreshness struct {
+	Checked     bool          // Whether we were able to check freshness
+	Fresh       bool          // True if shell matches current config
+	StoredHash  string        // Hash computed when shell was entered
+	CurrentHash string        // Hash computed now from current config files
+	ShellAge    time.Duration // How long ago the shell was entered
+	FixCommand  string        // Command to reload the shell
 }
 
 // UpdateInfo represents available update information
@@ -622,6 +638,79 @@ func GetStudioURL(projectRoot string, port int) string {
 	return fmt.Sprintf("http://localhost:%d/studio", port)
 }
 
+// CheckShellFreshness checks if the current shell is fresh (matches config files)
+// It compares STACKPANEL_SHELL_HASH (set at shell entry) with the current hash of config files
+func CheckShellFreshness(projectRoot string) ShellFreshness {
+	status := ShellFreshness{
+		Checked:    false,
+		Fresh:      true,                   // Assume fresh if we can't check
+		FixCommand: "exit && direnv allow", // or: nix develop --impure
+	}
+
+	// Get the stored hash from when the shell was entered
+	storedHash := os.Getenv("STACKPANEL_SHELL_HASH")
+	if storedHash == "" {
+		// Not in a stackpanel shell, or shell doesn't have hash support
+		return status
+	}
+	status.StoredHash = storedHash
+	status.Checked = true
+
+	// Get shell entry time
+	shellHashTimeStr := os.Getenv("STACKPANEL_SHELL_HASH_TIME")
+	if shellHashTimeStr != "" {
+		if shellTime, err := strconv.ParseInt(shellHashTimeStr, 10, 64); err == nil {
+			status.ShellAge = time.Since(time.Unix(shellTime, 0))
+		}
+	}
+
+	// Determine project root
+	if projectRoot == "" {
+		projectRoot = os.Getenv("STACKPANEL_ROOT")
+	}
+	if projectRoot == "" {
+		// Can't compute hash without knowing project root
+		return status
+	}
+
+	// Compute current hash of config files (same files as in Nix)
+	currentHash := computeConfigHash(projectRoot)
+	status.CurrentHash = currentHash
+
+	// Compare hashes
+	status.Fresh = (storedHash == currentHash)
+
+	return status
+}
+
+// computeConfigHash computes an MD5 hash of the config files
+// This must match the logic in nix/stackpanel/core/default.nix
+func computeConfigHash(projectRoot string) string {
+	configFiles := []string{
+		filepath.Join(projectRoot, "flake.nix"),
+		filepath.Join(projectRoot, "flake.lock"),
+		filepath.Join(projectRoot, ".stackpanel", "config.nix"),
+		filepath.Join(projectRoot, "devenv.nix"),
+		filepath.Join(projectRoot, "devenv.yaml"),
+	}
+
+	h := md5.New()
+	for _, filePath := range configFiles {
+		f, err := os.Open(filePath)
+		if err != nil {
+			// File doesn't exist, skip it (same as Nix behavior)
+			continue
+		}
+		_, err = io.Copy(h, f)
+		f.Close()
+		if err != nil {
+			continue
+		}
+	}
+
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 // CollectIssues aggregates issues from various status checks
 func CollectIssues(data *MOTDFullData) []Issue {
 	var issues []Issue
@@ -664,6 +753,15 @@ func CollectIssues(data *MOTDFullData) []Issue {
 		})
 	}
 
+	// Shell staleness
+	if data.ShellFreshness.Checked && !data.ShellFreshness.Fresh {
+		issues = append(issues, Issue{
+			Severity:   "warning",
+			Message:    "Shell is stale (config changed)",
+			FixCommand: data.ShellFreshness.FixCommand,
+		})
+	}
+
 	return issues
 }
 
@@ -699,6 +797,7 @@ func CollectMOTDData(projectName, projectRoot, version string, agentPort int) *M
 	data.AWS = CheckAWSStatus()
 	data.Environment = GetEnvironmentInfo()
 	data.StudioURL = GetStudioURL(projectRoot, 3000)
+	data.ShellFreshness = CheckShellFreshness(projectRoot)
 
 	// Check for updates (can be slow, do last)
 	data.UpdateAvailable = CheckForUpdates(version)

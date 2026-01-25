@@ -21,87 +21,30 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type VariableType int32
-
-const (
-	VariableType_LITERAL VariableType = 0
-	VariableType_SECRET  VariableType = 1
-	VariableType_VALS    VariableType = 2
-	VariableType_EXEC    VariableType = 3
-)
-
-// Enum value maps for VariableType.
-var (
-	VariableType_name = map[int32]string{
-		0: "LITERAL",
-		1: "SECRET",
-		2: "VALS",
-		3: "EXEC",
-	}
-	VariableType_value = map[string]int32{
-		"LITERAL": 0,
-		"SECRET":  1,
-		"VALS":    2,
-		"EXEC":    3,
-	}
-)
-
-func (x VariableType) Enum() *VariableType {
-	p := new(VariableType)
-	*p = x
-	return p
-}
-
-func (x VariableType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (VariableType) Descriptor() protoreflect.EnumDescriptor {
-	return file_variables_proto_enumTypes[0].Descriptor()
-}
-
-func (VariableType) Type() protoreflect.EnumType {
-	return &file_variables_proto_enumTypes[0]
-}
-
-func (x VariableType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use VariableType.Descriptor instead.
-func (VariableType) EnumDescriptor() ([]byte, []int) {
-	return file_variables_proto_rawDescGZIP(), []int{0}
-}
-
-// Configuration for a single variable in the workspace
+// A workspace variable (secret, literal, or vals reference)
 type Variable struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Globally unique identifier for the variable. Recommended format:
-	// `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Environment variable name when passing to apps (e.g., POSTGRES_URL).
-	Key         string       `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	Description *string      `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`              // Description of the variable
-	Type        VariableType `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.VariableType" json:"type,omitempty"` // How the variable value is resolved
-	// The value field meaning depends on type:
-	// - LITERAL: The actual value (embedded directly)
-	// - SECRET: Empty (value lives in encrypted .age file)
-	// - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
-	// - EXEC: Shell command to execute (stdout becomes the value)
-	Value string `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
-	// Master keys that can decrypt this secret. Only used when type=SECRET.
-	// The .age file is encrypted to ALL listed master keys.
-	// Default: ["local"] (auto-generated local key).
-	// Example: ["dev", "prod"] for team-accessible secrets.
-	MasterKeys []string `protobuf:"bytes,6,rep,name=masterKeys,proto3" json:"masterKeys,omitempty"`
-	// List of module names that require this variable (e.g., ["sst", "ci"]).
-	RequiredBy []string `protobuf:"bytes,7,rep,name=requiredBy,proto3" json:"requiredBy,omitempty"`
-	// Module name that provides/creates this variable.
-	ProvidedBy *string `protobuf:"bytes,8,opt,name=providedBy,proto3,oneof" json:"providedBy,omitempty"`
-	// Bootstrap level (0 = always available, 1+ = requires dependencies).
-	Level *int32 `protobuf:"varint,9,opt,name=level,proto3,oneof" json:"level,omitempty"`
-	// Action to resolve this variable if missing.
-	Action        *VariableAction `protobuf:"bytes,10,opt,name=action,proto3,oneof" json:"action,omitempty"`
+	// Path-based identifier. Format: /<keygroup>/<VARNAME>
+	//
+	// Examples:
+	//
+	//	/dev/DATABASE_URL      → Secret in dev.yaml
+	//	/prod/API_KEY          → Secret in prod.yaml
+	//	/computed/apps/web/port → Computed by Nix module
+	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	// The value - either a literal string or a vals reference.
+	//
+	// Literals:
+	//
+	//	"postgresql://localhost:5432/dev"
+	//	"3000"
+	//
+	// Vals references:
+	//
+	//	"ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+	//	"ref+awsssm://prod/api-key"
+	//	"ref+exec://echo $RANDOM"
+	Value         string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -137,31 +80,10 @@ func (*Variable) Descriptor() ([]byte, []int) {
 }
 
 func (x *Variable) GetId() string {
-	if x != nil {
-		return x.Id
+	if x != nil && x.Id != nil {
+		return *x.Id
 	}
 	return ""
-}
-
-func (x *Variable) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *Variable) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
-	}
-	return ""
-}
-
-func (x *Variable) GetType() VariableType {
-	if x != nil {
-		return x.Type
-	}
-	return VariableType_LITERAL
 }
 
 func (x *Variable) GetValue() string {
@@ -171,122 +93,19 @@ func (x *Variable) GetValue() string {
 	return ""
 }
 
-func (x *Variable) GetMasterKeys() []string {
-	if x != nil {
-		return x.MasterKeys
-	}
-	return nil
-}
-
-func (x *Variable) GetRequiredBy() []string {
-	if x != nil {
-		return x.RequiredBy
-	}
-	return nil
-}
-
-func (x *Variable) GetProvidedBy() string {
-	if x != nil && x.ProvidedBy != nil {
-		return *x.ProvidedBy
-	}
-	return ""
-}
-
-func (x *Variable) GetLevel() int32 {
-	if x != nil && x.Level != nil {
-		return *x.Level
-	}
-	return 0
-}
-
-func (x *Variable) GetAction() *VariableAction {
-	if x != nil {
-		return x.Action
-	}
-	return nil
-}
-
-// Action to resolve a missing variable
-type VariableAction struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Type of action: "add-secret", "add-variable", "configure", "external"
-	Type          string  `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Label         *string `protobuf:"bytes,2,opt,name=label,proto3,oneof" json:"label,omitempty"`         // Button/link label for the action
-	Url           *string `protobuf:"bytes,3,opt,name=url,proto3,oneof" json:"url,omitempty"`             // External URL (e.g., link to create API token)
-	SecretKey     *string `protobuf:"bytes,4,opt,name=secretKey,proto3,oneof" json:"secretKey,omitempty"` // Secret key name if type=add-secret
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VariableAction) Reset() {
-	*x = VariableAction{}
-	mi := &file_variables_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VariableAction) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VariableAction) ProtoMessage() {}
-
-func (x *VariableAction) ProtoReflect() protoreflect.Message {
-	mi := &file_variables_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VariableAction.ProtoReflect.Descriptor instead.
-func (*VariableAction) Descriptor() ([]byte, []int) {
-	return file_variables_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *VariableAction) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
-func (x *VariableAction) GetLabel() string {
-	if x != nil && x.Label != nil {
-		return *x.Label
-	}
-	return ""
-}
-
-func (x *VariableAction) GetUrl() string {
-	if x != nil && x.Url != nil {
-		return *x.Url
-	}
-	return ""
-}
-
-func (x *VariableAction) GetSecretKey() string {
-	if x != nil && x.SecretKey != nil {
-		return *x.SecretKey
-	}
-	return ""
-}
-
-// Map of variable identifier to variable configuration
+// Map of variable ID to Variable
 type Variables struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Variables     map[string]*Variable   `protobuf:"bytes,1,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Map of variable ID to variable config
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Map of variable ID to Variable object.
+	// Each Variable contains at minimum a value field.
+	Variables     map[string]*Variable `protobuf:"bytes,1,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Variables) Reset() {
 	*x = Variables{}
-	mi := &file_variables_proto_msgTypes[2]
+	mi := &file_variables_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -298,7 +117,7 @@ func (x *Variables) String() string {
 func (*Variables) ProtoMessage() {}
 
 func (x *Variables) ProtoReflect() protoreflect.Message {
-	mi := &file_variables_proto_msgTypes[2]
+	mi := &file_variables_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -311,7 +130,7 @@ func (x *Variables) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Variables.ProtoReflect.Descriptor instead.
 func (*Variables) Descriptor() ([]byte, []int) {
-	return file_variables_proto_rawDescGZIP(), []int{2}
+	return file_variables_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Variables) GetVariables() map[string]*Variable {
@@ -325,49 +144,16 @@ var File_variables_proto protoreflect.FileDescriptor
 
 const file_variables_proto_rawDesc = "" +
 	"\n" +
-	"\x0fvariables.proto\x12\rstackpanel.db\"\x8a\x03\n" +
-	"\bVariable\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\x12%\n" +
-	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12/\n" +
-	"\x04type\x18\x04 \x01(\x0e2\x1b.stackpanel.db.VariableTypeR\x04type\x12\x14\n" +
-	"\x05value\x18\x05 \x01(\tR\x05value\x12\x1e\n" +
-	"\n" +
-	"masterKeys\x18\x06 \x03(\tR\n" +
-	"masterKeys\x12\x1e\n" +
-	"\n" +
-	"requiredBy\x18\a \x03(\tR\n" +
-	"requiredBy\x12#\n" +
-	"\n" +
-	"providedBy\x18\b \x01(\tH\x01R\n" +
-	"providedBy\x88\x01\x01\x12\x19\n" +
-	"\x05level\x18\t \x01(\x05H\x02R\x05level\x88\x01\x01\x12:\n" +
-	"\x06action\x18\n" +
-	" \x01(\v2\x1d.stackpanel.db.VariableActionH\x03R\x06action\x88\x01\x01B\x0e\n" +
-	"\f_descriptionB\r\n" +
-	"\v_providedByB\b\n" +
-	"\x06_levelB\t\n" +
-	"\a_action\"\x99\x01\n" +
-	"\x0eVariableAction\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x19\n" +
-	"\x05label\x18\x02 \x01(\tH\x00R\x05label\x88\x01\x01\x12\x15\n" +
-	"\x03url\x18\x03 \x01(\tH\x01R\x03url\x88\x01\x01\x12!\n" +
-	"\tsecretKey\x18\x04 \x01(\tH\x02R\tsecretKey\x88\x01\x01B\b\n" +
-	"\x06_labelB\x06\n" +
-	"\x04_urlB\f\n" +
-	"\n" +
-	"_secretKey\"\xa9\x01\n" +
+	"\x0fvariables.proto\x12\rstackpanel.db\"<\n" +
+	"\bVariable\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tH\x00R\x02id\x88\x01\x01\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05valueB\x05\n" +
+	"\x03_id\"\xa9\x01\n" +
 	"\tVariables\x12E\n" +
 	"\tvariables\x18\x01 \x03(\v2'.stackpanel.db.Variables.VariablesEntryR\tvariables\x1aU\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12-\n" +
-	"\x05value\x18\x02 \x01(\v2\x17.stackpanel.db.VariableR\x05value:\x028\x01*;\n" +
-	"\fVariableType\x12\v\n" +
-	"\aLITERAL\x10\x00\x12\n" +
-	"\n" +
-	"\x06SECRET\x10\x01\x12\b\n" +
-	"\x04VALS\x10\x02\x12\b\n" +
-	"\x04EXEC\x10\x03B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x05value\x18\x02 \x01(\v2\x17.stackpanel.db.VariableR\x05value:\x028\x01B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_variables_proto_rawDescOnce sync.Once
@@ -381,25 +167,20 @@ func file_variables_proto_rawDescGZIP() []byte {
 	return file_variables_proto_rawDescData
 }
 
-var file_variables_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_variables_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_variables_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_variables_proto_goTypes = []any{
-	(VariableType)(0),      // 0: stackpanel.db.VariableType
-	(*Variable)(nil),       // 1: stackpanel.db.Variable
-	(*VariableAction)(nil), // 2: stackpanel.db.VariableAction
-	(*Variables)(nil),      // 3: stackpanel.db.Variables
-	nil,                    // 4: stackpanel.db.Variables.VariablesEntry
+	(*Variable)(nil),  // 0: stackpanel.db.Variable
+	(*Variables)(nil), // 1: stackpanel.db.Variables
+	nil,               // 2: stackpanel.db.Variables.VariablesEntry
 }
 var file_variables_proto_depIdxs = []int32{
-	0, // 0: stackpanel.db.Variable.type:type_name -> stackpanel.db.VariableType
-	2, // 1: stackpanel.db.Variable.action:type_name -> stackpanel.db.VariableAction
-	4, // 2: stackpanel.db.Variables.variables:type_name -> stackpanel.db.Variables.VariablesEntry
-	1, // 3: stackpanel.db.Variables.VariablesEntry.value:type_name -> stackpanel.db.Variable
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	2, // 0: stackpanel.db.Variables.variables:type_name -> stackpanel.db.Variables.VariablesEntry
+	0, // 1: stackpanel.db.Variables.VariablesEntry.value:type_name -> stackpanel.db.Variable
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_variables_proto_init() }
@@ -408,20 +189,18 @@ func file_variables_proto_init() {
 		return
 	}
 	file_variables_proto_msgTypes[0].OneofWrappers = []any{}
-	file_variables_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_variables_proto_rawDesc), len(file_variables_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      0,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_variables_proto_goTypes,
 		DependencyIndexes: file_variables_proto_depIdxs,
-		EnumInfos:         file_variables_proto_enumTypes,
 		MessageInfos:      file_variables_proto_msgTypes,
 	}.Build()
 	File_variables_proto = out.File

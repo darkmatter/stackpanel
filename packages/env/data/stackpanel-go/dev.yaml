@@ -1,0 +1,3 @@
+# stackpanel-go dev environment secrets
+# Auto-generated boilerplate - edit values, then encrypt with: sops stackpanel-go/dev.yaml
+STACKPANEL_TEST_PAIRING_TOKEN: token123

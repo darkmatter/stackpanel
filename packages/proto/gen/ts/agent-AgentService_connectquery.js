@@ -86,6 +86,11 @@ export const getModules = AgentService.method.getModules;
 export const getModule = AgentService.method.getModule;
 
 /**
+ * @generated from rpc stackpanel.agent.AgentService.GetModuleOutputs
+ */
+export const getModuleOutputs = AgentService.method.getModuleOutputs;
+
+/**
  * @generated from rpc stackpanel.agent.AgentService.EnableModule
  */
 export const enableModule = AgentService.method.enableModule;

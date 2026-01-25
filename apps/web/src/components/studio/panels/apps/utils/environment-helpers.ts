@@ -1,29 +1,20 @@
-import { AppVariableType } from "@stackpanel/proto";
-import type { AppEnvironment } from "@/lib/types";
-
-/**
- * Variable structure for writing to Nix (without the redundant environments field).
- * When variables are nested inside AppEnvironment.variables, they shouldn't have
- * their own environments field.
- */
-interface AppVariableForNix {
-	key: string;
-	type: AppVariableType;
-	variable_id: string;
-	value?: string;
-}
+import type { AppEnvironment } from "@stackpanel/proto";
 
 /**
  * Variable mapping for display and editing purposes.
  * Represents a flattened view of variables across environments.
+ * 
+ * With the simplified model, env is now map<string, string>:
+ * - Key = ENV_VAR_NAME (e.g., "DATABASE_URL")
+ * - Value = literal string OR vals reference (e.g., "ref+sops://...")
  */
 export interface AppVariableMapping {
+	/** Environment variable name (e.g., "DATABASE_URL") */
 	envKey: string;
-	variableId: string;
+	/** The value - literal string or vals reference */
+	value: string;
 	/** Environment names this variable mapping applies to */
 	environments: string[];
-	/** Optional literal value (when not linked to a workspace variable) */
-	literalValue?: string;
 }
 
 /**
@@ -46,14 +37,14 @@ export function toEnvironmentsMap(
 ): Record<string, AppEnvironment> {
 	const result: Record<string, AppEnvironment> = {};
 	for (const name of envNames) {
-		result[name] = { name, variables: {} };
+		result[name] = { name, env: {} };
 	}
 	return result;
 }
 
 /**
  * Extract all variables from all environments as a flat list for display.
- * Returns array of { envKey, variableId, environments } where environments is the
+ * Returns array of { envKey, value, environments } where environments is the
  * list of environment names that contain this variable.
  */
 export function flattenEnvironmentVariables(
@@ -61,22 +52,21 @@ export function flattenEnvironmentVariables(
 ): AppVariableMapping[] {
 	if (!environments) return [];
 
-	// Build a map of envKey -> { variableId, environments[] }
+	// Build a map of envKey -> { value, environments[] }
 	const variableMap = new Map<
 		string,
-		{ variableId: string; environments: string[]; literalValue?: string }
+		{ value: string; environments: string[] }
 	>();
 
 	for (const [envName, env] of Object.entries(environments)) {
-		for (const [envKey, variable] of Object.entries(env.variables ?? {})) {
+		for (const [envKey, value] of Object.entries(env.env ?? {})) {
 			const existing = variableMap.get(envKey);
 			if (existing) {
 				existing.environments.push(envName);
 			} else {
 				variableMap.set(envKey, {
-					variableId: variable.variable_id || "",
+					value: value || "",
 					environments: [envName],
-					literalValue: variable.value,
 				});
 			}
 		}
@@ -84,9 +74,8 @@ export function flattenEnvironmentVariables(
 
 	return Array.from(variableMap.entries()).map(([envKey, data]) => ({
 		envKey,
-		variableId: data.variableId,
+		value: data.value,
 		environments: data.environments,
-		literalValue: data.literalValue,
 	}));
 }
 
@@ -105,33 +94,59 @@ export function buildEnvironmentsMap(
 		const nameStr = String(envName).trim();
 		// Skip empty names or numeric-only names (like "0", "1")
 		if (!nameStr || /^\d+$/.test(nameStr)) continue;
-		result[nameStr] = { name: nameStr, variables: {} };
+		result[nameStr] = { name: nameStr, env: {} };
 	}
 
 	// Add variables to their respective environments
 	for (const mapping of variableMappings) {
 		if (!mapping.envKey) continue;
 
-		// Create variable without the 'environments' field since it's redundant
-		// when nested inside AppEnvironment.variables
-		const variable: AppVariableForNix = {
-			key: mapping.envKey,
-			type: mapping.variableId
-				? AppVariableType.VARIABLE
-				: AppVariableType.LITERAL,
-			variable_id: mapping.variableId || "",
-			...(mapping.literalValue ? { value: mapping.literalValue } : {}),
-		};
-
 		// Add this variable to each environment it belongs to
 		for (const envName of mapping.environments) {
 			const nameStr = String(envName).trim();
 			if (result[nameStr]) {
-				// Cast to any to allow the slimmer AppVariableForNix type
-				result[nameStr].variables[mapping.envKey] = variable as any;
+				result[nameStr].env[mapping.envKey] = mapping.value;
 			}
 		}
 	}
 
 	return result;
+}
+
+/**
+ * Check if a value is a vals reference (starts with "ref+").
+ */
+export function isValsReference(value: string): boolean {
+	return value.startsWith("ref+");
+}
+
+/**
+ * Check if a value is a SOPS secret reference.
+ */
+export function isSopsReference(value: string): boolean {
+	return value.startsWith("ref+sops://");
+}
+
+/**
+ * Build a SOPS reference for a secret.
+ * @param keyGroup - The key group (e.g., "dev", "prod")
+ * @param key - The secret key name (e.g., "DATABASE_URL")
+ */
+export function buildSopsReference(keyGroup: string, key: string): string {
+	return `ref+sops://.stackpanel/secrets/${keyGroup}.yaml#/${key}`;
+}
+
+/**
+ * Build a YAML reference for a plaintext config value.
+ * @param key - The config key name (e.g., "LOG_LEVEL")
+ */
+export function buildYamlReference(key: string): string {
+	return `ref+yaml://.stackpanel/secrets/vars.yaml#/${key}`;
+}
+
+/**
+ * Check if a value is a plaintext YAML reference.
+ */
+export function isYamlReference(value: string): boolean {
+	return value.startsWith("ref+yaml://");
 }

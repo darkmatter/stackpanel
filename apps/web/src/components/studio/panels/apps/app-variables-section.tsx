@@ -10,12 +10,14 @@ import { useAppVariablesSection } from "./app-variables-section/use-app-variable
 /**
  * Component to display and manage the variables section for an app.
  * Shows variables/secrets with environment filtering and show/hide values toggle.
+ * 
+ * Updated for simplified schema where variables are key-value pairs.
  */
 export function AppVariablesSection({
 	variables,
 	secrets,
 	environmentOptions,
-	availableVariables = [],
+	availableVariables,
 	onAddVariable,
 	onUpdateVariable,
 	onDeleteVariable,
@@ -41,23 +43,14 @@ export function AppVariablesSection({
 		editingEnvKey,
 		newEnvKey,
 		setNewEnvKey,
-		selectedVariableId,
-		isLiteralMode,
-		literalValue,
-		setLiteralValue,
-		variableSearchOpen,
-		setVariableSearchOpen,
-		variableSearch,
-		setVariableSearch,
+		editValue,
+		setEditValue,
 		envKeyInputRef,
 		literalInputRef,
 
 		// Computed values
 		filteredVariables,
 		filteredSecrets,
-		filteredUnusedVariables,
-		unusedVariables,
-		selectedVariable,
 		canConfirm,
 		isEditing,
 
@@ -75,13 +68,10 @@ export function AppVariablesSection({
 		handleCancelEditing,
 		handleConfirm,
 		handleDelete,
-		handleSelectVariable,
-		handleSelectLiteral,
 	} = useAppVariablesSection({
 		variables,
 		secrets,
 		environmentOptions,
-		availableVariables,
 		onAddVariable,
 		onUpdateVariable,
 		onDeleteVariable,
@@ -93,22 +83,13 @@ export function AppVariablesSection({
 		<EditInterface
 			newEnvKey={newEnvKey}
 			setNewEnvKey={setNewEnvKey}
-			isLiteralMode={isLiteralMode}
-			literalValue={literalValue}
-			setLiteralValue={setLiteralValue}
-			variableSearchOpen={variableSearchOpen}
-			setVariableSearchOpen={setVariableSearchOpen}
-			variableSearch={variableSearch}
-			setVariableSearch={setVariableSearch}
-			selectedVariable={selectedVariable}
-			filteredUnusedVariables={filteredUnusedVariables}
-			unusedVariables={unusedVariables}
+			editValue={editValue}
+			setEditValue={setEditValue}
 			canConfirm={canConfirm}
 			editMode={editMode}
 			envKeyInputRef={envKeyInputRef}
 			literalInputRef={literalInputRef}
-			onSelectVariable={handleSelectVariable}
-			onSelectLiteral={handleSelectLiteral}
+			availableVariables={availableVariables}
 			onConfirm={handleConfirm}
 			onCancel={handleCancelEditing}
 			onDelete={onDeleteVariable ? handleDelete : undefined}

@@ -12,7 +12,7 @@ import type {
 	AppData,
 	Extension,
 	ExtensionPanel,
-	FieldType,
+	FieldType as _FieldType,
 	PanelField,
 	PanelType,
 	StatusMetric,
@@ -22,12 +22,8 @@ import type {
 // Component Registry
 // =============================================================================
 
-type PanelComponent = React.ComponentType<{
-	extension: Extension;
-	allApps: Record<string, AppData>;
-	// biome-ignore lint/suspicious/noExplicitAny: Component props vary by type
-	[key: string]: any;
-}>;
+// biome-ignore lint/suspicious/noExplicitAny: Component props vary by panel type
+type PanelComponent = React.ComponentType<any>;
 
 const componentRegistry: Partial<Record<PanelType, PanelComponent>> = {
 	PANEL_TYPE_APPS_GRID: AppsGridPanel,

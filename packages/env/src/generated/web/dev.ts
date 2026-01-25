@@ -3,7 +3,6 @@
 import { parseEnv, z } from "znv";
 
 export const env = parseEnv(process.env, {
-    DOCS_PORT: z.coerce.number(),
     OPENAI_API_KEY: z.string(),
-    PORT: z.coerce.number(),
+    POSTGRES_URL: z.string(),
 });

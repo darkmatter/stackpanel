@@ -2,13 +2,13 @@
 // @generated from file apps.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 
 /**
  * Describes the file apps.proto.
  */
 export const file_apps = /*@__PURE__*/
-  fileDesc("CgphcHBzLnByb3RvEg1zdGFja3BhbmVsLmRiIqsECgNBcHASDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEgwKBHBhdGgYAyABKAkSEQoEdHlwZRgEIAEoCUgBiAEBEhEKBHBvcnQYBSABKAVIAogBARITCgZkb21haW4YBiABKAlIA4gBARIsCgV0YXNrcxgHIAMoCzIdLnN0YWNrcGFuZWwuZGIuQXBwLlRhc2tzRW50cnkSNAoJdmFyaWFibGVzGAggAygLMiEuc3RhY2twYW5lbC5kYi5BcHAuVmFyaWFibGVzRW50cnkSOgoMZW52aXJvbm1lbnRzGAkgAygLMiQuc3RhY2twYW5lbC5kYi5BcHAuRW52aXJvbm1lbnRzRW50cnkaRAoKVGFza3NFbnRyeRILCgNrZXkYASABKAkSJQoFdmFsdWUYAiABKAsyFi5zdGFja3BhbmVsLmRiLkFwcFRhc2s6AjgBGkwKDlZhcmlhYmxlc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLnN0YWNrcGFuZWwuZGIuQXBwVmFyaWFibGU6AjgBGlIKEUVudmlyb25tZW50c0VudHJ5EgsKA2tleRgBIAEoCRIsCgV2YWx1ZRgCIAEoCzIdLnN0YWNrcGFuZWwuZGIuQXBwRW52aXJvbm1lbnQ6AjgBQg4KDF9kZXNjcmlwdGlvbkIHCgVfdHlwZUIHCgVfcG9ydEIJCgdfZG9tYWluIv0BCg5BcHBFbnZpcm9ubWVudBIMCgRuYW1lGAEgASgJEhgKC2Rlc2NyaXB0aW9uGAIgASgJSACIAQESPwoJdmFyaWFibGVzGAMgAygLMiwuc3RhY2twYW5lbC5kYi5BcHBFbnZpcm9ubWVudC5WYXJpYWJsZXNFbnRyeRIPCgdzb3VyY2VzGAQgAygJEhMKC3B1YmxpY19rZXlzGAUgAygJGkwKDlZhcmlhYmxlc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLnN0YWNrcGFuZWwuZGIuQXBwVmFyaWFibGU6AjgBQg4KDF9kZXNjcmlwdGlvbiLHAQoHQXBwVGFzaxILCgNrZXkYASABKAkSGAoLZGVzY3JpcHRpb24YAiABKAlIAIgBARIPCgdjb21tYW5kGAMgASgJEiwKA2VudhgEIAMoCzIfLnN0YWNrcGFuZWwuZGIuQXBwVGFzay5FbnZFbnRyeRpGCghFbnZFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5zdGFja3BhbmVsLmRiLkFwcFZhcmlhYmxlOgI4AUIOCgxfZGVzY3JpcHRpb24iewoLQXBwVmFyaWFibGUSCwoDa2V5GAEgASgJEiwKBHR5cGUYAiABKA4yHi5zdGFja3BhbmVsLmRiLkFwcFZhcmlhYmxlVHlwZRITCgt2YXJpYWJsZV9pZBgDIAEoCRISCgV2YWx1ZRgEIAEoCUgAiAEBQggKBl92YWx1ZSJ0CgRBcHBzEisKBGFwcHMYASADKAsyHS5zdGFja3BhbmVsLmRiLkFwcHMuQXBwc0VudHJ5Gj8KCUFwcHNFbnRyeRILCgNrZXkYASABKAkSIQoFdmFsdWUYAiABKAsyEi5zdGFja3BhbmVsLmRiLkFwcDoCOAEqjwEKD0FwcFZhcmlhYmxlVHlwZRIhCh1BUFBfVkFSSUFCTEVfVFlQRV9VTlNQRUNJRklFRBAAEh0KGUFQUF9WQVJJQUJMRV9UWVBFX0xJVEVSQUwQARIeChpBUFBfVkFSSUFCTEVfVFlQRV9WQVJJQUJMRRACEhoKFkFQUF9WQVJJQUJMRV9UWVBFX1ZBTFMQA0I6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
+  fileDesc("CgphcHBzLnByb3RvEg1zdGFja3BhbmVsLmRiIrMCCgNBcHASDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEgwKBHBhdGgYAyABKAkSEQoEdHlwZRgEIAEoCUgBiAEBEhEKBHBvcnQYBSABKAVIAogBARITCgZkb21haW4YBiABKAlIA4gBARI6CgxlbnZpcm9ubWVudHMYByADKAsyJC5zdGFja3BhbmVsLmRiLkFwcC5FbnZpcm9ubWVudHNFbnRyeRpSChFFbnZpcm9ubWVudHNFbnRyeRILCgNrZXkYASABKAkSLAoFdmFsdWUYAiABKAsyHS5zdGFja3BhbmVsLmRiLkFwcEVudmlyb25tZW50OgI4AUIOCgxfZGVzY3JpcHRpb25CBwoFX3R5cGVCBwoFX3BvcnRCCQoHX2RvbWFpbiKpAQoOQXBwRW52aXJvbm1lbnQSDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEjMKA2VudhgDIAMoCzImLnN0YWNrcGFuZWwuZGIuQXBwRW52aXJvbm1lbnQuRW52RW50cnkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIOCgxfZGVzY3JpcHRpb24idAoEQXBwcxIrCgRhcHBzGAEgAygLMh0uc3RhY2twYW5lbC5kYi5BcHBzLkFwcHNFbnRyeRo/CglBcHBzRW50cnkSCwoDa2V5GAEgASgJEiEKBXZhbHVlGAIgASgLMhIuc3RhY2twYW5lbC5kYi5BcHA6AjgBQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
 
 /**
  * Describes the message stackpanel.db.App.
@@ -25,37 +25,9 @@ export const AppEnvironmentSchema = /*@__PURE__*/
   messageDesc(file_apps, 1);
 
 /**
- * Describes the message stackpanel.db.AppTask.
- * Use `create(AppTaskSchema)` to create a new message.
- */
-export const AppTaskSchema = /*@__PURE__*/
-  messageDesc(file_apps, 2);
-
-/**
- * Describes the message stackpanel.db.AppVariable.
- * Use `create(AppVariableSchema)` to create a new message.
- */
-export const AppVariableSchema = /*@__PURE__*/
-  messageDesc(file_apps, 3);
-
-/**
  * Describes the message stackpanel.db.Apps.
  * Use `create(AppsSchema)` to create a new message.
  */
 export const AppsSchema = /*@__PURE__*/
-  messageDesc(file_apps, 4);
-
-/**
- * Describes the enum stackpanel.db.AppVariableType.
- */
-export const AppVariableTypeSchema = /*@__PURE__*/
-  enumDesc(file_apps, 0);
-
-/**
- * Type of environment variable
- *
- * @generated from enum stackpanel.db.AppVariableType
- */
-export const AppVariableType = /*@__PURE__*/
-  tsEnum(AppVariableTypeSchema);
+  messageDesc(file_apps, 2);
 

@@ -78,6 +78,10 @@ export interface UseConfigurationResult {
   setVscodeEnabled: (value: boolean) => void;
   vscodeOutputMode: "workspace" | "settingsJson";
   setVscodeOutputMode: (value: "workspace" | "settingsJson") => void;
+  zedEnabled: boolean;
+  setZedEnabled: (value: boolean) => void;
+  zedOutputMode: "generated" | "dotZed";
+  setZedOutputMode: (value: "generated" | "dotZed") => void;
   savingIde: boolean;
   saveIde: () => Promise<void>;
 
@@ -202,6 +206,10 @@ export function useConfiguration(): UseConfigurationResult {
   const [vscodeOutputMode, setVscodeOutputMode] = useState<
     "workspace" | "settingsJson"
   >("workspace");
+  const [zedEnabled, setZedEnabled] = useState(false);
+  const [zedOutputMode, setZedOutputMode] = useState<"generated" | "dotZed">(
+    "generated",
+  );
   const [savingIde, setSavingIde] = useState(false);
 
   // Binary Cache state
@@ -300,6 +308,12 @@ export function useConfiguration(): UseConfigurationResult {
       ideData?.vscode?.["output-mode"] ??
         ideConfig?.vscode?.["output-mode"] ??
         "workspace",
+    );
+    setZedEnabled(ideData?.zed?.enable ?? ideConfig?.zed?.enable ?? false);
+    setZedOutputMode(
+      ideData?.zed?.["output-mode"] ??
+        ideConfig?.zed?.["output-mode"] ??
+        "generated",
     );
   }, [ideData, ideConfig, config]);
 
@@ -531,11 +545,25 @@ export function useConfiguration(): UseConfigurationResult {
           enable: vscodeEnabled,
           "output-mode": vscodeOutputMode,
         },
+        zed: {
+          ...(ideData?.zed ?? {}),
+          enable: zedEnabled,
+          "output-mode": zedOutputMode,
+        },
       });
     } finally {
       setSavingIde(false);
     }
-  }, [ideData, ideEnabled, savingIde, setIde, vscodeEnabled, vscodeOutputMode]);
+  }, [
+    ideData,
+    ideEnabled,
+    savingIde,
+    setIde,
+    vscodeEnabled,
+    vscodeOutputMode,
+    zedEnabled,
+    zedOutputMode,
+  ]);
 
   const saveCache = useCallback(async () => {
     if (savingCache) return;
@@ -627,6 +655,10 @@ export function useConfiguration(): UseConfigurationResult {
     setVscodeEnabled,
     vscodeOutputMode,
     setVscodeOutputMode,
+    zedEnabled,
+    setZedEnabled,
+    zedOutputMode,
+    setZedOutputMode,
     savingIde,
     saveIde,
 

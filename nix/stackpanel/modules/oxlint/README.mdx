@@ -1,0 +1,183 @@
+---
+title: OxLint
+description: Blazing fast JavaScript/TypeScript linter written in Rust
+---
+
+# OxLint
+
+[OxLint](https://oxc.rs) is a blazing fast JavaScript/TypeScript linter written in Rust, part of the Oxc project. It's 50-100x faster than ESLint while maintaining excellent compatibility.
+
+## Features
+
+- **Blazing Fast**: Written in Rust, 50-100x faster than ESLint
+- **Zero Config**: Works out of the box with sensible defaults
+- **Plugin Support**: React, TypeScript, Import, JSX-A11y, and more
+- **Auto-fix**: Automatically fix many common issues
+- **Git Hooks**: Pre-commit integration for clean commits
+- **Per-App Config**: Different settings for each app in your monorepo
+
+## Installation
+
+OxLint is a built-in module. Enable it per-app:
+
+```nix
+{
+  stackpanel.apps.web = {
+    linting.oxlint.enable = true;
+  };
+}
+```
+
+## Configuration
+
+### Basic Usage
+
+```nix
+{
+  stackpanel.apps.web = {
+    linting.oxlint = {
+      enable = true;
+      plugins = [ "react" "typescript" ];
+    };
+  };
+}
+```
+
+### Full Options
+
+```nix
+{
+  stackpanel.apps.web = {
+    linting.oxlint = {
+      enable = true;
+
+      # Plugins to enable
+      plugins = [ "react" "typescript" "import" "jsx-a11y" ];
+
+      # Category severity levels
+      categories = {
+        correctness = "error";
+        suspicious = "warn";
+        pedantic = "off";
+        style = "off";
+        nursery = "off";
+      };
+
+      # Individual rule overrides
+      rules = {
+        "no-console" = "warn";
+        "no-debugger" = "error";
+        "eqeqeq" = "error";
+      };
+
+      # Patterns to ignore
+      ignorePatterns = [
+        "node_modules"
+        "dist"
+        "build"
+        ".next"
+        "coverage"
+        "*.min.js"
+      ];
+
+      # Paths to lint (relative to app root)
+      paths = [ "src" "." ];
+
+      # Auto-fix by default
+      fix = false;
+
+      # Run in pre-commit git hook
+      gitHook = true;
+
+      # Custom config file (null = auto-generate)
+      configPath = null;
+    };
+  };
+}
+```
+
+## Scripts
+
+This module provides the following shell commands:
+
+| Command | Description |
+|---------|-------------|
+| `lint` | Run OxLint on all configured apps |
+| `lint-fix` | Run OxLint with `--fix` on all apps |
+| `lint-<app>` | Run OxLint on a specific app |
+| `lint-<app>-fix` | Run OxLint with `--fix` on a specific app |
+
+### Examples
+
+```bash
+# Lint all apps
+lint
+
+# Lint and fix all apps
+lint-fix
+
+# Lint just the web app
+lint-web
+
+# Lint and fix the web app
+lint-web-fix
+```
+
+## Generated Files
+
+When `configPath` is not set, OxLint generates a `.oxlintrc.json` file in each app directory:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "no-console": "warn"
+  },
+  "ignorePatterns": ["node_modules", "dist"]
+}
+```
+
+## Git Hooks
+
+When `gitHook = true` (default), OxLint runs on staged files during pre-commit. This integrates with the `git-hooks` module.
+
+To disable for a specific app:
+
+```nix
+{
+  stackpanel.apps.web.linting.oxlint.gitHook = false;
+}
+```
+
+## Health Checks
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| `oxlint-installed` | critical | Verifies oxlint is installed and accessible |
+| `oxlint-config` | warning | Verifies configuration files exist for all apps |
+| `oxlint-passes` | warning | Verifies all apps pass linting |
+
+## Troubleshooting
+
+### OxLint not found
+
+Make sure you've enabled oxlint for at least one app. The package is only added when an app has `linting.oxlint.enable = true`.
+
+### Config file not generated
+
+Config files are only generated when `configPath = null`. If you've set a custom path, you need to provide your own config file.
+
+### Rules not applying
+
+Check that your `categories` and `rules` settings are correct. Rule names should match OxLint's naming convention (e.g., `no-console`, not `noConsole`).
+
+## See Also
+
+- [OxLint Documentation](https://oxc.rs/docs/guide/usage/linter.html)
+- [OxLint Rules Reference](https://oxc.rs/docs/guide/usage/linter/rules.html)
+- [Git Hooks Module](/docs/modules/git-hooks)

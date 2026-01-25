@@ -1,0 +1,114 @@
+name: "Test Fixtures"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'nix/**'
+      - '.github/workflows/test-fixtures.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'nix/**'
+      - '.github/workflows/test-fixtures.yml'
+  workflow_dispatch: # Allow manual triggers
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Discover fixtures dynamically
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      fixtures: ${{ steps.list.outputs.fixtures }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: List fixtures
+        id: list
+        run: |
+          cd nix/flake/templates/_test-fixtures
+          # Find directories with flake.nix, output as JSON array
+          FIXTURES=$(find . -maxdepth 2 -name "flake.nix" -exec dirname {} \; | sed 's|^\./||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "fixtures=$FIXTURES" >> $GITHUB_OUTPUT
+          echo "Found fixtures: $FIXTURES"
+
+  # Test each fixture
+  test:
+    needs: discover
+    runs-on: ${{ matrix.system == 'aarch64-darwin' && 'depot-macos-latest' || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        fixture: ${{ fromJson(needs.discover.outputs.fixtures) }}
+        system:
+          - x86_64-linux
+          - aarch64-darwin
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            accept-flake-config = true
+            extra-substituters = https://devenv.cachix.org https://darkmatter.cachix.org
+            extra-trusted-public-keys = devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA=
+
+      - name: Pre-install cachix (Darwin)
+        if: matrix.system == 'aarch64-darwin'
+        run: nix profile install nixpkgs#cachix
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v16
+        with:
+          name: darkmatter
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: devenv
+          installCommand: ${{ matrix.system == 'aarch64-darwin' && 'true' || '' }}
+
+      - name: Setup SSH for private repos
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Test fixture - ${{ matrix.fixture }}
+        run: |
+          echo "Testing fixture: ${{ matrix.fixture }}"
+          echo "System: ${{ matrix.system }}"
+          
+          FIXTURE_DIR="nix/flake/templates/_test-fixtures/${{ matrix.fixture }}"
+          
+          # Run flake check with stackpanel override
+          nix flake check "$FIXTURE_DIR" \
+            --override-input stackpanel "path:$(pwd)" \
+            --no-write-lock-file \
+            --print-build-logs
+
+      - name: Build fixture checks - ${{ matrix.fixture }}
+        run: |
+          FIXTURE_DIR="nix/flake/templates/_test-fixtures/${{ matrix.fixture }}"
+          
+          # Build all checks for this system
+          nix build "$FIXTURE_DIR#checks.${{ matrix.system }}" \
+            --override-input stackpanel "path:$(pwd)" \
+            --no-write-lock-file \
+            --print-build-logs \
+            || echo "No checks output (using flake check instead)"
+
+  # Summary job
+  summary:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            echo "Some fixtures failed!"
+            exit 1
+          fi
+          echo "All fixtures passed!"

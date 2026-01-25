@@ -1,29 +1,37 @@
 /**
  * Type definitions for the app variables section.
+ * 
+ * With the simplified model, environment variables are now simple
+ * key-value pairs (env: { [key: string]: string }).
  */
-import type { VariableType } from "@stackpanel/proto";
+import type { VariableTypeName } from "../../variables/constants";
 
 /**
  * A variable displayed in the UI, including its mapping to an env key.
  */
 export interface DisplayVariable {
+	/** Environment variable name (e.g., "DATABASE_URL") */
 	envKey: string;
-	variableId: string;
-	variableKey: string;
-	type: VariableType | null;
-	description: string;
-	value?: string;
+	/** The value - literal string or vals reference */
+	value: string;
+	/** Environment names this variable is set in */
 	environments: string[];
+	/** UI-derived: whether this is a secret (based on value pattern) */
 	isSecret: boolean;
+	/** UI-derived: type name for display */
+	typeName: VariableTypeName;
 }
 
 /**
  * An available workspace variable that can be linked to an app.
  */
 export interface AvailableVariable {
+	/** Variable ID (e.g., "/dev/DATABASE_URL") */
 	id: string;
-	key: string;
-	type: VariableType | null;
+	/** Derived variable name from ID */
+	name: string;
+	/** UI-derived: type name for display */
+	typeName: VariableTypeName;
 }
 
 /**
@@ -38,22 +46,20 @@ export interface AppVariablesSectionProps {
 	environmentOptions: string[];
 	/** All available workspace variables that can be linked */
 	availableVariables?: AvailableVariable[];
-	/** Callback when a new variable mapping is added (variableId is null for literals) */
+	/** Callback when a new variable is added */
 	onAddVariable?: (
 		envKey: string,
-		variableId: string | null,
+		value: string,
 		environments: string[],
-		literalValue?: string,
 	) => void;
-	/** Callback when a variable mapping is updated */
+	/** Callback when a variable is updated */
 	onUpdateVariable?: (
 		oldEnvKey: string,
 		newEnvKey: string,
-		variableId: string | null,
+		value: string,
 		environments: string[],
-		literalValue?: string,
 	) => void;
-	/** Callback when a variable mapping is deleted */
+	/** Callback when a variable is deleted */
 	onDeleteVariable?: (envKey: string) => void;
 	/** Callback when environments list is updated */
 	onUpdateEnvironments?: (environments: string[]) => void;
@@ -83,9 +89,10 @@ export interface AppVariablesSectionState {
 	editMode: EditMode | null;
 	editingEnvKey: string | null;
 	newEnvKey: string;
-	selectedVariableId: string | null;
-	isLiteralMode: boolean;
-	literalValue: string;
+	/** The value being edited (literal or vals ref) */
+	editValue: string;
+	/** Whether we're linking to a workspace variable */
+	isLinkingVariable: boolean;
 	variableSearchOpen: boolean;
 	variableSearch: string;
 }

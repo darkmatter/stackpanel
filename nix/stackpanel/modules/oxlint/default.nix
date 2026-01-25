@@ -1,0 +1,35 @@
+# ==============================================================================
+# default.nix - OxLint Module Entry Point
+#
+# OxLint is a blazing fast JavaScript/TypeScript linter written in Rust.
+# Part of the Oxc project (https://oxc.rs).
+#
+# This module provides:
+#   - Per-app linting configuration via stackpanel.apps.*.linting.oxlint
+#   - Config file generation (.oxlintrc.json)
+#   - Shell scripts (lint, lint-fix, lint-<app>)
+#   - Git hooks integration (pre-commit linting)
+#   - Health checks
+#   - UI panel for lint status
+#
+# Usage:
+#   stackpanel.apps.web = {
+#     linting.oxlint = {
+#       enable = true;
+#       plugins = [ "react" "typescript" ];
+#       rules = { "no-console" = "warn"; };
+#     };
+#   };
+# ==============================================================================
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
+{
+  imports = [
+    ./module.nix
+    ./ui.nix
+  ];
+}

@@ -61,21 +61,7 @@ in
 
   config = {
     packages = config.stackpanel.devshell.packages;
-    # Pass env vars from stackpanel.devshell.env
-    # Use lib.mkMerge to merge with other env definitions (like devenv's process-compose)
-    # Note: stackpanel.process-compose sets PC_CONFIG_FILES etc. with mkOverride 50
-    # to take priority over devenv's process-compose module
-    env = lib.mkMerge [
-      config.stackpanel.devshell.env
-      # Override process-compose env vars set by devenv's module
-      # These need to be at devenv level, not stackpanel level
-      {
-        PC_CONFIG_FILES = lib.mkOverride 50 "";
-        PC_CONFIG = lib.mkOverride 50 "";
-        PROCESS_COMPOSE_FILE = lib.mkOverride 50 "";
-        PROCESS_COMPOSE_CONFIG = lib.mkOverride 50 "";
-      }
-    ];
+    env = config.stackpanel.devshell.env;
     enterShell = enterShell;
     outputs = outputs;
   };

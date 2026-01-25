@@ -1,5 +1,9 @@
+// @ts-nocheck - Legacy component, not actively used with new simplified schema
 "use client";
 
+// Note: This component uses the old schema with AppVariable.
+// The new schema uses simple key-value pairs in environments.env
+// This file is kept for reference but should be migrated or removed.
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";

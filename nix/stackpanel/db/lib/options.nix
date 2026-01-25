@@ -140,7 +140,11 @@ let
     let
       isEnumRef = allEnums ? ${field.type};
     in
-    if field.optional then
+    # For optional maps, default to empty attrset (not null) to avoid type errors
+    # when modules try to check if tasks are defined
+    if field.optional && field.mapKey != null then
+      { }
+    else if field.optional then
       null
     else if field.repeated then
       [ ]

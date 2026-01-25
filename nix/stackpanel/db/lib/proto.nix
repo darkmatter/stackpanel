@@ -351,10 +351,16 @@ let
       }
     '';
 
+  # Convert kebab-case to snake_case for protobuf compatibility
+  kebabToSnake = str: builtins.replaceStrings [ "-" ] [ "_" ] str;
+
   # Render a single field
   renderField =
     fieldNum: fieldName: field:
     let
+      # Convert field name from kebab-case to snake_case for protobuf
+      protoFieldName = kebabToSnake fieldName;
+
       # Build the type string
       typeStr =
         if field.mapKey != null then
@@ -378,7 +384,7 @@ let
       ) " // ${field.description}";
       num = if field.number != null then field.number else fieldNum;
     in
-    "${blockComment}  ${typeStr} ${fieldName} = ${toString num};${inlineComment}";
+    "${blockComment}  ${typeStr} ${protoFieldName} = ${toString num};${inlineComment}";
 
   # Render a message
   renderMessage =

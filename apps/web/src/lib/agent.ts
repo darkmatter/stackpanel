@@ -6,7 +6,7 @@ import {
 } from "./nix-data";
 import type {
   App,
-  AppVariable,
+  Variable,
   GeneratedFile,
   GeneratedFilesResponse,
   Service,
@@ -56,8 +56,9 @@ export interface DeleteResponse {
 
 /**
  * EntityClient - CRUD client for a specific Nix entity file.
+ * (Currently unused but kept for future use)
  */
-class EntityClient<T> {
+class _EntityClient<T> {
   constructor(
     private client: AgentHttpClient,
     private entityName: string,
@@ -263,6 +264,13 @@ export interface SSTResource {
 
 // Module requirements types (from Nix moduleRequirements config)
 
+/** Project validation response */
+export interface ProjectValidateResponse {
+  valid: boolean;
+  error?: string;
+  message?: string;
+}
+
 /** Action to resolve a missing variable */
 export interface VariableAction {
   type: string;
@@ -435,7 +443,7 @@ export class AgentHttpClient {
     services: new MapEntityClient<Service>(this, "services"),
     users: new MapEntityClient<User>(this, "users"),
     generatedFiles: new MapEntityClient<GeneratedFile>(this, "generated-files"),
-    variables: new MapEntityClient<AppVariable>(this, "variables"),
+    variables: new MapEntityClient<Variable>(this, "variables"),
     tasks: new MapEntityClient<Task>(this, "tasks"),
 
     /** Generic entity client for custom paths */

@@ -3,80 +3,40 @@ syntax = "proto3";
 package stackpanel.db;
 option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
 
-enum VariableType {
-  LITERAL = 0;
-  SECRET = 1;
-  VALS = 2;
-  EXEC = 3;
-}
-
-// Configuration for a single variable in the workspace
+// A workspace variable (secret, literal, or vals reference)
 message Variable {
   /*
-   * Globally unique identifier for the variable. Recommended format:
-   * `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
+   * Path-based identifier. Format: /<keygroup>/<VARNAME>
+   * 
+   * Examples:
+   *   /dev/DATABASE_URL      → Secret in dev.yaml
+   *   /prod/API_KEY          → Secret in prod.yaml
+   *   /computed/apps/web/port → Computed by Nix module
    * 
    */
-  string id = 1;
+  optional string id = 1;
   /*
-   * Environment variable name when passing to apps (e.g., POSTGRES_URL).
+   * The value - either a literal string or a vals reference.
+   * 
+   * Literals:
+   *   "postgresql://localhost:5432/dev"
+   *   "3000"
+   * 
+   * Vals references:
+   *   "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+   *   "ref+awsssm://prod/api-key"
+   *   "ref+exec://echo $RANDOM"
    * 
    */
-  string key = 2;
-  optional string description = 3; // Description of the variable
-  VariableType type = 4; // How the variable value is resolved
-  /*
-   * The value field meaning depends on type:
-   * - LITERAL: The actual value (embedded directly)
-   * - SECRET: Empty (value lives in encrypted .age file)
-   * - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
-   * - EXEC: Shell command to execute (stdout becomes the value)
-   * 
-   */
-  string value = 5;
-  /*
-   * Master keys that can decrypt this secret. Only used when type=SECRET.
-   * The .age file is encrypted to ALL listed master keys.
-   * Default: ["local"] (auto-generated local key).
-   * Example: ["dev", "prod"] for team-accessible secrets.
-   * 
-   */
-  repeated string masterKeys = 6;
-  /*
-   * List of module names that require this variable (e.g., ["sst", "ci"]).
-   * 
-   */
-  repeated string requiredBy = 7;
-  /*
-   * Module name that provides/creates this variable.
-   * 
-   */
-  optional string providedBy = 8;
-  /*
-   * Bootstrap level (0 = always available, 1+ = requires dependencies).
-   * 
-   */
-  optional int32 level = 9;
-  /*
-   * Action to resolve this variable if missing.
-   * 
-   */
-  optional VariableAction action = 10;
+  string value = 2;
 }
 
-// Action to resolve a missing variable
-message VariableAction {
-  /*
-   * Type of action: "add-secret", "add-variable", "configure", "external"
-   * 
-   */
-  string type = 1;
-  optional string label = 2; // Button/link label for the action
-  optional string url = 3; // External URL (e.g., link to create API token)
-  optional string secretKey = 4; // Secret key name if type=add-secret
-}
-
-// Map of variable identifier to variable configuration
+// Map of variable ID to Variable
 message Variables {
-  map<string, Variable> variables = 1; // Map of variable ID to variable config
+  /*
+   * Map of variable ID to Variable object.
+   * Each Variable contains at minimum a value field.
+   * 
+   */
+  map<string, Variable> variables = 1;
 }

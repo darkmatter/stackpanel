@@ -67,4 +67,3 @@ cd "$ROOT"
 
 # exec nix develop --accept-flake-config  github:cachix/devenv/v1.11.1 -- shell
 exec nix develop --impure
-

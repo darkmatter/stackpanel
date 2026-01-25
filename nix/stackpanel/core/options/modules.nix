@@ -603,6 +603,18 @@ in
     description = "External modules (local, flake-input, or registry)";
   };
 
+  # Fast metadata discovery - allows reading module metadata without full evaluation
+  # Set by modules/default.nix from each module's meta.nix file
+  options.stackpanel._moduleMetas = lib.mkOption {
+    type = lib.types.attrsOf lib.types.unspecified;
+    default = { };
+    description = ''
+      Fast module metadata for discovery without full module evaluation.
+      Each key is a module ID, value is the contents of that module's meta.nix.
+      This is set automatically by the module auto-discovery in modules/default.nix.
+    '';
+  };
+
   # ============================================================================
   # Config: Validation
   # ============================================================================

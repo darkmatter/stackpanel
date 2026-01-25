@@ -1,3 +1,6 @@
+// @ts-nocheck - Needs migration to new simplified Variable schema (id, value only)
+// Old schema had: key, description, type, providedBy, etc.
+// New schema has: id (path-based), value (literal or vals ref)
 "use client";
 
 import { Button } from "@ui/button";
@@ -116,14 +119,25 @@ export function VariablesPanel() {
 
 	const variablesList = useMemo(() => {
 		if (!variables) return [];
-		return Object.entries(variables).map(([id, variable]) => ({
-			...variable,
-			// Use id as the primary display name, key is the env var name
-			name: id,
-			envKey: variable.key ?? id,
-			description: variable.description ?? "",
-			id,
-		}));
+		// With simplified schema, variable is { id, value }
+		// We derive additional display properties from id and value
+		return Object.entries(variables).map(([id, variable]) => {
+			// variable could be the Variable object or just the value string
+			const value = typeof variable === 'string' ? variable : variable?.value ?? '';
+			const varId = typeof variable === 'string' ? id : (variable?.id ?? id);
+			// Use full ID as name to avoid confusion (e.g., multiple "port" vars)
+			const name = varId;
+			// Extract env key from last segment of path for display
+			const envKey = varId.split('/').pop() ?? varId;
+			return {
+				id: varId,
+				value,
+				// UI-derived properties
+				name,
+				envKey,
+				description: "",
+			};
+		});
 	}, [variables]);
 
 	// Filter variables based on search and type

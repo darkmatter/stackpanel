@@ -15,10 +15,15 @@
 #   - extra-folders: Additional workspace folders
 #   - extensions: Recommended extension IDs
 #
-# Other editors (Zed, Cursor) are placeholders for future implementation.
+# Zed options:
+#   - enable: Generate Zed configuration
+#   - settings: Zed settings to include
+#   - existing-settings-path: Merge with existing settings.json (impure)
+#   - output-mode: "generated" or "dotZed"
+#   - extensions: Recommended extension IDs
 #
-# Generated files are in .stackpanel/gen/ide/vscode/ and should be opened
-# as a workspace for the best experience.
+# Generated files are in .stackpanel/gen/ide/{editor}/ and should be symlinked
+# or opened as appropriate for each editor.
 # ==============================================================================
 { lib, ... }:
 {
@@ -83,8 +88,70 @@
       };
     };
 
-    # Placeholders for future editors
-    zed.enable = lib.mkEnableOption "Zed editor integration (not yet implemented)";
+    zed = {
+      enable = lib.mkEnableOption "Zed editor integration" // {
+        description = "Generate Zed configuration files";
+      };
+
+      settings = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+        description = ''
+          Zed settings to include in the generated configuration.
+          These take highest priority and will override any existing or generated settings.
+        '';
+      };
+
+      existing-settings-path = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to existing Zed settings.json to merge with generated settings.
+
+          WARNING: This creates IMPURE evaluation - the file must exist at Nix evaluation time.
+        '';
+      };
+
+      output-mode = lib.mkOption {
+        type = lib.types.enum [
+          "generated"
+          "dotZed"
+        ];
+        default = "generated";
+        description = ''
+          Where to output Zed settings:
+          - "generated": Generate to .stackpanel/gen/zed/ (default, safe) - requires manual symlink
+          - "dotZed": Generate to .zed/settings.json (CAUTION: may overwrite existing file)
+        '';
+      };
+
+      extensions = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Recommended Zed extension IDs";
+      };
+
+      tasks = lib.mkOption {
+        type = lib.types.listOf (lib.types.attrsOf lib.types.anything);
+        default = [ ];
+        description = ''
+          Zed tasks to include in the generated tasks.json.
+          Each task is an attrset with label, command, args, etc.
+        '';
+        example = [
+          {
+            label = "dev";
+            command = "bun";
+            args = [
+              "run"
+              "dev"
+            ];
+          }
+        ];
+      };
+    };
+
+    # Placeholder for future editors
     cursor.enable = lib.mkEnableOption "Cursor editor integration (not yet implemented)";
   };
 }

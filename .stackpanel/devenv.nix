@@ -33,6 +33,8 @@
   # ===========================================================================
   # Languages (devenv adds packages and sets up tooling automatically)
   # ===========================================================================
+  # Note: languages.go is auto-enabled when any app has go.enable = true
+  # (see nix/flake/default.nix - automatic language detection)
   languages = {
     javascript = {
       enable = true;
@@ -40,10 +42,7 @@
       bun.install.enable = true;
     };
     typescript.enable = true;
-    go = {
-      enable = true;
-      package = pkgs.go;
-    };
+    # go is auto-enabled by stackpanel when apps have go.enable = true
   };
 
   # ===========================================================================
@@ -57,16 +56,15 @@
   };
 
   # ===========================================================================
-  # Shell Hook
+  # Shell Hook (optional - stackpanel has its own hooks)
   # ===========================================================================
-  enterShell = ''
-    echo "✅ Devenv for the stackpanel repository"
-  '';
+  # enterShell is handled by stackpanel's hook system
+  # Add any devenv-specific shell code here if needed
 
   # ===========================================================================
-  # Pre-commit Hooks (devenv-native format)
+  # Git Hooks (devenv-native format)
   # ===========================================================================
-  pre-commit.hooks = {
+  git-hooks.hooks = {
     nixfmt-rfc-style.enable = true;
     gofmt.enable = true;
   };

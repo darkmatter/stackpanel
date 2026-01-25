@@ -18,13 +18,15 @@ interface CombinedAppData {
 	domain?: string | null;
 	url?: string | null;
 	tls?: boolean;
+	path?: string;
+	version?: string;
 	[key: string]: unknown;
 }
 
 export function AppsGridPanel({
 	extension,
 	allApps,
-	filter,
+	filter: _filter,
 	columns = ["name", "path", "status"],
 }: AppsGridProps) {
 	// Filter apps that have this extension enabled
@@ -90,14 +92,14 @@ function AppCard({
 			<div className="flex items-start justify-between">
 				<div className="space-y-1">
 					<h4 className="font-medium leading-none">{app.name}</h4>
-					{columns.includes("path") && app.path && (
-						<p className="text-sm text-muted-foreground">{String(app.path)}</p>
-					)}
-				</div>
-				<div className="flex items-center gap-2">
-					{columns.includes("version") && app.version && (
-						<Badge variant="outline">v{String(app.version)}</Badge>
-					)}
+				{columns.includes("path") && app.path && (
+					<p className="text-sm text-muted-foreground">{String(app.path)}</p>
+				)}
+			</div>
+			<div className="flex items-center gap-2">
+				{columns.includes("version") && app.version != null && (
+					<Badge variant="outline">v{String(app.version)}</Badge>
+				)}
 					{columns.includes("port") && app.port && (
 						<Badge variant="secondary">:{app.port}</Badge>
 					)}

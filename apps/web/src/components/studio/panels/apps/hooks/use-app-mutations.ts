@@ -24,13 +24,13 @@ export function useAppMutations({
 	const client = useAgentClient();
 
 	// Handler for adding a new variable mapping to an app
+	// With simplified schema: envKey maps to value (literal or vals reference)
 	const handleAddVariableToApp = useCallback(
 		async (
 			appId: string,
 			envKey: string,
-			variableId: string | null,
+			value: string,
 			environments: string[],
-			literalValue?: string,
 		) => {
 			if (!token) {
 				toast.error("Not connected to agent");
@@ -50,9 +50,8 @@ export function useAppMutations({
 					flattenEnvironmentVariables(existingEnvironments);
 				const newMapping: AppVariableMapping = {
 					envKey,
-					variableId: variableId || "",
+					value,
 					environments,
-					literalValue,
 				};
 
 				// Merge with existing (replace if same envKey)
@@ -82,7 +81,7 @@ export function useAppMutations({
 
 				// Regenerate secrets package in background (works when agent is in devshell)
 				client.regenerateSecrets().then((result) => {
-					if (result && result.exitCode === 0) {
+					if (result && result.exit_code === 0) {
 						toast.success("Secrets package regenerated", { duration: 2000 });
 					}
 				});
@@ -98,14 +97,14 @@ export function useAppMutations({
 	);
 
 	// Handler for updating an existing variable mapping
+	// With simplified schema: envKey maps to value (literal or vals reference)
 	const handleUpdateVariableInApp = useCallback(
 		async (
 			appId: string,
 			oldEnvKey: string,
 			newEnvKey: string,
-			variableId: string | null,
+			value: string,
 			environments: string[],
-			literalValue?: string,
 		) => {
 			if (!token) {
 				toast.error("Not connected to agent");
@@ -125,9 +124,8 @@ export function useAppMutations({
 					flattenEnvironmentVariables(existingEnvironments);
 				const updatedMapping: AppVariableMapping = {
 					envKey: newEnvKey,
-					variableId: variableId || "",
+					value,
 					environments,
-					literalValue,
 				};
 
 				// Remove old mapping and add updated one
@@ -157,7 +155,7 @@ export function useAppMutations({
 
 				// Regenerate secrets package in background (works when agent is in devshell)
 				client.regenerateSecrets().then((result) => {
-					if (result && result.exitCode === 0) {
+					if (result && result.exit_code === 0) {
 						toast.success("Secrets package regenerated", { duration: 2000 });
 					}
 				});
@@ -252,7 +250,7 @@ export function useAppMutations({
 
 				// Regenerate secrets package in background (works when agent is in devshell)
 				client.regenerateSecrets().then((result) => {
-					if (result && result.exitCode === 0) {
+					if (result && result.exit_code === 0) {
 						toast.success("Secrets package regenerated", { duration: 2000 });
 					}
 				});

@@ -3777,7 +3777,7 @@ const file_agent_proto_rawDesc = "" +
 	"\x06output\x18\x02 \x01(\tR\x06output\x12\x1b\n" +
 	"\texit_code\x18\x03 \x01(\x05R\bexitCode\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\tR\ttimestamp2\x98\x1e\n" +
+	"\ttimestamp\x18\x05 \x01(\tR\ttimestamp2\xf2\x1e\n" +
 	"\fAgentService\x12W\n" +
 	"\n" +
 	"GetProject\x12#.stackpanel.agent.GetProjectRequest\x1a$.stackpanel.agent.GetProjectResponse\x12F\n" +
@@ -3797,7 +3797,8 @@ const file_agent_proto_rawDesc = "" +
 	"\fSetVariables\x12\x18.stackpanel.db.Variables\x1a\x18.stackpanel.db.Variables\x12I\n" +
 	"\n" +
 	"GetModules\x12#.stackpanel.agent.GetModulesRequest\x1a\x16.stackpanel.db.Modules\x12F\n" +
-	"\tGetModule\x12\".stackpanel.agent.GetModuleRequest\x1a\x15.stackpanel.db.Module\x12Q\n" +
+	"\tGetModule\x12\".stackpanel.agent.GetModuleRequest\x1a\x15.stackpanel.db.Module\x12X\n" +
+	"\x10GetModuleOutputs\x12&.stackpanel.db.GetModuleOutputsRequest\x1a\x1c.stackpanel.db.ModuleOutputs\x12Q\n" +
 	"\fEnableModule\x12\".stackpanel.db.EnableModuleRequest\x1a\x1d.stackpanel.db.ModuleResponse\x12S\n" +
 	"\rDisableModule\x12#.stackpanel.db.DisableModuleRequest\x1a\x1d.stackpanel.db.ModuleResponse\x12a\n" +
 	"\x14UpdateModuleSettings\x12*.stackpanel.db.UpdateModuleSettingsRequest\x1a\x1d.stackpanel.db.ModuleResponse\x12`\n" +
@@ -3921,13 +3922,15 @@ var file_agent_proto_goTypes = []any{
 	(*Aws)(nil),                         // 74: stackpanel.db.Aws
 	(*Apps)(nil),                        // 75: stackpanel.db.Apps
 	(*Variables)(nil),                   // 76: stackpanel.db.Variables
-	(*EnableModuleRequest)(nil),         // 77: stackpanel.db.EnableModuleRequest
-	(*DisableModuleRequest)(nil),        // 78: stackpanel.db.DisableModuleRequest
-	(*UpdateModuleSettingsRequest)(nil), // 79: stackpanel.db.UpdateModuleSettingsRequest
-	(*Modules)(nil),                     // 80: stackpanel.db.Modules
-	(*Module)(nil),                      // 81: stackpanel.db.Module
-	(*ModuleResponse)(nil),              // 82: stackpanel.db.ModuleResponse
-	(*Sst)(nil),                         // 83: stackpanel.db.Sst
+	(*GetModuleOutputsRequest)(nil),     // 77: stackpanel.db.GetModuleOutputsRequest
+	(*EnableModuleRequest)(nil),         // 78: stackpanel.db.EnableModuleRequest
+	(*DisableModuleRequest)(nil),        // 79: stackpanel.db.DisableModuleRequest
+	(*UpdateModuleSettingsRequest)(nil), // 80: stackpanel.db.UpdateModuleSettingsRequest
+	(*Modules)(nil),                     // 81: stackpanel.db.Modules
+	(*Module)(nil),                      // 82: stackpanel.db.Module
+	(*ModuleOutputs)(nil),               // 83: stackpanel.db.ModuleOutputs
+	(*ModuleResponse)(nil),              // 84: stackpanel.db.ModuleResponse
+	(*Sst)(nil),                         // 85: stackpanel.db.Sst
 }
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
@@ -3957,85 +3960,87 @@ var file_agent_proto_depIdxs = []int32{
 	76, // 24: stackpanel.agent.AgentService.SetVariables:input_type -> stackpanel.db.Variables
 	11, // 25: stackpanel.agent.AgentService.GetModules:input_type -> stackpanel.agent.GetModulesRequest
 	12, // 26: stackpanel.agent.AgentService.GetModule:input_type -> stackpanel.agent.GetModuleRequest
-	77, // 27: stackpanel.agent.AgentService.EnableModule:input_type -> stackpanel.db.EnableModuleRequest
-	78, // 28: stackpanel.agent.AgentService.DisableModule:input_type -> stackpanel.db.DisableModuleRequest
-	79, // 29: stackpanel.agent.AgentService.UpdateModuleSettings:input_type -> stackpanel.db.UpdateModuleSettingsRequest
-	13, // 30: stackpanel.agent.AgentService.GetAgeIdentity:input_type -> stackpanel.agent.GetAgeIdentityRequest
-	14, // 31: stackpanel.agent.AgentService.SetAgeIdentity:input_type -> stackpanel.agent.SetAgeIdentityRequest
-	16, // 32: stackpanel.agent.AgentService.GetKMSConfig:input_type -> stackpanel.agent.GetKMSConfigRequest
-	17, // 33: stackpanel.agent.AgentService.SetKMSConfig:input_type -> stackpanel.agent.SetKMSConfigRequest
-	19, // 34: stackpanel.agent.AgentService.ReadFile:input_type -> stackpanel.agent.ReadFileRequest
-	21, // 35: stackpanel.agent.AgentService.WriteFile:input_type -> stackpanel.agent.WriteFileRequest
-	23, // 36: stackpanel.agent.AgentService.ListFiles:input_type -> stackpanel.agent.ListFilesRequest
-	26, // 37: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
-	28, // 38: stackpanel.agent.AgentService.NixGenerate:input_type -> stackpanel.agent.NixGenerateRequest
-	30, // 39: stackpanel.agent.AgentService.NixEval:input_type -> stackpanel.agent.NixEvalRequest
-	32, // 40: stackpanel.agent.AgentService.GetServicesStatus:input_type -> stackpanel.agent.GetServicesStatusRequest
-	35, // 41: stackpanel.agent.AgentService.StartService:input_type -> stackpanel.agent.ServiceRequest
-	35, // 42: stackpanel.agent.AgentService.StopService:input_type -> stackpanel.agent.ServiceRequest
-	35, // 43: stackpanel.agent.AgentService.RestartService:input_type -> stackpanel.agent.ServiceRequest
-	37, // 44: stackpanel.agent.AgentService.GetSSTStatus:input_type -> stackpanel.agent.GetSSTStatusRequest
-	39, // 45: stackpanel.agent.AgentService.GetSSTConfig:input_type -> stackpanel.agent.GetSSTConfigRequest
-	40, // 46: stackpanel.agent.AgentService.DeploySST:input_type -> stackpanel.agent.DeploySSTRequest
-	42, // 47: stackpanel.agent.AgentService.RemoveSST:input_type -> stackpanel.agent.RemoveSSTRequest
-	44, // 48: stackpanel.agent.AgentService.GetSSTOutputs:input_type -> stackpanel.agent.GetSSTOutputsRequest
-	46, // 49: stackpanel.agent.AgentService.GetSSTResources:input_type -> stackpanel.agent.GetSSTResourcesRequest
-	49, // 50: stackpanel.agent.AgentService.SearchNixpkgs:input_type -> stackpanel.agent.SearchNixpkgsRequest
-	52, // 51: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
-	55, // 52: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
-	58, // 53: stackpanel.agent.AgentService.GetHealthchecks:input_type -> stackpanel.agent.GetHealthchecksRequest
-	61, // 54: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
-	62, // 55: stackpanel.agent.AgentService.RefreshNixConfig:input_type -> stackpanel.agent.RefreshNixConfigRequest
-	64, // 56: stackpanel.agent.AgentService.GetShellStatus:input_type -> stackpanel.agent.GetShellStatusRequest
-	66, // 57: stackpanel.agent.AgentService.RebuildShell:input_type -> stackpanel.agent.RebuildShellRequest
-	1,  // 58: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
-	71, // 59: stackpanel.agent.AgentService.GetConfig:output_type -> stackpanel.db.Config
-	71, // 60: stackpanel.agent.AgentService.SetConfig:output_type -> stackpanel.db.Config
-	72, // 61: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
-	72, // 62: stackpanel.agent.AgentService.SetSecrets:output_type -> stackpanel.db.Secrets
-	73, // 63: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
-	73, // 64: stackpanel.agent.AgentService.SetUsers:output_type -> stackpanel.db.Users
-	74, // 65: stackpanel.agent.AgentService.GetAws:output_type -> stackpanel.db.Aws
-	74, // 66: stackpanel.agent.AgentService.SetAws:output_type -> stackpanel.db.Aws
-	75, // 67: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
-	75, // 68: stackpanel.agent.AgentService.SetApps:output_type -> stackpanel.db.Apps
-	76, // 69: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
-	76, // 70: stackpanel.agent.AgentService.SetVariables:output_type -> stackpanel.db.Variables
-	80, // 71: stackpanel.agent.AgentService.GetModules:output_type -> stackpanel.db.Modules
-	81, // 72: stackpanel.agent.AgentService.GetModule:output_type -> stackpanel.db.Module
-	82, // 73: stackpanel.agent.AgentService.EnableModule:output_type -> stackpanel.db.ModuleResponse
-	82, // 74: stackpanel.agent.AgentService.DisableModule:output_type -> stackpanel.db.ModuleResponse
-	82, // 75: stackpanel.agent.AgentService.UpdateModuleSettings:output_type -> stackpanel.db.ModuleResponse
-	15, // 76: stackpanel.agent.AgentService.GetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
-	15, // 77: stackpanel.agent.AgentService.SetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
-	18, // 78: stackpanel.agent.AgentService.GetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
-	18, // 79: stackpanel.agent.AgentService.SetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
-	20, // 80: stackpanel.agent.AgentService.ReadFile:output_type -> stackpanel.agent.ReadFileResponse
-	22, // 81: stackpanel.agent.AgentService.WriteFile:output_type -> stackpanel.agent.WriteFileResponse
-	24, // 82: stackpanel.agent.AgentService.ListFiles:output_type -> stackpanel.agent.ListFilesResponse
-	27, // 83: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
-	29, // 84: stackpanel.agent.AgentService.NixGenerate:output_type -> stackpanel.agent.NixGenerateResponse
-	31, // 85: stackpanel.agent.AgentService.NixEval:output_type -> stackpanel.agent.NixEvalResponse
-	33, // 86: stackpanel.agent.AgentService.GetServicesStatus:output_type -> stackpanel.agent.GetServicesStatusResponse
-	36, // 87: stackpanel.agent.AgentService.StartService:output_type -> stackpanel.agent.ServiceResponse
-	36, // 88: stackpanel.agent.AgentService.StopService:output_type -> stackpanel.agent.ServiceResponse
-	36, // 89: stackpanel.agent.AgentService.RestartService:output_type -> stackpanel.agent.ServiceResponse
-	38, // 90: stackpanel.agent.AgentService.GetSSTStatus:output_type -> stackpanel.agent.SSTStatusResponse
-	83, // 91: stackpanel.agent.AgentService.GetSSTConfig:output_type -> stackpanel.db.Sst
-	41, // 92: stackpanel.agent.AgentService.DeploySST:output_type -> stackpanel.agent.DeploySSTResponse
-	43, // 93: stackpanel.agent.AgentService.RemoveSST:output_type -> stackpanel.agent.RemoveSSTResponse
-	45, // 94: stackpanel.agent.AgentService.GetSSTOutputs:output_type -> stackpanel.agent.SSTOutputsResponse
-	48, // 95: stackpanel.agent.AgentService.GetSSTResources:output_type -> stackpanel.agent.SSTResourcesResponse
-	51, // 96: stackpanel.agent.AgentService.SearchNixpkgs:output_type -> stackpanel.agent.SearchNixpkgsResponse
-	54, // 97: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
-	57, // 98: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
-	60, // 99: stackpanel.agent.AgentService.GetHealthchecks:output_type -> stackpanel.agent.HealthchecksResponse
-	63, // 100: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
-	63, // 101: stackpanel.agent.AgentService.RefreshNixConfig:output_type -> stackpanel.agent.NixConfigResponse
-	65, // 102: stackpanel.agent.AgentService.GetShellStatus:output_type -> stackpanel.agent.ShellStatusResponse
-	67, // 103: stackpanel.agent.AgentService.RebuildShell:output_type -> stackpanel.agent.RebuildShellEvent
-	58, // [58:104] is the sub-list for method output_type
-	12, // [12:58] is the sub-list for method input_type
+	77, // 27: stackpanel.agent.AgentService.GetModuleOutputs:input_type -> stackpanel.db.GetModuleOutputsRequest
+	78, // 28: stackpanel.agent.AgentService.EnableModule:input_type -> stackpanel.db.EnableModuleRequest
+	79, // 29: stackpanel.agent.AgentService.DisableModule:input_type -> stackpanel.db.DisableModuleRequest
+	80, // 30: stackpanel.agent.AgentService.UpdateModuleSettings:input_type -> stackpanel.db.UpdateModuleSettingsRequest
+	13, // 31: stackpanel.agent.AgentService.GetAgeIdentity:input_type -> stackpanel.agent.GetAgeIdentityRequest
+	14, // 32: stackpanel.agent.AgentService.SetAgeIdentity:input_type -> stackpanel.agent.SetAgeIdentityRequest
+	16, // 33: stackpanel.agent.AgentService.GetKMSConfig:input_type -> stackpanel.agent.GetKMSConfigRequest
+	17, // 34: stackpanel.agent.AgentService.SetKMSConfig:input_type -> stackpanel.agent.SetKMSConfigRequest
+	19, // 35: stackpanel.agent.AgentService.ReadFile:input_type -> stackpanel.agent.ReadFileRequest
+	21, // 36: stackpanel.agent.AgentService.WriteFile:input_type -> stackpanel.agent.WriteFileRequest
+	23, // 37: stackpanel.agent.AgentService.ListFiles:input_type -> stackpanel.agent.ListFilesRequest
+	26, // 38: stackpanel.agent.AgentService.Exec:input_type -> stackpanel.agent.ExecRequest
+	28, // 39: stackpanel.agent.AgentService.NixGenerate:input_type -> stackpanel.agent.NixGenerateRequest
+	30, // 40: stackpanel.agent.AgentService.NixEval:input_type -> stackpanel.agent.NixEvalRequest
+	32, // 41: stackpanel.agent.AgentService.GetServicesStatus:input_type -> stackpanel.agent.GetServicesStatusRequest
+	35, // 42: stackpanel.agent.AgentService.StartService:input_type -> stackpanel.agent.ServiceRequest
+	35, // 43: stackpanel.agent.AgentService.StopService:input_type -> stackpanel.agent.ServiceRequest
+	35, // 44: stackpanel.agent.AgentService.RestartService:input_type -> stackpanel.agent.ServiceRequest
+	37, // 45: stackpanel.agent.AgentService.GetSSTStatus:input_type -> stackpanel.agent.GetSSTStatusRequest
+	39, // 46: stackpanel.agent.AgentService.GetSSTConfig:input_type -> stackpanel.agent.GetSSTConfigRequest
+	40, // 47: stackpanel.agent.AgentService.DeploySST:input_type -> stackpanel.agent.DeploySSTRequest
+	42, // 48: stackpanel.agent.AgentService.RemoveSST:input_type -> stackpanel.agent.RemoveSSTRequest
+	44, // 49: stackpanel.agent.AgentService.GetSSTOutputs:input_type -> stackpanel.agent.GetSSTOutputsRequest
+	46, // 50: stackpanel.agent.AgentService.GetSSTResources:input_type -> stackpanel.agent.GetSSTResourcesRequest
+	49, // 51: stackpanel.agent.AgentService.SearchNixpkgs:input_type -> stackpanel.agent.SearchNixpkgsRequest
+	52, // 52: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
+	55, // 53: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
+	58, // 54: stackpanel.agent.AgentService.GetHealthchecks:input_type -> stackpanel.agent.GetHealthchecksRequest
+	61, // 55: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
+	62, // 56: stackpanel.agent.AgentService.RefreshNixConfig:input_type -> stackpanel.agent.RefreshNixConfigRequest
+	64, // 57: stackpanel.agent.AgentService.GetShellStatus:input_type -> stackpanel.agent.GetShellStatusRequest
+	66, // 58: stackpanel.agent.AgentService.RebuildShell:input_type -> stackpanel.agent.RebuildShellRequest
+	1,  // 59: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
+	71, // 60: stackpanel.agent.AgentService.GetConfig:output_type -> stackpanel.db.Config
+	71, // 61: stackpanel.agent.AgentService.SetConfig:output_type -> stackpanel.db.Config
+	72, // 62: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
+	72, // 63: stackpanel.agent.AgentService.SetSecrets:output_type -> stackpanel.db.Secrets
+	73, // 64: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
+	73, // 65: stackpanel.agent.AgentService.SetUsers:output_type -> stackpanel.db.Users
+	74, // 66: stackpanel.agent.AgentService.GetAws:output_type -> stackpanel.db.Aws
+	74, // 67: stackpanel.agent.AgentService.SetAws:output_type -> stackpanel.db.Aws
+	75, // 68: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
+	75, // 69: stackpanel.agent.AgentService.SetApps:output_type -> stackpanel.db.Apps
+	76, // 70: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
+	76, // 71: stackpanel.agent.AgentService.SetVariables:output_type -> stackpanel.db.Variables
+	81, // 72: stackpanel.agent.AgentService.GetModules:output_type -> stackpanel.db.Modules
+	82, // 73: stackpanel.agent.AgentService.GetModule:output_type -> stackpanel.db.Module
+	83, // 74: stackpanel.agent.AgentService.GetModuleOutputs:output_type -> stackpanel.db.ModuleOutputs
+	84, // 75: stackpanel.agent.AgentService.EnableModule:output_type -> stackpanel.db.ModuleResponse
+	84, // 76: stackpanel.agent.AgentService.DisableModule:output_type -> stackpanel.db.ModuleResponse
+	84, // 77: stackpanel.agent.AgentService.UpdateModuleSettings:output_type -> stackpanel.db.ModuleResponse
+	15, // 78: stackpanel.agent.AgentService.GetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
+	15, // 79: stackpanel.agent.AgentService.SetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
+	18, // 80: stackpanel.agent.AgentService.GetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
+	18, // 81: stackpanel.agent.AgentService.SetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
+	20, // 82: stackpanel.agent.AgentService.ReadFile:output_type -> stackpanel.agent.ReadFileResponse
+	22, // 83: stackpanel.agent.AgentService.WriteFile:output_type -> stackpanel.agent.WriteFileResponse
+	24, // 84: stackpanel.agent.AgentService.ListFiles:output_type -> stackpanel.agent.ListFilesResponse
+	27, // 85: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
+	29, // 86: stackpanel.agent.AgentService.NixGenerate:output_type -> stackpanel.agent.NixGenerateResponse
+	31, // 87: stackpanel.agent.AgentService.NixEval:output_type -> stackpanel.agent.NixEvalResponse
+	33, // 88: stackpanel.agent.AgentService.GetServicesStatus:output_type -> stackpanel.agent.GetServicesStatusResponse
+	36, // 89: stackpanel.agent.AgentService.StartService:output_type -> stackpanel.agent.ServiceResponse
+	36, // 90: stackpanel.agent.AgentService.StopService:output_type -> stackpanel.agent.ServiceResponse
+	36, // 91: stackpanel.agent.AgentService.RestartService:output_type -> stackpanel.agent.ServiceResponse
+	38, // 92: stackpanel.agent.AgentService.GetSSTStatus:output_type -> stackpanel.agent.SSTStatusResponse
+	85, // 93: stackpanel.agent.AgentService.GetSSTConfig:output_type -> stackpanel.db.Sst
+	41, // 94: stackpanel.agent.AgentService.DeploySST:output_type -> stackpanel.agent.DeploySSTResponse
+	43, // 95: stackpanel.agent.AgentService.RemoveSST:output_type -> stackpanel.agent.RemoveSSTResponse
+	45, // 96: stackpanel.agent.AgentService.GetSSTOutputs:output_type -> stackpanel.agent.SSTOutputsResponse
+	48, // 97: stackpanel.agent.AgentService.GetSSTResources:output_type -> stackpanel.agent.SSTResourcesResponse
+	51, // 98: stackpanel.agent.AgentService.SearchNixpkgs:output_type -> stackpanel.agent.SearchNixpkgsResponse
+	54, // 99: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
+	57, // 100: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
+	60, // 101: stackpanel.agent.AgentService.GetHealthchecks:output_type -> stackpanel.agent.HealthchecksResponse
+	63, // 102: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	63, // 103: stackpanel.agent.AgentService.RefreshNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	65, // 104: stackpanel.agent.AgentService.GetShellStatus:output_type -> stackpanel.agent.ShellStatusResponse
+	67, // 105: stackpanel.agent.AgentService.RebuildShell:output_type -> stackpanel.agent.RebuildShellEvent
+	59, // [59:106] is the sub-list for method output_type
+	12, // [12:59] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name
 	12, // [12:12] is the sub-list for extension extendee
 	0,  // [0:12] is the sub-list for field type_name

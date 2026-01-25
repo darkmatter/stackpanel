@@ -13,25 +13,41 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // ALCHEMY=1 is set by root alchemy.run.ts for builds/deploys
 const useAlchemy = process.env.ALCHEMY === "1";
 
+// Docs proxy target - configure via DOCS_PROXY_URL env var
+const docsProxyUrl = process.env.DOCS_PROXY_URL || "http://localhost:4000";
+
 export default defineConfig({
-	plugins: [
-		tsconfigPaths({
-			projects: ["./tsconfig.json"],
-		}),
-		tailwindcss(),
-		// Use alchemy for Cloudflare deployment, nitro for local dev (HMR)
-		...(useAlchemy ? [alchemy()] : [nitro()]),
-		tanstackStart(),
-		viteReact(),
-	],
-	resolve: {
-		alias: {
-			"@ui": resolve(__dirname, "src/components/ui"),
-		},
-	},
-	server: {
-		port: 3001,
-		host: "0.0.0.0",
-		allowedHosts: ["coopers-mac-studio", "coopers-mac-studio.local"],
-	},
+  plugins: [
+    tsconfigPaths({
+      projects: ["./tsconfig.json"],
+    }),
+    tailwindcss(),
+    // Use alchemy for Cloudflare deployment, nitro for local dev (HMR)
+    ...(useAlchemy ? [alchemy()] : [nitro()]),
+    tanstackStart(),
+    viteReact(),
+  ],
+  resolve: {
+    alias: {
+      "@ui": resolve(__dirname, "src/components/ui"),
+    },
+  },
+  server: {
+    port: 3001,
+    host: "0.0.0.0",
+    allowedHosts: [
+      "coopers-mac-studio",
+      "coopers-mac-studio.local",
+      "coopers-mac-studio.tail6277a6.ts.net",
+    ],
+    // Proxy /docs to docs server if configured
+    proxy: docsProxyUrl
+      ? {
+          "/docs": {
+            target: docsProxyUrl,
+            changeOrigin: true,
+          },
+        }
+      : undefined,
+  },
 });

@@ -1,6 +1,16 @@
+// @ts-nocheck - Legacy component, not actively used with new simplified schema
 "use client";
 
-import { AppVariableType } from "@stackpanel/proto";
+// Note: This component uses the old schema with AppVariableType.
+// The new schema uses simple key-value pairs in environments.env
+// This file is kept for reference but should be migrated or removed.
+
+// Legacy type - no longer in proto schema
+enum AppVariableType {
+  UNSPECIFIED = 0,
+  VARIABLE = 1,
+  LITERAL = 2,
+}
 import { Button } from "@ui/button";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";

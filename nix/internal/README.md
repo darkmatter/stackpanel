@@ -1,48 +1,38 @@
 # nix/internal/
 
-**Internal devenv modules for the stackpanel repository itself.**
+**Internal modules for the stackpanel repository itself.**
 
-This directory contains devenv-specific modules for developing the stackpanel project. These are **not** used by `nix develop` - they configure the `devenv shell` workflow.
+This directory contains internal devenv-compatible modules that are loaded by the flake. These modules define processes, languages, and services for developing the stackpanel project.
+
+## Development Workflow
+
+```bash
+# Enter the development shell
+nix develop --impure
+
+# Start all dev processes (web, docs, server, format-watch)
+dev
+
+# Or use direnv for automatic shell loading
+direnv allow
+```
 
 ## Architecture
 
-Stackpanel now has two shell workflows:
-
-### 1. `nix develop` (Recommended)
-
-Uses the flakeModule which creates a pure `pkgs.mkShell`:
-- Auto-loads `.stackpanel/config.nix`
-- Auto-loads `.stackpanel/devenv.nix` for additional packages/env
-- Full control over passthru, shellHook, packages
-- No devenv involvement
+The flake creates a unified shell using `pkgs.mkShell`:
+- Auto-loads `.stackpanel/config.nix` for stackpanel options
+- Auto-loads internal devenv modules for processes/languages
+- Provides the `dev` command (process-compose wrapper)
 
 ```
 flake.nix
-    ↓
+    |
 imports = [ exports.flakeModules.default ]
-    ↓
+    |
 .stackpanel/config.nix (stackpanel options)
-.stackpanel/devenv.nix (additional packages/env)
-    ↓
-devShells.default (pkgs.mkShell)
-```
-
-### 2. `devenv shell` (For devenv features)
-
-For users who need devenv-specific features (languages, services, processes):
-- Uses `devenv.nix` + `devenv.yaml` at project root
-- Imports stackpanel's devenv adapter
-- Imports project-specific devenv modules from this directory
-
-```
-devenv shell
-    ↓
-devenv.nix (project root)
-    ↓
-nix/flake/modules/devenv.nix (adapter)
-nix/internal/devenv/devenv.nix (project-specific)
-    ↓
-devenv shell with processes, services, languages
+nix/internal/devenv/* (processes, languages)
+    |
+devShells.default (pkgs.mkShell with process-compose)
 ```
 
 ## Structure
@@ -50,30 +40,27 @@ devenv shell with processes, services, languages
 ```
 nix/internal/
 ├── README.md              # This file
-└── devenv/                # Devenv modules for `devenv shell` workflow
+└── devenv/                # Internal modules
     ├── devenv.nix         # Root module (imports all sub-modules)
     ├── docs/              # Documentation app (apps/docs)
     │   └── devenv.nix     # Docs dev server process
     ├── tools/             # Development infrastructure
-    │   └── devenv.nix     # Services: mailpit, tailscale funnel
+    │   └── devenv.nix     # Services and tooling
     └── web/               # Web app (apps/web)
         └── devenv.nix     # Web dev server process
 ```
 
 ## What These Modules Provide
 
-For `devenv shell` / `devenv up`:
-
-- **Processes**: `web`, `docs` dev servers
-- **Services**: `mailpit` for email testing
-- **Profiles**: `web`, `docs`, `share` for focused development
+- **Processes**: `web`, `docs`, `server`, `format-watch` dev servers
+- **Languages**: JavaScript/Bun, Go
 - **Cachix**: Binary cache configuration
 
 ## For External Users
 
 If you're using stackpanel in your own project:
 
-### Pure Stackpanel Shell (`nix develop`)
+### Standard Setup (`nix develop`)
 
 ```nix
 # flake.nix
@@ -83,21 +70,19 @@ imports = [ inputs.stackpanel.flakeModules.default ];
 # Additional packages/env in .stackpanel/devenv.nix (optional)
 ```
 
-### With Devenv Features (`devenv shell`)
+### With Devenv (for devenv.shells users)
+
+Stackpanel modules are compatible with devenv. Import the devenv adapter:
 
 ```nix
-# devenv.nix (project root)
+# In your devenv.shells.default
 {
-  imports = [
-    inputs.stackpanel.devenvModules.default
-    ./nix/devenv.nix  # Your project-specific devenv modules
-  ];
-
+  imports = [ inputs.stackpanel.devenvModules.default ];
+  
   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
-
-  # Devenv-specific options
+  
+  # Additional devenv options
   languages.javascript.enable = true;
-  processes.web.exec = "bun dev";
 }
 ```
 

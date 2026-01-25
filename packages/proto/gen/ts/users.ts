@@ -28,6 +28,14 @@ export interface User {
      * @generated from protobuf field: optional string email = 3
      */
     email?: string; // Email address
+    /**
+     * @generated from protobuf field: repeated string public_keys = 4
+     */
+    public_keys: string[]; // SSH or AGE public keys for the user
+    /**
+     * @generated from protobuf field: repeated string secrets_allowed_environments = 5
+     */
+    secrets_allowed_environments: string[]; // Environments this user can access secrets for (e.g., dev, staging, production)
 }
 /**
  * Map of username to user configuration
@@ -48,12 +56,16 @@ class User$Type extends MessageType<User> {
         super("stackpanel.db.User", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "github", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "email", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "email", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "public_keys", kind: "scalar", localName: "public_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "secrets_allowed_environments", kind: "scalar", localName: "secrets_allowed_environments", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<User>): User {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
+        message.public_keys = [];
+        message.secrets_allowed_environments = [];
         if (value !== undefined)
             reflectionMergePartial<User>(this, message, value);
         return message;
@@ -71,6 +83,12 @@ class User$Type extends MessageType<User> {
                     break;
                 case /* optional string email */ 3:
                     message.email = reader.string();
+                    break;
+                case /* repeated string public_keys */ 4:
+                    message.public_keys.push(reader.string());
+                    break;
+                case /* repeated string secrets_allowed_environments */ 5:
+                    message.secrets_allowed_environments.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -93,6 +111,12 @@ class User$Type extends MessageType<User> {
         /* optional string email = 3; */
         if (message.email !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.email);
+        /* repeated string public_keys = 4; */
+        for (let i = 0; i < message.public_keys.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.public_keys[i]);
+        /* repeated string secrets_allowed_environments = 5; */
+        for (let i = 0; i < message.secrets_allowed_environments.length; i++)
+            writer.tag(5, WireType.LengthDelimited).string(message.secrets_allowed_environments[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

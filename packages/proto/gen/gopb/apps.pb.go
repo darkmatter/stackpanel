@@ -21,71 +21,17 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Type of environment variable
-type AppVariableType int32
-
-const (
-	AppVariableType_APP_VARIABLE_TYPE_UNSPECIFIED AppVariableType = 0
-	AppVariableType_APP_VARIABLE_TYPE_LITERAL     AppVariableType = 1
-	AppVariableType_APP_VARIABLE_TYPE_VARIABLE    AppVariableType = 2
-	AppVariableType_APP_VARIABLE_TYPE_VALS        AppVariableType = 3
-)
-
-// Enum value maps for AppVariableType.
-var (
-	AppVariableType_name = map[int32]string{
-		0: "APP_VARIABLE_TYPE_UNSPECIFIED",
-		1: "APP_VARIABLE_TYPE_LITERAL",
-		2: "APP_VARIABLE_TYPE_VARIABLE",
-		3: "APP_VARIABLE_TYPE_VALS",
-	}
-	AppVariableType_value = map[string]int32{
-		"APP_VARIABLE_TYPE_UNSPECIFIED": 0,
-		"APP_VARIABLE_TYPE_LITERAL":     1,
-		"APP_VARIABLE_TYPE_VARIABLE":    2,
-		"APP_VARIABLE_TYPE_VALS":        3,
-	}
-)
-
-func (x AppVariableType) Enum() *AppVariableType {
-	p := new(AppVariableType)
-	*p = x
-	return p
-}
-
-func (x AppVariableType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (AppVariableType) Descriptor() protoreflect.EnumDescriptor {
-	return file_apps_proto_enumTypes[0].Descriptor()
-}
-
-func (AppVariableType) Type() protoreflect.EnumType {
-	return &file_apps_proto_enumTypes[0]
-}
-
-func (x AppVariableType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use AppVariableType.Descriptor instead.
-func (AppVariableType) EnumDescriptor() ([]byte, []int) {
-	return file_apps_proto_rawDescGZIP(), []int{0}
-}
-
 // Configuration for a single application in the workspace
 type App struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Name          string                     `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                                           // Display name of the app
-	Description   *string                    `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                                       // Description of the app
-	Path          string                     `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                                                                                           // Relative path to the app directory
-	Type          *string                    `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`                                                                                     // App type/runtime (bun, go, python, rust, etc.)
-	Port          *int32                     `protobuf:"varint,5,opt,name=port,proto3,oneof" json:"port,omitempty"`                                                                                    // Development server port
-	Domain        *string                    `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`                                                                                 // Local development domain
-	Tasks         map[string]*AppTask        `protobuf:"bytes,7,rep,name=tasks,proto3" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`               // DEPRECATED: Use commands option. Legacy tasks (key = task name)
-	Variables     map[string]*AppVariable    `protobuf:"bytes,8,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`       // Environment variables (key = env var key)
-	Environments  map[string]*AppEnvironment `protobuf:"bytes,9,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environments associated with this app
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Display name of the app
+	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Description of the app
+	Path        string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                     // Relative path to the app directory
+	Type        *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`               // App type/runtime (bun, go, python, rust, etc.)
+	Port        *int32                 `protobuf:"varint,5,opt,name=port,proto3,oneof" json:"port,omitempty"`              // Development server port
+	Domain      *string                `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`           // Local development domain
+	// Environment configurations (key = environment name like "dev", "prod").
+	Environments  map[string]*AppEnvironment `protobuf:"bytes,7,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -162,20 +108,6 @@ func (x *App) GetDomain() string {
 	return ""
 }
 
-func (x *App) GetTasks() map[string]*AppTask {
-	if x != nil {
-		return x.Tasks
-	}
-	return nil
-}
-
-func (x *App) GetVariables() map[string]*AppVariable {
-	if x != nil {
-		return x.Variables
-	}
-	return nil
-}
-
 func (x *App) GetEnvironments() map[string]*AppEnvironment {
 	if x != nil {
 		return x.Environments
@@ -185,17 +117,13 @@ func (x *App) GetEnvironments() map[string]*AppEnvironment {
 
 // Environment configuration (e.g., dev, staging, production)
 type AppEnvironment struct {
-	state       protoimpl.MessageState  `protogen:"open.v1"`
-	Name        string                  `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                                     // Name of the environment
-	Description *string                 `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                                 // (optional) Description of the environment
-	Variables   map[string]*AppVariable `protobuf:"bytes,3,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables (key = env var key)
-	// List of SOPS-encrypted source files for this environment (without .yaml extension).
-	// These files are decrypted and merged to provide secrets for the environment.
-	// Example: ["shared", "dev"] merges shared.yaml + dev.yaml
-	Sources []string `protobuf:"bytes,4,rep,name=sources,proto3" json:"sources,omitempty"`
-	// List of AGE/SSH public keys that can decrypt secrets for this environment.
-	// These keys are used when encrypting new secrets.
-	PublicKeys    []string `protobuf:"bytes,5,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Name of the environment
+	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // (optional) Description of the environment
+	// Environment variables for this environment.
+	// Key: Environment variable name (e.g., DATABASE_URL)
+	// Value: Literal string or vals reference (e.g., ref+sops://...)
+	Env           map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -244,163 +172,11 @@ func (x *AppEnvironment) GetDescription() string {
 	return ""
 }
 
-func (x *AppEnvironment) GetVariables() map[string]*AppVariable {
-	if x != nil {
-		return x.Variables
-	}
-	return nil
-}
-
-func (x *AppEnvironment) GetSources() []string {
-	if x != nil {
-		return x.Sources
-	}
-	return nil
-}
-
-func (x *AppEnvironment) GetPublicKeys() []string {
-	if x != nil {
-		return x.PublicKeys
-	}
-	return nil
-}
-
-// DEPRECATED: Use commands option instead. Shell command configuration.
-type AppTask struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Key           string                  `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                                                           // Corresponds to CMD in  `turbo task run CMD`
-	Description   *string                 `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`                                                     // (optional) Description of the command
-	Command       string                  `protobuf:"bytes,3,opt,name=command,proto3" json:"command,omitempty"`                                                                   // Command to run
-	Env           map[string]*AppVariable `protobuf:"bytes,4,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables to set
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AppTask) Reset() {
-	*x = AppTask{}
-	mi := &file_apps_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AppTask) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AppTask) ProtoMessage() {}
-
-func (x *AppTask) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AppTask.ProtoReflect.Descriptor instead.
-func (*AppTask) Descriptor() ([]byte, []int) {
-	return file_apps_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *AppTask) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *AppTask) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
-	}
-	return ""
-}
-
-func (x *AppTask) GetCommand() string {
-	if x != nil {
-		return x.Command
-	}
-	return ""
-}
-
-func (x *AppTask) GetEnv() map[string]*AppVariable {
+func (x *AppEnvironment) GetEnv() map[string]string {
 	if x != nil {
 		return x.Env
 	}
 	return nil
-}
-
-// Environment variable configuration
-type AppVariable struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                                       // Environment variable key
-	Type          AppVariableType        `protobuf:"varint,2,opt,name=type,proto3,enum=stackpanel.db.AppVariableType" json:"type,omitempty"` // Type of environment variable
-	VariableId    string                 `protobuf:"bytes,3,opt,name=variable_id,json=variableId,proto3" json:"variable_id,omitempty"`       // ID of the variable from variables.nix
-	Value         *string                `protobuf:"bytes,4,opt,name=value,proto3,oneof" json:"value,omitempty"`                             // Literal value (used when variable_id is empty)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AppVariable) Reset() {
-	*x = AppVariable{}
-	mi := &file_apps_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AppVariable) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AppVariable) ProtoMessage() {}
-
-func (x *AppVariable) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AppVariable.ProtoReflect.Descriptor instead.
-func (*AppVariable) Descriptor() ([]byte, []int) {
-	return file_apps_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *AppVariable) GetKey() string {
-	if x != nil {
-		return x.Key
-	}
-	return ""
-}
-
-func (x *AppVariable) GetType() AppVariableType {
-	if x != nil {
-		return x.Type
-	}
-	return AppVariableType_APP_VARIABLE_TYPE_UNSPECIFIED
-}
-
-func (x *AppVariable) GetVariableId() string {
-	if x != nil {
-		return x.VariableId
-	}
-	return ""
-}
-
-func (x *AppVariable) GetValue() string {
-	if x != nil && x.Value != nil {
-		return *x.Value
-	}
-	return ""
 }
 
 // Map of app identifier to app configuration
@@ -413,7 +189,7 @@ type Apps struct {
 
 func (x *Apps) Reset() {
 	*x = Apps{}
-	mi := &file_apps_proto_msgTypes[4]
+	mi := &file_apps_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +201,7 @@ func (x *Apps) String() string {
 func (*Apps) ProtoMessage() {}
 
 func (x *Apps) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_proto_msgTypes[4]
+	mi := &file_apps_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +214,7 @@ func (x *Apps) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Apps.ProtoReflect.Descriptor instead.
 func (*Apps) Descriptor() ([]byte, []int) {
-	return file_apps_proto_rawDescGZIP(), []int{4}
+	return file_apps_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Apps) GetApps() map[string]*App {
@@ -453,68 +229,35 @@ var File_apps_proto protoreflect.FileDescriptor
 const file_apps_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"apps.proto\x12\rstackpanel.db\"\x9c\x05\n" +
+	"apps.proto\x12\rstackpanel.db\"\xfa\x02\n" +
 	"\x03App\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x12\n" +
 	"\x04path\x18\x03 \x01(\tR\x04path\x12\x17\n" +
 	"\x04type\x18\x04 \x01(\tH\x01R\x04type\x88\x01\x01\x12\x17\n" +
 	"\x04port\x18\x05 \x01(\x05H\x02R\x04port\x88\x01\x01\x12\x1b\n" +
-	"\x06domain\x18\x06 \x01(\tH\x03R\x06domain\x88\x01\x01\x123\n" +
-	"\x05tasks\x18\a \x03(\v2\x1d.stackpanel.db.App.TasksEntryR\x05tasks\x12?\n" +
-	"\tvariables\x18\b \x03(\v2!.stackpanel.db.App.VariablesEntryR\tvariables\x12H\n" +
-	"\fenvironments\x18\t \x03(\v2$.stackpanel.db.App.EnvironmentsEntryR\fenvironments\x1aP\n" +
-	"\n" +
-	"TasksEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.stackpanel.db.AppTaskR\x05value:\x028\x01\x1aX\n" +
-	"\x0eVariablesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.AppVariableR\x05value:\x028\x01\x1a^\n" +
+	"\x06domain\x18\x06 \x01(\tH\x03R\x06domain\x88\x01\x01\x12H\n" +
+	"\fenvironments\x18\a \x03(\v2$.stackpanel.db.App.EnvironmentsEntryR\fenvironments\x1a^\n" +
 	"\x11EnvironmentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
 	"\x05value\x18\x02 \x01(\v2\x1d.stackpanel.db.AppEnvironmentR\x05value:\x028\x01B\x0e\n" +
 	"\f_descriptionB\a\n" +
 	"\x05_typeB\a\n" +
 	"\x05_portB\t\n" +
-	"\a_domain\"\xbc\x02\n" +
+	"\a_domain\"\xcd\x01\n" +
 	"\x0eAppEnvironment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
-	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12J\n" +
-	"\tvariables\x18\x03 \x03(\v2,.stackpanel.db.AppEnvironment.VariablesEntryR\tvariables\x12\x18\n" +
-	"\asources\x18\x04 \x03(\tR\asources\x12\x1f\n" +
-	"\vpublic_keys\x18\x05 \x03(\tR\n" +
-	"publicKeys\x1aX\n" +
-	"\x0eVariablesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.AppVariableR\x05value:\x028\x01B\x0e\n" +
-	"\f_description\"\xf3\x01\n" +
-	"\aAppTask\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12%\n" +
-	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x18\n" +
-	"\acommand\x18\x03 \x01(\tR\acommand\x121\n" +
-	"\x03env\x18\x04 \x03(\v2\x1f.stackpanel.db.AppTask.EnvEntryR\x03env\x1aR\n" +
+	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x128\n" +
+	"\x03env\x18\x03 \x03(\v2&.stackpanel.db.AppEnvironment.EnvEntryR\x03env\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.AppVariableR\x05value:\x028\x01B\x0e\n" +
-	"\f_description\"\x99\x01\n" +
-	"\vAppVariable\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x1e.stackpanel.db.AppVariableTypeR\x04type\x12\x1f\n" +
-	"\vvariable_id\x18\x03 \x01(\tR\n" +
-	"variableId\x12\x19\n" +
-	"\x05value\x18\x04 \x01(\tH\x00R\x05value\x88\x01\x01B\b\n" +
-	"\x06_value\"\x86\x01\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
+	"\f_description\"\x86\x01\n" +
 	"\x04Apps\x121\n" +
 	"\x04apps\x18\x01 \x03(\v2\x1d.stackpanel.db.Apps.AppsEntryR\x04apps\x1aK\n" +
 	"\tAppsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12(\n" +
-	"\x05value\x18\x02 \x01(\v2\x12.stackpanel.db.AppR\x05value:\x028\x01*\x8f\x01\n" +
-	"\x0fAppVariableType\x12!\n" +
-	"\x1dAPP_VARIABLE_TYPE_UNSPECIFIED\x10\x00\x12\x1d\n" +
-	"\x19APP_VARIABLE_TYPE_LITERAL\x10\x01\x12\x1e\n" +
-	"\x1aAPP_VARIABLE_TYPE_VARIABLE\x10\x02\x12\x1a\n" +
-	"\x16APP_VARIABLE_TYPE_VALS\x10\x03B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x05value\x18\x02 \x01(\v2\x12.stackpanel.db.AppR\x05value:\x028\x01B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_apps_proto_rawDescOnce sync.Once
@@ -528,41 +271,26 @@ func file_apps_proto_rawDescGZIP() []byte {
 	return file_apps_proto_rawDescData
 }
 
-var file_apps_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_apps_proto_goTypes = []any{
-	(AppVariableType)(0),   // 0: stackpanel.db.AppVariableType
-	(*App)(nil),            // 1: stackpanel.db.App
-	(*AppEnvironment)(nil), // 2: stackpanel.db.AppEnvironment
-	(*AppTask)(nil),        // 3: stackpanel.db.AppTask
-	(*AppVariable)(nil),    // 4: stackpanel.db.AppVariable
-	(*Apps)(nil),           // 5: stackpanel.db.Apps
-	nil,                    // 6: stackpanel.db.App.TasksEntry
-	nil,                    // 7: stackpanel.db.App.VariablesEntry
-	nil,                    // 8: stackpanel.db.App.EnvironmentsEntry
-	nil,                    // 9: stackpanel.db.AppEnvironment.VariablesEntry
-	nil,                    // 10: stackpanel.db.AppTask.EnvEntry
-	nil,                    // 11: stackpanel.db.Apps.AppsEntry
+	(*App)(nil),            // 0: stackpanel.db.App
+	(*AppEnvironment)(nil), // 1: stackpanel.db.AppEnvironment
+	(*Apps)(nil),           // 2: stackpanel.db.Apps
+	nil,                    // 3: stackpanel.db.App.EnvironmentsEntry
+	nil,                    // 4: stackpanel.db.AppEnvironment.EnvEntry
+	nil,                    // 5: stackpanel.db.Apps.AppsEntry
 }
 var file_apps_proto_depIdxs = []int32{
-	6,  // 0: stackpanel.db.App.tasks:type_name -> stackpanel.db.App.TasksEntry
-	7,  // 1: stackpanel.db.App.variables:type_name -> stackpanel.db.App.VariablesEntry
-	8,  // 2: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
-	9,  // 3: stackpanel.db.AppEnvironment.variables:type_name -> stackpanel.db.AppEnvironment.VariablesEntry
-	10, // 4: stackpanel.db.AppTask.env:type_name -> stackpanel.db.AppTask.EnvEntry
-	0,  // 5: stackpanel.db.AppVariable.type:type_name -> stackpanel.db.AppVariableType
-	11, // 6: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
-	3,  // 7: stackpanel.db.App.TasksEntry.value:type_name -> stackpanel.db.AppTask
-	4,  // 8: stackpanel.db.App.VariablesEntry.value:type_name -> stackpanel.db.AppVariable
-	2,  // 9: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
-	4,  // 10: stackpanel.db.AppEnvironment.VariablesEntry.value:type_name -> stackpanel.db.AppVariable
-	4,  // 11: stackpanel.db.AppTask.EnvEntry.value:type_name -> stackpanel.db.AppVariable
-	1,  // 12: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	3, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
+	4, // 1: stackpanel.db.AppEnvironment.env:type_name -> stackpanel.db.AppEnvironment.EnvEntry
+	5, // 2: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
+	1, // 3: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
+	0, // 4: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_apps_proto_init() }
@@ -572,21 +300,18 @@ func file_apps_proto_init() {
 	}
 	file_apps_proto_msgTypes[0].OneofWrappers = []any{}
 	file_apps_proto_msgTypes[1].OneofWrappers = []any{}
-	file_apps_proto_msgTypes[2].OneofWrappers = []any{}
-	file_apps_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_apps_proto_rawDesc), len(file_apps_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   11,
+			NumEnums:      0,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_apps_proto_goTypes,
 		DependencyIndexes: file_apps_proto_depIdxs,
-		EnumInfos:         file_apps_proto_enumTypes,
 		MessageInfos:      file_apps_proto_msgTypes,
 	}.Build()
 	File_apps_proto = out.File

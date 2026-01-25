@@ -891,7 +891,7 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
     initialContributor ?? null,
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [exportCopied, setExportCopied] = useState(false);
+  const [_exportCopied, setExportCopied] = useState(false);
 
   const displayData = useMemo(() => {
     if (!data) return null;
@@ -899,7 +899,7 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
     return filterInspectorDataByContributor(data, selectedContributor);
   }, [data, selectedContributor]);
 
-  const activeContributor =
+  const _activeContributor =
     contributors.find((c) => c.id === selectedContributor) ?? null;
   const inspectorData = displayData;
 
@@ -912,7 +912,7 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
     }
   };
 
-  const handleExport = () => {
+  const _handleExport = () => {
     const exportSource = displayData ?? data;
     if (!exportSource) return;
     const exportData = {

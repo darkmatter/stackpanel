@@ -276,6 +276,7 @@
       "name": "@stackpanel/env",
       "dependencies": {
         "@stackpanel/config": "workspace:*",
+        "yaml": "^2.7.0",
         "znv": "workspace:*",
         "zod": "catalog:",
       },

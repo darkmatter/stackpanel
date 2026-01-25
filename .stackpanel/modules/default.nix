@@ -23,10 +23,16 @@
   pkgs,
   ...
 }:
+let
+  # Import generated process-compose config if it exists
+  # This allows the web UI to generate config that takes effect on rebuild
+  genProcessComposePath = ../gen/process-compose.nix;
+  hasGeneratedProcessCompose = builtins.pathExists genProcessComposePath;
+in
 {
   imports = [
     ./generate-docs.nix
-  ];
+  ] ++ lib.optionals hasGeneratedProcessCompose [ genProcessComposePath ];
 
   # Example: Add config using module features
   # config = lib.mkIf config.stackpanel.enable {

@@ -21,7 +21,7 @@ const statusColors = {
 	error: "text-destructive",
 } as const;
 
-export function StatusPanel({ extension, metrics }: StatusPanelProps) {
+export function StatusPanel({ extension, metrics }: StatusPanelProps & { allApps?: Record<string, unknown> }) {
 	if (!metrics || metrics.length === 0) {
 		return (
 			<Card>

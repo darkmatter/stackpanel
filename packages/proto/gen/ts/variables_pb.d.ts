@@ -2,7 +2,7 @@
 // @generated from file variables.proto (package stackpanel.db, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
@@ -11,104 +11,42 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_variables: GenFile;
 
 /**
- * Configuration for a single variable in the workspace
+ * A workspace variable (secret, literal, or vals reference)
  *
  * @generated from message stackpanel.db.Variable
  */
 export declare type Variable = Message<"stackpanel.db.Variable"> & {
   /**
    *
-   * Globally unique identifier for the variable. Recommended format:
-   * `/path/based/variable-name` for organization (e.g., `/prod/postgres-url`).
+   * Path-based identifier. Format: /<keygroup>/<VARNAME>
+   *
+   * Examples:
+   *   /dev/DATABASE_URL      → Secret in dev.yaml
+   *   /prod/API_KEY          → Secret in prod.yaml
+   *   /computed/apps/web/port → Computed by Nix module
    *
    *
-   * @generated from field: string id = 1;
+   * @generated from field: optional string id = 1;
    */
-  id: string;
+  id?: string;
 
   /**
    *
-   * Environment variable name when passing to apps (e.g., POSTGRES_URL).
+   * The value - either a literal string or a vals reference.
+   *
+   * Literals:
+   *   "postgresql://localhost:5432/dev"
+   *   "3000"
+   *
+   * Vals references:
+   *   "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+   *   "ref+awsssm://prod/api-key"
+   *   "ref+exec://echo $RANDOM"
    *
    *
-   * @generated from field: string key = 2;
-   */
-  key: string;
-
-  /**
-   * Description of the variable
-   *
-   * @generated from field: optional string description = 3;
-   */
-  description?: string;
-
-  /**
-   * How the variable value is resolved
-   *
-   * @generated from field: stackpanel.db.VariableType type = 4;
-   */
-  type: VariableType;
-
-  /**
-   *
-   * The value field meaning depends on type:
-   * - LITERAL: The actual value (embedded directly)
-   * - SECRET: Empty (value lives in encrypted .age file)
-   * - VALS: A vals-compatible reference (e.g., ref+awsssm://path/to/param)
-   * - EXEC: Shell command to execute (stdout becomes the value)
-   *
-   *
-   * @generated from field: string value = 5;
+   * @generated from field: string value = 2;
    */
   value: string;
-
-  /**
-   *
-   * Master keys that can decrypt this secret. Only used when type=SECRET.
-   * The .age file is encrypted to ALL listed master keys.
-   * Default: ["local"] (auto-generated local key).
-   * Example: ["dev", "prod"] for team-accessible secrets.
-   *
-   *
-   * @generated from field: repeated string masterKeys = 6;
-   */
-  masterKeys: string[];
-
-  /**
-   *
-   * List of module names that require this variable (e.g., ["sst", "ci"]).
-   *
-   *
-   * @generated from field: repeated string requiredBy = 7;
-   */
-  requiredBy: string[];
-
-  /**
-   *
-   * Module name that provides/creates this variable.
-   *
-   *
-   * @generated from field: optional string providedBy = 8;
-   */
-  providedBy?: string;
-
-  /**
-   *
-   * Bootstrap level (0 = always available, 1+ = requires dependencies).
-   *
-   *
-   * @generated from field: optional int32 level = 9;
-   */
-  level?: number;
-
-  /**
-   *
-   * Action to resolve this variable if missing.
-   *
-   *
-   * @generated from field: optional stackpanel.db.VariableAction action = 10;
-   */
-  action?: VariableAction;
 };
 
 /**
@@ -118,56 +56,16 @@ export declare type Variable = Message<"stackpanel.db.Variable"> & {
 export declare const VariableSchema: GenMessage<Variable>;
 
 /**
- * Action to resolve a missing variable
- *
- * @generated from message stackpanel.db.VariableAction
- */
-export declare type VariableAction = Message<"stackpanel.db.VariableAction"> & {
-  /**
-   *
-   * Type of action: "add-secret", "add-variable", "configure", "external"
-   *
-   *
-   * @generated from field: string type = 1;
-   */
-  type: string;
-
-  /**
-   * Button/link label for the action
-   *
-   * @generated from field: optional string label = 2;
-   */
-  label?: string;
-
-  /**
-   * External URL (e.g., link to create API token)
-   *
-   * @generated from field: optional string url = 3;
-   */
-  url?: string;
-
-  /**
-   * Secret key name if type=add-secret
-   *
-   * @generated from field: optional string secretKey = 4;
-   */
-  secretKey?: string;
-};
-
-/**
- * Describes the message stackpanel.db.VariableAction.
- * Use `create(VariableActionSchema)` to create a new message.
- */
-export declare const VariableActionSchema: GenMessage<VariableAction>;
-
-/**
- * Map of variable identifier to variable configuration
+ * Map of variable ID to Variable
  *
  * @generated from message stackpanel.db.Variables
  */
 export declare type Variables = Message<"stackpanel.db.Variables"> & {
   /**
-   * Map of variable ID to variable config
+   *
+   * Map of variable ID to Variable object.
+   * Each Variable contains at minimum a value field.
+   *
    *
    * @generated from field: map<string, stackpanel.db.Variable> variables = 1;
    */
@@ -179,34 +77,4 @@ export declare type Variables = Message<"stackpanel.db.Variables"> & {
  * Use `create(VariablesSchema)` to create a new message.
  */
 export declare const VariablesSchema: GenMessage<Variables>;
-
-/**
- * @generated from enum stackpanel.db.VariableType
- */
-export enum VariableType {
-  /**
-   * @generated from enum value: LITERAL = 0;
-   */
-  LITERAL = 0,
-
-  /**
-   * @generated from enum value: SECRET = 1;
-   */
-  SECRET = 1,
-
-  /**
-   * @generated from enum value: VALS = 2;
-   */
-  VALS = 2,
-
-  /**
-   * @generated from enum value: EXEC = 3;
-   */
-  EXEC = 3,
-}
-
-/**
- * Describes the enum stackpanel.db.VariableType.
- */
-export declare const VariableTypeSchema: GenEnum<VariableType>;
 

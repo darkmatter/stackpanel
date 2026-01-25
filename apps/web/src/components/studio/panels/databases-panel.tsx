@@ -23,7 +23,7 @@ export function DatabasesPanel() {
 		workflowStatus,
 		handleProvision,
 		handleDialogClose,
-		handleRetry,
+		handleRetry: _handleRetry,
 	} = useDatabases();
 
 	return (

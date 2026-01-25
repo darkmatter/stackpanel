@@ -1,6 +1,5 @@
 "use client";
 
-import { VariableType } from "@stackpanel/proto";
 import { Button } from "@ui/button";
 import {
 	Dialog,
@@ -10,50 +9,70 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@ui/dialog";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Textarea } from "@ui/textarea";
 import { Loader2, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import type { Variable } from "@/lib/types";
-import { type VariableForm, VariableFormFields } from "./variable-form-fields";
+import { isSopsReference } from "./constants";
 
 interface AddVariableDialogProps {
 	onSuccess: () => void;
 }
 
+/**
+ * Dialog to add a new variable.
+ * 
+ * With the simplified schema:
+ * - id: Path-based identifier like /dev/DATABASE_URL or /var/LOG_LEVEL
+ * - value: Literal string or vals reference (ref+sops://...)
+ * 
+ * For secrets, use ref+sops:// format pointing to the SOPS file.
+ */
 export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 	const { token } = useAgentContext();
 	const agentClient = useAgentClient();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
-	const formRef = useRef<VariableForm | null>(null);
+	
+	// Form state
+	const [varId, setVarId] = useState("");
+	const [varValue, setVarValue] = useState("");
 
 	const handleOpenChange = (open: boolean) => {
 		setDialogOpen(open);
 		if (!open) {
 			// Reset form when closing
-			formRef.current?.reset();
+			setVarId("");
+			setVarValue("");
 		}
 	};
 
 	const handleSubmit = async () => {
-		if (!formRef.current || !token) {
-			toast.error(!token ? "Not connected to agent" : "Form not ready");
+		if (!token) {
+			toast.error("Not connected to agent");
 			return;
 		}
 
-		const values = formRef.current.getValues();
-
 		// Validate required fields
-		if (!values.id?.trim()) {
+		const trimmedId = varId.trim();
+		const trimmedValue = varValue.trim();
+
+		if (!trimmedId) {
 			toast.error("Please enter a variable ID");
 			return;
 		}
 
-		if (!values.value?.trim()) {
+		if (!trimmedValue) {
 			toast.error("Please enter a variable value");
 			return;
 		}
+
+		// Ensure ID starts with /
+		const normalizedId = trimmedId.startsWith("/") ? trimmedId : `/${trimmedId}`;
 
 		setIsSaving(true);
 		try {
@@ -61,52 +80,23 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 			if (token) client.setToken(token);
 			const variablesClient = client.nix.mapEntity<Variable>("variables");
 
-			console.log("[AddVariable] Checking if variable exists:", values.id);
-			console.log("[AddVariable] Form values:", values);
-			console.log(
-				"[AddVariable] VariableType.SECRET =",
-				VariableType.SECRET,
-				"values.type =",
-				values.type,
-			);
-
-			const existing = await variablesClient.get(values.id);
-			const exists = Boolean(existing);
-			console.log("[AddVariable] Variable exists:", exists);
-
-			if (exists) {
-				toast.error(`Variable "${values.id}" already exists`);
+			const existing = await variablesClient.get(normalizedId);
+			if (existing) {
+				toast.error(`Variable "${normalizedId}" already exists`);
 				setIsSaving(false);
 				return;
 			}
 
-			// Check if this is a SECRET type - needs agenix encryption
-			const isSecret = values.type === VariableType.SECRET;
-			console.log("[AddVariable] isSecret:", isSecret);
+			// With simplified schema, Variable just has id and value
+			const newVariable: Variable = {
+				id: normalizedId,
+				value: trimmedValue,
+			};
 
-			if (isSecret) {
-				// Use the agenix endpoint to encrypt and write the secret
-				console.log("[AddVariable] Creating secret via agenix...");
-				const result = await agentClient.writeAgenixSecret({
-					id: values.id,
-					key: values.key || values.id,
-					value: values.value,
-					description: values.description || undefined,
-				});
-				console.log("[AddVariable] Secret created:", result);
-				toast.success(`Created secret "${values.id}" (encrypted with age)`);
-			} else {
-				// Regular variable - write directly to variables.nix
-				const newVariable: Variable = {
-					key: values.key || values.id,
-					description: values.description || "",
-					type: values.type,
-					value: values.value,
-				};
-
-				await variablesClient.set(values.id, newVariable);
-				toast.success(`Created variable "${values.id}"`);
-			}
+			await variablesClient.set(normalizedId, newVariable);
+			
+			const isSecret = isSopsReference(trimmedValue);
+			toast.success(`Created ${isSecret ? "secret" : "variable"} "${normalizedId}"`);
 
 			handleOpenChange(false);
 			onSuccess();
@@ -131,20 +121,40 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 				<Plus className="h-3 w-3 text-blue-500" />
 				<span className="font-medium">Add Variable</span>
 			</button>
-			<DialogContent className="sm:max-w-4xl">
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>Add New Variable</DialogTitle>
 					<DialogDescription>
-						Create a new environment variable that can be linked to apps.
+						Create a new environment variable. Use /dev/, /prod/, or /var/ prefixes.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="py-4">
-					<VariableFormFields
-						showIdField
-						onFormReady={(form) => {
-							formRef.current = form;
-						}}
-					/>
+				<div className="py-4 space-y-4">
+					<div className="space-y-2">
+						<Label htmlFor="var-id">Variable ID *</Label>
+						<Input
+							id="var-id"
+							value={varId}
+							onChange={(e) => setVarId(e.target.value)}
+							placeholder="/dev/DATABASE_URL or /var/LOG_LEVEL"
+							className="font-mono"
+						/>
+						<p className="text-xs text-muted-foreground">
+							Path-based ID. Keygroups: /var/ (plaintext), /dev/, /staging/, /prod/ (secrets)
+						</p>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="var-value">Value *</Label>
+						<Textarea
+							id="var-value"
+							value={varValue}
+							onChange={(e) => setVarValue(e.target.value)}
+							placeholder="literal value or ref+sops://..."
+							className="font-mono min-h-[80px]"
+						/>
+						<p className="text-xs text-muted-foreground">
+							Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)
+						</p>
+					</div>
 				</div>
 				<DialogFooter>
 					<Button variant="outline" onClick={() => handleOpenChange(false)}>
@@ -152,7 +162,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 					</Button>
 					<Button
 						onClick={handleSubmit}
-						disabled={isSaving}
+						disabled={isSaving || !varId.trim() || !varValue.trim()}
 						className="bg-accent text-accent-foreground hover:bg-accent/90"
 					>
 						{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

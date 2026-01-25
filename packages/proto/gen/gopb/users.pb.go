@@ -23,12 +23,14 @@ const (
 
 // A team member with access to the project
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`           // Display name of the user
-	Github        *string                `protobuf:"bytes,2,opt,name=github,proto3,oneof" json:"github,omitempty"` // GitHub username
-	Email         *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`   // Email address
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	Name                       string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                                                                 // Display name of the user
+	Github                     *string                `protobuf:"bytes,2,opt,name=github,proto3,oneof" json:"github,omitempty"`                                                                       // GitHub username
+	Email                      *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`                                                                         // Email address
+	PublicKeys                 []string               `protobuf:"bytes,4,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`                                                   // SSH or AGE public keys for the user
+	SecretsAllowedEnvironments []string               `protobuf:"bytes,5,rep,name=secrets_allowed_environments,json=secretsAllowedEnvironments,proto3" json:"secrets_allowed_environments,omitempty"` // Environments this user can access secrets for (e.g., dev, staging, production)
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -82,6 +84,20 @@ func (x *User) GetEmail() string {
 	return ""
 }
 
+func (x *User) GetPublicKeys() []string {
+	if x != nil {
+		return x.PublicKeys
+	}
+	return nil
+}
+
+func (x *User) GetSecretsAllowedEnvironments() []string {
+	if x != nil {
+		return x.SecretsAllowedEnvironments
+	}
+	return nil
+}
+
 // Map of username to user configuration
 type Users struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -131,11 +147,14 @@ var File_users_proto protoreflect.FileDescriptor
 
 const file_users_proto_rawDesc = "" +
 	"\n" +
-	"\vusers.proto\x12\rstackpanel.db\"g\n" +
+	"\vusers.proto\x12\rstackpanel.db\"\xca\x01\n" +
 	"\x04User\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\x06github\x18\x02 \x01(\tH\x00R\x06github\x88\x01\x01\x12\x19\n" +
-	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01B\t\n" +
+	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1f\n" +
+	"\vpublic_keys\x18\x04 \x03(\tR\n" +
+	"publicKeys\x12@\n" +
+	"\x1csecrets_allowed_environments\x18\x05 \x03(\tR\x1asecretsAllowedEnvironmentsB\t\n" +
 	"\a_githubB\b\n" +
 	"\x06_email\"\x8d\x01\n" +
 	"\x05Users\x125\n" +

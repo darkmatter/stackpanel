@@ -46,6 +46,7 @@ service AgentService {
   // Modules - module configuration management
   rpc GetModules(GetModulesRequest) returns (stackpanel.db.Modules);
   rpc GetModule(GetModuleRequest) returns (stackpanel.db.Module);
+  rpc GetModuleOutputs(stackpanel.db.GetModuleOutputsRequest) returns (stackpanel.db.ModuleOutputs);
   rpc EnableModule(stackpanel.db.EnableModuleRequest) returns (stackpanel.db.ModuleResponse);
   rpc DisableModule(stackpanel.db.DisableModuleRequest) returns (stackpanel.db.ModuleResponse);
   rpc UpdateModuleSettings(stackpanel.db.UpdateModuleSettingsRequest) returns (stackpanel.db.ModuleResponse);

@@ -43,6 +43,8 @@ proto.mkProtoFile {
         name = proto.string 1 "Display name of the user";
         github = proto.optional (proto.string 2 "GitHub username");
         email = proto.optional (proto.string 3 "Email address");
+        public-keys = proto.repeated (proto.string 4 "SSH or AGE public keys for the user");
+        secrets-allowed-environments = proto.repeated (proto.string 5 "Environments this user can access secrets for (e.g., dev, staging, production)");
       };
     };
 

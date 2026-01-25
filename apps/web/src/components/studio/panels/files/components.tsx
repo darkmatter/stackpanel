@@ -17,7 +17,7 @@ import { useState } from "react";
 import { FileType } from "@stackpanel/proto";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
-import type { GeneratedFileWithStatus } from "@/lib/types";
+// GeneratedFileWithStatus type from @/lib/types used in ./types
 import type {
 	FileRowProps,
 	SourceGroupProps,

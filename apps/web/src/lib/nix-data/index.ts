@@ -6,52 +6,85 @@
  *
  * IMPORTANT: For map entities (like variables, apps, services), we only transform
  * the field names within each value object, NOT the map keys (IDs) themselves.
- * Map keys (like variable IDs) should be preserved exactly as-is.
+ * Map keys (like variable IDs, environment names, env var names) should be preserved exactly as-is.
  */
 
 // Re-export proto types for convenience
 export type * from "@stackpanel/proto";
 
 /**
- * Convert snake_case keys to kebab-case (for writing to Nix)
- * This transforms ALL keys recursively - use snakeToKebabValues for maps.
+ * Fields that are maps with user-defined keys that should NOT be transformed.
+ * When the parent key matches one of these, child keys are preserved as-is.
+ * This must match the Go agent's mapFieldNames() in json_transform.go.
  */
-export function snakeToKebab<T>(obj: T): T {
+const MAP_FIELD_NAMES = new Set([
+	"aliases",
+	"apps",
+	"categories",
+	"codegen",
+	"collaborators",
+	"commands",
+	"databases",
+	"env",
+	"environments",
+	"entries",
+	"extensions",
+	"masterKeys",
+	"modules",
+	"outputs",
+	"scripts",
+	"sites",
+	"steps",
+	"tasks",
+	"users",
+	"variables",
+	"zones",
+]);
+
+/**
+ * Convert snake_case keys to kebab-case (for writing to Nix).
+ * Preserves keys in map fields (like variables, environments) where keys are user data.
+ */
+export function snakeToKebab<T>(obj: T, parentKey = ""): T {
 	if (Array.isArray(obj)) {
-		return obj.map(snakeToKebab) as T;
+		return obj.map((item) => snakeToKebab(item, parentKey)) as T;
 	}
 	if (obj !== null && typeof obj === "object") {
+		const skipKeyTransform = MAP_FIELD_NAMES.has(parentKey);
 		return Object.fromEntries(
-			Object.entries(obj).map(([k, v]) => [
-				k.replace(/_/g, "-"),
-				snakeToKebab(v),
-			]),
+			Object.entries(obj).map(([k, v]) => {
+				// If parent is a map field, preserve this key as-is
+				const newKey = skipKeyTransform ? k : k.replace(/_/g, "-");
+				return [newKey, snakeToKebab(v, newKey)];
+			}),
 		) as T;
 	}
 	return obj;
 }
 
 /**
- * Convert kebab-case keys to snake_case (for reading from Nix)
- * This transforms ALL keys recursively - use kebabToSnakeValues for maps.
+ * Convert kebab-case keys to snake_case (for reading from Nix).
+ * Preserves keys in map fields (like variables, environments) where keys are user data.
  */
-export function kebabToSnake<T>(obj: T): T {
+export function kebabToSnake<T>(obj: T, parentKey = ""): T {
 	if (Array.isArray(obj)) {
-		return obj.map(kebabToSnake) as T;
+		return obj.map((item) => kebabToSnake(item, parentKey)) as T;
 	}
 	if (obj !== null && typeof obj === "object") {
+		const skipKeyTransform = MAP_FIELD_NAMES.has(parentKey);
 		return Object.fromEntries(
-			Object.entries(obj).map(([k, v]) => [
-				k.replace(/-/g, "_"),
-				kebabToSnake(v),
-			]),
+			Object.entries(obj).map(([k, v]) => {
+				// If parent is a map field, preserve this key as-is
+				const newKey = skipKeyTransform ? k : k.replace(/-/g, "_");
+				return [newKey, kebabToSnake(v, newKey)];
+			}),
 		) as T;
 	}
 	return obj;
 }
 
 /**
- * Convert snake_case to kebab-case for map VALUES only, preserving keys.
+ * Convert snake_case to kebab-case for map VALUES only, preserving top-level keys.
  * Use this for map entities like variables, apps, services where the keys
  * are user-defined IDs that should not be transformed.
  */
@@ -64,13 +97,13 @@ export function snakeToKebabValues<V>(
 	return Object.fromEntries(
 		Object.entries(obj).map(([key, value]) => [
 			key, // Preserve the key as-is
-			snakeToKebab(value), // Transform field names within the value
+			snakeToKebab(value, key), // Transform field names within the value
 		]),
 	) as Record<string, V>;
 }
 
 /**
- * Convert kebab-case to snake_case for map VALUES only, preserving keys.
+ * Convert kebab-case to snake_case for map VALUES only, preserving top-level keys.
  * Use this for map entities like variables, apps, services where the keys
  * are user-defined IDs that should not be transformed.
  */
@@ -83,7 +116,7 @@ export function kebabToSnakeValues<V>(
 	return Object.fromEntries(
 		Object.entries(obj).map(([key, value]) => [
 			key, // Preserve the key as-is
-			kebabToSnake(value), // Transform field names within the value
+			kebabToSnake(value, key), // Transform field names within the value
 		]),
 	) as Record<string, V>;
 }

@@ -187,5 +187,25 @@ in
       path = ./templates/devenv;
       description = "Stackpanel + devenv standalone (devenv.yaml)";
     };
+
+    # =========================================================================
+    # Test Fixtures (for module authors and CI testing)
+    # =========================================================================
+    test-basic = {
+      path = ./templates/_test-fixtures/basic;
+      description = "Test fixture: minimal config, no apps";
+    };
+    test-with-oxlint = {
+      path = ./templates/_test-fixtures/with-oxlint;
+      description = "Test fixture: OxLint module enabled";
+    };
+    test-full-stack = {
+      path = ./templates/_test-fixtures/full-stack;
+      description = "Test fixture: all features (multiple apps, modules)";
+    };
+    test-external-module = {
+      path = ./templates/_test-fixtures/external-module;
+      description = "Test fixture: for testing external modules";
+    };
   };
 }

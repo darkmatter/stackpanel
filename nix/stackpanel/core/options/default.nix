@@ -25,6 +25,7 @@
     ./aws.nix
     ./binary-cache.nix
     ./caddy.nix
+    ./checks.nix
     ./ci.nix
     ./cli.nix
     ./codegen.nix

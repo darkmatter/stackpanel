@@ -109,6 +109,8 @@ export interface NixpkgsPackage {
   homepage?: string;
   platforms?: string[];
   outputs?: string[];
+  /** Whether this package is installed in the current devshell */
+  installed?: boolean;
 }
 
 export interface NixpkgsSearchRequest {

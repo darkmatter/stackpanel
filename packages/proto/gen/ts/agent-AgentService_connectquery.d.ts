@@ -71,6 +71,10 @@ export const getModules: typeof AgentService["method"]["getModules"];
  */
 export const getModule: typeof AgentService["method"]["getModule"];
 /**
+ * @generated from rpc stackpanel.agent.AgentService.GetModuleOutputs
+ */
+export const getModuleOutputs: typeof AgentService["method"]["getModuleOutputs"];
+/**
  * @generated from rpc stackpanel.agent.AgentService.EnableModule
  */
 export const enableModule: typeof AgentService["method"]["enableModule"];
