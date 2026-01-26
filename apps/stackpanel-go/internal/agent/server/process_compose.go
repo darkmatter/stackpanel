@@ -3,8 +3,12 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 )
 
 // ProcessInfo represents information about a running process from process-compose.
@@ -24,56 +28,49 @@ type ProcessComposeStatusResponse struct {
 	Available bool          `json:"available"`
 	Running   bool          `json:"running"`
 	Processes []ProcessInfo `json:"processes"`
+	Port      int           `json:"port,omitempty"`
 	Error     string        `json:"error,omitempty"`
 }
 
+// getProcessComposePort returns the port for the process-compose API.
+// Reads from PC_PORT_NUM environment variable, defaults to 8080.
+func getProcessComposePort() string {
+	port := os.Getenv("PC_PORT_NUM")
+	if port == "" {
+		port = "8080"
+	}
+	return port
+}
+
 // handleProcessComposeProcesses returns the list of processes and their status.
+// Uses the process-compose HTTP API instead of the CLI for better performance.
 func (s *Server) handleProcessComposeProcesses(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 
+	port := getProcessComposePort()
 	response := ProcessComposeStatusResponse{
 		Available: false,
 		Running:   false,
 		Processes: []ProcessInfo{},
 	}
 
-	// Check if process-compose is available
-	whichRes, err := s.exec.Run("which", "process-compose")
-	if err != nil || whichRes.ExitCode != 0 {
-		response.Error = "process-compose not found in PATH"
-		s.writeJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"data":    response,
-		})
-		return
+	// Try to fetch from the process-compose HTTP API
+	client := &http.Client{
+		Timeout: 2 * time.Second,
 	}
 
-	response.Available = true
-
-	// Try to get process list from process-compose
-	// Using -j flag for JSON output
-	res, err := s.exec.Run("process-compose", "process", "list", "-j")
+	apiURL := fmt.Sprintf("http://localhost:%s/processes", port)
+	resp, err := client.Get(apiURL)
 	if err != nil {
-		response.Error = err.Error()
-		s.writeJSON(w, http.StatusOK, map[string]interface{}{
-			"success": true,
-			"data":    response,
-		})
-		return
-	}
-
-	// process-compose returns exit code 1 if no processes are running
-	if res.ExitCode != 0 {
-		// Check if it's because process-compose server isn't running
-		if strings.Contains(res.Stderr, "connection refused") ||
-			strings.Contains(res.Stderr, "dial") ||
-			strings.Contains(res.Stderr, "connect") {
+		// Connection failed - process-compose server not running
+		if strings.Contains(err.Error(), "connection refused") ||
+			strings.Contains(err.Error(), "dial") {
 			response.Error = "process-compose server not running"
 		} else {
-			response.Error = strings.TrimSpace(res.Stderr)
+			response.Error = fmt.Sprintf("failed to connect to process-compose API: %v", err)
 		}
 		s.writeJSON(w, http.StatusOK, map[string]interface{}{
 			"success": true,
@@ -81,9 +78,32 @@ func (s *Server) handleProcessComposeProcesses(w http.ResponseWriter, r *http.Re
 		})
 		return
 	}
+	defer resp.Body.Close()
 
-	// Parse the JSON output
-	// process-compose outputs a JSON object with a "data" array
+	response.Available = true
+
+	if resp.StatusCode != http.StatusOK {
+		response.Error = fmt.Sprintf("process-compose API returned status %d", resp.StatusCode)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data":    response,
+		})
+		return
+	}
+
+	// Read and parse the response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		response.Error = fmt.Sprintf("failed to read process-compose response: %v", err)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data":    response,
+		})
+		return
+	}
+
+	// Parse the JSON output from process-compose API
+	// The API returns: { "data": [...processes...] }
 	var pcOutput struct {
 		Data []struct {
 			Name       string `json:"name"`
@@ -91,61 +111,37 @@ func (s *Server) handleProcessComposeProcesses(w http.ResponseWriter, r *http.Re
 			Status     string `json:"status"`
 			PID        int    `json:"pid"`
 			ExitCode   int    `json:"exit_code"`
+			IsRunning  bool   `json:"is_running"`
 			Restarts   int    `json:"restarts"`
 			SystemTime string `json:"system_time"`
 		} `json:"data"`
 	}
 
-	if err := json.Unmarshal([]byte(res.Stdout), &pcOutput); err != nil {
-		// Try parsing as a plain array (some versions output differently)
-		var processes []struct {
-			Name       string `json:"name"`
-			Namespace  string `json:"namespace"`
-			Status     string `json:"status"`
-			PID        int    `json:"pid"`
-			ExitCode   int    `json:"exit_code"`
-			Restarts   int    `json:"restarts"`
-			SystemTime string `json:"system_time"`
-		}
-		if err := json.Unmarshal([]byte(res.Stdout), &processes); err != nil {
-			response.Error = "failed to parse process-compose output"
-			s.writeJSON(w, http.StatusOK, map[string]interface{}{
-				"success": true,
-				"data":    response,
-			})
-			return
-		}
-		// Convert to our format
-		for _, p := range processes {
-			response.Processes = append(response.Processes, ProcessInfo{
-				Name:       p.Name,
-				Namespace:  p.Namespace,
-				Status:     p.Status,
-				PID:        p.PID,
-				ExitCode:   p.ExitCode,
-				IsRunning:  isProcessRunning(p.Status),
-				Restarts:   p.Restarts,
-				SystemTime: p.SystemTime,
-			})
-		}
-	} else {
-		// Convert from wrapped format
-		for _, p := range pcOutput.Data {
-			response.Processes = append(response.Processes, ProcessInfo{
-				Name:       p.Name,
-				Namespace:  p.Namespace,
-				Status:     p.Status,
-				PID:        p.PID,
-				ExitCode:   p.ExitCode,
-				IsRunning:  isProcessRunning(p.Status),
-				Restarts:   p.Restarts,
-				SystemTime: p.SystemTime,
-			})
-		}
+	if err := json.Unmarshal(body, &pcOutput); err != nil {
+		response.Error = fmt.Sprintf("failed to parse process-compose response: %v", err)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data":    response,
+		})
+		return
 	}
 
-	// If we got processes, process-compose is running
-	response.Running = len(response.Processes) > 0 || res.ExitCode == 0
+	// Convert to our format
+	for _, p := range pcOutput.Data {
+		response.Processes = append(response.Processes, ProcessInfo{
+			Name:       p.Name,
+			Namespace:  p.Namespace,
+			Status:     p.Status,
+			PID:        p.PID,
+			ExitCode:   p.ExitCode,
+			IsRunning:  p.IsRunning, // Use the API's is_running field directly
+			Restarts:   p.Restarts,
+			SystemTime: p.SystemTime,
+		})
+	}
+
+	// If we got a successful response, process-compose is running
+	response.Running = true
 
 	s.writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,

@@ -24,12 +24,15 @@ import {
   Clock,
   Cloud,
   Code,
+  Copy,
   ExternalLink,
   FileCode,
   FolderGit,
+  Globe,
   Heart,
   Key,
   Loader2,
+  Network,
   Package,
   RefreshCw,
   Search,
@@ -37,6 +40,7 @@ import {
   Terminal,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   useModule,
@@ -316,6 +320,13 @@ function HealthTab({
     );
   }
 
+  // Checks that have viewable script/definition content
+  const checksWithScripts = health.checks.filter((c) => {
+    const def = c.check;
+    if (!def) return false;
+    return def.script || def.nixExpr || def.httpUrl || (def.tcpHost && def.tcpPort);
+  });
+
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -350,16 +361,66 @@ function HealthTab({
         </div>
       )}
 
-      {/* Individual Checks */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium">Health Checks</h4>
-        {health.checks.map((check) => (
-          <HealthCheckItem key={check.checkId} check={check} />
-        ))}
-      </div>
+      {/* Sub-tabs: Results | Scripts */}
+      <Tabs defaultValue="results">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="results" className="gap-1.5">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Results
+          </TabsTrigger>
+          <TabsTrigger
+            value="scripts"
+            className="gap-1.5"
+            disabled={checksWithScripts.length === 0}
+          >
+            <Code className="h-3.5 w-3.5" />
+            Scripts
+            {checksWithScripts.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
+                {checksWithScripts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Results tab */}
+        <TabsContent value="results" className="mt-3">
+          <div className="space-y-2">
+            {health.checks.map((check) => (
+              <HealthCheckItem key={check.checkId} check={check} />
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Scripts tab */}
+        <TabsContent value="scripts" className="mt-3">
+          {checksWithScripts.length > 0 ? (
+            <div className="space-y-4">
+              {checksWithScripts.map((result) => (
+                <CheckDefinitionBlock
+                  key={result.checkId}
+                  result={result}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <Terminal className="mx-auto mb-3 h-8 w-8 opacity-50" />
+              <p className="text-sm">No script content available</p>
+              <p className="mt-1 text-xs">
+                Script content is shown for inline and path-based checks.
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
+
+// =============================================================================
+// Health Check Result Item
+// =============================================================================
 
 function HealthCheckItem({ check }: { check: HealthcheckResult }) {
   return (
@@ -408,6 +469,157 @@ function HealthCheckItem({ check }: { check: HealthcheckResult }) {
           {check.output}
         </pre>
       )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Check Definition Block - Displays script/definition for a health check
+// =============================================================================
+
+function CheckDefinitionBlock({ result }: { result: HealthcheckResult }) {
+  const check = result.check;
+  if (!check) return null;
+
+  const checkName = check.name || result.checkId;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <HealthStatusIcon status={result.status} className="h-3.5 w-3.5" />
+        <span className="text-sm font-medium">{checkName}</span>
+        <CheckTypeBadge type={check.type} />
+      </div>
+      {check.description && (
+        <p className="text-xs text-muted-foreground">{check.description}</p>
+      )}
+
+      {/* Script content */}
+      {check.script && (
+        <ScriptBlock title="Script" content={check.script} language="bash" />
+      )}
+
+      {/* Nix expression */}
+      {check.nixExpr && (
+        <ScriptBlock title="Nix Expression" content={check.nixExpr} language="nix" />
+      )}
+
+      {/* HTTP check details */}
+      {check.httpUrl && (
+        <div className="rounded-md border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <Globe className="h-3.5 w-3.5" />
+            <span className="font-medium">HTTP Check</span>
+          </div>
+          <div className="text-sm font-mono">
+            {check.httpMethod || "GET"} {check.httpUrl}
+          </div>
+          {check.httpExpectedStatus && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Expected status: {check.httpExpectedStatus}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TCP check details */}
+      {check.tcpHost && check.tcpPort && (
+        <div className="rounded-md border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <Network className="h-3.5 w-3.5" />
+            <span className="font-medium">TCP Check</span>
+          </div>
+          <div className="text-sm font-mono">
+            {check.tcpHost}:{check.tcpPort}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Check Type Badge
+// =============================================================================
+
+function CheckTypeBadge({ type }: { type: string }) {
+  const config = {
+    HEALTHCHECK_TYPE_SCRIPT: { label: "Script", icon: Terminal },
+    HEALTHCHECK_TYPE_HTTP: { label: "HTTP", icon: Globe },
+    HEALTHCHECK_TYPE_TCP: { label: "TCP", icon: Network },
+    HEALTHCHECK_TYPE_NIX: { label: "Nix", icon: FileCode },
+  }[type] || { label: type, icon: Terminal };
+
+  const Icon = config.icon;
+
+  return (
+    <Badge
+      variant="outline"
+      className="text-[10px] px-1.5 py-0 h-4 gap-1 text-muted-foreground"
+    >
+      <Icon className="h-2.5 w-2.5" />
+      {config.label}
+    </Badge>
+  );
+}
+
+// =============================================================================
+// Script Block - Displays code with copy button
+// =============================================================================
+
+function ScriptBlock({
+  title,
+  content,
+  language,
+}: {
+  title: string;
+  content: string;
+  language: "bash" | "nix";
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="rounded-md border bg-slate-950 dark:bg-slate-900 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 dark:bg-slate-800 border-b border-slate-800">
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          {language === "bash" ? (
+            <Terminal className="h-3.5 w-3.5" />
+          ) : (
+            <FileCode className="h-3.5 w-3.5" />
+          )}
+          <span className="font-medium">{title}</span>
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 h-4 border-slate-700 text-slate-500"
+          >
+            {language}
+          </Badge>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleCopy}
+          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+        >
+          {copied ? (
+            <Check className="h-3 w-3" />
+          ) : (
+            <Copy className="h-3 w-3" />
+          )}
+        </Button>
+      </div>
+      <div className="overflow-auto max-h-64">
+        <pre className="p-3 text-xs font-mono text-slate-300 whitespace-pre overflow-x-auto">
+          <code>{content.trim()}</code>
+        </pre>
+      </div>
     </div>
   );
 }

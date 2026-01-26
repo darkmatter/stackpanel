@@ -3,6 +3,9 @@
 import { parseEnv, z } from "znv";
 
 export const env = parseEnv(process.env, {
+    APP_HOST: z.string(),
+    MEMO_MEMOAS_AD: z.string(),
     OPENAI_API_KEY: z.string(),
+    PORT: z.string(),
     POSTGRES_URL: z.string(),
 });

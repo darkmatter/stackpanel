@@ -238,7 +238,46 @@ func renderDivider() string {
 	return motdDividerStyle.Render(strings.Repeat("─", motdWidth-4))
 }
 
-// renderBanner renders the styled ASCII banner
+// hexToRGB converts a hex color string to RGB components
+func hexToRGB(hex string) (float64, float64, float64) {
+	hex = strings.TrimPrefix(hex, "#")
+	var r, g, b int
+	fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	return float64(r), float64(g), float64(b)
+}
+
+// interpolateColor linearly interpolates between two hex colors at position t (0.0-1.0)
+func interpolateColor(color1, color2 string, t float64) lipgloss.Color {
+	r1, g1, b1 := hexToRGB(color1)
+	r2, g2, b2 := hexToRGB(color2)
+	r := int(r1 + (r2-r1)*t)
+	g := int(g1 + (g2-g1)*t)
+	b := int(b1 + (b2-b1)*t)
+	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", r, g, b))
+}
+
+// gradientColor returns a color at position t (0.0-1.0) along a multi-stop gradient
+func gradientColor(stops []string, t float64) lipgloss.Color {
+	if t <= 0 {
+		return lipgloss.Color(stops[0])
+	}
+	if t >= 1 {
+		return lipgloss.Color(stops[len(stops)-1])
+	}
+	segments := len(stops) - 1
+	scaledT := t * float64(segments)
+	segment := int(scaledT)
+	if segment >= segments {
+		segment = segments - 1
+	}
+	localT := scaledT - float64(segment)
+	return interpolateColor(stops[segment], stops[segment+1], localT)
+}
+
+// Banner gradient color stops (purple → pink)
+var bannerGradientStops = []string{"#875fff", "#ff87d7"}
+
+// renderBanner renders the styled ASCII banner with a vertical gradient
 func renderBanner() string {
 	lines := strings.Split(motdBanner, "\n")
 
@@ -252,7 +291,6 @@ func renderBanner() string {
 	}
 
 	// Calculate centering padding based on container width
-	// The banner is already formatted with internal spacing, so we just need to center it
 	maxWidth := 0
 	for _, line := range nonEmptyLines {
 		if len(line) > maxWidth {
@@ -266,13 +304,18 @@ func renderBanner() string {
 		blockPadding = 0
 	}
 
-	// Apply consistent padding and styling to each line
-	var styledLines []string
+	// Apply vertical gradient: each line gets a uniform color based on its row position
 	paddingStr := strings.Repeat(" ", blockPadding)
-	for _, line := range nonEmptyLines {
-		// Use a visible style wrapper to preserve leading whitespace
-		styledLine := motdBannerStyle.Render(paddingStr + line)
-		styledLines = append(styledLines, styledLine)
+	numLines := len(nonEmptyLines)
+	var styledLines []string
+	for i, line := range nonEmptyLines {
+		var t float64
+		if numLines > 1 {
+			t = float64(i) / float64(numLines-1)
+		}
+		color := gradientColor(bannerGradientStops, t)
+		style := lipgloss.NewStyle().Foreground(color).Bold(true)
+		styledLines = append(styledLines, style.Render(paddingStr+line))
 	}
 
 	return strings.Join(styledLines, "\n")

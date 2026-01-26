@@ -1,25 +1,15 @@
 import { checkout, polar, portal } from "@polar-sh/better-auth";
 import { db } from "@stackpanel/db";
+import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { polarClient } from "./lib/payments";
 
-export const auth = betterAuth({
-	database: drizzleAdapter(db, {
-		provider: "pg",
-	}),
-	trustedOrigins: [process.env.CORS_ORIGIN || ""],
-	emailAndPassword: {
-		enabled: true,
-	},
-	advanced: {
-		defaultCookieAttributes: {
-			sameSite: "none",
-			secure: true,
-			httpOnly: true,
-		},
-	},
-	plugins: [
+// Build plugins array - only include Polar if configured
+const plugins: BetterAuthPlugin[] = [];
+
+if (polarClient) {
+	plugins.push(
 		polar({
 			client: polarClient,
 			createCustomerOnSignUp: true,
@@ -41,8 +31,26 @@ export const auth = betterAuth({
 				}),
 				portal(),
 			],
-		}) as unknown as import("better-auth").BetterAuthPlugin,
-	],
+		}) as unknown as BetterAuthPlugin,
+	);
+}
+
+export const auth = betterAuth({
+	database: drizzleAdapter(db, {
+		provider: "pg",
+	}),
+	trustedOrigins: [process.env.CORS_ORIGIN || ""],
+	emailAndPassword: {
+		enabled: true,
+	},
+	advanced: {
+		defaultCookieAttributes: {
+			sameSite: "none",
+			secure: true,
+			httpOnly: true,
+		},
+	},
+	plugins,
 });
 
 export type Auth = typeof auth;

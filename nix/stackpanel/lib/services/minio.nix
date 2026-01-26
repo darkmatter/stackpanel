@@ -97,5 +97,27 @@ in
         export MINIO_SECRET_KEY="${secretKey}"
         export S3_ENDPOINT="http://localhost:${toString port}"
       '';
+
+      # Foreground start script for process-compose
+      # Runs Minio server in the foreground.
+      # Process-compose manages the lifecycle.
+      startScript = pkgs.writeShellScriptBin "minio-start" ''
+        set -euo pipefail
+
+        DATADIR="${dataDir}"
+        PORT="${toString port}"
+        CONSOLE_PORT="${toString consolePort}"
+
+        mkdir -p "$DATADIR"
+
+        # Set credentials
+        export MINIO_ROOT_USER="${accessKey}"
+        export MINIO_ROOT_PASSWORD="${secretKey}"
+
+        # Start Minio in foreground
+        exec ${minioPackage}/bin/minio server "$DATADIR" \
+          --address ":$PORT" \
+          --console-address ":$CONSOLE_PORT"
+      '';
     };
 }

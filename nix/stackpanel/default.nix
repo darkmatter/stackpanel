@@ -41,6 +41,7 @@ in
     ./services # aws, caddy, global-services
     ./secrets # SOPS helper
     ./sst # SST infrastructure provisioning
+    ./deployment # Deployment providers (Fly.io, etc.)
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
 

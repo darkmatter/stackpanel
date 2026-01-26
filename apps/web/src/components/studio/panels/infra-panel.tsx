@@ -659,7 +659,7 @@ function ConfigureTabContent({
 									<Input
 										value={formData["config-path"] ?? ""}
 										onChange={(e) => updateField("config-path", e.target.value)}
-										placeholder="infra/sst/sst.config.ts"
+										placeholder="packages/infra/sst.config.ts"
 									/>
 								</Field>
 							</FieldRow>

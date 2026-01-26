@@ -1,6 +1,8 @@
+import type { AppRouter } from "@stackpanel/api/routers/index";
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import type { TRPCClient } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import SuperJSON from "superjson";
 
@@ -14,7 +16,11 @@ export function getRouter() {
 			hydrate: { deserializeData: SuperJSON.deserialize },
 		},
 	});
-	const trpcClient = makeTRPCClient();
+	// Note: makeTRPCClient uses createIsomorphicFn which has different return types
+	// on server (async) vs client (sync). At runtime the build transform handles this,
+	// but TypeScript sees the union. Cast is safe because the transform ensures
+	// we get the right type in each environment.
+	const trpcClient = makeTRPCClient() as TRPCClient<AppRouter>;
 	const trpc = createTRPCOptionsProxy({
 		client: trpcClient,
 		queryClient,
@@ -26,7 +32,7 @@ export function getRouter() {
 		defaultPreload: "intent",
 		Wrap: (props) => (
 			<TRPCProvider
-				trpcClient={trpcClient}
+				trpcClient={trpcClient as TRPCClient<AppRouter>}
 				queryClient={queryClient}
 				{...props}
 			/>

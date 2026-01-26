@@ -44,6 +44,7 @@
     ./tasks.nix
     ./ports.nix
     ./secrets.nix
+    ./services.nix
     ./theme.nix
     ./user-packages.nix
     ./users.nix
