@@ -181,6 +181,20 @@
         suspicious = "warn";
       };
     };
+    # Fly.io deployment
+    deployment = {
+      enable = true;
+      provider = "fly";
+      fly = {
+        appName = "stackpanel-web";
+        region = "iad";
+        memory = "512mb";
+      };
+      container = {
+        type = "bun";
+        port = 3000;
+      };
+    };
     # Environments - simplified key-value env vars
     environments = {
       dev = {

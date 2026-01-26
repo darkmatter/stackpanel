@@ -1,17 +1,5 @@
-// @ts-nocheck - Legacy component using old VariableType schema
 "use client";
 
-// Note: This component uses the old schema with VariableType.
-// The new schema uses simple id/value pairs.
-// This file needs to be migrated to the new schema.
-
-// Legacy type - no longer in proto schema
-enum VariableType {
-  UNSPECIFIED = 0,
-  VARIABLE = 1,
-  SECRET = 2,
-  VALS = 3,
-}
 import { Button } from "@ui/button";
 import {
 	Dialog,
@@ -21,25 +9,30 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@ui/dialog";
+import { Label } from "@ui/label";
+import { Textarea } from "@ui/textarea";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import type { Variable } from "@/lib/types";
-import { type VariableForm, VariableFormFields } from "./variable-form-fields";
+import { isSopsReference } from "./constants";
 
 interface EditVariableDialogProps {
 	variable: {
 		id: string;
-		key: string;
-		description?: string;
-		type: VariableType | number;
-		value?: string;
+		value: string;
 	};
 	onSuccess: () => void;
 	trigger?: React.ReactNode;
 }
 
+/**
+ * Dialog to edit an existing variable.
+ *
+ * With the simplified schema, Variable has only id and value.
+ * Type (secret/config/computed) is derived from the id path and value pattern.
+ */
 export function EditVariableDialog({
 	variable,
 	onSuccess,
@@ -50,26 +43,26 @@ export function EditVariableDialog({
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
-	const formRef = useRef<VariableForm | null>(null);
+
+	// Form state — id is read-only, only value can be edited
+	const [varValue, setVarValue] = useState(variable.value);
 
 	const handleOpenChange = (open: boolean) => {
 		setDialogOpen(open);
 		if (!open) {
-			// Reset form when closing
-			formRef.current?.reset();
+			// Reset to current value when closing
+			setVarValue(variable.value);
 		}
 	};
 
 	const handleSubmit = async () => {
-		if (!formRef.current || !token) {
-			toast.error(!token ? "Not connected to agent" : "Form not ready");
+		if (!token) {
+			toast.error("Not connected to agent");
 			return;
 		}
 
-		const values = formRef.current.getValues();
-
-		// Validate required fields
-		if (!values.value?.trim()) {
+		const trimmedValue = varValue.trim();
+		if (!trimmedValue) {
 			toast.error("Please enter a variable value");
 			return;
 		}
@@ -80,30 +73,15 @@ export function EditVariableDialog({
 			if (token) client.setToken(token);
 			const variablesClient = client.nix.mapEntity<Variable>("variables");
 
-			// Check if this is a SECRET type - needs agenix encryption
-			const isSecret = values.type === VariableType.SECRET;
+			const updatedVariable: Variable = {
+				id: variable.id,
+				value: trimmedValue,
+			};
 
-			if (isSecret) {
-				// Use the agenix endpoint to encrypt and write the secret
-				await agentClient.writeAgenixSecret({
-					id: variable.id,
-					key: values.key || variable.id,
-					value: values.value,
-					description: values.description || undefined,
-				});
-				toast.success(`Updated secret "${variable.id}"`);
-			} else {
-				// Regular variable - write directly to variables.nix
-				const updatedVariable: Variable = {
-					key: values.key || variable.id,
-					description: values.description || "",
-					type: values.type,
-					value: values.value,
-				};
+			await variablesClient.set(variable.id, updatedVariable);
 
-				await variablesClient.set(variable.id, updatedVariable);
-				toast.success(`Updated variable "${variable.id}"`);
-			}
+			const isSecret = isSopsReference(trimmedValue);
+			toast.success(`Updated ${isSecret ? "secret" : "variable"} "${variable.id}"`);
 
 			handleOpenChange(false);
 			onSuccess();
@@ -163,32 +141,32 @@ export function EditVariableDialog({
 					Edit
 				</Button>
 			)}
-			<DialogContent className="sm:max-w-4xl">
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle>Edit Variable</DialogTitle>
 					<DialogDescription>
-						Update the variable configuration. The variable ID cannot be
-						changed.
+						Update the variable value. The variable ID cannot be changed.
 					</DialogDescription>
 				</DialogHeader>
-				<div className="py-4">
-					<VariableFormFields
-						showIdField={false}
-						defaultValues={{
-							id: variable.id,
-							key: variable.key,
-							description: variable.description || "",
-							type: variable.type as VariableType,
-							value: variable.value || "",
-						}}
-						onFormReady={(form) => {
-							formRef.current = form;
-						}}
-					/>
-					<div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
+				<div className="py-4 space-y-4">
+					<div className="p-3 rounded-lg bg-muted/50 border border-border">
+						<Label className="text-xs text-muted-foreground font-medium">
+							Variable ID
+						</Label>
+						<p className="font-mono text-sm mt-1">{variable.id}</p>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="edit-var-value">Value *</Label>
+						<Textarea
+							id="edit-var-value"
+							value={varValue}
+							onChange={(e) => setVarValue(e.target.value)}
+							placeholder="literal value or ref+sops://..."
+							className="font-mono min-h-[80px]"
+							autoFocus
+						/>
 						<p className="text-xs text-muted-foreground">
-							<span className="font-medium">Variable ID:</span>{" "}
-							<code className="font-mono">{variable.id}</code>
+							Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)
 						</p>
 					</div>
 				</div>
@@ -209,7 +187,7 @@ export function EditVariableDialog({
 						</Button>
 						<Button
 							onClick={handleSubmit}
-							disabled={isSaving || isDeleting}
+							disabled={isSaving || isDeleting || !varValue.trim()}
 							className="bg-accent text-accent-foreground hover:bg-accent/90"
 						>
 							{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

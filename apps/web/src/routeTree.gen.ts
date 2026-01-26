@@ -35,6 +35,7 @@ import { Route as StudioInfraRouteImport } from './routes/studio/infra'
 import { Route as StudioFilesRouteImport } from './routes/studio/files'
 import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions'
 import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
+import { Route as StudioDeployRouteImport } from './routes/studio/deploy'
 import { Route as StudioDatabasesRouteImport } from './routes/studio/databases'
 import { Route as StudioDashboardRouteImport } from './routes/studio/dashboard'
 import { Route as StudioConfigurationRouteImport } from './routes/studio/configuration'
@@ -175,6 +176,11 @@ const StudioDevshellsRoute = StudioDevshellsRouteImport.update({
   path: '/devshells',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioDeployRoute = StudioDeployRouteImport.update({
+  id: '/deploy',
+  path: '/deploy',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioDatabasesRoute = StudioDatabasesRouteImport.update({
   id: '/databases',
   path: '/databases',
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
+  '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
   '/studio/files': typeof StudioFilesRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
+  '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
   '/studio/files': typeof StudioFilesRoute
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
+  '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
   '/studio/files': typeof StudioFilesRoute
@@ -348,6 +357,7 @@ export interface FileRouteTypes {
     | '/studio/configuration'
     | '/studio/dashboard'
     | '/studio/databases'
+    | '/studio/deploy'
     | '/studio/devshells'
     | '/studio/extensions'
     | '/studio/files'
@@ -384,6 +394,7 @@ export interface FileRouteTypes {
     | '/studio/configuration'
     | '/studio/dashboard'
     | '/studio/databases'
+    | '/studio/deploy'
     | '/studio/devshells'
     | '/studio/extensions'
     | '/studio/files'
@@ -421,6 +432,7 @@ export interface FileRouteTypes {
     | '/studio/configuration'
     | '/studio/dashboard'
     | '/studio/databases'
+    | '/studio/deploy'
     | '/studio/devshells'
     | '/studio/extensions'
     | '/studio/files'
@@ -644,6 +656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioDevshellsRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/deploy': {
+      id: '/studio/deploy'
+      path: '/deploy'
+      fullPath: '/studio/deploy'
+      preLoaderRoute: typeof StudioDeployRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/databases': {
       id: '/studio/databases'
       path: '/databases'
@@ -715,6 +734,7 @@ interface StudioRouteChildren {
   StudioConfigurationRoute: typeof StudioConfigurationRoute
   StudioDashboardRoute: typeof StudioDashboardRoute
   StudioDatabasesRoute: typeof StudioDatabasesRoute
+  StudioDeployRoute: typeof StudioDeployRoute
   StudioDevshellsRoute: typeof StudioDevshellsRoute
   StudioExtensionsRoute: typeof StudioExtensionsRoute
   StudioFilesRoute: typeof StudioFilesRoute
@@ -741,6 +761,7 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioConfigurationRoute: StudioConfigurationRoute,
   StudioDashboardRoute: StudioDashboardRoute,
   StudioDatabasesRoute: StudioDatabasesRoute,
+  StudioDeployRoute: StudioDeployRoute,
   StudioDevshellsRoute: StudioDevshellsRoute,
   StudioExtensionsRoute: StudioExtensionsRoute,
   StudioFilesRoute: StudioFilesRoute,

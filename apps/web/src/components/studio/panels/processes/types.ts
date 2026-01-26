@@ -13,7 +13,7 @@
 // =============================================================================
 
 /** Process source type identifier */
-export type ProcessSourceType = "app" | "script" | "task" | "custom" | "infra";
+export type ProcessSourceType = "app" | "script" | "task" | "custom" | "infra" | "service";
 
 /** A selectable process from any source */
 export interface ProcessSource {
@@ -47,6 +47,12 @@ export interface ProcessSource {
   scriptName?: string;
   /** For custom: user-provided description */
   description?: string;
+  /** For services: the port this service listens on */
+  port?: number;
+  /** For services: the data directory path */
+  dataDir?: string;
+  /** For services: human-readable display name */
+  displayName?: string;
 }
 
 // =============================================================================
@@ -237,7 +243,7 @@ export interface ProcessStatus {
 // =============================================================================
 
 /** Tab identifiers for source selection */
-export type SourceTab = "apps" | "scripts" | "tasks" | "custom";
+export type SourceTab = "apps" | "services" | "scripts" | "tasks" | "custom";
 
 /** Full UI state for the processes panel */
 export interface ProcessesState {

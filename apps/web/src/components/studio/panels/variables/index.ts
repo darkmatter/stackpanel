@@ -6,6 +6,5 @@ export {
 } from "./constants";
 export { EditVariableDialog } from "./edit-variable-dialog";
 export { defaultFormState, type VariableFormState } from "./types";
-export { VariableFormFields } from "./variable-form-fields";
 export { VariableUsageInfo } from "./variable-usage-info";
 export { VariablesPanel } from "./variables-panel";

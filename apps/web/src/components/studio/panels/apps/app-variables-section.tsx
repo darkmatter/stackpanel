@@ -4,7 +4,7 @@ import { Input } from "@ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import { Check, Eye, EyeOff, Pencil, Plus, X } from "lucide-react";
 import type { AppVariablesSectionProps } from "./app-variables-section/types";
-import { EditInterface, VariableBadge } from "./app-variables-section/components";
+import { EditInterface, VariableRow } from "./app-variables-section/components";
 import { useAppVariablesSection } from "./app-variables-section/use-app-variables-section";
 
 /**
@@ -214,56 +214,56 @@ export function AppVariablesSection({
 					</button>
 				</div>
 			</div>
-			<div className="flex flex-wrap gap-2">
-				{/* Render filtered variables */}
-				{filteredVariables.map((variable) => (
-					<VariableBadge
-						key={`var-${variable.envKey}`}
-						variable={variable}
-						isSecret={false}
-						isCurrentlyEditing={
-							editMode === "edit" && editingEnvKey === variable.envKey
-						}
-						showEnvValues={showEnvValues}
-						disabled={disabled}
-						isEditing={isEditing}
-						onStartEditing={handleStartEditing}
-						renderEditInterface={renderEditInterface}
-					/>
-				))}
+		<div className="space-y-1.5">
+			{/* Render filtered variables */}
+			{filteredVariables.map((variable) => (
+				<VariableRow
+					key={`var-${variable.envKey}`}
+					variable={variable}
+					isSecret={false}
+					isCurrentlyEditing={
+						editMode === "edit" && editingEnvKey === variable.envKey
+					}
+					showEnvValues={showEnvValues}
+					disabled={disabled}
+					isEditing={isEditing}
+					onStartEditing={handleStartEditing}
+					renderEditInterface={renderEditInterface}
+				/>
+			))}
 
-				{/* Render filtered secrets */}
-				{filteredSecrets.map((secret) => (
-					<VariableBadge
-						key={`secret-${secret.envKey}`}
-						variable={secret}
-						isSecret={true}
-						isCurrentlyEditing={
-							editMode === "edit" && editingEnvKey === secret.envKey
-						}
-						showEnvValues={showEnvValues}
-						disabled={disabled}
-						isEditing={isEditing}
-						onStartEditing={handleStartEditing}
-						renderEditInterface={renderEditInterface}
-					/>
-				))}
+			{/* Render filtered secrets */}
+			{filteredSecrets.map((secret) => (
+				<VariableRow
+					key={`secret-${secret.envKey}`}
+					variable={secret}
+					isSecret={true}
+					isCurrentlyEditing={
+						editMode === "edit" && editingEnvKey === secret.envKey
+					}
+					showEnvValues={showEnvValues}
+					disabled={disabled}
+					isEditing={isEditing}
+					onStartEditing={handleStartEditing}
+					renderEditInterface={renderEditInterface}
+				/>
+			))}
 
-				{/* Add interface (when adding new) */}
-				{editMode === "add" && renderEditInterface()}
+			{/* Add interface (when adding new) */}
+			{editMode === "add" && renderEditInterface()}
 
-				{/* Add button (when not editing) */}
-				{!isEditing && (
-					<button
-						onClick={handleStartAdding}
-						className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-xs text-muted-foreground hover:text-foreground"
-						disabled={disabled || !onAddVariable}
-					>
-						<Plus className="h-3 w-3" />
-						<span>Add variable</span>
-					</button>
-				)}
-			</div>
+			{/* Add button (when not editing) */}
+			{!isEditing && (
+				<button
+					onClick={handleStartAdding}
+					className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-xs text-muted-foreground hover:text-foreground"
+					disabled={disabled || !onAddVariable}
+				>
+					<Plus className="h-3 w-3" />
+					<span>Add variable</span>
+				</button>
+			)}
+		</div>
 		</div>
 	);
 }

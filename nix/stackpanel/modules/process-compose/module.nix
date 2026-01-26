@@ -99,6 +99,59 @@ let
     };
 
   # ---------------------------------------------------------------------------
+  # Per-service process-compose options (added via serviceModules)
+  # ---------------------------------------------------------------------------
+  processComposeServiceModule =
+    { lib, ... }:
+    {
+      options.process-compose = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether to include this service in process-compose.";
+        };
+        namespace = lib.mkOption {
+          type = lib.types.str;
+          default = "services";
+          description = "Process-compose namespace for grouping (default: services).";
+        };
+        readiness_probe = lib.mkOption {
+          type = lib.types.nullOr (lib.types.attrsOf lib.types.unspecified);
+          default = null;
+          description = ''
+            Readiness probe configuration. When set, other processes can depend
+            on this service with condition = "process_healthy".
+          '';
+          example = lib.literalExpression ''
+            {
+              exec.command = "pg_isready -p 5432";
+              initial_delay_seconds = 2;
+              period_seconds = 5;
+            }
+          '';
+        };
+        liveness_probe = lib.mkOption {
+          type = lib.types.nullOr (lib.types.attrsOf lib.types.unspecified);
+          default = null;
+          description = "Liveness probe configuration for health monitoring.";
+        };
+        availability = lib.mkOption {
+          type = lib.types.attrsOf lib.types.unspecified;
+          default = {
+            restart = "on_failure";
+            backoff_seconds = 5;
+          };
+          description = "Availability/restart policy for the service process.";
+        };
+        depends_on = lib.mkOption {
+          type = lib.types.attrsOf lib.types.unspecified;
+          default = { };
+          description = "Process dependencies for this service.";
+        };
+      };
+    };
+
+  # ---------------------------------------------------------------------------
   # Process entry generation (functions only - evaluation happens in config)
   # ---------------------------------------------------------------------------
 
@@ -175,6 +228,41 @@ let
         };
       };
     };
+
+  # ---------------------------------------------------------------------------
+  # Service process entries (from stackpanel.services)
+  # ---------------------------------------------------------------------------
+
+  # Generate process-compose entries from stackpanel.services
+  mkServiceProcessEntries =
+    services:
+    let
+      enabledServices = lib.filterAttrs (
+        _: svc: svc.enable && (svc.process-compose.enable or true)
+      ) services;
+    in
+    lib.mapAttrs (
+      name: svc:
+      {
+        command = svc.command;
+        namespace = svc.process-compose.namespace or "services";
+      }
+      // lib.optionalAttrs (!svc.autoStart) {
+        disabled = true;
+      }
+      // lib.optionalAttrs (svc.process-compose.readiness_probe or null != null) {
+        readiness_probe = svc.process-compose.readiness_probe;
+      }
+      // lib.optionalAttrs (svc.process-compose.liveness_probe or null != null) {
+        liveness_probe = svc.process-compose.liveness_probe;
+      }
+      // lib.optionalAttrs ((svc.process-compose.availability or { }) != { }) {
+        availability = svc.process-compose.availability;
+      }
+      // lib.optionalAttrs ((svc.process-compose.depends_on or { }) != { }) {
+        depends_on = svc.process-compose.depends_on;
+      }
+    ) enabledServices;
 
   # ---------------------------------------------------------------------------
   # Devenv-compatible process entries (uses exec instead of command)
@@ -285,6 +373,7 @@ let
       processes,
       environment,
       commandName,
+      port ? 8080,
     }:
     let
       processCount = builtins.length (lib.attrNames processes);
@@ -321,8 +410,12 @@ let
         fi
       fi
       
+      # Set PC_PORT_NUM for the process-compose API server
+      export PC_PORT_NUM="${toString port}"
+      
       # Run process-compose - auto-detects process-compose.yaml in repo root
-      exec ${pkgs.process-compose}/bin/process-compose "$@"
+      # The --port flag sets the API server port
+      exec ${pkgs.process-compose}/bin/process-compose --port ${toString port} "$@"
     '';
 
 in
@@ -333,6 +426,17 @@ in
   options.stackpanel.process-compose = {
     enable = lib.mkEnableOption "process-compose integration" // {
       default = true;
+    };
+
+    port = lib.mkOption {
+      type = lib.types.nullOr lib.types.port;
+      default = null;
+      description = ''
+        Port for the process-compose API server.
+        If null, uses the computed port from stackpanel.ports.service.PROCESS_COMPOSE.port.
+        Set PC_PORT_NUM environment variable to this value.
+      '';
+      example = 8080;
     };
 
     commandName = lib.mkOption {
@@ -430,15 +534,21 @@ in
       stackpanel.appModules = [ processComposeAppModule ];
     }
 
+    # Add the per-service process-compose options to all services
+    {
+      stackpanel.serviceModules = [ processComposeServiceModule ];
+    }
+
     # When stackpanel is enabled, populate process-compose from apps
     (lib.mkIf cfg.enable {
-      # Populate process-compose.processes from apps (evaluated with cfg.apps available)
+      # Populate process-compose.processes from apps, services, and infra
       stackpanel.process-compose.processes =
         let
           appProcesses = mkAppProcessEntries cfg.apps;
+          serviceProcesses = mkServiceProcessEntries (cfg.services or { });
           infraProcesses = mkInfrastructureProcesses pcCfg.formatWatcher;
         in
-        appProcesses // infraProcesses;
+        serviceProcesses // appProcesses // infraProcesses;
 
       # Default environment with ports
       stackpanel.process-compose.environment = {
@@ -449,6 +559,14 @@ in
     # When process-compose is enabled, build wrapper and add to devshell
     (lib.mkIf (cfg.enable && pcCfg.enable) (
       let
+        # Resolve port: explicit config > computed from base port + fixed offset
+        # Uses base-port + 90 to avoid hash collisions with other services
+        resolvedPort =
+          if pcCfg.port != null then
+            pcCfg.port
+          else
+            cfg.ports.base-port + 90;
+
         configFile = mkConfigFile {
           commandName = pcCfg.commandName;
           processes = pcCfg.processes;
@@ -456,12 +574,16 @@ in
         };
       in
       {
+        # Set PC_PORT_NUM environment variable for the devshell
+        stackpanel.devshell.env.PC_PORT_NUM = toString resolvedPort;
+
         stackpanel.devshell.packages = [
           pkgs.process-compose
           (mkDevPackage {
             commandName = pcCfg.commandName;
             processes = pcCfg.processes;
             environment = pcCfg.environment;
+            port = resolvedPort;
           })
         ];
 

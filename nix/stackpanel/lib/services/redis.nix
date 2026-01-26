@@ -71,5 +71,28 @@ in
         export REDIS_PORT="${toString port}"
         export REDIS_SOCKET="${socketPath}"
       '';
+
+      # Foreground start script for process-compose
+      # Runs redis-server in the foreground with inline config.
+      # Process-compose manages the lifecycle.
+      startScript = pkgs.writeShellScriptBin "redis-start" ''
+        set -euo pipefail
+
+        DATADIR="${dataDir}"
+        PORT="${toString port}"
+        SOCKET="${socketPath}"
+
+        mkdir -p "$DATADIR"
+
+        # Start Redis in foreground (no daemonize)
+        exec ${redisPackage}/bin/redis-server \
+          --port "$PORT" \
+          --dir "$DATADIR" \
+          --bind 127.0.0.1 \
+          --unixsocket "$SOCKET" \
+          --unixsocketperm 700 \
+          --loglevel notice \
+          --save ""
+      '';
     };
 }

@@ -84,5 +84,52 @@ in
         export DATABASE_URL="postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}"
         export POSTGRES_URL="postgresql://postgres@localhost:${toString port}/postgres?host=${socketDir}"
       '';
+
+      # Foreground start script for process-compose
+      # Initializes the data directory if needed, creates databases, then runs
+      # postgres in the foreground. Process-compose manages the lifecycle.
+      startScript = pkgs.writeShellScriptBin "postgres-start" ''
+        set -euo pipefail
+
+        DATADIR="${dataDir}"
+        SOCKETDIR="${socketDir}"
+        PORT="${toString port}"
+
+        # Initialize data directory if needed
+        if [ ! -f "$DATADIR/PG_VERSION" ]; then
+          echo "Initializing PostgreSQL data directory..."
+          mkdir -p "$DATADIR"
+          ${postgresPackage}/bin/initdb -D "$DATADIR" --no-locale --encoding=UTF8 -U postgres
+        fi
+
+        # Ensure socket directory exists
+        mkdir -p "$SOCKETDIR"
+
+        # Create databases after startup (background task)
+        (
+          # Wait for postgres to be ready
+          for i in $(seq 1 30); do
+            if ${postgresPackage}/bin/pg_isready -h "$SOCKETDIR" -p "$PORT" -U postgres >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.5
+          done
+
+          # Create configured databases
+          ${lib.concatMapStringsSep "\n" (db: ''
+            if ! ${postgresPackage}/bin/psql -h "$SOCKETDIR" -p "$PORT" -U postgres -lqt 2>/dev/null | grep -qw "${db}"; then
+              echo "Creating database: ${db}"
+              ${postgresPackage}/bin/createdb -h "$SOCKETDIR" -p "$PORT" -U postgres "${db}" 2>/dev/null || true
+            fi
+          '') databases}
+        ) &
+
+        # Start PostgreSQL in foreground
+        exec ${postgresPackage}/bin/postgres \
+          -D "$DATADIR" \
+          -p "$PORT" \
+          -k "$SOCKETDIR" \
+          -h localhost
+      '';
     };
 }

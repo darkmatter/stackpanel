@@ -6,11 +6,11 @@ import type { User } from "@/lib/types";
 import { useNixData } from "@/lib/use-agent";
 import type { GithubCollaboratorsData, TeamMember } from "./types";
 
-/** Extended User type with stackpanel-specific fields from Nix data */
-interface NixUser extends User {
-	public_keys?: string[];
-	secrets_allowed_environments?: string[];
-}
+/** 
+ * Type alias for User from Nix data.
+ * The proto User type now includes public_keys and secrets_allowed_environments.
+ */
+type NixUser = User;
 
 export function useTeam() {
 	const [searchQuery, setSearchQuery] = useState("");

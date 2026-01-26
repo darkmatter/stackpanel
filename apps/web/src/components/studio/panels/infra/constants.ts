@@ -28,7 +28,7 @@ export const DEFAULT_SST_DATA: SSTData = {
 	"project-name": "",
 	region: "us-west-2",
 	"account-id": "",
-	"config-path": "infra/sst/sst.config.ts",
+	"config-path": "packages/infra/sst.config.ts",
 	kms: {
 		enable: true,
 		alias: "",

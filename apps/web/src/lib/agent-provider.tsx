@@ -10,7 +10,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { AgentHttpClient } from "./agent";
+import { AgentHttpClient, AGENT_AUTH_ERROR_EVENT } from "./agent";
 import { useAgent, useAgentHealth } from "@/lib/use-agent";
 
 const STORAGE_KEY = "stackpanel.agent.token";
@@ -162,6 +162,44 @@ export function AgentProvider({
 		setToken(null);
 		agent.disconnect();
 	}, [agent]);
+
+	// Listen for 401 auth errors from any agent request (HTTP client or Connect-RPC).
+	// When the agent restarts, it generates new signing keys, invalidating all tokens.
+	// This clears the stale token so the pairing UI shows up again.
+	useEffect(() => {
+		const handleAuthError = () => {
+			console.log("Agent auth error (401) - clearing stale token for re-pairing");
+			localStorage.removeItem(STORAGE_KEY);
+			setToken(null);
+		};
+		window.addEventListener(AGENT_AUTH_ERROR_EVENT, handleAuthError);
+		return () => window.removeEventListener(AGENT_AUTH_ERROR_EVENT, handleAuthError);
+	}, []);
+
+	// Validate the stored token when the agent becomes available.
+	// This catches cases where the token is stale (e.g., agent restarted with new keys)
+	// before the user makes any API call that would trigger a 401.
+	useEffect(() => {
+		if (healthStatus !== "available" || !token) return;
+
+		let cancelled = false;
+		const validateToken = async () => {
+			try {
+				const res = await fetch(`http://${host}:${port}/api/auth/validate`, {
+					headers: { "X-Stackpanel-Token": token },
+				});
+				if (!cancelled && res.status === 401) {
+					console.log("Stored token is invalid (agent may have restarted), clearing for re-pairing");
+					localStorage.removeItem(STORAGE_KEY);
+					setToken(null);
+				}
+			} catch {
+				// Agent unreachable - health polling will handle this
+			}
+		};
+		validateToken();
+		return () => { cancelled = true; };
+	}, [healthStatus, token, host, port]);
 
 	const pair = useCallback(() => {
 		// Open the local agent pairing page (localhost) in a popup.

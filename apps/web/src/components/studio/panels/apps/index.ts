@@ -7,8 +7,6 @@ export {
 	parsePortValue,
 } from "./app-form-fields";
 export { AppTasks } from "./app-tasks";
-export { AppVariableManager } from "./app-variable-manager";
-export { AppVariables } from "./app-variables";
 export { AppVariablesSection } from "./app-variables-section";
 export {
 	APP_TYPES,

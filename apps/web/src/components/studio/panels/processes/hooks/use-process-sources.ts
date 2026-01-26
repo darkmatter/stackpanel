@@ -36,9 +36,22 @@ interface NixProcessComposeConfig {
 // Hook: useProcessSources
 // =============================================================================
 
+/** Service config shape from Nix */
+interface NixServiceConfig {
+  enable?: boolean;
+  displayName?: string;
+  description?: string;
+  command?: string;
+  port?: number;
+  autoStart?: boolean;
+  dataDir?: string;
+}
+
 export interface UseProcessSourcesResult {
   /** Apps available as process sources */
   appSources: ProcessSource[];
+  /** Services available as process sources */
+  serviceSources: ProcessSource[];
   /** Scripts available as process sources */
   scriptSources: ProcessSource[];
   /** Tasks available as process sources */
@@ -135,6 +148,41 @@ export function useProcessSources(): UseProcessSourcesResult {
       scriptName: name,
       description: script.description,
     }));
+  }, [nixConfigQuery.data]);
+
+  // Extract services from Nix config
+  const serviceSources = useMemo<ProcessSource[]>(() => {
+    const config = nixConfigQuery.data?.config;
+    if (!config) return [];
+
+    // Try to find services in the config - check multiple possible locations
+    let servicesConfig: Record<string, NixServiceConfig> | undefined;
+
+    if ((config as Record<string, unknown>).services) {
+      servicesConfig = (config as Record<string, unknown>).services as Record<string, NixServiceConfig>;
+    } else if ((config as Record<string, unknown>)?.stackpanel) {
+      const stackpanel = (config as Record<string, unknown>).stackpanel as Record<string, unknown>;
+      servicesConfig = stackpanel?.services as Record<string, NixServiceConfig>;
+    }
+
+    if (!servicesConfig || typeof servicesConfig !== "object") return [];
+
+    return Object.entries(servicesConfig)
+      .filter(([_, svc]) => svc && svc.enable === true)
+      .map(([name, svc]) => ({
+        id: `service-${name}`,
+        type: "service" as const,
+        name: svc.displayName ?? name,
+        command: svc.command ?? "",
+        enabled: true, // Services enabled by default when defined
+        autoStart: svc.autoStart !== false,
+        useEntrypoint: false, // Services don't use entrypoints
+        namespace: "services",
+        port: svc.port,
+        dataDir: svc.dataDir,
+        displayName: svc.displayName ?? name,
+        description: svc.description,
+      }));
   }, [nixConfigQuery.data]);
 
   // Extract tasks from Turbo packages
@@ -246,6 +294,7 @@ export function useProcessSources(): UseProcessSourcesResult {
 
   return {
     appSources,
+    serviceSources,
     scriptSources,
     taskSources,
     settings,

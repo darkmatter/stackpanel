@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -415,32 +416,131 @@ func (s *AgentServiceServer) GetServicesStatus(
 	ctx context.Context,
 	req *connect.Request[gopb.GetServicesStatusRequest],
 ) (*connect.Response[gopb.GetServicesStatusResponse], error) {
-	// TODO: Implement process-compose status check
-	return connect.NewResponse(&gopb.GetServicesStatusResponse{
+	resp := &gopb.GetServicesStatusResponse{
 		Running:  false,
-		Services: nil,
-	}), nil
+		Services: []*gopb.ServiceStatus{},
+	}
+
+	// Query process-compose for running processes
+	res, err := s.server.exec.Run("process-compose", "process", "list", "-j")
+	if err != nil || res.ExitCode != 0 {
+		// process-compose not running or not available
+		return connect.NewResponse(resp), nil
+	}
+
+	// Parse JSON output (try { data: [...] } format first, then plain array)
+	type pcProcess struct {
+		Name       string `json:"name"`
+		Namespace  string `json:"namespace"`
+		Status     string `json:"status"`
+		PID        int    `json:"pid"`
+		SystemTime string `json:"system_time"`
+	}
+
+	var processes []pcProcess
+
+	var wrapped struct {
+		Data []pcProcess `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(res.Stdout), &wrapped); err == nil {
+		processes = wrapped.Data
+	} else {
+		// Try plain array
+		_ = json.Unmarshal([]byte(res.Stdout), &processes)
+	}
+
+	// Filter for processes in the "services" namespace
+	anyRunning := false
+	for _, p := range processes {
+		if p.Namespace != "services" {
+			continue
+		}
+		status := "stopped"
+		if isProcessRunning(p.Status) {
+			status = "running"
+			anyRunning = true
+		}
+		resp.Services = append(resp.Services, &gopb.ServiceStatus{
+			Name:   p.Name,
+			Status: status,
+			Pid:    int32(p.PID),
+		})
+	}
+	resp.Running = anyRunning
+
+	return connect.NewResponse(resp), nil
 }
 
 func (s *AgentServiceServer) StartService(
 	ctx context.Context,
 	req *connect.Request[gopb.ServiceRequest],
 ) (*connect.Response[gopb.ServiceResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+	name := req.Msg.Name
+	if name == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
+	}
+
+	res, err := s.server.exec.Run("process-compose", "process", "start", name)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start service: %w", err))
+	}
+	if res.ExitCode != 0 {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose start failed: %s", res.Stderr))
+	}
+
+	log.Info().Str("service", name).Msg("Service started via process-compose")
+	return connect.NewResponse(&gopb.ServiceResponse{
+		Success: true,
+		Message: fmt.Sprintf("Service %s started", name),
+	}), nil
 }
 
 func (s *AgentServiceServer) StopService(
 	ctx context.Context,
 	req *connect.Request[gopb.ServiceRequest],
 ) (*connect.Response[gopb.ServiceResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+	name := req.Msg.Name
+	if name == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
+	}
+
+	res, err := s.server.exec.Run("process-compose", "process", "stop", name)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop service: %w", err))
+	}
+	if res.ExitCode != 0 {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose stop failed: %s", res.Stderr))
+	}
+
+	log.Info().Str("service", name).Msg("Service stopped via process-compose")
+	return connect.NewResponse(&gopb.ServiceResponse{
+		Success: true,
+		Message: fmt.Sprintf("Service %s stopped", name),
+	}), nil
 }
 
 func (s *AgentServiceServer) RestartService(
 	ctx context.Context,
 	req *connect.Request[gopb.ServiceRequest],
 ) (*connect.Response[gopb.ServiceResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("not implemented"))
+	name := req.Msg.Name
+	if name == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
+	}
+
+	res, err := s.server.exec.Run("process-compose", "process", "restart", name)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restart service: %w", err))
+	}
+	if res.ExitCode != 0 {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose restart failed: %s", res.Stderr))
+	}
+
+	log.Info().Str("service", name).Msg("Service restarted via process-compose")
+	return connect.NewResponse(&gopb.ServiceResponse{
+		Success: true,
+		Message: fmt.Sprintf("Service %s restarted", name),
+	}), nil
 }
 
 // =============================================================================

@@ -211,6 +211,21 @@ export interface KMSConfigResponse {
   source: "" | "state" | "nix";
 }
 
+/** Response from reading SOPS secrets for an environment */
+export interface SopsSecretsReadResponse {
+  exists: boolean;
+  path: string;
+  encrypted?: boolean;
+  secrets: Record<string, unknown>;
+  raw?: string;
+  error?: string;
+}
+
+/** Response from listing SOPS environments and their key names */
+export interface SopsSecretsListResponse {
+  environments: Record<string, string[]>;
+}
+
 // SST Infrastructure types
 
 /** SST configuration from Nix */
@@ -421,6 +436,26 @@ export interface GetPackageGraphOptions {
   excludeRoot?: boolean;
 }
 
+// =============================================================================
+// Auth Error Event
+// =============================================================================
+
+/**
+ * Custom event name dispatched when the agent returns a 401 Unauthorized.
+ * The AgentProvider listens for this and triggers re-pairing.
+ */
+export const AGENT_AUTH_ERROR_EVENT = "stackpanel:auth-error";
+
+/**
+ * Dispatch a global auth error event. Called on any 401 response from the agent.
+ * This allows the AgentProvider to clear the invalid token and show the pairing UI.
+ */
+function dispatchAuthError() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(AGENT_AUTH_ERROR_EVENT));
+  }
+}
+
 /**
  * HTTP client to interact with the StackPanel agent.
  */
@@ -537,6 +572,7 @@ export class AgentHttpClient {
     });
 
     if (!res.ok) {
+      if (res.status === 401) dispatchAuthError();
       throw new Error(`Agent request failed: ${res.statusText}`);
     }
 
@@ -576,6 +612,7 @@ export class AgentHttpClient {
     });
 
     if (!res.ok) {
+      if (res.status === 401) dispatchAuthError();
       throw new Error(`Agent request failed: ${res.statusText}`);
     }
 
@@ -592,6 +629,7 @@ export class AgentHttpClient {
     });
 
     if (!res.ok) {
+      if (res.status === 401) dispatchAuthError();
       throw new Error(`Agent request failed: ${res.statusText}`);
     }
 
@@ -763,6 +801,72 @@ export class AgentHttpClient {
     }>;
   }> {
     const res = await fetch(`${this.baseUrl}/api/secrets/list`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  // ---------------------------------------------------------------------------
+  // SOPS secret management (per-environment YAML files)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Read (decrypt) all secrets for an environment from the SOPS YAML file.
+   * Returns decrypted key-value pairs.
+   */
+  async readSopsSecrets(environment = "dev"): Promise<SopsSecretsReadResponse> {
+    const res = await fetch(
+      `${this.baseUrl}/api/sops/read?environment=${encodeURIComponent(environment)}`,
+      { headers: this.getHeaders(false) },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * Write/update a single key in a SOPS-encrypted environment YAML file.
+   */
+  async writeSopsSecret(request: {
+    environment?: string;
+    key: string;
+    value: string;
+  }): Promise<{ path: string; environment: string; key: string }> {
+    const res = await fetch(`${this.baseUrl}/api/sops/write`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(request),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * Delete a key from a SOPS-encrypted environment YAML file.
+   */
+  async deleteSopsSecret(
+    environment: string,
+    key: string,
+  ): Promise<void> {
+    const res = await fetch(
+      `${this.baseUrl}/api/sops/delete?environment=${encodeURIComponent(environment)}&key=${encodeURIComponent(key)}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(false),
+      },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+  }
+
+  /**
+   * List all SOPS environments and their secret key names (not values).
+   */
+  async listSopsSecrets(): Promise<SopsSecretsListResponse> {
+    const res = await fetch(`${this.baseUrl}/api/sops/list`, {
       headers: this.getHeaders(false),
     });
     const data = await res.json();
