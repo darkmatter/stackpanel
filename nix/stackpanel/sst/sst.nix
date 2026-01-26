@@ -456,6 +456,30 @@ let
       });
     '';
 
+  # ==========================================================================
+  # Package.json generation
+  # ==========================================================================
+  packageDir = builtins.dirOf cfg.config-path;
+
+  defaultPackageScripts = {
+    deploy = "bunx sst deploy";
+    dev = "bunx sst dev";
+    remove = "bunx sst remove";
+  };
+
+  defaultPackageDeps = {
+    sst = "catalog:";
+    "@pulumi/aws" = "catalog:";
+  };
+
+  packageJson = builtins.toJSON {
+    name = cfg.package.name;
+    type = "module";
+    private = true;
+    scripts = defaultPackageScripts // cfg.package.scripts;
+    dependencies = defaultPackageDeps // cfg.package.dependencies;
+  };
+
 in
 {
   options.stackpanel.sst = {
@@ -485,8 +509,35 @@ in
 
     config-path = lib.mkOption {
       type = lib.types.str;
-      default = "infra/sst/sst.config.ts";
-      description = "Path to generate the SST config file";
+      default = "packages/infra/sst.config.ts";
+      description = "Path to generate the SST config file (relative to project root)";
+    };
+
+    # Package.json generation (enables turbo integration)
+    package = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Generate a package.json in the SST directory, making it a workspace package for Turborepo";
+      };
+
+      name = lib.mkOption {
+        type = lib.types.str;
+        default = "@${projectName}/infra";
+        description = "NPM package name for the infrastructure package";
+      };
+
+      dependencies = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Additional dependencies to include in the generated package.json (beyond sst and @pulumi/aws)";
+      };
+
+      scripts = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Additional scripts to include in the generated package.json (deploy, dev, remove are included by default)";
+      };
     };
 
     # KMS configuration
@@ -651,6 +702,11 @@ in
                   value = cfg.config-path;
                   status = "ok";
                 }
+                {
+                  label = "Package";
+                  value = if cfg.package.enable then cfg.package.name else "Disabled";
+                  status = if cfg.package.enable then "ok" else "warning";
+                }
               ];
             }
           ];
@@ -684,6 +740,11 @@ in
     stackpanel.files.entries = {
       "${cfg.config-path}" = {
         text = generateSstConfig;
+        mode = "0644";
+      };
+    } // lib.optionalAttrs cfg.package.enable {
+      "${packageDir}/package.json" = {
+        text = packageJson;
         mode = "0644";
       };
     };
@@ -748,6 +809,10 @@ in
         account-id
         config-path
         ;
+      package = {
+        inherit (cfg.package) enable name;
+        path = packageDir;
+      };
       kms = {
         inherit (cfg.kms) enable alias;
       };

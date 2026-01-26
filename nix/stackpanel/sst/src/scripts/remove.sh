@@ -3,7 +3,7 @@
 # Removes SST infrastructure from AWS
 
 # Get the config path from first arg or default
-CONFIG_PATH="${SST_CONFIG_PATH:-infra/sst/sst.config.ts}"
+CONFIG_PATH="${SST_CONFIG_PATH:-packages/infra/sst.config.ts}"
 
 cd "$(dirname "$CONFIG_PATH")"
 exec bunx sst remove "$@"

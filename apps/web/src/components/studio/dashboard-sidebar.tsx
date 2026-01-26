@@ -85,6 +85,7 @@ export type PanelType =
   | "team"
   | "network"
   | "infra"
+  | "deploy"
   | "extensions"
   | "modules"
   | "files"
@@ -108,16 +109,16 @@ const navItems: NavItem[] = [
 const mainNavItems: NavItem[] = [
   // Configuration has its own expandable menu item
   { id: "variables", label: "Variables / Secrets", icon: Variable },
-  { id: "infra", label: "Infrastructure", icon: Cloud },
   { id: "apps", label: "Apps", icon: AppWindow },
   { id: "packages", label: "Packages", icon: Package },
   { id: "processes", label: "Processes", icon: Cog },
-  { id: "tasks", label: "Tasks", icon: Play },
   { id: "network", label: "Network", icon: Network },
+  { id: "deploy", label: "Deploy", icon: Rocket },
 ];
 
 const toolsNavItems: NavItem[] = [
   { id: "modules", label: "Modules", icon: Puzzle },
+  { id: "infra", label: "Infrastructure", icon: Cloud },
   { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
   { id: "inspector", label: "Inspector", icon: Search },
@@ -130,6 +131,7 @@ const otherNavItems: NavItem[] = [
 
 const coceptsNavItems: NavItem[] = [
   // { id: "databases", label: "Databases", icon: Database },
+  { id: "tasks", label: "Tasks", icon: Play },
   { id: "services", label: "Services", icon: Server },
   { id: "extensions", label: "Extensions", icon: Puzzle },
   // { id: "files", label: "Generated Files", icon: FileCode },

@@ -162,13 +162,18 @@ in
             perSystemCfg = config.stackpanel or { };
 
             # Project root for loading config files
+            # NOTE: flakeCfg.projectRoot is an absolute path string (from readStackpanelRoot).
+            # For Nix file operations (pathExists, import), we MUST use `self` (the flake source)
+            # because builtins.pathExists on a string path fails in pure evaluation.
+            # The string projectRoot is only used for runtime purposes (stackpanel.root).
             projectRoot = flakeCfg.projectRoot or self;
 
             # ===================================================================
             # Auto-load stackpanel config from .stackpanel/
+            # Always use `self` for file discovery (works in pure evaluation)
             # ===================================================================
-            internalConfigPath = projectRoot + "/.stackpanel/_internal.nix";
-            simpleConfigPath = projectRoot + "/.stackpanel/config.nix";
+            internalConfigPath = self + "/.stackpanel/_internal.nix";
+            simpleConfigPath = self + "/.stackpanel/config.nix";
 
             hasInternalConfig = builtins.pathExists internalConfigPath;
             hasSimpleConfig = builtins.pathExists simpleConfigPath;
@@ -205,7 +210,7 @@ in
             # ===================================================================
             # Devenv config path
             # ===================================================================
-            devenvConfigPath = projectRoot + "/.stackpanel/devenv.nix";
+            devenvConfigPath = self + "/.stackpanel/devenv.nix";
             hasDevenvConfig = builtins.pathExists devenvConfigPath;
 
             # Git hooks config (from stackpanel config)
@@ -430,6 +435,9 @@ in
                 stackpanelPackages = allSerializedPackages;
                 # Expose module options for introspection
                 stackpanelOptions = stackpanelEval.options.stackpanel or { };
+                # Raw user config (pre-module-evaluation), filtered to JSON-safe values.
+                # Used by `stackpanel config check/sync` for fast diff against data files.
+                stackpanelRawConfig = serializeLib.filterSerializable loadedConfig;
               };
             }
 
@@ -567,6 +575,11 @@ in
           # Full stackpanel config (may contain non-serializable values)
           stackpanelFullConfig = withSystem "aarch64-darwin" (
             { config, ... }: config.legacyPackages.stackpanelFullConfig or { }
+          );
+
+          # Raw user config (pre-module-evaluation), for fast config check/sync
+          stackpanelRawConfig = withSystem "aarch64-darwin" (
+            { config, ... }: config.legacyPackages.stackpanelRawConfig or { }
           );
 
           # Pre-serialized packages for fast access

@@ -359,6 +359,11 @@ let
             info = "HEALTHCHECK_SEVERITY_INFO";
           }
           .${check.severity};
+        # Raw script content for UI display (inline or read from path)
+        script =
+          if hasScript then check.script
+          else if hasPath then builtins.readFile check.path
+          else null;
         # For script-type checks: agent executes scriptPath directly (no sh -c)
         scriptPath = scriptBinPath;
         # Provide derivation path so agent can build if not realized

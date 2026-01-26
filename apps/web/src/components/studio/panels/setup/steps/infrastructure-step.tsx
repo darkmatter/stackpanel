@@ -79,7 +79,7 @@ export function InfrastructureStep() {
 								},
 								{
 									label: "SST Configuration",
-									code: `infra/sst/sst.config.ts`,
+									code: `packages/infra/sst.config.ts`,
 									description:
 										"Configuration that is used to deploy the infrastructure.",
 								},

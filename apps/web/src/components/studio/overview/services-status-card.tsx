@@ -38,71 +38,82 @@ export function ServicesStatusCard() {
 
   const services = useMemo((): ServiceInfo[] => {
     const config = nixConfig?.config as Record<string, unknown> | null;
-    const globalServices = (config?.globalServices ?? config?.services ?? {}) as Record<string, unknown>;
     const processList = processes?.processes ?? [];
 
-    // Helper to check if a process is running
+    // Helper to check if a process is running (by exact name or substring match)
     const isRunning = (names: string[]): boolean => {
       return processList.some(p => 
         names.some(name => p.name.toLowerCase().includes(name.toLowerCase())) && p.isRunning
       );
     };
 
-    // Helper to get service config
-    const getServiceConfig = (name: string) => {
-      return (globalServices[name] ?? {}) as Record<string, unknown>;
-    };
+    const result: ServiceInfo[] = [];
 
-    const postgresConfig = getServiceConfig("postgres");
-    const redisConfig = getServiceConfig("redis");
-    const minioConfig = getServiceConfig("minio");
-    const caddyConfig = getServiceConfig("caddy");
+    // Read from stackpanel.services (new canonical format)
+    const stackpanelServices = (config?.services ?? {}) as Record<string, Record<string, unknown>>;
+    for (const [name, svc] of Object.entries(stackpanelServices)) {
+      if (svc && svc.enable === true) {
+        const displayName = (svc.displayName as string) ?? name;
+        const icon = name.includes("postgres") ? Database
+          : name.includes("minio") ? HardDrive
+          : Server;
+        result.push({
+          name,
+          displayName,
+          icon,
+          enabled: true,
+          running: isRunning([name]),
+          port: svc.port as number | undefined,
+          status: isRunning([name]) ? "running" : "stopped",
+        });
+      }
+    }
 
-    return [
-      {
-        name: "postgres",
-        displayName: "PostgreSQL",
-        icon: Database,
-        enabled: postgresConfig.enable === true,
-        running: isRunning(["postgres", "postgresql"]),
-        port: postgresConfig.port as number | undefined,
-        status: postgresConfig.enable === true
-          ? isRunning(["postgres", "postgresql"]) ? "running" : "stopped"
-          : "unknown",
-      },
-      {
-        name: "redis",
-        displayName: "Redis",
-        icon: Server,
-        enabled: redisConfig.enable === true,
-        running: isRunning(["redis"]),
-        port: redisConfig.port as number | undefined,
-        status: redisConfig.enable === true
-          ? isRunning(["redis"]) ? "running" : "stopped"
-          : "unknown",
-      },
-      {
-        name: "minio",
-        displayName: "Minio",
-        icon: HardDrive,
-        enabled: minioConfig.enable === true,
-        running: isRunning(["minio"]),
-        port: minioConfig.port as number | undefined,
-        status: minioConfig.enable === true
-          ? isRunning(["minio"]) ? "running" : "stopped"
-          : "unknown",
-      },
-      {
-        name: "caddy",
-        displayName: "Caddy",
-        icon: Server,
-        enabled: caddyConfig.enable === true,
-        running: isRunning(["caddy"]),
-        status: caddyConfig.enable === true
-          ? isRunning(["caddy"]) ? "running" : "stopped"
-          : "unknown",
-      },
-    ];
+    // Fallback: also check globalServices for backward compatibility
+    if (result.length === 0) {
+      const globalServices = (config?.globalServices ?? {}) as Record<string, unknown>;
+      const getServiceConfig = (svcName: string) =>
+        (globalServices[svcName] ?? {}) as Record<string, unknown>;
+
+      const postgresConfig = getServiceConfig("postgres");
+      const redisConfig = getServiceConfig("redis");
+      const minioConfig = getServiceConfig("minio");
+      const caddyConfig = getServiceConfig("caddy");
+
+      if (postgresConfig.enable === true) {
+        result.push({
+          name: "postgres", displayName: "PostgreSQL", icon: Database,
+          enabled: true, running: isRunning(["postgres", "postgresql"]),
+          port: postgresConfig.port as number | undefined,
+          status: isRunning(["postgres", "postgresql"]) ? "running" : "stopped",
+        });
+      }
+      if (redisConfig.enable === true) {
+        result.push({
+          name: "redis", displayName: "Redis", icon: Server,
+          enabled: true, running: isRunning(["redis"]),
+          port: redisConfig.port as number | undefined,
+          status: isRunning(["redis"]) ? "running" : "stopped",
+        });
+      }
+      if (minioConfig.enable === true) {
+        result.push({
+          name: "minio", displayName: "Minio", icon: HardDrive,
+          enabled: true, running: isRunning(["minio"]),
+          port: minioConfig.port as number | undefined,
+          status: isRunning(["minio"]) ? "running" : "stopped",
+        });
+      }
+      if (caddyConfig.enable === true) {
+        result.push({
+          name: "caddy", displayName: "Caddy", icon: Server,
+          enabled: true, running: isRunning(["caddy"]),
+          status: isRunning(["caddy"]) ? "running" : "stopped",
+        });
+      }
+    }
+
+    return result;
   }, [nixConfig, processes]);
 
   const enabledServices = services.filter(s => s.enabled);
@@ -231,7 +242,7 @@ export function ServicesStatusCard() {
               )}
             </div>
             <p className="mt-1 text-muted-foreground text-xs">
-              Run <code className="rounded bg-muted px-1">stackpanel services start</code> to start all services
+              Run <code className="rounded bg-muted px-1">dev</code> to start all services with process-compose
             </p>
           </div>
         )}

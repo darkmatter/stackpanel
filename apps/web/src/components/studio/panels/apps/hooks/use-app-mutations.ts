@@ -265,6 +265,51 @@ export function useAppMutations({
 		[client, token, resolvedApps, refetch],
 	);
 
+	// Handler for setting the active framework (go/bun) for an app.
+	// Enables the chosen framework and disables the other.
+	const handleUpdateFramework = useCallback(
+		async (
+			appId: string,
+			framework: "go" | "bun" | null,
+		) => {
+			if (!token) {
+				toast.error("Not connected to agent");
+				return;
+			}
+
+			try {
+				if (token) client.setToken(token);
+				const appsClient = client.nix.mapEntity<App>("apps");
+
+				// Set the selected framework to enabled, disable the other,
+				// and update the type field to match
+				const updates: Record<string, unknown> = {
+					type: framework,
+					go: { enable: framework === "go" },
+					bun: { enable: framework === "bun" },
+				};
+
+				await appsClient.update(appId, updates as unknown as Partial<App>);
+
+				const label =
+					framework === "go"
+						? "Go"
+						: framework === "bun"
+							? "Bun"
+							: "None";
+				toast.success(`Set framework to ${label} for ${appId}`);
+				refetch();
+			} catch (err) {
+				toast.error(
+					err instanceof Error
+						? err.message
+						: "Failed to update framework setting",
+				);
+			}
+		},
+		[client, token, refetch],
+	);
+
 	// Handler for deleting an app
 	const handleDeleteApp = useCallback(
 		async (appId: string) => {
@@ -298,6 +343,7 @@ export function useAppMutations({
 		handleUpdateVariableInApp,
 		handleUpdateEnvironmentsForApp,
 		handleDeleteVariableFromApp,
+		handleUpdateFramework,
 		handleDeleteApp,
 	};
 }

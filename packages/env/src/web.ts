@@ -15,6 +15,7 @@ export const env = parseEnv(
 		POLAR_SUCCESS_URL: z
 			.string()
 			.default("http://localhost:3000/checkout/success"),
+		POLAR_ACCESS_TOKEN: z.string().optional(),
 		CORS_ORIGIN: z.string().optional(),
 	},
 );

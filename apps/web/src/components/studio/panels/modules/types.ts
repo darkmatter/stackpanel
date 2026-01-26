@@ -84,6 +84,18 @@ export interface Healthcheck {
   module: string;
   tags?: string[];
   enabled: boolean;
+  // Script-based checks
+  script?: string | null;
+  scriptPath?: string | null;
+  // Nix-based checks
+  nixExpr?: string | null;
+  // HTTP-based checks
+  httpUrl?: string | null;
+  httpMethod?: string | null;
+  httpExpectedStatus?: number | null;
+  // TCP-based checks
+  tcpHost?: string | null;
+  tcpPort?: number | null;
 }
 
 export type HealthStatus =

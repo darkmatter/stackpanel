@@ -188,6 +188,12 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/secrets/identity", s.withCORS(s.requireAuth(s.requireProject(s.handleAgeIdentity))))
 	mux.HandleFunc("/api/secrets/kms", s.withCORS(s.requireAuth(s.requireProject(s.handleKMSConfig))))
 
+	// SOPS secret management endpoints (per-environment YAML files)
+	mux.HandleFunc("/api/sops/read", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsRead))))
+	mux.HandleFunc("/api/sops/write", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsWrite))))
+	mux.HandleFunc("/api/sops/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDelete))))
+	mux.HandleFunc("/api/sops/list", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsList))))
+
 	// Security status endpoints (AWS session and certificate status)
 	mux.HandleFunc("/api/security/status", s.withCORS(s.requireAuth(s.handleSecurityStatus)))
 	mux.HandleFunc("/api/security/aws", s.withCORS(s.requireAuth(s.handleAWSStatus)))
@@ -205,6 +211,10 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/sst/outputs", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTOutputs))))
 	mux.HandleFunc("/api/sst/resources", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTResources))))
 	mux.HandleFunc("/api/sst/remove", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTRemove))))
+
+	// Config sync endpoints (check/sync config.nix → data files)
+	mux.HandleFunc("/api/config/check", s.withCORS(s.requireAuth(s.requireProject(s.handleConfigCheck))))
+	mux.HandleFunc("/api/config/sync", s.withCORS(s.requireAuth(s.requireProject(s.handleConfigSync))))
 
 	// Process-compose process management endpoints
 	mux.HandleFunc("/api/process-compose/processes", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcesses))))

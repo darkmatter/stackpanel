@@ -25,12 +25,6 @@
     path = "apps/docs";
     type = "bun";
   };
-  server = {
-    description = "Backend API server";
-    name = "server";
-    path = "apps/server";
-    type = "bun";
-  };
   stackpanel-go = {
     description = "Stackpanel CLI and agent (Go)";
     environments = {
@@ -56,14 +50,17 @@
     environments = {
       dev = {
         env = {
+          APP_HOST = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/url";
+          MEMO_MEMOAS_AD = "foobar";
           OPENAI_API_KEY = "ref+sops://.stackpanel/secrets/dev.yaml#/OPENAI_API_KEY";
+          PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/port";
           POSTGRES_URL = "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL";
         };
         name = "dev";
       };
       prod = {
         env = {
-          OPENAI_API_KEY = "ref+sops://.stackpanel/secrets/prod.yaml#/OPENAI_API_KEY";
+          OPENAI_API_KEY = "ref+sops://.stackpanel/secrets/dev.yaml#/OPENAI_API_KEY";
         };
         name = "prod";
       };

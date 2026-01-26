@@ -26,9 +26,9 @@ export const defaultFormState: VariableFormState = {
 /**
  * Convert a Variable to form state.
  */
-export function variableToFormState(variable: Variable): VariableFormState {
+export function variableToFormState(variable: Variable, fallbackId = ""): VariableFormState {
 	return {
-		id: variable.id,
+		id: variable.id ?? fallbackId,
 		value: variable.value,
 	};
 }

@@ -190,7 +190,7 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 				"project-name": sstData["project-name"] || projectName,
 				region: sstData.region || inheritedRegion,
 				"account-id": sstData["account-id"] || inheritedAccountId,
-				"config-path": sstData["config-path"] || "infra/sst/sst.config.ts",
+				"config-path": sstData["config-path"] || "packages/infra/sst.config.ts",
 				kms: {
 					enable: sstData.kms?.enable ?? true,
 					alias: sstData.kms?.alias || `${projectName}-secrets`,

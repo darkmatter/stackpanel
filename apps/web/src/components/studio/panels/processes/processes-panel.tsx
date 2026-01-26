@@ -22,6 +22,7 @@ import {
   Plus,
   Save,
   Search,
+  Server,
   Settings,
   Terminal,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import { useRebuildShell } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { useProcessSources, useProcessConfig } from "./hooks";
 import { AppsSource } from "./process-sources/apps-source";
+import { ServicesSource } from "./process-sources/services-source";
 import { ScriptsSource } from "./process-sources/scripts-source";
 import { TasksSource } from "./process-sources/tasks-source";
 import { CustomSource } from "./process-sources/custom-source";
@@ -48,6 +50,7 @@ export function ProcessesPanel() {
   // Fetch data from sources
   const {
     appSources,
+    serviceSources,
     scriptSources,
     taskSources,
     settings: initialSettings,
@@ -77,7 +80,7 @@ export function ProcessesPanel() {
     generateYaml,
     getEnabledSources,
   } = useProcessConfig({
-    initialSources: [...appSources, ...scriptSources, ...taskSources],
+    initialSources: [...appSources, ...serviceSources, ...scriptSources, ...taskSources],
     initialSettings,
   });
 
@@ -152,6 +155,7 @@ export function ProcessesPanel() {
 
   // Get filtered sources for each tab
   const filteredAppSources = filterSources(sources.filter((s) => s.type === "app"));
+  const filteredServiceSources = filterSources(sources.filter((s) => s.type === "service"));
   const filteredScriptSources = filterSources(sources.filter((s) => s.type === "script"));
   const filteredTaskSources = filterSources(sources.filter((s) => s.type === "task"));
   const filteredCustomSources = filterSources(customSources);
@@ -159,6 +163,7 @@ export function ProcessesPanel() {
   // Get enabled count for each tab
   const enabledCounts = {
     apps: sources.filter((s) => s.type === "app" && s.enabled).length,
+    services: sources.filter((s) => s.type === "service" && s.enabled).length,
     scripts: sources.filter((s) => s.type === "script" && s.enabled).length,
     tasks: sources.filter((s) => s.type === "task" && s.enabled).length,
     custom: customSources.filter((s) => s.enabled).length,
@@ -272,13 +277,22 @@ export function ProcessesPanel() {
               value={activeTab}
               onValueChange={(v) => setActiveTab(v as SourceTab)}
             >
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="apps" className="gap-2">
                   <AppWindow className="h-4 w-4" />
                   Apps
                   {enabledCounts.apps > 0 && (
                     <Badge variant="secondary" className="ml-1">
                       {enabledCounts.apps}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="services" className="gap-2">
+                  <Server className="h-4 w-4" />
+                  Services
+                  {enabledCounts.services > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {enabledCounts.services}
                     </Badge>
                   )}
                 </TabsTrigger>
@@ -314,6 +328,14 @@ export function ProcessesPanel() {
               <TabsContent value="apps" className="mt-4">
                 <AppsSource
                   sources={filteredAppSources}
+                  statuses={statuses}
+                  onToggle={toggleSource}
+                />
+              </TabsContent>
+
+              <TabsContent value="services" className="mt-4">
+                <ServicesSource
+                  sources={filteredServiceSources}
                   statuses={statuses}
                   onToggle={toggleSource}
                 />

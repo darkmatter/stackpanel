@@ -39,6 +39,7 @@ const panelTitles: Record<PanelType, string> = {
   terminal: "Terminal",
   roadmap: "Roadmap",
   infra: "Infrastructure",
+  deploy: "Deploy",
   inspector: "Inspector",
 };
 
@@ -65,6 +66,7 @@ const pathToPanelMap: Record<string, PanelType> = {
   "/studio/files": "files",
   "/studio/terminal": "terminal",
   "/studio/roadmap": "roadmap",
+  "/studio/deploy": "deploy",
   "/studio/inspector": "inspector",
 };
 
@@ -76,7 +78,7 @@ export function DashboardHeader() {
   const activePanel: PanelType = pathToPanelMap[pathname] || "overview";
 
   return (
-    <header className="flex h-16 items-center justify-between border-border border-b bg-card px-6">
+    <header className="flex h-16 items-center justify-between  px-6">
       <div className="flex items-center gap-4">
         <Link to="/">
           <Button

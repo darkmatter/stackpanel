@@ -1,5 +1,5 @@
 import { cleanup } from "@testing-library/react";
-import { afterEach, expect, vi } from "vitest";
+import { afterEach, vi } from "vitest";
 
 // Cleanup after each test case (e.g., clearing jsdom)
 afterEach(() => {
@@ -7,7 +7,7 @@ afterEach(() => {
 });
 
 // Mock fetch globally for tests
-global.fetch = vi.fn();
+global.fetch = vi.fn() as unknown as typeof fetch;
 
 // Mock localStorage
 const localStorageMock = {

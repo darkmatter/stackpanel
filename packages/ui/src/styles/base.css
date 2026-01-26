@@ -65,7 +65,7 @@
   --secondary-foreground: oklch(0.98 0 0);
   --muted: oklch(0.18 0 0);
   --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(70.792% 0.10983 160.728);
+  --accent: oklch(0.68 0.36 174.76 / 1);
   --accent-foreground: oklch(0.08 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0 0);
@@ -185,7 +185,9 @@
   h6 {
     font-family: var(--font-sans);
     /*font-weight: 700;*/
-    font-variation-settings: "wght" 832, "opsz" 12;
+    font-variation-settings:
+      "wght" 832,
+      "opsz" 12;
   }
 
   /* p {
@@ -206,24 +208,35 @@
     font-family: var(--font-mono);
     /* font-weight: 400; */
   }
-  
 
-  .font-bold, strong {
-    font-variation-settings: "wght" 832, "opsz" 12;
+  .font-bold,
+  strong {
+    font-variation-settings:
+      "wght" 832,
+      "opsz" 12;
     letter-spacing: -0.05em;
   }
-  .font-semibold, b {
-    font-variation-settings: "wght" 600, "opsz" 12;
+  .font-semibold,
+  b {
+    font-variation-settings:
+      "wght" 600,
+      "opsz" 12;
     letter-spacing: -0.05em;
   }
 
-  .font-light, em {
-    font-variation-settings: "wght" 300, "opsz" 12;
+  .font-light,
+  em {
+    font-variation-settings:
+      "wght" 300,
+      "opsz" 12;
     letter-spacing: -0.03em;
   }
 
-  .font-medium, i {
-    font-variation-settings: "wght" 500, "opsz" 12;
+  .font-medium,
+  i {
+    font-variation-settings:
+      "wght" 500,
+      "opsz" 12;
     letter-spacing: -0.03em;
   }
 }
@@ -399,4 +412,22 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+}
+
+@keyframes slideUp {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
 }

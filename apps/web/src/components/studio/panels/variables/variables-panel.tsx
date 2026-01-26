@@ -1,6 +1,3 @@
-// @ts-nocheck - Needs migration to new simplified Variable schema (id, value only)
-// Old schema had: key, description, type, providedBy, etc.
-// New schema has: id (path-based), value (literal or vals ref)
 "use client";
 
 import { Button } from "@ui/button";
@@ -10,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import { TooltipProvider } from "@ui/tooltip";
 import {
+	AlertTriangle,
+	CheckCircle2,
 	ChevronDown,
 	ChevronRight,
 	Cpu,
@@ -24,11 +23,13 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
+import { useModuleHealth } from "@/lib/healthchecks/use-healthchecks";
 import { useVariables } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { AddVariableDialog } from "./add-variable-dialog";
 import {
 	getTypeConfig,
+	isReadOnlyVariable,
 	VARIABLE_TYPES,
 	type VariableTypeName,
 } from "./constants";
@@ -42,8 +43,22 @@ import { VariableUsageInfo } from "./variable-usage-info";
 
 export function VariablesPanel() {
 	const { data: variables, isLoading, error, refetch } = useVariables();
-	const { token } = useAgentContext();
+	const { token, isConnected } = useAgentContext();
 	const agentClient = useAgentClient();
+	const { data: sopsHealth } = useModuleHealth("sops", {
+		enabled: isConnected,
+	});
+
+	// Check if at least one valid decryption method is configured
+	const hasValidDecryptionMethod = useMemo(() => {
+		if (!sopsHealth?.checks) return null; // null = unknown (still loading or no data)
+		const decryptionCheckIds = ["sops-age-key-available", "sops-kms-access"];
+		return sopsHealth.checks.some(
+			(check) =>
+				decryptionCheckIds.includes(check.checkId) &&
+				check.status === "HEALTH_STATUS_HEALTHY",
+		);
+	}, [sopsHealth]);
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedType, setSelectedType] = useState<VariableTypeName | "all">(
@@ -53,7 +68,6 @@ export function VariablesPanel() {
 	const [editingSecret, setEditingSecret] = useState<{
 		id: string;
 		key: string;
-		description?: string;
 	} | null>(null);
 
 	// State for revealed secrets: { [variableId]: { value: string, loading: boolean } }
@@ -135,7 +149,6 @@ export function VariablesPanel() {
 				// UI-derived properties
 				name,
 				envKey,
-				description: "",
 			};
 		});
 	}, [variables]);
@@ -149,11 +162,11 @@ export function VariablesPanel() {
 				const matchesSearch =
 					!query ||
 					variable.name.toLowerCase().includes(query) ||
-					variable.description.toLowerCase().includes(query) ||
-					variable.id.toLowerCase().includes(query);
+					variable.id.toLowerCase().includes(query) ||
+					variable.value.toLowerCase().includes(query);
 
-				// Convert the variable's type to our UI type string for comparison
-				const variableUiType = getTypeConfig(variable.type).value;
+				// Derive type from id and value
+				const variableUiType = getTypeConfig(variable.id, variable.value).value;
 				const matchesType =
 					selectedType === "all" || selectedType === variableUiType;
 
@@ -217,6 +230,12 @@ export function VariablesPanel() {
 						<TabsTrigger value="configure" className="flex items-center gap-2">
 							<Settings className="h-4 w-4" />
 							Configure
+							{hasValidDecryptionMethod === true && (
+								<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+							)}
+							{hasValidDecryptionMethod === false && (
+								<AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+							)}
 						</TabsTrigger>
 					</TabsList>
 
@@ -282,7 +301,7 @@ export function VariablesPanel() {
 								</Card>
 							) : (
 								filteredVariables.map((variable) => {
-									const typeConfig = getTypeConfig(variable.type);
+									const typeConfig = getTypeConfig(variable.id, variable.value);
 									const TypeIcon = typeConfig.icon;
 									const isExpanded = expandedId === variable.id;
 
@@ -310,15 +329,10 @@ export function VariablesPanel() {
 															<code className="text-sm font-semibold font-mono">
 																{variable.name}
 															</code>
-															{/* <span
-																className={`px-2 py-0.5 text-xs rounded ${typeConfig.color}`}
-															>
-																{typeConfig.label}
-															</span> */}
-															{variable.providedBy && (
+															{isReadOnlyVariable(variable.id) && (
 																<span
 																	className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-none text-amber-600 dark:text-amber-400 border border-amber-500/20"
-																	title={`Provided by ${variable.providedBy}`}
+																	title={`Computed from ${variable.id}`}
 																>
 																	<Cpu className="h-3 w-3" />
 																	Computed
@@ -326,18 +340,14 @@ export function VariablesPanel() {
 															)}
 														</div>
 														<p className="text-sm text-muted-foreground">
-															{variable.description ||
-																"No description provided."}
+															{typeConfig.description}
 														</p>
 													</div>
 													{/* Edit button for non-computed variables */}
-													{!variable.providedBy && (
+													{!isReadOnlyVariable(variable.id) && (
 														<EditVariableDialog
 															variable={{
 																id: variable.id,
-																key: variable.envKey,
-																description: variable.description,
-																type: variable.type,
 																value: variable.value,
 															}}
 															onSuccess={refetch}
@@ -405,7 +415,6 @@ export function VariablesPanel() {
 																				setEditingSecret({
 																					id: variable.id,
 																					key: variable.envKey,
-																					description: variable.description,
 																				});
 																			}}
 																		>
@@ -433,13 +442,13 @@ export function VariablesPanel() {
 															{typeConfig.description}
 														</p>
 													</div>
-													{variable.providedBy && (
+													{isReadOnlyVariable(variable.id) && (
 														<div className="space-y-1">
 															<p className="text-xs font-medium text-muted-foreground">
-																Provided By
+																Source
 															</p>
 															<p className="text-sm font-mono text-blue-600 dark:text-blue-400">
-																{variable.providedBy}
+																{variable.id.startsWith("/computed/services/") ? "Service" : "Computed"}
 															</p>
 														</div>
 													)}
@@ -519,7 +528,6 @@ export function VariablesPanel() {
 					<EditSecretDialog
 						secretId={editingSecret.id}
 						secretKey={editingSecret.key}
-						description={editingSecret.description}
 						open={!!editingSecret}
 						onOpenChange={(open) => {
 							if (!open) setEditingSecret(null);

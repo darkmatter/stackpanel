@@ -21,7 +21,7 @@ proto.mkProtoFile {
       # project-name = "my-project";
       # region = "us-west-2";
       # account-id = "123456789012";
-      # config-path = "infra/sst/sst.config.ts";
+      # config-path = "packages/infra/sst.config.ts";
       #
       # kms = {
       #   enable = true;

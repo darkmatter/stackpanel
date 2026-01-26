@@ -1,10 +1,11 @@
-// @ts-nocheck - Uses old agent methods (readSecrets, writeSecret, deleteSecret)
-// Needs refactoring to use new SOPS-based approach with setSecret
 /**
  * Hook for managing secrets panel state.
+ *
+ * Uses the SOPS endpoints (/api/sops/*) to read/write/delete secrets
+ * from per-environment YAML files (e.g., .stackpanel/secrets/dev.yaml).
  */
 import { useCallback, useEffect, useState } from "react";
-import { useAgent, useAgentHealth } from "@/lib/use-agent";
+import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { DEMO_SECRETS, inferSecretType } from "./constants";
 import type { Secret } from "./types";
 
@@ -21,12 +22,13 @@ export function useSecrets() {
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const { isPaired } = useAgentHealth();
-	const agent = useAgent({ autoConnect: false });
+	const { token, isConnected } = useAgentContext();
+	const agentClient = useAgentClient();
+	const isPaired = isConnected && !!token;
 
-	// Load secrets from agent when paired
+	// Load secrets from agent via SOPS read endpoint
 	const loadSecrets = useCallback(async () => {
-		if (!isPaired || !agent.isConnected) {
+		if (!isPaired) {
 			setSecrets(DEMO_SECRETS);
 			return;
 		}
@@ -35,7 +37,9 @@ export function useSecrets() {
 		setError(null);
 
 		try {
-			const result = await agent.readSecrets(selectedEnvironment);
+			agentClient.setToken(token!);
+			const result = await agentClient.readSopsSecrets(selectedEnvironment);
+
 			if (result.exists && result.secrets) {
 				const secretsList = Object.entries(result.secrets)
 					.filter(([key]) => !key.startsWith("sops"))
@@ -47,7 +51,7 @@ export function useSecrets() {
 					}));
 				setSecrets(secretsList);
 
-				// Store values for reveal
+				// Store values for reveal/copy
 				const values: Record<string, string> = {};
 				for (const [key, value] of Object.entries(result.secrets)) {
 					if (!key.startsWith("sops")) {
@@ -65,20 +69,16 @@ export function useSecrets() {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [isPaired, agent, selectedEnvironment]);
+	}, [isPaired, agentClient, selectedEnvironment, token]);
 
-	// Connect agent and load secrets when environment changes
+	// Load secrets when connection or environment changes
 	useEffect(() => {
-		if (isPaired && !agent.isConnected) {
-			agent.connect().then(() => {
-				loadSecrets();
-			});
-		} else if (isPaired && agent.isConnected) {
+		if (isPaired) {
 			loadSecrets();
 		} else {
 			setSecrets(DEMO_SECRETS);
 		}
-	}, [isPaired, agent.isConnected, selectedEnvironment, loadSecrets, agent]);
+	}, [isPaired, selectedEnvironment, loadSecrets]);
 
 	const handleAddSecret = async () => {
 		if (!newSecretKey.trim() || !newSecretValue.trim()) {
@@ -86,7 +86,7 @@ export function useSecrets() {
 			return;
 		}
 
-		if (!isPaired || !agent.isConnected) {
+		if (!isPaired) {
 			setError("Connect to the local agent to add secrets");
 			return;
 		}
@@ -95,11 +95,12 @@ export function useSecrets() {
 		setError(null);
 
 		try {
-			await agent.writeSecret(
-				selectedEnvironment,
-				newSecretKey,
-				newSecretValue,
-			);
+			agentClient.setToken(token!);
+			await agentClient.writeSopsSecret({
+				environment: selectedEnvironment,
+				key: newSecretKey,
+				value: newSecretValue,
+			});
 			setDialogOpen(false);
 			setNewSecretKey("");
 			setNewSecretValue("");
@@ -112,13 +113,14 @@ export function useSecrets() {
 	};
 
 	const handleDeleteSecret = async (key: string) => {
-		if (!isPaired || !agent.isConnected) {
+		if (!isPaired) {
 			setError("Connect to the local agent to delete secrets");
 			return;
 		}
 
 		try {
-			await agent.deleteSecret(selectedEnvironment, key);
+			agentClient.setToken(token!);
+			await agentClient.deleteSopsSecret(selectedEnvironment, key);
 			await loadSecrets();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to delete secret");

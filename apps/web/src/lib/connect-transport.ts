@@ -6,7 +6,9 @@
  */
 
 import type { Interceptor } from "@connectrpc/connect";
+import { ConnectError, Code } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
+import { AGENT_AUTH_ERROR_EVENT } from "./agent";
 
 /**
  * Creates a Connect transport configured for the local agent.
@@ -17,7 +19,17 @@ import { createConnectTransport } from "@connectrpc/connect-web";
 export function createAgentTransport(token: string, port: number = 9876) {
 	const authInterceptor: Interceptor = (next) => async (req) => {
 		req.header.set("Authorization", `Bearer ${token}`);
-		return next(req);
+		try {
+			return await next(req);
+		} catch (err) {
+			// Detect 401/Unauthenticated and dispatch auth error event
+			if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+				if (typeof window !== "undefined") {
+					window.dispatchEvent(new CustomEvent(AGENT_AUTH_ERROR_EVENT));
+				}
+			}
+			throw err;
+		}
 	};
 
 	return createConnectTransport({

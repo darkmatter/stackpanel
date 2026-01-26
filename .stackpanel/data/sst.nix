@@ -1,6 +1,6 @@
 {
   account-id = "950224716579";
-  config-path = "infra/sst/sst.config.ts";
+  config-path = "packages/infra/sst.config.ts";
   enable = true;
   iam = {
     role-name = "stackpanel-secrets-role";
@@ -27,5 +27,5 @@
   };
   project-name = "stackpanel";
   region = "us-west-2";
+  package.enable = true;
 }
-
