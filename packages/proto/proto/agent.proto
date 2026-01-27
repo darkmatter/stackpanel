@@ -95,6 +95,9 @@ service AgentService {
   // Healthchecks
   rpc GetHealthchecks(GetHealthchecksRequest) returns (HealthchecksResponse);
   
+  // Nix data patch - update a single value at a nested path within an entity
+  rpc PatchNixData(PatchNixDataRequest) returns (PatchNixDataResponse);
+  
   // Full Nix config (evaluated from flake)
   rpc GetNixConfig(GetNixConfigRequest) returns (NixConfigResponse);
   rpc RefreshNixConfig(RefreshNixConfigRequest) returns (NixConfigResponse);
@@ -429,6 +432,47 @@ message HealthcheckInfo {
 message HealthchecksResponse {
   bool all_healthy = 1;
   repeated HealthcheckInfo checks = 2;
+}
+
+// =============================================================================
+// Nix Data Patch
+// =============================================================================
+
+// PatchNixDataRequest updates a single value within a Nix data entity at a
+// dot-separated path. This enables editing individual fields from UI panels
+// without replacing the entire entity.
+//
+// Example: Update a Go app's mainPackage:
+//   entity = "apps"
+//   key = "stackpanel-go"
+//   path = "go.mainPackage"
+//   value = "./cmd/api"
+//   value_type = "string"
+//
+// The path uses camelCase (matching the SpField/panel editPath convention).
+// The handler converts to kebab-case when writing to the Nix data file.
+message PatchNixDataRequest {
+  // Entity name (e.g., "apps", "config", "secrets")
+  string entity = 1;
+  // Top-level key within the entity (e.g., app name "web" for apps entity)
+  // Empty string for non-map entities (e.g., "config")
+  string key = 2;
+  // Dot-separated path to the field within the key (e.g., "go.mainPackage")
+  // Uses camelCase convention (zero conversion from UI editPath)
+  string path = 3;
+  // JSON-encoded value to set (e.g., "\"./cmd/api\"", "true", "[\"a\",\"b\"]")
+  string value = 4;
+  // Value type hint for proper Nix serialization
+  // Supported: "string", "bool", "number", "list", "object", "null"
+  string value_type = 5;
+}
+
+message PatchNixDataResponse {
+  bool success = 1;
+  // The updated entity data as JSON (for UI cache invalidation)
+  string updated_json = 2;
+  // Error message if success is false
+  string error = 3;
 }
 
 // =============================================================================

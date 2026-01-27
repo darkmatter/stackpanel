@@ -30,6 +30,7 @@ import {
   AppExpandedContent,
   type AppFramework,
 } from "./apps/app-expanded-content";
+import type { AppModulePanel } from "./shared/panel-types";
 import { useAppMutations } from "./apps/hooks";
 import type { DisplayVariable, TaskWithCommand } from "./apps/types";
 import type { AvailableVariable } from "./apps/app-variables-section/types";
@@ -55,6 +56,24 @@ export function AppsPanelAlt() {
     (typeof nixConfig?.projectName === "string"
       ? nixConfig.projectName
       : null) ?? "stackpanel";
+
+  // Extract PANEL_TYPE_APP_CONFIG panels from panelsComputed
+  // Panels come from nix eval: config.panelsComputed (flake path) or config.ui.panels (CLI path)
+  const appConfigPanels = useMemo((): AppModulePanel[] => {
+    const cfg = nixConfig as Record<string, unknown> | null | undefined;
+    if (!cfg) return [];
+
+    // Try flake eval path first (panelsComputed), then CLI config path (ui.panels)
+    const panels =
+      cfg.panelsComputed ??
+      (cfg.ui as Record<string, unknown> | undefined)?.panels;
+    if (!panels || typeof panels !== "object") return [];
+
+    type RawPanel = AppModulePanel & { type?: string };
+    return Object.values(panels as Record<string, RawPanel>).filter(
+      (p): p is RawPanel => p.type === "PANEL_TYPE_APP_CONFIG",
+    );
+  }, [nixConfig]);
 
   // Transform apps data to include id, stablePort, and isRunning fields
   const resolvedApps = useMemo(() => {
@@ -465,6 +484,9 @@ export function AppsPanelAlt() {
                       environmentOptions={environmentOptions}
                       availableVariables={availableVariables}
                       disabled={!token}
+                      modulePanels={appConfigPanels.filter(
+                        (p) => p.apps[app.id] != null,
+                      )}
                       editingTask={editingTask}
                       taskCommandOverride={taskCommandOverride}
                       onTaskEdit={handleTaskEdit}

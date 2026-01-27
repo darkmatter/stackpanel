@@ -28,6 +28,7 @@ const (
 	FileType_FILE_TYPE_UNSPECIFIED FileType = 0
 	FileType_FILE_TYPE_TEXT        FileType = 1
 	FileType_FILE_TYPE_DERIVATION  FileType = 2
+	FileType_FILE_TYPE_JSON        FileType = 3
 )
 
 // Enum value maps for FileType.
@@ -36,11 +37,13 @@ var (
 		0: "FILE_TYPE_UNSPECIFIED",
 		1: "FILE_TYPE_TEXT",
 		2: "FILE_TYPE_DERIVATION",
+		3: "FILE_TYPE_JSON",
 	}
 	FileType_value = map[string]int32{
 		"FILE_TYPE_UNSPECIFIED": 0,
 		"FILE_TYPE_TEXT":        1,
 		"FILE_TYPE_DERIVATION":  2,
+		"FILE_TYPE_JSON":        3,
 	}
 )
 
@@ -250,11 +253,12 @@ const file_files_proto_rawDesc = "" +
 	"\aentries\x18\x02 \x03(\v2*.stackpanel.db.GeneratedFiles.EntriesEntryR\aentries\x1aX\n" +
 	"\fEntriesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.stackpanel.db.GeneratedFileR\x05value:\x028\x01*S\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.stackpanel.db.GeneratedFileR\x05value:\x028\x01*g\n" +
 	"\bFileType\x12\x19\n" +
 	"\x15FILE_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eFILE_TYPE_TEXT\x10\x01\x12\x18\n" +
-	"\x14FILE_TYPE_DERIVATION\x10\x02B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x14FILE_TYPE_DERIVATION\x10\x02\x12\x12\n" +
+	"\x0eFILE_TYPE_JSON\x10\x03B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_files_proto_rawDescOnce sync.Once

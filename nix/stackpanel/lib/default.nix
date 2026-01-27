@@ -52,6 +52,10 @@ in
   # Port computation utilities (pure, no pkgs needed)
   ports = import ./ports.nix { inherit lib; };
 
+  # Panel generation utilities (pure, no pkgs needed)
+  # Auto-generates PANEL_TYPE_APP_CONFIG panels from SpField definitions
+  panels = import ./panels.nix { inherit lib; };
+
   # Extension src/ directory discovery utilities (pure, no pkgs needed)
   # Use this to discover scripts, healthchecks, and files from extension srcDir.
   #

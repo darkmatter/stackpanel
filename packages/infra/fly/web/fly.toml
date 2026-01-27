@@ -4,7 +4,7 @@
 app = "stackpanel-web"
 
 [build]
-image = "registry.fly.io/stackpanel-web:latest"
+dockerfile = "packages/infra/docker/web/Dockerfile"
 
 [env]
 PORT = '3000'

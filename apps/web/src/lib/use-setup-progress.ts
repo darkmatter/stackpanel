@@ -2,6 +2,7 @@
 
 import {
 	Cloud,
+	Database,
 	FileCog,
 	FolderOpen,
 	Github as _Github,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";
-import { useNixData } from "./use-agent";
+import { useNixData, useVariablesBackend } from "./use-agent";
 
 // =============================================================================
 // Types
@@ -71,6 +72,11 @@ export function useSetupProgress(): SetupProgress | null {
 	const { data: sstData } = useNixData<SSTData>("sst", {
 		initialData: { enable: false },
 	});
+
+	// Load secrets backend
+	const { data: backendData } = useVariablesBackend();
+	const secretsBackend: "vals" | "chamber" = backendData?.backend ?? "vals";
+	const isChamber = secretsBackend === "chamber";
 
 	const loadProgress = useCallback(async () => {
 		let projectConfirmed = false;
@@ -155,32 +161,50 @@ export function useSetupProgress(): SetupProgress | null {
 				icon: FolderOpen,
 			},
 			{
+				id: "secrets-backend",
+				title: "Secrets Backend",
+				shortTitle: "Backend",
+				description: "Choose how secrets are stored and managed",
+				status: secretsBackend
+					? "complete"
+					: projectConfirmed
+						? "incomplete"
+						: "blocked",
+				required: true,
+				dependsOn: ["project-info"],
+				icon: Database,
+			},
+			{
 				id: "infrastructure",
 				title: "AWS Auto-Config",
 				shortTitle: "Auto-Deploy (AWS)",
 				description:
 					"Automatically create required AWS resources for production-ready secrets management",
-				status: sstData?.enable ? "complete" : "optional",
-				required: false,
-				dependsOn: ["project-info"],
+				status: sstData?.enable ? "complete" : isChamber ? "incomplete" : "optional",
+				required: isChamber,
+				dependsOn: ["secrets-backend"],
 				icon: Cloud,
 			},
 			{
 				id: "decryption-key",
 				title: "Local Decryption Key",
 				shortTitle: "AGE Key",
-				description: hasAwsKms
-					? "Optional if using AWS KMS"
-					: "Configure your private key for decrypting secrets locally",
-				status: hasIdentity
-					? "complete"
+				description: isChamber
+					? "Not needed for Chamber backend"
 					: hasAwsKms
-						? "optional"
-						: projectConfirmed
-							? "incomplete"
-							: "blocked",
-				required: !hasAwsKms,
-				dependsOn: ["project-info"],
+						? "Optional if using AWS KMS"
+						: "Configure your private key for decrypting secrets locally",
+				status: isChamber
+					? "complete"
+					: hasIdentity
+						? "complete"
+						: hasAwsKms
+							? "optional"
+							: projectConfirmed
+								? "incomplete"
+								: "blocked",
+				required: !isChamber && !hasAwsKms,
+				dependsOn: ["secrets-backend"],
 				icon: Key,
 			},
 			{
@@ -188,7 +212,7 @@ export function useSetupProgress(): SetupProgress | null {
 				title: "Team Sync",
 				shortTitle: "Github Sync",
 				description: "Sync team members' public keys for encryption",
-				status: usersConfigured ? "complete" : "optional",
+				status: isChamber ? "complete" : usersConfigured ? "complete" : "optional",
 				required: false,
 				icon: GithubIcon,
 			},
@@ -198,7 +222,7 @@ export function useSetupProgress(): SetupProgress | null {
 				shortTitle: "KMS",
 				description:
 					"Configure your local machine to use an existing AWS KMS key",
-				status: kmsEnabled ? "complete" : "optional",
+				status: isChamber ? "complete" : kmsEnabled ? "complete" : "optional",
 				required: false,
 				icon: Shield,
 			},
@@ -207,12 +231,14 @@ export function useSetupProgress(): SetupProgress | null {
 				title: "Generate SOPS Config",
 				shortTitle: "SOPS",
 				description: "Generate .sops.yaml with your encryption keys",
-				status: hasSopsConfig
+				status: isChamber
 					? "complete"
-					: hasIdentity
-						? "incomplete"
-						: "blocked",
-				required: true,
+					: hasSopsConfig
+						? "complete"
+						: hasIdentity
+							? "incomplete"
+							: "blocked",
+				required: !isChamber,
 				dependsOn: ["decryption-key"],
 				icon: FileCog,
 			},
@@ -232,7 +258,7 @@ export function useSetupProgress(): SetupProgress | null {
 			requiredTotal: requiredSteps.length,
 			isComplete: requiredComplete === requiredSteps.length,
 		});
-	}, [token, isConnected, sstData]);
+	}, [token, isConnected, sstData, agentClient, secretsBackend, isChamber]);
 
 	useEffect(() => {
 		loadProgress();

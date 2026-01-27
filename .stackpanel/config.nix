@@ -159,6 +159,7 @@
   caddy = {
     enable = true;
     project-name = "stackpanel";
+    use-step-tls = true;
   };
 
   # ---------------------------------------------------------------------------

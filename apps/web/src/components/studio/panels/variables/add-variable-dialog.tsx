@@ -16,8 +16,9 @@ import { Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
+import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
-import { isSopsReference } from "./constants";
+import { isSopsReference, isEncryptedKeyGroup, getKeyGroup } from "./constants";
 
 interface AddVariableDialogProps {
 	onSuccess: () => void;
@@ -30,11 +31,14 @@ interface AddVariableDialogProps {
  * - id: Path-based identifier like /dev/DATABASE_URL or /var/LOG_LEVEL
  * - value: Literal string or vals reference (ref+sops://...)
  * 
- * For secrets, use ref+sops:// format pointing to the SOPS file.
+ * For vals backend, secrets use ref+sops:// format pointing to the SOPS file.
+ * For chamber backend, secrets are plain values in encrypted keygroups (/dev/, /staging/, /prod/).
  */
 export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 	const { token } = useAgentContext();
 	const agentClient = useAgentClient();
+	const { data: backendData } = useVariablesBackend();
+	const isChamber = backendData?.backend === "chamber";
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	
@@ -95,7 +99,9 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 
 			await variablesClient.set(normalizedId, newVariable);
 			
-			const isSecret = isSopsReference(trimmedValue);
+			const isSecret = isChamber
+				? isEncryptedKeyGroup(getKeyGroup(normalizedId))
+				: isSopsReference(trimmedValue);
 			toast.success(`Created ${isSecret ? "secret" : "variable"} "${normalizedId}"`);
 
 			handleOpenChange(false);
@@ -148,11 +154,13 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
 							id="var-value"
 							value={varValue}
 							onChange={(e) => setVarValue(e.target.value)}
-							placeholder="literal value or ref+sops://..."
+							placeholder={isChamber ? "Secret value (stored in AWS SSM)" : "literal value or ref+sops://..."}
 							className="font-mono min-h-[80px]"
 						/>
 						<p className="text-xs text-muted-foreground">
-							Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)
+							{isChamber
+								? "Plain value. Secrets in /dev/, /staging/, /prod/ keygroups are encrypted via AWS KMS."
+								: "Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)"}
 						</p>
 					</div>
 				</div>

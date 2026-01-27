@@ -36,9 +36,9 @@ function StudioLayout() {
         <ProjectProvider initialProjectId={project}>
           <SidebarProvider>
             <DashboardSidebar />
+            {/* <SidebarTrigger /> */}
             <SidebarInset>
               <DashboardHeader />
-              <SidebarTrigger />
               <EnsureAgent />
             </SidebarInset>
           </SidebarProvider>

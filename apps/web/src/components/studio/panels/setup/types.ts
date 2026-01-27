@@ -135,4 +135,8 @@ export interface SetupContextValue {
 	sopsConfigGenerated: boolean;
 	handleGenerateSopsConfig: () => Promise<void>;
 	isGeneratingSops: boolean;
+
+	// Secrets backend
+	secretsBackend: "vals" | "chamber";
+	isChamber: boolean;
 }

@@ -41,6 +41,8 @@ in
     ./services # aws, caddy, global-services
     ./secrets # SOPS helper
     ./sst # SST infrastructure provisioning
+    ./infra # Alchemy-based infrastructure module system
+    ./docker # Container tooling (skopeo, OCI images)
     ./deployment # Deployment providers (Fly.io, etc.)
     ./tui # TUI components
     ./ide # IDE integration (VS Code)

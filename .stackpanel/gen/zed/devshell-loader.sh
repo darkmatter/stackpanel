@@ -7,7 +7,7 @@
 # Handles common edge cases like Nix not being in PATH yet.
 #
 # Shell mode: stackpanel
-# Lookup file: devenv.yaml
+# Lookup file: .git
 #
 
 
@@ -46,7 +46,7 @@ if [[ -n "${STACKPANEL_ROOT:-}" ]]; then
   if command -v git >/dev/null 2>&1; then
     local gr
 gr="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [[ -n "$gr" && -f "$gr/devenv.yaml" ]]; then
+if [[ -n "$gr" && -e "$gr/.git" ]]; then
 printf "%s\\n" "$gr"
       return 0
     fi
@@ -55,14 +55,14 @@ printf "%s\\n" "$gr"
   # Walk up from current dir
 local d="$PWD"
 while [[ "$d" != "/" ]]; do
-if [[ -f "$d/devenv.yaml" ]]; then
+if [[ -e "$d/.git" ]]; then
 printf "%s\\n" "$d"
       return 0
     fi
 d="$(dirname "$d")"
   done
 
-die "couldn't find devenv.yaml (open VS Code at the repo root)"
+die "couldn't find .git (open VS Code at the repo root)"
 }
 
 ROOT="$(find_root)"

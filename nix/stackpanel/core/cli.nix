@@ -176,6 +176,11 @@ let
       # Replaces extensions with a more comprehensive module system
       modules = cfg.modulesComputed or { };
       modulesList = cfg.modulesList or [ ];
+
+      # Module panels - serialized panel definitions for the web UI
+      # These come from stackpanel.panels (set by each module's ui.nix)
+      panels = cfg.panelsComputed or { };
+      panelModules = cfg.panelModules or [ ];
     };
   };
 
