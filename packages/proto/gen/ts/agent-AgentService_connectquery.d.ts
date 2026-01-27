@@ -203,6 +203,12 @@ export const getProcesses: typeof AgentService["method"]["getProcesses"];
  */
 export const getHealthchecks: typeof AgentService["method"]["getHealthchecks"];
 /**
+ * Nix data patch - update a single value at a nested path within an entity
+ *
+ * @generated from rpc stackpanel.agent.AgentService.PatchNixData
+ */
+export const patchNixData: typeof AgentService["method"]["patchNixData"];
+/**
  * Full Nix config (evaluated from flake)
  *
  * @generated from rpc stackpanel.agent.AgentService.GetNixConfig

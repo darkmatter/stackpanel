@@ -33,7 +33,7 @@
 }:
 let
   cfg = config.stackpanel.caddy;
-  stepCfg = config.stackpanel.network.step or { enable = false; };
+  stepCfg = config.stackpanel.step-ca or { enable = false; };
 
   # Import util for debug logging
   util = config.stackpanel.util;

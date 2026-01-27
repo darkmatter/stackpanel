@@ -264,6 +264,10 @@ in
 
         These are mutually exclusive - use one or the other.
 
+        For type="json" files, provide a Nix attrset via jsonValue. Multiple
+        modules can contribute to the same file path and their values will be
+        deep-merged by the Nix module system.
+
         Example:
           # Inline text
           stackpanel.files.entries.".github/workflows/ci.yml" = {
@@ -284,6 +288,17 @@ in
             drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
             mode = "0755";
           };
+
+          # JSON (deep-mergeable from multiple modules)
+          stackpanel.files.entries."apps/web/package.json" = {
+            type = "json";
+            jsonValue = {
+              name = "web";
+              private = true;
+              scripts.dev = "vite dev";
+              dependencies.react = "^19.0.0";
+            };
+          };
       '';
       type = types.attrsOf (
         types.submodule (
@@ -299,6 +314,7 @@ in
                   "text"
                   "derivation"
                   "symlink"
+                  "json"
                 ];
                 default = "text";
                 description = ''
@@ -306,6 +322,7 @@ in
                   - 'text': inline text content
                   - 'derivation': copy from a derivation
                   - 'symlink': create a symbolic link
+                  - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
                 '';
               };
 
@@ -315,6 +332,40 @@ in
                 description = ''
                   Text content for the file (when type = 'text').
                   Mutually exclusive with `path` - use one or the other.
+                '';
+              };
+
+              jsonValue = lib.mkOption {
+                type = types.attrsOf types.anything;
+                default = { };
+                description = ''
+                  Nix attrset to serialize as formatted JSON (when type = 'json').
+
+                  Multiple modules can contribute to the same file path and their
+                  values will be deep-merged by the Nix module system. This is
+                  ideal for shared files like package.json where different modules
+                  need to add scripts, dependencies, etc.
+
+                  Example:
+                    # Module A
+                    stackpanel.files.entries."package.json" = {
+                      type = "json";
+                      jsonValue = {
+                        name = "my-app";
+                        scripts.dev = "bun run dev";
+                      };
+                    };
+
+                    # Module B (merges with A)
+                    stackpanel.files.entries."package.json" = {
+                      type = "json";
+                      jsonValue = {
+                        scripts.test = "bun test";
+                        dependencies.zod = "^3.0.0";
+                      };
+                    };
+
+                    # Result: { name = "my-app"; scripts = { dev = "bun run dev"; test = "bun test"; }; dependencies = { zod = "^3.0.0"; }; }
                 '';
               };
 

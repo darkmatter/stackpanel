@@ -98,6 +98,31 @@ let
     "env"
   ];
 
+  # Helper to serialize a package derivation to JSON-safe format
+  serializePackage =
+    pkg:
+    if builtins.isAttrs pkg && pkg ? name then
+      {
+        name = pkg.pname or pkg.name or "unknown";
+        version = pkg.version or "";
+        attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
+        source = "devshell";
+      }
+    else if builtins.isString pkg then
+      {
+        name = pkg;
+        version = "";
+        attrPath = pkg;
+        source = "devshell";
+      }
+    else
+      {
+        name = "unknown";
+        version = "";
+        attrPath = "";
+        source = "devshell";
+      };
+
   # Special handling for devshell - only serialize specific attributes
   filterDevshell =
     devshell: lib.filterAttrs (name: _: builtins.elem name devshellSerializableAttrs) devshell;
@@ -246,5 +271,6 @@ in
     safeAccess
     canAccess
     defaultSkipAttrs
+    serializePackage
     ;
 }

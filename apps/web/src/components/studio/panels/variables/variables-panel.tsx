@@ -24,7 +24,7 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
 import { useModuleHealth } from "@/lib/healthchecks/use-healthchecks";
-import { useVariables } from "@/lib/use-agent";
+import { useVariables, useVariablesBackend } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { AddVariableDialog } from "./add-variable-dialog";
 import {
@@ -32,6 +32,7 @@ import {
 	isReadOnlyVariable,
 	VARIABLE_TYPES,
 	type VariableTypeName,
+	type VariablesBackend,
 } from "./constants";
 import {
 	AgeIdentitySettings,
@@ -45,12 +46,18 @@ export function VariablesPanel() {
 	const { data: variables, isLoading, error, refetch } = useVariables();
 	const { token, isConnected } = useAgentContext();
 	const agentClient = useAgentClient();
+	const { data: backendData } = useVariablesBackend();
+	const backend: VariablesBackend = backendData?.backend ?? "vals";
+	const isChamber = backend === "chamber";
+
 	const { data: sopsHealth } = useModuleHealth("sops", {
-		enabled: isConnected,
+		enabled: isConnected && !isChamber,
 	});
 
 	// Check if at least one valid decryption method is configured
+	// For chamber backend, decryption is handled by AWS — always considered valid
 	const hasValidDecryptionMethod = useMemo(() => {
+		if (isChamber) return true;
 		if (!sopsHealth?.checks) return null; // null = unknown (still loading or no data)
 		const decryptionCheckIds = ["sops-age-key-available", "sops-kms-access"];
 		return sopsHealth.checks.some(
@@ -58,7 +65,7 @@ export function VariablesPanel() {
 				decryptionCheckIds.includes(check.checkId) &&
 				check.status === "HEALTH_STATUS_HEALTHY",
 		);
-	}, [sopsHealth]);
+	}, [sopsHealth, isChamber]);
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedType, setSelectedType] = useState<VariableTypeName | "all">(
@@ -166,14 +173,14 @@ export function VariablesPanel() {
 					variable.value.toLowerCase().includes(query);
 
 				// Derive type from id and value
-				const variableUiType = getTypeConfig(variable.id, variable.value).value;
+				const variableUiType = getTypeConfig(variable.id, variable.value, backend).value;
 				const matchesType =
 					selectedType === "all" || selectedType === variableUiType;
 
 				return matchesSearch && matchesType;
 			})
 			.sort((a, b) => a.name.localeCompare(b.name));
-	}, [variablesList, searchQuery, selectedType]);
+	}, [variablesList, searchQuery, selectedType, backend]);
 
 	const toggleExpanded = (id: string) => {
 		setExpandedId((current) => (current === id ? null : id));
@@ -301,7 +308,7 @@ export function VariablesPanel() {
 								</Card>
 							) : (
 								filteredVariables.map((variable) => {
-									const typeConfig = getTypeConfig(variable.id, variable.value);
+									const typeConfig = getTypeConfig(variable.id, variable.value, backend);
 									const TypeIcon = typeConfig.icon;
 									const isExpanded = expandedId === variable.id;
 
@@ -490,36 +497,84 @@ export function VariablesPanel() {
 					</TabsContent>
 
 					<TabsContent value="configure" className="mt-6 space-y-6">
-						<div className="space-y-4">
-							<div>
-								<h3 className="text-lg font-medium mb-1">
-									Encryption Settings
-								</h3>
-								<p className="text-sm text-muted-foreground">
-									Configure how secrets are encrypted and decrypted in this
-									project.
-								</p>
-							</div>
-
+						{isChamber ? (
 							<div className="space-y-4">
-								<AgeIdentitySettings />
-								<KMSSettings />
-							</div>
+								<div>
+									<h3 className="text-lg font-medium mb-1">
+										Chamber Backend
+									</h3>
+									<p className="text-sm text-muted-foreground">
+										Secrets are managed via AWS Systems Manager Parameter Store
+										using Chamber.
+									</p>
+								</div>
 
-							<div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-								<h4 className="mb-2 text-sm font-medium text-amber-600 dark:text-amber-400">
-									After changing settings
-								</h4>
-								<p className="text-sm text-muted-foreground">
-									Run{" "}
-									<code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-										generate-sops-config
-									</code>{" "}
-									to update your <code>.sops.yaml</code> file with the new
-									encryption keys.
-								</p>
+								<div className="rounded-lg border border-border bg-card p-4 space-y-3">
+									<div className="flex items-center gap-2">
+										<CheckCircle2 className="h-4 w-4 text-green-500" />
+										<span className="text-sm font-medium">Active Backend: Chamber</span>
+									</div>
+									{backendData?.chamber?.servicePrefix && (
+										<div className="space-y-1">
+											<p className="text-xs font-medium text-muted-foreground">
+												Service Prefix
+											</p>
+											<code className="text-sm font-mono">
+												{backendData.chamber.servicePrefix}
+											</code>
+										</div>
+									)}
+									<p className="text-sm text-muted-foreground">
+										Secrets in <code className="bg-muted px-1 py-0.5 rounded text-xs">/dev/*</code>,{" "}
+										<code className="bg-muted px-1 py-0.5 rounded text-xs">/staging/*</code>, and{" "}
+										<code className="bg-muted px-1 py-0.5 rounded text-xs">/prod/*</code>{" "}
+										keygroups are stored as encrypted SSM parameters. Encryption is handled
+										transparently by AWS KMS.
+									</p>
+								</div>
+
+								<div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+									<h4 className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+										AWS Credentials Required
+									</h4>
+									<p className="text-sm text-muted-foreground">
+										Reading and writing secrets requires valid AWS credentials
+										with access to the SSM Parameter Store and KMS key.
+									</p>
+								</div>
 							</div>
-						</div>
+						) : (
+							<div className="space-y-4">
+								<div>
+									<h3 className="text-lg font-medium mb-1">
+										Encryption Settings
+									</h3>
+									<p className="text-sm text-muted-foreground">
+										Configure how secrets are encrypted and decrypted in this
+										project.
+									</p>
+								</div>
+
+								<div className="space-y-4">
+									<AgeIdentitySettings />
+									<KMSSettings />
+								</div>
+
+								<div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+									<h4 className="mb-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+										After changing settings
+									</h4>
+									<p className="text-sm text-muted-foreground">
+										Run{" "}
+										<code className="bg-muted px-1.5 py-0.5 rounded text-xs">
+											generate-sops-config
+										</code>{" "}
+										to update your <code>.sops.yaml</code> file with the new
+										encryption keys.
+									</p>
+								</div>
+							</div>
+						)}
 					</TabsContent>
 				</Tabs>
 

@@ -29,6 +29,9 @@
 }:
 let
   cfg = config.stackpanel.secrets;
+  variablesBackend = config.stackpanel.secrets.backend;
+  isChamber = variablesBackend == "chamber";
+  chamberCfg = config.stackpanel.secrets.chamber;
 
   # Import secrets library
   secretsLib = import ./lib.nix {
@@ -81,7 +84,7 @@ in
       pkgs.age
       pkgs.vals
       pkgs.jq
-    ];
+    ] ++ lib.optional isChamber pkgs.chamber;
 
     # Auto-generate local master key on shell entry
     stackpanel.devshell.hooks.before = [
@@ -144,6 +147,15 @@ in
         ref = key.ref;
         resolveCmd = key.resolve-cmd;
       }) cfg.master-keys;
+    };
+
+    # Variables backend configuration for CLI/agent
+    stackpanel.serializable.variables = {
+      backend = variablesBackend;
+    } // lib.optionalAttrs isChamber {
+      chamber = {
+        servicePrefix = chamberCfg.service-prefix;
+      };
     };
   };
 }

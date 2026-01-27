@@ -26,6 +26,7 @@ import { Route as StudioServicesRouteImport } from './routes/studio/services'
 import { Route as StudioSecretsRouteImport } from './routes/studio/secrets'
 import { Route as StudioRoadmapRouteImport } from './routes/studio/roadmap'
 import { Route as StudioProcessesRouteImport } from './routes/studio/processes'
+import { Route as StudioPanelsRouteImport } from './routes/studio/panels'
 import { Route as StudioPackagesRouteImport } from './routes/studio/packages'
 import { Route as StudioNetworkRouteImport } from './routes/studio/network'
 import { Route as StudioModulesRouteImport } from './routes/studio/modules'
@@ -129,6 +130,11 @@ const StudioRoadmapRoute = StudioRoadmapRouteImport.update({
 const StudioProcessesRoute = StudioProcessesRouteImport.update({
   id: '/processes',
   path: '/processes',
+  getParentRoute: () => StudioRoute,
+} as any)
+const StudioPanelsRoute = StudioPanelsRouteImport.update({
+  id: '/panels',
+  path: '/panels',
   getParentRoute: () => StudioRoute,
 } as any)
 const StudioPackagesRoute = StudioPackagesRouteImport.update({
@@ -251,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/studio/modules': typeof StudioModulesRoute
   '/studio/network': typeof StudioNetworkRoute
   '/studio/packages': typeof StudioPackagesRoute
+  '/studio/panels': typeof StudioPanelsRoute
   '/studio/processes': typeof StudioProcessesRoute
   '/studio/roadmap': typeof StudioRoadmapRoute
   '/studio/secrets': typeof StudioSecretsRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByTo {
   '/studio/modules': typeof StudioModulesRoute
   '/studio/network': typeof StudioNetworkRoute
   '/studio/packages': typeof StudioPackagesRoute
+  '/studio/panels': typeof StudioPanelsRoute
   '/studio/processes': typeof StudioProcessesRoute
   '/studio/roadmap': typeof StudioRoadmapRoute
   '/studio/secrets': typeof StudioSecretsRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/studio/modules': typeof StudioModulesRoute
   '/studio/network': typeof StudioNetworkRoute
   '/studio/packages': typeof StudioPackagesRoute
+  '/studio/panels': typeof StudioPanelsRoute
   '/studio/processes': typeof StudioProcessesRoute
   '/studio/roadmap': typeof StudioRoadmapRoute
   '/studio/secrets': typeof StudioSecretsRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/studio/modules'
     | '/studio/network'
     | '/studio/packages'
+    | '/studio/panels'
     | '/studio/processes'
     | '/studio/roadmap'
     | '/studio/secrets'
@@ -404,6 +414,7 @@ export interface FileRouteTypes {
     | '/studio/modules'
     | '/studio/network'
     | '/studio/packages'
+    | '/studio/panels'
     | '/studio/processes'
     | '/studio/roadmap'
     | '/studio/secrets'
@@ -442,6 +453,7 @@ export interface FileRouteTypes {
     | '/studio/modules'
     | '/studio/network'
     | '/studio/packages'
+    | '/studio/panels'
     | '/studio/processes'
     | '/studio/roadmap'
     | '/studio/secrets'
@@ -591,6 +603,13 @@ declare module '@tanstack/react-router' {
       path: '/processes'
       fullPath: '/studio/processes'
       preLoaderRoute: typeof StudioProcessesRouteImport
+      parentRoute: typeof StudioRoute
+    }
+    '/studio/panels': {
+      id: '/studio/panels'
+      path: '/panels'
+      fullPath: '/studio/panels'
+      preLoaderRoute: typeof StudioPanelsRouteImport
       parentRoute: typeof StudioRoute
     }
     '/studio/packages': {
@@ -744,6 +763,7 @@ interface StudioRouteChildren {
   StudioModulesRoute: typeof StudioModulesRoute
   StudioNetworkRoute: typeof StudioNetworkRoute
   StudioPackagesRoute: typeof StudioPackagesRoute
+  StudioPanelsRoute: typeof StudioPanelsRoute
   StudioProcessesRoute: typeof StudioProcessesRoute
   StudioRoadmapRoute: typeof StudioRoadmapRoute
   StudioSecretsRoute: typeof StudioSecretsRoute
@@ -771,6 +791,7 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioModulesRoute: StudioModulesRoute,
   StudioNetworkRoute: StudioNetworkRoute,
   StudioPackagesRoute: StudioPackagesRoute,
+  StudioPanelsRoute: StudioPanelsRoute,
   StudioProcessesRoute: StudioProcessesRoute,
   StudioRoadmapRoute: StudioRoadmapRoute,
   StudioSecretsRoute: StudioSecretsRoute,

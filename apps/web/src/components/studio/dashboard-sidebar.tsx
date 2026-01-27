@@ -8,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@ui/collapsible";
-import { Progress } from "@ui/progress";
+import { CircularProgress } from "@ui/circular-progress";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +27,7 @@ import {
   useSidebar,
 } from "@ui/sidebar";
 import {
+  Activity,
   AppWindow,
   BookOpen,
   Check,
@@ -67,6 +68,9 @@ import {
   CONFIGURATION_SECTIONS,
   type ConfigurationSection,
 } from "./panels/configuration";
+import { useAllPanelsGroupedByModule } from "./panels/panels-panel";
+import { getModuleIconById } from "./panels/shared";
+import type { Module } from "@stackpanel/proto";
 
 export type PanelType =
   | "overview"
@@ -88,6 +92,7 @@ export type PanelType =
   | "deploy"
   | "extensions"
   | "modules"
+  | "panels"
   | "files"
   | "terminal"
   | "services"
@@ -117,7 +122,9 @@ const mainNavItems: NavItem[] = [
 ];
 
 const toolsNavItems: NavItem[] = [
-  { id: "modules", label: "Modules", icon: Puzzle },
+  { id: "modules", label: "Find Modules", icon: Search },
+  // { id: "panels", label: "Configure", icon: Puzzle },
+  // { id: "panels", label: "Panels", icon: Activity },
   { id: "infra", label: "Infrastructure", icon: Cloud },
   { id: "devshells", label: "Dev Shells", icon: Terminal },
   { id: "team", label: "Team", icon: Users },
@@ -155,7 +162,7 @@ function NavMenuItem({ item }: { item: NavItem }) {
 
   return (
     <SidebarMenuItem>
-      <Link to={itemPath}>
+      <Link to={itemPath} search={{}}>
         <SidebarMenuButton
           isActive={isActive}
           tooltip={isCollapsed ? item.label : undefined}
@@ -256,7 +263,7 @@ function ConfigurationMenuItem() {
   if (isCollapsed) {
     return (
       <SidebarMenuItem>
-        <Link to="/studio/configuration">
+        <Link to="/studio/configuration" search={{}}>
           <SidebarMenuButton
             isActive={isActive}
             tooltip="Configuration"
@@ -300,6 +307,118 @@ function ConfigurationMenuItem() {
   );
 }
 
+const coreModules = [
+  "process-compose",
+  "app-commands",
+  "configuration",
+  "local-config",
+  "terminal"
+];
+// Filter out core stackpanel modules
+function moduleFilter(mod: Module) {
+  return !coreModules.includes(mod.id);
+}
+
+// Configuration menu item with collapsible sections
+function ModulePanelsMenuItem() {
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
+  const search = routerState.location.search;
+  const activeModuleId = search
+    ? new URLSearchParams(search).get("module")
+    : null;
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+  const isActive = pathname === "/studio/panels" || pathname.startsWith("/studio/panels/");
+  const { modules, byModule, appIds, isLoading } =
+    useAllPanelsGroupedByModule();
+  const activeModule = activeModuleId ?? modules[0]?.id ?? null;
+  const activeData = activeModule ? byModule[activeModule] : null;
+  const activeModuleMeta = modules.find((m) => m.id === activeModule);
+  const panelCount = (moduleId: string) => {
+    const data = byModule[moduleId];
+    if (!data) return 0;
+    return data.infoPanels.length + data.appConfigPanels.length;
+  };
+
+  // Collect app IDs that have config for the active module
+  const activeAppIds = activeData
+    ? appIds.filter((appId) =>
+      activeData.appConfigPanels.some((p) => p.apps[appId]?.enabled),
+    )
+    : [];
+
+  // When collapsed, just show a simple button
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItem>
+        <Link to="/studio/panels" search={{}}>
+          <SidebarMenuButton
+            isActive={isActive}
+            tooltip="Panels"
+            className="rounded-lg"
+          >
+            <Puzzle className="size-4" />
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <Collapsible defaultOpen={isActive} className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={isActive} className="rounded-lg">
+            <Puzzle className="size-4" />
+            <span className="flex-1">Modules</span>
+            <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub className="ml-3 mr-0 pr-0">
+            {modules.filter(moduleFilter).map((mod) => {
+              const isModActive = mod.id === activeModule;
+              const Icon = getModuleIconById(mod.id);
+              const count = panelCount(mod.id);
+              const hasAppConfig = (byModule[mod.id]?.appConfigPanels.length ?? 0) > 0;
+
+              return (
+                <SidebarMenuSubItem key={mod.id}>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isActive && isModActive}
+                    className="bg-transparent  data-active:border-l-accent data-[active=true]:border-l-2  -ml-2 pl-4 data-[active=true]:bg-secondary rounded-l-none!"
+                  >
+                    <Link to="/studio/panels" search={{ module: mod.id }} className="data-[active=true]:font-semibold">
+                      <Icon className="size-4" />
+                      <span className="flex-1">{mod.name}</span>
+                      <div className="flex items-center gap-1 ml-auto">
+                        {hasAppConfig && (
+                          <div
+                            className="h-1.5 w-1.5 rounded-full bg-blue-400"
+                            title="Has app configuration"
+                          />
+                        )}
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          {count}
+                        </Badge>
+                      </div>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
 // Setup menu item with collapsible steps
 function SetupMenuItem() {
   const routerState = useRouterState();
@@ -321,14 +440,14 @@ function SetupMenuItem() {
   if (isCollapsed) {
     return (
       <SidebarMenuItem>
-        <Link to="/studio/setup">
+        <Link to="/studio/setup" search={{}}>
           <SidebarMenuButton
             isActive={isActive}
             tooltip="Setup"
             className={cn(
               "rounded-lg",
               !isComplete &&
-                "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+              "bg-amber-500/10 text-amber-600 dark:text-amber-400",
               isComplete && "text-accent dark:text-accent",
             )}
           >
@@ -347,17 +466,17 @@ function SetupMenuItem() {
     <Collapsible defaultOpen={!isComplete} className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <Link to="/studio/setup">
+          <Link to="/studio/setup" search={{}}>
             <SidebarMenuButton
               isActive={isActive}
               className={cn(
                 "rounded-lg ",
                 !isComplete &&
-                  !isActive &&
-                  "bg-sidebar-accent/10 text-sidebar-accent-foreground dark:text-sidebar-accent-foreground hover:bg-sidebar-accent/20",
+                !isActive &&
+                "bg-sidebar-accent/10 text-sidebar-accent-foreground dark:text-sidebar-accent-foreground hover:bg-sidebar-accent/20",
                 isComplete &&
-                  !isActive &&
-                  "text-accent dark:text-accent-foreground",
+                !isActive &&
+                "text-accent dark:text-accent-foreground",
               )}
             >
               {isComplete ? (
@@ -366,20 +485,22 @@ function SetupMenuItem() {
                 <Rocket className="size-4" />
               )}
               <span className="flex-1">Setup</span>
-              <Badge variant={"default"}>
-                {progress?.requiredComplete}/{progress?.requiredTotal}
-              </Badge>
+              {!isComplete && (
+                <CircularProgress
+                  value={progressPercent}
+                  size={24}
+                  strokeWidth={2.5}
+                  label={`${progress?.requiredComplete}/${progress?.requiredTotal}`}
+                  indicatorClassName="stroke-amber-500"
+                  trackClassName="stroke-amber-500/20"
+                />
+              )}
               {/*<ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />*/}
             </SidebarMenuButton>
           </Link>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          {/* Progress bar */}
-          {!isComplete && (
-            <div className="px-2 py-2">
-              <Progress value={progressPercent} className="h-1" />
-            </div>
-          )}
+
           {/* TODO: Re-enable when setup steps are ready
           <SidebarMenuSub>
             {progress?.steps.map((step) => (
@@ -460,6 +581,7 @@ export function DashboardSidebar() {
               {mainNavItems.map((item) => (
                 <NavMenuItem key={item.id} item={item} />
               ))}
+              <ModulePanelsMenuItem />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

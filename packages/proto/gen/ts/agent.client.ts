@@ -12,6 +12,8 @@ import type { GetShellStatusRequest } from "./agent";
 import type { RefreshNixConfigRequest } from "./agent";
 import type { NixConfigResponse } from "./agent";
 import type { GetNixConfigRequest } from "./agent";
+import type { PatchNixDataResponse } from "./agent";
+import type { PatchNixDataRequest } from "./agent";
 import type { HealthchecksResponse } from "./agent";
 import type { GetHealthchecksRequest } from "./agent";
 import type { GetProcessesResponse } from "./agent";
@@ -290,6 +292,12 @@ export interface IAgentServiceClient {
      * @generated from protobuf rpc: GetHealthchecks
      */
     getHealthchecks(input: GetHealthchecksRequest, options?: RpcOptions): UnaryCall<GetHealthchecksRequest, HealthchecksResponse>;
+    /**
+     * Nix data patch - update a single value at a nested path within an entity
+     *
+     * @generated from protobuf rpc: PatchNixData
+     */
+    patchNixData(input: PatchNixDataRequest, options?: RpcOptions): UnaryCall<PatchNixDataRequest, PatchNixDataResponse>;
     /**
      * Full Nix config (evaluated from flake)
      *
@@ -655,19 +663,28 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
         return stackIntercept<GetHealthchecksRequest, HealthchecksResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * Nix data patch - update a single value at a nested path within an entity
+     *
+     * @generated from protobuf rpc: PatchNixData
+     */
+    patchNixData(input: PatchNixDataRequest, options?: RpcOptions): UnaryCall<PatchNixDataRequest, PatchNixDataResponse> {
+        const method = this.methods[43], opt = this._transport.mergeOptions(options);
+        return stackIntercept<PatchNixDataRequest, PatchNixDataResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * Full Nix config (evaluated from flake)
      *
      * @generated from protobuf rpc: GetNixConfig
      */
     getNixConfig(input: GetNixConfigRequest, options?: RpcOptions): UnaryCall<GetNixConfigRequest, NixConfigResponse> {
-        const method = this.methods[43], opt = this._transport.mergeOptions(options);
+        const method = this.methods[44], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetNixConfigRequest, NixConfigResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: RefreshNixConfig
      */
     refreshNixConfig(input: RefreshNixConfigRequest, options?: RpcOptions): UnaryCall<RefreshNixConfigRequest, NixConfigResponse> {
-        const method = this.methods[44], opt = this._transport.mergeOptions(options);
+        const method = this.methods[45], opt = this._transport.mergeOptions(options);
         return stackIntercept<RefreshNixConfigRequest, NixConfigResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -676,14 +693,14 @@ export class AgentServiceClient implements IAgentServiceClient, ServiceInfo {
      * @generated from protobuf rpc: GetShellStatus
      */
     getShellStatus(input: GetShellStatusRequest, options?: RpcOptions): UnaryCall<GetShellStatusRequest, ShellStatusResponse> {
-        const method = this.methods[45], opt = this._transport.mergeOptions(options);
+        const method = this.methods[46], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetShellStatusRequest, ShellStatusResponse>("unary", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: RebuildShell
      */
     rebuildShell(input: RebuildShellRequest, options?: RpcOptions): ServerStreamingCall<RebuildShellRequest, RebuildShellEvent> {
-        const method = this.methods[46], opt = this._transport.mergeOptions(options);
+        const method = this.methods[47], opt = this._transport.mergeOptions(options);
         return stackIntercept<RebuildShellRequest, RebuildShellEvent>("serverStreaming", this._transport, method, opt, input);
     }
 }

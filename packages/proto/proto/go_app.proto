@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package stackpanel.modules;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// Go-specific per-app configuration
+message GoAppConfig {
+  bool enable = 1; // Enable Go app support for this app
+  string main_package = 2; // Go main package path
+  string version = 3; // App version
+  optional string binary_name = 4; // Binary name (if different from app name)
+  repeated string ldflags = 5; // Go linker flags
+  repeated string watch_dirs = 6; // Directories to watch for air live reload
+  repeated string dev_args = 7; // Arguments to pass to binary during development
+  repeated string tools = 8; // Additional Go tool dependencies
+  bool generate_files = 9; // Generate package.json, .air.toml, and tools.go
+  string description = 10; // App description
+}

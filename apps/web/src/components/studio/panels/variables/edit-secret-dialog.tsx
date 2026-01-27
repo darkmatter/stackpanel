@@ -43,6 +43,7 @@ export function EditSecretDialog({
 		showSettings,
 		setShowSettings,
 		decryptError,
+		isChamber,
 
 		// Handlers
 		handleSave,
@@ -71,56 +72,58 @@ export function EditSecretDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				{/* Settings Panel */}
-				<div className="border rounded-lg p-3 bg-muted/30">
-					<button
-						type="button"
-						onClick={() => setShowSettings(!showSettings)}
-						className="flex items-center gap-2 text-sm font-medium w-full"
-					>
-						<Settings className="h-4 w-4" />
-						Private Key Configuration
-						<span className="ml-auto text-xs text-muted-foreground">
-							{identityPath || "Using default location"}
-						</span>
-					</button>
+				{/* Settings Panel (vals/SOPS backend only — chamber uses AWS credentials) */}
+				{!isChamber && (
+					<div className="border rounded-lg p-3 bg-muted/30">
+						<button
+							type="button"
+							onClick={() => setShowSettings(!showSettings)}
+							className="flex items-center gap-2 text-sm font-medium w-full"
+						>
+							<Settings className="h-4 w-4" />
+							Private Key Configuration
+							<span className="ml-auto text-xs text-muted-foreground">
+								{identityPath || "Using default location"}
+							</span>
+						</button>
 
-					{showSettings && (
-						<div className="mt-3 space-y-2">
-							<Label htmlFor="identity-path" className="text-xs">
-								AGE / SSH Identity File Path
-							</Label>
-							<Input
-								id="identity-path"
-								value={identityPath}
-								onChange={(e) => setIdentityPath(e.target.value)}
-								placeholder="Leave empty for default"
-								className="font-mono text-sm"
-							/>
-							<p className="text-xs text-muted-foreground">
-								Path to your private key. SSH keys (ed25519, RSA) are also
-								supported.
-								<br />
-								Defaults (if empty):{" "}
-								<code className="text-[10px]">~/.config/age/key.txt</code>,{" "}
-								<code className="text-[10px]">~/.age/key.txt</code>
-								<br />
-								For SSH keys, specify explicitly:{" "}
-								<code className="text-[10px]">~/.ssh/id_ed25519</code>
-							</p>
-							{decryptError && (
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleRetryDecrypt}
-									className="mt-2"
-								>
-									Retry Decrypt
-								</Button>
-							)}
-						</div>
-					)}
-				</div>
+						{showSettings && (
+							<div className="mt-3 space-y-2">
+								<Label htmlFor="identity-path" className="text-xs">
+									AGE / SSH Identity File Path
+								</Label>
+								<Input
+									id="identity-path"
+									value={identityPath}
+									onChange={(e) => setIdentityPath(e.target.value)}
+									placeholder="Leave empty for default"
+									className="font-mono text-sm"
+								/>
+								<p className="text-xs text-muted-foreground">
+									Path to your private key. SSH keys (ed25519, RSA) are also
+									supported.
+									<br />
+									Defaults (if empty):{" "}
+									<code className="text-[10px]">~/.config/age/key.txt</code>,{" "}
+									<code className="text-[10px]">~/.age/key.txt</code>
+									<br />
+									For SSH keys, specify explicitly:{" "}
+									<code className="text-[10px]">~/.ssh/id_ed25519</code>
+								</p>
+								{decryptError && (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRetryDecrypt}
+										className="mt-2"
+									>
+										Retry Decrypt
+									</Button>
+								)}
+							</div>
+						)}
+					</div>
+				)}
 
 				{/* Content */}
 				<div className="space-y-4 py-2">
@@ -128,14 +131,16 @@ export function EditSecretDialog({
 						<div className="flex items-center justify-center py-8">
 							<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
 							<span className="ml-2 text-sm text-muted-foreground">
-								Decrypting secret...
+								{isChamber ? "Loading secret..." : "Decrypting secret..."}
 							</span>
 						</div>
 					) : decryptError ? (
 						<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
 							<p className="text-sm text-destructive">{decryptError}</p>
 							<p className="mt-2 text-xs text-muted-foreground">
-								Configure your private key path above and try again.
+								{isChamber
+									? "Check your AWS credentials and permissions, then try again."
+									: "Configure your private key path above and try again."}
 							</p>
 						</div>
 					) : (

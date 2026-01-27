@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@ui/button";
 import { Input } from "@ui/input";
 import {
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@ui/select";
 import {
+  Boxes,
   Container,
   FolderOpen,
   ListChecks,
@@ -25,6 +26,12 @@ import { AppVariablesSection } from "./app-variables-section";
 import type { DisplayVariable, TaskWithCommand } from "./types";
 import type { AvailableVariable } from "./app-variables-section/types";
 import { CardContent } from "@/components/ui/card";
+import type { AppModulePanel, ModuleGroup } from "../shared/panel-types";
+import {
+  AppConfigFormRenderer,
+  getModuleIconByName,
+  formatModuleName,
+} from "../shared";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +46,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: Settings },
+  { id: "modules", label: "Modules", icon: Boxes },
   { id: "tasks", label: "Tasks", icon: ListChecks },
   { id: "variables", label: "Variables", icon: Variable },
   { id: "docker", label: "Docker", icon: Container },
@@ -70,6 +78,8 @@ export interface AppExpandedContentProps {
   environmentOptions: string[];
   availableVariables: AvailableVariable[];
   disabled?: boolean;
+  /** Module config panels for this app (PANEL_TYPE_APP_CONFIG) */
+  modulePanels?: AppModulePanel[];
   // Task editing
   editingTask: { appId: string; taskName: string } | null;
   taskCommandOverride: string;
@@ -105,6 +115,7 @@ export function AppExpandedContent({
   environmentOptions,
   availableVariables,
   disabled,
+  modulePanels,
   editingTask,
   taskCommandOverride,
   onTaskEdit,
@@ -120,7 +131,7 @@ export function AppExpandedContent({
   const [activeSection, setActiveSection] = useState("overview");
 
   return (
-    <CardContent className="border-t border-border min-h-70 animate-collapsible-down">
+    <CardContent className="border-t border-border min-h-70 animate-accordion-down">
       {/* Horizontal tab bar */}
       <div className="flex items-center gap-1 -mx-6 px-4 pt-1 border-b border-border bg-background/70">
         {navItems.map((item) => {
@@ -130,11 +141,10 @@ export function AppExpandedContent({
               key={item.id}
               type="button"
               onClick={() => setActiveSection(item.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs transition-colors relative ${
-                isActive
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs transition-colors relative ${isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               <item.icon className="h-3.5 w-3.5" />
               {item.label}
@@ -181,6 +191,13 @@ export function AppExpandedContent({
             disabled={disabled}
           />
         )}
+        {activeSection === "modules" && (
+          <ModulesTab
+            appId={app.id}
+            panels={modulePanels ?? []}
+            disabled={disabled}
+          />
+        )}
         {activeSection === "docker" && <DockerTab />}
         {activeSection === "deployment" && <DeploymentTab />}
         {activeSection === "checks" && <ChecksTab />}
@@ -198,18 +215,18 @@ const FRAMEWORK_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { value: "none", label: "None", description: "No framework module" },
-  {
-    value: "go",
-    label: "Go",
-    description: "Go toolchain, air live reload, and binary packaging",
-  },
-  {
-    value: "bun",
-    label: "Bun",
-    description: "Bun runtime, build scripts, and packaging",
-  },
-];
+    { value: "none", label: "None", description: "No framework module" },
+    {
+      value: "go",
+      label: "Go",
+      description: "Go toolchain, air live reload, and binary packaging",
+    },
+    {
+      value: "bun",
+      label: "Bun",
+      description: "Bun runtime, build scripts, and packaging",
+    },
+  ];
 
 function OverviewTab({
   app,
@@ -457,6 +474,99 @@ function ChecksTab() {
         <Plus className="h-4 w-4" />
         Add check
       </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Modules Tab - Vertical subnav per module + panel content
+// ---------------------------------------------------------------------------
+
+function ModulesTab({
+  appId,
+  panels,
+  disabled,
+}: {
+  appId: string;
+  panels: AppModulePanel[];
+  disabled?: boolean;
+}) {
+  const [activeModule, setActiveModule] = useState<string | null>(null);
+
+  // Group panels by module (preserves order)
+  const moduleGroups: ModuleGroup[] = useMemo(() => {
+    const groups: ModuleGroup[] = [];
+    const seen = new Set<string>();
+
+    for (const panel of panels) {
+      if (!seen.has(panel.module)) {
+        seen.add(panel.module);
+        groups.push({
+          id: panel.module,
+          label: formatModuleName(panel.module),
+          icon: panel.icon,
+          panels: [],
+        });
+      }
+      groups.find((g) => g.id === panel.module)?.panels.push(panel);
+    }
+    return groups;
+  }, [panels]);
+
+  // Resolve active module (default to first)
+  const selected = activeModule ?? moduleGroups[0]?.id ?? null;
+  const selectedGroup = moduleGroups.find((g) => g.id === selected);
+
+  if (panels.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          No module configuration panels available for this app.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Module panels appear when a language module (Go, Bun, etc.) or
+          tool module (OxLint, etc.) is enabled for this app.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-4">
+      {/* Vertical subnav */}
+      <nav className="w-36 shrink-0 space-y-0.5 border-r border-border pr-3">
+        {moduleGroups.map((group) => {
+          const isActive = group.id === selected;
+          const Icon = getModuleIconByName(group.icon);
+
+          return (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => setActiveModule(group.id)}
+              className={`w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors text-left ${isActive
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{group.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Panel content */}
+      <div className="flex-1 min-w-0 space-y-4">
+        {selectedGroup?.panels.map((panel) => (
+          <AppConfigFormRenderer
+            key={panel.id}
+            panel={panel}
+            appId={appId}
+            disabled={disabled}
+          />
+        ))}
+      </div>
     </div>
   );
 }

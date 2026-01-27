@@ -7,6 +7,7 @@ import {
 	Check,
 	CheckCircle2,
 	Cloud,
+	Database,
 	FileCog,
 	FolderOpen,
 	Key,
@@ -23,7 +24,7 @@ import {
 	type Project,
 } from "@/lib/agent";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
-import { useNixConfig, useNixData } from "@/lib/use-agent";
+import { useNixConfig, useNixData, useVariablesBackend } from "@/lib/use-agent";
 import { HelpButton } from "../shared/help-button";
 
 import { SetupProvider } from "./setup-context";
@@ -34,6 +35,7 @@ import {
 	InfrastructureStep,
 	KmsConfigStep,
 	ProjectInfoStep,
+	SecretsBackendStep,
 	TeamKeysStep,
 } from "./steps";
 import type { SetupContextValue, SetupStep, SSTData } from "./types";
@@ -119,6 +121,11 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 
 	// Check if AWS KMS is configured
 	const hasAwsKms = sstData?.kms?.enable ?? false;
+
+	// Secrets backend
+	const { data: backendData } = useVariablesBackend();
+	const secretsBackend: "vals" | "chamber" = backendData?.backend ?? "vals";
+	const isChamber = secretsBackend === "chamber";
 
 	// ==========================================================================
 	// Data Loading
@@ -278,7 +285,7 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		localStorage.setItem("stackpanel-project-confirmed", "true");
 		setProjectConfirmed(true);
 		toast.success("Project configuration confirmed");
-		setExpandedStep("infrastructure");
+		setExpandedStep("secrets-backend");
 	};
 
 	const goToStep = (stepId: string) => {
@@ -327,34 +334,49 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			icon: <FolderOpen className="h-5 w-5" />,
 		},
 		{
+			id: "secrets-backend",
+			title: "Secrets Backend",
+			description: "Choose how secrets are managed",
+			status: secretsBackend
+				? "complete"
+				: projectConfirmed
+					? "incomplete"
+					: "blocked",
+			required: true,
+			dependsOn: ["project-info"],
+			icon: <Database className="h-5 w-5" />,
+		},
+		{
 			id: "infrastructure",
 			title: "AWS Infrastructure",
 			description: "Deploy KMS and IAM roles",
-			status: sstData?.enable ? "complete" : "optional",
-			required: false,
-			dependsOn: ["project-info"],
+			status: sstData?.enable ? "complete" : isChamber ? "incomplete" : "optional",
+			required: isChamber,
+			dependsOn: ["secrets-backend"],
 			icon: <Cloud className="h-5 w-5" />,
 		},
 		{
 			id: "decryption-key",
 			title: "Local Decryption Key",
 			description: "Configure local key",
-			status: identityInfo?.type
-				? "complete"
-				: hasAwsKms
-					? "optional"
-					: projectConfirmed
-						? "incomplete"
-						: "blocked",
-			required: !hasAwsKms,
-			dependsOn: ["project-info"],
+			status: isChamber
+				? "complete" // Not needed for chamber
+				: identityInfo?.type
+					? "complete"
+					: hasAwsKms
+						? "optional"
+						: projectConfirmed
+							? "incomplete"
+							: "blocked",
+			required: !isChamber && !hasAwsKms,
+			dependsOn: ["secrets-backend"],
 			icon: <Key className="h-5 w-5" />,
 		},
 		{
 			id: "team-keys",
 			title: "Team Sync",
 			description: "Add team public keys",
-			status: usersConfigured ? "complete" : "optional",
+			status: isChamber ? "complete" : usersConfigured ? "complete" : "optional",
 			required: false,
 			icon: <Users className="h-5 w-5" />,
 		},
@@ -362,7 +384,7 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			id: "kms",
 			title: "AWS KMS Config",
 			description: "Use existing KMS key",
-			status: kmsConfig?.enable ? "complete" : "optional",
+			status: isChamber ? "complete" : kmsConfig?.enable ? "complete" : "optional",
 			required: false,
 			icon: <Shield className="h-5 w-5" />,
 		},
@@ -370,12 +392,14 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			id: "generate-config",
 			title: "Generate SOPS Config",
 			description: "Create .sops.yaml",
-			status: sopsConfigGenerated
-				? "complete"
-				: identityInfo?.type
-					? "incomplete"
-					: "blocked",
-			required: true,
+			status: isChamber
+				? "complete" // Not needed for chamber
+				: sopsConfigGenerated
+					? "complete"
+					: identityInfo?.type
+						? "incomplete"
+						: "blocked",
+			required: !isChamber,
 			dependsOn: ["decryption-key"],
 			icon: <FileCog className="h-5 w-5" />,
 		},
@@ -437,6 +461,10 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		sopsConfigGenerated,
 		handleGenerateSopsConfig,
 		isGeneratingSops,
+
+		// Secrets backend
+		secretsBackend,
+		isChamber,
 	};
 
 	// ==========================================================================
@@ -498,6 +526,7 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 					<div className="space-y-4">
 						<ConnectAgentStep />
 						<ProjectInfoStep />
+						<SecretsBackendStep />
 						<InfrastructureStep />
 						<DecryptionKeyStep />
 						<TeamKeysStep />
@@ -510,7 +539,7 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 						<Card className="bg-linear-to-r from-emerald-400/10 to-blue-400/10 border-emerald-500/20">
 							<CardContent className="pt-6">
 								<h3 className="font-semibold text-lg mb-2">
-									🎉 Setup Complete!
+									Setup Complete!
 								</h3>
 								<p className="text-sm text-muted-foreground mb-4">
 									Your project is ready for secrets management. Here's what you
@@ -521,15 +550,30 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 										<Check className="h-4 w-4 text-emerald-100" />
 										Create secrets in the Variables panel
 									</li>
-									<li className="flex items-center gap-2">
-										<Check className="h-4 w-4 text-emerald-100" />
-										Use <code>sops</code> to encrypt/decrypt files
-									</li>
-									<li className="flex items-center gap-2">
-										<Check className="h-4 w-4 text-emerald-100" />
-										Run <code>generate-sops-secrets</code> to create environment
-										YAML files
-									</li>
+									{isChamber ? (
+										<>
+											<li className="flex items-center gap-2">
+												<Check className="h-4 w-4 text-emerald-100" />
+												Use <code>chamber write</code> to add secrets to AWS SSM
+											</li>
+											<li className="flex items-center gap-2">
+												<Check className="h-4 w-4 text-emerald-100" />
+												Secrets are injected via <code>chamber env</code> at runtime
+											</li>
+										</>
+									) : (
+										<>
+											<li className="flex items-center gap-2">
+												<Check className="h-4 w-4 text-emerald-100" />
+												Use <code>sops</code> to encrypt/decrypt files
+											</li>
+											<li className="flex items-center gap-2">
+												<Check className="h-4 w-4 text-emerald-100" />
+												Run <code>generate-sops-secrets</code> to create environment
+												YAML files
+											</li>
+										</>
+									)}
 								</ul>
 							</CardContent>
 						</Card>

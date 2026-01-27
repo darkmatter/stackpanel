@@ -45,6 +45,7 @@ let
   proto = import ./lib/proto.nix { inherit lib; };
   optionsLib = import ./lib/options.nix { inherit lib; };
   mkOptLib = import ./lib/mkOpt.nix { inherit lib; };
+  fieldLib = import ./lib/field.nix { inherit lib; };
 
   # Re-export commonly used functions from optionsLib for convenience
   inherit (optionsLib)
@@ -407,6 +408,9 @@ in
   # Proto library for direct use
   inherit proto;
   lib = proto;
+
+  # Unified field definition library (mkSpField, asOption, UI types)
+  field = fieldLib;
 
   # Options library for custom option building
   inherit optionsLib;

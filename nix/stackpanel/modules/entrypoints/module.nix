@@ -32,6 +32,11 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
 
+  # Variables backend config
+  variablesBackend = cfg.secrets.backend or "vals";
+  isChamber = variablesBackend == "chamber";
+  chamberServicePrefix = if isChamber then (cfg.secrets.chamber.service-prefix or cfg.name or "stackpanel") else "";
+
   # Get master keys config for secrets loading (use empty default to avoid recursion)
   secretsCfg = cfg.secrets or { };
   masterKeysConfig = secretsCfg.master-keys or { };
@@ -93,6 +98,8 @@ let
       
       export STACKPANEL_APP_NAME="${name}"
       export STACKPANEL_APP_PATH="${appPath}"
+      export STACKPANEL_VARIABLES_BACKEND="${variablesBackend}"
+      ${if isChamber then ''export STACKPANEL_CHAMBER_SERVICE_PREFIX="${chamberServicePrefix}"'' else ""}
       export STACKPANEL_MASTER_KEYS='${masterKeysJson}'
       
       # ==============================================================================

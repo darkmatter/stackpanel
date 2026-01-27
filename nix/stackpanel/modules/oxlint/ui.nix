@@ -2,6 +2,9 @@
 # ui.nix - OxLint UI Panel Definitions
 #
 # Defines the panels that appear in the Stackpanel UI for this module.
+#
+# The APP_CONFIG panel is auto-generated from the SpField definitions in
+# oxlint-app.proto.nix. The status panel remains hand-crafted.
 # ==============================================================================
 {
   lib,
@@ -12,11 +15,19 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
 
+  # Import field definitions and panel generator
+  oxlintSchema = import ./schema.nix { inherit lib; };
+  panelsLib = import ../../lib/panels.nix { inherit lib; };
+
   # Get apps with oxlint enabled
   oxlintApps = lib.filterAttrs (_: app: app.linting.oxlint.enable or false) (cfg.apps or { });
   hasOxlintApps = oxlintApps != { };
 in
 lib.mkIf (cfg.enable && hasOxlintApps) {
+  # ---------------------------------------------------------------------------
+  # Status Panel - Overview of OxLint environment
+  # (Hand-crafted: uses runtime data from app configs)
+  # ---------------------------------------------------------------------------
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
     title = "OxLint Status";
@@ -52,5 +63,20 @@ lib.mkIf (cfg.enable && hasOxlintApps) {
         ];
       }
     ];
+  };
+
+  # ---------------------------------------------------------------------------
+  # App Config Panel - Per-app OxLint configuration
+  # (Auto-generated from oxlint-app.proto.nix SpField definitions)
+  # ---------------------------------------------------------------------------
+  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+    module = meta.id;
+    title = "OxLint Configuration";
+    icon = meta.icon;
+    fields = oxlintSchema.fields;
+    optionPrefix = "linting.oxlint";
+    apps = oxlintApps;
+    exclude = [ "enable" "turboTask" ];
+    order = meta.priority + 2;
   };
 }

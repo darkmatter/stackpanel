@@ -93,11 +93,14 @@
       # Configure terminal to use the devshell loader
       terminal = {
         shell = {
-          program = "/bin/bash";
-          args = [
-            "-c"
-            loaderPath
-          ];
+          with_arguments = {
+            program = "/bin/bash";
+            args = [
+              "-c"
+              loaderPath
+            ];
+            title_override = "devshell";
+          };
         };
       };
     };
@@ -119,14 +122,11 @@
           task
           // {
             shell = {
-              with_arguments = {
-                program = "/bin/bash";
-                args = [
-                  "-c"
-                  "${loaderPath} -c '${task.command} ${lib.concatStringsSep " " (task.args or [ ])}'"
-                ];
-                title_override = "devshell";
-              };
+              program = "/bin/bash";
+              args = [
+                "-c"
+                "${loaderPath} -c '${task.command} ${lib.concatStringsSep " " (task.args or [ ])}'"
+              ];
             };
           }
         else
@@ -155,6 +155,8 @@
       exec ? null,
       # Enable VS Code anti-recursion protection
       vscode ? true,
+      # Enable Zed anti-recursion protection
+      zed ? true,
       # Return as package (derivation) or raw script content
       asPackage ? true,
     }:
@@ -180,10 +182,11 @@
           ". <(devenv print-dev-env --impure)";
 
       # Determine which file to look for when finding project root
-      lookupFile = if shellMode == "flake" then "flake.nix" else "devenv.yaml";
+      lookupFile = if shellMode == "flake" then "flake.nix" else ".git";
 
-      vscode-anti-recursion =
-        if vscode then
+      mkAntiRecursion =
+        which:
+        if which == "vscode" then
           ''
             # Avoid recursion if VS Code reuses this profile inside itself
             if [[ "''${DEVENV_VSCODE_SHELL:-}" == "1" ]]; then
@@ -192,6 +195,21 @@
             fi
             export DEVENV_VSCODE_SHELL=1
           ''
+        else if which == "zed" then
+          ''
+            if [[ -n "''${ZED_TERM:-}" ]]; then
+              # If we're already inside, just start a login shell.
+              exec "''${SHELL:-/bin/bash}" -l
+            fi
+          ''
+        else
+          "";
+
+      anti-recursion-script =
+        if vscode then
+          mkAntiRecursion "vscode"
+        else if zed then
+          mkAntiRecursion "zed"
         else
           "";
 
@@ -213,7 +231,7 @@
         "# --- small helpers"
         ''die() { printf "devshell: %s\\n" "$*" >&2; exit 1; }''
         ""
-        vscode-anti-recursion
+        anti-recursion-script
         "# Ensure nix is available"
         "if ! command -v nix >/dev/null 2>&1; then"
         "  if [[ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]]; then"
@@ -239,7 +257,7 @@
         "  if command -v git >/dev/null 2>&1; then"
         "    local gr"
         ''gr="$(git rev-parse --show-toplevel 2>/dev/null || true)"''
-        ''if [[ -n "$gr" && -f "$gr/${lookupFile}" ]]; then''
+        ''if [[ -n "$gr" && -e "$gr/${lookupFile}" ]]; then''
         ''printf "%s\\n" "$gr"''
         "      return 0"
         "    fi"
@@ -248,7 +266,7 @@
         "  # Walk up from current dir"
         ''local d="$PWD"''
         ''while [[ "$d" != "/" ]]; do''
-        ''if [[ -f "$d/${lookupFile}" ]]; then''
+        ''if [[ -e "$d/${lookupFile}" ]]; then''
         ''printf "%s\\n" "$d"''
         "      return 0"
         "    fi"

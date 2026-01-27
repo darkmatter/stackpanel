@@ -3,5 +3,5 @@
 import { parseEnv, z } from "znv";
 
 export const env = parseEnv(process.env, {
-    PORT: z.coerce.number(),
+    PORT: z.string(),
 });

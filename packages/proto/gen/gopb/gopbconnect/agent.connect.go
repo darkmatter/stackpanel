@@ -142,6 +142,9 @@ const (
 	// AgentServiceGetHealthchecksProcedure is the fully-qualified name of the AgentService's
 	// GetHealthchecks RPC.
 	AgentServiceGetHealthchecksProcedure = "/stackpanel.agent.AgentService/GetHealthchecks"
+	// AgentServicePatchNixDataProcedure is the fully-qualified name of the AgentService's PatchNixData
+	// RPC.
+	AgentServicePatchNixDataProcedure = "/stackpanel.agent.AgentService/PatchNixData"
 	// AgentServiceGetNixConfigProcedure is the fully-qualified name of the AgentService's GetNixConfig
 	// RPC.
 	AgentServiceGetNixConfigProcedure = "/stackpanel.agent.AgentService/GetNixConfig"
@@ -214,6 +217,8 @@ type AgentServiceClient interface {
 	GetProcesses(context.Context, *connect.Request[gopb.GetProcessesRequest]) (*connect.Response[gopb.GetProcessesResponse], error)
 	// Healthchecks
 	GetHealthchecks(context.Context, *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error)
+	// Nix data patch - update a single value at a nested path within an entity
+	PatchNixData(context.Context, *connect.Request[gopb.PatchNixDataRequest]) (*connect.Response[gopb.PatchNixDataResponse], error)
 	// Full Nix config (evaluated from flake)
 	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
 	RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
@@ -491,6 +496,12 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(agentServiceMethods.ByName("GetHealthchecks")),
 			connect.WithClientOptions(opts...),
 		),
+		patchNixData: connect.NewClient[gopb.PatchNixDataRequest, gopb.PatchNixDataResponse](
+			httpClient,
+			baseURL+AgentServicePatchNixDataProcedure,
+			connect.WithSchema(agentServiceMethods.ByName("PatchNixData")),
+			connect.WithClientOptions(opts...),
+		),
 		getNixConfig: connect.NewClient[gopb.GetNixConfigRequest, gopb.NixConfigResponse](
 			httpClient,
 			baseURL+AgentServiceGetNixConfigProcedure,
@@ -563,6 +574,7 @@ type agentServiceClient struct {
 	getInstalledPackages *connect.Client[gopb.GetInstalledPackagesRequest, gopb.InstalledPackagesResponse]
 	getProcesses         *connect.Client[gopb.GetProcessesRequest, gopb.GetProcessesResponse]
 	getHealthchecks      *connect.Client[gopb.GetHealthchecksRequest, gopb.HealthchecksResponse]
+	patchNixData         *connect.Client[gopb.PatchNixDataRequest, gopb.PatchNixDataResponse]
 	getNixConfig         *connect.Client[gopb.GetNixConfigRequest, gopb.NixConfigResponse]
 	refreshNixConfig     *connect.Client[gopb.RefreshNixConfigRequest, gopb.NixConfigResponse]
 	getShellStatus       *connect.Client[gopb.GetShellStatusRequest, gopb.ShellStatusResponse]
@@ -784,6 +796,11 @@ func (c *agentServiceClient) GetHealthchecks(ctx context.Context, req *connect.R
 	return c.getHealthchecks.CallUnary(ctx, req)
 }
 
+// PatchNixData calls stackpanel.agent.AgentService.PatchNixData.
+func (c *agentServiceClient) PatchNixData(ctx context.Context, req *connect.Request[gopb.PatchNixDataRequest]) (*connect.Response[gopb.PatchNixDataResponse], error) {
+	return c.patchNixData.CallUnary(ctx, req)
+}
+
 // GetNixConfig calls stackpanel.agent.AgentService.GetNixConfig.
 func (c *agentServiceClient) GetNixConfig(ctx context.Context, req *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {
 	return c.getNixConfig.CallUnary(ctx, req)
@@ -862,6 +879,8 @@ type AgentServiceHandler interface {
 	GetProcesses(context.Context, *connect.Request[gopb.GetProcessesRequest]) (*connect.Response[gopb.GetProcessesResponse], error)
 	// Healthchecks
 	GetHealthchecks(context.Context, *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error)
+	// Nix data patch - update a single value at a nested path within an entity
+	PatchNixData(context.Context, *connect.Request[gopb.PatchNixDataRequest]) (*connect.Response[gopb.PatchNixDataResponse], error)
 	// Full Nix config (evaluated from flake)
 	GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
 	RefreshNixConfig(context.Context, *connect.Request[gopb.RefreshNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error)
@@ -1135,6 +1154,12 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(agentServiceMethods.ByName("GetHealthchecks")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentServicePatchNixDataHandler := connect.NewUnaryHandler(
+		AgentServicePatchNixDataProcedure,
+		svc.PatchNixData,
+		connect.WithSchema(agentServiceMethods.ByName("PatchNixData")),
+		connect.WithHandlerOptions(opts...),
+	)
 	agentServiceGetNixConfigHandler := connect.NewUnaryHandler(
 		AgentServiceGetNixConfigProcedure,
 		svc.GetNixConfig,
@@ -1247,6 +1272,8 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceGetProcessesHandler.ServeHTTP(w, r)
 		case AgentServiceGetHealthchecksProcedure:
 			agentServiceGetHealthchecksHandler.ServeHTTP(w, r)
+		case AgentServicePatchNixDataProcedure:
+			agentServicePatchNixDataHandler.ServeHTTP(w, r)
 		case AgentServiceGetNixConfigProcedure:
 			agentServiceGetNixConfigHandler.ServeHTTP(w, r)
 		case AgentServiceRefreshNixConfigProcedure:
@@ -1434,6 +1461,10 @@ func (UnimplementedAgentServiceHandler) GetProcesses(context.Context, *connect.R
 
 func (UnimplementedAgentServiceHandler) GetHealthchecks(context.Context, *connect.Request[gopb.GetHealthchecksRequest]) (*connect.Response[gopb.HealthchecksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.GetHealthchecks is not implemented"))
+}
+
+func (UnimplementedAgentServiceHandler) PatchNixData(context.Context, *connect.Request[gopb.PatchNixDataRequest]) (*connect.Response[gopb.PatchNixDataResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stackpanel.agent.AgentService.PatchNixData is not implemented"))
 }
 
 func (UnimplementedAgentServiceHandler) GetNixConfig(context.Context, *connect.Request[gopb.GetNixConfigRequest]) (*connect.Response[gopb.NixConfigResponse], error) {

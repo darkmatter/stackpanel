@@ -83,7 +83,11 @@ export enum FileType {
     /**
      * @generated from protobuf enum value: FILE_TYPE_DERIVATION = 2;
      */
-    DERIVATION = 2
+    DERIVATION = 2,
+    /**
+     * @generated from protobuf enum value: FILE_TYPE_JSON = 3;
+     */
+    JSON = 3
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class GeneratedFile$Type extends MessageType<GeneratedFile> {

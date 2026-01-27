@@ -12,6 +12,9 @@
 #   - text: Inline text content
 #   - path: Path to file (content read at eval time)
 #
+# For type="json" files, provide a Nix attrset via jsonValue. Multiple
+# modules can contribute to the same file and values are deep-merged.
+#
 # Usage (inline text):
 #   stackpanel.files.entries.".github/workflows/ci.yml" = {
 #     type = "text";
@@ -30,6 +33,15 @@
 #     type = "derivation";
 #     drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
 #     mode = "0755";
+#   };
+#
+# Usage (JSON - deep-mergeable):
+#   stackpanel.files.entries."package.json" = {
+#     type = "json";
+#     jsonValue = {
+#       name = "my-app";
+#       scripts.dev = "bun dev";
+#     };
 #   };
 # ==============================================================================
 {
@@ -64,6 +76,7 @@ let
           if fileConfig.path or null != null then "path"
           else if fileConfig.text or null != null then "inline"
           else "unknown"
+        else if fileType == "json" then "json"
         else if fileType == "derivation" then "derivation"
         else if fileType == "symlink" then "symlink"
         else "unknown";
@@ -89,13 +102,16 @@ let
     files = manifestEntries;
   };
 
-  # Resolve text content from either text or path
+  # Resolve text content from either text, path, or jsonValue
   resolveTextContent = path: fileConfig:
     let
+      fileType = fileConfig.type or "text";
       hasText = fileConfig.text or null != null;
       hasPath = fileConfig.path or null != null;
     in
-    if hasText && hasPath then
+    if fileType == "json" then
+      builtins.toJSON fileConfig.jsonValue
+    else if hasText && hasPath then
       throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
     else if hasPath then
       builtins.readFile fileConfig.path
@@ -117,6 +133,11 @@ let
             content = resolveTextContent path fileConfig;
           in
           pkgs.writeText (builtins.baseNameOf path) content
+        else if fileType == "json" then
+          let
+            content = resolveTextContent path fileConfig;
+          in
+          pkgs.writeText (builtins.baseNameOf path) content
         else if fileType == "derivation" then
           fileConfig.drv
         else
@@ -133,6 +154,17 @@ let
         # Remove existing file/symlink if present
         rm -f ${q path} 2>/dev/null || true
         ln -s ${q symlinkTarget} ${q path}
+      ''
+    else if fileType == "json" then
+      ''
+        ${util.log.debug "files: writing ${path} (json)"}
+        echo "• ${path}"
+        mkdir -p "$(dirname ${q path})"
+        ${pkgs.jq}/bin/jq '.' ${source} > ${q path}
+        ${lib.optionalString (mode != null) ''
+          ${util.log.debug "files: setting mode ${mode} on ${path}"}
+          chmod ${q mode} ${q path}
+        ''}
       ''
     else
       ''

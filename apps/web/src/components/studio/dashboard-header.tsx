@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useCanGoBack, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@ui/avatar";
 import { Button } from "@ui/button";
 import {
@@ -15,6 +15,7 @@ import { ArrowLeft, Bell, LogOut, Search, Settings, User } from "lucide-react";
 import { AgentStatus } from "@/components/agent-connect";
 import { ShellStatus } from "./shell-status";
 import type { PanelType } from "./dashboard-sidebar";
+import { SidebarTrigger } from "../ui/sidebar";
 
 const panelTitles: Record<PanelType, string> = {
   overview: "Overview",
@@ -71,36 +72,34 @@ const pathToPanelMap: Record<string, PanelType> = {
 };
 
 export function DashboardHeader() {
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
 
-  // Derive active panel from the current route
-  const activePanel: PanelType = pathToPanelMap[pathname] || "overview";
-
   return (
-    <header className="flex h-16 items-center justify-between  px-6">
+    <header className="flex h-16 items-center justify-between  px-6 w-full">
       <div className="flex items-center gap-4">
-        <Link to="/">
-          <Button
-            className="gap-2 text-muted-foreground hover:text-foreground"
-            size="sm"
-            variant="ghost"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Exit Demo
-          </Button>
-        </Link>
-        <div className="h-6 w-px bg-border" />
-        <h1 className="font-semibold text-foreground text-lg">
+        <SidebarTrigger />
+        {/* <Button
+          onClick={() => canGoBack ? router.history.back() : router.navigate({ to: "/studio", replace: true, search: {} })}
+          className="gap-2 text-muted-foreground hover:text-foreground"
+          size="sm"
+          variant="ghost"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button> */}
+        {/* <div className="h-6 w-px bg-border" /> */}
+        {/* <h1 className="font-semibold text-foreground text-lg">
           {panelTitles[activePanel]}
-        </h1>
+        </h1> */}
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative">
+        {/* <div className="relative">
           <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
           <Input className="w-64 bg-secondary pl-9" placeholder="Search..." />
-        </div>
+        </div> */}
 
         <div className="flex items-center gap-1">
           <Button
@@ -119,7 +118,7 @@ export function DashboardHeader() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/50 px-3 py-1.5">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/50 px-3 py-1.5 ml-auto">
           <ShellStatus />
           <div className="h-4 w-px bg-border" />
           <AgentStatus />

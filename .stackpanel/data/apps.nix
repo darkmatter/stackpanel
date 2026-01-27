@@ -4,7 +4,9 @@
     domain = "docs";
     environments = {
       dev = {
-        env = { };
+        env = {
+          PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/docs/port";
+        };
         name = "dev";
       };
       prod = {

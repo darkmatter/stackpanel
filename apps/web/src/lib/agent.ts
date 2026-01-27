@@ -930,6 +930,24 @@ export class AgentHttpClient {
     return data.data;
   }
 
+  // ==========================================================================
+  // Variables Backend
+  // ==========================================================================
+
+  /**
+   * Get the configured variables backend ("vals" or "chamber").
+   */
+  async getVariablesBackend(): Promise<{
+    backend: "vals" | "chamber";
+    chamber?: { servicePrefix: string };
+  }> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/backend`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    return data ?? { backend: "vals" };
+  }
+
   // Project management methods
 
   /**

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package stackpanel.modules;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// Bun-specific per-app configuration
+message BunAppConfig {
+  bool enable = 1; // Enable Bun app support for this app
+  string main_package = 2; // Main entry point for bun run
+  string version = 3; // App version
+  optional string binary_name = 4; // Binary name (if different from app name)
+  string build_phase = 5; // Build phase command
+  string start_script = 6; // Start script for runtime
+  map<string, string> runtime_env = 7; // Runtime environment variables
+  bool inherit_path = 8; // Whether to inherit PATH from environment at runtime
+  string description = 9; // App description
+}

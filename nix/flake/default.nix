@@ -33,31 +33,6 @@ let
   # Serialization helpers for JSON-safe config
   serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
 
-  # Helper to serialize a package derivation to JSON-safe format
-  serializePackage =
-    pkg:
-    if builtins.isAttrs pkg && pkg ? name then
-      {
-        name = pkg.pname or pkg.name or "unknown";
-        version = pkg.version or "";
-        attrPath = pkg.meta.mainProgram or pkg.pname or pkg.name or "";
-        source = "devshell";
-      }
-    else if builtins.isString pkg then
-      {
-        name = pkg;
-        version = "";
-        attrPath = pkg;
-        source = "devshell";
-      }
-    else
-      {
-        name = "unknown";
-        version = "";
-        attrPath = "";
-        source = "devshell";
-      };
-
   # Check if user's flake has these optional inputs
   hasDevenv = inputs ? devenv;
   hasProcessCompose = inputs ? process-compose-flake;
@@ -344,7 +319,7 @@ in
             # ===================================================================
             stackpanelSerializable = serializeLib.filterSerializable spConfig;
 
-            serializedPackages = map serializePackage allPackages;
+            serializedPackages = map serializeLib.serializePackage allPackages;
 
             userPackagesCfg =
               spConfig.userPackages or {

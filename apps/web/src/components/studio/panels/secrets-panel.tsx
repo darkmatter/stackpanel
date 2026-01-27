@@ -38,9 +38,13 @@ import {
 	Shield,
 	Trash2,
 } from "lucide-react";
+import { useVariablesBackend } from "@/lib/use-agent";
 import { getTypeColor, useSecrets } from "./secrets";
 
 export function SecretsPanel() {
+	const { data: backendData } = useVariablesBackend();
+	const isChamber = backendData?.backend === "chamber";
+
 	const {
 		// State
 		searchQuery,
@@ -69,6 +73,34 @@ export function SecretsPanel() {
 		handleAddSecret,
 		handleDeleteSecret,
 	} = useSecrets();
+
+	if (isChamber) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h2 className="font-semibold text-foreground text-xl">Secrets</h2>
+					<p className="text-muted-foreground text-sm">
+						Secrets are managed via AWS Parameter Store (Chamber)
+					</p>
+				</div>
+				<Card>
+					<CardContent className="py-12 text-center space-y-3">
+						<Shield className="mx-auto h-12 w-12 text-muted-foreground/50" />
+						<p className="text-muted-foreground text-sm">
+							This project uses the <strong>Chamber</strong> backend for secrets management.
+							Secrets are stored in AWS Systems Manager Parameter Store and encrypted via KMS.
+						</p>
+						<p className="text-muted-foreground text-xs">
+							Use the <strong>Variables & Secrets</strong> panel to manage secrets in the{" "}
+							<code className="bg-muted px-1 py-0.5 rounded text-xs">/dev/</code>,{" "}
+							<code className="bg-muted px-1 py-0.5 rounded text-xs">/staging/</code>, and{" "}
+							<code className="bg-muted px-1 py-0.5 rounded text-xs">/prod/</code> keygroups.
+						</p>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">

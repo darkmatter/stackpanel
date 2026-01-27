@@ -32,6 +32,11 @@ let
   cfg = config.stackpanel.secrets;
   wrappedCfg = cfg.wrapped;
 
+  # Variables backend config
+  variablesBackend = config.stackpanel.secrets.backend;
+  isChamber = variablesBackend == "chamber";
+  chamberServicePrefix = if isChamber then config.stackpanel.secrets.chamber.service-prefix else "";
+
   # Import secrets library
   secretsLib = import ./lib.nix {
     inherit pkgs lib;
@@ -49,7 +54,7 @@ let
   # Standard environments
   standardEnvs = [ "dev" "staging" "prod" ];
 
-  # Create the wrapper script that decrypts secrets using master keys
+  # Create the wrapper script that decrypts secrets using master keys (vals backend)
   mkSecretsLoaderScript = pkgs.writeShellApplication {
     name = "secrets-loader";
     runtimeInputs = [
@@ -107,29 +112,77 @@ let
     '';
   };
 
+  # Create the wrapper script for chamber backend
+  # Uses `chamber exec <service> -- <command>` to inject secrets from SSM
+  mkChamberLoaderScript = pkgs.writeShellApplication {
+    name = "chamber-loader";
+    runtimeInputs = [
+      pkgs.chamber
+      pkgs.coreutils
+    ];
+    text = ''
+      set -euo pipefail
+
+      # Arguments: <chamber-service> <command> [args...]
+      CHAMBER_SERVICE="$1"
+      shift
+
+      if [[ -z "$CHAMBER_SERVICE" ]]; then
+        echo "Error: Chamber service not specified" >&2
+        exit 1
+      fi
+
+      # Execute the command with chamber-injected environment
+      exec chamber exec "$CHAMBER_SERVICE" -- "$@"
+    '';
+  };
+
+  # Select the appropriate loader based on backend
+  activeLoaderScript = if isChamber then mkChamberLoaderScript else mkSecretsLoaderScript;
+
   # Create a wrapped package for a specific app/environment
   mkWrappedPackage = { pkg, appName, envName, secretsDir }:
     let
       secretsFile = "${secretsDir}/apps/${appName}/${envName}.age";
+      chamberService = "${chamberServicePrefix}/${envName}";
       pkgName = pkg.pname or pkg.name or "wrapped";
     in
-    pkgs.symlinkJoin {
-      name = "${pkgName}-${appName}-${envName}";
-      paths = [ pkg ];
-      nativeBuildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        for bin in $out/bin/*; do
-          if [ -f "$bin" ] && [ -x "$bin" ]; then
-            wrapProgram "$bin" \
-              --set STACKPANEL_SECRETS_FILE "''${PROJECT_ROOT:-.}/${secretsFile}" \
-              --prefix PATH : "${mkSecretsLoaderScript}/bin" \
-              --prefix PATH : "${pkgs.age}/bin" \
-              --prefix PATH : "${pkgs.vals}/bin" \
-              --prefix PATH : "${pkgs.jq}/bin"
-          fi
-        done
-      '';
-    };
+    if isChamber then
+      # Chamber backend: wrap with chamber exec
+      pkgs.symlinkJoin {
+        name = "${pkgName}-${appName}-${envName}";
+        paths = [ pkg ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          for bin in $out/bin/*; do
+            if [ -f "$bin" ] && [ -x "$bin" ]; then
+              wrapProgram "$bin" \
+                --set STACKPANEL_CHAMBER_SERVICE "${chamberService}" \
+                --set STACKPANEL_VARIABLES_BACKEND "chamber" \
+                --prefix PATH : "${pkgs.chamber}/bin"
+            fi
+          done
+        '';
+      }
+    else
+      # Vals backend: wrap with age decryption
+      pkgs.symlinkJoin {
+        name = "${pkgName}-${appName}-${envName}";
+        paths = [ pkg ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          for bin in $out/bin/*; do
+            if [ -f "$bin" ] && [ -x "$bin" ]; then
+              wrapProgram "$bin" \
+                --set STACKPANEL_SECRETS_FILE "''${PROJECT_ROOT:-.}/${secretsFile}" \
+                --prefix PATH : "${mkSecretsLoaderScript}/bin" \
+                --prefix PATH : "${pkgs.age}/bin" \
+                --prefix PATH : "${pkgs.vals}/bin" \
+                --prefix PATH : "${pkgs.jq}/bin"
+            fi
+          done
+        '';
+      };
 
   # Generate all wrapped packages
   mkAllWrappedPackages =
@@ -237,21 +290,34 @@ in
     stackpanel.scripts = {
       "secrets:run" = {
         description = "Run a command with secrets loaded (args: <app> <env> <command...>)";
-        exec = ''
-          if [[ $# -lt 3 ]]; then
-            echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
-            exit 1
-          fi
+        exec =
+          if isChamber then ''
+            if [[ $# -lt 3 ]]; then
+              echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
+              exit 1
+            fi
 
-          APP_NAME="$1"
-          ENV_NAME="$2"
-          shift 2
+            APP_NAME="$1"
+            ENV_NAME="$2"
+            shift 2
 
-          PROJECT_ROOT="''${PROJECT_ROOT:-$(pwd)}"
-          SECRETS_FILE="$PROJECT_ROOT/${cfg.secrets-dir}/apps/$APP_NAME/$ENV_NAME.age"
+            CHAMBER_SERVICE="${chamberServicePrefix}/$ENV_NAME"
+            exec ${mkChamberLoaderScript}/bin/chamber-loader "$CHAMBER_SERVICE" "$@"
+          '' else ''
+            if [[ $# -lt 3 ]]; then
+              echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
+              exit 1
+            fi
 
-          exec ${mkSecretsLoaderScript}/bin/secrets-loader "$SECRETS_FILE" "$@"
-        '';
+            APP_NAME="$1"
+            ENV_NAME="$2"
+            shift 2
+
+            PROJECT_ROOT="''${PROJECT_ROOT:-$(pwd)}"
+            SECRETS_FILE="$PROJECT_ROOT/${cfg.secrets-dir}/apps/$APP_NAME/$ENV_NAME.age"
+
+            exec ${mkSecretsLoaderScript}/bin/secrets-loader "$SECRETS_FILE" "$@"
+          '';
       };
     };
   };

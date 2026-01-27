@@ -1,1 +1,1 @@
-{"extends":["//"],"tasks":{"deploy:web":{"cache":false,"dependsOn":["deploy:web:push"]},"deploy:web:build":{"dependsOn":["deploy:web:clean"],"outputs":["../../apps/web/.output/**"]},"deploy:web:clean":{"cache":false},"deploy:web:push":{"cache":false,"dependsOn":["deploy:web:build"]}}}
+{"extends":["//"]}

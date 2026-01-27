@@ -866,6 +866,83 @@ export interface HealthchecksResponse {
     checks: HealthcheckInfo[];
 }
 // =============================================================================
+// Nix Data Patch
+// =============================================================================
+
+/**
+ * PatchNixDataRequest updates a single value within a Nix data entity at a
+ * dot-separated path. This enables editing individual fields from UI panels
+ * without replacing the entire entity.
+ *
+ * Example: Update a Go app's mainPackage:
+ *   entity = "apps"
+ *   key = "stackpanel-go"
+ *   path = "go.mainPackage"
+ *   value = "./cmd/api"
+ *   value_type = "string"
+ *
+ * The path uses camelCase (matching the SpField/panel editPath convention).
+ * The handler converts to kebab-case when writing to the Nix data file.
+ *
+ * @generated from protobuf message stackpanel.agent.PatchNixDataRequest
+ */
+export interface PatchNixDataRequest {
+    /**
+     * Entity name (e.g., "apps", "config", "secrets")
+     *
+     * @generated from protobuf field: string entity = 1
+     */
+    entity: string;
+    /**
+     * Top-level key within the entity (e.g., app name "web" for apps entity)
+     * Empty string for non-map entities (e.g., "config")
+     *
+     * @generated from protobuf field: string key = 2
+     */
+    key: string;
+    /**
+     * Dot-separated path to the field within the key (e.g., "go.mainPackage")
+     * Uses camelCase convention (zero conversion from UI editPath)
+     *
+     * @generated from protobuf field: string path = 3
+     */
+    path: string;
+    /**
+     * JSON-encoded value to set (e.g., "\"./cmd/api\"", "true", "[\"a\",\"b\"]")
+     *
+     * @generated from protobuf field: string value = 4
+     */
+    value: string;
+    /**
+     * Value type hint for proper Nix serialization
+     * Supported: "string", "bool", "number", "list", "object", "null"
+     *
+     * @generated from protobuf field: string value_type = 5
+     */
+    value_type: string;
+}
+/**
+ * @generated from protobuf message stackpanel.agent.PatchNixDataResponse
+ */
+export interface PatchNixDataResponse {
+    /**
+     * @generated from protobuf field: bool success = 1
+     */
+    success: boolean;
+    /**
+     * The updated entity data as JSON (for UI cache invalidation)
+     *
+     * @generated from protobuf field: string updated_json = 2
+     */
+    updated_json: string;
+    /**
+     * Error message if success is false
+     *
+     * @generated from protobuf field: string error = 3
+     */
+    error: string;
+}
+// =============================================================================
 // Full Nix Config
 // =============================================================================
 
@@ -4331,6 +4408,148 @@ class HealthchecksResponse$Type extends MessageType<HealthchecksResponse> {
  */
 export const HealthchecksResponse = new HealthchecksResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class PatchNixDataRequest$Type extends MessageType<PatchNixDataRequest> {
+    constructor() {
+        super("stackpanel.agent.PatchNixDataRequest", [
+            { no: 1, name: "entity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "value", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "value_type", kind: "scalar", localName: "value_type", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<PatchNixDataRequest>): PatchNixDataRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.entity = "";
+        message.key = "";
+        message.path = "";
+        message.value = "";
+        message.value_type = "";
+        if (value !== undefined)
+            reflectionMergePartial<PatchNixDataRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PatchNixDataRequest): PatchNixDataRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string entity */ 1:
+                    message.entity = reader.string();
+                    break;
+                case /* string key */ 2:
+                    message.key = reader.string();
+                    break;
+                case /* string path */ 3:
+                    message.path = reader.string();
+                    break;
+                case /* string value */ 4:
+                    message.value = reader.string();
+                    break;
+                case /* string value_type */ 5:
+                    message.value_type = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PatchNixDataRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string entity = 1; */
+        if (message.entity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.entity);
+        /* string key = 2; */
+        if (message.key !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.key);
+        /* string path = 3; */
+        if (message.path !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.path);
+        /* string value = 4; */
+        if (message.value !== "")
+            writer.tag(4, WireType.LengthDelimited).string(message.value);
+        /* string value_type = 5; */
+        if (message.value_type !== "")
+            writer.tag(5, WireType.LengthDelimited).string(message.value_type);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.PatchNixDataRequest
+ */
+export const PatchNixDataRequest = new PatchNixDataRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class PatchNixDataResponse$Type extends MessageType<PatchNixDataResponse> {
+    constructor() {
+        super("stackpanel.agent.PatchNixDataResponse", [
+            { no: 1, name: "success", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "updated_json", kind: "scalar", localName: "updated_json", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "error", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<PatchNixDataResponse>): PatchNixDataResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.success = false;
+        message.updated_json = "";
+        message.error = "";
+        if (value !== undefined)
+            reflectionMergePartial<PatchNixDataResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PatchNixDataResponse): PatchNixDataResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool success */ 1:
+                    message.success = reader.bool();
+                    break;
+                case /* string updated_json */ 2:
+                    message.updated_json = reader.string();
+                    break;
+                case /* string error */ 3:
+                    message.error = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PatchNixDataResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool success = 1; */
+        if (message.success !== false)
+            writer.tag(1, WireType.Varint).bool(message.success);
+        /* string updated_json = 2; */
+        if (message.updated_json !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.updated_json);
+        /* string error = 3; */
+        if (message.error !== "")
+            writer.tag(3, WireType.LengthDelimited).string(message.error);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.agent.PatchNixDataResponse
+ */
+export const PatchNixDataResponse = new PatchNixDataResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class GetNixConfigRequest$Type extends MessageType<GetNixConfigRequest> {
     constructor() {
         super("stackpanel.agent.GetNixConfigRequest", [
@@ -4776,6 +4995,7 @@ export const AgentService = new ServiceType("stackpanel.agent.AgentService", [
     { name: "GetInstalledPackages", options: {}, I: GetInstalledPackagesRequest, O: InstalledPackagesResponse },
     { name: "GetProcesses", options: {}, I: GetProcessesRequest, O: GetProcessesResponse },
     { name: "GetHealthchecks", options: {}, I: GetHealthchecksRequest, O: HealthchecksResponse },
+    { name: "PatchNixData", options: {}, I: PatchNixDataRequest, O: PatchNixDataResponse },
     { name: "GetNixConfig", options: {}, I: GetNixConfigRequest, O: NixConfigResponse },
     { name: "RefreshNixConfig", options: {}, I: RefreshNixConfigRequest, O: NixConfigResponse },
     { name: "GetShellStatus", options: {}, I: GetShellStatusRequest, O: ShellStatusResponse },

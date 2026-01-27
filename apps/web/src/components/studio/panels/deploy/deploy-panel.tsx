@@ -35,6 +35,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useAgentContext } from "@/lib/agent-provider";
+import { useVariablesBackend } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 
 // Types
@@ -168,6 +169,9 @@ function StatusCard({
 
 export function DeployPanel() {
 	const { isConnected } = useAgentContext();
+	const { data: backendData } = useVariablesBackend();
+	const isChamber = backendData?.backend === "chamber";
+	const chamberServicePrefix = backendData?.chamber?.servicePrefix;
 
 	// Mock data - in real implementation, this would come from the agent
 	const [apps] = useState<DeployableApp[]>([
@@ -683,7 +687,11 @@ export function DeployPanel() {
 											{formData.container.aws.enable && (
 												<Field
 													label="Chamber Service"
-													description="Service path for Chamber secrets (e.g., myapp/prod)"
+													description={
+														isChamber && chamberServicePrefix
+															? `Auto-derived from variables backend: ${chamberServicePrefix}/{stage}`
+															: "Service path for Chamber secrets (e.g., myapp/prod)"
+													}
 												>
 													<Input
 														value={formData.container.aws.chamberService || ""}
@@ -693,8 +701,17 @@ export function DeployPanel() {
 																e.target.value || null,
 															)
 														}
-														placeholder="myapp/prod"
+														placeholder={
+															isChamber && chamberServicePrefix
+																? `${chamberServicePrefix}/prod`
+																: "myapp/prod"
+														}
 													/>
+													{isChamber && chamberServicePrefix && !formData.container.aws.chamberService && (
+														<p className="text-xs text-muted-foreground mt-1">
+															Leave empty to auto-derive from the project's chamber service prefix.
+														</p>
+													)}
 												</Field>
 											)}
 										</FieldGroup>

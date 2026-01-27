@@ -19,6 +19,10 @@ let
   users = cfg.users or { };
   secretsCfg = cfg.secrets or { };
 
+  # Variables backend determines whether SOPS files are generated
+  variablesBackend = cfg.secrets.backend or "vals";
+  isChamber = variablesBackend == "chamber";
+
   # Output directories
   dataDir = "packages/env/data";
   generatedDir = "packages/env/src/generated";
@@ -259,18 +263,18 @@ let
 
   generatedFiles = 
     let
-      # .sops.yaml
-      sopsFile = {
+      # .sops.yaml - skip when backend is chamber (secrets in SSM, not SOPS)
+      sopsFile = lib.optionalAttrs (!isChamber) {
         "${dataDir}/.sops.yaml" = sopsYamlContent;
       };
 
-      # Shared vars
+      # Shared vars (always generate - these are plaintext /var/* variables)
       sharedFiles = {
         "${dataDir}/shared/vars.yaml" = sharedVarsBoilerplate;
       };
 
-      # Per-app/env YAML boilerplates
-      yamlFiles = lib.listToAttrs (
+      # Per-app/env YAML boilerplates - skip when backend is chamber
+      yamlFiles = if isChamber then {} else lib.listToAttrs (
         lib.concatMap ({ appName, envName, envCfg }:
           let
             content = mkEnvYamlBoilerplate appName envName envCfg;

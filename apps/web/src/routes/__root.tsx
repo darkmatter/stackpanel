@@ -38,6 +38,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 				name: "description",
 				content: "StackPanel - Modern infrastructure for modern teams",
 			},
+			{
+				name: "viewport",
+				content:
+					"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
+			},
 		],
 		links: [
 			{
