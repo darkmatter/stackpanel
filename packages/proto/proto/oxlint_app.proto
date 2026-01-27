@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package stackpanel.modules;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// OxLint per-app linting configuration
+message OxlintAppConfig {
+  bool enable = 1; // Enable OxLint for JavaScript/TypeScript linting
+  optional string config_path = 2; // Path to oxlint config file relative to app root
+  repeated string plugins = 3; // OxLint plugins to enable
+  map<string, string> categories = 4; // Rule category severity levels
+  map<string, string> rules = 5; // Individual rule overrides. Values: off, warn, error
+  repeated string ignore_patterns = 6; // Glob patterns to ignore
+  repeated string paths = 7; // Paths to lint (relative to app root)
+  bool fix = 8; // Whether to automatically fix fixable issues by default
+  bool git_hook = 9; // Whether to run oxlint in pre-commit git hook
+  bool turbo_task = 10; // Deprecated: This option is no longer used
+}

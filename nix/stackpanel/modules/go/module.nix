@@ -55,6 +55,10 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
 
+  # Unified field definitions - single source of truth for Go per-app options
+  goSchema = import ./schema.nix { inherit lib; };
+  sp = import ../../db/lib/field.nix { inherit lib; };
+
   # Compute npm scope prefix from config (project.repo or name)
   # e.g., "stackpanel" -> "@stackpanel"
   prefix = cfg.project.repo or cfg.name;
@@ -217,25 +221,21 @@ let
     '';
 
   # Create file entries for materialization (uses stackpanel.files system)
-  # Each file needs its own derivation (not a path into another derivation)
+  # package.json uses type="json" for deep-merge support from other modules
   mkGeneratedFileEntries =
     name: app:
     let
       goCfg = app.go;
-      # Create individual file derivations
-      packageJsonDrv = pkgs.runCommand "${name}-package.json" {
-        nativeBuildInputs = [ pkgs.jq ];
-        passAsFile = [ "jsonContent" ];
-        jsonContent = builtins.toJSON (generatePackageJson name app);
-      } ''jq '.' < "$jsonContentPath" > $out'';
 
       airTomlDrv = pkgs.writeText "${name}-air.toml" (generateAirToml name app);
       toolsGoDrv = pkgs.writeText "${name}-tools.go" (generateToolsGo name app);
     in
     {
       "${app.path}/package.json" = {
-        type = "derivation";
-        drv = packageJsonDrv;
+        type = "json";
+        jsonValue = generatePackageJson name app;
+        source = "go";
+        description = "Go app package.json (scripts, dependencies)";
       };
       "${app.path}/.air.toml" = {
         type = "derivation";
@@ -373,6 +373,7 @@ in
   # ===========================================================================
   config = lib.mkMerge [
     # Always add go options to all apps (not conditional)
+    # Options are auto-generated from go-app.proto.nix (single source of truth)
     {
       stackpanel.appModules = [
         (
@@ -380,77 +381,7 @@ in
           {
             options.go = lib.mkOption {
               type = lib.types.submodule {
-                options = {
-                  enable = lib.mkOption {
-                    type = lib.types.bool;
-                    default = false;
-                    description = "Enable Go app support for this app";
-                  };
-
-                  mainPackage = lib.mkOption {
-                    type = lib.types.str;
-                    default = ".";
-                    description = "Go main package path";
-                  };
-
-                  version = lib.mkOption {
-                    type = lib.types.str;
-                    default = "0.1.0";
-                    description = "App version";
-                  };
-
-                  binaryName = lib.mkOption {
-                    type = lib.types.nullOr lib.types.str;
-                    default = null;
-                    description = "Binary name (if different from app name)";
-                    example = "stackpanel";
-                  };
-
-                  ldflags = lib.mkOption {
-                    type = lib.types.listOf lib.types.str;
-                    default = [ ];
-                    description = "Go linker flags";
-                    example = [ "-X main.version=1.0.0" ];
-                  };
-
-                  watchDirs = lib.mkOption {
-                    type = lib.types.listOf lib.types.str;
-                    default = [
-                      "cmd"
-                      "internal"
-                    ];
-                    description = "Directories to watch for air live reload";
-                  };
-
-                  devArgs = lib.mkOption {
-                    type = lib.types.listOf lib.types.str;
-                    default = [ ];
-                    description = "Arguments to pass to binary during development";
-                    example = [
-                      "serve"
-                      "--port=3000"
-                    ];
-                  };
-
-                  tools = lib.mkOption {
-                    type = lib.types.listOf lib.types.str;
-                    default = [ ];
-                    description = "Additional Go tool dependencies";
-                    example = [ "github.com/golangci/golangci-lint/cmd/golangci-lint" ];
-                  };
-
-                  generateFiles = lib.mkOption {
-                    type = lib.types.bool;
-                    default = true;
-                    description = "Whether to generate package.json, .air.toml, and tools.go";
-                  };
-
-                  description = lib.mkOption {
-                    type = lib.types.str;
-                    default = "";
-                    description = "App description";
-                  };
-                };
+                options = lib.mapAttrs (_: sp.asOption) goSchema.fields;
               };
               default = { };
               description = "Go-specific configuration for this app";

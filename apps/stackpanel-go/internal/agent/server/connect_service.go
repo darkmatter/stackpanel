@@ -80,6 +80,16 @@ func (s *AgentServiceServer) GetAgeIdentity(
 	ctx context.Context,
 	req *connect.Request[gopb.GetAgeIdentityRequest],
 ) (*connect.Response[gopb.AgeIdentityResponse], error) {
+	// When backend is chamber, AGE identity is not applicable
+	if s.server.getVariablesBackend() == "chamber" {
+		return connect.NewResponse(&gopb.AgeIdentityResponse{
+			Type:      "not_applicable",
+			Value:     "Variables backend is set to 'chamber' - AGE identity is not used",
+			KeyPath:   "",
+			PublicKey: "",
+		}), nil
+	}
+
 	identityFile := s.server.getAgeIdentityPath()
 	resp := &gopb.AgeIdentityResponse{
 		Type:      "",
@@ -188,6 +198,29 @@ func (s *AgentServiceServer) GetKMSConfig(
 	ctx context.Context,
 	req *connect.Request[gopb.GetKMSConfigRequest],
 ) (*connect.Response[gopb.KMSConfigResponse], error) {
+	// When backend is chamber, KMS is always enabled (forced by Nix config)
+	if s.server.getVariablesBackend() == "chamber" {
+		resp := &gopb.KMSConfigResponse{
+			Enable:     true,
+			KeyArn:     "",
+			AwsProfile: "",
+			Source:     "chamber",
+		}
+
+		// Try to get the actual KMS ARN from state if available
+		configFile := s.server.getKMSConfigPath()
+		data, err := os.ReadFile(configFile)
+		if err == nil {
+			var stateConfig KMSConfigResponse
+			if err := json.Unmarshal(data, &stateConfig); err == nil {
+				resp.KeyArn = stateConfig.KeyArn
+				resp.AwsProfile = stateConfig.AwsProfile
+			}
+		}
+
+		return connect.NewResponse(resp), nil
+	}
+
 	configFile := s.server.getKMSConfigPath()
 	resp := &gopb.KMSConfigResponse{
 		Enable:     false,
@@ -204,9 +237,13 @@ func (s *AgentServiceServer) GetKMSConfig(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read KMS config: %w", err))
 	}
 
-	// Parse JSON config
-	// For now, return the basic structure - we can add JSON parsing later
-	_ = data
+	var stateConfig KMSConfigResponse
+	if err := json.Unmarshal(data, &stateConfig); err == nil {
+		resp.Enable = stateConfig.Enable
+		resp.KeyArn = stateConfig.KeyArn
+		resp.AwsProfile = stateConfig.AwsProfile
+	}
+
 	resp.Source = "state"
 	return connect.NewResponse(resp), nil
 }

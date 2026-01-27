@@ -41,6 +41,7 @@ let
     "PANEL_TYPE_FORM"
     "PANEL_TYPE_TABLE"
     "PANEL_TYPE_CUSTOM"
+    "PANEL_TYPE_APP_CONFIG"
   ];
 
   # Field types for panel configuration
@@ -54,6 +55,7 @@ let
     "FIELD_TYPE_APP_FILTER"
     "FIELD_TYPE_COLUMNS"
     "FIELD_TYPE_JSON"
+    "FIELD_TYPE_CODE"
   ];
 
   # Panel field type
@@ -77,6 +79,32 @@ let
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Options for select fields";
+      };
+
+      # Extended fields for PANEL_TYPE_APP_CONFIG
+      label = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Human-readable label for the field (defaults to name if null)";
+      };
+      editable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether the field can be modified from the UI";
+      };
+      editPath = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          Dot-separated path within the app's config for writes.
+          E.g., "go.mainPackage" tells the agent to patch
+          apps.<appId>.go.mainPackage in the data file.
+        '';
+      };
+      placeholder = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Placeholder text for input fields";
       };
     };
   };
@@ -174,6 +202,10 @@ let
       type = f.type;
       value = f.value;
       options = f.options;
+      label = f.label;
+      editable = f.editable;
+      editPath = f.editPath;
+      placeholder = f.placeholder;
     }) panel.fields;
     apps = lib.mapAttrs (name: appData: {
       enabled = appData.enabled;

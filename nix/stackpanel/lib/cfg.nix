@@ -90,13 +90,17 @@ let
       fi
       
       # Try CLI query (if stackpanel is available)
-      if command -v stackpanel &>/dev/null; then
-        local cli_val
-        if cli_val=$(stackpanel config get "$path" 2>/dev/null) && [[ -n "$cli_val" ]]; then
-          echo "$cli_val"
-          return 0
-        fi
-      fi
+      # NOTE: Disabled until 'stackpanel config get' subcommand is implemented.
+      # Currently 'stackpanel config' only has 'check' and 'sync', so
+      # 'stackpanel config get <path>' returns Cobra help text (exit 0)
+      # which gets captured as the value, causing shell entry failures.
+      # if command -v stackpanel &>/dev/null; then
+      #   local cli_val
+      #   if cli_val=$(stackpanel config get "$path" 2>/dev/null) && [[ -n "$cli_val" ]]; then
+      #     echo "$cli_val"
+      #     return 0
+      #   fi
+      # fi
       
       # Fall back to default
       echo "$default"

@@ -8,6 +8,7 @@ enum FileType {
   FILE_TYPE_UNSPECIFIED = 0;
   FILE_TYPE_TEXT = 1;
   FILE_TYPE_DERIVATION = 2;
+  FILE_TYPE_JSON = 3;
 }
 
 // A file to be generated into the project workspace

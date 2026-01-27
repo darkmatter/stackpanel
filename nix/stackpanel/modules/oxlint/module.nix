@@ -21,114 +21,9 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
 
-  # ---------------------------------------------------------------------------
-  # Per-app linting options module
-  # ---------------------------------------------------------------------------
-  oxlintAppModule =
-    { lib, name, ... }:
-    {
-      options.linting = {
-        oxlint = {
-          enable = lib.mkEnableOption "OxLint for JavaScript/TypeScript linting";
-
-          package = lib.mkOption {
-            type = lib.types.package;
-            default = pkgs.oxlint;
-            defaultText = lib.literalExpression "pkgs.oxlint";
-            description = "The oxlint package to use.";
-          };
-
-          configPath = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = ''
-              Path to oxlint config file relative to app root.
-              If null, a config file will be generated at `.oxlintrc.json`.
-            '';
-            example = "oxlint.json";
-          };
-
-          plugins = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = [ ];
-            description = "OxLint plugins to enable.";
-            example = [
-              "react"
-              "typescript"
-              "import"
-              "jsx-a11y"
-            ];
-          };
-
-          categories = lib.mkOption {
-            type = lib.types.attrsOf lib.types.str;
-            default = {
-              correctness = "error";
-              suspicious = "warn";
-              pedantic = "off";
-              style = "off";
-              nursery = "off";
-            };
-            description = "Rule category severity levels.";
-          };
-
-          rules = lib.mkOption {
-            type = lib.types.attrsOf lib.types.str;
-            default = { };
-            description = "Individual rule overrides. Values: 'off', 'warn', 'error'.";
-            example = {
-              "no-console" = "warn";
-              "no-debugger" = "error";
-              "eqeqeq" = "error";
-            };
-          };
-
-          ignorePatterns = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = [
-              "node_modules"
-              "dist"
-              "build"
-              ".next"
-              "coverage"
-              "*.min.js"
-              "*.bundle.js"
-            ];
-            description = "Glob patterns to ignore.";
-          };
-
-          paths = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = [
-              "src"
-              "."
-            ];
-            description = "Paths to lint (relative to app root).";
-          };
-
-          fix = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = "Whether to automatically fix fixable issues by default.";
-          };
-
-          gitHook = lib.mkOption {
-            type = lib.types.bool;
-            default = true;
-            description = "Whether to run oxlint in pre-commit git hook.";
-          };
-
-          turboTask = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = ''
-              Deprecated: This option is no longer used.
-              Turbo tasks are managed by the turbo module.
-            '';
-          };
-        };
-      };
-    };
+  # Import unified field definitions (single source of truth)
+  oxlintSchema = import ./schema.nix { inherit lib; };
+  spField = import ../../db/lib/field.nix { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Helpers
@@ -175,8 +70,31 @@ in
 {
   config = lib.mkMerge [
     # Always register the per-app options module
+    # Options are auto-generated from oxlint-app.proto.nix (single source of truth)
+    # `package` is Nix-only (package type has no proto equivalent)
     {
-      stackpanel.appModules = [ oxlintAppModule ];
+      stackpanel.appModules = [
+        (
+          { lib, ... }:
+          {
+            options.linting.oxlint = lib.mkOption {
+              type = lib.types.submodule {
+                options = lib.mapAttrs (_: spField.asOption) oxlintSchema.fields // {
+                  # Nix-only option: package references can't be proto fields
+                  package = lib.mkOption {
+                    type = lib.types.package;
+                    default = pkgs.oxlint;
+                    defaultText = lib.literalExpression "pkgs.oxlint";
+                    description = "The oxlint package to use.";
+                  };
+                };
+              };
+              default = { };
+              description = "OxLint linting configuration for this app";
+            };
+          }
+        )
+      ];
     }
 
     # Apply configuration when oxlint apps exist

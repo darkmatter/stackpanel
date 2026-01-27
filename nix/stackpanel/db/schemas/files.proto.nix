@@ -27,6 +27,7 @@ proto.mkProtoFile {
         "FILE_TYPE_UNSPECIFIED"
         "FILE_TYPE_TEXT"
         "FILE_TYPE_DERIVATION"
+        "FILE_TYPE_JSON"
       ];
     };
   };

@@ -27,5 +27,5 @@
   };
   project-name = "stackpanel";
   region = "us-west-2";
-  package.enable = true;
 }
+

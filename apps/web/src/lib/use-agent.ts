@@ -193,6 +193,9 @@ export const agentQueryKeys = {
 
 	// Nix Config
 	nixConfig: () => [...agentQueryKeys.all, "nixConfig"] as const,
+
+	// Variables Backend
+	variablesBackend: () => [...agentQueryKeys.all, "variablesBackend"] as const,
 } as const;
 
 // =============================================================================
@@ -852,6 +855,44 @@ export function useRefreshNixConfig() {
 }
 
 // =============================================================================
+// Variables Backend
+// =============================================================================
+
+/** Response shape from /api/secrets/backend */
+export interface VariablesBackendResponse {
+	backend: "vals" | "chamber";
+	chamber?: { servicePrefix: string };
+}
+
+/**
+ * Query hook for getting the variables backend configuration.
+ * Returns whether the project uses "vals" (AGE/SOPS) or "chamber" (AWS SSM).
+ *
+ * Uses the HTTP client since there is no proto definition for this endpoint yet.
+ */
+export function useVariablesBackend() {
+	const client = useAgentClient();
+	const { isConnected } = useAgentContext();
+
+	return useQuery({
+		queryKey: agentQueryKeys.variablesBackend(),
+		queryFn: async (): Promise<VariablesBackendResponse> => {
+			return client.getVariablesBackend();
+		},
+		enabled: isConnected,
+		staleTime: 60_000, // backend doesn't change at runtime
+	});
+}
+
+/**
+ * Convenience helper: returns true when the backend is "chamber".
+ */
+export function useIsChamberBackend(): boolean {
+	const { data } = useVariablesBackend();
+	return data?.backend === "chamber";
+}
+
+// =============================================================================
 // Compatibility Layer (for gradual migration from use-nix-config.ts)
 // =============================================================================
 
@@ -1420,3 +1461,76 @@ export type {
 	ModuleOutputPackage,
 	GetModuleOutputsRequest,
 } from "@stackpanel/proto";
+
+// =============================================================================
+// PatchNixData - Partial updates to Nix data entities
+// =============================================================================
+
+/**
+ * Parameters for patching a single value in a Nix data entity.
+ */
+export interface PatchNixDataParams {
+	/** Entity name (e.g., "apps", "config") */
+	entity: string;
+	/** Top-level key within the entity (e.g., app name "web"). Empty for non-map entities. */
+	key: string;
+	/** Dot-separated camelCase path to the field (e.g., "go.mainPackage") */
+	path: string;
+	/** JSON-encoded value (e.g., '"./cmd/api"', "true", '["a","b"]') */
+	value: string;
+	/** Value type hint: "string" | "bool" | "number" | "list" | "object" | "null" */
+	valueType: string;
+}
+
+/**
+ * Mutation hook for patching a single value within a Nix data entity.
+ *
+ * This enables editing individual fields from UI panels (e.g., app config forms)
+ * without replacing the entire entity.
+ *
+ * @example
+ * ```tsx
+ * const patchNixData = usePatchNixData();
+ *
+ * patchNixData.mutate({
+ *   entity: "apps",
+ *   key: "web",
+ *   path: "go.mainPackage",
+ *   value: JSON.stringify("./cmd/api"),
+ *   valueType: "string",
+ * });
+ * ```
+ */
+export function usePatchNixData() {
+	const client = useAgentRpcClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (params: PatchNixDataParams) => {
+			if (!client) throw new Error("Not connected to agent");
+			const response = await client.patchNixData({
+				entity: params.entity,
+				key: params.key,
+				path: params.path,
+				value: params.value,
+				valueType: params.valueType,
+			});
+			if (!response.success) {
+				throw new Error(response.error || "PatchNixData failed");
+			}
+			return response;
+		},
+		onSuccess: (_data, params) => {
+			// Invalidate the entity-specific query cache
+			const entityKey = params.entity as keyof typeof agentQueryKeys;
+			if (entityKey in agentQueryKeys) {
+				const keyFn = agentQueryKeys[entityKey];
+				if (typeof keyFn === "function") {
+					queryClient.invalidateQueries({ queryKey: (keyFn as () => readonly string[])() });
+				}
+			}
+			// Also invalidate the full nix config (it includes panel data)
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
+		},
+	});
+}

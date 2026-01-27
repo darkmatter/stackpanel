@@ -3153,6 +3153,166 @@ func (x *HealthchecksResponse) GetChecks() []*HealthcheckInfo {
 	return nil
 }
 
+// PatchNixDataRequest updates a single value within a Nix data entity at a
+// dot-separated path. This enables editing individual fields from UI panels
+// without replacing the entire entity.
+//
+// Example: Update a Go app's mainPackage:
+//
+//	entity = "apps"
+//	key = "stackpanel-go"
+//	path = "go.mainPackage"
+//	value = "./cmd/api"
+//	value_type = "string"
+//
+// The path uses camelCase (matching the SpField/panel editPath convention).
+// The handler converts to kebab-case when writing to the Nix data file.
+type PatchNixDataRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Entity name (e.g., "apps", "config", "secrets")
+	Entity string `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
+	// Top-level key within the entity (e.g., app name "web" for apps entity)
+	// Empty string for non-map entities (e.g., "config")
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// Dot-separated path to the field within the key (e.g., "go.mainPackage")
+	// Uses camelCase convention (zero conversion from UI editPath)
+	Path string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	// JSON-encoded value to set (e.g., "\"./cmd/api\"", "true", "[\"a\",\"b\"]")
+	Value string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
+	// Value type hint for proper Nix serialization
+	// Supported: "string", "bool", "number", "list", "object", "null"
+	ValueType     string `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchNixDataRequest) Reset() {
+	*x = PatchNixDataRequest{}
+	mi := &file_agent_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchNixDataRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchNixDataRequest) ProtoMessage() {}
+
+func (x *PatchNixDataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchNixDataRequest.ProtoReflect.Descriptor instead.
+func (*PatchNixDataRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *PatchNixDataRequest) GetEntity() string {
+	if x != nil {
+		return x.Entity
+	}
+	return ""
+}
+
+func (x *PatchNixDataRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *PatchNixDataRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *PatchNixDataRequest) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *PatchNixDataRequest) GetValueType() string {
+	if x != nil {
+		return x.ValueType
+	}
+	return ""
+}
+
+type PatchNixDataResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Success bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	// The updated entity data as JSON (for UI cache invalidation)
+	UpdatedJson string `protobuf:"bytes,2,opt,name=updated_json,json=updatedJson,proto3" json:"updated_json,omitempty"`
+	// Error message if success is false
+	Error         string `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchNixDataResponse) Reset() {
+	*x = PatchNixDataResponse{}
+	mi := &file_agent_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchNixDataResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchNixDataResponse) ProtoMessage() {}
+
+func (x *PatchNixDataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchNixDataResponse.ProtoReflect.Descriptor instead.
+func (*PatchNixDataResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *PatchNixDataResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *PatchNixDataResponse) GetUpdatedJson() string {
+	if x != nil {
+		return x.UpdatedJson
+	}
+	return ""
+}
+
+func (x *PatchNixDataResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 type GetNixConfigRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Refresh       bool                   `protobuf:"varint,1,opt,name=refresh,proto3" json:"refresh,omitempty"` // Force re-evaluation
@@ -3162,7 +3322,7 @@ type GetNixConfigRequest struct {
 
 func (x *GetNixConfigRequest) Reset() {
 	*x = GetNixConfigRequest{}
-	mi := &file_agent_proto_msgTypes[61]
+	mi := &file_agent_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3174,7 +3334,7 @@ func (x *GetNixConfigRequest) String() string {
 func (*GetNixConfigRequest) ProtoMessage() {}
 
 func (x *GetNixConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[61]
+	mi := &file_agent_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3187,7 +3347,7 @@ func (x *GetNixConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNixConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetNixConfigRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{61}
+	return file_agent_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *GetNixConfigRequest) GetRefresh() bool {
@@ -3205,7 +3365,7 @@ type RefreshNixConfigRequest struct {
 
 func (x *RefreshNixConfigRequest) Reset() {
 	*x = RefreshNixConfigRequest{}
-	mi := &file_agent_proto_msgTypes[62]
+	mi := &file_agent_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3217,7 +3377,7 @@ func (x *RefreshNixConfigRequest) String() string {
 func (*RefreshNixConfigRequest) ProtoMessage() {}
 
 func (x *RefreshNixConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[62]
+	mi := &file_agent_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3230,7 +3390,7 @@ func (x *RefreshNixConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshNixConfigRequest.ProtoReflect.Descriptor instead.
 func (*RefreshNixConfigRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{62}
+	return file_agent_proto_rawDescGZIP(), []int{64}
 }
 
 type NixConfigResponse struct {
@@ -3246,7 +3406,7 @@ type NixConfigResponse struct {
 
 func (x *NixConfigResponse) Reset() {
 	*x = NixConfigResponse{}
-	mi := &file_agent_proto_msgTypes[63]
+	mi := &file_agent_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3258,7 +3418,7 @@ func (x *NixConfigResponse) String() string {
 func (*NixConfigResponse) ProtoMessage() {}
 
 func (x *NixConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[63]
+	mi := &file_agent_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3271,7 +3431,7 @@ func (x *NixConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NixConfigResponse.ProtoReflect.Descriptor instead.
 func (*NixConfigResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{63}
+	return file_agent_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *NixConfigResponse) GetConfigJson() string {
@@ -3310,7 +3470,7 @@ type GetShellStatusRequest struct {
 
 func (x *GetShellStatusRequest) Reset() {
 	*x = GetShellStatusRequest{}
-	mi := &file_agent_proto_msgTypes[64]
+	mi := &file_agent_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3322,7 +3482,7 @@ func (x *GetShellStatusRequest) String() string {
 func (*GetShellStatusRequest) ProtoMessage() {}
 
 func (x *GetShellStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[64]
+	mi := &file_agent_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3335,7 +3495,7 @@ func (x *GetShellStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetShellStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetShellStatusRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{64}
+	return file_agent_proto_rawDescGZIP(), []int{66}
 }
 
 type ShellStatusResponse struct {
@@ -3356,7 +3516,7 @@ type ShellStatusResponse struct {
 
 func (x *ShellStatusResponse) Reset() {
 	*x = ShellStatusResponse{}
-	mi := &file_agent_proto_msgTypes[65]
+	mi := &file_agent_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3368,7 +3528,7 @@ func (x *ShellStatusResponse) String() string {
 func (*ShellStatusResponse) ProtoMessage() {}
 
 func (x *ShellStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[65]
+	mi := &file_agent_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3381,7 +3541,7 @@ func (x *ShellStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShellStatusResponse.ProtoReflect.Descriptor instead.
 func (*ShellStatusResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{65}
+	return file_agent_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ShellStatusResponse) GetStale() bool {
@@ -3430,7 +3590,7 @@ type RebuildShellRequest struct {
 
 func (x *RebuildShellRequest) Reset() {
 	*x = RebuildShellRequest{}
-	mi := &file_agent_proto_msgTypes[66]
+	mi := &file_agent_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3442,7 +3602,7 @@ func (x *RebuildShellRequest) String() string {
 func (*RebuildShellRequest) ProtoMessage() {}
 
 func (x *RebuildShellRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[66]
+	mi := &file_agent_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3455,7 +3615,7 @@ func (x *RebuildShellRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RebuildShellRequest.ProtoReflect.Descriptor instead.
 func (*RebuildShellRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{66}
+	return file_agent_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *RebuildShellRequest) GetMethod() string {
@@ -3483,7 +3643,7 @@ type RebuildShellEvent struct {
 
 func (x *RebuildShellEvent) Reset() {
 	*x = RebuildShellEvent{}
-	mi := &file_agent_proto_msgTypes[67]
+	mi := &file_agent_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3495,7 +3655,7 @@ func (x *RebuildShellEvent) String() string {
 func (*RebuildShellEvent) ProtoMessage() {}
 
 func (x *RebuildShellEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[67]
+	mi := &file_agent_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3508,7 +3668,7 @@ func (x *RebuildShellEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RebuildShellEvent.ProtoReflect.Descriptor instead.
 func (*RebuildShellEvent) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{67}
+	return file_agent_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *RebuildShellEvent) GetType() string {
@@ -3750,7 +3910,18 @@ const file_agent_proto_rawDesc = "" +
 	"\x14HealthchecksResponse\x12\x1f\n" +
 	"\vall_healthy\x18\x01 \x01(\bR\n" +
 	"allHealthy\x129\n" +
-	"\x06checks\x18\x02 \x03(\v2!.stackpanel.agent.HealthcheckInfoR\x06checks\"/\n" +
+	"\x06checks\x18\x02 \x03(\v2!.stackpanel.agent.HealthcheckInfoR\x06checks\"\x88\x01\n" +
+	"\x13PatchNixDataRequest\x12\x16\n" +
+	"\x06entity\x18\x01 \x01(\tR\x06entity\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12\x14\n" +
+	"\x05value\x18\x04 \x01(\tR\x05value\x12\x1d\n" +
+	"\n" +
+	"value_type\x18\x05 \x01(\tR\tvalueType\"i\n" +
+	"\x14PatchNixDataResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12!\n" +
+	"\fupdated_json\x18\x02 \x01(\tR\vupdatedJson\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"/\n" +
 	"\x13GetNixConfigRequest\x12\x18\n" +
 	"\arefresh\x18\x01 \x01(\bR\arefresh\"\x19\n" +
 	"\x17RefreshNixConfigRequest\"\x87\x01\n" +
@@ -3777,7 +3948,7 @@ const file_agent_proto_rawDesc = "" +
 	"\x06output\x18\x02 \x01(\tR\x06output\x12\x1b\n" +
 	"\texit_code\x18\x03 \x01(\x05R\bexitCode\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\tR\ttimestamp2\xf2\x1e\n" +
+	"\ttimestamp\x18\x05 \x01(\tR\ttimestamp2\xd1\x1f\n" +
 	"\fAgentService\x12W\n" +
 	"\n" +
 	"GetProject\x12#.stackpanel.agent.GetProjectRequest\x1a$.stackpanel.agent.GetProjectResponse\x12F\n" +
@@ -3825,7 +3996,8 @@ const file_agent_proto_rawDesc = "" +
 	"\rSearchNixpkgs\x12&.stackpanel.agent.SearchNixpkgsRequest\x1a'.stackpanel.agent.SearchNixpkgsResponse\x12r\n" +
 	"\x14GetInstalledPackages\x12-.stackpanel.agent.GetInstalledPackagesRequest\x1a+.stackpanel.agent.InstalledPackagesResponse\x12]\n" +
 	"\fGetProcesses\x12%.stackpanel.agent.GetProcessesRequest\x1a&.stackpanel.agent.GetProcessesResponse\x12c\n" +
-	"\x0fGetHealthchecks\x12(.stackpanel.agent.GetHealthchecksRequest\x1a&.stackpanel.agent.HealthchecksResponse\x12Z\n" +
+	"\x0fGetHealthchecks\x12(.stackpanel.agent.GetHealthchecksRequest\x1a&.stackpanel.agent.HealthchecksResponse\x12]\n" +
+	"\fPatchNixData\x12%.stackpanel.agent.PatchNixDataRequest\x1a&.stackpanel.agent.PatchNixDataResponse\x12Z\n" +
 	"\fGetNixConfig\x12%.stackpanel.agent.GetNixConfigRequest\x1a#.stackpanel.agent.NixConfigResponse\x12b\n" +
 	"\x10RefreshNixConfig\x12).stackpanel.agent.RefreshNixConfigRequest\x1a#.stackpanel.agent.NixConfigResponse\x12`\n" +
 	"\x0eGetShellStatus\x12'.stackpanel.agent.GetShellStatusRequest\x1a%.stackpanel.agent.ShellStatusResponse\x12\\\n" +
@@ -3843,7 +4015,7 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 71)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 73)
 var file_agent_proto_goTypes = []any{
 	(*GetProjectRequest)(nil),           // 0: stackpanel.agent.GetProjectRequest
 	(*GetProjectResponse)(nil),          // 1: stackpanel.agent.GetProjectResponse
@@ -3906,40 +4078,42 @@ var file_agent_proto_goTypes = []any{
 	(*GetHealthchecksRequest)(nil),      // 58: stackpanel.agent.GetHealthchecksRequest
 	(*HealthcheckInfo)(nil),             // 59: stackpanel.agent.HealthcheckInfo
 	(*HealthchecksResponse)(nil),        // 60: stackpanel.agent.HealthchecksResponse
-	(*GetNixConfigRequest)(nil),         // 61: stackpanel.agent.GetNixConfigRequest
-	(*RefreshNixConfigRequest)(nil),     // 62: stackpanel.agent.RefreshNixConfigRequest
-	(*NixConfigResponse)(nil),           // 63: stackpanel.agent.NixConfigResponse
-	(*GetShellStatusRequest)(nil),       // 64: stackpanel.agent.GetShellStatusRequest
-	(*ShellStatusResponse)(nil),         // 65: stackpanel.agent.ShellStatusResponse
-	(*RebuildShellRequest)(nil),         // 66: stackpanel.agent.RebuildShellRequest
-	(*RebuildShellEvent)(nil),           // 67: stackpanel.agent.RebuildShellEvent
-	nil,                                 // 68: stackpanel.agent.ExecRequest.EnvEntry
-	nil,                                 // 69: stackpanel.agent.DeploySSTResponse.OutputsEntry
-	nil,                                 // 70: stackpanel.agent.SSTOutputsResponse.OutputsEntry
-	(*Config)(nil),                      // 71: stackpanel.db.Config
-	(*Secrets)(nil),                     // 72: stackpanel.db.Secrets
-	(*Users)(nil),                       // 73: stackpanel.db.Users
-	(*Aws)(nil),                         // 74: stackpanel.db.Aws
-	(*Apps)(nil),                        // 75: stackpanel.db.Apps
-	(*Variables)(nil),                   // 76: stackpanel.db.Variables
-	(*GetModuleOutputsRequest)(nil),     // 77: stackpanel.db.GetModuleOutputsRequest
-	(*EnableModuleRequest)(nil),         // 78: stackpanel.db.EnableModuleRequest
-	(*DisableModuleRequest)(nil),        // 79: stackpanel.db.DisableModuleRequest
-	(*UpdateModuleSettingsRequest)(nil), // 80: stackpanel.db.UpdateModuleSettingsRequest
-	(*Modules)(nil),                     // 81: stackpanel.db.Modules
-	(*Module)(nil),                      // 82: stackpanel.db.Module
-	(*ModuleOutputs)(nil),               // 83: stackpanel.db.ModuleOutputs
-	(*ModuleResponse)(nil),              // 84: stackpanel.db.ModuleResponse
-	(*Sst)(nil),                         // 85: stackpanel.db.Sst
+	(*PatchNixDataRequest)(nil),         // 61: stackpanel.agent.PatchNixDataRequest
+	(*PatchNixDataResponse)(nil),        // 62: stackpanel.agent.PatchNixDataResponse
+	(*GetNixConfigRequest)(nil),         // 63: stackpanel.agent.GetNixConfigRequest
+	(*RefreshNixConfigRequest)(nil),     // 64: stackpanel.agent.RefreshNixConfigRequest
+	(*NixConfigResponse)(nil),           // 65: stackpanel.agent.NixConfigResponse
+	(*GetShellStatusRequest)(nil),       // 66: stackpanel.agent.GetShellStatusRequest
+	(*ShellStatusResponse)(nil),         // 67: stackpanel.agent.ShellStatusResponse
+	(*RebuildShellRequest)(nil),         // 68: stackpanel.agent.RebuildShellRequest
+	(*RebuildShellEvent)(nil),           // 69: stackpanel.agent.RebuildShellEvent
+	nil,                                 // 70: stackpanel.agent.ExecRequest.EnvEntry
+	nil,                                 // 71: stackpanel.agent.DeploySSTResponse.OutputsEntry
+	nil,                                 // 72: stackpanel.agent.SSTOutputsResponse.OutputsEntry
+	(*Config)(nil),                      // 73: stackpanel.db.Config
+	(*Secrets)(nil),                     // 74: stackpanel.db.Secrets
+	(*Users)(nil),                       // 75: stackpanel.db.Users
+	(*Aws)(nil),                         // 76: stackpanel.db.Aws
+	(*Apps)(nil),                        // 77: stackpanel.db.Apps
+	(*Variables)(nil),                   // 78: stackpanel.db.Variables
+	(*GetModuleOutputsRequest)(nil),     // 79: stackpanel.db.GetModuleOutputsRequest
+	(*EnableModuleRequest)(nil),         // 80: stackpanel.db.EnableModuleRequest
+	(*DisableModuleRequest)(nil),        // 81: stackpanel.db.DisableModuleRequest
+	(*UpdateModuleSettingsRequest)(nil), // 82: stackpanel.db.UpdateModuleSettingsRequest
+	(*Modules)(nil),                     // 83: stackpanel.db.Modules
+	(*Module)(nil),                      // 84: stackpanel.db.Module
+	(*ModuleOutputs)(nil),               // 85: stackpanel.db.ModuleOutputs
+	(*ModuleResponse)(nil),              // 86: stackpanel.db.ModuleResponse
+	(*Sst)(nil),                         // 87: stackpanel.db.Sst
 }
 var file_agent_proto_depIdxs = []int32{
 	2,  // 0: stackpanel.agent.GetProjectResponse.project:type_name -> stackpanel.agent.Project
 	3,  // 1: stackpanel.agent.Project.dirs:type_name -> stackpanel.agent.Directories
 	25, // 2: stackpanel.agent.ListFilesResponse.files:type_name -> stackpanel.agent.FileInfo
-	68, // 3: stackpanel.agent.ExecRequest.env:type_name -> stackpanel.agent.ExecRequest.EnvEntry
+	70, // 3: stackpanel.agent.ExecRequest.env:type_name -> stackpanel.agent.ExecRequest.EnvEntry
 	34, // 4: stackpanel.agent.GetServicesStatusResponse.services:type_name -> stackpanel.agent.ServiceStatus
-	69, // 5: stackpanel.agent.DeploySSTResponse.outputs:type_name -> stackpanel.agent.DeploySSTResponse.OutputsEntry
-	70, // 6: stackpanel.agent.SSTOutputsResponse.outputs:type_name -> stackpanel.agent.SSTOutputsResponse.OutputsEntry
+	71, // 5: stackpanel.agent.DeploySSTResponse.outputs:type_name -> stackpanel.agent.DeploySSTResponse.OutputsEntry
+	72, // 6: stackpanel.agent.SSTOutputsResponse.outputs:type_name -> stackpanel.agent.SSTOutputsResponse.OutputsEntry
 	47, // 7: stackpanel.agent.SSTResourcesResponse.resources:type_name -> stackpanel.agent.SSTResource
 	50, // 8: stackpanel.agent.SearchNixpkgsResponse.packages:type_name -> stackpanel.agent.NixpkgsPackage
 	53, // 9: stackpanel.agent.InstalledPackagesResponse.packages:type_name -> stackpanel.agent.InstalledPackage
@@ -3947,23 +4121,23 @@ var file_agent_proto_depIdxs = []int32{
 	59, // 11: stackpanel.agent.HealthchecksResponse.checks:type_name -> stackpanel.agent.HealthcheckInfo
 	0,  // 12: stackpanel.agent.AgentService.GetProject:input_type -> stackpanel.agent.GetProjectRequest
 	4,  // 13: stackpanel.agent.AgentService.GetConfig:input_type -> stackpanel.agent.GetConfigRequest
-	71, // 14: stackpanel.agent.AgentService.SetConfig:input_type -> stackpanel.db.Config
+	73, // 14: stackpanel.agent.AgentService.SetConfig:input_type -> stackpanel.db.Config
 	5,  // 15: stackpanel.agent.AgentService.GetSecrets:input_type -> stackpanel.agent.GetSecretsRequest
-	72, // 16: stackpanel.agent.AgentService.SetSecrets:input_type -> stackpanel.db.Secrets
+	74, // 16: stackpanel.agent.AgentService.SetSecrets:input_type -> stackpanel.db.Secrets
 	6,  // 17: stackpanel.agent.AgentService.GetUsers:input_type -> stackpanel.agent.GetUsersRequest
-	73, // 18: stackpanel.agent.AgentService.SetUsers:input_type -> stackpanel.db.Users
+	75, // 18: stackpanel.agent.AgentService.SetUsers:input_type -> stackpanel.db.Users
 	7,  // 19: stackpanel.agent.AgentService.GetAws:input_type -> stackpanel.agent.GetAwsRequest
-	74, // 20: stackpanel.agent.AgentService.SetAws:input_type -> stackpanel.db.Aws
+	76, // 20: stackpanel.agent.AgentService.SetAws:input_type -> stackpanel.db.Aws
 	8,  // 21: stackpanel.agent.AgentService.GetApps:input_type -> stackpanel.agent.GetAppsRequest
-	75, // 22: stackpanel.agent.AgentService.SetApps:input_type -> stackpanel.db.Apps
+	77, // 22: stackpanel.agent.AgentService.SetApps:input_type -> stackpanel.db.Apps
 	9,  // 23: stackpanel.agent.AgentService.GetVariables:input_type -> stackpanel.agent.GetVariablesRequest
-	76, // 24: stackpanel.agent.AgentService.SetVariables:input_type -> stackpanel.db.Variables
+	78, // 24: stackpanel.agent.AgentService.SetVariables:input_type -> stackpanel.db.Variables
 	11, // 25: stackpanel.agent.AgentService.GetModules:input_type -> stackpanel.agent.GetModulesRequest
 	12, // 26: stackpanel.agent.AgentService.GetModule:input_type -> stackpanel.agent.GetModuleRequest
-	77, // 27: stackpanel.agent.AgentService.GetModuleOutputs:input_type -> stackpanel.db.GetModuleOutputsRequest
-	78, // 28: stackpanel.agent.AgentService.EnableModule:input_type -> stackpanel.db.EnableModuleRequest
-	79, // 29: stackpanel.agent.AgentService.DisableModule:input_type -> stackpanel.db.DisableModuleRequest
-	80, // 30: stackpanel.agent.AgentService.UpdateModuleSettings:input_type -> stackpanel.db.UpdateModuleSettingsRequest
+	79, // 27: stackpanel.agent.AgentService.GetModuleOutputs:input_type -> stackpanel.db.GetModuleOutputsRequest
+	80, // 28: stackpanel.agent.AgentService.EnableModule:input_type -> stackpanel.db.EnableModuleRequest
+	81, // 29: stackpanel.agent.AgentService.DisableModule:input_type -> stackpanel.db.DisableModuleRequest
+	82, // 30: stackpanel.agent.AgentService.UpdateModuleSettings:input_type -> stackpanel.db.UpdateModuleSettingsRequest
 	13, // 31: stackpanel.agent.AgentService.GetAgeIdentity:input_type -> stackpanel.agent.GetAgeIdentityRequest
 	14, // 32: stackpanel.agent.AgentService.SetAgeIdentity:input_type -> stackpanel.agent.SetAgeIdentityRequest
 	16, // 33: stackpanel.agent.AgentService.GetKMSConfig:input_type -> stackpanel.agent.GetKMSConfigRequest
@@ -3988,59 +4162,61 @@ var file_agent_proto_depIdxs = []int32{
 	52, // 52: stackpanel.agent.AgentService.GetInstalledPackages:input_type -> stackpanel.agent.GetInstalledPackagesRequest
 	55, // 53: stackpanel.agent.AgentService.GetProcesses:input_type -> stackpanel.agent.GetProcessesRequest
 	58, // 54: stackpanel.agent.AgentService.GetHealthchecks:input_type -> stackpanel.agent.GetHealthchecksRequest
-	61, // 55: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
-	62, // 56: stackpanel.agent.AgentService.RefreshNixConfig:input_type -> stackpanel.agent.RefreshNixConfigRequest
-	64, // 57: stackpanel.agent.AgentService.GetShellStatus:input_type -> stackpanel.agent.GetShellStatusRequest
-	66, // 58: stackpanel.agent.AgentService.RebuildShell:input_type -> stackpanel.agent.RebuildShellRequest
-	1,  // 59: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
-	71, // 60: stackpanel.agent.AgentService.GetConfig:output_type -> stackpanel.db.Config
-	71, // 61: stackpanel.agent.AgentService.SetConfig:output_type -> stackpanel.db.Config
-	72, // 62: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
-	72, // 63: stackpanel.agent.AgentService.SetSecrets:output_type -> stackpanel.db.Secrets
-	73, // 64: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
-	73, // 65: stackpanel.agent.AgentService.SetUsers:output_type -> stackpanel.db.Users
-	74, // 66: stackpanel.agent.AgentService.GetAws:output_type -> stackpanel.db.Aws
-	74, // 67: stackpanel.agent.AgentService.SetAws:output_type -> stackpanel.db.Aws
-	75, // 68: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
-	75, // 69: stackpanel.agent.AgentService.SetApps:output_type -> stackpanel.db.Apps
-	76, // 70: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
-	76, // 71: stackpanel.agent.AgentService.SetVariables:output_type -> stackpanel.db.Variables
-	81, // 72: stackpanel.agent.AgentService.GetModules:output_type -> stackpanel.db.Modules
-	82, // 73: stackpanel.agent.AgentService.GetModule:output_type -> stackpanel.db.Module
-	83, // 74: stackpanel.agent.AgentService.GetModuleOutputs:output_type -> stackpanel.db.ModuleOutputs
-	84, // 75: stackpanel.agent.AgentService.EnableModule:output_type -> stackpanel.db.ModuleResponse
-	84, // 76: stackpanel.agent.AgentService.DisableModule:output_type -> stackpanel.db.ModuleResponse
-	84, // 77: stackpanel.agent.AgentService.UpdateModuleSettings:output_type -> stackpanel.db.ModuleResponse
-	15, // 78: stackpanel.agent.AgentService.GetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
-	15, // 79: stackpanel.agent.AgentService.SetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
-	18, // 80: stackpanel.agent.AgentService.GetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
-	18, // 81: stackpanel.agent.AgentService.SetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
-	20, // 82: stackpanel.agent.AgentService.ReadFile:output_type -> stackpanel.agent.ReadFileResponse
-	22, // 83: stackpanel.agent.AgentService.WriteFile:output_type -> stackpanel.agent.WriteFileResponse
-	24, // 84: stackpanel.agent.AgentService.ListFiles:output_type -> stackpanel.agent.ListFilesResponse
-	27, // 85: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
-	29, // 86: stackpanel.agent.AgentService.NixGenerate:output_type -> stackpanel.agent.NixGenerateResponse
-	31, // 87: stackpanel.agent.AgentService.NixEval:output_type -> stackpanel.agent.NixEvalResponse
-	33, // 88: stackpanel.agent.AgentService.GetServicesStatus:output_type -> stackpanel.agent.GetServicesStatusResponse
-	36, // 89: stackpanel.agent.AgentService.StartService:output_type -> stackpanel.agent.ServiceResponse
-	36, // 90: stackpanel.agent.AgentService.StopService:output_type -> stackpanel.agent.ServiceResponse
-	36, // 91: stackpanel.agent.AgentService.RestartService:output_type -> stackpanel.agent.ServiceResponse
-	38, // 92: stackpanel.agent.AgentService.GetSSTStatus:output_type -> stackpanel.agent.SSTStatusResponse
-	85, // 93: stackpanel.agent.AgentService.GetSSTConfig:output_type -> stackpanel.db.Sst
-	41, // 94: stackpanel.agent.AgentService.DeploySST:output_type -> stackpanel.agent.DeploySSTResponse
-	43, // 95: stackpanel.agent.AgentService.RemoveSST:output_type -> stackpanel.agent.RemoveSSTResponse
-	45, // 96: stackpanel.agent.AgentService.GetSSTOutputs:output_type -> stackpanel.agent.SSTOutputsResponse
-	48, // 97: stackpanel.agent.AgentService.GetSSTResources:output_type -> stackpanel.agent.SSTResourcesResponse
-	51, // 98: stackpanel.agent.AgentService.SearchNixpkgs:output_type -> stackpanel.agent.SearchNixpkgsResponse
-	54, // 99: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
-	57, // 100: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
-	60, // 101: stackpanel.agent.AgentService.GetHealthchecks:output_type -> stackpanel.agent.HealthchecksResponse
-	63, // 102: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
-	63, // 103: stackpanel.agent.AgentService.RefreshNixConfig:output_type -> stackpanel.agent.NixConfigResponse
-	65, // 104: stackpanel.agent.AgentService.GetShellStatus:output_type -> stackpanel.agent.ShellStatusResponse
-	67, // 105: stackpanel.agent.AgentService.RebuildShell:output_type -> stackpanel.agent.RebuildShellEvent
-	59, // [59:106] is the sub-list for method output_type
-	12, // [12:59] is the sub-list for method input_type
+	61, // 55: stackpanel.agent.AgentService.PatchNixData:input_type -> stackpanel.agent.PatchNixDataRequest
+	63, // 56: stackpanel.agent.AgentService.GetNixConfig:input_type -> stackpanel.agent.GetNixConfigRequest
+	64, // 57: stackpanel.agent.AgentService.RefreshNixConfig:input_type -> stackpanel.agent.RefreshNixConfigRequest
+	66, // 58: stackpanel.agent.AgentService.GetShellStatus:input_type -> stackpanel.agent.GetShellStatusRequest
+	68, // 59: stackpanel.agent.AgentService.RebuildShell:input_type -> stackpanel.agent.RebuildShellRequest
+	1,  // 60: stackpanel.agent.AgentService.GetProject:output_type -> stackpanel.agent.GetProjectResponse
+	73, // 61: stackpanel.agent.AgentService.GetConfig:output_type -> stackpanel.db.Config
+	73, // 62: stackpanel.agent.AgentService.SetConfig:output_type -> stackpanel.db.Config
+	74, // 63: stackpanel.agent.AgentService.GetSecrets:output_type -> stackpanel.db.Secrets
+	74, // 64: stackpanel.agent.AgentService.SetSecrets:output_type -> stackpanel.db.Secrets
+	75, // 65: stackpanel.agent.AgentService.GetUsers:output_type -> stackpanel.db.Users
+	75, // 66: stackpanel.agent.AgentService.SetUsers:output_type -> stackpanel.db.Users
+	76, // 67: stackpanel.agent.AgentService.GetAws:output_type -> stackpanel.db.Aws
+	76, // 68: stackpanel.agent.AgentService.SetAws:output_type -> stackpanel.db.Aws
+	77, // 69: stackpanel.agent.AgentService.GetApps:output_type -> stackpanel.db.Apps
+	77, // 70: stackpanel.agent.AgentService.SetApps:output_type -> stackpanel.db.Apps
+	78, // 71: stackpanel.agent.AgentService.GetVariables:output_type -> stackpanel.db.Variables
+	78, // 72: stackpanel.agent.AgentService.SetVariables:output_type -> stackpanel.db.Variables
+	83, // 73: stackpanel.agent.AgentService.GetModules:output_type -> stackpanel.db.Modules
+	84, // 74: stackpanel.agent.AgentService.GetModule:output_type -> stackpanel.db.Module
+	85, // 75: stackpanel.agent.AgentService.GetModuleOutputs:output_type -> stackpanel.db.ModuleOutputs
+	86, // 76: stackpanel.agent.AgentService.EnableModule:output_type -> stackpanel.db.ModuleResponse
+	86, // 77: stackpanel.agent.AgentService.DisableModule:output_type -> stackpanel.db.ModuleResponse
+	86, // 78: stackpanel.agent.AgentService.UpdateModuleSettings:output_type -> stackpanel.db.ModuleResponse
+	15, // 79: stackpanel.agent.AgentService.GetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
+	15, // 80: stackpanel.agent.AgentService.SetAgeIdentity:output_type -> stackpanel.agent.AgeIdentityResponse
+	18, // 81: stackpanel.agent.AgentService.GetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
+	18, // 82: stackpanel.agent.AgentService.SetKMSConfig:output_type -> stackpanel.agent.KMSConfigResponse
+	20, // 83: stackpanel.agent.AgentService.ReadFile:output_type -> stackpanel.agent.ReadFileResponse
+	22, // 84: stackpanel.agent.AgentService.WriteFile:output_type -> stackpanel.agent.WriteFileResponse
+	24, // 85: stackpanel.agent.AgentService.ListFiles:output_type -> stackpanel.agent.ListFilesResponse
+	27, // 86: stackpanel.agent.AgentService.Exec:output_type -> stackpanel.agent.ExecResponse
+	29, // 87: stackpanel.agent.AgentService.NixGenerate:output_type -> stackpanel.agent.NixGenerateResponse
+	31, // 88: stackpanel.agent.AgentService.NixEval:output_type -> stackpanel.agent.NixEvalResponse
+	33, // 89: stackpanel.agent.AgentService.GetServicesStatus:output_type -> stackpanel.agent.GetServicesStatusResponse
+	36, // 90: stackpanel.agent.AgentService.StartService:output_type -> stackpanel.agent.ServiceResponse
+	36, // 91: stackpanel.agent.AgentService.StopService:output_type -> stackpanel.agent.ServiceResponse
+	36, // 92: stackpanel.agent.AgentService.RestartService:output_type -> stackpanel.agent.ServiceResponse
+	38, // 93: stackpanel.agent.AgentService.GetSSTStatus:output_type -> stackpanel.agent.SSTStatusResponse
+	87, // 94: stackpanel.agent.AgentService.GetSSTConfig:output_type -> stackpanel.db.Sst
+	41, // 95: stackpanel.agent.AgentService.DeploySST:output_type -> stackpanel.agent.DeploySSTResponse
+	43, // 96: stackpanel.agent.AgentService.RemoveSST:output_type -> stackpanel.agent.RemoveSSTResponse
+	45, // 97: stackpanel.agent.AgentService.GetSSTOutputs:output_type -> stackpanel.agent.SSTOutputsResponse
+	48, // 98: stackpanel.agent.AgentService.GetSSTResources:output_type -> stackpanel.agent.SSTResourcesResponse
+	51, // 99: stackpanel.agent.AgentService.SearchNixpkgs:output_type -> stackpanel.agent.SearchNixpkgsResponse
+	54, // 100: stackpanel.agent.AgentService.GetInstalledPackages:output_type -> stackpanel.agent.InstalledPackagesResponse
+	57, // 101: stackpanel.agent.AgentService.GetProcesses:output_type -> stackpanel.agent.GetProcessesResponse
+	60, // 102: stackpanel.agent.AgentService.GetHealthchecks:output_type -> stackpanel.agent.HealthchecksResponse
+	62, // 103: stackpanel.agent.AgentService.PatchNixData:output_type -> stackpanel.agent.PatchNixDataResponse
+	65, // 104: stackpanel.agent.AgentService.GetNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	65, // 105: stackpanel.agent.AgentService.RefreshNixConfig:output_type -> stackpanel.agent.NixConfigResponse
+	67, // 106: stackpanel.agent.AgentService.GetShellStatus:output_type -> stackpanel.agent.ShellStatusResponse
+	69, // 107: stackpanel.agent.AgentService.RebuildShell:output_type -> stackpanel.agent.RebuildShellEvent
+	60, // [60:108] is the sub-list for method output_type
+	12, // [12:60] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name
 	12, // [12:12] is the sub-list for extension extendee
 	0,  // [0:12] is the sub-list for field type_name
@@ -4067,7 +4243,7 @@ func file_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   71,
+			NumMessages:   73,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

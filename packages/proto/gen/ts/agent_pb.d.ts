@@ -1332,6 +1332,99 @@ export declare type HealthchecksResponse = Message<"stackpanel.agent.Healthcheck
 export declare const HealthchecksResponseSchema: GenMessage<HealthchecksResponse>;
 
 /**
+ * PatchNixDataRequest updates a single value within a Nix data entity at a
+ * dot-separated path. This enables editing individual fields from UI panels
+ * without replacing the entire entity.
+ *
+ * Example: Update a Go app's mainPackage:
+ *   entity = "apps"
+ *   key = "stackpanel-go"
+ *   path = "go.mainPackage"
+ *   value = "./cmd/api"
+ *   value_type = "string"
+ *
+ * The path uses camelCase (matching the SpField/panel editPath convention).
+ * The handler converts to kebab-case when writing to the Nix data file.
+ *
+ * @generated from message stackpanel.agent.PatchNixDataRequest
+ */
+export declare type PatchNixDataRequest = Message<"stackpanel.agent.PatchNixDataRequest"> & {
+  /**
+   * Entity name (e.g., "apps", "config", "secrets")
+   *
+   * @generated from field: string entity = 1;
+   */
+  entity: string;
+
+  /**
+   * Top-level key within the entity (e.g., app name "web" for apps entity)
+   * Empty string for non-map entities (e.g., "config")
+   *
+   * @generated from field: string key = 2;
+   */
+  key: string;
+
+  /**
+   * Dot-separated path to the field within the key (e.g., "go.mainPackage")
+   * Uses camelCase convention (zero conversion from UI editPath)
+   *
+   * @generated from field: string path = 3;
+   */
+  path: string;
+
+  /**
+   * JSON-encoded value to set (e.g., "\"./cmd/api\"", "true", "[\"a\",\"b\"]")
+   *
+   * @generated from field: string value = 4;
+   */
+  value: string;
+
+  /**
+   * Value type hint for proper Nix serialization
+   * Supported: "string", "bool", "number", "list", "object", "null"
+   *
+   * @generated from field: string value_type = 5;
+   */
+  valueType: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.PatchNixDataRequest.
+ * Use `create(PatchNixDataRequestSchema)` to create a new message.
+ */
+export declare const PatchNixDataRequestSchema: GenMessage<PatchNixDataRequest>;
+
+/**
+ * @generated from message stackpanel.agent.PatchNixDataResponse
+ */
+export declare type PatchNixDataResponse = Message<"stackpanel.agent.PatchNixDataResponse"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * The updated entity data as JSON (for UI cache invalidation)
+   *
+   * @generated from field: string updated_json = 2;
+   */
+  updatedJson: string;
+
+  /**
+   * Error message if success is false
+   *
+   * @generated from field: string error = 3;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message stackpanel.agent.PatchNixDataResponse.
+ * Use `create(PatchNixDataResponseSchema)` to create a new message.
+ */
+export declare const PatchNixDataResponseSchema: GenMessage<PatchNixDataResponse>;
+
+/**
  * @generated from message stackpanel.agent.GetNixConfigRequest
  */
 export declare type GetNixConfigRequest = Message<"stackpanel.agent.GetNixConfigRequest"> & {
@@ -1895,6 +1988,16 @@ export declare const AgentService: GenService<{
     methodKind: "unary";
     input: typeof GetHealthchecksRequestSchema;
     output: typeof HealthchecksResponseSchema;
+  },
+  /**
+   * Nix data patch - update a single value at a nested path within an entity
+   *
+   * @generated from rpc stackpanel.agent.AgentService.PatchNixData
+   */
+  patchNixData: {
+    methodKind: "unary";
+    input: typeof PatchNixDataRequestSchema;
+    output: typeof PatchNixDataResponseSchema;
   },
   /**
    * Full Nix config (evaluated from flake)

@@ -29,74 +29,9 @@ let
   meta = import ./meta.nix;
   sp = config.stackpanel;
 
-  # ---------------------------------------------------------------------------
-  # Per-app options module
-  # ---------------------------------------------------------------------------
-  appModule =
-    { lib, name, ... }:
-    {
-      options.bun = {
-        enable = lib.mkEnableOption "Bun app support for this app";
-
-        mainPackage = lib.mkOption {
-          type = lib.types.str;
-          default = ".";
-          description = "Main entry point for bun run";
-        };
-
-        version = lib.mkOption {
-          type = lib.types.str;
-          default = "0.1.0";
-          description = "App version";
-        };
-
-        binaryName = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Binary name (if different from app name)";
-          example = "my-app";
-        };
-
-        buildPhase = lib.mkOption {
-          type = lib.types.str;
-          default = "bun run build";
-          description = "Build phase command";
-        };
-
-        startScript = lib.mkOption {
-          type = lib.types.str;
-          default = "bun run start";
-          description = "Start script for runtime";
-        };
-
-        runtimeInputs = lib.mkOption {
-          type = lib.types.listOf lib.types.package;
-          default = [ ];
-          description = "Runtime nix dependencies";
-        };
-
-        runtimeEnv = lib.mkOption {
-          type = lib.types.attrsOf lib.types.str;
-          default = { };
-          description = "Runtime environment variables";
-          example = {
-            NODE_ENV = "production";
-          };
-        };
-
-        inheritPath = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Whether to inherit PATH from environment at runtime";
-        };
-
-        description = lib.mkOption {
-          type = lib.types.str;
-          default = "";
-          description = "App description";
-        };
-      };
-    };
+  # Import unified field definitions (single source of truth)
+  bunSchema = import ./schema.nix { inherit lib; };
+  spField = import ../../db/lib/field.nix { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Helper Functions
@@ -165,8 +100,30 @@ in
   # ===========================================================================
   config = lib.mkMerge [
     # Always register appModules (unconditionally)
+    # Options are auto-generated from bun-app.proto.nix (single source of truth)
+    # runtimeInputs is Nix-only (listOf package - no proto equivalent)
     {
-      stackpanel.appModules = [ appModule ];
+      stackpanel.appModules = [
+        (
+          { lib, ... }:
+          {
+            options.bun = lib.mkOption {
+              type = lib.types.submodule {
+                options = lib.mapAttrs (_: spField.asOption) bunSchema.fields // {
+                  # Nix-only option: package references can't be proto fields
+                  runtimeInputs = lib.mkOption {
+                    type = lib.types.listOf lib.types.package;
+                    default = [ ];
+                    description = "Runtime nix dependencies";
+                  };
+                };
+              };
+              default = { };
+              description = "Bun-specific configuration for this app";
+            };
+          }
+        )
+      ];
     }
 
     # Apply config when stackpanel is enabled and bun apps exist

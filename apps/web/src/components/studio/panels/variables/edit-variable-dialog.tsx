@@ -15,8 +15,9 @@ import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
+import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
-import { isSopsReference } from "./constants";
+import { isSopsReference, isEncryptedKeyGroup, getKeyGroup } from "./constants";
 
 interface EditVariableDialogProps {
 	variable: {
@@ -40,6 +41,8 @@ export function EditVariableDialog({
 }: EditVariableDialogProps) {
 	const { token } = useAgentContext();
 	const agentClient = useAgentClient();
+	const { data: backendData } = useVariablesBackend();
+	const isChamber = backendData?.backend === "chamber";
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -80,7 +83,9 @@ export function EditVariableDialog({
 
 			await variablesClient.set(variable.id, updatedVariable);
 
-			const isSecret = isSopsReference(trimmedValue);
+			const isSecret = isChamber
+				? isEncryptedKeyGroup(getKeyGroup(variable.id))
+				: isSopsReference(trimmedValue);
 			toast.success(`Updated ${isSecret ? "secret" : "variable"} "${variable.id}"`);
 
 			handleOpenChange(false);
@@ -161,12 +166,14 @@ export function EditVariableDialog({
 							id="edit-var-value"
 							value={varValue}
 							onChange={(e) => setVarValue(e.target.value)}
-							placeholder="literal value or ref+sops://..."
+							placeholder={isChamber ? "Secret value (stored in AWS SSM)" : "literal value or ref+sops://..."}
 							className="font-mono min-h-[80px]"
 							autoFocus
 						/>
 						<p className="text-xs text-muted-foreground">
-							Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)
+							{isChamber
+								? "Plain value. Secrets in /dev/, /staging/, /prod/ keygroups are encrypted via AWS KMS."
+								: "Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)"}
 						</p>
 					</div>
 				</div>

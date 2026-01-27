@@ -1,10 +1,17 @@
 /**
  * Hook for managing EditSecretDialog state.
+ *
+ * Supports both vals (AGE/SOPS) and chamber (AWS SSM) backends.
+ * The server-side dispatch routes readAgenixSecret/writeAgenixSecret
+ * to the appropriate handler based on the configured backend, so
+ * the same API calls work for both backends. The main difference is
+ * that AGE identity management is skipped for the chamber backend.
  */
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { AgeIdentityResponse } from "@/lib/agent";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
+import { useVariablesBackend } from "@/lib/use-agent";
 import type { EditSecretDialogProps } from "./types";
 
 export function useEditSecretDialog(
@@ -13,6 +20,8 @@ export function useEditSecretDialog(
 	const { secretId, secretKey, description, open, onOpenChange, onSuccess } = props;
 	const { token } = useAgentContext();
 	const agentClient = useAgentClient();
+	const { data: backendData } = useVariablesBackend();
+	const isChamber = backendData?.backend === "chamber";
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
@@ -24,9 +33,9 @@ export function useEditSecretDialog(
 	const [showSettings, setShowSettings] = useState(false);
 	const [decryptError, setDecryptError] = useState<string | null>(null);
 
-	// Load the identity config when dialog opens
+	// Load the identity config when dialog opens (vals backend only)
 	const loadIdentityConfig = useCallback(async () => {
-		if (!token) return;
+		if (!token || isChamber) return;
 		try {
 			const client = agentClient;
 			const info = await client.getAgeIdentity();
@@ -39,7 +48,7 @@ export function useEditSecretDialog(
 		} catch (err) {
 			console.warn("Failed to load identity config:", err);
 		}
-	}, [token]);
+	}, [token, isChamber]);
 
 	// Load the secret value
 	const loadSecret = useCallback(async () => {
@@ -151,6 +160,7 @@ export function useEditSecretDialog(
 		showSettings,
 		setShowSettings,
 		decryptError,
+		isChamber,
 
 		// Handlers
 		handleSaveIdentity,

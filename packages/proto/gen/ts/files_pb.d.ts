@@ -126,6 +126,11 @@ export enum FileType {
    * @generated from enum value: FILE_TYPE_DERIVATION = 2;
    */
   DERIVATION = 2,
+
+  /**
+   * @generated from enum value: FILE_TYPE_JSON = 3;
+   */
+  JSON = 3,
 }
 
 /**

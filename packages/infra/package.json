@@ -1,1 +1,29 @@
-{"dependencies":{"@pulumi/aws":"catalog:","sst":"catalog:"},"name":"@stackpanel/infra","private":true,"scripts":{"deploy":"bunx sst deploy","deploy:web":"./fly/web/deploy.sh","deploy:web:build":"./.tasks/bin/deploy:web:build","deploy:web:clean":"./.tasks/bin/deploy:web:clean","deploy:web:push":"./.tasks/bin/deploy:web:push","dev":"bunx sst dev","remove":"bunx sst remove"},"type":"module"}
+{
+  "dependencies": {
+    "@aws-sdk/client-iam": "catalog:",
+    "@aws-sdk/client-kms": "catalog:",
+    "@pulumi/aws": "catalog:",
+    "alchemy": "catalog:",
+    "sst": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "name": "@stackpanel/infra",
+  "private": true,
+  "scripts": {
+    "deploy": "alchemy deploy",
+    "deploy:web": "cd ../.. && flyctl deploy --config packages/infra/fly/web/fly.toml",
+    "destroy": "alchemy destroy",
+    "dev": "alchemy dev",
+    "sst:deploy": "bunx sst deploy",
+    "sst:dev": "bunx sst dev",
+    "sst:remove": "bunx sst remove"
+  },
+  "type": "module"
+}

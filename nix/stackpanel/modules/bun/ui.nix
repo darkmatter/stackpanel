@@ -1,7 +1,11 @@
 # ==============================================================================
-# ui.nix - Bun Module UI Panels
+# ui.nix - Bun UI Panel Definitions
 #
-# Defines panels displayed in the Stackpanel UI for Bun apps.
+# Defines the panels that appear in the Stackpanel UI for this module.
+#
+# The APP_CONFIG panel is auto-generated from the SpField definitions in
+# bun-app.proto.nix. No manual field listing needed - the schema is the
+# single source of truth for both Nix options and UI panels.
 # ==============================================================================
 {
   lib,
@@ -11,15 +15,20 @@
 }:
 let
   meta = import ./meta.nix;
-  sp = config.stackpanel;
+  cfg = config.stackpanel;
+
+  # Import field definitions and panel generator
+  bunSchema = import ./schema.nix { inherit lib; };
+  panelsLib = import ../../lib/panels.nix { inherit lib; };
 
   # Filter apps to only Bun-enabled apps
-  bunApps = lib.filterAttrs (name: app: app.bun.enable or false) (sp.apps or {});
+  bunApps = lib.filterAttrs (name: app: app.bun.enable or false) (cfg.apps or {});
   hasBunApps = bunApps != {};
 in
-lib.mkIf (sp.enable && hasBunApps) {
+lib.mkIf (cfg.enable && hasBunApps) {
   # ---------------------------------------------------------------------------
   # Status Panel - Overview of Bun environment
+  # (Hand-crafted: uses runtime data like pkgs.bun.version)
   # ---------------------------------------------------------------------------
   stackpanel.panels."${meta.id}-status" = {
     module = meta.id;
@@ -49,37 +58,17 @@ lib.mkIf (sp.enable && hasBunApps) {
   };
 
   # ---------------------------------------------------------------------------
-  # Apps Grid Panel - List of Bun applications
+  # App Config Panel - Per-app Bun configuration
+  # (Auto-generated from bun-app.proto.nix SpField definitions)
   # ---------------------------------------------------------------------------
-  stackpanel.panels."${meta.id}-apps" = lib.mkIf (bunApps != { }) {
+  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
     module = meta.id;
-    title = "Bun Applications";
-    icon = "boxes";
-    type = "PANEL_TYPE_APPS_GRID";
-    order = meta.priority + 1;
-    fields = [
-      {
-        name = "columns";
-        type = "FIELD_TYPE_COLUMNS";
-        value = builtins.toJSON [
-          "name"
-          "path"
-          "version"
-          "port"
-        ];
-      }
-    ];
-    # Per-app computed data
-    apps = lib.mapAttrs (name: app: {
-      enabled = true;
-      config = {
-        path = app.path or "";
-        version = app.bun.version or "0.1.0";
-        binaryName = app.bun.binaryName or name;
-        mainPackage = app.bun.mainPackage or ".";
-        buildPhase = app.bun.buildPhase or "bun run build";
-        startScript = app.bun.startScript or "bun run start";
-      };
-    }) bunApps;
+    title = "Bun Configuration";
+    icon = meta.icon;
+    fields = bunSchema.fields;
+    optionPrefix = "bun";
+    apps = bunApps;
+    exclude = [ "enable" ];
+    order = meta.priority + 2;
   };
 }
