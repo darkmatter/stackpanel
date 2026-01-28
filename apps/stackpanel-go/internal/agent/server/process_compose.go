@@ -221,7 +221,7 @@ func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http
 			"success": true,
 			"data": map[string]interface{}{
 				"available": false,
-				"error":     "process-compose server not running",
+				"error":     fmt.Sprintf("process-compose server not running (tried %s)", apiURL),
 			},
 		})
 		return
@@ -240,14 +240,52 @@ func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Parse as generic map to handle any response format
-	var state map[string]interface{}
-	if err := json.Unmarshal(body, &state); err != nil {
+	// Check for non-2xx status codes
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		preview := string(body)
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+		}
 		s.writeJSON(w, http.StatusOK, map[string]interface{}{
 			"success": true,
 			"data": map[string]interface{}{
 				"available": false,
-				"error":     fmt.Sprintf("failed to parse response: %v", err),
+				"error":     fmt.Sprintf("process-compose at %s returned status %d: %s", apiURL, resp.StatusCode, preview),
+			},
+		})
+		return
+	}
+
+	// Check Content-Type to detect non-JSON responses early
+	contentType := resp.Header.Get("Content-Type")
+	if contentType != "" && !strings.Contains(contentType, "application/json") {
+		preview := string(body)
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+		}
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data": map[string]interface{}{
+				"available": false,
+				"error":     fmt.Sprintf("process-compose returned non-JSON response (Content-Type: %s): %s", contentType, preview),
+			},
+		})
+		return
+	}
+
+	// Parse as generic map to handle any response format
+	var state map[string]interface{}
+	if err := json.Unmarshal(body, &state); err != nil {
+		// Include body preview for debugging
+		preview := string(body)
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+		}
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data": map[string]interface{}{
+				"available": false,
+				"error":     fmt.Sprintf("failed to parse response as JSON: %s", preview),
 			},
 		})
 		return

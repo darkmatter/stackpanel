@@ -12,6 +12,7 @@ import {
 } from "react";
 import { AgentHttpClient, AGENT_AUTH_ERROR_EVENT } from "./agent";
 import { useAgent, useAgentHealth } from "@/lib/use-agent";
+import { useAgentSSEOptional } from "@/lib/agent-sse-provider";
 
 const STORAGE_KEY = "stackpanel.agent.token";
 
@@ -145,10 +146,30 @@ export function AgentProvider({
 		};
 	}, [token]);
 
-	const { status: healthStatus, projectRoot } = useAgentHealth({
+	// Use SSE for health status when available (provides instant disconnect detection)
+	const sse = useAgentSSEOptional();
+
+	// Fall back to polling for initial discovery when SSE is not connected
+	const { status: polledHealthStatus, projectRoot } = useAgentHealth({
 		host,
 		port,
+		// Poll less frequently when SSE is handling health (SSE is connected and alive)
+		intervalMs: sse?.isAlive ? 60_000 : 5_000,
 	});
+
+	// Derive health status: prefer SSE when connected and alive, fall back to polling
+	// Only trust SSE status when it's actually connected - "error" could mean no token yet
+	const healthStatus = (() => {
+		if (sse?.status === "connected" && sse.isAlive) {
+			return "available" as const;
+		}
+		// SSE had a connection but lost it (was alive, now not) - agent disconnected
+		if (sse?.status === "error" && sse.lastHeartbeat !== null) {
+			return "unavailable" as const;
+		}
+		// SSE not connected yet (no token, connecting, never connected) - use polling
+		return polledHealthStatus;
+	})();
 
 	const agent = useAgent({
 		host,
@@ -247,9 +268,9 @@ export function AgentProvider({
 	}, [host, port]);
 
 	// Consider "connected" if we have a token AND the agent is available.
+	// When SSE is connected and alive, we get instant disconnect detection.
 	// The server validates the token on each request - if the token is invalid
 	// (e.g., agent was restarted), the server will reject it and we'll get an error.
-	// This avoids the UX issue of requiring re-pairing after every agent restart.
 	const isConnected = healthStatus === "available" && !!token;
 
 	const value = useMemo<AgentContextValue>(

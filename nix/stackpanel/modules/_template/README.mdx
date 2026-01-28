@@ -1,92 +1,879 @@
 ---
-title: My Module
-description: A brief description of what this module does
+title: Module Development Guide
+description: How to create stackpanel modules with per-app options, file generation, scripts, health checks, and more
 ---
 
-# My Module
+# Stackpanel Module Development Guide
 
-A longer description of what this module provides and why you'd want to use it.
+This guide explains how to create stackpanel modules. A module is a self-contained extension that can add packages, generate files, provide scripts, define health checks, and extend app/service configuration.
 
-## Features
+## When to Create a Module
 
-- Feature 1: Brief description
-- Feature 2: Brief description
-- Feature 3: Brief description
+Create a module when you want to:
 
-## Installation
+- **Add tooling** that needs configuration (linters, formatters, build tools)
+- **Generate files** from Nix configuration (config files, scripts, lockfiles)
+- **Provide per-app options** (e.g., `app.go.enable`, `app.linting.oxlint.enable`)
+- **Add shell commands** that integrate with your project
+- **Run health checks** to verify the dev environment is working
+- **Integrate external services** (databases, caches, APIs)
 
-This is a built-in module. Enable it in your configuration:
+## Module Directory Structure
 
-```nix
-stackpanel.modules.my-module.enable = true;
+```
+modules/my-module/
+├── default.nix    # Entry point (imports everything)
+├── meta.nix       # Pure metadata (no lib calls)
+├── module.nix     # Options and configuration
+├── ui.nix         # UI panel definitions (optional)
+├── schema.nix     # Field definitions for per-app options (optional)
+└── README.mdx     # User-facing documentation
 ```
 
-## Configuration
+## Quick Start
 
-### Basic Usage
+1. Copy the `_template/` directory to your module name:
+   ```bash
+   cp -r modules/_template modules/my-module
+   ```
+
+2. Update `meta.nix` with your module's identity
+3. Implement options and config in `module.nix`
+4. Register in `modules/default.nix`
+
+---
+
+## meta.nix Reference
+
+The `meta.nix` file contains pure data that can be read without evaluating the module system. This enables fast UI discovery.
+
+**Critical**: No `lib` calls, no imports, no functions. Only literal values.
 
 ```nix
 {
-  stackpanel.modules.my-module = {
-    enable = true;
-    # Add configuration options here
+  # REQUIRED: Unique identifier (must match directory name)
+  id = "my-module";
+
+  # REQUIRED: Display name shown in UI
+  name = "My Module";
+
+  # REQUIRED: Short description (shown in module list)
+  description = "Integrates FooTool for automatic formatting";
+
+  # REQUIRED: Category for grouping in UI
+  # Options: development | database | infrastructure | monitoring | 
+  #          secrets | ci-cd | deployment | language | service | integration
+  category = "development";
+
+  # REQUIRED: Semantic version
+  version = "1.0.0";
+
+  # REQUIRED: Lucide icon name (https://lucide.dev/icons)
+  icon = "code";
+
+  # OPTIONAL: Link to external documentation
+  homepage = "https://footool.dev";
+
+  # OPTIONAL: Author or team name
+  author = "Stackpanel";
+
+  # OPTIONAL: Searchable tags for filtering
+  tags = [ "formatting" "typescript" "linting" ];
+
+  # OPTIONAL: Module dependencies (must be enabled for this to work)
+  requires = [ "turbo" ];
+
+  # OPTIONAL: Conflicting modules (cannot be enabled together)
+  conflicts = [ "other-formatter" ];
+
+  # REQUIRED: Feature flags for UI filtering
+  features = {
+    files = true;        # Generates config files
+    scripts = true;      # Provides shell commands  
+    healthchecks = true; # Has runtime health checks
+    packages = true;     # Adds packages to devshell
+    services = false;    # Runs background services
+    secrets = false;     # Manages secrets
+    tasks = false;       # Provides turbo/build tasks
+    appModule = true;    # Adds per-app options
+  };
+
+  # OPTIONAL: Priority for ordering (lower = higher priority)
+  priority = 100;
+}
+```
+
+---
+
+## module.nix Patterns
+
+### Basic Structure
+
+```nix
+{ lib, config, pkgs, ... }:
+let
+  meta = import ./meta.nix;
+  cfg = config.stackpanel.modules.${meta.id};
+  sp = config.stackpanel;
+in
+{
+  # Define options
+  options.stackpanel.modules.${meta.id} = {
+    enable = lib.mkEnableOption meta.description;
+    # ... more options
+  };
+
+  # Apply configuration when enabled
+  config = lib.mkIf (sp.enable && cfg.enable) {
+    # ... configuration
   };
 }
 ```
 
-### Per-App Configuration
+---
 
-If this module supports per-app configuration:
+## Use Case: Adding Packages to Devshell
+
+Add packages that should be available in the development shell.
 
 ```nix
+config = lib.mkIf (sp.enable && cfg.enable) {
+  stackpanel.devshell.packages = [
+    pkgs.ripgrep
+    pkgs.fd
+    cfg.package  # Allow users to override the package
+  ];
+};
+```
+
+**With a configurable package option:**
+
+```nix
+options.stackpanel.modules.${meta.id} = {
+  enable = lib.mkEnableOption "ripgrep integration";
+  
+  package = lib.mkOption {
+    type = lib.types.package;
+    default = pkgs.ripgrep;
+    defaultText = lib.literalExpression "pkgs.ripgrep";
+    description = "The ripgrep package to use";
+  };
+};
+
+config = lib.mkIf (sp.enable && cfg.enable) {
+  stackpanel.devshell.packages = [ cfg.package ];
+};
+```
+
+---
+
+## Use Case: Generating Configuration Files
+
+Generate config files that are written to the project on shell entry.
+
+### Static Text Files
+
+```nix
+config = lib.mkIf (sp.enable && cfg.enable) {
+  stackpanel.files.entries = {
+    ".prettierrc" = {
+      type = "text";
+      text = builtins.toJSON {
+        semi = true;
+        singleQuote = true;
+        tabWidth = 2;
+      };
+      description = "Prettier configuration";
+      source = meta.id;  # For tracking which module owns this file
+    };
+  };
+};
+```
+
+### JSON Files with Deep-Merge Support
+
+When multiple modules might contribute to the same file (like `package.json`), use `type = "json"`:
+
+```nix
+stackpanel.files.entries = {
+  "apps/web/package.json" = {
+    type = "json";
+    jsonValue = {
+      name = "web";
+      scripts = {
+        lint = "eslint .";
+        format = "prettier --write .";
+      };
+    };
+    source = meta.id;
+    description = "Package scripts for web app";
+  };
+};
+```
+
+### Symlinks to Nix Store
+
+For files that shouldn't be edited (generated configs):
+
+```nix
+let
+  configFile = pkgs.writeText "my-config.yaml" ''
+    # Generated by ${meta.name}
+    key: value
+  '';
+in
 {
-  stackpanel.apps.web = {
-    myModule = {
-      enable = true;
-      # Per-app options
+  stackpanel.files.entries."my-config.yaml" = {
+    type = "symlink";
+    target = "${configFile}";
+    description = "Generated config (read-only)";
+  };
+}
+```
+
+### Files from Derivations
+
+For complex file generation that needs build tools:
+
+```nix
+let
+  generatedConfig = pkgs.runCommand "generate-config" {
+    nativeBuildInputs = [ pkgs.jq ];
+  } ''
+    echo '{"generated": true}' | jq . > $out
+  '';
+in
+{
+  stackpanel.files.entries."config.json" = {
+    type = "derivation";
+    drv = generatedConfig;
+  };
+}
+```
+
+---
+
+## Use Case: Adding Shell Scripts
+
+Provide commands that users can run in the devshell.
+
+### Basic Script
+
+```nix
+stackpanel.scripts = {
+  my-lint = {
+    exec = ''
+      echo "Running linter..."
+      ${pkgs.eslint}/bin/eslint "$STACKPANEL_ROOT/src" "$@"
+    '';
+    description = "Lint the codebase";
+  };
+};
+```
+
+### Script with Runtime Dependencies
+
+```nix
+stackpanel.scripts = {
+  my-format = {
+    exec = ''
+      prettier --write "$STACKPANEL_ROOT/**/*.{ts,tsx,js,jsx}"
+    '';
+    runtimeInputs = [ pkgs.nodePackages.prettier ];
+    description = "Format all source files";
+  };
+};
+```
+
+### Per-App Scripts (Dynamic)
+
+Generate scripts for each app that has your feature enabled:
+
+```nix
+let
+  enabledApps = lib.filterAttrs (_: app: app.myFeature.enable or false) sp.apps;
+in
+{
+  stackpanel.scripts = lib.mkMerge (
+    lib.mapAttrsToList (name: app: {
+      "lint-${name}" = {
+        exec = ''
+          cd "$STACKPANEL_ROOT/${app.path}"
+          eslint .
+        '';
+        description = "Lint ${name}";
+      };
+      "lint-${name}-fix" = {
+        exec = ''
+          cd "$STACKPANEL_ROOT/${app.path}"
+          eslint --fix .
+        '';
+        description = "Lint and fix ${name}";
+      };
+    }) enabledApps
+  );
+}
+```
+
+### Global Aggregate Script
+
+Run an action across all enabled apps:
+
+```nix
+let
+  appNames = lib.attrNames enabledApps;
+in
+{
+  stackpanel.scripts.lint-all = {
+    exec = ''
+      echo "Linting all apps..."
+      exit_code=0
+      ${lib.concatMapStringsSep "\n" (name: ''
+        echo "→ Linting ${name}..."
+        lint-${name} || exit_code=$?
+      '') appNames}
+      exit "$exit_code"
+    '';
+    description = "Lint all apps";
+  };
+}
+```
+
+---
+
+## Use Case: Per-App Options (appModules)
+
+Add configuration options that appear under each app definition.
+
+### Defining Per-App Options
+
+```nix
+let
+  # Define the per-app options module
+  myAppModule = { lib, name, ... }: {
+    options.myFeature = {
+      enable = lib.mkEnableOption "MyFeature for this app";
+      
+      configPath = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Custom config file path";
+      };
+      
+      rules = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = {};
+        description = "Custom rules to apply";
+        example = { "no-console" = "error"; };
+      };
+    };
+  };
+in
+{
+  config = lib.mkMerge [
+    # Always register the appModule (unconditionally)
+    {
+      stackpanel.appModules = [ myAppModule ];
+    }
+    
+    # Apply configuration when enabled
+    (lib.mkIf (sp.enable && cfg.enable) {
+      # ... rest of config
+    })
+  ];
+}
+```
+
+**User configuration:**
+
+```nix
+stackpanel.apps.web = {
+  path = "apps/web";
+  myFeature = {
+    enable = true;
+    rules = { "no-console" = "warn"; };
+  };
+};
+```
+
+### Using Per-App Config
+
+```nix
+let
+  # Filter to apps with your feature enabled
+  enabledApps = lib.filterAttrs (_: app: app.myFeature.enable or false) sp.apps;
+in
+lib.mkIf (enabledApps != {}) {
+  # Generate config for each enabled app
+  stackpanel.files.entries = lib.concatMapAttrs (name: app: {
+    "${app.path}/.myfeaturerc" = {
+      type = "text";
+      text = builtins.toJSON {
+        rules = app.myFeature.rules;
+      };
+      source = meta.id;
+    };
+  }) enabledApps;
+}
+```
+
+### Schema-Based Per-App Options
+
+For complex options that need validation, use a schema file:
+
+**schema.nix:**
+```nix
+{ lib }:
+{
+  fields = {
+    enable = {
+      type = "bool";
+      default = false;
+      description = "Enable this feature for the app";
+    };
+    configPath = {
+      type = "nullOr str";
+      default = null;
+      description = "Path to config file";
+    };
+    plugins = {
+      type = "listOf str";
+      default = [];
+      description = "Plugins to enable";
     };
   };
 }
 ```
 
-## Options Reference
+**module.nix:**
+```nix
+let
+  schema = import ./schema.nix { inherit lib; };
+  spField = import ../../db/lib/field.nix { inherit lib; };
+in
+{
+  stackpanel.appModules = [
+    ({ lib, ... }: {
+      options.myFeature = lib.mkOption {
+        type = lib.types.submodule {
+          options = lib.mapAttrs (_: spField.asOption) schema.fields;
+        };
+        default = {};
+      };
+    })
+  ];
+}
+```
 
-### `stackpanel.modules.my-module.enable`
+---
 
-**Type:** `boolean`
-**Default:** `false`
+## Use Case: Per-Service Options (serviceModules)
 
-Enable the My Module integration.
+Extend service definitions with module-specific options.
 
-<!-- Add more options documentation here -->
+```nix
+let
+  myServiceModule = { lib, ... }: {
+    options.myFeature = {
+      metricsEnabled = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Enable metrics collection for this service";
+      };
+      metricsPort = lib.mkOption {
+        type = lib.types.port;
+        default = 9090;
+        description = "Port for metrics endpoint";
+      };
+    };
+  };
+in
+{
+  stackpanel.serviceModules = [ myServiceModule ];
+}
+```
 
-## Scripts
+**Usage in service definition:**
 
-This module provides the following shell commands:
+```nix
+stackpanel.services.postgres = {
+  enable = true;
+  myFeature.metricsEnabled = true;
+};
+```
 
-| Command | Description |
-|---------|-------------|
-| `my-command` | Does something useful |
-| `my-command-fix` | Does something with auto-fix |
+---
 
-## Health Checks
+## Use Case: Flake Checks (CI)
 
-| Check | Severity | Description |
-|-------|----------|-------------|
-| `installed` | critical | Verifies the tool is installed |
-| `config` | warning | Verifies configuration files exist |
+Flake checks run with `nix flake check` and verify your module works in CI.
 
-## Troubleshooting
+```nix
+stackpanel.moduleChecks.${meta.id} = {
+  # REQUIRED: Verify module evaluates without errors
+  eval = {
+    description = "${meta.name} module evaluates correctly";
+    required = true;
+    derivation = pkgs.runCommand "${meta.id}-eval-check" {} ''
+      echo "✓ Module evaluates"
+      touch $out
+    '';
+  };
 
-### Common Issue 1
+  # REQUIRED: Verify required packages are available
+  packages = {
+    description = "${meta.name} packages are available";
+    required = true;
+    derivation = pkgs.runCommand "${meta.id}-packages-check" {
+      nativeBuildInputs = [ pkgs.my-tool ];
+    } ''
+      my-tool --version
+      echo "✓ Package available"
+      touch $out
+    '';
+  };
 
-Description of the issue and how to fix it.
+  # RECOMMENDED: Verify config generation works
+  config = {
+    description = "${meta.name} config generation works";
+    required = false;
+    derivation = pkgs.runCommand "${meta.id}-config-check" {
+      nativeBuildInputs = [ pkgs.jq ];
+    } ''
+      echo '${builtins.toJSON { key = "value"; }}' | jq .
+      echo "✓ Config generation works"
+      touch $out
+    '';
+  };
 
-### Common Issue 2
+  # OPTIONAL: Custom module-specific checks
+  lint = {
+    description = "Sample config passes linting";
+    required = false;
+    derivation = pkgs.runCommand "${meta.id}-lint-check" {
+      nativeBuildInputs = [ pkgs.my-linter ];
+    } ''
+      echo '{}' > sample.json
+      my-linter sample.json
+      touch $out
+    '';
+  };
+};
+```
 
-Description of the issue and how to fix it.
+---
 
-## See Also
+## Use Case: Health Checks (Runtime)
 
-- [Official Documentation](https://example.com)
-- [Related Module](/docs/modules/related-module)
+Health checks run in the devshell and verify the environment is working. They appear in the Studio UI.
+
+```nix
+stackpanel.healthchecks.modules.${meta.id} = {
+  enable = true;
+  displayName = meta.name;
+  checks = {
+    # Critical: Module won't work without this
+    installed = {
+      description = "${meta.name} is installed and accessible";
+      script = ''
+        if command -v my-tool >/dev/null 2>&1; then
+          version=$(my-tool --version 2>&1 | head -1)
+          echo "${meta.name} version: $version"
+          exit 0
+        else
+          echo "${meta.name} is not installed"
+          exit 1
+        fi
+      '';
+      severity = "critical";
+      timeout = 5;
+    };
+
+    # Warning: Suboptimal but module still works
+    config-exists = {
+      description = "Configuration file exists";
+      script = ''
+        test -f "$STACKPANEL_ROOT/.mytoolrc"
+      '';
+      severity = "warning";
+      timeout = 5;
+    };
+
+    # Info: Nice to have
+    version-check = {
+      description = "Tool version is 2.0 or newer";
+      script = ''
+        version=$(my-tool --version | grep -oE '[0-9]+\.[0-9]+')
+        major=$(echo "$version" | cut -d. -f1)
+        [ "$major" -ge 2 ]
+      '';
+      severity = "info";
+      timeout = 5;
+    };
+  };
+};
+```
+
+**Severity levels:**
+- `critical`: Module cannot function (tool not installed)
+- `warning`: Module works but suboptimally (missing optional config)
+- `info`: Informational only (version recommendations)
+
+---
+
+## Use Case: Environment Variables
+
+Set environment variables in the devshell:
+
+```nix
+stackpanel.devshell.env = {
+  MY_TOOL_CONFIG = "$STACKPANEL_ROOT/.mytoolrc";
+  MY_TOOL_CACHE = "$HOME/.cache/my-tool";
+};
+```
+
+---
+
+## Use Case: Clean Aliases
+
+Remove shell aliases that might conflict with your commands:
+
+```nix
+# If your module provides a 'dev' command, clean any existing alias
+stackpanel.devshell.clean.aliases = [ "dev" "build" "test" ];
+```
+
+---
+
+## Use Case: Shell Hooks
+
+Run code on shell entry:
+
+```nix
+stackpanel.devshell.hooks.after = ''
+  # Run after other modules have initialized
+  if [ ! -f "$STACKPANEL_ROOT/.mytoolrc" ]; then
+    echo "⚠️  Missing .mytoolrc - run 'my-tool init'"
+  fi
+'';
+```
+
+Hook phases:
+- `hooks.before`: Runs first (setup, path manipulation)
+- `hooks.main`: Main initialization phase
+- `hooks.after`: Runs last (verification, messages)
+
+---
+
+## Module Registration
+
+Always register your module so it appears in the UI:
+
+```nix
+stackpanel.modules.${meta.id} = {
+  enable = true;
+  inherit meta;
+  source.type = "builtin";  # or "community", "local"
+  features = meta.features;
+  tags = meta.tags;
+  priority = meta.priority;
+  healthcheckModule = meta.id;  # Links to healthcheck section
+};
+```
+
+---
+
+## Complete Example: Linter Module
+
+Here's a complete module that integrates a linter with per-app configuration:
+
+```nix
+{ lib, config, pkgs, ... }:
+let
+  meta = import ./meta.nix;
+  cfg = config.stackpanel.modules.${meta.id};
+  sp = config.stackpanel;
+
+  # Per-app module
+  linterAppModule = { lib, ... }: {
+    options.linting.myLinter = {
+      enable = lib.mkEnableOption "MyLinter for this app";
+      rules = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { "no-unused-vars" = "error"; };
+      };
+      ignorePatterns = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "node_modules" "dist" ];
+      };
+    };
+  };
+
+  # Get enabled apps
+  linterApps = lib.filterAttrs (_: app: app.linting.myLinter.enable or false) sp.apps;
+  hasLinterApps = linterApps != {};
+
+  # Generate config for an app
+  mkConfig = name: app: {
+    rules = app.linting.myLinter.rules;
+    ignore = app.linting.myLinter.ignorePatterns;
+  };
+
+in {
+  config = lib.mkMerge [
+    # Always register appModule
+    { stackpanel.appModules = [ linterAppModule ]; }
+
+    # Apply when enabled
+    (lib.mkIf (sp.enable && hasLinterApps) {
+      # Add linter to devshell
+      stackpanel.devshell.packages = [ pkgs.my-linter ];
+
+      # Generate config files
+      stackpanel.files.entries = lib.concatMapAttrs (name: app: {
+        "${app.path}/.mylinterrc.json" = {
+          type = "text";
+          text = builtins.toJSON (mkConfig name app);
+          source = meta.id;
+        };
+      }) linterApps;
+
+      # Per-app scripts
+      stackpanel.scripts = lib.mkMerge [
+        (lib.concatMapAttrs (name: app: {
+          "lint-${name}" = {
+            exec = ''
+              cd "$STACKPANEL_ROOT/${app.path}"
+              my-linter .
+            '';
+            description = "Lint ${name}";
+          };
+        }) linterApps)
+        
+        # Global lint command
+        {
+          lint = {
+            exec = ''
+              ${lib.concatMapStringsSep "\n" (n: "lint-${n}") (lib.attrNames linterApps)}
+            '';
+            description = "Lint all apps";
+          };
+        }
+      ];
+
+      # Health checks
+      stackpanel.healthchecks.modules.${meta.id} = {
+        enable = true;
+        displayName = "MyLinter";
+        checks = {
+          installed = {
+            description = "MyLinter is installed";
+            script = "command -v my-linter >/dev/null 2>&1";
+            severity = "critical";
+            timeout = 5;
+          };
+        };
+      };
+
+      # CI checks
+      stackpanel.moduleChecks.${meta.id} = {
+        eval.description = "Module evaluates";
+        eval.required = true;
+        eval.derivation = pkgs.runCommand "check" {} "touch $out";
+      };
+
+      # Register module
+      stackpanel.modules.${meta.id} = {
+        enable = true;
+        inherit meta;
+        source.type = "builtin";
+        features = meta.features;
+        tags = meta.tags;
+        priority = meta.priority;
+      };
+    })
+  ];
+}
+```
+
+---
+
+## Testing Your Module
+
+1. **Evaluate without errors:**
+   ```bash
+   nix eval .#stackpanelConfig --impure
+   ```
+
+2. **Enter devshell:**
+   ```bash
+   nix develop --impure
+   ```
+
+3. **Run flake checks:**
+   ```bash
+   nix flake check --impure
+   ```
+
+4. **Verify health checks:**
+   ```bash
+   stackpanel status
+   ```
+
+---
+
+## Common Patterns
+
+### Conditional Configuration
+
+```nix
+config = lib.mkMerge [
+  # Unconditional (always applies)
+  { stackpanel.appModules = [ myAppModule ]; }
+
+  # Conditional on module being enabled
+  (lib.mkIf cfg.enable { ... })
+
+  # Conditional on apps existing
+  (lib.mkIf hasEnabledApps { ... })
+];
+```
+
+### Avoiding Infinite Recursion
+
+Don't access `cfg.apps` at the top level of `let`. Access it inside `lib.mkIf`:
+
+```nix
+# ❌ BAD - causes infinite recursion
+let
+  apps = lib.filterAttrs (...) config.stackpanel.apps;
+in { ... }
+
+# ✅ GOOD - access inside config block
+config = let
+  apps = lib.filterAttrs (...) config.stackpanel.apps;
+in lib.mkIf (apps != {}) { ... };
+```
+
+### Merging Multiple Attrsets
+
+```nix
+stackpanel.scripts = lib.mkMerge [
+  (lib.concatMapAttrs (...) apps)  # Per-app scripts
+  { global-command = { ... }; }     # Global scripts
+];
+```
+
+### Optional Attributes
+
+```nix
+{
+  command = "...";
+}
+// lib.optionalAttrs (cfg.timeout != null) {
+  timeout = cfg.timeout;
+}
+// lib.optionalAttrs cfg.verbose {
+  args = [ "--verbose" ];
+}
+```
