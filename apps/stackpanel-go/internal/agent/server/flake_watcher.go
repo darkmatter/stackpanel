@@ -154,7 +154,8 @@ func (fw *FlakeWatcher) GetPackages(ctx context.Context) ([]nixeval.InstalledPac
 
 // initialEvaluation performs the initial evaluation of both config and packages
 func (fw *FlakeWatcher) initialEvaluation() {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// 5 minutes allows time for Nix to download packages from caches
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	// Evaluate config first (usually faster)
@@ -288,7 +289,8 @@ func (fw *FlakeWatcher) handleFileChange(changedFile string) {
 		fw.server.shellManager.MarkNixFileChanged(changedFile)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// 5 minutes allows time for Nix to download packages from caches
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	// Determine what needs to be re-evaluated based on the file that changed

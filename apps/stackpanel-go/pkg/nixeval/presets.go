@@ -377,7 +377,8 @@ func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions)
 	}
 
 	expr := InstalledPackagesExpr(projectRoot)
-	result, err := EvalExprWithTimeout(ctx, expr, 60*time.Second)
+	// 5 minutes allows time for Nix to download packages from caches
+	result, err := EvalExprWithTimeout(ctx, expr, 5*time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate installed packages: %w", err)
 	}

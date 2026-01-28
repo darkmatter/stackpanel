@@ -7,8 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // ProcessInfo represents information about a running process from process-compose.
@@ -30,6 +33,38 @@ type ProcessComposeStatusResponse struct {
 	Processes []ProcessInfo `json:"processes"`
 	Port      int           `json:"port,omitempty"`
 	Error     string        `json:"error,omitempty"`
+}
+
+// ProjectState represents the project state from process-compose.
+type ProjectState struct {
+	FileNames        []string `json:"fileNames,omitempty"`
+	ProcessNum       int      `json:"processNum"`
+	RunningProcesses int      `json:"runningProcessNum"`
+	HostName         string   `json:"hostName,omitempty"`
+	Version          string   `json:"version,omitempty"`
+	MemoryState      *struct {
+		Allocated uint64 `json:"allocated,omitempty"`
+		Total     uint64 `json:"total,omitempty"`
+		System    uint64 `json:"system,omitempty"`
+	} `json:"memoryState,omitempty"`
+}
+
+// ProcessPorts represents ports used by a process.
+type ProcessPorts struct {
+	Name    string `json:"name"`
+	TcpPorts []int  `json:"tcpPorts,omitempty"`
+	UdpPorts []int  `json:"udpPorts,omitempty"`
+}
+
+// ProcessLogs represents log output from a process.
+type ProcessLogs struct {
+	Logs []string `json:"logs"`
+}
+
+// LogMessage represents a single log message for WebSocket streaming.
+type LogMessage struct {
+	ProcessName string `json:"processName"`
+	Message     string `json:"message"`
 }
 
 // getProcessComposePort returns the port for the process-compose API.
@@ -155,4 +190,474 @@ func isProcessRunning(status string) bool {
 	return status == "running" ||
 		status == "launched" ||
 		status == "restarting"
+}
+
+// getProcessComposeClient returns an HTTP client configured for process-compose API calls.
+func getProcessComposeClient() *http.Client {
+	return &http.Client{
+		Timeout: 5 * time.Second,
+	}
+}
+
+// getProcessComposeBaseURL returns the base URL for the process-compose API.
+func getProcessComposeBaseURL() string {
+	return fmt.Sprintf("http://localhost:%s", getProcessComposePort())
+}
+
+// handleProcessComposeProjectState returns the project state from process-compose.
+// GET /api/process-compose/project/state
+func (s *Server) handleProcessComposeProjectState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/project/state?withMemory=true"
+
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data": map[string]interface{}{
+				"available": false,
+				"error":     "process-compose server not running",
+			},
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data": map[string]interface{}{
+				"available": false,
+				"error":     "failed to read response",
+			},
+		})
+		return
+	}
+
+	// Parse as generic map to handle any response format
+	var state map[string]interface{}
+	if err := json.Unmarshal(body, &state); err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data": map[string]interface{}{
+				"available": false,
+				"error":     fmt.Sprintf("failed to parse response: %v", err),
+			},
+		})
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data": map[string]interface{}{
+			"available": true,
+			"state":     state,
+		},
+	})
+}
+
+// handleProcessComposeProcessInfo returns detailed info about a specific process.
+// GET /api/process-compose/process/info/{name}
+func (s *Server) handleProcessComposeProcessInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Extract process name from path: /api/process-compose/process/info/{name}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+	name := parts[5]
+
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/info/" + name
+
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   "process-compose server not running",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to read response")
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   errResp["error"],
+		})
+		return
+	}
+
+	var info map[string]interface{}
+	if err := json.Unmarshal(body, &info); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse response")
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    info,
+	})
+}
+
+// handleProcessComposeProcessPorts returns ports used by a specific process.
+// GET /api/process-compose/process/ports/{name}
+func (s *Server) handleProcessComposeProcessPorts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Extract process name from path: /api/process-compose/process/ports/{name}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+	name := parts[5]
+
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/ports/" + name
+
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   "process-compose server not running",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to read response")
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   errResp["error"],
+		})
+		return
+	}
+
+	var ports ProcessPorts
+	if err := json.Unmarshal(body, &ports); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse response")
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    ports,
+	})
+}
+
+// handleProcessComposeProcessLogs returns logs for a specific process.
+// GET /api/process-compose/process/logs/{name}?offset=0&limit=100
+func (s *Server) handleProcessComposeProcessLogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Extract process name from path: /api/process-compose/process/logs/{name}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+	name := parts[5]
+
+	// Get query params
+	offsetStr := r.URL.Query().Get("offset")
+	limitStr := r.URL.Query().Get("limit")
+
+	offset := 0
+	limit := 100
+	if offsetStr != "" {
+		if v, err := strconv.Atoi(offsetStr); err == nil {
+			offset = v
+		}
+	}
+	if limitStr != "" {
+		if v, err := strconv.Atoi(limitStr); err == nil {
+			limit = v
+		}
+	}
+
+	client := getProcessComposeClient()
+	apiURL := fmt.Sprintf("%s/process/logs/%s/%d/%d", getProcessComposeBaseURL(), name, offset, limit)
+
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   "process-compose server not running",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to read response")
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   errResp["error"],
+		})
+		return
+	}
+
+	var logs ProcessLogs
+	if err := json.Unmarshal(body, &logs); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse response")
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    logs,
+	})
+}
+
+// handleProcessComposeStart starts a specific process.
+// POST /api/process-compose/process/start/{name}
+func (s *Server) handleProcessComposeStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Extract process name from path
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+	name := parts[5]
+
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/start/" + name
+
+	req, _ := http.NewRequest(http.MethodPost, apiURL, nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   "process-compose server not running",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   errResp["error"],
+		})
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Process %s started", name),
+	})
+}
+
+// handleProcessComposeStop stops a specific process.
+// POST /api/process-compose/process/stop/{name}
+func (s *Server) handleProcessComposeStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Extract process name from path
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+	name := parts[5]
+
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/stop/" + name
+
+	req, _ := http.NewRequest(http.MethodPatch, apiURL, nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   "process-compose server not running",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   errResp["error"],
+		})
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Process %s stopped", name),
+	})
+}
+
+// handleProcessComposeRestart restarts a specific process.
+// POST /api/process-compose/process/restart/{name}
+func (s *Server) handleProcessComposeRestart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Extract process name from path
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 6 {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+	name := parts[5]
+
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/restart/" + name
+
+	req, _ := http.NewRequest(http.MethodPost, apiURL, nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   "process-compose server not running",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		s.writeJSON(w, http.StatusOK, map[string]interface{}{
+			"success": false,
+			"error":   errResp["error"],
+		})
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Process %s restarted", name),
+	})
+}
+
+// handleProcessComposeLogsWS streams process logs via WebSocket.
+// Note: Uses the shared wsUpgrader from ws.go
+// WS /api/process-compose/logs/ws?name=processName&offset=0&follow=true
+func (s *Server) handleProcessComposeLogsWS(w http.ResponseWriter, r *http.Request) {
+	processName := r.URL.Query().Get("name")
+	if processName == "" {
+		s.writeAPIError(w, http.StatusBadRequest, "process name required")
+		return
+	}
+
+	follow := r.URL.Query().Get("follow") == "true"
+	offsetStr := r.URL.Query().Get("offset")
+	offset := 0
+	if offsetStr != "" {
+		if v, err := strconv.Atoi(offsetStr); err == nil {
+			offset = v
+		}
+	}
+
+	// Upgrade to WebSocket
+	ws, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer ws.Close()
+
+	// Connect to process-compose WebSocket
+	pcURL := fmt.Sprintf("ws://localhost:%s/process/logs/ws?name=%s&offset=%d&follow=%t",
+		getProcessComposePort(), processName, offset, follow)
+
+	pcWS, _, err := websocket.DefaultDialer.Dial(pcURL, nil)
+	if err != nil {
+		ws.WriteJSON(map[string]string{"error": "Failed to connect to process-compose"})
+		return
+	}
+	defer pcWS.Close()
+
+	// Relay messages from process-compose to client
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			_, msg, err := ws.ReadMessage()
+			if err != nil {
+				return
+			}
+			// Forward any client messages to process-compose (for control)
+			pcWS.WriteMessage(websocket.TextMessage, msg)
+		}
+	}()
+
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			var logMsg LogMessage
+			err := pcWS.ReadJSON(&logMsg)
+			if err != nil {
+				return
+			}
+			if err := ws.WriteJSON(logMsg); err != nil {
+				return
+			}
+		}
+	}
 }

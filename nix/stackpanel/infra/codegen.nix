@@ -24,8 +24,7 @@
   config,
   pkgs,
   ...
-}:
-let
+}: let
   cfg = config.stackpanel.infra;
   projectName = config.stackpanel.name or "my-project";
   outputDir = cfg.output-dir;
@@ -33,18 +32,44 @@ let
   moduleIds = builtins.attrNames cfg.modules;
 
   # ============================================================================
+  # Module bunDeps handling
+  #
+  # External flakes can provide pre-validated bunDeps. When provided,
+  # dependencies are already validated at the flake's eval time.
+  # ============================================================================
+
+  # Modules that provide their own bunDeps
+  modulesWithBunDeps = lib.filterAttrs (_: mod: mod.bunDeps != null) cfg.modules;
+
+  # Modules without bunDeps (deps need runtime or package-level validation)
+  modulesWithoutBunDeps = lib.filterAttrs (_: mod: mod.bunDeps == null) cfg.modules;
+
+  # All module bunDeps as a list
+  allModuleBunDeps = lib.mapAttrsToList (_: mod: mod.bunDeps) modulesWithBunDeps;
+
+  # Check if all modules provide bunDeps (fully validated at flake level)
+  allModulesHaveBunDeps = builtins.length (builtins.attrNames modulesWithoutBunDeps) == 0
+                          && builtins.length moduleIds > 0;
+
+  # Check if any module provides bunDeps
+  anyModuleHasBunDeps = builtins.length (builtins.attrNames modulesWithBunDeps) > 0;
+
+  # ============================================================================
   # Inputs JSON (written to state dir, read by Infra class at runtime)
   # ============================================================================
   storageBackendConfig =
-    if cfg.storage-backend.type == "chamber" then {
+    if cfg.storage-backend.type == "chamber"
+    then {
       type = "chamber";
       service = cfg.storage-backend.chamber.service;
     }
-    else if cfg.storage-backend.type == "sops" then {
+    else if cfg.storage-backend.type == "sops"
+    then {
       type = "sops";
       filePath = cfg.storage-backend.sops.file-path;
     }
-    else if cfg.storage-backend.type == "ssm" then {
+    else if cfg.storage-backend.type == "ssm"
+    then {
       type = "ssm";
       prefix = cfg.storage-backend.ssm.prefix;
     }
@@ -52,13 +77,15 @@ let
       type = "none";
     };
 
-  inputsJson = {
-    __config__ = {
-      storageBackend = storageBackendConfig;
-      keyFormat = cfg.key-format;
-      inherit projectName;
-    };
-  } // lib.mapAttrs (_id: mod: mod.inputs) cfg.modules;
+  inputsJson =
+    {
+      __config__ = {
+        storageBackend = storageBackendConfig;
+        keyFormat = cfg.key-format;
+        inherit projectName;
+      };
+    }
+    // lib.mapAttrs (_id: mod: mod.inputs) cfg.modules;
 
   inputsJsonStr = builtins.toJSON inputsJson;
 
@@ -66,404 +93,141 @@ let
   # Best-effort TypeScript type inference from Nix values
   # ============================================================================
   nixTypeToTs = value:
-    if builtins.isBool value then "boolean"
-    else if builtins.isInt value || builtins.isFloat value then "number"
-    else if builtins.isString value then "string"
-    else if builtins.isList value then "string[]"
-    else if builtins.isAttrs value then
-      let
-        fields = lib.mapAttrsToList (k: v:
-          "  ${k}: ${nixTypeToTs v};"
-        ) value;
-      in
-      "{\n${lib.concatStringsSep "\n" fields}\n}"
+    if builtins.isBool value
+    then "boolean"
+    else if builtins.isInt value || builtins.isFloat value
+    then "number"
+    else if builtins.isString value
+    then "string"
+    else if builtins.isList value
+    then "string[]"
+    else if builtins.isAttrs value
+    then let
+      fields =
+        lib.mapAttrsToList (
+          k: v: "  ${k}: ${nixTypeToTs v};"
+        )
+        value;
+    in "{\n${lib.concatStringsSep "\n" fields}\n}"
     else "any";
 
-  mkModuleInterface = id: mod:
-    let
-      tsType = nixTypeToTs mod.inputs;
+  toPascalCase = s: let
+    parts = lib.splitString "-" s;
+    capitalize = str: let
+      first = builtins.substring 0 1 str;
+      rest = builtins.substring 1 (builtins.stringLength str) str;
+      upper =
+        builtins.replaceStrings
+        ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"]
+        ["A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O" "P" "Q" "R" "S" "T" "U" "V" "W" "X" "Y" "Z"]
+        first;
     in
-    "export interface ${lib.replaceStrings ["-"] ["_"] (lib.toUpper id)}Inputs ${tsType}\n";
-
-  # Capitalize first letter + camelCase helper
-  lib' = lib // {
-    toUpper = s:
-      let
-        parts = lib.splitString "-" s;
-        capitalize = str:
-          (lib.toUpper (builtins.substring 0 1 str)) + (builtins.substring 1 (builtins.stringLength str) str);
-      in
-      lib.concatStrings (map capitalize parts);
-  };
-
-  toPascalCase = s:
-    let
-      parts = lib.splitString "-" s;
-      capitalize = str:
-        let
-          first = builtins.substring 0 1 str;
-          rest = builtins.substring 1 (builtins.stringLength str) str;
-          upper = builtins.replaceStrings
-            ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"]
-            ["A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O" "P" "Q" "R" "S" "T" "U" "V" "W" "X" "Y" "Z"]
-            first;
-        in
-        upper + rest;
-    in
+      upper + rest;
+  in
     lib.concatStrings (map capitalize parts);
 
   # ============================================================================
-  # Generated: src/index.ts (Infra class)
+  # Template processing
   # ============================================================================
-  infraClassTs = ''
-    // Generated by stackpanel — do not edit manually.
-    // @stackpanel/infra — Infrastructure module library
-    import { execSync } from "node:child_process";
-    import * as fs from "node:fs";
-    import * as path from "node:path";
+  # Templates live in ./templates/ directory:
+  #   - *.tmpl.ts  — template files with {{PLACEHOLDER}} substitution
+  #   - *.ts       — static files copied verbatim
+  # ============================================================================
 
-    // Embedded project config
-    const PROJECT_CONFIG = ${builtins.toJSON inputsJson.__config__} as const;
+  # Read and process the Infra class template
+  infraTemplate = builtins.readFile ./templates/infra.tmpl.ts;
+  infraClassTs = builtins.replaceStrings
+    ["{{PROJECT_CONFIG}}"]
+    [(builtins.toJSON inputsJson.__config__)]
+    infraTemplate;
 
-    /**
-     * Read and parse the infra inputs JSON file.
-     * Resolution order:
-     *   1. STACKPANEL_INFRA_INPUTS env var (path to JSON file)
-     *   2. .stackpanel/state/infra-inputs.json (default location)
-     */
-    function loadAllInputs(): Record<string, any> {
-      const inputsPath =
-        process.env.STACKPANEL_INFRA_INPUTS ??
-        path.resolve(".stackpanel/state/infra-inputs.json");
-
-      try {
-        const raw = fs.readFileSync(inputsPath, "utf-8");
-        return JSON.parse(raw);
-      } catch {
-        console.warn(`[infra] Could not read inputs from ''${inputsPath}, using empty inputs`);
-        return {};
-      }
-    }
-
-    /**
-     * Decrypt AGE-encrypted values in an object tree.
-     * Values matching ENC[age,...] are decrypted using STACKPANEL_AGE_KEY.
-     */
-    function decryptValues<T>(obj: T): T {
-      if (typeof obj === "string" && obj.startsWith("ENC[age,")) {
-        const ageKey = process.env.STACKPANEL_AGE_KEY;
-        if (!ageKey) {
-          console.warn("[infra] Found AGE-encrypted value but STACKPANEL_AGE_KEY is not set");
-          return obj;
-        }
-        try {
-          const encrypted = obj.slice(8, -1); // Remove ENC[age,...] wrapper
-          const result = execSync(
-            `echo "''${encrypted}" | base64 -d | age -d -i <(echo "''${ageKey}")`,
-            { encoding: "utf-8", shell: "/bin/bash", stdio: ["pipe", "pipe", "pipe"] }
-          ).trim();
-          return result as unknown as T;
-        } catch (err) {
-          console.warn("[infra] Failed to decrypt AGE value:", err);
-          return obj;
-        }
-      }
-
-      if (Array.isArray(obj)) {
-        return obj.map(decryptValues) as unknown as T;
-      }
-
-      if (obj !== null && typeof obj === "object") {
-        const result: any = {};
-        for (const [key, value] of Object.entries(obj)) {
-          result[key] = decryptValues(value);
-        }
-        return result as T;
-      }
-
-      return obj;
-    }
-
-    /**
-     * Deep merge two objects (overrides win).
-     */
-    function deepMerge(base: any, overrides: any): any {
-      if (overrides === undefined || overrides === null) return base;
-      if (typeof base !== "object" || typeof overrides !== "object") return overrides;
-      if (Array.isArray(base) || Array.isArray(overrides)) return overrides;
-
-      const result = { ...base };
-      for (const [key, value] of Object.entries(overrides)) {
-        result[key] = deepMerge(result[key], value);
-      }
-      return result;
-    }
-
-    /**
-     * Format an output key using the project key format template.
-     */
-    function formatKey(moduleId: string, key: string): string {
-      return PROJECT_CONFIG.keyFormat
-        .replace(/\$module/g, moduleId)
-        .replace(/\$key/g, key);
-    }
-
-    // =========================================================================
-    // Infra class
-    // =========================================================================
-
-    export default class Infra {
-      private moduleId: string;
-
-      constructor(moduleId: string) {
-        this.moduleId = moduleId;
-      }
-
-      /**
-       * Resolve inputs for this module.
-       *
-       * @param overrides - Optional overrides (JSON string or object).
-       *   Use process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES for CI tweaks.
-       * @returns The module's input configuration with AGE values decrypted.
-       */
-      inputs<T = Record<string, any>>(overrides?: string | Record<string, any>): T {
-        const allInputs = loadAllInputs();
-        let moduleInputs = allInputs[this.moduleId] ?? {};
-
-        // Apply overrides
-        if (overrides) {
-          const overrideObj =
-            typeof overrides === "string" ? JSON.parse(overrides) : overrides;
-          moduleInputs = deepMerge(moduleInputs, overrideObj);
-        }
-
-        // Decrypt any AGE-encrypted values
-        return decryptValues(moduleInputs) as T;
-      }
-
-      /**
-       * Scoped alchemy resource identifier.
-       * Prevents collisions between modules.
-       *
-       * @example
-       * infra.id("role") // → "aws-secrets-role"
-       */
-      id(resourceName: string): string {
-        return `''${this.moduleId}-''${resourceName}`;
-      }
-
-      /**
-       * Sync all module outputs to the configured storage backend.
-       *
-       * @param modules - Map of module ID → { outputs, syncKeys }
-       */
-      static async syncAll(
-        modules: Record<string, {
-          outputs: Record<string, string>;
-          syncKeys: string[];
-        }>
-      ): Promise<void> {
-        const backend = PROJECT_CONFIG.storageBackend;
-        if (backend.type === "none") {
-          console.log("[infra] Storage backend is 'none', skipping output sync");
-          return;
-        }
-
-        // Collect all entries to sync
-        const entries: Array<{ formattedKey: string; value: string }> = [];
-        for (const [moduleId, mod] of Object.entries(modules)) {
-          for (const syncKey of mod.syncKeys) {
-            const value = mod.outputs[syncKey];
-            if (value !== undefined && value !== null) {
-              entries.push({
-                formattedKey: formatKey(moduleId, syncKey),
-                value: String(value),
-              });
-            }
-          }
-        }
-
-        if (entries.length === 0) {
-          console.log("[infra] No outputs to sync");
-          return;
-        }
-
-        console.log(`[infra] Syncing ''${entries.length} outputs to ''${backend.type}...`);
-
-        switch (backend.type) {
-          case "chamber": {
-            const service = (backend as any).service;
-            for (const { formattedKey, value } of entries) {
-              try {
-                execSync(
-                  `printf '%s' ''${JSON.stringify(value)} | chamber write ''${service} ''${formattedKey}`,
-                  { stdio: "pipe" }
-                );
-                console.log(`  ✓ chamber write ''${service} ''${formattedKey}`);
-              } catch (err) {
-                console.error(`  ✗ Failed to write ''${formattedKey} to chamber:`, err);
-              }
-            }
-            break;
-          }
-
-          case "sops": {
-            const filePath = (backend as any).filePath;
-            const yaml = entries
-              .map(({ formattedKey, value }) => `''${formattedKey}: ''${JSON.stringify(value)}`)
-              .join("\n");
-            const tmpPath = `''${filePath}.tmp`;
-            const dir = path.dirname(filePath);
-
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(tmpPath, yaml);
-
-            try {
-              execSync(`sops --encrypt "''${tmpPath}" > "''${filePath}"`, { stdio: "pipe" });
-              console.log(`  ✓ Wrote encrypted outputs to ''${filePath}`);
-            } catch (err) {
-              console.error(`  ✗ Failed to encrypt ''${filePath}:`, err);
-              fs.renameSync(tmpPath, filePath);
-              console.log(`  Wrote unencrypted file for debugging`);
-            } finally {
-              if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
-            }
-            break;
-          }
-
-          case "ssm": {
-            const prefix = (backend as any).prefix;
-            const { SSMParameter } = await import("alchemy/aws");
-            const alchemy = await import("alchemy");
-            for (const { formattedKey, value } of entries) {
-              try {
-                await SSMParameter(`infra-output-''${formattedKey}`, {
-                  name: `''${prefix}/''${formattedKey}`,
-                  value: alchemy.default.secret(value),
-                  type: "SecureString",
-                  description: `Infrastructure output: ''${formattedKey}`,
-                  tags: {
-                    "managed-by": "stackpanel-infra",
-                    module: formattedKey.split("-")[0] ?? "unknown",
-                  },
-                });
-                console.log(`  ✓ SSM ''${prefix}/''${formattedKey}`);
-              } catch (err) {
-                console.error(`  ✗ Failed to write ''${formattedKey} to SSM:`, err);
-              }
-            }
-            break;
-          }
-        }
-
-        console.log("[infra] Output sync complete");
-      }
-    }
-  '';
+  # Static resource files (no substitution needed)
+  kmsKeyTs = builtins.readFile ./templates/kms-key.ts;
+  kmsAliasTs = builtins.readFile ./templates/kms-alias.ts;
 
   # ============================================================================
   # Generated: src/types.ts (per-module input interfaces)
   # ============================================================================
-  typesTs =
-    let
-      interfaces = lib.concatMapStringsSep "\n" (id:
-        let
+  typesTs = let
+    interfaces =
+      lib.concatMapStringsSep "\n" (
+        id: let
           mod = cfg.modules.${id};
           pascalId = toPascalCase id;
           tsType = nixTypeToTs mod.inputs;
-        in
-        "export interface ${pascalId}Inputs ${tsType}\n"
-      ) moduleIds;
-    in
-    ''
-      // Generated by stackpanel — do not edit manually.
-      // TypeScript interfaces for infra module inputs.
+        in "export interface ${pascalId}Inputs ${tsType}\n"
+      )
+      moduleIds;
+  in ''
+    // Generated by stackpanel — do not edit manually.
+    // TypeScript interfaces for infra module inputs.
 
-      ${interfaces}
-    '';
+    ${interfaces}
+  '';
 
   # ============================================================================
   # Generated: alchemy.run.ts (orchestrator)
   # ============================================================================
-  alchemyRunTs =
-    let
-      # Dynamic imports for each module
-      moduleImports = lib.concatMapStringsSep "\n" (id:
-        let
+  alchemyRunTs = let
+    # Dynamic imports for each module
+    moduleImports =
+      lib.concatMapStringsSep "\n" (
+        id: let
           mod = cfg.modules.${id};
-          syncKeys = builtins.filter (k:
-            (mod.outputs.${k}.sync or false)
+          syncKeys = builtins.filter (
+            k: (mod.outputs.${k}.sync or false)
           ) (builtins.attrNames mod.outputs);
-        in
-        ''
+        in ''
           const ${builtins.replaceStrings ["-"] ["_"] id}Outputs = (await import("./modules/${id}.ts")).default;
         ''
-      ) moduleIds;
+      )
+      moduleIds;
 
-      # syncAll argument
-      syncAllArg = lib.concatMapStringsSep "\n" (id:
-        let
+    # syncAll argument
+    syncAllArg =
+      lib.concatMapStringsSep "\n" (
+        id: let
           mod = cfg.modules.${id};
-          syncKeys = builtins.filter (k:
-            (mod.outputs.${k}.sync or false)
+          syncKeys = builtins.filter (
+            k: (mod.outputs.${k}.sync or false)
           ) (builtins.attrNames mod.outputs);
           varName = builtins.replaceStrings ["-"] ["_"] id;
-        in
-        ''
-            "${id}": {
-              outputs: ${varName}Outputs,
-              syncKeys: ${builtins.toJSON syncKeys},
-            },''
-      ) moduleIds;
-    in
-    ''
-      // Generated by stackpanel — do not edit manually.
-      import alchemy from "alchemy";
-      import Infra from "./src/index.ts";
+        in ''
+          "${id}": {
+            outputs: ${varName}Outputs,
+            syncKeys: ${builtins.toJSON syncKeys},
+          },''
+      )
+      moduleIds;
+  in ''
+    // Generated by stackpanel — do not edit manually.
+    import alchemy from "alchemy";
+    import Infra from "./src/index.ts";
 
-      const app = await alchemy("${projectName}-infra", {
-        password: process.env.ALCHEMY_PASSWORD ?? "local-dev-password",
-      });
+    const app = await alchemy("${projectName}-infra", {
+      password: process.env.ALCHEMY_PASSWORD ?? "local-dev-password",
+    });
 
-      // Import and run infra modules
-      ${moduleImports}
+    // Import and run infra modules
+    ${moduleImports}
 
-      // Sync declared outputs to storage backend
-      await Infra.syncAll({
-      ${syncAllArg}
-      });
+    // Sync declared outputs to storage backend
+    await Infra.syncAll({
+    ${syncAllArg}
+    });
 
-      await app.finalize();
-    '';
+    await app.finalize();
+  '';
 
   # ============================================================================
-  # Generated: package.json
+  # Module dependency aggregation (used by turbo.packages)
   # ============================================================================
-  allDeps = lib.foldlAttrs (acc: _id: mod:
-    acc // mod.dependencies
-  ) {} cfg.modules;
-
-  packageJsonValue = {
-    name = cfg.package.name;
-    type = "module";
-    private = true;
-    scripts = {
-      deploy = "alchemy deploy";
-      dev = "alchemy dev";
-      destroy = "alchemy destroy";
-    };
-    dependencies = {
-      alchemy = "catalog:";
-    } // allDeps // cfg.package.dependencies;
-    exports = {
-      "." = {
-        default = "./src/index.ts";
-      };
-      "./*" = {
-        default = "./src/*.ts";
-      };
-    };
-  };
+  allDeps =
+    lib.foldlAttrs (
+      acc: _id: mod:
+        acc // mod.dependencies
+    ) {}
+    cfg.modules;
 
   # ============================================================================
   # Static: tsconfig.json
@@ -483,334 +247,133 @@ let
       outDir = "./dist";
       rootDir = ".";
     };
-    include = [ "src/**/*.ts" "modules/**/*.ts" "alchemy.run.ts" ];
-    exclude = [ "node_modules" "dist" ".alchemy" ];
+    include = ["src/**/*.ts" "modules/**/*.ts" "alchemy.run.ts"];
+    exclude = ["node_modules" "dist" ".alchemy"];
   };
-
-  # ============================================================================
-  # Static: src/resources/kms-key.ts
-  # ============================================================================
-  kmsKeyTs = ''
-    // Custom alchemy Resource for AWS KMS Key.
-    // Generated by stackpanel — static library code.
-    import type { Context } from "alchemy";
-    import { Resource } from "alchemy";
-
-    export interface KmsKeyProps {
-      /** Description of the key */
-      description?: string;
-      /** Enable automatic key rotation (default: true) */
-      enableKeyRotation?: boolean;
-      /** Deletion window in days (default: 30, range: 7-30) */
-      deletionWindowInDays?: number;
-      /** Key policy JSON document */
-      policy?: string;
-      /** Resource tags */
-      tags?: Record<string, string>;
-    }
-
-    export interface KmsKey extends KmsKeyProps {
-      /** ARN of the KMS key */
-      arn: string;
-      /** Key ID */
-      keyId: string;
-    }
-
-    export const KmsKey = Resource(
-      "kms::Key",
-      async function (
-        this: Context<KmsKey>,
-        _id: string,
-        props: KmsKeyProps,
-      ): Promise<KmsKey> {
-        const {
-          KMSClient,
-          CreateKeyCommand,
-          DescribeKeyCommand,
-          EnableKeyRotationCommand,
-          DisableKeyRotationCommand,
-          PutKeyPolicyCommand,
-          ScheduleKeyDeletionCommand,
-          TagResourceCommand,
-        } = await import("@aws-sdk/client-kms");
-        const client = new KMSClient({});
-
-        if (this.phase === "delete") {
-          if (this.output?.keyId) {
-            try {
-              await client.send(
-                new ScheduleKeyDeletionCommand({
-                  KeyId: this.output.keyId,
-                  PendingWindowInDays: props.deletionWindowInDays ?? 30,
-                })
-              );
-            } catch (err: any) {
-              if (err.name !== "NotFoundException") throw err;
-            }
-          }
-          return this.destroy();
-        }
-
-        let keyId: string;
-
-        if (this.phase === "create") {
-          const result = await client.send(
-            new CreateKeyCommand({
-              Description: props.description,
-              KeyUsage: "ENCRYPT_DECRYPT",
-              Origin: "AWS_KMS",
-              Tags: [
-                ...Object.entries(props.tags ?? {}).map(([Key, Value]) => ({ TagKey: Key, TagValue: Value })),
-                { TagKey: "alchemy_stage", TagValue: this.stage },
-                { TagKey: "alchemy_resource", TagValue: this.id },
-              ],
-              ...(props.policy ? { Policy: props.policy } : {}),
-            })
-          );
-          keyId = result.KeyMetadata!.KeyId!;
-        } else {
-          keyId = this.output!.keyId;
-        }
-
-        // Enable/disable key rotation
-        if (props.enableKeyRotation !== false) {
-          await client.send(new EnableKeyRotationCommand({ KeyId: keyId }));
-        } else {
-          await client.send(new DisableKeyRotationCommand({ KeyId: keyId }));
-        }
-
-        // Update policy if provided
-        if (props.policy) {
-          await client.send(
-            new PutKeyPolicyCommand({
-              KeyId: keyId,
-              PolicyName: "default",
-              Policy: props.policy,
-            })
-          );
-        }
-
-        // Update tags
-        const tags = {
-          ...props.tags,
-          alchemy_stage: this.stage,
-          alchemy_resource: this.id,
-        };
-        await client.send(
-          new TagResourceCommand({
-            KeyId: keyId,
-            Tags: Object.entries(tags).map(([TagKey, TagValue]) => ({ TagKey, TagValue })),
-          })
-        );
-
-        // Describe to get full info
-        const desc = await client.send(new DescribeKeyCommand({ KeyId: keyId }));
-
-        return {
-          ...props,
-          arn: desc.KeyMetadata!.Arn!,
-          keyId: desc.KeyMetadata!.KeyId!,
-        };
-      }
-    );
-  '';
-
-  # ============================================================================
-  # Static: src/resources/kms-alias.ts
-  # ============================================================================
-  kmsAliasTs = ''
-    // Custom alchemy Resource for AWS KMS Alias.
-    // Generated by stackpanel — static library code.
-    import type { Context } from "alchemy";
-    import { Resource } from "alchemy";
-
-    export interface KmsAliasProps {
-      /** Alias name (must start with "alias/") */
-      aliasName: string;
-      /** Target KMS key ID or ARN */
-      targetKeyId: string;
-    }
-
-    export interface KmsAlias extends KmsAliasProps {
-      /** ARN of the alias */
-      aliasArn: string;
-    }
-
-    export const KmsAlias = Resource(
-      "kms::Alias",
-      async function (
-        this: Context<KmsAlias>,
-        _id: string,
-        props: KmsAliasProps,
-      ): Promise<KmsAlias> {
-        const {
-          KMSClient,
-          CreateAliasCommand,
-          DeleteAliasCommand,
-          UpdateAliasCommand,
-          ListAliasesCommand,
-        } = await import("@aws-sdk/client-kms");
-        const client = new KMSClient({});
-
-        const aliasName = props.aliasName.startsWith("alias/")
-          ? props.aliasName
-          : `alias/''${props.aliasName}`;
-
-        if (this.phase === "delete") {
-          try {
-            await client.send(new DeleteAliasCommand({ AliasName: aliasName }));
-          } catch (err: any) {
-            if (err.name !== "NotFoundException") throw err;
-          }
-          return this.destroy();
-        }
-
-        // Check if alias already exists
-        let aliasExists = false;
-        try {
-          const list = await client.send(
-            new ListAliasesCommand({ KeyId: props.targetKeyId })
-          );
-          aliasExists = (list.Aliases ?? []).some(a => a.AliasName === aliasName);
-        } catch {
-          // ignore — will try create
-        }
-
-        if (aliasExists) {
-          await client.send(
-            new UpdateAliasCommand({
-              AliasName: aliasName,
-              TargetKeyId: props.targetKeyId,
-            })
-          );
-        } else {
-          try {
-            await client.send(
-              new CreateAliasCommand({
-                AliasName: aliasName,
-                TargetKeyId: props.targetKeyId,
-              })
-            );
-          } catch (err: any) {
-            if (err.name === "AlreadyExistsException") {
-              await client.send(
-                new UpdateAliasCommand({
-                  AliasName: aliasName,
-                  TargetKeyId: props.targetKeyId,
-                })
-              );
-            } else {
-              throw err;
-            }
-          }
-        }
-
-        // Get the ARN from the account
-        const { AccountId } = await import("alchemy/aws");
-        const accountId = await AccountId();
-        const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
-        const aliasArn = `arn:aws:kms:''${region}:''${accountId}:''${aliasName}`;
-
-        return {
-          ...props,
-          aliasName,
-          aliasArn,
-        };
-      }
-    );
-  '';
 
   # ============================================================================
   # Module .ts file entries (copied from paths)
   # ============================================================================
-  moduleFileEntries = lib.mapAttrs' (id: mod:
-    lib.nameValuePair "${outputDir}/modules/${id}.ts" {
-      text = builtins.readFile mod.path;
-      mode = "0644";
-      description = "Infra module: ${mod.name}";
-      source = "infra";
-    }
-  ) cfg.modules;
+  moduleFileEntries =
+    lib.mapAttrs' (
+      id: mod:
+        lib.nameValuePair "${outputDir}/modules/${id}.ts" {
+          text = builtins.readFile mod.path;
+          mode = "0644";
+          description = "Infra module: ${mod.name}";
+          source = "infra";
+        }
+    )
+    cfg.modules;
 
-in
-{
+in {
   config = lib.mkIf cfg.enable {
-
     # ==========================================================================
     # File generation
     # ==========================================================================
-    stackpanel.files.entries = {
-      # Infra class library
-      "${outputDir}/src/index.ts" = {
-        text = infraClassTs;
-        mode = "0644";
-        description = "Infra class library (@stackpanel/infra)";
-        source = "infra";
-      };
+    stackpanel.files.entries =
+      {
+        # Infra class library
+        "${outputDir}/src/index.ts" = {
+          text = infraClassTs;
+          mode = "0644";
+          description = "Infra class library (@stackpanel/infra)";
+          source = "infra";
+        };
 
-      # Per-module type interfaces
-      "${outputDir}/src/types.ts" = {
-        text = typesTs;
-        mode = "0644";
-        description = "Infra module input type interfaces";
-        source = "infra";
-      };
+        # Per-module type interfaces
+        "${outputDir}/src/types.ts" = {
+          text = typesTs;
+          mode = "0644";
+          description = "Infra module input type interfaces";
+          source = "infra";
+        };
 
-      # Custom alchemy resources
-      "${outputDir}/src/resources/kms-key.ts" = {
-        text = kmsKeyTs;
-        mode = "0644";
-        description = "Custom KMS Key alchemy resource";
-        source = "infra";
-      };
+        # Custom alchemy resources
+        "${outputDir}/src/resources/kms-key.ts" = {
+          text = kmsKeyTs;
+          mode = "0644";
+          description = "Custom KMS Key alchemy resource";
+          source = "infra";
+        };
 
-      "${outputDir}/src/resources/kms-alias.ts" = {
-        text = kmsAliasTs;
-        mode = "0644";
-        description = "Custom KMS Alias alchemy resource";
-        source = "infra";
-      };
+        "${outputDir}/src/resources/kms-alias.ts" = {
+          text = kmsAliasTs;
+          mode = "0644";
+          description = "Custom KMS Alias alchemy resource";
+          source = "infra";
+        };
 
-      # Orchestrator
-      "${outputDir}/alchemy.run.ts" = {
-        text = alchemyRunTs;
-        mode = "0644";
-        description = "Alchemy orchestrator (entrypoint)";
-        source = "infra";
-      };
+        # Orchestrator
+        "${outputDir}/alchemy.run.ts" = {
+          text = alchemyRunTs;
+          mode = "0644";
+          description = "Alchemy orchestrator (entrypoint)";
+          source = "infra";
+        };
 
-      # Package.json (type="json" for deep-merge with other modules like SST)
-      "${outputDir}/package.json" = {
-        type = "json";
-        jsonValue = packageJsonValue;
-        mode = "0644";
-        description = "Infrastructure package dependencies";
-        source = "infra";
-      };
+        # TSConfig
+        "${outputDir}/tsconfig.json" = {
+          type = "json";
+          jsonValue = tsconfigJsonValue;
+          mode = "0644";
+          description = "TypeScript configuration for infra package";
+          source = "infra";
+        };
 
-      # TSConfig
-      "${outputDir}/tsconfig.json" = {
-        type = "json";
-        jsonValue = tsconfigJsonValue;
-        mode = "0644";
-        description = "TypeScript configuration for infra package";
-        source = "infra";
-      };
-
-      # Inputs JSON (state file)
-      "${stateDir}/infra-inputs.json" = {
-        text = inputsJsonStr;
-        mode = "0600"; # restricted — may contain sensitive config
-        description = "Serialized infra module inputs";
-        source = "infra";
-      };
-    } // moduleFileEntries;
+        # Inputs JSON (state file)
+        "${stateDir}/infra-inputs.json" = {
+          text = inputsJsonStr;
+          mode = "0600"; # restricted — may contain sensitive config
+          description = "Serialized infra module inputs";
+          source = "infra";
+        };
+      }
+      // moduleFileEntries;
 
     # ==========================================================================
     # Devshell environment
     # ==========================================================================
     stackpanel.devshell.env = {
       STACKPANEL_INFRA_INPUTS = "${stateDir}/infra-inputs.json";
+    };
+
+    # ==========================================================================
+    # Turbo workspace package (generates package.json + turbo.json tasks)
+    # ==========================================================================
+    stackpanel.turbo.packages.infra = {
+      name = cfg.package.name;
+      path = outputDir;
+      dependencies = { alchemy = "catalog:"; } // allDeps // cfg.package.dependencies;
+      devDependencies = {
+        bun2nix = "latest";
+      };
+      exports = {
+        "." = { default = "./src/index.ts"; };
+        "./*" = { default = "./src/*.ts"; };
+      };
+      scripts = {
+        "alchemy:deploy" = {
+          exec = "alchemy deploy";
+          turbo = {
+            enable = true;
+            cache = false;
+          };
+        };
+        "alchemy:destroy" = {
+          exec = "alchemy destroy";
+          turbo = {
+            enable = true;
+            cache = false;
+          };
+        };
+        "alchemy:dev" = {
+          exec = "alchemy dev";
+        };
+        postinstall = {
+          exec = "test -f bun.lock && bun2nix -o bun.nix || true";
+        };
+      };
     };
 
     # ==========================================================================
@@ -839,75 +402,80 @@ in
       };
 
       "infra:pull-outputs" = {
-        exec =
-          let
-            storageType = cfg.storage-backend.type;
-            dataDir = config.stackpanel.dirs.data;
-            outputsFile = "${dataDir}/infra-outputs.nix";
-          in
-          if storageType == "chamber" then ''
+        exec = let
+          storageType = cfg.storage-backend.type;
+          dataDir = config.stackpanel.dirs.data;
+          outputsFile = "${dataDir}/infra-outputs.nix";
+        in
+          if storageType == "chamber"
+          then ''
             echo "Pulling outputs from chamber..."
             SERVICE="${cfg.storage-backend.chamber.service}"
             OUTPUT_FILE="${outputsFile}"
 
             echo "{" > "$OUTPUT_FILE"
-            ${lib.concatMapStringsSep "\n" (id:
-              let
-                mod = cfg.modules.${id};
-                syncKeys = builtins.filter (k:
-                  (mod.outputs.${k}.sync or false)
-                ) (builtins.attrNames mod.outputs);
-              in
-              ''
-                echo '  ${id} = {' >> "$OUTPUT_FILE"
-                ${lib.concatMapStringsSep "\n" (key:
-                  let
-                    formattedKey = builtins.replaceStrings
-                      ["$module" "$key"] [id key] cfg.key-format;
-                  in
-                  ''
-                    VALUE=$(chamber read -q "$SERVICE" "${formattedKey}" 2>/dev/null || echo "")
-                    if [ -n "$VALUE" ]; then
-                      echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
-                    fi
-                  ''
-                ) syncKeys}
-                echo '  };' >> "$OUTPUT_FILE"
-              ''
-            ) moduleIds}
+            ${lib.concatMapStringsSep "\n" (
+                id: let
+                  mod = cfg.modules.${id};
+                  syncKeys = builtins.filter (
+                    k: (mod.outputs.${k}.sync or false)
+                  ) (builtins.attrNames mod.outputs);
+                in ''
+                  echo '  ${id} = {' >> "$OUTPUT_FILE"
+                  ${lib.concatMapStringsSep "\n" (
+                      key: let
+                        formattedKey =
+                          builtins.replaceStrings
+                          ["$module" "$key"] [id key]
+                          cfg.key-format;
+                      in ''
+                        VALUE=$(chamber read -q "$SERVICE" "${formattedKey}" 2>/dev/null || echo "")
+                        if [ -n "$VALUE" ]; then
+                          echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
+                        fi
+                      ''
+                    )
+                    syncKeys}
+                  echo '  };' >> "$OUTPUT_FILE"
+                ''
+              )
+              moduleIds}
             echo "}" >> "$OUTPUT_FILE"
             echo "Wrote outputs to $OUTPUT_FILE"
           ''
-          else if storageType == "ssm" then ''
+          else if storageType == "ssm"
+          then ''
             echo "Pulling outputs from SSM..."
             PREFIX="${cfg.storage-backend.ssm.prefix}"
             OUTPUT_FILE="${outputsFile}"
 
             echo "{" > "$OUTPUT_FILE"
-            ${lib.concatMapStringsSep "\n" (id:
-              let
-                mod = cfg.modules.${id};
-                syncKeys = builtins.filter (k:
-                  (mod.outputs.${k}.sync or false)
-                ) (builtins.attrNames mod.outputs);
-              in
-              ''
-                echo '  ${id} = {' >> "$OUTPUT_FILE"
-                ${lib.concatMapStringsSep "\n" (key:
-                  let
-                    formattedKey = builtins.replaceStrings
-                      ["$module" "$key"] [id key] cfg.key-format;
-                  in
-                  ''
-                    VALUE=$(aws ssm get-parameter --name "$PREFIX/${formattedKey}" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-                    if [ -n "$VALUE" ]; then
-                      echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
-                    fi
-                  ''
-                ) syncKeys}
-                echo '  };' >> "$OUTPUT_FILE"
-              ''
-            ) moduleIds}
+            ${lib.concatMapStringsSep "\n" (
+                id: let
+                  mod = cfg.modules.${id};
+                  syncKeys = builtins.filter (
+                    k: (mod.outputs.${k}.sync or false)
+                  ) (builtins.attrNames mod.outputs);
+                in ''
+                  echo '  ${id} = {' >> "$OUTPUT_FILE"
+                  ${lib.concatMapStringsSep "\n" (
+                      key: let
+                        formattedKey =
+                          builtins.replaceStrings
+                          ["$module" "$key"] [id key]
+                          cfg.key-format;
+                      in ''
+                        VALUE=$(aws ssm get-parameter --name "$PREFIX/${formattedKey}" --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+                        if [ -n "$VALUE" ]; then
+                          echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
+                        fi
+                      ''
+                    )
+                    syncKeys}
+                  echo '  };' >> "$OUTPUT_FILE"
+                ''
+              )
+              moduleIds}
             echo "}" >> "$OUTPUT_FILE"
             echo "Wrote outputs to $OUTPUT_FILE"
           ''
@@ -944,7 +512,7 @@ in
         tasks = false;
         appModule = false;
       };
-      tags = [ "infrastructure" "alchemy" "iac" ];
+      tags = ["infrastructure" "alchemy" "iac"];
       priority = 15; # Load early — other modules may depend on infra outputs
     };
 
@@ -963,9 +531,11 @@ in
     ];
 
     stackpanel.motd.features =
-      [ "Infrastructure (${cfg.framework})" ]
+      ["Infrastructure (${cfg.framework})"]
       ++ lib.optional (cfg.storage-backend.type != "none")
-        "Output sync (${cfg.storage-backend.type})";
+         "Output sync (${cfg.storage-backend.type})"
+      ++ lib.optional (cfg.package.bun-nix != null || allModulesHaveBunDeps)
+         "Deps validated (bun2nix)";
 
     # ==========================================================================
     # Agent serialization
@@ -973,21 +543,29 @@ in
     stackpanel.serializable.infra = {
       inherit (cfg) enable framework key-format;
       output-dir = cfg.output-dir;
-      storage-backend = {
-        inherit (cfg.storage-backend) type;
-      } // lib.optionalAttrs (cfg.storage-backend.type == "chamber") {
-        service = cfg.storage-backend.chamber.service;
-      } // lib.optionalAttrs (cfg.storage-backend.type == "sops") {
-        file-path = cfg.storage-backend.sops.file-path;
-      } // lib.optionalAttrs (cfg.storage-backend.type == "ssm") {
-        prefix = cfg.storage-backend.ssm.prefix;
-      };
-      modules = lib.mapAttrs (_id: mod: {
-        inherit (mod) name description;
-        outputs = lib.mapAttrs (_k: v: {
-          inherit (v) description sensitive sync;
-        }) mod.outputs;
-      }) cfg.modules;
+      storage-backend =
+        {
+          inherit (cfg.storage-backend) type;
+        }
+        // lib.optionalAttrs (cfg.storage-backend.type == "chamber") {
+          service = cfg.storage-backend.chamber.service;
+        }
+        // lib.optionalAttrs (cfg.storage-backend.type == "sops") {
+          file-path = cfg.storage-backend.sops.file-path;
+        }
+        // lib.optionalAttrs (cfg.storage-backend.type == "ssm") {
+          prefix = cfg.storage-backend.ssm.prefix;
+        };
+      modules =
+        lib.mapAttrs (_id: mod: {
+          inherit (mod) name description;
+          outputs =
+            lib.mapAttrs (_k: v: {
+              inherit (v) description sensitive sync;
+            })
+            mod.outputs;
+        })
+        cfg.modules;
     };
   };
 }

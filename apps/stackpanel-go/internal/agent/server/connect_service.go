@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -365,35 +367,26 @@ func (s *AgentServiceServer) Exec(
 	ctx context.Context,
 	req *connect.Request[gopb.ExecRequest],
 ) (*connect.Response[gopb.ExecResponse], error) {
-	cmd := exec.CommandContext(ctx, req.Msg.Command, req.Msg.Args...)
-
+	cwd := s.server.config.ProjectRoot
 	if req.Msg.Cwd != "" {
-		cmd.Dir = req.Msg.Cwd
-	} else {
-		cmd.Dir = s.server.config.ProjectRoot
+		cwd = req.Msg.Cwd
 	}
 
-	// Set environment
-	cmd.Env = os.Environ()
+	// Convert map[string]string env to []string ("KEY=value") for the executor
+	var env []string
 	for k, v := range req.Msg.Env {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	stdout, _ := cmd.Output()
-	var stderr string
-	if exitErr, ok := cmd.ProcessState.ExitCode(), cmd.ProcessState != nil; ok {
-		_ = exitErr
-	}
-
-	exitCode := 0
-	if cmd.ProcessState != nil {
-		exitCode = cmd.ProcessState.ExitCode()
+	res, err := s.server.exec.RunWithOptions(req.Msg.Command, cwd, env, req.Msg.Args...)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	return connect.NewResponse(&gopb.ExecResponse{
-		ExitCode: int32(exitCode),
-		Stdout:   string(stdout),
-		Stderr:   stderr,
+		ExitCode: int32(res.ExitCode),
+		Stdout:   res.Stdout,
+		Stderr:   res.Stderr,
 	}), nil
 }
 
@@ -446,7 +439,7 @@ func (s *AgentServiceServer) NixEval(
 }
 
 // =============================================================================
-// Services (process-compose)
+// Services (process-compose) - Uses HTTP API at localhost:$PC_PORT_NUM
 // =============================================================================
 
 func (s *AgentServiceServer) GetServicesStatus(
@@ -458,42 +451,47 @@ func (s *AgentServiceServer) GetServicesStatus(
 		Services: []*gopb.ServiceStatus{},
 	}
 
-	// Query process-compose for running processes
-	res, err := s.server.exec.Run("process-compose", "process", "list", "-j")
-	if err != nil || res.ExitCode != 0 {
+	// Query process-compose HTTP API for running processes
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/processes"
+
+	httpResp, err := client.Get(apiURL)
+	if err != nil {
 		// process-compose not running or not available
 		return connect.NewResponse(resp), nil
 	}
+	defer httpResp.Body.Close()
 
-	// Parse JSON output (try { data: [...] } format first, then plain array)
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return connect.NewResponse(resp), nil
+	}
+
+	// Parse JSON output: { "data": [...] }
 	type pcProcess struct {
 		Name       string `json:"name"`
 		Namespace  string `json:"namespace"`
 		Status     string `json:"status"`
 		PID        int    `json:"pid"`
+		IsRunning  bool   `json:"is_running"`
 		SystemTime string `json:"system_time"`
 	}
-
-	var processes []pcProcess
 
 	var wrapped struct {
 		Data []pcProcess `json:"data"`
 	}
-	if err := json.Unmarshal([]byte(res.Stdout), &wrapped); err == nil {
-		processes = wrapped.Data
-	} else {
-		// Try plain array
-		_ = json.Unmarshal([]byte(res.Stdout), &processes)
+	if err := json.Unmarshal(body, &wrapped); err != nil {
+		return connect.NewResponse(resp), nil
 	}
 
 	// Filter for processes in the "services" namespace
 	anyRunning := false
-	for _, p := range processes {
+	for _, p := range wrapped.Data {
 		if p.Namespace != "services" {
 			continue
 		}
 		status := "stopped"
-		if isProcessRunning(p.Status) {
+		if p.IsRunning || isProcessRunning(p.Status) {
 			status = "running"
 			anyRunning = true
 		}
@@ -517,15 +515,25 @@ func (s *AgentServiceServer) StartService(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
 	}
 
-	res, err := s.server.exec.Run("process-compose", "process", "start", name)
+	// Use process-compose HTTP API: POST /process/start/{name}
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/start/" + name
+
+	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, nil)
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start service: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect to process-compose: %w", err))
 	}
-	if res.ExitCode != 0 {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose start failed: %s", res.Stderr))
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(httpResp.Body)
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose start failed: %s", errResp["error"]))
 	}
 
-	log.Info().Str("service", name).Msg("Service started via process-compose")
+	log.Info().Str("service", name).Msg("Service started via process-compose API")
 	return connect.NewResponse(&gopb.ServiceResponse{
 		Success: true,
 		Message: fmt.Sprintf("Service %s started", name),
@@ -541,15 +549,25 @@ func (s *AgentServiceServer) StopService(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
 	}
 
-	res, err := s.server.exec.Run("process-compose", "process", "stop", name)
+	// Use process-compose HTTP API: PATCH /process/stop/{name}
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/stop/" + name
+
+	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPatch, apiURL, nil)
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop service: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect to process-compose: %w", err))
 	}
-	if res.ExitCode != 0 {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose stop failed: %s", res.Stderr))
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(httpResp.Body)
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose stop failed: %s", errResp["error"]))
 	}
 
-	log.Info().Str("service", name).Msg("Service stopped via process-compose")
+	log.Info().Str("service", name).Msg("Service stopped via process-compose API")
 	return connect.NewResponse(&gopb.ServiceResponse{
 		Success: true,
 		Message: fmt.Sprintf("Service %s stopped", name),
@@ -565,15 +583,25 @@ func (s *AgentServiceServer) RestartService(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("service name required"))
 	}
 
-	res, err := s.server.exec.Run("process-compose", "process", "restart", name)
+	// Use process-compose HTTP API: POST /process/restart/{name}
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/process/restart/" + name
+
+	httpReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, nil)
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to restart service: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect to process-compose: %w", err))
 	}
-	if res.ExitCode != 0 {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose restart failed: %s", res.Stderr))
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(httpResp.Body)
+		var errResp map[string]string
+		json.Unmarshal(body, &errResp)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("process-compose restart failed: %s", errResp["error"]))
 	}
 
-	log.Info().Str("service", name).Msg("Service restarted via process-compose")
+	log.Info().Str("service", name).Msg("Service restarted via process-compose API")
 	return connect.NewResponse(&gopb.ServiceResponse{
 		Success: true,
 		Message: fmt.Sprintf("Service %s restarted", name),
