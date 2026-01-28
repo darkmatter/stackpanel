@@ -31,6 +31,7 @@
     ./codegen.nix
     ./core.nix
     ./devshell.nix
+    ./dns.nix
     ./extensions.nix
     ./global-services.nix
     ./healthchecks.nix

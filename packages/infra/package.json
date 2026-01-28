@@ -25,8 +25,11 @@
     "alchemy:deploy": "alchemy deploy",
     "alchemy:destroy": "alchemy destroy",
     "alchemy:dev": "alchemy dev",
-    "deploy:web": "cd ../.. && flyctl deploy --config packages/infra/fly/web/fly.toml",
+    "container:build:web": "cd ../.. && nix build --impure .#packages.x86_64-linux.container-web",
+    "container:push:web": "cd ../.. && nix run --impure .#copy-container-web -- docker://registry.fly.io/ --dest-creds x:$(flyctl auth token)",
+    "deploy:web": "cd ../.. && (flyctl status -a stackpanel-web > /dev/null 2>&1 || flyctl apps create stackpanel-web ) && flyctl deploy --config packages/infra/fly/web/fly.toml --image registry.fly.io/stackpanel-web:latest",
     "postinstall": "test -f bun.lock && bun2nix -o bun.nix || true",
+    "ship:web": "turbo run deploy:web",
     "sst:deploy": "bunx sst deploy",
     "sst:dev": "bunx sst dev",
     "sst:remove": "bunx sst remove"

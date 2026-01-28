@@ -122,53 +122,6 @@ Edit `.stackpanel/config.nix` to configure your environment:
 }
 ```
 
-## Features
-
-### Deterministic Ports
-
-Ports are computed from your project name, ensuring everyone on the team gets the same ports without configuration:
-
-```
-my-project → base port 4200
-  web      → 4200
-  api      → 4201
-  postgres → 4210
-  redis    → 4211
-```
-
-### Secrets Management
-
-Team-based secrets with AGE encryption:
-
-```nix
-stackpanel.secrets = {
-  master-key.enable = true;
-  
-  apps.api = {
-    dev = {
-      DATABASE_URL = "postgres://...";
-      API_KEY = "secret:api-key";
-    };
-  };
-};
-```
-
-### IDE Integration
-
-Auto-generated VS Code workspace with:
-- Correct terminal environment
-- Extension recommendations  
-- Debugger configurations
-- Task runners
-
-### Web Studio
-
-Local web UI at `localhost:9876` for:
-- Managing services
-- Viewing logs
-- Editing configuration
-- Installing extensions
-
 ## Documentation
 
 Full documentation is available at [stackpanel.dev](https://stackpanel.dev/docs):
@@ -181,27 +134,11 @@ Full documentation is available at [stackpanel.dev](https://stackpanel.dev/docs)
 
 ## Architecture
 
-For details on the internal architecture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-## Development
-
-```bash
-# Enter the dev shell
-nix develop --impure
-
-# Start all services
-dev
-
-# Run the web app only
-bun run dev:web
-
-# Run the Go agent
-bun run dev:agent
-```
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for details on the internal architecture.
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+Contributions are welcome! Please see our [contributing guide](./CONTRIBUTING.md) for details.
 
 ## License
 

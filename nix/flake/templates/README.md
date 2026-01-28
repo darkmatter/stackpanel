@@ -1,13 +1,13 @@
 # Stackpanel Templates
 
-Project templates for bootstrapping new stackpanel projects.
+Project templates for bootstrapping new Stackpanel projects.
 
 ## Available Templates
 
 | Template | Description | Use Case |
 |----------|-------------|----------|
 | `default` | devenv + flake-parts | Full-featured, recommended for most projects |
-| `native` | Native Nix shell + flake-parts | When you want stackpanel without devenv |
+| `native` | Native Nix shell + flake-parts | When you want Stackpanel without devenv |
 | `devenv` | Standalone devenv.yaml | For devenv-first workflows (no flake.nix) |
 | `minimal` | devenv without flake-parts | Simple flake without flake-parts |
 
@@ -45,13 +45,13 @@ nix flake init -t github:darkmatter/stackpanel
 │   └── devenv.nix         # Devenv options (packages, languages, etc.)
 ├── .stackpanel/
 │   └── config.nix         # Stackpanel options
-└── .envrc                 # Direnv configuration
+└── .envrc                 # direnv configuration
 ```
 
 **Features:**
 - Multi-platform support (Linux/Darwin, x86_64/aarch64)
 - All devenv features (processes, services, languages)
-- All stackpanel features (CLI, IDE, theme, services)
+- All Stackpanel features (CLI, IDE, theme, services)
 - Clean separation of concerns
 
 ---
@@ -70,13 +70,13 @@ nix flake init -t github:darkmatter/stackpanel#native
 ├── flake.nix              # Flake with flakeModules.native
 ├── .stackpanel/
 │   └── config.nix         # Stackpanel options
-└── .envrc                 # Direnv configuration
+└── .envrc                 # direnv configuration
 ```
 
 **Features:**
 - Faster evaluation (no devenv dependency)
 - Pure Nix implementation
-- All stackpanel features
+- All Stackpanel features
 - No `devenv up` (use external process managers)
 
 ---
@@ -93,10 +93,10 @@ nix flake init -t github:darkmatter/stackpanel#devenv
 ```
 .
 ├── devenv.yaml            # Devenv inputs and imports
-├── devenv.nix             # Devenv + stackpanel options
+├── devenv.nix             # Devenv + Stackpanel options
 ├── .stackpanel/
 │   └── config.nix         # Stackpanel options
-└── .envrc                 # Direnv configuration
+└── .envrc                 # direnv configuration
 ```
 
 **Usage:**
@@ -121,7 +121,7 @@ nix flake init -t github:darkmatter/stackpanel#minimal
 ├── flake.nix              # Standard Nix flake
 ├── .stackpanel/
 │   └── config.nix         # Stackpanel options
-└── .envrc                 # Direnv configuration
+└── .envrc                 # direnv configuration
 ```
 
 **Features:**
@@ -136,18 +136,24 @@ All templates use the same `.stackpanel/config.nix` structure:
 ```nix
 {
   enable = true;
-  cli.enable = true;             # CLI tools
-  theme.enable = true;           # Starship prompt
-  ide.vscode.enable = true;      # VS Code integration
-
-  # motd.enable = true;
-  # aws.roles-anywhere.enable = true;
-  # globalServices.postgres.enable = true;
+  
+  # Shell prompt theme
+  theme.enable = true;
+  
+  # VS Code integration
+  ide.vscode.enable = true;
+  
+  # Global services
+  globalServices = {
+    postgres.enable = true;
+    redis.enable = true;
+  };
 }
 ```
 
 ## Learn More
 
 - [Stackpanel Documentation](https://stackpanel.dev/docs)
-- [Devenv Documentation](https://devenv.sh)
+- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
+- [devenv Documentation](https://devenv.sh)
 - [Flake Parts](https://flake.parts)

@@ -1,0 +1,11 @@
+# ==============================================================================
+# docs/default.nix
+#
+# Documentation generation module. Generates README.md and other docs
+# from templates at Nix evaluation time.
+# ==============================================================================
+{
+  imports = [
+    ./readme.nix
+  ];
+}

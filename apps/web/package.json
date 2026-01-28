@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "ALCHEMY=1 vite build",
+		"build:fly": "vite build",
 		"dev": "vite dev --host",
 		"serve": "vite preview",
 		"test": "vitest run --exclude 'src/test/integration/**'",

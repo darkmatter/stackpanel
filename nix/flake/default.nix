@@ -200,7 +200,7 @@ in
                 stackpanelConfigModule
               ]
               ++ (perSystemCfg.imports or [ ]);
-              specialArgs = { inherit pkgs lib inputs; };
+              specialArgs = { inherit pkgs lib inputs self; };
             };
 
             spConfig = stackpanelEval.config.stackpanel;
@@ -477,6 +477,39 @@ in
                 packages = directPkgs;
                 # Nested attrsets (like scripts) go to legacyPackages for nix run .#scripts.<name>
                 legacyPackages = nestedPkgs;
+              }
+            ))
+
+            # Expose container images and copy scripts as flake outputs
+            # Uses nix2container directly (no devenv CLI required)
+            #
+            # Build: nix build .#container-<name>
+            # Push:  nix run .#copy-container-<name>
+            (lib.mkIf (spConfig.enable or false) (
+              let
+                containersComputed = spConfig.containersComputed or { };
+                containerImages = containersComputed.images or { };
+                copyScripts = containersComputed.copyScripts or { };
+              in
+              lib.mkIf (containerImages != { }) {
+                # Container images as packages: nix build .#container-<name>
+                packages = lib.mapAttrs' (
+                  name: image: {
+                    name = "container-${name}";
+                    value = image;
+                  }
+                ) containerImages;
+
+                # Copy scripts as apps: nix run .#copy-container-<name>
+                apps = lib.mapAttrs' (
+                  name: script: {
+                    name = "copy-container-${name}";
+                    value = {
+                      type = "app";
+                      program = "${script}";
+                    };
+                  }
+                ) copyScripts;
               }
             ))
 

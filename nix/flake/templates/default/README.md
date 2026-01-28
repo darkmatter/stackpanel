@@ -1,29 +1,31 @@
 # My Project
 
-Powered by [stackpanel](https://github.com/darkmatter/stackpanel).
+Powered by [Stackpanel](https://stackpanel.dev) - reproducible dev environments without the complexity.
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- [Nix](https://nixos.org/download.html) with flakes enabled
-- [direnv](https://direnv.net/) (recommended)
+- [Nix](https://nixos.org/download.html) with flakes enabled ([Determinate Nix Installer](https://github.com/DeterminateSystems/nix-installer) recommended)
+- [direnv](https://direnv.net/) (optional but recommended)
 
 ### Enter the Dev Environment
 
 ```bash
-# Allow direnv (first time only)
+# With direnv (recommended)
 direnv allow
 
-# Or manually enter the shell
+# Or manually
 nix develop --impure
 ```
 
-### Run Development Server
+You'll see a welcome message with available commands when the shell activates.
+
+### Start Development
 
 ```bash
-# Start all processes defined in devenv
-devenv up
+# Start all services and processes
+dev
 
 # Or run individual commands
 bun run dev
@@ -31,65 +33,73 @@ bun run dev
 
 ## Configuration
 
-- **Stackpanel config**: `.stackpanel/config.nix`
-- **Devenv options**: `nix/devenv.nix`
-- **Flake entry**: `flake.nix`
+### Stackpanel Config
 
-### Enable Stackpanel Features
-
-Edit `.stackpanel/config.nix`:
+Edit `.stackpanel/config.nix` to configure your environment:
 
 ```nix
 {
   enable = true;
-  cli.enable = true;             # CLI tools
-  theme.enable = true;           # Starship prompt
-  ide.vscode.enable = true;      # VS Code integration
-
-  # AWS certificate auth
-  # aws.roles-anywhere.enable = true;
-
-  # Global services
-  # globalServices.postgres.enable = true;
+  
+  # Shell prompt theme
+  theme.enable = true;
+  
+  # VS Code integration
+  ide.vscode.enable = true;
+  
+  # Enable services
+  globalServices = {
+    postgres.enable = true;
+    redis.enable = true;
+  };
 }
 ```
 
-### Add Packages & Languages
+### Devenv Options
 
-Edit `nix/devenv.nix`:
+Edit `nix/devenv.nix` for packages, languages, and processes:
 
 ```nix
 { pkgs }: {
   packages = with pkgs; [
     nodejs
     bun
-    go
   ];
 
-  languages = {
-    typescript.enable = true;
-    go.enable = true;
-  };
+  languages.typescript.enable = true;
 
   env = {
-    DATABASE_URL = "postgres://localhost:5432/myapp";
+    NODE_ENV = "development";
   };
 }
 ```
 
-## Common Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
+| `dev` | Start development (all processes) |
 | `direnv allow` | Activate the dev environment |
-| `devenv up` | Start all processes |
-| `stackpanel status` | Check stackpanel services |
-| `stackpanel users sync` | Sync team from GitHub |
-| `nix flake check` | Validate the flake |
+| `stackpanel status` | Check service status |
+| `stackpanel services start` | Start background services |
 | `nix flake update` | Update dependencies |
+
+## Project Structure
+
+```
+.
+├── .stackpanel/           # Stackpanel configuration
+│   ├── config.nix         # Main config
+│   ├── state/             # Runtime state (gitignored)
+│   └── gen/               # Generated files
+├── nix/
+│   └── devenv.nix         # Devenv options
+├── flake.nix              # Nix flake entrypoint
+└── .envrc                 # direnv integration
+```
 
 ## Learn More
 
-- [stackpanel Documentation](https://stackpanel.dev/docs)
-- [devenv Documentation](https://devenv.sh)
-- [Nix Flakes](https://nixos.wiki/wiki/Flakes)
+- [Stackpanel Documentation](https://stackpanel.dev/docs)
+- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
+- [Configuration Reference](https://stackpanel.dev/docs/reference)
