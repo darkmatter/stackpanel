@@ -58,4 +58,16 @@
 
   # Priority for ordering (lower = higher priority)
   priority = 100;
+
+  # Configuration boilerplate to inject into user's config.nix when module is installed
+  # This should be a commented-out example config that users can uncomment/modify
+  # The boilerplate will be injected into the "# STACKPANEL_MODULES_BEGIN" section
+  configBoilerplate = ''
+    # ${meta.name} - ${meta.description}
+    # See: ${meta.homepage or "https://stackpanel.dev/docs/modules/${meta.id}"}
+    # my-module = {
+    #   enable = true;
+    #   # Add your configuration here
+    # };
+  '';
 }
