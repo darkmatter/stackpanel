@@ -37,4 +37,14 @@
   };
 
   priority = 50;
+
+  # Configuration boilerplate to inject into user's config.nix when module is installed
+  configBoilerplate = ''
+    # OxLint - Blazing fast JavaScript/TypeScript linter
+    # See: https://oxc.rs
+    # oxlint = {
+    #   enable = true;
+    #   # Global linting is handled per-app in apps.nix via app.linting.oxlint
+    # };
+  '';
 }

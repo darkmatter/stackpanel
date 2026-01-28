@@ -1,15 +1,20 @@
 # ==============================================================================
-# module.nix - Docker & Container Module
+# module.nix - Docker/Dockerfile Fallback Module
 #
-# Provides container image building and registry tooling.
+# Provides traditional Dockerfile generation as a FALLBACK for environments
+# that cannot use nix2container (e.g., CI systems requiring docker build).
 #
-# Other modules contribute images by setting stackpanel.docker.images:
+# PRIMARY PATH: Use stackpanel.containers (nix2container via devenv) instead:
+#   stackpanel.apps.web.container.enable = true;
+#   # Then: devenv container copy web
 #
+# FALLBACK PATH: Enable this module for Dockerfile generation:
 #   stackpanel.docker.enable = true;
 #   stackpanel.docker.images.web = {
 #     registry = "registry.fly.io";
 #     name = "stackpanel-web";
 #     dockerfile = {
+#       enable = true;  # Opt-in
 #       type = "bun";
 #       appPath = "apps/web";
 #       port = 3000;
@@ -20,7 +25,6 @@
 #   - Generates Dockerfiles at packages/infra/docker/<image>/Dockerfile
 #   - Provides skopeo in the devshell (push to any registry)
 #   - Computes full image refs (registry/name:tag)
-#   - Exposes nix2container.enable flag per image (advanced path)
 #
 # Generated layout:
 #   packages/infra/docker/
@@ -208,8 +212,12 @@ in
               dockerfile = {
                 enable = lib.mkOption {
                   type = lib.types.bool;
-                  default = true;
-                  description = "Generate a Dockerfile for this image.";
+                  default = false;
+                  description = ''
+                    Generate a Dockerfile for this image.
+                    This is a FALLBACK for environments that cannot use nix2container.
+                    Prefer stackpanel.apps.<name>.container.enable for nix2container.
+                  '';
                 };
 
                 type = lib.mkOption {
@@ -251,30 +259,18 @@ in
                   '';
                 };
               };
-
-              # ----- nix2container (advanced) -----
-              nix2container = {
-                enable = lib.mkOption {
-                  type = lib.types.bool;
-                  default = false;
-                  description = ''
-                    Build this image with nix2container (reproducible, no Docker daemon).
-                    When enabled, a flake output is created at containers.<name>.
-                    Requires nix2container flake input.
-                  '';
-                };
-              };
             };
           }
         )
       );
       default = { };
       description = ''
-        Container image definitions. Other modules contribute images here.
+        Container image definitions for Dockerfile-based builds (fallback path).
 
-        Each image can have a Dockerfile (auto-generated or custom) and/or
-        nix2container config. Dockerfiles are generated at:
-          packages/infra/docker/<name>/Dockerfile
+        For nix2container (recommended), use stackpanel.apps.<name>.container.enable
+        instead, then run: devenv container copy <name>
+
+        Dockerfiles are generated at: packages/infra/docker/<name>/Dockerfile
       '';
     };
 

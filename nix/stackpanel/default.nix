@@ -42,10 +42,12 @@ in
     ./secrets # SOPS helper
     ./sst # SST infrastructure provisioning
     ./infra # Alchemy-based infrastructure module system
-    ./docker # Container tooling (skopeo, OCI images)
+    ./docker # Dockerfile fallback (skopeo, OCI images)
+    ./containers # nix2container via devenv (primary container building)
     ./deployment # Deployment providers (Fly.io, etc.)
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
+    ./docs # Documentation generation (README, etc.)
 
     # Feature modules - auto-discovered from ./modules/
     # Supports both single files (module.nix) and directories (module/default.nix)

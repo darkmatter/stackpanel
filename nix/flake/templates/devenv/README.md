@@ -1,12 +1,14 @@
 # My Project
 
-Powered by [stackpanel](https://github.com/darkmatter/stackpanel) + [devenv](https://devenv.sh).
+Powered by [Stackpanel](https://stackpanel.dev) + [devenv](https://devenv.sh).
 
-## Getting Started
+> This template uses standalone devenv (no flake.nix required).
+
+## Quick Start
 
 ### Prerequisites
 
-- [Nix](https://nixos.org/download.html) with flakes enabled
+- [Nix](https://nixos.org/download.html) with flakes enabled ([Determinate Nix Installer](https://github.com/DeterminateSystems/nix-installer) recommended)
 - [devenv](https://devenv.sh/getting-started/)
 
 ### Enter the Dev Environment
@@ -20,10 +22,10 @@ echo "use devenv" > .envrc
 direnv allow
 ```
 
-### Run Development Server
+### Start Development
 
 ```bash
-# Start all processes defined in devenv.nix
+# Start all processes
 devenv up
 
 # Or run individual commands
@@ -35,50 +37,53 @@ bun run dev
 ```
 .
 ├── devenv.yaml            # Devenv inputs and imports
-├── devenv.nix             # Devenv configuration (packages, languages, etc.)
-├── .stackpanel/
-│   └── config.nix         # Stackpanel options (theme, AWS, services, etc.)
-└── devenv.lock            # Locked dependencies (auto-generated)
+├── devenv.nix             # Devenv configuration
+├── devenv.lock            # Locked dependencies (auto-generated)
+└── .stackpanel/
+    └── config.nix         # Stackpanel options
 ```
 
 ## Configuration
 
-### Stackpanel Options
+### Stackpanel Config
 
-Edit `.stackpanel/config.nix` to configure stackpanel features:
+Edit `.stackpanel/config.nix`:
 
 ```nix
 {
   enable = true;
-  cli.enable = true;             # CLI tools
-  theme.enable = true;           # Starship prompt
-  ide.vscode.enable = true;      # VS Code integration
-
-  # AWS certificate auth
-  # aws.roles-anywhere.enable = true;
-
-  # Global services
-  # globalServices.postgres.enable = true;
+  
+  # Shell prompt theme
+  theme.enable = true;
+  
+  # VS Code integration
+  ide.vscode.enable = true;
+  
+  # Enable services
+  globalServices = {
+    postgres.enable = true;
+    redis.enable = true;
+  };
 }
 ```
 
 ### Devenv Options
 
-Edit `devenv.nix` to configure the dev environment:
+Edit `devenv.nix`:
 
 ```nix
-{
+{ pkgs, ... }: {
   packages = [ pkgs.nodejs pkgs.bun ];
-
+  
   languages.typescript.enable = true;
-
+  
   env.DATABASE_URL = "postgres://localhost:5432/myapp";
-
+  
   processes.server.exec = "bun run dev";
 }
 ```
 
-## Common Commands
+## Commands
 
 | Command | Description |
 |---------|-------------|
@@ -90,6 +95,7 @@ Edit `devenv.nix` to configure the dev environment:
 
 ## Learn More
 
-- [stackpanel Documentation](https://stackpanel.dev/docs)
+- [Stackpanel Documentation](https://stackpanel.dev/docs)
+- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
 - [devenv Documentation](https://devenv.sh)
 - [devenv Options Reference](https://devenv.sh/reference/options/)
