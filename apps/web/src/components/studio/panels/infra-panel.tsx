@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Link } from "@tanstack/react-router";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
@@ -29,12 +30,10 @@ import {
 	CloudOff,
 	Key,
 	Loader2,
-	Play,
 	RefreshCw,
 	Save,
 	Settings,
 	Shield,
-	Trash2,
 } from "lucide-react";
 import { useAgentContext } from "@/lib/agent-provider";
 import {
@@ -46,6 +45,7 @@ import {
 	useSSTConfig,
 } from "./infra";
 import { PanelHeader } from "./shared/panel-header";
+import { CommandRunner } from "../command-runner";
 
 export function InfraPanel() {
 	const { isConnected } = useAgentContext();
@@ -62,12 +62,8 @@ export function InfraPanel() {
 		resources,
 		isLoading,
 		error,
-		isDeploying,
-		deployOutput,
 		deployStage,
 		setDeployStage,
-		handleDeploy,
-		handleRemove,
 		loadStatus,
 		currentProvider,
 	} = useSSTConfig();
@@ -212,13 +208,9 @@ export function InfraPanel() {
 						<DeployTabContent
 							isConfigured={isConfigured}
 							isDeployed={isDeployed}
-							isDeploying={isDeploying}
 							hasChanges={hasChanges}
 							deployStage={deployStage}
-							deployOutput={deployOutput}
 							setDeployStage={setDeployStage}
-							handleDeploy={handleDeploy}
-							handleRemove={handleRemove}
 						/>
 					</TabsContent>
 
@@ -374,23 +366,15 @@ function StatusTabContent({
 function DeployTabContent({
 	isConfigured,
 	isDeployed,
-	isDeploying,
 	hasChanges,
 	deployStage,
-	deployOutput,
 	setDeployStage,
-	handleDeploy,
-	handleRemove,
 }: {
 	isConfigured: boolean;
 	isDeployed: boolean;
-	isDeploying: boolean;
 	hasChanges: boolean;
 	deployStage: string;
-	deployOutput: string;
 	setDeployStage: (stage: string) => void;
-	handleDeploy: () => Promise<void>;
-	handleRemove: () => Promise<void>;
 }) {
 	return (
 		<Card>
@@ -427,38 +411,40 @@ function DeployTabContent({
 						</Select>
 					</Field>
 					<div className="flex items-end gap-2">
-						<Button
-							onClick={handleDeploy}
-							disabled={!isConfigured || isDeploying || hasChanges}
-							className="gap-2 flex-1"
-						>
-							{isDeploying ? (
-								<Loader2 className="h-4 w-4 animate-spin" />
-							) : (
-								<Play className="h-4 w-4" />
-							)}
-							{isDeploying ? "Deploying..." : "Deploy"}
-						</Button>
+						<CommandRunner
+							command="sst"
+							args={["deploy", "--stage", deployStage]}
+							label="Deploy"
+							description={`Deploy SST infrastructure to ${deployStage}`}
+							disabled={!isConfigured || hasChanges}
+							variant="default"
+						/>
 						{isDeployed && (
-							<Button
-								onClick={handleRemove}
-								disabled={isDeploying}
+							<CommandRunner
+								command="sst"
+								args={["remove", "--stage", deployStage]}
+								label="Remove"
+								description={`Remove SST infrastructure from ${deployStage}`}
 								variant="destructive"
-								size="icon"
-							>
-								<Trash2 className="h-4 w-4" />
-							</Button>
+							/>
 						)}
 					</div>
 				</FieldRow>
 
-				{deployOutput && (
-					<Field label="Output">
-						<pre className="max-h-64 overflow-auto rounded-lg border border-border bg-secondary/50 p-4 font-mono text-xs text-muted-foreground">
-							{deployOutput}
-						</pre>
-					</Field>
-				)}
+				{/* Info about CLI commands */}
+				<div className="rounded-lg border border-border bg-secondary/30 p-4">
+					<p className="text-muted-foreground text-sm">
+						You can also run these commands from your terminal:
+					</p>
+					<div className="mt-2 space-y-1 font-mono text-xs">
+						<div className="text-muted-foreground">
+							<span className="text-accent">$</span> sst deploy --stage {deployStage}
+						</div>
+						<div className="text-muted-foreground">
+							<span className="text-accent">$</span> sst remove --stage {deployStage}
+						</div>
+					</div>
+				</div>
 			</CardContent>
 		</Card>
 	);

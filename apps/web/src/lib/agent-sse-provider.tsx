@@ -13,6 +13,12 @@ import {
 
 const STORAGE_KEY = "stackpanel.agent.token";
 
+/**
+ * How often we expect heartbeats from the server (milliseconds).
+ * Server sends ping every 5 seconds, so we allow some buffer.
+ */
+const HEARTBEAT_TIMEOUT_MS = 12_000;
+
 export type AgentSSEStatus = "idle" | "connecting" | "connected" | "error";
 
 export type AgentSSEEvent = {
@@ -28,6 +34,10 @@ type AgentSSEContextValue = {
 	status: AgentSSEStatus;
 	error: Error | null;
 	lastEvent: AgentSSEEvent | null;
+	/** Timestamp of last heartbeat ping from server */
+	lastHeartbeat: number | null;
+	/** True if connected and receiving heartbeats */
+	isAlive: boolean;
 	connect: () => void;
 	disconnect: () => void;
 	addEventListener: (event: string, listener: AgentSSEListener) => () => void;
@@ -62,9 +72,12 @@ export function AgentSSEProvider({
 	const [status, setStatus] = useState<AgentSSEStatus>("idle");
 	const [error, setError] = useState<Error | null>(null);
 	const [lastEvent, setLastEvent] = useState<AgentSSEEvent | null>(null);
+	const [lastHeartbeat, setLastHeartbeat] = useState<number | null>(null);
+	const [isAlive, setIsAlive] = useState(false);
 	const eventSourceRef = useRef<EventSource | null>(null);
 	const listenersRef = useRef<Map<string, Set<AgentSSEListener>>>(new Map());
 	const registeredEventsRef = useRef<Map<string, EventListener>>(new Map());
+	const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const resolvedToken = token !== undefined ? token : storedToken;
 
@@ -81,6 +94,22 @@ export function AgentSSEProvider({
 		window.addEventListener("storage", onStorage);
 		return () => window.removeEventListener("storage", onStorage);
 	}, [token]);
+
+	// Reset heartbeat timeout - called on each heartbeat or connection
+	const resetHeartbeatTimeout = useCallback(() => {
+		// Clear existing timeout
+		if (heartbeatTimeoutRef.current) {
+			clearTimeout(heartbeatTimeoutRef.current);
+		}
+		// Mark as alive
+		setIsAlive(true);
+		// Set timeout to mark as stale if no heartbeat received
+		heartbeatTimeoutRef.current = setTimeout(() => {
+			setIsAlive(false);
+			setStatus("error");
+			setError(new Error("Connection stale (no heartbeat)"));
+		}, HEARTBEAT_TIMEOUT_MS);
+	}, []);
 
 	const dispatchEvent = useCallback(
 		(eventName: string, rawEvent: MessageEvent) => {
@@ -109,9 +138,16 @@ export function AgentSSEProvider({
 
 			if (eventName === "connected") {
 				setStatus("connected");
+				resetHeartbeatTimeout();
+			}
+
+			// Handle heartbeat pings
+			if (eventName === "ping") {
+				setLastHeartbeat(Date.now());
+				resetHeartbeatTimeout();
 			}
 		},
-		[],
+		[resetHeartbeatTimeout],
 	);
 
 	const attachEventListener = useCallback(
@@ -153,9 +189,17 @@ export function AgentSSEProvider({
 		eventSource.onerror = () => {
 			setStatus("error");
 			setError(new Error("SSE connection error"));
+			setIsAlive(false);
+			// Clear heartbeat timeout on error
+			if (heartbeatTimeoutRef.current) {
+				clearTimeout(heartbeatTimeoutRef.current);
+				heartbeatTimeoutRef.current = null;
+			}
 		};
 
+		// Always listen for connected and ping events for keepalive
 		attachEventListener("connected");
+		attachEventListener("ping");
 		for (const eventName of listenersRef.current.keys()) {
 			if (eventName === "*") continue;
 			attachEventListener(eventName);
@@ -163,6 +207,11 @@ export function AgentSSEProvider({
 	}, [attachEventListener, host, port, resolvedToken]);
 
 	const disconnect = useCallback(() => {
+		// Clear heartbeat timeout
+		if (heartbeatTimeoutRef.current) {
+			clearTimeout(heartbeatTimeoutRef.current);
+			heartbeatTimeoutRef.current = null;
+		}
 		if (eventSourceRef.current) {
 			for (const [eventName, handler] of registeredEventsRef.current) {
 				eventSourceRef.current.removeEventListener(eventName, handler);
@@ -172,6 +221,8 @@ export function AgentSSEProvider({
 			eventSourceRef.current = null;
 		}
 		setStatus("idle");
+		setIsAlive(false);
+		setLastHeartbeat(null);
 	}, []);
 
 	const addEventListener = useCallback(
@@ -217,11 +268,13 @@ export function AgentSSEProvider({
 			status,
 			error,
 			lastEvent,
+			lastHeartbeat,
+			isAlive,
 			connect,
 			disconnect,
 			addEventListener,
 		}),
-		[addEventListener, connect, disconnect, error, lastEvent, status],
+		[addEventListener, connect, disconnect, error, isAlive, lastEvent, lastHeartbeat, status],
 	);
 
 	return (
@@ -237,6 +290,14 @@ export function useAgentSSE(): AgentSSEContextValue {
 		throw new Error("useAgentSSE must be used within <AgentSSEProvider>");
 	}
 	return ctx;
+}
+
+/**
+ * Optional hook that returns SSE context if available, otherwise null.
+ * Useful for components that can work with or without SSE.
+ */
+export function useAgentSSEOptional(): AgentSSEContextValue | null {
+	return useContext(AgentSSEContext);
 }
 
 export function useAgentSSEEvent<T = unknown>(

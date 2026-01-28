@@ -58,6 +58,9 @@ type AgenixDecryptResponse struct {
 
 // handleAgenixSecretRead handles decrypting and reading a secret
 // POST /api/secrets/read
+//
+// The secret is looked up by ID from the variables data, and its value
+// (a vals reference like "ref+sops://...") is evaluated using `vals eval`.
 func (s *Server) handleAgenixSecretRead(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -75,41 +78,25 @@ func (s *Server) handleAgenixSecretRead(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	safeID := sanitizeSecretID(req.ID)
-	if safeID == "" {
-		s.writeAPIError(w, http.StatusBadRequest, "invalid secret id")
+	// Look up the variable by ID to get its vals reference
+	valsRef, err := s.getVariableValue(req.ID)
+	if err != nil {
+		s.writeAPIError(w, http.StatusNotFound, "secret not found: "+err.Error())
 		return
 	}
 
-	// Find the .age file
-	agePath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars", safeID+".age")
-	if _, err := os.Stat(agePath); os.IsNotExist(err) {
-		s.writeAPIError(w, http.StatusNotFound, "secret not found")
+	// Check if it's a vals reference (starts with "ref+")
+	if !strings.HasPrefix(valsRef, "ref+") {
+		// It's a literal value, just return it
+		s.writeAPI(w, http.StatusOK, AgenixDecryptResponse{
+			ID:    req.ID,
+			Value: valsRef,
+		})
 		return
 	}
 
-	// Find identity (private key) file
-	// Priority: request param > configured identity > default search
-	identityPath := req.IdentityPath
-	if identityPath == "" {
-		identityPath = s.GetConfiguredIdentityPath()
-	}
-	if identityPath == "" {
-		identityPath = s.findAgeIdentity()
-	}
-	if identityPath == "" {
-		s.writeAPIError(w, http.StatusBadRequest, "no identity file found - configure via /api/secrets/identity or create ~/.config/age/key.txt")
-		return
-	}
-
-	// Expand ~ in path
-	if strings.HasPrefix(identityPath, "~/") {
-		home, _ := os.UserHomeDir()
-		identityPath = filepath.Join(home, identityPath[2:])
-	}
-
-	// Decrypt using age
-	value, err := s.decryptAgeSecret(agePath, identityPath)
+	// Evaluate the vals reference using `vals eval`
+	value, err := s.evalValsRef(valsRef)
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt: "+err.Error())
 		return
@@ -123,6 +110,65 @@ func (s *Server) handleAgenixSecretRead(w http.ResponseWriter, r *http.Request) 
 		ID:    req.ID,
 		Value: value,
 	})
+}
+
+// getVariableValue looks up a variable by ID and returns its value
+func (s *Server) getVariableValue(id string) (string, error) {
+	data, err := s.readNixEntityJSON("variables")
+	if err != nil {
+		return "", fmt.Errorf("failed to read variables: %w", err)
+	}
+
+	var variables struct {
+		Variables map[string]struct {
+			Value string `json:"value"`
+		} `json:"variables"`
+	}
+
+	if err := json.Unmarshal(data, &variables); err != nil {
+		return "", fmt.Errorf("failed to parse variables: %w", err)
+	}
+
+	v, ok := variables.Variables[id]
+	if !ok {
+		return "", fmt.Errorf("variable %q not found", id)
+	}
+
+	return v.Value, nil
+}
+
+// evalValsRef evaluates a vals reference using `vals eval`
+func (s *Server) evalValsRef(ref string) (string, error) {
+	// Create a simple YAML document with the reference
+	// Escape single quotes in the ref for shell safety
+	escapedRef := strings.ReplaceAll(ref, "'", "'\"'\"'")
+	input := fmt.Sprintf("value: %s", escapedRef)
+
+	// Run vals eval via shell so we can pipe input and use devshell PATH
+	// The executor handles devshell environment variables
+	result, err := s.exec.RunWithOptions(
+		"sh",
+		s.config.ProjectRoot,
+		nil,
+		"-c",
+		fmt.Sprintf("echo '%s' | vals eval -i -", input),
+	)
+	if err != nil {
+		return "", fmt.Errorf("vals eval failed: %w", err)
+	}
+	if result.ExitCode != 0 {
+		return "", fmt.Errorf("vals eval failed: %s", result.Stderr)
+	}
+
+	// Parse the output YAML
+	var outputDoc struct {
+		Value string `yaml:"value"`
+	}
+	if err := yaml.Unmarshal([]byte(result.Stdout), &outputDoc); err != nil {
+		return "", fmt.Errorf("failed to parse vals output: %w", err)
+	}
+
+	return outputDoc.Value, nil
 }
 
 // findAgeIdentity looks for an AGE identity file in common locations
