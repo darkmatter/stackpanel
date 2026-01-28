@@ -2,9 +2,14 @@
   "dependencies": {
     "@aws-sdk/client-iam": "catalog:",
     "@aws-sdk/client-kms": "catalog:",
+    "@aws-sdk/client-ssm": "catalog:",
+    "@aws-sdk/client-sts": "catalog:",
     "@pulumi/aws": "catalog:",
     "alchemy": "catalog:",
     "sst": "catalog:"
+  },
+  "devDependencies": {
+    "bun2nix": "latest"
   },
   "exports": {
     ".": {
@@ -17,10 +22,11 @@
   "name": "@stackpanel/infra",
   "private": true,
   "scripts": {
-    "deploy": "alchemy deploy",
+    "alchemy:deploy": "alchemy deploy",
+    "alchemy:destroy": "alchemy destroy",
+    "alchemy:dev": "alchemy dev",
     "deploy:web": "cd ../.. && flyctl deploy --config packages/infra/fly/web/fly.toml",
-    "destroy": "alchemy destroy",
-    "dev": "alchemy dev",
+    "postinstall": "test -f bun.lock && bun2nix -o bun.nix || true",
     "sst:deploy": "bunx sst deploy",
     "sst:dev": "bunx sst dev",
     "sst:remove": "bunx sst remove"

@@ -120,6 +120,39 @@ proto.mkProtoFile {
       };
     };
 
+    # Secrets group — access control boundary for secrets
+    SecretsGroup = proto.mkMessage {
+      name = "SecretsGroup";
+      description = ''
+        A secrets group is an access control boundary.
+        Each group has its own AGE keypair. The private key is stored externally
+        (e.g., AWS SSM) so that IAM policies control who can decrypt that group's secrets.
+        Variables specify which group(s) they belong to via the master-keys field.
+      '';
+      fields = {
+        age_pub = proto.optional (
+          proto.string 1 ''
+            AGE public key for this group. Set after running `secrets:init-group <name>`.
+            Format: age1... (bech32-encoded)
+          ''
+        );
+        ssm_path = proto.optional (
+          proto.string 2 ''
+            SSM Parameter Store path where the AGE private key is stored.
+            Defaults to /{chamber.service-prefix}/keys/{group-name}.
+            Example: /my-org/my-repo/keys/dev
+          ''
+        );
+        ref = proto.optional (
+          proto.string 3 ''
+            Vals reference that resolves to the AGE private key.
+            Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
+            Can be overridden for other backends (Vault, file, etc.).
+          ''
+        );
+      };
+    };
+
     # Root secrets configuration
     Secrets = proto.mkMessage {
       name = "Secrets";
@@ -153,6 +186,12 @@ proto.mkProtoFile {
         codegen = proto.map "string" "CodegenTarget" 7 ''
           Code generation targets keyed by name (e.g., typescript, go, python).
           Used to drive language-specific env/secret helpers.
+        '';
+        groups = proto.map "string" "SecretsGroup" 8 ''
+          Secrets groups for access control. Each group has an AGE keypair with
+          the private key stored externally (e.g., SSM). Secrets are encrypted to
+          group public keys, and IAM policies control who can retrieve the private key.
+          Default groups: dev, prod.
         '';
       };
     };

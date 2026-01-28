@@ -18,6 +18,8 @@ import {
 	Pencil,
 	Search,
 	Settings,
+	Shield,
+	Trash2,
 	VariableIcon,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -40,6 +42,7 @@ import {
 	KMSSettings,
 } from "./edit-secret-dialog";
 import { EditVariableDialog } from "./edit-variable-dialog";
+import { GroupsSection } from "./groups-section";
 import { VariableUsageInfo } from "./variable-usage-info";
 
 export function VariablesPanel() {
@@ -138,6 +141,33 @@ export function VariablesPanel() {
 		[token, agentClient, revealedSecrets],
 	);
 
+	// Delete a secret (removes .age file and variables.nix entry)
+	const handleDeleteSecret = useCallback(
+		async (variableId: string) => {
+			if (!token) {
+				toast.error("Not connected to agent");
+				return;
+			}
+
+			if (!confirm(`Are you sure you want to delete "${variableId}"? This will remove the encrypted secret file.`)) {
+				return;
+			}
+
+			try {
+				agentClient.setToken(token);
+				await agentClient.deleteAgenixSecret(variableId);
+				toast.success(`Deleted secret "${variableId}"`);
+				refetch();
+			} catch (err) {
+				console.error("Failed to delete secret:", err);
+				toast.error(
+					err instanceof Error ? err.message : "Failed to delete secret",
+				);
+			}
+		},
+		[token, agentClient, refetch],
+	);
+
 	const variablesList = useMemo(() => {
 		if (!variables) return [];
 		// With simplified schema, variable is { id, value }
@@ -229,10 +259,14 @@ export function VariablesPanel() {
 				/>
 
 				<Tabs defaultValue="manage" className="w-full">
-					<TabsList className="grid w-full grid-cols-2 max-w-xs">
+					<TabsList className="grid w-full grid-cols-3 max-w-md">
 						<TabsTrigger value="manage" className="flex items-center gap-2">
 							<VariableIcon className="h-4 w-4" />
 							Manage
+						</TabsTrigger>
+						<TabsTrigger value="groups" className="flex items-center gap-2">
+							<Shield className="h-4 w-4" />
+							Groups
 						</TabsTrigger>
 						<TabsTrigger value="configure" className="flex items-center gap-2">
 							<Settings className="h-4 w-4" />
@@ -350,16 +384,43 @@ export function VariablesPanel() {
 															{typeConfig.description}
 														</p>
 													</div>
-													{/* Edit button for non-computed variables */}
-													{!isReadOnlyVariable(variable.id) && (
-														<EditVariableDialog
-															variable={{
-																id: variable.id,
-																value: variable.value,
-															}}
-															onSuccess={refetch}
-														/>
-													)}
+								{/* Edit button for non-computed variables */}
+								{!isReadOnlyVariable(variable.id) && (
+									typeConfig.value === "secret" ? (
+										<div className="flex items-center gap-1">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => setEditingSecret({
+													id: variable.id,
+													key: variable.envKey,
+												})}
+												disabled={!token}
+												className="h-7 px-2 text-xs"
+											>
+												<Pencil className="h-3 w-3 mr-1" />
+												Edit
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => handleDeleteSecret(variable.id)}
+												disabled={!token}
+												className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+											>
+												<Trash2 className="h-3 w-3" />
+											</Button>
+										</div>
+									) : (
+										<EditVariableDialog
+											variable={{
+												id: variable.id,
+												value: variable.value,
+											}}
+											onSuccess={refetch}
+										/>
+									)
+								)}
 												</div>
 											</div>
 
@@ -494,10 +555,14 @@ export function VariablesPanel() {
 								</li>
 							</ul>
 						</div>
-					</TabsContent>
+				</TabsContent>
 
-					<TabsContent value="configure" className="mt-6 space-y-6">
-						{isChamber ? (
+				<TabsContent value="groups" className="mt-6 space-y-6">
+					<GroupsSection />
+				</TabsContent>
+
+				<TabsContent value="configure" className="mt-6 space-y-6">
+					{isChamber ? (
 							<div className="space-y-4">
 								<div>
 									<h3 className="text-lg font-medium mb-1">

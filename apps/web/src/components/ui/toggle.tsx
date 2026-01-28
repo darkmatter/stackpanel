@@ -5,13 +5,13 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const toggleVariants = cva(
-	"inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium hover:bg-muted hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none transition-[color,box-shadow] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap",
+	"inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium hover:bg-muted hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=on]:border-primary/10 data-[state=on]:bg-secondary/80 data-[state=on]:text-primary data-[state=on]:font-semibold data-[state=on]:shadow-accent [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none transition-[color,box-shadow] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap",
 	{
 		variants: {
 			variant: {
-				default: "bg-transparent",
+				default: "bg-secondary/80 text-secondary-foreground/80",
 				outline:
-					"border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground",
+					"border border-input bg-secondary/20 text-muted-foreground/70 shadow-xs hover:bg-accent hover:text-accent-foreground",
 				secondary:
 					"data-[state=on]:bg-secondary bg-secondary/20 border border-secondary text-primary/30 hover:text-primary/50 hover:bg-transparent data-[state=on]:text-primary lowercase font-mono",
 			},

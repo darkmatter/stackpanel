@@ -107,7 +107,8 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 		Msg("Loading devshell environment via nix print-dev-env")
 
 	// Use a timeout context to avoid hanging indefinitely
-	timeoutCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	// 5 minutes allows time for Nix to download packages from caches
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(timeoutCtx, "nix", "print-dev-env", "--impure")

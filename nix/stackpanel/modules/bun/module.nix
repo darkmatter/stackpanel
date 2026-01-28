@@ -3,9 +3,21 @@
 #
 # Provides Bun/TypeScript application support using bun2nix for packaging.
 #
+# Features:
+#   - Automatic bun2nix CLI in devshell (converts bun.lock -> bun.nix)
+#   - Generated package.json with postinstall script that runs bun2nix
+#   - Hermetic app packaging via bun2nix.writeBunApplication
+#   - run-<app> and test-<app> wrapper scripts
+#   - Health checks for bun, bun2nix, and lockfile presence
+#
 # Prerequisites:
-#   - bun.nix lockfile (generated via: bun2nix or bunx bun2nix)
+#   - bun.nix lockfile (auto-generated via postinstall or: bun2nix)
 #   - package.json in the app or root directory
+#
+# Architecture:
+#   Generated files (package.json) are created via stackpanel.files system
+#   and materialized on shell entry. package.json uses type="json" for
+#   deep-merge support so other modules can contribute to the same file.
 #
 # App definition example:
 #   stackpanel.apps.my-app = {
@@ -14,6 +26,7 @@
 #       enable = true;
 #       buildPhase = "bun run build";
 #       startScript = "bun run start";
+#       generateFiles = true;  # Generates package.json with bun2nix postinstall
 #     };
 #   };
 #
@@ -32,6 +45,10 @@ let
   # Import unified field definitions (single source of truth)
   bunSchema = import ./schema.nix { inherit lib; };
   spField = import ../../db/lib/field.nix { inherit lib; };
+
+  # Compute npm scope prefix from config (project.repo or name)
+  # e.g., "stackpanel" -> "@stackpanel"
+  prefix = sp.project.repo or sp.name;
 
   # ---------------------------------------------------------------------------
   # Helper Functions
@@ -77,6 +94,45 @@ let
       inheritPath = bunCfg.inheritPath;
 
       bunDeps = pkgs.bun2nix.fetchBunDeps { bunNix = bunNixPath; };
+    };
+
+  # ---------------------------------------------------------------------------
+  # File Generation (package.json with bun2nix postinstall)
+  # ---------------------------------------------------------------------------
+
+  # Generate package.json for a Bun app
+  generatePackageJson =
+    name: app:
+    let
+      bunCfg = app.bun;
+    in
+    {
+      name = name;
+      private = true;
+      dependencies = {
+        "@${prefix}/scripts" = "workspace:*";
+      };
+      scripts = {
+        preinstall = "check-devshell";
+        postinstall = "bun2nix";
+        dev = "bun run --hot ${bunCfg.mainPackage}";
+        build = bunCfg.buildPhase;
+        start = bunCfg.startScript;
+        test = "bun test";
+      };
+    };
+
+  # Create file entries for materialization (uses stackpanel.files system)
+  # package.json uses type="json" for deep-merge support from other modules
+  mkGeneratedFileEntries =
+    name: app:
+    {
+      "${app.path}/package.json" = {
+        type = "json";
+        jsonValue = generatePackageJson name app;
+        source = "bun";
+        description = "Bun app package.json (scripts, dependencies, bun2nix postinstall)";
+      };
     };
 
 in
@@ -129,17 +185,32 @@ in
     # Apply config when stackpanel is enabled and bun apps exist
     (lib.mkIf (sp.enable && hasBunApps) {
       # -----------------------------------------------------------------------
-      # Packages - Build Bun applications
+      # Packages - Build Bun applications via writeBunApplication
       # -----------------------------------------------------------------------
       stackpanel.bun.packages = {
         apps = lib.mapAttrs mkBunPackage bunApps;
       };
 
-    # -------------------------------------------------------------------------
-    # Scripts - Add run-<app> and test-<app> commands
-    # -------------------------------------------------------------------------
-    stackpanel.scripts = lib.mkIf hasBunApps (
-      lib.mkMerge (
+      # -----------------------------------------------------------------------
+      # Devshell - Add bun2nix CLI to shell environment
+      # -----------------------------------------------------------------------
+      stackpanel.devshell.packages = [
+        pkgs.bun2nix  # Native bun2nix CLI (converts bun.lock -> bun.nix)
+      ];
+
+      # -----------------------------------------------------------------------
+      # File Generation - package.json with bun2nix postinstall
+      # -----------------------------------------------------------------------
+      stackpanel.files.entries = lib.mkMerge (
+        lib.mapAttrsToList (
+          name: app: lib.optionalAttrs app.bun.generateFiles (mkGeneratedFileEntries name app)
+        ) bunApps
+      );
+
+      # -----------------------------------------------------------------------
+      # Scripts - Add run-<app> and test-<app> commands
+      # -----------------------------------------------------------------------
+      stackpanel.scripts = lib.mkMerge (
         lib.mapAttrsToList (name: app: {
           "run-${name}" = {
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
@@ -152,71 +223,80 @@ in
             description = "Test ${name} Bun app";
           };
         }) bunApps
-      )
-    );
+      );
 
-    # =========================================================================
-    # Flake Checks (CI)
-    # =========================================================================
-    stackpanel.moduleChecks.${meta.id} = {
-      eval = {
-        description = "${meta.name} module evaluates correctly";
-        required = true;
-        derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
-          echo "Bun module evaluates successfully"
-          touch $out
-        '';
-      };
-
-      packages = {
-        description = "${meta.name} packages are available";
-        required = true;
-        derivation = pkgs.runCommand "${meta.id}-packages-check" { nativeBuildInputs = [ pkgs.bun ]; } ''
-          bun --version
-          echo "Bun runtime available"
-          touch $out
-        '';
-      };
-    };
-
-    # =========================================================================
-    # Health Checks (Runtime)
-    # =========================================================================
-    stackpanel.healthchecks.modules.${meta.id} = {
-      enable = true;
-      displayName = meta.name;
-      checks = {
-        bun-installed = {
-          description = "Bun runtime is installed and accessible";
-          script = ''
-            command -v bun >/dev/null 2>&1 && bun --version
+      # -----------------------------------------------------------------------
+      # Flake Checks (CI)
+      # -----------------------------------------------------------------------
+      stackpanel.moduleChecks.${meta.id} = {
+        eval = {
+          description = "${meta.name} module evaluates correctly";
+          required = true;
+          derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
+            echo "Bun module evaluates successfully"
+            touch $out
           '';
-          severity = "critical";
-          timeout = 5;
         };
 
-        bun-version = {
-          description = "Bun version is 1.0 or newer";
-          script = ''
-            version=$(bun --version 2>/dev/null)
-            major=$(echo "$version" | cut -d. -f1)
-            [ "$major" -ge 1 ]
+        packages = {
+          description = "${meta.name} packages are available";
+          required = true;
+          derivation = pkgs.runCommand "${meta.id}-packages-check" { nativeBuildInputs = [ pkgs.bun ]; } ''
+            bun --version
+            echo "Bun runtime available"
+            touch $out
           '';
-          severity = "warning";
-          timeout = 5;
-        };
-
-        lockfile-exists = {
-          description = "bun.nix lockfile exists for Nix builds";
-          script = ''
-            test -f "$STACKPANEL_ROOT/bun.nix" || \
-            find "$STACKPANEL_ROOT/apps" -name "bun.nix" -type f | head -1 | grep -q .
-          '';
-          severity = "warning";
-          timeout = 5;
         };
       };
-    };
+
+      # -----------------------------------------------------------------------
+      # Health Checks (Runtime)
+      # -----------------------------------------------------------------------
+      stackpanel.healthchecks.modules.${meta.id} = {
+        enable = true;
+        displayName = meta.name;
+        checks = {
+          bun-installed = {
+            description = "Bun runtime is installed and accessible";
+            script = ''
+              command -v bun >/dev/null 2>&1 && bun --version
+            '';
+            severity = "critical";
+            timeout = 5;
+          };
+
+          bun-version = {
+            description = "Bun version is 1.2 or newer";
+            script = ''
+              version=$(bun --version 2>/dev/null)
+              major=$(echo "$version" | cut -d. -f1)
+              minor=$(echo "$version" | cut -d. -f2)
+              [ "$major" -gt 1 ] || ([ "$major" -eq 1 ] && [ "$minor" -ge 2 ])
+            '';
+            severity = "warning";
+            timeout = 5;
+          };
+
+          bun2nix-installed = {
+            description = "bun2nix CLI is installed and accessible";
+            script = ''
+              command -v bun2nix >/dev/null 2>&1 && bun2nix --version
+            '';
+            severity = "warning";
+            timeout = 5;
+          };
+
+          lockfile-exists = {
+            description = "bun.nix lockfile exists for Nix builds";
+            script = ''
+              test -f "$STACKPANEL_ROOT/bun.nix" || \
+              find "$STACKPANEL_ROOT/apps" -name "bun.nix" -type f | head -1 | grep -q .
+            '';
+            severity = "warning";
+            timeout = 5;
+          };
+        };
+      };
 
       # -----------------------------------------------------------------------
       # Module Registration

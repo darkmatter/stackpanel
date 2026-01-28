@@ -68,7 +68,7 @@ lib.mkIf (cfg.enable && hasBunApps) {
     fields = bunSchema.fields;
     optionPrefix = "bun";
     apps = bunApps;
-    exclude = [ "enable" ];
+    exclude = [ "enable" "generateFiles" ];
     order = meta.priority + 2;
   };
 }

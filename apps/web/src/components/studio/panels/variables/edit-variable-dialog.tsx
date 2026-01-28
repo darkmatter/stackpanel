@@ -166,14 +166,14 @@ export function EditVariableDialog({
 							id="edit-var-value"
 							value={varValue}
 							onChange={(e) => setVarValue(e.target.value)}
-							placeholder={isChamber ? "Secret value (stored in AWS SSM)" : "literal value or ref+sops://..."}
+							placeholder={isChamber ? "Value (stored in AWS SSM)" : "Literal value or vals reference"}
 							className="font-mono min-h-[80px]"
 							autoFocus
 						/>
 						<p className="text-xs text-muted-foreground">
 							{isChamber
-								? "Plain value. Secrets in /dev/, /staging/, /prod/ keygroups are encrypted via AWS KMS."
-								: "Literal value or vals reference (e.g., ref+sops://.stackpanel/secrets/dev.yaml#/KEY)"}
+								? "Plain value. Encryption is handled by AWS KMS."
+								: "Literal value or vals reference (e.g., ref+sops://...#/KEY)"}
 						</p>
 					</div>
 				</div>

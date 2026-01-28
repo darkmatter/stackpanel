@@ -1,0 +1,4 @@
+{"version": 2, "width": 138, "height": 75, "timestamp": 1769572551, "env": {"SHELL": "/nix/store/g9hhwjbkdrw0wnbd3axfs4icyb37nr6b-bash-interactive-5.3p3/bin/bash", "TERM": "xterm-256color"}}
+[0.075847, "o", "\u001b[?2004hbash-5.3$ "]
+[6.853118, "o", "\u001b[?2004l\r\r\n"]
+[6.853162, "o", "exit\r\n"]

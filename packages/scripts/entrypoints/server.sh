@@ -38,8 +38,8 @@ fi
 
 export STACKPANEL_APP_NAME="server"
 export STACKPANEL_APP_PATH="apps/server"
-export STACKPANEL_VARIABLES_BACKEND="vals"
-
+export STACKPANEL_VARIABLES_BACKEND="chamber"
+export STACKPANEL_CHAMBER_SERVICE_PREFIX="stackpanel"
 export STACKPANEL_MASTER_KEYS='{"local":{"age-pub":"","ref":"ref+file://.stackpanel/state/keys/local.txt","resolve-cmd":null}}'
 
 # ==============================================================================
