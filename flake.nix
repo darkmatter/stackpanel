@@ -4,8 +4,18 @@
   nixConfig = {
     extra-experimental-features = "nix-command flakes";
     allow-import-from-derivation = "true";
-    extra-substituters = "https://devenv.cachix.org https://darkmatter.cachix.org";
-    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw= darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA= nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU=";
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+      "https://devenv.cachix.org"
+      "https://darkmatter.cachix.org"
+      "https://nixpkgs-python.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
+      "darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA="
+      "nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
   };
 
   inputs = {
@@ -38,20 +48,18 @@
     stackpanel-root.flake = false;
   };
 
-  outputs =
-    inputs@{
-      self,
-      nixpkgs,
-      flake-parts,
-      ...
-    }:
-    flake-parts.lib.mkFlake { inherit inputs; } (
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    flake-parts,
+    ...
+  }:
+    flake-parts.lib.mkFlake {inherit inputs;} (
       {
         withSystem,
         flake-parts-lib,
         ...
-      }:
-      let
+      }: let
         # Import consolidated exports
         exports = import ./nix/flake/exports.nix {
           inherit
@@ -61,8 +69,7 @@
             self
             ;
         };
-      in
-      {
+      in {
         systems = exports.supportedSystems;
 
         # =============================================================
@@ -78,47 +85,45 @@
         # =============================================================
         # PER-SYSTEM CONFIG
         # =============================================================
-        perSystem =
-          {
-            config,
-            pkgs,
-            lib,
-            system,
-            ...
-          }:
-          let
-            packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
-          in
-          {
-            _module.args.pkgs = import nixpkgs {
-              inherit system;
-              overlays = [
-                inputs.gomod2nix.overlays.default
-                inputs.bun2nix.overlays.default
-              ];
-            };
-
-            # stackpanel.enable is set in .stackpanel/config.nix
-            # The flakeModule auto-loads it and creates devShells.default
-            #
-            # For devenv features (languages, services, processes), use:
-            #   devenv shell  (with devenv.nix/devenv.yaml)
-
-            # Packages
-            packages = packages;
-
-            # Checks
-            checks = {
-              stackpanel = config.packages.stackpanel;
-              default-package = config.packages.default;
-            };
+        perSystem = {
+          config,
+          pkgs,
+          lib,
+          system,
+          ...
+        }: let
+          packages = import ./nix/flake/packages.nix {inherit pkgs inputs;};
+        in {
+          _module.args.pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
+              inputs.gomod2nix.overlays.default
+              inputs.bun2nix.overlays.default
+            ];
           };
+
+          # stackpanel.enable is set in .stackpanel/config.nix
+          # The flakeModule auto-loads it and creates devShells.default
+          #
+          # For devenv features (languages, services, processes), use:
+          #   devenv shell  (with devenv.nix/devenv.yaml)
+
+          # Packages
+          packages = packages;
+
+          # Checks
+          checks = {
+            stackpanel = config.packages.stackpanel;
+            default-package = config.packages.default;
+          };
+        };
 
         # =============================================================
         # EXPORTS (for users)
         # =============================================================
         flake = {
-          inherit (exports)
+          inherit
+            (exports)
             flakeModules
             nixosModules
             devenvModules

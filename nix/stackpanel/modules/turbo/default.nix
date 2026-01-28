@@ -26,6 +26,7 @@ in
 {
   imports = [
     ./module.nix
+    ./packages.nix
     ./ui.nix
   ];
 }

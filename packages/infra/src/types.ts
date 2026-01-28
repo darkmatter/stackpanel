@@ -28,5 +28,11 @@ export interface AwsSecretsInputs {
 };
   projectName: string;
   region: string;
+  ssm: {
+  additionalPaths: string[];
+  enable: boolean;
+  groupPaths: string[];
+  keyPrefix: string;
+};
 }
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@ui/button";
+import { Checkbox } from "@ui/checkbox";
+import { Label } from "@ui/label";
 import {
 	Popover,
 	PopoverContent,
@@ -18,11 +20,29 @@ import {
 	RefreshCw,
 	Terminal,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useShellStatus, useRebuildShell } from "@/lib/use-agent";
 import { useShellStatusSSE } from "@/lib/use-sse";
 import { cn } from "@/lib/utils";
 import { useAgentContext } from "@/lib/agent-provider";
+
+const AUTO_BUILD_STORAGE_KEY = "stackpanel-auto-build-shell";
+
+function useAutoBuildPreference() {
+	const [autoBuild, setAutoBuildState] = useState(() => {
+		if (typeof window === "undefined") return false;
+		return localStorage.getItem(AUTO_BUILD_STORAGE_KEY) === "true";
+	});
+
+	const setAutoBuild = useCallback((value: boolean) => {
+		setAutoBuildState(value);
+		if (typeof window !== "undefined") {
+			localStorage.setItem(AUTO_BUILD_STORAGE_KEY, value ? "true" : "false");
+		}
+	}, []);
+
+	return [autoBuild, setAutoBuild] as const;
+}
 
 /**
  * Shell status indicator for the dashboard header.
@@ -33,6 +53,10 @@ export function ShellStatus() {
 	const { data: status, isLoading, refetch } = useShellStatus();
 	const { rebuild, isRebuilding, output, error, clearError } = useRebuildShell();
 	const [showOutput, setShowOutput] = useState(false);
+	const [autoBuild, setAutoBuild] = useAutoBuildPreference();
+	
+	// Track if we've already triggered auto-build for this stale state
+	const autoBuildTriggeredRef = useRef(false);
 
 	// Subscribe to SSE for real-time updates
 	const { isStale: sseStale, isRebuilding: sseRebuilding, lastChangedFile } = useShellStatusSSE(() => {
@@ -44,6 +68,19 @@ export function ShellStatus() {
 	const isStale = sseStale || status?.stale || false;
 	const isCurrentlyRebuilding = sseRebuilding || isRebuilding || status?.rebuilding || false;
 	const changedFiles = status?.changedFiles ?? [];
+
+	// Auto-build effect: trigger rebuild when shell becomes stale and auto-build is enabled
+	useEffect(() => {
+		if (autoBuild && isStale && !isCurrentlyRebuilding && !autoBuildTriggeredRef.current) {
+			autoBuildTriggeredRef.current = true;
+			setShowOutput(true);
+			rebuild("devshell");
+		}
+		// Reset the trigger flag when shell is no longer stale
+		if (!isStale) {
+			autoBuildTriggeredRef.current = false;
+		}
+	}, [autoBuild, isStale, isCurrentlyRebuilding, rebuild]);
 
 	// Don't show if not connected
 	if (!isConnected) {
@@ -192,6 +229,20 @@ export function ShellStatus() {
 									<p>Use nix develop</p>
 								</TooltipContent>
 							</Tooltip>
+						</div>
+
+						<div className="flex items-center gap-2 pt-2 border-t border-border">
+							<Checkbox
+								id="auto-build"
+								checked={autoBuild}
+								onCheckedChange={(checked) => setAutoBuild(checked === true)}
+							/>
+							<Label
+								htmlFor="auto-build"
+								className="text-xs text-muted-foreground cursor-pointer select-none"
+							>
+								Auto-rebuild when stale
+							</Label>
 						</div>
 					</div>
 				</PopoverContent>

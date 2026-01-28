@@ -32,9 +32,9 @@
 #   - SOPS YAML generation is skipped in codegen
 #   - The Secrets Panel in the UI shows a disabled state
 #
-# The chamber service path is auto-derived from the project name:
+# The chamber service path is auto-derived from the project owner/repo (or name):
 #   {service-prefix}/{keygroup}
-#   e.g., stackpanel/dev, stackpanel/prod
+#   e.g., darkmatter/stackpanel/dev, darkmatter/stackpanel/prod
 #
 # Keygroup mapping (same ID scheme for both backends):
 #   /dev/FOO      -> chamber service: {prefix}/dev
@@ -50,6 +50,15 @@
 }:
 let
   projectName = config.stackpanel.name or "my-project";
+  projectCfg = config.stackpanel.project or {};
+  owner = projectCfg.owner or "";
+  repo = projectCfg.repo or "";
+
+  # Prefer owner/repo for chamber prefix (better SSM path namespacing),
+  # fall back to project name for backwards compatibility
+  defaultPrefix = if owner != "" && repo != ""
+    then "${owner}/${repo}"
+    else projectName;
 in
 {
   # NOTE: Backend options live under stackpanel.secrets (not stackpanel.variables)
@@ -76,16 +85,17 @@ in
     chamber = {
       service-prefix = lib.mkOption {
         type = lib.types.str;
-        default = projectName;
+        default = defaultPrefix;
         description = ''
           Chamber service prefix. The full chamber service path is:
             {service-prefix}/{env}
 
-          For example, with prefix "stackpanel" and a variable /dev/DATABASE_URL:
-            chamber write stackpanel/dev DATABASE_URL <value>
-            chamber exec stackpanel/dev -- <command>
+          For example, with prefix "darkmatter/stackpanel" and a variable /dev/DATABASE_URL:
+            chamber write darkmatter/stackpanel/dev DATABASE_URL <value>
+            chamber exec darkmatter/stackpanel/dev -- <command>
 
-          Defaults to the project name.
+          Defaults to "{owner}/{repo}" when project owner/repo are configured,
+          otherwise falls back to the project name.
         '';
       };
     };

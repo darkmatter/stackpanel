@@ -20,6 +20,13 @@ let
   projectName = config.stackpanel.name or "my-project";
 
   # ============================================================================
+  # Alchemy peer dependency mapping
+  #
+  # Maps alchemy resource imports to their required npm peer dependencies.
+  # Used for validation to ensure all required dependencies are declared.
+  # ============================================================================
+
+  # ============================================================================
   # Submodule: output declaration (used in module registry)
   # ============================================================================
   outputDeclType = lib.types.submodule {
@@ -82,7 +89,33 @@ let
       dependencies = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
-        description = "NPM dependencies this module requires in package.json";
+        description = ''
+          NPM dependencies this module requires.
+          Merged into the infra package.json dependencies.
+
+          For external flake modules, prefer providing bunDeps instead
+          for pre-validated, reproducible dependencies.
+        '';
+      };
+
+      bunDeps = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = null;
+        description = ''
+          Pre-fetched Bun dependency cache from bun2nix.fetchBunDeps.
+
+          External flakes should provide this for reproducible builds.
+          When provided, these deps are validated at Nix eval time and
+          merged with other modules' deps.
+
+          Example (in a flake providing an infra module):
+            bunDeps = bun2nix.fetchBunDeps {
+              bunNix = ./bun.nix;
+            };
+
+          The flake should also ship package.json, bun.lock, and bun.nix
+          alongside the module.
+        '';
       };
 
       outputs = lib.mkOption {
@@ -206,6 +239,26 @@ in
         default = { };
         description = "Additional package.json dependencies beyond what modules declare";
       };
+
+      bun-nix = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to a bun.nix file for the infra package.
+
+          When provided, dependencies are validated at Nix evaluation time
+          via bun2nix.fetchBunDeps, catching invalid versions and missing
+          peer dependencies before runtime.
+
+          Bootstrapping workflow:
+            1. Enter devshell: nix develop --impure
+            2. Generate lock file: cd ${cfg.output-dir} && bun2nix
+            3. Set this option: bun-nix = ./${cfg.output-dir}/bun.nix;
+            4. Re-enter devshell to enable validation
+
+          See: https://nix-community.github.io/bun2nix/building-packages/fetchBunDeps.html
+        '';
+      };
     };
 
     # ==========================================================================
@@ -227,6 +280,7 @@ in
           config.stackpanel.infra.outputs.fly.web-server-ipv4
       '';
     };
+
   };
 
   # ============================================================================

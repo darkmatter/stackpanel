@@ -122,9 +122,19 @@ let
       };
     };
 
+    # Whether to generate package.json with bun2nix postinstall
+    generateFiles = sp.bool {
+      index = 9;
+      description = "Generate package.json with bun2nix postinstall and standard scripts";
+      default = true;
+      ui = {
+        label = "Generate Files";
+      };
+    };
+
     # App description
     description = sp.string {
-      index = 9;
+      index = 10;
       description = "App description";
       default = "";
       ui = {

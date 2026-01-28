@@ -35,6 +35,19 @@ let
   userKeys = lib.mapAttrsToList (_: user: user.age-public-key or null) users;
   validUserKeys = lib.filter (k: k != null) userKeys;
 
+  # Collect group public keys (only from initialized groups with age-pub set)
+  groups = secretsCfg.groups or {};
+  groupKeys = lib.pipe groups [
+    (lib.mapAttrsToList (_: g: g.age-pub or ""))
+    (lib.filter (k: k != ""))
+  ];
+
+  # Group keys indexed by name for environment-specific matching
+  groupsByName = lib.filterAttrs (_: g: (g.age-pub or "") != "") groups;
+
+  # All non-user keys (master + groups) — always included as recipients
+  baseKeys = [ masterKey ] ++ groupKeys;
+
   # ===========================================================================
   # SOPS Config Generation
   # ===========================================================================
@@ -47,17 +60,23 @@ let
       # Get environment-specific allowed keys (if configured)
       envAllowedUsers = envCfg.allowed-users or null;
       
+      # Match group by environment name (e.g., env "dev" → group "dev")
+      # This gives per-env access control: prod secrets only encrypted to prod group
+      matchingGroup = groupsByName.${envName} or null;
+      matchingGroupKey = if matchingGroup != null then [ matchingGroup.age-pub ] else [];
+      
       # Determine which keys to include
       keys = if envAllowedUsers != null 
         then lib.filter (k: k != null) (map (u: (users.${u} or {}).age-public-key or null) envAllowedUsers)
+              ++ matchingGroupKey
         else if isProd 
-          then [ masterKey ] # Prod is restricted to master key by default
-          else [ masterKey ] ++ validUserKeys; # Dev/staging gets all user keys
+          then [ masterKey ] ++ matchingGroupKey  # Prod: master + prod group (no user keys)
+          else [ masterKey ] ++ groupKeys ++ validUserKeys;  # Dev/staging: master + all groups + user keys
     in
     {
       path_regex = "^${appName}/${envName}\\.yaml$";
       key_groups = [{
-        age = keys;
+        age = lib.unique keys;
       }];
     };
 
@@ -85,7 +104,7 @@ let
   catchAllRule = {
     path_regex = ".*\\.yaml$";
     key_groups = [{
-      age = [ masterKey ] ++ validUserKeys;
+      age = lib.unique (baseKeys ++ validUserKeys);
     }];
   };
 
@@ -118,6 +137,9 @@ let
       keys:
         # Project master key
         - &master ${masterKey}
+      ${lib.optionalString (groupKeys != []) ''
+        # Group keys (access control boundaries)
+      ${lib.concatStringsSep "" (lib.mapAttrsToList (name: g: "  - &group_${name} ${g.age-pub}\n") groupsByName)}''}
       ${lib.optionalString (validUserKeys != []) ''
         # Team member keys
       ${lib.concatMapStringsSep "" (k: "  - ${k}\n") validUserKeys}''}

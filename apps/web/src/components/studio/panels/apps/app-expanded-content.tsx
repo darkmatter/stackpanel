@@ -46,12 +46,12 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: Settings },
-  { id: "modules", label: "Modules", icon: Boxes },
   { id: "tasks", label: "Tasks", icon: ListChecks },
   { id: "variables", label: "Variables", icon: Variable },
   { id: "docker", label: "Docker", icon: Container },
   { id: "deployment", label: "Deployment", icon: Rocket },
   { id: "checks", label: "Checks", icon: ShieldCheck },
+  { id: "modules", label: "Modules", icon: Boxes },
 ];
 
 /** The currently active framework for an app, or null for none */
@@ -142,8 +142,8 @@ export function AppExpandedContent({
               type="button"
               onClick={() => setActiveSection(item.id)}
               className={`flex items-center gap-1.5 px-3 py-2 text-xs transition-colors relative ${isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               <item.icon className="h-3.5 w-3.5" />
@@ -545,8 +545,8 @@ function ModulesTab({
               type="button"
               onClick={() => setActiveModule(group.id)}
               className={`w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors text-left ${isActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />

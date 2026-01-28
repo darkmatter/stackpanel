@@ -8,6 +8,7 @@ import { SecurityStatusCard as _SecurityStatusCard } from "@/components/studio/s
 import { HealthSummaryPanel } from "@/lib/healthchecks";
 import { StatsGrid } from "@/components/studio/overview/stats-grid";
 import { ServicesStatusCard } from "@/components/studio/overview/services-status-card";
+import { ProcessStateCard } from "@/components/studio/overview/process-state-card";
 
 export function OverviewPanel() {
   return (
@@ -15,18 +16,20 @@ export function OverviewPanel() {
       {/* Security Status (AWS Session & Certificates) */}
       {/*<SecurityStatusCard />*/}
 
-      {/* Health Summary */}
-      <HealthSummaryPanel />
+      {/* Two-column layout for Process State and Services */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Process Compose State */}
+        <ProcessStateCard />
+
+        {/* Services Status */}
+        <ServicesStatusCard />
+      </div>
 
       {/* Stats Grid - Real data */}
       <StatsGrid />
 
-      {/* Two-column layout for Services and Quick Actions */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Services Status */}
-        <ServicesStatusCard />
-
-        {/* Quick Actions */}
+      {/* Quick Actions */}
+      {/* <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="font-medium text-base">
@@ -74,7 +77,10 @@ export function OverviewPanel() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
+
+      {/* Health Summary */}
+      <HealthSummaryPanel />
     </div>
   );
 }

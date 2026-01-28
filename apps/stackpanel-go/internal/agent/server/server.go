@@ -219,6 +219,14 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Process-compose process management endpoints
 	mux.HandleFunc("/api/process-compose/processes", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcesses))))
+	mux.HandleFunc("/api/process-compose/project/state", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProjectState))))
+	mux.HandleFunc("/api/process-compose/process/info/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessInfo))))
+	mux.HandleFunc("/api/process-compose/process/ports/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessPorts))))
+	mux.HandleFunc("/api/process-compose/process/logs/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcessLogs))))
+	mux.HandleFunc("/api/process-compose/process/start/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeStart))))
+	mux.HandleFunc("/api/process-compose/process/stop/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeStop))))
+	mux.HandleFunc("/api/process-compose/process/restart/", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeRestart))))
+	mux.HandleFunc("/api/process-compose/logs/ws", s.withCORS(s.handleProcessComposeLogsWS)) // WebSocket, no auth required for upgrade
 
 	// Healthchecks endpoint for module health status
 	mux.HandleFunc("/api/healthchecks", s.withCORS(s.requireAuth(s.requireProject(s.handleHealthchecks))))

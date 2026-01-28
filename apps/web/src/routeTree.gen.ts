@@ -40,6 +40,7 @@ import { Route as StudioDeployRouteImport } from './routes/studio/deploy'
 import { Route as StudioDatabasesRouteImport } from './routes/studio/databases'
 import { Route as StudioDashboardRouteImport } from './routes/studio/dashboard'
 import { Route as StudioConfigurationRouteImport } from './routes/studio/configuration'
+import { Route as StudioChecksRouteImport } from './routes/studio/checks'
 import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
@@ -202,6 +203,11 @@ const StudioConfigurationRoute = StudioConfigurationRouteImport.update({
   path: '/configuration',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioChecksRoute = StudioChecksRouteImport.update({
+  id: '/checks',
+  path: '/checks',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioAppsRoute = StudioAppsRouteImport.update({
   id: '/apps',
   path: '/apps',
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/docs/$': typeof DocsSplatRoute
   '/studio/apps': typeof StudioAppsRoute
+  '/studio/checks': typeof StudioChecksRoute
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/docs/$': typeof DocsSplatRoute
   '/studio/apps': typeof StudioAppsRoute
+  '/studio/checks': typeof StudioChecksRoute
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
   '/docs/$': typeof DocsSplatRoute
   '/studio/apps': typeof StudioAppsRoute
+  '/studio/checks': typeof StudioChecksRoute
   '/studio/configuration': typeof StudioConfigurationRoute
   '/studio/dashboard': typeof StudioDashboardRoute
   '/studio/databases': typeof StudioDatabasesRoute
@@ -363,6 +372,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/docs/$'
     | '/studio/apps'
+    | '/studio/checks'
     | '/studio/configuration'
     | '/studio/dashboard'
     | '/studio/databases'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/docs/$'
     | '/studio/apps'
+    | '/studio/checks'
     | '/studio/configuration'
     | '/studio/dashboard'
     | '/studio/databases'
@@ -440,6 +451,7 @@ export interface FileRouteTypes {
     | '/api/seed-snapshots'
     | '/docs/$'
     | '/studio/apps'
+    | '/studio/checks'
     | '/studio/configuration'
     | '/studio/dashboard'
     | '/studio/databases'
@@ -703,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioConfigurationRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/checks': {
+      id: '/studio/checks'
+      path: '/checks'
+      fullPath: '/studio/checks'
+      preLoaderRoute: typeof StudioChecksRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/apps': {
       id: '/studio/apps'
       path: '/apps'
@@ -750,6 +769,7 @@ declare module '@tanstack/react-router' {
 
 interface StudioRouteChildren {
   StudioAppsRoute: typeof StudioAppsRoute
+  StudioChecksRoute: typeof StudioChecksRoute
   StudioConfigurationRoute: typeof StudioConfigurationRoute
   StudioDashboardRoute: typeof StudioDashboardRoute
   StudioDatabasesRoute: typeof StudioDatabasesRoute
@@ -778,6 +798,7 @@ interface StudioRouteChildren {
 
 const StudioRouteChildren: StudioRouteChildren = {
   StudioAppsRoute: StudioAppsRoute,
+  StudioChecksRoute: StudioChecksRoute,
   StudioConfigurationRoute: StudioConfigurationRoute,
   StudioDashboardRoute: StudioDashboardRoute,
   StudioDatabasesRoute: StudioDatabasesRoute,

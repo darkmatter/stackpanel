@@ -666,7 +666,8 @@ func (s *AgentServiceServer) RefreshNixConfig(
 	ctx context.Context,
 	req *connect.Request[gopb.RefreshNixConfigRequest],
 ) (*connect.Response[gopb.NixConfigResponse], error) {
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	// 5 minutes allows time for Nix to download packages from caches
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	// Try FlakeWatcher first

@@ -119,7 +119,14 @@ export function getVariableType(id: string, value: string, backend: VariablesBac
 		return "computed"; // Other vals references (awsssm, vault, etc.)
 	}
 	
-	// Default to config for literal values
+	// Vals backend: AGE-encrypted secrets have empty or non-reference values
+	// but live in encrypted keygroups. Classify by keygroup.
+	const keyGroup = getKeyGroup(id);
+	if (isEncryptedKeyGroup(keyGroup)) {
+		return "secret";
+	}
+	
+	// Default to config for literal values in non-encrypted keygroups
 	return "config";
 }
 

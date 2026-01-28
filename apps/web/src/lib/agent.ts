@@ -338,6 +338,31 @@ export interface ProcessComposeStatusResponse {
   error?: string;
 }
 
+/** ProjectState represents the project state from process-compose. */
+export interface ProcessComposeProjectState {
+  available: boolean;
+  state?: Record<string, unknown>;
+  error?: string;
+}
+
+/** ProcessPorts represents ports used by a process. */
+export interface ProcessPorts {
+  name: string;
+  tcpPorts?: number[];
+  udpPorts?: number[];
+}
+
+/** ProcessLogs represents log output from a process. */
+export interface ProcessLogs {
+  logs: string[];
+}
+
+/** LogMessage represents a single log message for WebSocket streaming. */
+export interface LogMessage {
+  processName: string;
+  message: string;
+}
+
 /** Installed package information from devenv/stackpanel config */
 export interface InstalledPackageInfo {
   name: string;
@@ -1226,6 +1251,120 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data ?? { available: false, running: false, processes: [] };
+  }
+
+  /**
+   * Get the project state from process-compose.
+   * Includes process counts, memory stats, and version info.
+   */
+  async getProcessComposeProjectState(): Promise<ProcessComposeProjectState> {
+    const res = await fetch(`${this.baseUrl}/api/process-compose/project/state`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data ?? { available: false };
+  }
+
+  /**
+   * Get detailed info about a specific process.
+   */
+  async getProcessInfo(name: string): Promise<Record<string, unknown> | null> {
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/process/info/${encodeURIComponent(name)}`,
+      { headers: this.getHeaders(false) },
+    );
+    const data = await res.json();
+    if (!data.success) return null;
+    return data.data;
+  }
+
+  /**
+   * Get ports used by a specific process.
+   */
+  async getProcessPorts(name: string): Promise<ProcessPorts | null> {
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/process/ports/${encodeURIComponent(name)}`,
+      { headers: this.getHeaders(false) },
+    );
+    const data = await res.json();
+    if (!data.success) return null;
+    return data.data;
+  }
+
+  /**
+   * Get logs for a specific process.
+   * @param name Process name
+   * @param offset Offset from end of log (0 = most recent)
+   * @param limit Max number of lines to return
+   */
+  async getProcessLogs(name: string, offset = 0, limit = 100): Promise<ProcessLogs> {
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/process/logs/${encodeURIComponent(name)}?offset=${offset}&limit=${limit}`,
+      { headers: this.getHeaders(false) },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data ?? { logs: [] };
+  }
+
+  /**
+   * Start a specific process.
+   */
+  async startProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/process/start/${encodeURIComponent(name)}`,
+      {
+        method: "POST",
+        headers: this.getHeaders(false),
+      },
+    );
+    return res.json();
+  }
+
+  /**
+   * Stop a specific process.
+   */
+  async stopProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/process/stop/${encodeURIComponent(name)}`,
+      {
+        method: "POST",
+        headers: this.getHeaders(false),
+      },
+    );
+    return res.json();
+  }
+
+  /**
+   * Restart a specific process.
+   */
+  async restartProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/process/restart/${encodeURIComponent(name)}`,
+      {
+        method: "POST",
+        headers: this.getHeaders(false),
+      },
+    );
+    return res.json();
+  }
+
+  /**
+   * Create a WebSocket connection to stream process logs.
+   * @param name Process name
+   * @param follow If true, continue streaming new lines
+   * @param offset Offset from end of log
+   */
+  createProcessLogsWebSocket(
+    name: string,
+    options: { follow?: boolean; offset?: number } = {},
+  ): WebSocket {
+    const { follow = true, offset = 0 } = options;
+    const wsUrl = this.baseUrl.replace(/^http/, "ws");
+    return new WebSocket(
+      `${wsUrl}/api/process-compose/logs/ws?name=${encodeURIComponent(name)}&follow=${follow}&offset=${offset}`,
+    );
   }
 
   // Variables methods

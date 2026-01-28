@@ -106,7 +106,8 @@ func (s *Server) handleNixConfigGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleNixConfigRefresh(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("Refreshing Stackpanel config from flake")
 
-	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	// 5 minutes allows time for Nix to download packages from caches
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 	defer cancel()
 
 	// Try FlakeWatcher first

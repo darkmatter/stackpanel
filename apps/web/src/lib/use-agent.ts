@@ -776,6 +776,109 @@ export function useProcesses() {
 	});
 }
 
+/**
+ * Query hook for getting process-compose project state.
+ * Includes process counts, memory stats, and version info.
+ */
+export function useProcessComposeProjectState() {
+	const client = useAgentClient();
+	const { isConnected } = useAgentContext();
+
+	return useQuery({
+		queryKey: [...agentQueryKeys.processes(), "projectState"],
+		queryFn: async () => {
+			return client.getProcessComposeProjectState();
+		},
+		enabled: isConnected,
+		refetchInterval: 5000,
+	});
+}
+
+/**
+ * Query hook for getting logs for a specific process.
+ */
+export function useProcessLogs(name: string, options?: { offset?: number; limit?: number; enabled?: boolean }) {
+	const client = useAgentClient();
+	const { isConnected } = useAgentContext();
+	const { offset = 0, limit = 100, enabled = true } = options ?? {};
+
+	return useQuery({
+		queryKey: [...agentQueryKeys.processes(), "logs", name, offset, limit],
+		queryFn: async () => {
+			return client.getProcessLogs(name, offset, limit);
+		},
+		enabled: isConnected && enabled && !!name,
+		refetchInterval: 2000, // Refresh logs every 2 seconds
+	});
+}
+
+/**
+ * Query hook for getting ports used by a specific process.
+ */
+export function useProcessPorts(name: string, options?: { enabled?: boolean }) {
+	const client = useAgentClient();
+	const { isConnected } = useAgentContext();
+
+	return useQuery({
+		queryKey: [...agentQueryKeys.processes(), "ports", name],
+		queryFn: async () => {
+			return client.getProcessPorts(name);
+		},
+		enabled: isConnected && (options?.enabled ?? true) && !!name,
+	});
+}
+
+/**
+ * Mutation hook for starting a process.
+ */
+export function useStartProcess() {
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (name: string) => {
+			return client.startProcess(name);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.processes() });
+		},
+	});
+}
+
+/**
+ * Mutation hook for stopping a process.
+ */
+export function useStopProcess() {
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (name: string) => {
+			return client.stopProcess(name);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.processes() });
+		},
+	});
+}
+
+/**
+ * Mutation hook for restarting a process.
+ */
+export function useRestartProcess() {
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (name: string) => {
+			return client.restartProcess(name);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.processes() });
+		},
+	});
+}
+
 // =============================================================================
 // Healthchecks
 // =============================================================================

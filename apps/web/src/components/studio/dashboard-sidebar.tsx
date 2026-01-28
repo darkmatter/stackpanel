@@ -109,6 +109,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: Home },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "checks", label: "Checks", icon: Activity },
 ];
 
 const mainNavItems: NavItem[] = [
@@ -116,13 +117,13 @@ const mainNavItems: NavItem[] = [
   { id: "variables", label: "Variables / Secrets", icon: Variable },
   { id: "apps", label: "Apps", icon: AppWindow },
   { id: "packages", label: "Packages", icon: Package },
-  { id: "processes", label: "Processes", icon: Cog },
+  { id: "processes", label: "Processes", icon: Server },
   { id: "network", label: "Network", icon: Network },
   { id: "deploy", label: "Deploy", icon: Rocket },
 ];
 
 const toolsNavItems: NavItem[] = [
-  { id: "modules", label: "Find Modules", icon: Search },
+  { id: "modules", label: "Explore Modules", icon: Search },
   // { id: "panels", label: "Configure", icon: Puzzle },
   // { id: "panels", label: "Panels", icon: Activity },
   { id: "infra", label: "Infrastructure", icon: Cloud },

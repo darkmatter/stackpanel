@@ -134,30 +134,6 @@ Files in `.stackpanel/gen/` are regenerated on each `devenv` run:
 - JSON schemas enable YAML intellisense in VS Code
 - Workspace file configures terminal integration
 
-**Architecture**: Nix computes the configuration, then calls the Go CLI to write all files atomically:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Nix/devenv                          │
-│  - Computes full config (ports, apps, services, IDE)        │
-│  - Builds Go CLI binary                                     │
-│  - In enterShell: pipes config JSON to CLI                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-              stackpanel init --config '${configJson}'
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Go CLI (single writer)                 │
-│  - Writes state.json                                        │
-│  - Writes IDE files (real files, not symlinks)              │
-│  - Writes JSON schemas                                      │
-│  - All writes happen atomically                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-This ensures generated files and state.json are always in sync (no divergence possible).
 
 ### State File
 

@@ -7,12 +7,17 @@
 # - A few master keys encrypt all secrets
 # - Each secret (variable with type=SECRET) specifies which master keys can decrypt it
 # - A default "local" key is auto-generated, ensuring secrets always work
+# - Groups provide access control via externally-stored AGE keypairs
 #
 # Usage:
 #   stackpanel.secrets.master-keys = {
 #     local = { ... };  # auto-configured
-#     dev = { age-pub = "age1..."; ref = "ref+awsssm://..."; };
-#     prod = { age-pub = "age1..."; ref = "ref+awsssm://..."; };
+#   };
+#
+#   # Groups auto-create master-key entries when initialized
+#   stackpanel.secrets.groups = {
+#     dev = { age-pub = "age1..."; };   # set after secrets:init-group dev
+#     prod = { age-pub = "age1..."; };  # set after secrets:init-group prod
 #   };
 #
 #   stackpanel.variables."/prod/api-key" = {
@@ -32,6 +37,7 @@ let
   variablesBackend = config.stackpanel.secrets.backend;
   isChamber = variablesBackend == "chamber";
   chamberCfg = config.stackpanel.secrets.chamber;
+  chamberPrefix = chamberCfg.service-prefix;
 
   # Import secrets library
   secretsLib = import ./lib.nix {
@@ -39,11 +45,22 @@ let
     secretsDir = cfg.secrets-dir;
   };
 
+  # Helper: coerce null to a default value (proto optional fields default to null,
+  # and Nix's `a.b or default` only handles missing attrs, not null values)
+  orNull = default: val: if val == null then default else val;
+
   # Convert master-keys to the format expected by lib scripts
   masterKeysConfig = lib.mapAttrs (name: key: {
     inherit (key) age-pub ref;
-    "resolve-cmd" = key.resolve-cmd or null;
+    "resolve-cmd" = key.resolve-cmd;
   }) cfg.master-keys;
+
+  # Convert groups to the format expected by lib scripts
+  groupsConfig = lib.mapAttrs (name: group: {
+    "age-pub" = orNull "" group.age-pub;
+    "ssm-path" = group.ssm-path;
+    ref = group.computed-ref;
+  }) cfg.groups;
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Packages
@@ -72,6 +89,14 @@ let
     text = secretsLib.rekeySecretScript { inherit masterKeysConfig; };
   };
 
+  secrets-init-group = pkgs.writeShellApplication {
+    name = "secrets-init-group";
+    runtimeInputs = [ pkgs.age pkgs.jq pkgs.awscli2 ];
+    text = secretsLib.initGroupScript {
+      inherit groupsConfig chamberPrefix;
+    };
+  };
+
 in
 {
   config = lib.mkIf cfg.enable {
@@ -80,11 +105,27 @@ in
     # ═══════════════════════════════════════════════════════════════════════════
 
     # Add required packages to devshell
+    # NOTE: secrets-init-group (and other script binaries) must be in packages
+    # so they're available via the agent's exec API (which has PATH but not
+    # devshell script functions).
     stackpanel.devshell.packages = [
       pkgs.age
       pkgs.vals
       pkgs.jq
+      secrets-init-group
+      secrets-set
+      secrets-get
+      secrets-list
+      secrets-rekey
     ] ++ lib.optional isChamber pkgs.chamber;
+
+    # Set CHAMBER_KMS_KEY_ALIAS when chamber backend is active.
+    # This tells chamber which KMS key to use for encrypting SSM parameters.
+    # The alias is derived from the infra aws-secrets KMS config if available,
+    # otherwise falls back to the project name.
+    stackpanel.devshell.env = lib.optionalAttrs isChamber {
+      CHAMBER_KMS_KEY_ALIAS = "alias/${config.stackpanel.name or "my-project"}-secrets";
+    };
 
     # Auto-generate local master key on shell entry
     stackpanel.devshell.hooks.before = [
@@ -120,6 +161,11 @@ in
         description = "Re-encrypt a secret to different master keys";
       };
 
+      "secrets:init-group" = {
+        exec = "${secrets-init-group}/bin/secrets-init-group \"$@\"";
+        description = "Initialize a secrets group (generate AGE keypair, store in SSM)";
+      };
+
       "secrets:show-keys" = {
         exec = ''
           echo "Master Keys:"
@@ -130,8 +176,21 @@ in
             echo "    ref: ${key.ref}"
             ${lib.optionalString (key.resolve-cmd != null) ''echo "    resolve-cmd: ${key.resolve-cmd}"''}
           '') cfg.master-keys)}
+
+          echo ""
+          echo "Groups:"
+          echo ""
+          ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: group: let
+            pub = orNull "" group.age-pub;
+          in ''
+            echo "  ${name}:"
+            echo "    public: ${if pub != "" then pub else "(not initialized)"}"
+            echo "    ssm-path: ${group.ssm-path}"
+            echo "    ref: ${group.computed-ref}"
+            ${if pub != "" then ''echo "    status: initialized"'' else ''echo "    status: pending (run: secrets:init-group ${name})"''}
+          '') cfg.groups)}
         '';
-        description = "Show configured master keys";
+        description = "Show configured master keys and groups";
       };
     };
 
@@ -147,6 +206,11 @@ in
         ref = key.ref;
         resolveCmd = key.resolve-cmd;
       }) cfg.master-keys;
+      groups = lib.mapAttrs (name: group: {
+        agePub = orNull "" group.age-pub;
+        ssmPath = group.ssm-path;
+        ref = group.computed-ref;
+      }) cfg.groups;
     };
 
     # Variables backend configuration for CLI/agent

@@ -31,6 +31,7 @@
   # Searchable tags
   tags = [
     "bun"
+    "bun2nix"
     "typescript"
     "javascript"
     "nodejs"
@@ -46,7 +47,7 @@
 
   # Feature flags
   features = {
-    files = false;
+    files = true;         # Generates package.json with bun2nix postinstall
     scripts = true; # Provides run-<app> and test-<app> scripts
     healthchecks = true;
     packages = true; # Builds Bun applications via bun2nix

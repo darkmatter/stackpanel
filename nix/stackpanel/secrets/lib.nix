@@ -337,6 +337,198 @@ rec {
     fi
   '';
 
+  # ===========================================================================
+  # Group Key Management
+  # ===========================================================================
+
+  # Initialize a secrets group: generate AGE keypair and store private key in SSM.
+  # Usage: secrets:init-group <group-name> [--ssm-path /custom/path] [--dry-run] [--yes]
+  initGroupScript = { groupsConfig, chamberPrefix }: ''
+    set -e
+
+    ${cfg.bashLib}
+
+    GROUPS_JSON='${builtins.toJSON groupsConfig}'
+
+    usage() {
+      echo "Usage: secrets:init-group <group-name> [--ssm-path PATH] [--dry-run] [--yes]"
+      echo ""
+      echo "Initialize a secrets group by generating an AGE keypair and storing"
+      echo "the private key in AWS SSM Parameter Store."
+      echo ""
+      echo "Options:"
+      echo "  --ssm-path  Override the SSM path (default: from group config)"
+      echo "  --dry-run   Generate keypair and show what would happen, don't write to SSM"
+      echo "  --yes       Skip confirmation prompt (for non-interactive use)"
+      echo ""
+      echo "Available groups:"
+      echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]' | while read -r g; do
+        SSM=$(echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r --arg g "$g" '.[$g]["ssm-path"] // "(default)"')
+        echo "  $g  (ssm-path: $SSM)"
+      done
+      exit 1
+    }
+
+    [[ $# -lt 1 ]] && usage
+
+    GROUP_NAME="$1"
+    shift
+
+    SSM_PATH_OVERRIDE=""
+    DRY_RUN=false
+    FORCE_YES=false
+    JSON_OUTPUT=false
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --ssm-path)
+          SSM_PATH_OVERRIDE="$2"
+          shift 2
+          ;;
+        --dry-run)
+          DRY_RUN=true
+          shift
+          ;;
+        --yes|-y)
+          FORCE_YES=true
+          shift
+          ;;
+        --json)
+          JSON_OUTPUT=true
+          shift
+          ;;
+        *)
+          echo "Unknown option: $1" >&2
+          usage
+          ;;
+      esac
+    done
+
+    # Look up group config
+    GROUP_EXISTS=$(echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq --arg g "$GROUP_NAME" 'has($g)')
+    if [[ "$GROUP_EXISTS" != "true" ]]; then
+      echo "Error: Unknown group '$GROUP_NAME'" >&2
+      echo "" >&2
+      echo "Available groups:" >&2
+      echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r 'keys[]' | while read -r g; do
+        echo "  $g" >&2
+      done
+      exit 1
+    fi
+
+    # Get SSM path
+    if [[ -n "$SSM_PATH_OVERRIDE" ]]; then
+      SSM_PATH="$SSM_PATH_OVERRIDE"
+    else
+      SSM_PATH=$(echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r --arg g "$GROUP_NAME" '.[$g]["ssm-path"]')
+    fi
+
+    # Check if group already has a public key configured
+    EXISTING_PUB=$(echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r --arg g "$GROUP_NAME" '.[$g]["age-pub"] // ""')
+    if [[ -n "$EXISTING_PUB" ]]; then
+      echo "Warning: Group '$GROUP_NAME' already has a public key configured:" >&2
+      echo "  $EXISTING_PUB" >&2
+      echo "" >&2
+      if [[ "$FORCE_YES" == "true" ]]; then
+        echo "Overwriting (--yes specified)..." >&2
+      else
+        read -rp "Overwrite? This will generate a NEW keypair. [y/N] " CONFIRM
+        if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+          echo "Aborted." >&2
+          exit 0
+        fi
+      fi
+    fi
+
+    echo "Generating AGE keypair for group '$GROUP_NAME'..."
+
+    # Generate keypair to a temp file
+    TMPDIR=$(mktemp -d)
+    trap 'rm -rf "$TMPDIR"' EXIT
+
+    ${pkgs.age}/bin/age-keygen -o "$TMPDIR/key.txt" 2>/dev/null
+    PRIVATE_KEY=$(cat "$TMPDIR/key.txt")
+    PUBLIC_KEY=$(${pkgs.age}/bin/age-keygen -y "$TMPDIR/key.txt")
+
+    # In JSON mode, all human-readable output goes to stderr
+    if [[ "$JSON_OUTPUT" == "true" ]]; then
+      LOG() { echo "$@" >&2; }
+    else
+      LOG() { echo "$@"; }
+    fi
+
+    LOG ""
+    LOG "Public key:  $PUBLIC_KEY"
+    LOG "SSM path:    $SSM_PATH"
+    LOG ""
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+      if [[ "$JSON_OUTPUT" == "true" ]]; then
+        ${pkgs.jq}/bin/jq -n \
+          --arg group "$GROUP_NAME" \
+          --arg publicKey "$PUBLIC_KEY" \
+          --arg ssmPath "$SSM_PATH" \
+          '{group: $group, publicKey: $publicKey, ssmPath: $ssmPath, dryRun: true}'
+      else
+        echo "[DRY RUN] Would store private key at SSM path: $SSM_PATH"
+        echo ""
+        echo "To complete setup, add to .stackpanel/config.nix:"
+        echo ""
+        echo "  stackpanel.secrets.groups.$GROUP_NAME.age-pub = \"$PUBLIC_KEY\";"
+        echo ""
+      fi
+      exit 0
+    fi
+
+    # Store private key in SSM Parameter Store
+    LOG "Storing private key in SSM Parameter Store..."
+
+    # Use chamber if available and backend is chamber, otherwise use aws ssm directly
+    CHAMBER_PREFIX="${chamberPrefix}"
+    if command -v chamber &>/dev/null && [[ -n "$CHAMBER_PREFIX" ]]; then
+      # Chamber stores under /{service}/keys/{group}
+      # The SSM_PATH is already the full path, but chamber expects service + key format
+      # We use aws ssm directly for precise path control
+      ${pkgs.awscli2}/bin/aws ssm put-parameter \
+        --name "$SSM_PATH" \
+        --value "$PRIVATE_KEY" \
+        --type SecureString \
+        --overwrite \
+        --description "AGE private key for stackpanel secrets group: $GROUP_NAME" \
+        --tags "Key=Project,Value=${chamberPrefix}" "Key=ManagedBy,Value=stackpanel" \
+        >&2 2>&1
+    else
+      ${pkgs.awscli2}/bin/aws ssm put-parameter \
+        --name "$SSM_PATH" \
+        --value "$PRIVATE_KEY" \
+        --type SecureString \
+        --overwrite \
+        --description "AGE private key for stackpanel secrets group: $GROUP_NAME" \
+        >&2 2>&1
+    fi
+
+    if [[ "$JSON_OUTPUT" == "true" ]]; then
+      # Output clean JSON to stdout for machine consumption
+      ${pkgs.jq}/bin/jq -n \
+        --arg group "$GROUP_NAME" \
+        --arg publicKey "$PUBLIC_KEY" \
+        --arg ssmPath "$SSM_PATH" \
+        '{group: $group, publicKey: $publicKey, ssmPath: $ssmPath, dryRun: false, success: true}'
+    else
+      echo ""
+      echo "Done! Private key stored in SSM."
+      echo ""
+      echo "Next steps:"
+      echo "  1. Add the public key to .stackpanel/config.nix (or data/secrets.nix):"
+      echo ""
+      echo "     stackpanel.secrets.groups.$GROUP_NAME.age-pub = \"$PUBLIC_KEY\";"
+      echo ""
+      echo "  2. Restart devshell to pick up the change"
+      echo "  3. Secrets encrypted to this group will use the group's master key"
+      echo ""
+    fi
+  '';
+
   # Re-encrypt a secret to different master keys
   rekeySecretScript = { masterKeysConfig }: ''
     set -e
