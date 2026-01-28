@@ -31,8 +31,9 @@ function StudioLayout() {
   const { project } = Route.useSearch();
 
   return (
-    <AgentProvider>
-      <AgentSSEProvider>
+    // SSE provider is outside so AgentProvider can consume SSE status for health
+    <AgentSSEProvider>
+      <AgentProvider>
         <ProjectProvider initialProjectId={project}>
           <SidebarProvider>
             <DashboardSidebar />
@@ -43,8 +44,8 @@ function StudioLayout() {
             </SidebarInset>
           </SidebarProvider>
         </ProjectProvider>
-      </AgentSSEProvider>
-    </AgentProvider>
+      </AgentProvider>
+    </AgentSSEProvider>
   );
 }
 

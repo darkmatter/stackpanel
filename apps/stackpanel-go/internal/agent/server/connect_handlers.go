@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -450,7 +451,7 @@ func (s *AgentServiceServer) GetInstalledPackages(
 // Process-Compose Handlers
 // =============================================================================
 
-// GetProcesses returns the list of processes from process-compose.
+// GetProcesses returns the list of processes from process-compose via HTTP API.
 func (s *AgentServiceServer) GetProcesses(
 	ctx context.Context,
 	req *connect.Request[gopb.GetProcessesRequest],
@@ -461,90 +462,66 @@ func (s *AgentServiceServer) GetProcesses(
 		Processes: []*gopb.ProcessInfo{},
 	}
 
-	// Check if process-compose is available
-	whichRes, err := s.server.exec.Run("which", "process-compose")
-	if err != nil || whichRes.ExitCode != 0 {
-		resp.Error = "process-compose not found in PATH"
+	// Use HTTP API instead of CLI for better performance
+	client := getProcessComposeClient()
+	apiURL := getProcessComposeBaseURL() + "/processes"
+
+	httpResp, err := client.Get(apiURL)
+	if err != nil {
+		resp.Error = "process-compose server not running"
+		return connect.NewResponse(resp), nil
+	}
+	defer httpResp.Body.Close()
+
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		resp.Error = "failed to read response"
+		return connect.NewResponse(resp), nil
+	}
+
+	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
+		resp.Error = fmt.Sprintf("process-compose returned status %d", httpResp.StatusCode)
+		return connect.NewResponse(resp), nil
+	}
+
+	// Parse the JSON output from the HTTP API
+	var pcOutput struct {
+		Data []struct {
+			Name       string  `json:"name"`
+			Namespace  string  `json:"namespace"`
+			Status     string  `json:"status"`
+			PID        int     `json:"pid"`
+			ExitCode   int     `json:"exit_code"`
+			Restarts   int     `json:"restarts"`
+			SystemTime string  `json:"system_time"`
+			IsRunning  bool    `json:"is_running"`
+			IsReady    string  `json:"is_ready"`
+			Mem        int64   `json:"mem"`
+			CPU        float64 `json:"cpu"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(body, &pcOutput); err != nil {
+		resp.Error = "failed to parse process-compose output"
 		return connect.NewResponse(resp), nil
 	}
 
 	resp.Available = true
 
-	// Try to get process list from process-compose
-	res, err := s.server.exec.Run("process-compose", "process", "list", "-j")
-	if err != nil {
-		resp.Error = err.Error()
-		return connect.NewResponse(resp), nil
+	for _, p := range pcOutput.Data {
+		resp.Processes = append(resp.Processes, &gopb.ProcessInfo{
+			Name:       p.Name,
+			Namespace:  p.Namespace,
+			Status:     p.Status,
+			Pid:        int32(p.PID),
+			ExitCode:   int32(p.ExitCode),
+			IsRunning:  p.IsRunning,
+			Restarts:   int32(p.Restarts),
+			SystemTime: p.SystemTime,
+		})
 	}
 
-	if res.ExitCode != 0 {
-		if strings.Contains(res.Stderr, "connection refused") ||
-			strings.Contains(res.Stderr, "dial") ||
-			strings.Contains(res.Stderr, "connect") {
-			resp.Error = "process-compose server not running"
-		} else {
-			resp.Error = strings.TrimSpace(res.Stderr)
-		}
-		return connect.NewResponse(resp), nil
-	}
-
-	// Parse the JSON output
-	var pcOutput struct {
-		Data []struct {
-			Name       string `json:"name"`
-			Namespace  string `json:"namespace"`
-			Status     string `json:"status"`
-			PID        int    `json:"pid"`
-			ExitCode   int    `json:"exit_code"`
-			Restarts   int    `json:"restarts"`
-			SystemTime string `json:"system_time"`
-		} `json:"data"`
-	}
-
-	if err := json.Unmarshal([]byte(res.Stdout), &pcOutput); err != nil {
-		// Try parsing as a plain array
-		var processes []struct {
-			Name       string `json:"name"`
-			Namespace  string `json:"namespace"`
-			Status     string `json:"status"`
-			PID        int    `json:"pid"`
-			ExitCode   int    `json:"exit_code"`
-			Restarts   int    `json:"restarts"`
-			SystemTime string `json:"system_time"`
-		}
-		if err := json.Unmarshal([]byte(res.Stdout), &processes); err != nil {
-			resp.Error = "failed to parse process-compose output"
-			return connect.NewResponse(resp), nil
-		}
-
-		for _, p := range processes {
-			resp.Processes = append(resp.Processes, &gopb.ProcessInfo{
-				Name:       p.Name,
-				Namespace:  p.Namespace,
-				Status:     p.Status,
-				Pid:        int32(p.PID),
-				ExitCode:   int32(p.ExitCode),
-				IsRunning:  isProcessRunning(p.Status),
-				Restarts:   int32(p.Restarts),
-				SystemTime: p.SystemTime,
-			})
-		}
-	} else {
-		for _, p := range pcOutput.Data {
-			resp.Processes = append(resp.Processes, &gopb.ProcessInfo{
-				Name:       p.Name,
-				Namespace:  p.Namespace,
-				Status:     p.Status,
-				Pid:        int32(p.PID),
-				ExitCode:   int32(p.ExitCode),
-				IsRunning:  isProcessRunning(p.Status),
-				Restarts:   int32(p.Restarts),
-				SystemTime: p.SystemTime,
-			})
-		}
-	}
-
-	resp.Running = len(resp.Processes) > 0 || res.ExitCode == 0
+	resp.Running = len(resp.Processes) > 0
 
 	return connect.NewResponse(resp), nil
 }

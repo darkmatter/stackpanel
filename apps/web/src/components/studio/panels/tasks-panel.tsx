@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useMemo, useState } from "react";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Card, CardContent, CardHeader } from "@ui/card";
@@ -12,12 +13,6 @@ import {
 	SelectValue,
 } from "@ui/select";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@ui/tooltip";
-import {
 	ChevronDown,
 	ChevronRight,
 	Loader2,
@@ -25,9 +20,9 @@ import {
 	Play,
 	Search,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 import { useTurboPackages } from "@/lib/use-agent";
 import { PanelHeader } from "./shared/panel-header";
+import { CommandRunner } from "../command-runner";
 
 /**
  * TasksPanel displays tasks discovered from the turbo package graph.
@@ -110,8 +105,7 @@ export function TasksPanel() {
 	}
 
 	return (
-		<TooltipProvider>
-			<div className="space-y-4">
+		<div className="space-y-4">
 				<PanelHeader
 					title="Tasks"
 					description={`${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} discovered from turbo.json across ${packages.length} package${packages.length !== 1 ? "s" : ""}`}
@@ -178,12 +172,12 @@ export function TasksPanel() {
 
 							return (
 								<Card key={task}>
-									<CardHeader
-										className="cursor-pointer py-3"
-										onClick={() => toggleTask(task)}
-									>
+									<CardHeader className="py-3">
 										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
+											<div
+												className="flex items-center gap-2 cursor-pointer flex-1"
+												onClick={() => toggleTask(task)}
+											>
 												{isExpanded ? (
 													<ChevronDown className="h-4 w-4 text-muted-foreground" />
 												) : (
@@ -197,16 +191,14 @@ export function TasksPanel() {
 													{count} package{count !== 1 ? "s" : ""}
 												</Badge>
 											</div>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<code className="text-muted-foreground text-xs">
-														turbo run {task}
-													</code>
-												</TooltipTrigger>
-												<TooltipContent>
-													Run this task across all packages
-												</TooltipContent>
-											</Tooltip>
+											<CommandRunner
+												command="turbo"
+												args={["run", task]}
+												label={`Run ${task}`}
+												description={`Run the "${task}" task across all packages`}
+												size="sm"
+												variant="ghost"
+											/>
 										</div>
 									</CardHeader>
 
@@ -216,27 +208,28 @@ export function TasksPanel() {
 												<div className="mb-2 text-muted-foreground text-xs font-medium uppercase tracking-wide">
 													Available in packages:
 												</div>
-												<div className="flex flex-wrap gap-2">
+												<div className="space-y-1.5">
 													{packagesWithTask.map((pkg) => (
-														<Tooltip key={pkg.name}>
-															<TooltipTrigger asChild>
-																<div className="flex items-center gap-1.5 rounded-md bg-background px-2 py-1 text-sm">
-																	<Package className="h-3 w-3 text-muted-foreground" />
-																	<span className="font-mono">{pkg.name}</span>
-																</div>
-															</TooltipTrigger>
-															<TooltipContent>
-																<div className="text-xs">
-																	<div className="font-medium">{pkg.name}</div>
-																	<div className="text-muted-foreground">
-																		{pkg.path}
-																	</div>
-																	<div className="mt-1 font-mono text-accent">
-																		turbo run {task} --filter={pkg.name}
-																	</div>
-																</div>
-															</TooltipContent>
-														</Tooltip>
+														<div
+															key={pkg.name}
+															className="flex items-center justify-between rounded-md bg-background px-3 py-2"
+														>
+															<div className="flex items-center gap-2">
+																<Package className="h-3.5 w-3.5 text-muted-foreground" />
+																<span className="font-mono text-sm">{pkg.name}</span>
+																<span className="text-muted-foreground text-xs">
+																	{pkg.path}
+																</span>
+															</div>
+															<CommandRunner
+																command="turbo"
+																args={["run", task, `--filter=${pkg.name}`]}
+																label="Run"
+																description={`Run "${task}" in ${pkg.name}`}
+																size="sm"
+																variant="ghost"
+															/>
+														</div>
 													))}
 												</div>
 											</div>
@@ -273,7 +266,6 @@ export function TasksPanel() {
 						</div>
 					</CardContent>
 				</Card>
-			</div>
-		</TooltipProvider>
+		</div>
 	);
 }

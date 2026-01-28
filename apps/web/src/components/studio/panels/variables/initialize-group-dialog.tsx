@@ -12,7 +12,7 @@ import {
 import { CheckCircle2, Copy, Key, Loader2, Terminal } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useAgentClient } from "@/lib/agent-provider";
+import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
 import { usePatchNixData, useRefreshNixConfig } from "@/lib/use-agent";
 
 interface InitGroupResult {
@@ -48,6 +48,7 @@ export function InitializeGroupDialog({
 	onSuccess,
 }: InitializeGroupDialogProps) {
 	const agentClient = useAgentClient();
+	const { projectRoot } = useAgentContext();
 	const patchNixData = usePatchNixData();
 	const refreshConfig = useRefreshNixConfig();
 	const [state, setState] = useState<InitState>({ step: "confirm" });
@@ -63,11 +64,20 @@ export function InitializeGroupDialog({
 		setOutput("");
 
 		try {
-			// secrets-init-group is in devshell packages; the agent's executor
-			// merges the devshell PATH so the binary is available directly.
+			// Build command with STACKPANEL_STATE_DIR export for AWS credential process.
+			// The aws-credential-process script needs this var to find certificates.
+			const stateDirExport = projectRoot
+				? `export STACKPANEL_STATE_DIR="${projectRoot}/.stackpanel/state"; `
+				: "";
+
+			// Try direct command first (available if agent has devshell PATH),
+			// fall back to nix run if not found.
 			const result = await agentClient.exec({
-				command: "secrets-init-group",
-				args: [groupName, "--yes", "--json"],
+				command: "sh",
+				args: [
+					"-c",
+					`${stateDirExport}command -v secrets-init-group >/dev/null 2>&1 && secrets-init-group ${groupName} --yes --json || nix run --impure .#stackpanel -- commands secrets:init-group ${groupName} --yes --json`,
+				],
 			});
 
 			// Capture stderr as output log
@@ -153,6 +163,7 @@ export function InitializeGroupDialog({
 		}
 	}, [
 		agentClient,
+		projectRoot,
 		groupName,
 		ssmPath,
 		patchNixData,

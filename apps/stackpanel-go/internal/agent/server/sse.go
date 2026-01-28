@@ -108,11 +108,19 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "event: connected\ndata: {\"status\":\"ok\"}\n\n")
 	flusher.Flush()
 
+	// Heartbeat ticker - sends ping events every 5 seconds for keepalive
+	heartbeatTicker := time.NewTicker(5 * time.Second)
+	defer heartbeatTicker.Stop()
+
 	// Stream events
 	for {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-heartbeatTicker.C:
+			// Send heartbeat ping
+			fmt.Fprintf(w, "event: ping\ndata: {\"ts\":%d}\n\n", time.Now().UnixMilli())
+			flusher.Flush()
 		case event := <-eventChan:
 			data, err := json.Marshal(event.Data)
 			if err != nil {
