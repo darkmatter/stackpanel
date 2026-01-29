@@ -383,11 +383,36 @@ let
 in
 {
   # ===========================================================================
-  # Configuration
+  # Options
   # ===========================================================================
-  # NOTE: Top-level options (stackpanel.deployment.{enable,defaultProvider,fly.*})
-  # are declared in nix/stackpanel/core/options/deployment.nix
-  # This module only adds per-app options via appModules and implements config.
+  options.stackpanel.deployment = {
+    enable = lib.mkEnableOption "deployment module" // {
+      default = true;
+    };
+
+    defaultProvider = lib.mkOption {
+      type = lib.types.enum [ "fly" ];
+      default = "fly";
+      description = "Default deployment provider.";
+    };
+
+    fly = {
+      organization = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Fly.io organization slug.";
+      };
+
+      defaultRegion = lib.mkOption {
+        type = lib.types.str;
+        default = "iad";
+        description = "Default Fly.io region for deployments.";
+      };
+    };
+  };
+
+  # ===========================================================================
+  # Configuration
   # ===========================================================================
   config = lib.mkMerge [
     # Always add appModules (unconditionally)

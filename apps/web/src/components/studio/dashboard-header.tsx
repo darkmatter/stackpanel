@@ -14,6 +14,7 @@ import { Input } from "@ui/input";
 import { ArrowLeft, Bell, LogOut, Search, Settings, User } from "lucide-react";
 import { AgentStatus } from "@/components/agent-connect";
 import { ShellStatus } from "./shell-status";
+import { AgentConsoleDialog } from "./agent-console-dialog";
 import type { PanelType } from "./dashboard-sidebar";
 import { SidebarTrigger } from "../ui/sidebar";
 
@@ -102,6 +103,7 @@ export function DashboardHeader() {
         </div> */}
 
         <div className="flex items-center gap-1">
+          <AgentConsoleDialog />
           <Button
             className="text-muted-foreground hover:text-foreground"
             size="icon"
