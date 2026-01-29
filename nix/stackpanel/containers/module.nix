@@ -932,7 +932,7 @@ in
                 echo "❌ Homebrew is required to install Apple container"
                 echo ""
                 echo "Install Homebrew first:"
-                echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+                echo '  /bin/bash -c "\$\(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh\)"'
                 echo ""
                 echo "Or install manually from: https://github.com/apple/container/releases"
                 exit 1
