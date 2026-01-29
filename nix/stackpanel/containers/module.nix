@@ -64,8 +64,7 @@ let
   # Get nix2container for Linux (x86_64-linux)
   # ---------------------------------------------------------------------------
   hasNix2container = inputs != null && inputs ? nix2container;
-  nix2containerPkgs =
-    if hasNix2container then inputs.nix2container.packages.x86_64-linux else null;
+  nix2containerPkgs = if hasNix2container then inputs.nix2container.packages.x86_64-linux else null;
   nix2container = if nix2containerPkgs != null then nix2containerPkgs.nix2container else null;
 
   # ---------------------------------------------------------------------------
@@ -229,26 +228,43 @@ let
       appType = containerCfg.type or "bun";
     in
     if startupCommand != null then
-      if builtins.isList startupCommand then startupCommand else [ "/bin/sh" "-c" startupCommand ]
+      if builtins.isList startupCommand then
+        startupCommand
+      else
+        [
+          "/bin/sh"
+          "-c"
+          startupCommand
+        ]
     else if appType == "bun" then
       # Bun is at /bin/bun in Nix containers (via buildEnv pathsToLink)
       # Nitro outputs to .output/server/index.mjs
-      [ "/bin/bun" "/app/.output/server/index.mjs" ]
+      [
+        "/bin/bun"
+        "/app/.output/server/index.mjs"
+      ]
     else if appType == "node" then
-      [ "/bin/node" "/app/.output/server/index.mjs" ]
+      [
+        "/bin/node"
+        "/app/.output/server/index.mjs"
+      ]
     else if appType == "go" then
       [ "/app/server" ]
     else if appType == "static" then
-      [ "nginx" "-g" "daemon off;" ]
+      [
+        "nginx"
+        "-g"
+        "daemon off;"
+      ]
     else
       [ "/bin/sh" ];
 
   # ---------------------------------------------------------------------------
   # Filter apps with container.enable = true
   # ---------------------------------------------------------------------------
-  appsWithContainers = lib.filterAttrs (
-    _name: appCfg: (appCfg.container.enable or false)
-  ) (cfg.apps or { });
+  appsWithContainers = lib.filterAttrs (_name: appCfg: (appCfg.container.enable or false)) (
+    cfg.apps or { }
+  );
 
   # ---------------------------------------------------------------------------
   # Build container image using dockerTools.buildImage
@@ -278,13 +294,12 @@ let
             null;
 
         # Environment variables
-        containerEnv =
-          [
-            "NODE_ENV=production"
-            "PORT=${toString (containerCfg.port or 3000)}"
-            "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-          ]
-          ++ lib.mapAttrsToList (k: v: "${k}=${v}") (containerCfg.env or { });
+        containerEnv = [
+          "NODE_ENV=production"
+          "PORT=${toString (containerCfg.port or 3000)}"
+          "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+        ]
+        ++ lib.mapAttrsToList (k: v: "${k}=${v}") (containerCfg.env or { });
 
         # App type determines what runtime to include
         appType = containerCfg.type or "bun";
@@ -319,23 +334,22 @@ let
 
         copyToRoot = pkgsLinux.buildEnv {
           name = "image-root";
-          paths =
-            [
-              pkgsLinux.bashInteractive
-              pkgsLinux.coreutils
-              pkgsLinux.cacert
-              appDir
-            ]
-            ++ lib.optional (runtimePkg != null) runtimePkg
-            ++ (
-              if containerCfg.copyToRoot != null then
-                if builtins.isList containerCfg.copyToRoot then
-                  containerCfg.copyToRoot
-                else
-                  [ containerCfg.copyToRoot ]
+          paths = [
+            pkgsLinux.bashInteractive
+            pkgsLinux.coreutils
+            pkgsLinux.cacert
+            appDir
+          ]
+          ++ lib.optional (runtimePkg != null) runtimePkg
+          ++ (
+            if containerCfg.copyToRoot != null then
+              if builtins.isList containerCfg.copyToRoot then
+                containerCfg.copyToRoot
               else
-                [ ]
-            );
+                [ containerCfg.copyToRoot ]
+            else
+              [ ]
+          );
           pathsToLink = [
             "/bin"
             "/etc"
@@ -394,13 +408,24 @@ let
             null;
 
         # Environment variables
-        containerEnv =
-          [
-            { name = "NODE_ENV"; value = "production"; }
-            { name = "PORT"; value = toString (containerCfg.port or 3000); }
-            { name = "SSL_CERT_FILE"; value = "/etc/ssl/certs/ca-bundle.crt"; }
-          ]
-          ++ lib.mapAttrsToList (k: v: { name = k; value = v; }) (containerCfg.env or { });
+        containerEnv = [
+          {
+            name = "NODE_ENV";
+            value = "production";
+          }
+          {
+            name = "PORT";
+            value = toString (containerCfg.port or 3000);
+          }
+          {
+            name = "SSL_CERT_FILE";
+            value = "/etc/ssl/certs/ca-bundle.crt";
+          }
+        ]
+        ++ lib.mapAttrsToList (k: v: {
+          name = k;
+          value = v;
+        }) (containerCfg.env or { });
 
         # App type determines what runtime to include
         appType = containerCfg.type or "bun";
@@ -598,10 +623,7 @@ let
       baseImage = container.baseImage;
       # Default buildOutputPath to app's .output directory
       buildOutputPath =
-        if container.buildOutputPath != null then
-          container.buildOutputPath
-        else
-          "${appPath}/.output";
+        if container.buildOutputPath != null then container.buildOutputPath else "${appPath}/.output";
       copyToRoot = container.copyToRoot;
       defaultCopyArgs = container.defaultCopyArgs;
       env = container.env;
@@ -932,7 +954,8 @@ in
                 echo "❌ Homebrew is required to install Apple container"
                 echo ""
                 echo "Install Homebrew first:"
-                echo '  /bin/bash -c "\$\(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh\)"'
+                # shellcheck disable=SC2016
+                echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
                 echo ""
                 echo "Or install manually from: https://github.com/apple/container/releases"
                 exit 1
