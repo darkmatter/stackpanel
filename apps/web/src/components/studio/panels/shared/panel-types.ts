@@ -2,6 +2,15 @@
 // Shared panel types used by panels-panel, app-expanded-content, and renderers.
 // =============================================================================
 
+/** Column definition for TABLE panels */
+export interface NixPanelColumn {
+  key: string;
+  label: string;
+}
+
+/** Option for SELECT fields - can be string or {value, label} object */
+export type NixFieldOption = string | { value: string; label: string };
+
 /** Raw panel shape from the Nix panelsComputed output */
 export interface NixPanel {
   id: string;
@@ -14,18 +23,26 @@ export interface NixPanel {
   enabled: boolean;
   fields: NixPanelField[];
   apps: Record<string, { enabled: boolean; config: Record<string, string> }>;
+  /** Column definitions for PANEL_TYPE_TABLE */
+  columns?: NixPanelColumn[];
+  /** Row data for PANEL_TYPE_TABLE */
+  rows?: Array<Record<string, string>>;
 }
 
 /** A single field inside a NixPanel */
 export interface NixPanelField {
   name: string;
   type: string;
-  value: string;
-  options?: string[];
+  value: string | null;
+  options?: NixFieldOption[];
   label?: string | null;
   editable?: boolean;
   editPath?: string | null;
   placeholder?: string | null;
+  /** Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization') */
+  configPath?: string | null;
+  /** Help text shown below the field */
+  description?: string | null;
 }
 
 /** A field definition from a PANEL_TYPE_APP_CONFIG panel */
@@ -36,8 +53,12 @@ export interface AppConfigField {
   editable?: boolean;
   editPath?: string; // camelCase dot path e.g. "go.mainPackage"
   placeholder?: string;
-  options?: string[];
+  options?: NixFieldOption[];
   value?: string;
+  /** Nix config path for saving field value */
+  configPath?: string | null;
+  /** Help text shown below the field */
+  description?: string | null;
 }
 
 /** A module panel with per-app config data */

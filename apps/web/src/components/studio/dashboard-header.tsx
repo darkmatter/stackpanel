@@ -37,6 +37,7 @@ const panelTitles: Record<PanelType, string> = {
   network: "Network",
   extensions: "Extensions",
   modules: "Modules",
+  panels: "Panels",
   files: "Generated Files",
   terminal: "Terminal",
   roadmap: "Roadmap",

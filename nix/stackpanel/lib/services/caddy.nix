@@ -7,6 +7,11 @@
 # Provides scripts for Caddy lifecycle management, site configuration, and
 # integration with Step CA for automatic TLS certificates.
 #
+# Domain Format:
+#   Virtual hosts use the format: <app>.<project>.<tld>
+#   Example: web.myproject.localhost, api.myproject.lan
+#   The TLD is configured via stackpanel.caddy.tld (default: "localhost")
+#
 # Features:
 #   - Stable port computation from project name (mkProjectPort)
 #   - Site registration and configuration management

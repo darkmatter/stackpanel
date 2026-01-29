@@ -4,4 +4,17 @@ description: How to Contribute
 icon: heart
 ---
 
-## Code Block
+## Testing
+
+```bash
+tmpdir=$(mktemp -d)
+cd $tmpdir
+nix flake init -t github:darkmatter/stackpanel#minimal
+# or locally
+nix flake init -t /Users/coopermaruyama/darkmatter/stackpanel#default
+git init && git add -A
+
+# 4. Update the flake to use local stackpanel (since github:darkmatter/stackpanel isn't public)
+sed 's|github:darkmatter/stackpanel|path:/Users/coopermaruyama/darkmatter/stackpanel|' flake.nix > flake.nix.tmp && mv flake.nix.tmp flake.nix
+
+```

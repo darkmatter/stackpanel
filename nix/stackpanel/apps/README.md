@@ -4,7 +4,17 @@ Application port management and Caddy virtual host configuration for devenv.
 
 ## Overview
 
-This module provides a unified way to manage application ports and domains in development environments. Each app gets a deterministic port based on the project name and can optionally be assigned a `.localhost` domain with automatic Caddy vhost setup.
+This module provides a unified way to manage application ports and domains in development environments. Each app gets a deterministic port based on the project name and can optionally be assigned a domain with automatic Caddy vhost setup.
+
+## Domain Format
+
+Virtual hosts use the format: `<app>.<project>.<tld>`
+
+Examples:
+- `web.myproject.localhost` (default TLD)
+- `api.myproject.lan` (custom TLD)
+
+The TLD is configured via `stackpanel.caddy.tld` (default: `"localhost"`).
 
 ## Files
 
@@ -27,12 +37,15 @@ Ports are computed from a base port (derived from project name):
 stackpanel.apps = {
   web = {};                          # Just port (basePort + 0)
   server = { offset = 1; };          # Port with explicit offset
-  docs = { domain = "docs"; };       # Port + docs.localhost vhost
+  docs = { domain = "docs"; };       # Port + docs.<project>.localhost vhost
   api = {
     domain = "api";
     tls = true;                      # Use TLS (requires Step CA)
   };
 };
+
+# To use a custom TLD (e.g., .lan):
+stackpanel.caddy.tld = "lan";
 ```
 
 ## Environment Variables

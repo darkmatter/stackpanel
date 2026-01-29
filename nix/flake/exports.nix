@@ -169,6 +169,29 @@ in
     # Get stackpanel module options for introspection
     # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
     inherit getOptions;
+
+    # =========================================================================
+    # DB Schema and Scaffolding
+    # =========================================================================
+
+    # Database schema module - contains all proto.nix schemas
+    # Usage: inputs.stackpanel.lib.db
+    db = import ../stackpanel/db { };
+
+    # Init files for scaffolding new projects
+    # Returns a map of relative paths to file contents:
+    #   { ".stackpanel/config.nix" = "..."; ".stackpanel/_internal.nix" = "..."; ... }
+    #
+    # Usage from CLI:
+    #   nix eval github:darkmatter/stackpanel#lib.initFiles --json
+    #
+    # Usage from Nix:
+    #   inputs.stackpanel.lib.initFiles
+    initFiles = (import ../stackpanel/db { }).initFiles;
+
+    # All schemas for codegen/introspection
+    # Usage: inputs.stackpanel.lib.schemas
+    schemas = (import ../stackpanel/db { }).schemas;
   };
 
   # ===========================================================================

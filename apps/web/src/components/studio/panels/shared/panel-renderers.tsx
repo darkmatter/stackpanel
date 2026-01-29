@@ -20,6 +20,7 @@ import type {
 } from "./panel-types";
 import { FieldRenderer } from "./field-renderer";
 import { FieldDisplay } from "./field-display";
+import { EditableFieldGroup, type EditableFieldItem } from "./editable-field";
 
 // =============================================================================
 // Status Panel
@@ -82,6 +83,105 @@ export function StatusPanelRenderer({ panel }: { panel: NixPanel }) {
         {otherFields.map((field) => (
           <FieldDisplay key={field.name} field={field} />
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// =============================================================================
+// Form Panel - renders editable configuration fields using EditableFieldGroup
+// =============================================================================
+
+export function FormPanelRenderer({ panel }: { panel: NixPanel }) {
+  // Convert NixPanel fields to EditableFieldItem format
+  const fieldItems: EditableFieldItem[] = panel.fields.map((field) => ({
+    field: {
+      name: field.name,
+      type: field.type,
+      label: field.label,
+      placeholder: field.placeholder,
+      description: field.description,
+      options: field.options,
+    },
+    initialValue: field.value ?? "",
+    configPath: field.configPath,
+    editPath: field.editPath,
+  }));
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          {panel.title}
+          {panel.description && (
+            <span className="text-xs text-muted-foreground font-normal">
+              {panel.description}
+            </span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <EditableFieldGroup fields={fieldItems} />
+      </CardContent>
+    </Card>
+  );
+}
+
+// =============================================================================
+// Table Panel - renders tabular data with columns and rows
+// =============================================================================
+
+export function TablePanelRenderer({ panel }: { panel: NixPanel }) {
+  const columns = panel.columns ?? [];
+  const rows = panel.rows ?? [];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          {panel.title}
+          {panel.description && (
+            <span className="text-xs text-muted-foreground font-normal">
+              {panel.description}
+            </span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No data available</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  {columns.map((col) => (
+                    <th
+                      key={col.key}
+                      className="text-left py-2 px-3 text-xs font-medium text-muted-foreground"
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => (
+                  <tr
+                    key={idx}
+                    className="border-b last:border-0 hover:bg-muted/50"
+                  >
+                    {columns.map((col) => (
+                      <td key={col.key} className="py-2 px-3 text-xs">
+                        {row[col.key] ?? "-"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -218,7 +318,9 @@ export function PanelRenderer({ panel }: { panel: NixPanel }) {
     case "PANEL_TYPE_APPS_GRID":
       return <AppsGridPanelRenderer panel={panel} />;
     case "PANEL_TYPE_FORM":
+      return <FormPanelRenderer panel={panel} />;
     case "PANEL_TYPE_TABLE":
+      return <TablePanelRenderer panel={panel} />;
     case "PANEL_TYPE_CUSTOM":
     default:
       // Generic fallback: render all fields as display

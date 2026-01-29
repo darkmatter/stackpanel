@@ -316,7 +316,7 @@ const coreModules = [
   "terminal"
 ];
 // Filter out core stackpanel modules
-function moduleFilter(mod: Module) {
+function moduleFilter(mod: { id: string }) {
   return !coreModules.includes(mod.id);
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -20,9 +21,12 @@ import (
 // convention). Path segments are converted to kebab-case when navigating the
 // Nix data structure.
 //
-// Example: PatchNixData(entity="apps", key="web", path="go.mainPackage", value="\"./cmd/api\"")
-// This reads .stackpanel/data/apps.nix, navigates to apps.web.go.main-package,
-// sets it to "./cmd/api", and writes the file back.
+// Special handling:
+// - entity="config" with path starting with "stackpanel.": writes to .stackpanel/data.nix
+// - Other entities: uses the legacy per-file approach in .stackpanel/data/
+//
+// Example: PatchNixData(entity="config", path="stackpanel.deployment.fly.organization", value="\"my-org\"")
+// This writes to .stackpanel/data.nix at deployment.fly.organization
 func (s *AgentServiceServer) PatchNixData(
 	ctx context.Context,
 	req *connect.Request[gopb.PatchNixDataRequest],
@@ -60,12 +64,92 @@ func (s *AgentServiceServer) PatchNixData(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid value: %w", err))
 	}
 
-	// Read existing data
 	srv := s.server
-	dataPath := srv.nixDataPath(entity)
+
+	// Check if this is a configPath-style update (entity="config", path starts with "stackpanel.")
+	// These go to the consolidated data.nix file
+	if entity == "config" && strings.HasPrefix(path, "stackpanel.") {
+		return s.patchConsolidatedConfig(srv, path, parsedValue)
+	}
+
+	// Legacy per-file approach for other entities
+	return s.patchLegacyEntity(srv, entity, msg.Key, path, parsedValue)
+}
+
+// patchConsolidatedConfig handles patches to the consolidated data.nix file.
+// Path format: "stackpanel.deployment.fly.organization" -> writes to data.nix at deployment.fly.organization
+func (s *AgentServiceServer) patchConsolidatedConfig(
+	srv *Server,
+	fullPath string,
+	value any,
+) (*connect.Response[gopb.PatchNixDataResponse], error) {
+	// Strip "stackpanel." prefix to get the path within data.nix
+	dataPath := parseConfigPath(fullPath)
+
+	log.Info().
+		Str("fullPath", fullPath).
+		Str("dataPath", dataPath).
+		Interface("value", value).
+		Msg("PatchNixData: patching consolidated data.nix")
+
+	// Patch the consolidated data file
+	if err := srv.patchConsolidatedData(dataPath, value); err != nil {
+		log.Error().Err(err).Msg("PatchNixData: failed to patch consolidated data")
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to patch data: %w", err))
+	}
+
+	// Read back the updated data for cache invalidation
+	updatedData, err := srv.readConsolidatedData()
+	if err != nil {
+		log.Warn().Err(err).Msg("PatchNixData: failed to read back updated data")
+	}
+
+	// Invalidate FlakeWatcher cache so next GetNixConfig returns fresh data
+	if srv.flakeWatcher != nil {
+		srv.flakeWatcher.InvalidateConfig()
+		log.Debug().Msg("PatchNixData: invalidated FlakeWatcher config cache")
+	}
+
+	// Emit config.changed SSE event
+	srv.broadcastSSE(SSEEvent{
+		Event: "config.changed",
+		Data: map[string]any{
+			"entity": "config",
+			"path":   fullPath,
+			"source": "patch",
+		},
+	})
+
+	log.Info().
+		Str("path", fullPath).
+		Str("file", srv.nixDataFilePath()).
+		Msg("PatchNixData: successfully patched consolidated data.nix")
+
+	// Return updated data as JSON
+	var updatedJSON []byte
+	if updatedData != nil {
+		updatedJSON, _ = json.Marshal(updatedData)
+	}
+
+	return connect.NewResponse(&gopb.PatchNixDataResponse{
+		Success:     true,
+		UpdatedJson: string(updatedJSON),
+	}), nil
+}
+
+// patchLegacyEntity handles patches to legacy per-entity files in .stackpanel/data/
+func (s *AgentServiceServer) patchLegacyEntity(
+	srv *Server,
+	entity string,
+	key string,
+	path string,
+	value any,
+) (*connect.Response[gopb.PatchNixDataResponse], error) {
+	// Read existing data from the legacy per-entity file
+	legacyPath := filepath.Join(srv.nixLegacyDataDir(), entity+".nix")
 	existing := make(map[string]any)
 
-	if _, err := os.Stat(dataPath); err == nil {
+	if _, err := os.Stat(legacyPath); err == nil {
 		data, err := srv.readNixDataFile(entity)
 		if err != nil {
 			log.Error().Err(err).Str("entity", entity).Msg("PatchNixData: failed to read existing data")
@@ -77,17 +161,13 @@ func (s *AgentServiceServer) PatchNixData(
 	}
 
 	// Navigate to the target location and set the value
-	// Path is camelCase from UI (e.g., "go.mainPackage")
-	// Nix data uses kebab-case keys (e.g., "go.main-package")
 	target := existing
-	key := msg.Key
 
 	// If key is specified, navigate into it first (for map entities like "apps")
-	if key != "" {
+	if key != "" && key != "_root" && key != "_global" {
 		kebabKey := camelToKebab(key)
 		child, ok := target[kebabKey]
 		if !ok {
-			// Key doesn't exist yet, create it
 			target[kebabKey] = make(map[string]any)
 			child = target[kebabKey]
 		}
@@ -105,18 +185,15 @@ func (s *AgentServiceServer) PatchNixData(
 		kebabPart := camelToKebab(part)
 
 		if i == len(pathParts)-1 {
-			// Last segment: set the value
-			target[kebabPart] = parsedValue
+			target[kebabPart] = value
 			log.Debug().
 				Str("path", path).
 				Str("kebabKey", kebabPart).
-				Interface("value", parsedValue).
+				Interface("value", value).
 				Msg("PatchNixData: set value")
 		} else {
-			// Intermediate segment: navigate deeper
 			child, ok := target[kebabPart]
 			if !ok {
-				// Create intermediate map
 				target[kebabPart] = make(map[string]any)
 				child = target[kebabPart]
 			}
@@ -137,33 +214,38 @@ func (s *AgentServiceServer) PatchNixData(
 	}
 
 	// Ensure data directory exists
-	dataDir := srv.nixDataDir()
+	dataDir := srv.nixLegacyDataDir()
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create data directory: %w", err))
 	}
 
-	if err := os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(legacyPath, []byte(nixExpr+"\n"), 0o644); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to write data file: %w", err))
+	}
+
+	// Invalidate FlakeWatcher cache so next GetNixConfig returns fresh data
+	if srv.flakeWatcher != nil {
+		srv.flakeWatcher.InvalidateConfig()
+		log.Debug().Msg("PatchNixData: invalidated FlakeWatcher config cache (legacy)")
 	}
 
 	log.Info().
 		Str("entity", entity).
 		Str("key", key).
 		Str("path", path).
-		Str("dataPath", dataPath).
-		Msg("PatchNixData: successfully patched value")
+		Str("dataPath", legacyPath).
+		Msg("PatchNixData: successfully patched legacy entity file")
 
 	// Return the updated entity as JSON for cache invalidation
 	updatedJSON, err := json.Marshal(existing)
 	if err != nil {
-		// Non-fatal: write succeeded, just can't return updated data
 		log.Warn().Err(err).Msg("PatchNixData: failed to marshal updated data")
 		return connect.NewResponse(&gopb.PatchNixDataResponse{
 			Success: true,
 		}), nil
 	}
 
-	// Emit config.changed SSE event so the UI can refresh
+	// Emit config.changed SSE event
 	srv.broadcastSSE(SSEEvent{
 		Event: "config.changed",
 		Data: map[string]any{

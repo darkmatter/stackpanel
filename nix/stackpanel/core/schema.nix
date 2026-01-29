@@ -36,7 +36,7 @@ let
           "string"
           "null"
         ];
-        description = "Domain for the app (e.g., 'app.localhost')";
+        description = "Domain for the app in format <app>.<project>.<tld> (e.g., 'web.myproject.localhost')";
       };
       url = {
         type = [

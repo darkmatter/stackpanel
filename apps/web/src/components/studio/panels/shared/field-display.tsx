@@ -19,7 +19,7 @@ export function FieldDisplay({ field }: FieldDisplayProps) {
   // Try to parse JSON values for better display
   if (field.type === "FIELD_TYPE_JSON" || field.type === "FIELD_TYPE_STRING") {
     try {
-      const parsed = JSON.parse(field.value);
+      const parsed = JSON.parse(field.value ?? "");
 
       // Array: render as badge list
       if (Array.isArray(parsed)) {

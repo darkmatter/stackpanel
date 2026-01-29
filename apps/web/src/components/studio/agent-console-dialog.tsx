@@ -47,6 +47,7 @@ export function AgentConsoleDialog() {
   const [isPaused, setIsPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [filter, setFilter] = useState<string>("");
+  const [now, setNow] = useState(() => Date.now());
   const outputRef = useRef<HTMLDivElement>(null);
   const logIdRef = useRef(0);
 
@@ -55,6 +56,8 @@ export function AgentConsoleDialog() {
   // Subscribe to all SSE events using wildcard
   useAgentSSEEvent<unknown>("*", (data, event) => {
     if (isPaused) return;
+    // Hide noisy keepalive events from the console output.
+    if (event.event === "ping") return;
     
     const entry: LogEntry = {
       id: logIdRef.current++,
@@ -65,6 +68,13 @@ export function AgentConsoleDialog() {
     
     setLogs((prev) => [...prev.slice(-500), entry]); // Keep last 500 entries
   });
+
+  // Keep "x seconds ago" UI fresh while open
+  useEffect(() => {
+    if (!open) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [open]);
 
   // Auto-scroll to bottom when logs change
   useEffect(() => {
@@ -131,13 +141,35 @@ export function AgentConsoleDialog() {
 
   // Get event color
   const getEventColor = (event: string) => {
-    if (event === "ping") return "text-muted-foreground/50";
     if (event === "connected") return "text-emerald-400";
     if (event === "error" || event.includes("error")) return "text-red-400";
     if (event === "config-changed" || event.includes("changed")) return "text-amber-400";
     if (event === "shell-status") return "text-blue-400";
     return "text-cyan-400";
   };
+
+  const lastPingSecondsAgo =
+    lastHeartbeat == null ? null : Math.max(0, Math.floor((now - lastHeartbeat) / 1000));
+
+  // Snap to 10-second increments so the text only updates every ~10s.
+  const lastPingSecondsAgoRounded =
+    lastPingSecondsAgo == null ? null : Math.floor(lastPingSecondsAgo / 10) * 10;
+
+  const lastPingLabel =
+    lastPingSecondsAgoRounded == null
+      ? null
+      : lastPingSecondsAgoRounded === 0
+        ? "just now"
+        : `${lastPingSecondsAgoRounded} second${lastPingSecondsAgoRounded === 1 ? "" : "s"} ago`;
+
+  const trafficLightColor =
+    lastHeartbeat == null
+      ? "bg-muted-foreground/40"
+      : isAlive
+        ? "bg-emerald-500"
+        : status === "connecting"
+          ? "bg-amber-500"
+          : "bg-red-500";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -259,9 +291,9 @@ export function AgentConsoleDialog() {
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <Terminal className="h-8 w-8 mb-2" />
               <p>{logs.length === 0 ? "Waiting for events..." : "No matching events"}</p>
-              {lastHeartbeat && (
+              {lastPingLabel && (
                 <p className="text-xs mt-2 opacity-50">
-                  Last heartbeat: {new Date(lastHeartbeat).toLocaleTimeString()}
+                  Last ping: {lastPingLabel}
                 </p>
               )}
             </div>
@@ -317,9 +349,15 @@ export function AgentConsoleDialog() {
             )}
           </div>
           <div>
-            {lastHeartbeat && (
-              <span>Last ping: {new Date(lastHeartbeat).toLocaleTimeString()}</span>
-            )}
+            <span className="inline-flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={cn("h-2 w-2 rounded-full", trafficLightColor)}
+              />
+              <span>
+                Last ping: {lastPingLabel ?? "—"}
+              </span>
+            </span>
           </div>
         </div>
       </DialogContent>

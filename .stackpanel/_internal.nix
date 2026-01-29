@@ -99,21 +99,24 @@ let
   userConfig = processImports baseUserConfig;
 
   # ---------------------------------------------------------------------------
-  # Auto-import data "tables" from ./data/
-  # Each .nix file becomes a top-level key under stackpanel.*
+  # Auto-import data from ./data.nix (consolidated) or ./data/ (legacy)
+  # The agent writes to data.nix; legacy data/*.nix files are for migration.
   # ---------------------------------------------------------------------------
-  dataDir = ./data;
+  dataFile = ./data.nix;
+  legacyDataDir = ./data;
 
   # Files that are data-only (read by agent) and don't have corresponding module options
   # These should NOT be merged into stackpanel.* config
   dataOnlyFiles = [
     "commands.nix" # Tool configurations (eslint, biome, etc.) - read directly by agent
-    # "apps.nix"
-    # "tasks.nix"
     "packages.nix" # Contains strings, resolved by user-packages.nix
   ];
 
-  loadDataTables =
+  # Load consolidated data.nix if it exists
+  consolidatedData = if builtins.pathExists dataFile then import dataFile else { };
+
+  # Load legacy data tables from ./data/ directory (for backwards compatibility)
+  loadLegacyDataTables =
     dir:
     let
       entries = builtins.readDir dir;
@@ -132,8 +135,11 @@ let
       value = import (dir + "/${n}");
     }) nixFiles;
 
-  # Load all data tables
-  data = if builtins.pathExists dataDir then loadDataTables dataDir else { };
+  legacyData = if builtins.pathExists legacyDataDir then loadLegacyDataTables legacyDataDir else { };
+
+  # Merge: legacy data first (lower priority), then consolidated data (higher priority)
+  # This allows gradual migration from data/*.nix to data.nix
+  data = lib.recursiveUpdate legacyData consolidatedData;
 
   # ---------------------------------------------------------------------------
   # GitHub collaborators transformation

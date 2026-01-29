@@ -23,7 +23,9 @@ export type {
 	MetricItem,
 	ModuleGroup,
 	ModuleMeta,
+	NixFieldOption,
 	NixPanel,
+	NixPanelColumn,
 	NixPanelField,
 } from "./panel-types";
 
@@ -39,10 +41,28 @@ export {
 export { FieldRenderer, type FieldRendererProps } from "./field-renderer";
 export { FieldDisplay, type FieldDisplayProps } from "./field-display";
 
+// Editable field components
+export {
+	EditableField,
+	EditableFieldGroup,
+	FieldInput,
+	useFieldEditor,
+	type EditableFieldConfig,
+	type EditableFieldItem,
+	type EditableFieldProps,
+	type EditableFieldGroupProps,
+	type FieldInputProps,
+	type FieldSaveTarget,
+	type UseFieldEditorOptions,
+	type FieldEditorState,
+} from "./editable-field";
+
 // Panel renderers
 export {
 	AppConfigFormRenderer,
 	AppsGridPanelRenderer,
+	FormPanelRenderer,
 	PanelRenderer,
 	StatusPanelRenderer,
+	TablePanelRenderer,
 } from "./panel-renderers";
