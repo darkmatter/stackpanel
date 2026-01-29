@@ -4,9 +4,14 @@
 # Caddy reverse proxy module for devenv.
 #
 # This module provides a local Caddy server for development, enabling:
-#   - Virtual hosts on .localhost domains
+#   - Virtual hosts with format: <app>.<project>.<tld>
 #   - Automatic HTTPS with Step CA integration
 #   - Deterministic port assignment per project
+#   - Configurable TLD (default: localhost, can be: lan, local, etc.)
+#
+# Domain Examples:
+#   web.myproject.localhost   (default TLD)
+#   api.myproject.lan         (custom TLD)
 #
 # Commands provided:
 #   caddy-start        - Start/reload caddy
@@ -22,7 +27,8 @@
 #   stackpanel.caddy = {
 #     enable = true;
 #     project-name = "myapp";
-#     use-step-tls = true;  # Optional: TLS via Step CA
+#     tld = "localhost";      # or "lan", "local", etc.
+#     use-step-tls = true;    # Optional: TLS via Step CA
 #   };
 # ==============================================================================
 {
@@ -61,13 +67,16 @@ let
   '';
 
   # Helper script to quickly set up a dev site for the current project
+  # Domain format: <app>.<project>.<tld> (e.g., app.myproject.localhost)
   caddyDevSite = pkgs.writeShellScriptBin "caddy-dev-site" ''
     set -euo pipefail
 
-    project_name="''${1:-${cfg.project-name}}"
-    port="''${2:-${toString projectPort}}"
+    app_name="''${1:-app}"
+    project_name="''${2:-${cfg.project-name}}"
+    port="''${3:-${toString projectPort}}"
+    tld="${cfg.tld or "localhost"}"
 
-    domain="$project_name.localhost"
+    domain="$app_name.$project_name.$tld"
     upstream="localhost:$port"
 
     echo "Setting up dev site:"
@@ -76,7 +85,7 @@ let
     echo "  Port:     $port"
     echo ""
 
-    ${caddyScripts.caddyAddSite}/bin/caddy-add-site "$domain" "$upstream"
+    ${caddyScripts.caddyAddSite}/bin/caddy-add-site "$domain" "$upstream" --project "$project_name"
 
     # Start/reload caddy
     ${caddyScripts.caddyStart}/bin/caddy-start

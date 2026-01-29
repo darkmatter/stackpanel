@@ -18,7 +18,15 @@ import {
   SelectValue,
 } from "@ui/select";
 import { Switch } from "@ui/switch";
-import type { AppConfigField } from "./panel-types";
+import type { AppConfigField, NixFieldOption } from "./panel-types";
+
+/** Helper to normalize field options to {value, label} format */
+function normalizeOption(opt: NixFieldOption): { value: string; label: string } {
+  if (typeof opt === "string") {
+    return { value: opt, label: opt };
+  }
+  return opt;
+}
 
 export interface FieldRendererProps {
   field: AppConfigField;
@@ -50,7 +58,8 @@ export function FieldRenderer({
         </div>
       );
 
-    case "FIELD_TYPE_SELECT":
+    case "FIELD_TYPE_SELECT": {
+      const options = (field.options ?? []).map(normalizeOption);
       return (
         <Select
           value={value}
@@ -61,14 +70,15 @@ export function FieldRenderer({
             <SelectValue placeholder={field.placeholder ?? "Select..."} />
           </SelectTrigger>
           <SelectContent>
-            {(field.options ?? []).map((opt) => (
-              <SelectItem key={opt} value={opt}>
-                {opt}
+            {options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       );
+    }
 
     case "FIELD_TYPE_MULTISELECT": {
       let items: string[] = [];

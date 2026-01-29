@@ -203,9 +203,7 @@ let
 
   # Flatten all options from all schemas into a single attrset
   # Keys are camelCase message names: user, app, sstKms, etc.
-  allOptions = lib.foldl' (
-    acc: bundle: acc // bundle.options
-  ) { } (lib.attrValues allSchemaBundles);
+  allOptions = lib.foldl' (acc: bundle: acc // bundle.options) { } (lib.attrValues allSchemaBundles);
 
   # Flatten all messages from all schemas
   # Keys are schema names: users, apps, sst, etc.
@@ -234,8 +232,7 @@ let
   extend =
     # All auto-generated options (from all messages in all schemas)
     # Each one gets a marker added for mkOpt validation
-    lib.mapAttrs (_: opts: mkOptLib.withMarker opts) allOptions
-    // {
+    lib.mapAttrs (_: opts: mkOptLib.withMarker opts) allOptions // {
       # Legacy aliases for backwards compatibility
       # (where the auto-generated name differs from the expected name)
       aws = mkOptLib.withMarker (allOptions.rolesAnywhere or { }); # aws.RolesAnywhere -> extend.aws
@@ -335,18 +332,15 @@ let
   #
   #   INTERNAL: Scaffolding / init file generation
   #
+  #   Generates the .stackpanel/ directory structure for new projects.
+  #   Uses consolidated data.nix instead of per-entity data files.
+  #
   # ============================================================================
   initFiles =
-    assert boilerplateValidation;
+    # NOTE: boilerplateValidation is disabled since we use consolidated data.nix
+    # assert boilerplateValidation;
     let
-      # Generate a data file using the schema's boilerplate
-      mkDataFile = name: schema: {
-        name = ".stackpanel/data/${snakeToKebab name}.nix";
-        value = schema.boilerplate;
-      };
-
-      # Config file uses the config schema's boilerplate if available,
-      # otherwise falls back to a default template
+      # Config file uses the config schema's boilerplate
       configBoilerplate = schemas.config.boilerplate or null;
       configFile = {
         ".stackpanel/config.nix" =
@@ -369,10 +363,17 @@ let
       internalFile =
         if internalBoilerplate != null then { ".stackpanel/_internal.nix" = internalBoilerplate; } else { };
 
-      # Generate data files from dataSchemas using their boilerplate
-      dataFiles = lib.listToAttrs (lib.mapAttrsToList mkDataFile dataSchemas);
+      # Consolidated data.nix file (agent-editable)
+      dataBoilerplate = schemas.config.dataBoilerplate or null;
+      dataFile = if dataBoilerplate != null then { ".stackpanel/data.nix" = dataBoilerplate; } else { };
+
+      # .gitignore file
+      gitignoreBoilerplate = schemas.config.gitignoreBoilerplate or null;
+      gitignoreFile =
+        if gitignoreBoilerplate != null then { ".stackpanel/.gitignore" = gitignoreBoilerplate; } else { };
+
     in
-    configFile // internalFile // dataFiles;
+    configFile // internalFile // dataFile // gitignoreFile;
 in
 {
   # ============================================================================

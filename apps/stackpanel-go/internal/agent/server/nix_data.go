@@ -402,9 +402,19 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// nixDataDir returns the path to the data directory.
+// nixDataDir returns the path to the .stackpanel directory.
 func (s *Server) nixDataDir() string {
-	return filepath.Join(s.config.ProjectRoot, ".stackpanel", "data")
+	return filepath.Join(s.config.ProjectRoot, ".stackpanel")
+}
+
+// nixDataFilePath returns the path to the single consolidated data.nix file.
+func (s *Server) nixDataFilePath() string {
+	return filepath.Join(s.nixDataDir(), "data.nix")
+}
+
+// nixLegacyDataDir returns the path to the legacy data/ directory (for migration).
+func (s *Server) nixLegacyDataDir() string {
+	return filepath.Join(s.nixDataDir(), "data")
 }
 
 func (s *Server) nixExternalDataDir() string {
@@ -412,8 +422,15 @@ func (s *Server) nixExternalDataDir() string {
 }
 
 // nixDataPath returns the path to a specific data file.
+// For backwards compatibility, this checks if the legacy data/ directory exists.
+// TODO: Remove after migration to single data.nix file.
 func (s *Server) nixDataPath(entity string) string {
-	return filepath.Join(s.nixDataDir(), entity+".nix")
+	legacyPath := filepath.Join(s.nixLegacyDataDir(), entity+".nix")
+	if _, err := os.Stat(legacyPath); err == nil {
+		return legacyPath
+	}
+	// Use the single data.nix file (entity is a key within it)
+	return s.nixDataFilePath()
 }
 
 func (s *Server) nixExternalDataPath(entity string) string {
@@ -743,4 +760,111 @@ func (s *Server) readNixDataFile(entity string) (any, error) {
 	}
 
 	return data, nil
+}
+
+// =============================================================================
+// Consolidated data.nix Support
+// =============================================================================
+
+// readConsolidatedData reads the entire data.nix file as a map.
+func (s *Server) readConsolidatedData() (map[string]any, error) {
+	dataPath := s.nixDataFilePath()
+
+	// Check if file exists
+	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+		return make(map[string]any), nil
+	}
+
+	// Use nix eval to evaluate the file
+	args := []string{"eval", "--impure", "--json", "-f", dataPath}
+	res, err := s.exec.RunNix(args...)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.ExitCode != 0 {
+		return nil, errors.New("nix eval failed: " + res.Stderr)
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal([]byte(res.Stdout), &data); err != nil {
+		return nil, errors.New("failed to parse JSON: " + err.Error())
+	}
+
+	return data, nil
+}
+
+// writeConsolidatedData writes the entire data map to data.nix.
+func (s *Server) writeConsolidatedData(data map[string]any) error {
+	// Serialize to Nix
+	nixExpr, err := nixser.SerializeIndented(data, "  ")
+	if err != nil {
+		return err
+	}
+
+	// Ensure .stackpanel directory exists
+	dataDir := s.nixDataDir()
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		return err
+	}
+
+	// Write the file
+	dataPath := s.nixDataFilePath()
+	if err := os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644); err != nil {
+		return err
+	}
+
+	log.Info().
+		Str("path", dataPath).
+		Msg("writeConsolidatedData: successfully wrote data.nix")
+
+	return nil
+}
+
+// patchConsolidatedData patches a value at a nested path within data.nix.
+// The path is dot-separated and uses camelCase (converted to kebab-case for Nix).
+// Example: "deployment.fly.organization" -> data.deployment.fly.organization
+func (s *Server) patchConsolidatedData(path string, value any) error {
+	// Read existing data
+	data, err := s.readConsolidatedData()
+	if err != nil {
+		return err
+	}
+
+	// Navigate and set the value
+	pathParts := strings.Split(path, ".")
+	target := data
+
+	for i, part := range pathParts {
+		kebabPart := camelToKebab(part)
+
+		if i == len(pathParts)-1 {
+			// Last segment: set the value
+			target[kebabPart] = value
+		} else {
+			// Intermediate segment: navigate deeper
+			child, ok := target[kebabPart]
+			if !ok {
+				// Create intermediate map
+				target[kebabPart] = make(map[string]any)
+				child = target[kebabPart]
+			}
+			childMap, ok := child.(map[string]any)
+			if !ok {
+				return errors.New("path segment is not a map: " + part)
+			}
+			target = childMap
+		}
+	}
+
+	// Write back
+	return s.writeConsolidatedData(data)
+}
+
+// parseConfigPath parses a configPath like "stackpanel.deployment.fly.organization"
+// and returns the path within data.nix (without the "stackpanel." prefix).
+func parseConfigPath(configPath string) string {
+	// Remove "stackpanel." prefix if present
+	path := strings.TrimPrefix(configPath, "stackpanel.")
+	return path
 }

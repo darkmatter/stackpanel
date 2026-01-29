@@ -4,22 +4,27 @@
 # Application configuration options - ports and Caddy virtual hosts.
 #
 # Manages application ports and Caddy virtual hosts in a unified way.
-# Each app gets a deterministic port and optionally a .localhost domain.
+# Each app gets a deterministic port and optionally a domain for Caddy vhosts.
 #
 # Port Layout (from basePort):
 #   +0 to +9:   User apps (web, server, docs, etc.)
 #   +10 to +99: Infrastructure services (postgres, redis, minio, etc.)
 #
+# Domain Format:
+#   Virtual hosts use the format: <app>.<project>.<tld>
+#   Example: web.myproject.localhost, api.myproject.lan
+#   The TLD is configured via stackpanel.caddy.tld (default: "localhost")
+#
 # Options per app:
 #   - offset: Port offset from base port (null = auto-assign by position)
-#   - domain: Domain prefix for .localhost vhost (null = no vhost)
+#   - domain: App name for vhost (null = no vhost). Creates <domain>.<project>.<tld>
 #   - tls: Enable TLS for the vhost (requires Step CA)
 #
 # Usage:
 #   stackpanel.apps = {
 #     web = {};                          # Just port (basePort + 0)
 #     server = { offset = 1; };          # Port with explicit offset
-#     docs = { domain = "docs"; };       # Port + docs.localhost vhost
+#     docs = { domain = "docs"; };       # Port + docs.<project>.localhost vhost
 #     api = { domain = "api"; tls = true; };  # TLS vhost
 #   };
 #
@@ -44,7 +49,12 @@ let
   # Get user-defined apps (before computed values)
   rawApps = config.stackpanel.apps;
   portsCfg = config.stackpanel.ports;
+  caddyCfg = config.stackpanel.caddy;
   repoKey = rawApps.github or "darkmatter/stackpanel";
+
+  # Domain format: <app>.<project>.<tld>
+  projectName = portsCfg.project-name;
+  tld = caddyCfg.tld or "localhost";
   portsLib = import ../../lib/ports.nix { inherit lib; };
   ports = portsLib.mkPorts { inherit lib; };
   db = import ../../db { inherit lib; };
@@ -246,7 +256,8 @@ let
           repo = repoKey;
           service = name;
         };
-        domain = if appCfg.domain != null then "${appCfg.domain}.localhost" else null;
+        # Domain format: <app>.<project>.<tld> (e.g., web.myproject.localhost)
+        domain = if appCfg.domain != null then "${appCfg.domain}.${projectName}.${tld}" else null;
         protocol = if appCfg.tls then "https" else "http";
         url = if domain != null then "${protocol}://${domain}" else null;
         tooling = appCfg.tooling;

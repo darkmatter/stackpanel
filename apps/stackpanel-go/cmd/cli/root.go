@@ -88,19 +88,19 @@ func init() {
 		//
 		// Projects are still registered automatically by:
 		// - stackpanel agent (when started from a project directory)
-		// - stackpanel init (when Nix calls it during shell entry)
-		// - stackpanel scaffold (after creating project structure)
+		// - stackpanel hook (when Nix calls it during shell entry)
+		// - stackpanel init (after creating project structure)
 		// - stackpanel project add (with user confirmation)
 		if os.Getenv("STACKPANEL_AUTO_REGISTER") == "1" {
 			// Skip for commands that handle registration themselves
 			skipCommands := map[string]bool{
-				"help":     true,
-				"version":  true,
-				"dev":      true,
-				"project":  true,
-				"agent":    true,
-				"init":     true,
-				"scaffold": true,
+				"help":    true,
+				"version": true,
+				"dev":     true,
+				"project": true,
+				"agent":   true,
+				"hook":    true,
+				"init":    true,
 			}
 
 			if !skipCommands[cmd.Name()] {
