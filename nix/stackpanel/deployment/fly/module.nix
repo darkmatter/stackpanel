@@ -33,7 +33,7 @@
 #       fly.appName = "my-app";
 #       container = { type = "bun"; port = 3000; };
 #     };
-#   }; 
+#   };
 # ==============================================================================
 {
   lib,
@@ -64,7 +64,7 @@ let
           default = deployCfg.defaultProvider or "cloudflare";
           description = ''
             Deployment provider to use.
-            
+
             - fly: Fly.io (containers, VMs) - requires nix2container/dockerTools
             - cloudflare: Cloudflare Workers (edge, serverless) - requires Alchemy
           '';
@@ -260,11 +260,14 @@ let
       acc
       // {
         # Build container (nix2container)
-        "container:build:${appName}" = "cd ../.. && nix build --impure .#packages.x86_64-linux.container-${appName}";
+        "container:build:${appName}" =
+          "cd ../.. && nix build --impure .#packages.x86_64-linux.container-${appName}";
         # Push container to Fly.io registry (dockerTools + skopeo)
-        "container:push:${appName}" = "cd ../.. && nix run --impure .#copy-container-${appName} -- docker://registry.fly.io/ --dest-creds x:$(flyctl auth token)";
+        "container:push:${appName}" =
+          "cd ../.. && nix run --impure .#copy-container-${appName} -- docker://registry.fly.io/ --dest-creds x:$(flyctl auth token)";
         # Deploy to Fly.io (creates app if needed, uses pre-pushed image)
-        "deploy:${appName}" = ''cd ../.. && (flyctl status -a ${flyAppName} > /dev/null 2>&1 || flyctl apps create ${flyAppName} ${orgFlag}) && flyctl deploy --config ${infraPath}/fly/${appName}/fly.toml --image registry.fly.io/${flyAppName}:latest'';
+        "deploy:${appName}" =
+          "cd ../.. && (flyctl status -a ${flyAppName} > /dev/null 2>&1 || flyctl apps create ${flyAppName} ${orgFlag}) && flyctl deploy --config ${infraPath}/fly/${appName}/fly.toml --image registry.fly.io/${flyAppName}:latest";
         # Full workflow
         "ship:${appName}" = "turbo run deploy:${appName}";
       }
@@ -279,11 +282,7 @@ let
     appName: appCfg:
     let
       # Package name from package.json (defaults to app name)
-      pkgName =
-        if appCfg.packageName or null != null then
-          appCfg.packageName
-        else
-          appCfg.name or appName;
+      pkgName = if appCfg.packageName or null != null then appCfg.packageName else appCfg.name or appName;
       flyAppName = appCfg.deployment.fly.appName or appName;
     in
     {
@@ -372,7 +371,8 @@ let
         # Container environment
         env = {
           PORT = toString c.port;
-        } // f.env;
+        }
+        // f.env;
       }
     ) deployableApps;
 
@@ -383,36 +383,11 @@ let
 in
 {
   # ===========================================================================
-  # Options
-  # ===========================================================================
-  options.stackpanel.deployment = {
-    enable = lib.mkEnableOption "deployment module" // {
-      default = true;
-    };
-
-    defaultProvider = lib.mkOption {
-      type = lib.types.enum [ "fly" ];
-      default = "fly";
-      description = "Default deployment provider.";
-    };
-
-    fly = {
-      organization = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Fly.io organization slug.";
-      };
-
-      defaultRegion = lib.mkOption {
-        type = lib.types.str;
-        default = "iad";
-        description = "Default Fly.io region for deployments.";
-      };
-    };
-  };
-
-  # ===========================================================================
   # Configuration
+  # ===========================================================================
+  # NOTE: Top-level options (stackpanel.deployment.{enable,defaultProvider,fly.*})
+  # are declared in nix/stackpanel/core/options/deployment.nix
+  # This module only adds per-app options via appModules and implements config.
   # ===========================================================================
   config = lib.mkMerge [
     # Always add appModules (unconditionally)
