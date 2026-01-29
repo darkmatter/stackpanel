@@ -289,11 +289,15 @@ let
       imports ? [ ],
       options ? { },
       syntax ? "proto3",
-      # Boilerplate Nix content for scaffolding .stackpanel/data/<name>.nix files
+      # Boilerplate Nix content for scaffolding .stackpanel/config.nix or .stackpanel/data/<name>.nix files
       # Should be a string containing valid Nix that conforms to this schema
       boilerplate ? null,
       # Internal boilerplate for _internal.nix (only used by config schema)
       internalBoilerplate ? null,
+      # Consolidated data.nix boilerplate (agent-editable data file)
+      dataBoilerplate ? null,
+      # .gitignore boilerplate
+      gitignoreBoilerplate ? null,
     }:
     {
       _isProtoFile = true;
@@ -308,6 +312,8 @@ let
         syntax
         boilerplate
         internalBoilerplate
+        dataBoilerplate
+        gitignoreBoilerplate
         ;
     };
 
@@ -443,12 +449,12 @@ let
     file:
     let
       syntaxLine = ''syntax = "${file.syntax}";'';
-      packageLine = ''package ${file.package};'';
+      packageLine = "package ${file.package};";
 
       importLines = builtins.map (i: ''import "${i}";'') file.imports;
 
       optionLines = lib.mapAttrsToList (
-        k: v: if builtins.isString v then ''option ${k} = "${v}";'' else ''option ${k} = ${toString v};''
+        k: v: if builtins.isString v then ''option ${k} = "${v}";'' else "option ${k} = ${toString v};"
       ) file.options;
 
       enumBlocks = lib.mapAttrsToList (_: renderEnum) file.enums;

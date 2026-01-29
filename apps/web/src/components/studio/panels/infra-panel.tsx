@@ -425,7 +425,7 @@ function DeployTabContent({
 								args={["remove", "--stage", deployStage]}
 								label="Remove"
 								description={`Remove SST infrastructure from ${deployStage}`}
-								variant="destructive"
+								variant="outline"
 							/>
 						)}
 					</div>

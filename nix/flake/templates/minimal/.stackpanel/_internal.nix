@@ -4,14 +4,24 @@
 # INTERNAL ENTRY POINT - DO NOT EDIT
 #
 # This file imports config.nix (user-editable) and handles:
-#   - Auto-loading data tables from ./data/
+#   - Processing `imports` directive for config data
+#   - Auto-loading data from ./data.nix (consolidated) or ./data/ (legacy)
 #   - Merging GitHub collaborators
+#   - Loading config.local.nix for per-user overrides (gitignored)
+#   - Applying STACKPANEL_CONFIG_OVERRIDE env var (JSON, for CI/scripting)
 #   - Combining everything into the final stackpanel config
 #
-# Usage in templates:
+# Merge priority (lowest to highest):
+#   1. Data tables (data.nix or data/*.nix)
+#   2. User config (config.nix)
+#   3. Local overrides (config.local.nix - gitignored)
+#   4. STACKPANEL_CONFIG_OVERRIDE (JSON env var)
+#
+# Usage:
 #   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
 #
 # Users should edit config.nix instead.
+# For local overrides, use config.local.nix (gitignored).
 # ==============================================================================
 { pkgs, lib }:
 let
@@ -20,25 +30,73 @@ let
   # Handles both plain attrset and function ({ pkgs }: ...) formats
   # ---------------------------------------------------------------------------
   rawConfig = import ./config.nix;
-  userConfig = if builtins.isFunction rawConfig then rawConfig { inherit pkgs; } else rawConfig;
+  baseUserConfig = if builtins.isFunction rawConfig then rawConfig { inherit pkgs; } else rawConfig;
 
   # ---------------------------------------------------------------------------
-  # Auto-import data "tables" from ./data/
-  # Each .nix file becomes a top-level key under stackpanel.*
+  # Import local config overrides (per-user, gitignored)
+  # Uses absolute path to bypass flake's gitignore filtering
   # ---------------------------------------------------------------------------
-  dataDir = ./data;
+  stackpanelRoot =
+    let
+      envRoot = builtins.getEnv "STACKPANEL_ROOT";
+      markerRoot =
+        let
+          markerPath = ../.stackpanel-root;
+        in
+        if builtins.pathExists markerPath then
+          lib.removeSuffix "\n" (builtins.readFile markerPath)
+        else
+          null;
+    in
+    if envRoot != "" then
+      envRoot
+    else if markerRoot != null && markerRoot != "." then
+      markerRoot
+    else
+      null;
 
-  # Files that are data-only (read by agent) and don't have corresponding module options
-  # These should NOT be merged into stackpanel.* config
+  localConfigPath =
+    if stackpanelRoot != null then stackpanelRoot + "/.stackpanel/config.local.nix" else null;
+  hasLocalConfig = localConfigPath != null && builtins.pathExists localConfigPath;
+  rawLocalConfig = if hasLocalConfig then import localConfigPath else { };
+  localConfig =
+    if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
+
+  # ---------------------------------------------------------------------------
+  # Process imports directive in config.nix
+  # ---------------------------------------------------------------------------
+  processImports =
+    config:
+    let
+      imports = config.imports or [ ];
+      configWithoutImports = builtins.removeAttrs config [ "imports" ];
+      importModule =
+        path:
+        let
+          imported = import path;
+          result = if builtins.isFunction imported then imported { inherit pkgs lib; } else imported;
+        in
+        processImports result;
+      importedConfigs = map importModule imports;
+    in
+    lib.foldl lib.recursiveUpdate { } (importedConfigs ++ [ configWithoutImports ]);
+
+  userConfig = processImports baseUserConfig;
+
+  # ---------------------------------------------------------------------------
+  # Auto-import data from ./data.nix (consolidated) or ./data/ (legacy)
+  # ---------------------------------------------------------------------------
+  dataFile = ./data.nix;
+  legacyDataDir = ./data;
+
   dataOnlyFiles = [
-    "variables.nix"
     "commands.nix"
-    "apps.nix"
-    "tasks.nix"
-    "packages.nix" # Contains strings, resolved by user-packages.nix
+    "packages.nix"
   ];
 
-  loadDataTables =
+  consolidatedData = if builtins.pathExists dataFile then import dataFile else { };
+
+  loadLegacyDataTables =
     dir:
     let
       entries = builtins.readDir dir;
@@ -57,8 +115,8 @@ let
       value = import (dir + "/${n}");
     }) nixFiles;
 
-  # Load all data tables
-  data = if builtins.pathExists dataDir then loadDataTables dataDir else { };
+  legacyData = if builtins.pathExists legacyDataDir then loadLegacyDataTables legacyDataDir else { };
+  data = lib.recursiveUpdate legacyData consolidatedData;
 
   # ---------------------------------------------------------------------------
   # GitHub collaborators transformation
@@ -67,19 +125,13 @@ let
   ghCollabs =
     if builtins.pathExists ghCollabsPath then import ghCollabsPath else { collaborators = { }; };
 
-  # Transform a GitHub collaborator to stackpanel user format
   toUser = name: collab: {
     inherit name;
     github = collab.login or name;
     public-keys = collab.publicKeys or [ ];
-    # Default environments based on admin status
     secrets-allowed-environments =
       if collab.isAdmin or false then
-        [
-          "dev"
-          "staging"
-          "production"
-        ]
+        [ "dev" "staging" "production" ]
       else
         [ "dev" ];
   };
@@ -87,13 +139,20 @@ let
   github-team = lib.mapAttrs (name: user: toUser name user) ghCollabs.collaborators;
 
   # ---------------------------------------------------------------------------
-  # Merge user config with auto-loaded data
+  # Merge configs
   # ---------------------------------------------------------------------------
-  # Start with user config, merge in GitHub team users, then merge data tables
   configWithUsers = userConfig // {
     users = lib.recursiveUpdate github-team (userConfig.users or { });
   };
 
+  envOverrideRaw = builtins.getEnv "STACKPANEL_CONFIG_OVERRIDE";
+  hasEnvOverride = envOverrideRaw != "";
+  envOverride = if hasEnvOverride then builtins.fromJSON envOverrideRaw else { };
+
+  baseConfig = lib.recursiveUpdate data configWithUsers;
+  configWithLocal = lib.recursiveUpdate baseConfig localConfig;
+  finalConfig = lib.recursiveUpdate configWithLocal envOverride;
+
 in
-# Return the merged config directly
-lib.recursiveUpdate configWithUsers data
+finalConfig
+

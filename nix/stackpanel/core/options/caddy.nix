@@ -12,6 +12,11 @@
 #   - project-port: Override computed port (optional)
 #   - use-step-tls: Use Step CA for TLS certificates
 #   - auto-start: Automatically start Caddy when entering the shell
+#   - tld: Top-level domain for virtual hosts (default: "localhost")
+#
+# Domain Format:
+#   Virtual hosts use the format: <app>.<project>.<tld>
+#   Example: web.myproject.localhost, api.myproject.lan
 #
 # Sites are registered via stackpanel.apps with domain configuration,
 # or manually via stackpanel.globalServices.caddy.sites.
@@ -45,6 +50,22 @@
       type = lib.types.bool;
       default = false;
       description = "Automatically start Caddy when entering the shell";
+    };
+
+    tld = lib.mkOption {
+      type = lib.types.str;
+      default = "localhost";
+      description = ''
+        Top-level domain for virtual hosts.
+
+        Virtual hosts use the format: <app>.<project>.<tld>
+        For example, with project "myapp" and tld "localhost":
+          - web app gets domain: web.myapp.localhost
+          - api app gets domain: api.myapp.localhost
+
+        Change to "lan" or "local" for custom DNS setups.
+      '';
+      example = "lan";
     };
   };
 }

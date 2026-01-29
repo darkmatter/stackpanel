@@ -98,14 +98,12 @@
   # See: https://stackpanel.dev/docs/step-ca
   # ---------------------------------------------------------------------------
   # step-ca = {
-  #   config = {
-  #     enable = true;
-  #     ca-url = "https://ca.internal:443";
-  #     ca-fingerprint = "abc123...";  # Root CA fingerprint for verification
-  #     provisioner = "admin";
-  #     cert-name = "dev-workstation";
-  #     prompt-on-shell = true;
-  #   };
+  #   enable = true;
+  #   ca-url = "https://ca.internal:443";
+  #   ca-fingerprint = "abc123...";  # Root CA fingerprint for verification
+  #   provisioner = "admin";
+  #   cert-name = "dev-workstation";
+  #   prompt-on-shell = true;
   # };
 
   # ---------------------------------------------------------------------------
@@ -114,55 +112,14 @@
   # ---------------------------------------------------------------------------
   # secrets = {
   #   enable = true;
-  #
-  #   # Directory containing SOPS-encrypted secrets (legacy layout)
-  #   # Usually .stackpanel/secrets
   #   input-directory = ".stackpanel/secrets";
   #
-  #   # Master keys for encrypting/decrypting secrets
-  #   # Each secret specifies which master keys can decrypt it
-  #   master-keys = {
-  #     # Default local key - auto-generated, always works
-  #     local = {
-  #       age-pub = "age1...";  # computed from private key
-  #       ref = "ref+file://.stackpanel/state/keys/local.txt";
-  #     };
-  #     
-  #     # Team dev key - stored in AWS SSM
-  #     dev = {
-  #       age-pub = "age1...";
-  #       ref = "ref+awsssm://stackpanel/keys/dev";
-  #     };
-  #     
-  #     # Production key
-  #     prod = {
-  #       age-pub = "age1...";
-  #       ref = "ref+awsssm://stackpanel/keys/prod";
-  #     };
-  #   };
-  #
-  #   # System-level AGE public keys (CI/deploy)
-  #   system-keys = [
-  #     # "age1..."
-  #   ];
-  #
-  #   # Code generation targets for type-safe env access
+  #   # Code generation for type-safe env access
   #   codegen = {
   #     typescript = {
   #       name = "env";
   #       directory = "packages/env/src/generated";
   #       language = "typescript";
-  #     };
-  #   };
-  #
-  #   # Environment-specific configs (SOPS sources + recipients)
-  #   environments = {
-  #     dev = {
-  #       name = "dev";
-  #       sources = [ "shared" "dev" ];
-  #       public-keys = [
-  #         "age1..."
-  #       ];
   #     };
   #   };
   # };
@@ -184,47 +141,13 @@
   #   };
   #
   #   oidc = {
-  #     provider = "github-actions";  # or "flyio" or "roles-anywhere"
+  #     provider = "github-actions";
   #     github-actions = {
   #       org = "my-org";
   #       repo = "*";
   #     };
   #   };
-  #
-  #   iam = {
-  #     role-name = "my-project-secrets-role";
-  #   };
   # };
-
-  # ---------------------------------------------------------------------------
-  # Modules - Enable built-in modules or install from the registry
-  # See: https://stackpanel.dev/docs/modules
-  # ---------------------------------------------------------------------------
-  # modules = {
-  #   # Example: Enable the OxLint module
-  #   oxlint = {
-  #     enable = true;
-  #   };
-  #
-  #   # Example: Configure a module with settings
-  #   postgres = {
-  #     enable = true;
-  #     settings = {
-  #       version = "16";
-  #       port = "5432";
-  #     };
-  #   };
-  # };
-
-  # ---------------------------------------------------------------------------
-  # STACKPANEL_MODULES_BEGIN
-  # Auto-generated module configurations (do not edit this section manually)
-  # Modules are sorted alphabetically and injected by the stackpanel CLI
-  # ---------------------------------------------------------------------------
-
-  # ---------------------------------------------------------------------------
-  # STACKPANEL_MODULES_END
-  # ---------------------------------------------------------------------------
 
   # ---------------------------------------------------------------------------
   # Global Services - Shared development services
@@ -245,3 +168,4 @@
   #   project-name = "myproject";
   # };
 }
+

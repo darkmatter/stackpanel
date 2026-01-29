@@ -64,7 +64,6 @@ export function ChecksPanel() {
 				<PanelHeader
 					title="Checks"
 					description={`${Object.keys(summary?.modules ?? {}).length} module${Object.keys(summary?.modules ?? {}).length !== 1 ? "s" : ""} monitored`}
-					guideKey="checks"
 					actions={
 						<Button variant="outline" size="sm" onClick={() => refetch()}>
 							Refresh

@@ -4,7 +4,7 @@
 # CLI-based file generation for stackpanel.
 #
 # This module aggregates configuration from various Stackpanel options and
-# invokes the `stackpanel init` CLI command when entering the devshell.
+# invokes the `stackpanel hook` CLI command when entering the devshell.
 # All codegen is kicked off as a result of this invocation.
 #
 # Generated files (by CLI):
@@ -216,7 +216,7 @@ in
         # Read config from nix store, replace $STACKPANEL_ROOT with actual value
         export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/stackpanel.json"
         _sp_config=$(cat ${configFile} | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
-        echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel init ${lib.optionalString cfg.cli.quiet "--quiet"}
+        echo "$_sp_config" | ${stackpanel-cli}/bin/stackpanel hook ${lib.optionalString cfg.cli.quiet "--quiet"}
 
         # Write the state file for Go agent/CLI consumption
         mkdir -p "$STACKPANEL_STATE_DIR"

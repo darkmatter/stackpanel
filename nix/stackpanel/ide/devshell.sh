@@ -63,4 +63,46 @@ cd "$ROOT"
 # Force bash shell to avoid starship prompt issues with zsh
 # (devenv enterShell runs starship init for bash, so we need to stay in bash)
 
-. <(nix print-dev-env --impure)
+# Compute shell hash for staleness check
+_sp_compute_shell_hash() {
+  local files=(
+    "$ROOT/flake.nix"
+    "$ROOT/flake.lock"
+    "$ROOT/.stackpanel/config.nix"
+    "$ROOT/devenv.nix"
+    "$ROOT/devenv.yaml"
+  )
+  local hash_input=""
+  for f in "${files[@]}"; do
+    if [[ -f "$f" ]]; then
+      hash_input+="$(cat "$f" 2>/dev/null)"
+    fi
+  done
+  echo -n "$hash_input" | md5sum | cut -d' ' -f1
+}
+
+_sp_cache_is_fresh() {
+  local cache_file="$1"
+  [[ -f "$cache_file" ]] || return 1
+
+  # Extract hash from cache header (line 3: "# Shell hash: <hash>")
+  local cached_hash
+  cached_hash=$(sed -n '3s/^# Shell hash: //p' "$cache_file" 2>/dev/null)
+  [[ -n "$cached_hash" ]] || return 1
+
+  # Compare with current hash
+  local current_hash
+  current_hash=$(_sp_compute_shell_hash)
+  [[ "$cached_hash" == "$current_hash" ]]
+}
+
+# Use cached nix-print-dev-env.sh for fast loading, warn if stale
+_sp_cached_env="$ROOT/.stackpanel/gen/nix-print-dev-env.sh"
+if [[ -f "$_sp_cached_env" ]]; then
+  if ! _sp_cache_is_fresh "$_sp_cached_env"; then
+    echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2
+  fi
+  . "$_sp_cached_env"
+else
+  . <(nix print-dev-env --impure)
+fi

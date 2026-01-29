@@ -250,7 +250,8 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 }
 
 // GetInitFiles evaluates the db module and returns the map of paths to content
-// for scaffolding a new project
+// for scaffolding a new project.
+// DEPRECATED: Use GetInitFilesFromFlake instead for portable scaffolding.
 func GetInitFiles(ctx context.Context) (map[string]string, error) {
 	result, err := EvalExpr(ctx, InitFilesPreset)
 	if err != nil {
@@ -263,6 +264,64 @@ func GetInitFiles(ctx context.Context) (map[string]string, error) {
 	}
 
 	return files, nil
+}
+
+// GetInitFilesFromFlake evaluates initFiles from a stackpanel flake reference.
+// This is the portable way to get scaffold templates - works from any directory.
+//
+// The flakeRef can be:
+//   - "github:darkmatter/stackpanel" (from GitHub)
+//   - "path:/local/path/to/stackpanel" (for local development)
+//   - Any valid Nix flake reference
+//
+// Example:
+//
+//	files, err := GetInitFilesFromFlake(ctx, "github:darkmatter/stackpanel")
+//	// files[".stackpanel/config.nix"] = "..."
+func GetInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
+	// Evaluate <flakeRef>#lib.initFiles
+	flakeAttr := flakeRef + "#lib.initFiles"
+	result, err := EvalFlakeAttrWithTimeout(ctx, flakeAttr, 2*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate %s: %w", flakeAttr, err)
+	}
+
+	var files map[string]string
+	if err := result.Unmarshal(&files); err != nil {
+		return nil, fmt.Errorf("failed to parse initFiles: %w", err)
+	}
+
+	return files, nil
+}
+
+// EvalFlakeAttr evaluates a flake attribute and returns the JSON result.
+// The flakeAttr should be in the form "flakeRef#attrPath" (e.g., "github:owner/repo#lib.foo").
+func EvalFlakeAttr(ctx context.Context, flakeAttr string) (*EvalExprResult, error) {
+	return EvalFlakeAttrWithTimeout(ctx, flakeAttr, 30*time.Second)
+}
+
+// EvalFlakeAttrWithTimeout evaluates a flake attribute with a custom timeout.
+func EvalFlakeAttrWithTimeout(ctx context.Context, flakeAttr string, timeout time.Duration) (*EvalExprResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	nixBin, err := findNixBin()
+	if err != nil {
+		return nil, err
+	}
+
+	// Use nix eval <flakeRef>#<attr> --json
+	cmd := exec.CommandContext(ctx, nixBin, "eval", "--json", flakeAttr)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
+	}
+
+	return &EvalExprResult{Raw: stdout.Bytes()}, nil
 }
 
 // GetDbSchemas evaluates the db module and returns all schemas for codegen
