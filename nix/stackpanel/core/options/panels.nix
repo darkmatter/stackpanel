@@ -71,14 +71,29 @@ let
         description = "Field type";
       };
       value = lib.mkOption {
-        type = lib.types.str;
+        type = lib.types.nullOr lib.types.str;
         default = "";
-        description = "Field value (JSON-encoded for complex types)";
+        description = "Field value (JSON-encoded for complex types, null if unset)";
       };
       options = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+        type = lib.types.listOf (
+          lib.types.either lib.types.str (
+            lib.types.submodule {
+              options = {
+                value = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Option value";
+                };
+                label = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Option display label";
+                };
+              };
+            }
+          )
+        );
         default = [ ];
-        description = "Options for select fields";
+        description = "Options for select fields (strings or {value, label} objects)";
       };
 
       # Extended fields for PANEL_TYPE_APP_CONFIG
@@ -105,6 +120,16 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Placeholder text for input fields";
+      };
+      configPath = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization')";
+      };
+      description = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Help text shown below the field";
       };
     };
   };
@@ -161,6 +186,33 @@ let
         description = "Whether this panel is enabled and should be shown";
       };
 
+      # Optional: Columns for PANEL_TYPE_TABLE
+      columns = lib.mkOption {
+        type = lib.types.listOf (
+          lib.types.submodule {
+            options = {
+              key = lib.mkOption {
+                type = lib.types.str;
+                description = "Column key (matches row data)";
+              };
+              label = lib.mkOption {
+                type = lib.types.str;
+                description = "Column header label";
+              };
+            };
+          }
+        );
+        default = [ ];
+        description = "Column definitions for table panels";
+      };
+
+      # Optional: Rows for PANEL_TYPE_TABLE
+      rows = lib.mkOption {
+        type = lib.types.listOf (lib.types.attrsOf lib.types.str);
+        default = [ ];
+        description = "Row data for table panels";
+      };
+
       # Optional: Apps data for PANEL_TYPE_APPS_GRID
       apps = lib.mkOption {
         type = lib.types.attrsOf (
@@ -206,11 +258,15 @@ let
       editable = f.editable;
       editPath = f.editPath;
       placeholder = f.placeholder;
+      configPath = f.configPath;
+      description = f.description;
     }) panel.fields;
     apps = lib.mapAttrs (name: appData: {
       enabled = appData.enabled;
       config = appData.config;
     }) panel.apps;
+    columns = panel.columns;
+    rows = panel.rows;
   };
 
   # Group panels by module

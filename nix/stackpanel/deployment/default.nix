@@ -7,8 +7,8 @@
 #   - cloudflare: Cloudflare Workers (edge, serverless)
 #   - fly: Fly.io (containers, VMs)
 #
-# Global options are defined in core/options/deployment.nix.
-# Each provider module adds per-app options via appModules.
+# Each provider module defines its own global options and adds per-app options via appModules.
+# See fly/module.nix and cloudflare/module.nix for provider-specific options.
 #
 # Usage:
 #   stackpanel.deployment.defaultProvider = "cloudflare";  # or "fly"

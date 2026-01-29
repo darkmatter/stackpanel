@@ -30,7 +30,6 @@
     ./cli.nix
     ./codegen.nix
     ./core.nix
-    ./deployment.nix
     ./devshell.nix
     ./dns.nix
     ./extensions.nix
