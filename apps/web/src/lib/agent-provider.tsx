@@ -149,18 +149,24 @@ export function AgentProvider({
 	// Use SSE for health status when available (provides instant disconnect detection)
 	const sse = useAgentSSEOptional();
 
-	// Fall back to polling for initial discovery when SSE is not connected
-	const { status: polledHealthStatus, projectRoot } = useAgentHealth({
+	// SSE provides connection info (projectRoot, hasProject) via the "connected" event
+	// Only poll when SSE is not connected yet (initial discovery before pairing)
+	const sseIsHealthy = sse?.status === "connected" && sse.isAlive;
+	const { status: polledHealthStatus, projectRoot: polledProjectRoot } = useAgentHealth({
 		host,
 		port,
-		// Poll less frequently when SSE is handling health (SSE is connected and alive)
-		intervalMs: sse?.isAlive ? 60_000 : 5_000,
+		// Disable polling when SSE is healthy (set very long interval)
+		// Only poll for initial discovery when no SSE connection
+		intervalMs: sseIsHealthy ? 300_000 : 5_000, // 5 min when SSE healthy, 5s otherwise
 	});
+
+	// Use SSE connectionInfo when available, fall back to polled values
+	const projectRoot = sse?.connectionInfo?.projectRoot ?? polledProjectRoot;
 
 	// Derive health status: prefer SSE when connected and alive, fall back to polling
 	// Only trust SSE status when it's actually connected - "error" could mean no token yet
 	const healthStatus = (() => {
-		if (sse?.status === "connected" && sse.isAlive) {
+		if (sseIsHealthy) {
 			return "available" as const;
 		}
 		// SSE had a connection but lost it (was alive, now not) - agent disconnected

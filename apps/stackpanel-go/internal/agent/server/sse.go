@@ -104,8 +104,16 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send initial connection event
-	fmt.Fprintf(w, "event: connected\ndata: {\"status\":\"ok\"}\n\n")
+	// Send initial connection event with project info (eliminates need for health polling)
+	hasProject := s.config.ProjectRoot != ""
+	connectedData := map[string]any{
+		"status":      "ok",
+		"hasProject":  hasProject,
+		"projectRoot": s.config.ProjectRoot,
+		"agentId":     s.jwtManager.GetAgentID(),
+	}
+	connectedJSON, _ := json.Marshal(connectedData)
+	fmt.Fprintf(w, "event: connected\ndata: %s\n\n", connectedJSON)
 	flusher.Flush()
 
 	// Heartbeat ticker - sends ping events every 5 seconds for keepalive

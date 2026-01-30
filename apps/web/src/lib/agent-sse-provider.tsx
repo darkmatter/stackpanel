@@ -30,6 +30,13 @@ export type AgentSSEEvent = {
 
 type AgentSSEListener = (event: AgentSSEEvent) => void;
 
+/** Data received from the SSE "connected" event */
+export type AgentSSEConnectionInfo = {
+	projectRoot: string | null;
+	hasProject: boolean;
+	agentId: string | null;
+};
+
 type AgentSSEContextValue = {
 	status: AgentSSEStatus;
 	error: Error | null;
@@ -38,6 +45,8 @@ type AgentSSEContextValue = {
 	lastHeartbeat: number | null;
 	/** True if connected and receiving heartbeats */
 	isAlive: boolean;
+	/** Connection info from the "connected" event (projectRoot, hasProject, agentId) */
+	connectionInfo: AgentSSEConnectionInfo | null;
 	connect: () => void;
 	disconnect: () => void;
 	addEventListener: (event: string, listener: AgentSSEListener) => () => void;
@@ -74,6 +83,7 @@ export function AgentSSEProvider({
 	const [lastEvent, setLastEvent] = useState<AgentSSEEvent | null>(null);
 	const [lastHeartbeat, setLastHeartbeat] = useState<number | null>(null);
 	const [isAlive, setIsAlive] = useState(false);
+	const [connectionInfo, setConnectionInfo] = useState<AgentSSEConnectionInfo | null>(null);
 	const eventSourceRef = useRef<EventSource | null>(null);
 	const listenersRef = useRef<Map<string, Set<AgentSSEListener>>>(new Map());
 	const registeredEventsRef = useRef<Map<string, EventListener>>(new Map());
@@ -139,6 +149,15 @@ export function AgentSSEProvider({
 			if (eventName === "connected") {
 				setStatus("connected");
 				resetHeartbeatTimeout();
+				// Extract connection info from the connected event
+				const connData = data as { projectRoot?: string; hasProject?: boolean; agentId?: string } | null;
+				if (connData && typeof connData === "object") {
+					setConnectionInfo({
+						projectRoot: connData.projectRoot ?? null,
+						hasProject: connData.hasProject ?? false,
+						agentId: connData.agentId ?? null,
+					});
+				}
 			}
 
 			// Handle heartbeat pings
@@ -223,6 +242,7 @@ export function AgentSSEProvider({
 		setStatus("idle");
 		setIsAlive(false);
 		setLastHeartbeat(null);
+		setConnectionInfo(null);
 	}, []);
 
 	const addEventListener = useCallback(
@@ -270,11 +290,12 @@ export function AgentSSEProvider({
 			lastEvent,
 			lastHeartbeat,
 			isAlive,
+			connectionInfo,
 			connect,
 			disconnect,
 			addEventListener,
 		}),
-		[addEventListener, connect, disconnect, error, isAlive, lastEvent, lastHeartbeat, status],
+		[addEventListener, connect, connectionInfo, disconnect, error, isAlive, lastEvent, lastHeartbeat, status],
 	);
 
 	return (
