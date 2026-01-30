@@ -8,6 +8,7 @@
 #   bun run deploy:web
 
 app = "stackpanel-web"
+org = "darkmatter"
 
 [build]
 dockerfile = "../../docker/web/Dockerfile"
