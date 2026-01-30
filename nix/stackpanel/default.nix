@@ -36,6 +36,9 @@ in
     # Core configuration and options
     ./core
 
+    # App-level features (Caddy vhost registration, CI)
+    ./apps/apps.nix
+
     # Feature modules (all adapter-agnostic)
     ./network # step-ca, ports
     ./services # aws, caddy, global-services
