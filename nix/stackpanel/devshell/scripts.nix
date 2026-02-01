@@ -49,7 +49,8 @@ let
   scriptsCfg = config.stackpanel.scriptsConfig;
 
   # Resolve script content from either exec or path
-  resolveScriptContent = name: script:
+  resolveScriptContent =
+    name: script:
     let
       hasExec = script.exec or null != null && script.exec != "";
       hasPath = script.path or null != null;
@@ -68,7 +69,7 @@ let
     name: script:
     let
       envExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (script.env or { })
+        lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (script.env or { })
       );
       scriptContent = resolveScriptContent name script;
     in
@@ -96,7 +97,8 @@ let
 
   # Generate serializable script definitions for CLI/agent access
   # Uses derivation paths instead of inline content for security
-  serializableScripts = lib.mapAttrs (name: script:
+  serializableScripts = lib.mapAttrs (
+    name: script:
     let
       pkg = scriptPackages.${name};
     in
@@ -104,6 +106,8 @@ let
       inherit name;
       description = script.description or null;
       env = script.env or { };
+      # Documented arguments for help text
+      args = script.args or [ ];
       # Derivation path - agent executes this directly (no sh -c with inline content)
       binPath = "${pkg}/bin/${name}";
       # Source info for debugging
@@ -166,7 +170,7 @@ in
     default = { };
     description = ''
       Scripts exposed in the development shell.
-      
+
       Each script becomes an executable command available in PATH.
       The attribute name determines the command name.
 

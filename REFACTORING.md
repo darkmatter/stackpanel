@@ -477,7 +477,7 @@ nix/stackpanel/
   }
   ```
 - [ ] Replace `useServices()` with React Query
-- [ ] Replace `useSecrets()` with React Query  
+- [ ] Replace `useSecrets()` with React Query
 - [ ] Replace `useGlobalServices()` with React Query
 - [ ] Replace `useUsers()` with React Query
 - [ ] Remove custom `QueryState` type and helpers
@@ -511,7 +511,7 @@ nix/stackpanel/
 - [ ] Convert filter hooks to `useMemo` in components:
   ```typescript
   const { data: apps } = useApps();
-  const appsWithBuild = useMemo(() => 
+  const appsWithBuild = useMemo(() =>
     filterAppsWithTask(apps, 'build'), [apps]);
   ```
 - [ ] Delete `useAppsWithTask`, `useAppsWithVariable`

@@ -37,6 +37,17 @@ proto.mkProtoFile {
       #   exec = "biome format --write .";
       #   description = "Format all source files";
       # };
+      #
+      # # Script with documented arguments:
+      # deploy = {
+      #   exec = "deploy.sh \"$@\"";
+      #   description = "Deploy the application to an environment";
+      #   args = [
+      #     { name = "environment"; description = "Target environment (dev, staging, prod)"; required = true; }
+      #     { name = "--dry-run"; description = "Preview changes without applying"; }
+      #     { name = "--force"; description = "Skip confirmation prompts"; }
+      #   ];
+      # };
     }
   '';
 
@@ -45,6 +56,24 @@ proto.mkProtoFile {
   };
 
   messages = {
+    # Argument documentation for scripts
+    ScriptArg = proto.mkMessage {
+      name = "ScriptArg";
+      description = ''
+        Documentation for a script argument.
+
+        Arguments are purely for documentation purposes - they describe what
+        positional or named arguments the script accepts. The script itself
+        is responsible for parsing these arguments.
+      '';
+      fields = {
+        name = proto.string 1 "Argument name (e.g., 'file', '--output', '-v')";
+        description = proto.optional (proto.string 2 "Human-readable description of the argument");
+        required = proto.optional (proto.bool 3 "Whether the argument is required (default: false)");
+        default = proto.optional (proto.string 4 "Default value if not provided");
+      };
+    };
+
     Script = proto.mkMessage {
       name = "Script";
       description = ''
@@ -63,6 +92,7 @@ proto.mkProtoFile {
         exec = proto.optional (proto.string 1 "Shell command to execute (mutually exclusive with path)");
         description = proto.optional (proto.string 2 "Human-readable description of the script");
         env = proto.map "string" "string" 3 "Environment variables to set when running the script";
+        args = proto.repeated (proto.message "ScriptArg" 6 "Documented arguments for this script");
 
         # Output options (serialized to agent - agent executes binPath directly)
         bin_path = proto.optional (proto.string 4 "Path to script executable in Nix store (computed)");

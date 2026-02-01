@@ -48,7 +48,7 @@ let
   tld = caddyCfg.tld or "localhost";
 
   # Import caddy library for adding sites
-  caddyLib = import ../lib/services/caddy.nix { inherit pkgs lib; };
+  caddyLib = import ../services/caddy { inherit pkgs lib; };
   caddyScripts = caddyLib.mkCaddyScripts {
     stepEnabled = config.stackpanel.network.step.enable or false;
     stepCaUrl = config.stackpanel.network.step.ca-url or "";

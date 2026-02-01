@@ -73,13 +73,20 @@ let
       # Determine content source for text files
       contentSource =
         if fileType == "text" then
-          if fileConfig.path or null != null then "path"
-          else if fileConfig.text or null != null then "inline"
-          else "unknown"
-        else if fileType == "json" then "json"
-        else if fileType == "derivation" then "derivation"
-        else if fileType == "symlink" then "symlink"
-        else "unknown";
+          if fileConfig.path or null != null then
+            "path"
+          else if fileConfig.text or null != null then
+            "inline"
+          else
+            "unknown"
+        else if fileType == "json" then
+          "json"
+        else if fileType == "derivation" then
+          "derivation"
+        else if fileType == "symlink" then
+          "symlink"
+        else
+          "unknown";
     in
     {
       inherit path;
@@ -103,7 +110,8 @@ let
   };
 
   # Resolve text content from either text, path, or jsonValue
-  resolveTextContent = path: fileConfig:
+  resolveTextContent =
+    path: fileConfig:
     let
       fileType = fileConfig.type or "text";
       hasText = fileConfig.text or null != null;

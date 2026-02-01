@@ -75,6 +75,29 @@ export function AppsPanelAlt() {
     );
   }, [nixConfig]);
 
+  // Separate panels by category:
+  // - Container panels go to the Docker tab
+  // - Deployment panels (fly, cloudflare) go to the Deployment tab
+  // - Other panels go to the Modules tab
+  const containerPanels = useMemo(() => {
+    return appConfigPanels.filter((p) => p.module === "containers");
+  }, [appConfigPanels]);
+
+  const deploymentPanels = useMemo(() => {
+    return appConfigPanels.filter(
+      (p) => p.module === "deployment-fly" || p.module === "deployment-cloudflare",
+    );
+  }, [appConfigPanels]);
+
+  const modulePanels = useMemo(() => {
+    return appConfigPanels.filter(
+      (p) =>
+        p.module !== "containers" &&
+        p.module !== "deployment-fly" &&
+        p.module !== "deployment-cloudflare",
+    );
+  }, [appConfigPanels]);
+
   // Transform apps data to include id, stablePort, and isRunning fields
   const resolvedApps = useMemo(() => {
     if (!rawApps) return null;
@@ -484,7 +507,13 @@ export function AppsPanelAlt() {
                       environmentOptions={environmentOptions}
                       availableVariables={availableVariables}
                       disabled={!token}
-                      modulePanels={appConfigPanels.filter(
+                      modulePanels={modulePanels.filter(
+                        (p) => p.apps[app.id] != null,
+                      )}
+                      containerPanels={containerPanels.filter(
+                        (p) => p.apps[app.id] != null,
+                      )}
+                      deploymentPanels={deploymentPanels.filter(
                         (p) => p.apps[app.id] != null,
                       )}
                       editingTask={editingTask}

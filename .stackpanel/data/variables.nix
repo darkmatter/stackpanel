@@ -1,10 +1,10 @@
 {
   "/common/SHARED_VALUE" = {
     id = "/common/SHARED_VALUE";
-    value = "secret value";
+    value = "secret value1";
   };
   "/dev/OPENAI_API_KEY" = {
-    value = "ref+sops://.stackpanel/secrets/dev.yaml#/OPENAI_API_KEY";
+    value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/OPENAI_API_KEY";
   };
   "/foobar" = {
     id = "/foobar";
@@ -14,10 +14,12 @@
   };
   "/my-api-endpoint" = {
     id = "/my-api-endpoint";
-    value = "cool-api.com";
+    key = "my-api-endpoint";
+    type = "SECRET";
+    value = "";
   };
   "/prod/POSTGRES_URL" = {
-    value = "ref+sops://.stackpanel/secrets/prod.yaml#/POSTGRES_URL";
+    value = "ref+sops://.stackpanel/secrets/groups/prod.yaml#/POSTGRES_URL";
   };
   "/secret-foo" = {
     id = "/secret-foo";
@@ -27,11 +29,17 @@
   };
   "/stripe-secre-key" = {
     id = "/stripe-secre-key";
-    value = "ref+sops://.stackpanel/secrets/common.yaml#/KEY";
+    value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/KEY";
   };
   "/test" = {
     id = "/test";
     key = "test";
+    type = "SECRET";
+    value = "";
+  };
+  "/username" = {
+    id = "/username";
+    key = "username";
     type = "SECRET";
     value = "";
   };

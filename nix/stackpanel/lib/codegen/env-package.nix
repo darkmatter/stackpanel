@@ -29,14 +29,15 @@ let
   entrypointsDir = "packages/env/src/entrypoints";
 
   # Get master key from secrets config
-  masterKey = secretsCfg.master-key or "age1mr42zd88679gyrk34f5cy8yx2axdrw39f2wq9q3y2du07kxluv5q9cwheu";
+  masterKey =
+    secretsCfg.master-key or "age1mr42zd88679gyrk34f5cy8yx2axdrw39f2wq9q3y2du07kxluv5q9cwheu";
 
   # Collect all user AGE keys
   userKeys = lib.mapAttrsToList (_: user: user.age-public-key or null) users;
   validUserKeys = lib.filter (k: k != null) userKeys;
 
   # Collect group public keys (only from initialized groups with age-pub set)
-  groups = secretsCfg.groups or {};
+  groups = secretsCfg.groups or { };
   groupKeys = lib.pipe groups [
     (lib.mapAttrsToList (_: g: g.age-pub or ""))
     (lib.filter (k: k != ""))
@@ -51,46 +52,57 @@ let
   # ===========================================================================
   # SOPS Config Generation
   # ===========================================================================
-  
+
   # Generate SOPS creation rule for an app/env
-  mkSopsRule = appName: envName: envCfg:
+  mkSopsRule =
+    appName: envName: envCfg:
     let
       # For prod, we might want restricted access
       isProd = envName == "prod" || envName == "production";
       # Get environment-specific allowed keys (if configured)
       envAllowedUsers = envCfg.allowed-users or null;
-      
+
       # Match group by environment name (e.g., env "dev" → group "dev")
       # This gives per-env access control: prod secrets only encrypted to prod group
       matchingGroup = groupsByName.${envName} or null;
-      matchingGroupKey = if matchingGroup != null then [ matchingGroup.age-pub ] else [];
-      
+      matchingGroupKey = if matchingGroup != null then [ matchingGroup.age-pub ] else [ ];
+
       # Determine which keys to include
-      keys = if envAllowedUsers != null 
-        then lib.filter (k: k != null) (map (u: (users.${u} or {}).age-public-key or null) envAllowedUsers)
-              ++ matchingGroupKey
-        else if isProd 
-          then [ masterKey ] ++ matchingGroupKey  # Prod: master + prod group (no user keys)
-          else [ masterKey ] ++ groupKeys ++ validUserKeys;  # Dev/staging: master + all groups + user keys
+      keys =
+        if envAllowedUsers != null then
+          lib.filter (k: k != null) (map (u: (users.${u} or { }).age-public-key or null) envAllowedUsers)
+          ++ matchingGroupKey
+        else if isProd then
+          [ masterKey ] ++ matchingGroupKey # Prod: master + prod group (no user keys)
+        else
+          [ masterKey ] ++ groupKeys ++ validUserKeys; # Dev/staging: master + all groups + user keys
     in
     {
       path_regex = "^${appName}/${envName}\\.yaml$";
-      key_groups = [{
-        age = lib.unique keys;
-      }];
+      key_groups = [
+        {
+          age = lib.unique keys;
+        }
+      ];
     };
 
   # Collect all app/env combinations
   allEnvs = lib.concatLists (
-    lib.mapAttrsToList (appName: appCfg:
+    lib.mapAttrsToList (
+      appName: appCfg:
       lib.mapAttrsToList (envName: envCfg: {
         inherit appName envName envCfg;
-      }) (appCfg.environments or {})
+      }) (appCfg.environments or { })
     ) apps
   );
 
   # Generate all SOPS rules
-  sopsRules = map ({ appName, envName, envCfg }: 
+  sopsRules = map (
+    {
+      appName,
+      envName,
+      envCfg,
+    }:
     mkSopsRule appName envName envCfg
   ) allEnvs;
 
@@ -103,27 +115,28 @@ let
   # Catch-all rule for any other files
   catchAllRule = {
     path_regex = ".*\\.yaml$";
-    key_groups = [{
-      age = lib.unique (baseKeys ++ validUserKeys);
-    }];
+    key_groups = [
+      {
+        age = lib.unique (baseKeys ++ validUserKeys);
+      }
+    ];
   };
 
   # Generate .sops.yaml content
-  sopsYamlContent = 
+  sopsYamlContent =
     let
       # Format a key group
-      formatKeyGroup = kg: 
-        "      - age:\n" + 
-        lib.concatMapStringsSep "" (k: "          - ${k}\n") kg.age;
-      
+      formatKeyGroup = kg: "      - age:\n" + lib.concatMapStringsSep "" (k: "          - ${k}\n") kg.age;
+
       # Format a creation rule
-      formatRule = rule:
+      formatRule =
+        rule:
         if rule ? unencrypted_regex then
           "  - path_regex: ${rule.path_regex}\n    unencrypted_regex: \"${rule.unencrypted_regex}\"\n"
         else
-          "  - path_regex: ${rule.path_regex}\n    key_groups:\n" +
-          lib.concatMapStringsSep "" formatKeyGroup rule.key_groups;
-      
+          "  - path_regex: ${rule.path_regex}\n    key_groups:\n"
+          + lib.concatMapStringsSep "" formatKeyGroup rule.key_groups;
+
       allRules = [ sharedVarsRule ] ++ sopsRules ++ [ catchAllRule ];
     in
     ''
@@ -137,12 +150,14 @@ let
       keys:
         # Project master key
         - &master ${masterKey}
-      ${lib.optionalString (groupKeys != []) ''
-        # Group keys (access control boundaries)
-      ${lib.concatStringsSep "" (lib.mapAttrsToList (name: g: "  - &group_${name} ${g.age-pub}\n") groupsByName)}''}
-      ${lib.optionalString (validUserKeys != []) ''
-        # Team member keys
-      ${lib.concatMapStringsSep "" (k: "  - ${k}\n") validUserKeys}''}
+      ${lib.optionalString (groupKeys != [ ]) ''
+          # Group keys (access control boundaries)
+        ${lib.concatStringsSep "" (
+          lib.mapAttrsToList (name: g: "  - &group_${name} ${g.age-pub}\n") groupsByName
+        )}''}
+      ${lib.optionalString (validUserKeys != [ ]) ''
+          # Team member keys
+        ${lib.concatMapStringsSep "" (k: "  - ${k}\n") validUserKeys}''}
 
       creation_rules:
       ${lib.concatMapStringsSep "" formatRule allRules}
@@ -153,11 +168,13 @@ let
   # ===========================================================================
 
   # Generate boilerplate YAML for an app/env
-  mkEnvYamlBoilerplate = appName: envName: envCfg:
+  mkEnvYamlBoilerplate =
+    appName: envName: envCfg:
     let
-      envVars = envCfg.env or {};
+      envVars = envCfg.env or { };
       # Generate key placeholders
-      lines = lib.mapAttrsToList (key: value:
+      lines = lib.mapAttrsToList (
+        key: value:
         let
           # If it's a vals ref, extract the key name for the placeholder
           isRef = lib.hasPrefix "ref+" value;
@@ -176,7 +193,7 @@ let
   sharedVarsBoilerplate = ''
     # Shared configuration variables (NOT encrypted)
     # Add non-sensitive config shared across apps/environments
-    
+
     LOG_LEVEL: info
     API_VERSION: v1
   '';
@@ -186,23 +203,30 @@ let
   # ===========================================================================
 
   # Infer Zod schema from value
-  inferZodSchema = value:
+  inferZodSchema =
+    value:
     let
       isValsRef = lib.hasPrefix "ref+" value;
       isNumericStr = builtins.match "^-?[0-9]+\\.?[0-9]*$" value != null;
       isBooleanStr = value == "true" || value == "false";
     in
-    if isValsRef then "z.string()"
-    else if isNumericStr then "z.coerce.number()"
-    else if isBooleanStr then "z.coerce.boolean()"
-    else "z.string()";
+    if isValsRef then
+      "z.string()"
+    else if isNumericStr then
+      "z.coerce.number()"
+    else if isBooleanStr then
+      "z.coerce.boolean()"
+    else
+      "z.string()";
 
   # Generate TypeScript module for an app/env
-  mkEnvTsModule = appName: envName: envCfg:
+  mkEnvTsModule =
+    appName: envName: envCfg:
     let
-      envVars = envCfg.env or {};
+      envVars = envCfg.env or { };
       sortedKeys = lib.sort (a: b: a < b) (lib.attrNames envVars);
-      fields = lib.concatMapStringsSep "\n" (key:
+      fields = lib.concatMapStringsSep "\n" (
+        key:
         let
           value = envVars.${key};
           zodSchema = inferZodSchema value;
@@ -210,18 +234,22 @@ let
         "    ${key}: ${zodSchema},"
       ) sortedKeys;
     in
-    if envVars == {} then null else ''
-      // Auto-generated by Stackpanel - do not edit manually
-      // Run 'write-files' or restart devshell to regenerate
-      import { parseEnv, z } from "znv";
+    if envVars == { } then
+      null
+    else
+      ''
+        // Auto-generated by Stackpanel - do not edit manually
+        // Run 'write-files' or restart devshell to regenerate
+        import { parseEnv, z } from "znv";
 
-      export const env = parseEnv(process.env, {
-      ${fields}
-      });
-    '';
+        export const env = parseEnv(process.env, {
+        ${fields}
+        });
+      '';
 
   # Generate app barrel export
-  mkAppBarrelExport = appName: envNames:
+  mkAppBarrelExport =
+    appName: envNames:
     let
       sorted = lib.sort (a: b: a < b) envNames;
       exports = lib.concatMapStringsSep "\n" (e: "export * as ${e} from './${e}';") sorted;
@@ -232,7 +260,8 @@ let
     '';
 
   # Generate root barrel export
-  mkRootBarrelExport = appNames:
+  mkRootBarrelExport =
+    appNames:
     let
       sorted = lib.sort (a: b: a < b) appNames;
       exports = lib.concatMapStringsSep "\n" (a: "export * as ${a} from './${a}';") sorted;
@@ -247,12 +276,11 @@ let
   # ===========================================================================
 
   # Generate entrypoint for an app
-  mkAppEntrypoint = appName: appCfg:
+  mkAppEntrypoint =
+    appName: appCfg:
     let
-      envNames = lib.attrNames (appCfg.environments or {});
-      envChecks = lib.concatMapStringsSep "\n  " (e: 
-        "case '${e}':"
-      ) envNames;
+      envNames = lib.attrNames (appCfg.environments or { });
+      envChecks = lib.concatMapStringsSep "\n  " (e: "case '${e}':") envNames;
     in
     ''
       // Auto-generated entrypoint for ${appName}
@@ -283,7 +311,7 @@ let
   # Collect All Generated Files
   # ===========================================================================
 
-  generatedFiles = 
+  generatedFiles =
     let
       # .sops.yaml - skip when backend is chamber (secrets in SSM, not SOPS)
       sopsFile = lib.optionalAttrs (!isChamber) {
@@ -296,23 +324,37 @@ let
       };
 
       # Per-app/env YAML boilerplates - skip when backend is chamber
-      yamlFiles = if isChamber then {} else lib.listToAttrs (
-        lib.concatMap ({ appName, envName, envCfg }:
-          let
-            content = mkEnvYamlBoilerplate appName envName envCfg;
-            path = "${dataDir}/${appName}/${envName}.yaml";
-          in
-          # Only generate if env has variables defined
-          lib.optional ((envCfg.env or {}) != {}) {
-            name = path;
-            value = content;
-          }
-        ) allEnvs
-      );
+      yamlFiles =
+        if isChamber then
+          { }
+        else
+          lib.listToAttrs (
+            lib.concatMap (
+              {
+                appName,
+                envName,
+                envCfg,
+              }:
+              let
+                content = mkEnvYamlBoilerplate appName envName envCfg;
+                path = "${dataDir}/${appName}/${envName}.yaml";
+              in
+              # Only generate if env has variables defined
+              lib.optional ((envCfg.env or { }) != { }) {
+                name = path;
+                value = content;
+              }
+            ) allEnvs
+          );
 
       # Per-app/env TypeScript modules
       tsModules = lib.listToAttrs (
-        lib.concatMap ({ appName, envName, envCfg }:
+        lib.concatMap (
+          {
+            appName,
+            envName,
+            envCfg,
+          }:
           let
             content = mkEnvTsModule appName envName envCfg;
             path = "${generatedDir}/${appName}/${envName}.ts";
@@ -326,14 +368,15 @@ let
 
       # Per-app barrel exports
       appBarrels = lib.listToAttrs (
-        lib.concatMap (appName:
+        lib.concatMap (
+          appName:
           let
             appCfg = apps.${appName};
-            envs = appCfg.environments or {};
-            envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or {}) != {}) envs);
+            envs = appCfg.environments or { };
+            envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs);
             path = "${generatedDir}/${appName}/index.ts";
           in
-          lib.optional (envNames != []) {
+          lib.optional (envNames != [ ]) {
             name = path;
             value = mkAppBarrelExport appName envNames;
           }
@@ -341,24 +384,26 @@ let
       );
 
       # Root barrel export
-      appsWithEnvs = lib.filter (appName:
+      appsWithEnvs = lib.filter (
+        appName:
         let
           appCfg = apps.${appName};
-          envs = appCfg.environments or {};
+          envs = appCfg.environments or { };
         in
-        lib.any (e: (e.env or {}) != {}) (lib.attrValues envs)
+        lib.any (e: (e.env or { }) != { }) (lib.attrValues envs)
       ) (lib.attrNames apps);
 
-      rootBarrel = lib.optionalAttrs (appsWithEnvs != []) {
+      rootBarrel = lib.optionalAttrs (appsWithEnvs != [ ]) {
         "${generatedDir}/index.ts" = mkRootBarrelExport appsWithEnvs;
       };
 
       # Entrypoints
       entrypoints = lib.listToAttrs (
-        lib.concatMap (appName:
+        lib.concatMap (
+          appName:
           let
             appCfg = apps.${appName};
-            hasEnvs = (appCfg.environments or {}) != {};
+            hasEnvs = (appCfg.environments or { }) != { };
             path = "${entrypointsDir}/${appName}.ts";
           in
           lib.optional hasEnvs {
@@ -369,8 +414,8 @@ let
       );
 
       # Entrypoints barrel
-      entrypointsBarrel = lib.optionalAttrs (entrypoints != {}) {
-        "${entrypointsDir}/index.ts" = 
+      entrypointsBarrel = lib.optionalAttrs (entrypoints != { }) {
+        "${entrypointsDir}/index.ts" =
           let
             appNames = lib.sort (a: b: a < b) (lib.attrNames apps);
             exports = lib.concatMapStringsSep "\n" (a: "export * as ${a} from './${a}';") appNames;
@@ -381,7 +426,14 @@ let
           '';
       };
     in
-    sopsFile // sharedFiles // yamlFiles // tsModules // appBarrels // rootBarrel // entrypoints // entrypointsBarrel;
+    sopsFile
+    // sharedFiles
+    // yamlFiles
+    // tsModules
+    // appBarrels
+    // rootBarrel
+    // entrypoints
+    // entrypointsBarrel;
 
   # Convert to stackpanel.files.entries format
   fileEntries = lib.mapAttrs (path: content: {
@@ -394,12 +446,13 @@ let
 in
 {
   inherit generatedFiles fileEntries;
-  
+
   # Individual parts for inspection
   sopsYaml = sopsYamlContent;
   sopsRules = sopsRules;
   allEnvs = allEnvs;
-  
+
   # Check if generation is needed
-  enabled = apps != {} && lib.any (appCfg: (appCfg.environments or {}) != {}) (lib.attrValues apps);
+  enabled =
+    apps != { } && lib.any (appCfg: (appCfg.environments or { }) != { }) (lib.attrValues apps);
 }

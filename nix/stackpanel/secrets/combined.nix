@@ -32,7 +32,11 @@ let
   # Script to export secrets as environment variables
   exportSecretsScript = pkgs.writeShellApplication {
     name = "export-secrets";
-    runtimeInputs = [ pkgs.age pkgs.jq pkgs.vals ];
+    runtimeInputs = [
+      pkgs.age
+      pkgs.jq
+      pkgs.vals
+    ];
     text = ''
       ${secretsLib.tryDecryptScript}
 
@@ -126,7 +130,14 @@ in
     stackpanel.scripts = {
       "secrets:export" = {
         exec = "${exportSecretsScript}/bin/export-secrets \"$@\"";
-        description = "Decrypt and export all secrets (--format env|json|yaml)";
+        description = "Decrypt and export all secrets";
+        args = [
+          {
+            name = "--format";
+            description = "Output format";
+            default = "env";
+          }
+        ];
       };
 
       "secrets:env" = {

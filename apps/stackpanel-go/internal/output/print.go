@@ -17,22 +17,22 @@ var (
 	DimC   = color.New(color.Faint)
 )
 
-// Success prints a success message with a green checkmark.
+// Success prints a success message with a green checkmark to stderr.
 func Success(msg string) {
-	Green.Print("✓ ")
-	fmt.Println(msg)
+	Green.Fprint(os.Stderr, "✓ ")
+	fmt.Fprintln(os.Stderr, msg)
 }
 
-// Info prints an informational message with a purple arrow.
+// Info prints an informational message with a purple arrow to stderr.
 func Info(msg string) {
-	Purple.Print("→ ")
-	fmt.Println(msg)
+	Purple.Fprint(os.Stderr, "→ ")
+	fmt.Fprintln(os.Stderr, msg)
 }
 
-// Warning prints a warning message with a yellow warning sign.
+// Warning prints a warning message with a yellow warning sign to stderr.
 func Warning(msg string) {
-	Yellow.Print("⚠ ")
-	fmt.Println(msg)
+	Yellow.Fprint(os.Stderr, "⚠ ")
+	fmt.Fprintln(os.Stderr, msg)
 }
 
 // Error prints an error message with a red X to stderr.
@@ -41,9 +41,9 @@ func Error(msg string) {
 	fmt.Fprintln(os.Stderr, msg)
 }
 
-// Dimmed prints a dimmed/faded message.
+// Dimmed prints a dimmed/faded message to stderr.
 func Dimmed(msg string) {
-	DimC.Println(msg)
+	DimC.Fprintln(os.Stderr, msg)
 }
 
 // SetNoColor disables colored output globally.

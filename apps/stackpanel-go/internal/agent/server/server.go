@@ -195,6 +195,13 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/sops/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDelete))))
 	mux.HandleFunc("/api/sops/list", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsList))))
 
+	// Group-based secrets management (SOPS files per access control group)
+	mux.HandleFunc("/api/secrets/group/write", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretWrite))))
+	mux.HandleFunc("/api/secrets/group/read", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretRead))))
+	mux.HandleFunc("/api/secrets/group/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretDelete))))
+	mux.HandleFunc("/api/secrets/group/list", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretsList))))
+	mux.HandleFunc("/api/secrets/generate-env-package", s.withCORS(s.requireAuth(s.requireProject(s.handleGenerateEnvPackage))))
+
 	// Security status endpoints (AWS session and certificate status)
 	mux.HandleFunc("/api/security/status", s.withCORS(s.requireAuth(s.handleSecurityStatus)))
 	mux.HandleFunc("/api/security/aws", s.withCORS(s.requireAuth(s.handleAWSStatus)))

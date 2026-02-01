@@ -1,5 +1,5 @@
 # ==============================================================================
-# services/postgres.nix
+# services/postgres/default.nix
 #
 # PostgreSQL database service configuration.
 # Pure functions that work with any Nix module system.
@@ -15,7 +15,7 @@
 #   - Shell hooks for automatic environment setup
 #
 # Usage:
-#   let pgLib = import ./postgres.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
+#   let pgLib = import ./postgres { inherit pkgs lib; baseDir = ".stackpanel/state"; };
 #   in pgLib.mkService { projectName = "myapp"; port = 5432; databases = ["app"]; }
 # ==============================================================================
 {

@@ -30,7 +30,7 @@ let
   devshellCfg = config.stackpanel.devshell;
 
   # Get all packages from devshell
-  allPackages = devshellCfg.packages or [];
+  allPackages = devshellCfg.packages or [ ];
 
   # Build a list of all bin directories from packages
   # Filter to packages that have a /bin directory
@@ -41,13 +41,13 @@ let
   # This runs at runtime so it can iterate over the actual binaries
   generateBinScript = pkgs.writeShellScript "stackpanel-generate-bin" ''
     set -euo pipefail
-    
+
     BIN_DIR="''${STACKPANEL_ROOT:-.}/.stackpanel/bin"
-    
+
     # Clean and recreate bin directory
     rm -rf "$BIN_DIR"
     mkdir -p "$BIN_DIR"
-    
+
     # Symlink all binaries from package bin directories
     for bindir in ${lib.escapeShellArgs binDirPaths}; do
       if [[ -d "$bindir" ]]; then
@@ -62,11 +62,11 @@ let
         done
       fi
     done
-    
+
     # Count symlinks created
     count=$(find "$BIN_DIR" -maxdepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
     if [[ "$count" -gt 0 ]]; then
-      echo "  → .stackpanel/bin: $count binaries"
+      echo "  → .stackpanel/bin: $count binaries" >&2
     fi
   '';
 in
@@ -87,7 +87,7 @@ in
     };
   };
 
-  config = lib.mkIf (config.stackpanel.enable && cfg.enable && binDirPaths != []) {
+  config = lib.mkIf (config.stackpanel.enable && cfg.enable && binDirPaths != [ ]) {
     # Run the bin generator script on shell entry
     stackpanel.devshell.hooks.after = [
       "${generateBinScript}"

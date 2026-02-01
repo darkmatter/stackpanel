@@ -15,11 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@ui/dropdown-menu";
 import {
+  Check,
   Folder,
   List,
   Loader2,
   MoreVertical,
   Pause,
+  Pencil,
   Play,
   RefreshCw,
   Terminal,
@@ -38,9 +40,12 @@ interface ProcessListProps {
   onRemove: (id: string) => void;
   onToggleAutoStart: (id: string, autoStart: boolean) => void;
   onToggleEntrypoint: (id: string, useEntrypoint: boolean) => void;
+  onClickAdd: () => void;
+  _onClickSave: () => void;
+  _isAdding: boolean;
 }
 
-export function ProcessList({ sources, statuses, onRemove, onToggleAutoStart: _onToggleAutoStart, onToggleEntrypoint: _onToggleEntrypoint }: ProcessListProps) {
+export function ProcessList({ sources, statuses, onRemove, onToggleAutoStart: _onToggleAutoStart, onToggleEntrypoint: _onToggleEntrypoint, onClickAdd, _onClickSave, _isAdding }: ProcessListProps) {
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<{ name: string; status?: string; isRunning?: boolean } | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
@@ -136,9 +141,10 @@ export function ProcessList({ sources, statuses, onRemove, onToggleAutoStart: _o
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <List className="h-4 w-4" />
             Configured Processes
-            <Badge variant="secondary" className="ml-auto">
-              {sources.length}
-            </Badge>
+            <Button variant="outline" size="sm" onClick={onClickAdd} className="ml-auto" data-icon="inline-start">
+              <Pencil />
+              Edit
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -164,7 +170,7 @@ export function ProcessList({ sources, statuses, onRemove, onToggleAutoStart: _o
                       className="flex items-center gap-3 rounded-lg border p-3 bg-secondary/20"
                     >
                       <ProcessStatusIndicator status={status} />
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium truncate">{source.name}</span>

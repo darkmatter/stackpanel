@@ -28,7 +28,7 @@
 }:
 let
   servicesLib = import ./services.nix { inherit pkgs lib; };
-  caddyLib = import ../../lib/services/caddy.nix { inherit pkgs lib; };
+  caddyLib = import ../../services/caddy { inherit pkgs lib; };
 
   # Fallback ports when explicit or computed ports are not provided
   fallbackPorts = {

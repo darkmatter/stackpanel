@@ -324,6 +324,26 @@ func (m commandsModel) renderCommandDetails(width int) string {
 		b.WriteString("\n\n")
 	}
 
+	// Display arguments if defined
+	if len(entry.Command.Args) > 0 {
+		b.WriteString(tui.TextSubtle.Render("Arguments"))
+		b.WriteString("\n")
+		argStyle := lipgloss.NewStyle().Foreground(tui.ColorPrimary)
+		requiredStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ef4444"))
+		for _, arg := range entry.Command.Args {
+			argLine := "  " + argStyle.Render(arg.Name)
+			if arg.Required != nil && *arg.Required {
+				argLine += " " + requiredStyle.Render("*")
+			}
+			if arg.Description != nil && *arg.Description != "" {
+				argLine += " " + tui.TextDim.Render(*arg.Description)
+			}
+			b.WriteString(argLine)
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	}
+
 	b.WriteString(tui.TextSubtle.Render("Exec"))
 	b.WriteString("\n")
 	code := lipgloss.NewStyle().
@@ -436,19 +456,44 @@ func formatCommandHelp(entry commandEntry) string {
 		b.WriteString("\n\n")
 	}
 
+	// Display documented arguments
+	if len(entry.Command.Args) > 0 {
+		b.WriteString("## Arguments\n\n")
+		for _, arg := range entry.Command.Args {
+			// Argument name with indicators
+			argLine := "- **" + arg.Name + "**"
+			if arg.Required != nil && *arg.Required {
+				argLine += " *(required)*"
+			}
+			if arg.Default != nil && *arg.Default != "" {
+				argLine += fmt.Sprintf(" [default: `%s`]", *arg.Default)
+			}
+			b.WriteString(argLine)
+
+			// Description
+			if arg.Description != nil && *arg.Description != "" {
+				b.WriteString(" — ")
+				b.WriteString(*arg.Description)
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString("## Script\n\n")
 	b.WriteString("```bash\n")
 	b.WriteString(strings.TrimSpace(entry.Command.Exec))
 	b.WriteString("\n```\n")
 
 	if len(entry.Command.Env) > 0 {
-		b.WriteString("\nEnvironment overrides:\n")
+		b.WriteString("\n## Environment overrides\n\n")
 		keys := make([]string, 0, len(entry.Command.Env))
 		for k := range entry.Command.Env {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			b.WriteString(fmt.Sprintf("- %s=%s\n", k, entry.Command.Env[k]))
+			b.WriteString(fmt.Sprintf("- `%s=%s`\n", k, entry.Command.Env[k]))
 		}
 	}
 

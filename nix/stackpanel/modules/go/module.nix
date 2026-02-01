@@ -356,7 +356,7 @@ in
   # ===========================================================================
   # Options
   # ===========================================================================
-  # Go packages are exposed via a separate option to avoid conflicts with the 
+  # Go packages are exposed via a separate option to avoid conflicts with the
   # stackpanel.modules attrsOf type
   options.stackpanel.go.packages = lib.mkOption {
     type = lib.types.attrsOf lib.types.unspecified;
@@ -423,11 +423,23 @@ in
               exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go run ${app.go.mainPackage} "$@"'';
               runtimeInputs = [ pkgs.go ];
               description = "Run ${name} Go app";
+              args = [
+                {
+                  name = "...";
+                  description = "Arguments passed to the Go app";
+                }
+              ];
             };
             "test-${name}" = {
               exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec go test ./... "$@"'';
               runtimeInputs = [ pkgs.go ];
               description = "Test ${name} Go app";
+              args = [
+                {
+                  name = "...";
+                  description = "Arguments passed to go test";
+                }
+              ];
             };
           }) goApps
         );

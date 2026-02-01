@@ -4,8 +4,8 @@
 # Static metadata for fast module discovery. Contains ONLY pure data.
 # ==============================================================================
 {
-  # Unique identifier (matches directory name)
-  id = "deploy-fly";
+  # Unique identifier (follows deployment-<provider> convention)
+  id = "deployment-fly";
 
   # Display name
   name = "Fly.io Deployment";

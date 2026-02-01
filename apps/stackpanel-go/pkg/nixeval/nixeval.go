@@ -21,14 +21,15 @@ import (
 
 // Config represents the stackpanel configuration from Nix
 type Config struct {
-	Version     int                `json:"version"`
-	ProjectName string             `json:"projectName"`
-	ProjectRoot string             `json:"projectRoot,omitempty"`
-	BasePort    int                `json:"basePort"`
-	Paths       Paths              `json:"paths"`
-	Apps        map[string]App     `json:"apps"`
-	Services    map[string]Service `json:"services"`
-	Network     Network            `json:"network"`
+	Version            int                `json:"version"`
+	ProjectName        string             `json:"projectName"`
+	ProjectRoot        string             `json:"projectRoot,omitempty"`
+	BasePort           int                `json:"basePort"`
+	ProcessComposePort int                `json:"processComposePort"`
+	Paths              Paths              `json:"paths"`
+	Apps               map[string]App     `json:"apps"`
+	Services           map[string]Service `json:"services"`
+	Network            Network            `json:"network"`
 
 	// Error fields (only present if evaluation failed)
 	Error string `json:"error,omitempty"`

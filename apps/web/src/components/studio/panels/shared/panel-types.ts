@@ -17,6 +17,8 @@ export interface NixPanel {
   module: string;
   title: string;
   description?: string | null;
+  /** Module documentation in markdown format */
+  readme?: string | null;
   icon?: string | null;
   type: string;
   order: number;
@@ -59,6 +61,8 @@ export interface AppConfigField {
   configPath?: string | null;
   /** Help text shown below the field */
   description?: string | null;
+  /** Example value for additional context */
+  example?: string | null;
 }
 
 /** A module panel with per-app config data */
@@ -67,6 +71,8 @@ export interface AppModulePanel {
   module: string;
   title: string;
   icon?: string;
+  /** Module documentation in markdown format */
+  readme?: string | null;
   fields: AppConfigField[];
   apps: Record<string, { enabled: boolean; config: Record<string, string> }>;
 }

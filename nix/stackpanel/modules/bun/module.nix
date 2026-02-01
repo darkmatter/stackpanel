@@ -124,16 +124,14 @@ let
 
   # Create file entries for materialization (uses stackpanel.files system)
   # package.json uses type="json" for deep-merge support from other modules
-  mkGeneratedFileEntries =
-    name: app:
-    {
-      "${app.path}/package.json" = {
-        type = "json";
-        jsonValue = generatePackageJson name app;
-        source = "bun";
-        description = "Bun app package.json (scripts, dependencies, bun2nix postinstall)";
-      };
+  mkGeneratedFileEntries = name: app: {
+    "${app.path}/package.json" = {
+      type = "json";
+      jsonValue = generatePackageJson name app;
+      source = "bun";
+      description = "Bun app package.json (scripts, dependencies, bun2nix postinstall)";
     };
+  };
 
 in
 {
@@ -195,7 +193,7 @@ in
       # Devshell - Add bun2nix CLI to shell environment
       # -----------------------------------------------------------------------
       stackpanel.devshell.packages = [
-        pkgs.bun2nix  # Native bun2nix CLI (converts bun.lock -> bun.nix)
+        pkgs.bun2nix # Native bun2nix CLI (converts bun.lock -> bun.nix)
       ];
 
       # -----------------------------------------------------------------------
@@ -216,11 +214,23 @@ in
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
             runtimeInputs = [ pkgs.bun ];
             description = "Run ${name} Bun app";
+            args = [
+              {
+                name = "...";
+                description = "Arguments passed to the bun script";
+              }
+            ];
           };
           "test-${name}" = {
             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun test "$@"'';
             runtimeInputs = [ pkgs.bun ];
             description = "Test ${name} Bun app";
+            args = [
+              {
+                name = "...";
+                description = "Arguments passed to bun test";
+              }
+            ];
           };
         }) bunApps
       );
