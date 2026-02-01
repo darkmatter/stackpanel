@@ -16,6 +16,7 @@
     ./files.nix
     ./clean.nix
     ./direnv.nix
+    ./tui.nix
     ./bin.nix
   ];
 }

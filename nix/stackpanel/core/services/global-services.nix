@@ -199,6 +199,7 @@ in
           PGHOST = "$HOME/.local/share/devservices/postgres/socket";
           PGPORT = toString postgresPort;
           DATABASE_URL = "postgresql://localhost:${toString postgresPort}/${lib.head databases}";
+          POSTGRES_URL = "postgresql://localhost:${toString postgresPort}/${lib.head databases}";
         })
         (lib.optionalAttrs cfg.redis.enable {
           REDIS_URL = "redis://localhost:${toString redisPort}";

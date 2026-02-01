@@ -60,6 +60,20 @@ export declare type Script = Message<"stackpanel.db.Script"> & {
    * @generated from field: optional string source = 5;
    */
   source?: string;
+
+  /**
+   * Documented arguments for this script
+   *
+   * @generated from field: repeated stackpanel.db.ScriptArg args = 6;
+   */
+  args: ScriptArg[];
+
+  /**
+   * Maximum execution time in seconds (0 = no timeout, default: 300)
+   *
+   * @generated from field: optional int32 timeout = 7;
+   */
+  timeout?: number;
 };
 
 /**
@@ -67,6 +81,53 @@ export declare type Script = Message<"stackpanel.db.Script"> & {
  * Use `create(ScriptSchema)` to create a new message.
  */
 export declare const ScriptSchema: GenMessage<Script>;
+
+/**
+ *
+ * Documentation for a script argument.
+ *
+ * Arguments are purely for documentation purposes - they describe what
+ * positional or named arguments the script accepts. The script itself
+ * is responsible for parsing these arguments.
+ *
+ *
+ * @generated from message stackpanel.db.ScriptArg
+ */
+export declare type ScriptArg = Message<"stackpanel.db.ScriptArg"> & {
+  /**
+   * Argument name (e.g., 'file', '--output', '-v')
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * Human-readable description of the argument
+   *
+   * @generated from field: optional string description = 2;
+   */
+  description?: string;
+
+  /**
+   * Whether the argument is required (default: false)
+   *
+   * @generated from field: optional bool required = 3;
+   */
+  required?: boolean;
+
+  /**
+   * Default value if not provided
+   *
+   * @generated from field: optional string default = 4;
+   */
+  default?: string;
+};
+
+/**
+ * Describes the message stackpanel.db.ScriptArg.
+ * Use `create(ScriptArgSchema)` to create a new message.
+ */
+export declare const ScriptArgSchema: GenMessage<ScriptArg>;
 
 /**
  * Collection of development shell scripts

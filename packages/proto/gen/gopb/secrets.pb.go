@@ -240,7 +240,12 @@ type Secrets struct {
 	Environments map[string]*Environment `protobuf:"bytes,6,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Code generation targets keyed by name (e.g., typescript, go, python).
 	// Used to drive language-specific env/secret helpers.
-	Codegen       map[string]*CodegenTarget `protobuf:"bytes,7,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Codegen map[string]*CodegenTarget `protobuf:"bytes,7,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Secrets groups for access control. Each group has an AGE keypair with
+	// the private key stored externally (e.g., SSM). Secrets are encrypted to
+	// group public keys, and IAM policies control who can retrieve the private key.
+	// Default groups: dev, prod.
+	Groups        map[string]*SecretsGroup `protobuf:"bytes,8,rep,name=groups,proto3" json:"groups,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -324,6 +329,85 @@ func (x *Secrets) GetCodegen() map[string]*CodegenTarget {
 	return nil
 }
 
+func (x *Secrets) GetGroups() map[string]*SecretsGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+// A secrets group is an access control boundary.
+// Each group has its own AGE keypair. The private key is stored externally
+// (e.g., AWS SSM) so that IAM policies control who can decrypt that group's secrets.
+// Variables specify which group(s) they belong to via the master-keys field.
+type SecretsGroup struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AGE public key for this group. Set after running `secrets:init-group <name>`.
+	// Format: age1... (bech32-encoded)
+	AgePub *string `protobuf:"bytes,1,opt,name=age_pub,json=agePub,proto3,oneof" json:"age_pub,omitempty"`
+	// SSM Parameter Store path where the AGE private key is stored.
+	// Defaults to /{chamber.service-prefix}/keys/{group-name}.
+	// Example: /my-org/my-repo/keys/dev
+	SsmPath *string `protobuf:"bytes,2,opt,name=ssm_path,json=ssmPath,proto3,oneof" json:"ssm_path,omitempty"`
+	// Vals reference that resolves to the AGE private key.
+	// Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
+	// Can be overridden for other backends (Vault, file, etc.).
+	Ref           *string `protobuf:"bytes,3,opt,name=ref,proto3,oneof" json:"ref,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SecretsGroup) Reset() {
+	*x = SecretsGroup{}
+	mi := &file_secrets_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SecretsGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SecretsGroup) ProtoMessage() {}
+
+func (x *SecretsGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_secrets_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SecretsGroup.ProtoReflect.Descriptor instead.
+func (*SecretsGroup) Descriptor() ([]byte, []int) {
+	return file_secrets_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SecretsGroup) GetAgePub() string {
+	if x != nil && x.AgePub != nil {
+		return *x.AgePub
+	}
+	return ""
+}
+
+func (x *SecretsGroup) GetSsmPath() string {
+	if x != nil && x.SsmPath != nil {
+		return *x.SsmPath
+	}
+	return ""
+}
+
+func (x *SecretsGroup) GetRef() string {
+	if x != nil && x.Ref != nil {
+		return *x.Ref
+	}
+	return ""
+}
+
 var File_secrets_proto protoreflect.FileDescriptor
 
 const file_secrets_proto_rawDesc = "" +
@@ -348,7 +432,7 @@ const file_secrets_proto_rawDesc = "" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12$\n" +
 	"\vresolve_cmd\x18\x03 \x01(\tH\x00R\n" +
 	"resolveCmd\x88\x01\x01B\x0e\n" +
-	"\f_resolve_cmd\"\xa0\x05\n" +
+	"\f_resolve_cmd\"\xb4\x06\n" +
 	"\aSecrets\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12G\n" +
 	"\vmaster_keys\x18\x02 \x03(\v2&.stackpanel.db.Secrets.MasterKeysEntryR\n" +
@@ -359,7 +443,8 @@ const file_secrets_proto_rawDesc = "" +
 	"\vsystem_keys\x18\x05 \x03(\tR\n" +
 	"systemKeys\x12L\n" +
 	"\fenvironments\x18\x06 \x03(\v2(.stackpanel.db.Secrets.EnvironmentsEntryR\fenvironments\x12=\n" +
-	"\acodegen\x18\a \x03(\v2#.stackpanel.db.Secrets.CodegenEntryR\acodegen\x1aW\n" +
+	"\acodegen\x18\a \x03(\v2#.stackpanel.db.Secrets.CodegenEntryR\acodegen\x12:\n" +
+	"\x06groups\x18\b \x03(\v2\".stackpanel.db.Secrets.GroupsEntryR\x06groups\x1aW\n" +
 	"\x0fMasterKeysEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
 	"\x05value\x18\x02 \x01(\v2\x18.stackpanel.db.MasterKeyR\x05value:\x028\x01\x1a[\n" +
@@ -368,9 +453,20 @@ const file_secrets_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x1a.stackpanel.db.EnvironmentR\x05value:\x028\x01\x1aX\n" +
 	"\fCodegenEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
-	"\x05value\x18\x02 \x01(\v2\x1c.stackpanel.db.CodegenTargetR\x05value:\x028\x01B\x12\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.stackpanel.db.CodegenTargetR\x05value:\x028\x01\x1aV\n" +
+	"\vGroupsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x121\n" +
+	"\x05value\x18\x02 \x01(\v2\x1b.stackpanel.db.SecretsGroupR\x05value:\x028\x01B\x12\n" +
 	"\x10_input_directoryB\x0e\n" +
-	"\f_secrets_dirB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\f_secrets_dir\"\x84\x01\n" +
+	"\fSecretsGroup\x12\x1c\n" +
+	"\aage_pub\x18\x01 \x01(\tH\x00R\x06agePub\x88\x01\x01\x12\x1e\n" +
+	"\bssm_path\x18\x02 \x01(\tH\x01R\assmPath\x88\x01\x01\x12\x15\n" +
+	"\x03ref\x18\x03 \x01(\tH\x02R\x03ref\x88\x01\x01B\n" +
+	"\n" +
+	"\b_age_pubB\v\n" +
+	"\t_ssm_pathB\x06\n" +
+	"\x04_refB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_secrets_proto_rawDescOnce sync.Once
@@ -384,28 +480,32 @@ func file_secrets_proto_rawDescGZIP() []byte {
 	return file_secrets_proto_rawDescData
 }
 
-var file_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_secrets_proto_goTypes = []any{
 	(*CodegenTarget)(nil), // 0: stackpanel.db.CodegenTarget
 	(*Environment)(nil),   // 1: stackpanel.db.Environment
 	(*MasterKey)(nil),     // 2: stackpanel.db.MasterKey
 	(*Secrets)(nil),       // 3: stackpanel.db.Secrets
-	nil,                   // 4: stackpanel.db.Secrets.MasterKeysEntry
-	nil,                   // 5: stackpanel.db.Secrets.EnvironmentsEntry
-	nil,                   // 6: stackpanel.db.Secrets.CodegenEntry
+	(*SecretsGroup)(nil),  // 4: stackpanel.db.SecretsGroup
+	nil,                   // 5: stackpanel.db.Secrets.MasterKeysEntry
+	nil,                   // 6: stackpanel.db.Secrets.EnvironmentsEntry
+	nil,                   // 7: stackpanel.db.Secrets.CodegenEntry
+	nil,                   // 8: stackpanel.db.Secrets.GroupsEntry
 }
 var file_secrets_proto_depIdxs = []int32{
-	4, // 0: stackpanel.db.Secrets.master_keys:type_name -> stackpanel.db.Secrets.MasterKeysEntry
-	5, // 1: stackpanel.db.Secrets.environments:type_name -> stackpanel.db.Secrets.EnvironmentsEntry
-	6, // 2: stackpanel.db.Secrets.codegen:type_name -> stackpanel.db.Secrets.CodegenEntry
-	2, // 3: stackpanel.db.Secrets.MasterKeysEntry.value:type_name -> stackpanel.db.MasterKey
-	1, // 4: stackpanel.db.Secrets.EnvironmentsEntry.value:type_name -> stackpanel.db.Environment
-	0, // 5: stackpanel.db.Secrets.CodegenEntry.value:type_name -> stackpanel.db.CodegenTarget
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	5, // 0: stackpanel.db.Secrets.master_keys:type_name -> stackpanel.db.Secrets.MasterKeysEntry
+	6, // 1: stackpanel.db.Secrets.environments:type_name -> stackpanel.db.Secrets.EnvironmentsEntry
+	7, // 2: stackpanel.db.Secrets.codegen:type_name -> stackpanel.db.Secrets.CodegenEntry
+	8, // 3: stackpanel.db.Secrets.groups:type_name -> stackpanel.db.Secrets.GroupsEntry
+	2, // 4: stackpanel.db.Secrets.MasterKeysEntry.value:type_name -> stackpanel.db.MasterKey
+	1, // 5: stackpanel.db.Secrets.EnvironmentsEntry.value:type_name -> stackpanel.db.Environment
+	0, // 6: stackpanel.db.Secrets.CodegenEntry.value:type_name -> stackpanel.db.CodegenTarget
+	4, // 7: stackpanel.db.Secrets.GroupsEntry.value:type_name -> stackpanel.db.SecretsGroup
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_secrets_proto_init() }
@@ -417,13 +517,14 @@ func file_secrets_proto_init() {
 	file_secrets_proto_msgTypes[1].OneofWrappers = []any{}
 	file_secrets_proto_msgTypes[2].OneofWrappers = []any{}
 	file_secrets_proto_msgTypes[3].OneofWrappers = []any{}
+	file_secrets_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_secrets_proto_rawDesc), len(file_secrets_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

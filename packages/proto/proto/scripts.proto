@@ -21,6 +21,23 @@ message Script {
   map<string, string> env = 3; // Environment variables to set when running the script
   optional string bin_path = 4; // Path to script executable in Nix store (computed)
   optional string source = 5; // Source type: inline or path (for debugging)
+  repeated ScriptArg args = 6; // Documented arguments for this script
+  optional int32 timeout = 7; // Maximum execution time in seconds (0 = no timeout, default: 300)
+}
+
+/*
+ * Documentation for a script argument.
+ * 
+ * Arguments are purely for documentation purposes - they describe what
+ * positional or named arguments the script accepts. The script itself
+ * is responsible for parsing these arguments.
+ * 
+ */
+message ScriptArg {
+  string name = 1; // Argument name (e.g., 'file', '--output', '-v')
+  optional string description = 2; // Human-readable description of the argument
+  optional bool required = 3; // Whether the argument is required (default: false)
+  optional string default = 4; // Default value if not provided
 }
 
 // Collection of development shell scripts

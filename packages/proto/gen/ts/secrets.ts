@@ -167,6 +167,60 @@ export interface Secrets {
     codegen: {
         [key: string]: CodegenTarget;
     };
+    /**
+     *
+     * Secrets groups for access control. Each group has an AGE keypair with
+     * the private key stored externally (e.g., SSM). Secrets are encrypted to
+     * group public keys, and IAM policies control who can retrieve the private key.
+     * Default groups: dev, prod.
+     *
+     *
+     * @generated from protobuf field: map<string, stackpanel.db.SecretsGroup> groups = 8
+     */
+    groups: {
+        [key: string]: SecretsGroup;
+    };
+}
+/**
+ *
+ * A secrets group is an access control boundary.
+ * Each group has its own AGE keypair. The private key is stored externally
+ * (e.g., AWS SSM) so that IAM policies control who can decrypt that group's secrets.
+ * Variables specify which group(s) they belong to via the master-keys field.
+ *
+ *
+ * @generated from protobuf message stackpanel.db.SecretsGroup
+ */
+export interface SecretsGroup {
+    /**
+     *
+     * AGE public key for this group. Set after running `secrets:init-group <name>`.
+     * Format: age1... (bech32-encoded)
+     *
+     *
+     * @generated from protobuf field: optional string age_pub = 1
+     */
+    age_pub?: string;
+    /**
+     *
+     * SSM Parameter Store path where the AGE private key is stored.
+     * Defaults to /{chamber.service-prefix}/keys/{group-name}.
+     * Example: /my-org/my-repo/keys/dev
+     *
+     *
+     * @generated from protobuf field: optional string ssm_path = 2
+     */
+    ssm_path?: string;
+    /**
+     *
+     * Vals reference that resolves to the AGE private key.
+     * Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
+     * Can be overridden for other backends (Vault, file, etc.).
+     *
+     *
+     * @generated from protobuf field: optional string ref = 3
+     */
+    ref?: string;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class CodegenTarget$Type extends MessageType<CodegenTarget> {
@@ -362,7 +416,8 @@ class Secrets$Type extends MessageType<Secrets> {
             { no: 4, name: "secrets_dir", kind: "scalar", localName: "secrets_dir", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "system_keys", kind: "scalar", localName: "system_keys", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
             { no: 6, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => Environment } },
-            { no: 7, name: "codegen", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => CodegenTarget } }
+            { no: 7, name: "codegen", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => CodegenTarget } },
+            { no: 8, name: "groups", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => SecretsGroup } }
         ]);
     }
     create(value?: PartialMessage<Secrets>): Secrets {
@@ -372,6 +427,7 @@ class Secrets$Type extends MessageType<Secrets> {
         message.system_keys = [];
         message.environments = {};
         message.codegen = {};
+        message.groups = {};
         if (value !== undefined)
             reflectionMergePartial<Secrets>(this, message, value);
         return message;
@@ -401,6 +457,9 @@ class Secrets$Type extends MessageType<Secrets> {
                     break;
                 case /* map<string, stackpanel.db.CodegenTarget> codegen */ 7:
                     this.binaryReadMap7(message.codegen, reader, options);
+                    break;
+                case /* map<string, stackpanel.db.SecretsGroup> groups */ 8:
+                    this.binaryReadMap8(message.groups, reader, options);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -461,6 +520,22 @@ class Secrets$Type extends MessageType<Secrets> {
         }
         map[key ?? ""] = val ?? CodegenTarget.create();
     }
+    private binaryReadMap8(map: Secrets["groups"], reader: IBinaryReader, options: BinaryReadOptions): void {
+        let len = reader.uint32(), end = reader.pos + len, key: keyof Secrets["groups"] | undefined, val: Secrets["groups"][any] | undefined;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case 1:
+                    key = reader.string();
+                    break;
+                case 2:
+                    val = SecretsGroup.internalBinaryRead(reader, reader.uint32(), options);
+                    break;
+                default: throw new globalThis.Error("unknown map entry field for stackpanel.db.Secrets.groups");
+            }
+        }
+        map[key ?? ""] = val ?? SecretsGroup.create();
+    }
     internalBinaryWrite(message: Secrets, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* bool enable = 1; */
         if (message.enable !== false)
@@ -495,6 +570,13 @@ class Secrets$Type extends MessageType<Secrets> {
             CodegenTarget.internalBinaryWrite(message.codegen[k], writer, options);
             writer.join().join();
         }
+        /* map<string, stackpanel.db.SecretsGroup> groups = 8; */
+        for (let k of globalThis.Object.keys(message.groups)) {
+            writer.tag(8, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k);
+            writer.tag(2, WireType.LengthDelimited).fork();
+            SecretsGroup.internalBinaryWrite(message.groups[k], writer, options);
+            writer.join().join();
+        }
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -505,3 +587,63 @@ class Secrets$Type extends MessageType<Secrets> {
  * @generated MessageType for protobuf message stackpanel.db.Secrets
  */
 export const Secrets = new Secrets$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SecretsGroup$Type extends MessageType<SecretsGroup> {
+    constructor() {
+        super("stackpanel.db.SecretsGroup", [
+            { no: 1, name: "age_pub", kind: "scalar", localName: "age_pub", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "ssm_path", kind: "scalar", localName: "ssm_path", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "ref", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<SecretsGroup>): SecretsGroup {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<SecretsGroup>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SecretsGroup): SecretsGroup {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional string age_pub */ 1:
+                    message.age_pub = reader.string();
+                    break;
+                case /* optional string ssm_path */ 2:
+                    message.ssm_path = reader.string();
+                    break;
+                case /* optional string ref */ 3:
+                    message.ref = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SecretsGroup, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional string age_pub = 1; */
+        if (message.age_pub !== undefined)
+            writer.tag(1, WireType.LengthDelimited).string(message.age_pub);
+        /* optional string ssm_path = 2; */
+        if (message.ssm_path !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.ssm_path);
+        /* optional string ref = 3; */
+        if (message.ref !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.ref);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.SecretsGroup
+ */
+export const SecretsGroup = new SecretsGroup$Type();

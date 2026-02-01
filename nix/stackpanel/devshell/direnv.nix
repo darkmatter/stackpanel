@@ -146,7 +146,7 @@ in
   options.stackpanel.devshell.clean.direnv = {
     enable = lib.mkOption {
       type = lib.types.bool;
-      default = cfg.enable;
+      default = true;
       description = ''
         Enable direnv integration for clean devshell settings.
 

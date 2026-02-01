@@ -288,14 +288,21 @@ in
             ${util.log.debug "aws: Step CA cert not found, skipping AWS config generation"}
           fi
 
-          ${lib.optionalString cfg.prompt-on-shell ''
-            ${util.log.debug "aws: running interactive setup prompt"}
-            # Interactive AWS cert-auth setup (errors should not crash the shell)
-            ${interactiveSetup}/bin/aws-cert-setup-prompt || true
-          ''}
+
           ${util.log.debug "aws: hook complete"}
         ''
       ];
+
+      # Register TUI prompt for post-shell-entry setup
+      stackpanel.tui.prompts.aws-setup = lib.mkIf cfg.prompt-on-shell {
+        enable = true;
+        description = "AWS Roles Anywhere setup";
+        script = ''
+          ${interactiveSetup}/bin/aws-cert-setup-prompt
+        '';
+        delay = 0.3;
+        order = 50;
+      };
     }
   );
 }
