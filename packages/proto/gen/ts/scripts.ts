@@ -48,6 +48,43 @@ export interface Script {
      * @generated from protobuf field: optional string source = 5
      */
     source?: string; // Source type: inline or path (for debugging)
+    /**
+     * @generated from protobuf field: repeated stackpanel.db.ScriptArg args = 6
+     */
+    args: ScriptArg[]; // Documented arguments for this script
+    /**
+     * @generated from protobuf field: optional int32 timeout = 7
+     */
+    timeout?: number; // Maximum execution time in seconds (0 = no timeout, default: 300)
+}
+/**
+ *
+ * Documentation for a script argument.
+ *
+ * Arguments are purely for documentation purposes - they describe what
+ * positional or named arguments the script accepts. The script itself
+ * is responsible for parsing these arguments.
+ *
+ *
+ * @generated from protobuf message stackpanel.db.ScriptArg
+ */
+export interface ScriptArg {
+    /**
+     * @generated from protobuf field: string name = 1
+     */
+    name: string; // Argument name (e.g., 'file', '--output', '-v')
+    /**
+     * @generated from protobuf field: optional string description = 2
+     */
+    description?: string; // Human-readable description of the argument
+    /**
+     * @generated from protobuf field: optional bool required = 3
+     */
+    required?: boolean; // Whether the argument is required (default: false)
+    /**
+     * @generated from protobuf field: optional string default = 4
+     */
+    default?: string; // Default value if not provided
 }
 /**
  * Collection of development shell scripts
@@ -81,12 +118,15 @@ class Script$Type extends MessageType<Script> {
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
             { no: 4, name: "bin_path", kind: "scalar", localName: "bin_path", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "source", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 5, name: "source", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "args", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ScriptArg },
+            { no: 7, name: "timeout", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
         ]);
     }
     create(value?: PartialMessage<Script>): Script {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.env = {};
+        message.args = [];
         if (value !== undefined)
             reflectionMergePartial<Script>(this, message, value);
         return message;
@@ -110,6 +150,12 @@ class Script$Type extends MessageType<Script> {
                     break;
                 case /* optional string source */ 5:
                     message.source = reader.string();
+                    break;
+                case /* repeated stackpanel.db.ScriptArg args */ 6:
+                    message.args.push(ScriptArg.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* optional int32 timeout */ 7:
+                    message.timeout = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -154,6 +200,12 @@ class Script$Type extends MessageType<Script> {
         /* optional string source = 5; */
         if (message.source !== undefined)
             writer.tag(5, WireType.LengthDelimited).string(message.source);
+        /* repeated stackpanel.db.ScriptArg args = 6; */
+        for (let i = 0; i < message.args.length; i++)
+            ScriptArg.internalBinaryWrite(message.args[i], writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+        /* optional int32 timeout = 7; */
+        if (message.timeout !== undefined)
+            writer.tag(7, WireType.Varint).int32(message.timeout);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -164,6 +216,74 @@ class Script$Type extends MessageType<Script> {
  * @generated MessageType for protobuf message stackpanel.db.Script
  */
 export const Script = new Script$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ScriptArg$Type extends MessageType<ScriptArg> {
+    constructor() {
+        super("stackpanel.db.ScriptArg", [
+            { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "required", kind: "scalar", opt: true, T: 8 /*ScalarType.BOOL*/ },
+            { no: 4, name: "default", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ScriptArg>): ScriptArg {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.name = "";
+        if (value !== undefined)
+            reflectionMergePartial<ScriptArg>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ScriptArg): ScriptArg {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string name */ 1:
+                    message.name = reader.string();
+                    break;
+                case /* optional string description */ 2:
+                    message.description = reader.string();
+                    break;
+                case /* optional bool required */ 3:
+                    message.required = reader.bool();
+                    break;
+                case /* optional string default */ 4:
+                    message.default = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ScriptArg, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string name = 1; */
+        if (message.name !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.name);
+        /* optional string description = 2; */
+        if (message.description !== undefined)
+            writer.tag(2, WireType.LengthDelimited).string(message.description);
+        /* optional bool required = 3; */
+        if (message.required !== undefined)
+            writer.tag(3, WireType.Varint).bool(message.required);
+        /* optional string default = 4; */
+        if (message.default !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.default);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.ScriptArg
+ */
+export const ScriptArg = new ScriptArg$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Scripts$Type extends MessageType<Scripts> {
     constructor() {

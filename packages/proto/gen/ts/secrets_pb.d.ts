@@ -204,6 +204,18 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
    * @generated from field: map<string, stackpanel.db.CodegenTarget> codegen = 7;
    */
   codegen: { [key: string]: CodegenTarget };
+
+  /**
+   *
+   * Secrets groups for access control. Each group has an AGE keypair with
+   * the private key stored externally (e.g., SSM). Secrets are encrypted to
+   * group public keys, and IAM policies control who can retrieve the private key.
+   * Default groups: dev, prod.
+   *
+   *
+   * @generated from field: map<string, stackpanel.db.SecretsGroup> groups = 8;
+   */
+  groups: { [key: string]: SecretsGroup };
 };
 
 /**
@@ -211,4 +223,54 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
  * Use `create(SecretsSchema)` to create a new message.
  */
 export declare const SecretsSchema: GenMessage<Secrets>;
+
+/**
+ *
+ * A secrets group is an access control boundary.
+ * Each group has its own AGE keypair. The private key is stored externally
+ * (e.g., AWS SSM) so that IAM policies control who can decrypt that group's secrets.
+ * Variables specify which group(s) they belong to via the master-keys field.
+ *
+ *
+ * @generated from message stackpanel.db.SecretsGroup
+ */
+export declare type SecretsGroup = Message<"stackpanel.db.SecretsGroup"> & {
+  /**
+   *
+   * AGE public key for this group. Set after running `secrets:init-group <name>`.
+   * Format: age1... (bech32-encoded)
+   *
+   *
+   * @generated from field: optional string age_pub = 1;
+   */
+  agePub?: string;
+
+  /**
+   *
+   * SSM Parameter Store path where the AGE private key is stored.
+   * Defaults to /{chamber.service-prefix}/keys/{group-name}.
+   * Example: /my-org/my-repo/keys/dev
+   *
+   *
+   * @generated from field: optional string ssm_path = 2;
+   */
+  ssmPath?: string;
+
+  /**
+   *
+   * Vals reference that resolves to the AGE private key.
+   * Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
+   * Can be overridden for other backends (Vault, file, etc.).
+   *
+   *
+   * @generated from field: optional string ref = 3;
+   */
+  ref?: string;
+};
+
+/**
+ * Describes the message stackpanel.db.SecretsGroup.
+ * Use `create(SecretsGroupSchema)` to create a new message.
+ */
+export declare const SecretsGroupSchema: GenMessage<SecretsGroup>;
 

@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package stackpanel.db;
+option go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/gopb";
+
+// Type of Cloudflare Worker deployment
+enum CloudflareWorkerType {
+  CLOUDFLARE_WORKER_TYPE_UNSPECIFIED = 0;
+  CLOUDFLARE_WORKER_TYPE_VITE = 1;
+  CLOUDFLARE_WORKER_TYPE_WORKER = 2;
+  CLOUDFLARE_WORKER_TYPE_PAGES = 3;
+}
+
+// Deployment provider/platform
+enum DeploymentProvider {
+  DEPLOYMENT_PROVIDER_UNSPECIFIED = 0;
+  DEPLOYMENT_PROVIDER_CLOUDFLARE = 1;
+  DEPLOYMENT_PROVIDER_FLY = 2;
+  DEPLOYMENT_PROVIDER_AWS_ECS = 3;
+  DEPLOYMENT_PROVIDER_RAILWAY = 4;
+  DEPLOYMENT_PROVIDER_RENDER = 5;
+}
+
+// Current status of a deployment
+enum DeploymentStatus {
+  DEPLOYMENT_STATUS_UNSPECIFIED = 0;
+  DEPLOYMENT_STATUS_PENDING = 1;
+  DEPLOYMENT_STATUS_BUILDING = 2;
+  DEPLOYMENT_STATUS_DEPLOYING = 3;
+  DEPLOYMENT_STATUS_DEPLOYED = 4;
+  DEPLOYMENT_STATUS_FAILED = 5;
+  DEPLOYMENT_STATUS_ROLLED_BACK = 6;
+}
+
+// Fly.io auto-stop behavior
+enum FlyAutoStop {
+  FLY_AUTO_STOP_UNSPECIFIED = 0;
+  FLY_AUTO_STOP_OFF = 1;
+  FLY_AUTO_STOP_STOP = 2;
+  FLY_AUTO_STOP_SUSPEND = 3;
+}
+
+// Fly.io machine CPU type
+enum FlyMachineCpuKind {
+  FLY_MACHINE_CPU_KIND_UNSPECIFIED = 0;
+  FLY_MACHINE_CPU_KIND_SHARED = 1;
+  FLY_MACHINE_CPU_KIND_PERFORMANCE = 2;
+}
+
+// Per-app deployment configuration
+message AppDeployment {
+  bool enable = 1; // Enable deployment for this app
+  DeploymentProvider provider = 2; // Deployment provider
+  optional FlyAppConfig fly = 3; // Fly.io specific config
+  optional CloudflareAppConfig cloudflare = 4; // Cloudflare specific config
+}
+
+// Cloudflare per-app deployment configuration
+message CloudflareAppConfig {
+  string worker_name = 1; // Worker name
+  CloudflareWorkerType type = 2; // Deployment type (vite/worker/pages)
+  optional string route = 3; // Custom domain route pattern
+  string compatibility = 4; // Compatibility mode (node/browser)
+  map<string, string> bindings = 5; // Environment variable bindings
+  repeated string secrets = 6; // Secret names to inject
+  repeated string kv_namespaces = 7; // KV namespace bindings
+  repeated string d1_databases = 8; // D1 database bindings
+  repeated string r2_buckets = 9; // R2 bucket bindings
+}
+
+// Cloudflare global settings
+message CloudflareGlobalConfig {
+  optional string account_id = 1; // Cloudflare account ID
+  string compatibility_date = 2; // Workers compatibility date
+  optional string default_route = 3; // Default custom domain route pattern
+}
+
+// Global deployment configuration
+message Deployment {
+  DeploymentProvider default_provider = 1; // Default provider for all apps
+  FlyGlobalConfig fly = 2; // Fly.io global settings
+  CloudflareGlobalConfig cloudflare = 3; // Cloudflare global settings
+}
+
+// Collection of deployment records
+message DeploymentHistory {
+  repeated DeploymentRecord deployments = 1; // List of deployments
+}
+
+// Record of a deployment
+message DeploymentRecord {
+  string id = 1; // Unique deployment ID
+  string app_name = 2; // App that was deployed
+  DeploymentProvider provider = 3; // Provider used
+  DeploymentStatus status = 4; // Current status
+  string version = 5; // Version/tag deployed
+  string started_at = 6; // ISO timestamp of deployment start
+  optional string completed_at = 7; // ISO timestamp of completion
+  optional string error = 8; // Error message if failed
+  optional string url = 9; // Deployed URL
+  optional string commit_sha = 10; // Git commit SHA
+  optional string triggered_by = 11; // User or system that triggered
+}
+
+// Fly.io per-app deployment configuration
+message FlyAppConfig {
+  string app_name = 1; // Fly.io app name
+  string region = 2; // Primary deployment region
+  string memory = 3; // Memory allocation (e.g., '512mb', '1gb')
+  FlyMachineCpuKind cpu_kind = 4; // CPU type
+  int32 cpus = 5; // Number of CPUs
+  FlyAutoStop auto_stop = 6; // Auto-stop behavior
+  bool auto_start = 7; // Auto-start on request
+  int32 min_machines = 8; // Minimum machines to keep running
+  bool force_https = 9; // Force HTTPS for all requests
+  map<string, string> env = 10; // Environment variables
+  repeated string secrets = 11; // Secret names to inject
+  optional string health_check_path = 12; // Health check endpoint path
+  optional string health_check_interval = 13; // Health check interval
+}
+
+// Fly.io global settings
+message FlyGlobalConfig {
+  optional string organization = 1; // Fly.io organization name
+  string default_region = 2; // Default region for new apps
+  string registry_prefix = 3; // Container registry prefix
+}

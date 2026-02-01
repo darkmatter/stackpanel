@@ -73,9 +73,16 @@ export declare type BunAppConfig = Message<"stackpanel.modules.BunAppConfig"> & 
   inheritPath: boolean;
 
   /**
+   * Generate package.json with bun2nix postinstall and standard scripts
+   *
+   * @generated from field: bool generate_files = 9;
+   */
+  generateFiles: boolean;
+
+  /**
    * App description
    *
-   * @generated from field: string description = 9;
+   * @generated from field: string description = 10;
    */
   description: string;
 };

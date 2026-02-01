@@ -48,6 +48,17 @@ let
   cfg = config.stackpanel.scripts;
   scriptsCfg = config.stackpanel.scriptsConfig;
 
+  # Timeout presets for common script types
+  # These provide sensible defaults for different use cases
+  timeouts = {
+    quick = 30;        # 30 seconds - quick checks, simple commands
+    default = 300;     # 5 minutes - most scripts (network calls, builds)
+    build = 900;       # 15 minutes - complex builds, compilations
+    deploy = 1800;     # 30 minutes - deployments, migrations
+    long = 3600;       # 1 hour - long-running data processing
+    none = 0;          # No timeout - use with caution
+  };
+
   # Resolve script content from either exec or path
   resolveScriptContent =
     name: script:
@@ -72,14 +83,33 @@ let
         lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (script.env or { })
       );
       scriptContent = resolveScriptContent name script;
+
+      # Timeout configuration (default: 300 seconds = 5 minutes)
+      # Set to 0 to disable timeout
+      # Common presets available: timeouts.quick (30s), timeouts.build (15m), etc.
+      timeoutSeconds = script.timeout or timeouts.default;
+      hasTimeout = timeoutSeconds > 0;
+
+      # Wrap script with timeout if configured
+      # The timeout command from coreutils will SIGTERM after the specified duration
+      # and SIGKILL after an additional 10 seconds if the process doesn't terminate
+      wrappedContent = if hasTimeout then ''
+        # Script timeout: ${toString timeoutSeconds} seconds (${toString (timeoutSeconds / 60.0)} minutes)
+        # This prevents the script from hanging indefinitely on network issues, waiting for input, etc.
+        timeout ${toString timeoutSeconds} bash -s "$@" <<'SCRIPT_TIMEOUT_EOF'
+        set -euo pipefail
+        ${scriptContent}
+        SCRIPT_TIMEOUT_EOF
+      '' else scriptContent;
     in
     pkgs.writeShellApplication {
       inherit name;
-      runtimeInputs = script.runtimeInputs or [ ];
+      # Always include coreutils for timeout command support
+      runtimeInputs = (script.runtimeInputs or [ ]) ++ [ pkgs.coreutils ];
       text = ''
         set -euo pipefail
         ${envExports}
-        ${scriptContent}
+        ${wrappedContent}
       '';
     };
 
@@ -108,6 +138,8 @@ let
       env = script.env or { };
       # Documented arguments for help text
       args = script.args or [ ];
+      # Timeout in seconds (0 = no timeout, default: 300)
+      timeout = script.timeout or timeouts.default;
       # Derivation path - agent executes this directly (no sh -c with inline content)
       binPath = "${pkg}/bin/${name}";
       # Source info for debugging
@@ -133,10 +165,13 @@ let
           example = lib.literalExpression "./.stackpanel/src/scripts/my-script.sh";
         };
 
+
+
         runtimeInputs = lib.mkOption {
           type = lib.types.listOf lib.types.package;
           default = [ ];
           description = ''
+            List of packages to add to PATH when running the script.
             Packages to include in PATH when running the script.
             These are pinned to specific Nix store paths, ensuring reproducible execution.
           '';
@@ -158,9 +193,11 @@ in
     type = lib.types.attrsOf (
       lib.types.submoduleWith {
         modules = [
-          # Proto-derived options (exec, description, env)
+          # Proto-derived options (exec, description, env, timeout)
           { options = db.asOptions db.extend.script; }
-          # Nix-only runtime options (runtimeInputs)
+          # Set timeout default (proto defines the option, we set the default)
+          { config.timeout = lib.mkDefault timeouts.default; }
+          # Nix-only runtime options (runtimeInputs, path)
           nixScriptOptionsModule
         ]
         ++ config.stackpanel.scriptModules;

@@ -8,7 +8,7 @@ import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
  * Describes the file scripts.proto.
  */
 export const file_scripts = /*@__PURE__*/
-  fileDesc("Cg1zY3JpcHRzLnByb3RvEg1zdGFja3BhbmVsLmRiIusBCgZTY3JpcHQSEQoEZXhlYxgBIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAIgASgJSAGIAQESKwoDZW52GAMgAygLMh4uc3RhY2twYW5lbC5kYi5TY3JpcHQuRW52RW50cnkSFQoIYmluX3BhdGgYBCABKAlIAogBARITCgZzb3VyY2UYBSABKAlIA4gBARoqCghFbnZFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgcKBV9leGVjQg4KDF9kZXNjcmlwdGlvbkILCglfYmluX3BhdGhCCQoHX3NvdXJjZSKGAQoHU2NyaXB0cxI0CgdzY3JpcHRzGAEgAygLMiMuc3RhY2twYW5lbC5kYi5TY3JpcHRzLlNjcmlwdHNFbnRyeRpFCgxTY3JpcHRzRW50cnkSCwoDa2V5GAEgASgJEiQKBXZhbHVlGAIgASgLMhUuc3RhY2twYW5lbC5kYi5TY3JpcHQ6AjgBIh8KDVNjcmlwdHNDb25maWcSDgoGZW5hYmxlGAEgASgIQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
+  fileDesc("Cg1zY3JpcHRzLnByb3RvEg1zdGFja3BhbmVsLmRiIrUCCgZTY3JpcHQSEQoEZXhlYxgBIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAIgASgJSAGIAQESKwoDZW52GAMgAygLMh4uc3RhY2twYW5lbC5kYi5TY3JpcHQuRW52RW50cnkSFQoIYmluX3BhdGgYBCABKAlIAogBARITCgZzb3VyY2UYBSABKAlIA4gBARImCgRhcmdzGAYgAygLMhguc3RhY2twYW5lbC5kYi5TY3JpcHRBcmcSFAoHdGltZW91dBgHIAEoBUgEiAEBGioKCEVudkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCBwoFX2V4ZWNCDgoMX2Rlc2NyaXB0aW9uQgsKCV9iaW5fcGF0aEIJCgdfc291cmNlQgoKCF90aW1lb3V0IokBCglTY3JpcHRBcmcSDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEhUKCHJlcXVpcmVkGAMgASgISAGIAQESFAoHZGVmYXVsdBgEIAEoCUgCiAEBQg4KDF9kZXNjcmlwdGlvbkILCglfcmVxdWlyZWRCCgoIX2RlZmF1bHQihgEKB1NjcmlwdHMSNAoHc2NyaXB0cxgBIAMoCzIjLnN0YWNrcGFuZWwuZGIuU2NyaXB0cy5TY3JpcHRzRW50cnkaRQoMU2NyaXB0c0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLnN0YWNrcGFuZWwuZGIuU2NyaXB0OgI4ASIfCg1TY3JpcHRzQ29uZmlnEg4KBmVuYWJsZRgBIAEoCEI6WjhnaXRodWIuY29tL2RhcmttYXR0ZXIvc3RhY2twYW5lbC9wYWNrYWdlcy9wcm90by9nZW4vZ29wYmIGcHJvdG8z");
 
 /**
  * Describes the message stackpanel.db.Script.
@@ -18,16 +18,23 @@ export const ScriptSchema = /*@__PURE__*/
   messageDesc(file_scripts, 0);
 
 /**
+ * Describes the message stackpanel.db.ScriptArg.
+ * Use `create(ScriptArgSchema)` to create a new message.
+ */
+export const ScriptArgSchema = /*@__PURE__*/
+  messageDesc(file_scripts, 1);
+
+/**
  * Describes the message stackpanel.db.Scripts.
  * Use `create(ScriptsSchema)` to create a new message.
  */
 export const ScriptsSchema = /*@__PURE__*/
-  messageDesc(file_scripts, 1);
+  messageDesc(file_scripts, 2);
 
 /**
  * Describes the message stackpanel.db.ScriptsConfig.
  * Use `create(ScriptsConfigSchema)` to create a new message.
  */
 export const ScriptsConfigSchema = /*@__PURE__*/
-  messageDesc(file_scripts, 2);
+  messageDesc(file_scripts, 3);
 
