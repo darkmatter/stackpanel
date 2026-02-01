@@ -73,6 +73,10 @@ func NewWithoutDevshell(projectRoot string, allowedCommands []string) (*Executor
 
 // isInDevshell checks if the current process is running inside a Nix devshell
 func isInDevshell() bool {
+	// STACKPANEL_ROOT is set by stackpanel devshell (most reliable indicator)
+	if os.Getenv("STACKPANEL_ROOT") != "" {
+		return true
+	}
 	// IN_NIX_SHELL is set by nix-shell and nix develop
 	if os.Getenv("IN_NIX_SHELL") != "" {
 		return true

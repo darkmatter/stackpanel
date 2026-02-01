@@ -59,21 +59,21 @@ let
       local git_dir hooks_dir
       git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return 0
       hooks_dir="$git_dir/hooks"
-      
+
       [[ -d "$hooks_dir" ]] || return 0
-      
+
       local hook_files=("pre-commit" "pre-push" "commit-msg" "prepare-commit-msg")
-      
+
       for hook in "''${hook_files[@]}"; do
         local hook_path="$hooks_dir/$hook"
         [[ -f "$hook_path" ]] || continue
-        
+
         # Check if hook references a nix store path
         if grep -q '/nix/store/' "$hook_path" 2>/dev/null; then
           # Extract nix store paths and check if they exist
           local store_paths
           store_paths=$(grep -oE '/nix/store/[a-z0-9]+-[^/"]+' "$hook_path" 2>/dev/null | head -5)
-          
+
           local any_missing=false
           while IFS= read -r store_path; do
             [[ -z "$store_path" ]] && continue
@@ -82,10 +82,10 @@ let
               break
             fi
           done <<< "$store_paths"
-          
+
           if [[ "$any_missing" == "true" ]]; then
             rm -f "$hook_path"
-            echo "Removed stale git hook: $hook (referenced garbage-collected nix store path)"
+            echo "Removed stale git hook: $hook (referenced garbage-collected nix store path)" >&2
           fi
         fi
       done

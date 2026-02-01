@@ -64,6 +64,22 @@ let
           example = [ "build" ];
         };
 
+        # Stackpanel extension: package scope for task
+        package = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            (Stackpanel extension) Package name to scope this task to.
+            When set, the task key in turbo.json becomes "package#taskName".
+
+            This is useful for tasks that should only run in a specific package,
+            such as deployment tasks that only exist in @stackpanel/infra.
+
+            Example: `package = "@stackpanel/infra";`
+          '';
+          example = "@stackpanel/infra";
+        };
+
         # Stackpanel extension: Nix packages for hermetic scripts
         runtimeInputs = lib.mkOption {
           type = lib.types.listOf lib.types.package;

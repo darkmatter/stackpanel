@@ -2,29 +2,45 @@
 
 import { Button } from "@ui/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@ui/dialog";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import { Textarea } from "@ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
-import { AlertTriangle, Eye, EyeOff, Key, Loader2, Plus, Settings } from "lucide-react";
+import {
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Key,
+  Loader2,
+  Plus,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
-import { getVariableName } from "./constants";
+import { getVariableName, SECRET_GROUPS } from "./constants";
 
 type VariableMode = "plaintext" | "secret";
 
 interface AddVariableDialogProps {
-	onSuccess: () => void;
+  onSuccess: () => void;
 }
 
 /**
@@ -38,291 +54,344 @@ interface AddVariableDialogProps {
  * by running `vals eval` before saving.
  */
 export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
-	const { token } = useAgentContext();
-	const agentClient = useAgentClient();
-	const { data: backendData } = useVariablesBackend();
-	const isChamber = backendData?.backend === "chamber";
-	const [dialogOpen, setDialogOpen] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
-	const [showValue, setShowValue] = useState(false);
+  const { token } = useAgentContext();
+  const agentClient = useAgentClient();
+  const { data: backendData } = useVariablesBackend();
+  const isChamber = backendData?.backend === "chamber";
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showValue, setShowValue] = useState(false);
 
-	// Form state
-	const [mode, setMode] = useState<VariableMode>("plaintext");
-	const [varId, setVarId] = useState("");
-	const [varValue, setVarValue] = useState("");
-	const [varDescription, setVarDescription] = useState("");
+  // Form state
+  const [mode, setMode] = useState<VariableMode>("plaintext");
+  const [varId, setVarId] = useState("");
+  const [varValue, setVarValue] = useState("");
+  const [varDescription, setVarDescription] = useState("");
+  const [group, setGroup] = useState<string>("dev");
 
-	// Validation state for vals references
-	const [valsError, setValsError] = useState<string | null>(null);
+  // Validation state for vals references
+  const [valsError, setValsError] = useState<string | null>(null);
 
-	const handleOpenChange = (open: boolean) => {
-		setDialogOpen(open);
-		if (!open) {
-			setMode("plaintext");
-			setVarId("");
-			setVarValue("");
-			setVarDescription("");
-			setShowValue(false);
-			setValsError(null);
-		}
-	};
+  const handleOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setMode("plaintext");
+      setVarId("");
+      setVarValue("");
+      setVarDescription("");
+      setShowValue(false);
+      setValsError(null);
+      setGroup("dev");
+    }
+  };
 
-	/**
-	 * Validate a vals reference by running `vals eval` via the agent exec API.
-	 * Returns null if valid, or an error message string if invalid.
-	 */
-	const validateValsReference = async (ref: string): Promise<string | null> => {
-		try {
-			const result = await agentClient.exec({
-				command: "sh",
-				args: ["-c", `printf 'v: %s\\n' "$_VALS_REF" | vals eval`],
-				env: [`_VALS_REF=${ref}`],
-			});
-			if (result.exit_code !== 0) {
-				const errMsg = (result.stderr || result.stdout || "").trim();
-				return errMsg || "vals could not resolve this reference";
-			}
-			return null;
-		} catch (err) {
-			// If exec itself fails (e.g. vals not installed), return the error
-			return err instanceof Error ? err.message : "Failed to validate reference";
-		}
-	};
+  /**
+   * Validate a vals reference by running `vals eval` via the agent exec API.
+   * Returns null if valid, or an error message string if invalid.
+   */
+  const validateValsReference = async (ref: string): Promise<string | null> => {
+    try {
+      const result = await agentClient.exec({
+        command: "sh",
+        args: ["-c", `printf 'v: %s\\n' "$_VALS_REF" | vals eval`],
+        env: [`_VALS_REF=${ref}`],
+      });
+      if (result.exit_code !== 0) {
+        const errMsg = (result.stderr || result.stdout || "").trim();
+        return errMsg || "vals could not resolve this reference";
+      }
+      return null;
+    } catch (err) {
+      // If exec itself fails (e.g. vals not installed), return the error
+      return err instanceof Error
+        ? err.message
+        : "Failed to validate reference";
+    }
+  };
 
-	const handleSubmit = async () => {
-		if (!token) {
-			toast.error("Not connected to agent");
-			return;
-		}
+  const handleSubmit = async () => {
+    if (!token) {
+      toast.error("Not connected to agent");
+      return;
+    }
 
-		const trimmedId = varId.trim();
-		const trimmedValue = varValue.trim();
+    const trimmedId = varId.trim();
+    const trimmedValue = varValue.trim();
 
-		if (!trimmedId) {
-			toast.error("Please enter a name");
-			return;
-		}
+    if (!trimmedId) {
+      toast.error("Please enter a name");
+      return;
+    }
 
-		if (!trimmedValue) {
-			toast.error("Please enter a value");
-			return;
-		}
+    if (!trimmedValue) {
+      toast.error("Please enter a value");
+      return;
+    }
 
-		const normalizedId = trimmedId.startsWith("/") ? trimmedId : `/${trimmedId}`;
-		const isValsRef = trimmedValue.startsWith("ref+");
+    const normalizedId = trimmedId.startsWith("/")
+      ? trimmedId
+      : `/${trimmedId}`;
+    const isValsRef = trimmedValue.startsWith("ref+");
 
-		setIsSaving(true);
-		setValsError(null);
-		try {
-			const client = agentClient;
-			if (token) client.setToken(token);
+    setIsSaving(true);
+    setValsError(null);
+    try {
+      const client = agentClient;
+      if (token) client.setToken(token);
 
-			// Validate vals references before saving
-			if (isValsRef && mode === "plaintext") {
-				const error = await validateValsReference(trimmedValue);
-				if (error) {
-					setValsError(error);
-					setIsSaving(false);
-					return;
-				}
-			}
+      // Validate vals references before saving
+      if (isValsRef && mode === "plaintext") {
+        const error = await validateValsReference(trimmedValue);
+        if (error) {
+          setValsError(error);
+          setIsSaving(false);
+          return;
+        }
+      }
 
-			if (mode === "secret") {
-				// Write secret via /api/secrets/write which dispatches to
-				// agenix (AGE encryption) or chamber (AWS SSM) based on backend.
-				const envKey = getVariableName(normalizedId);
-				await client.writeAgenixSecret({
-					id: normalizedId,
-					key: envKey,
-					value: trimmedValue,
-					description: varDescription.trim() || undefined,
-				});
-				toast.success(`Created secret "${normalizedId}"`);
-			} else {
-				// Plaintext variable
-				const variablesClient = client.nix.mapEntity<Variable>("variables");
+      if (mode === "secret") {
+        // Write secret to group-based SOPS file
+        const envKey = getVariableName(normalizedId);
+        const result = await client.writeGroupSecret({
+          key: envKey,
+          value: trimmedValue,
+          group: group,
+          description: varDescription.trim() || undefined,
+        });
 
-				const existing = await variablesClient.get(normalizedId);
-				if (existing) {
-					toast.error(`Variable "${normalizedId}" already exists`);
-					setIsSaving(false);
-					return;
-				}
+        // Create a variable entry with the vals reference
+        const variablesClient = client.nix.mapEntity<Variable>("variables");
+        const newVariable: Variable = {
+          id: normalizedId,
+          value: result.valsRef, // Use the source project vals reference
+        };
+        await variablesClient.set(normalizedId, newVariable);
 
-				const newVariable: Variable = {
-					id: normalizedId,
-					value: trimmedValue,
-				};
+        toast.success(`Created secret "${normalizedId}" in ${group} group`);
+      } else {
+        // Plaintext variable
+        const variablesClient = client.nix.mapEntity<Variable>("variables");
 
-				await variablesClient.set(normalizedId, newVariable);
-				toast.success(`Created variable "${normalizedId}"`);
-			}
+        const existing = await variablesClient.get(normalizedId);
+        if (existing) {
+          toast.error(`Variable "${normalizedId}" already exists`);
+          setIsSaving(false);
+          return;
+        }
 
-			handleOpenChange(false);
-			onSuccess();
-		} catch (err) {
-			console.error("[AddVariable] Error:", err);
-			toast.error(
-				err instanceof Error ? err.message : "Failed to create variable",
-			);
-		} finally {
-			setIsSaving(false);
-		}
-	};
+        const newVariable: Variable = {
+          id: normalizedId,
+          value: trimmedValue,
+        };
 
-	return (
-		<Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
-			<button
-				type="button"
-				onClick={() => setDialogOpen(true)}
-				disabled={!token}
-				className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-dashed border-border bg-background text-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-			>
-				<Plus className="h-3 w-3 text-blue-500" />
-				<span className="font-medium">Add Variable</span>
-			</button>
-			<DialogContent className="sm:max-w-lg">
-				<DialogHeader>
-					<DialogTitle>Add Variable</DialogTitle>
-					<DialogDescription>
-						Create a new variable or encrypted secret.
-					</DialogDescription>
-				</DialogHeader>
-				<div className="py-4 space-y-4">
-					{/* Mode toggle */}
-					<div className="space-y-2">
-						<Label>Type</Label>
-						<ToggleGroup
-							type="single"
-							variant="outline"
-							value={mode}
-							onValueChange={(value) => {
-								if (value) {
-									setMode(value as VariableMode);
-									setValsError(null);
-								}
-							}}
-							className="justify-start"
-						>
-							<ToggleGroupItem value="plaintext" size="sm" className="gap-1.5 text-xs px-3">
-								<Settings className="h-3.5 w-3.5" />
-								Plaintext
-							</ToggleGroupItem>
-							<ToggleGroupItem value="secret" size="sm" className="gap-1.5 text-xs px-3">
-								<Key className="h-3.5 w-3.5" />
-								Secret
-							</ToggleGroupItem>
-						</ToggleGroup>
-						<p className="text-xs text-muted-foreground">
-							{mode === "plaintext" && "Stored as a literal value. Vals references (ref+...) are also accepted."}
-							{mode === "secret" && (
-								isChamber
-									? "Stored in AWS SSM Parameter Store. Encryption is handled by AWS KMS."
-									: "Encrypted with AGE and stored as a .age file. Only team members with access can decrypt."
-							)}
-						</p>
-					</div>
+        await variablesClient.set(normalizedId, newVariable);
+        toast.success(`Created variable "${normalizedId}"`);
+      }
 
-					{/* Variable name */}
-					<div className="space-y-2">
-						<Label htmlFor="var-id">Name *</Label>
-						<Input
-							id="var-id"
-							value={varId}
-							onChange={(e) => setVarId(e.target.value)}
-							placeholder={mode === "secret" ? "postgres-url-production" : "some-api-hostname"}
-							className="font-mono"
-						/>
-						<p className="text-xs text-muted-foreground">
-							Unique identifier for this variable. Environment mapping is configured separately.
-						</p>
-					</div>
+      handleOpenChange(false);
+      onSuccess();
+    } catch (err) {
+      console.error("[AddVariable] Error:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create variable",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-					{/* Value */}
-					<div className="space-y-2">
-						<Label htmlFor="var-value">
-							{mode === "secret" ? "Secret Value *" : "Value *"}
-						</Label>
-						<div className="relative">
-							<Textarea
-								id="var-value"
-								value={varValue}
-								onChange={(e) => {
-									setVarValue(e.target.value);
-									if (valsError) setValsError(null);
-								}}
-								placeholder={
-									mode === "secret"
-										? isChamber
-											? "Enter the secret value (encrypted via AWS KMS)"
-											: "Enter the secret value (will be encrypted with AGE)"
-										: "Literal value or vals reference (ref+...)"
-								}
-								className={`font-mono min-h-[80px] ${mode === "secret" ? "pr-10" : ""}`}
-								style={
-									mode === "secret" && !showValue
-										? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
-										: undefined
-								}
-							/>
-							{mode === "secret" && (
-								<button
-									type="button"
-									onClick={() => setShowValue(!showValue)}
-									className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
-								>
-									{showValue ? (
-										<EyeOff className="h-4 w-4" />
-									) : (
-										<Eye className="h-4 w-4" />
-									)}
-								</button>
-							)}
-						</div>
+  return (
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
+      <button
+        type="button"
+        onClick={() => setDialogOpen(true)}
+        disabled={!token}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-dashed border-border bg-background text-xs hover:border-blue-500/50 hover:bg-blue-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Plus className="h-3 w-3 text-blue-500" />
+        <span className="font-medium">Add Variable</span>
+      </button>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add Variable</DialogTitle>
+          <DialogDescription>
+            Create a new variable or encrypted secret.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          {/* Group selector (for secrets only) */}
+          {mode === "secret" && !isChamber && (
+            <div className="space-y-2">
+              <Label htmlFor="group">Access Control Group *</Label>
+              <Select value={group} onValueChange={setGroup}>
+                <SelectTrigger id="group">
+                  <SelectValue placeholder="Select a group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SECRET_GROUPS.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-3.5 w-3.5" />
+                        {g}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Determines who can decrypt this secret. Only users with access
+                to the {group} group can read this value.
+              </p>
+            </div>
+          )}
 
-						{/* Vals reference validation error */}
-						{valsError && (
-							<div className="flex gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3">
-								<AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-								<div className="space-y-1 min-w-0">
-									<p className="text-sm font-medium text-destructive">
-										Could not resolve vals reference
-									</p>
-									<pre className="text-xs text-destructive/80 whitespace-pre-wrap break-all">
-										{valsError}
-									</pre>
-								</div>
-							</div>
-						)}
-					</div>
+          {/* Mode toggle */}
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={mode}
+              onValueChange={(value) => {
+                if (value) {
+                  setMode(value as VariableMode);
+                  setValsError(null);
+                }
+              }}
+              className="justify-start"
+            >
+              <ToggleGroupItem
+                value="plaintext"
+                size="sm"
+                className="gap-1.5 text-xs px-3"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Plaintext
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="secret"
+                size="sm"
+                className="gap-1.5 text-xs px-3"
+              >
+                <Key className="h-3.5 w-3.5" />
+                Secret
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <p className="text-xs text-muted-foreground">
+              {mode === "plaintext" &&
+                "Stored as a literal value. Vals references (ref+...) are also accepted."}
+              {mode === "secret" &&
+                (isChamber
+                  ? "Stored in AWS SSM Parameter Store. Encryption is handled by AWS KMS."
+                  : "Encrypted with AGE and stored as a .age file. Only team members with access can decrypt.")}
+            </p>
+          </div>
 
-					{/* Description (secrets only) */}
-					{mode === "secret" && (
-						<div className="space-y-2">
-							<Label htmlFor="var-description">Description (optional)</Label>
-							<Input
-								id="var-description"
-								value={varDescription}
-								onChange={(e) => setVarDescription(e.target.value)}
-								placeholder="What is this secret used for?"
-							/>
-						</div>
-					)}
-				</div>
-				<DialogFooter>
-					<Button variant="outline" onClick={() => handleOpenChange(false)}>
-						Cancel
-					</Button>
-					<Button
-						onClick={handleSubmit}
-						disabled={isSaving || !varId.trim() || !varValue.trim()}
-						className="bg-accent text-accent-foreground hover:bg-accent/90"
-					>
-						{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-						{mode === "secret" ? "Add Secret" : "Add Variable"}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	);
+          {/* Variable name */}
+          <div className="space-y-2">
+            <Label htmlFor="var-id">Name *</Label>
+            <Input
+              id="var-id"
+              value={varId}
+              onChange={(e) => setVarId(e.target.value)}
+              placeholder={
+                mode === "secret"
+                  ? "postgres-url-production"
+                  : "some-api-hostname"
+              }
+              className="font-mono"
+            />
+            <p className="text-xs text-muted-foreground">
+              Unique identifier for this variable. Environment mapping is
+              configured separately.
+            </p>
+          </div>
+
+          {/* Value */}
+          <div className="space-y-2">
+            <Label htmlFor="var-value">
+              {mode === "secret" ? "Secret Value *" : "Value *"}
+            </Label>
+            <div className="relative">
+              <Textarea
+                id="var-value"
+                value={varValue}
+                onChange={(e) => {
+                  setVarValue(e.target.value);
+                  if (valsError) setValsError(null);
+                }}
+                placeholder={
+                  mode === "secret"
+                    ? isChamber
+                      ? "Enter the secret value (encrypted via AWS KMS)"
+                      : "Enter the secret value (will be encrypted with AGE)"
+                    : "Literal value or vals reference (ref+...)"
+                }
+                className={`font-mono min-h-[80px] ${mode === "secret" ? "pr-10" : ""}`}
+                style={
+                  mode === "secret" && !showValue
+                    ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties)
+                    : undefined
+                }
+              />
+              {mode === "secret" && (
+                <button
+                  type="button"
+                  onClick={() => setShowValue(!showValue)}
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                >
+                  {showValue ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Vals reference validation error */}
+            {valsError && (
+              <div className="flex gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-1 min-w-0">
+                  <p className="text-sm font-medium text-destructive">
+                    Could not resolve vals reference
+                  </p>
+                  <pre className="text-xs text-destructive/80 whitespace-pre-wrap break-all">
+                    {valsError}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Description (secrets only) */}
+          {mode === "secret" && (
+            <div className="space-y-2">
+              <Label htmlFor="var-description">Description (optional)</Label>
+              <Input
+                id="var-description"
+                value={varDescription}
+                onChange={(e) => setVarDescription(e.target.value)}
+                placeholder="What is this secret used for?"
+              />
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSaving || !varId.trim() || !varValue.trim()}
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mode === "secret" ? "Add Secret" : "Add Variable"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

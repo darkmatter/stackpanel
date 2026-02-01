@@ -298,6 +298,9 @@ let
       dataBoilerplate ? null,
       # .gitignore boilerplate
       gitignoreBoilerplate ? null,
+      # Module documentation (markdown) to display in UI panels
+      # Helps users understand the module's purpose and configuration options
+      readme ? null,
     }:
     {
       _isProtoFile = true;
@@ -314,6 +317,7 @@ let
         internalBoilerplate
         dataBoilerplate
         gitignoreBoilerplate
+        readme
         ;
     };
 

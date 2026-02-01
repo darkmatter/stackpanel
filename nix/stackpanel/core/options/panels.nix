@@ -131,6 +131,11 @@ let
         default = null;
         description = "Help text shown below the field";
       };
+      example = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Example value shown as help text";
+      };
     };
   };
 
@@ -155,6 +160,14 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Optional description shown below the title";
+      };
+      readme = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          Module documentation in markdown format.
+          Rendered in the UI panel to help users understand the module's configuration.
+        '';
       };
       icon = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -245,6 +258,7 @@ let
     module = panel.module;
     title = panel.title;
     description = panel.description;
+    readme = panel.readme;
     icon = panel.icon;
     type = panel.type;
     order = panel.order;
@@ -260,6 +274,7 @@ let
       placeholder = f.placeholder;
       configPath = f.configPath;
       description = f.description;
+      example = f.example;
     }) panel.fields;
     apps = lib.mapAttrs (name: appData: {
       enabled = appData.enabled;

@@ -52,6 +52,7 @@ let
     version = 1;
     projectName = portsCfg.project-name;
     basePort = portsCfg.base-port;
+    processComposePort = cfg.process-compose.port or (portsCfg.base-port + 90);
 
     # Directories
     paths = {

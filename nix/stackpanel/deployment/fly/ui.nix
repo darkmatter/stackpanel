@@ -13,10 +13,15 @@ let
   cfg = config.stackpanel;
   deployCfg = cfg.deployment;
 
+  # Import schema and panel generator
+  flySchema = import ./schema.nix { inherit lib; };
+  panelsLib = import ../../lib/panels.nix { inherit lib; };
+
   # Get apps configured for Fly.io deployment
   flyApps = lib.filterAttrs (
     _name: appCfg:
-    (appCfg.deployment.enable or false) && (appCfg.deployment.provider or deployCfg.defaultProvider) == "fly"
+    (appCfg.deployment.enable or false)
+    && (appCfg.deployment.provider or deployCfg.defaultProvider) == "fly"
   ) (cfg.apps or { });
 
   hasFlyApps = flyApps != { };
@@ -183,5 +188,21 @@ lib.mkIf hasFlyApps {
       }
     ];
     rows = appStatusList;
+  };
+
+  # -------------------------------------------------------------------------
+  # Per-App Fly.io Configuration Panel (for Deployment tab)
+  # Auto-generated from schema.nix SpField definitions
+  # -------------------------------------------------------------------------
+  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+    module = meta.id;
+    title = "Fly.io Configuration";
+    icon = meta.icon;
+    fields = flySchema.fields;
+    optionPrefix = "deployment.fly";
+    apps = flyApps;
+    # Exclude env (hidden complex type)
+    exclude = [ "env" ];
+    order = meta.priority + 3;
   };
 }

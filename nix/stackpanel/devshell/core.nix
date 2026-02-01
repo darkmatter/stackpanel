@@ -15,6 +15,7 @@
     ./codegen.nix
     ./files.nix
     ./clean.nix
+    ./direnv.nix
     ./bin.nix
   ];
 }

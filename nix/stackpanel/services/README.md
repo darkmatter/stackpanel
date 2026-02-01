@@ -6,13 +6,25 @@ Development services orchestration for devenv.
 
 This module provides project-local database and infrastructure services with lifecycle management. Services use deterministic ports based on project name and expose environment variables for easy connectivity.
 
-## Files
+## Directory Structure
 
-| File | Description |
-|------|-------------|
-| `global-services.nix` | PostgreSQL, Redis, Minio, and Caddy orchestration |
-| `caddy.nix` | Caddy reverse proxy with virtual hosts |
-| `aws.nix` | AWS Roles Anywhere certificate authentication |
+```
+services/
+├── default.nix           # Module aggregator - imports all service modules
+├── global-services.nix   # Maps globalServices to stackpanel.services
+├── postgres/
+│   └── default.nix       # PostgreSQL service implementation
+├── redis/
+│   └── default.nix       # Redis service implementation
+├── minio/
+│   └── default.nix       # MinIO S3 service implementation
+├── caddy/
+│   └── default.nix       # Caddy reverse proxy scripts and utilities
+├── caddy.nix             # Caddy devenv module (uses caddy/)
+├── aws.nix               # AWS Roles Anywhere certificate authentication
+├── binary-cache.nix      # Nix binary cache configuration
+└── security-healthchecks.nix  # Security health checks
+```
 
 ## Supported Services
 
@@ -27,7 +39,9 @@ stackpanel.globalServices.postgres = {
 };
 ```
 
-**Environment**: `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`
+**Environment**: `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `POSTGRES_URL`
+
+**Location**: `services/postgres/default.nix`
 
 ### Redis
 
@@ -37,9 +51,11 @@ Key-value store for caching and queues.
 stackpanel.globalServices.redis.enable = true;
 ```
 
-**Environment**: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`
+**Environment**: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_SOCKET`
 
-### Minio
+**Location**: `services/redis/default.nix`
+
+### MinIO
 
 S3-compatible object storage.
 
@@ -47,7 +63,9 @@ S3-compatible object storage.
 stackpanel.globalServices.minio.enable = true;
 ```
 
-**Environment**: `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
+**Environment**: `MINIO_ENDPOINT`, `S3_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
+
+**Location**: `services/minio/default.nix`
 
 ### Caddy
 
@@ -62,6 +80,52 @@ stackpanel.caddy = {
 ```
 
 **Commands**: `caddy-start`, `caddy-stop`, `caddy-add-site`, `caddy-list-sites`
+
+**Location**: `services/caddy/default.nix` (library), `services/caddy.nix` (module)
+
+## Adding a New Service
+
+1. Create a new directory: `services/<service-name>/`
+2. Create `services/<service-name>/default.nix` with the service implementation
+3. Export a `mkService` function following the pattern in existing services
+4. Add the service to `core/services/services.nix` registry
+5. Optionally add a devenv module in `services/<service-name>.nix`
+
+### Service Implementation Pattern
+
+Each service implementation should export:
+
+```nix
+{
+  pkgs,
+  lib,
+  baseDir,  # Base directory for service data (e.g., ".stackpanel/state/services")
+}:
+{
+  # Required packages
+  packages = [ ... ];
+
+  # Factory function to create service instances
+  mkService = { projectName, port ? defaultPort, ... }:
+    {
+      # Environment variables
+      env = { ... };
+
+      # Packages needed by CLI
+      allPackages = [ ... ];
+
+      # Shell hook for env setup
+      shellHook = ''...'';
+
+      # Foreground start script for process-compose
+      startScript = pkgs.writeShellScriptBin "service-start" ''...'';
+
+      # Service-specific paths
+      dataDir = "...";
+      port = ...;
+    };
+}
+```
 
 ## AWS Certificate Authentication
 
@@ -87,4 +151,23 @@ All services are managed via the stackpanel CLI:
 stackpanel services start    # Start all enabled services
 stackpanel services stop     # Stop all services
 stackpanel services status   # Check service status
+```
+
+Services run under process-compose and are configured with:
+- Automatic restart on failure
+- Readiness probes for health checking
+- Proper shutdown handling
+
+## Architecture
+
+```
+User Config (stackpanel.globalServices)
+    ↓
+services/global-services.nix (maps to stackpanel.services)
+    ↓
+core/services/services.nix (service registry/factory)
+    ↓
+services/{postgres,redis,minio}/default.nix (implementations)
+    ↓
+process-compose (lifecycle management)
 ```

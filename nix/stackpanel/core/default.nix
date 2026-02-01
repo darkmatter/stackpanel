@@ -16,12 +16,14 @@
   lib,
   pkgs ? null,
   ...
-}: let
+}:
+let
   # pkgs is optional - provided by devenv/flakeModule via _module.args
   # or passed directly in specialArgs
   cfg = config.stackpanel;
-  pathsLib = import ../lib/paths.nix {inherit lib;};
-in {
+  pathsLib = import ../lib/paths.nix { inherit lib; };
+in
+{
   imports = [
     ./options
     ./aliases.nix
@@ -38,37 +40,31 @@ in {
     # Don't set STACKPANEL_ROOT if it's a store path (pure evaluation) - let the shell hook handle it
     stackpanel.devshell.env.STACKPANEL_ROOT = lib.mkDefault (
       let
-        root =
-          if cfg.root != null
-          then cfg.root
-          else "";
+        root = if cfg.root != null then cfg.root else "";
       in
-        if lib.hasPrefix "/nix/store/" root
-        then ""
-        else root
+      if lib.hasPrefix "/nix/store/" root then "" else root
     );
 
     # Core hook: define funcs, resolve paths, ensure dirs + marker + gitignore
     stackpanel.devshell.hooks.before = lib.mkBefore (
       # Clean conflicting aliases (runs first, before strict mode)
-      lib.optional (cfg.devshell.clean.aliases != []) ''
+      lib.optional (cfg.devshell.clean.aliases != [ ]) ''
         # Unset conflicting aliases
         ${lib.concatMapStringsSep "\n" (
-            alias: "unalias ${alias} 2>/dev/null || true"
-          )
-          cfg.devshell.clean.aliases}
+          alias: "unalias ${alias} 2>/dev/null || true"
+        ) cfg.devshell.clean.aliases}
       ''
       ++ [
         ''
                   set -euo pipefail
 
                   ${pathsLib.mkShellPathUtils {
-            rootDir = cfg.dirs.home;
-            rootMarker = cfg.root-marker;
-            # Hardcoded subdirectory names - these are not configurable
-            stateDir = "state";
-            genDir = "gen";
-          }}
+                    rootDir = cfg.dirs.home;
+                    rootMarker = cfg.root-marker;
+                    # Hardcoded subdirectory names - these are not configurable
+                    stateDir = "state";
+                    genDir = "gen";
+                  }}
 
                   # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking
                   if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
@@ -107,15 +103,15 @@ in {
                   fi
 
                   ${lib.optionalString cfg.gitignore.addProjectMarker ''
-            _root_gitignore="$STACKPANEL_ROOT/.gitignore"
-            if [[ -f "$_root_gitignore" ]]; then
-              if ! grep -q "^${cfg.root-marker}$" "$_root_gitignore" 2>/dev/null; then
-                echo "" >> "$_root_gitignore"
-                echo "# Stackpanel root marker (machine-specific)" >> "$_root_gitignore"
-                echo "${cfg.root-marker}" >> "$_root_gitignore"
-              fi
-            fi
-          ''}
+                    _root_gitignore="$STACKPANEL_ROOT/.gitignore"
+                    if [[ -f "$_root_gitignore" ]]; then
+                      if ! grep -q "^${cfg.root-marker}$" "$_root_gitignore" 2>/dev/null; then
+                        echo "" >> "$_root_gitignore"
+                        echo "# Stackpanel root marker (machine-specific)" >> "$_root_gitignore"
+                        echo "${cfg.root-marker}" >> "$_root_gitignore"
+                      fi
+                    fi
+                  ''}
 
                   # Compute shell freshness hash from config files
                   # This is used to detect when the shell is stale (config changed but shell not reloaded)
@@ -174,6 +170,15 @@ in {
         # Display MOTD if enabled
         if command -v stackpanel &> /dev/null; then
           stackpanel motd
+        fi
+
+        # Log completion
+        if [[ -z "''${DIRENV_IN_ENVRC:-}" ]]; then
+          echo ""
+          echo "═══════════════════════════════════════════════════════════════"
+          echo "Shell hook completed at $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "Log saved to: ''${STACKPANEL_STATE_DIR:-$PWD/.stackpanel/state}/shell.log"
+          echo "═══════════════════════════════════════════════════════════════"
         fi
       ''
     ];

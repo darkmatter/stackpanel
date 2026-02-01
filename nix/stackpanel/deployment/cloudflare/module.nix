@@ -26,6 +26,13 @@
 #       };
 #     };
 #   };
+#
+# Global Cloudflare settings (optional):
+#   stackpanel.deployment.cloudflare = {
+#     accountId = "abc123...";  # Or set CLOUDFLARE_ACCOUNT_ID env var
+#     compatibilityDate = "2024-01-01";
+#     defaultRoute = "*.example.com/*";
+#   };
 # ==============================================================================
 {
   lib,
@@ -37,83 +44,57 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   deployCfg = cfg.deployment;
+  cloudflareCfg = deployCfg.cloudflare or { };
   infraPath = "packages/infra";
+
+  # Import schema for SpField definitions
+  cloudflareSchema = import ./schema.nix { inherit lib; };
+  sp = import ../../db/lib/field.nix { inherit lib; };
 
   # ---------------------------------------------------------------------------
   # Per-app Cloudflare deployment options (added via appModules)
+  # Uses SpField schema for simple fields, manual definitions for complex types
   # ---------------------------------------------------------------------------
   cloudflareAppModule =
     { lib, name, ... }:
     {
       options.deployment.cloudflare = {
+        # Simple fields from schema (auto-converted via sp.asOption)
+        route = sp.asOption cloudflareSchema.fields.route;
+        bindings = sp.asOption cloudflareSchema.fields.bindings;
+        secrets = sp.asOption cloudflareSchema.fields.secrets;
+        kvNamespaces = sp.asOption cloudflareSchema.fields.kvNamespaces;
+        d1Databases = sp.asOption cloudflareSchema.fields.d1Databases;
+        r2Buckets = sp.asOption cloudflareSchema.fields.r2Buckets;
+
+        # Worker name defaults to app name - needs special handling
         workerName = lib.mkOption {
           type = lib.types.str;
           default = name;
-          description = "Cloudflare Worker name.";
+          description = cloudflareSchema.fields.workerName.description;
+          example = cloudflareSchema.fields.workerName.example or null;
         };
 
+        # Override type to use enum for strict validation in Nix
+        # (SpField generates string type, but we want enum validation)
         type = lib.mkOption {
           type = lib.types.enum [
             "vite"
             "worker"
             "pages"
           ];
-          default = "vite";
-          description = ''
-            Cloudflare deployment type:
-            - vite: TanStack Start / Vite-based app (uses cloudflare.Vite)
-            - worker: Plain Worker (uses cloudflare.Worker)
-            - pages: Cloudflare Pages (static + functions)
-          '';
+          default = cloudflareSchema.fields.type.default or "vite";
+          description = cloudflareSchema.fields.type.description;
         };
 
-        route = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Custom domain route pattern (e.g., 'app.example.com/*').";
-        };
-
+        # Override compatibility to use enum for strict validation
         compatibility = lib.mkOption {
           type = lib.types.enum [
             "node"
             "browser"
           ];
-          default = "node";
-          description = "Worker compatibility mode.";
-        };
-
-        bindings = lib.mkOption {
-          type = lib.types.attrsOf lib.types.str;
-          default = { };
-          description = "Environment variable bindings for the Worker.";
-        };
-
-        secrets = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          description = "Secret names to inject (resolved at deploy time).";
-          example = [
-            "DATABASE_URL"
-            "API_KEY"
-          ];
-        };
-
-        kvNamespaces = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          description = "KV namespace bindings.";
-        };
-
-        d1Databases = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          description = "D1 database bindings.";
-        };
-
-        r2Buckets = lib.mkOption {
-          type = lib.types.listOf lib.types.str;
-          default = [ ];
-          description = "R2 bucket bindings.";
+          default = cloudflareSchema.fields.compatibility.default or "node";
+          description = cloudflareSchema.fields.compatibility.description;
         };
       };
     };
@@ -123,7 +104,8 @@ let
   # ---------------------------------------------------------------------------
   cloudflareApps = lib.filterAttrs (
     _name: appCfg:
-    (appCfg.deployment.enable or false) && (appCfg.deployment.provider or deployCfg.defaultProvider) == "cloudflare"
+    (appCfg.deployment.enable or false)
+    && (appCfg.deployment.provider or deployCfg.defaultProvider) == "cloudflare"
   ) (cfg.apps or { });
 
   hasCloudflareApps = cloudflareApps != { };
@@ -194,6 +176,41 @@ let
 
 in
 {
+  # ===========================================================================
+  # Options - Global Cloudflare deployment settings
+  # ===========================================================================
+  options.stackpanel.deployment.cloudflare = {
+    accountId = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Cloudflare account ID. Can also be set via CLOUDFLARE_ACCOUNT_ID env var.
+        Find this in the Cloudflare dashboard under Account ID.
+      '';
+      example = "abc123def456...";
+    };
+
+    compatibilityDate = lib.mkOption {
+      type = lib.types.str;
+      default = "2024-01-01";
+      description = ''
+        Workers API compatibility date. This determines which Workers runtime
+        features are available. Use a recent date for new projects.
+      '';
+      example = "2024-12-01";
+    };
+
+    defaultRoute = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Default custom domain route pattern for Workers.
+        Individual apps can override this in their cloudflare.route option.
+      '';
+      example = "*.example.com/*";
+    };
+  };
+
   # ===========================================================================
   # Config
   # ===========================================================================

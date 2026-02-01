@@ -192,7 +192,7 @@ Plugins are just flake inputs:
 ```nix
 inputs = {
   stackpanel.url = "github:darkmatter/stackpanel";
-  
+
   # Community plugins
   stackpanel-aws.url = "github:someone/stackpanel-aws";
   stackpanel-stripe.url = "github:someone/stackpanel-stripe";

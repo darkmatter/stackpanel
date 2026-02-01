@@ -1,36 +1,35 @@
 # ==============================================================================
-# meta.nix - Docker/Dockerfile Fallback Module Metadata
+# meta.nix - Container Tooling Module Metadata
 #
 # Static metadata for fast module discovery. Contains ONLY pure data.
 #
-# NOTE: This is a FALLBACK module for Dockerfile generation.
-# For nix2container (recommended), use the containers module instead.
+# NOTE: This module provides container TOOLING (skopeo, image refs).
+# For container BUILDING, use the containers module instead.
 # ==============================================================================
 {
   id = "docker";
-  name = "Dockerfile Fallback";
-  description = "Dockerfile generation fallback for CI systems that cannot use nix2container";
+  name = "Container Tooling";
+  description = "Container tooling (skopeo) for OCI image operations";
   category = "infrastructure";
-  version = "1.0.0";
-  icon = "file-text";
-  homepage = "https://docs.docker.com/reference/dockerfile/";
+  version = "2.0.0";
+  icon = "package";
+  homepage = "https://github.com/containers/skopeo";
   author = "Stackpanel";
 
   tags = [
     "docker"
-    "dockerfile"
     "container"
     "oci"
     "skopeo"
-    "fallback"
+    "registry"
   ];
 
   requires = [ ];
   conflicts = [ ];
 
   features = {
-    files = true; # Generates Dockerfiles
-    scripts = false;
+    files = false;
+    scripts = true; # Provides image-inspect, image-copy, etc.
     healthchecks = true;
     packages = true; # Provides skopeo
     services = false;
@@ -39,5 +38,5 @@
     appModule = false;
   };
 
-  priority = 25; # Lower priority than containers module (15)
+  priority = 25;
 }

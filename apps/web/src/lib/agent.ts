@@ -19,6 +19,13 @@ import type {
   FileContent,
   SetSecretRequest,
   SetSecretResult,
+  GroupSecretWriteRequest,
+  GroupSecretWriteResponse,
+  GroupSecretReadRequest,
+  GroupSecretReadResponse,
+  GroupSecretListResponse,
+  AllGroupsListResponse,
+  GenerateEnvPackageResponse,
 } from "./types";
 
 // The full Nix config is a dynamic object from nix eval, not the proto Config message
@@ -872,10 +879,7 @@ export class AgentHttpClient {
   /**
    * Delete a key from a SOPS-encrypted environment YAML file.
    */
-  async deleteSopsSecret(
-    environment: string,
-    key: string,
-  ): Promise<void> {
+  async deleteSopsSecret(environment: string, key: string): Promise<void> {
     const res = await fetch(
       `${this.baseUrl}/api/sops/delete?environment=${encodeURIComponent(environment)}&key=${encodeURIComponent(key)}`,
       {
@@ -1258,9 +1262,12 @@ export class AgentHttpClient {
    * Includes process counts, memory stats, and version info.
    */
   async getProcessComposeProjectState(): Promise<ProcessComposeProjectState> {
-    const res = await fetch(`${this.baseUrl}/api/process-compose/project/state`, {
-      headers: this.getHeaders(false),
-    });
+    const res = await fetch(
+      `${this.baseUrl}/api/process-compose/project/state`,
+      {
+        headers: this.getHeaders(false),
+      },
+    );
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data ?? { available: false };
@@ -1298,7 +1305,11 @@ export class AgentHttpClient {
    * @param offset Offset from end of log (0 = most recent)
    * @param limit Max number of lines to return
    */
-  async getProcessLogs(name: string, offset = 0, limit = 100): Promise<ProcessLogs> {
+  async getProcessLogs(
+    name: string,
+    offset = 0,
+    limit = 100,
+  ): Promise<ProcessLogs> {
     const res = await fetch(
       `${this.baseUrl}/api/process-compose/process/logs/${encodeURIComponent(name)}?offset=${offset}&limit=${limit}`,
       { headers: this.getHeaders(false) },
@@ -1311,7 +1322,9 @@ export class AgentHttpClient {
   /**
    * Start a specific process.
    */
-  async startProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async startProcess(
+    name: string,
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
     const res = await fetch(
       `${this.baseUrl}/api/process-compose/process/start/${encodeURIComponent(name)}`,
       {
@@ -1325,7 +1338,9 @@ export class AgentHttpClient {
   /**
    * Stop a specific process.
    */
-  async stopProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async stopProcess(
+    name: string,
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
     const res = await fetch(
       `${this.baseUrl}/api/process-compose/process/stop/${encodeURIComponent(name)}`,
       {
@@ -1339,7 +1354,9 @@ export class AgentHttpClient {
   /**
    * Restart a specific process.
    */
-  async restartProcess(name: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async restartProcess(
+    name: string,
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
     const res = await fetch(
       `${this.baseUrl}/api/process-compose/process/restart/${encodeURIComponent(name)}`,
       {
@@ -1367,7 +1384,99 @@ export class AgentHttpClient {
     );
   }
 
-  // Variables methods
+  // ---------------------------------------------------------------------------
+  // Group-based secrets management (SOPS files per access control group)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Write a secret to a group's SOPS file.
+   * Returns the vals reference to use in app configs.
+   */
+  async writeGroupSecret(
+    request: GroupSecretWriteRequest,
+  ): Promise<GroupSecretWriteResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/group/write`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(request),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * Read (decrypt) a secret from a group's SOPS file.
+   */
+  async readGroupSecret(
+    request: GroupSecretReadRequest,
+  ): Promise<GroupSecretReadResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/group/read`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(request),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * Delete a secret from a group's SOPS file.
+   */
+  async deleteGroupSecret(
+    group: string,
+    key: string,
+  ): Promise<{ key: string; group: string; deleted: boolean }> {
+    const res = await fetch(
+      `${this.baseUrl}/api/secrets/group/delete?group=${encodeURIComponent(group)}&key=${encodeURIComponent(key)}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(false),
+      },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * List secrets in a group (keys only, not values).
+   * If no group specified, lists all groups and their keys.
+   */
+  async listGroupSecrets(
+    group?: string,
+  ): Promise<GroupSecretListResponse | AllGroupsListResponse> {
+    const url = group
+      ? `${this.baseUrl}/api/secrets/group/list?group=${encodeURIComponent(group)}`
+      : `${this.baseUrl}/api/secrets/group/list`;
+    const res = await fetch(url, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /**
+   * Generate the packages/env data directory.
+   * Creates:
+   * - apps/<app>/<env>.yaml - Plain YAML with vals references
+   * - groups/<group>.yaml - SOPS-encrypted files
+   * - .sops.yaml - SOPS configuration
+   */
+  async generateEnvPackage(): Promise<GenerateEnvPackageResponse> {
+    const res = await fetch(
+      `${this.baseUrl}/api/secrets/generate-env-package`,
+      {
+        method: "POST",
+        headers: this.getHeaders(false),
+      },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
 }
 
 // Default export singleton

@@ -18,7 +18,7 @@
 #   - minio: S3-compatible object storage
 #
 # To add a new service:
-#   1. Create a new file: nix/stackpanel/core/services/<service-name>.nix
+#   1. Create a new directory: nix/stackpanel/services/<service-name>/default.nix
 #   2. Export a mkService function following the pattern in existing services
 #   3. Add the service to the serviceModules registry below
 #
@@ -44,10 +44,10 @@ let
   # Global directory for services that must be shared (like Caddy)
   globalBaseDir = "$HOME/.local/share/devservices";
 
-  # Import individual service modules with the appropriate baseDir
-  postgresModule = import ../../lib/services/postgres.nix { inherit pkgs lib baseDir; };
-  redisModule = import ../../lib/services/redis.nix { inherit pkgs lib baseDir; };
-  minioModule = import ../../lib/services/minio.nix { inherit pkgs lib baseDir; };
+  # Import individual service modules from nix/stackpanel/services/
+  postgresModule = import ../../services/postgres { inherit pkgs lib baseDir; };
+  redisModule = import ../../services/redis { inherit pkgs lib baseDir; };
+  minioModule = import ../../services/minio { inherit pkgs lib baseDir; };
 
   # Service registry - add new services here
   serviceModules = {

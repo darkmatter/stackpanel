@@ -3,10 +3,6 @@
 let
   # All recipients who can decrypt secrets
   allKeys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDmZV9Oi9hrckXTpqBnDKRrY9mgwj+SJeVBGWmne2+q5"
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINh0gA7reCRW+zQ5pPpIjoJGpaFQSbC/4K8B6vMXJVr+"
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmYihgWHfnLw0f8uTfLokCwToLavzV/+k/GggBA4Sz/"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEijeq50HS1g27BTRfJ8XWIPrAX9UVkap5fgIOCOtA5+"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDuzbgoXZccZ2w/9HGgUyT9nJH7lG2/jfQCZJudY4yAN"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFStro05R+CPmjWMHWtzXUKfGll+OosoZtXAyPtngN7T"
@@ -15,12 +11,18 @@ let
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIoX0wKjybps6ZHuvA+uwE1ThfWl87MApDLxCjCDUCC9"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKZPhznHjTDifGroHiGRD3hwWz69B8NsSSPNbwWjfzgW"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJF9kzudl00FVTQA7nnSaicAJW2MoBKm47G7wefb6uSm"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDmZV9Oi9hrckXTpqBnDKRrY9mgwj+SJeVBGWmne2+q5"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINh0gA7reCRW+zQ5pPpIjoJGpaFQSbC/4K8B6vMXJVr+"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmYihgWHfnLw0f8uTfLokCwToLavzV/+k/GggBA4Sz/"
   ];
 in
 {
   "vars/-foobar.age".publicKeys = allKeys;
+  "vars/-my-api-endpoint.age".publicKeys = allKeys;
   "vars/-secret-foo.age".publicKeys = allKeys;
   "vars/-test.age".publicKeys = allKeys;
+  "vars/-username.age".publicKeys = allKeys;
   "vars/asasd.age".publicKeys = allKeys;
   "vars/openai-api-key.age".publicKeys = allKeys;
   "vars/postgres-url-dev.age".publicKeys = allKeys;

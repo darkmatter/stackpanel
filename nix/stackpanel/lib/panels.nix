@@ -28,7 +28,8 @@ let
 
   # Navigate a nested attrset by a dot-separated path string
   # e.g., getByPath app "linting.oxlint" → app.linting.oxlint
-  getByPath = attrset: path:
+  getByPath =
+    attrset: path:
     let
       parts = lib.splitString "." path;
     in
@@ -50,6 +51,7 @@ in
   #   exclude      - Field names to exclude (default: ["enable"])
   #   include      - If set, only include these field names (whitelist)
   #   order        - Panel display order (default: 100)
+  #   readme       - Module documentation in markdown (optional, shown in UI)
   #
   # Returns:
   #   A panel definition suitable for stackpanel.panels.<id>
@@ -66,6 +68,7 @@ in
       exclude ? [ "enable" ],
       include ? null,
       order ? 100,
+      readme ? null,
     }:
     let
       # Filter to UI-visible fields, applying include/exclude
@@ -82,20 +85,30 @@ in
 
       # Convert SpField definitions to panel field entries
       # Include _order for sorting, then strip it before output
-      panelFields = lib.mapAttrsToList (
-        name: field:
-        {
-          inherit name;
-          type = field.ui.type;
-          value = ""; # Per-app values go in the apps map, not here
-          options = field.ui.options;
-          label = field.ui.label;
-          editable = field.ui.editable;
-          editPath = "${optionPrefix}.${name}";
-          placeholder = field.ui.placeholder;
-          _order = field.ui.order;
-        }
-      ) visibleFields;
+      panelFields = lib.mapAttrsToList (name: field: {
+        inherit name;
+        type = field.ui.type;
+        value = ""; # Per-app values go in the apps map, not here
+        options = field.ui.options;
+        label = field.ui.label;
+        editable = field.ui.editable;
+        editPath = "${optionPrefix}.${name}";
+        placeholder = field.ui.placeholder;
+        # Help text from field description
+        description = field.ui.description or field.description or null;
+        # Example value for additional context (JSON-encoded if complex)
+        example =
+          let
+            ex = field.ui.example or field.example or null;
+          in
+          if ex == null then
+            null
+          else if builtins.isString ex then
+            ex
+          else
+            builtins.toJSON ex;
+        _order = field.ui.order;
+      }) visibleFields;
 
       # Sort fields by their UI order, then strip the internal _order key
       sortedFields = lib.sort (a: b: a._order < b._order) panelFields;
@@ -138,7 +151,13 @@ in
 
     in
     {
-      inherit module title icon order;
+      inherit
+        module
+        title
+        icon
+        order
+        readme
+        ;
       type = "PANEL_TYPE_APP_CONFIG";
       enabled = true;
       fields = cleanFields;

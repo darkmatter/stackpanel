@@ -17,12 +17,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ScriptArg represents a documented argument for a command
+type ScriptArg struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	Required    *bool   `json:"required"`
+	Default     *string `json:"default"`
+}
+
 // SerializableCommand represents a command from the Nix config
 type SerializableCommand struct {
 	Name        string            `json:"name"`
 	Exec        string            `json:"exec"`
 	Description *string           `json:"description"`
 	Env         map[string]string `json:"env"`
+	Args        []ScriptArg       `json:"args"`
 }
 
 // StackpanelConfig represents the relevant parts of the serialized config
@@ -266,6 +275,8 @@ func printCommandHelp(name string, cmd SerializableCommand) {
 	titleColor := color.New(color.FgCyan, color.Bold)
 	labelColor := color.New(color.Faint)
 	codeColor := color.New(color.FgGreen)
+	argNameColor := color.New(color.FgYellow)
+	requiredColor := color.New(color.FgRed)
 
 	fmt.Println()
 	fmt.Printf("%s\n", titleColor.Sprint(name))
@@ -280,6 +291,33 @@ func printCommandHelp(name string, cmd SerializableCommand) {
 	fmt.Printf("  stackpanel run %s [args...]\n", name)
 	fmt.Printf("  spx %s [args...]\n", name)
 	fmt.Println()
+
+	// Display arguments if defined
+	if len(cmd.Args) > 0 {
+		fmt.Printf("%s\n", labelColor.Sprint("Arguments:"))
+		for _, arg := range cmd.Args {
+			// Build the argument line
+			argLine := "  " + argNameColor.Sprint(arg.Name)
+
+			// Add required indicator
+			if arg.Required != nil && *arg.Required {
+				argLine += " " + requiredColor.Sprint("(required)")
+			}
+
+			// Add default value
+			if arg.Default != nil && *arg.Default != "" {
+				argLine += " " + labelColor.Sprintf("[default: %s]", *arg.Default)
+			}
+
+			fmt.Println(argLine)
+
+			// Add description on the next line, indented
+			if arg.Description != nil && *arg.Description != "" {
+				fmt.Printf("      %s\n", *arg.Description)
+			}
+		}
+		fmt.Println()
+	}
 
 	fmt.Printf("%s\n", labelColor.Sprint("Script:"))
 	// Indent and display the script

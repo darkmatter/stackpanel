@@ -80,6 +80,10 @@ export interface AppExpandedContentProps {
   disabled?: boolean;
   /** Module config panels for this app (PANEL_TYPE_APP_CONFIG) */
   modulePanels?: AppModulePanel[];
+  /** Container config panels for this app */
+  containerPanels?: AppModulePanel[];
+  /** Deployment config panels for this app */
+  deploymentPanels?: AppModulePanel[];
   // Task editing
   editingTask: { appId: string; taskName: string } | null;
   taskCommandOverride: string;
@@ -116,6 +120,8 @@ export function AppExpandedContent({
   availableVariables,
   disabled,
   modulePanels,
+  containerPanels,
+  deploymentPanels,
   editingTask,
   taskCommandOverride,
   onTaskEdit,
@@ -198,9 +204,21 @@ export function AppExpandedContent({
             disabled={disabled}
           />
         )}
-        {activeSection === "docker" && <DockerTab />}
-        {activeSection === "deployment" && <DeploymentTab />}
-        {activeSection === "checks" && <ChecksTab />}
+        {activeSection === "docker" && (
+          <DockerTab
+            appId={app.id}
+            panels={containerPanels ?? []}
+            disabled={disabled}
+          />
+        )}
+        {activeSection === "deployment" && (
+          <DeploymentTab
+            appId={app.id}
+            panels={deploymentPanels ?? []}
+            disabled={disabled}
+          />
+        )}
+        {activeSection === "checks" && <ChecksTab appId={app.id} />}
       </div>
     </CardContent>
   );
@@ -425,55 +443,292 @@ function TasksTab({
 }
 
 // ---------------------------------------------------------------------------
-// Docker Tab (placeholder)
+// Docker Tab - Container configuration
 // ---------------------------------------------------------------------------
 
-function DockerTab() {
+function DockerTab({
+  appId,
+  panels,
+  disabled,
+}: {
+  appId: string;
+  panels: AppModulePanel[];
+  disabled?: boolean;
+}) {
+  if (panels.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Container building is not enabled for this app.
+        </p>
+        <p className="text-xs text-muted-foreground/70">
+          Enable container support in your Nix configuration:
+        </p>
+        <pre className="text-xs bg-muted/50 p-3 rounded-md font-mono overflow-x-auto">
+          {`stackpanel.apps.${appId}.container.enable = true;`}
+        </pre>
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-4 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-sm text-muted-foreground"
+        >
+          <Plus className="h-4 w-4" />
+          Enable Container
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-8 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-sm text-muted-foreground"
-      >
-        <Plus className="h-4 w-4" />
-        Configure Docker
-      </button>
+    <div className="space-y-4">
+      {panels.map((panel) => (
+        <AppConfigFormRenderer
+          key={panel.id}
+          panel={panel}
+          appId={appId}
+          disabled={disabled}
+        />
+      ))}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Deployment Tab (placeholder)
+// Deployment Tab - Fly.io / Cloudflare configuration
 // ---------------------------------------------------------------------------
 
-function DeploymentTab() {
+function DeploymentTab({
+  appId,
+  panels,
+  disabled,
+}: {
+  appId: string;
+  panels: AppModulePanel[];
+  disabled?: boolean;
+}) {
+  if (panels.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Deployment is not enabled for this app.
+        </p>
+        <p className="text-xs text-muted-foreground/70">
+          Enable deployment in your Nix configuration:
+        </p>
+        <pre className="text-xs bg-muted/50 p-3 rounded-md font-mono overflow-x-auto">
+          {`stackpanel.apps.${appId}.deployment = {
+  enable = true;
+  provider = "fly"; # or "cloudflare"
+};`}
+        </pre>
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-4 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-sm text-muted-foreground"
+        >
+          <Plus className="h-4 w-4" />
+          Enable Deployment
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-8 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-sm text-muted-foreground"
-      >
-        <Plus className="h-4 w-4" />
-        Configure Deployment
-      </button>
+    <div className="space-y-4">
+      {panels.map((panel) => (
+        <AppConfigFormRenderer
+          key={panel.id}
+          panel={panel}
+          appId={appId}
+          disabled={disabled}
+        />
+      ))}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Checks Tab (placeholder)
+// Checks Tab - Shows app-specific healthchecks
 // ---------------------------------------------------------------------------
 
-function ChecksTab() {
+import { useHealthchecks } from "@/lib/healthchecks/use-healthchecks";
+import { TrafficLightDot } from "@/lib/healthchecks/traffic-light";
+import type { ModuleHealth, HealthcheckResult } from "@/lib/healthchecks/types";
+import { RefreshCw, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function ChecksTab({ appId }: { appId: string }) {
+  // Fetch all healthchecks and filter for app-related ones
+  const {
+    data: summary,
+    isLoading,
+    error,
+    isRefreshing,
+    runChecks,
+  } = useHealthchecks({ enabled: true });
+
+  // Filter modules relevant to this app:
+  // 1. app-<appId> module (app-specific checks)
+  // 2. oxlint (if app has oxlint enabled)
+  // 3. Other app-related modules
+  const appRelatedModules = useMemo(() => {
+    if (!summary?.modules) return [];
+
+    return Object.entries(summary.modules).filter(([moduleName, _]) => {
+      // Direct app module
+      if (moduleName === `app-${appId}`) return true;
+      // Could extend to check if oxlint is enabled for this app, etc.
+      return false;
+    });
+  }, [summary, appId]);
+
+  const hasChecks = appRelatedModules.length > 0 && 
+    appRelatedModules.some(([_, mod]) => mod.checks?.length > 0);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Header with run button */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">App Healthchecks</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => runChecks(`app-${appId}`)}
+          disabled={isLoading || isRefreshing}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw
+            className={cn("h-3 w-3", isRefreshing && "animate-spin")}
+          />
+          Run Checks
+        </button>
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isLoading && !summary && (
+        <div className="flex items-center justify-center py-8 text-muted-foreground">
+          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+          Loading checks...
+        </div>
+      )}
+
+      {/* No checks state */}
+      {!isLoading && !hasChecks && (
+        <div className="text-center py-8">
+          <ShieldCheck className="h-8 w-8 mx-auto mb-3 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground mb-2">
+            No healthchecks configured for this app
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Add checks in your Nix config:
+          </p>
+          <pre className="mt-2 p-2 rounded bg-muted text-xs text-left font-mono overflow-x-auto">
+{`stackpanel.apps.${appId}.commands.check = {
+  exec = "bun run typecheck";
+};`}
+          </pre>
+        </div>
+      )}
+
+      {/* Check results */}
+      {hasChecks && (
+        <div className="space-y-3">
+          {appRelatedModules.map(([moduleName, moduleHealth]) => (
+            <AppHealthModule
+              key={moduleName}
+              moduleHealth={moduleHealth}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Add check placeholder */}
       <button
         type="button"
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-8 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-sm text-muted-foreground"
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-4 rounded-md border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors text-xs text-muted-foreground"
       >
-        <Plus className="h-4 w-4" />
-        Add check
+        <Plus className="h-3.5 w-3.5" />
+        Add custom check
       </button>
+    </div>
+  );
+}
+
+function AppHealthModule({
+  moduleHealth,
+}: {
+  moduleHealth: ModuleHealth;
+}) {
+  const status = moduleHealth.status || "HEALTH_STATUS_UNKNOWN";
+  const checks = moduleHealth.checks || [];
+
+  if (checks.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border">
+      {/* Module header */}
+      <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+        <div className="flex items-center gap-2">
+          <TrafficLightDot status={status} size="sm" />
+          <span className="text-sm font-medium">{moduleHealth.displayName}</span>
+          <span className="text-xs text-muted-foreground">
+            {moduleHealth.healthyCount ?? 0}/{moduleHealth.totalCount ?? 0} passing
+          </span>
+        </div>
+      </div>
+
+      {/* Check list */}
+      <div className="divide-y">
+        {checks.map((result) => (
+          <AppHealthcheckItem key={result.checkId} result={result} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AppHealthcheckItem({ result }: { result: HealthcheckResult }) {
+  const check = result.check;
+  const status = result.status || "HEALTH_STATUS_UNKNOWN";
+  const checkName = check?.name || result.checkId;
+
+  return (
+    <div className="flex items-start gap-3 p-3">
+      <div className="mt-0.5">
+        <TrafficLightDot status={status} size="sm" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium">{checkName}</span>
+          {result.durationMs > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {result.durationMs}ms
+            </span>
+          )}
+        </div>
+        {check?.description && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {check.description}
+          </p>
+        )}
+        {result.error && (
+          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+            {result.error}
+          </p>
+        )}
+        {result.output && status === "HEALTH_STATUS_HEALTHY" && (
+          <p className="text-xs text-green-600 dark:text-green-400 mt-1 line-clamp-1">
+            {result.output}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

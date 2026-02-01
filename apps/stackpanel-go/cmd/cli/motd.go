@@ -69,7 +69,7 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 
 	// Minimal mode - just print a one-liner
 	if motdMinimal {
-		fmt.Print(tui.RenderMinimalMOTD(cfg.ProjectName))
+		fmt.Fprint(os.Stderr, tui.RenderMinimalMOTD(cfg.ProjectName))
 		return nil
 	}
 
@@ -118,7 +118,7 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 	}
 
 	// Render improved MOTD
-	fmt.Print(tui.RenderImprovedMOTD(data))
+	fmt.Fprint(os.Stderr, tui.RenderImprovedMOTD(data))
 	return nil
 }
 
@@ -158,9 +158,9 @@ func renderLegacyMOTD(cfg *nixconfig.Config) error {
 
 	// Use RenderMOTDWithServices if we have default services to detect
 	if len(services) == 0 {
-		fmt.Print(tui.RenderMOTDWithServices(legacyData, defaultServices))
+		fmt.Fprint(os.Stderr, tui.RenderMOTDWithServices(legacyData, defaultServices))
 	} else {
-		fmt.Print(tui.RenderMOTD(legacyData))
+		fmt.Fprint(os.Stderr, tui.RenderMOTD(legacyData))
 	}
 
 	return nil

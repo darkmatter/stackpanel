@@ -1,20 +1,21 @@
 # ==============================================================================
 # module.nix - Fly.io Deployment Module Implementation
 #
-# Provides Fly.io deployment support for stackpanel apps using dockerTools.
+# Provides Fly.io deployment support using nix2container (default) or dockerTools.
 #
 # This module:
 #   1. Adds deployment.* options to each app via appModules
-#   2. Auto-enables stackpanel.containers for deployable apps
+#   2. Auto-contributes to stackpanel.containers.images for deployable apps
 #   3. Generates fly.toml into packages/infra/fly/
 #   4. Adds deploy scripts to packages/infra/package.json
 #   5. Registers turbo tasks for build + deploy workflow
 #   6. Creates wrapped fly-<app> commands for each deployable app
 #
 # Container workflow:
+#   bun run build                          # Build app (in app directory)
 #   container-build web                    # Build container image
 #   container-copy web docker://...        # Push to registry
-#   fly-web deploy --image registry.fly.io/stackpanel-web:latest
+#   fly-web deploy --image registry.fly.io/my-app:latest
 #
 # Generated layout:
 #   packages/infra/
@@ -47,8 +48,13 @@ let
   deployCfg = cfg.deployment;
   infraPath = "packages/infra";
 
+  # Import schema for SpField definitions
+  flySchema = import ./schema.nix { inherit lib; };
+  sp = import ../../db/lib/field.nix { inherit lib; };
+
   # ---------------------------------------------------------------------------
   # Per-app deployment options module (added via appModules)
+  # Uses SpField schema for simple fields, manual definitions for complex types
   # ---------------------------------------------------------------------------
   deploymentAppModule =
     { lib, name, ... }:
@@ -71,71 +77,48 @@ let
         };
 
         fly = {
+          # Simple fields from schema (auto-converted via sp.asOption)
+          memory = sp.asOption flySchema.fields.memory;
+          cpus = sp.asOption flySchema.fields.cpus;
+          autoStart = sp.asOption flySchema.fields.autoStart;
+          minMachines = sp.asOption flySchema.fields.minMachines;
+          forceHttps = sp.asOption flySchema.fields.forceHttps;
+          env = sp.asOption flySchema.fields.env;
+
+          # App name defaults to stackpanel app name - needs special handling
           appName = lib.mkOption {
             type = lib.types.str;
             default = name;
-            description = "Fly.io app name.";
+            description = flySchema.fields.appName.description;
+            example = flySchema.fields.appName.example or null;
           };
 
+          # Region defaults to global setting - needs special handling
           region = lib.mkOption {
             type = lib.types.str;
-            default = deployCfg.fly.defaultRegion or "iad";
-            description = "Fly.io region for deployment.";
+            default = deployCfg.fly.defaultRegion or flySchema.fields.region.default or "iad";
+            description = flySchema.fields.region.description;
           };
 
-          memory = lib.mkOption {
-            type = lib.types.str;
-            default = "512mb";
-            description = "Memory allocation for the VM.";
-          };
-
+          # Override cpuKind to use enum for strict validation in Nix
           cpuKind = lib.mkOption {
             type = lib.types.enum [
               "shared"
               "performance"
             ];
-            default = "shared";
-            description = "CPU type for the VM.";
+            default = flySchema.fields.cpuKind.default or "shared";
+            description = flySchema.fields.cpuKind.description;
           };
 
-          cpus = lib.mkOption {
-            type = lib.types.int;
-            default = 1;
-            description = "Number of CPUs for the VM.";
-          };
-
+          # Override autoStop to use enum for strict validation
           autoStop = lib.mkOption {
             type = lib.types.enum [
               "off"
               "stop"
               "suspend"
             ];
-            default = "suspend";
-            description = "Auto-stop behavior for machines.";
-          };
-
-          autoStart = lib.mkOption {
-            type = lib.types.bool;
-            default = true;
-            description = "Auto-start machines on request.";
-          };
-
-          minMachines = lib.mkOption {
-            type = lib.types.int;
-            default = 0;
-            description = "Minimum number of machines to keep running.";
-          };
-
-          forceHttps = lib.mkOption {
-            type = lib.types.bool;
-            default = true;
-            description = "Force HTTPS for all requests.";
-          };
-
-          env = lib.mkOption {
-            type = lib.types.attrsOf lib.types.str;
-            default = { };
-            description = "Environment variables for fly.toml.";
+            default = flySchema.fields.autoStop.default or "suspend";
+            description = flySchema.fields.autoStop.description;
           };
         };
 
@@ -149,7 +132,7 @@ let
               "custom"
             ];
             default = "bun";
-            description = "App type determines the generated Dockerfile.";
+            description = "App type determines base image and startup command.";
           };
 
           port = lib.mkOption {
@@ -161,13 +144,7 @@ let
           entrypoint = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
             default = null;
-            description = "Container CMD override.";
-          };
-
-          dockerfile = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "Custom Dockerfile content (overrides auto-generation).";
+            description = "Container startup command override.";
           };
         };
       };
@@ -184,7 +161,7 @@ let
 
   # ---------------------------------------------------------------------------
   # Generate fly.toml content
-  # Uses Dockerfile for building (flyctl handles the build)
+  # Uses pre-built container images pushed via nix2container/dockerTools
   # ---------------------------------------------------------------------------
   mkFlyToml =
     appName: appCfg:
@@ -193,18 +170,13 @@ let
       f = d.fly;
       c = d.container;
       org = deployCfg.fly.organization or null;
+      flyAppName = f.appName or appName;
 
       allEnv = {
         PORT = toString c.port;
       }
       // f.env;
       envSection = lib.concatStringsSep "\n" (lib.mapAttrsToList (k: v: "${k} = '${v}'") allEnv);
-
-      # Dockerfile path - relative from fly.toml location to docker directory
-      # fly.toml is at packages/infra/fly/<app>/fly.toml
-      # Dockerfile is at packages/infra/docker/<app>/Dockerfile
-      # So relative path is ../../docker/<app>/Dockerfile
-      dockerfilePath = "../../docker/${appName}/Dockerfile";
 
       # Organization line (optional)
       orgLine = lib.optionalString (org != null) ''
@@ -215,16 +187,19 @@ let
       # Generated by stackpanel - do not edit manually
       # Regenerate by entering the devshell: nix develop --impure
       #
-      # Deploy workflow:
-      #   flyctl deploy --config ${infraPath}/fly/${appName}/fly.toml
+      # Deploy workflow (uses nix2container/dockerTools):
+      #   1. Build app:        bun run build (in app directory)
+      #   2. Build container:  container-build ${appName}
+      #   3. Push container:   container-copy ${appName} docker://registry.fly.io/
+      #   4. Deploy:           flyctl deploy --config ${infraPath}/fly/${appName}/fly.toml --image registry.fly.io/${flyAppName}:latest
       #
-      # Or use npm scripts:
-      #   bun run deploy:${appName}
+      # Or use turbo workflow:
+      #   turbo run ship:${appName}
 
-      app = "${f.appName}"
+      app = "${flyAppName}"
       ${orgLine}
-      [build]
-      dockerfile = "${dockerfilePath}"
+      # Build section removed - we use pre-built container images
+      # Container is built with nix2container/dockerTools and pushed via skopeo
 
       [env]
       ${envSection}
@@ -274,67 +249,115 @@ let
     ) { } deployableApps;
 
   # ---------------------------------------------------------------------------
-  # Turbo tasks per deployable app (with dependency chain)
+  # Turbo tasks - Global task definitions with transit dependencies
+  # 
   # Workflow: build -> container:build -> container:push -> deploy
-  # Uses nix2container for building and pushing containers
+  #
+  # Each app with deployment.enable has scripts generated at:
+  #   apps/<app>/.tasks/bin/{container-build,container-push,deploy}
+  #
+  # Apps add short wrappers in package.json that call these scripts.
+  # Turbo runs tasks across all packages that have them.
   # ---------------------------------------------------------------------------
-  mkDeployTasks =
+  
+  # Global turbo task definitions (apply to any package with the script)
+  globalDeployTasks = {
+    # build:container is a separate build script that apps can customize
+    # For Fly.io apps: runs Node/Nitro build (no ALCHEMY)
+    # For Cloudflare apps: this task won't exist, so turbo skips it
+    "build:container" = {
+      description = "Build app for container deployment";
+      # No cache - we want fresh builds for containers
+      cache = false;
+    };
+    # Container build depends on the app's container build script
+    "container:build" = {
+      description = "Build container image";
+      cache = false;
+      dependsOn = [ "build:container" ];
+    };
+    # Container push depends on container build
+    "container:push" = {
+      description = "Push container to registry";
+      cache = false;
+      dependsOn = [ "container:build" ];
+    };
+    # Deploy depends on container push
+    "deploy" = {
+      description = "Deploy to production";
+      cache = false;
+      dependsOn = [ "container:push" ];
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Per-app deploy scripts (generated at apps/<app>/.tasks/bin/)
+  # ---------------------------------------------------------------------------
+  mkAppDeployScriptDerivations =
     appName: appCfg:
     let
-      # Package name from package.json (defaults to app name)
-      pkgName = if appCfg.packageName or null != null then appCfg.packageName else appCfg.name or appName;
       flyAppName = appCfg.deployment.fly.appName or appName;
+      flyConfigPath = "${infraPath}/fly/${appName}/fly.toml";
+      appPath = appCfg.path or "apps/${appName}";
     in
     {
-      # Build container image (nix2container, uses Linux builder on macOS)
-      "container:build:${appName}" = {
-        description = "Build ${appName} container (nix2container)";
-        cache = false;
-        dependsOn = [ "${pkgName}#build" ];
-        exec = ''
-          echo "📦 Building container image with nix2container..."
-          nix build --impure ".#packages.x86_64-linux.container-${appName}"
-          echo "✅ Container built: ./result"
-        '';
-      };
-      # Push container to registry (uses dockerTools + skopeo)
-      "container:push:${appName}" = {
-        description = "Push ${appName} container to Fly.io registry";
-        cache = false;
-        dependsOn = [ "container:build:${appName}" ];
-        exec = ''
-          echo "📤 Pushing container to registry.fly.io..."
-          nix run --impure ".#copy-container-${appName}" -- \
-            "docker://registry.fly.io/" \
-            --dest-creds "x:$(flyctl auth token)"
-          echo "✅ Container pushed to registry.fly.io/${flyAppName}:latest"
-        '';
-      };
-      # Deploy to Fly.io (uses pre-pushed image)
-      "deploy:${appName}" = {
-        description = "Deploy ${appName} to Fly.io";
-        cache = false;
-        dependsOn = [ "container:push:${appName}" ];
-        exec = ''
-          # Ensure app exists (create if not)
-          if ! flyctl status -a ${flyAppName} > /dev/null 2>&1; then
-            echo "📱 Creating Fly.io app: ${flyAppName}..."
-            flyctl apps create ${flyAppName} ${orgFlag}
-          fi
-
-          echo "🚀 Deploying ${appName} to Fly.io..."
-          flyctl deploy --config ${infraPath}/fly/${appName}/fly.toml \
-            --image "registry.fly.io/${flyAppName}:latest"
-          echo "✅ Deployed to Fly.io!"
-        '';
-      };
-      # Ship is the full workflow
-      "ship:${appName}" = {
-        description = "Build, push, and deploy ${appName} to Fly.io";
-        cache = false;
-        dependsOn = [ "deploy:${appName}" ];
-      };
+      # Build container via nix
+      "container-build" = pkgs.writeShellScriptBin "container-build" ''
+        set -euo pipefail
+        # Find repo root (use STACKPANEL_ROOT or git root)
+        ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+        cd "$ROOT"
+        echo "📦 Building container for ${appName}..."
+        nix build --impure ".#packages.x86_64-linux.container-${appName}"
+        echo "✅ Container built: ./result"
+      '';
+      
+      # Push to Fly registry
+      "container-push" = pkgs.writeShellScriptBin "container-push" ''
+        set -euo pipefail
+        # Find repo root
+        ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+        cd "$ROOT"
+        echo "📤 Pushing container for ${appName} to Fly.io..."
+        nix run --impure ".#copy-container-${appName}"
+        echo "✅ Container pushed to registry.fly.io/${flyAppName}:latest"
+      '';
+      
+      # Deploy to Fly
+      "deploy" = pkgs.writeShellScriptBin "deploy" ''
+        set -euo pipefail
+        # Find repo root
+        ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+        cd "$ROOT"
+        
+        # Ensure app exists (create if not)
+        if ! flyctl status -a ${flyAppName} > /dev/null 2>&1; then
+          echo "📱 Creating Fly.io app: ${flyAppName}..."
+          flyctl apps create ${flyAppName} ${orgFlag}
+        fi
+        
+        echo "🚀 Deploying ${appName} to Fly.io..."
+        flyctl deploy --config ${flyConfigPath} --image "registry.fly.io/${flyAppName}:latest"
+        echo "✅ Deployed to https://${flyAppName}.fly.dev/"
+      '';
     };
+
+  # Generate file entries for app deploy scripts
+  mkAppDeployFileEntries =
+    appName: appCfg:
+    let
+      scripts = mkAppDeployScriptDerivations appName appCfg;
+      appPath = appCfg.path or "apps/${appName}";
+    in
+    lib.mapAttrs' (scriptName: scriptDrv: {
+      name = "${appPath}/.tasks/bin/${scriptName}";
+      value = {
+        type = "symlink";
+        target = "${scriptDrv}/bin/${scriptName}";
+        source = meta.id;
+        description = "Deploy script: ${scriptName} for ${appName}";
+      };
+    }) scripts;
 
   # Per-package turbo.json
   infraTurboJson = builtins.toJSON { extends = [ "//" ]; };
@@ -391,9 +414,16 @@ in
     };
 
     defaultProvider = lib.mkOption {
-      type = lib.types.enum [ "fly" ];
+      type = lib.types.enum [
+        "fly"
+        "cloudflare"
+      ];
       default = "fly";
-      description = "Default deployment provider.";
+      description = ''
+        Default deployment provider for apps that don't specify one.
+        - fly: Fly.io (containers, VMs) - requires nix2container/dockerTools
+        - cloudflare: Cloudflare Workers (edge, serverless) - requires Alchemy
+      '';
     };
 
     fly = {
@@ -422,35 +452,12 @@ in
 
     # Apply config when stackpanel is enabled and has deployable apps
     (lib.mkIf (cfg.enable && deployCfg.enable && hasDeployableApps) {
-      # -------------------------------------------------------------------------
-      # Contribute containers to stackpanel.containers
-      # These are passed to devenv.containers for nix2container builds
-      # -------------------------------------------------------------------------
-      stackpanel.containers = mkContainerConfigs deployableApps;
+      # NOTE: Container configs are NOT contributed here.
+      # The containers module reads deployment.fly.* settings and applies them.
+      # This avoids conflicts when both container.enable and deployment.enable are true.
 
-      # -------------------------------------------------------------------------
-      # Enable Dockerfile generation for Fly apps (docker build fallback)
-      # -------------------------------------------------------------------------
+      # Enable docker tooling for skopeo
       stackpanel.docker.enable = true;
-      stackpanel.docker.images = lib.mapAttrs (
-        appName: appCfg:
-        let
-          d = appCfg.deployment;
-          c = d.container;
-        in
-        {
-          registry = "registry.fly.io";
-          name = d.fly.appName or appName;
-          dockerfile = {
-            enable = true;
-            type = c.type;
-            appPath = appCfg.path or "apps/${appName}";
-            port = c.port;
-            entrypoint = c.entrypoint;
-            content = c.dockerfile;
-          };
-        }
-      ) deployableApps;
 
       # -------------------------------------------------------------------------
       # Merge deploy scripts into SST's packages/infra/package.json
@@ -458,7 +465,7 @@ in
       stackpanel.sst.package.scripts = mkDeployPackageScripts deployableApps;
 
       # -------------------------------------------------------------------------
-      # Generated Files (fly.toml)
+      # Generated Files (fly.toml + per-app deploy scripts)
       # -------------------------------------------------------------------------
       stackpanel.files.entries = lib.mkMerge [
         # packages/infra/turbo.json
@@ -481,12 +488,20 @@ in
             description = "Fly.io configuration for ${appName}";
           };
         }) deployableApps)
+
+        # Per-app deploy scripts at apps/<app>/.tasks/bin/
+        (lib.mkMerge (lib.mapAttrsToList mkAppDeployFileEntries deployableApps))
       ];
 
       # -------------------------------------------------------------------------
-      # Turbo Tasks
+      # Turbo Tasks (global definitions)
       # -------------------------------------------------------------------------
-      stackpanel.tasks = lib.mkMerge (lib.mapAttrsToList mkDeployTasks deployableApps);
+      stackpanel.tasks = globalDeployTasks;
+
+      # -------------------------------------------------------------------------
+      # Per-app package.json scripts (injected into apps via appModules)
+      # -------------------------------------------------------------------------
+      # This is handled by the deploymentAppModule which adds scripts to each app
 
       # -------------------------------------------------------------------------
       # Devshell Packages
@@ -509,6 +524,17 @@ in
           name = "fly-${appName}";
           value = {
             description = "Fly.io CLI for ${appName} (pre-configured)";
+            args = [
+              {
+                name = "command";
+                description = "Flyctl command (status, logs, deploy, etc.)";
+                required = true;
+              }
+              {
+                name = "...";
+                description = "Additional flyctl arguments";
+              }
+            ];
             exec = ''
               # Wrapped flyctl with pre-configured app and config
               # Usage: fly-${appName} <command> [args...]

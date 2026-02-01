@@ -71,6 +71,7 @@
         };
       in {
         systems = exports.supportedSystems;
+        debug = true;
 
         # =============================================================
         # DOGFOODING: Use our own flakeModule

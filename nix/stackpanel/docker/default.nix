@@ -1,8 +1,8 @@
 # ==============================================================================
-# Docker & Container Module
+# Container Tooling Module
 #
-# Provides container tooling (skopeo, nix2container) and a shared option
-# namespace (stackpanel.docker.images) for other modules to contribute to.
+# Provides container tooling (skopeo) for OCI image operations.
+# For container BUILDING, use the containers module instead.
 # ==============================================================================
 {
   imports = [

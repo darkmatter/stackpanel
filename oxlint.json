@@ -1,6 +1,10 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": ["import", "typescript", "react"],
+	"plugins": [
+		"import",
+		"typescript",
+		"react"
+	],
 	"env": {
 		"browser": true,
 		"node": true
@@ -9,11 +13,17 @@
 	"rules": {
 		"eqeqeq": "warn",
 		"no-unused-vars": "warn",
-		"no-console": "off"
+		"no-console": "off",
+		"react-in-jsx-scope": "off"
 	},
 	"overrides": [
 		{
-			"files": ["*.test.ts", "*.test.tsx", "*.spec.ts", "*.spec.tsx"],
+			"files": [
+				"*.test.ts",
+				"*.test.tsx",
+				"*.spec.ts",
+				"*.spec.tsx"
+			],
 			"rules": {
 				"typescript/no-explicit-any": "off"
 			}

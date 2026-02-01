@@ -16,6 +16,7 @@
   name = "stackpanel";
   github = "darkmatter/stackpanel";
   debug = false;
+  devshell.clean.impure = false;
 
   # ---------------------------------------------------------------------------
   # Theme & IDE
@@ -154,6 +155,15 @@
   };
 
   # ---------------------------------------------------------------------------
+  # Containers
+  # ---------------------------------------------------------------------------
+  containers.settings = {
+    # Use dockerTools backend until nix2container's skopeo build is fixed
+    # nix2container's patched skopeo has Go vendoring issues
+    backend = "dockerTools";
+  };
+
+  # ---------------------------------------------------------------------------
   # Caddy Reverse Proxy
   # ---------------------------------------------------------------------------
   caddy = {
@@ -170,6 +180,12 @@
     domain = "stackpanel";
     tls = true;
     path = "apps/web";
+    container = {
+      enable = true;
+      # Bun container - requires `bun --bun vite build` in package.json
+      # to properly bundle react-dom/server for Bun runtime
+      type = "bun";
+    };
     # Enable OxLint for JavaScript/TypeScript linting
     linting.oxlint = {
       enable = true;
@@ -192,6 +208,7 @@
         memory = "512mb";
       };
       container = {
+        # Bun container - works with `bun --bun vite build`
         type = "bun";
         port = 3000;
       };

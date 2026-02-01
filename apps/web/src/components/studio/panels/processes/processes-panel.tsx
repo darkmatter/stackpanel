@@ -13,6 +13,7 @@ import {
 } from "@ui/tooltip";
 import {
   AppWindow,
+  Check,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -25,6 +26,7 @@ import {
   Server,
   Settings,
   Terminal,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -80,7 +82,12 @@ export function ProcessesPanel() {
     generateYaml,
     getEnabledSources,
   } = useProcessConfig({
-    initialSources: [...appSources, ...serviceSources, ...scriptSources, ...taskSources],
+    initialSources: [
+      ...appSources,
+      ...serviceSources,
+      ...scriptSources,
+      ...taskSources,
+    ],
     initialSettings,
   });
 
@@ -95,6 +102,7 @@ export function ProcessesPanel() {
   const [yamlDialogOpen, setYamlDialogOpen] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
   // Handle save and rebuild
   const handleSaveAndRebuild = async () => {
@@ -107,23 +115,31 @@ export function ProcessesPanel() {
     try {
       // Generate the Nix config
       const nixConfig = generateNix("partial");
-      
+
       // Write to file
       toast.info(`Writing config to ${CONFIG_PATH}...`);
       await client.writeFile(CONFIG_PATH, nixConfig.content);
-      
+
       // Rebuild the shell
       toast.info("Rebuilding devshell...");
       const result = await rebuild("devshell");
-      
+
       if (result?.success) {
-        toast.success("Configuration saved and devshell rebuilt!", { duration: 3000 });
+        toast.success("Configuration saved and devshell rebuilt!", {
+          duration: 3000,
+        });
         refetch();
       } else {
-        toast.error("Devshell rebuild failed. Check the terminal for details.", { duration: 5000 });
+        toast.error(
+          "Devshell rebuild failed. Check the terminal for details.",
+          { duration: 5000 },
+        );
       }
     } catch (err) {
-      toast.error(`Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`, { duration: 5000 });
+      toast.error(
+        `Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`,
+        { duration: 5000 },
+      );
     } finally {
       setIsSaving(false);
     }
@@ -138,7 +154,7 @@ export function ProcessesPanel() {
           {settings.commandName}
         </code>
       </div>,
-      { duration: 5000 }
+      { duration: 5000 },
     );
   };
 
@@ -149,15 +165,23 @@ export function ProcessesPanel() {
     return sourcesToFilter.filter(
       (s) =>
         s.name.toLowerCase().includes(query) ||
-        s.command.toLowerCase().includes(query)
+        s.command.toLowerCase().includes(query),
     );
   };
 
   // Get filtered sources for each tab
-  const filteredAppSources = filterSources(sources.filter((s) => s.type === "app"));
-  const filteredServiceSources = filterSources(sources.filter((s) => s.type === "service"));
-  const filteredScriptSources = filterSources(sources.filter((s) => s.type === "script"));
-  const filteredTaskSources = filterSources(sources.filter((s) => s.type === "task"));
+  const filteredAppSources = filterSources(
+    sources.filter((s) => s.type === "app"),
+  );
+  const filteredServiceSources = filterSources(
+    sources.filter((s) => s.type === "service"),
+  );
+  const filteredScriptSources = filterSources(
+    sources.filter((s) => s.type === "script"),
+  );
+  const filteredTaskSources = filterSources(
+    sources.filter((s) => s.type === "task"),
+  );
   const filteredCustomSources = filterSources(customSources);
 
   // Get enabled count for each tab
@@ -211,18 +235,24 @@ export function ProcessesPanel() {
             <div className="flex gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={() => setYamlDialogOpen(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setYamlDialogOpen(true)}
+                  >
                     <Eye className="mr-2 h-4 w-4" />
                     Preview
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Preview generated YAML and Nix config</TooltipContent>
+                <TooltipContent>
+                  Preview generated YAML and Nix config
+                </TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleSaveAndRebuild}
                     disabled={isWorking}
                   >
@@ -231,7 +261,11 @@ export function ProcessesPanel() {
                     ) : (
                       <Save className="mr-2 h-4 w-4" />
                     )}
-                    {isSaving ? "Saving..." : isRebuilding ? "Rebuilding..." : "Save & Rebuild"}
+                    {isSaving
+                      ? "Saving..."
+                      : isRebuilding
+                        ? "Rebuilding..."
+                        : "Save & Rebuild"}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -240,7 +274,7 @@ export function ProcessesPanel() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
                     onClick={handleRunDev}
                   >
@@ -268,125 +302,145 @@ export function ProcessesPanel() {
         </div>
 
         {/* Source Tabs */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Add Processes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs
-              value={activeTab}
-              onValueChange={(v) => setActiveTab(v as SourceTab)}
-            >
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="apps" className="gap-2">
-                  <AppWindow className="h-4 w-4" />
-                  Apps
-                  {enabledCounts.apps > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {enabledCounts.apps}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="services" className="gap-2">
-                  <Server className="h-4 w-4" />
-                  Services
-                  {enabledCounts.services > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {enabledCounts.services}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="scripts" className="gap-2">
-                  <FileCode className="h-4 w-4" />
-                  Scripts
-                  {enabledCounts.scripts > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {enabledCounts.scripts}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="tasks" className="gap-2">
-                  <Play className="h-4 w-4" />
-                  Tasks
-                  {enabledCounts.tasks > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {enabledCounts.tasks}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="custom" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Custom
-                  {enabledCounts.custom > 0 && (
-                    <Badge variant="secondary" className="ml-1">
-                      {enabledCounts.custom}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
+        {isAdding && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-medium">
+                  Add Processes
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => setIsAdding(false)}
+                  className="ml-auto"
+                  data-icon="inline-start"
+                >
+                  <Check />
+                  Done
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as SourceTab)}
+              >
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="apps" className="gap-2">
+                    <AppWindow className="h-4 w-4" />
+                    Apps
+                    {enabledCounts.apps > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {enabledCounts.apps}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="services" className="gap-2">
+                    <Server className="h-4 w-4" />
+                    Services
+                    {enabledCounts.services > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {enabledCounts.services}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="scripts" className="gap-2">
+                    <FileCode className="h-4 w-4" />
+                    Scripts
+                    {enabledCounts.scripts > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {enabledCounts.scripts}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="tasks" className="gap-2">
+                    <Play className="h-4 w-4" />
+                    Tasks
+                    {enabledCounts.tasks > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {enabledCounts.tasks}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="custom" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Custom
+                    {enabledCounts.custom > 0 && (
+                      <Badge variant="secondary" className="ml-1">
+                        {enabledCounts.custom}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="apps" className="mt-4">
-                <AppsSource
-                  sources={filteredAppSources}
-                  statuses={statuses}
-                  onToggle={toggleSource}
-                />
-              </TabsContent>
+                <TabsContent value="apps" className="mt-4">
+                  <AppsSource
+                    sources={filteredAppSources}
+                    statuses={statuses}
+                    onToggle={toggleSource}
+                  />
+                </TabsContent>
 
-              <TabsContent value="services" className="mt-4">
-                <ServicesSource
-                  sources={filteredServiceSources}
-                  statuses={statuses}
-                  onToggle={toggleSource}
-                />
-              </TabsContent>
+                <TabsContent value="services" className="mt-4">
+                  <ServicesSource
+                    sources={filteredServiceSources}
+                    statuses={statuses}
+                    onToggle={toggleSource}
+                  />
+                </TabsContent>
 
-              <TabsContent value="scripts" className="mt-4">
-                <ScriptsSource
-                  sources={filteredScriptSources}
-                  statuses={statuses}
-                  onToggle={toggleSource}
-                />
-              </TabsContent>
+                <TabsContent value="scripts" className="mt-4">
+                  <ScriptsSource
+                    sources={filteredScriptSources}
+                    statuses={statuses}
+                    onToggle={toggleSource}
+                  />
+                </TabsContent>
 
-              <TabsContent value="tasks" className="mt-4">
-                <TasksSource
-                  sources={filteredTaskSources}
-                  statuses={statuses}
-                  onToggle={toggleSource}
-                />
-              </TabsContent>
+                <TabsContent value="tasks" className="mt-4">
+                  <TasksSource
+                    sources={filteredTaskSources}
+                    statuses={statuses}
+                    onToggle={toggleSource}
+                  />
+                </TabsContent>
 
-              <TabsContent value="custom" className="mt-4">
-                <CustomSource
-                  sources={filteredCustomSources}
-                  statuses={statuses}
-                  onToggle={toggleSource}
-                  onAdd={addCustomSource}
-                  onRemove={removeCustomSource}
-                  onUpdate={updateCustomSource}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                <TabsContent value="custom" className="mt-4">
+                  <CustomSource
+                    sources={filteredCustomSources}
+                    statuses={statuses}
+                    onToggle={toggleSource}
+                    onAdd={addCustomSource}
+                    onRemove={removeCustomSource}
+                    onUpdate={updateCustomSource}
+                  />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Configured Processes List */}
-        <ProcessList
-          sources={getEnabledSources()}
-          statuses={statuses}
-          onRemove={(id) => {
-            // Check if custom, then remove; otherwise just disable
-            const source = customSources.find((s) => s.id === id);
-            if (source) {
-              removeCustomSource(id);
-            } else {
-              toggleSource(id, false);
-            }
-          }}
-          onToggleAutoStart={toggleAutoStart}
-          onToggleEntrypoint={toggleEntrypoint}
-        />
+        {!isAdding && (
+          <ProcessList
+            sources={getEnabledSources()}
+            statuses={statuses}
+            onRemove={(id) => {
+              // Check if custom, then remove; otherwise just disable
+              const source = customSources.find((s) => s.id === id);
+              if (source) {
+                removeCustomSource(id);
+              } else {
+                toggleSource(id, false);
+              }
+            }}
+            onToggleAutoStart={toggleAutoStart}
+            onToggleEntrypoint={toggleEntrypoint}
+            onClickAdd={() => setIsAdding(true)}
+            onClickSave={() => setIsAdding(false)}
+            isAdding={isAdding}
+          />
+        )}
 
         {/* Settings */}
         <Card>
@@ -397,7 +451,9 @@ export function ProcessesPanel() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
-                <CardTitle className="text-base font-medium">Settings</CardTitle>
+                <CardTitle className="text-base font-medium">
+                  Settings
+                </CardTitle>
               </div>
               {settingsExpanded ? (
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -408,10 +464,7 @@ export function ProcessesPanel() {
           </CardHeader>
           {settingsExpanded && (
             <CardContent>
-              <ProcessSettings
-                settings={settings}
-                onUpdate={updateSettings}
-              />
+              <ProcessSettings settings={settings} onUpdate={updateSettings} />
             </CardContent>
           )}
         </Card>
@@ -426,8 +479,13 @@ export function ProcessesPanel() {
                   Run all processes with a single command
                 </p>
                 <p className="mt-1 text-muted-foreground">
-                  Configure your processes above, then click <strong>Save & Rebuild</strong> to apply changes.
-                  Once rebuilt, run <code className="rounded bg-secondary px-1 py-0.5 text-xs">{settings.commandName}</code> in your terminal.
+                  Configure your processes above, then click{" "}
+                  <strong>Save & Rebuild</strong> to apply changes. Once
+                  rebuilt, run{" "}
+                  <code className="rounded bg-secondary px-1 py-0.5 text-xs">
+                    {settings.commandName}
+                  </code>{" "}
+                  in your terminal.
                 </p>
               </div>
             </div>

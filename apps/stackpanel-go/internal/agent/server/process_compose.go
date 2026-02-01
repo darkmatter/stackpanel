@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/gorilla/websocket"
 )
 
@@ -51,7 +53,7 @@ type ProjectState struct {
 
 // ProcessPorts represents ports used by a process.
 type ProcessPorts struct {
-	Name    string `json:"name"`
+	Name     string `json:"name"`
 	TcpPorts []int  `json:"tcpPorts,omitempty"`
 	UdpPorts []int  `json:"udpPorts,omitempty"`
 }
@@ -72,9 +74,28 @@ type LogMessage struct {
 func getProcessComposePort() string {
 	port := os.Getenv("PC_PORT_NUM")
 	if port == "" {
+		if fallback := getProcessComposePortFromState(); fallback != "" {
+			return fallback
+		}
 		port = "8080"
 	}
 	return port
+}
+
+func getProcessComposePortFromState() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	config, err := nixeval.GetConfigWithEval(ctx, "")
+	if err != nil {
+		return ""
+	}
+
+	if config.ProcessComposePort <= 0 {
+		return ""
+	}
+
+	return strconv.Itoa(config.ProcessComposePort)
 }
 
 // handleProcessComposeProcesses returns the list of processes and their status.

@@ -203,4 +203,28 @@ in
       devshellLib
     else
       throw "stackpanel.lib.devshell requires pkgs to be passed";
+
+  # ============================================================================
+  # CONTAINER BUILDING
+  # ============================================================================
+
+  # Container building utilities (nix2container and dockerTools backends)
+  # Requires both pkgs and inputs for full functionality.
+  #
+  # Usage:
+  #   containers = stackpanelLib.containers { inherit inputs; };
+  #   image = containers.mkContainer {
+  #     name = "my-app";
+  #     backend = "nix2container"; # or "dockerTools"
+  #     type = "bun";
+  #     port = 3000;
+  #     projectRoot = "/path/to/project";
+  #     buildOutputPath = "apps/web/.output";
+  #   };
+  #
+  containers =
+    { inputs ? null }:
+    import ./containers.nix {
+      inherit lib pkgs inputs;
+    };
 }
