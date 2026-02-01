@@ -86,7 +86,7 @@ func runHook(cmd *cobra.Command, args []string) error {
 	// This command validates config and confirms initialization.
 
 	if !quiet {
-		fmt.Printf("Config validated for %s\n", cfg.ProjectName)
+		fmt.Fprintf(os.Stderr, "Config validated for %s\n", cfg.ProjectName)
 		output.Success("Stackpanel initialized")
 	}
 

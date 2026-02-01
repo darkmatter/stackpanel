@@ -66,6 +66,10 @@
 		"./tooltip": {
 			"types": "./src/components/tooltip.tsx",
 			"default": "./src/components/tooltip.tsx"
+		},
+		"./field": {
+			"types": "./src/components/field.tsx",
+			"default": "./src/components/field.tsx"
 		}
 	},
 	"peerDependencies": {
@@ -74,8 +78,11 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
+		"@radix-ui/react-label": "^2.1.8",
+		"@radix-ui/react-separator": "^1.1.8",
 		"@stackpanel/ui-core": "workspace:*",
 		"@stackpanel/ui-primitives": "workspace:*",
+		"class-variance-authority": "^0.7.1",
 		"lucide-react": "^0.454.0"
 	},
 	"devDependencies": {

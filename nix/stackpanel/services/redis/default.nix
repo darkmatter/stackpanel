@@ -1,5 +1,5 @@
 # ==============================================================================
-# services/redis.nix
+# services/redis/default.nix
 #
 # Redis in-memory data store service configuration.
 # Pure functions that work with any Nix module system.
@@ -14,7 +14,7 @@
 #   - Shell hooks for automatic environment setup
 #
 # Usage:
-#   let redisLib = import ./redis.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
+#   let redisLib = import ./default.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
 #   in redisLib.mkService { projectName = "myapp"; port = 6379; }
 # ==============================================================================
 {

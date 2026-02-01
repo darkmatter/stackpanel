@@ -45,7 +45,7 @@ let
   util = config.stackpanel.util;
 
   # Import shared caddy library
-  caddyLib = import ../lib/services/caddy.nix { inherit pkgs lib; };
+  caddyLib = import ./caddy { inherit pkgs lib; };
 
   # Compute project port if not explicitly set
   projectPort =

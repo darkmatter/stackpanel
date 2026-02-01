@@ -24,35 +24,16 @@ let
   ideCfg = config.stackpanel.ide;
   vscodeCfg = ideCfg.zed;
   stackpanelCfg = config.stackpanel;
-
-  # Detect if we're working on stackpanel itself
-  # Check both project.repo and the github option (owner/repo format)
-  repoFromProject = stackpanelCfg.project.repo or "";
-  repoFromGithub =
-    let
-      parts = lib.splitString "/" (stackpanelCfg.github or "");
-    in
-    if builtins.length parts == 2 then builtins.elemAt parts 1 else "";
-  repo = if repoFromProject != "" then repoFromProject else repoFromGithub;
-  isStackpanelRepo = repo == "stackpanel";
-
-  # Get a valid local path reference (requires .stackpanel-root with real absolute path)
-  hasValidLocalRoot = stackpanelCfg.root != null && !lib.hasPrefix "/nix/store/" stackpanelCfg.root;
-  localRef = "\"git+file://${stackpanelCfg.root}\"";
-
-  # FlakeHub URL for external users
-  flakehubRef = "\"https://flakehub.com/f/darkmatter/stackpanel/*\"";
-
-  # Choose the appropriate reference:
-  # - For stackpanel repo with valid local root: use local file reference
-  # - Otherwise: use FlakeHub URL (works for users and as fallback)
-  ref = if isStackpanelRepo && hasValidLocalRoot then localRef else flakehubRef;
-
+  libnixd = import ./lib/nixd.nix { inherit lib; };
   # Expression to get stackpanel options from the flake
-  flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
+  nixdValues = libnixd.mkValues {
+    project = stackpanelCfg.project;
+    github = stackpanelCfg.github;
+    root = stackpanelCfg.root;
+  };
 
   # Helper to get submodule options from the flake output
-  mkSubOptionsExpr = optionPath: "${flakeOptionsExpr}.${optionPath}.type.getSubOptions []";
+  mkSubOptionsExpr = optionPath: "${nixdValues.flakeOptionsExpr}.${optionPath}.type.getSubOptions []";
 in
 {
   config = lib.mkIf (ideCfg.enable && vscodeCfg.enable) {
@@ -69,13 +50,14 @@ in
               "command" = [ "nixfmt" ];
             };
             "options" = {
-              # Disable default nixos options (not relevant for stackpanel projects)
+              # `config.*` option completion uses the "nixos" slot in nixd.
+              # For stackpanel development, point it at stackpanel's full options set.
               "nixos" = {
-                "expr" = "null";
+                "expr" = nixdValues.nixosOptionsExpr;
               };
-              # Full stackpanel options (from flake output)
+              # Full stackpanel options (stackpanel.*)
               "stackpanel" = {
-                "expr" = flakeOptionsExpr;
+                "expr" = nixdValues.optionsExpr;
               };
               # Submodule options for common attrs
               "sp-user" = {
@@ -86,6 +68,23 @@ in
               };
               "sp-task" = {
                 "expr" = mkSubOptionsExpr "tasks";
+              };
+            };
+          };
+          "lsp.nil" = {
+            "formatting" = {
+              "command" = [ "alejandra" ];
+            };
+            "options" = {
+              "stackpanel" = {
+                "expr" = nixdValues.optionsExpr;
+              };
+            };
+            "nix" = {
+              "maxMemoryMB" = 8192;
+              "flake" = {
+                "autoEvalInputs" = true;
+                "nixpkgsInputName" = "nixpkgs";
               };
             };
           };

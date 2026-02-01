@@ -1,15 +1,22 @@
 # ==============================================================================
 # Containers Module
 #
-# Provides nix2container-based container building via devenv's containers module.
-# This enables reproducible OCI container images without a Docker daemon.
+# Builds OCI container images using nix2container (default) or dockerTools.
 #
-# Usage:
+# Backend selection:
+#   stackpanel.containers.settings.backend = "nix2container"; # or "dockerTools"
+#
+# Per-app container configuration:
 #   stackpanel.apps.web.container.enable = true;
-#   # Then: devenv container copy web
+#
+# Commands:
+#   container-build <name>    Build container image
+#   container-copy <name>     Build + push to registry
+#   container-run <name>      Build + run locally
 # ==============================================================================
 {
   imports = [
     ./module.nix
+    ./ui.nix
   ];
 }

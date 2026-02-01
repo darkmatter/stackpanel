@@ -52,7 +52,11 @@ let
   masterKeysJson = builtins.toJSON masterKeysConfig;
 
   # Standard environments
-  standardEnvs = [ "dev" "staging" "prod" ];
+  standardEnvs = [
+    "dev"
+    "staging"
+    "prod"
+  ];
 
   # Create the wrapper script that decrypts secrets using master keys (vals backend)
   mkSecretsLoaderScript = pkgs.writeShellApplication {
@@ -141,7 +145,13 @@ let
   activeLoaderScript = if isChamber then mkChamberLoaderScript else mkSecretsLoaderScript;
 
   # Create a wrapped package for a specific app/environment
-  mkWrappedPackage = { pkg, appName, envName, secretsDir }:
+  mkWrappedPackage =
+    {
+      pkg,
+      appName,
+      envName,
+      secretsDir,
+    }:
     let
       secretsFile = "${secretsDir}/apps/${appName}/${envName}.age";
       chamberService = "${chamberServicePrefix}/${envName}";
@@ -189,17 +199,24 @@ let
     let
       secretsDir = cfg.secrets-dir;
 
-      mkAppPackages = appName: appCfg:
+      mkAppPackages =
+        appName: appCfg:
         let
           envs = appCfg.environments or standardEnvs;
           packages = appCfg.packages or [ ];
 
-          mkEnvPackages = envName:
+          mkEnvPackages =
+            envName:
             lib.listToAttrs (
               map (pkg: {
                 name = pkg.pname or pkg.name or "wrapped";
                 value = mkWrappedPackage {
-                  inherit pkg appName envName secretsDir;
+                  inherit
+                    pkg
+                    appName
+                    envName
+                    secretsDir
+                    ;
                 };
               }) packages
             );
@@ -213,7 +230,8 @@ let
     in
     lib.mapAttrs mkAppPackages wrappedCfg.apps;
 
-  flattenWrappedPackages = packages:
+  flattenWrappedPackages =
+    packages:
     lib.flatten (
       lib.mapAttrsToList (
         appName: envPkgs: lib.mapAttrsToList (envName: pkgSet: lib.attrValues pkgSet) envPkgs
@@ -289,35 +307,55 @@ in
 
     stackpanel.scripts = {
       "secrets:run" = {
-        description = "Run a command with secrets loaded (args: <app> <env> <command...>)";
+        description = "Run a command with secrets loaded from an app/environment";
+        args = [
+          {
+            name = "app-name";
+            description = "Application name";
+            required = true;
+          }
+          {
+            name = "environment";
+            description = "Environment (dev, staging, prod)";
+            required = true;
+          }
+          {
+            name = "command";
+            description = "Command to run with secrets injected";
+            required = true;
+          }
+        ];
         exec =
-          if isChamber then ''
-            if [[ $# -lt 3 ]]; then
-              echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
-              exit 1
-            fi
+          if isChamber then
+            ''
+              if [[ $# -lt 3 ]]; then
+                echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
+                exit 1
+              fi
 
-            APP_NAME="$1"
-            ENV_NAME="$2"
-            shift 2
+              APP_NAME="$1"
+              ENV_NAME="$2"
+              shift 2
 
-            CHAMBER_SERVICE="${chamberServicePrefix}/$ENV_NAME"
-            exec ${mkChamberLoaderScript}/bin/chamber-loader "$CHAMBER_SERVICE" "$@"
-          '' else ''
-            if [[ $# -lt 3 ]]; then
-              echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
-              exit 1
-            fi
+              CHAMBER_SERVICE="${chamberServicePrefix}/$ENV_NAME"
+              exec ${mkChamberLoaderScript}/bin/chamber-loader "$CHAMBER_SERVICE" "$@"
+            ''
+          else
+            ''
+              if [[ $# -lt 3 ]]; then
+                echo "Usage: secrets:run <app-name> <environment> <command> [args...]"
+                exit 1
+              fi
 
-            APP_NAME="$1"
-            ENV_NAME="$2"
-            shift 2
+              APP_NAME="$1"
+              ENV_NAME="$2"
+              shift 2
 
-            PROJECT_ROOT="''${PROJECT_ROOT:-$(pwd)}"
-            SECRETS_FILE="$PROJECT_ROOT/${cfg.secrets-dir}/apps/$APP_NAME/$ENV_NAME.age"
+              PROJECT_ROOT="''${PROJECT_ROOT:-$(pwd)}"
+              SECRETS_FILE="$PROJECT_ROOT/${cfg.secrets-dir}/apps/$APP_NAME/$ENV_NAME.age"
 
-            exec ${mkSecretsLoaderScript}/bin/secrets-loader "$SECRETS_FILE" "$@"
-          '';
+              exec ${mkSecretsLoaderScript}/bin/secrets-loader "$SECRETS_FILE" "$@"
+            '';
       };
     };
   };

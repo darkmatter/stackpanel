@@ -10,10 +10,16 @@
 export * from "@stackpanel/proto";
 
 // Import a couple of proto types used below
-import type { App as ProtoApp, GeneratedFile as ProtoGeneratedFile } from "@stackpanel/proto";
+import type {
+  App as ProtoApp,
+  GeneratedFile as ProtoGeneratedFile,
+} from "@stackpanel/proto";
 
 // Re-export selected Nix-generated types (avoid wholesale re-exports to prevent name collisions)
-export type { ServicesServices as Service, StackpanelDB as StackpanelConfig } from "./generated/nix-types";
+export type {
+  ServicesServices as Service,
+  StackpanelDB as StackpanelConfig,
+} from "./generated/nix-types";
 
 // =============================================================================
 // UI-friendly extensions
@@ -80,6 +86,71 @@ export interface SetSecretRequest {
 }
 export interface SetSecretResult {
   path: string;
+}
+
+// =============================================================================
+// Group-based secrets (SOPS files per access control group)
+// =============================================================================
+
+/** Request to write a secret to a group's SOPS file */
+export interface GroupSecretWriteRequest {
+  /** Secret key name (e.g., DATABASE_URL) */
+  key: string;
+  /** Plaintext secret value to encrypt */
+  value: string;
+  /** Access control group (e.g., "dev", "prod", "ops") */
+  group: string;
+  /** Optional description */
+  description?: string;
+}
+
+/** Response after writing a secret to a group */
+export interface GroupSecretWriteResponse {
+  /** The secret key that was written */
+  key: string;
+  /** The group the secret was written to */
+  group: string;
+  /** Relative path to the SOPS file (from project root) */
+  path: string;
+  /** Vals reference for source project configs (uses configured secrets dir) */
+  valsRef: string;
+  /** Vals reference for deployed env package (uses relative path: ref+sops://groups/<group>.yaml#/<key>) */
+  envPackageRef: string;
+  /** Number of AGE recipients the file is encrypted to */
+  recipientCount: number;
+}
+
+/** Request to read a secret from a group */
+export interface GroupSecretReadRequest {
+  /** Secret key to read */
+  key: string;
+  /** Access control group */
+  group: string;
+}
+
+/** Response after reading a secret from a group */
+export interface GroupSecretReadResponse {
+  key: string;
+  group: string;
+  value: string;
+}
+
+/** Response listing secrets in a group */
+export interface GroupSecretListResponse {
+  group: string;
+  keys: string[];
+}
+
+/** Response listing all groups and their keys */
+export interface AllGroupsListResponse {
+  groups: Record<string, string[]>;
+}
+
+/** Response from generating the env package */
+export interface GenerateEnvPackageResponse {
+  path: string;
+  apps: number;
+  groups: string[];
 }
 
 /** Health information returned by the agent */

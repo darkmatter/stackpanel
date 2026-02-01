@@ -94,6 +94,20 @@ in
       default = false;
     };
 
+    clean.impure = lib.mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Whether to use --impure flag when entering the devshell.
+        
+        --impure allows Nix to access environment variables and system state,
+        but prevents effective caching between runs.
+        
+        Set to false if you want better caching and your devshell doesn't
+        need access to parent environment state.
+      '';
+    };
+
     clean.keep = lib.mkOption {
       type = types.listOf types.str;
       default = [

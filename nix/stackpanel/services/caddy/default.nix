@@ -1,5 +1,5 @@
 # ==============================================================================
-# services/caddy.nix
+# services/caddy/default.nix
 #
 # Caddy reverse proxy utilities - pure functions for managing Caddy configuration.
 # Works with any Nix module system (flake-parts, devenv, NixOS, etc.)
@@ -23,7 +23,7 @@
 # Override with CADDY_CONFIG_DIR environment variable if needed.
 #
 # Usage:
-#   let caddyLib = import ./caddy.nix { inherit pkgs lib; };
+#   let caddyLib = import ./services/caddy { inherit pkgs lib; };
 #   in caddyLib.mkCaddyScripts { stepEnabled = true; stepCaUrl = "..."; }
 #   in caddyLib.mkProjectPort { name = "myproject"; }
 # ==============================================================================
@@ -32,7 +32,7 @@
   lib,
 }:
 rec {
-  portsLib = import ../ports.nix { inherit lib; };
+  portsLib = import ../../lib/ports.nix { inherit lib; };
 
   mkProjectPort =
     {
@@ -42,9 +42,13 @@ rec {
       modulus ? portsLib.defaults.modulus,
     }:
     portsLib.computeBasePort {
-      inherit name minPort portRange modulus;
+      inherit
+        name
+        minPort
+        portRange
+        modulus
+        ;
     };
-
 
   # Create Caddy management scripts
   # Returns an attrset of derivations that can be added to packages

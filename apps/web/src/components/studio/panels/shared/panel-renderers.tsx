@@ -21,6 +21,7 @@ import type {
 import { FieldRenderer } from "./field-renderer";
 import { FieldDisplay } from "./field-display";
 import { EditableFieldGroup, type EditableFieldItem } from "./editable-field";
+import { FieldGroup } from '@stackpanel/ui-web/field';
 
 // =============================================================================
 // Status Panel
@@ -283,15 +284,44 @@ export function AppConfigFormRenderer({
         </Badge>
       </div>
 
-      <div className="space-y-2">
+      {/* Module documentation */}
+      {panel.readme && (
+        <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-3 border border-border/50">
+          <div className="prose prose-xs prose-slate dark:prose-invert max-w-none">
+            {/* Simple markdown-like rendering: preserve paragraphs and code */}
+            {panel.readme.split("\n\n").map((paragraph, i) => {
+              // Check if it's a code block
+              if (paragraph.startsWith("```")) {
+                const code = paragraph.replace(/^```\w*\n?/, "").replace(/```$/, "");
+                return (
+                  <pre
+                    key={i}
+                    className="bg-slate-900 text-slate-300 p-2 rounded text-[10px] font-mono overflow-x-auto my-2"
+                  >
+                    <code>{code}</code>
+                  </pre>
+                );
+              }
+              // Regular paragraph
+              return (
+                <p key={i} className="mb-2 last:mb-0 leading-relaxed">
+                  {paragraph}
+                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Form fields with max width constraint */}
+      <div className="space-y-3 max-w-md">
+        <FieldGroup>
+
         {panel.fields.map((field) => {
           const currentValue = appData.config[field.name] ?? "";
 
           return (
             <div key={field.name} className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
-                {field.label ?? field.name}
-              </Label>
               <FieldRenderer
                 field={field}
                 value={currentValue}
@@ -299,9 +329,21 @@ export function AppConfigFormRenderer({
                 isSaving={patchNixData.isPending}
                 onChange={(val) => handleFieldChange(field, val)}
               />
+              {/* Help text: description and/or example */}
+              {/* {(field.description || field.example) && (
+                <div className="text-[10px] text-muted-foreground/70 leading-relaxed">
+                  {field.description && <p>{field.description}</p>}
+                  {field.example && (
+                    <p className="font-mono mt-0.5">
+                      Example: <span className="text-muted-foreground">{field.example}</span>
+                    </p>
+                  )}
+                </div>
+              )} */}
             </div>
           );
         })}
+        </FieldGroup>
       </div>
     </div>
   );

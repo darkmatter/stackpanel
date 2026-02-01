@@ -7,20 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import { TooltipProvider } from "@ui/tooltip";
 import {
-	AlertTriangle,
-	CheckCircle2,
-	ChevronDown,
-	ChevronRight,
-	Cpu,
-	Eye,
-	EyeOff,
-	Loader2,
-	Pencil,
-	Search,
-	Settings,
-	Shield,
-	Trash2,
-	VariableIcon,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Cpu,
+  Eye,
+  EyeOff,
+  Loader2,
+  Pencil,
+  Search,
+  Settings,
+  Shield,
+  Trash2,
+  VariableIcon,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -30,632 +30,667 @@ import { useVariables, useVariablesBackend } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { AddVariableDialog } from "./add-variable-dialog";
 import {
-	getTypeConfig,
-	isReadOnlyVariable,
-	VARIABLE_TYPES,
-	type VariableTypeName,
-	type VariablesBackend,
+  getTypeConfig,
+  isReadOnlyVariable,
+  VARIABLE_TYPES,
+  type VariableTypeName,
+  type VariablesBackend,
 } from "./constants";
 import {
-	AgeIdentitySettings,
-	EditSecretDialog,
-	KMSSettings,
+  AgeIdentitySettings,
+  EditSecretDialog,
+  KMSSettings,
 } from "./edit-secret-dialog";
 import { EditVariableDialog } from "./edit-variable-dialog";
 import { GroupsSection } from "./groups-section";
 import { VariableUsageInfo } from "./variable-usage-info";
 
 export function VariablesPanel() {
-	const { data: variables, isLoading, error, refetch } = useVariables();
-	const { token, isConnected } = useAgentContext();
-	const agentClient = useAgentClient();
-	const { data: backendData } = useVariablesBackend();
-	const backend: VariablesBackend = backendData?.backend ?? "vals";
-	const isChamber = backend === "chamber";
+  const { data: variables, isLoading, error, refetch } = useVariables();
+  const { token, isConnected } = useAgentContext();
+  const agentClient = useAgentClient();
+  const { data: backendData } = useVariablesBackend();
+  const backend: VariablesBackend = backendData?.backend ?? "vals";
+  const isChamber = backend === "chamber";
 
-	const { data: sopsHealth } = useModuleHealth("sops", {
-		enabled: isConnected && !isChamber,
-	});
+  const { data: sopsHealth } = useModuleHealth("sops", {
+    enabled: isConnected && !isChamber,
+  });
 
-	// Check if at least one valid decryption method is configured
-	// For chamber backend, decryption is handled by AWS — always considered valid
-	const hasValidDecryptionMethod = useMemo(() => {
-		if (isChamber) return true;
-		if (!sopsHealth?.checks) return null; // null = unknown (still loading or no data)
-		const decryptionCheckIds = ["sops-age-key-available", "sops-kms-access"];
-		return sopsHealth.checks.some(
-			(check) =>
-				decryptionCheckIds.includes(check.checkId) &&
-				check.status === "HEALTH_STATUS_HEALTHY",
-		);
-	}, [sopsHealth, isChamber]);
+  // Check if at least one valid decryption method is configured
+  // For chamber backend, decryption is handled by AWS — always considered valid
+  const hasValidDecryptionMethod = useMemo(() => {
+    if (isChamber) return true;
+    if (!sopsHealth?.checks) return null; // null = unknown (still loading or no data)
+    const decryptionCheckIds = ["sops-age-key-available", "sops-kms-access"];
+    return sopsHealth.checks.some(
+      (check) =>
+        decryptionCheckIds.includes(check.checkId) &&
+        check.status === "HEALTH_STATUS_HEALTHY",
+    );
+  }, [sopsHealth, isChamber]);
 
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedType, setSelectedType] = useState<VariableTypeName | "all">(
-		"all",
-	);
-	const [expandedId, setExpandedId] = useState<string | null>(null);
-	const [editingSecret, setEditingSecret] = useState<{
-		id: string;
-		key: string;
-	} | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState<VariableTypeName | "all">(
+    "all",
+  );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingSecret, setEditingSecret] = useState<{
+    id: string;
+    key: string;
+    group?: string;
+    value?: string;
+  } | null>(null);
 
-	// State for revealed secrets: { [variableId]: { value: string, loading: boolean } }
-	const [revealedSecrets, setRevealedSecrets] = useState<
-		Record<string, { value: string; loading: boolean }>
-	>({});
+  // State for revealed secrets: { [variableId]: { value: string, loading: boolean } }
+  const [revealedSecrets, setRevealedSecrets] = useState<
+    Record<string, { value: string; loading: boolean }>
+  >({});
 
-	// Decrypt and reveal a secret
-	const handleRevealSecret = useCallback(
-		async (variableId: string) => {
-			if (!token) {
-				toast.error("Not connected to agent");
-				return;
-			}
+  // Decrypt and reveal a secret
+  const handleRevealSecret = useCallback(
+    async (variableId: string) => {
+      if (!token) {
+        toast.error("Not connected to agent");
+        return;
+      }
 
-			// Check if already revealed
-			if (revealedSecrets[variableId]?.value) {
-				// Hide it
-				setRevealedSecrets((prev) => {
-					const next = { ...prev };
-					delete next[variableId];
-					return next;
-				});
-				return;
-			}
+      // Check if already revealed
+      if (revealedSecrets[variableId]?.value) {
+        // Hide it
+        setRevealedSecrets((prev) => {
+          const next = { ...prev };
+          delete next[variableId];
+          return next;
+        });
+        return;
+      }
 
-			// Set loading state
-			setRevealedSecrets((prev) => ({
-				...prev,
-				[variableId]: { value: "", loading: true },
-			}));
+      // Set loading state
+      setRevealedSecrets((prev) => ({
+        ...prev,
+        [variableId]: { value: "", loading: true },
+      }));
 
-			try {
-				agentClient.setToken(token);
-				const result = await agentClient.readAgenixSecret({ id: variableId });
-				setRevealedSecrets((prev) => ({
-					...prev,
-					[variableId]: { value: result.value, loading: false },
-				}));
+      try {
+        agentClient.setToken(token);
+        const result = await agentClient.readAgenixSecret({ id: variableId });
+        setRevealedSecrets((prev) => ({
+          ...prev,
+          [variableId]: { value: result.value, loading: false },
+        }));
 
-				// Auto-hide after 30 seconds
-				setTimeout(() => {
-					setRevealedSecrets((prev) => {
-						const next = { ...prev };
-						delete next[variableId];
-						return next;
-					});
-				}, 30000);
-			} catch (err) {
-				console.error("Failed to decrypt secret:", err);
-				toast.error(
-					err instanceof Error ? err.message : "Failed to decrypt secret",
-				);
-				setRevealedSecrets((prev) => {
-					const next = { ...prev };
-					delete next[variableId];
-					return next;
-				});
-			}
-		},
-		[token, agentClient, revealedSecrets],
-	);
+        // Auto-hide after 30 seconds
+        setTimeout(() => {
+          setRevealedSecrets((prev) => {
+            const next = { ...prev };
+            delete next[variableId];
+            return next;
+          });
+        }, 30000);
+      } catch (err) {
+        console.error("Failed to decrypt secret:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Failed to decrypt secret",
+        );
+        setRevealedSecrets((prev) => {
+          const next = { ...prev };
+          delete next[variableId];
+          return next;
+        });
+      }
+    },
+    [token, agentClient, revealedSecrets],
+  );
 
-	// Delete a secret (removes .age file and variables.nix entry)
-	const handleDeleteSecret = useCallback(
-		async (variableId: string) => {
-			if (!token) {
-				toast.error("Not connected to agent");
-				return;
-			}
+  // Delete a secret (removes .age file and variables.nix entry)
+  const handleDeleteSecret = useCallback(
+    async (variableId: string) => {
+      if (!token) {
+        toast.error("Not connected to agent");
+        return;
+      }
 
-			if (!confirm(`Are you sure you want to delete "${variableId}"? This will remove the encrypted secret file.`)) {
-				return;
-			}
+      if (
+        !confirm(
+          `Are you sure you want to delete "${variableId}"? This will remove the encrypted secret file.`,
+        )
+      ) {
+        return;
+      }
 
-			try {
-				agentClient.setToken(token);
-				await agentClient.deleteAgenixSecret(variableId);
-				toast.success(`Deleted secret "${variableId}"`);
-				refetch();
-			} catch (err) {
-				console.error("Failed to delete secret:", err);
-				toast.error(
-					err instanceof Error ? err.message : "Failed to delete secret",
-				);
-			}
-		},
-		[token, agentClient, refetch],
-	);
+      try {
+        agentClient.setToken(token);
+        await agentClient.deleteAgenixSecret(variableId);
+        toast.success(`Deleted secret "${variableId}"`);
+        refetch();
+      } catch (err) {
+        console.error("Failed to delete secret:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Failed to delete secret",
+        );
+      }
+    },
+    [token, agentClient, refetch],
+  );
 
-	const variablesList = useMemo(() => {
-		if (!variables) return [];
-		// With simplified schema, variable is { id, value }
-		// We derive additional display properties from id and value
-		return Object.entries(variables).map(([id, variable]) => {
-			// variable could be the Variable object or just the value string
-			const value = typeof variable === 'string' ? variable : variable?.value ?? '';
-			const varId = typeof variable === 'string' ? id : (variable?.id ?? id);
-			// Use full ID as name to avoid confusion (e.g., multiple "port" vars)
-			const name = varId;
-			// Extract env key from last segment of path for display
-			const envKey = varId.split('/').pop() ?? varId;
-			return {
-				id: varId,
-				value,
-				// UI-derived properties
-				name,
-				envKey,
-			};
-		});
-	}, [variables]);
+  const variablesList = useMemo(() => {
+    if (!variables) return [];
+    // With simplified schema, variable is { id, value }
+    // We derive additional display properties from id and value
+    return Object.entries(variables).map(([id, variable]) => {
+      // variable could be the Variable object or just the value string
+      const value =
+        typeof variable === "string" ? variable : (variable?.value ?? "");
+      const varId = typeof variable === "string" ? id : (variable?.id ?? id);
+      // Use full ID as name to avoid confusion (e.g., multiple "port" vars)
+      const name = varId;
+      // Extract env key from last segment of path for display
+      const envKey = varId.split("/").pop() ?? varId;
+      return {
+        id: varId,
+        value,
+        // UI-derived properties
+        name,
+        envKey,
+      };
+    });
+  }, [variables]);
 
-	// Filter variables based on search and type
-	const filteredVariables = useMemo(() => {
-		const query = searchQuery.trim().toLowerCase();
+  // Filter variables based on search and type
+  const filteredVariables = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
-		return variablesList
-			.filter((variable) => {
-				const matchesSearch =
-					!query ||
-					variable.name.toLowerCase().includes(query) ||
-					variable.id.toLowerCase().includes(query) ||
-					variable.value.toLowerCase().includes(query);
+    return variablesList
+      .filter((variable) => {
+        const matchesSearch =
+          !query ||
+          variable.name.toLowerCase().includes(query) ||
+          variable.id.toLowerCase().includes(query) ||
+          variable.value.toLowerCase().includes(query);
 
-				// Derive type from id and value
-				const variableUiType = getTypeConfig(variable.id, variable.value, backend).value;
-				const matchesType =
-					selectedType === "all" || selectedType === variableUiType;
+        // Derive type from id and value
+        const variableUiType = getTypeConfig(
+          variable.id,
+          variable.value,
+          backend,
+        ).value;
+        const matchesType =
+          selectedType === "all" || selectedType === variableUiType;
 
-				return matchesSearch && matchesType;
-			})
-			.sort((a, b) => a.name.localeCompare(b.name));
-	}, [variablesList, searchQuery, selectedType, backend]);
+        return matchesSearch && matchesType;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [variablesList, searchQuery, selectedType, backend]);
 
-	const toggleExpanded = (id: string) => {
-		setExpandedId((current) => (current === id ? null : id));
-	};
+  const toggleExpanded = (id: string) => {
+    setExpandedId((current) => (current === id ? null : id));
+  };
 
-	const totalVariables = variablesList.length;
-	const emptyStateMessage =
-		searchQuery || selectedType !== "all"
-			? "No variables match your search"
-			: "No variables defined yet";
+  const totalVariables = variablesList.length;
+  const emptyStateMessage =
+    searchQuery || selectedType !== "all"
+      ? "No variables match your search"
+      : "No variables defined yet";
 
-	if (isLoading) {
-		return (
-			<Card>
-				<CardContent className="flex items-center justify-center py-12">
-					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-				</CardContent>
-			</Card>
-		);
-	}
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
 
-	if (error) {
-		return (
-			<Card className="border-destructive/40">
-				<CardContent className="space-y-4 py-8 text-center">
-					<p className="text-destructive">
-						Error loading variables: {error.message}
-					</p>
-					<Button variant="outline" onClick={refetch.bind(null, undefined)}>
-						Retry
-					</Button>
-				</CardContent>
-			</Card>
-		);
-	}
+  if (error) {
+    return (
+      <Card className="border-destructive/40">
+        <CardContent className="space-y-4 py-8 text-center">
+          <p className="text-destructive">
+            Error loading variables: {error.message}
+          </p>
+          <Button variant="outline" onClick={refetch.bind(null, undefined)}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
-	return (
-		<TooltipProvider>
-			<div className="space-y-6">
-				<PanelHeader
-					title="Variables & Secrets"
-					description={`${totalVariables} variable${totalVariables !== 1 ? "s" : ""} defined`}
-					guideKey="variables"
-					size="lg"
-					actions={<AddVariableDialog onSuccess={refetch} />}
-				/>
+  return (
+    <TooltipProvider>
+      <div className="space-y-6">
+        <PanelHeader
+          title="Variables & Secrets"
+          description={`${totalVariables} variable${totalVariables !== 1 ? "s" : ""} defined`}
+          guideKey="variables"
+          size="lg"
+          actions={<AddVariableDialog onSuccess={refetch} />}
+        />
 
-				<Tabs defaultValue="manage" className="w-full">
-					<TabsList className="grid w-full grid-cols-3 max-w-md">
-						<TabsTrigger value="manage" className="flex items-center gap-2">
-							<VariableIcon className="h-4 w-4" />
-							Manage
-						</TabsTrigger>
-						<TabsTrigger value="groups" className="flex items-center gap-2">
-							<Shield className="h-4 w-4" />
-							Groups
-						</TabsTrigger>
-						<TabsTrigger value="configure" className="flex items-center gap-2">
-							<Settings className="h-4 w-4" />
-							Configure
-							{hasValidDecryptionMethod === true && (
-								<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-							)}
-							{hasValidDecryptionMethod === false && (
-								<AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-							)}
-						</TabsTrigger>
-					</TabsList>
+        <Tabs defaultValue="manage" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="manage" className="flex items-center gap-2">
+              <VariableIcon className="h-4 w-4" />
+              Manage
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Groups
+            </TabsTrigger>
+            <TabsTrigger value="configure" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Configure
+              {hasValidDecryptionMethod === true && (
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              )}
+              {hasValidDecryptionMethod === false && (
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-					<TabsContent value="manage" className="mt-6 space-y-6">
-						<div className="flex flex-col gap-4">
-							<div className="flex flex-wrap items-center gap-3">
-								<div className="relative flex-1 min-w-60">
-									<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-									<Input
-										placeholder="Search variables..."
-										value={searchQuery}
-										onChange={(e) => setSearchQuery(e.target.value)}
-										className="pl-9"
-									/>
-								</div>
-								<ToggleGroup
-									type="single"
-									variant="outline"
-									value={selectedType}
-									onValueChange={(value) => {
-										setSelectedType(
-											(value || "all") as VariableTypeName | "all",
-										);
-									}}
-									className="flex-wrap "
-								>
-									<ToggleGroupItem
-										value="all"
-										size="sm"
-										className="text-[11px] px-2"
-									>
-										All
-									</ToggleGroupItem>
-									{VARIABLE_TYPES.map((type) => {
-										const TypeIcon = type.icon;
-										return (
-											<ToggleGroupItem
-												key={type.value}
-												value={type.value}
-												size="sm"
-												className="text-[11px] px-6"
-											>
-												<TypeIcon className="size-4 opacity-80 shrink-0" />
-												{type.label}
-											</ToggleGroupItem>
-										);
-									})}
-								</ToggleGroup>
-								<div className="text-xs text-muted-foreground">
-									{filteredVariables.length} result
-									{filteredVariables.length === 1 ? "" : "s"}
-								</div>
-							</div>
-						</div>
+          <TabsContent value="manage" className="mt-6 space-y-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-60">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search variables..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={selectedType}
+                  onValueChange={(value) => {
+                    setSelectedType(
+                      (value || "all") as VariableTypeName | "all",
+                    );
+                  }}
+                  className="flex-wrap "
+                >
+                  <ToggleGroupItem
+                    value="all"
+                    size="sm"
+                    className="text-[11px] px-2"
+                  >
+                    All
+                  </ToggleGroupItem>
+                  {VARIABLE_TYPES.map((type) => {
+                    const TypeIcon = type.icon;
+                    return (
+                      <ToggleGroupItem
+                        key={type.value}
+                        value={type.value}
+                        size="sm"
+                        className="text-[11px] px-6"
+                      >
+                        <TypeIcon className="size-4 opacity-80 shrink-0" />
+                        {type.label}
+                      </ToggleGroupItem>
+                    );
+                  })}
+                </ToggleGroup>
+                <div className="text-xs text-muted-foreground">
+                  {filteredVariables.length} result
+                  {filteredVariables.length === 1 ? "" : "s"}
+                </div>
+              </div>
+            </div>
 
-						<div className="space-y-2">
-							{filteredVariables.length === 0 ? (
-								<Card>
-									<CardContent className="py-10 text-center text-muted-foreground">
-										<VariableIcon className="mx-auto h-10 w-10 text-muted-foreground/50" />
-										<p className="mt-3 text-sm">{emptyStateMessage}</p>
-									</CardContent>
-								</Card>
-							) : (
-								filteredVariables.map((variable) => {
-									const typeConfig = getTypeConfig(variable.id, variable.value, backend);
-									const TypeIcon = typeConfig.icon;
-									const isExpanded = expandedId === variable.id;
+            <div className="space-y-2">
+              {filteredVariables.length === 0 ? (
+                <Card>
+                  <CardContent className="py-10 text-center text-muted-foreground">
+                    <VariableIcon className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                    <p className="mt-3 text-sm">{emptyStateMessage}</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredVariables.map((variable) => {
+                  const typeConfig = getTypeConfig(
+                    variable.id,
+                    variable.value,
+                    backend,
+                  );
+                  const TypeIcon = typeConfig.icon;
+                  const isExpanded = expandedId === variable.id;
 
-									return (
-										<div
-											key={variable.id}
-											className="rounded-lg border border-border bg-card transition-colors hover:border-primary/50"
-										>
-											<div className="p-4">
-												<div className="flex items-start gap-3">
-													<button
-														type="button"
-														onClick={() => toggleExpanded(variable.id)}
-														className="mt-0.5 text-muted-foreground"
-													>
-														<ChevronRight
-															className={`h-4 w-4 transition-transform ${
-																isExpanded ? "rotate-90" : ""
-															}`}
-														/>
-													</button>
-													<div className="flex-1 min-w-0">
-														<div className="flex items-center gap-2 mb-1 flex-wrap">
-															<TypeIcon className={`h-6 w-6 text-muted-foreground ${typeConfig.color} rounded-full p-1`} />
-															<code className="text-sm font-semibold font-mono">
-																{variable.name}
-															</code>
-															{isReadOnlyVariable(variable.id) && (
-																<span
-																	className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-none text-amber-600 dark:text-amber-400 border border-amber-500/20"
-																	title={`Computed from ${variable.id}`}
-																>
-																	<Cpu className="h-3 w-3" />
-																	Computed
-																</span>
-															)}
-														</div>
-														<p className="text-sm text-muted-foreground">
-															{typeConfig.description}
-														</p>
-													</div>
-								{/* Edit button for non-computed variables */}
-								{!isReadOnlyVariable(variable.id) && (
-									typeConfig.value === "secret" ? (
-										<div className="flex items-center gap-1">
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => setEditingSecret({
-													id: variable.id,
-													key: variable.envKey,
-												})}
-												disabled={!token}
-												className="h-7 px-2 text-xs"
-											>
-												<Pencil className="h-3 w-3 mr-1" />
-												Edit
-											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleDeleteSecret(variable.id)}
-												disabled={!token}
-												className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-											>
-												<Trash2 className="h-3 w-3" />
-											</Button>
-										</div>
-									) : (
-										<EditVariableDialog
-											variable={{
-												id: variable.id,
-												value: variable.value,
-											}}
-											onSuccess={refetch}
-										/>
-									)
-								)}
-												</div>
-											</div>
+                  return (
+                    <div
+                      key={variable.id}
+                      className="rounded-lg border border-border bg-card transition-colors hover:border-primary/50"
+                    >
+                      <div className="p-4">
+                        <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(variable.id)}
+                            className="mt-0.5 text-muted-foreground"
+                          >
+                            <ChevronRight
+                              className={`h-4 w-4 transition-transform ${
+                                isExpanded ? "rotate-90" : ""
+                              }`}
+                            />
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <TypeIcon
+                                className={`h-6 w-6 text-muted-foreground ${typeConfig.color} rounded-full p-1`}
+                              />
+                              <code className="text-sm font-semibold font-mono">
+                                {variable.name}
+                              </code>
+                              {isReadOnlyVariable(variable.id) && (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-none text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                  title={`Computed from ${variable.id}`}
+                                >
+                                  <Cpu className="h-3 w-3" />
+                                  Computed
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {typeConfig.description}
+                            </p>
+                          </div>
+                          {/* Edit button for non-computed variables */}
+                          {!isReadOnlyVariable(variable.id) &&
+                            (typeConfig.value === "secret" ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setEditingSecret({
+                                      id: variable.id,
+                                      key: variable.envKey,
+                                    })
+                                  }
+                                  disabled={!token}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  <Pencil className="h-3 w-3 mr-1" />
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteSecret(variable.id)
+                                  }
+                                  disabled={!token}
+                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <EditVariableDialog
+                                variable={{
+                                  id: variable.id,
+                                  value: variable.value,
+                                }}
+                                onSuccess={refetch}
+                              />
+                            ))}
+                        </div>
+                      </div>
 
-											{isExpanded && (
-												<div className="border-t border-border px-4 py-4 bg-muted/30 space-y-4">
-													<div className="grid gap-4 sm:grid-cols-2">
-														<div className="space-y-1">
-															<p className="text-xs font-medium text-muted-foreground">
-																Environment Key
-															</p>
-															<p className="text-sm font-mono">
-																{variable.envKey}
-															</p>
-														</div>
-														<div className="space-y-1">
-															<p className="text-xs font-medium text-muted-foreground">
-																Value
-															</p>
-															<div className="flex items-center gap-2">
-																{typeConfig.value === "secret" ? (
-																	<>
-																		<p className="text-sm font-mono flex-1 break-all">
-																			{revealedSecrets[variable.id]?.value ||
-																				"••••••••••••••••"}
-																		</p>
-																		{/* Show/Hide button for secrets */}
-																		<Button
-																			variant="ghost"
-																			size="sm"
-																			className="h-6 px-2 text-xs shrink-0"
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				handleRevealSecret(variable.id);
-																			}}
-																			disabled={
-																				revealedSecrets[variable.id]?.loading
-																			}
-																		>
-																			{revealedSecrets[variable.id]?.loading ? (
-																				<Loader2 className="h-3 w-3 animate-spin" />
-																			) : revealedSecrets[variable.id]?.value ? (
-																				<>
-																					<EyeOff className="h-3 w-3 mr-1" />
-																					Hide
-																				</>
-																			) : (
-																				<>
-																					<Eye className="h-3 w-3 mr-1" />
-																					Show
-																				</>
-																			)}
-																		</Button>
-																		{/* Edit button for secrets */}
-																		<Button
-																			variant="ghost"
-																			size="sm"
-																			className="h-6 px-2 text-xs shrink-0"
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				setEditingSecret({
-																					id: variable.id,
-																					key: variable.envKey,
-																				});
-																			}}
-																		>
-																			<Pencil className="h-3 w-3 mr-1" />
-																			Edit
-																		</Button>
-																	</>
-																) : (
-																	<p className="text-sm font-mono">
-																		{variable.value || "—"}
-																	</p>
-																)}
-															</div>
-															{revealedSecrets[variable.id]?.value && (
-																<p className="text-xs text-muted-foreground mt-1">
-																	Auto-hides in 30 seconds
-																</p>
-															)}
-														</div>
-													<div className="space-y-1">
-														<p className="text-xs font-medium text-muted-foreground">
-															Type Details
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{typeConfig.description}
-														</p>
-													</div>
-													{isReadOnlyVariable(variable.id) && (
-														<div className="space-y-1">
-															<p className="text-xs font-medium text-muted-foreground">
-																Source
-															</p>
-															<p className="text-sm font-mono text-blue-600 dark:text-blue-400">
-																{variable.id.startsWith("/computed/services/") ? "Service" : "Computed"}
-															</p>
-														</div>
-													)}
-												</div>
-												<div>
-													<p className="text-xs font-medium text-muted-foreground mb-2">
-														Used by
-													</p>
-													<VariableUsageInfo variableId={variable.id} />
-												</div>
-												</div>
-											)}
-										</div>
-									);
-								})
-							)}
-						</div>
+                      {isExpanded && (
+                        <div className="border-t border-border px-4 py-4 bg-muted/30 space-y-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Environment Key
+                              </p>
+                              <p className="text-sm font-mono">
+                                {variable.envKey}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Value
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {typeConfig.value === "secret" ? (
+                                  <>
+                                    <p className="text-sm font-mono flex-1 break-all">
+                                      {revealedSecrets[variable.id]?.value ||
+                                        "••••••••••••••••"}
+                                    </p>
+                                    {/* Show/Hide button for secrets */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRevealSecret(variable.id);
+                                      }}
+                                      disabled={
+                                        revealedSecrets[variable.id]?.loading
+                                      }
+                                    >
+                                      {revealedSecrets[variable.id]?.loading ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : revealedSecrets[variable.id]
+                                          ?.value ? (
+                                        <>
+                                          <EyeOff className="h-3 w-3 mr-1" />
+                                          Hide
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Eye className="h-3 w-3 mr-1" />
+                                          Show
+                                        </>
+                                      )}
+                                    </Button>
+                                    {/* Edit button for secrets */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingSecret({
+                                          id: variable.id,
+                                          key: variable.envKey,
+                                        });
+                                      }}
+                                    >
+                                      <Pencil className="h-3 w-3 mr-1" />
+                                      Edit
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <p className="text-sm font-mono">
+                                    {variable.value || "—"}
+                                  </p>
+                                )}
+                              </div>
+                              {revealedSecrets[variable.id]?.value && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Auto-hides in 30 seconds
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Type Details
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {typeConfig.description}
+                              </p>
+                            </div>
+                            {isReadOnlyVariable(variable.id) && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  Source
+                                </p>
+                                <p className="text-sm font-mono text-blue-600 dark:text-blue-400">
+                                  {variable.id.startsWith("/computed/services/")
+                                    ? "Service"
+                                    : "Computed"}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">
+                              Used by
+                            </p>
+                            <VariableUsageInfo variableId={variable.id} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
 
-						<div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
-							<h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
-								<ChevronDown className="h-4 w-4" />
-								Variables vs Secrets
-							</h4>
-							<ul className="ml-6 list-disc space-y-1 text-sm text-muted-foreground">
-								<li>
-									<strong>Configs</strong> are regular environment values like
-									URLs and feature flags.
-								</li>
-								<li>
-									<strong>Secrets</strong> are sensitive values that should stay
-									encrypted.
-								</li>
-								<li>
-									Computed and service variables are generated automatically
-									based on config.
-								</li>
-							</ul>
-						</div>
-				</TabsContent>
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+              <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                <ChevronDown className="h-4 w-4" />
+                Variables vs Secrets
+              </h4>
+              <ul className="ml-6 list-disc space-y-1 text-sm text-muted-foreground">
+                <li>
+                  <strong>Configs</strong> are regular environment values like
+                  URLs and feature flags.
+                </li>
+                <li>
+                  <strong>Secrets</strong> are sensitive values that should stay
+                  encrypted.
+                </li>
+                <li>
+                  Computed and service variables are generated automatically
+                  based on config.
+                </li>
+              </ul>
+            </div>
+          </TabsContent>
 
-				<TabsContent value="groups" className="mt-6 space-y-6">
-					<GroupsSection />
-				</TabsContent>
+          <TabsContent value="groups" className="mt-6 space-y-6">
+            <GroupsSection />
+          </TabsContent>
 
-				<TabsContent value="configure" className="mt-6 space-y-6">
-					{isChamber ? (
-							<div className="space-y-4">
-								<div>
-									<h3 className="text-lg font-medium mb-1">
-										Chamber Backend
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										Secrets are managed via AWS Systems Manager Parameter Store
-										using Chamber.
-									</p>
-								</div>
+          <TabsContent value="configure" className="mt-6 space-y-6">
+            {isChamber ? (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-1">Chamber Backend</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Secrets are managed via AWS Systems Manager Parameter Store
+                    using Chamber.
+                  </p>
+                </div>
 
-								<div className="rounded-lg border border-border bg-card p-4 space-y-3">
-									<div className="flex items-center gap-2">
-										<CheckCircle2 className="h-4 w-4 text-green-500" />
-										<span className="text-sm font-medium">Active Backend: Chamber</span>
-									</div>
-									{backendData?.chamber?.servicePrefix && (
-										<div className="space-y-1">
-											<p className="text-xs font-medium text-muted-foreground">
-												Service Prefix
-											</p>
-											<code className="text-sm font-mono">
-												{backendData.chamber.servicePrefix}
-											</code>
-										</div>
-									)}
-									<p className="text-sm text-muted-foreground">
-										Secrets in <code className="bg-muted px-1 py-0.5 rounded text-xs">/dev/*</code>,{" "}
-										<code className="bg-muted px-1 py-0.5 rounded text-xs">/staging/*</code>, and{" "}
-										<code className="bg-muted px-1 py-0.5 rounded text-xs">/prod/*</code>{" "}
-										keygroups are stored as encrypted SSM parameters. Encryption is handled
-										transparently by AWS KMS.
-									</p>
-								</div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium">
+                      Active Backend: Chamber
+                    </span>
+                  </div>
+                  {backendData?.chamber?.servicePrefix && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Service Prefix
+                      </p>
+                      <code className="text-sm font-mono">
+                        {backendData.chamber.servicePrefix}
+                      </code>
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Secrets in{" "}
+                    <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                      /dev/*
+                    </code>
+                    ,{" "}
+                    <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                      /staging/*
+                    </code>
+                    , and{" "}
+                    <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                      /prod/*
+                    </code>{" "}
+                    keygroups are stored as encrypted SSM parameters. Encryption
+                    is handled transparently by AWS KMS.
+                  </p>
+                </div>
 
-								<div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
-									<h4 className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">
-										AWS Credentials Required
-									</h4>
-									<p className="text-sm text-muted-foreground">
-										Reading and writing secrets requires valid AWS credentials
-										with access to the SSM Parameter Store and KMS key.
-									</p>
-								</div>
-							</div>
-						) : (
-							<div className="space-y-4">
-								<div>
-									<h3 className="text-lg font-medium mb-1">
-										Encryption Settings
-									</h3>
-									<p className="text-sm text-muted-foreground">
-										Configure how secrets are encrypted and decrypted in this
-										project.
-									</p>
-								</div>
+                <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                  <h4 className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                    AWS Credentials Required
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Reading and writing secrets requires valid AWS credentials
+                    with access to the SSM Parameter Store and KMS key.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-1">
+                    Encryption Settings
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure how secrets are encrypted and decrypted in this
+                    project.
+                  </p>
+                </div>
 
-								<div className="space-y-4">
-									<AgeIdentitySettings />
-									<KMSSettings />
-								</div>
+                <div className="space-y-4">
+                  <AgeIdentitySettings />
+                  <KMSSettings />
+                </div>
 
-								<div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-									<h4 className="mb-2 text-sm font-medium text-amber-600 dark:text-amber-400">
-										After changing settings
-									</h4>
-									<p className="text-sm text-muted-foreground">
-										Run{" "}
-										<code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-											generate-sops-config
-										</code>{" "}
-										to update your <code>.sops.yaml</code> file with the new
-										encryption keys.
-									</p>
-								</div>
-							</div>
-						)}
-					</TabsContent>
-				</Tabs>
+                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                  <h4 className="mb-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+                    After changing settings
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Run{" "}
+                    <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                      generate-sops-config
+                    </code>{" "}
+                    to update your <code>.sops.yaml</code> file with the new
+                    encryption keys.
+                  </p>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
-				{/* Edit Secret Dialog */}
-				{editingSecret && (
-					<EditSecretDialog
-						secretId={editingSecret.id}
-						secretKey={editingSecret.key}
-						open={!!editingSecret}
-						onOpenChange={(open) => {
-							if (!open) setEditingSecret(null);
-						}}
-						onSuccess={refetch}
-					/>
-				)}
-			</div>
-		</TooltipProvider>
-	);
+        {/* Edit Secret Dialog */}
+        {editingSecret && (
+          <EditSecretDialog
+            secretId={editingSecret.id}
+            secretKey={editingSecret.key}
+            open={!!editingSecret}
+            onOpenChange={(open) => {
+              if (!open) setEditingSecret(null);
+            }}
+            onSuccess={(_valsRef) => {
+              // valsRef could be used to update the variable value if needed
+              refetch();
+            }}
+          />
+        )}
+      </div>
+    </TooltipProvider>
+  );
 }

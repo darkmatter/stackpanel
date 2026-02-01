@@ -1,5 +1,5 @@
 # ==============================================================================
-# services/minio.nix
+# minio/default.nix
 #
 # MinIO S3-compatible object storage service configuration.
 # Pure functions that work with any Nix module system.
@@ -17,7 +17,7 @@
 # Apps should use MINIO_ENDPOINT and S3_ENDPOINT for MinIO access.
 #
 # Usage:
-#   let minioLib = import ./minio.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
+#   let minioLib = import ./default.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
 #   in minioLib.mkService { projectName = "myapp"; port = 9000; }
 # ==============================================================================
 {

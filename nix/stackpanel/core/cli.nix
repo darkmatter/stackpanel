@@ -38,6 +38,10 @@ let
         workspace-name = "workspace";
       };
     };
+  pcCfg =
+    cfg.process-compose or {
+      port = null;
+    };
   appsComputed = config.stackpanel.appsComputed or { };
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =
@@ -101,6 +105,7 @@ let
     projectName = portsCfg.project-name;
     projectRoot = "$STACKPANEL_ROOT"; # Will be expanded at runtime from PWD
     basePort = portsCfg.base-port;
+    processComposePort = if pcCfg.port != null then pcCfg.port else portsCfg.base-port + 90;
 
     # Note: these must match the Go Paths struct fields (state, gen, data)
     # dirs.config is intentionally excluded - it's a Nix-time path that becomes

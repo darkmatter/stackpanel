@@ -151,7 +151,7 @@ func (s *Server) evalValsRef(ref string) (string, error) {
 		s.config.ProjectRoot,
 		nil,
 		"-c",
-		fmt.Sprintf("echo '%s' | vals eval -i -", input),
+		fmt.Sprintf("echo '%s' | vals eval -f -", input),
 	)
 	if err != nil {
 		return "", fmt.Errorf("vals eval failed: %w", err)

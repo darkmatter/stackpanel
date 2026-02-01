@@ -13,6 +13,10 @@ let
   cfg = config.stackpanel;
   deployCfg = cfg.deployment;
 
+  # Import schema and panel generator
+  cloudflareSchema = import ./schema.nix { inherit lib; };
+  panelsLib = import ../../lib/panels.nix { inherit lib; };
+
   # Get apps configured for Cloudflare deployment
   cloudflareApps = lib.filterAttrs (
     _name: appCfg:
@@ -150,5 +154,27 @@ lib.mkIf hasCloudflareApps {
       }
     ];
     rows = appStatusList;
+  };
+
+  # -------------------------------------------------------------------------
+  # Per-App Cloudflare Configuration Panel (for Deployment tab)
+  # Auto-generated from schema.nix SpField definitions
+  # -------------------------------------------------------------------------
+  stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+    module = meta.id;
+    title = "Cloudflare Configuration";
+    icon = meta.ui.icon or "cloud";
+    fields = cloudflareSchema.fields;
+    optionPrefix = "deployment.cloudflare";
+    apps = cloudflareApps;
+    # Exclude complex types
+    exclude = [
+      "bindings"
+      "secrets"
+      "kvNamespaces"
+      "d1Databases"
+      "r2Buckets"
+    ];
+    order = meta.priority + 3;
   };
 }

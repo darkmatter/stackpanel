@@ -182,6 +182,10 @@ let
             placeholder = ui.placeholder or null;
             options = ui.options or [ ];
             hidden = ui.hidden or false;
+            # Help text: use UI-specific description override, or fall back to field description
+            description = ui.description or description;
+            # Example value for additional context
+            example = ui.example or example;
           };
     in
     protoField
@@ -255,37 +259,28 @@ let
   #   };
   #
   toProtoFields =
-    fields:
-    lib.mapAttrs' (
-      name: value: lib.nameValuePair (camelToSnake name) value
-    ) fields;
+    fields: lib.mapAttrs' (name: value: lib.nameValuePair (camelToSnake name) value) fields;
 
   # ===========================================================================
   # UI metadata extraction
   # ===========================================================================
 
   # Check if a field should be visible in panels
-  isUiVisible =
-    field:
-    (field._isSpField or false)
-    && field.ui != null
-    && !(field.ui.hidden or false);
+  isUiVisible = field: (field._isSpField or false) && field.ui != null && !(field.ui.hidden or false);
 
   # Filter fields to only those visible in UI
   uiVisibleFields = fields: lib.filterAttrs (_name: isUiVisible) fields;
 
   # Extract the UI metadata from a field for panel serialization
-  fieldToUiMeta =
-    name: field:
-    {
-      inherit name;
-      type = field.ui.type;
-      label = field.ui.label;
-      editable = field.ui.editable;
-      order = field.ui.order;
-      placeholder = field.ui.placeholder;
-      options = field.ui.options;
-    };
+  fieldToUiMeta = name: field: {
+    inherit name;
+    type = field.ui.type;
+    label = field.ui.label;
+    editable = field.ui.editable;
+    order = field.ui.order;
+    placeholder = field.ui.placeholder;
+    options = field.ui.options;
+  };
 
 in
 {
@@ -311,5 +306,11 @@ in
   inherit toProtoFields camelToSnake;
 
   # UI metadata
-  inherit uiType inferUiType isUiVisible uiVisibleFields fieldToUiMeta;
+  inherit
+    uiType
+    inferUiType
+    isUiVisible
+    uiVisibleFields
+    fieldToUiMeta
+    ;
 }

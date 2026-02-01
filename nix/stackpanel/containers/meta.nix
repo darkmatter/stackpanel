@@ -6,9 +6,9 @@
 {
   id = "containers";
   name = "Containers";
-  description = "nix2container-based container building via devenv integration";
+  description = "Container building with nix2container (default) or dockerTools backend";
   category = "infrastructure";
-  version = "1.0.0";
+  version = "2.0.0";
   icon = "box";
   homepage = "https://github.com/nlewo/nix2container";
   author = "Stackpanel";
@@ -17,8 +17,8 @@
     "container"
     "nix2container"
     "docker"
+    "dockerTools"
     "oci"
-    "devenv"
     "deployment"
   ];
 
@@ -27,9 +27,9 @@
 
   features = {
     files = false;
-    scripts = false;
+    scripts = true; # Provides container-build, container-copy, container-run
     healthchecks = false;
-    packages = false;
+    packages = true; # Provides skopeo
     services = false;
     secrets = false;
     tasks = false;

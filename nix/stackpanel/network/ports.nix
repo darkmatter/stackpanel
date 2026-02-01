@@ -62,32 +62,34 @@ in
       ''
         # Display port information
         if [[ -z "''${STACKPANEL_QUIET:-}" ]]; then
-          echo ""
-          echo "📦 Stackpanel Ports (project: ${cfg.project-name})"
-          echo "   Stable port: ${toString cfg.base-port}"
+          echo "" >&2
+          echo "📦 Stackpanel Ports (project: ${cfg.project-name})" >&2
+          echo "   Stable port: ${toString cfg.base-port}" >&2
           ${lib.optionalString hasApps ''
-            echo ""
-            echo "   Apps:"
+            echo "" >&2
+            echo "   Apps:" >&2
             ${lib.concatMapStrings (
               name:
               let
                 app = appsComputedCfg.${name};
               in
               ''
-                echo "     ${name}: ${toString app.port}${lib.optionalString (app.domain != null) " -> ${app.url}"}"
+                echo "     ${name}: ${toString app.port}${
+                  lib.optionalString (app.domain != null) " -> ${app.url}"
+                }" >&2
               ''
             ) (lib.attrNames appsComputedCfg)}
           ''}
           ${lib.optionalString hasServices ''
-            echo ""
-            echo "   Services:"
+            echo "" >&2
+            echo "   Services:" >&2
             ${lib.concatMapStrings (svc: ''
-              echo "     ${svc.displayName}: ${toString svc.port}"
+              echo "     ${svc.displayName}: ${toString svc.port}" >&2
             '') (lib.attrValues servicesByKey)}
           ''}
-          echo ""
-          echo "   Tip: Set STACKPANEL_QUIET=1 to hide this message"
-          echo ""
+          echo "" >&2
+          echo "   Tip: Set STACKPANEL_QUIET=1 to hide this message" >&2
+          echo "" >&2
         fi
       ''
     ];

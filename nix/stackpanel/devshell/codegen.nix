@@ -47,7 +47,7 @@ let
     name: gen:
     lib.optionalString ((gen.onEnter or cfg.runOnEnter) == true) ''
       ${util.log.debug "codegen: running generator '${name}'"}
-      echo "▶ running codegen: ${name}"
+      echo "▶ running codegen: ${name}" >&2
       ${gen.exec}
       ${util.log.debug "codegen: generator '${name}' completed"}
     ''
