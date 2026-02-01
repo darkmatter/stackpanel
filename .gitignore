@@ -106,3 +106,4 @@ devenv.local.yaml
 .stackpanel/bin/
 .sst
 .tmp
+.envrc.local

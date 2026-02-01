@@ -32,7 +32,8 @@ type BunAppConfig struct {
 	StartScript   string                 `protobuf:"bytes,6,opt,name=start_script,json=startScript,proto3" json:"start_script,omitempty"`                                                                        // Start script for runtime
 	RuntimeEnv    map[string]string      `protobuf:"bytes,7,rep,name=runtime_env,json=runtimeEnv,proto3" json:"runtime_env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Runtime environment variables
 	InheritPath   bool                   `protobuf:"varint,8,opt,name=inherit_path,json=inheritPath,proto3" json:"inherit_path,omitempty"`                                                                       // Whether to inherit PATH from environment at runtime
-	Description   string                 `protobuf:"bytes,9,opt,name=description,proto3" json:"description,omitempty"`                                                                                           // App description
+	GenerateFiles bool                   `protobuf:"varint,9,opt,name=generate_files,json=generateFiles,proto3" json:"generate_files,omitempty"`                                                                 // Generate package.json with bun2nix postinstall and standard scripts
+	Description   string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"`                                                                                          // App description
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -123,6 +124,13 @@ func (x *BunAppConfig) GetInheritPath() bool {
 	return false
 }
 
+func (x *BunAppConfig) GetGenerateFiles() bool {
+	if x != nil {
+		return x.GenerateFiles
+	}
+	return false
+}
+
 func (x *BunAppConfig) GetDescription() string {
 	if x != nil {
 		return x.Description
@@ -134,7 +142,7 @@ var File_bun_app_proto protoreflect.FileDescriptor
 
 const file_bun_app_proto_rawDesc = "" +
 	"\n" +
-	"\rbun_app.proto\x12\x12stackpanel.modules\"\xb4\x03\n" +
+	"\rbun_app.proto\x12\x12stackpanel.modules\"\xdb\x03\n" +
 	"\fBunAppConfig\x12\x16\n" +
 	"\x06enable\x18\x01 \x01(\bR\x06enable\x12!\n" +
 	"\fmain_package\x18\x02 \x01(\tR\vmainPackage\x12\x18\n" +
@@ -146,8 +154,10 @@ const file_bun_app_proto_rawDesc = "" +
 	"\fstart_script\x18\x06 \x01(\tR\vstartScript\x12Q\n" +
 	"\vruntime_env\x18\a \x03(\v20.stackpanel.modules.BunAppConfig.RuntimeEnvEntryR\n" +
 	"runtimeEnv\x12!\n" +
-	"\finherit_path\x18\b \x01(\bR\vinheritPath\x12 \n" +
-	"\vdescription\x18\t \x01(\tR\vdescription\x1a=\n" +
+	"\finherit_path\x18\b \x01(\bR\vinheritPath\x12%\n" +
+	"\x0egenerate_files\x18\t \x01(\bR\rgenerateFiles\x12 \n" +
+	"\vdescription\x18\n" +
+	" \x01(\tR\vdescription\x1a=\n" +
 	"\x0fRuntimeEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +

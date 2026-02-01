@@ -13,5 +13,6 @@ message BunAppConfig {
   string start_script = 6; // Start script for runtime
   map<string, string> runtime_env = 7; // Runtime environment variables
   bool inherit_path = 8; // Whether to inherit PATH from environment at runtime
-  string description = 9; // App description
+  bool generate_files = 9; // Generate package.json with bun2nix postinstall and standard scripts
+  string description = 10; // App description
 }

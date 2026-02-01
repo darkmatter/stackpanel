@@ -51,7 +51,11 @@ export interface BunAppConfig {
      */
     inherit_path: boolean; // Whether to inherit PATH from environment at runtime
     /**
-     * @generated from protobuf field: string description = 9
+     * @generated from protobuf field: bool generate_files = 9
+     */
+    generate_files: boolean; // Generate package.json with bun2nix postinstall and standard scripts
+    /**
+     * @generated from protobuf field: string description = 10
      */
     description: string; // App description
 }
@@ -67,7 +71,8 @@ class BunAppConfig$Type extends MessageType<BunAppConfig> {
             { no: 6, name: "start_script", kind: "scalar", localName: "start_script", T: 9 /*ScalarType.STRING*/ },
             { no: 7, name: "runtime_env", kind: "map", localName: "runtime_env", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
             { no: 8, name: "inherit_path", kind: "scalar", localName: "inherit_path", T: 8 /*ScalarType.BOOL*/ },
-            { no: 9, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 9, name: "generate_files", kind: "scalar", localName: "generate_files", T: 8 /*ScalarType.BOOL*/ },
+            { no: 10, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<BunAppConfig>): BunAppConfig {
@@ -79,6 +84,7 @@ class BunAppConfig$Type extends MessageType<BunAppConfig> {
         message.start_script = "";
         message.runtime_env = {};
         message.inherit_path = false;
+        message.generate_files = false;
         message.description = "";
         if (value !== undefined)
             reflectionMergePartial<BunAppConfig>(this, message, value);
@@ -113,7 +119,10 @@ class BunAppConfig$Type extends MessageType<BunAppConfig> {
                 case /* bool inherit_path */ 8:
                     message.inherit_path = reader.bool();
                     break;
-                case /* string description */ 9:
+                case /* bool generate_files */ 9:
+                    message.generate_files = reader.bool();
+                    break;
+                case /* string description */ 10:
                     message.description = reader.string();
                     break;
                 default:
@@ -168,9 +177,12 @@ class BunAppConfig$Type extends MessageType<BunAppConfig> {
         /* bool inherit_path = 8; */
         if (message.inherit_path !== false)
             writer.tag(8, WireType.Varint).bool(message.inherit_path);
-        /* string description = 9; */
+        /* bool generate_files = 9; */
+        if (message.generate_files !== false)
+            writer.tag(9, WireType.Varint).bool(message.generate_files);
+        /* string description = 10; */
         if (message.description !== "")
-            writer.tag(9, WireType.LengthDelimited).string(message.description);
+            writer.tag(10, WireType.LengthDelimited).string(message.description);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

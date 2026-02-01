@@ -37,6 +37,8 @@ type Script struct {
 	Env           map[string]string      `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables to set when running the script
 	BinPath       *string                `protobuf:"bytes,4,opt,name=bin_path,json=binPath,proto3,oneof" json:"bin_path,omitempty"`                                              // Path to script executable in Nix store (computed)
 	Source        *string                `protobuf:"bytes,5,opt,name=source,proto3,oneof" json:"source,omitempty"`                                                               // Source type: inline or path (for debugging)
+	Args          []*ScriptArg           `protobuf:"bytes,6,rep,name=args,proto3" json:"args,omitempty"`                                                                         // Documented arguments for this script
+	Timeout       *int32                 `protobuf:"varint,7,opt,name=timeout,proto3,oneof" json:"timeout,omitempty"`                                                            // Maximum execution time in seconds (0 = no timeout, default: 300)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -106,6 +108,93 @@ func (x *Script) GetSource() string {
 	return ""
 }
 
+func (x *Script) GetArgs() []*ScriptArg {
+	if x != nil {
+		return x.Args
+	}
+	return nil
+}
+
+func (x *Script) GetTimeout() int32 {
+	if x != nil && x.Timeout != nil {
+		return *x.Timeout
+	}
+	return 0
+}
+
+// Documentation for a script argument.
+//
+// Arguments are purely for documentation purposes - they describe what
+// positional or named arguments the script accepts. The script itself
+// is responsible for parsing these arguments.
+type ScriptArg struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                     // Argument name (e.g., 'file', '--output', '-v')
+	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"` // Human-readable description of the argument
+	Required      *bool                  `protobuf:"varint,3,opt,name=required,proto3,oneof" json:"required,omitempty"`      // Whether the argument is required (default: false)
+	Default       *string                `protobuf:"bytes,4,opt,name=default,proto3,oneof" json:"default,omitempty"`         // Default value if not provided
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ScriptArg) Reset() {
+	*x = ScriptArg{}
+	mi := &file_scripts_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScriptArg) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScriptArg) ProtoMessage() {}
+
+func (x *ScriptArg) ProtoReflect() protoreflect.Message {
+	mi := &file_scripts_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScriptArg.ProtoReflect.Descriptor instead.
+func (*ScriptArg) Descriptor() ([]byte, []int) {
+	return file_scripts_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ScriptArg) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ScriptArg) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *ScriptArg) GetRequired() bool {
+	if x != nil && x.Required != nil {
+		return *x.Required
+	}
+	return false
+}
+
+func (x *ScriptArg) GetDefault() string {
+	if x != nil && x.Default != nil {
+		return *x.Default
+	}
+	return ""
+}
+
 // Collection of development shell scripts
 type Scripts struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -116,7 +205,7 @@ type Scripts struct {
 
 func (x *Scripts) Reset() {
 	*x = Scripts{}
-	mi := &file_scripts_proto_msgTypes[1]
+	mi := &file_scripts_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -128,7 +217,7 @@ func (x *Scripts) String() string {
 func (*Scripts) ProtoMessage() {}
 
 func (x *Scripts) ProtoReflect() protoreflect.Message {
-	mi := &file_scripts_proto_msgTypes[1]
+	mi := &file_scripts_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -141,7 +230,7 @@ func (x *Scripts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Scripts.ProtoReflect.Descriptor instead.
 func (*Scripts) Descriptor() ([]byte, []int) {
-	return file_scripts_proto_rawDescGZIP(), []int{1}
+	return file_scripts_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Scripts) GetScripts() map[string]*Script {
@@ -161,7 +250,7 @@ type ScriptsConfig struct {
 
 func (x *ScriptsConfig) Reset() {
 	*x = ScriptsConfig{}
-	mi := &file_scripts_proto_msgTypes[2]
+	mi := &file_scripts_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -173,7 +262,7 @@ func (x *ScriptsConfig) String() string {
 func (*ScriptsConfig) ProtoMessage() {}
 
 func (x *ScriptsConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_scripts_proto_msgTypes[2]
+	mi := &file_scripts_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -186,7 +275,7 @@ func (x *ScriptsConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScriptsConfig.ProtoReflect.Descriptor instead.
 func (*ScriptsConfig) Descriptor() ([]byte, []int) {
-	return file_scripts_proto_rawDescGZIP(), []int{2}
+	return file_scripts_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ScriptsConfig) GetEnable() bool {
@@ -200,20 +289,33 @@ var File_scripts_proto protoreflect.FileDescriptor
 
 const file_scripts_proto_rawDesc = "" +
 	"\n" +
-	"\rscripts.proto\x12\rstackpanel.db\"\xa0\x02\n" +
+	"\rscripts.proto\x12\rstackpanel.db\"\xf9\x02\n" +
 	"\x06Script\x12\x17\n" +
 	"\x04exec\x18\x01 \x01(\tH\x00R\x04exec\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x120\n" +
 	"\x03env\x18\x03 \x03(\v2\x1e.stackpanel.db.Script.EnvEntryR\x03env\x12\x1e\n" +
 	"\bbin_path\x18\x04 \x01(\tH\x02R\abinPath\x88\x01\x01\x12\x1b\n" +
-	"\x06source\x18\x05 \x01(\tH\x03R\x06source\x88\x01\x01\x1a6\n" +
+	"\x06source\x18\x05 \x01(\tH\x03R\x06source\x88\x01\x01\x12,\n" +
+	"\x04args\x18\x06 \x03(\v2\x18.stackpanel.db.ScriptArgR\x04args\x12\x1d\n" +
+	"\atimeout\x18\a \x01(\x05H\x04R\atimeout\x88\x01\x01\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\a\n" +
 	"\x05_execB\x0e\n" +
 	"\f_descriptionB\v\n" +
 	"\t_bin_pathB\t\n" +
-	"\a_source\"\x9b\x01\n" +
+	"\a_sourceB\n" +
+	"\n" +
+	"\b_timeout\"\xaf\x01\n" +
+	"\tScriptArg\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
+	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1f\n" +
+	"\brequired\x18\x03 \x01(\bH\x01R\brequired\x88\x01\x01\x12\x1d\n" +
+	"\adefault\x18\x04 \x01(\tH\x02R\adefault\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\v\n" +
+	"\t_requiredB\n" +
+	"\n" +
+	"\b_default\"\x9b\x01\n" +
 	"\aScripts\x12=\n" +
 	"\ascripts\x18\x01 \x03(\v2#.stackpanel.db.Scripts.ScriptsEntryR\ascripts\x1aQ\n" +
 	"\fScriptsEntry\x12\x10\n" +
@@ -234,23 +336,25 @@ func file_scripts_proto_rawDescGZIP() []byte {
 	return file_scripts_proto_rawDescData
 }
 
-var file_scripts_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_scripts_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_scripts_proto_goTypes = []any{
 	(*Script)(nil),        // 0: stackpanel.db.Script
-	(*Scripts)(nil),       // 1: stackpanel.db.Scripts
-	(*ScriptsConfig)(nil), // 2: stackpanel.db.ScriptsConfig
-	nil,                   // 3: stackpanel.db.Script.EnvEntry
-	nil,                   // 4: stackpanel.db.Scripts.ScriptsEntry
+	(*ScriptArg)(nil),     // 1: stackpanel.db.ScriptArg
+	(*Scripts)(nil),       // 2: stackpanel.db.Scripts
+	(*ScriptsConfig)(nil), // 3: stackpanel.db.ScriptsConfig
+	nil,                   // 4: stackpanel.db.Script.EnvEntry
+	nil,                   // 5: stackpanel.db.Scripts.ScriptsEntry
 }
 var file_scripts_proto_depIdxs = []int32{
-	3, // 0: stackpanel.db.Script.env:type_name -> stackpanel.db.Script.EnvEntry
-	4, // 1: stackpanel.db.Scripts.scripts:type_name -> stackpanel.db.Scripts.ScriptsEntry
-	0, // 2: stackpanel.db.Scripts.ScriptsEntry.value:type_name -> stackpanel.db.Script
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	4, // 0: stackpanel.db.Script.env:type_name -> stackpanel.db.Script.EnvEntry
+	1, // 1: stackpanel.db.Script.args:type_name -> stackpanel.db.ScriptArg
+	5, // 2: stackpanel.db.Scripts.scripts:type_name -> stackpanel.db.Scripts.ScriptsEntry
+	0, // 3: stackpanel.db.Scripts.ScriptsEntry.value:type_name -> stackpanel.db.Script
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_scripts_proto_init() }
@@ -259,13 +363,14 @@ func file_scripts_proto_init() {
 		return
 	}
 	file_scripts_proto_msgTypes[0].OneofWrappers = []any{}
+	file_scripts_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_scripts_proto_rawDesc), len(file_scripts_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

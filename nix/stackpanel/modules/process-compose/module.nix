@@ -384,7 +384,7 @@ let
         echo "   Define apps or set stackpanel.process-compose.processes."
         exit 1
       fi
-      
+
       # Check if we're running inside the devshell
       # IN_NIX_SHELL is set by nix develop, DEVENV_ROOT by devenv
       if [[ -z "''${IN_NIX_SHELL:-}" && -z "''${DEVENV_ROOT:-}" ]]; then
@@ -400,7 +400,7 @@ let
             PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
           done
         fi
-        
+
         if [[ -x "$PROJECT_ROOT/devshell" ]]; then
           exec "$PROJECT_ROOT/devshell" -- ${commandName} "$@"
         else
@@ -409,10 +409,10 @@ let
           exit 1
         fi
       fi
-      
+
       # Set PC_PORT_NUM for the process-compose API server
       export PC_PORT_NUM="${toString port}"
-      
+
       # Run process-compose - auto-detects process-compose.yaml in repo root
       # The --port flag sets the API server port
       exec ${pkgs.process-compose}/bin/process-compose --port ${toString port} "$@"
@@ -550,10 +550,13 @@ in
         in
         serviceProcesses // appProcesses // infraProcesses;
 
-      # Default environment with ports
-      stackpanel.process-compose.environment = {
-        STACKPANEL_PORTS = builtins.toJSON (cfg.ports or { });
-      };
+      # Default environment with ports and devshell env vars
+      # Merge devshell.env so services like postgres provide DATABASE_URL to processes
+      stackpanel.process-compose.environment =
+        (cfg.devshell.env or {})
+        // {
+          STACKPANEL_PORTS = builtins.toJSON (cfg.ports or { });
+        };
     })
 
     # When process-compose is enabled, build wrapper and add to devshell

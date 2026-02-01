@@ -14,15 +14,18 @@ var preflightCmd = &cobra.Command{
 	Short: "Generate config.local.nix from environment variables for pure mode",
 	Long: `Generate config.local.nix from environment variables.
 
-This command reads relevant environment variables and generates a config.local.nix
-file, allowing you to use pure mode (nix develop without --impure) by materializing
-environment-based configuration into a file.
+The purpose of this command is to allow pure evaluation while still providing a
+way to configure modules using environment variables.
 
-Environment variables processed:
-  - STACKPANEL_ROOT: Project root directory
-  - AWS_*: AWS configuration and credentials
-  - STEP_CA_*: Step CA configuration
-  - Other stackpanel-specific variables
+We add a preflight stage before the actual evaluation where all relevant environment
+variables are collected into ` + "`" + `config.initial-env = { KEY = VALUE; ... }` + "`" + `
+
+It simply represents the environment variables that were defined at eval time, except
+as an attribute set so that it can be read by nix. This file can be gitignored but
+that would require impure eval to read, so we recommend checking it in as a blank file
+with changes untracked.
+
+In pure mode, all environment variables are cleaned except those in ` + "`" + `devshell.clean.keep` + "`" + `
 
 After running this, you can use 'nix develop' (without --impure) and direnv
 will work in pure mode, making evaluation fully reproducible.`,

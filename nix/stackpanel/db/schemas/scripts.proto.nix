@@ -48,6 +48,27 @@ proto.mkProtoFile {
       #     { name = "--force"; description = "Skip confirmation prompts"; }
       #   ];
       # };
+      #
+      # # Script with custom timeout (60 seconds):
+      # api-healthcheck = {
+      #   exec = "curl -f http://localhost:3000/health";
+      #   description = "Check API health";
+      #   timeout = 60;  # 1 minute timeout
+      # };
+      #
+      # # Long-running script (10 minutes):
+      # migrate-data = {
+      #   exec = "npm run migrate:production";
+      #   description = "Run production data migration";
+      #   timeout = 600;  # 10 minute timeout
+      # };
+      #
+      # # Script with no timeout (not recommended):
+      # interactive-shell = {
+      #   exec = "bash";
+      #   description = "Open interactive bash shell";
+      #   timeout = 0;  # No timeout - use with caution
+      # };
     }
   '';
 
@@ -93,6 +114,7 @@ proto.mkProtoFile {
         description = proto.optional (proto.string 2 "Human-readable description of the script");
         env = proto.map "string" "string" 3 "Environment variables to set when running the script";
         args = proto.repeated (proto.message "ScriptArg" 6 "Documented arguments for this script");
+        timeout = proto.optional (proto.int32 7 "Maximum execution time in seconds (0 = no timeout, default: 300)");
 
         # Output options (serialized to agent - agent executes binPath directly)
         bin_path = proto.optional (proto.string 4 "Path to script executable in Nix store (computed)");
