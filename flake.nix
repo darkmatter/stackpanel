@@ -59,10 +59,7 @@
       exports = import ./nix/flake/exports.nix { inherit inputs self; };
 
       # Overlays for nixpkgs
-      overlays = [
-        inputs.gomod2nix.overlays.default
-        inputs.bun2nix.overlays.default
-      ];
+      overlays = exports.lib.requiredOverlays;
 
       # Read project root from stackpanel-root input
       projectRoot = exports.lib.readStackpanelRoot { inherit inputs; };

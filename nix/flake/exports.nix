@@ -23,6 +23,13 @@ let
     "aarch64-darwin"
   ];
 
+  # Required overlays from stackpanel's inputs
+  # These are needed for building the stackpanel CLI (buildGoApplication, bun2nix)
+  stackpanelOverlays = [
+    inputs.gomod2nix.overlays.default
+    inputs.bun2nix.overlays.default
+  ];
+
   # Function to get stackpanel options.
   # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
   #
@@ -132,7 +139,7 @@ in
         self,
         # Optional: list of systems to build for (defaults to supportedSystems)
         systems ? supportedSystems,
-        # Optional: overlays to apply to nixpkgs
+        # Optional: additional overlays to apply to nixpkgs (stackpanel's overlays are always included)
         overlays ? [ ],
         # Optional: additional stackpanel module imports
         stackpanelImports ? [ ],
@@ -140,13 +147,15 @@ in
       let
         # Read project root from stackpanel-root input if available
         projectRoot = readStackpanelRoot { inherit inputs; };
+        # Combine stackpanel's required overlays with user's overlays
+        allOverlays = stackpanelOverlays ++ overlays;
       in
       flake-utils.lib.eachSystem systems (
         system:
         let
           pkgs = import nixpkgs {
             inherit system;
-            inherit overlays;
+            overlays = allOverlays;
           };
         in
         mkOutputs {
@@ -165,6 +174,13 @@ in
     # Utility: Read stackpanel root
     # =========================================================================
     inherit readStackpanelRoot;
+
+    # =========================================================================
+    # Required overlays for stackpanel
+    # =========================================================================
+    # When using mkOutputs with custom pkgs, you must include these overlays.
+    # mkFlake applies them automatically.
+    requiredOverlays = stackpanelOverlays;
 
     # =========================================================================
     # AWS credential helpers

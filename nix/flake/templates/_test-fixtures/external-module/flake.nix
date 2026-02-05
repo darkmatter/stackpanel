@@ -29,10 +29,12 @@
     // flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = stackpanel.lib.requiredOverlays;
+        };
         spOutputs = stackpanel.lib.mkOutputs {
-          inherit inputs self system;
-          pkgs = pkgs;
+          inherit pkgs inputs self system;
         };
         sp = spOutputs.legacyPackages.stackpanelFullConfig or { };
 
