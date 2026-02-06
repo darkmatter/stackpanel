@@ -9,7 +9,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-utils.url = "github:numtide/flake-utils";
     # Override in CI with: --override-input stackpanel path:/path/to/stackpanel
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
     stackpanel-root.url = "file+file:///dev/null";
@@ -21,49 +21,56 @@
     test-module.flake = false; # Set to true when testing real module
   };
 
-  outputs = inputs@{ flake-parts, nixpkgs, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        inputs.stackpanel.flakeModules.readStackpanelRoot
-        inputs.stackpanel.flakeModules.default
-      ];
+  outputs =
+    { self, nixpkgs, flake-utils, stackpanel, ... }@inputs:
+    # Use stackpanel.lib.mkFlake for core outputs
+    stackpanel.lib.mkFlake { inherit inputs self; }
+    # Add test-specific checks
+    // flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        spOutputs = stackpanel.lib.mkOutputs {
+          inherit inputs self system;
+          pkgs = pkgs;
+        };
+        sp = spOutputs.legacyPackages.stackpanelFullConfig or { };
 
-      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-
-      perSystem = { pkgs, config, lib, system, ... }:
-        let
-          sp = config.legacyPackages.stackpanelFullConfig or {};
-          
-          # Check if test-module is a real module (has stackpanelModules)
-          hasTestModule = inputs.test-module ? stackpanelModules;
-          testModuleChecks = 
-            if hasTestModule 
-            then inputs.test-module.checks.${system} or {}
-            else {};
-        in {
-          checks = {
+        # Check if test-module is a real module (has stackpanelModules)
+        hasTestModule = inputs.test-module ? stackpanelModules;
+        testModuleChecks =
+          if hasTestModule then inputs.test-module.checks.${system} or { } else { };
+      in
+      {
+        checks =
+          {
             # Basic evaluation check
-            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" {} ''
+            stackpanel-eval = pkgs.runCommand "stackpanel-eval-check" { } ''
               echo "Fixture: external-module"
               echo "stackpanel.enable: ${if sp.enable or false then "true" else "false"}"
               touch $out
             '';
 
             # Check if external module is detected
-            external-module-detected = pkgs.runCommand "external-module-check" {} ''
-              ${if hasTestModule then ''
-                echo "✓ External module detected"
-                echo "  Module has stackpanelModules output"
-              '' else ''
-                echo "ℹ No external module configured"
-                echo "  Override test-module input to test a module:"
-                echo "  nix flake lock --override-input test-module path:/path/to/module"
-              ''}
+            external-module-detected = pkgs.runCommand "external-module-check" { } ''
+              ${
+                if hasTestModule then
+                  ''
+                    echo "✓ External module detected"
+                    echo "  Module has stackpanelModules output"
+                  ''
+                else
+                  ''
+                    echo "ℹ No external module configured"
+                    echo "  Override test-module input to test a module:"
+                    echo "  nix flake lock --override-input test-module path:/path/to/module"
+                  ''
+              }
               touch $out
             '';
           }
           # Merge in the external module's checks if available
           // testModuleChecks;
-        };
-    };
+      }
+    );
 }

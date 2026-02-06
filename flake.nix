@@ -1,5 +1,5 @@
 {
-  description = "Stackpanel - Infrastructure toolkit for NixOS, devenv, and flake-parts";
+  description = "Stackpanel - Infrastructure toolkit for NixOS and flake-utils";
 
   nixConfig = {
     extra-experimental-features = "nix-command flakes";
@@ -27,7 +27,6 @@
     agenix-rekey.url = "github:oddlama/agenix-rekey";
     agenix-rekey.inputs.nixpkgs.follows = "nixpkgs";
     flake-utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
-    flake-parts.url = "https://flakehub.com/f/hercules-ci/flake-parts/0.1.424";
     devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
     nix2container.url = "github:nlewo/nix2container";
@@ -41,97 +40,83 @@
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    # stackpanel-root contains the absolute path to the project root
+    # Created by .envrc: echo "$PWD" > .stackpanel-root
+    # This enables pure evaluation (nix flake check, nix flake show)
+    stackpanel-root.url = "path:./.stackpanel-root";
+    stackpanel-root.flake = false;
   };
 
   outputs =
-    inputs@{
+    {
       self,
       nixpkgs,
-      flake-parts,
+      flake-utils,
       ...
-    }:
-    flake-parts.lib.mkFlake { inherit inputs; } (
-      {
-        withSystem,
-        flake-parts-lib,
-        ...
-      }:
+    }@inputs:
+    let
+      # Import consolidated exports
+      exports = import ./nix/flake/exports.nix { inherit inputs self; };
+
+      # Overlays for nixpkgs
+      overlays = [
+        inputs.gomod2nix.overlays.default
+        inputs.bun2nix.overlays.default
+      ];
+
+      # Read project root from stackpanel-root input
+      projectRoot = exports.lib.readStackpanelRoot { inherit inputs; };
+    in
+    # Per-system outputs
+    flake-utils.lib.eachSystem exports.supportedSystems (
+      system:
       let
-        # Import consolidated exports
-        exports = import ./nix/flake/exports.nix {
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+
+        # Stackpanel packages (CLI, etc.)
+        packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
+
+        # Stackpanel outputs (devShells, checks, apps, legacyPackages)
+        spOutputs = import ./nix/flake/default.nix {
           inherit
+            pkgs
             inputs
-            withSystem
-            flake-parts-lib
             self
+            system
+            projectRoot
             ;
         };
       in
       {
-        systems = exports.supportedSystems;
-        debug = true;
+        # Merge stackpanel packages with outputs packages
+        packages = packages // spOutputs.packages;
 
-        # =============================================================
-        # DOGFOODING: Use our own flakeModule
-        # =============================================================
-        imports = [
-          exports.flakeModules.default
-        ];
+        # DevShells from stackpanel
+        devShells = spOutputs.devShells;
 
-        # =============================================================
-        # PER-SYSTEM CONFIG
-        # =============================================================
-        perSystem =
-          {
-            config,
-            pkgs,
-            lib,
-            system,
-            ...
-          }:
-          let
-            packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
-          in
-          {
-            _module.args.pkgs = import nixpkgs {
-              inherit system;
-              overlays = [
-                inputs.gomod2nix.overlays.default
-                inputs.bun2nix.overlays.default
-              ];
-            };
+        # Checks - include package checks plus stackpanel checks
+        checks = {
+          stackpanel = packages.stackpanel;
+          default-package = packages.default;
+        }
+        // spOutputs.checks;
 
-            # stackpanel.enable is set in .stackpanel/config.nix
-            # The flakeModule auto-loads it and creates devShells.default
-            #
-            # For devenv features (languages, services, processes), use:
-            #   devenv shell  (with devenv.nix/devenv.yaml)
+        # Apps from stackpanel
+        apps = spOutputs.apps;
 
-            # Packages
-            packages = packages;
-
-            # Checks
-            checks = {
-              stackpanel = config.packages.stackpanel;
-              default-package = config.packages.default;
-            };
-          };
-
-        # =============================================================
-        # EXPORTS (for users)
-        # =============================================================
-        flake = {
-          inherit (exports)
-            flakeModules
-            nixosModules
-            devenvModules
-            lib
-            templates
-            ;
-          # Note: stackpanelOptions is available via:
-          #   - inputs.stackpanel.lib.getOptions { inherit pkgs; }  (function)
-          #   - .#legacyPackages.${system}.stackpanelOptions  (per-project)
-        };
+        # Legacy packages for introspection
+        legacyPackages = spOutputs.legacyPackages;
       }
-    );
+    )
+    # Global (not per-system) outputs
+    // {
+      inherit (exports)
+        lib
+        nixosModules
+        devenvModules
+        templates
+        ;
+    };
 }
