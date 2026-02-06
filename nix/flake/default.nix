@@ -29,6 +29,9 @@
 let
   lib = pkgs.lib;
 
+  # Returns a list of all the entries in a folder
+  listEntries = path: map (name: path + "/${name}") (builtins.attrNames (builtins.readDir path));
+
   # Serialization helpers for JSON-safe config
   serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
 
@@ -107,23 +110,42 @@ let
   # We do NOT use devenv's `enterShell` because it contains devenv-specific
   # setup (PS1, DEVENV_STATE dirs, profile linking) that conflicts with ours.
   # ===================================================================
+
   devenvConfigPath = self + "/.stackpanel/devenv.nix";
-  devenvEval =
-    if hasDevenv then
-      (lib.evalModules {
-        modules = [
-          (inputs.devenv.modules + /top-level.nix)
-          devenvConfigPath
-          (args: {
-            # Set devenv.root for pure evaluation (required by devenv)
-            # Uses effectiveRoot which comes from readStackpanelRoot module or falls back to self
-            devenv.root = effectiveRoot;
-          })
-        ];
-        specialArgs = { inherit pkgs inputs; };
-      })
-    else
-      null;
+  devenvModule =
+    args:
+    let
+      devenv-toplevel = import (inputs.devenv.modules + /top-level.nix) args;
+    in
+    {
+      options = devenv-toplevel.options;
+      # Here we could also pick and match and not use all of devenv's
+      # imports, but only the parts that we find useful.
+      imports = devenv-toplevel.imports;
+      config = lib.recursiveUpdate devenv-toplevel.config ({
+        # Set devenv.root for pure evaluation (required by devenv)
+        # Uses effectiveRoot which comes from readStackpanelRoot module or falls back to self
+        devenv.root = effectiveRoot;
+        # Fails checking cliVersion otherwise
+        devenv.warnOnNewVersion = false;
+        # cliVersion = inputs.devenv.version;
+        # Ignore devenv's enterShell. We need the enterShell of the
+        # other submodules, but the top level one adds things that
+        # conflict with our shellHook (like PS1 modifications,
+        # DEVENV_STATE_DIR setup, profile linking, etc.)
+        enterShell = "";
+      });
+    };
+  devenvEval = lib.evalModules {
+    modules = [
+      devenvModule
+      devenvConfigPath
+    ];
+    specialArgs = {
+      inherit pkgs inputs;
+      self = inputs.devenv;
+    };
+  };
   devenvConfig = devenvEval.config or null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
@@ -150,6 +172,10 @@ let
     lib.flatten [
       hooks.before
       hooks.main
+      (lib.optionals hasDevenv [
+        "echo \"⚙️  Entering devenv shell...\""
+        devenvConfig.enterShell
+      ])
       hooks.after
     ]
   );
@@ -257,6 +283,9 @@ let
 
     # Export path to shellHook file for inspection/debugging
     STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
+
+    # Avoid running devenv tasks
+    DEVENV_SKIP_TASKS = "1";
 
     # Minimal shellHook that sources the full hook from the store
     # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stackpanel/state/shellhook.sh)
