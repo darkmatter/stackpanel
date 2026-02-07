@@ -90,11 +90,10 @@ let
   # The hook content that spawns the background runner
   tuiHookContent = lib.optionalString (enabledPrompts != [ ]) ''
     # Spawn TUI runner in background (non-blocking)
-    (
-      ${tuiRunnerScript}
-    ) ${lib.optionalString (!cfg.debug) ">/dev/null 2>&1"} &
+    _tui_pid=$(${tuiRunnerScript} ${
+      lib.optionalString (!cfg.debug) ">/dev/null 2>&1"
+    } < /dev/null & echo $!)
     ${lib.optionalString cfg.debug ''
-      _tui_pid=$!
       echo "[TUI] Background runner spawned (PID=$_tui_pid)" >&2
     ''}
   '';
@@ -125,74 +124,79 @@ in
     };
 
     prompts = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule ({ name, ... }: {
-        options = {
-          name = lib.mkOption {
-            type = lib.types.str;
-            default = name;
-            description = "Unique identifier for this prompt";
-          };
+      type = lib.types.attrsOf (
+        lib.types.submodule (
+          { name, ... }:
+          {
+            options = {
+              name = lib.mkOption {
+                type = lib.types.str;
+                default = name;
+                description = "Unique identifier for this prompt";
+              };
 
-          enable = lib.mkEnableOption "this TUI prompt" // {
-            default = true;
-          };
+              enable = lib.mkEnableOption "this TUI prompt" // {
+                default = true;
+              };
 
-          description = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "Human-readable description (shown in debug logs)";
-          };
+              description = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Human-readable description (shown in debug logs)";
+              };
 
-          script = lib.mkOption {
-            type = lib.types.lines;
-            description = ''
-              Shell script to run for this prompt.
+              script = lib.mkOption {
+                type = lib.types.lines;
+                description = ''
+                  Shell script to run for this prompt.
 
-              The script should:
-              - Check if prompting is needed (cert missing, setup incomplete, etc.)
-              - Show interactive UI (using gum, dialog, etc.)
-              - Handle errors gracefully
+                  The script should:
+                  - Check if prompting is needed (cert missing, setup incomplete, etc.)
+                  - Show interactive UI (using gum, dialog, etc.)
+                  - Handle errors gracefully
 
-              Exit codes:
-              - 0: Success (or user declined)
-              - Non-zero: Error (logged but doesn't fail shell)
-            '';
-          };
+                  Exit codes:
+                  - 0: Success (or user declined)
+                  - Non-zero: Error (logged but doesn't fail shell)
+                '';
+              };
 
-          delay = lib.mkOption {
-            type = lib.types.numbers.nonnegative;
-            default = 0;
-            description = ''
-              Additional delay (in seconds) before running this specific prompt.
-              Useful for spacing out multiple prompts.
-            '';
-          };
+              delay = lib.mkOption {
+                type = lib.types.numbers.nonnegative;
+                default = 0;
+                description = ''
+                  Additional delay (in seconds) before running this specific prompt.
+                  Useful for spacing out multiple prompts.
+                '';
+              };
 
-          order = lib.mkOption {
-            type = lib.types.int;
-            default = 100;
-            description = ''
-              Execution order (lower numbers run first).
+              order = lib.mkOption {
+                type = lib.types.int;
+                default = 100;
+                description = ''
+                  Execution order (lower numbers run first).
 
-              Suggested ranges:
-              - 0-99: Critical setup (certificates, auth)
-              - 100-199: Services and connections
-              - 200-299: Optional features
-              - 300+: Informational prompts
-            '';
-          };
+                  Suggested ranges:
+                  - 0-99: Critical setup (certificates, auth)
+                  - 100-199: Services and connections
+                  - 200-299: Optional features
+                  - 300+: Informational prompts
+                '';
+              };
 
-          dependencies = lib.mkOption {
-            type = lib.types.listOf lib.types.str;
-            default = [];
-            description = ''
-              List of other prompt names that must complete before this one.
-              (Not yet implemented - use 'order' for now)
-            '';
-          };
-        };
-      }));
-      default = {};
+              dependencies = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = ''
+                  List of other prompt names that must complete before this one.
+                  (Not yet implemented - use 'order' for now)
+                '';
+              };
+            };
+          }
+        )
+      );
+      default = { };
       description = "TUI prompts to run after shell entry";
     };
   };
