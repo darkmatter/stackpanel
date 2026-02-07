@@ -69,15 +69,18 @@ in
     ++ lib.optional cfg.tools.gotools pkgs.gotools
     ++ lib.optional cfg.lsp.enable cfg.lsp.package;
 
+    # GOROOT is a static nix store path so it can go in env.
+    # GOPATH references $STACKPANEL_STATE_DIR which is set by an earlier hook,
+    # so it must be exported from a hook (env values are escaped/quoted).
     stackpanel.devshell.env = {
       GOROOT = "${cfg.package}/share/go/";
-      GOPATH = "\${STACKPANEL_STATE_DIR:-${stateDir}}/go";
       GOTOOLCHAIN = "local";
     };
 
     stackpanel.devshell.hooks.main = [
       ''
-        # Go toolchain: add $GOPATH/bin to PATH
+        # Go toolchain: set GOPATH and add $GOPATH/bin to PATH
+        export GOPATH="''${STACKPANEL_STATE_DIR:-${stateDir}}/go"
         export PATH="$GOPATH/bin:$PATH"
       ''
     ];

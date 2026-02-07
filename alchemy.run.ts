@@ -6,11 +6,13 @@ import * as cloudflare from "alchemy/cloudflare";
 import * as docker from "alchemy/docker";
 import { NeonBranch, NeonProject } from "alchemy/neon";
 import { UpstashRedis } from "alchemy/upstash";
-import { config } from "dotenv";
+// import { config } from "dotenv";
 import * as infra from "@stackpanel/infra";
-import * as env from "@stackpanel/env";
 
-console.log(env.web.dev.env.POSTGRES_URL);
+import { env } from "@gen/env/web";
+
+console.log(env.POSTGRES_URL);
+console.log(infra.default);
 
 // ----------------------------------------------------------------------------
 // Helper: Read secrets from SSM (for API keys that are pre-populated)
@@ -443,50 +445,12 @@ export const web = await cloudflare.Vite("web", {
   },
 });
 
-export const server = await cloudflare.Worker("server", {
-  cwd: "apps/server",
-  entrypoint: "src/index.ts",
-  compatibility: "node",
-  bindings: {
-    // Database (Devenv, Neon, or Docker Postgres)
-    DATABASE_URL: alchemy.secret(databaseUrl),
-
-    // Cache (Devenv, Upstash, or Docker Valkey)
-    REDIS_URL: redisUrl,
-    ...(redisToken
-      ? { UPSTASH_REDIS_REST_TOKEN: alchemy.secret(redisToken) }
-      : {}),
-
-    // Auth & API
-    CORS_ORIGIN: process.env.CORS_ORIGIN || "",
-    ...(process.env.BETTER_AUTH_SECRET
-      ? { BETTER_AUTH_SECRET: alchemy.secret(process.env.BETTER_AUTH_SECRET) }
-      : {}),
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || "",
-    ...(process.env.GOOGLE_GENERATIVE_AI_API_KEY
-      ? {
-          GOOGLE_GENERATIVE_AI_API_KEY: alchemy.secret(
-            process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-          ),
-        }
-      : {}),
-    ...(process.env.POLAR_ACCESS_TOKEN
-      ? { POLAR_ACCESS_TOKEN: alchemy.secret(process.env.POLAR_ACCESS_TOKEN) }
-      : {}),
-    POLAR_SUCCESS_URL: process.env.POLAR_SUCCESS_URL || "",
-  },
-  dev: {
-    port: devServerPort,
-  },
-});
-
 // ============================================================================
 // Exports
 // ============================================================================
 export { databaseUrl, redisUrl, redisToken, caddyConfig };
 
 console.log(`Web    -> ${web.url}`);
-console.log(`Server -> ${server.url}`);
 if (caddyConfig) {
   console.log(`Caddy  -> ${caddyConfig.url}`);
 }
