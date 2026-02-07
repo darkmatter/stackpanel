@@ -240,9 +240,16 @@ let
     # Run the hook with all output to stderr (so direnv doesn't capture/evaluate it)
     # Optionally tee to log file if state dir exists
     if [[ -d "''${STACKPANEL_STATE_DIR:-.stackpanel/state}" ]] 2>/dev/null; then
-      __stackpanel_shell_hook_main 2>&1 | tee -a "''${STACKPANEL_STATE_DIR:-.stackpanel/state}/shell.log" >&2
+      __stackpanel_shell_hook_main 2> \
+          >(tee -a "''${STACKPANEL_STATE_DIR:-.stackpanel/state}/shell.log" >&2) \
+        || status=$?
     else
-      __stackpanel_shell_hook_main >&2
+      __stackpanel_shell_hook_main >&2 \
+        || status=$?
+    fi
+    if [[ $status -ne 0 ]]; then
+      echo "❌ Stackpanel shell hook exited with status $status" >&2
+      exit $status
     fi
   '';
 
