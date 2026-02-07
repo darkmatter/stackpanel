@@ -240,6 +240,9 @@ let
     # Run the hook with all output to stderr (so direnv doesn't capture/evaluate it)
     # Optionally tee to log file if state dir exists
     if [[ -d "''${STACKPANEL_STATE_DIR:-.stackpanel/state}" ]] 2>/dev/null; then
+      CLICOLOR_FORCE=1 \
+      FORCE_COLOR=3 \
+      COLORTERM=truecolor \
       __stackpanel_shell_hook_main 2> \
           >(tee -a "''${STACKPANEL_STATE_DIR:-.stackpanel/state}/shell.log" >&2) \
         || status=$?
