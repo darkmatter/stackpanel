@@ -140,7 +140,7 @@ proto.mkProtoFile {
       #   codegen = {
       #     typescript = {
       #       name = "env";
-      #       directory = "packages/env/src/generated";
+      #       directory = "packages/gen/env/src/generated";
       #       language = "typescript";
       #     };
       #   };

@@ -21,7 +21,7 @@ let
   cloudflareApps = lib.filterAttrs (
     _name: appCfg:
     (appCfg.deployment.enable or false)
-    && (appCfg.deployment.provider or deployCfg.defaultProvider) == "cloudflare"
+    && (appCfg.deployment.host or deployCfg.defaultHost or "cloudflare") == "cloudflare"
   ) (cfg.apps or { });
 
   hasCloudflareApps = cloudflareApps != { };

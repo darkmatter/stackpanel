@@ -78,18 +78,23 @@
         enable = true;
         type = "bun";
       };
+      framework.tanstack-start.enable = true;
       deployment = {
-        container = {
-          port = 3000;
-          type = "bun";
-        };
         enable = true;
-        fly = {
-          appName = "stackpanel-web";
-          memory = "512mb";
-          region = "iad";
-        };
-        provider = "fly";
+        host = "cloudflare";
+        bindings = [
+          "DATABASE_URL"
+          "CORS_ORIGIN"
+          "BETTER_AUTH_SECRET"
+          "BETTER_AUTH_URL"
+          "POLAR_ACCESS_TOKEN"
+          "POLAR_SUCCESS_URL"
+        ];
+        secrets = [
+          "DATABASE_URL"
+          "BETTER_AUTH_SECRET"
+          "POLAR_ACCESS_TOKEN"
+        ];
       };
       description = "Main web application";
       domain = "stackpanel";
@@ -98,7 +103,7 @@
           env = {
             APP_HOST = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/url";
             MEMO_MEMOAS_AD = "foobar";
-            OPENAI_API_KEY = "ref+sops://packages/env/data/web/dev.yaml#/OPENAI_API_KEY";
+            OPENAI_API_KEY = "ref+sops://packages/gen/env/data/web/dev.yaml#/OPENAI_API_KEY";
             PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/port";
             POSTGRES_URL = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL";
           };
@@ -106,7 +111,7 @@
         };
         prod = {
           env = {
-            OPENAI_API_KEY = "ref+sops://packages/env/data/web/prod.yaml#/OPENAI_API_KEY";
+            OPENAI_API_KEY = "ref+sops://packages/gen/env/data/web/prod.yaml#/OPENAI_API_KEY";
           };
           name = "prod";
         };
@@ -319,7 +324,7 @@
   # Packages (resolved to nixpkgs by the module system)
   # ---------------------------------------------------------------------------
   packages = [
-		"sops"
+    "sops"
     "air"
     "buf"
     "git"
@@ -327,6 +332,7 @@
     "gomod2nix"
     "jq"
     "nixd"
+    "nixfmt"
     "oxfmt"
     "oxlint"
     "quicktype"
@@ -359,7 +365,7 @@
     backend = "chamber";
     codegen = {
       typescript = {
-        directory = "packages/env/src/generated";
+        directory = "packages/gen/env/src/generated";
         language = "CODEGEN_LANGUAGE_TYPESCRIPT";
         name = "env";
       };
@@ -495,6 +501,19 @@
       env = { };
       exec = "turbo run typecheck";
     };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Languages (replaces devenv languages.* config)
+  # ---------------------------------------------------------------------------
+  languages = {
+    go.enable = true;
+    javascript = {
+      enable = true;
+      bun.enable = true;
+      bun.install.enable = true;
+    };
+    typescript.enable = true;
   };
 
   # ---------------------------------------------------------------------------

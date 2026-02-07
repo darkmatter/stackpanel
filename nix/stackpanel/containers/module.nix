@@ -130,7 +130,7 @@ let
 
       # Check if Fly.io deployment is enabled for this app
       deployment = appCfg.deployment or { };
-      isFlyDeployment = (deployment.enable or false) && (deployment.provider or "cloudflare") == "fly";
+      isFlyDeployment = (deployment.enable or false) && (deployment.host or "cloudflare") == "fly";
       flyConfig = deployment.fly or { };
 
       # Fly-specific overrides
@@ -145,9 +145,12 @@ let
     {
       # Use fly appName if fly deployment is enabled, otherwise container.name or appName
       name =
-        if isFlyDeployment then flyAppName
-        else if container.name != null then container.name
-        else appName;
+        if isFlyDeployment then
+          flyAppName
+        else if container.name != null then
+          container.name
+        else
+          appName;
       version = container.version;
       type = container.type;
       port = container.port;

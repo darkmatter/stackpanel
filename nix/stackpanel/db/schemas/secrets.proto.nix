@@ -31,13 +31,13 @@ proto.mkProtoFile {
       #     age-pub = "age1...";  # computed from private key
       #     ref = "ref+file://.stackpanel/state/keys/local.txt";
       #   };
-      #   
+      #
       #   # Team dev key - stored in AWS SSM
       #   dev = {
       #     age-pub = "age1...";
       #     ref = "ref+awsssm://stackpanel/keys/dev";
       #   };
-      #   
+      #
       #   # Production key
       #   prod = {
       #     age-pub = "age1...";
@@ -54,7 +54,7 @@ proto.mkProtoFile {
       # codegen = {
       #   typescript = {
       #     name = "env";
-      #     directory = "packages/env/src/generated";
+      #     directory = "packages/gen/env/src/generated";
       #     language = "typescript";
       #   };
       # };

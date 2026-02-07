@@ -6,7 +6,6 @@
 #
 # Simplified architecture:
 #   - ONE flakeModule (default) that handles everything
-#   - Devenv is the shell backend (always)
 #   - Config auto-loaded from .stackpanel/
 # ==============================================================================
 {
@@ -57,15 +56,9 @@ in
   # ===========================================================================
   flakeModules = {
     # Main stackpanel flake-parts module
-    # This is THE module - auto-loads config, creates devenv shell, exposes outputs
+    # Auto-loads config, creates devShells.default, exposes outputs
     # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
     default = importApply ./default.nix {
-      localFlake = self;
-      inherit withSystem;
-    };
-
-    # Alias for backwards compatibility
-    devenv = importApply ./default.nix {
       localFlake = self;
       inherit withSystem;
     };
@@ -115,24 +108,13 @@ in
   # NIXOS MODULES (for NixOS users)
   # ===========================================================================
   nixosModules = {
-    default = ./modules/devenv.nix;
+    default = ../stackpanel/default.nix;
     aws = ../stackpanel/services/aws.nix;
     network = ../stackpanel/network/network.nix;
     secrets = ../stackpanel/secrets/default.nix;
     theme = ../stackpanel/lib/theme.nix;
     caddy = ../stackpanel/services/caddy.nix;
     ci = ../stackpanel/apps/ci.nix;
-  };
-
-  # ===========================================================================
-  # DEVENV MODULES (for devenv users - yaml and flake-parts)
-  # ===========================================================================
-  # Usage in devenv.shells.default:
-  #   imports = [ inputs.stackpanel.devenvModules.default ];
-  devenvModules = {
-    default = ./modules/devenv.nix;
-    # Alias for backwards compatibility
-    devshell = ./modules/devenv.nix;
   };
 
   # ===========================================================================
@@ -148,23 +130,6 @@ in
     # Fly.io OIDC to AWS authentication
     # Usage: inputs.stackpanel.lib.flyOidc { pkgs = pkgsLinux; }
     flyOidc = import ../stackpanel/lib/services/fly-oidc.nix;
-
-    # Wrap devenv input to extract schema and inject into modules
-    # This enables bidirectional mapping: devenv options ↔ stackpanel state
-    #
-    # Usage in your flake.nix:
-    #   let
-    #     wrappedDevenv = inputs.stackpanel.lib.wrapDevenv { inherit inputs; };
-    #   in {
-    #     devShells.default = wrappedDevenv.lib.mkShell { ... };
-    #     # Access schema: wrappedDevenv.schema
-    #   }
-    #
-    # The wrapped devenv:
-    #   - Extracts available services, languages, pre-commit hooks
-    #   - Injects schema via specialArgs to all modules
-    #   - Exposes schema for state.json serialization
-    wrapDevenv = import ../lib/wrap-devenv.nix;
 
     # Get stackpanel module options for introspection
     # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
@@ -200,17 +165,12 @@ in
   templates = {
     default = {
       path = ./templates/default;
-      description = "Stackpanel + devenv + flake-parts (recommended)";
+      description = "Stackpanel + flake-parts (recommended)";
     };
     minimal = {
       path = ./templates/minimal;
       description = "Stackpanel minimal setup";
     };
-    devenv = {
-      path = ./templates/devenv;
-      description = "Stackpanel + devenv standalone (devenv.yaml)";
-    };
-
     # =========================================================================
     # Test Fixtures (for module authors and CI testing)
     # =========================================================================
