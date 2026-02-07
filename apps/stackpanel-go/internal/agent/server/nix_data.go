@@ -407,9 +407,10 @@ func (s *Server) nixDataDir() string {
 	return filepath.Join(s.config.ProjectRoot, ".stackpanel")
 }
 
-// nixDataFilePath returns the path to the single consolidated data.nix file.
+// nixDataFilePath returns the path to the single consolidated config.nix file.
+// This is the single source of truth for all stackpanel configuration.
 func (s *Server) nixDataFilePath() string {
-	return filepath.Join(s.nixDataDir(), "data.nix")
+	return filepath.Join(s.nixDataDir(), "config.nix")
 }
 
 // nixLegacyDataDir returns the path to the legacy data/ directory (for migration).
@@ -431,6 +432,14 @@ func (s *Server) nixDataPath(entity string) string {
 	}
 	// Use the single data.nix file (entity is a key within it)
 	return s.nixDataFilePath()
+}
+
+// isUsingConsolidatedConfig checks if an entity is stored in the consolidated config.nix
+// rather than a legacy individual file like data/apps.nix.
+func (s *Server) isUsingConsolidatedConfig(entity string) bool {
+	legacyPath := filepath.Join(s.nixLegacyDataDir(), entity+".nix")
+	_, err := os.Stat(legacyPath)
+	return os.IsNotExist(err)
 }
 
 func (s *Server) nixExternalDataPath(entity string) string {
@@ -502,8 +511,10 @@ func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 	}
 
 	dataPath := s.nixDataPath(entity)
+	isConsolidated := s.isUsingConsolidatedConfig(entity)
 	if isExternalEntity(entity) {
 		dataPath = s.nixExternalDataPath(entity)
+		isConsolidated = false
 	}
 
 	// Check if file exists
@@ -513,7 +524,11 @@ func (s *Server) readNixEntityJSON(entity string) ([]byte, error) {
 	}
 
 	// Evaluate the Nix file to get JSON
+	// For consolidated config.nix, extract just the entity attribute
 	args := []string{"eval", "--impure", "--json", "-f", dataPath}
+	if isConsolidated {
+		args = append(args, entity)
+	}
 	res, err := s.exec.RunNix(args...)
 	if err != nil {
 		return nil, err
@@ -763,10 +778,23 @@ func (s *Server) readNixDataFile(entity string) (any, error) {
 }
 
 // =============================================================================
-// Consolidated data.nix Support
+// Consolidated config.nix Support
 // =============================================================================
 
-// readConsolidatedData reads the entire data.nix file as a map.
+// configNixHeader is the file header added to config.nix when writing.
+const configNixHeader = `# ==============================================================================
+# config.nix
+#
+# Stackpanel project configuration.
+# Both human-editable and machine-editable (single source of truth).
+#
+# Machine writes will sort keys alphabetically and format with nixfmt.
+# For config that needs pkgs/lib (computed values, custom packages),
+# use .stackpanel/modules/ which has full NixOS module context.
+# ==============================================================================
+`
+
+// readConsolidatedData reads the entire config.nix file as a map.
 func (s *Server) readConsolidatedData() (map[string]any, error) {
 	dataPath := s.nixDataFilePath()
 
@@ -794,10 +822,10 @@ func (s *Server) readConsolidatedData() (map[string]any, error) {
 	return data, nil
 }
 
-// writeConsolidatedData writes the entire data map to data.nix.
+// writeConsolidatedData writes the entire data map to config.nix.
 func (s *Server) writeConsolidatedData(data map[string]any) error {
-	// Serialize to Nix
-	nixExpr, err := nixser.SerializeIndented(data, "  ")
+	// Serialize to Nix with section comments
+	nixExpr, err := nixser.SerializeWithSections(data, "  ", getSectionHeaders())
 	if err != nil {
 		return err
 	}
@@ -808,22 +836,54 @@ func (s *Server) writeConsolidatedData(data map[string]any) error {
 		return err
 	}
 
-	// Write the file
+	// Write the file with header
 	dataPath := s.nixDataFilePath()
-	if err := os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644); err != nil {
+	content := configNixHeader + nixExpr + "\n"
+	if err := os.WriteFile(dataPath, []byte(content), 0o644); err != nil {
 		return err
 	}
 
 	log.Info().
 		Str("path", dataPath).
-		Msg("writeConsolidatedData: successfully wrote data.nix")
+		Msg("writeConsolidatedData: successfully wrote config.nix")
 
 	return nil
 }
 
-// patchConsolidatedData patches a value at a nested path within data.nix.
+// getSectionHeaders returns the section header comments for top-level config keys.
+func getSectionHeaders() map[string]string {
+	return map[string]string{
+		"apps":           "Apps",
+		"aws":            "AWS",
+		"binary-cache":   "Binary Cache",
+		"caddy":          "Caddy",
+		"cli":            "CLI",
+		"containers":     "Containers",
+		"debug":          "Debug",
+		"deployment":     "Deployment",
+		"devshell":       "Devshell",
+		"enable":         "Project",
+		"git-hooks":      "Git Hooks",
+		"github":         "GitHub",
+		"globalServices": "Global Services",
+		"ide":            "IDE",
+		"motd":           "MOTD",
+		"name":           "Name",
+		"packages":       "Packages",
+		"ports":          "Ports",
+		"secrets":        "Secrets",
+		"sst":            "SST",
+		"step-ca":        "Step CA",
+		"tasks":          "Tasks",
+		"theme":          "Theme",
+		"users":          "Users",
+		"variables":      "Variables",
+	}
+}
+
+// patchConsolidatedData patches a value at a nested path within config.nix.
 // The path is dot-separated and uses camelCase (converted to kebab-case for Nix).
-// Example: "deployment.fly.organization" -> data.deployment.fly.organization
+// Example: "deployment.fly.organization" -> config.deployment.fly.organization
 func (s *Server) patchConsolidatedData(path string, value any) error {
 	// Read existing data
 	data, err := s.readConsolidatedData()
@@ -862,7 +922,7 @@ func (s *Server) patchConsolidatedData(path string, value any) error {
 }
 
 // parseConfigPath parses a configPath like "stackpanel.deployment.fly.organization"
-// and returns the path within data.nix (without the "stackpanel." prefix).
+// and returns the path within config.nix (without the "stackpanel." prefix).
 func parseConfigPath(configPath string) string {
 	// Remove "stackpanel." prefix if present
 	path := strings.TrimPrefix(configPath, "stackpanel.")

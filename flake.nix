@@ -41,25 +41,22 @@
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    # stackpanel-root contains the absolute path to the project root
-    # Created by .envrc: echo "$PWD" > .stackpanel-root
-    # This enables pure evaluation (nix flake check, nix flake show)
-    stackpanel-root.url = "path:./.stackpanel-root";
-    stackpanel-root.flake = false;
   };
 
-  outputs = inputs @ {
-    self,
-    nixpkgs,
-    flake-parts,
-    ...
-  }:
-    flake-parts.lib.mkFlake {inherit inputs;} (
+  outputs =
+    inputs@{
+      self,
+      nixpkgs,
+      flake-parts,
+      ...
+    }:
+    flake-parts.lib.mkFlake { inherit inputs; } (
       {
         withSystem,
         flake-parts-lib,
         ...
-      }: let
+      }:
+      let
         # Import consolidated exports
         exports = import ./nix/flake/exports.nix {
           inherit
@@ -69,7 +66,8 @@
             self
             ;
         };
-      in {
+      in
+      {
         systems = exports.supportedSystems;
         debug = true;
 
@@ -77,54 +75,53 @@
         # DOGFOODING: Use our own flakeModule
         # =============================================================
         imports = [
-          exports.flakeModules.readStackpanelRoot
           exports.flakeModules.default
         ];
-
-        # projectRoot is set by readStackpanelRoot module (reads from .stackpanel-root file)
 
         # =============================================================
         # PER-SYSTEM CONFIG
         # =============================================================
-        perSystem = {
-          config,
-          pkgs,
-          lib,
-          system,
-          ...
-        }: let
-          packages = import ./nix/flake/packages.nix {inherit pkgs inputs;};
-        in {
-          _module.args.pkgs = import nixpkgs {
-            inherit system;
-            overlays = [
-              inputs.gomod2nix.overlays.default
-              inputs.bun2nix.overlays.default
-            ];
+        perSystem =
+          {
+            config,
+            pkgs,
+            lib,
+            system,
+            ...
+          }:
+          let
+            packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
+          in
+          {
+            _module.args.pkgs = import nixpkgs {
+              inherit system;
+              overlays = [
+                inputs.gomod2nix.overlays.default
+                inputs.bun2nix.overlays.default
+              ];
+            };
+
+            # stackpanel.enable is set in .stackpanel/config.nix
+            # The flakeModule auto-loads it and creates devShells.default
+            #
+            # For devenv features (languages, services, processes), use:
+            #   devenv shell  (with devenv.nix/devenv.yaml)
+
+            # Packages
+            packages = packages;
+
+            # Checks
+            checks = {
+              stackpanel = config.packages.stackpanel;
+              default-package = config.packages.default;
+            };
           };
-
-          # stackpanel.enable is set in .stackpanel/config.nix
-          # The flakeModule auto-loads it and creates devShells.default
-          #
-          # For devenv features (languages, services, processes), use:
-          #   devenv shell  (with devenv.nix/devenv.yaml)
-
-          # Packages
-          packages = packages;
-
-          # Checks
-          checks = {
-            stackpanel = config.packages.stackpanel;
-            default-package = config.packages.default;
-          };
-        };
 
         # =============================================================
         # EXPORTS (for users)
         # =============================================================
         flake = {
-          inherit
-            (exports)
+          inherit (exports)
             flakeModules
             nixosModules
             devenvModules

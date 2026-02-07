@@ -312,7 +312,13 @@ in
             # Check common AGE key locations
             found=0
 
-            # Check SOPS_AGE_KEY_FILE first
+            # Check SOPS_AGE_KEY_CMD first (lazy key command)
+            if [ -n "$SOPS_AGE_KEY_CMD" ]; then
+              echo "AGE key command configured: $SOPS_AGE_KEY_CMD"
+              exit 0
+            fi
+
+            # Check SOPS_AGE_KEY_FILE
             if [ -n "$SOPS_AGE_KEY_FILE" ] && [ -f "$SOPS_AGE_KEY_FILE" ]; then
               echo "AGE key found at: $SOPS_AGE_KEY_FILE"
               exit 0
@@ -335,6 +341,7 @@ in
             echo "No AGE key found"
             echo ""
             echo "Checked locations:"
+            echo "  - \$SOPS_AGE_KEY_CMD (not set)"
             if [ -n "$SOPS_AGE_KEY_FILE" ]; then
               echo "  - \$SOPS_AGE_KEY_FILE ($SOPS_AGE_KEY_FILE)"
             else

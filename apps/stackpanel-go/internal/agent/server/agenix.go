@@ -209,7 +209,9 @@ func (s *Server) decryptAgeSecret(agePath, identityPath string) (string, error) 
 	return res.Stdout, nil
 }
 
-// handleAgenixSecretWrite handles writing a secret using age encryption
+// handleAgenixSecretWrite handles writing a secret using the group-based SOPS system.
+// Legacy individual .age files are no longer supported - secrets are stored in
+// group YAML files (groups/dev.yaml, groups/staging.yaml, groups/prod.yaml).
 // POST /api/secrets/write
 func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -224,78 +226,80 @@ func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Validate request
-	if strings.TrimSpace(req.ID) == "" {
-		s.writeAPIError(w, http.StatusBadRequest, "id is required")
-		return
-	}
 	if strings.TrimSpace(req.Key) == "" {
 		s.writeAPIError(w, http.StatusBadRequest, "key is required")
 		return
 	}
 
-	// Sanitize ID for use as filename
-	safeID := sanitizeSecretID(req.ID)
-	if safeID == "" {
-		s.writeAPIError(w, http.StatusBadRequest, "invalid secret id")
-		return
+	// Determine the group from environments (default to "dev")
+	group := "dev"
+	if len(req.Environments) > 0 {
+		group = req.Environments[0]
 	}
 
-	// Get recipients (public keys) from users
-	recipients, err := s.getAgenixRecipients(req.Environments)
+	// Delegate to group-based secret write
+	groupReq := GroupSecretRequest{
+		Key:         req.Key,
+		Value:       req.Value,
+		Group:       group,
+		Description: req.Description,
+	}
+
+	// Get recipients for this group
+	safeGroup := sanitizeSecretID(group)
+	recipients, err := s.getGroupRecipients(safeGroup)
 	if err != nil {
-		s.writeAPIError(w, http.StatusBadRequest, err.Error())
+		s.writeAPIError(w, http.StatusBadRequest, "failed to get recipients: "+err.Error())
 		return
 	}
-
 	if len(recipients) == 0 {
-		s.writeAPIError(w, http.StatusBadRequest, "no recipients found - ensure users have public-keys defined")
+		s.writeAPIError(w, http.StatusBadRequest, "no recipients found - ensure master keys are configured")
 		return
 	}
 
-	// Ensure secrets directory exists
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
-	if err := os.MkdirAll(secretsDir, 0o755); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to create secrets directory: "+err.Error())
-		return
+	// Read existing secrets for this group
+	secrets, err := s.readGroupSecrets(safeGroup)
+	if err != nil {
+		log.Warn().Err(err).Str("group", safeGroup).Msg("Failed to read existing group secrets, starting fresh")
+		secrets = make(map[string]interface{})
 	}
 
-	// Write the secret using age
-	agePath := filepath.Join(secretsDir, safeID+".age")
-	if err := s.writeAgeSecret(agePath, req.Value, recipients); err != nil {
+	// Update the secret
+	secrets[groupReq.Key] = groupReq.Value
+
+	// Write back encrypted
+	if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to write secret: "+err.Error())
 		return
 	}
 
-	// Update variables.nix with the secret metadata (not the value)
+	// Update variables.nix with the secret metadata
 	if err := s.updateVariableEntry(req.ID, req.Key, req.Description, req.Environments); err != nil {
 		log.Warn().Err(err).Msg("Failed to update variables.nix")
-		// Don't fail the request - the secret was written successfully
 	}
 
-	// Update the secrets.nix file for agenix
-	if err := s.updateSecretsNix(); err != nil {
-		log.Warn().Err(err).Msg("Failed to update secrets.nix")
-	}
-
-	relPath, _ := filepath.Rel(s.config.ProjectRoot, agePath)
+	groupPath, _ := s.getGroupFilePath(safeGroup)
+	relPath, _ := filepath.Rel(s.config.ProjectRoot, groupPath)
 
 	log.Info().
 		Str("id", req.ID).
 		Str("key", req.Key).
+		Str("group", safeGroup).
 		Str("path", relPath).
 		Int("recipients", len(recipients)).
-		Msg("Secret written successfully")
+		Msg("Secret written to group")
 
 	s.writeAPI(w, http.StatusOK, AgenixSecretResponse{
 		ID:       req.ID,
 		Path:     relPath,
-		AgePath:  agePath,
+		AgePath:  groupPath,
 		KeyCount: len(recipients),
 	})
 }
 
-// handleAgenixSecretDelete handles deleting an age-encrypted secret
-// DELETE /api/secrets/delete?id=<id>
+// handleAgenixSecretDelete handles deleting a secret.
+// Secrets are now stored in group YAML files, not individual .age files.
+// DELETE /api/secrets/delete?id=<id>&group=<group>
 func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -308,17 +312,52 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	safeID := sanitizeSecretID(id)
-	if safeID == "" {
-		s.writeAPIError(w, http.StatusBadRequest, "invalid secret id")
+	group := strings.TrimSpace(r.URL.Query().Get("group"))
+	if group == "" {
+		group = "dev"
+	}
+
+	safeGroup := sanitizeSecretID(group)
+	if safeGroup == "" {
+		s.writeAPIError(w, http.StatusBadRequest, "invalid group name")
 		return
 	}
 
-	// Delete the .age file
-	agePath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars", safeID+".age")
-	if err := os.Remove(agePath); err != nil && !os.IsNotExist(err) {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to delete secret file: "+err.Error())
+	// Get recipients for re-encryption
+	recipients, err := s.getGroupRecipients(safeGroup)
+	if err != nil {
+		s.writeAPIError(w, http.StatusBadRequest, "failed to get recipients: "+err.Error())
 		return
+	}
+
+	// Read existing secrets
+	secrets, err := s.readGroupSecrets(safeGroup)
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, "failed to decrypt group secrets: "+err.Error())
+		return
+	}
+
+	// Use the key (id) to find and delete the secret
+	key := id
+	if _, exists := secrets[key]; !exists {
+		s.writeAPIError(w, http.StatusNotFound, "secret not found in group")
+		return
+	}
+
+	delete(secrets, key)
+
+	// Write back encrypted (or delete file if empty)
+	if len(secrets) == 0 {
+		groupPath, _ := s.getGroupFilePath(safeGroup)
+		if err := os.Remove(groupPath); err != nil && !os.IsNotExist(err) {
+			s.writeAPIError(w, http.StatusInternalServerError, "failed to delete empty group file: "+err.Error())
+			return
+		}
+	} else {
+		if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
+			s.writeAPIError(w, http.StatusInternalServerError, "failed to write group secrets: "+err.Error())
+			return
+		}
 	}
 
 	// Remove from variables.nix
@@ -326,16 +365,11 @@ func (s *Server) handleAgenixSecretDelete(w http.ResponseWriter, r *http.Request
 		log.Warn().Err(err).Msg("Failed to remove from variables.nix")
 	}
 
-	// Update secrets.nix
-	if err := s.updateSecretsNix(); err != nil {
-		log.Warn().Err(err).Msg("Failed to update secrets.nix")
-	}
-
-	log.Info().Str("id", id).Msg("Secret deleted")
-	s.writeAPI(w, http.StatusOK, map[string]any{"deleted": true, "id": id})
+	log.Info().Str("id", id).Str("group", safeGroup).Msg("Secret deleted from group")
+	s.writeAPI(w, http.StatusOK, map[string]any{"deleted": true, "id": id, "group": safeGroup})
 }
 
-// handleAgenixSecretsList lists all age-encrypted secrets
+// handleAgenixSecretsList lists all secrets across all groups.
 // GET /api/secrets/list
 func (s *Server) handleAgenixSecretsList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -343,39 +377,8 @@ func (s *Server) handleAgenixSecretsList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
-
-	entries, err := os.ReadDir(secretsDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			s.writeAPI(w, http.StatusOK, map[string]any{"secrets": []string{}})
-			return
-		}
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to read secrets directory: "+err.Error())
-		return
-	}
-
-	var secrets []map[string]any
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".age") {
-			continue
-		}
-
-		id := strings.TrimSuffix(entry.Name(), ".age")
-		info, _ := entry.Info()
-
-		secret := map[string]any{
-			"id":   id,
-			"file": entry.Name(),
-		}
-		if info != nil {
-			secret["modTime"] = info.ModTime().Unix()
-			secret["size"] = info.Size()
-		}
-		secrets = append(secrets, secret)
-	}
-
-	s.writeAPI(w, http.StatusOK, map[string]any{"secrets": secrets})
+	// Delegate to the group-based list which returns all groups and their keys
+	s.handleListAllGroups(w, r)
 }
 
 // getAgenixRecipients returns the list of age/SSH public keys for encryption
@@ -383,7 +386,7 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 	// Try multiple user sources in order of priority:
 	// 1. .stackpanel/data/external/users.nix (auto-synced from GitHub)
 	// 2. .stackpanel/data/users.nix (manual user definitions)
-	// 3. .stackpanel/secrets/users.yaml (legacy YAML format)
+	// Users are read from Nix files only (legacy users.yaml is no longer supported)
 
 	userPaths := []string{
 		filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "external", "users.nix"),
@@ -430,9 +433,9 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 		}
 	}
 
-	// Fall back to YAML if no Nix users found
+	// If no Nix users found, return empty with error
 	if allUsers == nil || len(allUsers) == 0 {
-		return s.getAgenixRecipientsFromYAML()
+		return nil, fmt.Errorf("no users found in .stackpanel/data/users.nix or .stackpanel/data/external/users.nix")
 	}
 
 	var recipients []string
@@ -473,33 +476,10 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 	return recipients, nil
 }
 
-// getAgenixRecipientsFromYAML falls back to reading users.yaml
+// getAgenixRecipientsFromYAML is deprecated - users are now read from Nix files only.
+// Kept as a stub for backwards compatibility with secrets_groups.go fallback.
 func (s *Server) getAgenixRecipientsFromYAML() ([]string, error) {
-	// Try the old YAML format as fallback
-	usersPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "users.yaml")
-	content, err := os.ReadFile(usersPath)
-	if err != nil {
-		return nil, fmt.Errorf("no users found: %w", err)
-	}
-
-	// Parse as simple key: {pubkey: ...} format
-	var users map[string]struct {
-		Pubkey string `yaml:"pubkey"`
-	}
-	if err := yaml.Unmarshal(content, &users); err != nil {
-		return nil, fmt.Errorf("failed to parse users.yaml: %w", err)
-	}
-
-	var recipients []string
-	for _, u := range users {
-		key := strings.TrimSpace(u.Pubkey)
-		// Accept both AGE keys and SSH ed25519 keys
-		if strings.HasPrefix(key, "age1") || strings.HasPrefix(key, "ssh-ed25519 ") {
-			recipients = append(recipients, key)
-		}
-	}
-
-	return recipients, nil
+	return nil, fmt.Errorf("legacy users.yaml is no longer supported - use .stackpanel/data/users.nix")
 }
 
 // getSystemKeys returns system-level AGE keys (CI, deploy servers, etc.)
@@ -636,57 +616,10 @@ func (s *Server) removeVariableEntry(id string) error {
 	return os.WriteFile(dataPath, []byte(nixExpr+"\n"), 0o644)
 }
 
-// updateSecretsNix generates/updates the secrets.nix file for agenix
+// updateSecretsNix is deprecated - individual .age files and secrets.nix are no longer used.
+// Secrets are now stored in group YAML files encrypted via SOPS.
 func (s *Server) updateSecretsNix() error {
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
-	secretsNixPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "secrets.nix")
-
-	// List all .age files
-	entries, err := os.ReadDir(secretsDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	// Get all recipients
-	recipients, err := s.getAgenixRecipients(nil)
-	if err != nil {
-		recipients = []string{}
-	}
-
-	// Build secrets.nix content
-	var sb strings.Builder
-	sb.WriteString("# Auto-generated by StackPanel - do not edit manually\n")
-	sb.WriteString("# This file defines public keys for agenix secret encryption\n")
-	sb.WriteString("let\n")
-	sb.WriteString("  # All recipients who can decrypt secrets\n")
-	sb.WriteString("  allKeys = [\n")
-	for _, r := range recipients {
-		sb.WriteString(fmt.Sprintf("    %q\n", r))
-	}
-	sb.WriteString("  ];\n")
-	sb.WriteString("in\n")
-	sb.WriteString("{\n")
-
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".age") {
-			continue
-		}
-		// Use relative path from secrets.nix location
-		relPath := filepath.Join("vars", entry.Name())
-		sb.WriteString(fmt.Sprintf("  %q.publicKeys = allKeys;\n", relPath))
-	}
-
-	sb.WriteString("}\n")
-
-	// Write the file
-	if err := os.MkdirAll(filepath.Dir(secretsNixPath), 0o755); err != nil {
-		return err
-	}
-
-	return os.WriteFile(secretsNixPath, []byte(sb.String()), 0o644)
+	return nil
 }
 
 // sanitizeSecretID ensures the secret ID is safe for use as a filename

@@ -100,7 +100,15 @@ in
       # Shell hook for directory setup
       dirSetupHook = ''
         # Stackpanel shell initialization
-        export STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$PWD}"
+        # Use git root as fallback to handle running from subdirectories
+        if [[ -z "''${STACKPANEL_ROOT:-}" ]]; then
+          if command -v git >/dev/null 2>&1; then
+            STACKPANEL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || STACKPANEL_ROOT="$PWD"
+          else
+            STACKPANEL_ROOT="$PWD"
+          fi
+        fi
+        export STACKPANEL_ROOT
         export STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-$STACKPANEL_ROOT/${cfg.stateDir}}"
         export STACKPANEL_GEN_DIR="''${STACKPANEL_GEN_DIR:-$STACKPANEL_ROOT/${cfg.genDir}}"
         export STACKPANEL_DATA_DIR="''${STACKPANEL_DATA_DIR:-$STACKPANEL_ROOT/${cfg.dataDir}}"

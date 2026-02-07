@@ -36,6 +36,74 @@ func SerializeIndented(v any, indent string) (string, error) {
 	return formatNix(s, indent), nil
 }
 
+// SerializeWithSections converts a Go map to a formatted Nix attrset with section comments.
+// The sectionHeaders map provides human-readable headers for top-level keys.
+// Keys not in sectionHeaders will not have comments.
+func SerializeWithSections(v any, indent string, sectionHeaders map[string]string) (string, error) {
+	// Get the underlying map
+	rv := reflect.ValueOf(v)
+	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+		if rv.IsNil() {
+			return "{ }\n", nil
+		}
+		rv = rv.Elem()
+	}
+
+	if rv.Kind() != reflect.Map {
+		// Not a map, fall back to regular serialization
+		return SerializeIndented(v, indent)
+	}
+
+	if rv.Type().Key().Kind() != reflect.String {
+		return "", fmt.Errorf("map keys must be strings, got %s", rv.Type().Key().Kind())
+	}
+
+	if rv.Len() == 0 {
+		return "{ }\n", nil
+	}
+
+	// Sort keys for deterministic output
+	keys := rv.MapKeys()
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+
+	var b strings.Builder
+	b.WriteString("{\n")
+
+	for _, key := range keys {
+		keyStr := key.String()
+		val, err := serializeValue(rv.MapIndex(key), 1)
+		if err != nil {
+			return "", fmt.Errorf("map key %q: %w", keyStr, err)
+		}
+
+		// Add section header comment if defined
+		if header, ok := sectionHeaders[keyStr]; ok {
+			b.WriteString(indent)
+			b.WriteString("# ---------------------------------------------------------------------------\n")
+			b.WriteString(indent)
+			b.WriteString("# ")
+			b.WriteString(header)
+			b.WriteString("\n")
+			b.WriteString(indent)
+			b.WriteString("# ---------------------------------------------------------------------------\n")
+		}
+
+		// Write the key-value pair
+		b.WriteString(indent)
+		b.WriteString(serializeAttrName(keyStr))
+		b.WriteString(" = ")
+		b.WriteString(val)
+		b.WriteString(";\n\n")
+	}
+
+	b.WriteString("}\n")
+
+	// Format with nixfmt
+	return formatNix(b.String(), indent), nil
+}
+
 func serializeValue(v reflect.Value, depth int) (string, error) {
 	// Handle invalid (nil interface)
 	if !v.IsValid() {

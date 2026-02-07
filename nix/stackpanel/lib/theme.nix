@@ -44,9 +44,12 @@
         cp "${starshipConfig}" "$config_dir/starship.toml"
 
         echo "Starship config installed to $config_dir/starship.toml"
-        echo "Add this to your shell rc file:"
-        echo '  export STARSHIP_CONFIG="$config_dir/starship.toml"'
-        echo '  eval "$(starship init bash)"  # or zsh/fish'
+        # echo "Add this to your shell rc file:"
+        # echo '  export STARSHIP_CONFIG="$config_dir/starship.toml"'
+        # echo '  eval "$(starship init bash)"  # or zsh/fish'
+        if [[ -z "$STARSHIP_SHELL" ]]; then
+          eval "$(starship init $SHELL)"
+        fi
       '';
     in
     {

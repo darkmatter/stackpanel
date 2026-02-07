@@ -205,16 +205,26 @@ let
             null;
       in
       if webOutput != null then
-        pkgsLinux.runCommand "${name}-app" { } ''
-          mkdir -p $out/app/.output
-          cp -r ${webOutput}/server $out/app/.output/ || true
-          cp -r ${webOutput}/public $out/app/.output/ || true
-        ''
+        pkgsLinux.runCommand "${name}-app"
+          {
+            preferLocalBuild = true;
+            allowSubstitutes = false;
+          }
+          ''
+            mkdir -p $out/app/.output
+            cp -r ${webOutput}/server $out/app/.output/ || true
+            cp -r ${webOutput}/public $out/app/.output/ || true
+          ''
       else
-        pkgsLinux.runCommand "${name}-app-placeholder" { } ''
-          mkdir -p $out/app
-          echo "Build output not found at ${buildOutputPath}. Run your build command first." > $out/app/README.txt
-        '';
+        pkgsLinux.runCommand "${name}-app-placeholder"
+          {
+            preferLocalBuild = true;
+            allowSubstitutes = false;
+          }
+          ''
+            mkdir -p $out/app
+            echo "Build output not found at ${buildOutputPath}. Run your build command first." > $out/app/README.txt
+          '';
 
   # ---------------------------------------------------------------------------
   # Build container with nix2container
@@ -255,10 +265,16 @@ let
             [ ];
 
         # App layer
-        appLayer = pkgsLinux.runCommand "${name}-layer" { } ''
-          mkdir -p $out
-          cp -r ${appDir}/* $out/
-        '';
+        appLayer =
+          pkgsLinux.runCommand "${name}-layer"
+            {
+              preferLocalBuild = true;
+              allowSubstitutes = false;
+            }
+            ''
+              mkdir -p $out
+              cp -r ${appDir}/* $out/
+            '';
       in
       nix2containerLib.buildImage {
         inherit name;
@@ -377,10 +393,7 @@ let
     else
       let
         sourceArg =
-          if backend == "nix2container" then
-            "nix:${container}"
-          else
-            "docker-archive:${container}";
+          if backend == "nix2container" then "nix:${container}" else "docker-archive:${container}";
       in
       pkgs.writeShellScript "copy-container-${name}" ''
         set -e -o pipefail

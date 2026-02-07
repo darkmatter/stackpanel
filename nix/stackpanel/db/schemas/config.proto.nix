@@ -194,7 +194,7 @@ proto.mkProtoFile {
 
   # ==========================================================================
   # Internal entry point (_internal.nix) boilerplate
-  # This handles merging config.nix with data files and GitHub collaborators
+  # This handles merging config.nix with GitHub collaborators and overrides
   # ==========================================================================
   internalBoilerplate = ''
     # ==============================================================================
@@ -203,16 +203,14 @@ proto.mkProtoFile {
     # INTERNAL ENTRY POINT - DO NOT EDIT
     #
     # This file imports config.nix (user-editable) and handles:
-    #   - Processing `imports` directive for config data
-    #   - Auto-loading data from ./data.nix (consolidated) or ./data/ (legacy)
-    #   - Merging GitHub collaborators
+    #   - Processing `imports` directive for config composition
+    #   - Merging GitHub collaborators into users
     #   - Loading config.local.nix for per-user overrides (gitignored)
     #   - Applying STACKPANEL_CONFIG_OVERRIDE env var (JSON, for CI/scripting)
-    #   - Combining everything into the final stackpanel config
     #
     # Merge priority (lowest to highest):
-    #   1. Data tables (data.nix or data/*.nix)
-    #   2. User config (config.nix)
+    #   1. User config (config.nix)
+    #   2. GitHub collaborators (auto-synced)
     #   3. Local overrides (config.local.nix - gitignored)
     #   4. STACKPANEL_CONFIG_OVERRIDE (JSON env var)
     #
@@ -283,41 +281,6 @@ proto.mkProtoFile {
       userConfig = processImports baseUserConfig;
 
       # ---------------------------------------------------------------------------
-      # Auto-import data from ./data.nix (consolidated) or ./data/ (legacy)
-      # ---------------------------------------------------------------------------
-      dataFile = ./data.nix;
-      legacyDataDir = ./data;
-
-      dataOnlyFiles = [
-        "commands.nix"
-        "packages.nix"
-      ];
-
-      consolidatedData = if builtins.pathExists dataFile then import dataFile else { };
-
-      loadLegacyDataTables =
-        dir:
-        let
-          entries = builtins.readDir dir;
-          nixFiles = lib.filterAttrs (
-            n: type:
-            type == "regular"
-            && lib.hasSuffix ".nix" n
-            && n != "default.nix"
-            && (!lib.hasPrefix "_" n)
-            && (!builtins.elem n dataOnlyFiles)
-          ) entries;
-          toKey = n: lib.removeSuffix ".nix" n;
-        in
-        lib.mapAttrs' (n: _: {
-          name = toKey n;
-          value = import (dir + "/''${n}");
-        }) nixFiles;
-
-      legacyData = if builtins.pathExists legacyDataDir then loadLegacyDataTables legacyDataDir else { };
-      data = lib.recursiveUpdate legacyData consolidatedData;
-
-      # ---------------------------------------------------------------------------
       # GitHub collaborators transformation
       # ---------------------------------------------------------------------------
       ghCollabsPath = ./external/github-collaborators.nix;
@@ -348,29 +311,11 @@ proto.mkProtoFile {
       hasEnvOverride = envOverrideRaw != "";
       envOverride = if hasEnvOverride then builtins.fromJSON envOverrideRaw else { };
 
-      baseConfig = lib.recursiveUpdate data configWithUsers;
-      configWithLocal = lib.recursiveUpdate baseConfig localConfig;
+      configWithLocal = lib.recursiveUpdate configWithUsers localConfig;
       finalConfig = lib.recursiveUpdate configWithLocal envOverride;
 
     in
     finalConfig
-  '';
-
-  # ==========================================================================
-  # Consolidated data.nix boilerplate
-  # Agent-editable data file (do not edit manually)
-  # ==========================================================================
-  dataBoilerplate = ''
-    # ==============================================================================
-    # data.nix - Agent-editable data
-    #
-    # This file is written by the Stackpanel agent. Do not edit manually.
-    # User configuration should go in config.nix instead.
-    #
-    # The agent patches values at specific paths (e.g., deployment.fly.organization)
-    # This file is merged with config.nix by _internal.nix (config.nix takes precedence)
-    # ==============================================================================
-    { }
   '';
 
   # ==========================================================================

@@ -32,12 +32,13 @@ in
 {
   imports = [
     ./generate-docs.nix
-  ] ++ lib.optionals hasGeneratedProcessCompose [ genProcessComposePath ];
+    ./prek-wrapper.nix
+  ]
+  ++ lib.optionals hasGeneratedProcessCompose [ genProcessComposePath ];
 
-  # Example: Add config using module features
-  # config = lib.mkIf config.stackpanel.enable {
-  #   stackpanel.scripts.my-script = {
-  #     exec = "echo Hello from module!";
-  #   };
-  # };
+  # Config that requires pkgs (not serializable in config.nix)
+  config = lib.mkIf config.stackpanel.enable {
+    # PostgreSQL package - requires pkgs, so lives here instead of config.nix
+    stackpanel.globalServices.postgres.package = pkgs.postgresql_17;
+  };
 }

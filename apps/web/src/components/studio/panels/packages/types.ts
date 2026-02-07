@@ -21,7 +21,7 @@ export interface SearchErrorMessageProps {
 }
 
 export interface DataSourceIndicatorProps {
-	source: "fresh" | "cache" | "local" | null;
+	source: "fresh" | "cache" | "local" | "nixhub" | null;
 	isRefreshing: boolean;
 	cacheStats: { packageCount: number; searchCount: number } | null;
 }

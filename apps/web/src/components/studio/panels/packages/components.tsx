@@ -137,6 +137,22 @@ export function DataSourceIndicator({
 		);
 	}
 
+	if (source === "nixhub") {
+		return (
+			<TooltipProvider>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<div className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+							<Zap className="h-3 w-3" />
+							<span>Nixhub</span>
+						</div>
+					</TooltipTrigger>
+					<TooltipContent>Results from nixhub.io (fast search)</TooltipContent>
+				</Tooltip>
+			</TooltipProvider>
+		);
+	}
+
 	return null;
 }
 

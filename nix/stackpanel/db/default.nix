@@ -333,12 +333,10 @@ let
   #   INTERNAL: Scaffolding / init file generation
   #
   #   Generates the .stackpanel/ directory structure for new projects.
-  #   Uses consolidated data.nix instead of per-entity data files.
+  #   config.nix is the single source of truth (both user and agent editable).
   #
   # ============================================================================
   initFiles =
-    # NOTE: boilerplateValidation is disabled since we use consolidated data.nix
-    # assert boilerplateValidation;
     let
       # Config file uses the config schema's boilerplate
       configBoilerplate = schemas.config.boilerplate or null;
@@ -363,17 +361,13 @@ let
       internalFile =
         if internalBoilerplate != null then { ".stackpanel/_internal.nix" = internalBoilerplate; } else { };
 
-      # Consolidated data.nix file (agent-editable)
-      dataBoilerplate = schemas.config.dataBoilerplate or null;
-      dataFile = if dataBoilerplate != null then { ".stackpanel/data.nix" = dataBoilerplate; } else { };
-
       # .gitignore file
       gitignoreBoilerplate = schemas.config.gitignoreBoilerplate or null;
       gitignoreFile =
         if gitignoreBoilerplate != null then { ".stackpanel/.gitignore" = gitignoreBoilerplate; } else { };
 
     in
-    configFile // internalFile // dataFile // gitignoreFile;
+    configFile // internalFile // gitignoreFile;
 in
 {
   # ============================================================================
