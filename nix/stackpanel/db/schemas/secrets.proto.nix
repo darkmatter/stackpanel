@@ -86,9 +86,7 @@ proto.mkProtoFile {
         name = proto.optional (
           proto.string 1 "Name of the generated package/module (defaults to the target key)"
         );
-        directory = proto.optional (
-          proto.string 2 "Output directory for generated code (repo-relative)"
-        );
+        directory = proto.optional (proto.string 2 "Output directory for generated code (repo-relative)");
         language = proto.optional (
           proto.string 3 ''
             Target language for generated code (e.g., "typescript", "go", "python").
@@ -102,9 +100,7 @@ proto.mkProtoFile {
       name = "Environment";
       description = "Environment-specific secrets configuration";
       fields = {
-        name = proto.optional (
-          proto.string 1 "Name of the environment (e.g., dev, staging, production)"
-        );
+        name = proto.optional (proto.string 1 "Name of the environment (e.g., dev, staging, production)");
         sources = proto.repeated (
           proto.string 2 ''
             List of SOPS-encrypted source files for this environment (without .yaml extension).
@@ -148,6 +144,17 @@ proto.mkProtoFile {
             Vals reference that resolves to the AGE private key.
             Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
             Can be overridden for other backends (Vault, file, etc.).
+          ''
+        );
+        key_cmd = proto.optional (
+          proto.string 4 ''
+            Shell command that outputs the AGE private key to stdout.
+            Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
+            Defaults to: sops --decrypt .stackpanel/secrets/keys/<group>.enc.age
+            Override for alternative key stores, e.g.:
+              - chamber read keys/stackpanel/dev current -q
+              - op read 'op://vault/stackpanel/dev-age-key'
+              - aws ssm get-parameter --name /keys/dev --with-decryption --query Parameter.Value --output text
           ''
         );
       };

@@ -39,6 +39,9 @@ let
   chamberCfg = config.stackpanel.secrets.chamber;
   chamberPrefix = chamberCfg.service-prefix;
 
+  # Import cfg.nix for path resolution in shell hooks
+  cfgLib = import ../lib/cfg.nix { inherit lib; };
+
   # Import secrets library
   secretsLib = import ./lib.nix {
     inherit pkgs lib;
@@ -59,8 +62,72 @@ let
   groupsConfig = lib.mapAttrs (name: group: {
     "age-pub" = orNull "" group.age-pub;
     "ssm-path" = group.ssm-path;
+    "key-cmd" = orNull "" group.key-cmd;
     ref = group.computed-ref;
   }) cfg.groups;
+
+  # Build the list of group key-cmd entries for the sops-age-keys script.
+  # Each group contributes a block that runs its key-cmd and extracts AGE keys.
+  groupKeyBlocks = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (
+      name: group:
+      let
+        keyCmd = orNull "" group.key-cmd;
+      in
+      lib.optionalString (keyCmd != "") ''
+        # Group: ${name}
+        GROUP_OUTPUT=$(${keyCmd} 2>/dev/null) || true
+        if [[ -n "$GROUP_OUTPUT" ]]; then
+          while IFS= read -r line; do
+            if [[ "$line" =~ AGE-SECRET-KEY- ]]; then
+              echo "$line"
+            fi
+          done <<< "$GROUP_OUTPUT"
+        fi
+      ''
+    ) cfg.groups
+  );
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # sops-age-keys: SOPS_AGE_KEY_CMD script
+  #
+  # Outputs all available AGE private keys to stdout, one per line.
+  # Called lazily by SOPS when it needs to decrypt.
+  #
+  # Key sources:
+  #   1. Local AGE key (always, from .stackpanel/state/keys/local.txt)
+  #   2. Per-group key-cmd (configurable, default: sops --decrypt .enc.age)
+  # ═══════════════════════════════════════════════════════════════════════════
+  sops-age-keys = pkgs.writeShellApplication {
+    name = "sops-age-keys";
+    runtimeInputs = [
+      pkgs.sops
+    ];
+    text = ''
+      ${cfgLib.bashLib}
+
+      # Prevent recursive invocation: SOPS_AGE_KEY_CMD calls this script,
+      # and group key-cmds may call sops, which would call this script again.
+      # Break the cycle by unsetting SOPS_AGE_KEY_CMD and using SOPS_AGE_KEY
+      # for any inner sops calls.
+      unset SOPS_AGE_KEY_CMD
+
+      LOCAL_KEY_FILE=${cfgLib.getKnown "paths.local-key"}
+
+      # Step 1: Local AGE key (always available)
+      if [[ -f "$LOCAL_KEY_FILE" ]]; then
+        LOCAL_KEY=$(grep "^AGE-SECRET-KEY-" "$LOCAL_KEY_FILE" 2>/dev/null || true)
+        if [[ -n "$LOCAL_KEY" ]]; then
+          echo "$LOCAL_KEY"
+          # Set SOPS_AGE_KEY so inner sops calls (from group key-cmds) can decrypt
+          export SOPS_AGE_KEY="$LOCAL_KEY"
+        fi
+      fi
+
+      # Step 2: Group key-cmds
+      ${groupKeyBlocks}
+    '';
+  };
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Packages
@@ -105,8 +172,10 @@ let
     runtimeInputs = [
       pkgs.age
       pkgs.jq
-      pkgs.awscli2
+      pkgs.sops
     ];
+    # NOTE: awscli2 is not a hard dependency - SSM storage is optional.
+    # If aws CLI is in PATH, it will be used. Otherwise SSM is skipped.
     text = secretsLib.initGroupScript {
       inherit groupsConfig chamberPrefix;
     };
@@ -127,6 +196,8 @@ in
       pkgs.age
       pkgs.vals
       pkgs.jq
+      pkgs.sops
+      sops-age-keys
       secrets-init-group
       secrets-set
       secrets-get
@@ -283,21 +354,17 @@ in
 
     stackpanel.devshell.hooks.main = [
       ''
-        # Load AGE master key from SSM for SOPS decryption
-        if command -v aws &>/dev/null && command -v vals &>/dev/null; then
-          # Add 3s timeout to prevent shell hang on expired AWS credentials
-          if timeout 3 aws sts get-caller-identity &>/dev/null 2>&1; then
-            # Add 5s timeout for vals SSM fetch (network call)
-            AGE_KEY=$(timeout 5 vals eval "ref+awsssm:///stackpanel/keys/dev" 2>/dev/null || true)
-            if [[ -n "$AGE_KEY" ]] && [[ "$AGE_KEY" =~ ^AGE-SECRET-KEY- ]]; then
-              export SOPS_AGE_KEY="$AGE_KEY"
-              echo "✓ Loaded AGE master key from SSM"
-            fi
-          fi
-        fi
+        # ================================================================
+        # SOPS AGE key command
+        #
+        # Instead of eagerly loading all keys at shell entry, we set
+        # SOPS_AGE_KEY_CMD to a script that lazily retrieves keys on demand.
+        # This avoids slow AWS/SSM calls on every shell entry and supports
+        # pluggable key backends via the group key-cmd option.
+        # ================================================================
+        export SOPS_AGE_KEY_CMD="${sops-age-keys}/bin/sops-age-keys"
       ''
     ];
-
 
     # ═══════════════════════════════════════════════════════════════════════════
     # Serializable config for CLI/agent
@@ -314,6 +381,7 @@ in
       groups = lib.mapAttrs (name: group: {
         agePub = orNull "" group.age-pub;
         ssmPath = group.ssm-path;
+        keyCmd = orNull "" group.key-cmd;
         ref = group.computed-ref;
       }) cfg.groups;
     };

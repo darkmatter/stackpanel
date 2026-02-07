@@ -58,6 +58,8 @@ let
       stackpanel_find_root() {
         local dir="$PWD"
         local marker="${rootMarker}"
+
+        # First, try to find the marker file by walking up the directory tree
         while [[ "$dir" != "/" ]]; do
           if [[ -f "$dir/$marker" ]]; then
             cat "$dir/$marker"
@@ -65,12 +67,35 @@ let
           fi
           dir="$(dirname "$dir")"
         done
-        # Fallback: check if STACKPANEL_ROOT is already set
-        if [[ -n "$STACKPANEL_ROOT" ]]; then
+
+        # Fallback 1: check if STACKPANEL_ROOT is already set
+        if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
           echo "$STACKPANEL_ROOT"
           return 0
         fi
-        echo "Error: Could not find stackpanel root (no $marker found)" >&2
+
+        # Fallback 2: use git repository root if available
+        # This handles running `nix develop` from subdirectories before marker exists
+        if command -v git >/dev/null 2>&1; then
+          local git_root
+          git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || true
+          if [[ -n "$git_root" ]]; then
+            echo "$git_root"
+            return 0
+          fi
+        fi
+
+        # Fallback 3: look for flake.nix by walking up from PWD
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -f "$dir/flake.nix" ]]; then
+            echo "$dir"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
+
+        echo "Error: Could not find stackpanel root (no $marker, git repo, or flake.nix found)" >&2
         return 1
       }
     '';

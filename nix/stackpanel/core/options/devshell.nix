@@ -28,20 +28,59 @@
 {
   lib,
   config,
+  pkgs ? null,
   ...
 }:
 let
   types = lib.types;
   db = import ../../db { inherit lib; };
+  hasPkgs = pkgs != null;
+
+  # Resolve a package name string to a package from pkgs
+  resolvePackage =
+    name:
+    let
+      parts = lib.splitString "." name;
+      resolved = lib.attrByPath parts null pkgs;
+    in
+    if resolved != null then resolved else null;
+
+  # Type that accepts either a package or a string (package name)
+  packageOrString = types.either types.package types.str;
 in
 {
   # ----------------------------------------------------------------------------
   # Top-level packages (preferred API)
+  # Accepts either actual packages or string package names (resolved from nixpkgs)
   # ----------------------------------------------------------------------------
   options.stackpanel.packages = lib.mkOption {
+    type = types.listOf packageOrString;
+    default = [ ];
+    description = ''
+      Packages to include in the devshell.
+
+      Can be either:
+      - Actual Nix packages (e.g., pkgs.git)
+      - String package names (e.g., "git") - resolved from nixpkgs
+
+      String packages are resolved via nixpkgs attribute paths, supporting
+      nested paths like "nodePackages.typescript".
+    '';
+    example = lib.literalExpression ''
+      [
+        pkgs.git
+        "ripgrep"
+        "nodePackages.typescript"
+      ]
+    '';
+  };
+
+  # Resolved packages (internal) - converts strings to packages
+  options.stackpanel.packagesResolved = lib.mkOption {
     type = types.listOf types.package;
     default = [ ];
-    description = "Packages to include in the devshell. Preferred over devshell.packages.";
+    internal = true;
+    description = "Internal: packages with strings resolved to actual packages.";
   };
 
   # ----------------------------------------------------------------------------
@@ -99,10 +138,10 @@ in
       default = true;
       description = ''
         Whether to use --impure flag when entering the devshell.
-        
+
         --impure allows Nix to access environment variables and system state,
         but prevents effective caching between runs.
-        
+
         Set to false if you want better caching and your devshell doesn't
         need access to parent environment state.
       '';
@@ -436,9 +475,18 @@ in
   };
 
   # ----------------------------------------------------------------------------
-  # Config: merge top-level packages into devshell.packages
+  # Config: resolve string packages and merge into devshell.packages
   # ----------------------------------------------------------------------------
-  config = {
-    stackpanel.devshell.packages = config.stackpanel.packages;
+  config = lib.mkIf hasPkgs {
+    # Resolve string package names to actual packages
+    stackpanel.packagesResolved =
+      let
+        resolveItem = item: if builtins.isString item then resolvePackage item else item;
+        resolved = map resolveItem config.stackpanel.packages;
+      in
+      lib.filter (p: p != null) resolved;
+
+    # Use resolved packages for the devshell
+    stackpanel.devshell.packages = config.stackpanel.packagesResolved;
   };
 }

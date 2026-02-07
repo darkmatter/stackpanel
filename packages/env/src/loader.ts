@@ -137,7 +137,7 @@ function decryptSopsFile(filePath: string): Record<string, string> {
     // Check for common SOPS errors
     if (error.message?.includes('could not decrypt')) {
       throw new Error(
-        `Failed to decrypt ${filePath}. Ensure AGE key is available via SOPS_AGE_KEY_FILE or SOPS_AGE_KEY environment variable.`
+        `Failed to decrypt ${filePath}. Ensure AGE key is available via SOPS_AGE_KEY_CMD, SOPS_AGE_KEY_FILE, or SOPS_AGE_KEY environment variable.`
       );
     }
     if (error.message?.includes('command not found') || error.message?.includes('ENOENT')) {
@@ -181,10 +181,11 @@ export function checkSopsAvailable(): { available: boolean; keyConfigured: boole
   
   const hasKeyFile = !!process.env.SOPS_AGE_KEY_FILE;
   const hasKeyEnv = !!process.env.SOPS_AGE_KEY;
+  const hasKeyCmd = !!process.env.SOPS_AGE_KEY_CMD;
   
   return {
     available: true,
-    keyConfigured: hasKeyFile || hasKeyEnv,
-    error: !hasKeyFile && !hasKeyEnv ? 'No AGE key configured (set SOPS_AGE_KEY_FILE or SOPS_AGE_KEY)' : undefined,
+    keyConfigured: hasKeyFile || hasKeyEnv || hasKeyCmd,
+    error: !hasKeyFile && !hasKeyEnv && !hasKeyCmd ? 'No AGE key configured (set SOPS_AGE_KEY_CMD, SOPS_AGE_KEY_FILE or SOPS_AGE_KEY)' : undefined,
   };
 }

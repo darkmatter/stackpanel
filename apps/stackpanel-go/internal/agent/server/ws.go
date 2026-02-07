@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -217,124 +218,158 @@ func (s *Server) handleWSMessage(msg wsMessage) wsResponse {
 		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"path": path}}
 
 	case "secrets.write":
-		var req AgenixSecretRequest
+		// Secrets are now written to group YAML files via SOPS
+		var req GroupSecretRequest
 		if err := json.Unmarshal(msg.Payload, &req); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.write payload"}
-		}
-		if strings.TrimSpace(req.ID) == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "id is required"}
+			// Fall back to legacy format
+			var legacyReq AgenixSecretRequest
+			if err2 := json.Unmarshal(msg.Payload, &legacyReq); err2 != nil {
+				return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.write payload"}
+			}
+			req.Key = legacyReq.Key
+			req.Value = legacyReq.Value
+			req.Description = legacyReq.Description
+			req.Group = "dev"
+			if len(legacyReq.Environments) > 0 {
+				req.Group = legacyReq.Environments[0]
+			}
 		}
 		if strings.TrimSpace(req.Key) == "" {
 			return wsResponse{ID: msg.ID, Success: false, Error: "key is required"}
 		}
-		safeID := sanitizeSecretID(req.ID)
-		if safeID == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secret id"}
+		if strings.TrimSpace(req.Group) == "" {
+			req.Group = "dev"
 		}
-		recipients, err := s.getAgenixRecipients(req.Environments)
+		safeGroup := sanitizeSecretID(req.Group)
+		recipients, err := s.getGroupRecipients(safeGroup)
+		if err != nil || len(recipients) == 0 {
+			return wsResponse{ID: msg.ID, Success: false, Error: "no recipients found for group"}
+		}
+		secrets, err := s.readGroupSecrets(safeGroup)
 		if err != nil {
+			secrets = make(map[string]interface{})
+		}
+		secrets[req.Key] = req.Value
+		if err := s.writeGroupSecrets(safeGroup, secrets, recipients); err != nil {
 			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
 		}
-		if len(recipients) == 0 {
-			return wsResponse{ID: msg.ID, Success: false, Error: "no recipients found"}
-		}
-		secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
-		if err := os.MkdirAll(secretsDir, 0o755); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to create secrets directory"}
-		}
-		agePath := filepath.Join(secretsDir, safeID+".age")
-		if err := s.writeAgeSecret(agePath, req.Value, recipients); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
-		}
-		_ = s.updateVariableEntry(req.ID, req.Key, req.Description, req.Environments)
-		_ = s.updateSecretsNix()
-		relPath, _ := filepath.Rel(s.config.ProjectRoot, agePath)
-		return wsResponse{ID: msg.ID, Success: true, Data: AgenixSecretResponse{
-			ID:       req.ID,
-			Path:     relPath,
-			AgePath:  agePath,
-			KeyCount: len(recipients),
+		groupPath, _ := s.getGroupFilePath(safeGroup)
+		relPath, _ := filepath.Rel(s.config.ProjectRoot, groupPath)
+		return wsResponse{ID: msg.ID, Success: true, Data: GroupSecretResponse{
+			Key:            req.Key,
+			Group:          safeGroup,
+			Path:           relPath,
+			RecipientCount: len(recipients),
 		}}
 
 	case "secrets.read":
-		var req AgenixDecryptRequest
+		// Read a secret from a group's SOPS file
+		var req GroupSecretReadRequest
 		if err := json.Unmarshal(msg.Payload, &req); err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.read payload"}
+			// Fall back to legacy format
+			var legacyReq AgenixDecryptRequest
+			if err2 := json.Unmarshal(msg.Payload, &legacyReq); err2 != nil {
+				return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.read payload"}
+			}
+			req.Key = legacyReq.ID
+			req.Group = "dev"
 		}
-		if strings.TrimSpace(req.ID) == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "id is required"}
+		if strings.TrimSpace(req.Key) == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "key is required"}
 		}
-		safeID := sanitizeSecretID(req.ID)
-		if safeID == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secret id"}
+		if strings.TrimSpace(req.Group) == "" {
+			req.Group = "dev"
 		}
-		agePath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars", safeID+".age")
-		if _, err := os.Stat(agePath); os.IsNotExist(err) {
-			return wsResponse{ID: msg.ID, Success: false, Error: "secret not found"}
-		}
-		identityPath := req.IdentityPath
-		if identityPath == "" {
-			identityPath = s.findAgeIdentity()
-		}
-		if identityPath == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "no identity file found - specify identityPath or create ~/.config/age/key.txt"}
-		}
-		if strings.HasPrefix(identityPath, "~/") {
-			home, _ := os.UserHomeDir()
-			identityPath = filepath.Join(home, identityPath[2:])
-		}
-		value, err := s.decryptAgeSecret(agePath, identityPath)
+		safeGroup := sanitizeSecretID(req.Group)
+		groupSecrets, err := s.readGroupSecrets(safeGroup)
 		if err != nil {
-			return wsResponse{ID: msg.ID, Success: false, Error: "failed to decrypt: " + err.Error()}
+			return wsResponse{ID: msg.ID, Success: false, Error: "failed to decrypt group secrets: " + err.Error()}
 		}
-		return wsResponse{ID: msg.ID, Success: true, Data: AgenixDecryptResponse{ID: req.ID, Value: value}}
+		value, exists := groupSecrets[req.Key]
+		if !exists {
+			return wsResponse{ID: msg.ID, Success: false, Error: "secret not found in group"}
+		}
+		return wsResponse{ID: msg.ID, Success: true, Data: GroupSecretReadResponse{
+			Key:   req.Key,
+			Group: safeGroup,
+			Value: fmt.Sprintf("%v", value),
+		}}
 
 	case "secrets.delete":
 		var req struct {
-			ID string `json:"id"`
+			Key   string `json:"key"`
+			ID    string `json:"id"`
+			Group string `json:"group"`
 		}
 		if err := json.Unmarshal(msg.Payload, &req); err != nil {
 			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secrets.delete payload"}
 		}
-		if strings.TrimSpace(req.ID) == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "id is required"}
+		key := req.Key
+		if key == "" {
+			key = req.ID
 		}
-		safeID := sanitizeSecretID(req.ID)
-		if safeID == "" {
-			return wsResponse{ID: msg.ID, Success: false, Error: "invalid secret id"}
+		if strings.TrimSpace(key) == "" {
+			return wsResponse{ID: msg.ID, Success: false, Error: "key is required"}
 		}
-		agePath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars", safeID+".age")
-		if err := os.Remove(agePath); err != nil && !os.IsNotExist(err) {
-			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
+		group := req.Group
+		if group == "" {
+			group = "dev"
 		}
-		_ = s.removeVariableEntry(req.ID)
-		_ = s.updateSecretsNix()
-		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"deleted": true, "id": req.ID}}
+		safeGroup := sanitizeSecretID(group)
+		recipients, err := s.getGroupRecipients(safeGroup)
+		if err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "failed to get recipients: " + err.Error()}
+		}
+		groupSecrets, err := s.readGroupSecrets(safeGroup)
+		if err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "failed to decrypt group secrets: " + err.Error()}
+		}
+		if _, exists := groupSecrets[key]; !exists {
+			return wsResponse{ID: msg.ID, Success: false, Error: "secret not found in group"}
+		}
+		delete(groupSecrets, key)
+		if len(groupSecrets) == 0 {
+			groupPath, _ := s.getGroupFilePath(safeGroup)
+			_ = os.Remove(groupPath)
+		} else {
+			if err := s.writeGroupSecrets(safeGroup, groupSecrets, recipients); err != nil {
+				return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
+			}
+		}
+		_ = s.removeVariableEntry(key)
+		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"deleted": true, "key": key, "group": safeGroup}}
 
 	case "secrets.list":
-		secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "vars")
-		entries, err := os.ReadDir(secretsDir)
+		// List all groups and their keys
+		groupsDir, err := s.getGroupsDir()
+		if err != nil {
+			return wsResponse{ID: msg.ID, Success: false, Error: "failed to get groups directory: " + err.Error()}
+		}
+		entries, err := os.ReadDir(groupsDir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"secrets": []string{}}}
+				return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"groups": map[string][]string{}}}
 			}
 			return wsResponse{ID: msg.ID, Success: false, Error: err.Error()}
 		}
-		var secrets []map[string]any
+		groups := make(map[string][]string)
 		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".age") {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
 				continue
 			}
-			id := strings.TrimSuffix(entry.Name(), ".age")
-			info, _ := entry.Info()
-			secret := map[string]any{"id": id, "file": entry.Name()}
-			if info != nil {
-				secret["modTime"] = info.ModTime().Unix()
-				secret["size"] = info.Size()
+			groupName := strings.TrimSuffix(entry.Name(), ".yaml")
+			groupSecrets, err := s.readGroupSecrets(groupName)
+			if err != nil {
+				groups[groupName] = []string{}
+				continue
 			}
-			secrets = append(secrets, secret)
+			keys := make([]string, 0, len(groupSecrets))
+			for k := range groupSecrets {
+				keys = append(keys, k)
+			}
+			groups[groupName] = keys
 		}
-		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"secrets": secrets}}
+		return wsResponse{ID: msg.ID, Success: true, Data: map[string]any{"groups": groups}}
 
 	default:
 		return wsResponse{ID: msg.ID, Success: false, Error: "unknown message type"}

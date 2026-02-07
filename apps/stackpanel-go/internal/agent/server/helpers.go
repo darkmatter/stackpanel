@@ -121,35 +121,18 @@ func normalizeEnv(env string) (string, error) {
 	}
 }
 
-type secretsUser struct {
-	Pubkey string `yaml:"pubkey"`
-	Github string `yaml:"github,omitempty"`
-	Admin  bool   `yaml:"admin,omitempty"`
-}
+// secretsUser was used for the legacy users.yaml format - now deprecated.
+// Users are read from .stackpanel/data/users.nix via Nix evaluation.
 
 func (s *Server) setSopsSecret(env string, key string, value string) (string, error) {
-	usersPath, err := safeJoin(s.config.ProjectRoot, ".stackpanel/secrets/users.yaml")
-	if err != nil {
-		return "", err
-	}
-	usersBytes, err := os.ReadFile(usersPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read users.yaml: %w", err)
-	}
-
-	users := map[string]secretsUser{}
-	if err := yaml.Unmarshal(usersBytes, &users); err != nil {
-		return "", fmt.Errorf("failed to parse users.yaml: %w", err)
-	}
-
-	var recipients []string
-	for _, u := range users {
-		if strings.TrimSpace(u.Pubkey) != "" {
-			recipients = append(recipients, strings.TrimSpace(u.Pubkey))
-		}
+	// Get recipients from Nix user config (replaces legacy users.yaml)
+	recipients, err := s.getAgenixRecipients(nil)
+	if err != nil || len(recipients) == 0 {
+		// Fall back to all-public-keys from master keys
+		recipients = s.getAgeRecipients()
 	}
 	if len(recipients) == 0 {
-		return "", errors.New("no recipients found in .stackpanel/secrets/users.yaml")
+		return "", errors.New("no recipients found - ensure .stackpanel/data/users.nix has public-keys defined")
 	}
 
 	secretsRel := fmt.Sprintf(".stackpanel/secrets/%s.yaml", env)

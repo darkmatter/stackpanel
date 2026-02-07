@@ -17,6 +17,7 @@
 {
   imports = [
     ./module.nix
+    ./builder.nix
     ./ui.nix
   ];
 }

@@ -21,7 +21,7 @@
       },
       "options": {
         "stackpanel": {
-          "expr": "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ /Users/coopermaruyama/darkmatter/stackpanel/nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel"
+          "expr": "(builtins.getFlake \"https://flakehub.com/f/darkmatter/stackpanel/*\").legacyPackages.${builtins.currentSystem}.stackpanelOptions"
         }
       }
     },
@@ -33,19 +33,19 @@
       },
       "options": {
         "nixos": {
-          "expr": "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ /Users/coopermaruyama/darkmatter/stackpanel/nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options"
+          "expr": "null"
         },
         "sp-app": {
-          "expr": "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ /Users/coopermaruyama/darkmatter/stackpanel/nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.apps.type.getSubOptions []"
+          "expr": "(builtins.getFlake \"https://flakehub.com/f/darkmatter/stackpanel/*\").legacyPackages.${builtins.currentSystem}.stackpanelOptions.apps.type.getSubOptions []"
         },
         "sp-task": {
-          "expr": "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ /Users/coopermaruyama/darkmatter/stackpanel/nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.tasks.type.getSubOptions []"
+          "expr": "(builtins.getFlake \"https://flakehub.com/f/darkmatter/stackpanel/*\").legacyPackages.${builtins.currentSystem}.stackpanelOptions.tasks.type.getSubOptions []"
         },
         "sp-user": {
-          "expr": "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ /Users/coopermaruyama/darkmatter/stackpanel/nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel.users.type.getSubOptions []"
+          "expr": "(builtins.getFlake \"https://flakehub.com/f/darkmatter/stackpanel/*\").legacyPackages.${builtins.currentSystem}.stackpanelOptions.users.type.getSubOptions []"
         },
         "stackpanel": {
-          "expr": "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ /Users/coopermaruyama/darkmatter/stackpanel/nix/stackpanel/core/options { _module.args = { inherit pkgs lib; }; } ]; }; in eval.options.stackpanel"
+          "expr": "(builtins.getFlake \"https://flakehub.com/f/darkmatter/stackpanel/*\").legacyPackages.${builtins.currentSystem}.stackpanelOptions"
         }
       }
     }

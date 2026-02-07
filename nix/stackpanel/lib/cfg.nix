@@ -16,7 +16,7 @@
 #   {
 #     myScript = ''
 #       ${cfg.bashLib}
-#       
+#
 #       STATE_DIR=${cfg.get "paths.state"}
 #       KEYS_DIR=${cfg.get "paths.keys"}
 #     '';
@@ -37,8 +37,7 @@ let
 
   # Convert a dot path to an env var name
   # "paths.state" → "STACKPANEL_PATHS_STATE"
-  pathToEnvVar =
-    path: "STACKPANEL_${lib.toUpper (builtins.replaceStrings [ "." ] [ "_" ] path)}";
+  pathToEnvVar = path: "STACKPANEL_${lib.toUpper (builtins.replaceStrings [ "." ] [ "_" ] path)}";
 
   # Get default value from config by path
   # Returns empty string if config not available or path not found
@@ -124,7 +123,7 @@ let
     if default == "" then
       throw ''
         cfg.get: No default found for "${path}".
-        
+
         Either:
           1. Pass config when importing cfg.nix:
              cfg = import ./cfg.nix { inherit lib config; };
@@ -153,6 +152,8 @@ let
 
     # Secrets
     "secrets.secrets-dir" = ".stackpanel/secrets";
+    "secrets.keys-dir" = ".stackpanel/secrets/keys";
+    "secrets.groups-dir" = ".stackpanel/secrets/groups";
 
     # Files
     "paths.state-file" = ".stackpanel/state/stackpanel.json";
@@ -171,9 +172,9 @@ let
     if default == null then
       throw ''
         cfg.getKnown: "${path}" is not a known path.
-        
+
         Known paths: ${lib.concatStringsSep ", " (builtins.attrNames knownPaths)}
-        
+
         Use cfg.getWithDefault for custom paths.
       ''
     else
