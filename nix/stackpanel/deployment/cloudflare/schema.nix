@@ -42,14 +42,18 @@ let
     type = sp.string {
       index = 2;
       description = "Cloudflare deployment type determines how your app is built and deployed.";
-      default = "vite";
+      default = "tanstack-start";
       ui = {
         label = "Type";
         type = sp.uiType.select;
         options = [
           {
+            value = "tanstack-start";
+            label = "TanStack Start (full-stack SSR)";
+          }
+          {
             value = "vite";
-            label = "Vite (TanStack/React)";
+            label = "Vite (SPA)";
           }
           {
             value = "worker";
@@ -60,7 +64,7 @@ let
             label = "Pages (static + functions)";
           }
         ];
-        description = "Vite for full-stack apps, Worker for APIs, Pages for static sites.";
+        description = "TanStack Start for full-stack SSR apps, Vite for SPAs, Worker for APIs, Pages for static sites.";
       };
     };
 
