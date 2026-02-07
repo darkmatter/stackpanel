@@ -38,7 +38,18 @@ let
       null
     else
       starshipTheme.config;
-  resolvedConfigPath = if resolvedConfig == null then "" else toString resolvedConfig;
+  # Copy the config file into its own store path (not referencing `self`/flake source)
+  # to avoid polluting the shellhook derivation with the flake source store path.
+  resolvedConfigFile =
+    if resolvedConfig == null then
+      null
+    else
+      pkgs.writeTextFile {
+        name = "starship-config";
+        text = builtins.readFile resolvedConfig;
+        destination = "/starship.toml";
+      };
+  resolvedConfigPath = if resolvedConfigFile == null then "" else "${resolvedConfigFile}/starship.toml";
 in
 {
   config = lib.mkIf cfg.enable {

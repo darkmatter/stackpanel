@@ -2,6 +2,13 @@
 // Run 'write-files' or restart devshell to regenerate
 import { parseEnv, z } from "znv";
 
-export const env = parseEnv(process.env, {
+const schema = {
     STACKPANEL_TEST_PAIRING_TOKEN: z.string(),
-});
+};
+
+let cached: ReturnType<typeof parseEnv<typeof schema>> | null = null;
+
+export const getEnv = (input: Record<string, string | undefined> = process.env) => {
+  if (!cached) cached = parseEnv(input, schema);
+  return cached;
+};

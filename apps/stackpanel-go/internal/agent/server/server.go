@@ -220,10 +220,6 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/sst/resources", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTResources))))
 	mux.HandleFunc("/api/sst/remove", s.withCORS(s.requireAuth(s.requireProject(s.handleSSTRemove))))
 
-	// Config sync endpoints (check/sync config.nix → data files)
-	mux.HandleFunc("/api/config/check", s.withCORS(s.requireAuth(s.requireProject(s.handleConfigCheck))))
-	mux.HandleFunc("/api/config/sync", s.withCORS(s.requireAuth(s.requireProject(s.handleConfigSync))))
-
 	// Process-compose process management endpoints
 	mux.HandleFunc("/api/process-compose/processes", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProcesses))))
 	mux.HandleFunc("/api/process-compose/project/state", s.withCORS(s.requireAuth(s.requireProject(s.handleProcessComposeProjectState))))

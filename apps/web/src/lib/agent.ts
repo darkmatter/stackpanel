@@ -770,8 +770,8 @@ export class AgentHttpClient {
   }
 
   /**
-   * Write an age-encrypted secret using agenix.
-   * Creates a .age file in .stackpanel/secrets/vars/<id>.age
+   * Write a secret to a group's SOPS-encrypted YAML file.
+   * Secrets are stored in .stackpanel/secrets/groups/<group>.yaml
    */
   async writeAgenixSecret(
     request: AgenixSecretRequest,

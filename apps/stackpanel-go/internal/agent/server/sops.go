@@ -194,7 +194,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 		if len(recipients) == 0 {
 			s.writeJSON(w, http.StatusOK, apiResponse{
 				Success: false,
-				Error:   "No age recipients found. Create .stackpanel/secrets/users.yaml or .sops.yaml",
+				Error:   "No age recipients found. Ensure .stackpanel/data/users.nix has public-keys defined, or configure .sops.yaml",
 			})
 			return
 		}
@@ -240,42 +240,21 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getAgeRecipients reads age public keys from users.yaml
+// getAgeRecipients gets age public keys from the Nix config (all-public-keys).
 func (s *Server) getAgeRecipients() []string {
-	usersPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", "users.yaml")
-
-	content, err := os.ReadFile(usersPath)
-	if err != nil {
+	recipients, err := s.getAgenixRecipients(nil)
+	if err != nil || len(recipients) == 0 {
+		// Fall back to all-public-keys from master keys
+		args := []string{"eval", "--impure", "--json", ".#stackpanelFullConfig.secrets.all-public-keys"}
+		res, err := s.exec.RunNix(args...)
+		if err == nil && res.ExitCode == 0 {
+			var keys []string
+			if err := json.Unmarshal([]byte(res.Stdout), &keys); err == nil {
+				return keys
+			}
+		}
 		return nil
 	}
-
-	// Parse YAML to find age keys
-	// This is a simplified parser - in production use a proper YAML library
-	var recipients []string
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "age1") {
-			// Found an age public key
-			key := strings.TrimSpace(strings.Split(line, "#")[0])
-			key = strings.Trim(key, "\"'")
-			if strings.HasPrefix(key, "age1") {
-				recipients = append(recipients, key)
-			}
-		}
-		// Also check for "public_key:" or "age_key:" patterns
-		if strings.Contains(line, "age1") {
-			parts := strings.Split(line, ":")
-			for _, part := range parts {
-				part = strings.TrimSpace(part)
-				part = strings.Trim(part, "\"'")
-				if strings.HasPrefix(part, "age1") {
-					recipients = append(recipients, part)
-				}
-			}
-		}
-	}
-
 	return recipients
 }
 

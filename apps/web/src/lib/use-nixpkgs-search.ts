@@ -5,6 +5,9 @@ import { useAgentClient } from "./agent-provider";
 import { getNixpkgsCache } from "./nixpkgs-cache";
 import type { NixpkgsPackage } from "./types";
 
+/** nixhub.io Remix data API - fast, no auth required */
+const NIXHUB_SEARCH_API = "https://www.nixhub.io/search";
+
 export interface UseNixpkgsSearchOptions {
   /** Agent host */
   host?: string;
@@ -16,7 +19,7 @@ export interface UseNixpkgsSearchOptions {
   debounceMs?: number;
 }
 
-export type DataSource = "cache" | "fresh" | "local";
+export type DataSource = "cache" | "fresh" | "local" | "nixhub";
 
 export interface UseNixpkgsSearchReturn {
   /** Current search query */
@@ -141,7 +144,42 @@ export function useNixpkgsSearch(
     [query],
   );
 
-  // Perform the search with caching
+  // Search nixhub.io API (fast, no cache needed)
+  const searchNixhub = useCallback(
+    async (
+      searchQuery: string,
+      signal: AbortSignal,
+    ): Promise<{ packages: NixpkgsPackage[]; total: number } | null> => {
+      try {
+        const url = `${NIXHUB_SEARCH_API}?q=${encodeURIComponent(searchQuery)}&_data=routes/_nixhub.search`;
+        const response = await fetch(url, { signal });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const data: {
+          query: string;
+          total_results: number;
+          results: Array<{ name: string; summary: string; last_updated: string }>;
+        } = await response.json();
+
+        const packages: NixpkgsPackage[] = data.results.map((r) => ({
+          name: r.name,
+          attr_path: r.name,
+          version: "",
+          description: r.summary || "",
+        }));
+
+        return { packages, total: data.total_results };
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  // Perform the search - try nixhub first, fall back to agent with caching
   const performSearch = useCallback(
     async (searchQuery: string, searchOffset: number, append: boolean) => {
       const normalizedQuery = searchQuery.trim();
@@ -165,16 +203,37 @@ export function useNixpkgsSearch(
 
       // Create new abort controller for this request
       abortControllerRef.current?.abort();
-      abortControllerRef.current = new AbortController();
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
-      // For first page, try to show cached results immediately
+      setIsLoading(true);
+
+      // Step 1: Try nixhub.io first (fast, no cache needed)
+      // Only for first page - nixhub doesn't support pagination
       if (searchOffset === 0 && !append) {
-        setIsLoading(true);
+        const nixhubResult = await searchNixhub(normalizedQuery, abortController.signal);
 
-        // Step 1: Try cached search results
+        if (activeQueryRef.current !== normalizedQuery) return;
+
+        if (nixhubResult && nixhubResult.packages.length > 0) {
+          setResults({
+            query: normalizedQuery,
+            packages: nixhubResult.packages.slice(0, limit),
+            total: nixhubResult.total,
+            offset: 0,
+            dataSource: "nixhub",
+            error: null,
+          });
+          setIsLoading(false);
+          setIsRefreshing(false);
+          return;
+        }
+      }
+
+      // Step 2: Fallback - try cached results from agent API
+      if (searchOffset === 0 && !append) {
         const cached = await cache.getCachedSearch(normalizedQuery);
 
-        // Check if query changed while checking cache
         if (activeQueryRef.current !== normalizedQuery) return;
 
         if (cached && cached.packages.length > 0) {
@@ -188,19 +247,16 @@ export function useNixpkgsSearch(
           });
           setIsLoading(false);
 
-          // If cache is fresh, we're done
           if (cached.isFresh) {
             setIsRefreshing(false);
             return;
           }
 
-          // Otherwise, show cached but fetch fresh in background
           setIsRefreshing(true);
         } else {
-          // Step 2: Try local search in package cache
+          // Try local search in package cache
           const localResults = await cache.searchLocal(normalizedQuery, limit);
 
-          // Check if query changed while doing local search
           if (activeQueryRef.current !== normalizedQuery) return;
 
           if (localResults.length > 0) {
@@ -218,7 +274,7 @@ export function useNixpkgsSearch(
         }
       }
 
-      // Step 3: Fetch fresh data from API
+      // Step 3: Fetch from agent API (supports pagination, slower)
       try {
         const client = agentClient;
         const result = await client.searchNixpkgs({
@@ -227,12 +283,11 @@ export function useNixpkgsSearch(
           offset: searchOffset,
         });
 
-        // Check if query changed while we were fetching
         if (activeQueryRef.current !== normalizedQuery) {
           return;
         }
 
-        // Update cache
+        // Update cache for agent results
         if (searchOffset === 0) {
           await cache.cacheSearchResults(
             normalizedQuery,
@@ -242,9 +297,7 @@ export function useNixpkgsSearch(
           await updateCacheStats();
         }
 
-        // Update state
         setResults((prev) => {
-          // Only update if this is still the active query
           if (activeQueryRef.current !== normalizedQuery) return prev;
 
           return {
@@ -259,19 +312,16 @@ export function useNixpkgsSearch(
           };
         });
       } catch (err) {
-        // Check if query changed or was aborted
         if (activeQueryRef.current !== normalizedQuery) {
           return;
         }
 
-        // If we already have cached data, keep showing it
+        // If we already have cached/nixhub data, keep showing it
         setResults((prev) => {
           if (prev.query === normalizedQuery && prev.packages.length > 0) {
-            // Keep cached data, just log the error
             console.warn("Failed to fetch fresh data, showing cached:", err);
             return prev;
           }
-          // No cached data, show error
           return {
             query: normalizedQuery,
             packages: [],
@@ -288,7 +338,7 @@ export function useNixpkgsSearch(
         }
       }
     },
-    [limit, agentClient, updateCacheStats],
+    [limit, agentClient, updateCacheStats, searchNixhub],
   );
 
   // Debounced search when query changes
