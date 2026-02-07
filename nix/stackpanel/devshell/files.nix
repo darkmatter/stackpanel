@@ -209,16 +209,61 @@ let
       ${util.log.debug "files: ROOT=$ROOT"}
       cd "$ROOT"
 
+      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+
+      # ── Cleanup stale files from previous generation ───────────────────────
+      # Compare old files.json with the current set of files. Any path that
+      # was in the old manifest but is NOT in the current manifest is stale
+      # and should be removed.
+      OLD_MANIFEST="$STATE_DIR/files.json"
+      REMOVED_COUNT=0
+      if [[ -f "$OLD_MANIFEST" ]]; then
+        CURRENT_PATHS='${currentPathsJson}'
+
+        # Extract old paths from the manifest
+        OLD_PATHS=$(jq -r '.files[].path' "$OLD_MANIFEST" 2>/dev/null) || OLD_PATHS=""
+
+        for old_path in $OLD_PATHS; do
+          # Check if this path is still in the current file set
+          if ! echo "$CURRENT_PATHS" | jq -e --arg p "$old_path" 'index($p) != null' >/dev/null 2>&1; then
+            # This file is stale — remove it
+            if [[ -e "$old_path" || -L "$old_path" ]]; then
+              rm -f "$old_path" 2>/dev/null || true
+              echo "✕ $old_path (removed)"
+              REMOVED_COUNT=$((REMOVED_COUNT + 1))
+
+              # Clean up empty parent directories (up to repo root)
+              dir=$(dirname "$old_path")
+              while [[ "$dir" != "." && "$dir" != "/" ]]; do
+                # Only remove if empty
+                if [[ -d "$dir" ]] && [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]; then
+                  rmdir "$dir" 2>/dev/null || true
+                  ${util.log.debug "files: removed empty directory $dir"}
+                else
+                  break
+                fi
+                dir=$(dirname "$dir")
+              done
+            fi
+          fi
+        done
+      fi
+
+      # ── Write current files ────────────────────────────────────────────────
       ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet enabledFiles)}
 
-      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+      # ── Write manifest ─────────────────────────────────────────────────────
       mkdir -p "$STATE_DIR"
       cat > "$STATE_DIR/files.json" << 'STACKPANEL_FILES_EOF'
       ${manifestJson}
       STACKPANEL_FILES_EOF
 
       ${util.log.debug "files: completed writing ${toString fileCount} file(s)"}
-      echo "✅ wrote ${toString fileCount} file(s) into $ROOT"
+      if [[ "$REMOVED_COUNT" -gt 0 ]]; then
+        echo "✅ wrote ${toString fileCount} file(s), removed $REMOVED_COUNT stale file(s) from $ROOT"
+      else
+        echo "✅ wrote ${toString fileCount} file(s) into $ROOT"
+      fi
     '';
   };
 in
