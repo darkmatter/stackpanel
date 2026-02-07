@@ -112,6 +112,8 @@ let
   # ===================================================================
 
   devenvConfigPath = self + "/.stackpanel/devenv.nix";
+  hasDevenvConfig = builtins.pathExists devenvConfigPath;
+
   devenvModule =
     args:
     let
@@ -136,6 +138,7 @@ let
         enterShell = "";
       });
     };
+
   devenvEval = lib.evalModules {
     modules = [
       devenvModule
@@ -146,17 +149,19 @@ let
       self = inputs.devenv;
     };
   };
-  devenvConfig = devenvEval.config or null;
+
+  # Extract devenv config if available
+  devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
-  devenvPackages = if devenvConfig != null then (devenvConfig.packages or [ ]) else [ ];
+  devenvPackages = devenvConfig.packages or [ ];
 
   # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
   # We extract this and merge it into our env, giving our values priority
-  devenvEnv = if devenvConfig != null then (devenvConfig.env or { }) else { };
+  devenvEnv = devenvConfig.env or { };
 
   # Get processes from devenv
-  devenvProcesses = if devenvConfig != null then (devenvConfig.processes or { }) else { };
+  devenvProcesses = devenvConfig.processes or { };
 
   # ===================================================================
   # Build shell hook from stackpanel hooks
