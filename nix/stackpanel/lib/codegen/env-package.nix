@@ -18,6 +18,7 @@ let
   apps = cfg.apps or { };
   users = cfg.users or { };
   secretsCfg = cfg.secrets or { };
+  packageName = cfg.env.package-name or "@gen/env";
 
   # Variables backend determines whether SOPS files are generated
   variablesBackend = cfg.secrets.backend or "vals";
@@ -446,7 +447,7 @@ let
       packageJson = {
         "${packageDir}/package.json" = ''
           {
-            "name": "@gen/env",
+            "name": "${packageName}",
             "type": "module",
             "exports": {
               ".": { "default": "./src/generated/index.ts" },

@@ -48,6 +48,7 @@ in
     ./docker # Dockerfile fallback (skopeo, OCI images)
     ./containers # nix2container via devenv (primary container building)
     ./deployment # Deployment providers (Fly.io, etc.)
+    ./languages # Language toolchains (go, javascript, typescript)
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
     ./docs # Documentation generation (README, etc.)

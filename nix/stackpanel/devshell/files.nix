@@ -186,9 +186,15 @@ let
         ''}
       '';
 
+  # JSON array of all current file paths (for the cleanup diff)
+  currentPathsJson = builtins.toJSON (builtins.attrNames enabledFiles);
+
   writerDrv = pkgs.writeShellApplication {
     name = "write-files";
-    runtimeInputs = [ pkgs.gum ];
+    runtimeInputs = [
+      pkgs.gum
+      pkgs.jq
+    ];
     text = ''
       set -euo pipefail
       ${util.log.debug "files: starting file generation"}

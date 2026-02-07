@@ -26,6 +26,23 @@ let
 
   hasCloudflareApps = cloudflareApps != { };
 
+  # Derive active framework name from an app config
+  frameworkNames = [
+    "tanstack-start"
+    "nextjs"
+    "vite"
+    "hono"
+    "astro"
+    "remix"
+    "nuxt"
+  ];
+  getFramework =
+    appCfg:
+    let
+      enabled = lib.filter (fw: appCfg.framework.${fw}.enable or false) frameworkNames;
+    in
+    if enabled == [ ] then "-" else lib.head enabled;
+
   # Build app status list
   appStatusList = lib.mapAttrsToList (
     name: appCfg:
@@ -35,8 +52,8 @@ let
     {
       name = name;
       workerName = cf.workerName or name;
-      type = cf.type or "vite";
-      route = cf.route or "-";
+      type = getFramework appCfg;
+      route = if cf.route or null != null then cf.route else "-";
     }
   ) cloudflareApps;
 in
