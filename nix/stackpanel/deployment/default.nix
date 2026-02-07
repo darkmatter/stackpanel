@@ -3,19 +3,31 @@
 #
 # Aggregates all deployment provider modules.
 #
-# Supported providers:
+# Supported hosts:
 #   - cloudflare: Cloudflare Workers (edge, serverless)
 #   - fly: Fly.io (containers, VMs)
+#   - vercel: Vercel (Next.js, etc.) [planned]
+#   - aws: AWS (Lambda, ECS, etc.) [planned]
 #
-# Each provider module defines its own global options and adds per-app options via appModules.
-# See fly/module.nix and cloudflare/module.nix for provider-specific options.
+# Each host module defines its own global options and adds per-app options
+# via appModules. See fly/module.nix and cloudflare/module.nix for
+# host-specific options.
+#
+# The actual deployment is handled by the deployment infra module at
+# infra/modules/deployment/, which reads each app's `framework` × `host`
+# config and creates the appropriate alchemy resources.
 #
 # Usage:
-#   stackpanel.deployment.defaultProvider = "cloudflare";  # or "fly"
+#   stackpanel.deployment.defaultHost = "cloudflare";
 #
-#   stackpanel.apps.web.deployment = {
-#     enable = true;
-#     provider = "cloudflare";  # optional, uses defaultProvider
+#   stackpanel.apps.web = {
+#     framework = "tanstack-start";
+#     deployment = {
+#       enable = true;
+#       host = "cloudflare";
+#       bindings = [ "DATABASE_URL" "CORS_ORIGIN" ];
+#       secrets = [ "DATABASE_URL" ];
+#     };
 #   };
 # ==============================================================================
 {
