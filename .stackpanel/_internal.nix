@@ -7,12 +7,10 @@
 #   - Processing `imports` directive for additional config fragments
 #   - Merging GitHub collaborators into users
 #   - Loading config.local.nix for per-user overrides (gitignored)
-#   - Applying STACKPANEL_CONFIG_OVERRIDE env var (JSON, for CI/scripting)
 #
 # Merge priority (lowest to highest):
 #   1. User config (config.nix)
 #   2. Local overrides (config.local.nix - gitignored)
-#   3. STACKPANEL_CONFIG_OVERRIDE (JSON env var)
 #
 # Usage in templates:
 #   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
@@ -35,24 +33,18 @@ let
 
   # ---------------------------------------------------------------------------
   # Import local config overrides (per-user, gitignored)
-  # Uses absolute path to bypass flake's gitignore filtering
+  # Uses the .stackpanel-root marker file (written by .envrc) to locate the
+  # project root, then imports config.local.nix from there if it exists.
   # ---------------------------------------------------------------------------
   stackpanelRoot =
     let
-      envRoot = builtins.getEnv "STACKPANEL_ROOT";
-      markerRoot =
-        let
-          markerPath = ../.stackpanel-root;
-        in
-        if builtins.pathExists markerPath then
-          lib.removeSuffix "\n" (builtins.readFile markerPath)
-        else
-          null;
+      markerPath = ../.stackpanel-root;
     in
-    if envRoot != "" then
-      envRoot
-    else if markerRoot != null && markerRoot != "." then
-      markerRoot
+    if builtins.pathExists markerPath then
+      let
+        content = lib.removeSuffix "\n" (builtins.readFile markerPath);
+      in
+      if content != "" && content != "." then content else null
     else
       null;
 
@@ -119,20 +111,11 @@ let
   };
 
   # ---------------------------------------------------------------------------
-  # Environment variable override (JSON)
-  # ---------------------------------------------------------------------------
-  envOverrideRaw = builtins.getEnv "STACKPANEL_CONFIG_OVERRIDE";
-  hasEnvOverride = envOverrideRaw != "";
-  envOverride = if hasEnvOverride then builtins.fromJSON envOverrideRaw else { };
-
-  # ---------------------------------------------------------------------------
   # Final merge order:
   #   1. User config (config.nix)
   #   2. Local overrides (config.local.nix - gitignored)
-  #   3. STACKPANEL_CONFIG_OVERRIDE (JSON env var - highest priority)
   # ---------------------------------------------------------------------------
-  configWithLocal = lib.recursiveUpdate configWithUsers localConfig;
-  finalConfig = lib.recursiveUpdate configWithLocal envOverride;
+  finalConfig = lib.recursiveUpdate configWithUsers localConfig;
 
 in
 finalConfig
