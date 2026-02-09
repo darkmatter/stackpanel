@@ -155,8 +155,11 @@ let
       type = container.type;
       port = container.port;
       startupCommand = container.startupCommand;
-      # Use fly registry if fly deployment is enabled
-      registry = if isFlyDeployment then flyRegistry else container.registry;
+      # Use fly registry if fly deployment is enabled, fall back to null (resolved by mkContainerDerivation)
+      registry =
+        if isFlyDeployment then flyRegistry
+        else if container.registry != null then container.registry
+        else null;
       workingDir = container.workingDir;
       buildOutputPath =
         if container.buildOutputPath != null then container.buildOutputPath else "${appPath}/.output";
@@ -195,7 +198,11 @@ let
         copyToRoot = containerCfg.copyToRoot or null;
         env = containerCfg.env or { };
         maxLayers = containerCfg.maxLayers or 100;
-        registry = containerCfg.registry or settingsCfg.defaultRegistry;
+        # Use proper null check: `or` on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ly handles missing attrs, not null values
+        registry =
+          if containerCfg ? registry && containerCfg.registry != null
+          then containerCfg.registry
+          else settingsCfg.defaultRegistry;
         defaultCopyArgs = containerCfg.defaultCopyArgs or [ ];
       };
     in
