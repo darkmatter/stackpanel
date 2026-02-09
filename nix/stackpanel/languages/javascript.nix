@@ -23,7 +23,7 @@
 }:
 let
   cfg = config.stackpanel.languages.javascript;
-  rootDir = config.stackpanel.root or ".";
+  rootDir = if config.stackpanel.root != null then config.stackpanel.root else ".";
 
   nodeModulesPath = "${
     lib.optionalString (cfg.directory != rootDir) ''"${cfg.directory}/"''
@@ -115,7 +115,7 @@ in
 
     directory = lib.mkOption {
       type = lib.types.str;
-      default = config.stackpanel.root or ".";
+      default = if config.stackpanel.root != null then config.stackpanel.root else ".";
       defaultText = "config.stackpanel.root";
       description = "Project root for JavaScript tooling. Defaults to the repo root.";
     };
@@ -213,7 +213,7 @@ in
       ++ [
         ''
           # JavaScript toolchain: add node_modules/.bin to PATH
-          export PATH="${nodeModulesPath}/.bin:$PATH"
+          export PATH="$STACKPANEL_ROOT/${nodeModulesPath}/.bin:$PATH"
         ''
       ];
 
