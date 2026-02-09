@@ -4,6 +4,7 @@ import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Card, CardContent } from "@ui/card";
 import {
+	AlertTriangle,
 	CheckCircle2,
 	Clock,
 	Copy,
@@ -11,9 +12,12 @@ import {
 	Loader2,
 	RefreshCw,
 	Shield,
+	XCircle,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useModuleHealth } from "@/lib/healthchecks/use-healthchecks";
+import type { HealthStatus } from "@/lib/healthchecks/types";
 import { useNixConfigQuery } from "@/lib/use-agent";
 import { InitializeGroupDialog } from "./initialize-group-dialog";
 
@@ -27,6 +31,26 @@ interface GroupsData {
 	[name: string]: GroupConfig;
 }
 
+/**
+ * Get the SSM access status for a specific group from the SOPS module health data.
+ * The check ID follows the pattern: sops-ssm-access-{groupName}
+ */
+function getGroupSsmStatus(
+	sopsHealth: ReturnType<typeof useModuleHealth>["data"],
+	groupName: string,
+): { status: HealthStatus | null; message?: string; output?: string } {
+	if (!sopsHealth?.checks) return { status: null };
+	const check = sopsHealth.checks.find(
+		(c) => c.checkId === `sops-ssm-access-${groupName}`,
+	);
+	if (!check) return { status: null };
+	return {
+		status: check.status,
+		message: check.message ?? undefined,
+		output: check.output ?? undefined,
+	};
+}
+
 export function GroupsSection() {
 	const { data: nixConfig, isLoading, refetch } = useNixConfigQuery();
 	const [initializingGroup, setInitializingGroup] = useState<{
@@ -34,6 +58,10 @@ export function GroupsSection() {
 		ssmPath: string;
 		isReinitialize: boolean;
 	} | null>(null);
+
+	// Fetch SOPS module health to get per-group SSM access status
+	const { data: sopsHealth, runChecks: runSopsChecks } =
+		useModuleHealth("sops");
 
 	// Extract groups from the nix config
 	const groups: GroupsData = useMemo(() => {
@@ -107,20 +135,36 @@ export function GroupsSection() {
 						{groupEntries.length !== 1 ? "s" : ""} initialized
 					</p>
 				</div>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={() => refetch()}
-					className="h-8 px-2"
-				>
-					<RefreshCw className="h-3.5 w-3.5" />
-				</Button>
+				<div className="flex items-center gap-1">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => runSopsChecks()}
+						className="h-8 px-2 text-xs"
+						title="Re-run SSM access checks"
+					>
+						<Shield className="h-3.5 w-3.5 mr-1" />
+						Check SSM
+					</Button>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => refetch()}
+						className="h-8 px-2"
+					>
+						<RefreshCw className="h-3.5 w-3.5" />
+					</Button>
+				</div>
 			</div>
 
 			<div className="space-y-3">
 				{groupEntries.map(([name, group]) => {
 					const isInitialized =
 						group.agePub != null && group.agePub !== "";
+					const ssmStatus = getGroupSsmStatus(sopsHealth, name);
+					const ssmAccessible =
+						ssmStatus.status === "HEALTH_STATUS_HEALTHY";
+					const ssmChecked = ssmStatus.status !== null;
 					return (
 						<Card
 							key={name}
@@ -167,6 +211,23 @@ export function GroupsSection() {
 														? "Initialized"
 														: "Pending"}
 												</Badge>
+												{ssmChecked && (
+													<Badge
+														variant="outline"
+														className={
+															ssmAccessible
+																? "border-green-500/30 text-green-600 dark:text-green-400 text-[10px]"
+																: "border-red-500/30 text-red-600 dark:text-red-400 text-[10px]"
+														}
+													>
+														{ssmAccessible ? (
+															<CheckCircle2 className="h-3 w-3 mr-1" />
+														) : (
+															<XCircle className="h-3 w-3 mr-1" />
+														)}
+														SSM
+													</Badge>
+												)}
 											</div>
 
 											<div className="space-y-1.5">
@@ -174,9 +235,27 @@ export function GroupsSection() {
 													<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
 														SSM Path
 													</p>
-													<code className="text-xs font-mono text-muted-foreground break-all">
-														{group.ssmPath}
-													</code>
+													<div className="flex items-center gap-1.5">
+														<code className="text-xs font-mono text-muted-foreground break-all">
+															{group.ssmPath}
+														</code>
+														{ssmChecked && !ssmAccessible && (
+															<span
+																className="shrink-0"
+																title={
+																	ssmStatus.output ??
+																	"SSM parameter not accessible"
+																}
+															>
+																<AlertTriangle className="h-3 w-3 text-red-500" />
+															</span>
+														)}
+													</div>
+													{ssmChecked && !ssmAccessible && ssmStatus.output && (
+														<p className="text-[10px] text-red-500 mt-0.5">
+															{ssmStatus.output.split("\n")[0]}
+														</p>
+													)}
 												</div>
 
 												{isInitialized && (
