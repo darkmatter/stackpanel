@@ -388,6 +388,10 @@ let
       defaultCopyArgs ? [ ],
       backend ? "nix2container",
     }:
+    let
+      # Ensure registry is never null (fall back to default if null)
+      effectiveRegistry = if registry != null then registry else "docker-daemon:";
+    in
     if pkgs == null || container == null then
       null
     else
@@ -403,7 +407,7 @@ let
 
         # Allow overriding destination via first argument
         if [[ -z "$1" ]] || [[ "$1" == "--"* ]]; then
-          DEST="${registry}''${IMAGE_NAME}:''${IMAGE_TAG}"
+          DEST="${effectiveRegistry}''${IMAGE_NAME}:''${IMAGE_TAG}"
         elif [[ "$1" == "docker-daemon:" ]]; then
           DEST="docker-daemon:''${IMAGE_NAME}:''${IMAGE_TAG}"
           shift || true
