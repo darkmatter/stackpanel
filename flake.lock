@@ -281,23 +281,6 @@
         "type": "github"
       }
     },
-    "flake-parts_4": {
-      "inputs": {
-        "nixpkgs-lib": "nixpkgs-lib_2"
-      },
-      "locked": {
-        "lastModified": 1768135262,
-        "narHash": "sha256-PVvu7OqHBGWN16zSi6tEmPwwHQ4rLPU9Plvs8/1TUBY=",
-        "rev": "80daad04eddbbf5a4d883996a73f3f542fa437ac",
-        "revCount": 435,
-        "type": "tarball",
-        "url": "https://api.flakehub.com/f/pinned/hercules-ci/flake-parts/0.1.435%2Brev-80daad04eddbbf5a4d883996a73f3f542fa437ac/019bae22-b551-7786-bf6d-33671a04a044/source.tar.gz"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://flakehub.com/f/hercules-ci/flake-parts/0.1.424"
-      }
-    },
     "flake-root": {
       "locked": {
         "lastModified": 1723604017,
@@ -632,21 +615,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-lib_2": {
-      "locked": {
-        "lastModified": 1765674936,
-        "narHash": "sha256-k00uTP4JNfmejrCLJOwdObYC9jHRrr/5M/a/8L2EIdo=",
-        "owner": "nix-community",
-        "repo": "nixpkgs.lib",
-        "rev": "2075416fcb47225d9b68ac469a5c4801a9c4dd85",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "nixpkgs.lib",
-        "type": "github"
-      }
-    },
     "pre-commit-hooks": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -691,7 +659,6 @@
         "agenix-rekey": "agenix-rekey",
         "bun2nix": "bun2nix",
         "devenv": "devenv",
-        "flake-parts": "flake-parts_4",
         "flake-utils": "flake-utils",
         "git-hooks": "git-hooks_2",
         "gomod2nix": "gomod2nix",
@@ -699,8 +666,21 @@
         "nix2container": "nix2container",
         "nixpkgs": "nixpkgs",
         "process-compose-flake": "process-compose-flake",
+        "stackpanel-root": "stackpanel-root",
         "treefmt-nix": "treefmt-nix_4"
       }
+    },
+    "stackpanel-root": {
+      "flake": false,
+      "locked": {
+        "path": "./.stackpanel-root",
+        "type": "path"
+      },
+      "original": {
+        "path": "./.stackpanel-root",
+        "type": "path"
+      },
+      "parent": []
     },
     "systems": {
       "locked": {
