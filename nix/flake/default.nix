@@ -73,10 +73,7 @@ let
   gitHooksConfig = loadedConfig.git-hooks or { };
 
   stackpanelConfigModule = {
-    stackpanel = loadedConfig // {
-      # Set root from projectRoot
-      root = lib.mkDefault effectiveRoot;
-    };
+    stackpanel = loadedConfig;
   };
 
   # ===================================================================
@@ -216,13 +213,6 @@ let
     # ================================================================
 
     __stackpanel_shell_hook_main() {
-      # Prevent recursive entry
-      if [[ -n "''${__STACKPANEL_SHELL_ACTIVE:-}" ]]; then
-        echo "⚠️  Already in stackpanel shell - preventing recursive entry"
-        return 0
-      fi
-      export __STACKPANEL_SHELL_ACTIVE=1
-
       # Export environment variables (includes GOPATH, GOROOT from devenv languages.*)
       ${lib.concatStringsSep "\n" (
         lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
