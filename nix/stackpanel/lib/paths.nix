@@ -106,11 +106,20 @@ let
       rootDir ? defaults.rootDir,
       stateDir ? defaults.stateDir,
       genDir ? defaults.genDir,
+      rootMarker ? defaults.rootMarker,
     }:
     ''
       stackpanel_resolve_paths() {
         local root="''${1:-$(stackpanel_find_root)}"
         if [[ -z "$root" ]]; then
+          return 1
+        fi
+        if [[ ! -d "$root" ]]; then
+          echo "Error: Resolved stackpanel root is not a directory: $root"
+          echo "You may need to run on your stackpanel root dir:"
+          echo
+          echo "    echo \"\$PWD\" > ${rootMarker}"
+          echo
           return 1
         fi
         export STACKPANEL_ROOT="$root"

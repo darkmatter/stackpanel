@@ -1,7 +1,7 @@
 # ==============================================================================
 # flake.nix
 #
-# Starter flake template for projects using stackpanel + flake-parts.
+# Starter flake template for projects using stackpanel.
 #
 # Getting started:
 #   1. Run: nix flake init -t github:darkmatter/stackpanel
@@ -12,10 +12,9 @@
 #   nix develop     # Pure stackpanel shell (fast, reproducible)
 #   devenv shell    # Devenv shell with languages/services (if devenv.nix exists)
 #
-# The flakeModule:
+# The lib.mkFlake function:
 #   - Auto-loads .stackpanel/config.nix (and _internal.nix if present)
-#   - Auto-loads .stackpanel/devenv.nix for additional packages/env
-#   - Creates devShells.default via pkgs.mkShell (NOT devenv)
+#   - Creates devShells.default via pkgs.mkShell
 #   - Exposes stackpanelConfig, stackpanelFullConfig, stackpanelPackages
 # ==============================================================================
 {
@@ -23,7 +22,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-utils.url = "github:numtide/flake-utils";
     stackpanel.url = "github:darkmatter/stackpanel";
 
     # For pure flake evaluation (nix flake check)
@@ -32,27 +31,18 @@
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        inputs.stackpanel.flakeModules.readStackpanelRoot
-        inputs.stackpanel.flakeModules.default
-      ];
-
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-        "x86_64-darwin"
-      ];
-
-      perSystem =
-        { pkgs, ... }:
-        {
-          # The flakeModule auto-loads .stackpanel/config.nix
-          # and creates devShells.default automatically when stackpanel.enable = true
-
-          packages.default = pkgs.hello;
-        };
-    };
+    { self, nixpkgs, flake-utils, stackpanel, ... }@inputs:
+    # Use stackpanel.lib.mkFlake for full stackpanel integration
+    stackpanel.lib.mkFlake { inherit inputs self; }
+    # Merge with additional custom outputs
+    // flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        # Add your own packages here
+        packages.hello = pkgs.hello;
+      }
+    );
 }
