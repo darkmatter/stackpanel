@@ -1,17 +1,8 @@
 # ==============================================================================
 # default.nix - Stackpanel Flake Outputs Generator
 #
-<<<<<<< HEAD
-# THE single flake-parts module for stackpanel. This module:
-#   1. Auto-loads config from .stackpanel/_internal.nix or .stackpanel/config.nix
-#   2. Evaluates stackpanel modules via lib.evalModules
-#   3. Creates devShells.default via pkgs.mkShell with full passthru
-#   4. Full control over passthru, shellHook ordering, packages
-=======
 # A pure function that generates flake outputs for a given system.
 # This replaces the previous flake-parts module with explicit function calls.
->>>>>>> main
-#
 # Usage:
 #   import ./default.nix { inherit pkgs inputs self system; }
 #
@@ -44,6 +35,7 @@ let
   serializeLib = import ../stackpanel/lib/serialize.nix { inherit lib; };
 
   # Check if user's flake has these optional inputs
+  hasDevenv = inputs ? devenv;
   hasProcessCompose = inputs ? process-compose-flake;
   hasGitHooks = inputs ? git-hooks;
 
@@ -161,14 +153,14 @@ let
   devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
-  devenvPackages = devenvConfig.packages or [ ];
+  devenvPackages = if devenvConfig != null then (devenvConfig.packages or [ ]) else [ ];
 
   # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
   # We extract this and merge it into our env, giving our values priority
-  devenvEnv = devenvConfig.env or { };
+  devenvEnv = if devenvConfig != null then (devenvConfig.env or { }) else { };
 
   # Get processes from devenv
-  devenvProcesses = devenvConfig.processes or { };
+  devenvProcesses = if devenvConfig != null then (devenvConfig.processes or { }) else { };
 
   # ===================================================================
   # Build shell hook from stackpanel hooks
@@ -184,7 +176,7 @@ let
     lib.flatten [
       hooks.before
       hooks.main
-      (lib.optionals hasDevenv [
+      (lib.optionals (devenvConfig != null) [
         "echo \"⚙️  Entering devenv shell...\""
         devenvConfig.enterShell
       ])
@@ -383,7 +375,7 @@ let
       type = "app";
       program = "${script}";
     };
-  }) copyScripts;
+  }) (lib.filterAttrs (_: v: v != null) copyScripts);
 
   # Checks
   simpleChecks = spConfig.checks or { };
