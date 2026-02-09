@@ -81,6 +81,7 @@
             system
             projectRoot
             ;
+          stackpanelImports = [ ./.stackpanel/modules ];
         };
       in
       {
