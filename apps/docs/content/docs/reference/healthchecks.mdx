@@ -1,0 +1,392 @@
+---
+title: healthchecks
+description: Configuration options for stackpanel.healthchecks
+icon: Settings
+---
+
+# Healthchecks Options
+
+## `healthchecks.defaultInterval`
+
+Default interval for automatic healthcheck runs in seconds.
+Set to null to disable automatic checks.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `30` |
+
+---
+
+## `healthchecks.defaultTimeout`
+
+Default timeout for healthchecks in seconds
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `10` |
+
+---
+
+## `healthchecks.enable`
+
+Enable the healthchecks system
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `healthchecks.modules`
+
+Healthchecks organized by module.
+
+Each module can declare multiple healthchecks that verify its
+functionality. The UI displays a traffic light for each module
+based on the aggregate status of its healthchecks.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  go = {
+    displayName = "Go";
+    checks = {
+      # Inline script
+      go-installed = {
+        script = "command -v go >/dev/null 2>&1";
+        severity = "critical";
+      };
+    };
+  };
+
+  postgres = {
+    displayName = "PostgreSQL";
+    checks = {
+      # TCP check
+      running = {
+        type = "tcp";
+        tcpHost = "localhost";
+        tcpPort = 5432;
+        severity = "critical";
+      };
+      # Path to script file
+      has-tables = {
+        path = ./.stackpanel/src/checks/postgres/has-tables.sh;
+        severity = "warning";
+      };
+    };
+  };
+
+  # Extension module
+  sst = {
+    displayName = "SST";
+    checks = {
+      configured = {
+        path = ./src/checks/configured.sh;
+        severity = "critical";
+      };
+    };
+  };
+}
+```
+
+
+---
+
+## `healthchecks.modules.<name>.checks`
+
+Healthchecks for this module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.description`
+
+Description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.enable`
+
+Whether this healthcheck is enabled
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.httpExpectedStatus`
+
+Expected HTTP status code for a healthy response
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `200` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.httpMethod`
+
+HTTP method to use for http-type checks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"GET"` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.httpUrl`
+
+URL to check for http-type checks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"http://localhost:3000/health"`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.interval`
+
+How often to run this check in seconds.
+If null, check runs only on demand.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `null` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.name`
+
+Display name for the healthcheck
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"‹name›"` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.nixExpr`
+
+Nix expression to evaluate for nix-type checks.
+Should evaluate to true for healthy, false for unhealthy.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"builtins.pathExists /nix/store"`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.path`
+
+Path to script file for script-type checks.
+Content is read and used as the script body.
+Mutually exclusive with `script` and `scriptRef`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or absolute path` |
+| **Default** | `null` |
+
+**Example:**
+
+`./.stackpanel/src/checks/postgres/can-connect.sh`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.script`
+
+Shell script content for script-type checks (inline).
+Should exit 0 for healthy, non-zero for unhealthy.
+Mutually exclusive with `path` and `scriptRef`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"command -v go >/dev/null 2>&1"`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.scriptPackage`
+
+A derivation that provides the healthcheck script.
+The script should be at $out/bin/ or $out.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or package` |
+| **Default** | `null` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.scriptRef`
+
+Reference to a stackpanel.scripts.* entry.
+The referenced script is used as the healthcheck command.
+Mutually exclusive with `script` and `path`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"db-connect"`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.severity`
+
+How critical this check is:
+- critical: Failing = unhealthy (red light)
+- warning: Failing = degraded (yellow light)
+- info: Informational only, doesn't affect status
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "critical", "warning", "info"` |
+| **Default** | `"warning"` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.tags`
+
+Tags for filtering/grouping checks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "database"
+  "critical"
+]
+```
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.tcpHost`
+
+Host to connect to for tcp-type checks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"localhost"`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.tcpPort`
+
+Port to connect to for tcp-type checks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `null` |
+
+**Example:**
+
+`5432`
+
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.timeout`
+
+Timeout for the check in seconds
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `10` |
+
+---
+
+## `healthchecks.modules.<name>.checks.<name>.type`
+
+Type of healthcheck (script, nix, http, tcp)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "script", "nix", "http", "tcp"` |
+| **Default** | `"script"` |
+
+---
+
+## `healthchecks.modules.<name>.displayName`
+
+Display name for the module in the UI
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"‹name›"` |
+
+---
+
+## `healthchecks.modules.<name>.enable`
+
+Enable healthchecks for this module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+

@@ -1,0 +1,58 @@
+---
+title: Infra Templates
+description: Documentation for the templates module
+---
+
+This directory contains TypeScript templates used by `codegen.nix` to generate
+the infrastructure module library.
+
+## Template Pattern
+
+### Naming Convention
+
+- **`*.tmpl.ts`** — Template files with handlebars-style placeholders (`{{VAR}}`)
+- **`*.ts`** — Static files copied verbatim (no substitution)
+
+### Placeholders
+
+Templates use double-brace syntax for substitution:
+
+```typescript
+const CONFIG = {{PROJECT_CONFIG}} as const;
+```
+
+Available placeholders in `infra.tmpl.ts`:
+
+| Placeholder         | Description                              |
+|---------------------|------------------------------------------|
+| `{{PROJECT_CONFIG}}`| JSON object with storageBackend, keyFormat, projectName |
+
+### How It Works
+
+In `codegen.nix`:
+
+```nix
+# Read template
+infraTemplate = builtins.readFile ./templates/infra.tmpl.ts;
+
+# Apply substitutions
+infraClassTs = builtins.replaceStrings
+  ["{{PROJECT_CONFIG}}"]
+  [builtins.toJSON inputsJson.__config__]
+  infraTemplate;
+```
+
+### Adding New Templates
+
+1. Create `foo.tmpl.ts` with `{{PLACEHOLDER}}` markers
+2. In `codegen.nix`, read the file and use `builtins.replaceStrings`
+3. Document placeholders in this README
+
+### IDE Support
+
+The `.tmpl.ts` extension is valid TypeScript, so you get:
+- Syntax highlighting
+- Type checking (placeholders will error until replaced)
+- IntelliSense for non-placeholder code
+
+To check templates locally, temporarily replace placeholders with valid values.

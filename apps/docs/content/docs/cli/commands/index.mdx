@@ -1,0 +1,49 @@
+---
+title: stackpanel commands
+description: List or run devshell commands
+icon: Terminal
+---
+
+# stackpanel commands
+
+List or run commands defined in the Nix devshell configuration.
+
+Without arguments, lists all available commands.
+With a command name, runs that command with any additional arguments.
+
+Examples:
+  stackpanel commands                    # List all commands
+  stackpanel commands secrets:list       # Run the secrets:list command
+  stackpanel commands secrets:list --help  # Show help for secrets:list
+  stackpanel run generate-types          # Run generate-types (using alias)
+  stackpanel cmd build --release         # Run build with --release flag
+
+## Usage
+
+```bash
+stackpanel commands [command-name] [args...]
+```
+
+**Aliases:** `cmd`, `run`
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`list`](./list) | List all available commands |
+

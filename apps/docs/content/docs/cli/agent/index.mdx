@@ -1,0 +1,54 @@
+---
+title: stackpanel agent
+description: Run the local Stackpanel agent
+icon: Terminal
+---
+
+# stackpanel agent
+
+Run the local Stackpanel agent server.
+
+The agent runs on your machine and exposes a localhost API used by the Stackpanel web UI
+to run commands, evaluate Nix, and read/write files in the project.
+
+The agent auto-detects projects by looking for .stackpanel/config.nix in the current
+directory or parent directories.
+
+## Usage
+
+```bash
+stackpanel agent
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--bind` | `string` | _none_ | Bind address (default 127.0.0.1, or 0.0.0.0 with --remote) |
+| `--debug` | `bool` | `false` | Enable debug logging |
+| `--host` | `stringArray` | `[]` | Allowed CORS origins (can be specified multiple times, e.g., --host https://myapp.example.com) |
+| `--port` | `int` | `9876` | Port to listen on |
+| `--project-root, -p` | `string` | _none_ | Project root (defaults to auto-detect from current directory) |
+| `--remote` | `bool` | `false` | Enable remote access (binds to 0.0.0.0 and allows Tailscale origins) |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`test-token`](./test-token) | Generate a deterministic test pairing token |
+

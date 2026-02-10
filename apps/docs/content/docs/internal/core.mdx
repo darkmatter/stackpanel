@@ -35,7 +35,7 @@ core/
     ├── services.nix     # Service registry and factory
     ├── global-services.nix  # Global singleton services
     ├── ports.nix        # Port computation utilities (pure functions)
-    └── <service\>nix    # Individual service definitions
+    └── <service>.nix    # Individual service definitions
 ```
 
 ## Usage
@@ -44,20 +44,20 @@ The core module is typically imported by a devenv adapter:
 
 ```nix
 # In devenv.nix or a flake module
-\{
+{
   imports = [
     ./nix/stackpanel/core
   ];
 
-  stackpanel = \{
+  stackpanel = {
     enable = true;
     ports.project-name = "myproject";
-    apps = \{
-      web = \{\};
-      api = \{ domain = "api"; tls = true; \};
-    \};
-  \};
-\}
+    apps = {
+      web = {};
+      api = { domain = "api"; tls = true; };
+    };
+  };
+}
 ```
 
 ## Key Concepts
@@ -87,5 +87,5 @@ To add new options:
 3. Implement the feature in the appropriate module
 
 To add new services:
-1. Create a new file in `services/<name\>nix`
+1. Create a new file in `services/<name>.nix`
 2. Register it in `services/services.nix`

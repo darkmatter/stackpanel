@@ -8,23 +8,23 @@ Usage (Minimal):
 
 ```nix
 # flake.nix
-devShells.$\{system\}.default = inputs.stackpanel.lib.mkDevShell \{
+devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
   pkgs = pkgs;
   modules = [
-    (\{ ... \}: \{ devshell.packages = [ pkgs.nodejs_22 ]; \})
+    ({ ... }: { devshell.packages = [ pkgs.nodejs_22 ]; })
   ];
-\};
+};
 ```
 
 Usage (Recommended):
 
 ```nix
-devShells.$\{system\}.default = inputs.stackpanel.lib.mkDevShell \{
+devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
   pkgs = pkgs;
   includeDefaults = true;
   modules = [
     inputs.stackpanel.lib.devshell.features.aws
-    (\{ ... \}: \{ stackpanel.aws.enable = true; \})
+    ({ ... }: { stackpanel.aws.enable = true; })
   ];
-\};
+};
 ```

@@ -1,0 +1,34 @@
+---
+title: "=============================================================================="
+description: "infra/modules/aws-secrets/module.nix"
+---
+
+infra/modules/aws-secrets/module.nix
+
+AWS Secrets Infrastructure infra module.
+
+## Provisions
+
+```nix
+- GitHub Actions / Fly.io / Roles Anywhere OIDC provider
+- IAM role with OIDC trust policy
+- KMS key + alias for secrets encryption
+- SSM Parameter Store policies for secrets group key storage
+```
+
+
+This is the direct replacement for the SST-based stackpanel.sst module.
+
+## Usage
+
+```nix
+stackpanel.infra.enable = true;
+stackpanel.infra.aws.secrets = {
+  enable = true;
+  oidc.provider = "github-actions";
+  oidc.github-actions = { org = "my-org"; repo = "my-repo"; };
+};
+```
+
+
+==============================================================================

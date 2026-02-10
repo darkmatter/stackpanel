@@ -67,25 +67,89 @@ If you encounter a collision in the port calculation, you can set
 
 ---
 
-## `apps.<name>.build-command`
+## `apps.<name>.deployment.bindings`
 
-Custom build command (overrides default behavior)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `apps.<name>.commands`
-
-Commands associated with this app
+Environment variable names to bind to the deployed app.
+Each name is read from `process.env` at deploy time.
+Mark sensitive ones in `secrets`.
 
 | Property | Value |
 |----------|-------|
 | **Type** | `list of string` |
 | **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "DATABASE_URL"
+  "CORS_ORIGIN"
+  "BETTER_AUTH_SECRET"
+]
+```
+
+
+---
+
+## `apps.<name>.deployment.enable`
+
+Whether to enable deployment for this app.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.deployment.host`
+
+Deployment host/platform. Combined with `framework` to determine
+the alchemy resource type:
+
+  framework × host → alchemy resource
+  tanstack-start × cloudflare → TanStackStart
+  nextjs × cloudflare → Nextjs
+  vite × cloudflare → cloudflare.Vite
+  hono × cloudflare → cloudflare.Worker
+  * × fly → Fly container
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or one of "cloudflare", "fly", "vercel", "aws"` |
+| **Default** | `null` |
+
+**Example:**
+
+`"cloudflare"`
+
+
+---
+
+## `apps.<name>.deployment.secrets`
+
+Subset of `bindings` that contain sensitive values.
+These are wrapped with `alchemy.secret()` at deploy time.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "DATABASE_URL"
+  "BETTER_AUTH_SECRET"
+]
+```
+
 
 ---
 
@@ -95,42 +159,36 @@ Description of the app
 
 | Property | Value |
 |----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
+| **Type** | `null or string` |
+| **Default** | `null` |
 
 ---
 
 ## `apps.<name>.domain`
 
-Domain prefix for .localhost vhost.
-If set, a Caddy vhost will be created at .localhost
+Local development domain
 
 | Property | Value |
 |----------|-------|
 | **Type** | `null or string` |
 | **Default** | `null` |
-
-**Example:**
-
-`"api"`
-
 
 ---
 
 ## `apps.<name>.environments`
 
-Environments associated with this app
+Environment configurations (key = environment name like "dev", "prod").
 
 | Property | Value |
 |----------|-------|
-| **Type** | `list of (attribute set)` |
-| **Default** | `[ ]` |
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
 
 ---
 
-## `apps.<name>.format-command`
+## `apps.<name>.environments.<name>.description`
 
-Custom code formatting command
+(optional) Description of the environment
 
 | Property | Value |
 |----------|-------|
@@ -139,25 +197,183 @@ Custom code formatting command
 
 ---
 
-## `apps.<name>.install-command`
+## `apps.<name>.environments.<name>.env`
 
-Custom install command (overrides default behavior)
+Environment variables for this environment.
+Key: Environment variable name (e.g., DATABASE_URL)
+Value: Literal string or vals reference (e.g., ref+sops://...)
 
 | Property | Value |
 |----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
 
 ---
 
-## `apps.<name>.lint-command`
+## `apps.<name>.environments.<name>.name`
 
-Custom linting command
+Name of the environment
 
 | Property | Value |
 |----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.framework.astro.enable`
+
+Whether to enable Astro (static/SSR).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.hono.enable`
+
+Whether to enable Hono API server.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.hono.entrypoint`
+
+Entrypoint file for the Hono worker.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"src/index.ts"` |
+
+---
+
+## `apps.<name>.framework.nextjs.enable`
+
+Whether to enable Next.js (App Router or Pages).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.nextjs.output`
+
+Next.js output mode.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "standalone", "export"` |
+| **Default** | `"standalone"` |
+
+---
+
+## `apps.<name>.framework.nuxt.enable`
+
+Whether to enable Nuxt.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.remix.enable`
+
+Whether to enable Remix.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.tanstack-start.enable`
+
+Whether to enable TanStack Start (full-stack SSR with TanStack Router + Nitro).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.vite.assets-dir`
+
+Output directory for built assets.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"dist"` |
+
+---
+
+## `apps.<name>.framework.vite.enable`
+
+Whether to enable Vite SPA (React, Vue, Svelte, etc.).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.vite.ssr`
+
+Enable Vite SSR mode.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
 
 ---
 
@@ -189,6 +405,23 @@ If null, offset is determined by position in apps attrset.
 
 ---
 
+## `apps.<name>.packageName`
+
+NPM package name for turbo filter (e.g., "@stackpanel/web").
+If null, defaults to the app name.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"@myorg/web"`
+
+
+---
+
 ## `apps.<name>.path`
 
 Relative path to the app directory
@@ -202,33 +435,11 @@ Relative path to the app directory
 
 ## `apps.<name>.port`
 
-Port number for the app.
+Development server port
 
 | Property | Value |
 |----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `8080` |
-
----
-
-## `apps.<name>.start-command`
-
-Custom start/development command
-
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `apps.<name>.test-command`
-
-Custom test command
-
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
+| **Type** | `null or signed integer` |
 | **Default** | `null` |
 
 ---
@@ -862,23 +1073,12 @@ Package that provides the tool binary.
 
 ## `apps.<name>.type`
 
-Type of the app
+App type/runtime (bun, go, python, rust, etc.)
 
 | Property | Value |
 |----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `apps.<name>.variables`
-
-Variables associated with this app
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
+| **Type** | `null or string` |
+| **Default** | `null` |
 
 ---
 

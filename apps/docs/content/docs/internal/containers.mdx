@@ -1,0 +1,30 @@
+---
+title: "=============================================================================="
+description: Containers Module
+---
+
+Containers Module
+
+Builds OCI container images using nix2container (default) or dockerTools.
+
+Backend selection:
+```nix
+stackpanel.containers.settings.backend = "nix2container"; # or "dockerTools"
+```
+
+
+Per-app container configuration:
+```nix
+stackpanel.apps.web.container.enable = true;
+```
+
+
+## Commands
+
+```nix
+container-build <name>    Build container image
+container-copy <name>     Build + push to registry
+container-run <name>      Build + run locally
+```
+
+==============================================================================

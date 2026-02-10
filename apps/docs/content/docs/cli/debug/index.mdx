@@ -1,0 +1,53 @@
+---
+title: stackpanel debug
+description: Manage debug mode (run stackpanel from source)
+icon: Terminal
+---
+
+# stackpanel debug
+
+Manage debug mode settings for the stackpanel CLI.
+
+When debug mode is enabled, the CLI will forward all commands to 'go run'
+in your local stackpanel repository. This allows you to test changes
+without rebuilding or reinstalling the binary.
+
+Examples:
+  stackpanel debug status                    # Show current debug mode settings
+  stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
+  stackpanel debug disable                   # Disable debug mode
+
+Alias:
+  stackpanel dev ... (legacy alias)
+
+## Usage
+
+```bash
+stackpanel debug
+```
+
+**Aliases:** `dev`
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`disable`](./disable) | Disable debug mode |
+| [`enable`](./enable) | Enable debug mode with a local repository path |
+| [`status`](./status) | Show current debug mode settings |
+

@@ -8,12 +8,30 @@ icon: Settings
 
 ## `packages`
 
-Packages to include in the devshell. Preferred over devshell.packages.
+Packages to include in the devshell.
+
+Can be either:
+- Actual Nix packages (e.g., pkgs.git)
+- String package names (e.g., "git") - resolved from nixpkgs
+
+String packages are resolved via nixpkgs attribute paths, supporting
+nested paths like "nodePackages.typescript".
 
 | Property | Value |
 |----------|-------|
-| **Type** | `list of package` |
+| **Type** | `list of (package or string)` |
 | **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  pkgs.git
+  "ripgrep"
+  "nodePackages.typescript"
+]
+```
+
 
 ---
 

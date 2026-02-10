@@ -1,0 +1,172 @@
+---
+title: Ports
+description: Deterministic port assignment and configuration
+icon: hash
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+For the conceptual overview of how deterministic ports work, see [Core Concepts → Deterministic Ports](/docs/concepts/deterministic-ports). This page covers the practical configuration and usage.
+
+## Configuration
+
+Port computation is driven by `stackpanel.ports`:
+
+```nix
+stackpanel.ports = {
+  # The project name used to compute the port hash.
+  # Defaults to stackpanel.name if not set.
+  projectName = "myapp";
+
+  # Optional: override the computed base port directly.
+  # Normally you don't need this — the hash does the work.
+  # basePort = 4200;
+};
+```
+
+Once configured, Stackpanel computes a base port from the project name hash and assigns ports to apps and services from that range. The algorithm is deterministic — the same project name always produces the same ports, on every machine.
+
+## Port Ranges
+
+Ports are allocated within the range `[3000, 65000)` and rounded to the nearest 100. Within a project's range:
+
+| Category | Allocation | Example |
+|----------|-----------|---------|
+| **App ports** | Sequential from the base: `base + 0`, `base + 1`, ... | `4200`, `4201`, `4202` |
+| **Service ports** | Hashed from `projectName + serviceName` within the range | `4237` (postgres), `4252` (redis) |
+
+App ports are assigned in the order apps are defined. Service ports are independently hashed to avoid collisions with app ports.
+
+## Querying Ports
+
+### From the CLI
+
+```bash
+# Show the computed port for a specific service
+stackpanel port postgres
+
+# Show all assigned ports
+stackpanel status
+```
+
+### From Environment Variables
+
+Every assigned port is exported as an environment variable:
+
+```
+STACKPANEL_<KEY>_PORT
+```
+
+Examples:
+
+| Variable | Description |
+|----------|-------------|
+| `STACKPANEL_WEB_PORT` | Web app port |
+| `STACKPANEL_API_PORT` | API server port |
+| `STACKPANEL_POSTGRES_PORT` | PostgreSQL port |
+| `STACKPANEL_REDIS_PORT` | Redis port |
+| `STACKPANEL_MINIO_PORT` | Minio API port |
+
+These are set at shell entry time and available to all processes in the devshell — your application code, scripts, and any tool that reads environment variables.
+
+```bash
+# Use in shell scripts
+echo "PostgreSQL is on port $STACKPANEL_POSTGRES_PORT"
+curl http://localhost:$STACKPANEL_WEB_PORT/health
+```
+
+### From Nix
+
+Within your Nix configuration, reference computed ports through the config:
+
+```nix
+{ config, ... }:
+{
+  stackpanel.devshell.env = {
+    DATABASE_URL = "postgresql://localhost:${toString config.stackpanel.ports.computed.postgres}/myapp";
+    REDIS_URL = "redis://localhost:${toString config.stackpanel.ports.computed.redis}";
+  };
+}
+```
+
+This is the most reliable way to wire services together — the port values are computed at eval time and guaranteed to be consistent.
+
+## App Port Assignment
+
+Apps declared in `stackpanel.apps` receive sequential ports starting from the base:
+
+```nix
+stackpanel.apps = {
+  web = {
+    port = 0;  # base + 0 → e.g., 4200
+  };
+  api = {
+    port = 1;  # base + 1 → e.g., 4201
+  };
+  docs = {
+    port = 2;  # base + 2 → e.g., 4202
+  };
+};
+```
+
+The `port` value is an offset from the computed base, not an absolute port number. This keeps your config portable — the actual port depends on the project name hash.
+
+<Callout type="info">
+If you need a fixed, absolute port for a specific service (e.g., a tool that doesn't support configurable ports), you can set it directly. But prefer offsets whenever possible to avoid cross-project conflicts.
+</Callout>
+
+## Port Conflicts
+
+Deterministic ports make conflicts between Stackpanel projects extremely unlikely — different project names hash to different ranges. But conflicts can still happen if:
+
+- Another (non-Stackpanel) process is using the same port
+- Two projects happen to hash to overlapping ranges (rare)
+- A system service is bound to a port in your range
+
+### Diagnosing Conflicts
+
+```bash
+# Check what's using a specific port
+lsof -i :4237
+
+# Check if a port is available
+nc -z localhost 4237 && echo "in use" || echo "available"
+```
+
+### Resolving Conflicts
+
+If you hit a conflict, you have two options:
+
+1. **Change the project name** — a different name produces a different port range:
+
+```nix
+stackpanel.ports.projectName = "myapp-v2";
+```
+
+2. **Override the base port** — manually set the starting point:
+
+```nix
+stackpanel.ports.basePort = 5100;
+```
+
+<Callout type="warn">
+Overriding the base port means all team members need the same override. Make sure it's committed to your shared config, not in `config.local.nix`.
+</Callout>
+
+## Multiple Projects
+
+When you're working on several Stackpanel projects simultaneously, each project gets its own port range derived from its unique project name. This is the primary benefit of deterministic ports — you can run three projects at once without any manual port coordination.
+
+```
+Project "frontend"  → base 3400 → web:3400, api:3401, postgres:3437
+Project "backend"   → base 5200 → web:5200, api:5201, postgres:5237
+Project "analytics" → base 7100 → web:7100, api:7101, postgres:7137
+```
+
+Each project is isolated. No shared state, no conflicts, no `.env` files to keep in sync.
+
+## Reference
+
+- [Core Concepts → Deterministic Ports](/docs/concepts/deterministic-ports) for the mental model
+- [Options Reference → Ports](/docs/reference/ports) for all port-related options
+- [Services](/docs/services) for how services use assigned ports

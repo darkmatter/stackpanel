@@ -1,0 +1,195 @@
+---
+title: Extensions
+description: Add capabilities to your project with extensions
+icon: puzzle
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Extensions are the primary way to add new capabilities to a Stackpanel project. They're Nix modules that compose core features—file generation, scripts, services, packages, and more—into cohesive, reusable units.
+
+## What's an Extension?
+
+An extension is a Nix module that:
+
+1. **Defines its own configuration options** under `stackpanel.<extensionName>.*`
+2. **Registers itself** in the extensions system for visibility in the CLI and Studio UI
+3. **Uses core Stackpanel features** to implement its functionality
+
+For example, the SST extension adds AWS infrastructure provisioning. When you enable it, it:
+
+- Adds the SST CLI to your `PATH`
+- Generates an `sst.config.ts` file from your Nix config
+- Registers scripts like `sst:deploy` and `sst:dev`
+- Configures IAM roles and KMS keys for secrets
+- Adds a status panel to Studio showing deployment state
+
+All of this happens through the same core features your own config uses—`stackpanel.devshell.packages`, `stackpanel.scripts`, `stackpanel.files.entries`, and so on. Extensions are just well-organized modules.
+
+## Extension Types
+
+| Type | Where It Lives | Use Case |
+|------|---------------|----------|
+| **Builtin** | Shipped with Stackpanel | Core integrations (SST, Docker, CI, Git hooks) |
+| **Local** | In your project's Nix config | Project-specific modules you write yourself |
+| **External** | GitHub repos or other sources | Community-published extensions |
+
+## Quick Start
+
+### Enable a Builtin Extension
+
+Builtin extensions are already available—you just enable them:
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+};
+```
+
+### Browse Available Extensions
+
+Use Studio to browse, enable, and configure extensions through a visual interface. Or list them from the CLI:
+
+```bash
+stackpanel commands
+```
+
+### Create a Local Extension
+
+For project-specific logic, create a module in your config:
+
+```nix
+# .stackpanel/modules/seed-data.nix
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.stackpanel.seed-data;
+in
+{
+  options.stackpanel.seed-data = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable database seed data management";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    stackpanel.scripts."db:seed" = {
+      path = ./scripts/seed.sh;
+      description = "Seed the database with test data";
+      runtimeInputs = [ pkgs.postgresql ];
+    };
+
+    stackpanel.scripts."db:reset" = {
+      exec = "dropdb myapp && createdb myapp && db:seed";
+      description = "Reset and re-seed the database";
+    };
+  };
+}
+```
+
+Then import and enable it:
+
+```nix
+# .stackpanel/config.nix
+{
+  imports = [ ./modules/seed-data.nix ];
+  stackpanel.seed-data.enable = true;
+}
+```
+
+## Core Features Available to Extensions
+
+Extensions can use any of these core Stackpanel features:
+
+| Feature | Option Path | Description |
+|---------|-------------|-------------|
+| **File Generation** | `stackpanel.files.entries` | Generate files into the project workspace |
+| **Scripts** | `stackpanel.scripts` | Add CLI commands to the devshell |
+| **Packages** | `stackpanel.devshell.packages` | Add tools to the shell PATH |
+| **Tasks** | `stackpanel.tasks` | Define runnable tasks |
+| **Shell Hooks** | `stackpanel.devshell.hooks` | Run code on shell entry |
+| **Variables** | `stackpanel.variables` | Manage secrets and config values |
+| **Services** | `stackpanel.services` | Configure background services |
+| **MOTD** | `stackpanel.motd` | Add entries to the shell welcome message |
+| **Health Checks** | `stackpanel.healthchecks` | Register health check commands |
+
+Because extensions use the [module system](/docs/concepts/module-system), multiple extensions can contribute to the same features without conflicts. Two extensions can both add `.gitignore` entries, both register scripts, and both add packages—the module system merges everything.
+
+## Extension Categories
+
+Extensions are grouped by category in the Studio UI:
+
+| Category | Examples |
+|----------|---------|
+| Infrastructure | AWS, SST, cloud resources |
+| CI/CD | GitHub Actions, deployment pipelines |
+| Database | Database management, migrations |
+| Secrets | Secret and variable management |
+| Deployment | Docker, Cloudflare, Fly.io |
+| Development | Linters, formatters, dev tools |
+| Monitoring | Logging, metrics |
+| Integration | Third-party service integrations |
+
+## Sections
+
+<Cards>
+  <Card title="Using Extensions" href="./using-extensions">
+    Install, enable, and configure extensions for your project
+  </Card>
+  <Card title="Writing Extensions" href="./writing-extensions">
+    Build your own extensions with the full extension schema
+  </Card>
+  <Card title="Extension Registry" href="./registry">
+    Browse and discover extensions through Studio
+  </Card>
+</Cards>
+
+## How Extensions Compose
+
+Extensions follow the same composition model as everything else in Stackpanel. When you enable multiple extensions, their contributions are merged by the module system:
+
+```
+SST Extension
+  → adds sst CLI to PATH
+  → generates sst.config.ts
+  → registers sst:deploy, sst:dev scripts
+  → adds .sst to .gitignore
+
+Docker Extension
+  → adds docker CLI to PATH
+  → generates Dockerfile
+  → registers docker:build, docker:push scripts
+  → adds .docker to .gitignore
+
+CI Extension
+  → generates .github/workflows/ci.yml
+  → includes SST deploy steps (because SST is enabled)
+  → includes Docker build steps (because Docker is enabled)
+  → adds CI-specific .gitignore entries
+
+Your config
+  → adds project-specific packages
+  → sets environment variables
+  → defines custom scripts
+
+  ↓ Module system merges everything ↓
+
+Final devshell: all packages, all scripts, all env vars
+Generated files: sst.config.ts, Dockerfile, ci.yml, .gitignore (merged)
+```
+
+No extension needs to know about the others. Each declares what it needs, and the module system handles the rest.
+
+<Callout type="info">
+Extensions can declare dependencies on other extensions. If an extension requires PostgreSQL, it can specify `dependencies = [ "postgres" ]` and Stackpanel will ensure the dependency is satisfied before the extension loads.
+</Callout>
+
+## Reference
+
+- [Options Reference → Extensions](/docs/reference/extensions) for all extension configuration options
+- [Options Reference → Modules](/docs/reference/modules) for the module system options
+- [Core Concepts → Module System](/docs/concepts/module-system) for how module composition works

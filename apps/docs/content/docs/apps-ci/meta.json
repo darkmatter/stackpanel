@@ -1,0 +1,6 @@
+{
+  "title": "Apps & CI",
+  "description": "Define applications and generate CI pipelines",
+  "icon": "rocket",
+  "pages": ["index", "defining-apps", "ci-generation"]
+}

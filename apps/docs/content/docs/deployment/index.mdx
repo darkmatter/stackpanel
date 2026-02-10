@@ -1,0 +1,126 @@
+---
+title: Containers & Deployment
+description: Build containers and deploy your applications to production
+icon: cloud
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel supports building containers and deploying to multiple platforms—all configured from the same Nix source of truth as your dev environment. Container definitions, deployment targets, and infrastructure provisioning are declared alongside your services and apps, so everything stays in sync.
+
+## The Deployment Story
+
+Stackpanel's approach to deployment follows the same philosophy as everything else: **declare it once, generate the artifacts your tools expect.**
+
+- Need a `Dockerfile`? Stackpanel generates one optimized for your stack.
+- Need a Cloudflare Workers config? Declared in Nix, generated as standard config files.
+- Need AWS infrastructure? The SST extension provisions it with IAM, KMS, and OIDC already wired up.
+
+The generated files are standard—`Dockerfile`, `fly.toml`, `sst.config.ts`—committed to Git and usable without Nix. Your CI pipeline reads them as normal config. If you eject from Stackpanel, the files stay.
+
+## What's Available
+
+<Cards>
+  <Card title="Containers" href="./containers">
+    Build OCI-compatible container images using Nix or Dockerfile generation
+  </Card>
+  <Card title="Cloudflare" href="./cloudflare">
+    Deploy to Cloudflare Workers and Pages
+  </Card>
+  <Card title="Fly.io" href="./fly">
+    Deploy to Fly.io with generated fly.toml and Dockerfile
+  </Card>
+  <Card title="SST" href="./sst">
+    AWS infrastructure provisioning with KMS, IAM, and OIDC authentication
+  </Card>
+</Cards>
+
+## Quick Example
+
+A typical deployment setup might combine containers with a deployment target:
+
+```nix
+{
+  # Define your apps
+  stackpanel.apps.api = {
+    port = 1;
+    root = "./apps/api";
+    build = "bun run build";
+  };
+
+  # Build a container for the API
+  stackpanel.containers.api = {
+    enable = true;
+    app = "api";
+    registry = "ghcr.io/my-org/myapp-api";
+  };
+
+  # Deploy to Fly.io
+  stackpanel.deployment.fly = {
+    enable = true;
+    apps.api = {
+      region = "iad";
+      vm-size = "shared-cpu-1x";
+    };
+  };
+}
+```
+
+From this, Stackpanel generates a `Dockerfile` for the API, a `fly.toml` with the correct configuration, and optionally CI steps that build and deploy on merge to `main`.
+
+## How Deployment Connects to CI
+
+Deployment configuration feeds into [CI generation](/docs/apps-ci/ci-generation). When you define a deployment target and enable the CI extension, the generated GitHub Actions workflow includes the appropriate deploy steps:
+
+```
+stackpanel.containers.api
+  → Generates Dockerfile
+  → CI workflow gets docker build + push steps
+
+stackpanel.deployment.fly.apps.api
+  → Generates fly.toml
+  → CI workflow gets flyctl deploy step
+
+stackpanel.sst
+  → Generates sst.config.ts
+  → CI workflow gets sst deploy step with OIDC auth
+```
+
+Each deployment platform adds its own steps to the CI pipeline. Multiple platforms can coexist—deploy your frontend to Cloudflare and your API to Fly.io from the same workflow.
+
+<Callout type="info">
+All deployment configuration generates standard files that work without Nix. Your CI runners don't need Nix installed—they use Docker, flyctl, wrangler, or sst directly.
+</Callout>
+
+## Container Strategies
+
+Stackpanel supports two approaches to building containers:
+
+| Strategy | How It Works | Best For |
+|----------|-------------|----------|
+| **Dockerfile generation** | Generates a standard `Dockerfile` optimized for your stack | Most projects, standard CI/CD pipelines |
+| **Nix-based containers** | Uses `nix2container` to build minimal OCI images directly from Nix | Minimal image size, reproducible builds |
+
+The Dockerfile approach is more portable—any Docker-compatible CI can build it. The Nix approach produces smaller, more reproducible images but requires Nix at build time. See [Containers](./containers) for details on both strategies.
+
+## Platform-Specific Notes
+
+### Cloudflare
+
+Cloudflare Workers and Pages deployments are lightweight—no containers involved. Stackpanel generates the `wrangler.toml` configuration and can produce the correct build output format for your framework (static export for Pages, Worker bundles for Workers).
+
+### Fly.io
+
+Fly.io deployments use containers. Stackpanel generates both the `Dockerfile` and `fly.toml`, with the correct ports, health checks, and environment variables wired up from your Stackpanel config.
+
+### SST (AWS)
+
+SST is the most comprehensive—it provisions cloud infrastructure (KMS keys, IAM roles, S3 buckets) alongside your deployment. The SST extension handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials.
+
+## Reference
+
+- [Options Reference → CI](/docs/reference/ci) for CI generation options
+- [Apps & CI](/docs/apps-ci) for how app definitions drive deployment
+- [Core Concepts → Building Source](/docs/concepts/building-source) for why deployment config is generated
+- [Core Concepts → File Generation](/docs/concepts/file-generation) for how generated files work
