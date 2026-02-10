@@ -1,0 +1,64 @@
+---
+title: "=============================================================================="
+description: "fly-oidc.nix - Fly.io OIDC to AWS Authentication"
+---
+
+fly-oidc.nix - Fly.io OIDC to AWS Authentication
+
+Creates entrypoint scripts for containers running on Fly.io that need to
+authenticate to AWS using OIDC federation.
+
+The script handles:
+- Retrieving OIDC token from Fly.io (token file or API fallback)
+- Exchanging token for AWS credentials via STS AssumeRoleWithWebIdentity
+- Optionally loading secrets from AWS SSM Parameter Store via Chamber
+- Executing the container's main command
+
+== USAGE ==
+
+```nix
+let flyOidc = import ./fly-oidc.nix { inherit pkgs; };
+```
+
+
+```nix
+# Basic usage with Chamber:
+entrypoint = flyOidc.mkEntrypoint {
+  chamberService = "myapp/prod";
+  sessionPrefix = "myapp";
+};
+```
+
+
+```nix
+# Skip Chamber, just get AWS creds:
+entrypoint = flyOidc.mkEntrypoint {
+  sessionPrefix = "myapp";
+  skipChamber = true;
+};
+```
+
+
+== CONTAINER CONFIG ==
+
+```nix
+config = {
+  entrypoint = [ "${entrypoint}/bin/fly-oidc-entrypoint" ];
+  Cmd = [ "node" "server.js" ];
+  Env = [
+    "AWS_REGION=us-west-2"
+    "AWS_ROLE_ARN=arn:aws:iam::123456789:role/myapp-prod"
+  ];
+};
+```
+
+
+== FLY.TOML ==
+
+```nix
+[env]
+AWS_ROLE_ARN = "arn:aws:iam::123456789:role/myapp-prod"
+```
+
+
+==============================================================================

@@ -1,0 +1,15 @@
+---
+title: Web app devenv configuration
+description: "Note(cooper): This is my first nix2container setup so there's probably extra"
+---
+
+Note(cooper): This is my first nix2container setup so there's probably extra
+code that can be trimmed. @todo come back later and trim down while verifying
+that everything still works. Definitely a learning curve to nix2container.
+
+Build strategy:
+- We build the web app on macOS (impure, using local bun/turbo)
+- The .output directory is then copied into a linux container
+- This avoids cross-compilation issues with native node modules
+
+For pure builds, you'd need a Linux builder (remote or VM).

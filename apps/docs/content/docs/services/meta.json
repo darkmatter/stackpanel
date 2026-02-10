@@ -1,0 +1,13 @@
+{
+  "title": "Services",
+  "description": "Manage local development services like PostgreSQL, Redis, and more",
+  "icon": "database",
+  "pages": [
+    "index",
+    "postgres",
+    "redis",
+    "minio",
+    "process-compose",
+    "custom-services"
+  ]
+}

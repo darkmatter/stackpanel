@@ -1,0 +1,152 @@
+---
+title: Studio
+description: The Stackpanel web interface for managing your development environment
+icon: layout-dashboard
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Studio is Stackpanel's local web interface. It gives you a visual dashboard for everything in your development environment—services, extensions, generated files, secrets, and configuration—without touching the terminal or editing Nix by hand.
+
+## What Studio Does
+
+Studio is a React application (built with TanStack Start) that runs in your browser and communicates with the [Agent](/docs/agent) over HTTP. It provides:
+
+- **Extension registry** — Browse, enable, and configure extensions with a single click
+- **Service dashboard** — See which services are running, start/stop them, and stream logs
+- **Configuration editor** — Edit Stackpanel options through forms instead of Nix files
+- **Generated file viewer** — Inspect generated files and see which ones are stale
+- **App overview** — A grid view of all defined apps with their ports, URLs, and status
+- **Variable management** — Set and view secrets and environment variables
+- **Extension panels** — Custom UI panels contributed by extensions (status displays, forms, tables)
+
+## Opening Studio
+
+Once the [Agent](/docs/agent) is running, Studio is available at:
+
+```
+http://localhost:9876
+```
+
+The agent serves Studio directly—no separate process to start. If you're in your devshell and the agent is running, Studio is already accessible.
+
+```bash
+# Start the agent (if not already running)
+stackpanel agent
+
+# Studio is now available at http://localhost:9876
+```
+
+<Callout type="info">
+The agent starts automatically in many setups. Check `stackpanel status` to see if it's running. If not, `stackpanel agent` launches it in the background.
+</Callout>
+
+## The Dashboard
+
+The main Studio view is a dashboard that shows the current state of your project at a glance:
+
+- **Services** — Running/stopped status for PostgreSQL, Redis, Minio, and custom services
+- **Apps** — Your defined applications with their ports and live/dead status
+- **Extensions** — Enabled extensions with their status panels
+- **Generated files** — Files that Stackpanel manages, with staleness indicators
+- **Health checks** — Results from registered health check commands
+
+Each section updates in real time via the Agent's SSE (Server-Sent Events) stream. When a service starts, a config changes, or a file is regenerated, Studio reflects it immediately.
+
+## Extension Registry
+
+The registry panel lets you browse all available extensions—builtin, local, and external—organized by category. Each extension card shows:
+
+- Name and description
+- Category and tags
+- Whether it's currently enabled
+- What features it uses (files, scripts, services, etc.)
+
+Click an extension to see its full details, configuration options, and what it will add to your environment. Enable it with a single click—Studio writes the configuration to your `.stackpanel/config.nix` automatically.
+
+See [Extensions → Extension Registry](/docs/extensions/registry) for more details.
+
+## Service Management
+
+The services panel provides a visual interface for managing background processes:
+
+- **Start/stop** individual services or all services at once
+- **View logs** with real-time streaming and filtering
+- **Check health** — readiness probe status for each service
+- **See ports** — the deterministic port each service is using
+
+This mirrors what `stackpanel services` does in the CLI, but with a more ergonomic interface for monitoring multiple services simultaneously.
+
+## Configuration
+
+Studio can edit your Stackpanel configuration through forms. When you change a setting, Studio updates your `.stackpanel/config.nix` file. This means:
+
+- You don't need to know Nix syntax to configure Stackpanel
+- Changes are written to the same files that Nix reads
+- Your config stays version-controlled in Git
+- Other team members see your changes in the normal code review flow
+
+<Callout type="warn">
+Studio writes to your actual config files. Changes show up in `git diff` just like any other edit. Review them before committing, especially if you're unfamiliar with the generated Nix syntax.
+</Callout>
+
+## Extension Panels
+
+Extensions can register custom UI panels that appear in Studio. These provide extension-specific visibility without requiring the terminal:
+
+| Panel Type | Description |
+|------------|-------------|
+| **Status** | Key-value display (e.g., "Region: us-west-2", "Status: healthy") |
+| **Apps Grid** | Visual grid of applications with status indicators |
+| **Form** | Configuration form for editing extension options |
+| **Table** | Tabular data (logs, items, metrics) |
+| **Custom** | Extension-specific React components |
+
+Panels update in real time through the Agent's event stream. When an extension's state changes, the panel reflects it immediately.
+
+See [Extensions → Writing Extensions](/docs/extensions/writing-extensions) for how to add panels to your own extensions.
+
+## Generated Files
+
+The files panel shows every file that Stackpanel manages—`.gitignore`, `tsconfig.json`, CI workflows, Dockerfiles, and any other generated config. For each file, you can see:
+
+- The current contents
+- Whether the file on disk matches the expected output (or if it's stale)
+- Which modules contributed to it
+- When it was last regenerated
+
+This is especially useful for understanding what Stackpanel is doing and debugging cases where a generated file doesn't match expectations.
+
+## Architecture
+
+Studio's architecture follows a clean separation:
+
+```
+Browser (Studio UI)
+  ├── React + TanStack Start + TanStack Query
+  ├── Radix UI + shadcn components + Tailwind CSS
+  │
+  └── Communicates with:
+      ├── Agent (localhost:9876) — HTTP REST + Connect-RPC
+      │     ├── Nix evaluation (config, options, packages)
+      │     ├── Process management (services, logs)
+      │     ├── File system (generated files, secrets)
+      │     └── SSE events (real-time updates)
+      │
+      └── Cloud API (optional) — tRPC
+            ├── Authentication (Better Auth)
+            └── Team features (shared config, billing)
+```
+
+The Agent is the bridge between Studio and your local Nix environment. All operations—evaluating config, starting services, reading files—go through the Agent's API. Studio never touches Nix or the filesystem directly.
+
+## Offline Support
+
+Studio works entirely offline for local development features. The Agent serves the UI and handles all local operations without an internet connection. The cloud API is optional and only used for team features like shared configuration and authentication.
+
+## Reference
+
+- [Agent](/docs/agent) for the background service that powers Studio
+- [Extensions → Extension Registry](/docs/extensions/registry) for browsing and installing extensions
+- [Extensions → Writing Extensions](/docs/extensions/writing-extensions) for adding custom panels
+- [Services](/docs/services) for the services that Studio manages

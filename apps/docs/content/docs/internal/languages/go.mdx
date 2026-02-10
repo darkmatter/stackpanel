@@ -1,0 +1,21 @@
+---
+title: "=============================================================================="
+description: "go.nix - Go Language Toolchain"
+---
+
+go.nix - Go Language Toolchain
+
+Sets up the Go development toolchain: compiler, tools, GOPATH, GOROOT,
+and PATH. This replaces devenv's languages.go module.
+
+This module handles TOOLCHAIN setup (compiler, env, PATH).
+App-level config (building, packaging, air, gomod2nix) is in modules/go/.
+
+Usage in .stackpanel/config.nix:
+```nix
+languages.go.enable = true;
+```
+
+
+Or auto-enabled when any app has go.enable = true.
+==============================================================================

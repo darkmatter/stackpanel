@@ -1,0 +1,170 @@
+---
+title: variables
+description: Configuration options for stackpanel.variables
+icon: Settings
+---
+
+# Variables Options
+
+## `variables`
+
+Workspace variables - literals, secrets, and vals references.
+
+Keygroups determine storage and encryption:
+  /var/*      - Shared config (plaintext, NOT encrypted)
+  /dev/*      - Dev secrets (encrypted)
+  /staging/*  - Staging secrets (encrypted)
+  /prod/*     - Production secrets (encrypted)
+  /computed/* - Nix-computed values (read-only)
+
+Values are either literal strings or vals references:
+  "info"                                  (literal)
+  "ref+sops://.../dev.yaml#/DATABASE_URL" (encrypted SOPS)
+  "ref+yaml://.../vars.yaml#/LOG_LEVEL"   (plaintext YAML)
+  "ref+awsssm://prod/api-key"             (AWS SSM)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  # Shared config (plaintext, NOT encrypted)
+  "/var/LOG_LEVEL" = { value = "info"; };
+  "/var/API_VERSION" = { value = "v1"; };
+  
+  # Dev secrets (encrypted in dev.yaml)
+  "/dev/DATABASE_URL" = {
+    value = "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL";
+  };
+  
+  # Prod secrets (encrypted in prod.yaml)
+  "/prod/API_KEY" = {
+    value = "ref+sops://.stackpanel/secrets/prod.yaml#/API_KEY";
+  };
+}
+```
+
+
+---
+
+## `variables.<name>.id`
+
+Variable identifier. Format: //
+
+The keygroup determines which SOPS file the secret lives in:
+  /dev/FOO -\> .stackpanel/secrets/dev.yaml
+  /prod/FOO -\> .stackpanel/secrets/prod.yaml
+
+Computed variables use /computed/\<source\>/\<path\>:
+  /computed/apps/web/port
+  /computed/services/postgres/port
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"‹name›"` |
+
+---
+
+## `variables.<name>.isComputed`
+
+Whether this is a computed (read-only) variable
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.isPlaintext`
+
+Whether this is a plaintext config variable (/var/*)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.isSecret`
+
+Whether this is a SOPS-encrypted secret
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.isValsRef`
+
+Whether the value is a vals reference
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.keyGroup`
+
+Key group extracted from ID (e.g., 'dev', 'prod', 'computed')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.sopsFile`
+
+Path to the SOPS file for this keygroup (null for /var/* and /computed/*)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.value`
+
+The value - either a literal string or a vals reference.
+
+Literals: "3000", "postgresql://localhost/dev"
+Vals refs: "ref+sops://...", "ref+awsssm://...", "ref+exec://..."
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `variables.<name>.varName`
+
+Variable name extracted from ID (last path component)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+

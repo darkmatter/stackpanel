@@ -1,0 +1,50 @@
+---
+title: state
+description: Configuration options for stackpanel.state
+icon: Settings
+---
+
+# State Options
+
+## `state.custom`
+
+Arbitrary state data contributed by modules.
+Use this for module-specific state that should be serialized.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+---
+
+## `state.devenv`
+
+Devenv-related state for serialization.
+Populated by devenv integration modules (services, languages, pre-commit).
+
+Structure:
+  \{
+    services = \{ available = [...]; enabled = [...]; \};
+    languages = \{ available = [...]; enabled = [...]; \};
+    preCommit = \{ available = [...]; enabled = [...]; \};
+  \}
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+---
+
+## `state.file`
+
+Name of the state file written to the state directory.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"stackpanel.json"` |
+
+---
+

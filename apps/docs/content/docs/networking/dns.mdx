@@ -1,0 +1,222 @@
+---
+title: DNS
+description: Configure local DNS for your development services
+icon: globe
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can configure local DNS so that your development services are reachable at readable hostnames instead of `localhost:<port>`. Instead of remembering that your API is on port 4201, you can access it at `api.myapp.local`.
+
+## Overview
+
+Local DNS works in conjunction with the [Caddy reverse proxy](./caddy) and optionally [Step CA certificates](./certificates). The flow looks like this:
+
+```
+Browser → api.myapp.local
+    → DNS resolves to 127.0.0.1
+    → Caddy receives the request
+    → Caddy proxies to localhost:4201 (your API's deterministic port)
+```
+
+This gives you production-like URLs during development, which is especially useful when working with:
+
+- **CORS** — matching origins between frontend and backend
+- **Cookies** — domain-scoped cookies that work across services
+- **OAuth callbacks** — redirect URLs that look like real domains
+- **Multi-service architectures** — clear, memorable addresses for each service
+
+## Configuration
+
+DNS settings are configured under `stackpanel.dns`:
+
+```nix
+stackpanel.dns = {
+  enable = true;
+  domain = "myapp.local";
+
+  entries = {
+    web = {
+      host = "myapp.local";
+      port = config.stackpanel.ports.computed.web;
+    };
+
+    api = {
+      host = "api.myapp.local";
+      port = config.stackpanel.ports.computed.api;
+    };
+
+    minio = {
+      host = "s3.myapp.local";
+      port = config.stackpanel.ports.computed.minio;
+    };
+  };
+};
+```
+
+Each entry maps a hostname to a local port. Stackpanel configures Caddy to proxy these hostnames to the correct ports.
+
+## How DNS Resolution Works
+
+For local DNS to work, your machine needs to resolve `*.myapp.local` to `127.0.0.1`. There are a few ways to set this up:
+
+### `/etc/hosts` (Simplest)
+
+Add entries manually to your hosts file:
+
+```
+127.0.0.1  myapp.local
+127.0.0.1  api.myapp.local
+127.0.0.1  s3.myapp.local
+```
+
+This is straightforward but requires updating the file every time you add a new subdomain.
+
+### dnsmasq (Wildcard Support)
+
+For wildcard resolution (so that _any_ subdomain of `myapp.local` resolves locally), use dnsmasq:
+
+```bash
+# macOS with Homebrew
+brew install dnsmasq
+
+# Add a rule for your local domain
+echo "address=/myapp.local/127.0.0.1" >> /opt/homebrew/etc/dnsmasq.conf
+
+# Restart dnsmasq
+sudo brew services restart dnsmasq
+
+# Tell macOS to use dnsmasq for .local domains
+sudo mkdir -p /etc/resolver
+echo "nameserver 127.0.0.1" | sudo tee /etc/resolver/local
+```
+
+With this setup, `anything.myapp.local` resolves to `127.0.0.1` automatically—no hosts file edits needed when you add new services.
+
+<Callout type="info">
+On Linux, you can achieve similar wildcard resolution with `systemd-resolved` or `NetworkManager` dnsmasq integration. The exact setup varies by distribution.
+</Callout>
+
+## Combining with Caddy
+
+DNS entries work hand-in-hand with Stackpanel's [Caddy integration](./caddy). When both are configured, Caddy automatically gets reverse proxy rules for each DNS entry:
+
+```nix
+{
+  stackpanel.dns = {
+    enable = true;
+    entries.api = {
+      host = "api.myapp.local";
+      port = config.stackpanel.ports.computed.api;
+    };
+  };
+
+  # Caddy picks up DNS entries and creates proxy rules
+  stackpanel.caddy.enable = true;
+}
+```
+
+Caddy will proxy `api.myapp.local` → `localhost:<api-port>` without any additional Caddy configuration.
+
+## HTTPS with Local DNS
+
+For HTTPS on local domains, combine DNS with [Step CA certificates](./certificates):
+
+```nix
+{
+  stackpanel.dns.enable = true;
+  stackpanel.caddy.enable = true;
+  stackpanel.step-ca.enable = true;
+}
+```
+
+With all three enabled, you get:
+
+1. **DNS** resolves `api.myapp.local` → `127.0.0.1`
+2. **Step CA** issues a TLS certificate for `api.myapp.local`
+3. **Caddy** terminates TLS and proxies to your app
+
+The result is `https://api.myapp.local` working in your browser with a trusted certificate—identical to production.
+
+## Per-App DNS
+
+When you define apps in `stackpanel.apps`, DNS entries can be generated automatically:
+
+```nix
+stackpanel = {
+  dns.enable = true;
+  dns.domain = "myapp.local";
+
+  apps = {
+    web = {
+      port = 0; # auto-assigned
+      # Automatically gets web.myapp.local (or just myapp.local for the first app)
+    };
+    api = {
+      port = 1;
+      # Automatically gets api.myapp.local
+    };
+  };
+};
+```
+
+This keeps your DNS configuration in sync with your app definitions—no need to maintain both separately.
+
+## Environment Variables
+
+When DNS is enabled, Stackpanel exports URL environment variables that use the configured hostnames instead of `localhost`:
+
+| Variable | Without DNS | With DNS |
+|----------|-------------|----------|
+| `STACKPANEL_WEB_URL` | `http://localhost:4200` | `http://myapp.local` |
+| `STACKPANEL_API_URL` | `http://localhost:4201` | `http://api.myapp.local` |
+
+Your application code can reference these variables to construct URLs that match the actual hostname—useful for generating OAuth redirect URLs, API base URLs, and CORS allow-lists.
+
+## Troubleshooting
+
+### Hostname not resolving
+
+Verify DNS resolution is working:
+
+```bash
+# Should show 127.0.0.1
+dig +short myapp.local
+
+# Or with nslookup
+nslookup myapp.local
+```
+
+If it doesn't resolve, check your `/etc/hosts` or dnsmasq configuration.
+
+### "Connection refused" after DNS resolves
+
+DNS is resolving correctly, but nothing is listening. Make sure Caddy is running:
+
+```bash
+stackpanel caddy status
+```
+
+And that your target service is up:
+
+```bash
+stackpanel services status
+```
+
+### `.local` domain conflicts on macOS
+
+macOS uses mDNS (Bonjour) for `.local` domains by default, which can conflict with custom DNS. If you experience slow resolution or intermittent failures, either:
+
+- Use a different TLD (e.g., `.test`, `.internal`)
+- Configure dnsmasq to handle `.local` resolution before mDNS
+
+<Callout type="warn">
+The `.local` TLD is reserved for mDNS by RFC 6762. If you hit issues, `.test` is a safe alternative—it's reserved by IANA for testing purposes and will never conflict with real domains.
+</Callout>
+
+## Reference
+
+- [Options Reference → DNS](/docs/reference/dns) for all DNS configuration options
+- [Caddy](./caddy) for reverse proxy setup
+- [Certificates](./certificates) for HTTPS with local domains
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how port assignments work

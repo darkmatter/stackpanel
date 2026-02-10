@@ -1,0 +1,43 @@
+---
+title: outputs
+description: Configuration options for stackpanel.outputs
+icon: Settings
+---
+
+# Outputs Options
+
+## `outputs`
+
+Output derivations to expose.
+
+These will be available as:
+  - `nix build .#` (via flake) - for direct packages
+  - `nix run .#.` (via flake) - for grouped packages (like scripts)
+  - `devenv outputs.` (via devenv)
+
+Example:
+  stackpanel.outputs = \{
+    my-docs = pkgs.runCommand "docs" \{\} "...";
+    my-script = pkgs.writeShellScriptBin "foo" "...";
+    # Grouped packages (available via nix run .#scripts.)
+    scripts = \{ foo = pkgs.writeShellScriptBin "foo" "..."; \};
+  \};
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (package or attribute set of package)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  docs-json = optionsDoc.optionsJSON;
+  docs-md = optionsDoc.optionsCommonMark;
+  scripts = { my-script = pkgs.writeShellScriptBin "test" "echo hello"; };
+}
+```
+
+
+---
+

@@ -1,0 +1,122 @@
+---
+title: moduleRequirements
+description: Configuration options for stackpanel.moduleRequirements
+icon: Settings
+---
+
+# ModuleRequirements Options
+
+## `moduleRequirements`
+
+Variable requirements declared by enabled modules.
+Modules add entries here to declare what environment variables they need.
+The agent/UI can query this to show what's missing.
+
+Format: \{ moduleName = \{ requires = [ ... ]; provides = [ ... ]; \}; \}
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `moduleRequirements.<name>.provides`
+
+Environment variables provided by this module after setup
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `moduleRequirements.<name>.requires`
+
+Variables required by this module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action`
+
+Action to resolve this variable if missing
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action.label`
+
+Button/link label
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action.type`
+
+Action type: add-secret, add-variable, external
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action.url`
+
+External URL for creating the value
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.description`
+
+Description of the variable
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.key`
+
+Environment variable name
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleRequirements.<name>.requires.*.sensitive`
+
+Whether the value should be treated as a secret
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+

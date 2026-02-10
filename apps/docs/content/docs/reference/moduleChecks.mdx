@@ -1,0 +1,389 @@
+---
+title: moduleChecks
+description: Configuration options for stackpanel.moduleChecks
+icon: Settings
+---
+
+# ModuleChecks Options
+
+## `moduleChecks`
+
+Structured module checks organized by module ID.
+These are derivations that run during `nix flake check` and in CI.
+
+Each module can define checks in standard categories:
+- eval (required for certification)
+- packages (required for certification)
+- config (recommended)
+- integration (recommended)
+- lint (optional)
+- custom.* (module-specific)
+
+For simple flake checks, use stackpanel.checks instead.
+This option provides structured metadata for certification.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  oxlint = {
+    eval = {
+      description = "OxLint module evaluates correctly";
+      required = true;
+      derivation = pkgs.runCommand "oxlint-eval" {} "touch $out";
+    };
+    packages = {
+      description = "OxLint package is available";
+      required = true;
+      derivation = pkgs.runCommand "oxlint-packages" {
+        nativeBuildInputs = [ pkgs.oxlint ];
+      } "oxlint --version > $out";
+    };
+  };
+}
+```
+
+
+---
+
+## `moduleChecks.<name>.config`
+
+Configuration check - verifies config generation works correctly.
+Recommended for modules that generate config files.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.config.derivation`
+
+The derivation that runs this check (must succeed to pass)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.config.description`
+
+Human-readable description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.config.required`
+
+Whether this check is required for module certification
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.config.timeout`
+
+Timeout in seconds for this check
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
+
+---
+
+## `moduleChecks.<name>.custom`
+
+Custom module-specific checks.
+Use this for checks that don't fit the standard categories.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.derivation`
+
+The derivation that runs this check (must succeed to pass)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.description`
+
+Human-readable description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.required`
+
+Whether this check is required for module certification
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.timeout`
+
+Timeout in seconds for this check
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
+
+---
+
+## `moduleChecks.<name>.eval`
+
+Evaluation check - verifies the module evaluates without errors.
+Required for module certification.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.eval.derivation`
+
+The derivation that runs this check (must succeed to pass)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.eval.description`
+
+Human-readable description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.eval.required`
+
+Whether this check is required for module certification
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.eval.timeout`
+
+Timeout in seconds for this check
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
+
+---
+
+## `moduleChecks.<name>.integration`
+
+Integration check - verifies module works with a sample project.
+Recommended for complex modules.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.integration.derivation`
+
+The derivation that runs this check (must succeed to pass)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.integration.description`
+
+Human-readable description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.integration.required`
+
+Whether this check is required for module certification
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.integration.timeout`
+
+Timeout in seconds for this check
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
+
+---
+
+## `moduleChecks.<name>.lint`
+
+Lint check - verifies the module's code passes linting.
+Optional.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.lint.derivation`
+
+The derivation that runs this check (must succeed to pass)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.lint.description`
+
+Human-readable description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.lint.required`
+
+Whether this check is required for module certification
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.lint.timeout`
+
+Timeout in seconds for this check
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
+
+---
+
+## `moduleChecks.<name>.packages`
+
+Packages check - verifies required packages are available.
+Required for module certification.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.packages.derivation`
+
+The derivation that runs this check (must succeed to pass)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.packages.description`
+
+Human-readable description of what this check verifies
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.packages.required`
+
+Whether this check is required for module certification
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.packages.timeout`
+
+Timeout in seconds for this check
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
+
+---
+

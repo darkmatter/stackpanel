@@ -1,0 +1,32 @@
+---
+title: "=============================================================================="
+description: "packages.nix - Turbo Workspace Package Declarations"
+---
+
+packages.nix - Turbo Workspace Package Declarations
+
+Declares workspace packages whose package.json scripts and turbo.json tasks
+are managed by Nix. Single source of truth for both files.
+
+## Usage
+
+```nix
+stackpanel.turbo.packages.infra = {
+  name = "@stackpanel/infra";
+  path = "packages/infra";
+  dependencies = { alchemy = "catalog:"; };
+  scripts.deploy = {
+    exec = "alchemy deploy";
+    turbo = { enable = true; cache = false; };
+  };
+};
+```
+
+
+This generates:
+```nix
+- packages/infra/package.json (with name, scripts, deps, exports)
+- turbo.json tasks entry for scripts with turbo.enable = true
+```
+
+==============================================================================

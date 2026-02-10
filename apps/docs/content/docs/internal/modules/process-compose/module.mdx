@@ -1,0 +1,50 @@
+---
+title: "=============================================================================="
+description: "module.nix - Process Compose Module Implementation"
+---
+
+module.nix - Process Compose Module Implementation
+
+Process-compose integration for stackpanel.
+
+This module:
+```nix
+1. Defines stackpanel.process-compose.{enable, processes, environment, package}
+2. Auto-generates process entries from apps (defaults to turbo run -F <name> dev)
+3. Creates a `dev` wrapper package added to devshell
+```
+
+
+## Usage
+
+```nix
+# All apps get a dev process by default using: turbo run -F <name> dev
+# Just define the app:
+web = {
+  path = "apps/web";
+};
+```
+
+
+```nix
+# Override with explicit command if needed:
+api = {
+  path = "apps/api";
+  tasks.dev.command = "go run ./cmd/api";
+};
+```
+
+
+```nix
+# Disable process-compose for a specific app:
+stackpanel.apps.legacy.process-compose.enable = false;
+```
+
+
+Access the generated config:
+```nix
+config.stackpanel.process-compose.processes
+config.stackpanel.process-compose.package
+```
+
+==============================================================================

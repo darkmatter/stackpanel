@@ -1,0 +1,266 @@
+---
+title: Caddy
+description: Reverse proxy with automatic HTTPS for local development
+icon: shield
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+[Caddy](https://caddyserver.com/) is a modern web server with automatic HTTPS built in. Stackpanel uses Caddy as a reverse proxy so you can access your local services through clean URLs like `https://myapp.local` instead of `http://localhost:4200`.
+
+## Why a Reverse Proxy?
+
+Running multiple services locally means juggling multiple ports: your web app on `4200`, your API on `4201`, Minio on `4260`. A reverse proxy gives you:
+
+- **Readable URLs** — `https://myapp.local` instead of `http://localhost:4200`
+- **Automatic HTTPS** — TLS certificates provisioned through [Step CA](/docs/networking/certificates), so your local dev environment behaves like production
+- **Single entry point** — Route different paths or subdomains to different backend services
+- **CORS simplification** — Everything goes through one origin, eliminating cross-origin headaches during development
+
+## Enable Caddy
+
+```nix
+stackpanel.caddy = {
+  enable = true;
+};
+```
+
+When enabled, Caddy is added to your devshell and managed as a service through [process-compose](/docs/services/process-compose). It starts alongside your other services when you run `stackpanel services start`.
+
+## Defining Routes
+
+Routes map incoming requests to your local services. Define them under `stackpanel.caddy.routes`:
+
+```nix
+stackpanel.caddy = {
+  enable = true;
+
+  routes = {
+    web = {
+      from = "myapp.local";
+      to = "localhost:${toString config.stackpanel.ports.computed.web}";
+    };
+
+    api = {
+      from = "api.myapp.local";
+      to = "localhost:${toString config.stackpanel.ports.computed.api}";
+    };
+  };
+};
+```
+
+After starting services, `https://myapp.local` proxies to your web app and `https://api.myapp.local` proxies to your API server.
+
+<Callout type="info">
+Routes use Nix expressions, so they automatically reference the correct [deterministic ports](/docs/concepts/deterministic-ports). If your port assignments change, the Caddy config updates to match.
+</Callout>
+
+## Managing Caddy
+
+Use the Stackpanel CLI to control Caddy:
+
+```bash
+# Start Caddy (usually started with all services)
+stackpanel caddy start
+
+# Stop Caddy
+stackpanel caddy stop
+
+# Check status
+stackpanel caddy status
+
+# Add a route dynamically
+stackpanel caddy add myapp.local localhost:4200
+
+# Remove a route
+stackpanel caddy remove myapp.local
+```
+
+Or manage it through [Studio](/docs/studio), where routes are visible in the networking panel.
+
+## HTTPS and Certificates
+
+For local HTTPS to work, Caddy needs a certificate authority (CA) that your browser trusts. Stackpanel integrates with [Step CA](/docs/networking/certificates) to handle this:
+
+1. Step CA issues certificates for your local domains
+2. Caddy automatically requests and renews certificates from Step CA
+3. Your browser trusts the certificates because Step CA's root cert is installed in your system trust store
+
+```nix
+{
+  stackpanel.step-ca = {
+    enable = true;
+    ca-url = "https://ca.internal:443";
+    ca-fingerprint = "abc123...";
+  };
+
+  stackpanel.caddy = {
+    enable = true;
+    tls = {
+      ca = config.stackpanel.step-ca.ca-url;
+      ca-root = config.stackpanel.step-ca.root-cert;
+    };
+  };
+}
+```
+
+<Callout type="warn">
+HTTPS requires [Step CA](/docs/networking/certificates) to be configured. Without it, Caddy falls back to HTTP-only proxying. If you don't need HTTPS locally, you can skip the TLS configuration entirely.
+</Callout>
+
+## Path-Based Routing
+
+Instead of subdomains, you can route based on URL paths:
+
+```nix
+stackpanel.caddy = {
+  enable = true;
+
+  routes = {
+    web = {
+      from = "myapp.local";
+      to = "localhost:${toString config.stackpanel.ports.computed.web}";
+    };
+
+    api = {
+      from = "myapp.local/api/*";
+      to = "localhost:${toString config.stackpanel.ports.computed.api}";
+      strip_prefix = "/api";
+    };
+
+    minio = {
+      from = "myapp.local/storage/*";
+      to = "localhost:${toString config.stackpanel.ports.computed.minio}";
+      strip_prefix = "/storage";
+    };
+  };
+};
+```
+
+This routes `myapp.local/api/users` to your API's `/users` endpoint, and `myapp.local/storage/` to Minio.
+
+## DNS Configuration
+
+For `.local` domains to resolve to `localhost`, you need a local DNS resolver. Stackpanel can manage this through the [DNS](/docs/networking/dns) configuration, or you can add entries to `/etc/hosts` manually:
+
+```
+127.0.0.1  myapp.local
+127.0.0.1  api.myapp.local
+```
+
+<Callout type="info">
+On macOS, you can use `dscacheutil -flushcache` after editing `/etc/hosts` to pick up changes immediately.
+</Callout>
+
+## Custom Caddyfile Snippets
+
+For advanced use cases, you can inject raw Caddyfile directives:
+
+```nix
+stackpanel.caddy = {
+  enable = true;
+
+  extraConfig = ''
+    (cors) {
+      header Access-Control-Allow-Origin *
+      header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+      header Access-Control-Allow-Headers "Content-Type, Authorization"
+    }
+  '';
+
+  routes.api = {
+    from = "api.myapp.local";
+    to = "localhost:${toString config.stackpanel.ports.computed.api}";
+    extraDirectives = ''
+      import cors
+      encode gzip
+    '';
+  };
+};
+```
+
+## Combining with Other Services
+
+A typical full-stack setup uses Caddy to front all your local services:
+
+```nix
+{
+  stackpanel.globalServices = {
+    enable = true;
+    postgres.enable = true;
+    redis.enable = true;
+    minio.enable = true;
+  };
+
+  stackpanel.caddy = {
+    enable = true;
+
+    routes = {
+      web = {
+        from = "myapp.local";
+        to = "localhost:${toString config.stackpanel.ports.computed.web}";
+      };
+
+      api = {
+        from = "api.myapp.local";
+        to = "localhost:${toString config.stackpanel.ports.computed.api}";
+      };
+
+      minio-console = {
+        from = "storage.myapp.local";
+        to = "localhost:${toString config.stackpanel.ports.computed.minio-console}";
+      };
+    };
+  };
+}
+```
+
+All services—including Caddy—are started together with `stackpanel services start` and stopped together with `stackpanel services stop`.
+
+## Troubleshooting
+
+### "address already in use" on port 80 or 443
+
+Another web server (Apache, nginx, or another Caddy instance) is using the standard HTTP/HTTPS ports. Either stop the conflicting service or configure Caddy to use alternate ports:
+
+```nix
+stackpanel.caddy = {
+  enable = true;
+  http_port = 8080;
+  https_port = 8443;
+};
+```
+
+### Browser shows certificate warning
+
+This usually means the Step CA root certificate isn't trusted by your system. See [Certificates → Trust Store](/docs/networking/certificates) for instructions on installing the root cert.
+
+### Domain not resolving
+
+Make sure your `.local` domains resolve to `127.0.0.1`. Check with:
+
+```bash
+dig myapp.local
+# or
+nslookup myapp.local
+```
+
+If they don't resolve, add entries to `/etc/hosts` or configure [local DNS](/docs/networking/dns).
+
+### Caddy not starting
+
+Check the logs for details:
+
+```bash
+stackpanel logs caddy
+```
+
+Common causes: port conflicts, invalid route configuration, or certificate provisioning failures.
+
+## Reference
+
+- [Options Reference → Caddy](/docs/reference/caddy) for all Caddy configuration options
+- [CLI → Caddy](/docs/cli/caddy) for CLI commands
+- [Certificates](/docs/networking/certificates) for HTTPS and Step CA configuration
+- [DNS](/docs/networking/dns) for local domain resolution
+- [Caddy documentation](https://caddyserver.com/docs/) for Caddy-specific configuration

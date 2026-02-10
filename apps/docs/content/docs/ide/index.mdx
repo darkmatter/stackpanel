@@ -1,0 +1,114 @@
+---
+title: IDE Integration
+description: Auto-generated editor configuration for VS Code and Zed
+icon: code
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel generates IDE configuration files so that every developer on your team gets the same editor experience—extensions, settings, debug configurations, and devshell integration—without anyone having to set it up manually.
+
+## Why Generate IDE Config?
+
+Every team has the same conversation: "make sure you install the Nix formatter extension," "use these workspace settings," "here's the launch.json for debugging." These instructions live in a README that nobody reads, and new team members spend their first hour configuring their editor.
+
+Stackpanel treats IDE configuration the same way it treats everything else: as [build output](/docs/concepts/building-source). Your Nix config declares what the editor should look like, and Stackpanel generates the files your editor expects.
+
+## Enable IDE Integration
+
+```nix
+stackpanel.ide = {
+  enable = true;
+  vscode.enable = true;
+  zed.enable = true;
+};
+```
+
+When enabled, Stackpanel generates editor-specific configuration files in the standard locations your editor reads. Every team member gets identical settings without copying files or following setup docs.
+
+## What Gets Generated
+
+| Editor | Generated Files | What They Configure |
+|--------|----------------|---------------------|
+| **VS Code** | `.vscode/settings.json`, `.vscode/extensions.json` | Formatter, linter, Nix LSP, recommended extensions, devshell environment loading |
+| **Zed** | `.zed/settings.json` | Language server config, formatter settings, Nix integration |
+
+Generated files are committed to Git, so they work for every team member immediately—no manual setup step.
+
+<Callout type="info">
+Like all Stackpanel-generated files, IDE config files are standard files in standard locations. Your editor reads them normally. If you stop using Stackpanel, the files stay and keep working.
+</Callout>
+
+## Quick Example
+
+```nix
+stackpanel.ide = {
+  enable = true;
+
+  vscode = {
+    enable = true;
+
+    # Recommend extensions for the team
+    extensions = [
+      "jnoortheen.nix-ide"
+      "esbenp.prettier-vscode"
+      "dbaeumer.vscode-eslint"
+      "bradlc.vscode-tailwindcss"
+    ];
+
+    # Workspace settings
+    settings = {
+      "editor.formatOnSave" = true;
+      "editor.defaultFormatter" = "esbenp.prettier-vscode";
+      "nix.enableLanguageServer" = true;
+      "nix.serverPath" = "nil";
+    };
+  };
+};
+```
+
+This generates `.vscode/settings.json` and `.vscode/extensions.json` with the specified configuration. When a team member opens the project in VS Code, they're prompted to install the recommended extensions and the settings apply automatically.
+
+## Devshell Environment Loading
+
+One of the most useful features is automatic devshell environment loading. When configured, your editor runs inside the Stackpanel devshell environment—meaning language servers, formatters, and tools resolve to the Nix-provided versions, not whatever's installed globally on the developer's machine.
+
+This eliminates the "my LSP uses a different TypeScript version" class of problems entirely.
+
+## Extension Contributions
+
+Extensions can contribute IDE settings alongside their other features. When you enable the OxLint extension, it can add the OxLint VS Code extension to the recommended list and configure the linter settings. When you enable the Go module, it can set up `gopls` with the correct GOPATH. Each extension manages its own IDE integration.
+
+```nix
+# Inside an extension module
+config = lib.mkIf cfg.enable {
+  stackpanel.ide.vscode.settings = {
+    "oxlint.enable" = true;
+    "oxlint.configPath" = cfg.config-file;
+  };
+
+  stackpanel.ide.vscode.extensions = [
+    "nicolo-ribaudo.vscode-oxlint"
+  ];
+};
+```
+
+Multiple extensions can contribute settings and extension recommendations. The [module system](/docs/concepts/module-system) merges everything into a single set of generated files.
+
+## Editors
+
+<Cards>
+  <Card title="VS Code" href="./vscode">
+    Workspace settings, recommended extensions, and devshell integration
+  </Card>
+  <Card title="Zed" href="./zed">
+    Language server configuration and Nix integration
+  </Card>
+</Cards>
+
+## Reference
+
+- [Options Reference → IDE](/docs/reference/ide) for all IDE configuration options
+- [Core Concepts → File Generation](/docs/concepts/file-generation) for how generated files work
+- [Dev Environment](/docs/dev-environment) for the devshell that IDE integration builds on

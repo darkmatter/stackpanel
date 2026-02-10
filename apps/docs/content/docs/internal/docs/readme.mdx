@@ -1,0 +1,30 @@
+---
+title: "=============================================================================="
+description: docs/readme.nix
+---
+
+docs/readme.nix
+
+README generation module. Generates README.md from a template with
+dynamic content injected from the docs and project configuration.
+
+## Usage
+
+```nix
+stackpanel.docs.readme = {
+  enable = true;
+  template = ./README.tmpl.md;  # Optional custom template
+};
+```
+
+
+The module reads content from:
+```nix
+- The template file (README.tmpl.md by default)
+- apps/docs/content/docs/index.mdx (vision/intro)
+- apps/docs/content/docs/quick-start.mdx (quickstart guide)
+```
+
+
+Generated file is written to README.md in the project root.
+==============================================================================

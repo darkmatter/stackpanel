@@ -1,0 +1,17 @@
+---
+title: "=============================================================================="
+description: "container.nix - nix2container Image Building for Fly.io"
+---
+
+container.nix - nix2container Image Building for Fly.io
+
+Creates container images using nix2container for deployment to Fly.io.
+Supports multiple app types: bun, node, go, static, custom.
+
+Build strategy:
+- Apps are built impure on the host (using local bun/node/go)
+- The build output is then copied into a linux container
+- This avoids cross-compilation issues with native modules
+
+For pure builds, you'd need a Linux builder (remote or VM).
+==============================================================================

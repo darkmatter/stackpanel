@@ -1,0 +1,320 @@
+---
+title: Fly.io
+description: Deploy applications to Fly.io with generated configuration and OIDC authentication
+icon: plane
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can generate Fly.io deployment configuration from your project definition—`fly.toml` files, Dockerfiles, and OIDC-based authentication for passwordless deploys from CI. Instead of hand-maintaining Fly config that drifts from your actual app setup, the deployment extension derives everything from your Stackpanel config.
+
+## Enable the Fly Extension
+
+```nix
+stackpanel.deployment.fly = {
+  enable = true;
+};
+```
+
+When enabled, Stackpanel adds the `flyctl` CLI to your devshell and generates Fly.io configuration files based on your [app definitions](/docs/apps-ci/defining-apps).
+
+## Defining Fly Apps
+
+Each app that should be deployed to Fly needs deployment configuration:
+
+```nix
+stackpanel.apps = {
+  api = {
+    port = 1;
+    root = "./apps/api";
+    build = "bun run build";
+
+    deployment.fly = {
+      enable = true;
+      app-name = "myapp-api";
+      region = "iad";
+      
+      # Resource allocation
+      vm = {
+        size = "shared-cpu-1x";
+        memory = 256;
+      };
+
+      # Health check
+      http-service = {
+        internal-port = 8080;
+        force-https = true;
+      };
+    };
+  };
+
+  web = {
+    port = 0;
+    root = "./apps/web";
+    build = "bun run build";
+
+    deployment.fly = {
+      enable = true;
+      app-name = "myapp-web";
+      region = "iad";
+    };
+  };
+};
+```
+
+Stackpanel generates a `fly.toml` for each app in its working directory, configured with the correct internal port, health checks, and resource settings.
+
+## Generated Files
+
+When the Fly extension is enabled, Stackpanel generates:
+
+| File | Description |
+|------|-------------|
+| `apps/<app>/fly.toml` | Fly.io app configuration |
+| `apps/<app>/Dockerfile` | Container image (if not already defined) |
+
+These are standard Fly.io files—`flyctl` reads them directly. Like all Stackpanel-generated files, they're committed to Git so that deploys work without Nix.
+
+```nix
+# The extension generates fly.toml from your config
+stackpanel.files.entries."apps/api/fly.toml" = {
+  # ... generated automatically from deployment.fly settings
+};
+```
+
+<Callout type="info">
+You can inspect the generated `fly.toml` at any time. It's a standard file that `flyctl` understands—no proprietary format or wrapper.
+</Callout>
+
+## Container Builds
+
+Fly.io deploys container images. The Fly extension works with Stackpanel's [container system](/docs/deployment/containers) to build images for your apps:
+
+```nix
+stackpanel.apps.api.deployment.fly = {
+  enable = true;
+  app-name = "myapp-api";
+
+  # Use the Stackpanel container builder
+  build = {
+    # Dockerfile is generated from your Nix config
+    # or you can point to an existing one
+    dockerfile = "./apps/api/Dockerfile";
+  };
+};
+```
+
+If you don't have a Dockerfile, the [container extension](/docs/deployment/containers) can generate one based on your app's framework, language, and dependencies.
+
+## OIDC Authentication
+
+For CI/CD deployments, the Fly extension supports OIDC-based authentication—no long-lived API tokens stored as secrets:
+
+```nix
+stackpanel.deployment.fly = {
+  enable = true;
+
+  oidc = {
+    enable = true;
+    org = "my-fly-org";
+  };
+};
+```
+
+When OIDC is enabled, the [CI generation](/docs/apps-ci/ci-generation) produces GitHub Actions steps that authenticate with Fly using GitHub's OIDC token. This means:
+
+- No `FLY_API_TOKEN` secret to manage
+- Tokens are short-lived and scoped to each CI run
+- Authentication is tied to your GitHub org/repo identity
+- No token rotation or expiration to worry about
+
+```yaml
+# Generated CI step (simplified)
+- name: Deploy to Fly
+  uses: superfly/flyctl-actions/setup-flyctl@master
+- run: flyctl deploy --remote-only
+  env:
+    FLY_API_TOKEN: ${{ steps.fly-oidc.outputs.token }}
+```
+
+<Callout type="warn">
+OIDC authentication requires your Fly.io organization to have OIDC configured with your GitHub repository. See the [Fly.io OIDC docs](https://fly.io/docs/reference/openid-connect/) for setup instructions.
+</Callout>
+
+## Multi-Region Deployment
+
+Deploy to multiple Fly.io regions for lower latency:
+
+```nix
+stackpanel.apps.api.deployment.fly = {
+  enable = true;
+  app-name = "myapp-api";
+  region = "iad";
+  
+  # Additional regions for replica placement
+  regions = [ "iad" "lhr" "nrt" ];
+};
+```
+
+Fly handles request routing to the nearest region automatically.
+
+## Environment and Secrets
+
+Stackpanel can sync your [variables](/docs/secrets/variables) to Fly.io secrets:
+
+```nix
+stackpanel.apps.api.deployment.fly = {
+  enable = true;
+  app-name = "myapp-api";
+
+  # These Stackpanel variables get set as Fly secrets
+  secrets = [
+    "DATABASE_URL"
+    "API_KEY"
+    "STRIPE_SECRET_KEY"
+  ];
+
+  # Static environment variables (non-secret)
+  env = {
+    NODE_ENV = "production";
+    LOG_LEVEL = "info";
+  };
+};
+```
+
+Static environment variables are written into `fly.toml`. Secrets are managed through `flyctl secrets set` and never appear in generated files.
+
+## Deployment Scripts
+
+The Fly extension registers scripts for common deployment tasks:
+
+```bash
+# Deploy a specific app
+fly:deploy api
+
+# Deploy all Fly-configured apps
+fly:deploy-all
+
+# Check deployment status
+fly:status
+
+# Open the Fly dashboard
+fly:dashboard
+```
+
+These are standard Stackpanel [scripts](/docs/dev-environment/packages-scripts) that wrap `flyctl` with the correct app names and configuration.
+
+## Databases on Fly
+
+If your app needs a managed database, you can configure Fly Postgres:
+
+```nix
+stackpanel.apps.api.deployment.fly = {
+  enable = true;
+  app-name = "myapp-api";
+
+  postgres = {
+    enable = true;
+    name = "myapp-db";
+    region = "iad";
+    vm-size = "shared-cpu-1x";
+    volume-size = 1; # GB
+  };
+};
+```
+
+The extension generates the necessary `flyctl postgres create` commands and wires the `DATABASE_URL` into your app's environment.
+
+<Callout type="info">
+Fly Postgres is a managed PostgreSQL instance running on Fly's infrastructure. For local development, use Stackpanel's built-in [PostgreSQL service](/docs/services/postgres) instead.
+</Callout>
+
+## Combining with Other Deployment Targets
+
+You can deploy different apps in your monorepo to different platforms:
+
+```nix
+stackpanel.apps = {
+  web = {
+    port = 0;
+    # Deploy the frontend to Cloudflare Pages
+    deployment.cloudflare.enable = true;
+  };
+
+  api = {
+    port = 1;
+    # Deploy the API to Fly.io
+    deployment.fly = {
+      enable = true;
+      app-name = "myapp-api";
+    };
+  };
+};
+```
+
+Each deployment target generates its own configuration files independently. The [CI generation](/docs/apps-ci/ci-generation) produces workflow steps for all enabled deployment targets.
+
+## CLI Commands
+
+The Fly extension adds `flyctl` to your devshell and registers convenience scripts:
+
+```bash
+# Direct flyctl access (always available when extension is enabled)
+flyctl status --app myapp-api
+flyctl logs --app myapp-api
+flyctl ssh console --app myapp-api
+
+# Stackpanel wrapper scripts
+fly:deploy api          # Deploy a specific app
+fly:logs api            # Stream logs
+fly:status              # Show status of all Fly apps
+```
+
+## Troubleshooting
+
+### "App not found" errors
+
+Make sure the Fly app exists. On first deployment, you may need to create it:
+
+```bash
+flyctl apps create myapp-api --org my-org
+```
+
+Or let `flyctl deploy` create it automatically on the first run.
+
+### Build failures in CI
+
+Check that the generated Dockerfile is correct:
+
+```bash
+cat apps/api/Dockerfile
+```
+
+If the auto-generated Dockerfile doesn't work for your app, you can provide a custom one and point the extension at it.
+
+### OIDC token errors
+
+Verify that your Fly.io organization has OIDC configured for your GitHub repository. The OIDC subject must match what Fly expects—typically `repo:<org>/<repo>:ref:refs/heads/main` or similar.
+
+```bash
+# Test OIDC locally (requires flyctl >= 0.1.130)
+flyctl auth token --oidc
+```
+
+### Secrets not available in the deployed app
+
+Fly secrets are set separately from `fly.toml` environment variables. Make sure secrets are actually set:
+
+```bash
+flyctl secrets list --app myapp-api
+```
+
+If a secret is missing, set it manually or re-run the deployment script that syncs Stackpanel variables to Fly secrets.
+
+## Reference
+
+- [Options Reference → Deployment](/docs/reference) for Fly deployment options
+- [Containers](/docs/deployment/containers) for container image configuration
+- [CI Generation](/docs/apps-ci/ci-generation) for automated deployment pipelines
+- [Fly.io documentation](https://fly.io/docs/) for platform-specific details
+- [Fly.io OIDC](https://fly.io/docs/reference/openid-connect/) for passwordless CI authentication

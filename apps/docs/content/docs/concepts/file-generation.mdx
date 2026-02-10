@@ -1,0 +1,146 @@
+---
+title: File Generation
+description: How multiple modules contribute to the same files
+icon: file-text
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Most configuration files are just the sum of decisions made by different tools. Your `.gitignore` has entries for Node, entries for your IDE, entries for your build tool. Your `tsconfig.json` has paths for your app, paths for your test framework, paths for your monorepo packages. Today, you maintain all of that by hand in a single file.
+
+Stackpanel flips this around: **each module declares what it needs, and the file is assembled automatically.**
+
+## How It Works
+
+Any module—builtin extension, community plugin, or your own config—can contribute to a file using `stackpanel.files.entries`:
+
+```nix
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  content = [
+    "node_modules"
+    ".env.local"
+  ];
+};
+```
+
+When multiple modules contribute to the same file path, Stackpanel merges them according to the file's type strategy. The result is a normal file on disk—no symlinks, no magic. Any tool that reads `.gitignore` sees a regular file.
+
+## File Types
+
+Different files need different merge strategies. Stackpanel supports several:
+
+### Line Set
+
+A deduplicated, sorted set of lines. Ideal for `.gitignore`, `.prettierignore`, and similar files.
+
+```nix
+# From the Node extension
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  content = [
+    "node_modules"
+    "dist"
+    ".turbo"
+  ];
+};
+
+# From the secrets extension
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  content = [
+    ".stackpanel/state/keys/"
+    "*.age"
+  ];
+};
+```
+
+Both contributions are merged into a single `.gitignore` with all entries present.
+
+### JSON
+
+Deep-merged JSON output. Useful for `tsconfig.json`, `package.json` fragments, VS Code settings, and similar structured config.
+
+```nix
+stackpanel.files.entries.".vscode/settings.json" = {
+  type = "json";
+  content = {
+    "editor.formatOnSave" = true;
+    "nix.enableLanguageServer" = true;
+  };
+};
+```
+
+### Text
+
+Raw text content. No merging—the last module to write wins. Use this for files that are fully owned by a single module.
+
+```nix
+stackpanel.files.entries."sst.config.ts" = {
+  type = "text";
+  text = ''
+    /// <reference path="./.sst/platform/config.d.ts" />
+    export default $config({
+      app(input) {
+        return { name: "${cfg.project-name}", region: "${cfg.region}" };
+      },
+    });
+  '';
+};
+```
+
+## Co-location of Concerns
+
+This is the key benefit: **the thing that creates a concern is the same thing that manages it.**
+
+Without file generation, installing a tool that writes to `.state/` means you have to:
+1. Add `.state` to `.gitignore` (manually)
+2. Remember to remove it if you uninstall the tool (you won't)
+
+With file generation, the module that introduces `.state/` also contributes the `.gitignore` entry. Enable the module and the entry appears. Disable it and the entry disappears. No orphaned config left behind.
+
+```nix
+# Everything about this extension lives in one place
+config = lib.mkIf cfg.enable {
+  # The tool itself
+  stackpanel.devshell.packages = [ pkgs.some-tool ];
+
+  # Its gitignore entry
+  stackpanel.files.entries.".gitignore" = {
+    type = "line-set";
+    content = [ ".state" ];
+  };
+
+  # Its VS Code settings
+  stackpanel.files.entries.".vscode/settings.json" = {
+    type = "json";
+    content = {
+      "some-tool.enabled" = true;
+    };
+  };
+};
+```
+
+## Generated Files and Git
+
+Generated files are real files on disk, and they're meant to be committed to Git. This is intentional—it means:
+
+- **CI works without Nix.** Your GitHub Actions, Docker builds, and deploy scripts see a normal repository with normal config files.
+- **Ejecting is trivial.** Stop using Stackpanel and you still have every file you need, exactly where it should be.
+- **Code review still works.** Changes to generated files show up in diffs, so your team can see what changed and why.
+
+<Callout type="info">
+Think of it like a code formatter: you commit the formatted output, not the raw input. The source of truth is your Stackpanel config, but the generated files are what the rest of the world sees.
+</Callout>
+
+## When Files Go Stale
+
+If you change your Stackpanel config, the generated files need to be rebuilt. The [Agent](/docs/agent) watches for config changes and can regenerate files automatically. You can also trigger regeneration manually through the CLI or [Studio](/docs/studio).
+
+The Agent tracks which files it generated and can detect when a file on disk has drifted from what the config says it should be—useful for catching accidental manual edits to generated files.
+
+## Next Steps
+
+- [Dev Environment → Shell Hooks & Files](/docs/dev-environment/shell-hooks-files) for the full `stackpanel.files.entries` API
+- [Extensions → Writing Extensions](/docs/extensions/writing-extensions) to see how extensions use file generation
+- [Options Reference → Codegen](/docs/reference/codegen) for all codegen-related options

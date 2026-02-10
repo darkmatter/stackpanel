@@ -1,0 +1,49 @@
+---
+title: stackpanel vars
+description: Manage workspace variables
+icon: Terminal
+---
+
+# stackpanel vars
+
+Manage workspace variables defined in stackpanel.
+
+Variables can be:
+  - LITERAL: Plain text values
+  - SECRET: Encrypted with AGE master keys
+  - VALS: External references (AWS SSM, Vault, etc.)
+  - EXEC: Shell command outputs
+
+Examples:
+  stackpanel vars list              # List all variables
+  stackpanel vars list --type SECRET  # List only secrets
+  stackpanel vars get /apps/web/port  # Get a specific variable
+
+## Usage
+
+```bash
+stackpanel vars
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`get`](./get) | Get a specific variable |
+| [`list`](./list) | List all workspace variables |
+

@@ -1,0 +1,5 @@
+{
+  "title": "IDE Integration",
+  "icon": "code",
+  "pages": ["index", "vscode", "zed"]
+}

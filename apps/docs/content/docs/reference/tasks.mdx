@@ -8,18 +8,101 @@ icon: Settings
 
 ## `tasks`
 
-Task definitions forwarded to devenv tasks.
+Task definitions for Turborepo integration.
+
+Options mirror turbo.json where possible:
+  - dependsOn: Task dependencies (use ^ for workspace deps)
+  - outputs: Output globs for caching
+  - inputs: Input globs for cache keys
+  - cache: Enable/disable caching
+  - persistent: Long-running process
+  - interactive: Accept stdin
+
+Stackpanel extensions:
+  - exec: Shell script (compiled to Nix derivation)
+  - runtimeInputs: Nix packages for PATH
+  - before: Reverse dependency convenience
+
+Tasks with `exec` are compiled to Nix derivations and symlinked to
+`.tasks/bin/`. Turborepo invokes these via package.json scripts.
+
+For ad-hoc utility scripts without build dependencies, use
+`stackpanel.scripts` instead.
 
 | Property | Value |
 |----------|-------|
 | **Type** | `attribute set of (submodule)` |
 | **Default** | `{ }` |
 
+**Example:**
+
+```nix
+{
+  build = {
+    exec = "npm run compile";
+    description = "Build all packages";
+    dependsOn = [ "deps" "^build" ];
+    outputs = [ "dist/**" ];
+    runtimeInputs = [ pkgs.nodejs ];
+  };
+  dev = {
+    description = "Start development servers";
+    persistent = true;
+    cache = false;
+  };
+  test = {
+    exec = "vitest run";
+    dependsOn = [ "^build" ];
+    outputs = [ "coverage/**" ];
+    runtimeInputs = [ pkgs.nodejs ];
+  };
+}
+```
+
+
+---
+
+## `tasks.<name>.before`
+
+(Stackpanel extension) Tasks that depend on this task completing first.
+Automatically adds this task to the target tasks' `dependsOn`.
+
+Example: if `compile.before = [ "build" ]`, then
+`build.dependsOn` will automatically include `compile`.
+
+This is a convenience for defining dependencies from the
+dependency's perspective rather than the dependent's.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "build"
+]
+```
+
+
+---
+
+## `tasks.<name>.cache`
+
+Enable Turborepo caching (default: true)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or boolean` |
+| **Default** | `null` |
+
 ---
 
 ## `tasks.<name>.cwd`
 
-Working directory for the task
+Working directory for the task (relative to repo root)
 
 | Property | Value |
 |----------|-------|
@@ -28,9 +111,47 @@ Working directory for the task
 
 ---
 
+## `tasks.<name>.depends-on`
+
+Tasks that must complete first (use ^ for deps)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `tasks.<name>.dependsOn`
+
+Tasks that must complete before this task runs.
+Matches Turborepo's `dependsOn` option in turbo.json.
+
+Use `^taskname` to reference the same task in dependencies.
+Use `$taskname` for package-level dependencies.
+
+Example: `dependsOn = [ "deps" "^build" ];`
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "deps"
+  "^build"
+]
+```
+
+
+---
+
 ## `tasks.<name>.description`
 
-Optional description for the task
+Human-readable description of the task
 
 | Property | Value |
 |----------|-------|
@@ -52,12 +173,97 @@ Environment variables for the task
 
 ## `tasks.<name>.exec`
 
-Task command to execute
+Shell script to execute (compiled to Nix derivation)
 
 | Property | Value |
 |----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `tasks.<name>.inputs`
+
+Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `tasks.<name>.interactive`
+
+Task accepts stdin input
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or boolean` |
+| **Default** | `null` |
+
+---
+
+## `tasks.<name>.outputs`
+
+Output file globs for caching (e.g. dist/**)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `tasks.<name>.package`
+
+(Stackpanel extension) Package name to scope this task to.
+When set, the task key in turbo.json becomes "package#taskName".
+
+This is useful for tasks that should only run in a specific package,
+such as deployment tasks that only exist in @stackpanel/infra.
+
+Example: `package = "@stackpanel/infra";`
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"@stackpanel/infra"`
+
+
+---
+
+## `tasks.<name>.persistent`
+
+Long-running process (e.g. dev server)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or boolean` |
+| **Default** | `null` |
+
+---
+
+## `tasks.<name>.runtimeInputs`
+
+(Stackpanel extension) Packages to include in PATH when running the task script.
+Used with `exec` to create hermetic writeShellApplication derivations.
+
+These are pinned to specific Nix store paths, ensuring reproducible builds.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of package` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+`[ pkgs.nodejs pkgs.pnpm ]`
+
 
 ---
 

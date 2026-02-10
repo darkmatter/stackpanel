@@ -1,0 +1,225 @@
+---
+title: Process Compose
+description: Orchestrate and manage background processes in your dev environment
+icon: layers
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+[Process Compose](https://github.com/F1bonacc1/process-compose) is the process orchestrator behind Stackpanel's service management. It starts, stops, and monitors background processes—your PostgreSQL server, Redis instance, dev servers, and anything else that needs to run alongside your code.
+
+You don't interact with Process Compose directly most of the time. Stackpanel's service system generates a `process-compose.yaml` for you, and the CLI and Studio UI provide the interface. But understanding how it works helps when you need to customize behavior or debug issues.
+
+## How Stackpanel Uses Process Compose
+
+When you define services through `stackpanel.globalServices` or `stackpanel.services`, Stackpanel translates them into Process Compose process definitions. The generated `process-compose.yaml` at your project root is a standard Process Compose config file—no proprietary format.
+
+```nix
+# Your Stackpanel config
+stackpanel.globalServices = {
+  postgres.enable = true;
+  redis.enable = true;
+};
+```
+
+This produces a `process-compose.yaml` with process entries for both services, including health checks, readiness probes, dependency ordering, and log configuration—all derived from the service definitions.
+
+## Managing Processes
+
+### Via the CLI
+
+The `stackpanel services` command wraps Process Compose with project-aware defaults:
+
+```bash
+# Start all configured services
+stackpanel services start
+
+# Stop all services
+stackpanel services stop
+
+# Check what's running
+stackpanel services status
+
+# Restart a specific service
+stackpanel services restart postgres
+
+# View logs for a service
+stackpanel logs postgres
+```
+
+### Via Studio
+
+The [Studio](/docs/studio) web UI shows a live dashboard of all running processes with status indicators, log streaming, and start/stop controls. No terminal required.
+
+### Via Process Compose Directly
+
+Since the generated config is a standard `process-compose.yaml`, you can also use the `process-compose` CLI directly if you prefer:
+
+```bash
+process-compose up
+process-compose down
+process-compose attach postgres
+```
+
+<Callout type="info">
+`process-compose` is automatically available in your devshell when you have services configured. You don't need to install it separately.
+</Callout>
+
+## Custom Processes
+
+Beyond the built-in services (PostgreSQL, Redis, Minio), you can define arbitrary processes using the `stackpanel.modules.process-compose` module:
+
+```nix
+stackpanel.modules.process-compose = {
+  enable = true;
+
+  processes = {
+    web = {
+      command = "bun run --filter @myapp/web dev";
+      depends_on.api.condition = "process_healthy";
+    };
+
+    api = {
+      command = "bun run --filter @myapp/api dev";
+      depends_on = {
+        postgres.condition = "process_healthy";
+        redis.condition = "process_healthy";
+      };
+      readiness_probe = {
+        http_get = {
+          host = "localhost";
+          port = 4201;
+          path = "/health";
+        };
+        initial_delay_seconds = 2;
+        period_seconds = 5;
+      };
+    };
+
+    worker = {
+      command = "bun run --filter @myapp/worker start";
+      depends_on.api.condition = "process_healthy";
+    };
+  };
+};
+```
+
+### Process Options
+
+Each process supports the standard Process Compose configuration:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `command` | `string` | The shell command to run |
+| `depends_on` | `attrset` | Dependencies on other processes |
+| `readiness_probe` | `attrset` | How to determine the process is ready |
+| `liveness_probe` | `attrset` | How to determine the process is still healthy |
+| `environment` | `attrset` | Additional environment variables |
+| `working_dir` | `string` | Working directory for the process |
+| `namespace` | `string` | Group label for UI display |
+| `disabled` | `bool` | Whether the process is disabled by default |
+| `restart` | `string` | Restart policy: `"no"`, `"always"`, `"on_failure"` |
+| `shutdown` | `attrset` | Graceful shutdown configuration |
+
+### Dependency Ordering
+
+Process Compose supports ordering processes by their readiness state. This ensures your API server doesn't start until PostgreSQL is accepting connections:
+
+```nix
+processes.api = {
+  command = "bun run api:dev";
+  depends_on = {
+    postgres.condition = "process_healthy";
+    redis.condition = "process_started";
+  };
+};
+```
+
+Available conditions:
+
+| Condition | Meaning |
+|-----------|---------|
+| `process_started` | The process has been launched |
+| `process_healthy` | The process's readiness probe is passing |
+| `process_completed` | The process ran and exited with code 0 |
+| `process_completed_successfully` | Same as `process_completed` |
+
+### Health Checks
+
+Built-in services like PostgreSQL and Redis come with health checks pre-configured. For custom processes, define your own:
+
+```nix
+processes.my-service = {
+  command = "my-service start";
+
+  readiness_probe = {
+    # HTTP health check
+    http_get = {
+      host = "127.0.0.1";
+      port = 8080;
+      path = "/healthz";
+    };
+    initial_delay_seconds = 3;
+    period_seconds = 10;
+    failure_threshold = 3;
+  };
+};
+```
+
+Or use a command-based probe:
+
+```nix
+readiness_probe = {
+  exec.command = "pg_isready -h localhost -p 5432";
+  initial_delay_seconds = 1;
+  period_seconds = 2;
+};
+```
+
+## Interaction with Stackpanel Services
+
+When you enable a global service like `stackpanel.globalServices.postgres.enable = true`, Stackpanel:
+
+1. Adds the service's package (e.g., `postgresql`) to the devshell
+2. Computes a [deterministic port](/docs/concepts/deterministic-ports) for the service
+3. Generates environment variables (`STACKPANEL_POSTGRES_PORT`, `DATABASE_URL`, etc.)
+4. Creates a Process Compose process definition with correct startup commands and health checks
+5. Registers CLI commands (`stackpanel services start postgres`, etc.)
+
+Your custom processes can depend on these built-in services by referencing their names in `depends_on`. The service names match the keys in `stackpanel.globalServices`—`postgres`, `redis`, `minio`.
+
+## Logs
+
+Process Compose captures stdout and stderr from all managed processes. Access them through:
+
+```bash
+# Stream logs for a specific service
+stackpanel logs postgres
+
+# Stream logs for all services
+stackpanel logs
+
+# View logs in Studio (live streaming with filtering)
+```
+
+The [Studio](/docs/studio) UI provides a more ergonomic log viewer with filtering, search, and per-service log streams.
+
+## Generated Config
+
+The generated `process-compose.yaml` is a standard file that Process Compose reads directly. You can inspect it to understand what Stackpanel configured:
+
+```bash
+cat process-compose.yaml
+```
+
+Like all Stackpanel-generated files, this file is committed to Git so that collaborators can run services even without Nix. The file is rebuilt whenever your Stackpanel config changes.
+
+<Callout type="warn">
+Don't edit `process-compose.yaml` by hand—your changes will be overwritten on the next build. Instead, configure processes through your Stackpanel Nix config.
+</Callout>
+
+## Reference
+
+- [Options Reference → GlobalServices](/docs/reference/globalServices) for built-in service options
+- [Options Reference → Services](/docs/reference/services) for the service type system
+- [Process Compose documentation](https://f1bonacc1.github.io/process-compose/) for the full Process Compose spec

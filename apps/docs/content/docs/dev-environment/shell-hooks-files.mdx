@@ -1,0 +1,239 @@
+---
+title: Shell Hooks & Files
+description: Run code on shell entry and generate files from your Nix config
+icon: file-code
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+## Shell Hooks
+
+Shell hooks run every time you enter the dev environment—whether through `direnv`, `nix develop`, or the Stackpanel agent reloading your shell. They're useful for one-time setup, printing status information, or ensuring local state is correct.
+
+### Adding Hooks
+
+Hooks are defined under `stackpanel.devshell.hooks`:
+
+```nix
+stackpanel.devshell.hooks.main = [
+  ''
+    echo "Welcome to the dev environment!"
+    bun install --silent
+  ''
+];
+```
+
+Multiple modules can contribute hooks to the same key. They're concatenated in the order the module system resolves them.
+
+### Hook Ordering
+
+If you need hooks to run in a specific order, use different keys:
+
+```nix
+# Runs first (keys are sorted alphabetically)
+stackpanel.devshell.hooks."00-env" = [
+  ''
+    export MY_VAR="computed-at-shell-entry"
+  ''
+];
+
+# Runs after
+stackpanel.devshell.hooks."99-status" = [
+  ''
+    echo "Environment ready. MY_VAR=$MY_VAR"
+  ''
+];
+```
+
+### Common Patterns
+
+```nix
+# Install dependencies on shell entry
+stackpanel.devshell.hooks.main = [
+  ''
+    if [ -f package.json ]; then
+      bun install --silent
+    fi
+  ''
+];
+
+# Ensure local database exists
+stackpanel.devshell.hooks.db = [
+  ''
+    if ! psql -lqt | cut -d \| -f 1 | grep -qw myapp; then
+      createdb myapp 2>/dev/null || true
+    fi
+  ''
+];
+```
+
+<Callout type="warn">
+Shell hooks run on every shell entry, so keep them fast. Avoid network calls or long-running processes. If something takes more than a second or two, move it to a [script](/docs/dev-environment/packages-scripts) that developers run explicitly.
+</Callout>
+
+## Generated Files
+
+Stackpanel can generate files into your project workspace from Nix configuration. This is one of the most powerful features—it lets modules co-locate file contributions with the logic that requires them.
+
+For the conceptual overview of why this matters, see [File Generation](/docs/concepts/file-generation). This page covers the practical API.
+
+### Basic Usage
+
+Files are defined under `stackpanel.files.entries`, keyed by their path relative to the project root:
+
+```nix
+stackpanel.files.entries.".editorconfig" = {
+  type = "text";
+  text = ''
+    root = true
+
+    [*]
+    indent_style = space
+    indent_size = 2
+    end_of_line = lf
+    insert_final_newline = true
+  '';
+};
+```
+
+### File Types
+
+The `type` field determines how contributions from multiple modules are merged.
+
+#### `line-set`
+
+A deduplicated, sorted set of lines. Each module contributes a list, and the final file contains all unique entries.
+
+```nix
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  content = [
+    "node_modules"
+    "dist"
+    ".env.local"
+    ".stackpanel/state/"
+  ];
+};
+```
+
+Best for: `.gitignore`, `.prettierignore`, `.dockerignore`, `.eslintignore`.
+
+#### `json`
+
+Deep-merged JSON. Multiple modules can contribute keys, and nested objects are recursively merged.
+
+```nix
+stackpanel.files.entries.".vscode/settings.json" = {
+  type = "json";
+  content = {
+    "editor.formatOnSave" = true;
+    "editor.defaultFormatter" = "esbenp.prettier-vscode";
+    "nix.enableLanguageServer" = true;
+  };
+};
+```
+
+Best for: `tsconfig.json`, VS Code settings, any `.json` config file.
+
+#### `text`
+
+Raw text content. No merging—if multiple modules write to the same path, the last one wins (use `mkDefault` / `mkForce` to control priority).
+
+```nix
+stackpanel.files.entries."docker-compose.yml" = {
+  type = "text";
+  text = ''
+    version: "3.8"
+    services:
+      db:
+        image: postgres:16
+        ports:
+          - "${toString cfg.postgresPort}:5432"
+  '';
+};
+```
+
+Best for: Dockerfiles, shell scripts, templates, any file fully owned by one module.
+
+### Interpolating Nix Values
+
+Because file contents are defined in Nix, you can interpolate any Nix expression—config values, computed ports, package paths:
+
+```nix
+stackpanel.files.entries.".env.development" = {
+  type = "text";
+  text = ''
+    DATABASE_URL=postgresql://localhost:${toString config.stackpanel.ports.postgres}/dev
+    REDIS_URL=redis://localhost:${toString config.stackpanel.ports.redis}
+    NODE_ENV=development
+  '';
+};
+```
+
+This is a key advantage over hand-maintained config files: your generated files always reflect the actual state of your environment.
+
+### Conditional File Generation
+
+Combine file entries with `mkIf` to only generate files when a feature is enabled:
+
+```nix
+config = lib.mkIf config.stackpanel.globalServices.postgres.enable {
+  stackpanel.files.entries."drizzle.config.ts" = {
+    type = "text";
+    text = ''
+      import { defineConfig } from "drizzle-kit";
+      export default defineConfig({
+        dialect: "postgresql",
+        dbCredentials: {
+          url: process.env.DATABASE_URL!,
+        },
+      });
+    '';
+  };
+};
+```
+
+### Checking Generated File Status
+
+The Stackpanel [Agent](/docs/agent) tracks which files were generated and can detect drift—when a file on disk doesn't match what the config says it should be. You can check file status through the CLI:
+
+```bash
+stackpanel status
+```
+
+Or through [Studio](/docs/studio), which shows generated files alongside their staleness status.
+
+## Combining Hooks and Files
+
+A common pattern is to use hooks that reference generated files:
+
+```nix
+{
+  # Generate a setup script
+  stackpanel.files.entries.".stackpanel/setup.sh" = {
+    type = "text";
+    text = ''
+      #!/usr/bin/env bash
+      set -euo pipefail
+      echo "Running project setup..."
+      bun install
+      bun run db:migrate
+    '';
+  };
+
+  # Run it on shell entry (only if needed)
+  stackpanel.devshell.hooks.setup = [
+    ''
+      if [ ! -f node_modules/.package-lock.json ]; then
+        bash .stackpanel/setup.sh
+      fi
+    ''
+  ];
+}
+```
+
+## Reference
+
+- [Options Reference → Devshell](/docs/reference/devshell) for all devshell options
+- [Options Reference → Codegen](/docs/reference/codegen) for file generation options
+- [Core Concepts → File Generation](/docs/concepts/file-generation) for the mental model

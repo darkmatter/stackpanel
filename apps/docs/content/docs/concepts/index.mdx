@@ -1,0 +1,39 @@
+---
+title: Core Concepts
+description: The mental models behind Stackpanel
+icon: lightbulb
+---
+
+Stackpanel introduces a few ideas that are worth understanding before you dive into the feature docs. None of them are complicated, but they'll change how you think about your codebase.
+
+## Config as Build Output
+
+Most tools expect configuration files to live at specific paths—`package.json` at the root, `.github/workflows/*.yml` in the right directory, `tsconfig.json` next to your source. Fighting this is pointless, so Stackpanel embraces it: your config files become **build output**, generated from a single source of truth.
+
+Just as you don't consider `dist/` or `node_modules/` to be source code, generated config files aren't source code either. They're artifacts.
+
+[Read more →](./building-source)
+
+## Deterministic Ports
+
+Every Stackpanel project gets a stable set of port numbers computed from the project name. Your PostgreSQL, Redis, and app servers all get the same ports on every machine, for every team member, without anyone having to coordinate.
+
+No more "port 5432 is already in use" because another project grabbed it first.
+
+[Read more →](./deterministic-ports)
+
+## The Module System
+
+Stackpanel uses the NixOS module system to let independent pieces of configuration compose together. Each module—whether it's a builtin extension, a community plugin, or your own config—declares options and contributes values. The module system merges everything into a single, consistent result.
+
+This is what makes it possible for an extension to add a `.gitignore` entry, register a script, and configure a service all in one place, without touching your files.
+
+[Read more →](./module-system)
+
+## File Generation
+
+Multiple modules can contribute to the same file. A `.gitignore` might get entries from your Node module, your SST extension, and your secrets system—each declaring what they need, without any of them knowing about the others.
+
+Stackpanel supports several file strategies: line sets (like `.gitignore`), JSON merge, YAML merge, TOML, and raw text templates. The result is always a normal file on disk that any tool can read.
+
+[Read more →](./file-generation)

@@ -1,0 +1,32 @@
+---
+title: "=============================================================================="
+description: infra/codegen.nix
+---
+
+infra/codegen.nix
+
+Code generation engine for the infrastructure module system.
+
+Generates via stackpanel.files.entries:
+```nix
+- src/index.ts       (Infra class with embedded project config)
+- src/types.ts       (per-module input TypeScript interfaces)
+- src/resources/*.ts  (custom alchemy resources: KMS Key, KMS Alias)
+- modules/<id>.ts    (copied from module path attributes)
+- alchemy.run.ts     (orchestrator)
+- package.json       (union of all module dependencies)
+- tsconfig.json      (TypeScript config)
+```
+
+
+## Also
+
+```nix
+- Writes infra-inputs.json to state dir
+- Sets STACKPANEL_INFRA_INPUTS env var
+- Registers scripts (infra:deploy, infra:destroy, etc.)
+- Registers as a stackpanel module for UI
+- Serializes config for the agent
+```
+
+==============================================================================

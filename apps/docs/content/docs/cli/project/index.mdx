@@ -1,0 +1,51 @@
+---
+title: stackpanel project
+description: Manage Stackpanel projects
+icon: Terminal
+---
+
+# stackpanel project
+
+Manage Stackpanel projects across your system.
+
+Projects are stored in ~/.config/stackpanel/stackpanel.yaml and can be
+accessed from any directory. Each project has a unique ID that can be
+used in API requests via the X-Stackpanel-Project header.
+
+Examples:
+  stackpanel project list                  # List all known projects
+  stackpanel project info                  # Show current project info
+  stackpanel project default .             # Set current directory as default
+  stackpanel project default --clear       # Clear default project
+
+## Usage
+
+```bash
+stackpanel project
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`add`](./add) | Add a project to the known projects list |
+| [`default`](./default) | Set or show the default project |
+| [`info`](./info) | Show information about a project |
+| [`list`](./list) | List all known projects |
+| [`remove`](./remove) | Remove a project from the known projects list |
+

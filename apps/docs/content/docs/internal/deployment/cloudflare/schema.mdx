@@ -1,0 +1,32 @@
+---
+title: "=============================================================================="
+description: "schema.nix - Cloudflare Workers Deployment App Configuration Schema"
+---
+
+schema.nix - Cloudflare Workers Deployment App Configuration Schema
+
+Unified field definitions for Cloudflare Workers per-app deployment configuration.
+
+This is the SINGLE SOURCE OF TRUTH for Cloudflare deployment per-app options.
+It defines SpFields that simultaneously serve as:
+```nix
+1. Proto fields -> CloudflareAppConfig message (for Go/TS codegen)
+2. Nix option source -> cloudflare/module.nix uses asOption to create lib.mkOption
+3. UI panel source -> cloudflare/ui.nix uses fields for auto-generated panels
+```
+
+
+Usage from module.nix:
+```nix
+let cloudflareSchema = import ./schema.nix { inherit lib; };
+in { options = lib.mapAttrs (_: sp.asOption) cloudflareSchema.fields; }
+```
+
+
+Usage from ui.nix:
+```nix
+let cloudflareSchema = import ./schema.nix { inherit lib; };
+in panelsLib.mkPanelFromSpFields { fields = cloudflareSchema.fields; ... }
+```
+
+==============================================================================

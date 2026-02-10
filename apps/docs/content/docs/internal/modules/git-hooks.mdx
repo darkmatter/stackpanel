@@ -1,18 +1,24 @@
 ---
 title: "=============================================================================="
-description: "git-hooks.nix"
+description: "default.nix - Git Hooks Module Entry Point"
 ---
 
-git-hooks.nix
+default.nix - Git Hooks Module Entry Point
 
 Git hooks integration using stackpanel app tooling wrappers.
-Consumes stackpanel.appsComputed\<app\>wrappedTooling.* and exposes a
-git-hooks configuration fragment suitable for git-hooks.nix.
+Handles pre-commit linters, formatters, and pre-push build steps.
 
-Usage (in .stackpanel/devenv.nix):
+## Components
+
+- meta.nix: Static metadata for discovery
+- module.nix: Options and configuration
+- ui.nix: UI panel definitions
+
+## Usage
+
 ```nix
-git-hooks.enable = true;
-# merged-config.nix will expose this as git-hooks config
+stackpanel.git-hooks.enable = true;
+stackpanel.git-hooks.extraLinters = [ myLinter ];
 ```
 
 ==============================================================================

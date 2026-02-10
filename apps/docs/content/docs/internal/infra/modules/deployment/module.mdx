@@ -1,0 +1,42 @@
+---
+title: "=============================================================================="
+description: infra/modules/deployment/module.nix
+---
+
+infra/modules/deployment/module.nix
+
+Deployment infra module — provisions app hosting via Alchemy.
+
+Reads `framework` × `deployment.host` from each app's config and registers
+a single infra module that creates the appropriate alchemy resources.
+
+The actual TypeScript lives in index.ts (static) and receives pure-data
+inputs via the standard infra inputs JSON — no inlined TS in Nix.
+
+Supported matrix (framework × host → alchemy resource):
+```nix
+tanstack-start × cloudflare → TanStackStart
+nextjs         × cloudflare → Nextjs
+vite           × cloudflare → cloudflare.Vite
+hono           × cloudflare → cloudflare.Worker
+astro          × cloudflare → Astro
+remix          × cloudflare → Remix (Worker-based)
+*              × fly        → Fly container (handled separately)
+```
+
+
+## Usage
+
+```nix
+stackpanel.apps.web = {
+  framework = "tanstack-start";
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+    bindings = [ "DATABASE_URL" "CORS_ORIGIN" "BETTER_AUTH_SECRET" ];
+    secrets = [ "DATABASE_URL" "BETTER_AUTH_SECRET" ];
+  };
+};
+```
+
+==============================================================================

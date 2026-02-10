@@ -1,0 +1,55 @@
+---
+title: "=============================================================================="
+description: "module.nix - Fly.io Deployment Module Implementation"
+---
+
+module.nix - Fly.io Deployment Module Implementation
+
+Provides Fly.io deployment support using nix2container (default) or dockerTools.
+
+This module:
+```nix
+1. Adds deployment.* options to each app via appModules
+2. Auto-contributes to stackpanel.containers.images for deployable apps
+3. Generates fly.toml into packages/infra/fly/
+4. Adds deploy scripts to packages/infra/package.json
+5. Registers turbo tasks for build + deploy workflow
+6. Creates wrapped fly-<app> commands for each deployable app
+```
+
+
+Container workflow:
+```nix
+bun run build                          # Build app (in app directory)
+container-build web                    # Build container image
+container-copy web docker://...        # Push to registry
+fly-web deploy --image registry.fly.io/my-app:latest
+```
+
+
+Generated layout:
+```nix
+packages/infra/
+├── package.json           # "deploy:web" script (merged via SST)
+├── turbo.json             # Per-package turbo config (extends root)
+└── fly/
+    └── <appName>/
+        └── fly.toml       # Fly.io app configuration
+```
+
+
+## Usage
+
+```nix
+stackpanel.apps.web = {
+  path = "apps/web";
+  deployment = {
+    enable = true;
+    provider = "fly";
+    fly.appName = "my-app";
+    container = { type = "bun"; port = 3000; };
+  };
+};
+```
+
+==============================================================================

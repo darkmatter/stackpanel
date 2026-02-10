@@ -1,32 +1,28 @@
 ---
 title: stackpanel init
-description: Initialize stackpanel from Nix configuration
+description: Initialize a new stackpanel project
 icon: Terminal
 ---
 
 # stackpanel init
 
-Initialize stackpanel by validating configuration from Nix.
+Initialize creates the .stackpanel directory structure with boilerplate files.
 
-This command is typically called by Nix during shell entry.
-It validates the configuration JSON and confirms stackpanel is ready.
+This command evaluates the stackpanel flake to get the list of files to create,
+then writes them to the appropriate locations. Existing files are NOT overwritten
+unless --force is specified.
 
-File generation is handled by Nix's write-files script, so this
-command now primarily serves as a validation checkpoint.
+The initialized structure includes:
+  - .stackpanel/config.nix       User-editable configuration file
+  - .stackpanel/_internal.nix    Internal merging logic (do not edit)
+  - .stackpanel/data.nix         Agent-editable data file
+  - .stackpanel/.gitignore       Gitignore for state and local config
 
-Configuration can be passed via:
-  - --config-file [path]   Read from a JSON file
-  - --config [json]        Pass JSON directly as argument
-  - stdin                  Pipe JSON to stdin
-
-Example (from Nix):
-  stackpanel init --config '$\{builtins.toJSON config\}'
-
-Example (from file):
-  stackpanel init --config-file /tmp/stackpanel-config.json
-
-Example (from stdin):
-  echo '\{"projectName": "myapp", ...\}' | stackpanel init
+Example:
+  stackpanel init                              # Create files in current directory
+  stackpanel init --force                      # Overwrite existing files
+  stackpanel init --dry-run                    # Show what would be created
+  stackpanel init --flake path:/path/to/sp     # Use local stackpanel for development
 
 ## Usage
 
@@ -39,9 +35,9 @@ stackpanel init
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--config` | `string` | _none_ | Configuration JSON string |
-| `--config-file` | `string` | _none_ | Path to configuration JSON file |
-| `--quiet` | `bool` | `false` | Suppress output |
+| `--dry-run` | `bool` | `false` | Show what would be created without writing files |
+| `--flake` | `string` | _none_ | Stackpanel flake reference (default: github:darkmatter/stackpanel) |
+| `--force` | `bool` | `false` | Overwrite existing files |
 
 
 ## Global Flags

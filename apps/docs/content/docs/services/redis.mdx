@@ -1,0 +1,172 @@
+---
+title: Redis
+description: Run a local Redis instance with deterministic ports and zero configuration
+icon: database
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Redis is available as a global service in Stackpanel. Enable it and you get a local Redis instance running on a [deterministic port](/docs/concepts/deterministic-ports)—the same port on every machine, for every team member.
+
+## Quick Start
+
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  redis.enable = true;
+};
+```
+
+That's it. Enter your dev shell and Redis is running. Connect to it using the `STACKPANEL_REDIS_PORT` environment variable:
+
+```bash
+redis-cli -p $STACKPANEL_REDIS_PORT ping
+# PONG
+```
+
+## Connection Details
+
+| Property | Value |
+|----------|-------|
+| Host | `localhost` / `127.0.0.1` |
+| Port | `$STACKPANEL_REDIS_PORT` (deterministic, computed from project name) |
+| Auth | None (local development) |
+
+In your application code, read the port from the environment:
+
+```typescript
+import { createClient } from "redis";
+
+const client = createClient({
+  url: `redis://localhost:${process.env.STACKPANEL_REDIS_PORT}`,
+});
+
+await client.connect();
+```
+
+Or in Go:
+
+```go
+import "github.com/redis/go-redis/v9"
+
+client := redis.NewClient(&redis.Options{
+    Addr: fmt.Sprintf("localhost:%s", os.Getenv("STACKPANEL_REDIS_PORT")),
+})
+```
+
+<Callout type="info">
+Never hardcode the port number. Always use the `STACKPANEL_REDIS_PORT` environment variable so that your code works for every team member without changes.
+</Callout>
+
+## Configuration
+
+### Custom Settings
+
+You can pass additional configuration to the Redis instance:
+
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  redis = {
+    enable = true;
+    # Additional Redis configuration options
+  };
+};
+```
+
+### Data Persistence
+
+By default, Redis data is stored in a project-local directory managed by Stackpanel. Data persists across shell sessions but is local to your machine—it's not shared between team members.
+
+To start fresh, stop the service and remove the data directory:
+
+```bash
+stackpanel services stop redis
+rm -rf .stackpanel/state/redis/
+stackpanel services start redis
+```
+
+## Managing the Service
+
+Use the Stackpanel CLI or Studio to manage the Redis lifecycle:
+
+```bash
+# Check status
+stackpanel services status
+
+# Stop Redis
+stackpanel services stop redis
+
+# Restart Redis
+stackpanel services restart redis
+
+# View logs
+stackpanel logs redis
+```
+
+You can also manage services through [Studio](/docs/studio), which provides a visual interface for starting, stopping, and monitoring all your services.
+
+## Using with Other Services
+
+Redis pairs naturally with other Stackpanel services. A common pattern is running Redis alongside PostgreSQL for caching:
+
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  postgres.enable = true;
+  redis.enable = true;
+};
+```
+
+Both services get deterministic ports, and both are available through environment variables. Your application can reference them without any manual port coordination.
+
+## Environment Variables
+
+When Redis is enabled, the following environment variables are available in your devshell:
+
+| Variable | Description |
+|----------|-------------|
+| `STACKPANEL_REDIS_PORT` | The port Redis is listening on |
+| `REDIS_URL` | Full connection URL (`redis://localhost:<port>`) |
+
+Use these in your `.env` templates, scripts, or application code to stay in sync with the running service.
+
+## Troubleshooting
+
+### "Connection refused" errors
+
+Make sure the service is running:
+
+```bash
+stackpanel services status
+```
+
+If Redis shows as stopped, start it:
+
+```bash
+stackpanel services start redis
+```
+
+### Port conflicts
+
+Stackpanel's [deterministic port system](/docs/concepts/deterministic-ports) makes conflicts unlikely, but if another process is already using the computed port, Redis will fail to start. Check what's using the port:
+
+```bash
+lsof -i :$STACKPANEL_REDIS_PORT
+```
+
+### Stale data causing issues
+
+If you need a clean slate:
+
+```bash
+stackpanel services stop redis
+rm -rf .stackpanel/state/redis/
+stackpanel services start redis
+```
+
+## Reference
+
+- [Options Reference → GlobalServices](/docs/reference/globalServices) for all service configuration options
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how ports are computed
+- [Services Overview](/docs/services) for general service management

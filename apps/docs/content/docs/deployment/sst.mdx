@@ -1,0 +1,276 @@
+---
+title: SST
+description: AWS infrastructure provisioning with SST and OIDC-based authentication
+icon: cloud
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+[SST](https://sst.dev/) is an infrastructure-as-code framework for deploying to AWS. Stackpanel's SST extension generates configuration, manages IAM roles with OIDC authentication, and provisions KMS keys for secrets encryption—all from your Nix config.
+
+## Enable SST
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+};
+```
+
+When enabled, the SST extension:
+
+- Adds the SST CLI to your `PATH`
+- Generates an `sst.config.ts` from your Nix configuration
+- Registers `sst:deploy`, `sst:dev`, and other scripts in your devshell
+- Optionally provisions KMS keys and IAM roles for secure deployments
+
+## Configuration
+
+### Basic Setup
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+};
+```
+
+This generates a minimal `sst.config.ts` that you can extend with your own infrastructure definitions.
+
+### KMS for Secrets Encryption
+
+SST can provision a KMS key for encrypting secrets at rest:
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+  kms.enable = true;
+};
+```
+
+The KMS key integrates with Stackpanel's [secrets system](/docs/secrets)—secrets encrypted with this key can be decrypted in your deployed application using the IAM role's KMS permissions.
+
+### OIDC Authentication
+
+Instead of long-lived AWS credentials, the SST extension supports OIDC-based authentication. This gives you short-lived, automatically rotated credentials for CI/CD and local development.
+
+#### GitHub Actions OIDC
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+
+  oidc = {
+    provider = "github-actions";
+    github-actions = {
+      org = "my-org";
+      repo = "my-repo";
+    };
+  };
+};
+```
+
+This provisions:
+
+- An IAM OIDC identity provider for GitHub Actions
+- An IAM role that GitHub Actions can assume via OIDC
+- Trust policies scoped to your specific org and repo
+
+Your [CI workflows](/docs/apps-ci/ci-generation) automatically get the correct role ARN and OIDC configuration—no manual secret management.
+
+#### Fly.io OIDC
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+
+  oidc = {
+    provider = "fly";
+    fly = {
+      org = "my-fly-org";
+    };
+  };
+};
+```
+
+#### AWS Roles Anywhere
+
+For environments that don't support OIDC natively, use [AWS Roles Anywhere](https://docs.aws.amazon.com/rolesanywhere/latest/userguide/introduction.html) with mTLS certificates from [Step CA](/docs/networking/certificates):
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+
+  oidc = {
+    provider = "roles-anywhere";
+  };
+};
+
+stackpanel.aws.roles-anywhere = {
+  enable = true;
+  region = "us-west-2";
+  account-id = "123456789012";
+  role-name = "dev-role";
+  trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abc123";
+  profile-arn = "arn:aws:rolesanywhere:us-west-2:123456789012:profile/def456";
+};
+```
+
+This provisions certificate-based AWS authentication through your team's [Step CA](/docs/networking/certificates) instance, giving every developer short-lived AWS credentials without any shared secrets.
+
+<Callout type="info">
+Roles Anywhere is the most secure option for local development—each developer gets their own short-lived certificate, and all access is logged in CloudTrail. It requires a [Step CA](/docs/networking/certificates) instance but provides the strongest security guarantees.
+</Callout>
+
+## Generated Files
+
+The SST extension generates:
+
+| File | Purpose |
+|------|---------|
+| `sst.config.ts` | SST project configuration with app name, region, and settings |
+
+Like all Stackpanel-generated files, `sst.config.ts` is committed to Git and works without Nix. If you eject from Stackpanel, you have a standard SST project.
+
+<Callout type="warn">
+Don't edit `sst.config.ts` by hand—your changes will be overwritten on the next build. Add custom infrastructure in separate files that SST imports, or configure everything through the Nix options.
+</Callout>
+
+## Scripts
+
+When SST is enabled, the following scripts are available in your devshell:
+
+| Script | Description |
+|--------|-------------|
+| `sst:dev` | Start SST in development mode with live Lambda reloading |
+| `sst:deploy` | Deploy infrastructure to AWS |
+| `sst:remove` | Remove all deployed resources |
+
+These scripts handle credential injection automatically—whether you're using OIDC, Roles Anywhere, or environment-based credentials.
+
+## Using with CI
+
+The SST extension integrates with [CI generation](/docs/apps-ci/ci-generation). When both are enabled, the generated GitHub Actions workflow includes:
+
+- AWS OIDC credential setup (if GitHub Actions OIDC is configured)
+- SST deploy steps with the correct region and project name
+- Environment variable injection for secrets
+
+```nix
+{
+  stackpanel.sst = {
+    enable = true;
+    project-name = "myapp";
+    region = "us-west-2";
+    oidc.provider = "github-actions";
+    oidc.github-actions = {
+      org = "my-org";
+      repo = "my-repo";
+    };
+  };
+
+  stackpanel.ci.enable = true;
+}
+```
+
+This generates a CI pipeline that authenticates to AWS via OIDC and deploys your SST infrastructure—no long-lived AWS credentials stored in GitHub Secrets.
+
+## Full Example
+
+A complete SST setup with KMS, OIDC, and secrets:
+
+```nix
+{
+  # SST infrastructure
+  stackpanel.sst = {
+    enable = true;
+    project-name = "myapp";
+    region = "us-west-2";
+
+    # KMS key for secrets encryption
+    kms.enable = true;
+
+    # GitHub Actions OIDC for CI deployments
+    oidc = {
+      provider = "github-actions";
+      github-actions = {
+        org = "my-org";
+        repo = "my-repo";
+      };
+    };
+  };
+
+  # Local AWS access via Roles Anywhere
+  stackpanel.aws.roles-anywhere = {
+    enable = true;
+    region = "us-west-2";
+    account-id = "123456789012";
+    role-name = "dev-role";
+    trust-anchor-arn = "arn:aws:rolesanywhere:...";
+    profile-arn = "arn:aws:rolesanywhere:...";
+  };
+
+  # Secrets encrypted with KMS
+  stackpanel.variables."/prod/api-key" = {
+    key = "API_KEY";
+    type = "SECRET";
+    master-keys = [ "prod" ];
+  };
+
+  # CI pipeline with SST deploy
+  stackpanel.ci.enable = true;
+}
+```
+
+## Troubleshooting
+
+### "Unable to assume role" in CI
+
+Verify your OIDC configuration matches your GitHub repository:
+
+```nix
+oidc.github-actions = {
+  org = "my-org";      # Must match your GitHub org exactly
+  repo = "my-repo";    # Must match your GitHub repo name exactly
+};
+```
+
+Also confirm the IAM OIDC provider and role have been provisioned. The SST extension creates these resources on first deploy—you may need to run `sst deploy` locally with admin credentials once to bootstrap.
+
+### "KMS key not found"
+
+If KMS is enabled but not yet provisioned, run the initial deployment:
+
+```bash
+sst:deploy
+```
+
+The KMS key is created as part of the SST infrastructure stack. After the first deploy, it's available for encrypting secrets.
+
+### SST dev mode not connecting
+
+Ensure your AWS credentials are working:
+
+```bash
+aws sts get-caller-identity
+```
+
+If using Roles Anywhere, verify your [Step CA](/docs/networking/certificates) certificate is valid and the trust anchor is configured correctly.
+
+## Reference
+
+- [Options Reference → AWS](/docs/reference/aws) for AWS Roles Anywhere configuration
+- [Secrets](/docs/secrets) for encrypted secrets management
+- [CI Generation](/docs/apps-ci/ci-generation) for automated deployment pipelines
+- [Certificates](/docs/networking/certificates) for Step CA and Roles Anywhere
+- [SST documentation](https://sst.dev/docs) for SST-specific configuration
