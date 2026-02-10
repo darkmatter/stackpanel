@@ -1,0 +1,207 @@
+---
+title: Certificates
+description: Local HTTPS with automatic TLS certificates via Step CA
+icon: shield-check
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel integrates with [Step CA](https://smallstep.com/docs/step-ca/) to provide automatic TLS certificate provisioning for local development. This lets you run your dev services over HTTPS with real certificates—issued by a private certificate authority that your team controls.
+
+## Why Local HTTPS?
+
+Some features only work over HTTPS—secure cookies, service workers, WebAuthn, and many browser APIs require a secure context. Using self-signed certificates leads to browser warnings and trust issues. Step CA gives you a proper certificate chain that your machine trusts, with automatic renewal.
+
+Combined with [Caddy](/docs/networking/caddy) as a reverse proxy, you get HTTPS for every local service with zero manual certificate management.
+
+## Enable Step CA
+
+```nix
+stackpanel.step-ca = {
+  enable = true;
+  ca-url = "https://ca.internal:443";
+  ca-fingerprint = "e4b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+};
+```
+
+| Option | Description |
+|--------|-------------|
+| `enable` | Activate Step CA integration |
+| `ca-url` | URL of your team's Step CA server |
+| `ca-fingerprint` | SHA256 fingerprint of the CA root certificate (used to bootstrap trust) |
+
+<Callout type="info">
+The CA fingerprint is used on first connection to verify you're talking to the right certificate authority. You can get it from your CA administrator or by running `step certificate fingerprint root_ca.crt` on the CA server.
+</Callout>
+
+## How It Works
+
+When Step CA is enabled, Stackpanel:
+
+1. **Bootstraps trust** — On first shell entry, the Step CA root certificate is downloaded and installed into your local trust store using the provided URL and fingerprint.
+2. **Requests certificates** — When a service needs HTTPS (e.g., through [Caddy](/docs/networking/caddy)), Stackpanel requests a certificate from the CA for the appropriate domain.
+3. **Handles renewal** — Certificates are short-lived by default (24 hours). The agent handles automatic renewal before expiration, so you never see an expired certificate.
+
+```
+Developer machine
+  → stackpanel enters devshell
+    → Step CA client bootstraps trust (first time only)
+    → Caddy requests certificate for myapp.local
+    → Step CA issues a short-lived TLS certificate
+    → Caddy serves HTTPS on myapp.local
+    → Certificate auto-renews before expiration
+```
+
+## Using with Caddy
+
+The most common pattern is combining Step CA with [Caddy](/docs/networking/caddy) for automatic HTTPS on local domains:
+
+```nix
+{
+  stackpanel.step-ca = {
+    enable = true;
+    ca-url = "https://ca.internal:443";
+    ca-fingerprint = "e4b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  };
+
+  stackpanel.caddy = {
+    enable = true;
+    routes = {
+      "myapp.local" = {
+        upstream = "localhost:${toString config.stackpanel.ports.computed.web}";
+      };
+      "api.myapp.local" = {
+        upstream = "localhost:${toString config.stackpanel.ports.computed.api}";
+      };
+    };
+  };
+}
+```
+
+With this configuration, `https://myapp.local` and `https://api.myapp.local` resolve to your local dev servers, with valid TLS certificates issued by your team's CA.
+
+<Callout type="info">
+You'll also need [DNS](/docs/networking/dns) configured to resolve `.local` domains to `127.0.0.1`. Stackpanel can manage this for you—see the [DNS docs](/docs/networking/dns).
+</Callout>
+
+## Team Setup
+
+Step CA is a team-wide resource. One person sets up the CA server, and everyone else connects to it.
+
+### Setting Up the CA Server
+
+If your team doesn't have a Step CA instance yet, you can run one:
+
+```bash
+# Install step-ca
+step ca init --name "My Team CA" --provisioner admin --address ":443"
+
+# Start the CA
+step-ca $(step path)/config/ca.json
+```
+
+Share the CA URL and root fingerprint with your team. The fingerprint is printed during `step ca init`, or you can retrieve it later:
+
+```bash
+step certificate fingerprint $(step path)/certs/root_ca.crt
+```
+
+### Connecting Team Members
+
+Each team member adds the same Step CA configuration to the shared Stackpanel config:
+
+```nix
+stackpanel.step-ca = {
+  enable = true;
+  ca-url = "https://ca.yourteam.internal:443";
+  ca-fingerprint = "your-ca-fingerprint-here";
+};
+```
+
+On first shell entry, Stackpanel bootstraps trust with the CA. After that, certificate operations are automatic.
+
+## Token-Based Authentication
+
+Step CA supports several authentication methods for certificate requests. Stackpanel uses token-based authentication by default—when a service needs a certificate, the agent requests a one-time token from the CA and uses it to obtain the certificate.
+
+This means:
+
+- No long-lived credentials stored on developer machines
+- Each certificate request is individually authenticated
+- Tokens are short-lived and single-use
+- The CA maintains an audit trail of every issued certificate
+
+## Certificate Storage
+
+Certificates and keys are stored in the Stackpanel state directory:
+
+```
+.stackpanel/state/certs/
+├── root_ca.crt          # CA root certificate (trusted)
+├── myapp.local.crt      # Issued certificate
+└── myapp.local.key      # Private key
+```
+
+These files are gitignored by default since they contain machine-specific certificates and private keys.
+
+<Callout type="warn">
+Certificate private keys never leave your machine. They're generated locally and only the certificate signing request (CSR) is sent to the CA.
+</Callout>
+
+## Security Model
+
+The Step CA integration follows a security model designed for development teams:
+
+| Property | Detail |
+|----------|--------|
+| **Short-lived certificates** | 24-hour default lifetime, auto-renewed |
+| **Private CA** | Not publicly trusted—only machines that have bootstrapped trust can verify certificates |
+| **Per-machine keys** | Private keys are generated and stay on each developer's machine |
+| **Token auth** | Each certificate request uses a fresh, single-use token |
+| **Audit trail** | The CA logs every certificate issuance |
+
+This is significantly more secure than the common alternatives (self-signed certificates, disabling TLS verification, or sharing a wildcard certificate).
+
+## Troubleshooting
+
+### "Certificate not trusted" in browser
+
+The CA root certificate may not be in your system trust store. Re-bootstrap trust:
+
+```bash
+step ca bootstrap --ca-url https://ca.internal:443 --fingerprint <fingerprint> --install
+```
+
+The `--install` flag adds the root certificate to your system trust store so that browsers recognize it.
+
+### "Connection refused" to CA
+
+Verify the CA server is running and reachable:
+
+```bash
+curl -k https://ca.internal:443/health
+```
+
+If you're on a VPN or private network, ensure the CA URL is accessible from your current network.
+
+### Certificate renewal failing
+
+Check the agent logs for renewal errors:
+
+```bash
+stackpanel logs
+```
+
+Common causes:
+- The CA server is temporarily unreachable
+- Your authentication token has been revoked
+- The CA's provisioner configuration has changed
+
+Certificates have a renewal window (typically starting at 2/3 of the lifetime), so a brief CA outage won't immediately cause issues.
+
+## Reference
+
+- [Options Reference → Step-ca](/docs/reference/step-ca) for all Step CA configuration options
+- [Caddy](/docs/networking/caddy) for reverse proxy and HTTPS termination
+- [DNS](/docs/networking/dns) for local domain resolution
+- [Step CA documentation](https://smallstep.com/docs/step-ca/) for the upstream project

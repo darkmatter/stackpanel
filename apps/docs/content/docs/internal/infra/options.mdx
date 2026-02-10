@@ -1,0 +1,20 @@
+---
+title: "=============================================================================="
+description: infra/options.nix
+---
+
+infra/options.nix
+
+Core options for the infrastructure module system.
+
+## Defines
+
+```nix
+- stackpanel.infra.enable, framework, output-dir, key-format
+- stackpanel.infra.storage-backend (chamber, sops, ssm, none)
+- stackpanel.infra.modules (internal registry)
+- stackpanel.infra.package (generated package.json config)
+- stackpanel.infra.outputs (stub for cross-resource references)
+```
+
+==============================================================================

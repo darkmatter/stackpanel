@@ -1,0 +1,41 @@
+---
+title: stackpanel vars get
+description: Get a specific variable
+icon: Terminal
+---
+
+# stackpanel vars get
+
+Get details about a specific variable by its ID.
+
+Examples:
+  stackpanel vars get /apps/web/port
+  stackpanel vars get /prod/postgres-url
+
+## Usage
+
+```bash
+stackpanel vars get <variable-id>
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | `bool` | `false` | Output as JSON |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

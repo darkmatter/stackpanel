@@ -1,0 +1,85 @@
+---
+title: Deterministic Ports
+description: Stable, conflict-free port assignments computed from your project name
+icon: hash
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Every Stackpanel project gets a stable set of port numbers derived from the project name. The same project always gets the same ports—on every machine, for every team member, with zero manual configuration.
+
+## The Problem
+
+Run two projects locally that both want PostgreSQL on port 5432 and you get a conflict. The usual fix is to manually pick different ports for each project, write them down somewhere, and hope everyone on the team uses the same ones. This breaks constantly.
+
+## How It Works
+
+Stackpanel computes ports using a deterministic hash of your project name:
+
+1. Hash the project name with MD5
+2. Convert the first 8 hex characters to a decimal number
+3. Constrain the result to the range `[3000, 65000)`, rounded to the nearest 100
+4. Assign **app ports** sequentially from the base: `base + 0`, `base + 1`, `base + 2`, ...
+5. Assign **service ports** by hashing `projectName + serviceName` within the project's port range
+
+Because the hash is deterministic, the same project name always produces the same ports. Two different projects will almost certainly get different port ranges, eliminating conflicts.
+
+## Example
+
+For a project named `"myapp"`, the computed ports might look like:
+
+| Service | Port | Environment Variable |
+|---------|------|----------------------|
+| Web app | 4200 | `STACKPANEL_WEB_PORT` |
+| API server | 4201 | `STACKPANEL_API_PORT` |
+| PostgreSQL | 4237 | `STACKPANEL_POSTGRES_PORT` |
+| Redis | 4252 | `STACKPANEL_REDIS_PORT` |
+
+Every developer on the team gets these exact same ports without any coordination.
+
+## Configuration
+
+Ports are configured through `stackpanel.ports`:
+
+```nix
+stackpanel = {
+  ports.projectName = "myapp";
+};
+```
+
+That's it. The port assignments are computed automatically. You can reference the assigned ports through environment variables in your application code:
+
+```nix
+stackpanel = {
+  apps.web = {
+    port = 0;  # auto-assigned from the deterministic range
+  };
+  apps.api = {
+    port = 1;  # next sequential port
+  };
+};
+```
+
+## Environment Variables
+
+Every assigned port is exported as an environment variable following the pattern:
+
+```
+STACKPANEL_<KEY>_PORT
+```
+
+These are available in your shell, in scripts, and in any process launched from the dev environment. Your application code can read them directly—no hardcoded port numbers anywhere.
+
+<Callout type="info">
+Port environment variables are set during shell entry (the Nix evaluation phase), so they're available to all processes in the dev environment without any runtime resolution.
+</Callout>
+
+## Why Not Just Use Random Ports?
+
+Random ports solve conflicts but create a different problem: every time you restart your environment, everything gets a new address. Bookmarked URLs break, database connection strings change, and browser cookies stop working.
+
+Deterministic ports give you the best of both worlds: no conflicts between projects, and stable addresses that never change.
+
+## Reference
+
+See the [ports options reference](/docs/reference/ports) for the full set of configurable options.

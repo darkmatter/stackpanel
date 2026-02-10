@@ -127,7 +127,7 @@ Name for the generated .code-workspace file (without extension)
 
 ## `ide.zed.enable`
 
-Whether to enable Zed editor integration (not yet implemented).
+Generate Zed configuration files
 
 | Property | Value |
 |----------|-------|
@@ -137,6 +137,83 @@ Whether to enable Zed editor integration (not yet implemented).
 **Example:**
 
 `true`
+
+
+---
+
+## `ide.zed.existing-settings-path`
+
+Path to existing Zed settings.json to merge with generated settings.
+
+WARNING: This creates IMPURE evaluation - the file must exist at Nix evaluation time.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or absolute path` |
+| **Default** | `null` |
+
+---
+
+## `ide.zed.extensions`
+
+Recommended Zed extension IDs
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `ide.zed.output-mode`
+
+Where to output Zed settings:
+- "generated": Generate to .stackpanel/gen/zed/ (default, safe) - requires manual symlink
+- "dotZed": Generate to .zed/settings.json (CAUTION: may overwrite existing file)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "generated", "dotZed"` |
+| **Default** | `"generated"` |
+
+---
+
+## `ide.zed.settings`
+
+Zed settings to include in the generated configuration.
+These take highest priority and will override any existing or generated settings.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+---
+
+## `ide.zed.tasks`
+
+Zed tasks to include in the generated tasks.json.
+Each task is an attrset with label, command, args, etc.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of attribute set of anything` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  {
+    args = [
+      "run"
+      "dev"
+    ];
+    command = "bun";
+    label = "dev";
+  }
+]
+```
 
 
 ---

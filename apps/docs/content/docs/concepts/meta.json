@@ -1,0 +1,11 @@
+{
+  "title": "Core Concepts",
+  "icon": "lightbulb",
+  "pages": [
+    "index",
+    "building-source",
+    "deterministic-ports",
+    "module-system",
+    "file-generation"
+  ]
+}

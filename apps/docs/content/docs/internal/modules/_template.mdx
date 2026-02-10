@@ -1,0 +1,20 @@
+---
+title: "=============================================================================="
+description: "default.nix - Module Entry Point"
+---
+
+default.nix - Module Entry Point
+
+This is the main entry point for the module. It imports and composes all
+the module's components:
+
+- meta.nix: Static metadata (always loaded for discovery)
+- module.nix: Options and configuration
+- ui.nix: UI panel definitions (lazy loaded)
+
+For simple modules, you can inline everything here instead of splitting
+into separate files. The directory structure is recommended for:
+- Modules with per-app options
+- Modules with complex configuration
+- Modules that need extensive documentation
+==============================================================================

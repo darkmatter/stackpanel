@@ -1,0 +1,232 @@
+---
+title: PostgreSQL
+description: Local PostgreSQL server with deterministic ports and zero configuration
+icon: database
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can manage a local PostgreSQL instance for your project. It runs on a [deterministic port](/docs/concepts/deterministic-ports) derived from your project name, so every team member gets the same connection string without coordination.
+
+## Enable PostgreSQL
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+};
+```
+
+That's it. The next time you enter your dev shell, PostgreSQL will be available. A database matching your project name is created automatically.
+
+## Connection Details
+
+Once enabled, Stackpanel exports the connection details as environment variables:
+
+| Variable | Example Value |
+|----------|---------------|
+| `STACKPANEL_POSTGRES_PORT` | `4237` |
+| `PGHOST` | `localhost` |
+| `PGPORT` | `4237` |
+| `PGDATABASE` | `myapp` |
+
+You can use these in your application code directly:
+
+```nix
+stackpanel.devshell.env = {
+  DATABASE_URL = "postgresql://localhost:${toString config.stackpanel.ports.computed.postgres}/myapp";
+};
+```
+
+Or reference them at runtime:
+
+```bash
+psql # connects automatically using PG* environment variables
+```
+
+<Callout type="info">
+The port is computed deterministically from your project name. It won't conflict with other Stackpanel projects or a system-wide PostgreSQL installation. See [Deterministic Ports](/docs/concepts/deterministic-ports) for how this works.
+</Callout>
+
+## Managing the Service
+
+PostgreSQL is managed through the Stackpanel service lifecycle. Use the CLI to control it:
+
+```bash
+# Start PostgreSQL
+stackpanel services start postgres
+
+# Stop it
+stackpanel services stop postgres
+
+# Check status
+stackpanel services status
+
+# View logs
+stackpanel services logs postgres
+
+# Restart after config changes
+stackpanel services restart postgres
+```
+
+You can also manage services through [Studio](/docs/studio), which shows service status in real time.
+
+## Data Directory
+
+PostgreSQL stores its data in a project-local directory so that each project has its own isolated database cluster:
+
+```
+.stackpanel/state/services/postgres/data/
+```
+
+This directory is gitignored by default. Deleting it resets the database to a clean state—useful when you want to start fresh.
+
+## Configuration Options
+
+### Custom Database Name
+
+By default, a database is created with your project name. To use a different name:
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+  database = "my_custom_db";
+};
+```
+
+### PostgreSQL Version
+
+Stackpanel uses the PostgreSQL version provided by your Nixpkgs input. To pin a specific version:
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+  package = pkgs.postgresql_16;
+};
+```
+
+Available packages include `postgresql_14`, `postgresql_15`, `postgresql_16`, and `postgresql_17` depending on your Nixpkgs revision.
+
+### Extensions
+
+Enable PostgreSQL extensions by adding them to the package:
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+  package = pkgs.postgresql_16.withPackages (ps: [
+    ps.postgis
+    ps.pgvector
+    ps.pg_cron
+  ]);
+};
+```
+
+### Custom Configuration
+
+Pass additional PostgreSQL configuration options:
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+  settings = {
+    log_statement = "all";
+    max_connections = "200";
+    shared_buffers = "256MB";
+  };
+};
+```
+
+### Initial SQL
+
+Run SQL on first database creation—useful for seeding schemas, creating roles, or enabling extensions:
+
+```nix
+stackpanel.globalServices.postgres = {
+  enable = true;
+  initialScript = ''
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+    CREATE ROLE app_user WITH LOGIN PASSWORD 'dev';
+    GRANT ALL PRIVILEGES ON DATABASE myapp TO app_user;
+  '';
+};
+```
+
+<Callout type="warn">
+The initial script only runs when the data directory is first created. If you've already started PostgreSQL, delete the data directory to re-run it: `rm -rf .stackpanel/state/services/postgres/data/`
+</Callout>
+
+## Using with Drizzle
+
+A common pattern is to pair PostgreSQL with Drizzle ORM. Stackpanel can generate the `drizzle.config.ts` for you:
+
+```nix
+{
+  stackpanel.globalServices.postgres.enable = true;
+
+  stackpanel.devshell.env.DATABASE_URL =
+    "postgresql://localhost:${toString config.stackpanel.ports.computed.postgres}/myapp";
+
+  stackpanel.scripts."db:migrate" = {
+    exec = "drizzle-kit migrate";
+    description = "Run database migrations";
+  };
+
+  stackpanel.scripts."db:studio" = {
+    exec = "drizzle-kit studio";
+    description = "Open Drizzle Studio";
+  };
+
+  stackpanel.scripts."db:seed" = {
+    path = ./.stackpanel/src/scripts/db-seed.sh;
+    description = "Seed the database with test data";
+  };
+}
+```
+
+## Connecting from External Tools
+
+Because PostgreSQL runs on a stable, deterministic port, you can save connection profiles in tools like pgAdmin, TablePlus, or DataGrip and they'll always work:
+
+- **Host:** `localhost`
+- **Port:** Value of `$STACKPANEL_POSTGRES_PORT` (check with `stackpanel port postgres`)
+- **Database:** Your project name (or custom `database` value)
+- **User:** Your system username (local peer auth, no password needed)
+
+## Troubleshooting
+
+### Port already in use
+
+If you see a "port already in use" error, another process is occupying the deterministic port. Check what's using it:
+
+```bash
+lsof -i :$STACKPANEL_POSTGRES_PORT
+```
+
+This is rare since deterministic ports are project-specific, but it can happen if you have a system PostgreSQL running on a coincidentally matching port.
+
+### Database not created
+
+If the auto-created database is missing, create it manually:
+
+```bash
+createdb myapp
+```
+
+Or reset the data directory to trigger a fresh initialization:
+
+```bash
+rm -rf .stackpanel/state/services/postgres/data/
+stackpanel services restart postgres
+```
+
+### Permission denied
+
+Stackpanel runs PostgreSQL as your current user with local peer authentication. If you're seeing permission errors, ensure you're connecting without a password and with your system username.
+
+## Reference
+
+- [Options Reference → GlobalServices](/docs/reference/globalServices) for all PostgreSQL options
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how port assignment works
+- [Services Overview](/docs/services) for the service lifecycle

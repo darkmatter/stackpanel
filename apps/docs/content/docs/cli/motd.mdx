@@ -6,7 +6,23 @@ icon: Terminal
 
 # stackpanel motd
 
-Display the stackpanel message of the day with available commands, features, and hints.
+Display the stackpanel message of the day with status, commands, and hints.
+
+The MOTD shows:
+  - Agent and service status
+  - AWS credentials status
+  - Generated files status
+  - Health check summary
+  - Available commands
+  - Quick start instructions
+  - Useful shortcuts (sp, spx)
+
+Examples:
+  stackpanel motd              # Show full MOTD
+  stackpanel motd --minimal    # Show one-line status
+  stackpanel motd --json       # Output status as JSON
+  stackpanel motd --legacy     # Use the legacy MOTD format
+  stackpanel motd --force      # Show MOTD even if disabled
 
 ## Usage
 
@@ -14,6 +30,15 @@ Display the stackpanel message of the day with available commands, features, and
 stackpanel motd
 ```
 
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force` | `bool` | `false` | Show MOTD even if disabled in config |
+| `--json` | `bool` | `false` | Output MOTD data as JSON |
+| `--legacy` | `bool` | `false` | Use legacy MOTD format |
+| `--minimal` | `bool` | `false` | Show minimal one-line MOTD |
 
 
 ## Global Flags

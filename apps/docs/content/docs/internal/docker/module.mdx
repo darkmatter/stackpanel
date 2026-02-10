@@ -1,0 +1,26 @@
+---
+title: "=============================================================================="
+description: "module.nix - Container Tooling Module"
+---
+
+module.nix - Container Tooling Module
+
+Provides container-related tools (skopeo) and image reference computation
+for working with OCI container images.
+
+For container BUILDING, use the containers module instead:
+```nix
+stackpanel.containers.settings.backend = "nix2container"; # or "dockerTools"
+stackpanel.apps.web.container.enable = true;
+```
+
+
+This module provides:
+```nix
+- skopeo for image inspection, copying, and registry operations
+- Image reference computation (registry/name:tag)
+- Helper scripts for common image operations
+```
+
+
+==============================================================================

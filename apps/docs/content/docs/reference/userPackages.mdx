@@ -1,0 +1,74 @@
+---
+title: userPackages
+description: Configuration options for stackpanel.userPackages
+icon: Settings
+---
+
+# UserPackages Options
+
+## `userPackages.enable`
+
+Whether to enable user-installed packages from .stackpanel/data/packages.nix.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `userPackages.packages`
+
+List of user-installed package attribute paths (read from packages.nix)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+| **Read Only** | `true` |
+
+**Default:**
+
+```nix
+[
+  "oxlint"
+  "oxfmt"
+]
+```
+
+
+---
+
+## `userPackages.resolved`
+
+Resolved package derivations from user package list.
+
+Only populated when pkgs is available. Empty list otherwise.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of package` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `userPackages.serialized`
+
+Serialized package info for config JSON.
+
+Only populated when pkgs is available. Empty list otherwise.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (attribute set)` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+

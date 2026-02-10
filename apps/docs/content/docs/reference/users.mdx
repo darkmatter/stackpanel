@@ -8,10 +8,10 @@ icon: Settings
 
 ## `users`
 
-Users of the repository who should have access to secrets.
+Team members with project access.
 
-Base schema: nix/stackpanel/db/schemas/users.proto.nix
-Extended with: is-admin, email
+Note: Secrets are encrypted using master keys, not per-user keys.
+See stackpanel.secrets.master-keys for encryption configuration.
 
 | Property | Value |
 |----------|-------|
@@ -22,30 +22,14 @@ Extended with: is-admin, email
 
 ```nix
 {
-  alice = {
-    github = "aliceexample";
-    name = "Alice Example";
-    public-keys = [
-      "age1..."
-    ];
-    secrets-allowed-environments = [
-      "dev"
-    ];
+  johndoe = {
+    name = "John Doe";
+    github = "johndoe";
+    email = "john@example.com";
   };
-  cooper = {
-    email = "cooper@example.com";
-    github = "coopermaruyama";
-    is-admin = true;
-    name = "Cooper Maruyama";
-    public-keys = [
-      "age1..."
-      "ssh-ed25519 AAAA..."
-    ];
-    secrets-allowed-environments = [
-      "dev"
-      "staging"
-      "production"
-    ];
+  alice = {
+    name = "Alice Example";
+    github = "aliceexample";
   };
 }
 ```
@@ -55,7 +39,7 @@ Extended with: is-admin, email
 
 ## `users.<name>.email`
 
-Email address for notifications
+Email address
 
 | Property | Value |
 |----------|-------|
@@ -75,17 +59,6 @@ GitHub username
 
 ---
 
-## `users.<name>.is-admin`
-
-Whether this user has admin privileges (computed at runtime)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
 ## `users.<name>.name`
 
 Display name of the user
@@ -99,7 +72,7 @@ Display name of the user
 
 ## `users.<name>.public-keys`
 
-SSH or AGE public keys for encryption
+SSH or AGE public keys for the user
 
 | Property | Value |
 |----------|-------|
@@ -110,11 +83,11 @@ SSH or AGE public keys for encryption
 
 ## `users.<name>.secrets-allowed-environments`
 
-Environments this user can access secrets for
+Environments this user can access secrets for (e.g., dev, staging, production)
 
 | Property | Value |
 |----------|-------|
-| **Type** | `list of (attribute set)` |
+| **Type** | `list of string` |
 | **Default** | `[ ]` |
 
 ---

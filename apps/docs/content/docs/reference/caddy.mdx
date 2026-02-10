@@ -65,6 +65,29 @@ Stable port for Caddy. If null, computed from project-name.
 
 ---
 
+## `caddy.tld`
+
+Top-level domain for virtual hosts.
+
+Virtual hosts use the format: ..
+For example, with project "myapp" and tld "localhost":
+  - web app gets domain: web.myapp.localhost
+  - api app gets domain: api.myapp.localhost
+
+Change to "lan" or "local" for custom DNS setups.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"localhost"` |
+
+**Example:**
+
+`"lan"`
+
+
+---
+
 ## `caddy.use-step-tls`
 
 Use Step CA for TLS certificates (requires stackpanel.network.step.enable)

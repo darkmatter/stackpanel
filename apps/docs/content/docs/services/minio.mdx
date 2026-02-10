@@ -1,0 +1,150 @@
+---
+title: Minio
+description: S3-compatible object storage for local development
+icon: hard-drive
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+[Minio](https://min.io/) is an S3-compatible object storage server. Stackpanel runs a local Minio instance so you can develop against an S3 API without needing an AWS account or internet connection.
+
+## Enable Minio
+
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  minio.enable = true;
+};
+```
+
+That's it. Stackpanel provisions a local Minio server with a [deterministic port](/docs/concepts/deterministic-ports) computed from your project name. Every team member gets the same port automatically.
+
+## Connection Details
+
+Once enabled, the following environment variables are available in your devshell:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `STACKPANEL_MINIO_PORT` | Minio API port | `4260` |
+| `STACKPANEL_MINIO_CONSOLE_PORT` | Minio web console port | `4261` |
+
+### Default Credentials
+
+Minio starts with default development credentials:
+
+| Field | Value |
+|-------|-------|
+| Access Key | `minioadmin` |
+| Secret Key | `minioadmin` |
+| Endpoint | `http://localhost:<STACKPANEL_MINIO_PORT>` |
+| Console | `http://localhost:<STACKPANEL_MINIO_CONSOLE_PORT>` |
+
+<Callout type="warn">
+These are local development credentials only. Never use them in production. For real AWS credentials, see [Secrets](/docs/secrets).
+</Callout>
+
+## Using with AWS SDKs
+
+Most AWS SDKs can be pointed at a local Minio instance by setting the endpoint URL. Here's a typical setup:
+
+### JavaScript / TypeScript
+
+```ts
+import { S3Client } from "@aws-sdk/client-s3";
+
+const s3 = new S3Client({
+  endpoint: `http://localhost:${process.env.STACKPANEL_MINIO_PORT}`,
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: "minioadmin",
+    secretAccessKey: "minioadmin",
+  },
+  forcePathStyle: true, // required for Minio
+});
+```
+
+### Go
+
+```go
+cfg, _ := config.LoadDefaultConfig(ctx,
+    config.WithEndpointResolverWithOptions(
+        aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+            return aws.Endpoint{
+                URL:               fmt.Sprintf("http://localhost:%s", os.Getenv("STACKPANEL_MINIO_PORT")),
+                HostnameImmutable: true,
+            }, nil
+        }),
+    ),
+    config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("minioadmin", "minioadmin", "")),
+)
+
+client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+    o.UsePathStyle = true
+})
+```
+
+<Callout type="info">
+Setting `forcePathStyle: true` (or `UsePathStyle` in Go) is required for Minio. Without it, the SDK tries virtual-hosted-style requests (`bucket.localhost`), which won't resolve locally.
+</Callout>
+
+## Web Console
+
+Minio ships with a built-in web console for browsing buckets, uploading files, and managing access policies. Once the service is running, open:
+
+```
+http://localhost:<STACKPANEL_MINIO_CONSOLE_PORT>
+```
+
+Log in with the default credentials (`minioadmin` / `minioadmin`).
+
+## Data Persistence
+
+Minio stores its data locally in the Stackpanel state directory. Data persists across shell restarts—you won't lose your buckets or objects when you leave the devshell.
+
+To start fresh, stop the service and clear the data directory:
+
+```bash
+stackpanel services stop minio
+rm -rf .stackpanel/state/minio
+stackpanel services start minio
+```
+
+## Managing the Service
+
+Use the CLI to control the Minio service lifecycle:
+
+```bash
+# Check status
+stackpanel services status
+
+# Start / stop / restart
+stackpanel services start minio
+stackpanel services stop minio
+stackpanel services restart minio
+
+# View logs
+stackpanel logs minio
+```
+
+Or use [Studio](/docs/studio) for a visual interface.
+
+## Combining with Other Services
+
+Minio works well alongside other Stackpanel services. A common pattern is to use it with PostgreSQL for a full backend development stack:
+
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  postgres.enable = true;
+  redis.enable = true;
+  minio.enable = true;
+};
+```
+
+All three services get deterministic ports and are managed together through `stackpanel services`.
+
+## Reference
+
+- [Options Reference → GlobalServices](/docs/reference/globalServices) for all service configuration options
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how ports are assigned
+- [Minio documentation](https://min.io/docs/minio/linux/index.html) for Minio-specific configuration

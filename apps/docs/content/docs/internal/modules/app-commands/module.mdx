@@ -1,0 +1,48 @@
+---
+title: "=============================================================================="
+description: "module.nix - App Commands Module Implementation"
+---
+
+module.nix - App Commands Module Implementation
+
+Nix-native app commands module for stackpanel.
+
+Provides per-app derivations for standard operations (build, dev, test, lint,
+format) exposed as native flake outputs, replacing the npm-script-style
+`tasks` system.
+
+Flake Output Mapping:
+```nix
+| Command  | Flake Output          | Access              |
+|----------|----------------------|---------------------|
+| build    | packages.<app>       | nix build .#web     |
+| dev      | packages.<app>-dev   | nix run .#web-dev   |
+| start    | apps.<app>           | nix run .#web       |
+| test     | checks.<app>-test    | nix flake check     |
+| lint     | checks.<app>-lint    | nix flake check     |
+| format   | checks.<app>-format  | nix flake check     |
+```
+
+
+Each command supports two modes:
+```nix
+1. Package mode - Reference a Nix derivation directly (for builds)
+2. Script mode - Shell command wrapped with writeShellApplication
+```
+
+
+## Usage
+
+```nix
+stackpanel.apps.web = {
+  path = "apps/web";
+  type = "bun";
+  commands = {
+    dev = { command = "bun run dev"; runtimeInputs = [ pkgs.bun ]; };
+    build = { package = myBuildDerivation; };
+    test = { command = "bun test"; env.CI = "true"; };
+  };
+};
+```
+
+==============================================================================

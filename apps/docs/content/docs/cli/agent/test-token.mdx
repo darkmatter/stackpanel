@@ -1,0 +1,51 @@
+---
+title: stackpanel agent test-token
+description: Generate a deterministic test pairing token
+icon: Terminal
+---
+
+# stackpanel agent test-token
+
+Generate a deterministic pairing token for testing and E2E automation.
+
+This command requires STACKPANEL_TEST_PAIRING_TOKEN to be set. The generated token
+will be valid as long as the agent is started with the same secret.
+
+The token is deterministic - running this command with the same secret and origin
+will always produce the same token, making it suitable for CI/CD pipelines.
+
+Example:
+  export STACKPANEL_TEST_PAIRING_TOKEN="my-e2e-test-secret"
+  stackpanel agent test-token --origin "http://localhost:3000"
+
+Then use the token in your tests:
+  curl -H "X-Stackpanel-Token: \<token\>" http://localhost:9876/api/...
+
+## Usage
+
+```bash
+stackpanel agent test-token
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | `bool` | `false` | Output in JSON format |
+| `--origin` | `string` | _none_ | Origin to bind the token to (e.g., http://localhost:3000) |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
