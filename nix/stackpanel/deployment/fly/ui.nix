@@ -21,7 +21,7 @@ let
   flyApps = lib.filterAttrs (
     _name: appCfg:
     (appCfg.deployment.enable or false)
-    && (appCfg.deployment.provider or deployCfg.defaultProvider) == "fly"
+    && (appCfg.deployment.host or deployCfg.defaultHost or "fly") == "fly"
   ) (cfg.apps or { });
 
   hasFlyApps = flyApps != { };

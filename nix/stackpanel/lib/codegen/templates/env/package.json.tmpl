@@ -1,0 +1,15 @@
+{
+  "name": "{{PACKAGE_NAME}}",
+  "type": "module",
+  "exports": {
+    ".": { "default": "./src/generated/index.ts" },
+    "./*": { "default": "./src/*.ts" }
+  },
+  "dependencies": {
+    "znv": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

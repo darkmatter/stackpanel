@@ -1,12 +1,12 @@
 # ==============================================================================
-# files.nix
+# files.nix — v2
 #
-# File generation system for devshell environments.
+# Derivation-based file generation with hash-check caching.
 #
-# This module provides a declarative way to generate files in the project
-# workspace. Files are written by a generated shell script that can be run
-# manually or on shell entry. Supports custom file modes and automatic
-# directory creation.
+# Each file entry is converted to a Nix store derivation at eval time.
+# The writer script compares on-disk content against the store path using
+# sha256 hashes, skipping unchanged files. A manifest fast path allows
+# the common case (no config changes) to exit after a single hash comparison.
 #
 # For type="text" files, content can be provided via:
 #   - text: Inline text content
@@ -66,10 +66,69 @@ let
 
   fileCount = builtins.length (builtins.attrNames enabledFiles);
 
+  # ── Resolve content ──────────────────────────────────────────────────────
+  # Resolve text content from either text, path, or jsonValue
+  resolveTextContent =
+    path: fileConfig:
+    let
+      fileType = fileConfig.type or "text";
+      hasText = fileConfig.text or null != null;
+      hasPath = fileConfig.path or null != null;
+    in
+    if fileType == "json" then
+      builtins.toJSON fileConfig.jsonValue
+    else if hasText && hasPath then
+      throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
+    else if hasPath then
+      builtins.readFile fileConfig.path
+    else if hasText then
+      fileConfig.text
+    else
+      throw "File '${path}': type 'text' requires either 'text' or 'path' to be set";
+
+  # ── Store path resolution ────────────────────────────────────────────────
+  # Convert each entry into a Nix store derivation. This is the single source
+  # of truth for file content — the writer script and drift check both use it.
+  #
+  # For JSON files, the store path contains jq-formatted output so that
+  # hash comparisons work correctly (the on-disk file is also jq-formatted).
+  mkStorePath =
+    path: fileConfig:
+    let
+      fileType = fileConfig.type or "text";
+      baseName = builtins.baseNameOf path;
+    in
+    if fileType == "text" then
+      pkgs.writeText baseName (resolveTextContent path fileConfig)
+    else if fileType == "json" then
+      # Pre-format JSON with jq at build time so the store path content
+      # matches what gets written on disk (jq-formatted).
+      let
+        rawJson = pkgs.writeText "${baseName}.raw" (resolveTextContent path fileConfig);
+      in
+      pkgs.runCommand baseName { nativeBuildInputs = [ pkgs.jq ]; } ''
+        ${pkgs.jq}/bin/jq '.' ${rawJson} > $out
+      ''
+    else if fileType == "derivation" then
+      fileConfig.drv
+    else
+      null; # symlink doesn't have a store path
+
+  # Attrset of { path = storePath; } for all non-symlink entries
+  storePathsByFile = lib.mapAttrs (
+    path: fileConfig:
+    let
+      fileType = fileConfig.type or "text";
+    in
+    if fileType == "symlink" then null else mkStorePath path fileConfig
+  ) enabledFiles;
+
+  # ── Manifest (for state tracking and fast path) ──────────────────────────
   manifestEntries = lib.mapAttrsToList (
     path: fileConfig:
     let
       fileType = fileConfig.type or "text";
+      storePath = storePathsByFile.${path};
       # Determine content source for text files
       contentSource =
         if fileType == "text" then
@@ -97,101 +156,112 @@ let
       target = fileConfig.target or null;
       contentSource = contentSource;
       storePath =
-        if fileType == "derivation" && fileConfig.drv != null then
-          builtins.toString fileConfig.drv
-        else
-          null;
+        if storePath != null then builtins.toString storePath else null;
     }
   ) enabledFiles;
 
   manifestJson = builtins.toJSON {
-    version = 1;
+    version = 2;
     files = manifestEntries;
   };
 
-  # Resolve text content from either text, path, or jsonValue
-  resolveTextContent =
-    path: fileConfig:
+  # ── Manifest hash (fast path) ───────────────────────────────────────────
+  # Compute a single hash from all (path, storePath) pairs. When this hash
+  # matches the on-disk manifest hash, we know nothing changed and can skip
+  # all individual file checks.
+  #
+  # We include symlink targets in the hash too so symlink target changes
+  # are detected.
+  manifestHashInput = lib.concatMapStringsSep "\n" (
+    entry:
     let
-      fileType = fileConfig.type or "text";
-      hasText = fileConfig.text or null != null;
-      hasPath = fileConfig.path or null != null;
+      value =
+        if entry.storePath != null then
+          entry.storePath
+        else if entry.target or null != null then
+          "symlink:${entry.target}"
+        else
+          "unknown";
     in
-    if fileType == "json" then
-      builtins.toJSON fileConfig.jsonValue
-    else if hasText && hasPath then
-      throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
-    else if hasPath then
-      builtins.readFile fileConfig.path
-    else if hasText then
-      fileConfig.text
-    else
-      throw "File '${path}': type 'text' requires either 'text' or 'path' to be set";
+    "${entry.path}=${value}"
+  ) manifestEntries;
 
+  manifestHash = builtins.hashString "sha256" manifestHashInput;
+
+  # ── Per-file write snippets ──────────────────────────────────────────────
   mkWriteSnippet =
     path: fileConfig:
     let
       mode = fileConfig.mode;
       fileType = fileConfig.type;
-
-      # Get the source content based on type
-      source =
-        if fileType == "text" then
-          let
-            content = resolveTextContent path fileConfig;
-          in
-          pkgs.writeText (builtins.baseNameOf path) content
-        else if fileType == "json" then
-          let
-            content = resolveTextContent path fileConfig;
-          in
-          pkgs.writeText (builtins.baseNameOf path) content
-        else if fileType == "derivation" then
-          fileConfig.drv
-        else
-          null; # symlink doesn't use source
-
-      # For symlinks, get the target
+      storePath = storePathsByFile.${path};
       symlinkTarget = fileConfig.target or null;
     in
     if fileType == "symlink" then
+      # Symlinks are always recreated (cheap operation, no hash check needed)
       ''
-        ${util.log.debug "files: creating symlink ${path} -> ${symlinkTarget}"}
-        echo "• ${path} -> ${symlinkTarget}"
+        # ${path} (symlink)
         mkdir -p "$(dirname ${q path})"
-        # Remove existing file/symlink if present
-        rm -f ${q path} 2>/dev/null || true
-        ln -s ${q symlinkTarget} ${q path}
-      ''
-    else if fileType == "json" then
-      ''
-        ${util.log.debug "files: writing ${path} (json)"}
-        echo "• ${path}"
-        mkdir -p "$(dirname ${q path})"
-        ${pkgs.jq}/bin/jq '.' ${source} > ${q path}
-        ${lib.optionalString (mode != null) ''
-          ${util.log.debug "files: setting mode ${mode} on ${path}"}
-          chmod ${q mode} ${q path}
-        ''}
+        if [[ "$FORCE" == "0" ]] && [[ -L ${q path} ]] && [[ "$(readlink ${q path})" == ${q symlinkTarget} ]]; then
+          UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
+          if [[ "''${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
+            echo "  skip ${path} (symlink unchanged)"
+          fi
+        else
+          rm -f ${q path} 2>/dev/null || true
+          ln -s ${q symlinkTarget} ${q path}
+          WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
+          echo "  write ${path} -> ${symlinkTarget}"
+        fi
       ''
     else
+      # For text, json, derivation: hash-check before writing
       ''
-        ${util.log.debug "files: writing ${path}"}
-        echo "• ${path}"
-        mkdir -p "$(dirname ${q path})"
-        cat ${source} > ${q path}
-        ${lib.optionalString (mode != null) ''
-          ${util.log.debug "files: setting mode ${mode} on ${path}"}
-          chmod ${q mode} ${q path}
-        ''}
+        # ${path} (${fileType})
+        _src=${storePath}
+        _dst=${q path}
+        if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(${pkgs.coreutils}/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(${pkgs.coreutils}/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
+          UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
+          if [[ "''${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
+            echo "  skip ${path} (unchanged)"
+          fi
+        else
+          mkdir -p "$(dirname "$_dst")"
+          cat "$_src" > "$_dst"
+          ${lib.optionalString (mode != null) ''chmod ${q mode} "$_dst"''}
+          WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
+          echo "  write ${path}"
+        fi
       '';
 
+  # JSON array of all current file paths (for the cleanup diff)
+  currentPathsJson = builtins.toJSON (builtins.attrNames enabledFiles);
+
+  # ── Writer script ────────────────────────────────────────────────────────
   writerDrv = pkgs.writeShellApplication {
     name = "write-files";
-    runtimeInputs = [ pkgs.gum ];
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.jq
+    ];
     text = ''
       set -euo pipefail
-      ${util.log.debug "files: starting file generation"}
+
+      # ── Parse flags ──────────────────────────────────────────────────────
+      FORCE=0
+      VERBOSE=0
+      for arg in "$@"; do
+        case "$arg" in
+          --force|-f) FORCE=1 ;;
+          --verbose|-v) VERBOSE=1 ;;
+          --help|-h)
+            echo "Usage: write-files [--force] [--verbose]"
+            echo "  --force   Skip hash checks, rewrite all files"
+            echo "  --verbose Show per-file skip/write details"
+            exit 0
+            ;;
+        esac
+      done
 
       # Determine repo root
       ROOT="''${STACKPANEL_ROOT:-}"
@@ -200,21 +270,162 @@ let
         exit 1
       fi
 
-      ${util.log.debug "files: ROOT=$ROOT"}
       cd "$ROOT"
+
+      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+      MANIFEST_FILE="$STATE_DIR/.files-manifest"
+
+      # ── Manifest fast path ──────────────────────────────────────────────
+      # If the manifest hash matches, nothing changed — skip everything.
+      MANIFEST_HASH="${manifestHash}"
+      if [[ "$FORCE" == "0" ]] && [[ -f "$MANIFEST_FILE" ]] && [[ "$(cat "$MANIFEST_FILE")" == "$MANIFEST_HASH" ]]; then
+        if [[ "''${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
+          echo "files: all ${toString fileCount} files unchanged (skipping)"
+        fi
+        exit 0
+      fi
+
+      # ── Cleanup stale files from previous generation ─────────────────────
+      OLD_MANIFEST="$STATE_DIR/files.json"
+      REMOVED_COUNT=0
+      if [[ -f "$OLD_MANIFEST" ]]; then
+        CURRENT_PATHS='${currentPathsJson}'
+
+        # Extract old paths from the manifest
+        OLD_PATHS=$(jq -r '.files[].path' "$OLD_MANIFEST" 2>/dev/null) || OLD_PATHS=""
+
+        for old_path in $OLD_PATHS; do
+          # Check if this path is still in the current file set
+          if ! echo "$CURRENT_PATHS" | jq -e --arg p "$old_path" 'index($p) != null' >/dev/null 2>&1; then
+            # This file is stale — remove it
+            if [[ -e "$old_path" || -L "$old_path" ]]; then
+              rm -f "$old_path" 2>/dev/null || true
+              echo "  remove $old_path (stale)"
+              REMOVED_COUNT=$((REMOVED_COUNT + 1))
+
+              # Clean up empty parent directories (up to repo root)
+              dir=$(dirname "$old_path")
+              while [[ "$dir" != "." && "$dir" != "/" ]]; do
+                if [[ -d "$dir" ]] && [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]; then
+                  rmdir "$dir" 2>/dev/null || true
+                else
+                  break
+                fi
+                dir=$(dirname "$dir")
+              done
+            fi
+          fi
+        done
+      fi
+
+      # ── Write current files (with hash check) ───────────────────────────
+      WRITTEN_COUNT=0
+      UNCHANGED_COUNT=0
 
       ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet enabledFiles)}
 
-      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+      # ── Write manifest ──────────────────────────────────────────────────
       mkdir -p "$STATE_DIR"
       cat > "$STATE_DIR/files.json" << 'STACKPANEL_FILES_EOF'
       ${manifestJson}
       STACKPANEL_FILES_EOF
 
-      ${util.log.debug "files: completed writing ${toString fileCount} file(s)"}
-      echo "✅ wrote ${toString fileCount} file(s) into $ROOT"
+      # Write manifest hash for fast path on next run
+      echo -n "$MANIFEST_HASH" > "$MANIFEST_FILE"
+
+      # ── Summary ─────────────────────────────────────────────────────────
+      PARTS=""
+      if [[ "$WRITTEN_COUNT" -gt 0 ]]; then
+        PARTS="$WRITTEN_COUNT written"
+      fi
+      if [[ "$UNCHANGED_COUNT" -gt 0 ]]; then
+        if [[ -n "$PARTS" ]]; then PARTS="$PARTS, "; fi
+        PARTS="''${PARTS}$UNCHANGED_COUNT unchanged"
+      fi
+      if [[ "$REMOVED_COUNT" -gt 0 ]]; then
+        if [[ -n "$PARTS" ]]; then PARTS="$PARTS, "; fi
+        PARTS="''${PARTS}$REMOVED_COUNT removed"
+      fi
+      echo "files: $PARTS"
     '';
   };
+
+  # ── Drift check derivation ──────────────────────────────────────────────
+  # A derivation that verifies on-disk files match their expected store content.
+  # Used via `nix flake check` or exposed as a moduleCheck.
+  #
+  # NOTE: This check requires IFD (import-from-derivation) or must be run
+  # against a checkout. We build it as a script that takes ROOT as an argument.
+  driftCheckScript =
+    let
+      # Only check files that have a store path (skip symlinks)
+      checkableFiles = lib.filterAttrs (_: v: v != null) storePathsByFile;
+
+      checkSnippets = lib.mapAttrsToList (
+        path: storePath:
+        ''
+          _dst="$ROOT/${path}"
+          if [[ ! -f "$_dst" ]]; then
+            echo "DRIFT: ${path} is missing (expected from store)"
+            DRIFT=1
+          else
+            _expected=$(${pkgs.coreutils}/bin/sha256sum ${storePath} | cut -d' ' -f1)
+            _actual=$(${pkgs.coreutils}/bin/sha256sum "$_dst" | cut -d' ' -f1)
+            if [[ "$_expected" != "$_actual" ]]; then
+              echo "DRIFT: ${path} does not match generated content"
+              DRIFT=1
+            fi
+          fi
+        ''
+      ) checkableFiles;
+
+      # Also check symlinks
+      symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") enabledFiles;
+      symlinkSnippets = lib.mapAttrsToList (
+        path: fileConfig:
+        ''
+          _dst="$ROOT/${path}"
+          if [[ ! -L "$_dst" ]]; then
+            echo "DRIFT: ${path} is not a symlink (expected -> ${fileConfig.target})"
+            DRIFT=1
+          elif [[ "$(readlink "$_dst")" != ${q fileConfig.target} ]]; then
+            echo "DRIFT: ${path} points to $(readlink "$_dst"), expected ${fileConfig.target}"
+            DRIFT=1
+          fi
+        ''
+      ) symlinkFiles;
+    in
+    pkgs.writeShellApplication {
+      name = "check-files-drift";
+      runtimeInputs = [
+        pkgs.coreutils
+      ];
+      text = ''
+        set -euo pipefail
+
+        ROOT="''${1:-''${STACKPANEL_ROOT:-}}"
+        if [[ -z "$ROOT" ]]; then
+          echo "Usage: check-files-drift [ROOT]" >&2
+          echo "  or set STACKPANEL_ROOT" >&2
+          exit 1
+        fi
+
+        cd "$ROOT"
+        DRIFT=0
+
+        ${lib.concatLines checkSnippets}
+        ${lib.concatLines symlinkSnippets}
+
+        if [[ "$DRIFT" == "1" ]]; then
+          echo ""
+          echo "Some generated files are out of date."
+          echo "Run 'write-files' to fix."
+          exit 1
+        else
+          echo "All ${toString fileCount} generated files are up to date."
+        fi
+      '';
+    };
 in
 {
   imports = [
@@ -223,7 +434,10 @@ in
 
   config = lib.mkIf hasFiles {
     # Make the executable available in PATH
-    stackpanel.devshell.packages = [ writerDrv ];
+    stackpanel.devshell.packages = [
+      writerDrv
+      driftCheckScript
+    ];
 
     # Run write-files on shell entry (after core setup which sets STACKPANEL_ROOT)
     stackpanel.devshell.hooks.main = [
@@ -233,10 +447,15 @@ in
       ''
     ];
 
-    # Also expose as a stackpanel script
+    # Also expose as stackpanel scripts
     stackpanel.scripts."write-files" = {
       exec = ''${writerDrv}/bin/write-files "$@"'';
-      description = "Write generated files to the project";
+      description = "Write generated files to the project (with hash-check caching)";
+    };
+
+    stackpanel.scripts."check-files" = {
+      exec = ''${driftCheckScript}/bin/check-files-drift "$@"'';
+      description = "Check if generated files are up-to-date (drift detection)";
     };
   };
 }

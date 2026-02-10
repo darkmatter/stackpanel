@@ -8,14 +8,14 @@
 #   - Auto-loading data from ./data.nix (consolidated) or ./data/ (legacy)
 #   - Merging GitHub collaborators
 #   - Loading config.local.nix for per-user overrides (gitignored)
-#   - Applying STACKPANEL_CONFIG_OVERRIDE env var (JSON, for CI/scripting)
+
 #   - Combining everything into the final stackpanel config
 #
 # Merge priority (lowest to highest):
 #   1. Data tables (data.nix or data/*.nix)
 #   2. User config (config.nix)
 #   3. Local overrides (config.local.nix - gitignored)
-#   4. STACKPANEL_CONFIG_OVERRIDE (JSON env var)
+
 #
 # Usage:
 #   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
@@ -34,24 +34,18 @@ let
 
   # ---------------------------------------------------------------------------
   # Import local config overrides (per-user, gitignored)
-  # Uses absolute path to bypass flake's gitignore filtering
+  # Uses the .stackpanel-root marker file (written by .envrc) to locate the
+  # project root, then imports config.local.nix from there if it exists.
   # ---------------------------------------------------------------------------
   stackpanelRoot =
     let
-      envRoot = builtins.getEnv "STACKPANEL_ROOT";
-      markerRoot =
-        let
-          markerPath = ../.stackpanel-root;
-        in
-        if builtins.pathExists markerPath then
-          lib.removeSuffix "\n" (builtins.readFile markerPath)
-        else
-          null;
+      markerPath = ../.stackpanel-root;
     in
-    if envRoot != "" then
-      envRoot
-    else if markerRoot != null && markerRoot != "." then
-      markerRoot
+    if builtins.pathExists markerPath then
+      let
+        content = lib.removeSuffix "\n" (builtins.readFile markerPath);
+      in
+      if content != "" && content != "." then content else null
     else
       null;
 
@@ -131,7 +125,11 @@ let
     public-keys = collab.publicKeys or [ ];
     secrets-allowed-environments =
       if collab.isAdmin or false then
-        [ "dev" "staging" "production" ]
+        [
+          "dev"
+          "staging"
+          "production"
+        ]
       else
         [ "dev" ];
   };
@@ -145,14 +143,8 @@ let
     users = lib.recursiveUpdate github-team (userConfig.users or { });
   };
 
-  envOverrideRaw = builtins.getEnv "STACKPANEL_CONFIG_OVERRIDE";
-  hasEnvOverride = envOverrideRaw != "";
-  envOverride = if hasEnvOverride then builtins.fromJSON envOverrideRaw else { };
-
   baseConfig = lib.recursiveUpdate data configWithUsers;
-  configWithLocal = lib.recursiveUpdate baseConfig localConfig;
-  finalConfig = lib.recursiveUpdate configWithLocal envOverride;
+  finalConfig = lib.recursiveUpdate baseConfig localConfig;
 
 in
 finalConfig
-

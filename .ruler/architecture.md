@@ -177,7 +177,7 @@ apps/web
   -> @stackpanel/api (tRPC routers + types)
      -> @stackpanel/auth (Better Auth + Polar payments)
         -> @stackpanel/db (Drizzle ORM + Neon PostgreSQL)
-        -> @stackpanel/env (validated env vars)
+        -> @gen/env (validated env vars)
      -> @stackpanel/db
   -> @stackpanel/agent-client -> @stackpanel/proto (Connect-RPC types)
   -> @stackpanel/ui -> @stackpanel/ui-web -> @stackpanel/ui-core + @stackpanel/ui-primitives (Radix)
@@ -190,7 +190,7 @@ apps/web
 | `@stackpanel/api` | tRPC routers (agent, github). Creates context with `{ authApi, session, db }`. Defines `publicProcedure` and `protectedProcedure`. |
 | `@stackpanel/auth` | Better Auth with Drizzle adapter, email/password, Polar payments plugin. |
 | `@stackpanel/db` | Drizzle ORM with Neon serverless PostgreSQL. Auth schema (user, session, account, verification). |
-| `@stackpanel/env` | Type-safe env vars via Zod schemas. Per-app/per-env codegen from Nix. Multi-entrypoint (web, web-client, web-server, auth, loader). |
+| `@gen/env` | Type-safe env vars via Zod schemas. Per-app/per-env codegen from Nix. Multi-entrypoint (web, web-client, web-server, auth, loader). |
 | `@stackpanel/proto` | 23+ protobuf modules for agent communication. Generated Go + TypeScript types. |
 | `@stackpanel/agent-client` | Connect-RPC client factory with JWT interceptor. |
 | `@stackpanel/ui` | Facade: re-exports ui-web (or ui-native) + ui-core utilities. |
