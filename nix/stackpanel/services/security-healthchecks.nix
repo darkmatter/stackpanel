@@ -24,6 +24,155 @@ let
   awsCfg = config.stackpanel.aws.roles-anywhere or { enable = false; };
   secretsCfg = config.stackpanel.secrets or { enable = false; };
   healthchecksCfg = config.stackpanel.healthchecks or { enable = true; };
+
+  # Secrets groups for per-group checks
+  secretsGroups = secretsCfg.groups or { };
+  secretsDir = secretsCfg.secrets-dir or ".stackpanel/secrets";
+
+  # Infra config for checking if KMS/IAM is deployed
+  infraCfg = config.stackpanel.infra or { enable = false; };
+  infraAwsSecrets = infraCfg.aws.secrets or { enable = false; };
+
+  # Generate per-group SSM access healthchecks.
+  # Each group stores its AGE private key in SSM. This check verifies
+  # that the current AWS credentials can read that parameter.
+  # Red = AWS/SSM not set up or no permissions for the group's key path.
+  groupSsmChecks = lib.mapAttrs' (
+    name: group:
+    lib.nameValuePair "ssm-access-${name}" {
+      name = "SSM Access: ${name}";
+      description = "Check if the group key for '${name}' is readable from SSM at ${group.ssm-path}";
+      type = "script";
+      severity = "warning";
+      timeout = 15;
+      script = ''
+        SSM_PATH="${group.ssm-path}"
+
+        if ! command -v aws >/dev/null 2>&1; then
+          echo "AWS CLI not found in PATH"
+          echo "Install awscli2 or ensure it's in the devshell"
+          exit 1
+        fi
+
+        # Try to read the parameter (just verify access, don't output the secret)
+        if aws ssm get-parameter --name "$SSM_PATH" --with-decryption --query "Parameter.Name" --output text >/dev/null 2>&1; then
+          echo "SSM parameter accessible: $SSM_PATH"
+        else
+          # Try to distinguish between "not found" and "access denied"
+          error=$(aws ssm get-parameter --name "$SSM_PATH" --with-decryption 2>&1 || true)
+          if echo "$error" | grep -qi "ParameterNotFound"; then
+            echo "SSM parameter not found: $SSM_PATH"
+            echo ""
+            echo "The group key has not been stored in SSM yet."
+            echo "Run: secrets:init-group ${name}"
+          elif echo "$error" | grep -qi "ExpiredTokenException\|AccessDenied\|UnrecognizedClient\|InvalidSignature"; then
+            echo "AWS credentials not configured or insufficient permissions"
+            echo ""
+            echo "Ensure you have ssm:GetParameter permission for: $SSM_PATH"
+          else
+            echo "Cannot access SSM parameter: $SSM_PATH"
+            echo "$error"
+          fi
+          exit 1
+        fi
+      '';
+    }
+  ) secretsGroups;
+
+  # Generate per-group key file existence checks.
+  # Each group's AGE private key should be stored as a SOPS-encrypted
+  # .enc.age file in the keys/ directory.
+  groupKeyFileChecks = lib.mapAttrs' (
+    name: _group:
+    lib.nameValuePair "group-key-exists-${name}" {
+      name = "Group Key Exists: ${name}";
+      description = "Check if the encrypted AGE key file exists for group '${name}'";
+      type = "script";
+      severity = "critical";
+      timeout = 5;
+      tags = [
+        "secrets"
+        "groups"
+        "keys"
+      ];
+      script = ''
+        ENC_AGE_FILE="${secretsDir}/keys/${name}.enc.age"
+
+        if [ -f "$ENC_AGE_FILE" ]; then
+          # Verify it's not empty
+          if [ -s "$ENC_AGE_FILE" ]; then
+            echo "Group key file exists: $ENC_AGE_FILE"
+            size=$(wc -c < "$ENC_AGE_FILE" | tr -d ' ')
+            echo "Size: $size bytes"
+          else
+            echo "Group key file is empty: $ENC_AGE_FILE"
+            echo ""
+            echo "Re-initialize with: secrets:init-group ${name}"
+            exit 1
+          fi
+        else
+          echo "Group key file not found: $ENC_AGE_FILE"
+          echo ""
+          echo "The encrypted AGE private key for group '${name}' has not been created."
+          echo "Initialize with: secrets:init-group ${name}"
+          exit 1
+        fi
+      '';
+    }
+  ) secretsGroups;
+
+  # Generate per-group decrypt checks.
+  # For each group that has a SOPS-encrypted secrets file, verify we can
+  # actually decrypt it using the group key chain.
+  groupDecryptChecks = lib.mapAttrs' (
+    name: _group:
+    lib.nameValuePair "group-decrypt-${name}" {
+      name = "Decrypt Group: ${name}";
+      description = "Test decrypting the '${name}' group secrets file using the group key";
+      type = "script";
+      severity = "warning";
+      timeout = 20;
+      tags = [
+        "secrets"
+        "groups"
+        "decrypt"
+      ];
+      script = ''
+        GROUP_FILE="${secretsDir}/groups/${name}.yaml"
+
+        if [ ! -f "$GROUP_FILE" ]; then
+          echo "No secrets file for group '${name}' at $GROUP_FILE"
+          echo "This is OK if you haven't added secrets to this group yet"
+          exit 0
+        fi
+
+        # Check that the .enc.age key file exists first
+        ENC_AGE_FILE="${secretsDir}/keys/${name}.enc.age"
+        if [ ! -f "$ENC_AGE_FILE" ]; then
+          echo "Cannot decrypt: group key not found at $ENC_AGE_FILE"
+          echo "Initialize with: secrets:init-group ${name}"
+          exit 1
+        fi
+
+        echo "Testing decryption of: $GROUP_FILE"
+
+        # Try to decrypt (validate only, don't output secrets)
+        if sops --decrypt "$GROUP_FILE" >/dev/null 2>&1; then
+          echo "Successfully decrypted $GROUP_FILE"
+        else
+          echo "Failed to decrypt $GROUP_FILE"
+          echo ""
+          echo "Possible causes:"
+          echo "  1. Local AGE key cannot decrypt the group .enc.age file"
+          echo "  2. Group key is not in the secrets file's recipients"
+          echo "  3. SOPS_AGE_KEY_CMD is not configured correctly"
+          echo ""
+          echo "Try manually: sops --decrypt \"$GROUP_FILE\""
+          exit 1
+        fi
+      '';
+    }
+  ) secretsGroups;
 in
 {
   config = lib.mkIf healthchecksCfg.enable {
@@ -285,12 +434,22 @@ in
       enable = true;
       displayName = "SOPS Secrets";
       checks = {
+        # Per-group checks (dynamically generated from secrets.groups)
+      }
+      // groupSsmChecks
+      // groupKeyFileChecks
+      // groupDecryptChecks
+      // {
         sops-installed = {
           name = "SOPS Available";
           description = "Check if SOPS binary is available";
           type = "script";
           severity = "critical";
           timeout = 5;
+          tags = [
+            "secrets"
+            "toolchain"
+          ];
           script = ''
             if command -v sops >/dev/null 2>&1; then
               version=$(sops --version 2>&1 | head -1)
@@ -308,6 +467,10 @@ in
           type = "script";
           severity = "critical";
           timeout = 5;
+          tags = [
+            "secrets"
+            "keys"
+          ];
           script = ''
             # Check common AGE key locations
             found=0
@@ -364,6 +527,10 @@ in
           type = "script";
           severity = "warning";
           timeout = 5;
+          tags = [
+            "secrets"
+            "config"
+          ];
           script = ''
             if [ -f ".sops.yaml" ]; then
               echo ".sops.yaml found"
@@ -378,59 +545,17 @@ in
           '';
         };
 
-        decrypt-test = {
-          name = "Decrypt Test";
-          description = "Test decrypting an encrypted secret file";
-          type = "script";
-          severity = "warning";
-          timeout = 15;
-          script = ''
-            # Find a SOPS-encrypted file to test
-            test_file=""
-
-            # Look for common encrypted file patterns
-            for pattern in ".stackpanel/secrets/"*.enc.json ".stackpanel/secrets/"*.sops.json \
-                           ".stackpanel/secrets/"*.enc.yaml ".stackpanel/secrets/"*.sops.yaml \
-                           "secrets/"*.enc.json "secrets/"*.sops.json; do
-              for f in $pattern; do
-                if [ -f "$f" ]; then
-                  test_file="$f"
-                  break 2
-                fi
-              done
-            done
-
-            if [ -z "$test_file" ]; then
-              echo "No encrypted secret files found to test"
-              echo "This is OK if you haven't created any secrets yet"
-              exit 0
-            fi
-
-            echo "Testing decryption of: $test_file"
-
-            # Try to decrypt (just validate, don't output secrets)
-            if sops --decrypt "$test_file" >/dev/null 2>&1; then
-              echo "Successfully decrypted $test_file"
-            else
-              echo "Failed to decrypt $test_file"
-              echo ""
-              echo "Possible causes:"
-              echo "  1. Your AGE key is not in the file's recipients"
-              echo "  2. KMS key not accessible (if using KMS)"
-              echo "  3. File is corrupted"
-              echo ""
-              echo "Run: sops --decrypt \"$test_file\" for details"
-              exit 1
-            fi
-          '';
-        };
-
         kms-access = lib.mkIf ((secretsCfg.kms or { enable = false; }).enable or false) {
           name = "KMS Access";
           description = "Verify access to configured AWS KMS key";
           type = "script";
           severity = "warning";
           timeout = 20;
+          tags = [
+            "secrets"
+            "kms"
+            "aws"
+          ];
           script = ''
             KMS_ARN="${(secretsCfg.kms or { }).arn or ""}"
 
@@ -466,6 +591,80 @@ in
               echo "  - kms:Decrypt"
               exit 1
             fi
+          '';
+        };
+
+        # =====================================================================
+        # Infra Deployed: verify KMS key + IAM role are provisioned
+        # =====================================================================
+        infra-deployed = lib.mkIf (infraAwsSecrets.enable or false) {
+          name = "Secrets Infra Deployed";
+          description = "Verify that Alchemy-provisioned KMS key and IAM role exist in AWS";
+          type = "script";
+          severity = "warning";
+          timeout = 30;
+          tags = [
+            "secrets"
+            "infra"
+            "alchemy"
+            "aws"
+          ];
+          script = ''
+            KMS_ALIAS="alias/${infraAwsSecrets.kms.alias or "stackpanel-secrets"}"
+            ROLE_NAME="${infraAwsSecrets.iam.role-name or "stackpanel-secrets-role"}"
+            REGION="${infraAwsSecrets.region or "us-west-2"}"
+            errors=0
+
+            if ! command -v aws >/dev/null 2>&1; then
+              echo "AWS CLI not found in PATH"
+              echo "Install awscli2 or ensure it's in the devshell"
+              exit 1
+            fi
+
+            # Check AWS credentials
+            if ! aws sts get-caller-identity >/dev/null 2>&1; then
+              echo "AWS credentials not available"
+              echo ""
+              echo "Authenticate first (e.g., ensure-device-cert for Roles Anywhere)"
+              exit 1
+            fi
+
+            # Check KMS key exists via alias
+            echo "Checking KMS key: $KMS_ALIAS"
+            if aws kms describe-key --key-id "$KMS_ALIAS" --region "$REGION" >/dev/null 2>&1; then
+              key_state=$(aws kms describe-key --key-id "$KMS_ALIAS" --region "$REGION" --query "KeyMetadata.KeyState" --output text 2>/dev/null)
+              echo "KMS key exists (state: $key_state)"
+              if [ "$key_state" != "Enabled" ]; then
+                echo "Warning: KMS key is not in Enabled state"
+                errors=$((errors + 1))
+              fi
+            else
+              echo "KMS key not found: $KMS_ALIAS"
+              echo "Run 'infra:deploy' to provision the KMS key"
+              errors=$((errors + 1))
+            fi
+
+            # Check IAM role exists
+            echo "Checking IAM role: $ROLE_NAME"
+            if aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+              role_arn=$(aws iam get-role --role-name "$ROLE_NAME" --query "Role.Arn" --output text 2>/dev/null)
+              echo "IAM role exists: $role_arn"
+            else
+              echo "IAM role not found: $ROLE_NAME"
+              echo "Run 'infra:deploy' to provision the IAM role"
+              errors=$((errors + 1))
+            fi
+
+            if [ $errors -gt 0 ]; then
+              echo ""
+              echo "$errors infrastructure resource(s) missing or degraded"
+              echo ""
+              echo "Deploy with: infra:deploy"
+              exit 1
+            fi
+
+            echo ""
+            echo "All secrets infrastructure resources are deployed"
           '';
         };
       };

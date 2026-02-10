@@ -108,6 +108,115 @@ let
     { lib, ... }:
     {
       options = {
+        framework = {
+          tanstack-start = {
+            enable = lib.mkEnableOption "TanStack Start (full-stack SSR with TanStack Router + Nitro)";
+          };
+
+          nextjs = {
+            enable = lib.mkEnableOption "Next.js (App Router or Pages)";
+            output = lib.mkOption {
+              type = lib.types.enum [
+                "standalone"
+                "export"
+              ];
+              default = "standalone";
+              description = "Next.js output mode.";
+            };
+          };
+
+          vite = {
+            enable = lib.mkEnableOption "Vite SPA (React, Vue, Svelte, etc.)";
+            ssr = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Enable Vite SSR mode.";
+            };
+            assets-dir = lib.mkOption {
+              type = lib.types.str;
+              default = "dist";
+              description = "Output directory for built assets.";
+            };
+          };
+
+          hono = {
+            enable = lib.mkEnableOption "Hono API server";
+            entrypoint = lib.mkOption {
+              type = lib.types.str;
+              default = "src/index.ts";
+              description = "Entrypoint file for the Hono worker.";
+            };
+          };
+
+          astro = {
+            enable = lib.mkEnableOption "Astro (static/SSR)";
+          };
+
+          remix = {
+            enable = lib.mkEnableOption "Remix";
+          };
+
+          nuxt = {
+            enable = lib.mkEnableOption "Nuxt";
+          };
+        };
+
+        deployment = {
+          enable = lib.mkEnableOption "deployment for this app";
+
+          host = lib.mkOption {
+            type = lib.types.nullOr (
+              lib.types.enum [
+                "cloudflare"
+                "fly"
+                "vercel"
+                "aws"
+              ]
+            );
+            default = null;
+            description = ''
+              Deployment host/platform. Combined with `framework` to determine
+              the alchemy resource type:
+
+                framework × host → alchemy resource
+                tanstack-start × cloudflare → TanStackStart
+                nextjs × cloudflare → Nextjs
+                vite × cloudflare → cloudflare.Vite
+                hono × cloudflare → cloudflare.Worker
+                * × fly → Fly container
+            '';
+            example = "cloudflare";
+          };
+
+          bindings = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Environment variable names to bind to the deployed app.
+              Each name is read from `process.env` at deploy time.
+              Mark sensitive ones in `secrets`.
+            '';
+            example = [
+              "DATABASE_URL"
+              "CORS_ORIGIN"
+              "BETTER_AUTH_SECRET"
+            ];
+          };
+
+          secrets = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Subset of `bindings` that contain sensitive values.
+              These are wrapped with `alchemy.secret()` at deploy time.
+            '';
+            example = [
+              "DATABASE_URL"
+              "BETTER_AUTH_SECRET"
+            ];
+          };
+        };
+
         tooling = {
           install = lib.mkOption {
             type = lib.types.nullOr (lib.types.submodule toolStepModule);
@@ -263,7 +372,21 @@ let
         tooling = appCfg.tooling;
         # Only compute wrappedTooling when pkgs is available
         wrappedTooling = if mkWrappedTooling != null then mkWrappedTooling name appCfg else null;
+
+        # Framework mutual exclusivity check
+        _frameworkNames = [
+          "tanstack-start"
+          "nextjs"
+          "vite"
+          "hono"
+          "astro"
+          "remix"
+          "nuxt"
+        ];
+        _enabledFrameworks = lib.filter (fw: appCfg.framework.${fw}.enable or false) _frameworkNames;
       in
+      assert lib.assertMsg (lib.length _enabledFrameworks <= 1)
+        "stackpanel.apps.${name}: at most one framework may be enabled, but found ${toString (lib.length _enabledFrameworks)}: ${lib.concatStringsSep ", " _enabledFrameworks}";
       {
         inherit name;
         value = {

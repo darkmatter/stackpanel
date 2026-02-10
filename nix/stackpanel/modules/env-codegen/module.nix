@@ -1,17 +1,17 @@
 # ==============================================================================
 # env-codegen/module.nix
 #
-# Generates the packages/env structure from stackpanel.apps configuration.
+# Generates the packages/gen/env structure from stackpanel.apps configuration.
 #
 # This module integrates env-package.nix codegen into the files system,
 # ensuring all generated files are created on devshell entry.
 #
 # Generated files:
-#   packages/env/data/.sops.yaml         - SOPS creation rules
-#   packages/env/data/shared/vars.yaml   - Shared plaintext config
-#   packages/env/data/<app>/<env>.yaml   - Per-app secrets (boilerplate)
-#   packages/env/src/generated/          - TypeScript znv modules
-#   packages/env/src/entrypoints/        - App entrypoint loaders
+#   packages/gen/env/data/.sops.yaml         - SOPS creation rules
+#   packages/gen/env/data/shared/vars.yaml   - Shared plaintext config
+#   packages/gen/env/data/<app>/<env>.yaml   - Per-app secrets (boilerplate)
+#   packages/gen/env/src/generated/          - TypeScript znv modules
+#   packages/gen/env/src/entrypoints/        - App entrypoint loaders
 #
 # Usage:
 #   # The module is automatically enabled when apps have environments
@@ -19,13 +19,19 @@
 #     DATABASE_URL = "ref+sops://...";
 #   };
 # ==============================================================================
-{ lib, config, pkgs, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stackpanel;
-  
+  envOutputDir = config.stackpanel.env.output-dir;
+
   # Import the codegen library
   envPackage = import ../../lib/codegen/env-package.nix { inherit lib config; };
-  
+
   # Check if we should generate files
   hasAppsWithEnvs = envPackage.enabled;
 
@@ -33,13 +39,45 @@ let
   meta = {
     id = "env-codegen";
     name = "Environment Codegen";
-    description = "Generates packages/env structure from app configurations";
+    description = "Generates packages/gen/env structure from app configurations";
     category = "codegen";
     version = "1.0.0";
   };
 
 in
 {
+  # ===========================================================================
+  # Options
+  # ===========================================================================
+  options.stackpanel.env = {
+    output-dir = lib.mkOption {
+      type = lib.types.str;
+      default = "packages/gen/env";
+      description = ''
+        Output directory for the generated env package (relative to project root).
+
+        Examples:
+          "packages/gen/env"       — monorepo with @gen/env workspace package
+          "packages/env"           — traditional packages/env location
+          "apps/my-app/gen/env"    — co-located with a specific app
+      '';
+      example = "packages/env";
+    };
+
+    package-name = lib.mkOption {
+      type = lib.types.str;
+      default = "@${config.stackpanel.project.owner}/env";
+      description = ''
+        NPM package name for the generated env package.
+        Defaults to @{project.owner}/env (e.g., @darkmatter/env).
+      '';
+      example = "@gen/env";
+    };
+  };
+
+  # ===========================================================================
+  # Config
+  # ===========================================================================
   config = lib.mkIf hasAppsWithEnvs {
     # Register generated files
     stackpanel.files.entries = envPackage.fileEntries;
@@ -51,7 +89,7 @@ in
         name = meta.name;
         description = meta.description;
         icon = "FileCode";
-        category = "development";  # "codegen" not in allowed values
+        category = "development"; # "codegen" not in allowed values
         version = meta.version;
       };
       source.type = "builtin";
@@ -59,7 +97,11 @@ in
         files = true;
         secrets = true;
       };
-      tags = [ "codegen" "secrets" "env" ];
+      tags = [
+        "codegen"
+        "secrets"
+        "env"
+      ];
       priority = 50; # Run after app definitions are processed
     };
 
@@ -70,25 +112,31 @@ in
       checks = {
         sops-yaml-exists = {
           name = "SOPS Config Generated";
-          description = "Check if packages/env/data/.sops.yaml exists";
+          description = "Check if ${envOutputDir}/data/.sops.yaml exists";
           type = "script";
           script = ''
-            [ -f "packages/env/data/.sops.yaml" ]
+            [ -f "${envOutputDir}/data/.sops.yaml" ]
           '';
           severity = "warning";
           timeout = 5;
-          tags = [ "codegen" "sops" ];
+          tags = [
+            "codegen"
+            "sops"
+          ];
         };
         generated-ts-exists = {
           name = "TypeScript Modules Generated";
           description = "Check if generated TypeScript modules exist";
           type = "script";
           script = ''
-            [ -d "packages/env/src/generated" ] && [ -f "packages/env/src/generated/index.ts" ]
+            [ -d "${envOutputDir}/src/generated" ] && [ -f "${envOutputDir}/src/generated/index.ts" ]
           '';
           severity = "warning";
           timeout = 5;
-          tags = [ "codegen" "typescript" ];
+          tags = [
+            "codegen"
+            "typescript"
+          ];
         };
       };
     };

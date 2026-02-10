@@ -289,11 +289,9 @@ in
   config = lib.mkIf cfg.enable {
     stackpanel.infra.outputs =
       let
-        root = config.stackpanel.root or ./.;
+        root = if config.stackpanel.root != null then config.stackpanel.root else ./.;
         outputsFile = root + "/.stackpanel/data/infra-outputs.nix";
       in
-      lib.mkDefault (
-        lib.optionalAttrs (builtins.pathExists outputsFile) (import outputsFile)
-      );
+      lib.mkDefault (lib.optionalAttrs (builtins.pathExists outputsFile) (import outputsFile));
   };
 }

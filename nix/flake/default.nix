@@ -3,7 +3,6 @@
 #
 # A pure function that generates flake outputs for a given system.
 # This replaces the previous flake-parts module with explicit function calls.
-#
 # Usage:
 #   import ./default.nix { inherit pkgs inputs self system; }
 #
@@ -74,10 +73,7 @@ let
   gitHooksConfig = loadedConfig.git-hooks or { };
 
   stackpanelConfigModule = {
-    stackpanel = loadedConfig // {
-      # Set root from projectRoot
-      root = lib.mkDefault effectiveRoot;
-    };
+    stackpanel = loadedConfig;
   };
 
   # ===================================================================
@@ -154,14 +150,14 @@ let
   devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
-  devenvPackages = devenvConfig.packages or [ ];
+  devenvPackages = if devenvConfig != null then (devenvConfig.packages or [ ]) else [ ];
 
   # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
   # We extract this and merge it into our env, giving our values priority
-  devenvEnv = devenvConfig.env or { };
+  devenvEnv = if devenvConfig != null then (devenvConfig.env or { }) else { };
 
   # Get processes from devenv
-  devenvProcesses = devenvConfig.processes or { };
+  devenvProcesses = if devenvConfig != null then (devenvConfig.processes or { }) else { };
 
   # ===================================================================
   # Build shell hook from stackpanel hooks
@@ -177,7 +173,7 @@ let
     lib.flatten [
       hooks.before
       hooks.main
-      (lib.optionals hasDevenv [
+      (lib.optionals (devenvConfig != null) [
         "echo \"⚙️  Entering devenv shell...\""
         devenvConfig.enterShell
       ])
@@ -217,13 +213,6 @@ let
     # ================================================================
 
     __stackpanel_shell_hook_main() {
-      # Prevent recursive entry
-      if [[ -n "''${__STACKPANEL_SHELL_ACTIVE:-}" ]]; then
-        echo "⚠️  Already in stackpanel shell - preventing recursive entry"
-        return 0
-      fi
-      export __STACKPANEL_SHELL_ACTIVE=1
-
       # Export environment variables (includes GOPATH, GOROOT from devenv languages.*)
       ${lib.concatStringsSep "\n" (
         lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg (toString v)}") allEnv
@@ -376,7 +365,7 @@ let
       type = "app";
       program = "${script}";
     };
-  }) copyScripts;
+  }) (lib.filterAttrs (_: v: v != null) copyScripts);
 
   # Checks
   simpleChecks = spConfig.checks or { };

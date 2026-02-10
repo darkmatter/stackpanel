@@ -2,7 +2,7 @@
 # env-typescript.nix - DEPRECATED
 #
 # This module has been superseded by env-package.nix which generates the
-# complete packages/env structure including:
+# complete packages/gen/env structure including:
 #   - .sops.yaml configuration
 #   - TypeScript znv modules
 #   - Entrypoint loaders
@@ -16,13 +16,9 @@ in
 {
   # Re-export everything from env-package
   inherit (envPackage) generatedFiles fileEntries enabled;
-  
+
   # Backwards compatibility: filter to just TypeScript files
-  tsGeneratedFiles = lib.filterAttrs 
-    (path: _: lib.hasSuffix ".ts" path) 
-    envPackage.generatedFiles;
-  
-  tsFileEntries = lib.filterAttrs 
-    (path: _: lib.hasSuffix ".ts" path) 
-    envPackage.fileEntries;
+  tsGeneratedFiles = lib.filterAttrs (path: _: lib.hasSuffix ".ts" path) envPackage.generatedFiles;
+
+  tsFileEntries = lib.filterAttrs (path: _: lib.hasSuffix ".ts" path) envPackage.fileEntries;
 }
