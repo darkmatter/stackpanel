@@ -130,7 +130,7 @@ let
 
       # Check if Fly.io deployment is enabled for this app
       deployment = appCfg.deployment or { };
-      isFlyDeployment = (deployment.enable or false) && (deployment.provider or "cloudflare") == "fly";
+      isFlyDeployment = (deployment.enable or false) && (deployment.host or "cloudflare") == "fly";
       flyConfig = deployment.fly or { };
 
       # Fly-specific overrides
@@ -145,15 +145,21 @@ let
     {
       # Use fly appName if fly deployment is enabled, otherwise container.name or appName
       name =
-        if isFlyDeployment then flyAppName
-        else if container.name != null then container.name
-        else appName;
+        if isFlyDeployment then
+          flyAppName
+        else if container.name != null then
+          container.name
+        else
+          appName;
       version = container.version;
       type = container.type;
       port = container.port;
       startupCommand = container.startupCommand;
-      # Use fly registry if fly deployment is enabled
-      registry = if isFlyDeployment then flyRegistry else container.registry;
+      # Use fly registry if fly deployment is enabled, fall back to null (resolved by mkContainerDerivation)
+      registry =
+        if isFlyDeployment then flyRegistry
+        else if container.registry != null then container.registry
+        else null;
       workingDir = container.workingDir;
       buildOutputPath =
         if container.buildOutputPath != null then container.buildOutputPath else "${appPath}/.output";
@@ -192,7 +198,11 @@ let
         copyToRoot = containerCfg.copyToRoot or null;
         env = containerCfg.env or { };
         maxLayers = containerCfg.maxLayers or 100;
-        registry = containerCfg.registry or settingsCfg.defaultRegistry;
+        # Use proper null check: `or` on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ly handles missing attrs, not null values
+        registry =
+          if containerCfg ? registry && containerCfg.registry != null
+          then containerCfg.registry
+          else settingsCfg.defaultRegistry;
         defaultCopyArgs = containerCfg.defaultCopyArgs or [ ];
       };
     in

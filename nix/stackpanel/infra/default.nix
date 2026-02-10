@@ -23,5 +23,6 @@
     ./options.nix
     ./codegen.nix
     ./modules/aws-secrets/module.nix
+    ./modules/deployment/module.nix
   ];
 }

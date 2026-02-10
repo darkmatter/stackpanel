@@ -6,6 +6,7 @@
     "packages": [
       "apps/*",
       "packages/*",
+      "packages/gen/*",
       "tooling/*"
     ],
     "catalog": {
@@ -34,7 +35,7 @@
     }
   },
   "scripts": {
-    "check": "oxlint --fix .",
+    "check": "oxlint && oxfmt --write",
     "lint": "oxlint .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
     "dev": "alchemy dev",
@@ -67,7 +68,7 @@
     "@mdx-js/rollup": "^3.1.1",
     "@pulumi/pulumi": "^3.213.0",
     "@stackpanel/infra": "workspace:*",
-    "@stackpanel/env": "workspace:*",
+    "@gen/env": "workspace:*",
     "@types/node": "^22.13.11",
     "alchemy": "^0.77.0",
     "bun2nix": "^2.0.6",

@@ -284,11 +284,6 @@ in
       path = ./templates/minimal;
       description = "Stackpanel minimal setup";
     };
-    devenv = {
-      path = ./templates/devenv;
-      description = "Stackpanel + devenv standalone (devenv.yaml)";
-    };
-
     # =========================================================================
     # Test Fixtures (for module authors and CI testing)
     # =========================================================================

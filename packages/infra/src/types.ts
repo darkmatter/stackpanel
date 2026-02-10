@@ -36,3 +36,15 @@ export interface AwsSecretsInputs {
 };
 }
 
+export interface DeploymentInputs {
+  apps: {
+  web: {
+  bindings: string[];
+  framework: string;
+  host: string;
+  path: string;
+  secrets: string[];
+};
+};
+}
+

@@ -60,22 +60,6 @@ let
     { lib, name, ... }:
     {
       options.deployment = {
-        enable = lib.mkEnableOption "deployment for this app";
-
-        provider = lib.mkOption {
-          type = lib.types.enum [
-            "fly"
-            "cloudflare"
-          ];
-          default = deployCfg.defaultProvider or "cloudflare";
-          description = ''
-            Deployment provider to use.
-
-            - fly: Fly.io (containers, VMs) - requires nix2container/dockerTools
-            - cloudflare: Cloudflare Workers (edge, serverless) - requires Alchemy
-          '';
-        };
-
         fly = {
           # Simple fields from schema (auto-converted via sp.asOption)
           memory = sp.asOption flySchema.fields.memory;
@@ -156,7 +140,9 @@ let
   getDeployableApps =
     apps:
     lib.filterAttrs (
-      _: appCfg: (appCfg.deployment.enable or false) && (appCfg.deployment.provider or "fly") == "fly"
+      _: appCfg:
+      (appCfg.deployment.enable or false)
+      && (appCfg.deployment.host or deployCfg.defaultHost or "fly") == "fly"
     ) apps;
 
   # ---------------------------------------------------------------------------
@@ -250,7 +236,7 @@ let
 
   # ---------------------------------------------------------------------------
   # Turbo tasks - Global task definitions with transit dependencies
-  # 
+  #
   # Workflow: build -> container:build -> container:push -> deploy
   #
   # Each app with deployment.enable has scripts generated at:
@@ -259,7 +245,7 @@ let
   # Apps add short wrappers in package.json that call these scripts.
   # Turbo runs tasks across all packages that have them.
   # ---------------------------------------------------------------------------
-  
+
   # Global turbo task definitions (apply to any package with the script)
   globalDeployTasks = {
     # build:container is a separate build script that apps can customize
@@ -311,7 +297,7 @@ let
         nix build --impure ".#packages.x86_64-linux.container-${appName}"
         echo "✅ Container built: ./result"
       '';
-      
+
       # Push to Fly registry
       "container-push" = pkgs.writeShellScriptBin "container-push" ''
         set -euo pipefail
@@ -322,20 +308,20 @@ let
         nix run --impure ".#copy-container-${appName}"
         echo "✅ Container pushed to registry.fly.io/${flyAppName}:latest"
       '';
-      
+
       # Deploy to Fly
       "deploy" = pkgs.writeShellScriptBin "deploy" ''
         set -euo pipefail
         # Find repo root
         ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
         cd "$ROOT"
-        
+
         # Ensure app exists (create if not)
         if ! flyctl status -a ${flyAppName} > /dev/null 2>&1; then
           echo "📱 Creating Fly.io app: ${flyAppName}..."
           flyctl apps create ${flyAppName} ${orgFlag}
         fi
-        
+
         echo "🚀 Deploying ${appName} to Fly.io..."
         flyctl deploy --config ${flyConfigPath} --image "registry.fly.io/${flyAppName}:latest"
         echo "✅ Deployed to https://${flyAppName}.fly.dev/"
@@ -413,16 +399,20 @@ in
       default = true;
     };
 
-    defaultProvider = lib.mkOption {
+    defaultHost = lib.mkOption {
       type = lib.types.enum [
-        "fly"
         "cloudflare"
+        "fly"
+        "vercel"
+        "aws"
       ];
-      default = "fly";
+      default = "cloudflare";
       description = ''
-        Default deployment provider for apps that don't specify one.
-        - fly: Fly.io (containers, VMs) - requires nix2container/dockerTools
-        - cloudflare: Cloudflare Workers (edge, serverless) - requires Alchemy
+        Default deployment host for apps that don't specify one.
+        - cloudflare: Cloudflare Workers (edge, serverless)
+        - fly: Fly.io (containers, VMs)
+        - vercel: Vercel (Next.js, etc.)
+        - aws: AWS (Lambda, ECS, etc.)
       '';
     };
 

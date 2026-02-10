@@ -140,7 +140,7 @@ proto.mkProtoFile {
       #   codegen = {
       #     typescript = {
       #       name = "env";
-      #       directory = "packages/env/src/generated";
+      #       directory = "packages/gen/env/src/generated";
       #       language = "typescript";
       #     };
       #   };
@@ -206,13 +206,11 @@ proto.mkProtoFile {
     #   - Processing `imports` directive for config composition
     #   - Merging GitHub collaborators into users
     #   - Loading config.local.nix for per-user overrides (gitignored)
-    #   - Applying STACKPANEL_CONFIG_OVERRIDE env var (JSON, for CI/scripting)
     #
     # Merge priority (lowest to highest):
     #   1. User config (config.nix)
     #   2. GitHub collaborators (auto-synced)
     #   3. Local overrides (config.local.nix - gitignored)
-    #   4. STACKPANEL_CONFIG_OVERRIDE (JSON env var)
     #
     # Usage:
     #   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
@@ -231,24 +229,18 @@ proto.mkProtoFile {
 
       # ---------------------------------------------------------------------------
       # Import local config overrides (per-user, gitignored)
-      # Uses absolute path to bypass flake's gitignore filtering
+      # Uses the .stackpanel-root marker file (written by .envrc) to locate the
+      # project root, then imports config.local.nix from there if it exists.
       # ---------------------------------------------------------------------------
       stackpanelRoot =
         let
-          envRoot = builtins.getEnv "STACKPANEL_ROOT";
-          markerRoot =
-            let
-              markerPath = ../.stackpanel-root;
-            in
-            if builtins.pathExists markerPath then
-              lib.removeSuffix "\n" (builtins.readFile markerPath)
-            else
-              null;
+          markerPath = ../.stackpanel-root;
         in
-        if envRoot != "" then
-          envRoot
-        else if markerRoot != null && markerRoot != "." then
-          markerRoot
+        if builtins.pathExists markerPath then
+          let
+            content = lib.removeSuffix "\n" (builtins.readFile markerPath);
+          in
+          if content != "" && content != "." then content else null
         else
           null;
 
@@ -307,12 +299,7 @@ proto.mkProtoFile {
         users = lib.recursiveUpdate github-team (userConfig.users or { });
       };
 
-      envOverrideRaw = builtins.getEnv "STACKPANEL_CONFIG_OVERRIDE";
-      hasEnvOverride = envOverrideRaw != "";
-      envOverride = if hasEnvOverride then builtins.fromJSON envOverrideRaw else { };
-
-      configWithLocal = lib.recursiveUpdate configWithUsers localConfig;
-      finalConfig = lib.recursiveUpdate configWithLocal envOverride;
+      finalConfig = lib.recursiveUpdate configWithUsers localConfig;
 
     in
     finalConfig

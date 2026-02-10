@@ -6,12 +6,10 @@
     allow-import-from-derivation = "true";
     extra-substituters = [
       "https://nix-community.cachix.org"
-      "https://devenv.cachix.org"
       "https://darkmatter.cachix.org"
       "https://nixpkgs-python.cachix.org"
     ];
     extra-trusted-public-keys = [
-      "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw="
       "darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA="
       "nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
@@ -31,7 +29,6 @@
     devenv.inputs.nixpkgs.follows = "nixpkgs";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
-    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
     treefmt-nix.url = "https://flakehub.com/f/numtide/treefmt-nix/0.1.512";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.url = "github:nix-community/gomod2nix";
@@ -84,6 +81,7 @@
             system
             projectRoot
             ;
+          stackpanelImports = [ ./.stackpanel/modules ];
         };
       in
       {

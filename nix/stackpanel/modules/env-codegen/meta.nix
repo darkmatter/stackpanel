@@ -2,7 +2,7 @@
 {
   id = "env-codegen";
   name = "Environment Codegen";
-  description = "Generates packages/env structure from app configurations";
+  description = "Generates packages/gen/env structure from app configurations";
   icon = "FileCode";
   category = "development";
   author = "stackpanel";
@@ -13,6 +13,11 @@
     "typescript-codegen"
     "entrypoint-generation"
   ];
-  tags = [ "codegen" "secrets" "env" "typescript" ];
+  tags = [
+    "codegen"
+    "secrets"
+    "env"
+    "typescript"
+  ];
   priority = 50;
 }

@@ -1,0 +1,194 @@
+# ==============================================================================
+# exports.nix
+#
+# Consolidated flake exports for stackpanel.
+# All user-facing outputs are defined here and imported by flake.nix.
+#
+# Simplified architecture:
+#   - ONE flakeModule (default) that handles everything
+#   - Config auto-loaded from .stackpanel/
+# ==============================================================================
+{
+  inputs,
+  withSystem,
+  flake-parts-lib,
+  self,
+}:
+let
+  inherit (flake-parts-lib) importApply;
+
+  supportedSystems = [
+    "x86_64-linux"
+    "aarch64-linux"
+    "x86_64-darwin"
+    "aarch64-darwin"
+  ];
+
+  # Function to get stackpanel options.
+  # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
+  #
+  # Returns the full stackpanel options attrset for introspection.
+  getOptions =
+    { pkgs }:
+    let
+      lib = pkgs.lib;
+      evaluated = lib.evalModules {
+        modules = [
+          ../stackpanel
+          {
+            _module.args = {
+              inherit pkgs lib;
+              inputs = { };
+            };
+            stackpanel.enable = true;
+            stackpanel.name = "options-eval";
+          }
+        ];
+      };
+    in
+    evaluated.options.stackpanel;
+in
+{
+  inherit supportedSystems;
+
+  # ===========================================================================
+  # FLAKE MODULES (for flake-parts users)
+  # ===========================================================================
+  flakeModules = {
+    # Main stackpanel flake-parts module
+    # Auto-loads config, creates devShells.default, exposes outputs
+    # Usage: imports = [ inputs.stackpanel.flakeModules.default ];
+    default = importApply ./default.nix {
+      localFlake = self;
+      inherit withSystem;
+    };
+
+    # Helper module for pure flake evaluation (like `nix flake check`)
+    # Reads stackpanel root from a file input for impure-free evaluation
+    #
+    # The file can contain:
+    #   - An absolute path (written by .envrc for impure evaluation)
+    #   - "." to use the flake source directory (for pure evaluation)
+    #
+    # For pure evaluation to work, the file must be tracked by git (not in .gitignore)
+    #
+    # This module sets config.stackpanel.projectRoot at the flake level.
+    # Users who need devenv.root for pure evaluation should set it separately.
+    readStackpanelRoot =
+      {
+        inputs,
+        lib,
+        ...
+      }:
+      let
+        hasInput = inputs ? stackpanel-root;
+        rawContent = if hasInput then builtins.readFile inputs.stackpanel-root.outPath else "";
+        rootContent = lib.strings.trim rawContent;
+        # The input's outPath points to the file itself, so get its directory
+        # which is the flake source root
+        flakeSourceDir = if hasInput then builtins.dirOf inputs.stackpanel-root.outPath else "";
+        # If content is "." use the flake source directory
+        # Otherwise use the absolute path from the file
+        effectiveRoot =
+          if rootContent == "." then
+            flakeSourceDir
+          else if rootContent != "" then
+            rootContent
+          else
+            null;
+      in
+      {
+        # Set the flake-level stackpanel.projectRoot option
+        # The main flakeModule will read this and set devenv.root
+        config.stackpanel.projectRoot = lib.mkIf (effectiveRoot != null) effectiveRoot;
+      };
+  };
+
+  # ===========================================================================
+  # NIXOS MODULES (for NixOS users)
+  # ===========================================================================
+  nixosModules = {
+    default = ../stackpanel/default.nix;
+    aws = ../stackpanel/services/aws.nix;
+    network = ../stackpanel/network/network.nix;
+    secrets = ../stackpanel/secrets/default.nix;
+    theme = ../stackpanel/lib/theme.nix;
+    caddy = ../stackpanel/services/caddy.nix;
+    ci = ../stackpanel/apps/ci.nix;
+  };
+
+  # ===========================================================================
+  # LIBRARY FUNCTIONS
+  # ===========================================================================
+  lib = {
+    # AWS credential helpers
+    mkAwsCredScripts = import ../stackpanel/lib/services/aws.nix;
+
+    # Step CA certificate helpers
+    mkStepScripts = import ../stackpanel/lib/services/step.nix;
+
+    # Fly.io OIDC to AWS authentication
+    # Usage: inputs.stackpanel.lib.flyOidc { pkgs = pkgsLinux; }
+    flyOidc = import ../stackpanel/lib/services/fly-oidc.nix;
+
+    # Get stackpanel module options for introspection
+    # Usage: inputs.stackpanel.lib.getOptions { inherit pkgs; }
+    inherit getOptions;
+
+    # =========================================================================
+    # DB Schema and Scaffolding
+    # =========================================================================
+
+    # Database schema module - contains all proto.nix schemas
+    # Usage: inputs.stackpanel.lib.db
+    db = import ../stackpanel/db { };
+
+    # Init files for scaffolding new projects
+    # Returns a map of relative paths to file contents:
+    #   { ".stackpanel/config.nix" = "..."; ".stackpanel/_internal.nix" = "..."; ... }
+    #
+    # Usage from CLI:
+    #   nix eval github:darkmatter/stackpanel#lib.initFiles --json
+    #
+    # Usage from Nix:
+    #   inputs.stackpanel.lib.initFiles
+    initFiles = (import ../stackpanel/db { }).initFiles;
+
+    # All schemas for codegen/introspection
+    # Usage: inputs.stackpanel.lib.schemas
+    schemas = (import ../stackpanel/db { }).schemas;
+  };
+
+  # ===========================================================================
+  # TEMPLATES
+  # ===========================================================================
+  templates = {
+    default = {
+      path = ./templates/default;
+      description = "Stackpanel + flake-parts (recommended)";
+    };
+    minimal = {
+      path = ./templates/minimal;
+      description = "Stackpanel minimal setup";
+    };
+    # =========================================================================
+    # Test Fixtures (for module authors and CI testing)
+    # =========================================================================
+    test-basic = {
+      path = ./templates/_test-fixtures/basic;
+      description = "Test fixture: minimal config, no apps";
+    };
+    test-with-oxlint = {
+      path = ./templates/_test-fixtures/with-oxlint;
+      description = "Test fixture: OxLint module enabled";
+    };
+    test-full-stack = {
+      path = ./templates/_test-fixtures/full-stack;
+      description = "Test fixture: all features (multiple apps, modules)";
+    };
+    test-external-module = {
+      path = ./templates/_test-fixtures/external-module;
+      description = "Test fixture: for testing external modules";
+    };
+  };
+}

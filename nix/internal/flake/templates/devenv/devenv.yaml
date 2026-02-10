@@ -1,0 +1,17 @@
+# ==============================================================================
+# devenv.yaml
+#
+# Configuration for devenv (standalone mode, without flake-parts).
+# Run `devenv shell` to enter the dev environment.
+#
+# Documentation: https://devenv.sh
+# ==============================================================================
+
+inputs:
+  nixpkgs:
+    url: github:NixOS/nixpkgs/nixos-unstable
+  stackpanel:
+    url: github:darkmatter/stackpanel
+
+imports:
+  - stackpanel/devenvModules/default
