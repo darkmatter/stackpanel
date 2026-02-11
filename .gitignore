@@ -167,4 +167,5 @@ devenv.local.yaml
 /packages/scripts/entrypoints/web.sh
 /process-compose.yaml
 /turbo.json
+/.stackpanel/secrets/keys/.sops.yaml
 # END Stackpanel Generated Files
