@@ -307,6 +307,17 @@ in
       default = true;
     };
 
+    gitignore = {
+      enable = lib.mkEnableOption "auto-manage .gitignore section" // {
+        default = true;
+      };
+      extraEntries = lib.mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = "Additional entries to include in the managed section.";
+      };
+    };
+
     entries = lib.mkOption {
       description = ''
         Files to generate into the repo. Keys are file paths relative to repo root.
