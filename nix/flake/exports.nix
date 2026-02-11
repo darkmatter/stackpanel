@@ -55,31 +55,6 @@ let
     evaluated.options.stackpanel;
 
   # =========================================================================
-  # Read stackpanel root from file input
-  # =========================================================================
-  # Helper to read project root from stackpanel-root input
-  # Used for pure evaluation support
-  readStackpanelRoot =
-    { inputs, ... }:
-    let
-      lib = nixpkgs.lib;
-      hasInput = inputs ? stackpanel-root;
-      rawContent = if hasInput then builtins.readFile inputs.stackpanel-root.outPath else "";
-      rootContent = lib.strings.trim rawContent;
-      # The input's outPath points to the file itself, so get its directory
-      # which is the flake source root
-      flakeSourceDir = if hasInput then builtins.dirOf inputs.stackpanel-root.outPath else "";
-    in
-    # If content is "." use the flake source directory
-    # Otherwise use the absolute path from the file
-    if rootContent == "." then
-      flakeSourceDir
-    else if rootContent != "" then
-      rootContent
-    else
-      null;
-
-  # =========================================================================
   # mkOutputs - Generate outputs for a single system
   # =========================================================================
   mkOutputs =
@@ -145,8 +120,6 @@ in
         stackpanelImports ? [ ],
       }:
       let
-        # Read project root from stackpanel-root input if available
-        projectRoot = readStackpanelRoot { inherit inputs; };
         # Combine stackpanel's required overlays with user's overlays
         allOverlays = stackpanelOverlays ++ overlays;
       in
@@ -164,16 +137,10 @@ in
             inputs
             self
             system
-            projectRoot
             stackpanelImports
             ;
         }
       );
-
-    # =========================================================================
-    # Utility: Read stackpanel root
-    # =========================================================================
-    inherit readStackpanelRoot;
 
     # =========================================================================
     # Required overlays for stackpanel

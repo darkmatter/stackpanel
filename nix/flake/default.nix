@@ -20,8 +20,6 @@
   inputs,
   self,
   system,
-  # Optional: override the project root (defaults to self)
-  projectRoot ? null,
   # Optional: additional stackpanel module imports
   stackpanelImports ? [ ],
 }:
@@ -38,11 +36,6 @@ let
   hasDevenv = inputs ? devenv;
   hasProcessCompose = inputs ? process-compose-flake;
   hasGitHooks = inputs ? git-hooks;
-
-  # ===================================================================
-  # Compute effective project root
-  # ===================================================================
-  effectiveRoot = if projectRoot != null then projectRoot else toString self;
 
   # ===================================================================
   # Auto-load stackpanel config from .stackpanel/
@@ -122,8 +115,8 @@ let
       imports = devenv-toplevel.imports;
       config = lib.recursiveUpdate devenv-toplevel.config ({
         # Set devenv.root for pure evaluation (required by devenv)
-        # Uses effectiveRoot which comes from readStackpanelRoot module or falls back to self
-        devenv.root = effectiveRoot;
+        # Uses toString self which works in pure flake evaluation
+        devenv.root = toString self;
         # We can not get away without this anymore
         devenv.cli.version = inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.default.version;
         # Fails checking cliVersion otherwise

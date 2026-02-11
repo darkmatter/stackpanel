@@ -99,8 +99,6 @@ devenv.local.yaml
 
 /result
 
-# Stackpanel root marker (machine-specific)
-
 # Stackpanel generated files (cache)
 .stackpanel/state/
 .stackpanel/bin/

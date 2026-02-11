@@ -5,9 +5,9 @@
 #
 # This module initializes the Stackpanel development environment by:
 #   - Importing all option modules from ./options/
-#   - Setting up environment variables for root marker and directories
+#   - Setting up environment variables for directories
 #   - Creating devshell hooks to resolve paths, create directories, and
-#     ensure the root marker file and .gitignore entries exist.
+#     ensure .gitignore entries exist.
 #
 # Imported by devenv.nix to enable the Stackpanel module system.
 # ==============================================================================
@@ -32,8 +32,7 @@ in
   ];
 
   config = lib.mkIf cfg.enable {
-    # Provide marker + optional root override as data
-    stackpanel.devshell.env.STACKPANEL_ROOT_MARKER = cfg.root-marker;
+    # Provide directory names as environment variables
     stackpanel.devshell.env.STACKPANEL_ROOT_DIR_NAME = cfg.dirs.home;
 
     # STACKPANEL_ROOT is resolved at runtime by stackpanel_resolve_paths
@@ -55,13 +54,12 @@ in
 
                   ${pathsLib.mkShellPathUtils {
                     rootDir = cfg.dirs.home;
-                    rootMarker = cfg.root-marker;
                     # Hardcoded subdirectory names - these are not configurable
                     stateDir = "state";
                     genDir = "gen";
                   }}
 
-                  # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking
+                  # If stackpanel.root was provided, prefer it; otherwise resolve via env/git/flake detection
                   if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
                     stackpanel_resolve_paths "$STACKPANEL_ROOT"
                   else
@@ -75,11 +73,6 @@ in
                   # if [[ -z "''${STACKPANEL_SHELL_LOG:-}" ]]; then
                   #   export STACKPANEL_SHELL_LOG="$STACKPANEL_STATE_DIR/shell.log"
                   # fi
-
-                  # Ensure marker exists at repo root
-                  if [[ ! -f "$STACKPANEL_ROOT/${cfg.root-marker}" ]]; then
-                    echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
-                  fi
 
                   # Ensure .stackpanel/.gitignore exists and ignores state/ and config.local.nix
                   _sp_gitignore="$STACKPANEL_ROOT_DIR/.gitignore"
@@ -96,17 +89,6 @@ in
                       echo "config.local.nix" >> "$_sp_gitignore"
                     fi
                   fi
-
-                  ${lib.optionalString cfg.gitignore.addProjectMarker ''
-                    _root_gitignore="$STACKPANEL_ROOT/.gitignore"
-                    if [[ -f "$_root_gitignore" ]]; then
-                      if ! grep -q "^${cfg.root-marker}$" "$_root_gitignore" 2>/dev/null; then
-                        echo "" >> "$_root_gitignore"
-                        echo "# Stackpanel root marker (machine-specific)" >> "$_root_gitignore"
-                        echo "${cfg.root-marker}" >> "$_root_gitignore"
-                      fi
-                    fi
-                  ''}
 
                   # Compute shell freshness hash from config files
                   # This is used to detect when the shell is stale (config changed but shell not reloaded)
