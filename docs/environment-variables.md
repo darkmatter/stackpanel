@@ -62,18 +62,6 @@ Absolute path to the project root directory.
 
 This is the primary variable used to locate the project. It's set automatically when entering a devenv shell.
 
-### `STACKPANEL_ROOT_MARKER`
-
-Filename used as a marker to identify project root.
-
-| Property | Value |
-|----------|-------|
-| Source | nix |
-| Required | No |
-| Default | `.stackpanel-root` |
-
-When searching for the project root, Stackpanel looks for this marker file walking up the directory tree.
-
 ### `STACKPANEL_ROOT_DIR_NAME`
 
 Name of the .stackpanel directory within the project.

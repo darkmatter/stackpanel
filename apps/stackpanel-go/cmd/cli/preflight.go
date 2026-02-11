@@ -67,12 +67,6 @@ func runPreflight(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Write .stackpanel-root marker
-	markerPath := filepath.Join(projectRoot, ".stackpanel-root")
-	if err := os.WriteFile(markerPath, []byte(projectRoot+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write .stackpanel-root marker: %w", err)
-	}
-
 	// Write config.local.nix
 	configPath := filepath.Join(projectRoot, ".stackpanel", "config.local.nix")
 	if !preflightForce {

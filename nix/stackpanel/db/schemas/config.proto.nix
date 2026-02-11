@@ -229,24 +229,9 @@ proto.mkProtoFile {
 
       # ---------------------------------------------------------------------------
       # Import local config overrides (per-user, gitignored)
-      # Uses the .stackpanel-root marker file (written by .envrc) to locate the
-      # project root, then imports config.local.nix from there if it exists.
       # ---------------------------------------------------------------------------
-      stackpanelRoot =
-        let
-          markerPath = ../.stackpanel-root;
-        in
-        if builtins.pathExists markerPath then
-          let
-            content = lib.removeSuffix "\n" (builtins.readFile markerPath);
-          in
-          if content != "" && content != "." then content else null
-        else
-          null;
-
-      localConfigPath =
-        if stackpanelRoot != null then stackpanelRoot + "/.stackpanel/config.local.nix" else null;
-      hasLocalConfig = localConfigPath != null && builtins.pathExists localConfigPath;
+      localConfigPath = ./config.local.nix;
+      hasLocalConfig = builtins.pathExists localConfigPath;
       rawLocalConfig = if hasLocalConfig then import localConfigPath else { };
       localConfig =
         if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
