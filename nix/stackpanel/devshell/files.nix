@@ -237,11 +237,27 @@ let
   # JSON array of all current file paths (for the cleanup diff)
   currentPathsJson = builtins.toJSON (builtins.attrNames enabledFiles);
 
+  # ── Gitignore entries (sorted at Nix eval time) ─────────────────────────
+  sortedFilePaths = builtins.sort builtins.lessThan (builtins.attrNames enabledFiles);
+  gitignoreEntries = sortedFilePaths ++ cfg.gitignore.extraEntries;
+
+  # Pre-compute the gitignore section content
+  gitignoreStartMarker = "# START Stackpanel Generated Files";
+  gitignoreEndMarker = "# END Stackpanel Generated Files";
+  gitignoreComment = "# DO NOT EDIT - managed by stackpanel. Changes will be overwritten.";
+  gitignoreSectionContent = lib.concatStringsSep "\n" (
+    [ gitignoreStartMarker gitignoreComment ]
+    ++ (map (p: "/" + p) gitignoreEntries)
+    ++ [ gitignoreEndMarker ]
+  );
+
   # ── Writer script ────────────────────────────────────────────────────────
   writerDrv = pkgs.writeShellApplication {
     name = "write-files";
     runtimeInputs = [
       pkgs.coreutils
+      pkgs.gawk
+      pkgs.gnugrep
       pkgs.jq
     ];
     text = ''
@@ -274,6 +290,67 @@ let
 
       STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
       MANIFEST_FILE="$STATE_DIR/.files-manifest"
+
+      # ── Update .gitignore section (runs before fast path) ───────────────
+      ${lib.optionalString cfg.gitignore.enable ''
+      update_gitignore_section() {
+        local gitignore_file="$ROOT/.gitignore"
+        local start_marker="${gitignoreStartMarker}"
+        local end_marker="${gitignoreEndMarker}"
+
+        # The new section content (embedded at Nix eval time)
+        local new_section
+        new_section=$(cat << 'STACKPANEL_GITIGNORE_EOF'
+${gitignoreSectionContent}
+STACKPANEL_GITIGNORE_EOF
+)
+
+        if [[ ! -f "$gitignore_file" ]]; then
+          # .gitignore doesn't exist - create with just the section
+          echo "$new_section" > "$gitignore_file"
+          echo "gitignore: created .gitignore with managed section"
+          return
+        fi
+
+        # Check if section already exists
+        if grep -qF "$start_marker" "$gitignore_file"; then
+          # Section exists - replace content between markers using awk
+          local old_content new_content
+          old_content=$(cat "$gitignore_file")
+
+          new_content=$(awk -v start="$start_marker" -v end="$end_marker" -v section="$new_section" '
+            BEGIN { in_section = 0; printed = 0 }
+            $0 == start { in_section = 1; print section; printed = 1; next }
+            $0 == end { in_section = 0; next }
+            !in_section { print }
+          ' "$gitignore_file")
+
+          # Only write if content changed
+          if [[ "$old_content" != "$new_content" ]]; then
+            echo "$new_content" > "$gitignore_file"
+            echo "gitignore: updated managed section"
+          else
+            if [[ "''${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
+              echo "gitignore: section unchanged"
+            fi
+          fi
+        else
+          # No section exists - append at end with blank line separator
+          local old_content
+          old_content=$(cat "$gitignore_file")
+
+          # Ensure there's a trailing newline before our section
+          if [[ -n "$old_content" ]] && [[ "''${old_content: -1}" != $'\n' ]]; then
+            echo "" >> "$gitignore_file"
+          fi
+          echo "" >> "$gitignore_file"
+          echo "$new_section" >> "$gitignore_file"
+          echo "gitignore: appended managed section"
+        fi
+      }
+
+      update_gitignore_section
+      ''}
 
       # ── Manifest fast path ──────────────────────────────────────────────
       # If the manifest hash matches, nothing changed — skip everything.
