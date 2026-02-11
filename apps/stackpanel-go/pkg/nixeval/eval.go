@@ -267,29 +267,34 @@ func loadFromStateFile(projectRoot string) (*Config, error) {
 	return &config, nil
 }
 
-// findProjectRoot searches for the project root by looking for devenv.nix
+// findProjectRoot searches for the project root
 func findProjectRoot() string {
 	// 1. Check STACKPANEL_ROOT env var (preferred)
 	if root := os.Getenv("STACKPANEL_ROOT"); root != "" && strings.HasPrefix(root, "/") {
 		return root
 	}
 
-	// 3. Search up from current directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return ""
 	}
 
+	// 2. Search up from current directory for .git
 	dir := cwd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel-root")); err == nil {
+	for dir != "/" {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
 			return dir
 		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
+		dir = filepath.Dir(dir)
+	}
+
+	// 3. Search up from current directory for flake.nix
+	dir = cwd
+	for dir != "/" {
+		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
+			return dir
 		}
-		dir = parent
+		dir = filepath.Dir(dir)
 	}
 
 	return ""

@@ -88,15 +88,6 @@ rec {
       goField = "ProjectRoot";
     };
 
-    STACKPANEL_ROOT_MARKER = mkEnvVar {
-      name = "STACKPANEL_ROOT_MARKER";
-      description = "Filename used as a marker to identify project root";
-      category = categories.core;
-      source = "nix";
-      default = ".stackpanel-root";
-      goField = "RootMarker";
-    };
-
     STACKPANEL_ROOT_DIR_NAME = mkEnvVar {
       name = "STACKPANEL_ROOT_DIR_NAME";
       description = "Name of the .stackpanel directory within the project";
