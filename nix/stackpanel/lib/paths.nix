@@ -69,7 +69,17 @@ let
           fi
         fi
 
-        # Fallback 2: look for flake.nix by walking up from PWD
+        # Fallback 2: look for .stackpanel directory by walking up from PWD
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -d "$dir/${rootDir}" ]]; then
+            echo "$dir"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
+
+        # Fallback 3: look for flake.nix by walking up from PWD
         dir="$PWD"
         while [[ "$dir" != "/" ]]; do
           if [[ -f "$dir/flake.nix" ]]; then
@@ -79,7 +89,7 @@ let
           dir="$(dirname "$dir")"
         done
 
-        echo "Error: Could not find stackpanel root (no STACKPANEL_ROOT env var, git repo, or flake.nix found)" >&2
+        echo "Error: Could not find stackpanel root (no STACKPANEL_ROOT env var, git repo, ${rootDir} dir, or flake.nix found)" >&2
         return 1
       }
     '';
