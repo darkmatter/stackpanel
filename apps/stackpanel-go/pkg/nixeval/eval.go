@@ -288,7 +288,16 @@ func findProjectRoot() string {
 		dir = filepath.Dir(dir)
 	}
 
-	// 3. Search up from current directory for flake.nix
+	// 3. Search up from current directory for .stackpanel directory
+	dir = cwd
+	for dir != "/" {
+		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
+			return dir
+		}
+		dir = filepath.Dir(dir)
+	}
+
+	// 4. Search up from current directory for flake.nix
 	dir = cwd
 	for dir != "/" {
 		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
