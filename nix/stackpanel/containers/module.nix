@@ -157,9 +157,12 @@ let
       startupCommand = container.startupCommand;
       # Use fly registry if fly deployment is enabled, fall back to null (resolved by mkContainerDerivation)
       registry =
-        if isFlyDeployment then flyRegistry
-        else if container.registry != null then container.registry
-        else null;
+        if isFlyDeployment then
+          flyRegistry
+        else if container.registry != null then
+          container.registry
+        else
+          null;
       workingDir = container.workingDir;
       buildOutputPath =
         if container.buildOutputPath != null then container.buildOutputPath else "${appPath}/.output";
@@ -177,7 +180,7 @@ let
   mkContainerDerivation =
     appName: containerCfg:
     let
-      projectRoot = cfg.root or (builtins.getEnv "PWD");
+      projectRoot = if cfg.root != null then cfg.root else builtins.getEnv "PWD";
       backend = settingsCfg.backend;
       # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
       # The appName (attrset key, e.g., web) is only used for fallback paths
@@ -200,9 +203,10 @@ let
         maxLayers = containerCfg.maxLayers or 100;
         # Use proper null check: `or` on                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ly handles missing attrs, not null values
         registry =
-          if containerCfg ? registry && containerCfg.registry != null
-          then containerCfg.registry
-          else settingsCfg.defaultRegistry;
+          if containerCfg ? registry && containerCfg.registry != null then
+            containerCfg.registry
+          else
+            settingsCfg.defaultRegistry;
         defaultCopyArgs = containerCfg.defaultCopyArgs or [ ];
       };
     in

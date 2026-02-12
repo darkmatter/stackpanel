@@ -77,6 +77,15 @@ let
     in
     if fileType == "json" then
       builtins.toJSON fileConfig.jsonValue
+    else if fileType == "line-set" then
+      let
+        raw = fileConfig.lines;
+        deduped = if fileConfig.dedupe or false then lib.unique raw else raw;
+        sorted = if fileConfig.sort or false then lib.sort lib.lessThan deduped else deduped;
+      in
+      lib.concatStringsSep "\n" sorted + "\n"
+    else if fileType == "line-map" then
+      lib.concatStringsSep "\n" (lib.attrNames (lib.filterAttrs (_: v: v) fileConfig.mapLines)) + "\n"
     else if hasText && hasPath then
       throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
     else if hasPath then
@@ -98,7 +107,7 @@ let
       fileType = fileConfig.type or "text";
       baseName = builtins.baseNameOf path;
     in
-    if fileType == "text" then
+    if fileType == "text" || fileType == "line-set" || fileType == "line-map" then
       pkgs.writeText baseName (resolveTextContent path fileConfig)
     else if fileType == "json" then
       # Pre-format JSON with jq at build time so the store path content
@@ -155,8 +164,7 @@ let
       description = fileConfig.description or null;
       target = fileConfig.target or null;
       contentSource = contentSource;
-      storePath =
-        if storePath != null then builtins.toString storePath else null;
+      storePath = if storePath != null then builtins.toString storePath else null;
     }
   ) enabledFiles;
 
@@ -361,39 +369,33 @@ let
       # Only check files that have a store path (skip symlinks)
       checkableFiles = lib.filterAttrs (_: v: v != null) storePathsByFile;
 
-      checkSnippets = lib.mapAttrsToList (
-        path: storePath:
-        ''
-          _dst="$ROOT/${path}"
-          if [[ ! -f "$_dst" ]]; then
-            echo "DRIFT: ${path} is missing (expected from store)"
+      checkSnippets = lib.mapAttrsToList (path: storePath: ''
+        _dst="$ROOT/${path}"
+        if [[ ! -f "$_dst" ]]; then
+          echo "DRIFT: ${path} is missing (expected from store)"
+          DRIFT=1
+        else
+          _expected=$(${pkgs.coreutils}/bin/sha256sum ${storePath} | cut -d' ' -f1)
+          _actual=$(${pkgs.coreutils}/bin/sha256sum "$_dst" | cut -d' ' -f1)
+          if [[ "$_expected" != "$_actual" ]]; then
+            echo "DRIFT: ${path} does not match generated content"
             DRIFT=1
-          else
-            _expected=$(${pkgs.coreutils}/bin/sha256sum ${storePath} | cut -d' ' -f1)
-            _actual=$(${pkgs.coreutils}/bin/sha256sum "$_dst" | cut -d' ' -f1)
-            if [[ "$_expected" != "$_actual" ]]; then
-              echo "DRIFT: ${path} does not match generated content"
-              DRIFT=1
-            fi
           fi
-        ''
-      ) checkableFiles;
+        fi
+      '') checkableFiles;
 
       # Also check symlinks
       symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") enabledFiles;
-      symlinkSnippets = lib.mapAttrsToList (
-        path: fileConfig:
-        ''
-          _dst="$ROOT/${path}"
-          if [[ ! -L "$_dst" ]]; then
-            echo "DRIFT: ${path} is not a symlink (expected -> ${fileConfig.target})"
-            DRIFT=1
-          elif [[ "$(readlink "$_dst")" != ${q fileConfig.target} ]]; then
-            echo "DRIFT: ${path} points to $(readlink "$_dst"), expected ${fileConfig.target}"
-            DRIFT=1
-          fi
-        ''
-      ) symlinkFiles;
+      symlinkSnippets = lib.mapAttrsToList (path: fileConfig: ''
+        _dst="$ROOT/${path}"
+        if [[ ! -L "$_dst" ]]; then
+          echo "DRIFT: ${path} is not a symlink (expected -> ${fileConfig.target})"
+          DRIFT=1
+        elif [[ "$(readlink "$_dst")" != ${q fileConfig.target} ]]; then
+          echo "DRIFT: ${path} points to $(readlink "$_dst"), expected ${fileConfig.target}"
+          DRIFT=1
+        fi
+      '') symlinkFiles;
     in
     pkgs.writeShellApplication {
       name = "check-files-drift";
@@ -428,9 +430,134 @@ let
     };
 in
 {
-  imports = [
-    ../core/options
-  ];
+  options.stackpanel.files = {
+    enable = lib.mkEnableOption "file generation" // {
+      default = true;
+    };
+
+    entries = lib.mkOption {
+      description = ''
+        Files to generate into the repo. Keys are file paths relative to repo root.
+
+        Supported types:
+          - text: Inline text content (via `text` or `path`)
+          - json: Nix attrset serialized to formatted JSON (deep-mergeable)
+          - line-set: List of strings joined by newlines (with optional `dedupe`/`sort`)
+          - line-map: Attrset where truthy keys become lines (allows override/disable)
+          - derivation: Copy from a Nix derivation
+          - symlink: Create a symbolic link
+      '';
+      type = lib.types.attrsOf (
+        lib.types.submodule (
+          { name, ... }:
+          {
+            options = {
+              enable = lib.mkEnableOption "Generate this file" // {
+                default = true;
+              };
+
+              type = lib.mkOption {
+                type = lib.types.enum [
+                  "text"
+                  "derivation"
+                  "symlink"
+                  "json"
+                  "line-set"
+                  "line-map"
+                ];
+                default = "text";
+                description = ''
+                  Type of file content:
+                  - 'text': inline text content
+                  - 'derivation': copy from a derivation
+                  - 'symlink': create a symbolic link
+                  - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
+                  - 'line-set': list of strings joined by newlines (with optional dedupe/sort)
+                  - 'line-map': attrset where each key with a truthy value becomes a line (allows override/disable across modules)
+                '';
+              };
+
+              text = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = ''
+                  Text content for the file (when type = 'text').
+                  Mutually exclusive with `path` - use one or the other.
+                '';
+              };
+
+              jsonValue = lib.mkOption {
+                type = lib.types.attrsOf lib.types.anything;
+                default = { };
+                description = "Nix attrset to serialize as formatted JSON (when type = 'json'). Deep-merged across modules.";
+              };
+
+              lines = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = "List of lines (when type = 'line-set'). Merged across modules via list concatenation.";
+              };
+
+              dedupe = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Remove duplicate lines from the output (when type = 'line-set').";
+              };
+
+              sort = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Sort lines alphabetically in the output (when type = 'line-set').";
+              };
+
+              mapLines = lib.mkOption {
+                type = lib.types.attrsOf lib.types.bool;
+                default = { };
+                description = "Attrset of lines (when type = 'line-map'). Keys with true become lines; false excludes them.";
+              };
+
+              path = lib.mkOption {
+                type = lib.types.nullOr lib.types.path;
+                default = null;
+                description = "Path to file content (when type = 'text'). Read at eval time. Mutually exclusive with `text`.";
+              };
+
+              drv = lib.mkOption {
+                type = lib.types.nullOr lib.types.package;
+                default = null;
+                description = "Derivation whose outPath contains the file content (when type = 'derivation').";
+              };
+
+              target = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
+              };
+
+              mode = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Optional chmod mode (e.g. '0644', '0755').";
+              };
+
+              source = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Module or component that generated this file (for UI display).";
+              };
+
+              description = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Human-readable description of the file's purpose.";
+              };
+            };
+          }
+        )
+      );
+      default = { };
+    };
+  };
 
   config = lib.mkIf hasFiles {
     # Make the executable available in PATH

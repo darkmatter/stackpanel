@@ -3,7 +3,9 @@
 import { parseEnv, z } from "znv";
 
 const schema = {
+  ALCHEMY_STATE_TOKEN: z.string(),
   APP_HOST: z.string(),
+  CLOUDFLARE_API_TOKEN: z.string(),
   MEMO_MEMOAS_AD: z.string(),
   OPENAI_API_KEY: z.string(),
   PORT: z.string(),

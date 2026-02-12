@@ -42,6 +42,8 @@
     # This enables pure evaluation (nix flake check, nix flake show)
     stackpanel-root.url = "path:./.stackpanel-root";
     stackpanel-root.flake = false;
+		#inputs.sops-nix.url = "github:Mic92/sops-nix";
+		#inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

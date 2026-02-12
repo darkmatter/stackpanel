@@ -41,10 +41,6 @@
       path = "apps/docs";
       type = "bun";
     };
-    server = {
-      name = "server";
-      path = "apps/server";
-    };
     stackpanel-go = {
       description = "Stackpanel CLI and agent (Go)";
       environments = {
@@ -106,6 +102,8 @@
             OPENAI_API_KEY = "ref+sops://packages/gen/env/data/web/dev.yaml#/OPENAI_API_KEY";
             PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/port";
             POSTGRES_URL = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL";
+            CLOUDFLARE_API_TOKEN = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/CLOUDFLARE_API_TOKEN";
+            ALCHEMY_STATE_TOKEN = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/ALCHEMY_STATE_TOKEN";
           };
           name = "dev";
         };
@@ -600,6 +598,14 @@
     };
     "/var/LOG_LEVEL" = {
       value = "info";
+    };
+
+    # Cloudflare credentials for Alchemy state store
+    "/dev/CLOUDFLARE_API_TOKEN" = {
+      value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/CLOUDFLARE_API_TOKEN";
+    };
+    "/dev/ALCHEMY_STATE_TOKEN" = {
+      value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/ALCHEMY_STATE_TOKEN";
     };
   };
 }

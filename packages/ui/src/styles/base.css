@@ -12,7 +12,8 @@
   font-style: normal;
   font-display: swap;
   font-weight: 300 800;
-  src: url(@fontsource-variable/google-sans-code/files/google-sans-code-latin-wght-normal.woff2) format("woff2-variations");
+  src: url(@fontsource-variable/google-sans-code/files/google-sans-code-latin-wght-normal.woff2)
+    format("woff2-variations");
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
     U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
@@ -148,7 +149,7 @@
 
 .dark {
   --color-fd-background: hsl(240, 4%, 5.04%);
-  --color-fd-foreground: oklch(0.88 0 0);
+  --color-fd-foreground: oklch(0.91 0 0);
   --color-fd-muted: hsl(0, 0%, 12.9%);
   --color-fd-muted-foreground: hsla(0, 0%, 70%, 0.8);
   --color-fd-popover: hsl(0, 0%, 11.6%);

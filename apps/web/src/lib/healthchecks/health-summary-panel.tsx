@@ -95,7 +95,7 @@ export function HealthSummaryPanel() {
 
 interface HealthSummaryPanelViewProps extends HealthSummaryPanelProps {
   isRefreshing?: boolean;
-  onRunChecks?: (module?: string) => Promise<void>;
+  onRunChecks?: (module?: string, checkId?: string) => Promise<void>;
 }
 
 /**
@@ -198,6 +198,11 @@ export function HealthSummaryPanelView({
                     key={moduleName}
                     moduleHealth={moduleHealth}
                     onRunChecks={() => onRunChecks?.(moduleName)}
+                    onRunCheck={
+                      onRunChecks
+                        ? (checkId: string) => onRunChecks(moduleName, checkId)
+                        : undefined
+                    }
                   />
                 ),
               )}
@@ -257,11 +262,13 @@ function StatusCount({
 interface ModuleHealthCardProps {
   moduleHealth: ModuleHealth;
   onRunChecks?: () => void;
+  onRunCheck?: (checkId: string) => Promise<void>;
 }
 
 function ModuleHealthCard({
   moduleHealth,
   onRunChecks,
+  onRunCheck,
 }: ModuleHealthCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const hasChecks = moduleHealth.checks?.length > 0;
@@ -322,6 +329,7 @@ function ModuleHealthCard({
                   <HealthcheckItem
                     key={checkResult.checkId}
                     result={checkResult}
+                    onRunCheck={onRunCheck}
                   />
                 ))}
               </div>
@@ -353,8 +361,15 @@ function ModuleHealthCard({
 // HealthcheckItem Component - Shows individual check with script
 // =============================================================================
 
-function HealthcheckItem({ result }: { result: HealthcheckResult }) {
+function HealthcheckItem({
+  result,
+  onRunCheck,
+}: {
+  result: HealthcheckResult;
+  onRunCheck?: (checkId: string) => Promise<void>;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const check = result.check;
   const status = result.status || "HEALTH_STATUS_UNKNOWN";
 
@@ -384,51 +399,74 @@ function HealthcheckItem({ result }: { result: HealthcheckResult }) {
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "flex w-full items-start gap-3 p-3 text-left transition-colors",
-            hasDetails && "hover:bg-muted/30 cursor-pointer",
-          )}
-        >
-          <div className="mt-0.5">
-            <TrafficLightDot status={status} size="sm" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{checkName}</span>
-              {severity && <SeverityBadge severity={severity} />}
-              <CheckTypeBadge type={checkType} />
-              {result.durationMs > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {result.durationMs}ms
-                </span>
-              )}
-            </div>
-            {description && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {description}
-              </p>
+      <div className="flex items-start">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "flex w-full items-start gap-3 p-3 text-left transition-colors",
+              hasDetails && "hover:bg-muted/30 cursor-pointer",
             )}
-            {/* Show error inline if not expanded */}
-            {!isExpanded && result.error && (
-              <p className="text-xs text-red-500 dark:text-red-400 mt-1 line-clamp-1">
-                {result.error}
-              </p>
-            )}
-          </div>
-          {hasDetails && (
+          >
             <div className="mt-0.5">
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <TrafficLightDot status={status} size="sm" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-sm">{checkName}</span>
+                {severity && <SeverityBadge severity={severity} />}
+                <CheckTypeBadge type={checkType} />
+                {result.durationMs > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {result.durationMs}ms
+                  </span>
+                )}
+              </div>
+              {description && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {description}
+                </p>
+              )}
+              {/* Show error inline if not expanded */}
+              {!isExpanded && result.error && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1 line-clamp-1">
+                  {result.error}
+                </p>
               )}
             </div>
-          )}
-        </button>
-      </CollapsibleTrigger>
+            {hasDetails && (
+              <div className="mt-0.5">
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            )}
+          </button>
+        </CollapsibleTrigger>
+        {onRunCheck && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 mt-3 mr-3 shrink-0 text-muted-foreground hover:text-foreground"
+            disabled={isRunning}
+            onClick={async (e) => {
+              e.stopPropagation();
+              setIsRunning(true);
+              try {
+                await onRunCheck(result.checkId);
+              } finally {
+                setIsRunning(false);
+              }
+            }}
+          >
+            <RefreshCw
+              className={cn("h-3 w-3", isRunning && "animate-spin")}
+            />
+          </Button>
+        )}
+      </div>
 
       {hasDetails && (
         <CollapsibleContent>

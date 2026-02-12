@@ -430,9 +430,9 @@ in
     # =========================================================================
     # SOPS / Secrets Healthchecks
     # =========================================================================
-    stackpanel.healthchecks.modules.sops = lib.mkIf secretsCfg.enable {
+    stackpanel.healthchecks.modules.secrets = lib.mkIf secretsCfg.enable {
       enable = true;
-      displayName = "SOPS Secrets";
+      displayName = "Secrets";
       checks = {
         # Per-group checks (dynamically generated from secrets.groups)
       }
@@ -473,22 +473,20 @@ in
           ];
           script = ''
             # Check common AGE key locations
-            found=0
-
             # Check SOPS_AGE_KEY_CMD first (lazy key command)
-            if [ -n "$SOPS_AGE_KEY_CMD" ]; then
+            if [ -n "''${SOPS_AGE_KEY_CMD:-}" ]; then
               echo "AGE key command configured: $SOPS_AGE_KEY_CMD"
               exit 0
             fi
 
             # Check SOPS_AGE_KEY_FILE
-            if [ -n "$SOPS_AGE_KEY_FILE" ] && [ -f "$SOPS_AGE_KEY_FILE" ]; then
+            if [ -n "''${SOPS_AGE_KEY_FILE:-}" ] && [ -f "''${SOPS_AGE_KEY_FILE:-}" ]; then
               echo "AGE key found at: $SOPS_AGE_KEY_FILE"
               exit 0
             fi
 
             # Check stackpanel state dir
-            if [ -f "$STACKPANEL_STATE_DIR/age-key.txt" ]; then
+            if [ -f "''${STACKPANEL_STATE_DIR:-}/age-key.txt" ]; then
               echo "AGE key found at: $STACKPANEL_STATE_DIR/age-key.txt"
               exit 0
             fi

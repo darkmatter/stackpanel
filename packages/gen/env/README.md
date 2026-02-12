@@ -48,7 +48,7 @@ const env = stackpanelGo.dev.getEnv();
 ### web
 
 Environments: `dev`, `prod`
-Variables: `APP_HOST`, `MEMO_MEMOAS_AD`, `OPENAI_API_KEY`, `PORT`, `POSTGRES_URL`
+Variables: `ALCHEMY_STATE_TOKEN`, `APP_HOST`, `CLOUDFLARE_API_TOKEN`, `MEMO_MEMOAS_AD`, `OPENAI_API_KEY`, `PORT`, `POSTGRES_URL`
 
 ```typescript
 import { web } from "@gen/env";

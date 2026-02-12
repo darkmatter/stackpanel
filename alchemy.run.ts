@@ -5,6 +5,7 @@ import { SSMParameter } from "alchemy/aws";
 import * as cloudflare from "alchemy/cloudflare";
 import * as docker from "alchemy/docker";
 import { NeonBranch, NeonProject } from "alchemy/neon";
+import { CloudflareStateStore } from "alchemy/state";
 import { UpstashRedis } from "alchemy/upstash";
 // import { config } from "dotenv";
 import * as infra from "@stackpanel/infra";
@@ -35,22 +36,13 @@ async function getSSMSecret(name: string): Promise<string> {
   return response.Parameter.Value;
 }
 
-// Get Alchemy password from env var or SSM for remote state
-let alchemyPassword = process.env.ALCHEMY_PASSWORD;
-if (!alchemyPassword) {
-  try {
-    // Try to get from SSM if not in env (for CI/CD)
-    alchemyPassword = await getSSMSecret("/common/alchemy-password");
-    console.log("Using Alchemy password from SSM");
-  } catch (error) {
-    // For local development without SSM, use a default
-    alchemyPassword = "local-dev-password";
-    console.log("Using default local Alchemy password");
-  }
-}
-
 const app = await alchemy("stackpanel", {
-  password: alchemyPassword,
+  stateStore: process.env.CLOUDFLARE_API_TOKEN
+    ? (scope) =>
+        new CloudflareStateStore(scope, {
+          apiToken: alchemy.secret(process.env.CLOUDFLARE_API_TOKEN!),
+        })
+    : undefined, // Falls back to default FileSystemStateStore for local dev without CF token
 });
 
 // ----------------------------------------------------------------------------

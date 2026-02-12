@@ -117,19 +117,88 @@ func GenerateCLIDocs(rootCmd *cobra.Command, outputDir string) error {
 	return nil
 }
 
-// Escape sequences that are unlikely to be actual jsx
+// escapeMDX escapes characters that would be interpreted as JSX in MDX files.
+// It is code-block-aware: content inside fenced code blocks (```) and inline
+// code spans (`) is left untouched since MDX treats those as literal text.
 func escapeMDX(text string) string {
-	// Order matters: escape backslashes first so you don't double-escape later
-	// text = strings.ReplaceAll(text, "\\", "\\\\") // Escape literal backslashes
-	text = strings.ReplaceAll(text, "{", "\\{") // Escape JS expression braces
-	text = strings.ReplaceAll(text, "}", "\\}")
-	text = strings.ReplaceAll(text, ".<", "\\<") // Escape JSX tags
-	text = strings.ReplaceAll(text, ">.", "\\>")
-	// text = strings.ReplaceAll(text, "*", "\\*") // Escape bold/italic
-	// text = strings.ReplaceAll(text, "_", "\\_")
-	// text = strings.ReplaceAll(text, "#", "\\#") // Escape headers
-	// Add other characters if needed (e.g., '[', ']', '`', etc., depending on context)
-	return text
+	var result strings.Builder
+	result.Grow(len(text))
+
+	lines := strings.Split(text, "\n")
+	inFencedBlock := false
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Toggle fenced code block state on ``` lines
+		if strings.HasPrefix(trimmed, "```") {
+			inFencedBlock = !inFencedBlock
+			result.WriteString(line)
+			if i < len(lines)-1 {
+				result.WriteByte('\n')
+			}
+			continue
+		}
+
+		// Inside a fenced code block — pass through unchanged
+		if inFencedBlock {
+			result.WriteString(line)
+			if i < len(lines)-1 {
+				result.WriteByte('\n')
+			}
+			continue
+		}
+
+		// Outside code blocks — escape character-by-character,
+		// skipping inline code spans delimited by backticks.
+		// Also skip already-escaped sequences (preceded by \).
+		inInlineCode := false
+		for j := 0; j < len(line); j++ {
+			ch := line[j]
+
+			if ch == '`' {
+				inInlineCode = !inInlineCode
+				result.WriteByte(ch)
+				continue
+			}
+
+			if inInlineCode {
+				result.WriteByte(ch)
+				continue
+			}
+
+			// If this is a backslash followed by a char we'd escape,
+			// pass both through unchanged (already escaped).
+			if ch == '\\' && j+1 < len(line) {
+				next := line[j+1]
+				if next == '<' || next == '>' || next == '{' || next == '}' {
+					result.WriteByte(ch)
+					result.WriteByte(next)
+					j++ // skip next char
+					continue
+				}
+			}
+
+			switch ch {
+			case '{':
+				result.WriteString("\\{")
+			case '}':
+				result.WriteString("\\}")
+			case '<':
+				result.WriteString("\\<")
+			case '>':
+				result.WriteString("\\>")
+			default:
+				result.WriteByte(ch)
+			}
+		}
+
+		if i < len(lines)-1 {
+			result.WriteByte('\n')
+		}
+	}
+
+	return result.String()
 }
 
 // generateCommandDocs generates documentation for a single command and its subcommands
