@@ -42,17 +42,16 @@
 }
 
 :root {
-  --font-sans: "Inter Variable", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans:
+    "Inter Variable", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-sans2: "Montserrat";
 }
-
 
 body {
   font-family: var(--font-sans);
   /* font-variation-settings: "wght" 300, "opsz" 12, "calt" 1, "kern" 1;
   font-feature-settings: "wght" 300, "opsz" 12, "calt" 1, "kern" 1;
   letter-spacing: -0.05em; */
-
 }
 
 p {
@@ -61,6 +60,8 @@ p {
 }
 
 strong {
-  font-variation-settings: "wght" 740, "opsz" 12;
+  font-variation-settings:
+    "wght" 740,
+    "opsz" 12;
   letter-spacing: -0.025em;
 }

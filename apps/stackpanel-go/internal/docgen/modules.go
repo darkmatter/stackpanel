@@ -156,7 +156,7 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 
 	if len(indexDocs) > 0 {
 		modulesIndexPath := filepath.Join(outputDir, "index.mdx")
-		modulesIndex := generateModulesIndexMdx(indexDocs)
+		modulesIndex := escapeMDX(generateModulesIndexMdx(indexDocs))
 		if err := os.WriteFile(modulesIndexPath, []byte(modulesIndex), 0644); err != nil {
 			return nil, err
 		}

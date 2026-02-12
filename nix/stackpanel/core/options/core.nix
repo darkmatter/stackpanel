@@ -211,11 +211,12 @@
       type = lib.types.str;
       default = ".stackpanel-root";
     };
-    # Whether to append the marker to the project's .gitignore (off by default)
     gitignore = {
+      # Whether to append the marker to the project's .gitignore
       addProjectMarker = lib.mkOption {
         type = lib.types.bool;
         default = false;
+        description = "Whether to add the root marker file to the project's .gitignore.";
       };
     };
 
