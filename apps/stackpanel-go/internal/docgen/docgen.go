@@ -127,7 +127,7 @@ func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir 
 
 	// Generate index
 	indexPath := filepath.Join(outputDir, "index.mdx")
-	if err := os.WriteFile(indexPath, []byte(generateIndexMdx(categories)), 0644); err != nil {
+	if err := os.WriteFile(indexPath, []byte(escapeMDX(generateIndexMdx(categories))), 0644); err != nil {
 		return fmt.Errorf("failed to write index: %w", err)
 	}
 	fmt.Printf("  ✓ %s\n", indexPath)
@@ -135,7 +135,7 @@ func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir 
 	// Generate category pages
 	for category, opts := range groups {
 		categoryPath := filepath.Join(outputDir, category+".mdx")
-		if err := os.WriteFile(categoryPath, []byte(generateCategoryMdx(category, opts)), 0644); err != nil {
+		if err := os.WriteFile(categoryPath, []byte(escapeMDX(generateCategoryMdx(category, opts))), 0644); err != nil {
 			return fmt.Errorf("failed to write category %s: %w", category, err)
 		}
 		fmt.Printf("  ✓ %s (%d options)\n", categoryPath, len(opts))

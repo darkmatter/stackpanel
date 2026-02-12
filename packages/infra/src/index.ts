@@ -5,6 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 // Embedded project config
+// @ts-ignore
 const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","storageBackend":{"type":"none"}} as const;
 
 /**
@@ -14,15 +15,23 @@ const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","s
  *   2. .stackpanel/state/infra-inputs.json (default location)
  */
 function loadAllInputs(): Record<string, any> {
-  const inputsPath =
+  const ROOT =
+    PROJECT_CONFIG.root ||
+    process.env.STACKPANEL_ROOT ||
+    execSync("git rev-parse --show-toplevel", { encoding: "utf-8" }).trim() ||
+    process.cwd();
+  const relPath =
     process.env.STACKPANEL_INFRA_INPUTS ??
-    path.resolve(".stackpanel/state/infra-inputs.json");
+    ".stackpanel/state/infra-inputs.json";
+  const inputsPath = path.resolve(ROOT, relPath);
 
   try {
     const raw = fs.readFileSync(inputsPath, "utf-8");
     return JSON.parse(raw);
   } catch {
-    console.warn(`[infra] Could not read inputs from ${inputsPath}, using empty inputs`);
+    console.warn(
+      `[infra] Could not read inputs from ${inputsPath}, using empty inputs`,
+    );
     return {};
   }
 }
@@ -35,14 +44,20 @@ function decryptValues<T>(obj: T): T {
   if (typeof obj === "string" && obj.startsWith("ENC[age,")) {
     const ageKey = process.env.STACKPANEL_AGE_KEY;
     if (!ageKey) {
-      console.warn("[infra] Found AGE-encrypted value but STACKPANEL_AGE_KEY is not set");
+      console.warn(
+        "[infra] Found AGE-encrypted value but STACKPANEL_AGE_KEY is not set",
+      );
       return obj;
     }
     try {
       const encrypted = obj.slice(8, -1); // Remove ENC[age,...] wrapper
       const result = execSync(
         `echo "${encrypted}" | base64 -d | age -d -i <(echo "${ageKey}")`,
-        { encoding: "utf-8", shell: "/bin/bash", stdio: ["pipe", "pipe", "pipe"] }
+        {
+          encoding: "utf-8",
+          shell: "/bin/bash",
+          stdio: ["pipe", "pipe", "pipe"],
+        },
       ).trim();
       return result as unknown as T;
     } catch (err) {
@@ -71,7 +86,8 @@ function decryptValues<T>(obj: T): T {
  */
 function deepMerge(base: any, overrides: any): any {
   if (overrides === undefined || overrides === null) return base;
-  if (typeof base !== "object" || typeof overrides !== "object") return overrides;
+  if (typeof base !== "object" || typeof overrides !== "object")
+    return overrides;
   if (Array.isArray(base) || Array.isArray(overrides)) return overrides;
 
   const result = { ...base };
@@ -140,10 +156,13 @@ export default class Infra {
    * @param modules - Map of module ID → { outputs, syncKeys }
    */
   static async syncAll(
-    modules: Record<string, {
-      outputs: Record<string, string>;
-      syncKeys: string[];
-    }>
+    modules: Record<
+      string,
+      {
+        outputs: Record<string, string>;
+        syncKeys: string[];
+      }
+    >,
   ): Promise<void> {
     const backend = PROJECT_CONFIG.storageBackend;
     if (backend.type === "none") {
@@ -170,7 +189,9 @@ export default class Infra {
       return;
     }
 
-    console.log(`[infra] Syncing ${entries.length} outputs to ${backend.type}...`);
+    console.log(
+      `[infra] Syncing ${entries.length} outputs to ${backend.type}...`,
+    );
 
     switch (backend.type) {
       case "chamber": {
@@ -179,11 +200,14 @@ export default class Infra {
           try {
             execSync(
               `printf '%s' ${JSON.stringify(value)} | chamber write ${service} ${formattedKey}`,
-              { stdio: "pipe" }
+              { stdio: "pipe" },
             );
             console.log(`  ✓ chamber write ${service} ${formattedKey}`);
           } catch (err) {
-            console.error(`  ✗ Failed to write ${formattedKey} to chamber:`, err);
+            console.error(
+              `  ✗ Failed to write ${formattedKey} to chamber:`,
+              err,
+            );
           }
         }
         break;
@@ -192,7 +216,10 @@ export default class Infra {
       case "sops": {
         const filePath = (backend as any).filePath;
         const yaml = entries
-          .map(({ formattedKey, value }) => `${formattedKey}: ${JSON.stringify(value)}`)
+          .map(
+            ({ formattedKey, value }) =>
+              `${formattedKey}: ${JSON.stringify(value)}`,
+          )
           .join("\n");
         const tmpPath = `${filePath}.tmp`;
         const dir = path.dirname(filePath);
@@ -201,7 +228,9 @@ export default class Infra {
         fs.writeFileSync(tmpPath, yaml);
 
         try {
-          execSync(`sops --encrypt "${tmpPath}" > "${filePath}"`, { stdio: "pipe" });
+          execSync(`sops --encrypt "${tmpPath}" > "${filePath}"`, {
+            stdio: "pipe",
+          });
           console.log(`  ✓ Wrote encrypted outputs to ${filePath}`);
         } catch (err) {
           console.error(`  ✗ Failed to encrypt ${filePath}:`, err);

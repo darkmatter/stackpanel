@@ -94,8 +94,11 @@ export function useHealthchecks(
   const fetchHealth = useCallback(async () => {
     setState((prev) => ({
       ...prev,
-      status: "loading",
-      isLoading: true,
+      // Only set isLoading on the initial fetch (no data yet).
+      // Background refetches keep isLoading false so the UI doesn't
+      // unmount and lose collapsible/expand state.
+      status: prev.data ? prev.status : "loading",
+      isLoading: !prev.data,
       error: null,
     }));
 

@@ -11,6 +11,7 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/config"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/agent/project"
 	sharedexec "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )
@@ -20,6 +21,10 @@ type Server struct {
 	config     *config.Config
 	httpServer *http.Server
 	exec       *sharedexec.Executor
+
+	// store provides transport-agnostic Nix data read/write/patch operations.
+	// Shared with the CLI via pkg/nixdata.
+	store *nixdata.Store
 
 	// Project manager for handling project selection and validation
 	projectMgr *project.Manager
@@ -128,9 +133,17 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create JWT manager: %w", err)
 	}
 
+	// Initialize the shared Nix data store (nil-safe if no executor yet)
+	var store *nixdata.Store
+	if exec != nil && cfg.ProjectRoot != "" {
+		store = nixdata.NewStore(cfg.ProjectRoot, exec)
+	}
+
 	s := &Server{
 		config:         cfg,
+		httpServer:     nil,
 		exec:           exec,
+		store:          store,
 		projectMgr:     projectMgr,
 		jwtManager:     jwtMgr,
 		pairTemplate:   pairTmpl,
@@ -343,6 +356,7 @@ func (s *Server) reinitializeExecutor() error {
 	}
 
 	s.exec = exec
+	s.store = nixdata.NewStore(s.config.ProjectRoot, exec)
 	s.shellManager = NewShellManager(s.config.ProjectRoot, s)
 
 	log.Info().
