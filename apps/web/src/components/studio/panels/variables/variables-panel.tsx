@@ -36,11 +36,7 @@ import {
   type VariableTypeName,
   type VariablesBackend,
 } from "./constants";
-import {
-  AgeIdentitySettings,
-  EditSecretDialog,
-  KMSSettings,
-} from "./edit-secret-dialog";
+import { EditSecretDialog, KMSSettings } from "./edit-secret-dialog";
 import { EditVariableDialog } from "./edit-variable-dialog";
 import { GroupsSection } from "./groups-section";
 import { VariableUsageInfo } from "./variable-usage-info";
@@ -652,23 +648,23 @@ export function VariablesPanel() {
                   </p>
                 </div>
 
-                <div className="space-y-4">
-                  <AgeIdentitySettings />
-                  <KMSSettings />
-                </div>
-
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                  <h4 className="mb-2 text-sm font-medium text-amber-600 dark:text-amber-400">
-                    After changing settings
+                <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                  <h4 className="mb-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+                    Auto-generated local keys
                   </h4>
                   <p className="text-sm text-muted-foreground">
-                    Run{" "}
+                    Your local AGE key is automatically generated when you enter
+                    the devshell and stored at{" "}
                     <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                      generate-sops-config
-                    </code>{" "}
-                    to update your <code>.sops.yaml</code> file with the new
-                    encryption keys.
+                      .stackpanel/state/keys/local.txt
+                    </code>
+                    . A wrapped SOPS binary handles key resolution automatically
+                    &mdash; no manual identity configuration is needed.
                   </p>
+                </div>
+
+                <div className="space-y-4">
+                  <KMSSettings />
                 </div>
               </div>
             )}

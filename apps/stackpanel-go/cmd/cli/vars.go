@@ -380,6 +380,22 @@ func listVariables(variables map[string]Variable, typeFilter string) {
 		ungrouped = append(ungrouped, id)
 	}
 
+	// Compute max widths for aligned columns
+	maxIDLen := 0
+	maxKeyLen := 0
+	for _, id := range ids {
+		v := variables[id]
+		if typeFilter != "" && !strings.EqualFold(v.Type, typeFilter) {
+			continue
+		}
+		if len(id) > maxIDLen {
+			maxIDLen = len(id)
+		}
+		if len(v.Key) > maxKeyLen {
+			maxKeyLen = len(v.Key)
+		}
+	}
+
 	keyColor := color.New(color.FgCyan)
 	typeColor := color.New(color.FgYellow)
 	descColor := color.New(color.Faint)
@@ -401,14 +417,16 @@ func listVariables(variables map[string]Variable, typeFilter string) {
 			valueStr = valueColor.Sprint(v.Value)
 		}
 
-		fmt.Printf("  %s  %s  %s=%s\n",
-			keyColor.Sprint(id),
+		paddedID := fmt.Sprintf("%-*s", maxIDLen, id)
+		paddedKey := fmt.Sprintf("%-*s", maxKeyLen, v.Key)
+		fmt.Printf("  %s  %s  %s = %s\n",
+			keyColor.Sprint(paddedID),
 			typeStr,
-			v.Key,
+			paddedKey,
 			valueStr,
 		)
 		if v.Description != nil && *v.Description != "" {
-			fmt.Printf("      %s\n", descColor.Sprint(*v.Description))
+			fmt.Printf("  %s  %s\n", strings.Repeat(" ", maxIDLen), descColor.Sprint(*v.Description))
 		}
 	}
 

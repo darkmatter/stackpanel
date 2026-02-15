@@ -21,6 +21,8 @@ interface InitGroupResult {
 	ssmPath: string;
 	dryRun: boolean;
 	success?: boolean;
+	ghStored?: boolean;
+	workflowGenerated?: boolean;
 }
 
 interface InitializeGroupDialogProps {
@@ -32,11 +34,15 @@ interface InitializeGroupDialogProps {
 	onSuccess?: () => void;
 }
 
+interface InitializeGroupDialogOptions {
+	skipGh?: boolean;
+}
+
 type InitState =
 	| { step: "confirm" }
 	| { step: "running" }
 	| { step: "writing-config" }
-	| { step: "success"; publicKey: string }
+	| { step: "success"; publicKey: string; ghStored?: boolean; workflowGenerated?: boolean }
 	| { step: "error"; message: string };
 
 export function InitializeGroupDialog({
@@ -53,6 +59,7 @@ export function InitializeGroupDialog({
 	const refreshConfig = useRefreshNixConfig();
 	const [state, setState] = useState<InitState>({ step: "confirm" });
 	const [output, setOutput] = useState("");
+	const [options, setOptions] = useState<InitializeGroupDialogOptions>({ skipGh: false });
 
 	const handleInitialize = useCallback(async () => {
 		if (!agentClient) {
@@ -76,7 +83,7 @@ export function InitializeGroupDialog({
 				command: "sh",
 				args: [
 					"-c",
-					`${stateDirExport}command -v secrets-init-group >/dev/null 2>&1 && secrets-init-group ${groupName} --yes --json || nix run --impure .#stackpanel -- commands secrets:init-group ${groupName} --yes --json`,
+					`${stateDirExport}command -v secrets-init-group >/dev/null 2>&1 && secrets-init-group ${groupName} --yes --json${options.skipGh ? " --no-gh" : ""} || nix run --impure .#stackpanel -- commands secrets:init-group ${groupName} --yes --json${options.skipGh ? " --no-gh" : ""}`,
 				],
 			});
 
@@ -151,7 +158,12 @@ export function InitializeGroupDialog({
 				// Non-critical - config will refresh on next poll
 			}
 
-			setState({ step: "success", publicKey: initResult.publicKey });
+			setState({
+				step: "success",
+				publicKey: initResult.publicKey,
+				ghStored: initResult.ghStored,
+				workflowGenerated: initResult.workflowGenerated,
+			});
 			toast.success(
 				`Group "${groupName}" initialized and config updated`,
 			);
@@ -169,6 +181,7 @@ export function InitializeGroupDialog({
 		patchNixData,
 		refreshConfig,
 		onSuccess,
+		options.skipGh,
 	]);
 
 	const handleCopyPublicKey = useCallback(
@@ -233,8 +246,36 @@ export function InitializeGroupDialog({
 								<li>
 									Save the public key to your project config
 								</li>
+								{!options.skipGh && (
+									<>
+										<li>
+											Upload the private key as a GitHub
+											Actions secret
+										</li>
+										<li>
+											Generate the secrets rekey workflow
+										</li>
+									</>
+								)}
 							</ol>
 						</div>
+
+						<label className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								checked={options.skipGh}
+								onChange={(e) =>
+									setOptions((prev) => ({
+										...prev,
+										skipGh: e.target.checked,
+									}))
+								}
+								className="rounded border-border"
+							/>
+							<span className="text-muted-foreground">
+								Skip GitHub integration (--no-gh)
+							</span>
+						</label>
 
 						{isReinitialize && (
 							<div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
@@ -290,6 +331,10 @@ export function InitializeGroupDialog({
 								<p className="text-xs text-muted-foreground mt-1">
 									Private key stored in SSM. Public key saved
 									to config.
+									{state.ghStored &&
+										" GitHub secret uploaded."}
+									{state.workflowGenerated &&
+										" Rekey workflow generated."}
 								</p>
 							</div>
 						</div>

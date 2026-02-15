@@ -17,6 +17,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useModuleHealth } from "@/lib/healthchecks/use-healthchecks";
+import { RecipientsSection } from "./recipients-section";
 import type { HealthStatus } from "@/lib/healthchecks/types";
 import { useNixConfigQuery } from "@/lib/use-agent";
 import { InitializeGroupDialog } from "./initialize-group-dialog";
@@ -383,8 +384,11 @@ export function GroupsSection() {
 						refetch();
 						setInitializingGroup(null);
 					}}
-				/>
-			)}
-		</div>
-	);
+			/>
+		)}
+
+		{/* Recipients section */}
+		<RecipientsSection />
+	</div>
+);
 }
