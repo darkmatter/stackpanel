@@ -89,12 +89,18 @@ func (s *Server) checkAWSSessionStatus() AWSSessionStatus {
 	}
 
 	// Check if AWS Roles Anywhere is configured
-	profileARN := os.Getenv("AWS_PROFILE_ARN")
-	roleARN := os.Getenv("AWS_ROLE_ARN")
-	trustAnchorARN := os.Getenv("AWS_TRUST_ANCHOR_ARN")
-	region := os.Getenv("AWS_REGION")
+	// Use s.exec.GetEnv to read from cached devshell env when running outside nix develop
+	getEnv := os.Getenv
+	if s.exec != nil {
+		getEnv = s.exec.GetEnv
+	}
+
+	profileARN := getEnv("AWS_PROFILE_ARN")
+	roleARN := getEnv("AWS_ROLE_ARN")
+	trustAnchorARN := getEnv("AWS_TRUST_ANCHOR_ARN")
+	region := getEnv("AWS_REGION")
 	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+		region = getEnv("AWS_DEFAULT_REGION")
 	}
 
 	// AWS is considered enabled if any of the Roles Anywhere config is present
@@ -110,15 +116,18 @@ func (s *Server) checkAWSSessionStatus() AWSSessionStatus {
 	}
 
 	// Check if credentials exist in environment
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+	accessKey := getEnv("AWS_ACCESS_KEY_ID")
+	secretKey := getEnv("AWS_SECRET_ACCESS_KEY")
+	sessionToken := getEnv("AWS_SESSION_TOKEN")
 
 	status.HasCredentials = accessKey != "" && secretKey != ""
 
 	// Try to validate credentials using AWS STS get-caller-identity
 	// This is the most reliable way to check if credentials are valid
 	cmd := exec.Command("aws", "sts", "get-caller-identity", "--output", "json")
+	if s.exec != nil {
+		cmd.Env = s.exec.BuildEnv(nil)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		// Check if it's an expiration error
@@ -167,8 +176,14 @@ func (s *Server) checkCertificateStatus() CertificateStatus {
 	}
 
 	// Check if Step CA is configured
-	caURL := os.Getenv("STEP_CA_URL")
-	caFingerprint := os.Getenv("STEP_CA_FINGERPRINT")
+	// Use s.exec.GetEnv to read from cached devshell env when running outside nix develop
+	getCertEnv := os.Getenv
+	if s.exec != nil {
+		getCertEnv = s.exec.GetEnv
+	}
+
+	caURL := getCertEnv("STEP_CA_URL")
+	caFingerprint := getCertEnv("STEP_CA_FINGERPRINT")
 
 	if caURL != "" {
 		status.Enabled = true
@@ -195,6 +210,9 @@ func (s *Server) checkCertificateStatus() CertificateStatus {
 
 	// Use step CLI to inspect the certificate
 	cmd := exec.Command("step", "certificate", "inspect", certPath, "--format", "json")
+	if s.exec != nil {
+		cmd.Env = s.exec.BuildEnv(nil)
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		status.Error = "Unable to inspect certificate"
@@ -254,7 +272,12 @@ func (s *Server) checkCertificateStatus() CertificateStatus {
 // findCertificatePath finds the device certificate path
 func (s *Server) findCertificatePath() string {
 	// Check environment variable override first
-	if certPath := os.Getenv("AWS_CERT_PATH"); certPath != "" {
+	// Use s.exec.GetEnv to read from cached devshell env when running outside nix develop
+	getPathEnv := os.Getenv
+	if s.exec != nil {
+		getPathEnv = s.exec.GetEnv
+	}
+	if certPath := getPathEnv("AWS_CERT_PATH"); certPath != "" {
 		return certPath
 	}
 
@@ -296,7 +319,11 @@ func (s *Server) findCertificatePath() string {
 func (s *Server) checkCAReachable(caURL, fingerprint string) bool {
 	// Use step CA health check
 	cmd := exec.Command("step", "ca", "health", "--ca-url", caURL, "--root", fingerprint)
-	cmd.Env = append(os.Environ(), "STEP_CA_URL="+caURL)
+	if s.exec != nil {
+		cmd.Env = s.exec.BuildEnv([]string{"STEP_CA_URL=" + caURL})
+	} else {
+		cmd.Env = append(os.Environ(), "STEP_CA_URL="+caURL)
+	}
 
 	err := cmd.Run()
 	return err == nil

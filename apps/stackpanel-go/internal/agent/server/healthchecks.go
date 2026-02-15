@@ -163,7 +163,10 @@ func (s *Server) handleGetHealthchecks(w http.ResponseWriter, r *http.Request) {
 	s.writeAPI(w, http.StatusOK, summary)
 }
 
-// handleRunHealthchecks runs healthchecks and returns results
+// handleRunHealthchecks runs healthchecks and returns results.
+// Individual check results are streamed via SSE ("healthcheck.result") as each
+// completes, so the UI can update incrementally. A final "healthchecks.updated"
+// event is broadcast with the full summary once everything is done.
 func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 	module := r.URL.Query().Get("module")
 	checkID := r.URL.Query().Get("check")
@@ -194,8 +197,22 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Run healthchecks in parallel
-	results := s.runHealthchecksParallel(r.Context(), checksToRun)
+	// Broadcast a "healthchecks.running" event so the UI knows which checks
+	// are about to be evaluated and can show pending/spinner states.
+	checkIDs := make([]string, len(checksToRun))
+	for i, c := range checksToRun {
+		checkIDs[i] = c.ID
+	}
+	s.broadcastSSE(SSEEvent{
+		Event: "healthchecks.running",
+		Data: map[string]any{
+			"checkIds": checkIDs,
+			"module":   module,
+		},
+	})
+
+	// Run healthchecks in parallel, broadcasting each result as it arrives.
+	results := s.runHealthchecksParallelStreaming(r.Context(), checksToRun, healthchecks)
 
 	// Cache results
 	for _, result := range results {
@@ -205,7 +222,7 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 	// Build summary
 	summary := s.buildHealthSummaryFromResults(healthchecks, results, module)
 
-	// Broadcast SSE event
+	// Broadcast final summary SSE event
 	s.broadcastSSE(SSEEvent{
 		Event: "healthchecks.updated",
 		Data:  summary,
@@ -335,6 +352,12 @@ func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (b
 	}
 
 	cmd.Dir = s.config.ProjectRoot
+
+	// Apply devshell environment so scripts see STACKPANEL_STATE_DIR,
+	// AWS_CERT_PATH, etc. even when the agent started outside nix develop.
+	if s.exec != nil {
+		cmd.Env = s.exec.BuildEnv(nil)
+	}
 
 	output, err := cmd.CombinedOutput()
 	outputStr := strings.TrimSpace(string(output))
@@ -471,6 +494,43 @@ func (s *Server) runHealthchecksParallel(ctx context.Context, checks []Healthche
 			defer wg.Done()
 			result := s.runHealthcheck(ctx, c)
 			results[idx] = *result
+		}(i, check)
+	}
+
+	wg.Wait()
+	return results
+}
+
+// runHealthchecksParallelStreaming runs checks in parallel and broadcasts each
+// result via SSE as soon as it completes. This lets the UI update incrementally
+// instead of waiting for every check to finish.
+func (s *Server) runHealthchecksParallelStreaming(ctx context.Context, checks []Healthcheck, allChecks []Healthcheck) []HealthcheckResult {
+	results := make([]HealthcheckResult, len(checks))
+	var wg sync.WaitGroup
+
+	// Build a map of all checks by ID so we can attach definitions to results
+	checkMap := make(map[string]Healthcheck, len(allChecks))
+	for _, c := range allChecks {
+		checkMap[c.ID] = c
+	}
+
+	for i, check := range checks {
+		wg.Add(1)
+		go func(idx int, c Healthcheck) {
+			defer wg.Done()
+			result := s.runHealthcheck(ctx, c)
+
+			// Attach the check definition for UI display
+			checkCopy := c
+			result.Check = &checkCopy
+
+			results[idx] = *result
+
+			// Broadcast individual result immediately
+			s.broadcastSSE(SSEEvent{
+				Event: "healthcheck.result",
+				Data:  result,
+			})
 		}(i, check)
 	}
 

@@ -1,166 +1,180 @@
 # StackPanel Secrets Module
 
-Master key-based secrets management for StackPanel projects.
+SOPS-based secrets management with AGE encryption, organized by groups (dev, prod, etc.).
 
-## Overview
+## Getting Started
 
-This module provides a simplified secrets system using [AGE](https://github.com/FiloSottile/age) encryption with master keys. Instead of per-user keys, a few master keys encrypt all secrets, and each secret specifies which master keys can decrypt it.
+### Step 1: Enter the devshell
 
-## Key Concepts
-
-### Master Keys
-
-Master keys are the **only** keys used for encrypting/decrypting secrets:
-
-```nix
-stackpanel.secrets.master-keys = {
-  # Auto-generated local key - always works
-  local = {
-    age-pub = "age1...";  # computed from private key
-    ref = "ref+file://.stackpanel/state/keys/local.txt";
-  };
-  
-  # Team dev key - stored in AWS SSM
-  dev = {
-    age-pub = "age1...";
-    ref = "ref+awsssm://stackpanel/keys/dev";
-  };
-  
-  # Production key
-  prod = {
-    age-pub = "age1...";
-    ref = "ref+awsssm://stackpanel/keys/prod";
-  };
-};
+```bash
+nix develop --impure
 ```
 
-### Variable Types
+Your local AGE key is auto-generated on first entry. No manual setup needed.
 
-Variables can be one of four types:
+### Step 2: Initialize a group
 
-| Type | Description | Value Field Contains | Resolved At |
-|------|-------------|---------------------|-------------|
-| `LITERAL` | Plain text value | The actual value | Eval time |
-| `SECRET` | Encrypted with master keys | Empty (value in .age file) | Runtime |
-| `VALS` | External secret store ref | `ref+awsssm://...` | Runtime |
-| `EXEC` | Shell command | Command to execute | Runtime |
-
-### Example Configuration
-
-```nix
-{
-  # Master keys
-  stackpanel.secrets.master-keys = {
-    local = { ... };  # auto-configured
-    dev = {
-      age-pub = "age1...";
-      ref = "ref+awsssm://stackpanel/keys/dev";
-    };
-  };
-
-  # Variables
-  stackpanel.variables = {
-    "/dev/postgres-url" = {
-      key = "POSTGRES_URL";
-      type = "LITERAL";
-      value = "postgresql://localhost:5432/dev";
-    };
-    
-    "/prod/api-key" = {
-      key = "API_KEY";
-      type = "SECRET";
-      master-keys = [ "prod" ];  # only prod key can decrypt
-    };
-    
-    "/shared/openai-key" = {
-      key = "OPENAI_API_KEY";
-      type = "SECRET";
-      master-keys = [ "dev" "prod" ];  # both can decrypt
-    };
-    
-    "/dev/git-commit" = {
-      key = "GIT_COMMIT";
-      type = "EXEC";
-      value = "git rev-parse --short HEAD";
-    };
-  };
-}
+```bash
+secrets:init-group dev
 ```
 
-## Available Commands
+This generates an AGE keypair for the `dev` group and prints the public key. If you have `gh` authenticated, it also uploads the private key as a GitHub Actions secret and generates a rekey workflow.
+
+### Step 3: Add the public key to config.nix
+
+Copy the printed public key into your config:
+
+```nix
+# .stackpanel/config.nix
+stackpanel.secrets.groups.dev.age-pub = "age18jex...";
+```
+
+### Step 4: Re-enter the devshell
+
+```bash
+exit
+nix develop --impure
+```
+
+The config change takes effect on re-entry.
+
+### Step 5: Store and retrieve secrets
+
+```bash
+secrets:set DATABASE_URL --group dev --value "postgresql://localhost:5432/mydb"
+secrets:get DATABASE_URL --group dev
+secrets:list
+```
+
+### Step 6: Commit
+
+```bash
+git add .stackpanel/secrets/ .github/workflows/
+git commit -m "Initialize dev group secrets"
+git push
+```
+
+That's it — secrets are working.
+
+## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `secrets:set <id> --keys k1,k2` | Set a secret (encrypt to master keys) |
-| `secrets:get <id>` | Get a decrypted secret |
-| `secrets:list` | List all encrypted secrets |
-| `secrets:rekey <id> --keys k1,k2` | Re-encrypt to different master keys |
-| `secrets:show-keys` | Show configured master keys |
-| `secrets:export --format env|json|yaml` | Export all secrets |
-| `secrets:env` | Load secrets into current shell |
+| `secrets:set KEY --group GROUP --value VALUE` | Set a secret in a group's SOPS-encrypted YAML |
+| `secrets:get KEY --group GROUP` | Decrypt and retrieve a secret from a group |
+| `secrets:list [GROUP]` | List all secrets (optionally filtered by group) |
+| `secrets:init-group <name>` | Generate group keypair, upload to GH, generate rekey workflow |
+| `secrets:show-keys` | Show configured master keys and groups |
+| `secrets:rekey <id> --keys k1,k2` | Re-encrypt a secret to different master keys |
 
-## How It Works
+### `secrets:init-group` flags
 
-### Encryption
+| Flag | Description |
+|------|-------------|
+| `--ssm-path <path>` | Custom AWS SSM path for the private key |
+| `--no-ssm` | Skip AWS SSM storage |
+| `--no-gh` | Skip GitHub Actions secret upload and workflow generation |
+| `--force-gh` | Overwrite existing GitHub Actions secret (use with care) |
+| `--dry-run` | Show what would happen without making changes |
+| `--yes` / `-y` | Skip confirmation prompts |
+| `--json` | Output results as JSON |
 
-When you run `secrets:set /prod/api-key --keys prod`:
+## Architecture
 
-1. Look up `master-keys.prod.age-pub`
-2. Encrypt the value: `age -r age1... -o .stackpanel/secrets/prod-api-key.age`
+### File layout
 
-For multiple keys: `age -r key1 -r key2 -o secret.age`
+```
+.stackpanel/
+  config.nix                              # Group public keys (single source of truth)
+  state/keys/
+    local.txt                             # Your local AGE private key (gitignored)
+    local.pub                             # Your local AGE public key (gitignored)
+  secrets/
+    keys/
+      recipients/                         # Committed pub keys (one per team member)
+        alice.pub
+        bob.pub
+      .sops.yaml                          # Auto-generated from recipients/*.pub
+      dev.enc.age                         # Group private key, SOPS-encrypted to all recipients
+    groups/
+      .sops.yaml                          # Auto-generated from config.nix (gitignored)
+      dev.yaml                            # SOPS-encrypted secrets for dev group
+      prod.yaml                           # SOPS-encrypted secrets for prod group
+```
 
-### Decryption
+### Encryption chain
 
-When decrypting at runtime:
+```
+config.nix  (group public key)
+    ↓ used by wrapped SOPS
+groups/dev.yaml  (SOPS-encrypted secrets)
+    ↓ decrypted by group private key
+keys/dev.enc.age  (group private key, SOPS-encrypted to all recipients)
+    ↓ decrypted by your local key
+.stackpanel/state/keys/local.txt  (your local AGE key)
+```
 
-1. Try each configured master key in order
-2. Resolve the key using vals: `vals eval "ref+awsssm://..."`
-3. Decrypt with the resolved private key
-4. Return the decrypted value
+### Wrapped SOPS
 
-### Local Development
+The devshell provides a wrapped `sops` binary that:
+- Reads group public keys from `config.nix` (baked in at Nix eval time)
+- Injects the correct `--age` recipient when encrypting group files
+- Sets `SOPS_AGE_KEY_CMD` for automatic private key resolution
 
-A `local` master key is auto-generated on first shell entry:
-- Private key: `.stackpanel/state/keys/local.txt`
-- Public key: `.stackpanel/state/keys/local.pub`
+This means `sops edit groups/dev.yaml` just works.
 
-This ensures secrets can always be created without external configuration.
+### Generated `.sops.yaml` files
+
+Two `.sops.yaml` files are auto-generated at shell entry:
+- `keys/.sops.yaml` — built from all `recipients/*.pub` files (for `.enc.age` encryption)
+- `groups/.sops.yaml` — built from `config.nix` group public keys (for group YAML encryption)
+
+Both are gitignored. The canonical key source is always `config.nix`.
+
+## Team Collaboration
+
+Team onboarding is **self-service** via git push + GitHub Actions.
+
+### New team member flow
+
+1. Clone the repo and enter the devshell — local key is auto-generated
+2. Public key is auto-registered to `recipients/<username>.pub`
+3. Commit and push the `.pub` file
+4. GitHub Actions rekey workflow triggers — re-encrypts all `.enc.age` files for all recipients
+5. Pull — the new member can now decrypt everything
+
+No manual intervention needed from existing team members.
+
+### Rekey workflow
+
+The generated `.github/workflows/secrets-rekey.yml`:
+- Triggers when `recipients/*.pub` files are pushed
+- Uses the group private key (from GitHub Actions secrets) to decrypt `.enc.age` files
+- Re-encrypts them for all current recipients
+- Commits and pushes
+
+### Safety
+
+`secrets:init-group` will **not** overwrite an existing GitHub Actions secret by default. This prevents breaking the rekey workflow by uploading a new key when `.enc.age` files are encrypted with the old one. Use `--force-gh` only for intentional key rotation.
+
+## Variable Types
+
+| Type | Value | Resolved At |
+|------|-------|-------------|
+| `LITERAL` | Plain text | Eval time |
+| `SECRET` | In SOPS-encrypted group YAML | Runtime (via vals) |
+| `VALS` | External store ref (`ref+awsssm://...`) | Runtime (via vals) |
+| `EXEC` | Shell command output | Runtime |
 
 ## External Secret Stores
 
-Master key private keys can be stored anywhere that vals supports:
+Group private keys can be stored in any vals-supported backend:
 
 ```nix
-# AWS SSM Parameter Store
-ref = "ref+awsssm://stackpanel/keys/prod";
-
-# HashiCorp Vault
-ref = "ref+vault://secret/data/stackpanel/prod#key";
-
-# GCP Secret Manager
-ref = "ref+gcpsecrets://project/stackpanel-prod";
-
-# Local file (default for local key)
-ref = "ref+file://.stackpanel/state/keys/local.txt";
-```
-
-For unsupported stores, use `resolve-cmd`:
-
-```nix
-prod = {
+stackpanel.secrets.master-keys.prod = {
   age-pub = "age1...";
-  ref = "";  # not used
-  resolve-cmd = "op read 'op://vault/stackpanel/age-key'";
+  ref = "ref+awsssm://stackpanel/keys/prod";     # AWS SSM
+  # ref = "ref+vault://secret/data/prod#key";     # HashiCorp Vault
+  # resolve-cmd = "op read 'op://vault/key'";     # 1Password CLI
 };
 ```
-
-## Migration from Per-User Keys
-
-If you previously used per-user keys:
-
-1. Add master keys to your config
-2. Re-encrypt secrets: `secrets:rekey /my-secret --keys dev,prod`
-3. Remove old user key references
-
-The user model no longer includes public keys - users are just team member metadata.

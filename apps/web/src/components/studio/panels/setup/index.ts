@@ -7,12 +7,13 @@ export { StepCard } from "./step-card";
 // Steps (for individual use or custom composition)
 export {
 	ConnectAgentStep,
-	DecryptionKeyStep,
-	GenerateSopsStep,
+	InitGroupsStep,
 	InfrastructureStep,
 	KmsConfigStep,
 	ProjectInfoStep,
-	TeamKeysStep,
+	SecretsBackendStep,
+	TeamAccessStep,
+	VerifyConfigStep,
 } from "./steps";
 // Types
 export type {
