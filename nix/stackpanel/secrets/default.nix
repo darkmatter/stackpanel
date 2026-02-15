@@ -8,6 +8,7 @@
 # - Each secret (variable with type=SECRET) specifies which master keys can decrypt it
 # - A default "local" key is auto-generated, ensuring secrets always work
 # - Groups provide access control via externally-stored AGE keypairs
+# - Team collaboration via recipients directory + GitHub Actions rekey workflow
 #
 # Usage:
 #   stackpanel.secrets.master-keys = {
@@ -25,6 +26,31 @@
 #     key = "API_KEY";
 #     master-keys = [ "prod" ];
 #   };
+#
+# Team Onboarding:
+#   On first shell entry, each developer's AGE public key is auto-registered in
+#   .stackpanel/secrets/keys/recipients/<username>.pub (committed to git).
+#   The keys/.sops.yaml is rebuilt from ALL recipients/*.pub files.
+#
+#   secrets:init-group uploads the group private key to GitHub as a secret and
+#   generates a GitHub Actions workflow (.github/workflows/secrets-rekey.yml)
+#   that triggers on pushes to recipients/*.pub. The workflow re-encrypts all
+#   .enc.age files for all current recipients, enabling self-service onboarding.
+#
+#   Flags for secrets:init-group:
+#     --no-gh          Skip GitHub integration entirely
+#     --force-gh       Overwrite existing GitHub secret (use with care)
+#     --no-ssm         Skip SSM storage
+#     --dry-run        Preview without making changes
+#     --json           Output structured JSON
+#
+# Key Integrity:
+#   config.nix is the single source of truth for group public keys.
+#   groups/.sops.yaml is GENERATED at shell entry from config.nix (gitignored).
+#   A wrapped SOPS binary (named "sops") resolves the correct group public key
+#   from Nix config at build time and injects --age per invocation, plus sets
+#   SOPS_AGE_KEY_CMD for private key resolution. This eliminates key drift
+#   between config files.
 # ==============================================================================
 {
   pkgs,
@@ -133,27 +159,43 @@ let
   # Packages
   # ═══════════════════════════════════════════════════════════════════════════
 
+  # Wrapped SOPS that resolves group→pubkey from Nix config and passes --age
+  # per invocation. Also sets SOPS_AGE_KEY_CMD for private key resolution.
+  # This ensures encryption always uses the canonical key from config.nix.
+  sops-wrapped = pkgs.writeShellApplication {
+    name = "sops";
+    runtimeInputs = [
+      pkgs.jq
+    ];
+    text = secretsLib.sopsWrappedScript {
+      inherit groupsConfig;
+      sopsAgeKeysPath = "${sops-age-keys}/bin/sops-age-keys";
+    };
+  };
+
   secrets-set = pkgs.writeShellApplication {
     name = "secrets-set";
     runtimeInputs = [
-      pkgs.age
-      pkgs.jq
+      sops-wrapped
     ];
-    text = secretsLib.setSecretScript { inherit masterKeysConfig; };
+    text = secretsLib.setSecretScript;
   };
 
   secrets-get = pkgs.writeShellApplication {
     name = "secrets-get";
     runtimeInputs = [
-      pkgs.age
-      pkgs.jq
-      pkgs.vals
+      sops-wrapped
+      pkgs.yq-go
     ];
-    text = secretsLib.getSecretScript { inherit masterKeysConfig; };
+    text = secretsLib.getSecretScript;
   };
 
   secrets-list = pkgs.writeShellApplication {
     name = "secrets-list";
+    runtimeInputs = [
+      sops-wrapped
+      pkgs.yq-go
+    ];
     text = secretsLib.listSecretsScript;
   };
 
@@ -173,6 +215,8 @@ let
       pkgs.age
       pkgs.jq
       pkgs.sops
+      pkgs.gh
+      pkgs.gawk
     ];
     # NOTE: awscli2 is not a hard dependency - SSM storage is optional.
     # If aws CLI is in PATH, it will be used. Otherwise SSM is skipped.
@@ -196,7 +240,7 @@ in
       pkgs.age
       pkgs.vals
       pkgs.jq
-      pkgs.sops
+      sops-wrapped # wrapped sops that resolves keys from Nix config
       sops-age-keys
       secrets-init-group
       secrets-set
@@ -214,11 +258,16 @@ in
       CHAMBER_KMS_KEY_ALIAS = "alias/${config.stackpanel.name or "my-project"}-secrets";
     };
 
-    # Auto-generate local master key on shell entry
+    # Auto-generate local master key and SOPS configs on shell entry
     stackpanel.devshell.hooks.before = [
       ''
         (
         ${secretsLib.autoGenerateLocalKeyScript}
+        )
+      ''
+      ''
+        (
+        ${secretsLib.generateGroupsSopsConfigScript { inherit groupsConfig; }}
         )
       ''
     ];
@@ -230,17 +279,17 @@ in
     stackpanel.scripts = {
       "secrets:set" = {
         exec = "${secrets-set}/bin/secrets-set \"$@\"";
-        description = "Set a secret value (encrypt to master keys)";
+        description = "Set a secret value in a SOPS group file";
         args = [
           {
-            name = "variable-id";
-            description = "Secret identifier (e.g., /prod/api-key)";
+            name = "key";
+            description = "Secret key name (e.g., API_KEY, DATABASE_URL)";
             required = true;
           }
           {
-            name = "--keys";
-            description = "Comma-separated list of master key names";
-            default = "local";
+            name = "--group";
+            description = "Target group (dev, prod, staging, etc.)";
+            default = "dev";
           }
           {
             name = "--value";
@@ -251,19 +300,30 @@ in
 
       "secrets:get" = {
         exec = "${secrets-get}/bin/secrets-get \"$@\"";
-        description = "Get a decrypted secret value";
+        description = "Get a decrypted secret value from a SOPS group file";
         args = [
           {
-            name = "variable-id";
-            description = "Secret identifier (e.g., /prod/api-key)";
+            name = "key";
+            description = "Secret key name (e.g., API_KEY, DATABASE_URL)";
             required = true;
+          }
+          {
+            name = "--group";
+            description = "Source group (dev, prod, staging, etc.)";
+            default = "dev";
           }
         ];
       };
 
       "secrets:list" = {
-        exec = "${secrets-list}/bin/secrets-list";
-        description = "List all encrypted secrets";
+        exec = "${secrets-list}/bin/secrets-list \"$@\"";
+        description = "List all secrets across SOPS group files";
+        args = [
+          {
+            name = "group";
+            description = "Optional: filter to a specific group";
+          }
+        ];
       };
 
       "secrets:rekey" = {
