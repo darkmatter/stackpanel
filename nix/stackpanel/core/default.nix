@@ -42,8 +42,14 @@ in
 
     # Core gitignore entries — other modules contribute via
     # stackpanel.files.entries.".gitignore".lines = [ "entry" ];
+    #
+    # Uses managed = "block" so that user-written gitignore content is
+    # preserved. Stackpanel only owns the marker-delimited block within
+    # the file; everything outside it is untouched. On module uninstall,
+    # only the managed block is removed (the file itself is kept).
     stackpanel.files.entries.".gitignore" = {
       type = "line-set";
+      managed = "block";
       dedupe = true;
       sort = true;
       lines = [

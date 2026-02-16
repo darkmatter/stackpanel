@@ -71,8 +71,6 @@ temp
 /.mcp.json.bak
 /.vscode/mcp.json
 /.vscode/mcp.json.bak
-/.zed/settings.json
-/.zed/settings.json.bak
 /AGENTS.md
 /AGENTS.md.bak
 /CLAUDE.md
@@ -103,7 +101,36 @@ devenv.local.yaml
 
 # Stackpanel generated files (cache)
 .stackpanel/state/
-.stackpanel/bin/
-.sst
-.tmp
-.envrc.local
+
+# ── BEGIN stackpanel ──
+# DO NOT EDIT between these markers — managed by stackpanel
+*.log
+*.swo
+*.swp
+*.tgz
+*.tsbuildinfo
+*~
+.DS_Store
+.cache
+.devenv
+.devenv.flake.nix
+.direnv
+.env
+.env*.local
+.idea
+.stackpanel/.token
+.stackpanel/bin
+.stackpanel/config.local.nix
+.stackpanel/state/
+/.devenv*
+/.devenv-root
+/.stackpanel/state
+/result
+build
+devenv.local.nix
+devenv.local.yaml
+dist
+logs
+node_modules
+temp
+tmp# ── END stackpanel ──
