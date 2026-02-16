@@ -35,17 +35,17 @@ import { isSopsReference, isValsReference } from "../utils";
 // ---------------------------------------------------------------------------
 
 /**
- * Build a vals reference for a variable ID.
- * E.g., "/dev/DATABASE_URL" → "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+ * Build a vals reference from a variable ID.
+ * E.g., "/dev/DATABASE_URL" → "ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL"
  */
 function buildValsReference(variableId: string): string {
   const parts = variableId.split("/").filter(Boolean);
   if (parts.length >= 2) {
-    const env = parts[0];
+    const group = parts[0];
     const name = parts.slice(1).join("/");
-    return `ref+sops://.stackpanel/secrets/${env}.yaml#/${name}`;
+    return `ref+sops://.stackpanel/secrets/groups/${group}.yaml#/${name}`;
   }
-  return `ref+sops://.stackpanel/secrets/dev.yaml#${variableId}`;
+  return `ref+sops://.stackpanel/secrets/groups/dev.yaml#${variableId}`;
 }
 
 /**
