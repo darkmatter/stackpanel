@@ -621,4 +621,41 @@
       value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/ALCHEMY_STATE_TOKEN";
     };
   };
+  files.entries.".gitignore" = {
+    type = "line-set";
+    dedupe = true;
+    sort = true;
+    managed = "block";
+    lines = [
+      "node_modules"
+      ".stackpanel/bin"
+      "dist"
+      "build"
+      "*.tsbuildinfo"
+      ".stackpanel/.token"
+      ".env"
+      ".env*.local"
+      ".idea"
+      "*.swp"
+      "*.swo"
+      "*~"
+      ".DS_Store"
+      "logs"
+      "*.log"
+      "*.tgz"
+      ".cache"
+      "tmp"
+      "temp"
+      ".devenv"
+      ".devenv.flake.nix"
+      "devenv.local.nix"
+      "devenv.local.yaml"
+      ".direnv"
+      "/.stackpanel/state"
+      "/.devenv*"
+      "/.devenv-root"
+      "/result"
+      ".stackpanel/state/"
+    ];
+  };
 }

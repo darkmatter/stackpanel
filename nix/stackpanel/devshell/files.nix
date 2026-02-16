@@ -43,6 +43,28 @@
 #       scripts.dev = "bun dev";
 #     };
 #   };
+#
+# Usage (block-managed - preserves user content):
+#   stackpanel.files.entries.".gitignore" = {
+#     type = "line-set";
+#     managed = "block";    # only manage a marker-delimited block
+#     dedupe = true;
+#     sort = true;
+#     lines = [ "node_modules" ".env" ];
+#   };
+#
+#   This produces a file like:
+#     # ... user-written content above ...
+#
+#     # ── BEGIN stackpanel ──
+#     # DO NOT EDIT between these markers — managed by stackpanel
+#     .env
+#     node_modules
+#     # ── END stackpanel ──
+#
+#   User content outside the markers is never touched. On uninstall,
+#   only the managed block is removed (the file is kept if non-empty).
+#
 # ==============================================================================
 {
   config,
@@ -159,6 +181,9 @@ let
     {
       inherit path;
       type = fileType;
+      managed = fileConfig.managed or "full";
+      blockLabel = fileConfig.blockLabel or "stackpanel";
+      commentPrefix = fileConfig.commentPrefix or "#";
       mode = fileConfig.mode or null;
       source = fileConfig.source or null;
       description = fileConfig.description or null;
@@ -202,8 +227,12 @@ let
     let
       mode = fileConfig.mode;
       fileType = fileConfig.type;
+      managed = fileConfig.managed;
       storePath = storePathsByFile.${path};
       symlinkTarget = fileConfig.target or null;
+      beginMarker = "${fileConfig.commentPrefix} ── BEGIN ${fileConfig.blockLabel} ──";
+      endMarker = "${fileConfig.commentPrefix} ── END ${fileConfig.blockLabel} ──";
+      noEditNotice = "${fileConfig.commentPrefix} DO NOT EDIT between these markers — managed by stackpanel";
     in
     if fileType == "symlink" then
       # Symlinks are always recreated (cheap operation, no hash check needed)
@@ -222,8 +251,67 @@ let
           echo "  write ${path} -> ${symlinkTarget}"
         fi
       ''
+    else if managed == "block" then
+      # Block mode: only manage a marker-delimited section within the file.
+      # User content outside the markers is preserved.
+      ''
+        # ${path} (${fileType}, block-managed)
+        _src=${storePath}
+        _dst=${q path}
+        _begin_marker=${q beginMarker}
+        _end_marker=${q endMarker}
+        _no_edit=${q noEditNotice}
+
+        # Build the full managed block (markers + content)
+        _block_content="$(printf '%s\n%s\n%s%s' "$_begin_marker" "$_no_edit" "$(cat "$_src")" "$_end_marker")"
+
+        mkdir -p "$(dirname "$_dst")"
+
+        if [[ ! -f "$_dst" ]]; then
+          # File doesn't exist — create with just the managed block
+          printf '%s\n' "$_block_content" > "$_dst"
+          ${lib.optionalString (mode != null) ''chmod ${q mode} "$_dst"''}
+          WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
+          echo "  write ${path} (block, new file)"
+        elif ! grep -qF "$_begin_marker" "$_dst"; then
+          # File exists but no managed block — append
+          # Add a blank line separator if file doesn't end with one
+          if [[ -s "$_dst" ]] && [[ "$(tail -c1 "$_dst")" != "" ]]; then
+            printf '\n' >> "$_dst"
+          fi
+          printf '\n%s\n' "$_block_content" >> "$_dst"
+          ${lib.optionalString (mode != null) ''chmod ${q mode} "$_dst"''}
+          WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
+          echo "  write ${path} (block, appended)"
+        else
+          # File exists with managed block — extract current block and compare
+          _current_block=$(${pkgs.gawk}/bin/awk -v begin="$_begin_marker" -v end="$_end_marker" '
+            $0 == begin { found=1 }
+            found { block = block $0 "\n" }
+            $0 == end { found=0 }
+            END { printf "%s", block }
+          ' "$_dst")
+
+          if [[ "$FORCE" == "0" ]] && [[ "$_current_block" == "$_block_content"$'\n' ]]; then
+            UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
+            if [[ "''${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
+              echo "  skip ${path} (block unchanged)"
+            fi
+          else
+            # Replace block between markers (inclusive) using awk
+            ${pkgs.gawk}/bin/awk -v begin="$_begin_marker" -v end="$_end_marker" -v replacement="$_block_content" '
+              $0 == begin { skip=1; if (!printed) { print replacement; printed=1 }; next }
+              skip && $0 == end { skip=0; next }
+              !skip { print }
+            ' "$_dst" > "$_dst.sp-tmp" && mv "$_dst.sp-tmp" "$_dst"
+            ${lib.optionalString (mode != null) ''chmod ${q mode} "$_dst"''}
+            WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
+            echo "  write ${path} (block, updated)"
+          fi
+        fi
+      ''
     else
-      # For text, json, derivation: hash-check before writing
+      # Full mode (default): hash-check before writing entire file
       ''
         # ${path} (${fileType})
         _src=${storePath}
@@ -251,6 +339,7 @@ let
     runtimeInputs = [
       pkgs.coreutils
       pkgs.jq
+      pkgs.gawk
     ];
     text = ''
       set -euo pipefail
@@ -299,31 +388,59 @@ let
       if [[ -f "$OLD_MANIFEST" ]]; then
         CURRENT_PATHS='${currentPathsJson}'
 
-        # Extract old paths from the manifest
-        OLD_PATHS=$(jq -r '.files[].path' "$OLD_MANIFEST" 2>/dev/null) || OLD_PATHS=""
+        # Extract old file entries from the manifest (path + managed mode + markers)
+        OLD_ENTRIES=$(jq -r '.files[] | "\(.path)\t\(.managed // "full")\t\(.commentPrefix // "#")\t\(.blockLabel // "stackpanel")"' "$OLD_MANIFEST" 2>/dev/null) || OLD_ENTRIES=""
 
-        for old_path in $OLD_PATHS; do
+        while IFS=$'\t' read -r old_path old_managed old_comment_prefix old_block_label; do
+          [[ -z "$old_path" ]] && continue
           # Check if this path is still in the current file set
           if ! echo "$CURRENT_PATHS" | jq -e --arg p "$old_path" 'index($p) != null' >/dev/null 2>&1; then
-            # This file is stale — remove it
-            if [[ -e "$old_path" || -L "$old_path" ]]; then
-              rm -f "$old_path" 2>/dev/null || true
-              echo "  remove $old_path (stale)"
-              REMOVED_COUNT=$((REMOVED_COUNT + 1))
-
-              # Clean up empty parent directories (up to repo root)
-              dir=$(dirname "$old_path")
-              while [[ "$dir" != "." && "$dir" != "/" ]]; do
-                if [[ -d "$dir" ]] && [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]; then
-                  rmdir "$dir" 2>/dev/null || true
-                else
-                  break
+            # This file is stale
+            if [[ "$old_managed" == "block" ]]; then
+              # Block-managed: strip the managed block instead of deleting
+              if [[ -f "$old_path" ]]; then
+                _begin="$old_comment_prefix ── BEGIN $old_block_label ──"
+                _end="$old_comment_prefix ── END $old_block_label ──"
+                if grep -qF "$_begin" "$old_path"; then
+                  # Remove the block (and any single blank line immediately before it)
+                  ${pkgs.gawk}/bin/awk -v begin="$_begin" -v end="$_end" '
+                    $0 == begin { skip=1; if (prev_blank) { prev_blank=0 }; next }
+                    skip && $0 == end { skip=0; next }
+                    skip { next }
+                    /^[[:space:]]*$/ { prev_blank=1; prev_line=$0; next }
+                    { if (prev_blank) { print prev_line; prev_blank=0 }; print }
+                    END { if (prev_blank) print prev_line }
+                  ' "$old_path" > "$old_path.sp-tmp" && mv "$old_path.sp-tmp" "$old_path"
+                  echo "  remove $old_path (stale block stripped)"
+                  REMOVED_COUNT=$((REMOVED_COUNT + 1))
+                  # If the file is now empty (or only whitespace), remove it
+                  if [[ ! -s "$old_path" ]] || ! grep -q '[^[:space:]]' "$old_path"; then
+                    rm -f "$old_path"
+                    echo "  remove $old_path (empty after block removal)"
+                  fi
                 fi
-                dir=$(dirname "$dir")
-              done
+              fi
+            else
+              # Full-managed: delete the entire file
+              if [[ -e "$old_path" || -L "$old_path" ]]; then
+                rm -f "$old_path" 2>/dev/null || true
+                echo "  remove $old_path (stale)"
+                REMOVED_COUNT=$((REMOVED_COUNT + 1))
+
+                # Clean up empty parent directories (up to repo root)
+                dir=$(dirname "$old_path")
+                while [[ "$dir" != "." && "$dir" != "/" ]]; do
+                  if [[ -d "$dir" ]] && [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]; then
+                    rmdir "$dir" 2>/dev/null || true
+                  else
+                    break
+                  fi
+                  dir=$(dirname "$dir")
+                done
+              fi
             fi
           fi
-        done
+        done <<< "$OLD_ENTRIES"
       fi
 
       # ── Write current files (with hash check) ───────────────────────────
@@ -369,7 +486,11 @@ let
       # Only check files that have a store path (skip symlinks)
       checkableFiles = lib.filterAttrs (_: v: v != null) storePathsByFile;
 
-      checkSnippets = lib.mapAttrsToList (path: storePath: ''
+      # Full-managed files: compare entire file hash
+      fullManagedFiles = lib.filterAttrs (
+        path: _: (enabledFiles.${path}.managed or "full") == "full"
+      ) checkableFiles;
+      fullCheckSnippets = lib.mapAttrsToList (path: storePath: ''
         _dst="$ROOT/${path}"
         if [[ ! -f "$_dst" ]]; then
           echo "DRIFT: ${path} is missing (expected from store)"
@@ -382,7 +503,44 @@ let
             DRIFT=1
           fi
         fi
-      '') checkableFiles;
+      '') fullManagedFiles;
+
+      # Block-managed files: extract the block and compare against expected content
+      blockManagedFiles = lib.filterAttrs (
+        path: _: (enabledFiles.${path}.managed or "full") == "block"
+      ) checkableFiles;
+      blockCheckSnippets = lib.mapAttrsToList (
+        path: storePath:
+        let
+          fc = enabledFiles.${path};
+          beginMarker = "${fc.commentPrefix} ── BEGIN ${fc.blockLabel} ──";
+          endMarker = "${fc.commentPrefix} ── END ${fc.blockLabel} ──";
+          noEditNotice = "${fc.commentPrefix} DO NOT EDIT between these markers — managed by stackpanel";
+        in
+        ''
+          _dst="$ROOT/${path}"
+          if [[ ! -f "$_dst" ]]; then
+            echo "DRIFT: ${path} is missing (expected block-managed file)"
+            DRIFT=1
+          elif ! grep -qF ${q beginMarker} "$_dst"; then
+            echo "DRIFT: ${path} is missing managed block (expected ${q beginMarker})"
+            DRIFT=1
+          else
+            # Extract the content between markers (excluding markers and notice line)
+            _block_content=$(${pkgs.gawk}/bin/awk -v begin=${q beginMarker} -v end=${q endMarker} -v notice=${q noEditNotice} '
+              $0 == begin { found=1; next }
+              found && $0 == notice { next }
+              found && $0 == end { found=0; next }
+              found { print }
+            ' "$_dst")
+            _expected=$(cat ${storePath})
+            if [[ "$_block_content" != "$_expected" ]]; then
+              echo "DRIFT: ${path} managed block does not match expected content"
+              DRIFT=1
+            fi
+          fi
+        ''
+      ) blockManagedFiles;
 
       # Also check symlinks
       symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") enabledFiles;
@@ -401,6 +559,7 @@ let
       name = "check-files-drift";
       runtimeInputs = [
         pkgs.coreutils
+        pkgs.gawk
       ];
       text = ''
         set -euo pipefail
@@ -415,7 +574,8 @@ let
         cd "$ROOT"
         DRIFT=0
 
-        ${lib.concatLines checkSnippets}
+        ${lib.concatLines fullCheckSnippets}
+        ${lib.concatLines blockCheckSnippets}
         ${lib.concatLines symlinkSnippets}
 
         if [[ "$DRIFT" == "1" ]]; then
@@ -532,6 +692,43 @@ in
                 type = lib.types.nullOr lib.types.str;
                 default = null;
                 description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
+              };
+
+              managed = lib.mkOption {
+                type = lib.types.enum [
+                  "full"
+                  "block"
+                ];
+                default = "full";
+                description = ''
+                  How the file is managed:
+                  - 'full': the entire file is owned by stackpanel (default). The file is
+                    overwritten on write and deleted when stale.
+                  - 'block': only a marker-delimited block within the file is managed.
+                    Content outside the block is preserved. On uninstall, only the block
+                    is removed (the file itself is kept unless empty). This is useful for
+                    files like .gitignore where user content must coexist with managed content.
+                '';
+              };
+
+              blockLabel = lib.mkOption {
+                type = lib.types.str;
+                default = "stackpanel";
+                description = ''
+                  Label used in the BEGIN/END markers for block-managed files.
+                  The markers will be: "# ── BEGIN <label> ──" / "# ── END <label> ──"
+                  Only used when managed = "block".
+                '';
+              };
+
+              commentPrefix = lib.mkOption {
+                type = lib.types.str;
+                default = "#";
+                description = ''
+                  Comment prefix for block markers. Defaults to "#" which works for
+                  gitignore, shell scripts, YAML, TOML, etc. Set to "//" for JSON-like,
+                  or ";" for INI files, etc. Only used when managed = "block".
+                '';
               };
 
               mode = lib.mkOption {
