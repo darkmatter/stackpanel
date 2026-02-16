@@ -4,6 +4,11 @@
  * React hook for fetching and managing module healthcheck data.
  * Provides loading states, error handling, and refresh capabilities.
  *
+ * Supports incremental streaming: when checks are run via POST, the backend
+ * broadcasts individual `healthcheck.result` SSE events as each check
+ * completes, so the UI can update one-by-one instead of waiting for all
+ * checks to finish.
+ *
  * Usage:
  *   const { data, isLoading, error, refetch, runChecks } = useHealthchecks();
  *   const { data: moduleHealth } = useModuleHealth('go');
@@ -56,10 +61,226 @@ interface UseHealthchecksResult {
   dataUpdatedAt: number | null;
   /** Whether a refresh is in progress */
   isRefreshing: boolean;
+  /** Set of check IDs currently being evaluated */
+  runningCheckIds: Set<string>;
   /** Refetch health data (uses cache) */
   refetch: () => Promise<void>;
   /** Run healthchecks (forces fresh evaluation) */
   runChecks: (module?: string, checkId?: string) => Promise<void>;
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Merge a single HealthcheckResult into an existing HealthSummary, returning
+ * a new object (immutable update). Updates the matching check inside its
+ * module, recomputes healthy counts, and recomputes module/overall status.
+ */
+function mergeSingleResult(
+  prev: HealthSummary,
+  result: HealthcheckResult,
+): HealthSummary {
+  const moduleName = result.check?.module;
+  if (!moduleName) return prev;
+
+  const existingModule = prev.modules[moduleName];
+  if (!existingModule) return prev;
+
+  // Replace (or append) the check result in the module
+  let found = false;
+  const updatedChecks = existingModule.checks.map((c) => {
+    if (c.checkId === result.checkId) {
+      found = true;
+      return result;
+    }
+    return c;
+  });
+  if (!found) {
+    updatedChecks.push(result);
+  }
+
+  // Recompute module-level aggregates
+  let healthyCount = 0;
+  let moduleStatus: HealthSummary["overallStatus"] = "HEALTH_STATUS_HEALTHY";
+  for (const cr of updatedChecks) {
+    if (cr.status === "HEALTH_STATUS_HEALTHY") {
+      healthyCount++;
+    } else {
+      const severity = cr.check?.severity;
+      if (severity === "HEALTHCHECK_SEVERITY_CRITICAL") {
+        moduleStatus = "HEALTH_STATUS_UNHEALTHY";
+      } else if (
+        severity === "HEALTHCHECK_SEVERITY_WARNING" &&
+        moduleStatus !== "HEALTH_STATUS_UNHEALTHY"
+      ) {
+        moduleStatus = "HEALTH_STATUS_DEGRADED";
+      }
+    }
+  }
+
+  const updatedModule: ModuleHealth = {
+    ...existingModule,
+    checks: updatedChecks,
+    healthyCount,
+    totalCount: updatedChecks.length,
+    status: moduleStatus,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  const updatedModules = { ...prev.modules, [moduleName]: updatedModule };
+
+  // Recompute overall aggregates
+  let overallStatus: HealthSummary["overallStatus"] = "HEALTH_STATUS_HEALTHY";
+  let totalHealthy = 0;
+  let totalChecks = 0;
+  for (const mod of Object.values(updatedModules)) {
+    totalHealthy += mod.healthyCount;
+    totalChecks += mod.totalCount;
+    if (mod.status === "HEALTH_STATUS_UNHEALTHY") {
+      overallStatus = "HEALTH_STATUS_UNHEALTHY";
+    } else if (
+      mod.status === "HEALTH_STATUS_DEGRADED" &&
+      overallStatus !== "HEALTH_STATUS_UNHEALTHY"
+    ) {
+      overallStatus = "HEALTH_STATUS_DEGRADED";
+    }
+  }
+
+  return {
+    ...prev,
+    modules: updatedModules,
+    overallStatus,
+    totalHealthy,
+    totalChecks,
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
+/**
+ * Merge a partial HealthSummary (e.g. from running a single check or module)
+ * into a full existing HealthSummary. For each module in the partial summary,
+ * merge its checks into the existing module (updating matching checks,
+ * appending new ones), then recompute aggregates.
+ */
+function mergePartialSummary(
+  prev: HealthSummary,
+  partial: HealthSummary,
+): HealthSummary {
+  const updatedModules = { ...prev.modules };
+
+  for (const [moduleName, partialModule] of Object.entries(
+    partial.modules ?? {},
+  )) {
+    const existingModule = updatedModules[moduleName];
+    if (!existingModule) {
+      // New module we haven't seen before — just add it
+      updatedModules[moduleName] = partialModule;
+      continue;
+    }
+
+    // Merge checks: update existing ones, append new ones
+    let updatedChecks = [...existingModule.checks];
+    for (const partialCheck of partialModule.checks) {
+      const idx = updatedChecks.findIndex(
+        (c) => c.checkId === partialCheck.checkId,
+      );
+      if (idx >= 0) {
+        updatedChecks[idx] = partialCheck;
+      } else {
+        updatedChecks.push(partialCheck);
+      }
+    }
+
+    // Recompute module-level aggregates
+    let healthyCount = 0;
+    let moduleStatus: HealthSummary["overallStatus"] = "HEALTH_STATUS_HEALTHY";
+    for (const cr of updatedChecks) {
+      if (cr.status === "HEALTH_STATUS_HEALTHY") {
+        healthyCount++;
+      } else {
+        const severity = cr.check?.severity;
+        if (severity === "HEALTHCHECK_SEVERITY_CRITICAL") {
+          moduleStatus = "HEALTH_STATUS_UNHEALTHY";
+        } else if (
+          severity === "HEALTHCHECK_SEVERITY_WARNING" &&
+          moduleStatus !== "HEALTH_STATUS_UNHEALTHY"
+        ) {
+          moduleStatus = "HEALTH_STATUS_DEGRADED";
+        }
+      }
+    }
+
+    updatedModules[moduleName] = {
+      ...existingModule,
+      checks: updatedChecks,
+      healthyCount,
+      totalCount: updatedChecks.length,
+      status: moduleStatus,
+      lastUpdated: partialModule.lastUpdated ?? new Date().toISOString(),
+    };
+  }
+
+  // Recompute overall aggregates
+  let overallStatus: HealthSummary["overallStatus"] = "HEALTH_STATUS_HEALTHY";
+  let totalHealthy = 0;
+  let totalChecks = 0;
+  for (const mod of Object.values(updatedModules)) {
+    totalHealthy += mod.healthyCount;
+    totalChecks += mod.totalCount;
+    if (mod.status === "HEALTH_STATUS_UNHEALTHY") {
+      overallStatus = "HEALTH_STATUS_UNHEALTHY";
+    } else if (
+      mod.status === "HEALTH_STATUS_DEGRADED" &&
+      overallStatus !== "HEALTH_STATUS_UNHEALTHY"
+    ) {
+      overallStatus = "HEALTH_STATUS_DEGRADED";
+    }
+  }
+
+  return {
+    ...prev,
+    modules: updatedModules,
+    overallStatus,
+    totalHealthy,
+    totalChecks,
+    lastUpdated: partial.lastUpdated ?? new Date().toISOString(),
+  };
+}
+
+/**
+ * Mark a set of check IDs as "running" (UNKNOWN status) in the existing
+ * summary so the UI can show spinners immediately.
+ */
+function markChecksRunning(
+  prev: HealthSummary,
+  checkIds: Set<string>,
+): HealthSummary {
+  const updatedModules = { ...prev.modules };
+
+  for (const [moduleName, mod] of Object.entries(updatedModules)) {
+    const updatedChecks = mod.checks.map((c) => {
+      if (checkIds.has(c.checkId)) {
+        return {
+          ...c,
+          status: "HEALTH_STATUS_UNKNOWN" as const,
+          durationMs: 0,
+          message: undefined,
+          error: undefined,
+          output: undefined,
+        };
+      }
+      return c;
+    });
+
+    // Only create new object if something changed
+    if (updatedChecks !== mod.checks) {
+      updatedModules[moduleName] = { ...mod, checks: updatedChecks };
+    }
+  }
+
+  return { ...prev, modules: updatedModules };
 }
 
 // =============================================================================
@@ -89,6 +310,9 @@ export function useHealthchecks(
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [runningCheckIds, setRunningCheckIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Fetch health data
   const fetchHealth = useCallback(async () => {
@@ -143,7 +367,9 @@ export function useHealthchecks(
     }
   }, [client, module, cached]);
 
-  // Run healthchecks (POST - forces fresh evaluation)
+  // Run healthchecks (POST - forces fresh evaluation).
+  // The actual result updates come incrementally through SSE events.
+  // The POST response is used as the final authoritative state.
   const runChecks = useCallback(
     async (targetModule?: string, checkId?: string) => {
       setIsRefreshing(true);
@@ -168,14 +394,24 @@ export function useHealthchecks(
           throw new Error(response.error ?? "Failed to run healthchecks");
         }
 
-        setState({
-          data: response.data,
-          error: null,
-          status: "success",
-          isLoading: false,
-          isError: false,
-          isSuccess: true,
-          dataUpdatedAt: Date.now(),
+        // When a specific module or check was targeted, the server returns a
+        // partial summary containing only the checks that were run.  Merge that
+        // into the existing full summary so other checks are preserved.
+        const isPartial = !!(targetModule || module || checkId);
+        setState((prev) => {
+          const merged =
+            isPartial && prev.data
+              ? mergePartialSummary(prev.data, response.data)
+              : response.data;
+          return {
+            data: merged,
+            error: null,
+            status: "success",
+            isLoading: false,
+            isError: false,
+            isSuccess: true,
+            dataUpdatedAt: Date.now(),
+          };
         });
       } catch (err) {
         const errorMessage =
@@ -190,6 +426,7 @@ export function useHealthchecks(
         }));
       } finally {
         setIsRefreshing(false);
+        setRunningCheckIds(new Set());
       }
     },
     [client, module],
@@ -202,10 +439,82 @@ export function useHealthchecks(
     }
   }, [enabled, fetchHealth]);
 
-  // Subscribe to healthchecks.updated events for auto-refetch
-  useAgentSSEEvent("healthchecks.updated", () => {
-    if (autoRefetch) {
-      fetchHealth();
+  // ---- SSE: healthchecks.running ----
+  // Fired when the server starts evaluating checks. Mark them as "running"
+  // in the UI immediately so we can show spinners.
+  useAgentSSEEvent<{ checkIds: string[]; module: string }>(
+    "healthchecks.running",
+    (data) => {
+      const ids = new Set(data.checkIds ?? []);
+      setRunningCheckIds(ids);
+
+      setState((prev) => {
+        if (!prev.data) return prev;
+        return {
+          ...prev,
+          data: markChecksRunning(prev.data, ids),
+        };
+      });
+    },
+  );
+
+  // ---- SSE: healthcheck.result ----
+  // Fired for each individual check as it completes. Merge the result into
+  // the existing summary so it appears immediately in the UI.
+  useAgentSSEEvent<HealthcheckResult>("healthcheck.result", (result) => {
+    if (!result?.checkId) return;
+
+    // Remove from running set
+    setRunningCheckIds((prev) => {
+      if (!prev.has(result.checkId)) return prev;
+      const next = new Set(prev);
+      next.delete(result.checkId);
+      return next;
+    });
+
+    // Merge into summary
+    setState((prev) => {
+      if (!prev.data) return prev;
+      return {
+        ...prev,
+        data: mergeSingleResult(prev.data, result),
+        status: "success",
+        isSuccess: true,
+        dataUpdatedAt: Date.now(),
+      };
+    });
+  });
+
+  // ---- SSE: healthchecks.updated ----
+  // Final authoritative summary from the server once all checks are done.
+  // If the incoming summary is partial (fewer modules than we currently have),
+  // merge it into the existing state instead of replacing everything.
+  useAgentSSEEvent<HealthSummary>("healthchecks.updated", (data) => {
+    if (autoRefetch && data?.modules) {
+      setState((prev) => {
+        // Detect partial summary: if we already have data and the incoming
+        // summary has fewer modules, it's a partial result from running a
+        // subset of checks.
+        const isPartial =
+          prev.data &&
+          Object.keys(data.modules).length <
+            Object.keys(prev.data.modules).length;
+        const merged =
+          isPartial && prev.data
+            ? mergePartialSummary(prev.data, data)
+            : data;
+        return {
+          ...prev,
+          data: merged,
+          status: "success",
+          isSuccess: true,
+          isLoading: false,
+          isError: false,
+          error: null,
+          dataUpdatedAt: Date.now(),
+        };
+      });
+      setRunningCheckIds(new Set());
     }
   });
 
@@ -219,10 +528,11 @@ export function useHealthchecks(
       isSuccess: state.isSuccess,
       dataUpdatedAt: state.dataUpdatedAt,
       isRefreshing,
+      runningCheckIds,
       refetch: fetchHealth,
       runChecks,
     }),
-    [state, isRefreshing, fetchHealth, runChecks],
+    [state, isRefreshing, runningCheckIds, fetchHealth, runChecks],
   );
 }
 

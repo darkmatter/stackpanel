@@ -30,12 +30,14 @@ import {
   FileCode,
   FileJson,
   FolderOpen,
+  Info,
   Loader2,
   Play,
   Puzzle,
   RefreshCw,
   Search,
   Terminal,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -100,97 +102,305 @@ function FileStatusBadge({ file }: { file: InspectorGeneratedFile }) {
   );
 }
 
-function GeneratedFileItem({ file }: { file: InspectorGeneratedFile }) {
+// -----------------------------------------------------------------------------
+// File tree data structure
+// -----------------------------------------------------------------------------
+
+interface FileTreeNode {
+  name: string;
+  /** Full path segment up to this node (used as key) */
+  path: string;
+  children: Map<string, FileTreeNode>;
+  /** Present only on leaf nodes (actual files) */
+  file?: InspectorGeneratedFile;
+}
+
+/**
+ * Build a nested tree from a flat list of generated files.
+ * Each file's `path` is split on "/" to create intermediate folder nodes.
+ */
+function buildFileTree(files: InspectorGeneratedFile[]): FileTreeNode {
+  const root: FileTreeNode = { name: "", path: "", children: new Map() };
+
+  for (const file of files) {
+    const parts = file.path.split("/").filter(Boolean);
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const segmentPath = parts.slice(0, i + 1).join("/");
+
+      if (!current.children.has(part)) {
+        current.children.set(part, {
+          name: part,
+          path: segmentPath,
+          children: new Map(),
+        });
+      }
+      current = current.children.get(part)!;
+    }
+
+    // Mark the final node as a file leaf
+    current.file = file;
+  }
+
+  return root;
+}
+
+/** Count total files (leaves) under a tree node */
+function countFiles(node: FileTreeNode): number {
+  if (node.file && node.children.size === 0) return 1;
+  let count = node.file ? 1 : 0;
+  for (const child of node.children.values()) {
+    count += countFiles(child);
+  }
+  return count;
+}
+
+/** Check if any file in the subtree is stale */
+function hasStaleFiles(node: FileTreeNode): boolean {
+  if (node.file?.isStale && node.file.enable) return true;
+  for (const child of node.children.values()) {
+    if (hasStaleFiles(child)) return true;
+  }
+  return false;
+}
+
+/**
+ * Collapse single-child intermediate folders into one node for a cleaner tree.
+ * e.g. `home / .config / nix` becomes `home/.config/nix` when each has only
+ * one child and is not itself a file.
+ */
+function collapseSingleChildFolders(node: FileTreeNode): FileTreeNode {
+  // First, recursively collapse children
+  const collapsedChildren = new Map<string, FileTreeNode>();
+  for (const [key, child] of node.children) {
+    collapsedChildren.set(key, collapseSingleChildFolders(child));
+  }
+  node.children = collapsedChildren;
+
+  // If this node has exactly one child and is not a file, merge with child
+  if (node.children.size === 1 && !node.file && node.name !== "") {
+    const [, onlyChild] = [...node.children.entries()][0];
+    return {
+      ...onlyChild,
+      name: `${node.name}/${onlyChild.name}`,
+    };
+  }
+
+  return node;
+}
+
+// -----------------------------------------------------------------------------
+// Tree rendering components
+// -----------------------------------------------------------------------------
+
+function FileContentPreview({ file }: { file: InspectorGeneratedFile }) {
+  if (!file.text) return null;
+
+  const maxPreviewLines = 12;
+  const lines = file.text.split("\n");
+  const truncated = lines.length > maxPreviewLines;
+  const preview = truncated
+    ? lines.slice(0, maxPreviewLines).join("\n") + "\n..."
+    : file.text;
+
+  return (
+    <div className="mt-1.5">
+      <pre className="max-h-[200px] overflow-auto rounded border bg-muted/50 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+        {preview}
+      </pre>
+    </div>
+  );
+}
+
+function FileLeafNode({
+  node,
+  depth,
+}: {
+  node: FileTreeNode;
+  depth: number;
+}) {
+  const file = node.file!;
   const [expanded, setExpanded] = useState(false);
-  const fileName = file.path.split("/").pop() ?? file.path;
-  const directory = file.path.includes("/")
-    ? file.path.substring(0, file.path.lastIndexOf("/"))
-    : "";
 
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded}>
       <CollapsibleTrigger asChild>
         <div
           className={cn(
-            "flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors hover:bg-accent/50",
-            file.isStale && file.enable && "border-yellow-500/30",
+            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50",
+            file.isStale && file.enable && "text-yellow-600 dark:text-yellow-400",
           )}
+          style={{ paddingLeft: `${depth * 16 + 8}px` }}
         >
           {expanded ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           )}
           <FileCode
             className={cn(
-              "h-4 w-4",
+              "h-4 w-4 shrink-0",
               file.type === FileType.DERIVATION
                 ? "text-blue-500"
                 : "text-muted-foreground",
             )}
           />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="truncate font-mono text-sm">{fileName}</span>
-              <FileStatusBadge file={file} />
-            </div>
-            {directory && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <FolderOpen className="h-3 w-3" />
-                <span className="truncate">{directory}</span>
-              </div>
-            )}
-          </div>
+          <span className="truncate font-mono text-sm">{node.name}</span>
+          <FileStatusBadge file={file} />
           {file.source && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="ml-auto shrink-0 text-[10px]">
               {file.source}
             </Badge>
           )}
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-7 mt-2 space-y-2 rounded-md border bg-muted/30 p-3 text-xs">
-          <div className="grid grid-cols-2 gap-2">
+        <div
+          className="space-y-2 border-l border-border/50 py-1"
+          style={{ marginLeft: `${depth * 16 + 20}px` }}
+        >
+          {/* Metadata */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 px-3 text-xs">
             <div>
-              <span className="text-muted-foreground">Full Path:</span>
-              <p className="truncate font-mono">{file.path}</p>
+              <span className="text-muted-foreground">Path: </span>
+              <span className="font-mono">{file.path}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Type:</span>
-              <p>{file.type === FileType.DERIVATION ? "Derivation" : "Text"}</p>
+              <span className="text-muted-foreground">Type: </span>
+              <span>{file.type === FileType.DERIVATION ? "Derivation" : "Text"}</span>
             </div>
             {file.mode && (
               <div>
-                <span className="text-muted-foreground">Mode:</span>
-                <p className="font-mono">{file.mode}</p>
+                <span className="text-muted-foreground">Mode: </span>
+                <span className="font-mono">{file.mode}</span>
               </div>
             )}
             {file.size !== null && (
               <div>
-                <span className="text-muted-foreground">Size:</span>
-                <p>{formatFileSize(file.size)}</p>
+                <span className="text-muted-foreground">Size: </span>
+                <span>{formatFileSize(file.size)}</span>
+              </div>
+            )}
+            {file.description && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Description: </span>
+                <span>{file.description}</span>
+              </div>
+            )}
+            {file.store_path && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Store: </span>
+                <span className="break-all font-mono text-[10px]">{file.store_path}</span>
               </div>
             )}
           </div>
-          {file.description && (
-            <div>
-              <span className="text-muted-foreground">Description:</span>
-              <p>{file.description}</p>
-            </div>
-          )}
-          {file.store_path && (
-            <div>
-              <span className="text-muted-foreground">Store Path:</span>
-              <p className="break-all font-mono text-[10px]">
-                {file.store_path}
-              </p>
-            </div>
-          )}
+
+          {/* Content preview */}
+          <div className="px-3">
+            <FileContentPreview file={file} />
+          </div>
         </div>
       </CollapsibleContent>
     </Collapsible>
   );
 }
+
+function FolderTreeNode({
+  node,
+  depth,
+  defaultOpen,
+  filter,
+}: {
+  node: FileTreeNode;
+  depth: number;
+  defaultOpen?: boolean;
+  filter: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? depth < 1);
+  const fileCount = countFiles(node);
+  const stale = hasStaleFiles(node);
+
+  // Sort children: folders first (alphabetically), then files (alphabetically)
+  const sortedChildren = [...node.children.values()].sort((a, b) => {
+    const aIsFolder = a.children.size > 0 && !a.file;
+    const bIsFolder = b.children.size > 0 && !b.file;
+    if (aIsFolder && !bIsFolder) return -1;
+    if (!aIsFolder && bIsFolder) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <div
+          className={cn(
+            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-accent/50",
+            stale && "text-yellow-600 dark:text-yellow-400",
+          )}
+          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        >
+          {open ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          {open ? (
+            <FolderOpen className="h-4 w-4 shrink-0 text-blue-400" />
+          ) : (
+            <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+          <span className="truncate font-medium">{node.name}</span>
+          <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+            {fileCount}
+          </span>
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="border-l border-border/40" style={{ marginLeft: `${depth * 16 + 16}px` }}>
+          {sortedChildren.map((child) => (
+            <FileTreeNodeRenderer
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              filter={filter}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function FileTreeNodeRenderer({
+  node,
+  depth,
+  filter,
+}: {
+  node: FileTreeNode;
+  depth: number;
+  filter: string;
+}) {
+  // Leaf file node (has a file and no children)
+  if (node.file && node.children.size === 0) {
+    return <FileLeafNode node={node} depth={depth} />;
+  }
+
+  // Folder node
+  return (
+    <FolderTreeNode
+      node={node}
+      depth={depth}
+      defaultOpen={filter.length > 0 || depth < 1}
+      filter={filter}
+    />
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Generated Files Tab
+// -----------------------------------------------------------------------------
 
 function GeneratedFilesTab({
   files,
@@ -211,27 +421,31 @@ function GeneratedFilesTab({
       (f.source?.toLowerCase().includes(filter.toLowerCase()) ?? false),
   );
 
-  if (filteredFiles.length === 0) {
-    return (
-      <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed">
-        <FileCode className="h-5 w-5 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          No generated files match this filter
-        </p>
-      </div>
-    );
-  }
+  const tree = useMemo(() => {
+    const raw = buildFileTree(filteredFiles);
+    // Collapse single-child folders for a cleaner view
+    const collapsed: FileTreeNode = {
+      ...raw,
+      children: new Map(
+        [...raw.children.entries()].map(([k, v]) => [
+          k,
+          collapseSingleChildFolders(v),
+        ]),
+      ),
+    };
+    return collapsed;
+  }, [filteredFiles]);
 
-  // Group files by source
-  const filesBySource = filteredFiles.reduce(
-    (acc, file) => {
-      const source = file.source ?? "unknown";
-      if (!acc[source]) acc[source] = [];
-      acc[source].push(file);
-      return acc;
-    },
-    {} as Record<string, InspectorGeneratedFile[]>,
-  );
+  // Sort top-level: folders first, then files
+  const sortedTopLevel = useMemo(() => {
+    return [...tree.children.values()].sort((a, b) => {
+      const aIsFolder = a.children.size > 0 && !a.file;
+      const bIsFolder = b.children.size > 0 && !b.file;
+      if (aIsFolder && !bIsFolder) return -1;
+      if (!aIsFolder && bIsFolder) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [tree]);
 
   return (
     <div className="space-y-4">
@@ -260,34 +474,35 @@ function GeneratedFilesTab({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Filter files..."
+          placeholder="Filter files by path or source..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="w-full rounded-md border bg-background px-9 py-2 text-sm"
         />
       </div>
 
-      {/* Files by source */}
-      <ScrollArea className="h-[500px]">
-        <div className="space-y-4 pr-4">
-          {Object.entries(filesBySource).map(([source, sourceFiles]) => (
-            <div key={source} className="space-y-2">
-              <h3 className="flex items-center gap-2 font-medium text-sm">
-                <FolderOpen className="h-4 w-4" />
-                {source}
-                <Badge variant="secondary" className="text-xs">
-                  {sourceFiles.length}
-                </Badge>
-              </h3>
-              <div className="space-y-1">
-                {sourceFiles.map((file) => (
-                  <GeneratedFileItem key={file.path} file={file} />
-                ))}
-              </div>
-            </div>
-          ))}
+      {/* File tree */}
+      {filteredFiles.length === 0 ? (
+        <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed">
+          <FileCode className="h-5 w-5 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
+            No generated files match this filter
+          </p>
         </div>
-      </ScrollArea>
+      ) : (
+        <ScrollArea className="h-[500px]">
+          <div className="pr-4">
+            {sortedTopLevel.map((child) => (
+              <FileTreeNodeRenderer
+                key={child.path}
+                node={child}
+                depth={0}
+                filter={filter}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }
@@ -712,6 +927,86 @@ function ConfigSourceBadge({ source }: { source: string | null }) {
   );
 }
 
+/**
+ * Resolve a dot-notation path against a nested object.
+ * Supports case-insensitive key matching and partial (prefix) paths.
+ * e.g. "ide.zed" on { ide: { zed: { … } } } returns { ide: { zed: { … } } }
+ *
+ * Returns `undefined` when no match is found.
+ */
+function resolveConfigPath(
+  obj: Record<string, unknown>,
+  path: string,
+): unknown | undefined {
+  const segments = path.split(".");
+  let current: unknown = obj;
+
+  for (const segment of segments) {
+    if (current == null || typeof current !== "object") return undefined;
+    const record = current as Record<string, unknown>;
+    // Try exact key first, then case-insensitive fallback
+    const key =
+      segment in record
+        ? segment
+        : Object.keys(record).find(
+            (k) => k.toLowerCase() === segment.toLowerCase(),
+          );
+    if (key === undefined) return undefined;
+    current = record[key];
+  }
+  return current;
+}
+
+/**
+ * Collect every node in `obj` whose full key-path contains `query` as a
+ * case-insensitive substring. Returns a sparse reconstruction of the original
+ * object that keeps only matching branches (preserving complete subtrees once
+ * a key path matches).
+ */
+function filterConfigByKeySearch(
+  obj: Record<string, unknown>,
+  query: string,
+): Record<string, unknown> | undefined {
+  const lowerQuery = query.toLowerCase();
+
+  function walk(
+    node: unknown,
+    currentPath: string,
+  ): unknown | undefined {
+    if (node == null || typeof node !== "object") {
+      // Leaf – keep it only if the path so far matches
+      return currentPath.toLowerCase().includes(lowerQuery) ? node : undefined;
+    }
+
+    const record = node as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    let hasMatch = false;
+
+    for (const [key, value] of Object.entries(record)) {
+      const childPath = currentPath ? `${currentPath}.${key}` : key;
+
+      // If the path up to (and including) this key already matches,
+      // include the entire subtree as-is.
+      if (childPath.toLowerCase().includes(lowerQuery)) {
+        result[key] = value;
+        hasMatch = true;
+      } else {
+        // Otherwise recurse – there may be deeper matches.
+        const filtered = walk(value, childPath);
+        if (filtered !== undefined) {
+          result[key] = filtered;
+          hasMatch = true;
+        }
+      }
+    }
+
+    return hasMatch ? result : undefined;
+  }
+
+  const out = walk(obj, "");
+  return out !== undefined ? (out as Record<string, unknown>) : undefined;
+}
+
 function ConfigTab({
   config,
   configSource,
@@ -722,6 +1017,7 @@ function ConfigTab({
   contributorFilter?: string | null;
 }) {
   const [filter, setFilter] = useState("");
+  const [showFilterHint, setShowFilterHint] = useState(true);
 
   if (!config) {
     return (
@@ -736,24 +1032,71 @@ function ConfigTab({
 
   const configString = JSON.stringify(config, null, 2);
   const contributorFilterLower = contributorFilter?.toLowerCase() ?? "";
-  const filteredConfig = filter
-    ? configString
-        .split("\n")
-        .filter((line) => {
-          const lower = line.toLowerCase();
-          const matchesFreeText = lower.includes(filter.toLowerCase());
-          const matchesContributor = contributorFilterLower
-            ? lower.includes(contributorFilterLower)
-            : true;
-          return matchesFreeText && matchesContributor;
-        })
-        .join("\n")
-    : contributorFilterLower
-      ? configString
-          .split("\n")
-          .filter((line) => line.toLowerCase().includes(contributorFilterLower))
-          .join("\n")
-      : configString;
+
+  // ---------------------------------------------------------------------------
+  // Filtering strategy:
+  //   1. If the filter text resolves as a dot-path (e.g. "ide.zed"), show the
+  //      value at that path wrapped in its parent keys so the context is clear.
+  //   2. Otherwise, do a key-path substring search across the whole tree,
+  //      returning every branch whose path contains the filter text.
+  //   3. If neither yields results, fall through to the raw JSON string.
+  //   4. Contributor filter is applied separately as a line-level filter on the
+  //      final JSON string.
+  // ---------------------------------------------------------------------------
+  let filteredConfig: string;
+
+  if (filter) {
+    const trimmed = filter.trim();
+
+    // Attempt 1: exact dot-path resolution
+    const exactMatch = resolveConfigPath(config, trimmed);
+    // Attempt 2: key-path substring search
+    const fuzzyMatch = filterConfigByKeySearch(config, trimmed);
+
+    if (exactMatch !== undefined) {
+      // Wrap the result back into its path for context
+      const segments = trimmed.split(".");
+      let wrapped: unknown = exactMatch;
+      for (let i = segments.length - 1; i >= 0; i--) {
+        // Find the actual key (preserving original casing)
+        let lookupObj: unknown = config;
+        for (let j = 0; j < i; j++) {
+          const rec = lookupObj as Record<string, unknown>;
+          const realKey =
+            segments[j] in rec
+              ? segments[j]
+              : Object.keys(rec).find(
+                  (k) => k.toLowerCase() === segments[j].toLowerCase(),
+                ) ?? segments[j];
+          lookupObj = rec[realKey];
+        }
+        const rec = lookupObj as Record<string, unknown>;
+        const realKey =
+          segments[i] in rec
+            ? segments[i]
+            : Object.keys(rec).find(
+                (k) => k.toLowerCase() === segments[i].toLowerCase(),
+              ) ?? segments[i];
+        wrapped = { [realKey]: wrapped };
+      }
+      filteredConfig = JSON.stringify(wrapped, null, 2);
+    } else if (fuzzyMatch !== undefined) {
+      filteredConfig = JSON.stringify(fuzzyMatch, null, 2);
+    } else {
+      // Nothing matched via path – show empty
+      filteredConfig = "// No matching config paths found";
+    }
+  } else {
+    filteredConfig = configString;
+  }
+
+  // Apply contributor line-level filter on top, if present
+  if (contributorFilterLower) {
+    filteredConfig = filteredConfig
+      .split("\n")
+      .filter((line) => line.toLowerCase().includes(contributorFilterLower))
+      .join("\n");
+  }
 
   return (
     <div className="space-y-4">
@@ -777,12 +1120,39 @@ function ConfigTab({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Filter config..."
+          placeholder="Filter by path (e.g. ide.zed) or keyword..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="w-full rounded-md border bg-background px-9 py-2 text-sm"
         />
       </div>
+
+      {/* Filter hint notice */}
+      {showFilterHint && (
+        <div className="relative flex gap-3 rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2.5 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium">Supports dot-path filtering</p>
+            <p className="text-blue-700 dark:text-blue-300">
+              Use dot-separated paths to drill into the config and view full
+              objects. Examples:
+            </p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-blue-800 dark:text-blue-200">
+              <span>services.postgres</span>
+              <span>ide.zed</span>
+              <span>languages.javascript</span>
+              <span>devshell</span>
+              <span>stackpanel.scripts</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowFilterHint(false)}
+            className="absolute right-1.5 top-1.5 rounded p-0.5 text-blue-400 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-300"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       <ScrollArea className="h-[500px]">
         <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-4 font-mono text-xs">

@@ -154,6 +154,7 @@ let
     "secrets.secrets-dir" = ".stackpanel/secrets";
     "secrets.keys-dir" = ".stackpanel/secrets/keys";
     "secrets.groups-dir" = ".stackpanel/secrets/groups";
+    "secrets.recipients-dir" = ".stackpanel/secrets/keys/recipients";
 
     # Files
     "paths.state-file" = ".stackpanel/state/stackpanel.json";
