@@ -73,6 +73,7 @@ async function deployApp(
     switch (app.framework) {
       case "tanstack-start":
         return TanStackStart(name, {
+          adopt: true,
           cwd: app.path,
           bindings,
         });
@@ -80,6 +81,7 @@ async function deployApp(
       case "nextjs":
         // @ts-expect-error — Nextjs may not be available in all alchemy versions
         return (await import("alchemy/cloudflare")).Nextjs(name, {
+          adopt: true,
           cwd: app.path,
           bindings,
         });
@@ -87,6 +89,7 @@ async function deployApp(
       case "astro":
         // @ts-expect-error — Astro may not be available in all alchemy versions
         return (await import("alchemy/cloudflare")).Astro(name, {
+          adopt: true,
           cwd: app.path,
           bindings,
         });
@@ -94,6 +97,7 @@ async function deployApp(
       case "remix":
         // @ts-expect-error — Remix may not be available in all alchemy versions
         return (await import("alchemy/cloudflare")).Remix(name, {
+          adopt: true,
           cwd: app.path,
           bindings,
         });
@@ -101,12 +105,14 @@ async function deployApp(
       case "nuxt":
         // @ts-expect-error — Nuxt may not be available in all alchemy versions
         return (await import("alchemy/cloudflare")).Nuxt(name, {
+          adopt: true,
           cwd: app.path,
           bindings,
         });
 
       case "vite":
         return cloudflare.Vite(name, {
+          adopt: true,
           cwd: app.path,
           assets: app.assetsDir ?? "dist",
           bindings,
@@ -115,6 +121,7 @@ async function deployApp(
 
       case "hono":
         return cloudflare.Worker(name, {
+          adopt: true,
           cwd: app.path,
           entrypoint: app.entrypoint ?? "src/index.ts",
           compatibility: "node",

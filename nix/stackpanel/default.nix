@@ -44,6 +44,7 @@ in
     ./services # aws, caddy, global-services
     ./secrets # SOPS helper
     ./sst # SST infrastructure provisioning
+    ./alchemy # Alchemy IaC shared configuration (@gen/alchemy)
     ./infra # Alchemy-based infrastructure module system
     ./docker # Dockerfile fallback (skopeo, OCI images)
     ./containers # nix2container via devenv (primary container building)

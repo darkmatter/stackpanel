@@ -437,6 +437,11 @@
   # Tasks
   # ---------------------------------------------------------------------------
   tasks = {
+    "alchemy:ensure" = {
+      description = "Ensure alchemy is initialized - builds will error without this if using alchemy for deployments. creates wrangler.jsonc when using @cloudflare/vite-plugin";
+      env = { };
+      exec = "test -f .alchemy/local/wrangler.jsonc || (mkdir -p .alchemy/local && echo '{\"name\":\"web\",\"main\":\".alchemy/local/worker.js\",\"compatibility_date\":\"2025-01-01\",\"assets\":{\"directory\":\"dist\"}}' > .alchemy/local/wrangler.jsonc)";
+    };
     build = {
       description = "Build all packages and apps";
       env = { };
