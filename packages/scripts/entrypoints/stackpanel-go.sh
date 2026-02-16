@@ -40,7 +40,7 @@ export STACKPANEL_APP_NAME="stackpanel-go"
 export STACKPANEL_APP_PATH="apps/stackpanel-go"
 export STACKPANEL_VARIABLES_BACKEND="chamber"
 export STACKPANEL_CHAMBER_SERVICE_PREFIX="stackpanel"
-export STACKPANEL_MASTER_KEYS='{"local":{"age-pub":"","ref":"ref+file://.stackpanel/state/keys/local.txt","resolve-cmd":null}}'
+export STACKPANEL_MASTER_KEYS='{"dev":{"age-pub":"age18jexhwcd4ehm7th0pqt8x6rmg3yuxstwv8aavqul4hvcmjkkhfaqn75su0","ref":"ref+awsssm:///stackpanel/keys/dev","resolve-cmd":null},"local":{"age-pub":"","ref":"ref+file://.stackpanel/state/keys/local.txt","resolve-cmd":null}}'
 
 # ==============================================================================
 # Argument Parsing

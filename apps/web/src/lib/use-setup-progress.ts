@@ -5,13 +5,11 @@ import {
 	Database,
 	FileCog,
 	FolderOpen,
-	Github as _Github,
-	GithubIcon,
-	Key,
 	type LucideIcon,
 	Shield,
+	ShieldCheck,
 	Terminal,
-	Users as _Users,
+	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";
@@ -80,10 +78,10 @@ export function useSetupProgress(): SetupProgress | null {
 
 	const loadProgress = useCallback(async () => {
 		let projectConfirmed = false;
-		let hasIdentity = false;
-		let hasSopsConfig = false;
-		let usersConfigured = false;
+		let hasInitializedGroups = false;
+		let hasRecipients = false;
 		let kmsEnabled = false;
+		let configVerified = false;
 
 		if (token) {
 			try {
@@ -93,32 +91,23 @@ export function useSetupProgress(): SetupProgress | null {
 				projectConfirmed =
 					localStorage.getItem("stackpanel-project-confirmed") === "true";
 
-				// Check identity
+				// Check if any groups are initialized (have .enc.age files)
 				try {
-					const identity = await client.getAgeIdentity();
-					hasIdentity = identity.type !== "";
+					const groupSecrets = await client.listGroupSecrets();
+					if ("groups" in groupSecrets) {
+						hasInitializedGroups =
+							Object.keys(groupSecrets.groups).length > 0;
+					}
 				} catch {
 					// Ignore
 				}
 
-				// Check SOPS config
+				// Check recipients
 				try {
-					await client.readFile(".sops.yaml");
-					hasSopsConfig = true;
+					const recipientsResp = await client.listRecipients();
+					hasRecipients = recipientsResp.recipients.length > 0;
 				} catch {
-					// File doesn't exist
-				}
-
-				// Check users.yaml
-				try {
-					const usersFile = await client.readFile(
-						".stackpanel/secrets/users.yaml",
-					);
-					const hasPublicKeys =
-						usersFile.content?.includes("public-key:") ?? false;
-					usersConfigured = hasPublicKeys;
-				} catch {
-					// File doesn't exist
+					// Ignore
 				}
 
 				// Check KMS config
@@ -128,12 +117,20 @@ export function useSetupProgress(): SetupProgress | null {
 				} catch {
 					// Ignore
 				}
+
+				// Check config verification (groups/.sops.yaml exists)
+				try {
+					await client.readFile(
+						".stackpanel/secrets/groups/.sops.yaml",
+					);
+					configVerified = true;
+				} catch {
+					// File doesn't exist
+				}
 			} catch (err) {
 				console.warn("Failed to load setup progress:", err);
 			}
 		}
-
-		const hasAwsKms = sstData?.kms?.enable ?? false;
 
 		const steps: SetupStep[] = [
 			{
@@ -180,41 +177,46 @@ export function useSetupProgress(): SetupProgress | null {
 				shortTitle: "Auto-Deploy (AWS)",
 				description:
 					"Automatically create required AWS resources for production-ready secrets management",
-				status: sstData?.enable ? "complete" : isChamber ? "incomplete" : "optional",
+				status: sstData?.enable
+					? "complete"
+					: isChamber
+						? "incomplete"
+						: "optional",
 				required: isChamber,
 				dependsOn: ["secrets-backend"],
 				icon: Cloud,
 			},
 			{
-				id: "decryption-key",
-				title: "Local Decryption Key",
-				shortTitle: "AGE Key",
+				id: "init-groups",
+				title: "Initialize Groups",
+				shortTitle: "Groups",
 				description: isChamber
 					? "Not needed for Chamber backend"
-					: hasAwsKms
-						? "Optional if using AWS KMS"
-						: "Configure your private key for decrypting secrets locally",
+					: "Initialize secret groups and verify encryption",
 				status: isChamber
 					? "complete"
-					: hasIdentity
+					: hasInitializedGroups
 						? "complete"
-						: hasAwsKms
-							? "optional"
-							: projectConfirmed
-								? "incomplete"
-								: "blocked",
-				required: !isChamber && !hasAwsKms,
+						: projectConfirmed
+							? "incomplete"
+							: "blocked",
+				required: !isChamber,
 				dependsOn: ["secrets-backend"],
-				icon: Key,
+				icon: ShieldCheck,
 			},
 			{
-				id: "team-keys",
-				title: "Team Sync",
-				shortTitle: "Github Sync",
-				description: "Sync team members' public keys for encryption",
-				status: isChamber ? "complete" : usersConfigured ? "complete" : "optional",
+				id: "team-access",
+				title: "Team Access",
+				shortTitle: "Team",
+				description:
+					"Manage team members who can access encrypted secrets",
+				status: isChamber
+					? "complete"
+					: hasRecipients
+						? "complete"
+						: "optional",
 				required: false,
-				icon: GithubIcon,
+				icon: Users,
 			},
 			{
 				id: "kms",
@@ -222,24 +224,29 @@ export function useSetupProgress(): SetupProgress | null {
 				shortTitle: "KMS",
 				description:
 					"Configure your local machine to use an existing AWS KMS key",
-				status: isChamber ? "complete" : kmsEnabled ? "complete" : "optional",
+				status: isChamber
+					? "complete"
+					: kmsEnabled
+						? "complete"
+						: "optional",
 				required: false,
 				icon: Shield,
 			},
 			{
-				id: "generate-config",
-				title: "Generate SOPS Config",
-				shortTitle: "SOPS",
-				description: "Generate .sops.yaml with your encryption keys",
+				id: "verify-config",
+				title: "Verify Configuration",
+				shortTitle: "Verify",
+				description:
+					"Verify SOPS configuration is auto-generated and working",
 				status: isChamber
 					? "complete"
-					: hasSopsConfig
+					: configVerified
 						? "complete"
-						: hasIdentity
+						: hasInitializedGroups
 							? "incomplete"
 							: "blocked",
 				required: !isChamber,
-				dependsOn: ["decryption-key"],
+				dependsOn: ["init-groups"],
 				icon: FileCog,
 			},
 		];

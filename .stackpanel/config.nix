@@ -302,7 +302,7 @@
     };
     zed = {
       enable = true;
-      output-mode = "generated";
+      output-mode = "dotZed";
     };
   };
 

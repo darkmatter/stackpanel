@@ -1,1 +1,123 @@
-/nix/store/2djgzby2h9lplayd2xinp6q2wlh6i4y3-process-compose.yaml
+environment:
+- AWS_CONFIG_FILE=/nix/store/13yqr93hm27784x31l0vmf6aaa82vik1-aws-config
+- AWS_REGION=us-west-2
+- AWS_SHARED_CREDENTIALS_FILE=/dev/null
+- CHAMBER_KMS_KEY_ALIAS=alias/stackpanel-secrets
+- DATABASE_URL=postgresql://postgres@localhost:6404/postgres?host=$HOME/.local/share/devservices/postgres
+- GOROOT=/nix/store/rwzizip34lp556kmagcfw0fszch22x0k-go-1.25.6/share/go/
+- GOTOOLCHAIN=local
+- MINIO_ACCESS_KEY=minioadmin
+- MINIO_CONSOLE_ADDRESS=:6436
+- MINIO_ENDPOINT=http://localhost:6498
+- MINIO_ROOT_PASSWORD=minioadmin
+- MINIO_ROOT_USER=minioadmin
+- MINIO_SECRET_KEY=minioadmin
+- PC_PORT_NUM=6490
+- PGDATA=$HOME/.local/share/devservices/postgres/data
+- PGDATABASE=postgres
+- PGHOST=$HOME/.local/share/devservices/postgres
+- PGPORT=6404
+- PGUSER=postgres
+- PORT_DOCS=6400
+- PORT_STACKPANEL_GO=6401
+- PORT_WEB=6402
+- POSTGRES_URL=postgresql://postgres@localhost:6404/postgres?host=$HOME/.local/share/devservices/postgres
+- REDIS_HOST=localhost
+- REDIS_PORT=6494
+- REDIS_SOCKET=$HOME/.local/share/devservices/redis/redis.sock
+- REDIS_URL=redis://localhost:6494
+- S3_ENDPOINT=http://localhost:6498
+- "STACKPANEL_ALIAS_FUNC=# Internal helper shared by shortcuts\n_stackpanel_commands_runner()\
+  \ {\n  if [ $# -eq 0 ]; then\n  stackpanel commands list\nelse\n  stackpanel commands\
+  \ \"$@\"\nfi\n\n}\n\n# Stackpanel command shortcut: x\nx() {\n  _stackpanel_commands_runner\
+  \ \"$@\"\n}\n\n# Short alias for the stackpanel CLI\nalias sp=\"stackpanel\"\n\n\
+  # Explicit commands runner shortcut\nspx() {\n  _stackpanel_commands_runner \"$@\"\
+  \n}\n"
+- STACKPANEL_CLEAN_IMPURE=0
+- STACKPANEL_CLEAN_MODE=0
+- STACKPANEL_CONFIG_JSON=/nix/store/zdm3kkxw55fg4gc9swng5rsj95bvf3xx-stackpanel-config.json
+- STACKPANEL_INFRA_INPUTS=.stackpanel/state/infra-inputs.json
+- STACKPANEL_NIX_CONFIG=$STACKPANEL_ROOT/.stackpanel/config.nix
+- STACKPANEL_PORTS={"base-port":6400,"enable":true,"project-name":"stackpanel","service":{"MINIO":{"displayName":"Minio","key":"MINIO","name":"Minio","port":6498},"MINIO_CONSOLE":{"displayName":"Minio
+  Console","key":"MINIO_CONSOLE","name":"Minio Console","port":6436},"POSTGRES":{"displayName":"PostgreSQL","key":"POSTGRES","name":"PostgreSQL","port":6404},"REDIS":{"displayName":"Redis","key":"REDIS","name":"Redis","port":6494}},"services":{"MINIO":{"name":"Minio"},"MINIO_CONSOLE":{"name":"Minio
+  Console"},"POSTGRES":{"name":"PostgreSQL"},"REDIS":{"name":"Redis"}}}
+- STACKPANEL_REMOTE_BUILDER_HOST=100.102.113.26
+- STACKPANEL_ROOT_DIR_NAME=.stackpanel
+- STACKPANEL_ROOT_MARKER=.stackpanel-root
+- STACKPANEL_SERVICES_CONFIG=[{"key":"MINIO","name":"Minio","port":6498},{"key":"MINIO_CONSOLE","name":"Minio
+  Console","port":6436},{"key":"POSTGRES","name":"PostgreSQL","port":6404},{"key":"REDIS","name":"Redis","port":6494}]
+- STACKPANEL_STABLE_PORT=6400
+- URL_DOCS=http://docs.stackpanel.localhost
+- URL_WEB=https://stackpanel.stackpanel.localhost
+- __STACKPANEL_CLEAN_ENV=
+processes:
+  docs:
+    command: if [[ -f packages/scripts/entrypoints/docs.sh ]]; then source packages/scripts/entrypoints/docs.sh
+      --dev && exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
+      run -F $(/nix/store/fcjd369g57hxibl4iyggvdhfvwzz5mj9-jq-1.8.1-bin/bin/jq -r
+      .name apps/docs/package.json 2>/dev/null || echo 'docs') dev; else exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
+      run -F $(/nix/store/fcjd369g57hxibl4iyggvdhfvwzz5mj9-jq-1.8.1-bin/bin/jq -r
+      .name apps/docs/package.json 2>/dev/null || echo 'docs') dev; fi
+    working_dir: apps/docs
+  format-watch:
+    availability:
+      backoff_seconds: 2
+      restart: always
+    command: /nix/store/jj13g1knnfj2hvj06m7i6q992gql5ks4-watchexec-2.3.2/bin/watchexec
+      --exts ts,tsx,js,jsx,json,md,css,scss,html,nix,go,rs,py -- /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
+      run format --continue
+    namespace: infra
+    working_dir: null
+  minio:
+    availability:
+      backoff_seconds: 5
+      restart: on_failure
+    command: /nix/store/ji7l5s8y6rjpnb8isjjbarn8c197d6qk-minio-start/bin/minio-start
+    namespace: services
+    readiness_probe:
+      exec:
+        command: /nix/store/0bz5d30q8f28yz8yhf65aya4jbcxn33n-curl-8.18.0-bin/bin/curl
+          -sf http://localhost:6498/minio/health/live
+      initial_delay_seconds: 2
+      period_seconds: 5
+  postgres:
+    availability:
+      backoff_seconds: 5
+      restart: on_failure
+    command: /nix/store/dsqakvx7r6pq8q8hzpwgk43ypsy82qs3-postgres-start/bin/postgres-start
+    namespace: services
+    readiness_probe:
+      exec:
+        command: /nix/store/2ypmadhl399j3g9wjvfxbbswdsxi3svr-postgresql-17.7/bin/pg_isready
+          -h $HOME/.local/share/devservices/postgres -p 6404
+      initial_delay_seconds: 2
+      period_seconds: 5
+  redis:
+    availability:
+      backoff_seconds: 5
+      restart: on_failure
+    command: /nix/store/lxsm39z29v67aasj1vzw7lk1rkbavgd6-redis-start/bin/redis-start
+    namespace: services
+    readiness_probe:
+      exec:
+        command: /nix/store/wk93aw2y3d9axv2hrii3yixzvv2sf8ha-redis-8.2.3/bin/redis-cli
+          -p 6494 ping
+      initial_delay_seconds: 1
+      period_seconds: 3
+  stackpanel-go:
+    command: if [[ -f packages/scripts/entrypoints/stackpanel-go.sh ]]; then source
+      packages/scripts/entrypoints/stackpanel-go.sh --dev && exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
+      run -F $(/nix/store/fcjd369g57hxibl4iyggvdhfvwzz5mj9-jq-1.8.1-bin/bin/jq -r
+      .name apps/stackpanel-go/package.json 2>/dev/null || echo 'stackpanel-go') dev;
+      else exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
+      run -F $(/nix/store/fcjd369g57hxibl4iyggvdhfvwzz5mj9-jq-1.8.1-bin/bin/jq -r
+      .name apps/stackpanel-go/package.json 2>/dev/null || echo 'stackpanel-go') dev;
+      fi
+    working_dir: apps/stackpanel-go
+  web:
+    command: bun run -F web dev
+    working_dir: apps/web
+shell:
+  shell_argument: -c
+  shell_command: /nix/store/3cq07cjs5rbf2grkmp2xip0ns7qmm0nw-bash-interactive-5.3p3/bin/bash
+version: '0.5'

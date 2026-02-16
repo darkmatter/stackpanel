@@ -24,5 +24,7 @@
     ./codegen.nix
     ./modules/aws-secrets/module.nix
     ./modules/deployment/module.nix
+    ./modules/database/module.nix
+    ./modules/cache/module.nix
   ];
 }
