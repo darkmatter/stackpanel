@@ -153,6 +153,61 @@ export interface GenerateEnvPackageResponse {
   groups: string[];
 }
 
+// =============================================================================
+// Recipients & team access
+// =============================================================================
+
+/** A recipient who can decrypt secrets (has a .pub file in recipients dir) */
+export interface Recipient {
+  /** Recipient name (filename without .pub extension) */
+  name: string;
+  /** AGE public key */
+  publicKey: string;
+}
+
+/** Response from listing recipients */
+export interface RecipientListResponse {
+  recipients: Recipient[];
+}
+
+/** Request to add a new recipient */
+export interface AddRecipientRequest {
+  /** Name for the recipient (used as filename) */
+  name: string;
+  /** AGE public key (starts with age1...) */
+  publicKey?: string;
+  /** SSH public key (will be converted to AGE via ssh-to-age) */
+  sshPublicKey?: string;
+}
+
+/** Status of the GitHub Actions rekey workflow */
+export interface RekeyWorkflowStatus {
+  /** Whether the workflow file exists */
+  exists: boolean;
+  /** Path to the workflow file */
+  path: string;
+  /** Most recent workflow run info (if available) */
+  lastRun?: {
+    status: string;
+    conclusion: string;
+    createdAt: string;
+  };
+}
+
+/** Request to verify secrets encrypt/decrypt round-trip */
+export interface SecretsVerifyRequest {
+  /** Group to verify (e.g., "dev") */
+  group: string;
+}
+
+/** Response from secrets verification */
+export interface SecretsVerifyResponse {
+  /** Whether the round-trip succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
+}
+
 /** Health information returned by the agent */
 export interface AgentHealth {
   status: "available" | "unavailable" | "checking";

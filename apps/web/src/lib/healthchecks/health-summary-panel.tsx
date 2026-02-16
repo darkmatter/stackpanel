@@ -44,6 +44,7 @@ import {
   CheckCircle2,
   Copy,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import type {
@@ -73,6 +74,7 @@ export function HealthSummaryPanel() {
     isLoading,
     error,
     isRefreshing,
+    runningCheckIds,
     refetch,
     runChecks,
   } = useHealthchecks({ enabled: true });
@@ -83,6 +85,7 @@ export function HealthSummaryPanel() {
       isLoading={isLoading}
       error={error ?? undefined}
       isRefreshing={isRefreshing}
+      runningCheckIds={runningCheckIds}
       onRefresh={refetch}
       onRunChecks={runChecks}
     />
@@ -95,6 +98,8 @@ export function HealthSummaryPanel() {
 
 interface HealthSummaryPanelViewProps extends HealthSummaryPanelProps {
   isRefreshing?: boolean;
+  /** Set of check IDs currently being evaluated on the server */
+  runningCheckIds?: Set<string>;
   onRunChecks?: (module?: string, checkId?: string) => Promise<void>;
 }
 
@@ -107,6 +112,7 @@ export function HealthSummaryPanelView({
   isLoading,
   error,
   isRefreshing,
+  runningCheckIds,
   onRunChecks,
 }: HealthSummaryPanelViewProps) {
   const counts = countModulesByStatus(summary);
@@ -197,6 +203,7 @@ export function HealthSummaryPanelView({
                   <ModuleHealthCard
                     key={moduleName}
                     moduleHealth={moduleHealth}
+                    runningCheckIds={runningCheckIds}
                     onRunChecks={() => onRunChecks?.(moduleName)}
                     onRunCheck={
                       onRunChecks
@@ -261,12 +268,14 @@ function StatusCount({
 
 interface ModuleHealthCardProps {
   moduleHealth: ModuleHealth;
+  runningCheckIds?: Set<string>;
   onRunChecks?: () => void;
   onRunCheck?: (checkId: string) => Promise<void>;
 }
 
 function ModuleHealthCard({
   moduleHealth,
+  runningCheckIds,
   onRunChecks,
   onRunCheck,
 }: ModuleHealthCardProps) {
@@ -329,6 +338,7 @@ function ModuleHealthCard({
                   <HealthcheckItem
                     key={checkResult.checkId}
                     result={checkResult}
+                    isRunning={runningCheckIds?.has(checkResult.checkId) ?? false}
                     onRunCheck={onRunCheck}
                   />
                 ))}
@@ -363,13 +373,17 @@ function ModuleHealthCard({
 
 function HealthcheckItem({
   result,
+  isRunning: isCheckRunning = false,
   onRunCheck,
 }: {
   result: HealthcheckResult;
+  /** Whether this check is currently being evaluated on the server */
+  isRunning?: boolean;
   onRunCheck?: (checkId: string) => Promise<void>;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
+  const [isManualRunning, setIsManualRunning] = useState(false);
+  const isRunning = isCheckRunning || isManualRunning;
   const check = result.check;
   const status = result.status || "HEALTH_STATUS_UNKNOWN";
 
@@ -409,17 +423,27 @@ function HealthcheckItem({
             )}
           >
             <div className="mt-0.5">
-              <TrafficLightDot status={status} size="sm" />
+              {isRunning ? (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              ) : (
+                <TrafficLightDot status={status} size="sm" />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm">{checkName}</span>
                 {severity && <SeverityBadge severity={severity} />}
                 <CheckTypeBadge type={checkType} />
-                {result.durationMs > 0 && (
+                {isRunning ? (
                   <span className="text-xs text-muted-foreground">
-                    {result.durationMs}ms
+                    Running...
                   </span>
+                ) : (
+                  result.durationMs > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {result.durationMs}ms
+                    </span>
+                  )
                 )}
               </div>
               {description && (
@@ -453,11 +477,11 @@ function HealthcheckItem({
             disabled={isRunning}
             onClick={async (e) => {
               e.stopPropagation();
-              setIsRunning(true);
+              setIsManualRunning(true);
               try {
                 await onRunCheck(result.checkId);
               } finally {
-                setIsRunning(false);
+                setIsManualRunning(false);
               }
             }}
           >
@@ -522,12 +546,45 @@ function HealthcheckItem({
 
             {/* Output */}
             {result.output && (
-              <div className="rounded-md border bg-green-50 dark:bg-green-950/30 p-3">
-                <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-400 mb-2">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+              <div className={cn(
+                "rounded-md border p-3",
+                status === "HEALTH_STATUS_HEALTHY"
+                  ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
+                  : status === "HEALTH_STATUS_UNHEALTHY"
+                    ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900"
+                    : status === "HEALTH_STATUS_DEGRADED"
+                      ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900"
+                      : "bg-muted/30 border-border"
+              )}>
+                <div className={cn(
+                  "flex items-center gap-2 text-xs mb-2",
+                  status === "HEALTH_STATUS_HEALTHY"
+                    ? "text-green-700 dark:text-green-400"
+                    : status === "HEALTH_STATUS_UNHEALTHY"
+                      ? "text-red-700 dark:text-red-400"
+                      : status === "HEALTH_STATUS_DEGRADED"
+                        ? "text-yellow-700 dark:text-yellow-400"
+                        : "text-muted-foreground"
+                )}>
+                  {status === "HEALTH_STATUS_HEALTHY" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : status === "HEALTH_STATUS_UNHEALTHY" ? (
+                    <AlertCircle className="h-3.5 w-3.5" />
+                  ) : (
+                    <Terminal className="h-3.5 w-3.5" />
+                  )}
                   <span className="font-medium">Output</span>
                 </div>
-                <pre className="text-xs font-mono whitespace-pre-wrap text-green-800 dark:text-green-300">
+                <pre className={cn(
+                  "text-xs font-mono whitespace-pre-wrap",
+                  status === "HEALTH_STATUS_HEALTHY"
+                    ? "text-green-800 dark:text-green-300"
+                    : status === "HEALTH_STATUS_UNHEALTHY"
+                      ? "text-red-800 dark:text-red-300"
+                      : status === "HEALTH_STATUS_DEGRADED"
+                        ? "text-yellow-800 dark:text-yellow-300"
+                        : "text-foreground"
+                )}>
                   {result.output}
                 </pre>
               </div>

@@ -35,6 +35,8 @@ export type {
   HealthSummary,
   HealthchecksResponse,
   HealthchecksUpdatedEvent,
+  HealthchecksRunningEvent,
+  HealthcheckResultEvent,
   TrafficLightProps,
   ModuleHealthCardProps,
   HealthSummaryPanelProps,

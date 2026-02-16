@@ -377,6 +377,14 @@
     environments = { };
     secrets-dir = ".stackpanel/secrets";
     system-keys = [ ];
+    groups = {
+      dev = {
+        age-pub = "age18jexhwcd4ehm7th0pqt8x6rmg3yuxstwv8aavqul4hvcmjkkhfaqn75su0";
+      };
+      prod = {
+        age-pub = "age1tvczw6y7g4v0ma7cn05adrnst9jnnsh9j8ge0t0flls8ucq5yg9qe37jhe";
+      };
+    };
   };
 
   # ---------------------------------------------------------------------------
