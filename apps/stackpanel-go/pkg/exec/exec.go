@@ -352,6 +352,20 @@ func (e *Executor) ClearDevshellEnv() {
 	e.devshellEnv = nil
 }
 
+// BuildEnv returns a merged environment suitable for passing to exec.Cmd.Env.
+// It layers: os.Environ() -> cached devshell env (if outside devshell) -> extra overrides.
+// This mirrors the same precedence used by RunWithOptions.
+func (e *Executor) BuildEnv(extra []string) []string {
+	env := os.Environ()
+	if !e.inDevshell && len(e.devshellEnv) > 0 {
+		env = mergeEnv(env, e.devshellEnv)
+	}
+	if len(extra) > 0 {
+		env = mergeEnv(env, extra)
+	}
+	return env
+}
+
 // GetEnv retrieves an environment variable value from the devshell environment.
 // It first checks the cached devshell env, then falls back to os.Getenv.
 // Returns empty string if the variable is not found.

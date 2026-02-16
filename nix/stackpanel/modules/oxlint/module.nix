@@ -268,6 +268,7 @@ in
             oxlint-config = {
               description = "OxLint configuration files exist";
               script = ''
+                STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
                 missing=""
                 ${lib.concatMapStringsSep "\n" (
                   name:
@@ -298,6 +299,7 @@ in
             oxlint-passes = {
               description = "OxLint check passes on all apps";
               script = ''
+                STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
                 failed=""
                 ${lib.concatMapStringsSep "\n" (
                   name:
