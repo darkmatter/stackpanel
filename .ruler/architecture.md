@@ -212,7 +212,17 @@ Three-tier system:
 
 1. **Master keys**: AGE-encrypted master keys (local auto-generated, team-shared). Local key at `.stackpanel/state/keys/`.
 2. **SOPS-encrypted YAML**: Per-environment files (`dev.yaml`, `staging.yaml`, `prod.yaml`) + `vars.yaml` (plaintext shared config).
-3. **Agenix**: Per-secret `.age` files encrypted to team member SSH public keys.
+3. **Group keys**: Per-group `.enc.age` files encrypted to all team recipients. Decrypted at runtime for secret access.
+
+Key directories:
+- `.stackpanel/secrets/keys/recipients/` -- AGE public keys per team member (committed, auto-registered on shell entry)
+- `.stackpanel/secrets/keys/*.enc.age` -- SOPS-encrypted group private keys (committed, encrypted to all recipients)
+- `.stackpanel/secrets/keys/.sops.yaml` -- Auto-generated from all `recipients/*.pub` files
+- `.stackpanel/secrets/groups/.sops.yaml` -- GENERATED at shell entry from `config.nix` group keys (gitignored, never committed)
+
+Key integrity: `config.nix` is the single source of truth for group public keys. A wrapped SOPS binary resolves group pubkeys from Nix at build time (injects `--age` per file), and `groups/.sops.yaml` is generated as a fallback. This eliminates key drift between config files.
+
+Team onboarding: self-service via Git push. New member enters devshell -> pub key registered in `recipients/` -> push triggers GitHub Actions rekey workflow -> `.enc.age` files re-encrypted for all recipients -> pull to access secrets. Group private keys stored as GitHub Actions secrets (`SECRETS_AGE_KEY_<GROUP>`).
 
 Codegen: Nix generates typed TypeScript env modules in `packages/env/src/generated/` per app per environment.
 
@@ -297,3 +307,39 @@ hooks.after
 - Proto definitions in `packages/proto/` are the contract between Go agent and TypeScript web app
 - Environment variables follow the pattern `STACKPANEL_<KEY>_<PROPERTY>` (e.g., `STACKPANEL_POSTGRES_PORT`)
 - All user-editable config uses YAML/Nix with JSON Schema validation for IDE intellisense
+
+## Change Propagation
+
+When modifying any part of the system, you must propagate changes to all affected layers. Stackpanel is a full-stack system where Nix modules, Go CLI, TypeScript packages, codegen, templates, UI, and docs are tightly coupled. A change in one layer almost always requires updates in others.
+
+### Propagation Matrix
+
+Use this matrix to identify what else needs updating when you change something:
+
+| What Changed | Also Update |
+|---|---|
+| **Nix module options** | Proto schema if the option feeds into types, Go CLI if it reads the option, `@gen/env` codegen templates if it's an env var, docs content (`apps/docs/`), module `ui.nix` if it should appear in Studio, module `meta.nix` if metadata changed |
+| **Proto schema (`.proto.nix`)** | Run `packages/proto/generate.sh` to regenerate Go + TS types, update any Go/TS code consuming the changed types, update UI components displaying the data |
+| **Go CLI command** | Doc generation templates (`apps/stackpanel-go/internal/docgen/`), docs site content (`apps/docs/`), `meta.nix` if the command relates to a module |
+| **Go agent API endpoint** | TypeScript agent client (`packages/agent-client/`), UI components consuming the endpoint (`apps/web/`), tRPC routers if proxied (`packages/api/`) |
+| **UI component** | Ensure proto types are current, check if the component is used in Studio module panels (`ui.nix` references) |
+| **Nix service module** | Port allocation in `network/`, process-compose config, env var exports, codegen templates, docs, Studio UI panel |
+| **Flake template** | Update ALL template variants (`default/`, `minimal/`, `devenv/`), run template tests (`tests/`), update docs if user-facing behavior changed |
+| **Codegen template** | Re-run the relevant generation script, verify generated output compiles/type-checks, update tests |
+| **Package public API** | Check all downstream consumers in the dependency chain, update re-exports in `packages/ui/` if it's a UI package |
+| **Secrets / SOPS config** | Update `.stackpanel/secrets/` schema, verify group key derivation, check env var propagation |
+| **Database schema** | Update proto schema, regenerate types, update Drizzle schema (`packages/db/`), run migrations |
+| **Docs content** | Verify code examples are current, check cross-references to other doc pages |
+| **Config schema (YAML/JSON Schema)** | Update validation schemas, Nix option types, docs, and any Go/TS code that parses the config |
+
+### Workflow Checklist
+
+When completing any task, verify the following before considering it done:
+
+1. **Types are current**: If you changed a schema or data structure, regenerate types (`packages/proto/generate.sh`, `nix/stackpanel/core/generate-types.sh`)
+2. **Codegen is current**: If you changed Nix options or templates, re-run the relevant codegen and verify output
+3. **UI reflects changes**: If you changed a module's behavior or options, update `ui.nix` and any Studio components
+4. **Docs are updated**: If you changed user-facing behavior, update `apps/docs/` content and any relevant `docs/` files
+5. **Templates are consistent**: If you changed project structure or defaults, update all flake templates
+6. **Tests pass**: Run `bun run test` / `turbo test` and verify nothing is broken by the change
+7. **Devshell builds**: Enter `nix develop --impure` to verify the Nix evaluation still succeeds
