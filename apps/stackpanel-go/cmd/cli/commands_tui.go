@@ -18,6 +18,7 @@ const (
 	commandsViewList commandsViewState = iota
 	commandsViewRunning
 	commandsViewHelp
+	commandsViewDetail
 	commandsViewOutput
 )
 
@@ -109,7 +110,7 @@ func (m commandsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	if m.state == commandsViewHelp || m.state == commandsViewOutput {
+	if m.state == commandsViewHelp || m.state == commandsViewDetail || m.state == commandsViewOutput {
 		if ws, ok := msg.(tea.WindowSizeMsg); ok {
 			m.width = ws.Width
 			m.height = ws.Height
@@ -138,6 +139,8 @@ func (m commandsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.commands) > 0 {
 				m.selected = len(m.commands) - 1
 			}
+		case "v":
+			return m.showDetail(), nil
 		case "h", "?":
 			return m.showHelp(), nil
 		case "enter", " ":
@@ -183,7 +186,7 @@ func (m commandsModel) View() string {
 	switch m.state {
 	case commandsViewRunning:
 		return tui.RenderFrame(m.renderRunningView())
-	case commandsViewHelp, commandsViewOutput:
+	case commandsViewHelp, commandsViewDetail, commandsViewOutput:
 		return tui.RenderFrame(m.outputViewer.View())
 	default:
 		return tui.RenderFrame(m.renderListView())
@@ -213,13 +216,9 @@ func (m commandsModel) renderListView() string {
 			tui.HelpStyle.Render("q: quit")
 	}
 
-	listWidth := 48
+	listWidth := 60
 	if m.width > 0 {
-		listWidth = max(32, m.width/2)
-	}
-	detailWidth := 44
-	if m.width > 0 {
-		detailWidth = max(28, m.width-listWidth-6)
+		listWidth = m.width - 4
 	}
 
 	var b strings.Builder
@@ -230,19 +229,10 @@ func (m commandsModel) renderListView() string {
 	b.WriteString(subtitle)
 	b.WriteString("\n\n")
 
-	left := m.renderCommandsList(listWidth)
-	right := m.renderCommandDetails(detailWidth)
-
-	content := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		left,
-		right,
-	)
-
-	b.WriteString(content)
+	b.WriteString(m.renderCommandsList(listWidth))
 	b.WriteString("\n")
 
-	help := "↑/↓: select • enter: run • h/?: help text • q: quit"
+	help := "↑/↓: select • enter: run • v: view details • h/?: help text • q: quit"
 	b.WriteString(tui.HelpStyle.Render(help))
 
 	if m.statusMessage != "" {
@@ -301,82 +291,6 @@ func (m commandsModel) renderCommandsList(width int) string {
 	return box.Render(strings.Join(items, "\n"))
 }
 
-func (m commandsModel) renderCommandDetails(width int) string {
-	if len(m.commands) == 0 {
-		return tui.BoxStyle.Width(width).Render(tui.TextDim.Render("Select a command to see details"))
-	}
-
-	entry := m.commands[m.selected]
-
-	var b strings.Builder
-	title := lipgloss.NewStyle().
-		Foreground(tui.ColorPrimary).
-		Bold(true).
-		Render(entry.Name)
-	b.WriteString(title)
-	b.WriteString("\n")
-
-	if desc := entry.description(); desc != "" {
-		b.WriteString(tui.TextDim.Render(desc))
-		b.WriteString("\n\n")
-	} else {
-		b.WriteString(tui.TextDim.Render("No description provided."))
-		b.WriteString("\n\n")
-	}
-
-	// Display arguments if defined
-	if len(entry.Command.Args) > 0 {
-		b.WriteString(tui.TextSubtle.Render("Arguments"))
-		b.WriteString("\n")
-		argStyle := lipgloss.NewStyle().Foreground(tui.ColorPrimary)
-		requiredStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#ef4444"))
-		for _, arg := range entry.Command.Args {
-			argLine := "  " + argStyle.Render(arg.Name)
-			if arg.Required != nil && *arg.Required {
-				argLine += " " + requiredStyle.Render("*")
-			}
-			if arg.Description != nil && *arg.Description != "" {
-				argLine += " " + tui.TextDim.Render(*arg.Description)
-			}
-			b.WriteString(argLine)
-			b.WriteString("\n")
-		}
-		b.WriteString("\n")
-	}
-
-	b.WriteString(tui.TextSubtle.Render("Exec"))
-	b.WriteString("\n")
-	code := lipgloss.NewStyle().
-		Foreground(tui.ColorWhite).
-		Background(tui.ColorSurface).
-		Padding(0, 1).
-		Width(width - 4).
-		Render(strings.TrimSpace(entry.Command.Exec))
-	b.WriteString(code)
-	b.WriteString("\n\n")
-
-	if len(entry.Command.Env) > 0 {
-		b.WriteString(tui.TextSubtle.Render("Env overrides"))
-		b.WriteString("\n")
-		envLines := make([]string, 0, len(entry.Command.Env))
-		keys := make([]string, 0, len(entry.Command.Env))
-		for k := range entry.Command.Env {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			envLines = append(envLines, fmt.Sprintf("%s=%s", k, entry.Command.Env[k]))
-		}
-		b.WriteString(strings.Join(envLines, "\n"))
-		b.WriteString("\n")
-	} else {
-		b.WriteString(tui.TextDim.Render("No command-specific environment."))
-		b.WriteString("\n")
-	}
-
-	return tui.BoxStyle.Width(width).Render(b.String())
-}
-
 func (m commandsModel) renderRunningView() string {
 	if len(m.commands) == 0 {
 		return tui.TextDim.Render("No commands to run.")
@@ -402,6 +316,28 @@ func (m commandsModel) showHelp() commandsModel {
 	m.outputViewer = viewer
 	m.hasViewer = true
 	m.state = commandsViewHelp
+	if m.width > 0 && m.height > 0 {
+		m.updateViewerSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+	}
+	return m
+}
+
+func (m commandsModel) showDetail() commandsModel {
+	if len(m.commands) == 0 {
+		return m
+	}
+
+	entry := m.commands[m.selected]
+	detailText := formatCommandDetail(entry)
+	viewer := output.NewViewerModel(
+		detailText,
+		output.WithTitle(entry.Name),
+		output.WithMarkdown(),
+		output.WithReturnMsg(returnToCommandsMsg{}),
+	)
+	m.outputViewer = viewer
+	m.hasViewer = true
+	m.state = commandsViewDetail
 	if m.width > 0 && m.height > 0 {
 		m.updateViewerSize(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 	}
@@ -443,6 +379,59 @@ func (c commandEntry) description() string {
 		return strings.TrimSpace(*c.Command.Description)
 	}
 	return ""
+}
+
+func formatCommandDetail(entry commandEntry) string {
+	var b strings.Builder
+	b.WriteString("# ")
+	b.WriteString(entry.Name)
+	b.WriteString("\n\n")
+
+	if desc := entry.description(); desc != "" {
+		b.WriteString(desc)
+		b.WriteString("\n\n")
+	}
+
+	if len(entry.Command.Args) > 0 {
+		b.WriteString("## Arguments\n\n")
+		for _, arg := range entry.Command.Args {
+			argLine := "- **" + arg.Name + "**"
+			if arg.Required != nil && *arg.Required {
+				argLine += " *(required)*"
+			}
+			if arg.Default != nil && *arg.Default != "" {
+				argLine += fmt.Sprintf(" [default: `%s`]", *arg.Default)
+			}
+			b.WriteString(argLine)
+			if arg.Description != nil && *arg.Description != "" {
+				b.WriteString(" — ")
+				b.WriteString(*arg.Description)
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString("## Script\n\n")
+	b.WriteString("```bash\n")
+	b.WriteString(strings.TrimSpace(entry.Command.Exec))
+	b.WriteString("\n```\n")
+
+	if len(entry.Command.Env) > 0 {
+		b.WriteString("\n## Environment Overrides\n\n")
+		keys := make([]string, 0, len(entry.Command.Env))
+		for k := range entry.Command.Env {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			b.WriteString(fmt.Sprintf("- `%s=%s`\n", k, entry.Command.Env[k]))
+		}
+	}
+
+	b.WriteString("\n")
+	b.WriteString("_Press q/esc/enter to return_")
+	return b.String()
 }
 
 func formatCommandHelp(entry commandEntry) string {
