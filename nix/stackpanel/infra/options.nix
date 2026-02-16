@@ -145,7 +145,12 @@ in
     framework = lib.mkOption {
       type = lib.types.enum [ "alchemy" ];
       default = "alchemy";
-      description = "IaC framework to use for infrastructure provisioning";
+      description = ''
+        IaC framework to use for infrastructure provisioning.
+        Currently only "alchemy" is supported. The alchemy module at
+        config.stackpanel.alchemy provides the shared SDK configuration
+        (version, state store, helpers) that this module consumes.
+      '';
     };
 
     output-dir = lib.mkOption {
