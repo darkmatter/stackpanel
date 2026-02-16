@@ -81,9 +81,6 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 **React 19+:**
 - Use ref as a prop instead of `React.forwardRef`
 
-**Solid/Svelte/Vue/Qwik:**
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
-
 ---
 
 ## Proto Schema & Type Generation
@@ -163,7 +160,7 @@ proto.mkProtoFile {
 - Nix schemas: `nix/stackpanel/db/schemas/*.proto.nix`
 - Generated .proto: `packages/proto/proto/*.proto`
 - Generated TypeScript: `packages/proto/gen/ts/*.ts`
-- Generated Go: `packages/proto/gen/go/*.go`
+- Generated Go: `packages/proto/gen/gopb/*.pb.go`
 
 ### When to Extend vs. Use Directly
 
@@ -176,93 +173,6 @@ proto.mkProtoFile {
     isStale: boolean;
   }
   ```
-
----
-
-## Nix-Backed Database (Core Architecture)
-
-Stackpanel uses a **Nix-first schema system** as the single source of truth for configuration data types. This is a core architectural pattern - not a traditional database, but a type-safe configuration system.
-
-### Key Concepts
-
-- **Schemas defined in Nix** (`nix/stackpanel/db/schemas/*.nix`) using familiar `mkOption`-style syntax
-- **JSON Schema generated automatically** from Nix types for cross-language compatibility
-- **TypeScript and Go types generated** via `quicktype` from JSON Schema
-- **Data files** live in `.stackpanel/data/*.nix` and act like database "tables"
-
-### Directory Structure
-
-```
-nix/stackpanel/db/
-├── default.nix          # Main module, aggregates all schemas
-├── lib/types.nix        # Nix type → JSON Schema mapping
-└── schemas/
-    ├── users.nix        # User schema
-    ├── apps.nix         # Apps schema
-    ├── databases.nix    # Database connections schema
-    └── ...              # Other entity schemas
-```
-
-### Type Generation
-
-Run the generation script after schema changes:
-
-```bash
-./nix/stackpanel/core/generate-types.sh      # Generate both TS and Go
-./nix/stackpanel/core/generate-types.sh ts   # TypeScript only
-./nix/stackpanel/core/generate-types.sh go   # Go only
-```
-
-**Output files:**
-- TypeScript: `apps/web/src/lib/generated/nix-types.ts`
-- Go: `packages/stackpanel-go/types/generated/config.go`
-
-### Type Prefixing
-
-Entity types are prefixed with their entity name to avoid naming collisions:
-- `DatabasesType`, `ExtensionsType`, `OnboardingType` (not generic `Type`)
-- `ExtensionsSource`, `DnsProvider` (not generic `Source`, `Provider`)
-
-### Schema Definition Pattern
-
-```nix
-# nix/stackpanel/db/schemas/users.nix
-{ lib }:
-let
-  dbTypes = import ../lib/types.nix { inherit lib; };
-  inherit (dbTypes) mkSchema str nullableStr listOfStr;
-
-  userOptions = {
-    name = str "Display name of the user";
-    github = nullableStr "GitHub username";
-    public-keys = listOfStr "SSH or AGE public keys";
-  };
-in
-mkSchema {
-  name = "Users";
-  filename = "users.nix";
-  isMap = true;
-  additionalProperties = buildSubmoduleSchema "A team member" userOptions;
-}
-```
-
-### Type Mapping (Nix → JSON Schema → TS/Go)
-
-| Nix Type | JSON Schema | TypeScript | Go |
-|----------|-------------|------------|-----|
-| `types.str` | `{ type: "string" }` | `string` | `string` |
-| `types.int` | `{ type: "integer" }` | `number` | `int64` |
-| `types.bool` | `{ type: "boolean" }` | `boolean` | `bool` |
-| `types.listOf types.str` | `{ type: "array", items: {...} }` | `string[]` | `[]string` |
-| `types.attrsOf types.str` | `{ additionalProperties: {...} }` | `{ [key: string]: string }` | `map[string]string` |
-| `types.nullOr types.str` | `{ type: ["string", "null"] }` | `string \| null` | `*string` |
-
-### Important Notes
-
-- **Nix is the source of truth** - never edit generated type files directly
-- **Regenerate after schema changes** - always run the generation script
-- **Core types have no prefix** - only entity/data types are prefixed
-- See `nix/stackpanel/db/README.md` for detailed documentation
 
 ---
 
