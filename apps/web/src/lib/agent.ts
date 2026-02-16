@@ -26,6 +26,11 @@ import type {
   GroupSecretListResponse,
   AllGroupsListResponse,
   GenerateEnvPackageResponse,
+  RecipientListResponse,
+  AddRecipientRequest,
+  Recipient,
+  RekeyWorkflowStatus,
+  SecretsVerifyResponse,
 } from "./types";
 
 // The full Nix config is a dynamic object from nix eval, not the proto Config message
@@ -65,6 +70,7 @@ export interface DeleteResponse {
  * EntityClient - CRUD client for a specific Nix entity file.
  * (Currently unused but kept for future use)
  */
+// @ts-expect-error Kept for future use
 class _EntityClient<T> {
   constructor(
     private client: AgentHttpClient,
@@ -711,31 +717,6 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data;
-  }
-
-  /**
-   * Regenerate the secrets package (sops config + secrets files).
-   * Call this after updating variables to ensure secrets are in sync.
-   * Uses nix run to access the script via flake output, works regardless of devshell.
-   * Returns null if regeneration fails.
-   */
-  async regenerateSecrets(): Promise<ExecResult | null> {
-    try {
-      // Try nix run first (works outside devshell via flake output)
-      // The script name has a colon, so we need to quote it in the attribute path
-      return await this.exec({
-        command: "nix",
-        args: ["run", "--impure", '.#scripts."secrets:generate"'],
-      });
-    } catch (err) {
-      // Fall back to direct command (works inside devshell)
-      try {
-        return await this.exec({ command: "secrets:generate" });
-      } catch {
-        console.debug("secrets:generate not available:", err);
-        return null;
-      }
-    }
   }
 
   async readFile(path: string): Promise<FileContent> {
@@ -1465,6 +1446,76 @@ export class AgentHttpClient {
    * - groups/<group>.yaml - SOPS-encrypted files
    * - .sops.yaml - SOPS configuration
    */
+  // ===========================================================================
+  // Recipients & team access
+  // ===========================================================================
+
+  /** List all recipients (AGE public keys in the recipients directory) */
+  async listRecipients(): Promise<RecipientListResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Add a new recipient (AGE or SSH public key) */
+  async addRecipient(
+    request: AddRecipientRequest,
+  ): Promise<Recipient> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(request),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Remove a recipient */
+  async removeRecipient(name: string): Promise<{ deleted: boolean }> {
+    const res = await fetch(
+      `${this.baseUrl}/api/secrets/recipients?name=${encodeURIComponent(name)}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(false),
+      },
+    );
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Check the status of the GitHub Actions rekey workflow */
+  async getRekeyWorkflowStatus(): Promise<RekeyWorkflowStatus> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/rekey-workflow`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Verify secrets encrypt/decrypt round-trip for a group */
+  async verifySecrets(
+    group: string,
+  ): Promise<SecretsVerifyResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/verify`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ group }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  // ===========================================================================
+  // Env package generation
+  // ===========================================================================
+
   async generateEnvPackage(): Promise<GenerateEnvPackageResponse> {
     const res = await fetch(
       `${this.baseUrl}/api/secrets/generate-env-package`,

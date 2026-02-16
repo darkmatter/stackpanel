@@ -190,6 +190,7 @@ in
           severity = "critical";
           timeout = 5;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
             KEY_PATH="$STACKPANEL_STATE_DIR/step/device.key"
 
@@ -215,6 +216,7 @@ in
           severity = "critical";
           timeout = 10;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
             if [ ! -f "$CERT_PATH" ]; then
@@ -243,6 +245,7 @@ in
           severity = "warning";
           timeout = 10;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
             if [ ! -f "$CERT_PATH" ]; then
@@ -320,6 +323,7 @@ in
           severity = "critical";
           timeout = 5;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
             CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
             KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
@@ -346,6 +350,7 @@ in
           severity = "critical";
           timeout = 30;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
             CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
             KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
@@ -472,21 +477,23 @@ in
             "keys"
           ];
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+
             # Check common AGE key locations
             # Check SOPS_AGE_KEY_CMD first (lazy key command)
             if [ -n "''${SOPS_AGE_KEY_CMD:-}" ]; then
-              echo "AGE key command configured: $SOPS_AGE_KEY_CMD"
+              echo "AGE key command configured: ''${SOPS_AGE_KEY_CMD:-}"
               exit 0
             fi
 
             # Check SOPS_AGE_KEY_FILE
             if [ -n "''${SOPS_AGE_KEY_FILE:-}" ] && [ -f "''${SOPS_AGE_KEY_FILE:-}" ]; then
-              echo "AGE key found at: $SOPS_AGE_KEY_FILE"
+              echo "AGE key found at: ''${SOPS_AGE_KEY_FILE:-}"
               exit 0
             fi
 
             # Check stackpanel state dir
-            if [ -f "''${STACKPANEL_STATE_DIR:-}/age-key.txt" ]; then
+            if [ -f "$STACKPANEL_STATE_DIR/age-key.txt" ]; then
               echo "AGE key found at: $STACKPANEL_STATE_DIR/age-key.txt"
               exit 0
             fi
@@ -503,8 +510,8 @@ in
             echo ""
             echo "Checked locations:"
             echo "  - \$SOPS_AGE_KEY_CMD (not set)"
-            if [ -n "$SOPS_AGE_KEY_FILE" ]; then
-              echo "  - \$SOPS_AGE_KEY_FILE ($SOPS_AGE_KEY_FILE)"
+            if [ -n "''${SOPS_AGE_KEY_FILE:-}" ]; then
+              echo "  - \$SOPS_AGE_KEY_FILE (''${SOPS_AGE_KEY_FILE:-})"
             else
               echo "  - \$SOPS_AGE_KEY_FILE (not set)"
             fi

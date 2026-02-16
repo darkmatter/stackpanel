@@ -79,13 +79,6 @@ export function useAppMutations({
 				});
 				toast.success(`Added ${envKey} to app`);
 
-				// Regenerate secrets package in background (works when agent is in devshell)
-				client.regenerateSecrets().then((result) => {
-					if (result && result.exit_code === 0) {
-						toast.success("Secrets package regenerated", { duration: 2000 });
-					}
-				});
-
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -152,13 +145,6 @@ export function useAppMutations({
 					environments: newEnvironments,
 				});
 				toast.success(`Updated ${newEnvKey}`);
-
-				// Regenerate secrets package in background (works when agent is in devshell)
-				client.regenerateSecrets().then((result) => {
-					if (result && result.exit_code === 0) {
-						toast.success("Secrets package regenerated", { duration: 2000 });
-					}
-				});
 
 				refetch();
 			} catch (err) {
@@ -247,13 +233,6 @@ export function useAppMutations({
 					environments: newEnvironments,
 				});
 				toast.success(`Removed ${envKey}`);
-
-				// Regenerate secrets package in background (works when agent is in devshell)
-				client.regenerateSecrets().then((result) => {
-					if (result && result.exit_code === 0) {
-						toast.success("Secrets package regenerated", { duration: 2000 });
-					}
-				});
 
 				refetch();
 			} catch (err) {
