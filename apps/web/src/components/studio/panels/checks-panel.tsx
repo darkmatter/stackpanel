@@ -25,6 +25,7 @@ export function ChecksPanel() {
 		isLoading,
 		error,
 		isRefreshing,
+		runningCheckIds,
 		refetch,
 		runChecks,
 	} = useHealthchecks({ enabled: true });
@@ -83,7 +84,7 @@ export function ChecksPanel() {
 							className="pl-9"
 						/>
 					</div>
-					<HealthSummaryPanelView summary={summary ?? null} isLoading={isLoading} error={error ?? undefined} isRefreshing={isRefreshing} onRunChecks={runChecks} />
+					<HealthSummaryPanelView summary={summary ?? null} isLoading={isLoading} error={error ?? undefined} isRefreshing={isRefreshing} runningCheckIds={runningCheckIds} onRunChecks={runChecks} />
 
 					{/* Info Card */}
 					<Card className="border-accent/30 bg-accent/5">

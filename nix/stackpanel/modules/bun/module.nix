@@ -299,6 +299,7 @@ in
           lockfile-exists = {
             description = "bun.nix lockfile exists for Nix builds";
             script = ''
+              STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
               test -f "$STACKPANEL_ROOT/bun.nix" || \
               find "$STACKPANEL_ROOT/apps" -name "bun.nix" -type f | head -1 | grep -q .
             '';
