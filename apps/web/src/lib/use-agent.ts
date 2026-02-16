@@ -43,6 +43,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";
 import { createAgentTransport } from "./connect-transport";
 import { AgentHttpClient } from "./agent";
+import type { RecipientListResponse, RekeyWorkflowStatus } from "./types";
 
 // =============================================================================
 // Legacy Hooks (for backward compatibility)
@@ -196,6 +197,10 @@ export const agentQueryKeys = {
 
 	// Variables Backend
 	variablesBackend: () => [...agentQueryKeys.all, "variablesBackend"] as const,
+
+	// Recipients & Team Access
+	recipients: () => [...agentQueryKeys.all, "recipients"] as const,
+	rekeyWorkflow: () => [...agentQueryKeys.all, "rekeyWorkflow"] as const,
 } as const;
 
 // =============================================================================
@@ -993,6 +998,112 @@ export function useVariablesBackend() {
 export function useIsChamberBackend(): boolean {
 	const { data } = useVariablesBackend();
 	return data?.backend === "chamber";
+}
+
+// =============================================================================
+// Recipients
+// =============================================================================
+
+/**
+ * Fetch the list of AGE recipients (public keys registered for secrets access).
+ */
+export function useRecipients() {
+	const client = useAgentClient();
+	const { isConnected } = useAgentContext();
+
+	return useQuery<RecipientListResponse>({
+		queryKey: agentQueryKeys.recipients(),
+		queryFn: async () => {
+			if (!client) throw new Error("No agent client");
+			return client.listRecipients();
+		},
+		enabled: isConnected,
+		staleTime: 30_000,
+	});
+}
+
+/**
+ * Mutation to add a new recipient.
+ */
+export function useAddRecipient() {
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (request: {
+			name: string;
+			publicKey?: string;
+			sshPublicKey?: string;
+		}) => {
+			if (!client) throw new Error("No agent client");
+			return client.addRecipient(request);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: agentQueryKeys.recipients(),
+			});
+		},
+	});
+}
+
+/**
+ * Mutation to remove a recipient.
+ */
+export function useRemoveRecipient() {
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (name: string) => {
+			if (!client) throw new Error("No agent client");
+			return client.removeRecipient(name);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: agentQueryKeys.recipients(),
+			});
+		},
+	});
+}
+
+// =============================================================================
+// Rekey Workflow
+// =============================================================================
+
+/**
+ * Fetch the status of the GitHub Actions secrets rekey workflow.
+ */
+export function useRekeyWorkflowStatus() {
+	const client = useAgentClient();
+	const { isConnected } = useAgentContext();
+
+	return useQuery<RekeyWorkflowStatus>({
+		queryKey: agentQueryKeys.rekeyWorkflow(),
+		queryFn: async () => {
+			if (!client) throw new Error("No agent client");
+			return client.getRekeyWorkflowStatus();
+		},
+		enabled: isConnected,
+		staleTime: 60_000,
+	});
+}
+
+// =============================================================================
+// Secrets Verification
+// =============================================================================
+
+/**
+ * Mutation to verify encrypt/decrypt round-trip for a secrets group.
+ */
+export function useVerifySecrets() {
+	const client = useAgentClient();
+
+	return useMutation({
+		mutationFn: async (group: string) => {
+			if (!client) throw new Error("No agent client");
+			return client.verifySecrets(group);
+		},
+	});
 }
 
 // =============================================================================
