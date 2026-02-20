@@ -7,11 +7,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
+
+// secretKeyPattern enforces chamber-style naming: lowercase alphanumeric + hyphens,
+// must start with a letter or digit. No slashes, no uppercase.
+var secretKeyPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+// isValidSecretKey checks if a secret key name follows chamber naming rules.
+func isValidSecretKey(key string) bool {
+	return secretKeyPattern.MatchString(key)
+}
 
 // GroupSecretRequest represents a request to write a secret to a group's SOPS file
 type GroupSecretRequest struct {
@@ -300,6 +310,12 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 		s.writeAPIError(w, http.StatusBadRequest, "key is required")
 		return
 	}
+	// Enforce chamber naming rules: lowercase alphanumeric + hyphens only
+	if !isValidSecretKey(req.Key) {
+		s.writeAPIError(w, http.StatusBadRequest,
+			"invalid key name: must contain only lowercase letters, numbers, and hyphens, and start with a letter or number")
+		return
+	}
 	if strings.TrimSpace(req.Group) == "" {
 		s.writeAPIError(w, http.StatusBadRequest, "group is required")
 		return
@@ -386,6 +402,10 @@ func (s *Server) handleGroupSecretRead(w http.ResponseWriter, r *http.Request) {
 		s.writeAPIError(w, http.StatusBadRequest, "key is required")
 		return
 	}
+	if !isValidSecretKey(req.Key) {
+		s.writeAPIError(w, http.StatusBadRequest, "invalid key name: must be lowercase alphanumeric and hyphens only (e.g., 'database-url')")
+		return
+	}
 	if strings.TrimSpace(req.Group) == "" {
 		s.writeAPIError(w, http.StatusBadRequest, "group is required")
 		return
@@ -429,6 +449,10 @@ func (s *Server) handleGroupSecretDelete(w http.ResponseWriter, r *http.Request)
 
 	if key == "" {
 		s.writeAPIError(w, http.StatusBadRequest, "key is required")
+		return
+	}
+	if !isValidSecretKey(key) {
+		s.writeAPIError(w, http.StatusBadRequest, "invalid key name: must be lowercase alphanumeric and hyphens only (e.g., 'database-url')")
 		return
 	}
 	if group == "" {
