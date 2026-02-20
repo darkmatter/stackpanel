@@ -39,6 +39,7 @@
       };
       name = "docs";
       path = "apps/docs";
+      tls = true;
       type = "bun";
     };
     stackpanel-go = {
@@ -379,7 +380,7 @@
     system-keys = [ ];
     groups = {
       dev = {
-        age-pub = "age18jexhwcd4ehm7th0pqt8x6rmg3yuxstwv8aavqul4hvcmjkkhfaqn75su0";
+        age-pub = "age1783kahlc7yxv2md9vtpx4wq899csvqxty03fatcs5s7lqfh5334s6p7r0l";
       };
       prod = {
         age-pub = "age1tvczw6y7g4v0ma7cn05adrnst9jnnsh9j8ge0t0flls8ucq5yg9qe37jhe";
@@ -562,64 +563,6 @@
   # Variables
   # ---------------------------------------------------------------------------
   variables = {
-    "/common/SHARED_VALUE" = {
-      id = "/common/SHARED_VALUE";
-      value = "secret value";
-    };
-    "/dev/OPENAI_API_KEY" = {
-      value = "ref+sops://.stackpanel/secrets/dev.yaml#/OPENAI_API_KEY";
-    };
-    "/foobar" = {
-      id = "/foobar";
-      key = "foobar";
-      type = "SECRET";
-      value = "";
-    };
-    "/my-api-endpoint" = {
-      id = "/my-api-endpoint";
-      key = "my-api-endpoint";
-      type = "SECRET";
-      value = "cool-api.com";
-    };
-    "/prod/POSTGRES_URL" = {
-      value = "ref+sops://.stackpanel/secrets/prod.yaml#/POSTGRES_URL";
-    };
-    "/secret-foo" = {
-      id = "/secret-foo";
-      key = "secret-foo";
-      type = "SECRET";
-      value = "";
-    };
-    "/stripe-secre-key" = {
-      id = "/stripe-secre-key";
-      value = "ref+sops://.stackpanel/secrets/common.yaml#/KEY";
-    };
-    "/test" = {
-      id = "/test";
-      key = "test";
-      type = "SECRET";
-      value = "";
-    };
-    "/username" = {
-      id = "/username";
-      key = "username";
-      type = "SECRET";
-      value = "";
-    };
-    "/var/API_VERSION" = {
-      value = "v1";
-    };
-    "/var/LOG_LEVEL" = {
-      value = "info";
-    };
-
-    # Cloudflare credentials for Alchemy state store
-    "/dev/CLOUDFLARE_API_TOKEN" = {
-      value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/CLOUDFLARE_API_TOKEN";
-    };
-    "/dev/ALCHEMY_STATE_TOKEN" = {
-      value = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/ALCHEMY_STATE_TOKEN";
-    };
   };
   files.entries.".gitignore" = {
     type = "line-set";
