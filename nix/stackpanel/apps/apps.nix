@@ -49,10 +49,15 @@ let
 
   # Import caddy library for adding sites
   caddyLib = import ../services/caddy { inherit pkgs lib; };
+  stepCaCfg = config.stackpanel.step-ca or { enable = false; };
+  useStepTls = caddyCfg.use-step-tls or false;
+  stepEnabled = useStepTls && (stepCaCfg.enable or false);
+  stepCaUrl = stepCaCfg.ca-url or "";
+  stepCaRoot = "$HOME/.step/certs/root_ca.crt";
   caddyScripts = caddyLib.mkCaddyScripts {
-    stepEnabled = config.stackpanel.network.step.enable or false;
-    stepCaUrl = config.stackpanel.network.step.ca-url or "";
-    stepCaFingerprint = config.stackpanel.network.step.ca-fingerprint or "";
+    inherit stepEnabled;
+    inherit stepCaUrl;
+    stepCaFingerprint = stepCaCfg.ca-fingerprint or "";
   };
 
   # Apps use offset 0-9 (services use 10+)
@@ -136,7 +141,24 @@ in
         in
         ''
           # Register Caddy site for ${name}
-          ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${app.domain}" "localhost:${toString app.port}" --project "${portsCfg.project-name}" ${lib.optionalString app.tls "--tls-internal"} 2>/dev/null || true
+          ${lib.optionalString (app.tls && stepEnabled) ''
+            # Generate Step CA certificate for ${app.domain} if needed
+            _step_cert="$HOME/.step/certs/${app.domain}.crt"
+            _step_key="$HOME/.step/certs/${app.domain}.key"
+            if [ ! -f "$_step_cert" ] || [ ! -f "$_step_key" ]; then
+              step ca certificate "${app.domain}" "$_step_cert" "$_step_key" \
+                --ca-url "${stepCaUrl}" \
+                --provisioner "${stepCaCfg.provisioner or "default"}" \
+                --not-after 720h \
+                --force 2>/dev/null || true
+            fi
+          ''}
+          ${caddyScripts.caddyAddSite}/bin/caddy-add-site "${app.domain}" "localhost:${toString app.port}" --project "${portsCfg.project-name}" ${
+            if app.tls && stepEnabled then
+              ''--tls-cert "$HOME/.step/certs/${app.domain}.crt" --tls-key "$HOME/.step/certs/${app.domain}.key"''
+            else
+              lib.optionalString app.tls "--tls-internal"
+          } 2>/dev/null || true
         ''
       ) appsWithVhosts)
     ];

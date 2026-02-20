@@ -171,6 +171,7 @@
   caddy = {
     enable = true;
     project-name = "stackpanel";
+    tld = "lan";
     use-step-tls = true;
   };
 
