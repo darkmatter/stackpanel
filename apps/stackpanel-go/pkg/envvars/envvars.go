@@ -105,16 +105,6 @@ var (
 		GoField:     "ProjectRoot",
 	}
 
-	// StackpanelRootMarker is the filename used to identify project root
-	StackpanelRootMarker = EnvVar{
-		Name:        "STACKPANEL_ROOT_MARKER",
-		Description: "Filename used as a marker to identify project root",
-		Category:    CategoryCore,
-		Source:      SourceNix,
-		Default:     ".stackpanel-root",
-		GoField:     "RootMarker",
-	}
-
 	// StackpanelRootDirName is the name of the .stackpanel directory
 	StackpanelRootDirName = EnvVar{
 		Name:        "STACKPANEL_ROOT_DIR_NAME",
@@ -588,7 +578,6 @@ func All() []EnvVar {
 	return []EnvVar{
 		// Core
 		StackpanelRoot,
-		StackpanelRootMarker,
 		StackpanelRootDirName,
 		StackpanelShellID,
 		StackpanelNixConfig,

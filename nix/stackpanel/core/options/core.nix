@@ -6,13 +6,8 @@
 # Defines the base options that control Stackpanel behavior:
 #   - enable: Master switch for Stackpanel functionality
 #   - root: Absolute project root path (optional override)
-#   - root-marker: Filename for the root marker file (.stackpanel-root)
 #   - dirs: Directory configuration (home, state, gen, config)
 #   - direnv: Direnv integration settings
-#   - gitignore: Whether to auto-add root marker to .gitignore
-#
-# The root marker system allows tools to find the project root from any
-# subdirectory by walking up the tree looking for the marker file.
 #
 # Directory layout:
 #   .stackpanel/           (dirs.home)
@@ -180,43 +175,15 @@
     # ----------------------------------------------------------------------------
     root = lib.mkOption {
       description = ''
-        Absolute path to the project root. If set, this overrides PWD-based detection.
+        Absolute path to the project root. If set, this overrides automatic detection.
 
-        For pure flake evaluation (like `nix flake check`), use the readStackpanelRoot
-        flake module which reads this from a flake input:
-
-        ```nix
-        # flake.nix inputs
-        inputs.stackpanel-root = {
-          url = "file+file:///dev/null";
-          flake = false;
-        };
-
-        # imports
-        imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
-        ```
-
-        Then in .envrc: `echo "$PWD" > .stackpanel-root`
+        Automatic detection uses (in order):
+        1. STACKPANEL_ROOT environment variable
+        2. Git repository root (.git directory)
+        3. flake.nix location
       '';
       type = lib.types.nullOr lib.types.str;
       default = null;
-    };
-    root-marker = lib.mkOption {
-      description = ''
-        Filename for the root marker file written to the project root.
-        Contains the absolute path to the project root, allowing tools
-        to find the project from any subdirectory. Add to .dockerignore
-        and .gitignore so containers create their own marker.
-      '';
-      type = lib.types.str;
-      default = ".stackpanel-root";
-    };
-    # Whether to append the marker to the project's .gitignore (off by default)
-    gitignore = {
-      addProjectMarker = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-      };
     };
 
     # ----------------------------------------------------------------------------

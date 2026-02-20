@@ -20,8 +20,6 @@
   inputs,
   self,
   system,
-  # Optional: override the project root (defaults to self)
-  projectRoot ? null,
   # Optional: additional stackpanel module imports
   stackpanelImports ? [ ],
 }:
@@ -38,11 +36,6 @@ let
   hasDevenv = inputs ? devenv;
   hasProcessCompose = inputs ? process-compose-flake;
   hasGitHooks = inputs ? git-hooks;
-
-  # ===================================================================
-  # Compute effective project root
-  # ===================================================================
-  effectiveRoot = if projectRoot != null then projectRoot else toString self;
 
   # ===================================================================
   # Auto-load stackpanel config from .stackpanel/
@@ -122,11 +115,17 @@ let
       imports = devenv-toplevel.imports;
       config = lib.recursiveUpdate devenv-toplevel.config ({
         # Set devenv.root for pure evaluation (required by devenv)
-        # Uses effectiveRoot which comes from readStackpanelRoot module or falls back to self
-        devenv.root = effectiveRoot;
+        # Uses toString self which works in pure flake evaluation
+        devenv.root = toString self;
+        # We can not get away without this anymore
+        devenv.cli.version = inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.default.version;
         # Fails checking cliVersion otherwise
         devenv.warnOnNewVersion = false;
-        # cliVersion = inputs.devenv.version;
+        # In newer devenv, without this, it also requires the
+        # cli.version to be set. We can set it the way described
+        # below, but this is actuallly a more correct value in our
+        # context
+        process.manager.implementation = "process-compose";
         # Ignore devenv's enterShell. We need the enterShell of the
         # other submodules, but the top level one adds things that
         # conflict with our shellHook (like PS1 modifications,
@@ -150,14 +149,14 @@ let
   devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
-  devenvPackages = if devenvConfig != null then (devenvConfig.packages or [ ]) else [ ];
+  devenvPackages = devenvConfig.packages or [ ];
 
   # Get env from devenv (includes computed values like GOPATH, GOROOT, GOTOOLCHAIN)
   # We extract this and merge it into our env, giving our values priority
-  devenvEnv = if devenvConfig != null then (devenvConfig.env or { }) else { };
+  devenvEnv = devenvConfig.env or { };
 
   # Get processes from devenv
-  devenvProcesses = if devenvConfig != null then (devenvConfig.processes or { }) else { };
+  devenvProcesses = devenvConfig.processes or { };
 
   # ===================================================================
   # Build shell hook from stackpanel hooks
@@ -325,17 +324,8 @@ let
       # All env vars
       env = allEnv;
 
-      # Process definitions (for process-compose integration)
-      processes = devenvProcesses // (spConfig.process-compose.processes or { });
-
-      # Devenv info
-      devenv = {
-        evaluated = devenvConfig != null;
-        packages = devenvPackages;
-        env = devenvEnv;
-        processes = devenvProcesses;
-        root = spConfig.root or null;
-      };
+      # Defenv config
+      devenv = devenvConfig;
     };
   };
 
