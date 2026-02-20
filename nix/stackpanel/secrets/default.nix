@@ -92,8 +92,29 @@ let
     ref = group.computed-ref;
   }) cfg.groups;
 
-  # Build the list of group key-cmd entries for the sops-age-keys script.
-  # Each group contributes a block that runs its key-cmd and extracts AGE keys.
+  # Build the list of group key resolution blocks for the sops-age-keys script.
+  # For each group, tries (in order):
+  #   1. All .age files in keys/ (plain private keys, gitignored)
+  #   2. Per-group key-cmd fallback (default: sops --decrypt .enc.age)
+  #
+  # Reading ALL .age files means old/rotated keys are automatically available
+  # for decrypting secrets still encrypted to them, without any re-keying.
+  allAgeFilesBlock = ''
+    # Read ALL .age files in the keys directory (includes current + rotated keys)
+     KEYS_DIR="${cfg.secrets-dir}/keys"
+    if [[ -d "$KEYS_DIR" ]]; then
+      for age_file in "$KEYS_DIR"/*.age; do
+        [[ -f "$age_file" ]] || continue
+        while IFS= read -r line; do
+          if [[ "$line" =~ AGE-SECRET-KEY- ]]; then
+            echo "$line"
+          fi
+        done < "$age_file"
+      done
+    fi
+  '';
+
+  # Per-group key-cmd fallback (for .enc.age decryption when no plain .age exists)
   groupKeyBlocks = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (
       name: group:
@@ -101,7 +122,7 @@ let
         keyCmd = orNull "" group.key-cmd;
       in
       lib.optionalString (keyCmd != "") ''
-        # Group: ${name}
+        # Group: ${name} — key-cmd fallback
         GROUP_OUTPUT=$(${keyCmd} 2>/dev/null) || true
         if [[ -n "$GROUP_OUTPUT" ]]; then
           while IFS= read -r line; do
@@ -150,7 +171,10 @@ let
         fi
       fi
 
-      # Step 2: Group key-cmds
+      # Step 2: All .age files in keys/ (current + rotated group keys)
+      ${allAgeFilesBlock}
+
+      # Step 3: Per-group key-cmd fallback (.enc.age decryption)
       ${groupKeyBlocks}
     '';
   };
@@ -424,6 +448,11 @@ in
         # ================================================================
         export SOPS_AGE_KEY_CMD="${sops-age-keys}/bin/sops-age-keys"
       ''
+    ];
+
+    stackpanel.files.entries.".gitignore".lines = [
+      ".stackpanel/secrets/*.age"
+      "!*.stackpanel/secrets/*.enc.age"
     ];
 
     # ═══════════════════════════════════════════════════════════════════════════
