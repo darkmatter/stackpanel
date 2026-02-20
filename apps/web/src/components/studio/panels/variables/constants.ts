@@ -188,6 +188,27 @@ export function getVariableName(id: string): string {
 }
 
 /**
+ * Validate a secret key name follows Chamber naming rules:
+ * lowercase alphanumeric + hyphens only, must start with alphanumeric.
+ */
+const SECRET_KEY_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+export function isValidSecretKey(key: string): boolean {
+  return SECRET_KEY_PATTERN.test(key);
+}
+
+export function formatSecretKeyError(key: string): string | null {
+  if (!key) return "Key is required";
+  if (/[A-Z]/.test(key))
+    return `Key "${key}" contains uppercase letters. Use lowercase only (e.g., "${key.toLowerCase()}")`;
+  if (/\//.test(key))
+    return `Key "${key}" contains slashes. Use hyphens instead`;
+  if (!SECRET_KEY_PATTERN.test(key))
+    return `Key "${key}" is invalid. Use only lowercase letters, numbers, and hyphens (must start with a letter or number)`;
+  return null;
+}
+
+/**
  * Check if a value is a vals reference.
  */
 export function isValsReference(value: string): boolean {

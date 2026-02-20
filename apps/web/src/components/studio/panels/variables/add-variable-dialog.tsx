@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
-import { getVariableName, SECRET_GROUPS } from "./constants";
+import { formatSecretKeyError, getVariableName, SECRET_GROUPS } from "./constants";
 
 type VariableMode = "plaintext" | "secret";
 
@@ -152,6 +152,15 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
       if (mode === "secret") {
         // Write secret to group-based SOPS file
         const envKey = getVariableName(normalizedId);
+
+        // Validate key follows Chamber naming rules
+        const keyError = formatSecretKeyError(envKey);
+        if (keyError) {
+          toast.error(keyError);
+          setIsSaving(false);
+          return;
+        }
+
         const result = await client.writeGroupSecret({
           key: envKey,
           value: trimmedValue,

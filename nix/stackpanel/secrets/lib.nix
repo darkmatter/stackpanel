@@ -397,6 +397,14 @@ rec {
     KEY="$1"
     shift
 
+    # Validate key: lowercase alphanumeric + hyphens only (chamber naming rules)
+    if [[ ! "$KEY" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+      LOG "ERROR" "Invalid key name: $KEY"
+      LOG "ERROR" "Keys must contain only lowercase letters, numbers, and hyphens"
+      LOG "ERROR" "Keys must start with a letter or number (not a hyphen)"
+      exit 1
+    fi
+
     GROUP="dev"
     VALUE=""
 
@@ -483,6 +491,13 @@ rec {
 
     KEY="$1"
     shift
+
+    # Validate key: lowercase alphanumeric + hyphens only (chamber naming rules)
+    if [[ ! "$KEY" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+      LOG "ERROR" "Invalid key name: $KEY"
+      LOG "ERROR" "Keys must contain only lowercase letters, numbers, and hyphens"
+      exit 1
+    fi
 
     GROUP="dev"
 
@@ -684,24 +699,77 @@ rec {
                     SSM_PATH=$(echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r --arg g "$GROUP_NAME" '.[$g]["ssm-path"]')
                   fi
 
+                  KEYS_DIR="${secretsDir}/keys"
+
                   # Check if group already has a public key configured
                   EXISTING_PUB=$(echo "$GROUPS_JSON" | ${pkgs.jq}/bin/jq -r --arg g "$GROUP_NAME" '.[$g]["age-pub"] // ""')
+                  GH_SYNC_ONLY=false
                   if [[ -n "$EXISTING_PUB" ]]; then
-                    echo "Warning: Group '$GROUP_NAME' already has a public key configured:" >&2
-                    echo "  $EXISTING_PUB" >&2
-                    echo "" >&2
-                    if [[ "$FORCE_YES" == "true" ]]; then
-                      echo "Overwriting (--yes specified)..." >&2
-                    else
-                      read -rp "Overwrite? This will generate a NEW keypair. [y/N] " CONFIRM
-                      if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
-                        echo "Aborted." >&2
-                        exit 0
+                    # If --force-gh is passed without --yes, sync the existing key to
+                    # GitHub without regenerating the keypair.
+                    if [[ "$FORCE_GH" == "true" && "$FORCE_YES" != "true" ]]; then
+                      GH_SYNC_ONLY=true
+                      echo "Syncing existing group key to GitHub..." >&2
+
+                      # Resolve the existing private key
+                      PLAIN_KEY="$KEYS_DIR/$GROUP_NAME.age"
+                      ENC_KEY="$KEYS_DIR/$GROUP_NAME.enc.age"
+                      if [[ -f "$PLAIN_KEY" ]]; then
+                        PRIVATE_KEY=$(cat "$PLAIN_KEY")
+                      elif [[ -f "$ENC_KEY" ]]; then
+                        PRIVATE_KEY=$(${pkgs.sops}/bin/sops --decrypt "$ENC_KEY" 2>/dev/null) || {
+                          echo "Error: Could not decrypt $ENC_KEY to read the private key." >&2
+                          exit 1
+                        }
+                      else
+                        echo "Error: No private key found at $PLAIN_KEY or $ENC_KEY." >&2
+                        echo "  Run 'secrets:init-group $GROUP_NAME --yes' to regenerate." >&2
+                        exit 1
                       fi
+
+                      PUBLIC_KEY="$EXISTING_PUB"
+                      ENC_AGE_FILE="$KEYS_DIR/$GROUP_NAME.enc.age"
+                      PLAIN_AGE_FILE="$KEYS_DIR/$GROUP_NAME.age"
+                      SOPS_SUCCESS=true
+                      SSM_SUCCESS=false
+                      if [[ "$JSON_OUTPUT" == "true" ]]; then
+                        LOG() { echo "$@" >&2; }
+                      else
+                        LOG() { echo "$@"; }
+                      fi
+                    elif [[ "$FORCE_YES" == "true" ]]; then
+                      echo "Regenerating keypair (--yes specified)..." >&2
+                    else
+                      echo "Group '$GROUP_NAME' is already initialized:" >&2
+                      echo "  Public key: $EXISTING_PUB" >&2
+                      echo "" >&2
+                      echo "  To sync existing key to GitHub:  secrets:init-group $GROUP_NAME --force-gh" >&2
+                      echo "  To regenerate the keypair:       secrets:init-group $GROUP_NAME --yes" >&2
+                      exit 0
                     fi
                   fi
 
+                  if [[ "$GH_SYNC_ONLY" == "true" ]]; then
+                    # Skip keypair generation — jump to GH integration below
+                    SOPS_SUCCESS=true
+                    SSM_SUCCESS=false
+                  else
+
                   echo "Generating AGE keypair for group '$GROUP_NAME'..."
+
+                  # Rename old .age file to preserve history (for decryption of old secrets)
+                  OLD_AGE_FILE="$KEYS_DIR/$GROUP_NAME.age"
+                  if [[ -f "$OLD_AGE_FILE" ]]; then
+                    OLD_PUB=$(${pkgs.age}/bin/age-keygen -y "$OLD_AGE_FILE" 2>/dev/null || true)
+                    if [[ -n "$OLD_PUB" ]]; then
+                      # Use first 8 and last 8 chars of the public key for the filename
+                      PREFIX="''${OLD_PUB:0:8}"
+                      SUFFIX="''${OLD_PUB: -8}"
+                      ARCHIVE_NAME="$GROUP_NAME-''${PREFIX}-''${SUFFIX}.age"
+                      mv "$OLD_AGE_FILE" "$KEYS_DIR/$ARCHIVE_NAME"
+                      echo "  Archived old key as keys/$ARCHIVE_NAME"
+                    fi
+                  fi
 
                   # Generate keypair to a temp file
                   TMPDIR=$(mktemp -d)
@@ -775,6 +843,12 @@ rec {
                     LOG "Warning: sops not found in PATH. Cannot encrypt .enc.age file." >&2
                   fi
 
+                  # Also save plain private key to <group>.age (gitignored, for fast local resolution)
+                  PLAIN_AGE_FILE="$KEYS_DIR/$GROUP_NAME.age"
+                  cp "$TMPDIR/key.txt" "$PLAIN_AGE_FILE"
+                  chmod 600 "$PLAIN_AGE_FILE"
+                  LOG "Plain group key saved to $PLAIN_AGE_FILE (gitignored)"
+
                   # Optionally store in SSM Parameter Store
                   SSM_SUCCESS=false
                   if [[ "$SKIP_SSM" != "true" ]]; then
@@ -823,6 +897,8 @@ rec {
                     echo "  - AWS credentials are available for SSM storage" >&2
                     exit 1
                   fi
+
+                  fi  # end of GH_SYNC_ONLY guard
 
                   # ── GitHub Actions integration ───────────────────────────────────────
                   # Upload the group private key as a GitHub Actions secret so the
