@@ -74,7 +74,11 @@ Examples:
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		useTls, _ := cmd.Flags().GetBool("tls")
-		addCaddySite(args[0], args[1], useTls)
+		tlsCert, _ := cmd.Flags().GetString("tls-cert")
+		tlsKey, _ := cmd.Flags().GetString("tls-key")
+		stepCaUrl, _ := cmd.Flags().GetString("tls-step-ca-url")
+		stepCaRoot, _ := cmd.Flags().GetString("tls-step-ca-root")
+		addCaddySite(args[0], args[1], useTls, tlsCert, tlsKey, stepCaUrl, stepCaRoot)
 	},
 }
 
@@ -103,7 +107,11 @@ func init() {
 	caddyCmd.AddCommand(caddyRemoveSiteCmd)
 	caddyCmd.AddCommand(caddyListSitesCmd)
 
-	caddyAddSiteCmd.Flags().Bool("tls", false, "Enable internal TLS")
+	caddyAddSiteCmd.Flags().Bool("tls", false, "Enable Caddy's built-in self-signed TLS")
+	caddyAddSiteCmd.Flags().String("tls-cert", "", "Path to TLS certificate file (e.g., from step ca certificate)")
+	caddyAddSiteCmd.Flags().String("tls-key", "", "Path to TLS private key file")
+	caddyAddSiteCmd.Flags().String("tls-step-ca-url", "", "Step CA ACME directory URL for TLS certs")
+	caddyAddSiteCmd.Flags().String("tls-step-ca-root", "", "Path to Step CA root certificate")
 }
 
 func ensureCaddyDirs() {
@@ -198,7 +206,7 @@ func showCaddyStatus() {
 	listCaddySites()
 }
 
-func addCaddySite(domain, upstream string, useTls bool) {
+func addCaddySite(domain, upstream string, useTls bool, tlsCert, tlsKey, stepCaUrl, stepCaRoot string) {
 	ensureCaddyDirs()
 
 	// Sanitize domain for filename
@@ -206,8 +214,17 @@ func addCaddySite(domain, upstream string, useTls bool) {
 	filename = strings.ReplaceAll(filename, ":", "_")
 	siteFile := filepath.Join(caddySitesDir, filename+".caddy")
 
+	// Build TLS config: cert/key files > Step CA ACME > tls internal
 	tlsConfig := ""
-	if useTls {
+	if tlsCert != "" && tlsKey != "" {
+		tlsConfig = fmt.Sprintf("tls %s %s", tlsCert, tlsKey)
+	} else if stepCaUrl != "" {
+		tlsConfig = fmt.Sprintf("tls {\n    ca %s", stepCaUrl)
+		if stepCaRoot != "" {
+			tlsConfig += fmt.Sprintf("\n    ca_root %s", stepCaRoot)
+		}
+		tlsConfig += "\n  }"
+	} else if useTls {
 		tlsConfig = "tls internal"
 	}
 
