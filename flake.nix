@@ -37,11 +37,6 @@
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    # stackpanel-root contains the absolute path to the project root
-    # Created by .envrc: echo "$PWD" > .stackpanel-root
-    # This enables pure evaluation (nix flake check, nix flake show)
-    stackpanel-root.url = "path:./.stackpanel-root";
-    stackpanel-root.flake = false;
   };
 
   outputs =
@@ -57,9 +52,6 @@
 
       # Overlays for nixpkgs
       overlays = exports.lib.requiredOverlays;
-
-      # Read project root from stackpanel-root input
-      projectRoot = exports.lib.readStackpanelRoot { inherit inputs; };
     in
     # Per-system outputs
     flake-utils.lib.eachSystem exports.supportedSystems (
@@ -79,7 +71,6 @@
             inputs
             self
             system
-            projectRoot
             ;
           stackpanelImports = [ ./.stackpanel/modules ];
         };

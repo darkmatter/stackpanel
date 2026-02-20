@@ -17,9 +17,6 @@
 # If you're getting duplicate path segments like ".stackpanel/.stackpanel/state",
 # you're passing a full path where a subdirectory name is expected!
 #
-# Uses a root marker file pattern (similar to devenv's .devenv-root) to allow
-# tools to find the project root from any subdirectory.
-#
 # Features:
 #   - Shell functions for finding project root (stackpanel_find_root)
 #   - Path resolution utilities (stackpanel_resolve_paths)
@@ -43,39 +40,26 @@ let
   # Default configuration (can be overridden)
   defaults = {
     rootDir = ".stackpanel";
-    rootMarker = ".stackpanel-root";
     stateDir = "state";
     genDir = "gen";
   };
 
-  # Shell function to find project root by looking for root marker
+  # Shell function to find project root
   mkShellFindRoot =
     {
       rootDir ? defaults.rootDir,
-      rootMarker ? defaults.rootMarker,
     }:
     ''
       stackpanel_find_root() {
         local dir="$PWD"
-        local marker="${rootMarker}"
 
-        # First, try to find the marker file by walking up the directory tree
-        while [[ "$dir" != "/" ]]; do
-          if [[ -f "$dir/$marker" ]]; then
-            cat "$dir/$marker"
-            return 0
-          fi
-          dir="$(dirname "$dir")"
-        done
-
-        # Fallback 1: check if STACKPANEL_ROOT is already set
+        # First, check if STACKPANEL_ROOT is already set (preferred)
         if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
           echo "$STACKPANEL_ROOT"
           return 0
         fi
 
-        # Fallback 2: use git repository root if available
-        # This handles running `nix develop` from subdirectories before marker exists
+        # Fallback 1: use git repository root if available
         if command -v git >/dev/null 2>&1; then
           local git_root
           git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || true
@@ -84,6 +68,16 @@ let
             return 0
           fi
         fi
+
+        # Fallback 2: look for .stackpanel directory by walking up from PWD
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -d "$dir/${rootDir}" ]]; then
+            echo "$dir"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
 
         # Fallback 3: look for flake.nix by walking up from PWD
         dir="$PWD"
@@ -95,7 +89,7 @@ let
           dir="$(dirname "$dir")"
         done
 
-        echo "Error: Could not find stackpanel root (no $marker, git repo, or flake.nix found)" >&2
+        echo "Error: Could not find stackpanel root (no STACKPANEL_ROOT env var, git repo, ${rootDir} dir, or flake.nix found)" >&2
         return 1
       }
     '';
@@ -106,7 +100,6 @@ let
       rootDir ? defaults.rootDir,
       stateDir ? defaults.stateDir,
       genDir ? defaults.genDir,
-      rootMarker ? defaults.rootMarker,
     }:
     ''
       stackpanel_resolve_paths() {
@@ -116,10 +109,7 @@ let
         fi
         if [[ ! -d "$root" ]]; then
           echo "Error: Resolved stackpanel root is not a directory: $root"
-          echo "You may need to run on your stackpanel root dir:"
-          echo
-          echo "    echo \"\$PWD\" > ${rootMarker}"
-          echo
+          echo "You may need to set STACKPANEL_ROOT or run from a git repository"
           return 1
         fi
         export STACKPANEL_ROOT="$root"
@@ -138,7 +128,6 @@ in
     cfg:
     let
       rootDir = cfg.rootDir or defaults.rootDir;
-      rootMarker = cfg.rootMarker or defaults.rootMarker;
       stateDir = cfg.stateDir or defaults.stateDir;
       genDir = cfg.genDir or defaults.genDir;
 
@@ -168,7 +157,7 @@ in
     in
     ''
       # Stackpanel path utilities
-      ${mkShellFindRoot { inherit rootDir rootMarker; }}
+      ${mkShellFindRoot { inherit rootDir; }}
       ${mkShellResolvePaths {
         rootDir = rootDir;
         stateDir = validatedStateDir;
@@ -203,14 +192,12 @@ in
   # Generate .gitignore content for the stackpanel root directory
   mkGitignore =
     {
-      rootMarker ? defaults.rootMarker,
       stateDir ? defaults.stateDir,
       extraEntries ? [ ],
     }:
     lib.concatStringsSep "\n" (
       [
         "${stateDir}/"
-        rootMarker
       ]
       ++ extraEntries
     );

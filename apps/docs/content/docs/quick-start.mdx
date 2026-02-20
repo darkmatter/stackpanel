@@ -313,21 +313,7 @@ devenv.shells.default = {
 
 ### "devenv was not able to determine the current directory"
 
-This happens during pure evaluation (like `nix flake check`). Add to your `.envrc`:
-
-```bash
-echo "$PWD" > .stackpanel-root
-use flake . --impure
-```
-
-And add the `readStackpanelRoot` module to your flake:
-
-```nix
-imports = [
-  inputs.stackpanel.flakeModules.readStackpanelRoot
-  inputs.stackpanel.flakeModules.default
-];
-```
+This happens during pure evaluation (like `nix flake check`). Make sure you're using the flake from within a git repository, as stackpanel uses the git root for project detection.
 
 ### Flake check fails with missing attribute
 

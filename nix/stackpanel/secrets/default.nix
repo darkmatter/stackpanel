@@ -188,6 +188,11 @@ in
     # Devshell Integration
     # ═══════════════════════════════════════════════════════════════════════════
 
+    # Add .sops.yaml to gitignore (it's auto-generated with the local AGE key)
+    stackpanel.files.gitignore.extraEntries = [
+      ".stackpanel/secrets/keys/.sops.yaml"
+    ];
+
     # Add required packages to devshell
     # NOTE: secrets-init-group (and other script binaries) must be in packages
     # so they're available via the agent's exec API (which has PATH but not
