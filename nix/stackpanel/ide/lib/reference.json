@@ -1,5 +1,4 @@
 {
-  // Rust Analyzer - configured to use devenv toolchain
   "[rust]": {
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },

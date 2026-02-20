@@ -29,13 +29,14 @@ let
   nixdValues = libnixd.mkValues {
     project = stackpanelCfg.project;
     github = stackpanelCfg.github;
-    root = "\${workspace_root}";
-    # root = stackpanelCfg.root;
+    # Use the actual project root path (not ${workspace_root} — Zed does NOT
+    # expand variables inside lsp.*.settings values). The nixd wrapper script
+    # disables pure-eval so absolute paths work.
+    root = stackpanelCfg.root;
   };
 
   # Helper to get submodule options
-  # For stackpanel repo: use local evalModules (avoids ${builtins.currentSystem} which
-  # Zed interprets as its own variable interpolation syntax, breaking settings parsing)
+  # For stackpanel repo: use local evalModules
   # For external users: use flake-based expression
   mkSubOptionsExpr =
     optionPath:
@@ -43,6 +44,15 @@ let
       "${nixdValues.localStackpanelOptionsExpr}.${optionPath}.type.getSubOptions []"
     else
       "${nixdValues.flakeOptionsExpr}.${optionPath}.type.getSubOptions []";
+
+  # Wrapper script for nixd that disables pure-eval.
+  # nixd option expressions require importing nixpkgs and local module paths,
+  # both of which are forbidden in pure evaluation mode.
+  nixdWrapper = pkgs.writeShellScript "nixd-wrapper" ''
+    export NIX_CONFIG="pure-eval = false''${NIX_CONFIG:+
+    $NIX_CONFIG}"
+    exec ${pkgs.nixd}/bin/nixd "$@"
+  '';
 in
 {
   config = lib.mkIf (ideCfg.enable && zedCfg.enable) {
@@ -56,10 +66,15 @@ in
         config = {
           lsp = {
             nixd = {
-              settings = {
+              binary = {
+                "path" = "${nixdWrapper}";
+              };
+              initialization_options = {
                 "formatting" = {
                   "command" = [ "nixfmt" ];
                 };
+              };
+              settings = {
                 "options" = {
                   # `config.*` option completion uses the "nixos" slot in nixd.
                   # For stackpanel development, point it at stackpanel's full options set.
@@ -84,19 +99,23 @@ in
               };
             };
             nil = {
-              "formatting" = {
-                "command" = [ "alejandra" ];
-              };
-              "options" = {
-                "stackpanel" = {
-                  "expr" = nixdValues.optionsExpr;
+              initialization_options = {
+                "formatting" = {
+                  "command" = [ "alejandra" ];
                 };
               };
-              "nix" = {
-                "maxMemoryMB" = 8192;
-                "flake" = {
-                  "autoEvalInputs" = true;
-                  "nixpkgsInputName" = "nixpkgs";
+              settings = {
+                "options" = {
+                  "stackpanel" = {
+                    "expr" = nixdValues.optionsExpr;
+                  };
+                };
+                "nix" = {
+                  "maxMemoryMB" = 8192;
+                  "flake" = {
+                    "autoEvalInputs" = true;
+                    "nixpkgsInputName" = "nixpkgs";
+                  };
                 };
               };
             };

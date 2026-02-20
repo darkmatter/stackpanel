@@ -451,8 +451,8 @@ in
     ];
 
     stackpanel.files.entries.".gitignore".lines = [
-      ".stackpanel/secrets/*.age"
-      "!*.stackpanel/secrets/*.enc.age"
+      ".stackpanel/secrets/keys/*.age"
+      "!*.stackpanel/secrets/keys/*.enc.age"
     ];
 
     # ═══════════════════════════════════════════════════════════════════════════
