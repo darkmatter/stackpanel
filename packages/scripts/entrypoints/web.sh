@@ -40,7 +40,7 @@ export STACKPANEL_APP_NAME="web"
 export STACKPANEL_APP_PATH="apps/web"
 export STACKPANEL_VARIABLES_BACKEND="chamber"
 export STACKPANEL_CHAMBER_SERVICE_PREFIX="stackpanel"
-export STACKPANEL_MASTER_KEYS='{"dev":{"age-pub":"age18jexhwcd4ehm7th0pqt8x6rmg3yuxstwv8aavqul4hvcmjkkhfaqn75su0","ref":"ref+awsssm:///stackpanel/keys/dev","resolve-cmd":null},"local":{"age-pub":"","ref":"ref+file://.stackpanel/state/keys/local.txt","resolve-cmd":null}}'
+export STACKPANEL_MASTER_KEYS='{"dev":{"age-pub":"age1783kahlc7yxv2md9vtpx4wq899csvqxty03fatcs5s7lqfh5334s6p7r0l","ref":"ref+awsssm:///stackpanel/keys/dev","resolve-cmd":null},"local":{"age-pub":"","ref":"ref+file://.stackpanel/state/keys/local.txt","resolve-cmd":null},"prod":{"age-pub":"age1tvczw6y7g4v0ma7cn05adrnst9jnnsh9j8ge0t0flls8ucq5yg9qe37jhe","ref":"ref+awsssm:///stackpanel/keys/prod","resolve-cmd":null}}'
 
 # ==============================================================================
 # Argument Parsing
