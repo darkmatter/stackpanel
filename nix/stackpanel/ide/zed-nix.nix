@@ -12,7 +12,7 @@
 #   - sp-task: Submodule options for stackpanel.tasks
 #
 # For users: references stackpanel via FlakeHub URL
-# For stackpanel development: uses local reference via .stackpanel-root
+# For stackpanel development: uses local reference via STACKPANEL_ROOT
 # ==============================================================================
 {
   lib,
