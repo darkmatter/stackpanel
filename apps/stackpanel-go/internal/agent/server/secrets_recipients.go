@@ -80,10 +80,7 @@ func (s *Server) handleListRecipients(w http.ResponseWriter, _ *http.Request) {
 	entries, err := os.ReadDir(recipientsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			s.writeAPI(w, http.StatusOK, map[string]any{
-				"success": true,
-				"data":    map[string]any{"recipients": []Recipient{}},
-			})
+			s.writeAPI(w, http.StatusOK, map[string]any{"recipients": []Recipient{}})
 			return
 		}
 		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read recipients dir: %v", err))
@@ -110,10 +107,7 @@ func (s *Server) handleListRecipients(w http.ResponseWriter, _ *http.Request) {
 		}
 	}
 
-	s.writeAPI(w, http.StatusOK, map[string]any{
-		"success": true,
-		"data":    map[string]any{"recipients": recipients},
-	})
+	s.writeAPI(w, http.StatusOK, map[string]any{"recipients": recipients})
 }
 
 // handleAddRecipient adds a new recipient .pub file.
@@ -197,12 +191,9 @@ func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("name", req.Name).Str("pubKey", pubKey).Msg("added recipient")
 
-	s.writeAPI(w, http.StatusOK, map[string]any{
-		"success": true,
-		"data": Recipient{
-			Name:      req.Name,
-			PublicKey: pubKey,
-		},
+	s.writeAPI(w, http.StatusOK, Recipient{
+		Name:      req.Name,
+		PublicKey: pubKey,
 	})
 }
 
@@ -237,10 +228,7 @@ func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("name", name).Msg("removed recipient")
 
-	s.writeAPI(w, http.StatusOK, map[string]any{
-		"success": true,
-		"data":    map[string]any{"name": name, "deleted": true},
-	})
+	s.writeAPI(w, http.StatusOK, map[string]any{"name": name, "deleted": true})
 }
 
 // handleRekeyWorkflowStatus checks if the rekey workflow exists.
@@ -256,10 +244,7 @@ func (s *Server) handleRekeyWorkflowStatus(w http.ResponseWriter, r *http.Reques
 		exists = true
 	}
 
-	s.writeAPI(w, http.StatusOK, map[string]any{
-		"success": true,
-		"data":    RekeyWorkflowStatus{Exists: exists},
-	})
+	s.writeAPI(w, http.StatusOK, RekeyWorkflowStatus{Exists: exists})
 }
 
 // handleSecretsVerify does an encrypt/decrypt round-trip to verify secrets work.
@@ -286,23 +271,17 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	// Get recipients for this group
 	recipients, err := s.getGroupRecipients(safeGroup)
 	if err != nil {
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data": SecretsVerifyResponse{
-				Success: false,
-				Error:   fmt.Sprintf("failed to get recipients: %v", err),
-			},
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{
+			Success: false,
+			Error:   fmt.Sprintf("failed to get recipients: %v", err),
 		})
 		return
 	}
 
 	if len(recipients) == 0 {
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data": SecretsVerifyResponse{
-				Success: false,
-				Error:   "no recipients configured for this group",
-			},
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{
+			Success: false,
+			Error:   "no recipients configured for this group",
 		})
 		return
 	}
@@ -310,12 +289,9 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	// Create temp file with test content
 	tmpFile, err := os.CreateTemp("", "sp-verify-*.yaml")
 	if err != nil {
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data": SecretsVerifyResponse{
-				Success: false,
-				Error:   fmt.Sprintf("failed to create temp file: %v", err),
-			},
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{
+			Success: false,
+			Error:   fmt.Sprintf("failed to create temp file: %v", err),
 		})
 		return
 	}
@@ -325,12 +301,9 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	testContent := "_verify_test: stackpanel-verify-ok\n"
 	if _, err := tmpFile.WriteString(testContent); err != nil {
 		tmpFile.Close()
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data": SecretsVerifyResponse{
-				Success: false,
-				Error:   fmt.Sprintf("failed to write test content: %v", err),
-			},
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{
+			Success: false,
+			Error:   fmt.Sprintf("failed to write test content: %v", err),
 		})
 		return
 	}
@@ -351,22 +324,16 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 		} else if encRes.Stderr != "" {
 			errMsg = fmt.Sprintf("encryption failed: %s", encRes.Stderr)
 		}
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data":    SecretsVerifyResponse{Success: false, Error: errMsg},
-		})
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{Success: false, Error: errMsg})
 		return
 	}
 
 	// Write encrypted content to a temp file for decryption
 	encTmp, err := os.CreateTemp("", "sp-verify-enc-*.yaml")
 	if err != nil {
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data": SecretsVerifyResponse{
-				Success: false,
-				Error:   fmt.Sprintf("failed to create encrypted temp file: %v", err),
-			},
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{
+			Success: false,
+			Error:   fmt.Sprintf("failed to create encrypted temp file: %v", err),
 		})
 		return
 	}
@@ -392,24 +359,15 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 		} else if decRes.Stderr != "" {
 			errMsg = fmt.Sprintf("decryption failed: %s", strings.TrimSpace(decRes.Stderr))
 		}
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data":    SecretsVerifyResponse{Success: false, Error: errMsg},
-		})
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{Success: false, Error: errMsg})
 		return
 	}
 
 	// Verify the decrypted content matches
 	if !strings.Contains(decRes.Stdout, "stackpanel-verify-ok") {
-		s.writeAPI(w, http.StatusOK, map[string]any{
-			"success": true,
-			"data":    SecretsVerifyResponse{Success: false, Error: "decrypted content does not match original"},
-		})
+		s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{Success: false, Error: "decrypted content does not match original"})
 		return
 	}
 
-	s.writeAPI(w, http.StatusOK, map[string]any{
-		"success": true,
-		"data":    SecretsVerifyResponse{Success: true},
-	})
+	s.writeAPI(w, http.StatusOK, SecretsVerifyResponse{Success: true})
 }
