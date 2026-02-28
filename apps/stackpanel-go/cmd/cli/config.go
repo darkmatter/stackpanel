@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/darkmatter/stackpanel/stackpanel-go/internal/jsoncolor"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/fatih/color"
@@ -40,9 +40,9 @@ Without a path, prints the entire configuration. With a path, traverses
 into the config and prints the value at that location.
 
 Scalar values (strings, numbers, booleans) are printed raw by default.
-Objects and arrays are printed as formatted JSON with jq-style syntax
-colors (auto-disabled when piped). Use --json to always get JSON output,
-or --raw to suppress any formatting.
+Objects and arrays are printed as colorized JSON (via jq when available,
+plain JSON otherwise). Use --json to always get JSON output, or --raw to
+suppress any formatting.
 
 The lookup is performed directly by Nix evaluation, so only the requested
 attribute is evaluated — not the entire config tree.
@@ -153,17 +153,40 @@ func runConfigGet(cmd *cobra.Command, args []string) {
 	case nil:
 		fmt.Println("null")
 	default:
-		// Objects and arrays get jq-style colorized JSON
+		// Objects and arrays get colorized JSON via jq
 		printJSON(result)
 	}
 }
 
-// printJSON outputs colorized, indented JSON to stdout. Colors are
-// automatically suppressed when stdout is not a TTY (e.g. piped).
-// Accepts the raw JSON bytes from nix eval to avoid a round-trip
-// through encoding/json.
+// printJSON pipes raw JSON through jq for colorized, indented output.
+// Falls back to plain json.MarshalIndent when jq is not available.
+// jq automatically disables colors when stdout is not a TTY.
 func printJSON(raw []byte) {
-	os.Stdout.Write(jsoncolor.Format(raw))
+	jqPath, err := exec.LookPath("jq")
+	if err == nil {
+		cmd := exec.Command(jqPath, ".")
+		cmd.Stdin = strings.NewReader(string(raw))
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = nil
+		if cmd.Run() == nil {
+			return
+		}
+	}
+
+	// Fallback: re-indent without color
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		os.Stdout.Write(raw)
+		fmt.Println()
+		return
+	}
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		os.Stdout.Write(raw)
+		fmt.Println()
+		return
+	}
+	fmt.Println(string(data))
 }
 
 // printRaw outputs the value with minimal formatting — strings have no
