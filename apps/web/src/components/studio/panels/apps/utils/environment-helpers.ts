@@ -141,7 +141,7 @@ export function buildSopsReference(keyGroup: string, key: string): string {
  * @param key - The config key name (e.g., "LOG_LEVEL")
  */
 export function buildYamlReference(key: string): string {
-	return `ref+yaml://.stackpanel/secrets/vars.yaml#/${key}`;
+	return `ref+yaml://.stackpanel/secrets/vars/var.sops.yaml#/${key}`;
 }
 
 /**

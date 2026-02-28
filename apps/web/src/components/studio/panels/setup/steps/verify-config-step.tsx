@@ -48,7 +48,7 @@ export function VerifyConfigStep() {
     setCheckingSops(true);
     try {
       const res = await agentClient.readFile(
-        ".stackpanel/secrets/groups/.sops.yaml",
+        ".stackpanel/secrets/vars/.sops.yaml",
       );
       setSopsExists(!!res);
     } catch {
@@ -108,7 +108,7 @@ export function VerifyConfigStep() {
           <div className="flex items-center gap-2">
             <FileCheck className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">
-              groups/.sops.yaml (auto-generated)
+              vars/.sops.yaml (auto-generated)
             </span>
           </div>
           {checkingSops ? (

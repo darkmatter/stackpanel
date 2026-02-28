@@ -3,7 +3,7 @@
  *
  * Supports group-based SOPS secrets for access control.
  * Secrets are stored in SOPS files per group, and the variable value
- * becomes a vals reference: ref+sops://.stackpanel/secrets/groups/<group>.yaml#/<key>
+ * becomes a vals reference: ref+sops://.stackpanel/secrets/vars/<group>.sops.yaml#/<key>
  */
 import type { AgeIdentityResponse, KMSConfigResponse } from "@/lib/agent";
 
