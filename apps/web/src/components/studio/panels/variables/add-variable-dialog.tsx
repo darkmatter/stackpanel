@@ -35,7 +35,11 @@ import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
-import { formatSecretKeyError, getVariableName, SECRET_GROUPS } from "./constants";
+import {
+  formatSecretKeyError,
+  getVariableName,
+  SECRET_GROUPS,
+} from "./constants";
 
 type VariableMode = "plaintext" | "secret";
 
@@ -168,15 +172,19 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
           description: varDescription.trim() || undefined,
         });
 
+        // Build the variable ID with the group prefix so Nix can extract
+        // the keygroup (e.g. "/dev/openrouter-api-key" → keyGroup "dev").
+        const secretId = `/${group}/${envKey}`;
+
         // Create a variable entry with the vals reference
         const variablesClient = client.nix.mapEntity<Variable>("variables");
         const newVariable: Variable = {
-          id: normalizedId,
+          id: secretId,
           value: result.valsRef, // Use the source project vals reference
         };
-        await variablesClient.set(normalizedId, newVariable);
+        await variablesClient.set(secretId, newVariable);
 
-        toast.success(`Created secret "${normalizedId}" in ${group} group`);
+        toast.success(`Created secret "${secretId}" in ${group} group`);
       } else {
         // Plaintext variable
         const variablesClient = client.nix.mapEntity<Variable>("variables");

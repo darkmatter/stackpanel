@@ -48,7 +48,11 @@ export interface CommandRunnerProps {
   /** Variant for buttons */
   variant?: "default" | "outline" | "secondary" | "ghost";
   /** Called when execution completes */
-  onComplete?: (result: { exitCode: number; stdout: string; stderr: string }) => void;
+  onComplete?: (result: {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+  }) => void;
   /** Called when execution fails */
   onError?: (error: Error) => void;
   /** Whether to show the command text in a code block */
@@ -70,7 +74,11 @@ export interface CommandRunnerDialogProps {
   description?: string;
   /** Auto-run the command when dialog opens */
   autoRun?: boolean;
-  onComplete?: (result: { exitCode: number; stdout: string; stderr: string }) => void;
+  onComplete?: (result: {
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+  }) => void;
   onError?: (error: Error) => void;
 }
 
@@ -83,12 +91,10 @@ export interface CommandRunnerDialogProps {
  */
 function formatCommand(command: string, args?: string[]): string {
   if (!args || args.length === 0) return command;
-  
+
   // Quote args that have spaces
-  const quotedArgs = args.map((arg) =>
-    arg.includes(" ") ? `"${arg}"` : arg
-  );
-  
+  const quotedArgs = args.map((arg) => (arg.includes(" ") ? `"${arg}"` : arg));
+
   return `${command} ${quotedArgs.join(" ")}`;
 }
 
@@ -114,12 +120,16 @@ export function CommandRunnerDialog({
   onError,
 }: CommandRunnerDialogProps) {
   const outputRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<"idle" | "running" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "running" | "success" | "error"
+  >("idle");
   const [output, setOutput] = useState<string[]>([]);
   const [exitCode, setExitCode] = useState<number | null>(null);
   const hasRun = useRef(false);
 
   const exec = useExec();
+  const execRef = useRef(exec);
+  execRef.current = exec;
   const fullCommand = formatCommand(command, args);
 
   // Auto-scroll to bottom when output changes
@@ -136,7 +146,7 @@ export function CommandRunnerDialog({
     setExitCode(null);
 
     try {
-      const result = await exec.mutateAsync({
+      const result = await execRef.current.mutateAsync({
         command,
         args,
         cwd,
@@ -145,11 +155,11 @@ export function CommandRunnerDialog({
 
       // Combine stdout and stderr with proper labeling
       const lines: string[] = [];
-      
+
       if (result.stdout) {
         lines.push(...result.stdout.split("\n"));
       }
-      
+
       if (result.stderr) {
         // Add stderr with dim styling hint (we'll style it in the render)
         lines.push("", "--- stderr ---");
@@ -178,7 +188,7 @@ export function CommandRunnerDialog({
       onError?.(error);
       toast.error(`Failed to execute command: ${error.message}`);
     }
-  }, [exec, command, args, cwd, env, fullCommand, onComplete, onError]);
+  }, [command, args, cwd, env, fullCommand, onComplete, onError]);
 
   // Auto-run on open
   useEffect(() => {
@@ -186,15 +196,17 @@ export function CommandRunnerDialog({
       hasRun.current = true;
       runCommand();
     }
-    
-    // Reset when dialog closes
+  }, [open, autoRun, runCommand]);
+
+  // Reset when dialog closes
+  useEffect(() => {
     if (!open) {
       hasRun.current = false;
       setStatus("idle");
       setOutput([]);
       setExitCode(null);
     }
-  }, [open, autoRun, runCommand]);
+  }, [open]);
 
   // Copy output to clipboard
   const copyOutput = () => {
@@ -210,27 +222,34 @@ export function CommandRunnerDialog({
             <Terminal className="h-5 w-5" />
             {label || "Run Command"}
             {status === "running" && (
-              <Badge variant="outline" className="ml-2 text-xs border-blue-500/30 text-blue-500">
+              <Badge
+                variant="outline"
+                className="ml-2 text-xs border-blue-500/30 text-blue-500"
+              >
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 Running
               </Badge>
             )}
             {status === "success" && (
-              <Badge variant="outline" className="ml-2 text-xs border-emerald-500/30 text-emerald-500">
+              <Badge
+                variant="outline"
+                className="ml-2 text-xs border-emerald-500/30 text-emerald-500"
+              >
                 <Check className="mr-1 h-3 w-3" />
                 Success
               </Badge>
             )}
             {status === "error" && (
-              <Badge variant="outline" className="ml-2 text-xs border-red-500/30 text-red-500">
+              <Badge
+                variant="outline"
+                className="ml-2 text-xs border-red-500/30 text-red-500"
+              >
                 <X className="mr-1 h-3 w-3" />
                 Failed{exitCode !== null && ` (${exitCode})`}
               </Badge>
             )}
           </DialogTitle>
-          {description && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
 
         {/* Command preview */}
@@ -283,7 +302,10 @@ export function CommandRunnerDialog({
                     // Style errors
                     line.startsWith("Error:") && "text-red-400",
                     // Default output color
-                    !line.startsWith("$") && !line.includes("stderr") && !line.startsWith("Error:") && "text-green-400"
+                    !line.startsWith("$") &&
+                      !line.includes("stderr") &&
+                      !line.startsWith("Error:") &&
+                      "text-green-400",
                   )}
                 >
                   {line}
@@ -331,13 +353,13 @@ export function CommandRunnerDialog({
 
 /**
  * A split button with popover for running shell commands from the UI.
- * 
+ *
  * Features:
  * - Main "Run" button opens a popover with options
  * - Copy button to copy the command to clipboard
  * - Execute button that runs the command in a dialog
  * - Clear disclaimer about UI execution reliability
- * 
+ *
  * @example
  * ```tsx
  * <CommandRunner
@@ -345,7 +367,7 @@ export function CommandRunnerDialog({
  *   args={["run", "build"]}
  *   label="Build"
  * />
- * 
+ *
  * // With custom options
  * <CommandRunner
  *   command="nix"
@@ -401,7 +423,7 @@ export function CommandRunner({
             {fullCommand}
           </code>
         )}
-        
+
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
             <ButtonGroup>
@@ -476,7 +498,7 @@ export function CommandRunner({
               <div className="flex gap-2 rounded-md bg-amber-500/10 border border-amber-500/20 p-2">
                 <Info className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
-                  For best results, copy and run in your terminal. UI execution 
+                  For best results, copy and run in your terminal. UI execution
                   may not handle all interactive commands reliably.
                 </p>
               </div>
@@ -527,7 +549,7 @@ export interface CommandRunnerDropdownProps {
 
 /**
  * A dropdown variant that allows choosing from multiple commands.
- * 
+ *
  * @example
  * ```tsx
  * <CommandRunnerDropdown
@@ -549,7 +571,9 @@ export function CommandRunnerDropdown({
   disabled = false,
 }: CommandRunnerDropdownProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedCommand, setSelectedCommand] = useState<CommandOption | null>(null);
+  const [selectedCommand, setSelectedCommand] = useState<CommandOption | null>(
+    null,
+  );
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleSelect = useCallback((cmd: CommandOption) => {
@@ -580,7 +604,7 @@ export function CommandRunnerDropdown({
               className="fixed inset-0 z-40"
               onClick={() => setMenuOpen(false)}
             />
-            
+
             {/* Menu */}
             <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-md border bg-popover p-1 shadow-md">
               {commands.map((cmd) => (
