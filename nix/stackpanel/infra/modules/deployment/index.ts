@@ -43,7 +43,32 @@ const inputs = infra.inputs<DeploymentInputs>(
 );
 
 // ---------------------------------------------------------------------------
-// Resolve bindings from process.env, wrapping secrets with alchemy.secret()
+// Stage detection
+// ---------------------------------------------------------------------------
+const STAGE = process.env.STAGE ?? "dev";
+
+// ---------------------------------------------------------------------------
+// Stage-aware URL defaults: derive per-stage URLs when env vars are not
+// explicitly set, so staging deployments don't use production origins.
+// ---------------------------------------------------------------------------
+const STAGE_URL_DEFAULTS: Record<string, (stage: string) => string> = {
+  CORS_ORIGIN: (stage) =>
+    stage === "prod"
+      ? "https://stackpanel.com"
+      : `https://${stage}.stackpanel.com`,
+  BETTER_AUTH_URL: (stage) =>
+    stage === "prod"
+      ? "https://stackpanel.com"
+      : `https://${stage}.stackpanel.com`,
+  POLAR_SUCCESS_URL: (stage) =>
+    stage === "prod"
+      ? "https://stackpanel.com"
+      : `https://${stage}.stackpanel.com`,
+};
+
+// ---------------------------------------------------------------------------
+// Resolve bindings from process.env, wrapping secrets with alchemy.secret().
+// Falls back to stage-aware URL defaults when env vars are not set.
 // ---------------------------------------------------------------------------
 function resolveBindings(
   bindingNames: string[],
@@ -53,7 +78,9 @@ function resolveBindings(
   const resolved: Record<string, unknown> = {};
 
   for (const key of bindingNames) {
-    const value = process.env[key];
+    const envValue = process.env[key];
+    const defaultFn = STAGE_URL_DEFAULTS[key];
+    const value = envValue ?? (defaultFn ? defaultFn(STAGE) : undefined);
     resolved[key] = secretSet.has(key) ? alchemy.secret(value ?? "") : value;
   }
 
@@ -147,7 +174,7 @@ const outputs: Record<string, string> = {};
 for (const [appName, app] of Object.entries(inputs.apps)) {
   const resource = await deployApp(appName, app);
   outputs[`${appName}Url`] = resource.url;
-  console.log(`${appName} -> ${resource.url}`);
+  console.log(`[${STAGE}] ${appName} -> ${resource.url}`);
 }
 
 export default outputs;

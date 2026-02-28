@@ -5,6 +5,7 @@
 #   - packages/gen/env/data/.sops.yaml - SOPS creation rules per app/env
 #   - packages/gen/env/data/<app>/<env>.yaml - Boilerplate YAML files
 #   - packages/gen/env/data/shared/vars.yaml - Shared plaintext config
+#   Note: Source secrets live in .stackpanel/secrets/vars/<group>.sops.yaml
 #   - packages/gen/env/src/generated/<app>/<env>.ts - znv TypeScript modules
 #   - packages/gen/env/src/generated/<app>/index.ts - App barrel exports
 #   - packages/gen/env/src/generated/index.ts - Root barrel export

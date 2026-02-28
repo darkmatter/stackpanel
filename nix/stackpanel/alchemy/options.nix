@@ -153,7 +153,7 @@ in
         default = null;
         description = ''
           SOPS reference path for the state token.
-          Example: "ref+sops://.stackpanel/secrets/groups/dev.yaml#/ALCHEMY_STATE_TOKEN"
+          Example: "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/ALCHEMY_STATE_TOKEN"
           When set, the token is automatically injected into the devshell environment.
         '';
       };

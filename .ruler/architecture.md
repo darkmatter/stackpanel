@@ -211,16 +211,17 @@ All packages use the `exports` field with `.` and `./*` patterns. Source TypeScr
 Three-tier system:
 
 1. **Master keys**: AGE-encrypted master keys (local auto-generated, team-shared). Local key at `.stackpanel/state/keys/`.
-2. **SOPS-encrypted YAML**: Per-environment files (`dev.yaml`, `staging.yaml`, `prod.yaml`) + `vars.yaml` (plaintext shared config).
-3. **Group keys**: Per-group `.enc.age` files encrypted to all team recipients. Decrypted at runtime for secret access.
+2. **SOPS-encrypted YAML**: Per-environment files in `vars/` (`dev.sops.yaml`, `staging.sops.yaml`, `prod.sops.yaml`). Plaintext values use `# safe` comment marker (SOPS `unencrypted_comment_regex`).
+3. **Group keys**: Per-group `.enc.age` files in `recipients/`, encrypted to all team recipients. Decrypted at runtime for secret access.
 
 Key directories:
-- `.stackpanel/secrets/keys/recipients/` -- AGE public keys per team member (committed, auto-registered on shell entry)
-- `.stackpanel/secrets/keys/*.enc.age` -- SOPS-encrypted group private keys (committed, encrypted to all recipients)
-- `.stackpanel/secrets/keys/.sops.yaml` -- Auto-generated from all `recipients/*.pub` files
-- `.stackpanel/secrets/groups/.sops.yaml` -- GENERATED at shell entry from `config.nix` group keys (gitignored, never committed)
+- `.stackpanel/secrets/recipients/` -- AGE public keys per team member (`*.age.pub`, committed, auto-registered on shell entry)
+- `.stackpanel/secrets/recipients/*.enc.age` -- SOPS-encrypted group private keys (committed, encrypted to all recipients)
+- `.stackpanel/secrets/recipients/.sops.yaml` -- Auto-generated from all `recipients/**/*.age.pub` files
+- `.stackpanel/secrets/vars/.sops.yaml` -- GENERATED at shell entry from `config.nix` group keys (gitignored, never committed)
+- `.stackpanel/secrets/recipients/.archive/` -- Rotated/old keys
 
-Key integrity: `config.nix` is the single source of truth for group public keys. A wrapped SOPS binary resolves group pubkeys from Nix at build time (injects `--age` per file), and `groups/.sops.yaml` is generated as a fallback. This eliminates key drift between config files.
+Key integrity: `config.nix` is the single source of truth for group public keys. A wrapped SOPS binary resolves group pubkeys from Nix at build time (injects `--age` per file), and `vars/.sops.yaml` is generated as a fallback. This eliminates key drift between config files.
 
 Team onboarding: self-service via Git push. New member enters devshell -> pub key registered in `recipients/` -> push triggers GitHub Actions rekey workflow -> `.enc.age` files re-encrypted for all recipients -> pull to access secrets. Group private keys stored as GitHub Actions secrets (`SECRETS_AGE_KEY_<GROUP>`).
 

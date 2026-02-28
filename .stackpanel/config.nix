@@ -75,10 +75,7 @@
         enable = true;
         type = "bun";
       };
-      framework.tanstack-start.enable = true;
       deployment = {
-        enable = true;
-        host = "cloudflare";
         bindings = [
           "DATABASE_URL"
           "CORS_ORIGIN"
@@ -87,6 +84,8 @@
           "POLAR_ACCESS_TOKEN"
           "POLAR_SUCCESS_URL"
         ];
+        enable = true;
+        host = "cloudflare";
         secrets = [
           "DATABASE_URL"
           "BETTER_AUTH_SECRET"
@@ -98,13 +97,13 @@
       environments = {
         dev = {
           env = {
+            ALCHEMY_STATE_TOKEN = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/ALCHEMY_STATE_TOKEN";
             APP_HOST = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/url";
+            CLOUDFLARE_API_TOKEN = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/CLOUDFLARE_API_TOKEN";
             MEMO_MEMOAS_AD = "foobar";
             OPENAI_API_KEY = "ref+sops://packages/gen/env/data/web/dev.yaml#/OPENAI_API_KEY";
             PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/port";
-            POSTGRES_URL = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL";
-            CLOUDFLARE_API_TOKEN = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/CLOUDFLARE_API_TOKEN";
-            ALCHEMY_STATE_TOKEN = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/ALCHEMY_STATE_TOKEN";
+            POSTGRES_URL = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL";
           };
           name = "dev";
         };
@@ -117,6 +116,11 @@
         staging = {
           env = { };
           name = "staging";
+        };
+      };
+      framework = {
+        tanstack-start = {
+          enable = true;
         };
       };
       linting = {
@@ -186,29 +190,27 @@
   # Containers
   # ---------------------------------------------------------------------------
   containers = {
-    settings = {
-      backend = "nix2container";
-    };
-    # Linux builder detection and fallback for macOS users
     builder = {
       enable = true;
-      warnIfMissing = true;
-      # Remote builder fallback for team members without Determinate Nix native builder
       remote = {
         enable = true;
         host = "100.102.113.26";
-        user = "root";
-        sshKeyPath = "/etc/nix/builder_ed25519";
-        systems = [ "x86_64-linux" ];
         maxJobs = 16;
         speedFactor = 1;
+        sshKeyPath = "/etc/nix/builder_ed25519";
         supportedFeatures = [
           "big-parallel"
           "benchmark"
           "kvm"
           "nixos-test"
         ];
+        systems = [ "x86_64-linux" ];
+        user = "root";
       };
+      warnIfMissing = true;
+    };
+    settings = {
+      backend = "nix2container";
     };
   };
 
@@ -247,10 +249,51 @@
   # ---------------------------------------------------------------------------
   enable = true;
 
-  # ---------------------------------------------------------------------------
-  # Env Codegen
-  # ---------------------------------------------------------------------------
-  env.package-name = "@gen/env";
+  env = {
+    package-name = "@gen/env";
+  };
+
+  files = {
+    entries = {
+      ".gitignore" = {
+        dedupe = true;
+        lines = [
+          "node_modules"
+          ".stackpanel/bin"
+          "dist"
+          "build"
+          "*.tsbuildinfo"
+          ".stackpanel/.token"
+          ".env"
+          ".env*.local"
+          ".idea"
+          "*.swp"
+          "*.swo"
+          "*~"
+          ".DS_Store"
+          "logs"
+          "*.log"
+          "*.tgz"
+          ".cache"
+          "tmp"
+          "temp"
+          ".devenv"
+          ".devenv.flake.nix"
+          "devenv.local.nix"
+          "devenv.local.yaml"
+          ".direnv"
+          "/.stackpanel/state"
+          "/.devenv*"
+          "/.devenv-root"
+          "/result"
+          ".stackpanel/state/"
+        ];
+        managed = "block";
+        sort = true;
+        type = "line-set";
+      };
+    };
+  };
 
   # ---------------------------------------------------------------------------
   # Git Hooks
@@ -308,6 +351,24 @@
     };
   };
 
+  languages = {
+    go = {
+      enable = true;
+    };
+    javascript = {
+      bun = {
+        enable = true;
+        install = {
+          enable = true;
+        };
+      };
+      enable = true;
+    };
+    typescript = {
+      enable = true;
+    };
+  };
+
   # ---------------------------------------------------------------------------
   # MOTD
   # ---------------------------------------------------------------------------
@@ -326,7 +387,7 @@
   name = "stackpanel";
 
   # ---------------------------------------------------------------------------
-  # Packages (resolved to nixpkgs by the module system)
+  # Packages
   # ---------------------------------------------------------------------------
   packages = [
     "sops"
@@ -377,8 +438,6 @@
     };
     enable = true;
     environments = { };
-    secrets-dir = ".stackpanel/secrets";
-    system-keys = [ ];
     groups = {
       dev = {
         age-pub = "age1783kahlc7yxv2md9vtpx4wq899csvqxty03fatcs5s7lqfh5334s6p7r0l";
@@ -387,6 +446,8 @@
         age-pub = "age1tvczw6y7g4v0ma7cn05adrnst9jnnsh9j8ge0t0flls8ucq5yg9qe37jhe";
       };
     };
+    secrets-dir = ".stackpanel/secrets";
+    system-keys = [ ];
   };
 
   # ---------------------------------------------------------------------------
@@ -522,19 +583,6 @@
   };
 
   # ---------------------------------------------------------------------------
-  # Languages (replaces devenv languages.* config)
-  # ---------------------------------------------------------------------------
-  languages = {
-    go.enable = true;
-    javascript = {
-      enable = true;
-      bun.enable = true;
-      bun.install.enable = true;
-    };
-    typescript.enable = true;
-  };
-
-  # ---------------------------------------------------------------------------
   # Theme
   # ---------------------------------------------------------------------------
   theme = {
@@ -564,42 +612,11 @@
   # Variables
   # ---------------------------------------------------------------------------
   variables = {
+    "/dev/openrouter-api-key" = {
+      id = "/dev/openrouter-api-key";
+      value = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/openrouter-api-key";
+    };
   };
-  files.entries.".gitignore" = {
-    type = "line-set";
-    dedupe = true;
-    sort = true;
-    managed = "block";
-    lines = [
-      "node_modules"
-      ".stackpanel/bin"
-      "dist"
-      "build"
-      "*.tsbuildinfo"
-      ".stackpanel/.token"
-      ".env"
-      ".env*.local"
-      ".idea"
-      "*.swp"
-      "*.swo"
-      "*~"
-      ".DS_Store"
-      "logs"
-      "*.log"
-      "*.tgz"
-      ".cache"
-      "tmp"
-      "temp"
-      ".devenv"
-      ".devenv.flake.nix"
-      "devenv.local.nix"
-      "devenv.local.yaml"
-      ".direnv"
-      "/.stackpanel/state"
-      "/.devenv*"
-      "/.devenv-root"
-      "/result"
-      ".stackpanel/state/"
-    ];
-  };
+
 }
+

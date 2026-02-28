@@ -96,10 +96,16 @@ let
       wrappedContent = if hasTimeout then ''
         # Script timeout: ${toString timeoutSeconds} seconds (${toString (timeoutSeconds / 60.0)} minutes)
         # This prevents the script from hanging indefinitely on network issues, waiting for input, etc.
-        timeout ${toString timeoutSeconds} bash -s "$@" <<'SCRIPT_TIMEOUT_EOF'
+        # Note: We use a temp file instead of a heredoc (bash -s <<EOF) because heredocs
+        # consume stdin, which causes commands like `nix build` to receive EOF on stdin
+        # and exit with "error: interrupted by user".
+        _sp_script_tmp=$(mktemp)
+        trap 'rm -f "$_sp_script_tmp"' EXIT
+        cat > "$_sp_script_tmp" <<'SCRIPT_TIMEOUT_EOF'
         set -euo pipefail
         ${scriptContent}
         SCRIPT_TIMEOUT_EOF
+        timeout ${toString timeoutSeconds} bash "$_sp_script_tmp" "$@"
       '' else scriptContent;
     in
     pkgs.writeShellApplication {
