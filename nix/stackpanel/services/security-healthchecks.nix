@@ -138,7 +138,7 @@ let
         "decrypt"
       ];
       script = ''
-        GROUP_FILE="${secretsDir}/groups/${name}.yaml"
+        GROUP_FILE="${secretsDir}/vars/${name}.sops.yaml"
 
         if [ ! -f "$GROUP_FILE" ]; then
           echo "No secrets file for group '${name}' at $GROUP_FILE"
@@ -147,7 +147,7 @@ let
         fi
 
         # Check that the .enc.age key file exists first
-        ENC_AGE_FILE="${secretsDir}/keys/${name}.enc.age"
+        ENC_AGE_FILE="${secretsDir}/recipients/${name}.enc.age"
         if [ ! -f "$ENC_AGE_FILE" ]; then
           echo "Cannot decrypt: group key not found at $ENC_AGE_FILE"
           echo "Initialize with: secrets:init-group ${name}"

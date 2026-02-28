@@ -152,9 +152,10 @@ let
 
     # Secrets
     "secrets.secrets-dir" = ".stackpanel/secrets";
-    "secrets.keys-dir" = ".stackpanel/secrets/keys";
-    "secrets.groups-dir" = ".stackpanel/secrets/groups";
-    "secrets.recipients-dir" = ".stackpanel/secrets/keys/recipients";
+    "secrets.vars-dir" = ".stackpanel/secrets/vars";
+    "secrets.recipients-dir" = ".stackpanel/secrets/recipients";
+    "secrets.recipients-archive-dir" = ".stackpanel/secrets/recipients/.archive";
+    "secrets.bin-dir" = ".stackpanel/secrets/bin";
 
     # Files
     "paths.state-file" = ".stackpanel/state/stackpanel.json";
