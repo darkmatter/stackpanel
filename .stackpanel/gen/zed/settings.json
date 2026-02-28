@@ -1,4 +1,5 @@
 {
+  "load_direnv": "shell_hook",
   "lsp": {
     "nil": {
       "initialization_options": {
