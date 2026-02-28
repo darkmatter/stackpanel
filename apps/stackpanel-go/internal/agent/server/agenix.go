@@ -211,7 +211,7 @@ func (s *Server) decryptAgeSecret(agePath, identityPath string) (string, error) 
 
 // handleAgenixSecretWrite handles writing a secret using the group-based SOPS system.
 // Legacy individual .age files are no longer supported - secrets are stored in
-// group YAML files (groups/dev.yaml, groups/staging.yaml, groups/prod.yaml).
+// group YAML files (vars/dev.sops.yaml, vars/staging.sops.yaml, vars/prod.sops.yaml).
 // POST /api/secrets/write
 func (s *Server) handleAgenixSecretWrite(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

@@ -50,7 +50,7 @@ func (s *Server) getRecipientsDir() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get secrets config: %w", err)
 	}
-	return filepath.Join(s.config.ProjectRoot, secretsCfg.SecretsDir, "keys", "recipients"), nil
+	return filepath.Join(s.config.ProjectRoot, secretsCfg.SecretsDir, "recipients"), nil
 }
 
 // handleRecipientsRoute dispatches GET/POST/DELETE to sub-handlers.
@@ -89,10 +89,10 @@ func (s *Server) handleListRecipients(w http.ResponseWriter, _ *http.Request) {
 
 	recipients := []Recipient{}
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".pub") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".age.pub") {
 			continue
 		}
-		name := strings.TrimSuffix(entry.Name(), ".pub")
+		name := strings.TrimSuffix(entry.Name(), ".age.pub")
 		content, err := os.ReadFile(filepath.Join(recipientsDir, entry.Name()))
 		if err != nil {
 			log.Warn().Err(err).Str("file", entry.Name()).Msg("failed to read recipient pub file")
@@ -183,7 +183,7 @@ func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pubFile := filepath.Join(recipientsDir, req.Name+".pub")
+	pubFile := filepath.Join(recipientsDir, req.Name+".age.pub")
 	if err := os.WriteFile(pubFile, []byte(pubKey+"\n"), 0o644); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to write recipient file: %v", err))
 		return
@@ -215,7 +215,7 @@ func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pubFile := filepath.Join(recipientsDir, name+".pub")
+	pubFile := filepath.Join(recipientsDir, name+".age.pub")
 	if _, err := os.Stat(pubFile); os.IsNotExist(err) {
 		s.writeAPIError(w, http.StatusNotFound, fmt.Sprintf("recipient '%s' not found", name))
 		return

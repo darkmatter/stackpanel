@@ -51,12 +51,12 @@ type GroupSecretResponse struct {
 	Path string `json:"path"`
 
 	// ValsRef is the vals reference to use in app configs
-	// For source project: ref+sops://<secrets-dir>/groups/<group>.yaml#/<key>
-	// For env package: ref+sops://groups/<group>.yaml#/<key>
+	// For source project: ref+sops://<secrets-dir>/vars/<group>.sops.yaml#/<key>
+	// For env package: ref+sops://vars/<group>.sops.yaml#/<key>
 	ValsRef string `json:"valsRef"`
 
 	// EnvPackageRef is the vals reference for use in the deployed env package
-	// This uses relative paths: ref+sops://groups/<group>.yaml#/<key>
+	// This uses relative paths: ref+sops://vars/<group>.sops.yaml#/<key>
 	EnvPackageRef string `json:"envPackageRef"`
 
 	// RecipientCount is the number of AGE recipients the file is encrypted to
@@ -82,7 +82,7 @@ type GroupSecretReadResponse struct {
 // SecretsConfig holds paths and settings from Nix config
 type SecretsConfig struct {
 	SecretsDir    string `json:"secretsDir"`    // e.g., ".stackpanel/secrets"
-	GroupsSubdir  string `json:"groupsSubdir"`  // e.g., "groups" (relative to secretsDir)
+	VarsSubdir    string `json:"varsSubdir"`    // e.g., "vars" (relative to secretsDir)
 	EnvPackageDir string `json:"envPackageDir"` // e.g., "packages/env/data"
 }
 
@@ -101,7 +101,7 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 		if err := json.Unmarshal([]byte(res.Stdout), &serializable); err == nil && serializable.SecretsDir != "" {
 			return &SecretsConfig{
 				SecretsDir:    serializable.SecretsDir,
-				GroupsSubdir:  "groups",
+				VarsSubdir:    "vars",
 				EnvPackageDir: "packages/env/data",
 			}, nil
 		}
@@ -118,7 +118,7 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 		if err := json.Unmarshal([]byte(res.Stdout), &secretsDir); err == nil && secretsDir != "" {
 			return &SecretsConfig{
 				SecretsDir:    secretsDir,
-				GroupsSubdir:  "groups",
+				VarsSubdir:    "vars",
 				EnvPackageDir: "packages/env/data",
 			}, nil
 		}
@@ -127,7 +127,7 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 	// Fall back to defaults
 	return &SecretsConfig{
 		SecretsDir:    ".stackpanel/secrets",
-		GroupsSubdir:  "groups",
+		VarsSubdir:    "vars",
 		EnvPackageDir: "packages/env/data",
 	}, nil
 }
@@ -138,7 +138,7 @@ func (s *Server) getGroupsDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(s.config.ProjectRoot, cfg.SecretsDir, cfg.GroupsSubdir), nil
+	return filepath.Join(s.config.ProjectRoot, cfg.SecretsDir, cfg.VarsSubdir), nil
 }
 
 // getGroupFilePath returns the absolute path to a group's SOPS file
@@ -152,7 +152,7 @@ func (s *Server) getGroupFilePath(group string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(groupsDir, safeGroup+".yaml"), nil
+	return filepath.Join(groupsDir, safeGroup+".sops.yaml"), nil
 }
 
 // buildValsRef builds a vals reference for a secret in a group
@@ -163,15 +163,15 @@ func (s *Server) buildValsRef(group, key string) (string, error) {
 		return "", err
 	}
 	// Path relative to project root
-	relPath := filepath.Join(cfg.SecretsDir, cfg.GroupsSubdir, group+".yaml")
+	relPath := filepath.Join(cfg.SecretsDir, cfg.VarsSubdir, group+".sops.yaml")
 	return fmt.Sprintf("ref+sops://%s#/%s", relPath, key), nil
 }
 
 // buildEnvPackageRef builds a vals reference for the deployed env package
 // This uses paths relative to the env package data directory
 func buildEnvPackageRef(group, key string) string {
-	// In the env package, groups are at ./groups/<group>.yaml
-	return fmt.Sprintf("ref+sops://groups/%s.yaml#/%s", group, key)
+	// In the env package, vars are at ./vars/<group>.sops.yaml
+	return fmt.Sprintf("ref+sops://vars/%s.sops.yaml#/%s", group, key)
 }
 
 // getGroupRecipients gets the AGE public keys for a group from the Nix config
@@ -585,11 +585,11 @@ func (s *Server) handleListAllGroups(w http.ResponseWriter, r *http.Request) {
 	groups := make(map[string][]string)
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sops.yaml") {
 			continue
 		}
 
-		groupName := strings.TrimSuffix(entry.Name(), ".yaml")
+		groupName := strings.TrimSuffix(entry.Name(), ".sops.yaml")
 		secrets, err := s.readGroupSecrets(groupName)
 		if err != nil {
 			log.Warn().Err(err).Str("group", groupName).Msg("Failed to read group secrets")
@@ -622,8 +622,8 @@ type EnvPackageData struct {
 //
 //	packages/env/data/
 //	├── .sops.yaml           # SOPS config
-//	├── apps/<app>/<env>.yaml  # Plain YAML with vals refs: ref+sops://groups/<group>.yaml#/<key>
-//	└── groups/<group>.yaml    # SOPS-encrypted files (copied from source)
+//	├── apps/<app>/<env>.yaml  # Plain YAML with vals refs: ref+sops://vars/<group>.sops.yaml#/<key>
+//	└── vars/<group>.sops.yaml # SOPS-encrypted files (copied from source)
 func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -667,7 +667,7 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 	}
 
 	// Create apps directory structure with vals references
-	// These refs are RELATIVE to the env package: ref+sops://groups/<group>.yaml#/<key>
+	// These refs are RELATIVE to the env package: ref+sops://vars/<group>.sops.yaml#/<key>
 	appsDir := filepath.Join(envPkgDir, "apps")
 	if err := os.MkdirAll(appsDir, 0o755); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to create apps directory: "+err.Error())
@@ -701,9 +701,9 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// Copy groups directory (SOPS-encrypted files)
-	srcGroupsDir := filepath.Join(s.config.ProjectRoot, cfg.SecretsDir, cfg.GroupsSubdir)
-	dstGroupsDir := filepath.Join(envPkgDir, "groups")
+	// Copy vars directory (SOPS-encrypted files)
+	srcGroupsDir := filepath.Join(s.config.ProjectRoot, cfg.SecretsDir, cfg.VarsSubdir)
+	dstGroupsDir := filepath.Join(envPkgDir, "vars")
 	if err := os.MkdirAll(dstGroupsDir, 0o755); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to create groups directory: "+err.Error())
 		return
@@ -712,7 +712,7 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 	var copiedGroups []string
 	if entries, err := os.ReadDir(srcGroupsDir); err == nil {
 		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sops.yaml") {
 				continue
 			}
 
@@ -730,7 +730,7 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 				continue
 			}
 
-			groupName := strings.TrimSuffix(entry.Name(), ".yaml")
+			groupName := strings.TrimSuffix(entry.Name(), ".sops.yaml")
 			copiedGroups = append(copiedGroups, groupName)
 		}
 	}
@@ -756,8 +756,8 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 }
 
 // transformValsRefForEnvPackage converts a source vals ref to a relative ref for the env package
-// Source: ref+sops://.stackpanel/secrets/groups/dev.yaml#/KEY
-// Output: ref+sops://groups/dev.yaml#/KEY
+// Source: ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/KEY
+// Output: ref+sops://vars/dev.sops.yaml#/KEY
 func (s *Server) transformValsRefForEnvPackage(value string) string {
 	if !strings.HasPrefix(value, "ref+sops://") {
 		return value
@@ -773,21 +773,21 @@ func (s *Server) transformValsRefForEnvPackage(value string) string {
 	pathPart := strings.TrimPrefix(parts[0], "ref+sops://")
 	keyPart := parts[1]
 
-	// Check if this is a groups reference
+	// Check if this is a vars reference
 	cfg, _ := s.getSecretsConfig()
-	groupsPath := filepath.Join(cfg.SecretsDir, cfg.GroupsSubdir)
+	varsPath := filepath.Join(cfg.SecretsDir, cfg.VarsSubdir)
 
-	if strings.HasPrefix(pathPart, groupsPath+"/") {
+	if strings.HasPrefix(pathPart, varsPath+"/") {
 		// Extract just the filename
 		filename := filepath.Base(pathPart)
-		return fmt.Sprintf("ref+sops://groups/%s#%s", filename, keyPart)
+		return fmt.Sprintf("ref+sops://vars/%s#%s", filename, keyPart)
 	}
 
-	// For other refs, try to make them relative to groups/
-	if strings.Contains(pathPart, "/groups/") {
-		idx := strings.LastIndex(pathPart, "/groups/")
-		filename := pathPart[idx+len("/groups/"):]
-		return fmt.Sprintf("ref+sops://groups/%s#%s", filename, keyPart)
+	// For other refs, try to make them relative to vars/
+	if strings.Contains(pathPart, "/vars/") {
+		idx := strings.LastIndex(pathPart, "/vars/")
+		filename := pathPart[idx+len("/vars/"):]
+		return fmt.Sprintf("ref+sops://vars/%s#%s", filename, keyPart)
 	}
 
 	// Return as-is if we can't transform it
@@ -827,10 +827,10 @@ func (s *Server) generateEnvPackageSopsConfig(groups []string) string {
 	sb.WriteString("  - path_regex: ^apps/.*\\.yaml$\n")
 	sb.WriteString("    unencrypted_regex: \".*\"\n\n")
 
-	// Groups directory IS encrypted
-	sb.WriteString("  # Groups contain encrypted secret values\n")
+	// Vars directory IS encrypted
+	sb.WriteString("  # Vars contain encrypted secret values\n")
 	for _, group := range groups {
-		sb.WriteString(fmt.Sprintf("  - path_regex: ^groups/%s\\.yaml$\n", group))
+		sb.WriteString(fmt.Sprintf("  - path_regex: ^vars/%s\\.sops\\.yaml$\n", group))
 		sb.WriteString("    key_groups:\n")
 		sb.WriteString("      - age:\n")
 		for i := range pubKeys {
