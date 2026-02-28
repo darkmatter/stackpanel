@@ -1,5 +1,5 @@
 # ==============================================================================
-# evalconfig.nix
+# eval.nix
 #
 # Stackpanel configuration evaluator for Go CLI/agent integration.
 #
@@ -8,26 +8,34 @@
 # tools to read live configuration directly from Nix.
 #
 # Configuration sources (in priority order):
-#   1. STACKPANEL_CONFIG_JSON - Nix store path to JSON config (set by devenv enterShell)
-#   2. State file - .stackpanel/state/stackpanel.json (fallback)
+#   1. configJson arg  - Nix store path to JSON config (passed by caller)
+#   2. stateDir arg    - directory containing stackpanel.json (passed by caller)
+#   3. root arg        - project root, state file derived as root/.stackpanel/state/stackpanel.json
+#   4. env fallbacks   - STACKPANEL_CONFIG_JSON / STACKPANEL_STATE_DIR / STACKPANEL_ROOT / PWD
+#                        (only used when args are null, requires --impure)
 #
-# Usage (must be run with --impure to read STACKPANEL_* env vars):
-#   nix eval --impure --json -f nix/stackpanel/core/lib/evalconfig.nix
+# Preferred usage (pure — no --impure needed):
+#   nix eval --json -f eval.nix --argstr root /path/to/project
 #
-# Or from any directory:
-#   nix eval --impure --json -f /path/to/project/nix/stackpanel/core/lib/evalconfig.nix
+# Legacy usage (impure — reads env vars):
+#   nix eval --impure --json -f eval.nix
 #
-# The Go agent/CLI can call this to get live config without state.json,
-# eliminating state drift entirely.
+# The Go agent passes --argstr root <path> so evaluation is pure whenever
+# the project root is known.
 # ==============================================================================
 {
   root ? null,
+  configJson ? null,
+  stateDir ? null,
 }:
 let
-  # Get project root from environment (set by stackpanel enterShell)
-  # Falls back to searching for devenv.nix from PWD
+  # ===========================================================================
+  # Resolve effective values — prefer explicit args, fall back to env vars
+  # ===========================================================================
+
+  # Project root: arg > STACKPANEL_ROOT env > PWD-based search
   envRoot = builtins.getEnv "STACKPANEL_ROOT";
-  pwd = builtins.getEnv "PWD";
+  envPwd = builtins.getEnv "PWD";
 
   findProjectRoot =
     dir:
@@ -40,7 +48,6 @@ let
     else
       findProjectRoot (dirOf dir);
 
-  # Convert string path to actual path for dirOf
   dirOf =
     path:
     let
@@ -51,27 +58,46 @@ let
     in
     if builtins.length parts <= 1 then "/" else "/" + parent;
 
-  projectRoot =
+  effectiveRoot =
     if root != null then
       root
     else if envRoot != "" then
       envRoot
     else
-      findProjectRoot pwd;
+      findProjectRoot envPwd;
 
-  # Priority 1: Read from Nix store config JSON (set by devenv enterShell)
-  # This is the most authoritative source when inside a devenv shell
-  configJsonPath = builtins.getEnv "STACKPANEL_CONFIG_JSON";
+  # Config JSON path: arg > STACKPANEL_CONFIG_JSON env
+  envConfigJson = builtins.getEnv "STACKPANEL_CONFIG_JSON";
+  effectiveConfigJson =
+    if configJson != null then
+      configJson
+    else if envConfigJson != "" then
+      envConfigJson
+    else
+      null;
 
-  configFromNixStore =
-    if configJsonPath != "" && builtins.pathExists configJsonPath then
+  # State dir: arg > STACKPANEL_STATE_DIR env > derived from root
+  envStateDir = builtins.getEnv "STACKPANEL_STATE_DIR";
+  effectiveStateDir =
+    if stateDir != null then
+      stateDir
+    else if envStateDir != "" then
+      envStateDir
+    else
+      null;
+
+  # ===========================================================================
+  # Priority 1: Read from config JSON (Nix store path set by devenv enterShell)
+  # ===========================================================================
+  configFromJson =
+    if effectiveConfigJson != null && builtins.pathExists effectiveConfigJson then
       let
-        raw = builtins.fromJSON (builtins.readFile configJsonPath);
+        raw = builtins.fromJSON (builtins.readFile effectiveConfigJson);
         # Replace $STACKPANEL_ROOT placeholder with actual value
         fixProjectRoot =
           config:
-          if config.projectRoot == "$STACKPANEL_ROOT" && envRoot != "" then
-            config // { projectRoot = envRoot; }
+          if config.projectRoot == "$STACKPANEL_ROOT" && effectiveRoot != null then
+            config // { projectRoot = effectiveRoot; }
           else
             config;
       in
@@ -79,13 +105,15 @@ let
     else
       null;
 
-  # Priority 2: Read from state file as fallback
-  stateDir = builtins.getEnv "STACKPANEL_STATE_DIR";
+  # ===========================================================================
+  # Priority 2: Read from state file
+  # Try explicit stateDir first, then derive from root
+  # ===========================================================================
   stateFile =
-    if stateDir != "" then
-      stateDir + "/stackpanel.json"
-    else if projectRoot != null then
-      projectRoot + "/.stackpanel/state/stackpanel.json"
+    if effectiveStateDir != null then
+      effectiveStateDir + "/stackpanel.json"
+    else if effectiveRoot != null then
+      effectiveRoot + "/.stackpanel/state/stackpanel.json"
     else
       null;
 
@@ -94,18 +122,21 @@ let
       builtins.fromJSON (builtins.readFile stateFile)
     else
       null;
+
 in
-if configFromNixStore != null then
-  configFromNixStore
+if configFromJson != null then
+  configFromJson
 else if configFromState != null then
   configFromState
 else
   {
     error = "No stackpanel configuration found";
-    hint = "Run this from within a devenv shell, or ensure STACKPANEL_STATE_DIR is set";
-    projectRoot = projectRoot;
-    envRoot = envRoot;
+    hint =
+      if root == null then
+        "Pass --argstr root /path/to/project, or run from within a devenv shell"
+      else
+        "No config at ${effectiveRoot}/.stackpanel/state/stackpanel.json — run 'stackpanel preflight' first";
+    projectRoot = effectiveRoot;
     stateFile = stateFile;
-    configJsonPath = configJsonPath;
-    pwd = pwd;
+    configJsonPath = effectiveConfigJson;
   }
