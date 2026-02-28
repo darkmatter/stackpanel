@@ -26,7 +26,7 @@
   conflicts = [ ];
 
   features = {
-    files = false;
+    files = true;
     scripts = true; # Provides container-build, container-copy, container-run
     healthchecks = false;
     packages = true; # Provides skopeo
