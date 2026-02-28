@@ -16,8 +16,8 @@ Secrets are managed using a **group-based SOPS** approach where:
 **All vals references in the deployed env package use RELATIVE paths.**
 
 This is critical for portability:
-- Source project: `ref+sops://.stackpanel/secrets/groups/dev.yaml#/KEY` (configurable path)
-- Env package: `ref+sops://groups/dev.yaml#/KEY` (relative to data dir)
+- Source project: `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/KEY` (configurable path)
+- Env package: `ref+sops://vars/dev.sops.yaml#/KEY` (relative to data dir)
 
 The `.stackpanel` path is **configurable** via `stackpanel.secrets.secrets-dir` in Nix config.
 The env package generator **transforms** source refs to relative refs during generation.
@@ -27,12 +27,14 @@ The env package generator **transforms** source refs to relative refs during gen
 **Source Project** (path configurable via `stackpanel.secrets.secrets-dir`):
 ```
 .stackpanel/secrets/          # Or custom path from config
-├── groups/                   # SOPS-encrypted secrets by access control group
-│   ├── dev.yaml             # Secrets accessible to dev group
-│   ├── staging.yaml         # Secrets accessible to staging group
-│   └── prod.yaml            # Secrets accessible to prod group
+├── vars/                     # SOPS-encrypted secrets by access control group
+│   ├── dev.sops.yaml        # Secrets accessible to dev group
+│   ├── staging.sops.yaml    # Secrets accessible to staging group
+│   └── prod.sops.yaml       # Secrets accessible to prod group
+├── recipients/               # AGE public keys + encrypted group keys
 ├── .sops.yaml               # SOPS config defining key groups
-└── vars.yaml                # Plaintext shared configuration
+├── groups.json              # Recipient group -> keygroup mapping
+└── apps.json                # Per-app codegen metadata
 ```
 
 **Deployed Env Package** (portable, relative paths):
@@ -41,20 +43,20 @@ packages/env/data/
 ├── .sops.yaml               # Self-contained SOPS config
 ├── apps/                    # Plain YAML with RELATIVE vals references (NOT encrypted)
 │   ├── web/
-│   │   ├── dev.yaml         # { DATABASE_URL: "ref+sops://groups/dev.yaml#/DATABASE_URL" }
+│   │   ├── dev.yaml         # { DATABASE_URL: "ref+sops://vars/dev.sops.yaml#/DATABASE_URL" }
 │   │   ├── staging.yaml
 │   │   └── prod.yaml
 │   └── docs/
 │       ├── dev.yaml
 │       └── prod.yaml
-└── groups/                  # SOPS-encrypted files (copied)
-    ├── dev.yaml
-    ├── staging.yaml
-    └── prod.yaml
+└── vars/                    # SOPS-encrypted files (copied)
+    ├── dev.sops.yaml
+    ├── staging.sops.yaml
+    └── prod.sops.yaml
 ```
 
-**Note:** The apps/*.yaml files use `ref+sops://groups/...` (relative to data dir),
-NOT `ref+sops://.stackpanel/secrets/groups/...` (source project path).
+**Note:** The apps/*.yaml files use `ref+sops://vars/...` (relative to data dir),
+NOT `ref+sops://.stackpanel/secrets/vars/...` (source project path).
 
 ## How It Works
 
@@ -68,10 +70,10 @@ Selected group: dev
 ```
 
 The agent:
-1. Reads existing `.stackpanel/secrets/groups/dev.yaml` (or creates new)
+1. Reads existing `.stackpanel/secrets/vars/dev.sops.yaml` (or creates new)
 2. Adds/updates the key with the plaintext value
 3. Encrypts with SOPS using the group's AGE recipients
-4. Returns a vals reference: `ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL`
+4. Returns a vals reference: `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL`
 
 ### 2. Using in App Config
 
@@ -80,15 +82,15 @@ The app's environment config contains vals references (NOT actual secrets).
 **In source project** (references the configured secrets-dir):
 ```yaml
 # From apps.nix or variables.nix
-DATABASE_URL: ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL
+DATABASE_URL: ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL
 ```
 
 **In deployed env package** (relative paths):
 ```yaml
 # packages/env/data/apps/web/dev.yaml
-DATABASE_URL: ref+sops://groups/dev.yaml#/DATABASE_URL
-REDIS_URL: ref+sops://groups/dev.yaml#/REDIS_URL
-API_KEY: ref+sops://groups/prod.yaml#/API_KEY
+DATABASE_URL: ref+sops://vars/dev.sops.yaml#/DATABASE_URL
+REDIS_URL: ref+sops://vars/dev.sops.yaml#/REDIS_URL
+API_KEY: ref+sops://vars/prod.sops.yaml#/API_KEY
 ```
 
 The generator **transforms** source refs to relative refs automatically.
@@ -120,7 +122,7 @@ keys:
 
 creation_rules:
   # Dev: everyone
-  - path_regex: ^groups/dev\.yaml$
+  - path_regex: ^vars/dev\.sops\.yaml$
     key_groups:
       - age:
           - *alice
@@ -128,14 +130,14 @@ creation_rules:
           - *ci
 
   # Staging: ops team + CI
-  - path_regex: ^groups/staging\.yaml$
+  - path_regex: ^vars/staging\.sops\.yaml$
     key_groups:
       - age:
           - *alice
           - *ci
 
   # Prod: restricted
-  - path_regex: ^groups/prod\.yaml$
+  - path_regex: ^vars/prod\.sops\.yaml$
     key_groups:
       - age:
           - *alice
@@ -146,7 +148,7 @@ creation_rules:
 
 Run `secrets:generate-env-package` (or use the API endpoint) to:
 
-1. Copy group SOPS files to `packages/env/data/groups/`
+1. Copy group SOPS files to `packages/env/data/vars/`
 2. Generate app env YAML files with vals references
 3. Generate `.sops.yaml` for self-contained decryption
 
@@ -180,7 +182,7 @@ The old architecture used individual `.age` files per secret:
 1. Create groups: `secrets:init-group dev && secrets:init-group prod`
 2. For each secret in `vars/*.age`:
    - Decrypt: `age -d -i ~/.age/key.txt vars/my-secret.age`
-   - Write to group: `sops set groups/dev.yaml /MY_SECRET "value"`
+   - Write to group: `sops set vars/dev.sops.yaml /MY_SECRET "value"`
 3. Update app configs to use vals references
 4. Delete old `.age` files
 
@@ -195,8 +197,8 @@ POST /api/secrets/group/write
   "group": "dev"
 }
 Response: {
-  "valsRef": "ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL",
-  "envPackageRef": "ref+sops://groups/dev.yaml#/DATABASE_URL"
+  "valsRef": "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL",
+  "envPackageRef": "ref+sops://vars/dev.sops.yaml#/DATABASE_URL"
 }
 ```
 
@@ -236,11 +238,11 @@ Response: { "path": "packages/env/data", "apps": 3, "groups": ["dev", "prod"] }
 
 | Context | Reference Format | Example |
 |---------|-----------------|---------|
-| Source project | Full path from config | `ref+sops://.stackpanel/secrets/groups/dev.yaml#/KEY` |
-| Env package | Relative to data dir | `ref+sops://groups/dev.yaml#/KEY` |
-| Docker | Relative (mount data dir) | `ref+sops://groups/dev.yaml#/KEY` |
+| Source project | Full path from config | `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/KEY` |
+| Env package | Relative to data dir | `ref+sops://vars/dev.sops.yaml#/KEY` |
+| Docker | Relative (mount data dir) | `ref+sops://vars/dev.sops.yaml#/KEY` |
 
 The key insight is that **vals resolves paths relative to the current working directory**.
 In Docker, you either:
 1. Mount `packages/env/data/` and run from there, OR
-2. Set `SOPS_FILE` env var to point to the groups directory
+2. Set `SOPS_FILE` env var to point to the vars directory

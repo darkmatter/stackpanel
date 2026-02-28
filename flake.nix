@@ -88,7 +88,7 @@
       in
       {
         # Merge stackpanel packages with outputs packages
-        packages = packages // spOutputs.packages;
+        packages = packages // (spOutputs.packages or { });
 
         # DevShells from stackpanel
         devShells = spOutputs.devShells;
