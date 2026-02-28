@@ -150,7 +150,7 @@ proto.mkProtoFile {
           proto.string 4 ''
             Shell command that outputs the AGE private key to stdout.
             Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
-            Defaults to: sops --decrypt .stackpanel/secrets/keys/<group>.enc.age
+            Defaults to: sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age
             Override for alternative key stores, e.g.:
               - chamber read keys/stackpanel/dev current -q
               - op read 'op://vault/stackpanel/dev-age-key'

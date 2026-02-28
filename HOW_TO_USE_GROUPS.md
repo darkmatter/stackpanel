@@ -20,9 +20,9 @@ The secret is now encrypted to the selected group's SOPS file.
 ### What Happens Behind the Scenes
 
 When you create a secret:
-1. The value is written to `.stackpanel/secrets/groups/<group>.yaml` (SOPS-encrypted)
+1. The value is written to `.stackpanel/secrets/vars/<group>.sops.yaml` (SOPS-encrypted)
 2. A variable entry is created with a vals reference
-3. The reference is: `ref+sops://.stackpanel/secrets/groups/<group>.yaml#/<key>`
+3. The reference is: `ref+sops://.stackpanel/secrets/vars/<group>.sops.yaml#/<key>`
 
 ## Editing an Existing Secret
 
@@ -54,10 +54,10 @@ A group is an **access control boundary**. Each group has:
 Access to each group is controlled by the `.sops.yaml` configuration:
 
 ```yaml
-# .stackpanel/secrets/groups/.sops.yaml
+# .stackpanel/secrets/vars/.sops.yaml
 creation_rules:
   # Dev: Everyone
-  - path_regex: ^dev\.yaml$
+  - path_regex: ^dev\.sops\.yaml$
     key_groups:
       - age:
           - alice_key
@@ -65,7 +65,7 @@ creation_rules:
           - ci_key
   
   # Prod: Restricted
-  - path_regex: ^prod\.yaml$
+  - path_regex: ^prod\.sops\.yaml$
     key_groups:
       - age:
           - alice_key  # Only admin
@@ -82,11 +82,11 @@ When you create a secret, it automatically generates a vals reference. Use this 
 # apps.nix
 {
   apps.web.environments.dev.env = {
-    DATABASE_URL = "ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL";
+    DATABASE_URL = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL";
   };
   
   apps.web.environments.prod.env = {
-    DATABASE_URL = "ref+sops://.stackpanel/secrets/groups/prod.yaml#/DATABASE_URL";
+    DATABASE_URL = "ref+sops://.stackpanel/secrets/vars/prod.sops.yaml#/DATABASE_URL";
   };
 }
 ```
@@ -145,19 +145,19 @@ Use:
 **Option 1: Same group, different apps**
 ```nix
 apps.web.environments.dev.env.SHARED_API_KEY = 
-  "ref+sops://.stackpanel/secrets/groups/dev.yaml#/EXTERNAL_API_KEY";
+  "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/EXTERNAL_API_KEY";
 
 apps.api.environments.dev.env.SHARED_API_KEY = 
-  "ref+sops://.stackpanel/secrets/groups/dev.yaml#/EXTERNAL_API_KEY";
+  "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/EXTERNAL_API_KEY";
 ```
 
 **Option 2: Different groups per environment**
 ```nix
 apps.web.environments.dev.env.API_KEY = 
-  "ref+sops://.stackpanel/secrets/groups/dev.yaml#/API_KEY";
+  "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/API_KEY";
 
 apps.web.environments.prod.env.API_KEY = 
-  "ref+sops://.stackpanel/secrets/groups/prod.yaml#/API_KEY";
+  "ref+sops://.stackpanel/secrets/vars/prod.sops.yaml#/API_KEY";
 ```
 
 ### Promoting Secrets from Dev to Prod
@@ -185,7 +185,7 @@ apps.web.environments.prod.env.API_KEY =
 **Solution:**
 1. Check `.sops.yaml` to see which keys can decrypt the group
 2. Add your AGE public key to the group's creation rule
-3. Run `sops updatekeys .stackpanel/secrets/groups/<group>.yaml` to re-encrypt
+3. Run `sops updatekeys .stackpanel/secrets/vars/<group>.sops.yaml` to re-encrypt
 
 ### "Group not found"
 
@@ -233,7 +233,7 @@ Edit `.sops.yaml`:
 
 ```yaml
 creation_rules:
-  - path_regex: ^analytics\.yaml$
+  - path_regex: ^analytics\.sops\.yaml$
     key_groups:
       - age:
           - alice_key
