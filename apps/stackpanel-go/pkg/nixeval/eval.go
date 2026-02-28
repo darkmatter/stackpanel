@@ -98,10 +98,20 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Build nix eval command - only pass projectRoot if we have it
+	// Build nix eval command.
+	// Forward all known values as explicit Nix args. eval.nix prefers args over
+	// builtins.getEnv due to lazy evaluation, making the env var paths dead code
+	// when args are provided. --impure remains as a safety net for any fallback
+	// paths that are still reachable (e.g. when root is unknown).
 	args := []string{"eval", "--impure", "--json", "-f", nixFile}
 	if absRoot != "" {
 		args = append(args, "--argstr", "root", absRoot)
+	}
+	if v := os.Getenv("STACKPANEL_CONFIG_JSON"); v != "" {
+		args = append(args, "--argstr", "configJson", v)
+	}
+	if v := os.Getenv("STACKPANEL_STATE_DIR"); v != "" {
+		args = append(args, "--argstr", "stateDir", v)
 	}
 
 	cmd := exec.CommandContext(ctx, "nix", args...)
@@ -186,7 +196,7 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 			strings.HasPrefix(opts.Expression, "git+") ||
 			strings.HasPrefix(opts.Expression, "github:") ||
 			strings.HasPrefix(opts.Expression, "nixpkgs#")
-		
+
 		if isInstallable {
 			// Pass installable directly without --expr
 			args = append(args, opts.Expression)
@@ -212,11 +222,6 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
-	}
-
-	var config Config
-	if err := json.Unmarshal(stdout.Bytes(), &config); err != nil {
-		return nil, fmt.Errorf("failed to parse nix eval output: %w", err)
 	}
 
 	return stdout.Bytes(), nil
