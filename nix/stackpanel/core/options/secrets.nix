@@ -70,7 +70,7 @@ let
         computed-ref = config.ref or "ref+awsssm://${config.ssm-path}";
 
         # Default key-cmd: decrypt .enc.age with sops (plain .age files are loaded globally by sops-age-keys)
-        key-cmd = lib.mkDefault "sops --decrypt .stackpanel/secrets/keys/${name}.enc.age";
+        key-cmd = lib.mkDefault "sops --decrypt .stackpanel/secrets/recipients/${name}.enc.age";
       };
     };
 

@@ -90,16 +90,16 @@ That's it — secrets are working.
     local.txt                             # Your local AGE private key (gitignored)
     local.pub                             # Your local AGE public key (gitignored)
   secrets/
-    keys/
-      recipients/                         # Committed pub keys (one per team member)
-        alice.pub
-        bob.pub
-      .sops.yaml                          # Auto-generated from recipients/*.pub
+    recipients/                           # Committed pub keys + encrypted group keys
+      alice.age.pub                       # Team member AGE public key
+      bob.age.pub
+      .sops.yaml                          # Auto-generated from recipients/**/*.age.pub
       dev.enc.age                         # Group private key, SOPS-encrypted to all recipients
-    groups/
+      .archive/                           # Rotated/old keys
+    vars/
       .sops.yaml                          # Auto-generated from config.nix (gitignored)
-      dev.yaml                            # SOPS-encrypted secrets for dev group
-      prod.yaml                           # SOPS-encrypted secrets for prod group
+      dev.sops.yaml                       # SOPS-encrypted secrets for dev group
+      prod.sops.yaml                      # SOPS-encrypted secrets for prod group
 ```
 
 ### Encryption chain
@@ -107,9 +107,9 @@ That's it — secrets are working.
 ```
 config.nix  (group public key)
     ↓ used by wrapped SOPS
-groups/dev.yaml  (SOPS-encrypted secrets)
+vars/dev.sops.yaml  (SOPS-encrypted secrets)
     ↓ decrypted by group private key
-keys/dev.enc.age  (group private key, SOPS-encrypted to all recipients)
+recipients/dev.enc.age  (group private key, SOPS-encrypted to all recipients)
     ↓ decrypted by your local key
 .stackpanel/state/keys/local.txt  (your local AGE key)
 ```
@@ -121,13 +121,13 @@ The devshell provides a wrapped `sops` binary that:
 - Injects the correct `--age` recipient when encrypting group files
 - Sets `SOPS_AGE_KEY_CMD` for automatic private key resolution
 
-This means `sops edit groups/dev.yaml` just works.
+This means `sops edit vars/dev.sops.yaml` just works.
 
 ### Generated `.sops.yaml` files
 
 Two `.sops.yaml` files are auto-generated at shell entry:
-- `keys/.sops.yaml` — built from all `recipients/*.pub` files (for `.enc.age` encryption)
-- `groups/.sops.yaml` — built from `config.nix` group public keys (for group YAML encryption)
+- `recipients/.sops.yaml` — built from all `recipients/**/*.age.pub` files (for `.enc.age` encryption)
+- `vars/.sops.yaml` — built from `config.nix` group public keys (for group YAML encryption)
 
 Both are gitignored. The canonical key source is always `config.nix`.
 
