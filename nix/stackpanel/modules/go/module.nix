@@ -249,42 +249,63 @@ let
 
   # Build a Go app package
   # Supports both Go workspace (root go.mod) and per-app go.mod layouts
+  # Consults app.build.* fields first, falling back to auto-detection
   mkGoPackage =
     name: app:
     let
       goCfg = app.go;
+      buildCfg = app.build or {};
       repoRoot = ../../../..;
       appPath = app.path;
 
-      # Check if app has its own go.mod (per-app layout)
+      # Layout: explicit build.srcLayout > auto-detect from go.mod presence
       hasPerAppGoMod = builtins.pathExists (repoRoot + "/${appPath}/go.mod");
-      hasPerAppGomod2nix = builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml");
+      layout =
+        if buildCfg.srcLayout or null != null
+        then buildCfg.srcLayout
+        else if hasPerAppGoMod
+        then "standalone"
+        else "workspace";
 
-      # For per-app layout, use the app directory as source
-      # For workspace layout, use repo root with subPackages
+      isStandalone = layout == "standalone";
+
+      # Source: explicit build.srcRoot > inferred from layout
       src =
-        if hasPerAppGoMod then
-          repoRoot + "/${appPath}"
-        else if goCfg.generateFiles then
-          mkGoSourceWithGenerated name app
-        else
-          repoRoot;
+        if buildCfg.srcRoot or null != null
+        then repoRoot + "/${buildCfg.srcRoot}"
+        else if isStandalone
+        then repoRoot + "/${appPath}"
+        else if goCfg.generateFiles
+        then mkGoSourceWithGenerated name app
+        else repoRoot;
 
-      # gomod2nix.toml location depends on layout
+      # Lockfile: explicit build.depsLockfile > inferred from layout
+      hasPerAppGomod2nix = builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml");
       gomod2nixPath =
-        if hasPerAppGomod2nix then
-          repoRoot + "/${appPath}/gomod2nix.toml"
-        else
-          repoRoot + "/gomod2nix.toml";
+        if buildCfg.depsLockfile or null != null
+        then repoRoot + "/${buildCfg.depsLockfile}"
+        else if isStandalone && hasPerAppGomod2nix
+        then repoRoot + "/${appPath}/gomod2nix.toml"
+        else repoRoot + "/gomod2nix.toml";
+
+      # Output name: explicit build.outputName > go.binaryName > app name
+      pname =
+        if (buildCfg.outputName or null) != null then buildCfg.outputName
+        else if goCfg.binaryName != null then goCfg.binaryName
+        else name;
+      version =
+        if (buildCfg.outputVersion or null) != null then buildCfg.outputVersion
+        else goCfg.version;
+
+      # Binary rename target (if binaryName is set and differs from pname)
+      effectiveBinaryName = goCfg.binaryName;
     in
     pkgs.buildGoApplication {
-      pname = name;
-      version = goCfg.version;
-      inherit src;
+      inherit pname version src;
 
       modules = gomod2nixPath;
-      # For per-app layout, build from current dir; for workspace, specify subpackage
-      subPackages = if hasPerAppGoMod then [ "." ] else [ appPath ];
+      # For standalone layout, build from current dir; for workspace, specify subpackage
+      subPackages = if isStandalone then [ "." ] else [ appPath ];
 
       doCheck = false; # Tests run separately via checks
 
@@ -295,13 +316,13 @@ let
       ++ goCfg.ldflags;
 
       # Rename binary if needed
-      postInstall = lib.optionalString (goCfg.binaryName != null) ''
-        # For per-app layout, binary name is the directory name
+      postInstall = lib.optionalString (effectiveBinaryName != null) ''
+        # For standalone layout, binary name is the directory name
         # For workspace layout, binary name is the last path component
         oldName=${
-          if hasPerAppGoMod then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
+          if isStandalone then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
         }
-        mv $out/bin/$oldName $out/bin/${goCfg.binaryName} 2>/dev/null || true
+        mv $out/bin/$oldName $out/bin/${effectiveBinaryName} 2>/dev/null || true
       '';
 
       meta = with lib; {
@@ -406,6 +427,7 @@ in
           apps = lib.mapAttrs mkGoPackage goApps;
           devEnvs = lib.mapAttrs mkGoDevEnv goApps;
           generatedFiles = lib.mapAttrs mkGeneratedFiles goApps;
+          tests = lib.mapAttrs mkGoTests goApps;
         };
 
         # Materialize generated files using stackpanel.files system
