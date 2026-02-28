@@ -180,7 +180,20 @@ let
   mkContainerDerivation =
     appName: containerCfg:
     let
-      projectRoot = if cfg.root != null then cfg.root else builtins.getEnv "PWD";
+      projectRoot =
+        if cfg.root != null then
+          cfg.root
+        else
+          throw ''
+            stackpanel.containers: cfg.root is not set. Cannot build containers without a project root.
+
+            Fix: set stackpanel.root in your devenv.nix or .stackpanel/config.local.nix:
+              stackpanel.root = "/absolute/path/to/project";
+
+            Or use the readStackpanelRoot flake module (recommended):
+              imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
+            Then in .envrc: echo "$PWD" > .stackpanel-root
+          '';
       backend = settingsCfg.backend;
       # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
       # The appName (attrset key, e.g., web) is only used for fallback paths
@@ -211,6 +224,47 @@ let
       };
     in
     result;
+
+  # ---------------------------------------------------------------------------
+  # Per-app .tasks/bin/ scripts for container-build and container-push
+  # These are generated for ALL apps with containers enabled, regardless of
+  # deployment host (the Fly module only generates deploy scripts).
+  # ---------------------------------------------------------------------------
+  mkContainerScriptDerivations = appName: _appCfg: {
+    "container-build" = pkgs.writeShellScriptBin "container-build" ''
+      set -euo pipefail
+      ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+      cd "$ROOT"
+      echo "📦 Building container for ${appName}..."
+      nix build --impure ".#packages.x86_64-linux.container-${appName}"
+      echo "✅ Container built: ./result"
+    '';
+
+    "container-push" = pkgs.writeShellScriptBin "container-push" ''
+      set -euo pipefail
+      ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+      cd "$ROOT"
+      echo "📤 Pushing container for ${appName}..."
+      nix run --impure ".#copy-container-${appName}"
+      echo "✅ Container pushed"
+    '';
+  };
+
+  mkContainerFileEntries =
+    appName: appCfg:
+    let
+      scripts = mkContainerScriptDerivations appName appCfg;
+      appPath = appCfg.path or "apps/${appName}";
+    in
+    lib.mapAttrs' (scriptName: scriptDrv: {
+      name = "${appPath}/.tasks/bin/${scriptName}";
+      value = {
+        type = "symlink";
+        target = "${scriptDrv}/bin/${scriptName}";
+        source = meta.id;
+        description = "Container script: ${scriptName} for ${appName}";
+      };
+    }) scripts;
 
   # Build all outputs
   containerResults = lib.mapAttrs mkContainerDerivation containersCfg.images;
@@ -554,6 +608,11 @@ in
             '';
           };
         };
+
+        # Generate .tasks/bin/ scripts for each app with containers
+        stackpanel.files.entries = lib.mkMerge (
+          lib.mapAttrsToList mkContainerFileEntries appsWithContainers
+        );
 
         # Add skopeo to devshell
         stackpanel.devshell.packages = lib.optionals (pkgs != null) [

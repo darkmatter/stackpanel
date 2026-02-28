@@ -28,11 +28,8 @@ let
   # works on any Mac.
   nix2containerPkgs = inputs.nix2container.packages.x86_64-linux;
 
-  # Fly.io OIDC authentication library (from stackpanel)
-  # TODO: Once stackpanel is added as a flake input, use:
-  #   flyOidc = inputs.stackpanel.lib.flyOidc { pkgs = pkgsLinux; };
-  stackpanelPath = builtins.getEnv "HOME" + "/darkmatter/stackpanel";
-  flyOidc = import (stackpanelPath + "/nix/stackpanel/lib/services/fly-oidc.nix") {
+  # Fly.io OIDC authentication library (local relative import)
+  flyOidc = import ./lib/fly-oidc.nix {
     pkgs = pkgsLinux;
   };
 
@@ -57,7 +54,16 @@ let
       runHook postBuild
     '';
   };
-  envname = if builtins.getEnv "NIXMAC_ENV" != "" then builtins.getEnv "NIXMAC_ENV" else "dev";
+  # Environment name for secrets file selection (web.${envname}.yaml).
+  # Hardcoded per-environment — when you need staging/production, duplicate
+  # this file or parameterize via a config.local.nix value:
+  #
+  #   # .stackpanel/config.local.nix
+  #   { deployment = { envname = "production"; }; }
+  #
+  #   # then read it here:
+  #   envname = (import ../../.stackpanel/config.local.nix).deployment.envname or "dev";
+  envname = "dev";
 
   # Equivalent to FROM alpine:latest. hash makes it reproducible. try "distroless"
   # To update: nix-shell -p nix-prefetch-docker --run "nix-prefetch-docker --image-name oven/bun --image-tag slim --arch amd64"
