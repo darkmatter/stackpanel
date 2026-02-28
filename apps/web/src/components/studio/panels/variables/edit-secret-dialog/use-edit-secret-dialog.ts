@@ -6,8 +6,8 @@
  * - Legacy agenix secrets: Individual .age files (deprecated, for backward compatibility)
  * - Chamber (AWS SSM): Uses AWS SSM Parameter Store
  *
- * When a group is specified, secrets are written to `.stackpanel/secrets/groups/<group>.yaml`
- * and the variable value becomes a vals reference: `ref+sops://.stackpanel/secrets/groups/<group>.yaml#/<key>`
+ * When a group is specified, secrets are written to `.stackpanel/secrets/vars/<group>.sops.yaml`
+ * and the variable value becomes a vals reference: `ref+sops://.stackpanel/secrets/vars/<group>.sops.yaml#/<key>`
  */
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";

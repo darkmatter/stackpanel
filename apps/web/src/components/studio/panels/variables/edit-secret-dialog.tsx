@@ -72,7 +72,7 @@ export function EditSecretDialog({
 
   // Build the vals reference preview
   const valsRefPreview = useGroupSecrets
-    ? `ref+sops://.stackpanel/secrets/groups/${group}.yaml#/${secretKey}`
+    ? `ref+sops://.stackpanel/secrets/vars/${group}.sops.yaml#/${secretKey}`
     : null;
 
   return (

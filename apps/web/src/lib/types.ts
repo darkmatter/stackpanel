@@ -114,7 +114,7 @@ export interface GroupSecretWriteResponse {
   path: string;
   /** Vals reference for source project configs (uses configured secrets dir) */
   valsRef: string;
-  /** Vals reference for deployed env package (uses relative path: ref+sops://groups/<group>.yaml#/<key>) */
+  /** Vals reference for deployed env package (uses relative path: ref+sops://vars/<group>.sops.yaml#/<key>) */
   envPackageRef: string;
   /** Number of AGE recipients the file is encrypted to */
   recipientCount: number;

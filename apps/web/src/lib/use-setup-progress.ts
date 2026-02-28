@@ -118,11 +118,11 @@ export function useSetupProgress(): SetupProgress | null {
 					// Ignore
 				}
 
-				// Check config verification (groups/.sops.yaml exists)
-				try {
-					await client.readFile(
-						".stackpanel/secrets/groups/.sops.yaml",
-					);
+			// Check config verification (vars/.sops.yaml exists)
+			try {
+				await client.readFile(
+					".stackpanel/secrets/vars/.sops.yaml",
+				);
 					configVerified = true;
 				} catch {
 					// File doesn't exist

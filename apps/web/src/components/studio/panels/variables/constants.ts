@@ -277,21 +277,21 @@ export function getSopsFilePath(keyGroup: string): string | null {
   if (keyGroup === "var" || keyGroup === "computed") {
     return null;
   }
-  return `.stackpanel/secrets/${keyGroup}.yaml`;
+  return `.stackpanel/secrets/vars/${keyGroup}.sops.yaml`;
 }
 
 /**
  * Build a SOPS reference for a secret.
  */
 export function buildSopsReference(keyGroup: string, key: string): string {
-  return `ref+sops://.stackpanel/secrets/${keyGroup}.yaml#/${key}`;
+  return `ref+sops://.stackpanel/secrets/vars/${keyGroup}.sops.yaml#/${key}`;
 }
 
 /**
  * Build a YAML reference for a plaintext config value.
  */
 export function buildYamlReference(key: string): string {
-  return `ref+yaml://.stackpanel/secrets/vars.yaml#/${key}`;
+  return `ref+yaml://.stackpanel/secrets/vars/var.sops.yaml#/${key}`;
 }
 
 // =============================================================================
@@ -301,14 +301,14 @@ export function buildYamlReference(key: string): string {
 /**
  * Build a group-based SOPS reference for the DEPLOYED env package.
  * Uses relative paths that work when running from packages/env/data/
- * Format: ref+sops://groups/<group>.yaml#/<key>
+ * Format: ref+sops://vars/<group>.sops.yaml#/<key>
  *
  * For source project references (which use the configured secrets-dir),
  * use the valsRef returned from the API instead of building it client-side.
  */
 export function buildGroupSopsReference(group: string, key: string): string {
   // Relative path for deployed env package
-  return `ref+sops://groups/${group}.yaml#/${key}`;
+  return `ref+sops://vars/${group}.sops.yaml#/${key}`;
 }
 
 /**
@@ -320,19 +320,19 @@ export function buildSourceGroupSopsReference(
   group: string,
   key: string,
 ): string {
-  return `ref+sops://${secretsDir}/groups/${group}.yaml#/${key}`;
+  return `ref+sops://${secretsDir}/vars/${group}.sops.yaml#/${key}`;
 }
 
 /**
  * Check if a value is a group-based SOPS reference.
  * Matches both source project refs and env package refs:
- * - ref+sops://.stackpanel/secrets/groups/<group>.yaml#/<key>
- * - ref+sops://groups/<group>.yaml#/<key>
+ * - ref+sops://.stackpanel/secrets/vars/<group>.sops.yaml#/<key>
+ * - ref+sops://vars/<group>.sops.yaml#/<key>
  */
 export function isGroupSopsReference(value: string): boolean {
   return (
-    value.startsWith("ref+sops://groups/") ||
-    (value.includes("/groups/") && value.startsWith("ref+sops://"))
+    value.startsWith("ref+sops://vars/") ||
+    (value.includes("/vars/") && value.startsWith("ref+sops://"))
   );
 }
 
@@ -342,24 +342,28 @@ export function isGroupSopsReference(value: string): boolean {
  * Returns null if the value is not a valid group reference.
  *
  * @example
- * parseGroupSopsReference("ref+sops://.stackpanel/secrets/groups/dev.yaml#/DATABASE_URL")
+ * parseGroupSopsReference("ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL")
  * // Returns: { group: "dev", key: "DATABASE_URL" }
  *
  * @example
- * parseGroupSopsReference("ref+sops://groups/dev.yaml#/DATABASE_URL")
+ * parseGroupSopsReference("ref+sops://vars/dev.sops.yaml#/DATABASE_URL")
  * // Returns: { group: "dev", key: "DATABASE_URL" }
  */
 export function parseGroupSopsReference(
   value: string,
 ): { group: string; key: string } | null {
-  // Try env package format first: ref+sops://groups/<group>.yaml#/<key>
-  let match = value.match(/^ref\+sops:\/\/groups\/([^.]+)\.yaml#\/(.+)$/);
+  // Try env package format first: ref+sops://vars/<group>.sops.yaml#/<key>
+  let match = value.match(
+    /^ref\+sops:\/\/vars\/([^.]+)\.sops\.yaml#\/(.+)$/,
+  );
   if (match) {
     return { group: match[1], key: match[2] };
   }
 
-  // Try source project format: ref+sops://<any-path>/groups/<group>.yaml#/<key>
-  match = value.match(/^ref\+sops:\/\/.*\/groups\/([^.]+)\.yaml#\/(.+)$/);
+  // Try source project format: ref+sops://<any-path>/vars/<group>.sops.yaml#/<key>
+  match = value.match(
+    /^ref\+sops:\/\/.*\/vars\/([^.]+)\.sops\.yaml#\/(.+)$/,
+  );
   if (match) {
     return { group: match[1], key: match[2] };
   }
@@ -399,7 +403,7 @@ export function getGroupFromValue(value: string, defaultGroup = "dev"): string {
 
 /**
  * Available secret groups for access control.
- * These correspond to SOPS files in .stackpanel/secrets/groups/
+ * These correspond to SOPS files in .stackpanel/secrets/vars/
  */
 export const SECRET_GROUPS = ["dev", "staging", "prod"] as const;
 
