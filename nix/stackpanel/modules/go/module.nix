@@ -269,13 +269,18 @@ let
 
       isStandalone = layout == "standalone";
 
-      # Source: explicit build.srcRoot > inferred from layout
+      # pwd: where go.mod lives (needed for resolving replace directives)
+      # For standalone layout, pwd must point to the app dir within the repo
+      # so that relative replace paths (e.g., ../../packages/proto) resolve.
+      pwd = repoRoot + "/${appPath}";
+
+      # Source: explicit build.srcRoot > repo root (for replace directives) > app dir
+      # For standalone layout with replace directives, we must use the repo root
+      # so that paths like ../../packages/proto/gen/gopb are available in the source tree.
       src =
         if buildCfg.srcRoot or null != null
         then repoRoot + "/${buildCfg.srcRoot}"
-        else if isStandalone
-        then repoRoot + "/${appPath}"
-        else if goCfg.generateFiles
+        else if goCfg.generateFiles && !isStandalone
         then mkGoSourceWithGenerated name app
         else repoRoot;
 
@@ -301,10 +306,12 @@ let
       effectiveBinaryName = goCfg.binaryName;
     in
     pkgs.buildGoApplication {
-      inherit pname version src;
+      inherit pname version src pwd;
 
       modules = gomod2nixPath;
-      # For standalone layout, build from current dir; for workspace, specify subpackage
+      # For standalone layout, modRoot tells the build hook to cd into the app dir
+      # within the repo root source. subPackages = ["."] then builds from there.
+      modRoot = if isStandalone then appPath else "";
       subPackages = if isStandalone then [ "." ] else [ appPath ];
 
       doCheck = false; # Tests run separately via checks
