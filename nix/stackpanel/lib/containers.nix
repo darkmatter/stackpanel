@@ -37,6 +37,15 @@ let
   nix2containerPkgs = if hasNix2container then inputs.nix2container.packages.x86_64-linux else null;
   nix2containerLib = if nix2containerPkgs != null then nix2containerPkgs.nix2container else null;
 
+  # Patched skopeo with nix: transport support — includes the custom nix:
+  # transport that can read nix2container image JSON files from the nix store.
+  # Uses host system (e.g. aarch64-darwin) since the copy script runs locally
+  # and Linux store paths are present locally after remote builds.
+  skopeoNix2container =
+    if hasNix2container && pkgs != null
+    then inputs.nix2container.packages.${pkgs.stdenv.hostPlatform.system}.skopeo-nix2container
+    else null;
+
   # ---------------------------------------------------------------------------
   # Default base images for nix2container.pullImage
   # Get hash with: nix-shell -p nix-prefetch-docker --run \
@@ -398,8 +407,12 @@ let
       let
         sourceArg =
           if backend == "nix2container" then "nix:${container}" else "docker-archive:${container}";
+        # Always use host pkgs for the copy script — it runs locally on the host.
+        # The patched skopeo-nix2container supports macOS natively and reads
+        # Linux store paths from the local store (copied back from remote builder).
+        writePkgs = pkgs;
       in
-      pkgs.writeShellScript "copy-container-${name}" ''
+      writePkgs.writeShellScript "copy-container-${name}" ''
         set -e -o pipefail
 
         IMAGE_NAME="${name}"
@@ -422,7 +435,9 @@ let
         echo "   Destination: $DEST"
         echo
 
-        ${pkgs.skopeo}/bin/skopeo copy \
+        ${if backend == "nix2container" && skopeoNix2container != null
+          then skopeoNix2container
+          else pkgs.skopeo}/bin/skopeo copy \
           --insecure-policy \
           "${sourceArg}" \
           "$DEST" \
