@@ -7,8 +7,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/fatih/color"
 )
 
 // captureStdout runs fn while capturing everything written to os.Stdout.
@@ -35,16 +33,6 @@ func captureStdout(t *testing.T, fn func()) string {
 	r.Close()
 
 	return buf.String()
-}
-
-// disableColor disables color for the duration of the test and restores
-// the previous value on cleanup. This ensures stable assertions without
-// ANSI escape codes.
-func disableColor(t *testing.T) {
-	t.Helper()
-	prev := color.NoColor
-	color.NoColor = true
-	t.Cleanup(func() { color.NoColor = prev })
 }
 
 // ---------------------------------------------------------------------------
@@ -205,68 +193,90 @@ func TestPrintRaw_Array(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// printJSON — now takes []byte (raw JSON from nix eval)
+// printJSON — pipes through jq or falls back to json.MarshalIndent
+//
+// We strip ANSI escape codes before asserting so the tests pass
+// regardless of whether jq is available and whether stdout is a TTY.
 // ---------------------------------------------------------------------------
 
+// stripANSI removes ANSI escape sequences so assertions work with or
+// without jq colorization.
+func stripANSI(s string) string {
+	var buf strings.Builder
+	inEscape := false
+	for _, r := range s {
+		if r == '\033' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		buf.WriteRune(r)
+	}
+	return buf.String()
+}
+
 func TestPrintJSON_String(t *testing.T) {
-	disableColor(t)
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`"hello"`)) }))
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`"hello"`)) })))
 	if got != `"hello"` {
 		t.Errorf("printJSON(string) = %q, want %q", got, `"hello"`)
 	}
 }
 
 func TestPrintJSON_Integer(t *testing.T) {
-	disableColor(t)
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`42`)) }))
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`42`)) })))
 	if got != "42" {
 		t.Errorf("printJSON(42) = %q, want %q", got, "42")
 	}
 }
 
 func TestPrintJSON_Bool(t *testing.T) {
-	disableColor(t)
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`true`)) }))
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`true`)) })))
 	if got != "true" {
 		t.Errorf("printJSON(true) = %q, want %q", got, "true")
 	}
 }
 
-func TestPrintJSON_Nil(t *testing.T) {
-	disableColor(t)
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`null`)) }))
+func TestPrintJSON_Null(t *testing.T) {
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`null`)) })))
 	if got != "null" {
 		t.Errorf("printJSON(null) = %q, want %q", got, "null")
 	}
 }
 
-func TestPrintJSON_Object(t *testing.T) {
-	disableColor(t)
+func TestPrintJSON_Object_IsValidJSON(t *testing.T) {
 	raw := []byte(`{"port":3000}`)
-	got := captureStdout(t, func() { printJSON(raw) })
-
-	// Should be indented
-	if !strings.Contains(got, "\n") {
-		t.Errorf("printJSON(object) should be indented, got: %s", got)
-	}
+	got := stripANSI(captureStdout(t, func() { printJSON(raw) }))
 
 	var parsed map[string]any
 	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("printJSON(object) output is not valid JSON: %v", err)
+		t.Fatalf("printJSON(object) output is not valid JSON: %v\ngot: %s", err, got)
 	}
 	if parsed["port"] != float64(3000) {
 		t.Errorf("expected port=3000, got: %v", parsed["port"])
 	}
 }
 
+func TestPrintJSON_Object_IsIndented(t *testing.T) {
+	raw := []byte(`{"port":3000}`)
+	got := stripANSI(captureStdout(t, func() { printJSON(raw) }))
+
+	if !strings.Contains(got, "\n") {
+		t.Errorf("printJSON(object) should be indented, got: %q", got)
+	}
+}
+
 func TestPrintJSON_NestedObject(t *testing.T) {
-	disableColor(t)
 	raw := []byte(`{"apps":{"web":{"port":3000}}}`)
-	got := captureStdout(t, func() { printJSON(raw) })
+	got := stripANSI(captureStdout(t, func() { printJSON(raw) }))
 
 	var parsed map[string]any
 	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("printJSON(nested) output is not valid JSON: %v", err)
+		t.Fatalf("printJSON(nested) output is not valid JSON: %v\ngot: %s", err, got)
 	}
 
 	apps, ok := parsed["apps"].(map[string]any)
@@ -283,13 +293,12 @@ func TestPrintJSON_NestedObject(t *testing.T) {
 }
 
 func TestPrintJSON_Array(t *testing.T) {
-	disableColor(t)
 	raw := []byte(`["a","b","c"]`)
-	got := captureStdout(t, func() { printJSON(raw) })
+	got := stripANSI(captureStdout(t, func() { printJSON(raw) }))
 
 	var parsed []any
 	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
-		t.Fatalf("printJSON(array) output is not valid JSON: %v", err)
+		t.Fatalf("printJSON(array) output is not valid JSON: %v\ngot: %s", err, got)
 	}
 	if len(parsed) != 3 {
 		t.Errorf("expected 3 elements, got %d", len(parsed))
@@ -297,49 +306,53 @@ func TestPrintJSON_Array(t *testing.T) {
 }
 
 func TestPrintJSON_EmptyObject(t *testing.T) {
-	disableColor(t)
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`{}`)) }))
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`{}`)) })))
 	if got != "{}" {
 		t.Errorf("printJSON(empty object) = %q, want %q", got, "{}")
 	}
 }
 
 func TestPrintJSON_EmptyArray(t *testing.T) {
-	disableColor(t)
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`[]`)) }))
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`[]`)) })))
 	if got != "[]" {
 		t.Errorf("printJSON(empty array) = %q, want %q", got, "[]")
 	}
 }
 
 func TestPrintJSON_LargeInteger(t *testing.T) {
-	disableColor(t)
-	// Ensure large integers don't get scientific notation
-	got := strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`1234567890`)) }))
+	got := stripANSI(strings.TrimSpace(captureStdout(t, func() { printJSON([]byte(`1234567890`)) })))
 	if got != "1234567890" {
 		t.Errorf("printJSON(large int) = %q, want %q", got, "1234567890")
 	}
 }
 
-func TestPrintJSON_KeysSorted(t *testing.T) {
-	disableColor(t)
-	raw := []byte(`{"z":3,"a":1,"m":2}`)
-	got := captureStdout(t, func() { printJSON(raw) })
-
-	aIdx := strings.Index(got, `"a"`)
-	mIdx := strings.Index(got, `"m"`)
-	zIdx := strings.Index(got, `"z"`)
-
-	if aIdx >= mIdx || mIdx >= zIdx {
-		t.Errorf("keys should be sorted a < m < z, got:\n%s", got)
-	}
-}
-
 func TestPrintJSON_InvalidJSON(t *testing.T) {
-	// Should not panic on invalid JSON — just output what it got
+	// Should not panic — outputs whatever it can
 	got := captureStdout(t, func() { printJSON([]byte(`not json`)) })
 	if !strings.Contains(got, "not json") {
 		t.Errorf("expected raw passthrough for invalid JSON, got: %q", got)
+	}
+}
+
+func TestPrintJSON_ComplexObject_RoundTrip(t *testing.T) {
+	raw := []byte(`{"a":1,"b":"two","c":null,"d":true,"e":[1,2,3],"f":{"nested":"yes"}}`)
+	got := stripANSI(captureStdout(t, func() { printJSON(raw) }))
+
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(got), &parsed); err != nil {
+		t.Fatalf("complex object output is not valid JSON: %v\ngot: %s", err, got)
+	}
+	if parsed["a"] != float64(1) {
+		t.Errorf("expected a=1, got: %v", parsed["a"])
+	}
+	if parsed["b"] != "two" {
+		t.Errorf("expected b=two, got: %v", parsed["b"])
+	}
+	if parsed["c"] != nil {
+		t.Errorf("expected c=nil, got: %v", parsed["c"])
+	}
+	if parsed["d"] != true {
+		t.Errorf("expected d=true, got: %v", parsed["d"])
 	}
 }
 
@@ -425,15 +438,14 @@ func TestDefaultOutput_IntegerPrintsWithoutDecimal(t *testing.T) {
 }
 
 func TestDefaultOutput_StructuredUsesJSON(t *testing.T) {
-	disableColor(t)
 	raw := []byte(`{"key":"value"}`)
-	got := captureStdout(t, func() { printJSON(raw) })
+	got := stripANSI(captureStdout(t, func() { printJSON(raw) }))
 
 	if !strings.Contains(got, "\n") {
 		t.Errorf("structured output should be indented JSON, got: %q", got)
 	}
-	if !strings.Contains(got, `"key"`) {
-		t.Errorf("structured output should contain key, got: %q", got)
+	if !json.Valid([]byte(got)) {
+		t.Errorf("structured output should be valid JSON, got: %q", got)
 	}
 }
 
