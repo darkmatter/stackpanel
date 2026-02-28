@@ -64,6 +64,8 @@ in
     stackpanel.ide.zed.settings-modules = lib.mkAfter [
       {
         config = {
+          # loads tools inside nix shell
+          load_direnv = "shell_hook";
           lsp = {
             nixd = {
               binary = {
