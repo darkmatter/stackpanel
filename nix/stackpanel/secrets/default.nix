@@ -29,8 +29,8 @@
 #
 # Team Onboarding:
 #   On first shell entry, each developer's AGE public key is auto-registered in
-#   .stackpanel/secrets/keys/recipients/<username>.pub (committed to git).
-#   The keys/.sops.yaml is rebuilt from ALL recipients/*.pub files.
+#   .stackpanel/secrets/recipients/<username>.age.pub (committed to git).
+#   The recipients/.sops.yaml is rebuilt from ALL recipients/**/*.age.pub files.
 #
 #   secrets:init-group uploads the group private key to GitHub as a secret and
 #   generates a GitHub Actions workflow (.github/workflows/secrets-rekey.yml)
@@ -46,7 +46,7 @@
 #
 # Key Integrity:
 #   config.nix is the single source of truth for group public keys.
-#   groups/.sops.yaml is GENERATED at shell entry from config.nix (gitignored).
+#   vars/.sops.yaml is GENERATED at shell entry from config.nix (gitignored).
 #   A wrapped SOPS binary (named "sops") resolves the correct group public key
 #   from Nix config at build time and injects --age per invocation, plus sets
 #   SOPS_AGE_KEY_CMD for private key resolution. This eliminates key drift
@@ -94,22 +94,61 @@ let
 
   # Build the list of group key resolution blocks for the sops-age-keys script.
   # For each group, tries (in order):
-  #   1. All .age files in keys/ (plain private keys, gitignored)
-  #   2. Per-group key-cmd fallback (default: sops --decrypt .enc.age)
+  #   1. All .age files in recipients/ (plain private keys, gitignored)
+  #   2. Archived keys in recipients/.archive/ (rotated keys)
+  #   3. .vals files (optional, via `vals eval`)
+  #   4. Per-group key-cmd fallback (default: sops --decrypt .enc.age)
   #
   # Reading ALL .age files means old/rotated keys are automatically available
   # for decrypting secrets still encrypted to them, without any re-keying.
   allAgeFilesBlock = ''
-    # Read ALL .age files in the keys directory (includes current + rotated keys)
-     KEYS_DIR="${cfg.secrets-dir}/keys"
-    if [[ -d "$KEYS_DIR" ]]; then
-      for age_file in "$KEYS_DIR"/*.age; do
+    # Read ALL .age private key files in the recipients directory (current keys)
+    RECIPIENTS_DIR="${cfg.secrets-dir}/recipients"
+    if [[ -d "$RECIPIENTS_DIR" ]]; then
+      for age_file in "$RECIPIENTS_DIR"/*.age; do
         [[ -f "$age_file" ]] || continue
+        # Skip .age.pub files (public keys) and .enc.age files (encrypted)
+        [[ "$age_file" == *.age.pub ]] && continue
+        [[ "$age_file" == *.enc.age ]] && continue
         while IFS= read -r line; do
           if [[ "$line" =~ AGE-SECRET-KEY- ]]; then
             echo "$line"
           fi
         done < "$age_file"
+      done
+      # Also read archived/rotated keys
+      if [[ -d "$RECIPIENTS_DIR/.archive" ]]; then
+        for age_file in "$RECIPIENTS_DIR/.archive"/*.age; do
+          [[ -f "$age_file" ]] || continue
+          while IFS= read -r line; do
+            if [[ "$line" =~ AGE-SECRET-KEY- ]]; then
+              echo "$line"
+            fi
+          done < "$age_file"
+        done
+      fi
+    fi
+  '';
+
+  # .vals file resolution: for each <group>.vals file in recipients/,
+  # read the vals reference and resolve it to an AGE private key.
+  # This replaces per-value ref+sops:// with a single reference per group.
+  valsFileBlock = ''
+    # Check for .vals files in recipients/ (optional, needs vals)
+    if [[ -d "$RECIPIENTS_DIR" ]]; then
+      for vals_file in "$RECIPIENTS_DIR"/*.vals; do
+        [[ -f "$vals_file" ]] || continue
+        VALS_REF=$(cat "$vals_file" | tr -d '[:space:]')
+        if [[ -n "$VALS_REF" ]] && command -v vals &>/dev/null; then
+          VALS_OUTPUT=$(vals eval "$VALS_REF" 2>/dev/null) || true
+          if [[ -n "$VALS_OUTPUT" ]]; then
+            while IFS= read -r line; do
+              if [[ "$line" =~ AGE-SECRET-KEY- ]]; then
+                echo "$line"
+              fi
+            done <<< "$VALS_OUTPUT"
+          fi
+        fi
       done
     fi
   '';
@@ -141,9 +180,11 @@ let
   # Outputs all available AGE private keys to stdout, one per line.
   # Called lazily by SOPS when it needs to decrypt.
   #
-  # Key sources:
+  # Key sources (in order):
   #   1. Local AGE key (always, from .stackpanel/state/keys/local.txt)
-  #   2. Per-group key-cmd (configurable, default: sops --decrypt .enc.age)
+  #   2. Plaintext .age files in recipients/ (current + rotated group keys)
+  #   3. .vals files in recipients/ (optional, via vals eval)
+  #   4. Per-group key-cmd fallback (configurable, default: sops --decrypt .enc.age)
   # ═══════════════════════════════════════════════════════════════════════════
   sops-age-keys = pkgs.writeShellApplication {
     name = "sops-age-keys";
@@ -171,10 +212,13 @@ let
         fi
       fi
 
-      # Step 2: All .age files in keys/ (current + rotated group keys)
+      # Step 2: All .age files in recipients/ (current + rotated group keys)
       ${allAgeFilesBlock}
 
-      # Step 3: Per-group key-cmd fallback (.enc.age decryption)
+      # Step 3: .vals files in recipients/ (optional, via vals eval)
+      ${valsFileBlock}
+
+      # Step 4: Per-group key-cmd fallback (.enc.age decryption)
       ${groupKeyBlocks}
     '';
   };
@@ -233,6 +277,186 @@ let
     text = secretsLib.rekeySecretScript { inherit masterKeysConfig; };
   };
 
+  # secrets:load - Decrypt a SOPS vars file to dotenv format
+  secrets-load = pkgs.writeShellApplication {
+    name = "secrets-load";
+    runtimeInputs = [
+      sops-wrapped
+    ];
+    text = ''
+      ${cfgLib.bashLib}
+
+      SECRETS_DIR=${cfgLib.getWithDefault "secrets.secrets-dir" cfg.secrets-dir}
+      VARS_DIR="$SECRETS_DIR/vars"
+
+      usage() {
+        echo "Usage: secrets:load <group> [--format dotenv|json|yaml]"
+        echo ""
+        echo "Decrypt a SOPS vars file and output in the specified format."
+        echo ""
+        echo "Options:"
+        echo "  --format   Output format: dotenv (default), json, yaml"
+        echo ""
+        echo "Examples:"
+        echo "  secrets:load dev"
+        echo "  secrets:load common --format json"
+        echo "  eval \$(secrets:load dev)   # load into current shell"
+        exit 1
+      }
+
+      [[ $# -lt 1 ]] && usage
+
+      GROUP="$1"
+      shift
+      FORMAT="dotenv"
+
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --format|-f)
+            FORMAT="$2"
+            shift 2
+            ;;
+          -h|--help)
+            usage
+            ;;
+          *)
+            echo "Unknown option: $1" >&2
+            usage
+            ;;
+        esac
+      done
+
+      GROUP_FILE="$VARS_DIR/$GROUP.sops.yaml"
+
+      if [[ ! -f "$GROUP_FILE" ]]; then
+        echo "Error: Group file not found: $GROUP_FILE" >&2
+        echo "Available groups:" >&2
+        for f in "$VARS_DIR"/*.sops.yaml; do
+          [[ -f "$f" ]] && echo "  $(basename "$f" .sops.yaml)" >&2
+        done
+        exit 1
+      fi
+
+      case "$FORMAT" in
+        dotenv)
+          sops decrypt --output-type dotenv "$GROUP_FILE"
+          ;;
+        json)
+          sops decrypt --output-type json "$GROUP_FILE"
+          ;;
+        yaml)
+          sops decrypt "$GROUP_FILE"
+          ;;
+        *)
+          echo "Error: Unknown format: $FORMAT (expected dotenv, json, or yaml)" >&2
+          exit 1
+          ;;
+      esac
+    '';
+  };
+
+  # secrets:join - Add local key to a recipient group
+  secrets-join = pkgs.writeShellApplication {
+    name = "secrets-join";
+    runtimeInputs = [
+      pkgs.age
+      pkgs.git
+    ];
+    text = ''
+      ${cfgLib.bashLib}
+
+      LOCAL_PUB=${cfgLib.getKnown "paths.local-pub"}
+      RECIPIENTS_DIR=${cfgLib.getKnown "secrets.recipients-dir"}
+
+      usage() {
+        echo "Usage: secrets:join [--group GROUP] [--name USERNAME]"
+        echo ""
+        echo "Add your local AGE public key to a recipient group."
+        echo "This registers you to receive secrets after the next rekey."
+        echo ""
+        echo "Options:"
+        echo "  --group   Recipient group (default: team)"
+        echo "  --name    Your username (default: git config user.name or whoami)"
+        exit 1
+      }
+
+      GROUP="team"
+      USERNAME=""
+
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --group|-g)
+            GROUP="$2"
+            shift 2
+            ;;
+          --name|-n)
+            USERNAME="$2"
+            shift 2
+            ;;
+          -h|--help)
+            usage
+            ;;
+          *)
+            echo "Unknown option: $1" >&2
+            usage
+            ;;
+        esac
+      done
+
+      # Determine username
+      if [[ -z "$USERNAME" ]]; then
+        USERNAME=$(git config user.name 2>/dev/null | tr ' ' '-' | tr '[:upper:]' '[:lower:]') || true
+        if [[ -z "$USERNAME" ]]; then
+          USERNAME=$(whoami)
+        fi
+      fi
+
+      # Check local key exists
+      if [[ ! -f "$LOCAL_PUB" ]]; then
+        echo "Error: No local key found at $LOCAL_PUB" >&2
+        echo "Re-enter the devshell to auto-generate one." >&2
+        exit 1
+      fi
+
+      PUB_KEY=$(cat "$LOCAL_PUB" | tr -d '[:space:]')
+      if [[ -z "$PUB_KEY" ]]; then
+        echo "Error: Local public key is empty" >&2
+        exit 1
+      fi
+
+      # Create group directory
+      GROUP_DIR="$RECIPIENTS_DIR/$GROUP"
+      mkdir -p "$GROUP_DIR"
+
+      # Write pub key
+      OUTPUT_FILE="$GROUP_DIR/$USERNAME.age.pub"
+      if [[ -f "$OUTPUT_FILE" ]]; then
+        EXISTING=$(cat "$OUTPUT_FILE" | tr -d '[:space:]')
+        if [[ "$EXISTING" == "$PUB_KEY" ]]; then
+          echo "Your key is already registered in $GROUP/$USERNAME.age.pub"
+          echo ""
+          echo "If you're waiting for access, ask a teammate to rekey:"
+          echo "  .stackpanel/secrets/bin/rekey.sh"
+          exit 0
+        fi
+      fi
+
+      echo "$PUB_KEY" > "$OUTPUT_FILE"
+      echo "Added your key to $OUTPUT_FILE"
+      echo ""
+      echo "Public key: $PUB_KEY"
+      echo ""
+
+      # Offer to commit and push
+      echo "Next steps:"
+      echo "  1. git add $OUTPUT_FILE"
+      echo "  2. git commit -m 'chore(secrets): add $USERNAME to $GROUP recipients'"
+      echo "  3. git push (triggers rekey workflow)"
+      echo ""
+      echo "Or ask a teammate to run: .stackpanel/secrets/bin/rekey.sh"
+    '';
+  };
+
   secrets-init-group = pkgs.writeShellApplication {
     name = "secrets-init-group";
     runtimeInputs = [
@@ -247,6 +471,46 @@ let
     text = secretsLib.initGroupScript {
       inherit groupsConfig chamberPrefix;
     };
+  };
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Manifest: maps groups → keys, derived from stackpanel.variables
+  # Generated as JSON at Nix eval time, written to state/ at shell entry.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # Build manifest from variables config
+  # Variables with keyGroup "computed" or "var" are excluded (not secrets).
+  # Group each variable's varName by its keyGroup.
+  secretVariables = lib.filterAttrs
+    (_: v: v.keyGroup != "computed" && v.keyGroup != "var")
+    config.stackpanel.variables;
+
+  # Group variable names by keyGroup: { dev = ["DATABASE_URL" "API_KEY"]; prod = [...]; }
+  keysByGroup = lib.foldlAttrs (acc: _: v:
+    let
+      group = v.keyGroup;
+      name = v.varName;
+      existing = acc.${group} or [];
+    in
+    acc // { ${group} = existing ++ [ name ]; }
+  ) {} secretVariables;
+
+  # Build the groups section of the manifest from Nix-known data
+  # Note: recipient mapping comes from groups.json at runtime, not Nix eval time
+  manifestGroups = lib.mapAttrs (groupName: _:
+    let
+      pub = orNull "" (cfg.groups.${groupName}.age-pub or null);
+    in {
+      initialized = pub != "";
+    } // lib.optionalAttrs (groupName == "common") {
+      keyedTo = "all-group-keys";
+    }
+  ) (keysByGroup // { common = []; });  # ensure common is always present
+
+  # The full manifest JSON
+  manifestJson = builtins.toJSON {
+    groups = manifestGroups;
+    keysByGroup = keysByGroup;
   };
 
 in
@@ -264,6 +528,7 @@ in
       pkgs.age
       pkgs.vals
       pkgs.jq
+      pkgs.ssh-to-age
       sops-wrapped # wrapped sops that resolves keys from Nix config
       sops-age-keys
       secrets-init-group
@@ -271,6 +536,8 @@ in
       secrets-get
       secrets-list
       secrets-rekey
+      secrets-load
+      secrets-join
     ]
     ++ lib.optional isChamber pkgs.chamber;
 
@@ -291,7 +558,20 @@ in
       ''
       ''
         (
-        ${secretsLib.generateGroupsSopsConfigScript { inherit groupsConfig; }}
+        ${secretsLib.generateVarsSopsConfigScript { inherit groupsConfig; }}
+        )
+      ''
+      # Generate v2 manifest.json in secrets state directory
+      ''
+        (
+        SECRETS_STATE_DIR="${cfg.secrets-dir}/state"
+        mkdir -p "$SECRETS_STATE_DIR"
+        MANIFEST_FILE="$SECRETS_STATE_DIR/manifest.json"
+        MANIFEST_CONTENT='${manifestJson}'
+        # Only rewrite if content changed
+        if [[ ! -f "$MANIFEST_FILE" ]] || [[ "$(cat "$MANIFEST_FILE" 2>/dev/null)" != "$MANIFEST_CONTENT" ]]; then
+          echo "$MANIFEST_CONTENT" | ${pkgs.jq}/bin/jq '.' > "$MANIFEST_FILE"
+        fi
         )
       ''
     ];
@@ -434,6 +714,39 @@ in
         '';
         description = "Show configured master keys and groups";
       };
+
+      "secrets:load" = {
+        exec = "${secrets-load}/bin/secrets-load \"$@\"";
+        description = "Decrypt a SOPS vars file (dotenv, json, or yaml)";
+        args = [
+          {
+            name = "group";
+            description = "Group to decrypt (dev, prod, common, etc.)";
+            required = true;
+          }
+          {
+            name = "--format";
+            description = "Output format: dotenv (default), json, yaml";
+            default = "dotenv";
+          }
+        ];
+      };
+
+      "secrets:join" = {
+        exec = "${secrets-join}/bin/secrets-join \"$@\"";
+        description = "Add your local key to a recipient group";
+        args = [
+          {
+            name = "--group";
+            description = "Recipient group to join";
+            default = "team";
+          }
+          {
+            name = "--name";
+            description = "Your username (default: git user.name or whoami)";
+          }
+        ];
+      };
     };
 
     stackpanel.devshell.hooks.main = [
@@ -451,8 +764,21 @@ in
     ];
 
     stackpanel.files.entries.".gitignore".lines = [
-      ".stackpanel/secrets/keys/*.age"
-      "!*.stackpanel/secrets/keys/*.enc.age"
+      # Plaintext private keys (gitignored), but NOT .age.pub (public) or .enc.age (encrypted)
+      ".stackpanel/secrets/recipients/*.age"
+      "!.stackpanel/secrets/recipients/*.age.pub"
+      "!.stackpanel/secrets/recipients/*.enc.age"
+      # SSH ED25519 public keys in group dirs should be committed
+      "!.stackpanel/secrets/recipients/**/*.ed25519.pub"
+      # Archived rotated keys
+      ".stackpanel/secrets/recipients/.archive/"
+      # .vals files (contain refs to external stores, gitignored)
+      ".stackpanel/secrets/recipients/*.vals"
+      # Generated SOPS configs (regenerated on devshell entry)
+      ".stackpanel/secrets/vars/.sops.yaml"
+      ".stackpanel/secrets/recipients/.sops.yaml"
+      # v2 state directory (generated artifacts)
+      ".stackpanel/secrets/state/"
     ];
 
     # ═══════════════════════════════════════════════════════════════════════════
