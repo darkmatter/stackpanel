@@ -182,13 +182,33 @@ func (s *Store) WriteEntity(entity string, data any) (string, error) {
 		return "", errors.New("external entities are read-only")
 	}
 
+	if err := s.paths.EnsureDir(); err != nil {
+		return "", fmt.Errorf("create data directory: %w", err)
+	}
+
+	// For consolidated config, update only this entity's key within the
+	// full config.nix file so sibling entities are preserved.
+	if s.paths.IsUsingConsolidatedConfig(entity) {
+		fullConfig, err := s.ReadConsolidatedData()
+		if err != nil {
+			return "", fmt.Errorf("read config.nix for entity write: %w", err)
+		}
+		fullConfig[entity] = data
+		if err := s.WriteConsolidatedData(fullConfig); err != nil {
+			return "", fmt.Errorf("write config.nix: %w", err)
+		}
+		dataPath := s.paths.ConfigFilePath()
+		log.Info().
+			Str("entity", entity).
+			Str("path", dataPath).
+			Msg("nixdata.Store: wrote entity (consolidated)")
+		return dataPath, nil
+	}
+
+	// Legacy per-entity file: write directly.
 	nixExpr, err := nixser.SerializeIndented(data, "  ")
 	if err != nil {
 		return "", fmt.Errorf("serialize to nix: %w", err)
-	}
-
-	if err := s.paths.EnsureDir(); err != nil {
-		return "", fmt.Errorf("create data directory: %w", err)
 	}
 
 	dataPath := s.paths.EntityPath(entity)
@@ -290,6 +310,9 @@ func (s *Store) DeleteKey(entity, key string) (string, error) {
 
 // readExistingMap reads the raw data file for entity and returns it as a
 // map. If the file does not exist yet an empty map is returned.
+//
+// For consolidated config (config.nix), only the entity's subtree is
+// returned — not the entire file.
 func (s *Store) readExistingMap(entity string) (map[string]any, error) {
 	dataPath := s.paths.EntityPath(entity)
 	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
@@ -301,21 +324,60 @@ func (s *Store) readExistingMap(entity string) (map[string]any, error) {
 		return nil, fmt.Errorf("read existing data: %w", err)
 	}
 
-	if m, ok := raw.(map[string]any); ok {
-		return m, nil
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return make(map[string]any), nil
 	}
-	return make(map[string]any), nil
+
+	// For consolidated config, the raw import returns ALL top-level keys
+	// (apps, variables, users, …). Extract just this entity's subtree so
+	// that key-level updates don't corrupt sibling entities.
+	if s.paths.IsUsingConsolidatedConfig(entity) {
+		sub, exists := m[entity]
+		if !exists {
+			return make(map[string]any), nil
+		}
+		if subMap, ok := sub.(map[string]any); ok {
+			return subMap, nil
+		}
+		return make(map[string]any), nil
+	}
+
+	return m, nil
 }
 
 // writeMap serialises a map to Nix and writes it to the entity's data file.
+//
+// For consolidated config (config.nix), only the entity's key is updated
+// within the full file — sibling entities are preserved.
 func (s *Store) writeMap(entity string, data map[string]any) (string, error) {
+	if err := s.paths.EnsureDir(); err != nil {
+		return "", fmt.Errorf("create data directory: %w", err)
+	}
+
+	// For consolidated config, read the full file, update only this
+	// entity's key, and write everything back with section headers.
+	if s.paths.IsUsingConsolidatedConfig(entity) {
+		fullConfig, err := s.ReadConsolidatedData()
+		if err != nil {
+			return "", fmt.Errorf("read config.nix for key update: %w", err)
+		}
+		fullConfig[entity] = data
+		if err := s.WriteConsolidatedData(fullConfig); err != nil {
+			return "", fmt.Errorf("write config.nix: %w", err)
+		}
+		dataPath := s.paths.ConfigFilePath()
+		log.Info().
+			Str("entity", entity).
+			Str("path", dataPath).
+			Msg("nixdata.Store: wrote map entity (consolidated)")
+		return dataPath, nil
+	}
+
+	// Legacy per-entity file: write directly.
 	nixExpr, err := nixser.SerializeIndented(data, "  ")
 	if err != nil {
 		return "", fmt.Errorf("serialize to nix: %w", err)
-	}
-
-	if err := s.paths.EnsureDir(); err != nil {
-		return "", fmt.Errorf("create data directory: %w", err)
 	}
 
 	dataPath := s.paths.EntityPath(entity)
