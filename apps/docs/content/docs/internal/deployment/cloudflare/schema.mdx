@@ -1,9 +1,7 @@
 ---
-title: "=============================================================================="
-description: "schema.nix - Cloudflare Workers Deployment App Configuration Schema"
+title: Cloudflare Workers Deployment App Configuration Schema
+description: "Unified field definitions for Cloudflare Workers per-app deployment configuration."
 ---
-
-schema.nix - Cloudflare Workers Deployment App Configuration Schema
 
 Unified field definitions for Cloudflare Workers per-app deployment configuration.
 
@@ -28,5 +26,3 @@ Usage from ui.nix:
 let cloudflareSchema = import ./schema.nix { inherit lib; };
 in panelsLib.mkPanelFromSpFields { fields = cloudflareSchema.fields; ... }
 ```
-
-==============================================================================
