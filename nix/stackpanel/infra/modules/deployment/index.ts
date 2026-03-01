@@ -162,8 +162,11 @@ async function deployApp(
     }
   }
 
-  // Future: fly, vercel, aws
-  throw new Error(`Unsupported host "${app.host}"`);
+  // This module currently manages Cloudflare resources only.
+  // Fly deploys are handled by the Fly deployment module.
+  throw new Error(
+    `Unsupported host "${app.host}" in infra deployment module (expected: cloudflare)`,
+  );
 }
 
 // ---------------------------------------------------------------------------
