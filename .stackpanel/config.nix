@@ -458,6 +458,20 @@
         api-key-ssm-path = "/common/neon-api-key";
       };
     };
+    machines = {
+      enable = true;
+      source = "aws-ec2";
+      aws = {
+        region = "us-west-2";
+        filters = [
+          {
+            name = "instance-state-name";
+            values = [ "running" ];
+          }
+        ];
+      };
+      machines = { };
+    };
   };
 
   # ---------------------------------------------------------------------------
