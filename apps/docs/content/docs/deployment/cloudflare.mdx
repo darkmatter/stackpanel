@@ -10,54 +10,47 @@ Stackpanel includes a Cloudflare deployment module that generates the configurat
 
 ## Enable Cloudflare Deployment
 
-```nix
-stackpanel.deployment.cloudflare = {
-  enable = true;
-};
-```
+Deployment configuration is per-app. You don't need a global "Cloudflare extension" - just configure your apps with `deployment.host = "cloudflare"`.
 
-When enabled, the Cloudflare module:
-
-- Adds the `wrangler` CLI to your devshell
-- Generates deployment configuration from your app definitions
-- Registers deploy scripts (e.g., `cloudflare:deploy`)
-- Integrates with [CI generation](/docs/apps-ci/ci-generation) for automated deployments
+Stackpanel will automatically add the `wrangler` CLI to your devshell when you have apps configured for Cloudflare deployment.
 
 ## Configuration
 
-### Basic Setup
+### Global Settings
+
+Set your Cloudflare account ID at the global deployment level:
 
 ```nix
-stackpanel.deployment.cloudflare = {
-  enable = true;
-  account-id = "your-cloudflare-account-id";
+stackpanel.deployment = {
+  cloudflare = {
+    accountId = "your-cloudflare-account-id";
+    compatibilityDate = "2024-01-01";
+  };
 };
 ```
 
 ### Per-App Deployment
 
-When you have apps defined in `stackpanel.apps`, the Cloudflare module can generate deployment targets for each one:
+Configure each app with Cloudflare-specific deployment settings:
 
 ```nix
 stackpanel.apps.web = {
   port = 0;
-  framework = "nextjs";
+  framework = "tanstack-start";
   root = "./apps/web";
   build = "bun run build";
-};
 
-stackpanel.deployment.cloudflare = {
-  enable = true;
-  account-id = "your-account-id";
-
-  workers = {
-    web = {
-      app = "web";  # References stackpanel.apps.web
-      name = "myapp-web";
-      compatibility-date = "2024-01-01";
-      routes = [
-        { pattern = "myapp.com/*"; zone-name = "myapp.com"; }
-      ];
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+    
+    cloudflare = {
+      workerName = "myapp-web";
+      type = "CLOUDFLARE_WORKER_TYPE_VITE";
+      route = "myapp.com/*";
+      bindings = {
+        DATABASE_URL = "...";
+      };
     };
   };
 };
@@ -68,13 +61,21 @@ stackpanel.deployment.cloudflare = {
 Pass environment variables to your Workers at deploy time:
 
 ```nix
-stackpanel.deployment.cloudflare.workers.api = {
-  app = "api";
-  name = "myapp-api";
-
-  vars = {
-    APP_ENV = "production";
-    API_VERSION = "v1";
+stackpanel.apps.api = {
+  port = 1;
+  root = "./apps/api";
+  
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+    
+    cloudflare = {
+      workerName = "myapp-api";
+      bindings = {
+        APP_ENV = "production";
+        API_VERSION = "v1";
+      };
+    };
   };
 };
 ```
@@ -128,13 +129,23 @@ cloudflare:tail
 
 ## CI Integration
 
-When both the Cloudflare module and [CI generation](/docs/apps-ci/ci-generation) are enabled, the generated GitHub Actions workflow includes Cloudflare deploy steps:
+When you have apps configured for Cloudflare deployment and [CI generation](/docs/apps-ci/ci-generation) is enabled, the generated GitHub Actions workflow includes Cloudflare deploy steps:
 
 ```nix
 {
-  stackpanel.deployment.cloudflare = {
-    enable = true;
-    account-id = "your-account-id";
+  stackpanel.deployment = {
+    cloudflare = {
+      accountId = "your-account-id";
+    };
+  };
+
+  stackpanel.apps.api = {
+    port = 1;
+    deployment = {
+      enable = true;
+      host = "cloudflare";
+      cloudflare.workerName = "myapp-api";
+    };
   };
 
   stackpanel.ci = {
@@ -157,21 +168,24 @@ You'll need to create a Cloudflare API token with the appropriate permissions an
 Cloudflare Workers support various bindings—KV namespaces, R2 buckets, D1 databases, Durable Objects, and more. Configure them through the module:
 
 ```nix
-stackpanel.deployment.cloudflare.workers.api = {
-  app = "api";
-  name = "myapp-api";
-
-  kv-namespaces = [
-    { binding = "CACHE"; id = "abc123"; }
-  ];
-
-  r2-buckets = [
-    { binding = "UPLOADS"; bucket-name = "myapp-uploads"; }
-  ];
-
-  d1-databases = [
-    { binding = "DB"; database-id = "def456"; database-name = "myapp-db"; }
-  ];
+stackpanel.apps.api = {
+  port = 1;
+  
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+    
+    cloudflare = {
+      workerName = "myapp-api";
+      kvNamespaces = [ "CACHE" ];
+      r2Buckets = [ "UPLOADS" ];
+      d1Databases = [ "DB" ];
+      bindings = {
+        CACHE = "abc123";
+        DB = "def456";
+      };
+    };
+  };
 };
 ```
 
@@ -182,11 +196,17 @@ These bindings are written into the generated `wrangler.toml` and available as t
 For static sites or frameworks with static export (like Next.js static export or Astro), use Cloudflare Pages:
 
 ```nix
-stackpanel.deployment.cloudflare.pages = {
-  docs = {
-    app = "docs";
-    project-name = "myapp-docs";
-    build-output-dir = "out";  # Static export directory
+stackpanel.apps.docs = {
+  port = 2;
+  
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+    
+    cloudflare = {
+      workerName = "myapp-docs";
+      type = "CLOUDFLARE_WORKER_TYPE_PAGES";
+    };
   };
 };
 ```
@@ -214,27 +234,38 @@ Not every app in your project needs to deploy to Cloudflare. You can mix deploym
 ```nix
 {
   stackpanel.apps = {
-    web = { port = 0; framework = "nextjs"; };
-    api = { port = 1; framework = "hono"; };
-    docs = { port = 2; framework = "nextjs"; };
-  };
+    web = {
+      port = 0;
+      framework = "nextjs";
+      deployment = {
+        enable = true;
+        host = "fly";
+        fly.appName = "myapp-web";
+      };
+    };
 
-  # API deploys to Cloudflare Workers
-  stackpanel.deployment.cloudflare.workers.api = {
-    app = "api";
-    name = "myapp-api";
-  };
+    api = {
+      port = 1;
+      framework = "hono";
+      deployment = {
+        enable = true;
+        host = "cloudflare";
+        cloudflare.workerName = "myapp-api";
+      };
+    };
 
-  # Docs deploy to Cloudflare Pages
-  stackpanel.deployment.cloudflare.pages.docs = {
-    app = "docs";
-    project-name = "myapp-docs";
-  };
-
-  # Web deploys to Fly.io (see Fly.io docs)
-  stackpanel.deployment.fly.apps.web = {
-    app = "web";
-    # ...
+    docs = {
+      port = 2;
+      framework = "nextjs";
+      deployment = {
+        enable = true;
+        host = "cloudflare";
+        cloudflare = {
+          workerName = "myapp-docs";
+          type = "CLOUDFLARE_WORKER_TYPE_PAGES";
+        };
+      };
+    };
   };
 }
 ```
