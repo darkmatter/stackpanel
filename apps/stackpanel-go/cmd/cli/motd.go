@@ -81,6 +81,20 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		9876, // Default agent port
 	)
 
+	// Pass missing flake inputs from Nix config
+	if len(cfg.MissingFlakeInputs) > 0 {
+		for _, fi := range cfg.MissingFlakeInputs {
+			data.MissingFlakeInputs = append(data.MissingFlakeInputs, tui.MissingFlakeInput{
+				Name:           fi.Name,
+				URL:            fi.URL,
+				FollowsNixpkgs: fi.FollowsNixpkgs,
+				RequiredBy:     fi.RequiredBy,
+			})
+		}
+		// Re-collect issues now that we have missing flake inputs
+		data.Issues = tui.CollectIssues(data)
+	}
+
 	// Detect services from config and check their status
 	if cfg.Services != nil {
 		for name := range cfg.Services {

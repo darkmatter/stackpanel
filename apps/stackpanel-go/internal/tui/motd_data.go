@@ -43,10 +43,21 @@ type MOTDFullData struct {
 	DocsURL       string
 	AgentPort     int
 
+	// Missing flake inputs (from Nix config)
+	MissingFlakeInputs []MissingFlakeInput
+
 	// Computed
 	Issues          []Issue
 	UpdateAvailable *UpdateInfo
 	ShellFreshness  ShellFreshness
+}
+
+// MissingFlakeInput represents a flake input that a module needs but isn't in flake.nix
+type MissingFlakeInput struct {
+	Name           string `json:"name"`
+	URL            string `json:"url"`
+	FollowsNixpkgs bool   `json:"followsNixpkgs"`
+	RequiredBy     string `json:"requiredBy"`
 }
 
 // AgentStatus represents the status of the stackpanel agent
@@ -759,6 +770,17 @@ func CollectIssues(data *MOTDFullData) []Issue {
 			Severity:   "warning",
 			Message:    "Shell is stale (config changed)",
 			FixCommand: data.ShellFreshness.FixCommand,
+		})
+	}
+
+	// Missing flake inputs
+	for _, fi := range data.MissingFlakeInputs {
+		msg := fmt.Sprintf("Module %q requires flake input %q", fi.RequiredBy, fi.Name)
+		fixCmd := fmt.Sprintf("stackpanel flake add-input %s %s", fi.Name, fi.URL)
+		issues = append(issues, Issue{
+			Severity:   "warning",
+			Message:    msg,
+			FixCommand: fixCmd,
 		})
 	}
 
