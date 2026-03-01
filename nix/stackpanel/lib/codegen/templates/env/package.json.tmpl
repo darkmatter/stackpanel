@@ -1,11 +1,16 @@
 {
   "name": "{{PACKAGE_NAME}}",
   "type": "module",
+  "bin": {
+    "docker-entrypoint": "./src/docker-entrypoint.ts"
+  },
   "exports": {
     ".": { "default": "./src/generated/index.ts" },
     "./*": { "default": "./src/*.ts" }
   },
   "dependencies": {
+    "sops-age": "^4.0.2",
+    "yaml": "^2.8.0",
     "znv": "workspace:*",
     "zod": "catalog:"
   },

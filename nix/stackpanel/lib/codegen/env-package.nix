@@ -44,6 +44,8 @@ let
     barrel = builtins.readFile "${templateDir}/barrel.tmpl.ts";
     entrypoint = builtins.readFile "${templateDir}/entrypoint.tmpl.ts";
     index = builtins.readFile "${templateDir}/index.ts";
+    loader = builtins.readFile "${templateDir}/loader.ts";
+    dockerEntrypoint = builtins.readFile "${templateDir}/docker-entrypoint.ts";
     packageJson = builtins.readFile "${templateDir}/package.json.tmpl";
     tsconfig = builtins.readFile "${templateDir}/tsconfig.json";
     readme = builtins.readFile "${templateDir}/README.tmpl.md";
@@ -414,6 +416,14 @@ let
         "${packageDir}/src/index.ts" = templates.index;
       };
 
+      loader = {
+        "${packageDir}/src/loader.ts" = templates.loader;
+      };
+
+      dockerEntrypoint = {
+        "${packageDir}/src/docker-entrypoint.ts" = templates.dockerEntrypoint;
+      };
+
       # README — assemble dynamic sections, then substitute into template
       appSections = lib.concatMapStringsSep "\n" (
         appName:
@@ -470,6 +480,8 @@ let
     packageJson
     // tsconfigJson
     // rootIndex
+    // loader
+    // dockerEntrypoint
     // readme
     // sopsFile
     // sharedFiles

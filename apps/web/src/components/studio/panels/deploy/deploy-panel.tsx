@@ -4,8 +4,8 @@
  * Deploy Panel - Colmena-centric deployment management.
  *
  * Shows machine inventory, app-to-machine mapping, and deploy actions
- * (eval/build/apply). Data comes from the agent via colmena-machines.json
- * and colmena-app-deploy.json state files.
+ * (eval/build/apply). Supports full machine CRUD (add/edit/delete) and
+ * AWS EC2 discovery configuration.
  */
 
 import { useState, useMemo } from "react";
@@ -18,6 +18,16 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@ui/card";
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@ui/select";
+import { Switch } from "@ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import {
 	Activity,
@@ -28,6 +38,7 @@ import {
 	HardDrive,
 	Loader2,
 	Network,
+	Pencil,
 	Play,
 	RefreshCw,
 	Rocket,
@@ -36,10 +47,14 @@ import {
 	Shield,
 	XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAgentContext } from "@/lib/agent-provider";
 import { useNixConfig } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { cn } from "@/lib/utils";
+import { AddMachineDialog } from "./add-machine-dialog";
+import { EditMachineDialog } from "./edit-machine-dialog";
+import { useMachinesConfig, type MachineConfig } from "./use-machines";
 
 // =============================================================================
 // Types
@@ -96,11 +111,9 @@ function useColmenaData() {
 		const serializable = cfg.serializable as Record<string, unknown> | undefined;
 		const colmenaConfig = (serializable?.colmena ?? null) as ColmenaConfig | null;
 
-		// Try to get machines from colmena serialized data or panels
 		const colmenaData = cfg.colmena as Record<string, unknown> | undefined;
 		const machinesComputed = (colmenaData?.machinesComputed ?? {}) as Record<string, MachineInfo>;
 
-		// Apps with deploy config
 		const rawApps = (cfg.apps ?? cfg.appsComputed ?? {}) as Record<string, Record<string, unknown>>;
 		const appDeploy: Record<string, AppDeployMapping> = {};
 
@@ -128,21 +141,35 @@ function useColmenaData() {
 // Sub-components
 // =============================================================================
 
-function MachineCard({ machine }: { machine: MachineInfo }) {
+function MachineCard({
+	machine,
+	onEdit,
+}: {
+	machine: MachineInfo;
+	onEdit?: () => void;
+}) {
 	const isReachable = machine.host !== null;
 
 	return (
-		<Card className={cn(
-			"transition-colors",
-			isReachable ? "border-border" : "border-amber-500/30",
-		)}>
+		<Card
+			className={cn(
+				"transition-colors cursor-pointer hover:border-primary/40",
+				isReachable ? "border-border" : "border-amber-500/30",
+			)}
+			onClick={onEdit}
+		>
 			<CardContent className="p-4">
 				<div className="flex items-start justify-between mb-3">
 					<div className="flex items-center gap-2">
 						<Server className="h-4 w-4 text-muted-foreground" />
-						<span className="font-medium text-sm">{machine.name}</span>
+						<span className="font-medium text-sm">{machine.name || machine.id}</span>
 					</div>
 					<div className="flex items-center gap-1.5">
+						{onEdit && (
+							<Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+								<Pencil className="h-3 w-3" />
+							</Button>
+						)}
 						{isReachable ? (
 							<Badge variant="secondary" className="text-[10px] gap-1">
 								<CheckCircle className="h-3 w-3 text-green-500" />
@@ -225,7 +252,9 @@ function AppTargetRow({
 					<p className="text-xs text-muted-foreground">
 						{deploy.targets.length > 0
 							? `Targets: ${deploy.targets.join(", ")}`
-							: "No targets defined"}
+							: deploy.role
+								? `Role: ${deploy.role}`
+								: "No targets defined"}
 					</p>
 				</div>
 			</div>
@@ -244,24 +273,173 @@ function AppTargetRow({
 }
 
 // =============================================================================
+// Settings: AWS EC2 Discovery Configuration
+// =============================================================================
+
+function AwsEc2Settings({ machines }: { machines: ReturnType<typeof useMachinesConfig> }) {
+	const cfg = machines.config.aws;
+	const [saving, setSaving] = useState(false);
+	const [region, setRegion] = useState(cfg.region ?? "");
+	const [sshUser, setSshUser] = useState(cfg.ssh.user);
+	const [sshPort, setSshPort] = useState(cfg.ssh.port);
+	const [sshKeyPath, setSshKeyPath] = useState(cfg.ssh.key_path ?? "");
+	const [hostPref, setHostPref] = useState(cfg.host_preference.join(", "));
+
+	const handleSave = async () => {
+		setSaving(true);
+		try {
+			await machines.updateSettings({
+				source: "aws-ec2",
+				enable: true,
+				aws: {
+					...cfg,
+					region: region || null,
+					ssh: {
+						user: sshUser || "root",
+						port: sshPort || 22,
+						key_path: sshKeyPath || null,
+					},
+					host_preference: hostPref.split(",").map((s) => s.trim()).filter(Boolean),
+				},
+			});
+			toast.success("AWS EC2 settings saved");
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "Failed to save");
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-base">AWS EC2 Discovery</CardTitle>
+				<CardDescription>
+					Auto-discover machines from running EC2 instances
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="grid grid-cols-2 gap-3">
+					<div className="space-y-2">
+						<Label>Region</Label>
+						<Input
+							placeholder="us-west-2"
+							value={region}
+							onChange={(e) => setRegion(e.target.value)}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label>Host Preference</Label>
+						<Input
+							placeholder="publicDns, publicIp, privateIp"
+							value={hostPref}
+							onChange={(e) => setHostPref(e.target.value)}
+						/>
+					</div>
+				</div>
+
+				<fieldset className="rounded-lg border border-border p-3 space-y-3">
+					<legend className="px-2 text-sm font-medium">Default SSH</legend>
+					<div className="grid grid-cols-3 gap-3">
+						<div className="space-y-2">
+							<Label>User</Label>
+							<Input
+								placeholder="ec2-user"
+								value={sshUser}
+								onChange={(e) => setSshUser(e.target.value)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Port</Label>
+							<Input
+								type="number"
+								value={sshPort}
+								onChange={(e) => setSshPort(Number.parseInt(e.target.value, 10) || 22)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Key Path</Label>
+							<Input
+								placeholder="~/.ssh/aws"
+								value={sshKeyPath}
+								onChange={(e) => setSshKeyPath(e.target.value)}
+							/>
+						</div>
+					</div>
+				</fieldset>
+
+				<Button onClick={handleSave} disabled={saving} size="sm">
+					{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+					Save Settings
+				</Button>
+			</CardContent>
+		</Card>
+	);
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
 export function DeployPanel() {
 	const { isConnected } = useAgentContext();
-	const { machines, appDeploy, colmenaConfig, isLoading, refetch } = useColmenaData();
+	const { machines: computedMachines, appDeploy, colmenaConfig, isLoading, refetch } = useColmenaData();
+	const machinesConfig = useMachinesConfig();
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [editingMachine, setEditingMachine] = useState<{ id: string; config: MachineConfig } | null>(null);
 
-	const machineList = Object.values(machines);
-	const machineCount = machineList.length;
+	// Merge computed machines (from colmena/infra) with static config machines
+	const configMachines = machinesConfig.config.machines;
+	const computedList = Object.values(computedMachines);
+	const configList = Object.entries(configMachines);
+
+	// Build combined machine list: computed takes precedence, config fills gaps
+	const allMachineEntries = useMemo(() => {
+		const seen = new Set<string>();
+		const entries: Array<{ id: string; info: MachineInfo; configurable: boolean }> = [];
+
+		// Add computed machines
+		for (const m of computedList) {
+			seen.add(m.id);
+			entries.push({ id: m.id, info: m, configurable: !!configMachines[m.id] });
+		}
+
+		// Add config-only machines not in computed
+		for (const [key, cfg] of configList) {
+			if (!seen.has(key)) {
+				entries.push({
+					id: key,
+					info: {
+						id: key,
+						name: cfg.name ?? key,
+						host: cfg.host,
+						ssh: { user: cfg.ssh.user, port: cfg.ssh.port, keyPath: cfg.ssh.key_path },
+						tags: cfg.tags,
+						roles: cfg.roles,
+						provider: cfg.provider,
+						arch: cfg.arch,
+						publicIp: cfg.public_ip,
+						privateIp: cfg.private_ip,
+						targetEnv: cfg.target_env,
+						labels: cfg.labels,
+					},
+					configurable: true,
+				});
+			}
+		}
+
+		return entries;
+	}, [computedList, configList, configMachines]);
+
+	const machineCount = allMachineEntries.length;
 	const appDeployEntries = Object.entries(appDeploy);
-	const healthyCount = machineList.filter((m) => m.host !== null).length;
+	const healthyCount = allMachineEntries.filter((m) => m.info.host !== null).length;
 	const unhealthyCount = machineCount - healthyCount;
 
 	const handleRefresh = async () => {
 		setIsRefreshing(true);
 		try {
-			await refetch();
+			await Promise.all([refetch(), machinesConfig.refetch()]);
 		} finally {
 			setIsRefreshing(false);
 		}
@@ -272,7 +450,7 @@ export function DeployPanel() {
 			<div className="space-y-6">
 				<PanelHeader
 					title="Deploy"
-					description="Colmena deployment management (Recommended)"
+					description="Machine inventory and deployment management"
 				/>
 				<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
 					<CardContent className="flex flex-col items-center justify-center gap-4 p-8">
@@ -301,19 +479,22 @@ export function DeployPanel() {
 		<div className="space-y-6">
 			<PanelHeader
 				title="Deploy"
-				description="Colmena deployment management (Recommended)"
+				description="Machine inventory and deployment management"
 				actions={
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={handleRefresh}
-						disabled={isRefreshing}
-					>
-						<RefreshCw
-							className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
-						/>
-						{isRefreshing ? "Refreshing..." : "Refresh"}
-					</Button>
+					<div className="flex items-center gap-2">
+						<AddMachineDialog machines={machinesConfig} />
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={handleRefresh}
+							disabled={isRefreshing}
+						>
+							<RefreshCw
+								className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
+							/>
+							{isRefreshing ? "Refreshing..." : "Refresh"}
+						</Button>
+					</div>
 				}
 			/>
 
@@ -414,15 +595,28 @@ export function DeployPanel() {
 								<div className="text-center">
 									<p className="font-medium text-foreground">No Machines</p>
 									<p className="text-muted-foreground text-sm max-w-md">
-										Machine inventory is empty. Run <code className="text-xs bg-secondary px-1 py-0.5 rounded">infra:deploy</code> and <code className="text-xs bg-secondary px-1 py-0.5 rounded">infra:pull-outputs</code> to populate it, then reload the shell.
+										Add machines manually using the <strong>Add Machine</strong> button above,
+										or configure AWS EC2 discovery in Settings and run{" "}
+										<code className="text-xs bg-secondary px-1 py-0.5 rounded">infra:deploy</code>.
 									</p>
 								</div>
 							</CardContent>
 						</Card>
 					) : (
 						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-							{machineList.map((machine) => (
-								<MachineCard key={machine.id} machine={machine} />
+							{allMachineEntries.map((entry) => (
+								<MachineCard
+									key={entry.id}
+									machine={entry.info}
+									onEdit={
+										entry.configurable
+											? () => {
+													const cfg = configMachines[entry.id];
+													if (cfg) setEditingMachine({ id: entry.id, config: cfg });
+												}
+											: undefined
+									}
+								/>
 							))}
 						</div>
 					)}
@@ -449,7 +643,7 @@ export function DeployPanel() {
 									key={appName}
 									appName={appName}
 									deploy={deploy}
-									machines={machines}
+									machines={computedMachines}
 								/>
 							))}
 						</div>
@@ -471,7 +665,7 @@ export function DeployPanel() {
 									<div className="flex items-center gap-3">
 										<AlertCircle className="h-5 w-5 text-amber-500" />
 										<p className="text-amber-700 dark:text-amber-300 text-sm">
-											No machines in inventory. Provision infrastructure first.
+											No machines in inventory. Add machines or configure EC2 discovery first.
 										</p>
 									</div>
 								</div>
@@ -503,44 +697,88 @@ export function DeployPanel() {
 
 				{/* Settings Tab */}
 				<TabsContent className="mt-6 space-y-4" value="settings">
+					{/* Module enable + source selection */}
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-base">Colmena Configuration</CardTitle>
+							<CardTitle className="text-base">Machines Module</CardTitle>
 							<CardDescription>
-								Current Colmena module settings
+								Configure how machines are sourced for deployment
 							</CardDescription>
 						</CardHeader>
-						<CardContent>
-							<div className="grid gap-3 sm:grid-cols-2">
-								<div className="rounded-lg border border-border bg-secondary/30 p-3">
-									<p className="text-muted-foreground text-xs">Machine Source</p>
-									<p className="font-medium text-foreground text-sm">
-										{colmenaConfig?.machineSource ?? "infra"}
+						<CardContent className="space-y-4">
+							<div className="flex items-center justify-between">
+								<div>
+									<Label>Enable</Label>
+									<p className="text-xs text-muted-foreground">
+										Enable the machines infra module
 									</p>
 								</div>
-								<div className="rounded-lg border border-border bg-secondary/30 p-3">
-									<p className="text-muted-foreground text-xs">Hive Config</p>
-									<p className="font-medium text-foreground text-sm font-mono text-[11px]">
-										{colmenaConfig?.config ?? ".stackpanel/state/colmena/hive.nix"}
-									</p>
-								</div>
-								<div className="rounded-lg border border-border bg-secondary/30 p-3">
-									<p className="text-muted-foreground text-xs">Generate Hive</p>
-									<p className="font-medium text-foreground text-sm">
-										{colmenaConfig?.generateHive ? "Yes" : "No"}
-									</p>
-								</div>
-								<div className="rounded-lg border border-border bg-secondary/30 p-3">
-									<p className="text-muted-foreground text-xs">Machine Count</p>
-									<p className="font-medium text-foreground text-sm">
-										{colmenaConfig?.machineCount ?? machineCount}
-									</p>
-								</div>
+								<Switch
+									checked={machinesConfig.config.enable}
+									onCheckedChange={(checked) =>
+										machinesConfig.updateSettings({ enable: checked })
+									}
+								/>
 							</div>
+
+							<div className="space-y-2">
+								<Label>Machine Source</Label>
+								<Select
+									value={machinesConfig.config.source}
+									onValueChange={(v) =>
+										machinesConfig.updateSettings({
+											source: v as "static" | "aws-ec2",
+										})
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="static">Static (defined in config)</SelectItem>
+										<SelectItem value="aws-ec2">AWS EC2 (auto-discover)</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+
+							{colmenaConfig && (
+								<div className="grid gap-3 sm:grid-cols-2 mt-4">
+									<div className="rounded-lg border border-border bg-secondary/30 p-3">
+										<p className="text-muted-foreground text-xs">Hive Config</p>
+										<p className="font-medium text-foreground text-sm font-mono text-[11px]">
+											{colmenaConfig.config ?? ".stackpanel/state/colmena/hive.nix"}
+										</p>
+									</div>
+									<div className="rounded-lg border border-border bg-secondary/30 p-3">
+										<p className="text-muted-foreground text-xs">Generate Hive</p>
+										<p className="font-medium text-foreground text-sm">
+											{colmenaConfig.generateHive ? "Yes" : "No"}
+										</p>
+									</div>
+								</div>
+							)}
 						</CardContent>
 					</Card>
+
+					{/* AWS EC2 settings (shown when source is aws-ec2) */}
+					{machinesConfig.config.source === "aws-ec2" && (
+						<AwsEc2Settings machines={machinesConfig} />
+					)}
 				</TabsContent>
 			</Tabs>
+
+			{/* Edit dialog */}
+			{editingMachine && (
+				<EditMachineDialog
+					machineId={editingMachine.id}
+					machine={editingMachine.config}
+					machines={machinesConfig}
+					open={!!editingMachine}
+					onOpenChange={(open) => {
+						if (!open) setEditingMachine(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }
