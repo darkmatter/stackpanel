@@ -517,6 +517,10 @@ schema = 3
     version = 'v0.0.1'
     hash = 'sha256-JlWckeGaWG+bXK8l8WEdZqmSiTwCA8b1qbmBKa/Fj3E='
 
+  [mod.'github.com/mattn/go-pointer']
+    version = 'v0.0.1'
+    hash = 'sha256-99jRgbkLrUhBcabNC/gcAsU+RG7x9o4ByCdy3oWcqd8='
+
   [mod.'github.com/mattn/go-runewidth']
     version = 'v0.0.16'
     hash = 'sha256-NC+ntvwIpqDNmXb7aixcg09il80ygq6JAnW0Gb5b/DQ='
@@ -780,6 +784,10 @@ schema = 3
   [mod.'github.com/tommy-muehle/go-mnd/v2']
     version = 'v2.5.1'
     hash = 'sha256-SzTbk3PRnhKUNP2/d6vqKP7he/OXU/LDSagif8UuRig='
+
+  [mod.'github.com/tree-sitter/go-tree-sitter']
+    version = 'v0.25.0'
+    hash = 'sha256-/cySkkOhBDKbzEbgSz5F3YJYl3bAiM9iAkSQhXj8A8k='
 
   [mod.'github.com/ultraware/funlen']
     version = 'v0.2.0'
