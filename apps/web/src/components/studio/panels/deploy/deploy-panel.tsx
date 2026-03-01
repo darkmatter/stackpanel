@@ -54,7 +54,13 @@ import { PanelHeader } from "../shared/panel-header";
 import { cn } from "@/lib/utils";
 import { AddMachineDialog } from "./add-machine-dialog";
 import { EditMachineDialog } from "./edit-machine-dialog";
-import { useMachinesConfig, type MachineConfig } from "./use-machines";
+import { ProvisionInstanceDialog } from "./provision-instance-dialog";
+import {
+	useMachinesConfig,
+	useEc2Provisioning,
+	type MachineConfig,
+	type Ec2AppConfig,
+} from "./use-machines";
 
 // =============================================================================
 // Types
@@ -378,6 +384,73 @@ function AwsEc2Settings({ machines }: { machines: ReturnType<typeof useMachinesC
 }
 
 // =============================================================================
+// Provisioning: EC2 Instance List
+// =============================================================================
+
+function Ec2AppRow({
+	appId,
+	app,
+	onRemove,
+}: {
+	appId: string;
+	app: Ec2AppConfig;
+	onRemove: () => void;
+}) {
+	const [removing, setRemoving] = useState(false);
+
+	return (
+		<div className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
+			<div className="flex items-center gap-3">
+				<div className="flex h-8 w-8 items-center justify-center rounded-md bg-orange-500/10">
+					<Server className="h-4 w-4 text-orange-500" />
+				</div>
+				<div>
+					<p className="font-medium text-sm">{appId}</p>
+					<p className="text-xs text-muted-foreground">
+						{app.instance_count} x {app.instance_type ?? "t3.micro"} &middot; {app.os_type}
+						{app.machine.roles.length > 0 && ` · roles: ${app.machine.roles.join(", ")}`}
+					</p>
+				</div>
+			</div>
+			<div className="flex items-center gap-2">
+				{app.security_group.create && (
+					<Badge variant="outline" className="text-[10px]">SG</Badge>
+				)}
+				{app.iam.enable && (
+					<Badge variant="outline" className="text-[10px]">IAM</Badge>
+				)}
+				{app.key_pair.create && (
+					<Badge variant="outline" className="text-[10px]">Key</Badge>
+				)}
+				<Badge variant="secondary" className="text-[10px]">
+					{app.associate_public_ip ? "public" : "private"}
+				</Badge>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="h-7 w-7 text-destructive hover:text-destructive"
+					onClick={async () => {
+						setRemoving(true);
+						try {
+							await onRemove();
+						} finally {
+							setRemoving(false);
+						}
+					}}
+					disabled={removing}
+				>
+					{removing ? (
+						<Loader2 className="h-3 w-3 animate-spin" />
+					) : (
+						<XCircle className="h-4 w-4" />
+					)}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -385,6 +458,7 @@ export function DeployPanel() {
 	const { isConnected } = useAgentContext();
 	const { machines: computedMachines, appDeploy, colmenaConfig, isLoading, refetch } = useColmenaData();
 	const machinesConfig = useMachinesConfig();
+	const ec2Provisioning = useEc2Provisioning();
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [editingMachine, setEditingMachine] = useState<{ id: string; config: MachineConfig } | null>(null);
 
@@ -574,6 +648,14 @@ export function DeployPanel() {
 							</Badge>
 						)}
 					</TabsTrigger>
+					<TabsTrigger value="provision">
+						Provision
+						{Object.keys(ec2Provisioning.config.apps).length > 0 && (
+							<Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+								{Object.keys(ec2Provisioning.config.apps).length}
+							</Badge>
+						)}
+					</TabsTrigger>
 					<TabsTrigger value="targets">
 						App Targets
 						{appDeployEntries.length > 0 && (
@@ -618,6 +700,56 @@ export function DeployPanel() {
 									}
 								/>
 							))}
+						</div>
+					)}
+				</TabsContent>
+
+				{/* Provision Tab */}
+				<TabsContent className="mt-6 space-y-4" value="provision">
+					<div className="flex items-center justify-between">
+						<div>
+							<h3 className="font-medium text-sm">EC2 Instances to Provision</h3>
+							<p className="text-xs text-muted-foreground">
+								Define instance groups here, then run <code className="bg-secondary px-1 py-0.5 rounded">infra:deploy</code> to create them.
+							</p>
+						</div>
+						<ProvisionInstanceDialog ec2={ec2Provisioning} />
+					</div>
+
+					{Object.keys(ec2Provisioning.config.apps).length === 0 ? (
+						<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
+							<CardContent className="flex flex-col items-center justify-center gap-4 p-8">
+								<Server className="h-12 w-12 text-muted-foreground/50" />
+								<div className="text-center">
+									<p className="font-medium text-foreground">No Instances Configured</p>
+									<p className="text-muted-foreground text-sm max-w-md">
+										Click <strong>Provision EC2</strong> to define instance groups.
+										Each group gets its own security group, IAM role, and optional key pair.
+									</p>
+								</div>
+							</CardContent>
+						</Card>
+					) : (
+						<div className="space-y-3">
+							{Object.entries(ec2Provisioning.config.apps).map(([id, app]) => (
+								<Ec2AppRow
+									key={id}
+									appId={id}
+									app={app}
+									onRemove={() => ec2Provisioning.removeApp(id)}
+								/>
+							))}
+
+							<Card className="border-blue-500/20 bg-blue-500/5">
+								<CardContent className="p-4">
+									<p className="text-sm text-blue-700 dark:text-blue-300">
+										Run <code className="bg-secondary px-1.5 py-0.5 rounded text-xs">infra:deploy</code> to
+										provision these instances. After provisioning, run{" "}
+										<code className="bg-secondary px-1.5 py-0.5 rounded text-xs">infra:pull-outputs</code> and
+										reload the shell to see them in the Machines tab.
+									</p>
+								</CardContent>
+							</Card>
 						</div>
 					)}
 				</TabsContent>
