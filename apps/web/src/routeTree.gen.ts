@@ -34,6 +34,7 @@ import { Route as StudioLocalConfigRouteImport } from './routes/studio/local-con
 import { Route as StudioInspectorRouteImport } from './routes/studio/inspector'
 import { Route as StudioInfraRouteImport } from './routes/studio/infra'
 import { Route as StudioFilesRouteImport } from './routes/studio/files'
+import { Route as StudioFeatureFlagsRouteImport } from './routes/studio/feature-flags'
 import { Route as StudioExtensionsRouteImport } from './routes/studio/extensions'
 import { Route as StudioDevshellsRouteImport } from './routes/studio/devshells'
 import { Route as StudioDeployRouteImport } from './routes/studio/deploy'
@@ -173,6 +174,11 @@ const StudioFilesRoute = StudioFilesRouteImport.update({
   path: '/files',
   getParentRoute: () => StudioRoute,
 } as any)
+const StudioFeatureFlagsRoute = StudioFeatureFlagsRouteImport.update({
+  id: '/feature-flags',
+  path: '/feature-flags',
+  getParentRoute: () => StudioRoute,
+} as any)
 const StudioExtensionsRoute = StudioExtensionsRouteImport.update({
   id: '/extensions',
   path: '/extensions',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
+  '/studio/feature-flags': typeof StudioFeatureFlagsRoute
   '/studio/files': typeof StudioFilesRoute
   '/studio/infra': typeof StudioInfraRoute
   '/studio/inspector': typeof StudioInspectorRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
+  '/studio/feature-flags': typeof StudioFeatureFlagsRoute
   '/studio/files': typeof StudioFilesRoute
   '/studio/infra': typeof StudioInfraRoute
   '/studio/inspector': typeof StudioInspectorRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/studio/deploy': typeof StudioDeployRoute
   '/studio/devshells': typeof StudioDevshellsRoute
   '/studio/extensions': typeof StudioExtensionsRoute
+  '/studio/feature-flags': typeof StudioFeatureFlagsRoute
   '/studio/files': typeof StudioFilesRoute
   '/studio/infra': typeof StudioInfraRoute
   '/studio/inspector': typeof StudioInspectorRoute
@@ -379,6 +388,7 @@ export interface FileRouteTypes {
     | '/studio/deploy'
     | '/studio/devshells'
     | '/studio/extensions'
+    | '/studio/feature-flags'
     | '/studio/files'
     | '/studio/infra'
     | '/studio/inspector'
@@ -418,6 +428,7 @@ export interface FileRouteTypes {
     | '/studio/deploy'
     | '/studio/devshells'
     | '/studio/extensions'
+    | '/studio/feature-flags'
     | '/studio/files'
     | '/studio/infra'
     | '/studio/inspector'
@@ -458,6 +469,7 @@ export interface FileRouteTypes {
     | '/studio/deploy'
     | '/studio/devshells'
     | '/studio/extensions'
+    | '/studio/feature-flags'
     | '/studio/files'
     | '/studio/infra'
     | '/studio/inspector'
@@ -673,6 +685,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioFilesRouteImport
       parentRoute: typeof StudioRoute
     }
+    '/studio/feature-flags': {
+      id: '/studio/feature-flags'
+      path: '/feature-flags'
+      fullPath: '/studio/feature-flags'
+      preLoaderRoute: typeof StudioFeatureFlagsRouteImport
+      parentRoute: typeof StudioRoute
+    }
     '/studio/extensions': {
       id: '/studio/extensions'
       path: '/extensions'
@@ -776,6 +795,7 @@ interface StudioRouteChildren {
   StudioDeployRoute: typeof StudioDeployRoute
   StudioDevshellsRoute: typeof StudioDevshellsRoute
   StudioExtensionsRoute: typeof StudioExtensionsRoute
+  StudioFeatureFlagsRoute: typeof StudioFeatureFlagsRoute
   StudioFilesRoute: typeof StudioFilesRoute
   StudioInfraRoute: typeof StudioInfraRoute
   StudioInspectorRoute: typeof StudioInspectorRoute
@@ -805,6 +825,7 @@ const StudioRouteChildren: StudioRouteChildren = {
   StudioDeployRoute: StudioDeployRoute,
   StudioDevshellsRoute: StudioDevshellsRoute,
   StudioExtensionsRoute: StudioExtensionsRoute,
+  StudioFeatureFlagsRoute: StudioFeatureFlagsRoute,
   StudioFilesRoute: StudioFilesRoute,
   StudioInfraRoute: StudioInfraRoute,
   StudioInspectorRoute: StudioInspectorRoute,

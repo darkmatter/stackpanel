@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, useCanGoBack, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@ui/avatar";
 import { Button } from "@ui/button";
 import {
@@ -10,8 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@ui/dropdown-menu";
-import { Input } from "@ui/input";
-import { ArrowLeft, Bell, LogOut, Search, Settings, User } from "lucide-react";
+import { Bell, LogOut, Settings, User } from "lucide-react";
 import { AgentStatus } from "@/components/agent-connect";
 import { ShellStatus } from "./shell-status";
 import { AgentConsoleDialog } from "./agent-console-dialog";
@@ -41,6 +40,7 @@ const panelTitles: Record<PanelType, string> = {
   files: "Generated Files",
   terminal: "Terminal",
   roadmap: "Roadmap",
+  "feature-flags": "Feature Flags",
   infra: "Infrastructure",
   deploy: "Deploy",
   inspector: "Inspector",
@@ -69,15 +69,15 @@ const pathToPanelMap: Record<string, PanelType> = {
   "/studio/files": "files",
   "/studio/terminal": "terminal",
   "/studio/roadmap": "roadmap",
+  "/studio/feature-flags": "feature-flags",
   "/studio/deploy": "deploy",
   "/studio/inspector": "inspector",
 };
 
 export function DashboardHeader() {
-  const router = useRouter();
-  const canGoBack = useCanGoBack();
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
+  const activePanel = pathToPanelMap[pathname] ?? "overview";
 
   return (
     <header className="flex h-16 items-center justify-between  px-6 w-full">
@@ -92,9 +92,7 @@ export function DashboardHeader() {
           <ArrowLeft className="h-4 w-4" />
         </Button> */}
         {/* <div className="h-6 w-px bg-border" /> */}
-        {/* <h1 className="font-semibold text-foreground text-lg">
-          {panelTitles[activePanel]}
-        </h1> */}
+        <h1 className="font-semibold text-foreground text-lg">{panelTitles[activePanel]}</h1>
       </div>
 
       <div className="flex items-center gap-4">
