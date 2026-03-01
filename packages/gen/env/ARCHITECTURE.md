@@ -1,190 +1,123 @@
 # Env Package Architecture
 
-This document describes the group-based secrets architecture used by `@gen/env`.
+This document describes the secrets architecture used by `@gen/env`.
 
 ## Overview
 
-Secrets are managed using a **group-based SOPS** approach where:
+Secrets are managed using a **group-based direct SOPS** approach where:
 
-1. **Secrets are stored in SOPS-encrypted YAML files per GROUP** (not per environment)
-2. **Groups control access** - each group can have different AGE recipients
-3. **Variables contain vals references** - app configs use `ref+sops://...` references
-4. **No decryption needed to render files** - just copy the references and encrypted files
-
-## Key Design Decision: Relative Paths
-
-**All vals references in the deployed env package use RELATIVE paths.**
-
-This is critical for portability:
-- Source project: `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/KEY` (configurable path)
-- Env package: `ref+sops://vars/dev.sops.yaml#/KEY` (relative to data dir)
-
-The `.stackpanel` path is **configurable** via `stackpanel.secrets.secrets-dir` in Nix config.
-The env package generator **transforms** source refs to relative refs during generation.
+1. **Secrets are stored in SOPS-encrypted YAML files per GROUP** (e.g., `dev.sops.yaml`, `prod.sops.yaml`)
+2. **Groups control access** -- each group has its own AGE keypair
+3. **Variable IDs encode the group** -- a variable with ID `/dev/DATABASE_URL` stores its value in `vars/dev.sops.yaml`
+4. **Variable values are empty strings** -- the actual secret value lives only in the SOPS file
+5. **No vals references** -- decryption uses `sops decrypt` directly, not `ref+sops://` indirection
 
 ## Directory Structure
 
 **Source Project** (path configurable via `stackpanel.secrets.secrets-dir`):
 ```
-.stackpanel/secrets/          # Or custom path from config
-├── vars/                     # SOPS-encrypted secrets by access control group
-│   ├── dev.sops.yaml        # Secrets accessible to dev group
-│   ├── staging.sops.yaml    # Secrets accessible to staging group
-│   └── prod.sops.yaml       # Secrets accessible to prod group
-├── recipients/               # AGE public keys + encrypted group keys
-├── .sops.yaml               # SOPS config defining key groups
-├── groups.json              # Recipient group -> keygroup mapping
-└── apps.json                # Per-app codegen metadata
+.stackpanel/secrets/
+├── vars/                     # SOPS-encrypted secrets by group
+│   ├── .sops.yaml           # Per-group creation rules (generated, gitignored)
+│   ├── common.sops.yaml     # Shared config (encrypted to all group keys)
+│   ├── dev.sops.yaml        # Dev secrets
+│   ├── staging.sops.yaml    # Staging secrets
+│   └── prod.sops.yaml       # Prod secrets
+├── recipients/               # Recipient keys for team access
+│   ├── .sops.yaml           # For .enc.age files (generated, gitignored)
+│   ├── groups.json          # Recipient group -> vars file mapping
+│   ├── team/                # Default team recipient group
+│   │   └── <user>.age.pub   # Team member public keys
+│   └── admins/              # Admin recipient group
+├── keys/                     # Local AGE keypair (gitignored)
+└── state/                    # Generated state (gitignored)
+    └── manifest.json        # Current secrets manifest
 ```
-
-**Deployed Env Package** (portable, relative paths):
-```
-packages/env/data/
-├── .sops.yaml               # Self-contained SOPS config
-├── apps/                    # Plain YAML with RELATIVE vals references (NOT encrypted)
-│   ├── web/
-│   │   ├── dev.yaml         # { DATABASE_URL: "ref+sops://vars/dev.sops.yaml#/DATABASE_URL" }
-│   │   ├── staging.yaml
-│   │   └── prod.yaml
-│   └── docs/
-│       ├── dev.yaml
-│       └── prod.yaml
-└── vars/                    # SOPS-encrypted files (copied)
-    ├── dev.sops.yaml
-    ├── staging.sops.yaml
-    └── prod.sops.yaml
-```
-
-**Note:** The apps/*.yaml files use `ref+sops://vars/...` (relative to data dir),
-NOT `ref+sops://.stackpanel/secrets/vars/...` (source project path).
 
 ## How It Works
 
 ### 1. Writing a Secret
 
-When you edit a secret in the UI:
+When you set a secret via CLI or UI:
 
-```
-User enters: DATABASE_URL = "postgres://..."
-Selected group: dev
+```bash
+secrets:set DATABASE_URL --group dev --value "postgres://..."
 ```
 
 The agent:
-1. Reads existing `.stackpanel/secrets/vars/dev.sops.yaml` (or creates new)
-2. Adds/updates the key with the plaintext value
-3. Encrypts with SOPS using the group's AGE recipients
-4. Returns a vals reference: `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL`
+1. Resolves the SOPS file path: `vars/dev.sops.yaml`
+2. Uses `sops set` to write the key in-place (non-destructive, preserves other keys)
+3. The variable in `config.nix` has `value = ""` -- the actual value is only in the SOPS file
 
-### 2. Using in App Config
+### 2. Variable ID Convention
 
-The app's environment config contains vals references (NOT actual secrets).
+Variable IDs encode the group: `/<group>/<key>`
 
-**In source project** (references the configured secrets-dir):
-```yaml
-# From apps.nix or variables.nix
-DATABASE_URL: ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL
-```
-
-**In deployed env package** (relative paths):
-```yaml
-# packages/env/data/apps/web/dev.yaml
-DATABASE_URL: ref+sops://vars/dev.sops.yaml#/DATABASE_URL
-REDIS_URL: ref+sops://vars/dev.sops.yaml#/REDIS_URL
-API_KEY: ref+sops://vars/prod.sops.yaml#/API_KEY
-```
-
-The generator **transforms** source refs to relative refs automatically.
+| Variable ID | Group | SOPS File | Key in File |
+|---|---|---|---|
+| `/dev/database-url` | `dev` | `vars/dev.sops.yaml` | `database-url` |
+| `/prod/api-key` | `prod` | `vars/prod.sops.yaml` | `api-key` |
+| `/common/log-level` | `common` | `vars/common.sops.yaml` | `log-level` |
+| `/var/app-name` | `var` | N/A (not encrypted) | Literal value |
+| `/computed/services/postgres-port` | `computed` | N/A (computed) | Computed value |
 
 ### 3. Runtime Resolution
 
-At runtime, [vals](https://github.com/helmfile/vals) resolves the references:
+At runtime, secrets are decrypted directly from SOPS files:
 
 ```bash
-# vals evaluates the references
-vals eval -f packages/env/data/apps/web/dev.yaml
-# Output:
-# DATABASE_URL: postgres://user:pass@localhost:5432/dev
-# REDIS_URL: redis://localhost:6379
-# API_KEY: sk_live_xxx
+# Decrypt all secrets in a group
+sops decrypt vars/dev.sops.yaml
+
+# Export as environment variables
+eval $(secrets:load dev)
+
+# Get a single secret
+secrets:get DATABASE_URL --group dev
 ```
+
+The agent uses `SOPS_AGE_KEY_CMD` to lazily resolve decryption keys from:
+1. Local AGE key (`.stackpanel/state/keys/local.txt`)
+2. Plaintext group keys (`recipients/<group>.age`, gitignored)
+3. SOPS-encrypted group keys (`recipients/<group>.enc.age`)
+4. Per-group key-cmd fallback
 
 ## Access Control
 
-Groups enable fine-grained access control:
+Groups enable fine-grained access control via `.sops.yaml` creation rules (auto-generated from `config.nix`):
 
 ```yaml
-# .stackpanel/secrets/.sops.yaml
-keys:
-  - &alice age1alice...
-  - &bob age1bob...
-  - &ci age1ci...
-  - &prod-only age1prod...
-
+# .stackpanel/secrets/vars/.sops.yaml
 creation_rules:
-  # Dev: everyone
-  - path_regex: ^vars/dev\.sops\.yaml$
+  - path_regex: ^dev\.sops\.yaml$
     key_groups:
       - age:
-          - *alice
-          - *bob
-          - *ci
+          - age1...  # dev group public key
 
-  # Staging: ops team + CI
-  - path_regex: ^vars/staging\.sops\.yaml$
+  - path_regex: ^prod\.sops\.yaml$
     key_groups:
       - age:
-          - *alice
-          - *ci
+          - age1...  # prod group public key
 
-  # Prod: restricted
-  - path_regex: ^vars/prod\.sops\.yaml$
+  - path_regex: ^common\.sops\.yaml$
     key_groups:
       - age:
-          - *alice
-          - *prod-only
+          - age1...  # dev key
+          - age1...  # prod key (all groups can decrypt common)
 ```
 
-## Generating the Env Package
+## Infrastructure Output Integration
 
-Run `secrets:generate-env-package` (or use the API endpoint) to:
+The infra module system can write outputs (e.g., Neon database URL) directly to SOPS group files:
 
-1. Copy group SOPS files to `packages/env/data/vars/`
-2. Generate app env YAML files with vals references
-3. Generate `.sops.yaml` for self-contained decryption
-
-The resulting `packages/env/data/` directory is **portable** - copy it to Docker and it works with just SOPS + AGE key.
-
-## Migration from .age Files
-
-The old architecture used individual `.age` files per secret:
-
-```
-.stackpanel/secrets/vars/
-├── database-url.age
-├── api-key.age
-└── stripe-secret.age
+```nix
+stackpanel.infra.storage-backend = {
+  type = "sops";
+  sops.group = "dev";  # writes to vars/dev.sops.yaml
+};
 ```
 
-**Problems with .age files:**
-- No batch operations
-- No built-in key rotation
-- Harder to manage access control
-- Requires custom tooling
-
-**New group-based approach:**
-- Standard SOPS tooling (`sops`, `vals`)
-- Batch encrypt/decrypt per group
-- Access control via `.sops.yaml` creation rules
-- Easy key rotation with `sops updatekeys`
-
-### Migration Steps
-
-1. Create groups: `secrets:init-group dev && secrets:init-group prod`
-2. For each secret in `vars/*.age`:
-   - Decrypt: `age -d -i ~/.age/key.txt vars/my-secret.age`
-   - Write to group: `sops set vars/dev.sops.yaml /MY_SECRET "value"`
-3. Update app configs to use vals references
-4. Delete old `.age` files
+The `Infra.syncAll()` method uses `sops set` per key for non-destructive updates that preserve existing secrets in the file.
 
 ## API Endpoints
 
@@ -196,14 +129,8 @@ POST /api/secrets/group/write
   "value": "postgres://...",
   "group": "dev"
 }
-Response: {
-  "valsRef": "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL",
-  "envPackageRef": "ref+sops://vars/dev.sops.yaml#/DATABASE_URL"
-}
+Response: { "success": true }
 ```
-
-- `valsRef`: Use in source project configs (uses configured secrets-dir)
-- `envPackageRef`: Use in deployed apps (relative path, portable)
 
 ### Read Secret from Group
 ```
@@ -218,31 +145,10 @@ GET /api/secrets/group/list
 Response: { "groups": { "dev": ["DATABASE_URL", "REDIS_URL"], "prod": ["API_KEY"] } }
 ```
 
-### Generate Env Package
-```
-POST /api/secrets/generate-env-package
-Response: { "path": "packages/env/data", "apps": 3, "groups": ["dev", "prod"] }
-```
-
 ## Best Practices
 
-1. **Use meaningful group names** - `dev`, `staging`, `prod`, `ops`, `analytics`
-2. **Minimize prod access** - Only add keys that need production access
-3. **Rotate keys periodically** - Use `sops updatekeys` when team changes
-4. **Keep refs in version control** - The vals references are NOT secrets
-5. **Don't commit decrypted values** - Only encrypted SOPS files
-6. **Don't hardcode paths** - The secrets-dir is configurable; always use API-returned refs
-7. **Use envPackageRef for deployments** - Relative paths ensure portability to Docker/K8s
-
-## Path Resolution
-
-| Context | Reference Format | Example |
-|---------|-----------------|---------|
-| Source project | Full path from config | `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/KEY` |
-| Env package | Relative to data dir | `ref+sops://vars/dev.sops.yaml#/KEY` |
-| Docker | Relative (mount data dir) | `ref+sops://vars/dev.sops.yaml#/KEY` |
-
-The key insight is that **vals resolves paths relative to the current working directory**.
-In Docker, you either:
-1. Mount `packages/env/data/` and run from there, OR
-2. Set `SOPS_FILE` env var to point to the vars directory
+1. **Use meaningful group names** -- `dev`, `staging`, `prod`, `ops`, `analytics`
+2. **Minimize prod access** -- Only add keys that need production access
+3. **Rotate keys periodically** -- Use `sops updatekeys` when team changes
+4. **Don't commit decrypted values** -- Only encrypted SOPS files
+5. **Use `common` for shared config** -- Encrypted to all groups, accessible by anyone with any group key

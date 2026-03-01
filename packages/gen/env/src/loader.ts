@@ -25,6 +25,9 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { parse as parseYaml } from "yaml";
 
+const VARIABLE_LINK_PREFIX = "var://";
+const groupSecretsCache = new Map<string, Record<string, string>>();
+
 // Get package root directory (works in both ESM and CJS)
 const getPackageRoot = (): string => {
   // Try ESM approach
@@ -109,8 +112,20 @@ export async function loadAppEnv(
   env: string,
   options: LoadEnvOptions = {},
 ): Promise<Record<string, string>> {
-  const shared = await loadSharedVars({ ...options, inject: false });
-  const appEnv = await loadEnv(app, env, { ...options, inject: false });
+  const packageRoot = getPackageRoot();
+  const baseDataDir = options.dataDir || join(packageRoot, "data");
+
+  const shared = await loadSharedVars({
+    ...options,
+    inject: false,
+    dataDir: baseDataDir,
+  });
+  const rawAppEnv = await loadEnv(app, env, {
+    ...options,
+    inject: false,
+    dataDir: baseDataDir,
+  });
+  const appEnv = resolveVariableLinks(rawAppEnv, shared, baseDataDir);
 
   const merged = { ...shared, ...appEnv };
 
@@ -119,6 +134,119 @@ export async function loadAppEnv(
   }
 
   return merged;
+}
+
+function resolveVariableLinks(
+  envVars: Record<string, string>,
+  sharedVars: Record<string, string>,
+  baseDataDir: string,
+): Record<string, string> {
+  const resolved: Record<string, string> = { ...envVars };
+
+  for (const [envKey, value] of Object.entries(envVars)) {
+    const variableId = parseVariableLink(value);
+    if (!variableId) {
+      continue;
+    }
+
+    const keyGroup = getVariableKeyGroup(variableId);
+    const variableName = getVariableName(variableId);
+
+    if (keyGroup === "var") {
+      const sharedValue = sharedVars[variableName];
+      if (sharedValue === undefined) {
+        throw new Error(
+          `Could not resolve ${envKey}: linked variable ${variableId} was not found in shared vars`,
+        );
+      }
+      resolved[envKey] = sharedValue;
+      continue;
+    }
+
+    if (keyGroup === "computed") {
+      const computedValue = process.env[variableName];
+      if (computedValue === undefined) {
+        throw new Error(
+          `Could not resolve ${envKey}: linked computed variable ${variableId} is not available at runtime`,
+        );
+      }
+      resolved[envKey] = computedValue;
+      continue;
+    }
+
+    const groupVars = loadGroupSecrets(baseDataDir, keyGroup);
+    const secretValue = groupVars[variableName];
+    if (secretValue === undefined) {
+      throw new Error(
+        `Could not resolve ${envKey}: linked variable ${variableId} was not found in vars/${keyGroup}.sops.yaml`,
+      );
+    }
+    resolved[envKey] = secretValue;
+  }
+
+  return resolved;
+}
+
+function parseVariableLink(value: string): string | null {
+  if (!value.startsWith(VARIABLE_LINK_PREFIX)) {
+    return null;
+  }
+
+  const rawId = value.slice(VARIABLE_LINK_PREFIX.length).trim();
+  if (!rawId) {
+    return null;
+  }
+
+  return rawId.startsWith("/") ? rawId : `/${rawId}`;
+}
+
+function getVariableKeyGroup(variableId: string): string {
+  const match = variableId.match(/^\/([^/]+)\//);
+  return match?.[1] ?? "var";
+}
+
+function getVariableName(variableId: string): string {
+  const parts = variableId.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? variableId;
+}
+
+function loadGroupSecrets(
+  baseDataDir: string,
+  keyGroup: string,
+): Record<string, string> {
+  const sopsFile = findGroupSopsFile(baseDataDir, keyGroup);
+  if (!sopsFile) {
+    throw new Error(
+      `Could not resolve linked variable: missing vars/${keyGroup}.sops.yaml in env package data or source project`,
+    );
+  }
+
+  const cached = groupSecretsCache.get(sopsFile);
+  if (cached) {
+    return cached;
+  }
+
+  const parsed = filterSopsMetadata(decryptSopsFile(sopsFile));
+  groupSecretsCache.set(sopsFile, parsed);
+  return parsed;
+}
+
+function findGroupSopsFile(baseDataDir: string, keyGroup: string): string | null {
+  const explicitSecretsDir = process.env.STACKPANEL_SECRETS_DIR;
+  const searchRoots = [
+    join(baseDataDir, "vars"),
+    explicitSecretsDir ? join(explicitSecretsDir, "vars") : null,
+    join(process.cwd(), ".stackpanel", "secrets", "vars"),
+  ].filter((root): root is string => Boolean(root));
+
+  for (const root of searchRoots) {
+    const candidate = join(root, `${keyGroup}.sops.yaml`);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 /**
