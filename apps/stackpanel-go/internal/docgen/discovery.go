@@ -114,6 +114,22 @@ func findNixDocHeaders(dir string, baseDir string) ([]DocSource, error) {
 	return results, nil
 }
 
+// isSeparatorLine checks if a line consists entirely of repeated separator characters
+// (e.g., "======", "------", "******", or similar decorative lines)
+func isSeparatorLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if len(trimmed) < 3 {
+		return false
+	}
+	// Check if the line is entirely composed of one repeated character
+	for _, ch := range []byte{'=', '-', '*', '~', '#'} {
+		if strings.Trim(trimmed, string(ch)) == "" {
+			return true
+		}
+	}
+	return false
+}
+
 // extractNixDocHeader extracts the documentation header from a .nix file
 // Returns the content if the file starts with a multi-line comment block (5+ lines)
 func extractNixDocHeader(path string) string {
@@ -135,6 +151,10 @@ func extractNixDocHeader(path string) string {
 			// Remove the # prefix and leading space
 			docLine := strings.TrimPrefix(trimmed, "#")
 			docLine = strings.TrimPrefix(docLine, " ")
+			// Skip separator lines (e.g., "==============")
+			if isSeparatorLine(docLine) {
+				continue
+			}
 			docLines = append(docLines, docLine)
 		} else if trimmed == "" && len(docLines) > 0 {
 			// Allow empty lines within the doc block

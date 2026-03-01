@@ -691,6 +691,99 @@ Example:
 	}
 }
 
+func TestIsSeparatorLine(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"==============================================================================", true},
+		{"===", true},
+		{"---", true},
+		{"***", true},
+		{"~~~", true},
+		{"###", true},
+		{"== ", false},  // trailing space means not purely separator chars
+		{" === ", true}, // with surrounding space (trimmed)
+		{"==", false},   // too short (< 3)
+		{"=", false},
+		{"", false},
+		{"hello", false},
+		{"module.nix - My Module", false},
+		{"=-=", false}, // mixed characters
+		{"a===", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := isSeparatorLine(tt.input)
+			if result != tt.expected {
+				t.Errorf("isSeparatorLine(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestExtractNixDocHeader_SkipsSeparators(t *testing.T) {
+	tmpDir := t.TempDir()
+	nixFile := filepath.Join(tmpDir, "module.nix")
+
+	content := `# ==============================================================================
+# module.nix - Bun Module Implementation
+#
+# Provides Bun/TypeScript application support.
+#
+# Features:
+#   - Automatic bun2nix CLI in devshell
+#   - Generated package.json with postinstall script
+# ==============================================================================
+{
+  config = {};
+}
+`
+	os.WriteFile(nixFile, []byte(content), 0644)
+
+	header := extractNixDocHeader(nixFile)
+
+	// Should not contain separator lines
+	if strings.Contains(header, "====") {
+		t.Errorf("expected separator lines to be stripped, got:\n%s", header)
+	}
+
+	// Should contain the actual title line
+	if !strings.Contains(header, "module.nix - Bun Module Implementation") {
+		t.Errorf("expected title line preserved, got:\n%s", header)
+	}
+}
+
+func TestConvertNixHeaderToMdx_SanitizedTitle(t *testing.T) {
+	// Simulate what extractNixDocHeader produces after separator stripping
+	header := "module.nix - Bun Module Implementation\n\nProvides Bun/TypeScript application support.\n\nFeatures:\n  - Automatic bun2nix CLI in devshell\n  - Generated package.json"
+
+	result := convertNixHeaderToMdx(header, "bun")
+
+	// Title should NOT be "======" and should strip "module.nix - " prefix
+	if strings.Contains(result, `title: "=="`) {
+		t.Errorf("title should not be separator line, got:\n%s", result)
+	}
+	if strings.Contains(result, "module.nix") {
+		t.Errorf("title should strip filename prefix, got:\n%s", result)
+	}
+	if !strings.Contains(result, "Bun Module Implementation") {
+		t.Errorf("expected clean title 'Bun Module Implementation', got:\n%s", result)
+	}
+}
+
+func TestConvertNixHeaderToMdx_PlainTitle(t *testing.T) {
+	// Some headers don't have the "filename.nix - " prefix
+	header := "Deployment Module\n\nAggregates all deployment provider modules.\n\nSupported hosts:\n  - cloudflare\n  - fly"
+
+	result := convertNixHeaderToMdx(header, "deployment")
+
+	if !strings.Contains(result, "title: Deployment Module") {
+		t.Errorf("expected plain title 'Deployment Module', got:\n%s", result)
+	}
+}
+
 func TestBuildUsageString(t *testing.T) {
 	rootCmd := &cobra.Command{Use: "app"}
 	subCmd := &cobra.Command{Use: "sub"}
