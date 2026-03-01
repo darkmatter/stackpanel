@@ -15,21 +15,28 @@ Stackpanel's approach to deployment follows the same philosophy as everything el
 
 - Need a `Dockerfile`? Stackpanel generates one optimized for your stack.
 - Need a Cloudflare Workers config? Declared in Nix, generated as standard config files.
-- Need AWS infrastructure? The SST extension provisions it with IAM, KMS, and OIDC already wired up.
+- Need AWS infrastructure? The [infra module system](./infrastructure) provisions it with IAM, KMS, and OIDC already wired up.
+- Need to manage deployment targets? The [machines module](./machines) discovers EC2 instances or accepts static definitions.
 
 The generated files are standard—`Dockerfile`, `fly.toml`, `sst.config.ts`—committed to Git and usable without Nix. Your CI pipeline reads them as normal config. If you eject from Stackpanel, the files stay.
 
 ## What's Available
 
 <Cards>
-  <Card title="Containers" href="./containers">
-    Build OCI-compatible container images using Nix or Dockerfile generation
+  <Card title="Infrastructure" href="./infrastructure">
+    Provision cloud resources with the Alchemy-based infra module system
+  </Card>
+  <Card title="Machines" href="./machines">
+    Define and discover deployment target machines (static or AWS EC2)
   </Card>
   <Card title="Cloudflare" href="./cloudflare">
     Deploy to Cloudflare Workers and Pages
   </Card>
   <Card title="Fly.io" href="./fly">
     Deploy to Fly.io with generated fly.toml and Dockerfile
+  </Card>
+  <Card title="Containers" href="./containers">
+    Build OCI-compatible container images using Nix or Dockerfile generation
   </Card>
   <Card title="SST" href="./sst">
     AWS infrastructure provisioning with KMS, IAM, and OIDC authentication
@@ -114,9 +121,17 @@ Cloudflare Workers and Pages deployments are lightweight—no containers involve
 
 Fly.io deployments use containers. Stackpanel generates both the `Dockerfile` and `fly.toml`, with the correct ports, health checks, and environment variables wired up from your Stackpanel config.
 
-### SST (AWS)
+### Infrastructure (Alchemy)
 
-SST is the most comprehensive—it provisions cloud infrastructure (KMS keys, IAM roles, S3 buckets) alongside your deployment. The SST extension handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials.
+The [infra module system](./infrastructure) is the most comprehensive approach -- it provisions cloud infrastructure (KMS keys, IAM roles, databases, caches) alongside your deployment using Alchemy. It handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials. Use `infra:deploy --adopt` to bring existing resources under management.
+
+### Machines
+
+The [machines module](./machines) maintains an inventory of your deployment targets. Machines can be declared statically or discovered from AWS EC2 at deploy time. The inventory feeds into the Studio UI's Deploy panel and Colmena for NixOS deployments.
+
+### SST (Legacy)
+
+[SST](./sst) is an alternative infrastructure approach using the SST framework directly. For new projects, the [infra module system](./infrastructure) is recommended as it provides more flexibility and integrates with the broader Stackpanel infra pipeline.
 
 ## Reference
 

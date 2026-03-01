@@ -329,7 +329,7 @@ Changes needed:
 ### Current approach (keep for compatibility)
 
 Env-style codegen: Nix generates typed TypeScript modules in
-`packages/env/src/generated/` with `process.env.KEY` access patterns. This
+`packages/gen/env/` with `process.env.KEY` access patterns. This
 continues to work via the existing `ref+sops://` variable values.
 
 ### New approach: sops decrypt + quicktype

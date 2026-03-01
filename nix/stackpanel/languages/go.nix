@@ -80,6 +80,13 @@ in
     stackpanel.devshell.env = {
       GOROOT = "${cfg.package}/share/go/";
       GOTOOLCHAIN = "local";
+    }
+    # CGO on macOS: the Nix clang wrapper reads NIX_LDFLAGS, but intermediary
+    # tools (turbo, bun, air) may strip it. Explicitly set CGO_LDFLAGS with
+    # the concrete store path to libresolv so `go build` with CGO works
+    # everywhere: interactive shell, process-compose, turbo pipelines, CI.
+    // lib.optionalAttrs pkgs.stdenv.isDarwin {
+      CGO_LDFLAGS = "-L${pkgs.darwin.libresolv}/lib";
     };
 
     stackpanel.devshell.hooks.main = [
@@ -89,6 +96,8 @@ in
         export PATH="$GOPATH/bin:$PATH"
       ''
     ];
+
+
 
     stackpanel.motd.features = [ "Go ${cfg.package.version or ""}" ];
   };
