@@ -190,6 +190,24 @@ in
             allPackages = (devshellOutputs.packages or [ ]) ++ (devshellOutputs._commandPkgs or [ ]);
 
             # ===================================================================
+            # Unified profile: single buildEnv instead of 90+ PATH entries
+            #
+            # When the profile module is enabled, we pass the profile derivation
+            # to mkShell instead of the full individual package list.  This
+            # collapses PATH down to a single entry.
+            #
+            # allPackages is still kept around for serialization / passthru.
+            # ===================================================================
+            profileEnabled = devshellOutputs.profile.enable or false;
+            profileDrv = devshellOutputs.profile.package or null;
+
+            shellPackages =
+              if profileEnabled && profileDrv != null then
+                [ profileDrv ]
+              else
+                allPackages;
+
+            # ===================================================================
             # All env vars (from stackpanel modules only)
             # ===================================================================
             allEnv = devshellOutputs.env or { };
@@ -258,7 +276,7 @@ in
             stackpanelShell = pkgs.mkShell {
               name = "stackpanel-${spConfig.name or "dev"}";
 
-              packages = allPackages;
+              packages = shellPackages;
               nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
               buildInputs = devshellOutputs.buildInputs or [ ];
 
