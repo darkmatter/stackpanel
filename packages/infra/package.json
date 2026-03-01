@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@aws-sdk/client-ec2": "catalog:",
     "@aws-sdk/client-iam": "catalog:",
     "@aws-sdk/client-kms": "catalog:",
     "@aws-sdk/client-ssm": "catalog:",
