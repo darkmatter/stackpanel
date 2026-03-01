@@ -31,6 +31,27 @@ type Config struct {
 	Network            Network             `json:"network"`
 	MOTD               MOTD                `json:"motd"`
 	MissingFlakeInputs []MissingFlakeInput `json:"missingFlakeInputs"`
+	Healthchecks       []Healthcheck       `json:"healthchecks"`
+}
+
+// Healthcheck represents a healthcheck definition from Nix configuration.
+// These are the check definitions (not results) — they tell the CLI what to run.
+type Healthcheck struct {
+	ID                 string   `json:"id"`
+	Name               string   `json:"name"`
+	Description        *string  `json:"description"`
+	Module             string   `json:"module"`
+	Type               string   `json:"type"`     // HEALTHCHECK_TYPE_SCRIPT, _HTTP, _TCP, _NIX
+	Severity           string   `json:"severity"` // HEALTHCHECK_SEVERITY_CRITICAL, _WARNING, _INFO
+	ScriptPath         *string  `json:"scriptPath"`
+	HTTPUrl            *string  `json:"httpUrl"`
+	HTTPMethod         string   `json:"httpMethod"`
+	HTTPExpectedStatus int      `json:"httpExpectedStatus"`
+	TCPHost            *string  `json:"tcpHost"`
+	TCPPort            *int     `json:"tcpPort"`
+	Timeout            int      `json:"timeout"`
+	Tags               []string `json:"tags"`
+	Enabled            bool     `json:"enabled"`
 }
 
 // MissingFlakeInput represents a flake input that an enabled module requires
