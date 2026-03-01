@@ -32,6 +32,7 @@ type App struct {
 	Domain      *string                `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`           // Local development domain
 	// Environment configurations (key = environment name like "dev", "prod").
 	Environments  map[string]*AppEnvironment `protobuf:"bytes,7,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Deploy        *AppDeploy                 `protobuf:"bytes,8,opt,name=deploy,proto3" json:"deploy,omitempty"` // Colmena deployment mapping for this app
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +116,98 @@ func (x *App) GetEnvironments() map[string]*AppEnvironment {
 	return nil
 }
 
+func (x *App) GetDeploy() *AppDeploy {
+	if x != nil {
+		return x.Deploy
+	}
+	return nil
+}
+
+// Deployment mapping for Colmena (targets, roles, and modules)
+type AppDeploy struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`                                // Enable deployment mapping for this app
+	Targets       []string               `protobuf:"bytes,2,rep,name=targets,proto3" json:"targets,omitempty"`                               // Target machine ids or tag selectors
+	Role          *string                `protobuf:"bytes,3,opt,name=role,proto3,oneof" json:"role,omitempty"`                               // Deployment role label for this app
+	NixosModules  []string               `protobuf:"bytes,4,rep,name=nixos_modules,json=nixosModules,proto3" json:"nixos_modules,omitempty"` // Extra NixOS modules to import for this app
+	System        *string                `protobuf:"bytes,5,opt,name=system,proto3,oneof" json:"system,omitempty"`                           // Target system/architecture (e.g., x86_64-linux)
+	Secrets       []string               `protobuf:"bytes,6,rep,name=secrets,proto3" json:"secrets,omitempty"`                               // Secret references required by this app during deploy
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppDeploy) Reset() {
+	*x = AppDeploy{}
+	mi := &file_apps_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppDeploy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppDeploy) ProtoMessage() {}
+
+func (x *AppDeploy) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppDeploy.ProtoReflect.Descriptor instead.
+func (*AppDeploy) Descriptor() ([]byte, []int) {
+	return file_apps_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AppDeploy) GetEnable() bool {
+	if x != nil {
+		return x.Enable
+	}
+	return false
+}
+
+func (x *AppDeploy) GetTargets() []string {
+	if x != nil {
+		return x.Targets
+	}
+	return nil
+}
+
+func (x *AppDeploy) GetRole() string {
+	if x != nil && x.Role != nil {
+		return *x.Role
+	}
+	return ""
+}
+
+func (x *AppDeploy) GetNixosModules() []string {
+	if x != nil {
+		return x.NixosModules
+	}
+	return nil
+}
+
+func (x *AppDeploy) GetSystem() string {
+	if x != nil && x.System != nil {
+		return *x.System
+	}
+	return ""
+}
+
+func (x *AppDeploy) GetSecrets() []string {
+	if x != nil {
+		return x.Secrets
+	}
+	return nil
+}
+
 // Environment configuration (e.g., dev, staging, production)
 type AppEnvironment struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
@@ -130,7 +223,7 @@ type AppEnvironment struct {
 
 func (x *AppEnvironment) Reset() {
 	*x = AppEnvironment{}
-	mi := &file_apps_proto_msgTypes[1]
+	mi := &file_apps_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -142,7 +235,7 @@ func (x *AppEnvironment) String() string {
 func (*AppEnvironment) ProtoMessage() {}
 
 func (x *AppEnvironment) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_proto_msgTypes[1]
+	mi := &file_apps_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -155,7 +248,7 @@ func (x *AppEnvironment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppEnvironment.ProtoReflect.Descriptor instead.
 func (*AppEnvironment) Descriptor() ([]byte, []int) {
-	return file_apps_proto_rawDescGZIP(), []int{1}
+	return file_apps_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AppEnvironment) GetName() string {
@@ -189,7 +282,7 @@ type Apps struct {
 
 func (x *Apps) Reset() {
 	*x = Apps{}
-	mi := &file_apps_proto_msgTypes[2]
+	mi := &file_apps_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -201,7 +294,7 @@ func (x *Apps) String() string {
 func (*Apps) ProtoMessage() {}
 
 func (x *Apps) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_proto_msgTypes[2]
+	mi := &file_apps_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -214,7 +307,7 @@ func (x *Apps) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Apps.ProtoReflect.Descriptor instead.
 func (*Apps) Descriptor() ([]byte, []int) {
-	return file_apps_proto_rawDescGZIP(), []int{2}
+	return file_apps_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Apps) GetApps() map[string]*App {
@@ -229,7 +322,7 @@ var File_apps_proto protoreflect.FileDescriptor
 const file_apps_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"apps.proto\x12\rstackpanel.db\"\xfa\x02\n" +
+	"apps.proto\x12\rstackpanel.db\"\xac\x03\n" +
 	"\x03App\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x12\n" +
@@ -237,14 +330,24 @@ const file_apps_proto_rawDesc = "" +
 	"\x04type\x18\x04 \x01(\tH\x01R\x04type\x88\x01\x01\x12\x17\n" +
 	"\x04port\x18\x05 \x01(\x05H\x02R\x04port\x88\x01\x01\x12\x1b\n" +
 	"\x06domain\x18\x06 \x01(\tH\x03R\x06domain\x88\x01\x01\x12H\n" +
-	"\fenvironments\x18\a \x03(\v2$.stackpanel.db.App.EnvironmentsEntryR\fenvironments\x1a^\n" +
+	"\fenvironments\x18\a \x03(\v2$.stackpanel.db.App.EnvironmentsEntryR\fenvironments\x120\n" +
+	"\x06deploy\x18\b \x01(\v2\x18.stackpanel.db.AppDeployR\x06deploy\x1a^\n" +
 	"\x11EnvironmentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
 	"\x05value\x18\x02 \x01(\v2\x1d.stackpanel.db.AppEnvironmentR\x05value:\x028\x01B\x0e\n" +
 	"\f_descriptionB\a\n" +
 	"\x05_typeB\a\n" +
 	"\x05_portB\t\n" +
-	"\a_domain\"\xcd\x01\n" +
+	"\a_domain\"\xc6\x01\n" +
+	"\tAppDeploy\x12\x16\n" +
+	"\x06enable\x18\x01 \x01(\bR\x06enable\x12\x18\n" +
+	"\atargets\x18\x02 \x03(\tR\atargets\x12\x17\n" +
+	"\x04role\x18\x03 \x01(\tH\x00R\x04role\x88\x01\x01\x12#\n" +
+	"\rnixos_modules\x18\x04 \x03(\tR\fnixosModules\x12\x1b\n" +
+	"\x06system\x18\x05 \x01(\tH\x01R\x06system\x88\x01\x01\x12\x18\n" +
+	"\asecrets\x18\x06 \x03(\tR\asecretsB\a\n" +
+	"\x05_roleB\t\n" +
+	"\a_system\"\xcd\x01\n" +
 	"\x0eAppEnvironment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x128\n" +
@@ -271,26 +374,28 @@ func file_apps_proto_rawDescGZIP() []byte {
 	return file_apps_proto_rawDescData
 }
 
-var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_apps_proto_goTypes = []any{
 	(*App)(nil),            // 0: stackpanel.db.App
-	(*AppEnvironment)(nil), // 1: stackpanel.db.AppEnvironment
-	(*Apps)(nil),           // 2: stackpanel.db.Apps
-	nil,                    // 3: stackpanel.db.App.EnvironmentsEntry
-	nil,                    // 4: stackpanel.db.AppEnvironment.EnvEntry
-	nil,                    // 5: stackpanel.db.Apps.AppsEntry
+	(*AppDeploy)(nil),      // 1: stackpanel.db.AppDeploy
+	(*AppEnvironment)(nil), // 2: stackpanel.db.AppEnvironment
+	(*Apps)(nil),           // 3: stackpanel.db.Apps
+	nil,                    // 4: stackpanel.db.App.EnvironmentsEntry
+	nil,                    // 5: stackpanel.db.AppEnvironment.EnvEntry
+	nil,                    // 6: stackpanel.db.Apps.AppsEntry
 }
 var file_apps_proto_depIdxs = []int32{
-	3, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
-	4, // 1: stackpanel.db.AppEnvironment.env:type_name -> stackpanel.db.AppEnvironment.EnvEntry
-	5, // 2: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
-	1, // 3: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
-	0, // 4: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
+	1, // 1: stackpanel.db.App.deploy:type_name -> stackpanel.db.AppDeploy
+	5, // 2: stackpanel.db.AppEnvironment.env:type_name -> stackpanel.db.AppEnvironment.EnvEntry
+	6, // 3: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
+	2, // 4: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
+	0, // 5: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_apps_proto_init() }
@@ -300,13 +405,14 @@ func file_apps_proto_init() {
 	}
 	file_apps_proto_msgTypes[0].OneofWrappers = []any{}
 	file_apps_proto_msgTypes[1].OneofWrappers = []any{}
+	file_apps_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_apps_proto_rawDesc), len(file_apps_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

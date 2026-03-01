@@ -352,7 +352,15 @@ type SecretsGroup struct {
 	// Vals reference that resolves to the AGE private key.
 	// Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
 	// Can be overridden for other backends (Vault, file, etc.).
-	Ref           *string `protobuf:"bytes,3,opt,name=ref,proto3,oneof" json:"ref,omitempty"`
+	Ref *string `protobuf:"bytes,3,opt,name=ref,proto3,oneof" json:"ref,omitempty"`
+	// Shell command that outputs the AGE private key to stdout.
+	// Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
+	// Defaults to: sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age
+	// Override for alternative key stores, e.g.:
+	//   - chamber read keys/stackpanel/dev current -q
+	//   - op read 'op://vault/stackpanel/dev-age-key'
+	//   - aws ssm get-parameter --name /keys/dev --with-decryption --query Parameter.Value --output text
+	KeyCmd        *string `protobuf:"bytes,4,opt,name=key_cmd,json=keyCmd,proto3,oneof" json:"key_cmd,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -408,6 +416,13 @@ func (x *SecretsGroup) GetRef() string {
 	return ""
 }
 
+func (x *SecretsGroup) GetKeyCmd() string {
+	if x != nil && x.KeyCmd != nil {
+		return *x.KeyCmd
+	}
+	return ""
+}
+
 var File_secrets_proto protoreflect.FileDescriptor
 
 const file_secrets_proto_rawDesc = "" +
@@ -458,15 +473,18 @@ const file_secrets_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x121\n" +
 	"\x05value\x18\x02 \x01(\v2\x1b.stackpanel.db.SecretsGroupR\x05value:\x028\x01B\x12\n" +
 	"\x10_input_directoryB\x0e\n" +
-	"\f_secrets_dir\"\x84\x01\n" +
+	"\f_secrets_dir\"\xae\x01\n" +
 	"\fSecretsGroup\x12\x1c\n" +
 	"\aage_pub\x18\x01 \x01(\tH\x00R\x06agePub\x88\x01\x01\x12\x1e\n" +
 	"\bssm_path\x18\x02 \x01(\tH\x01R\assmPath\x88\x01\x01\x12\x15\n" +
-	"\x03ref\x18\x03 \x01(\tH\x02R\x03ref\x88\x01\x01B\n" +
+	"\x03ref\x18\x03 \x01(\tH\x02R\x03ref\x88\x01\x01\x12\x1c\n" +
+	"\akey_cmd\x18\x04 \x01(\tH\x03R\x06keyCmd\x88\x01\x01B\n" +
 	"\n" +
 	"\b_age_pubB\v\n" +
 	"\t_ssm_pathB\x06\n" +
-	"\x04_refB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x04_refB\n" +
+	"\n" +
+	"\b_key_cmdB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_secrets_proto_rawDescOnce sync.Once

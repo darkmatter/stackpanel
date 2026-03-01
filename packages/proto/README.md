@@ -14,10 +14,11 @@ nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →
 ## Quick Start
 
 ```bash
-# Generate everything (protos from Nix + code from buf)
-./generate.sh
+# From repo root (recommended; runs in devshell)
+nix develop --impure -c ./packages/proto/generate.sh
 
-# Or step by step:
+# Or, inside the devshell:
+./generate.sh
 ./generate.sh proto   # Generate .proto files from Nix
 ./generate.sh buf     # Run buf generate
 ./generate.sh clean   # Remove all generated files
@@ -35,7 +36,7 @@ nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →
 
 3. Generate:
    ```bash
-   ./generate.sh
+   nix develop --impure -c ./packages/proto/generate.sh
    ```
 
 ## Schema Syntax
@@ -106,7 +107,7 @@ Rules:
 
 ## Generated Output
 
-After running `./generate.sh`:
+After running `./packages/proto/generate.sh` (in devshell):
 
 ```
 packages/proto/

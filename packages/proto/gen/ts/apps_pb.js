@@ -8,7 +8,7 @@ import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
  * Describes the file apps.proto.
  */
 export const file_apps = /*@__PURE__*/
-  fileDesc("CgphcHBzLnByb3RvEg1zdGFja3BhbmVsLmRiIrMCCgNBcHASDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEgwKBHBhdGgYAyABKAkSEQoEdHlwZRgEIAEoCUgBiAEBEhEKBHBvcnQYBSABKAVIAogBARITCgZkb21haW4YBiABKAlIA4gBARI6CgxlbnZpcm9ubWVudHMYByADKAsyJC5zdGFja3BhbmVsLmRiLkFwcC5FbnZpcm9ubWVudHNFbnRyeRpSChFFbnZpcm9ubWVudHNFbnRyeRILCgNrZXkYASABKAkSLAoFdmFsdWUYAiABKAsyHS5zdGFja3BhbmVsLmRiLkFwcEVudmlyb25tZW50OgI4AUIOCgxfZGVzY3JpcHRpb25CBwoFX3R5cGVCBwoFX3BvcnRCCQoHX2RvbWFpbiKpAQoOQXBwRW52aXJvbm1lbnQSDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEjMKA2VudhgDIAMoCzImLnN0YWNrcGFuZWwuZGIuQXBwRW52aXJvbm1lbnQuRW52RW50cnkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIOCgxfZGVzY3JpcHRpb24idAoEQXBwcxIrCgRhcHBzGAEgAygLMh0uc3RhY2twYW5lbC5kYi5BcHBzLkFwcHNFbnRyeRo/CglBcHBzRW50cnkSCwoDa2V5GAEgASgJEiEKBXZhbHVlGAIgASgLMhIuc3RhY2twYW5lbC5kYi5BcHA6AjgBQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
+  fileDesc("CgphcHBzLnByb3RvEg1zdGFja3BhbmVsLmRiIt0CCgNBcHASDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEgwKBHBhdGgYAyABKAkSEQoEdHlwZRgEIAEoCUgBiAEBEhEKBHBvcnQYBSABKAVIAogBARITCgZkb21haW4YBiABKAlIA4gBARI6CgxlbnZpcm9ubWVudHMYByADKAsyJC5zdGFja3BhbmVsLmRiLkFwcC5FbnZpcm9ubWVudHNFbnRyeRIoCgZkZXBsb3kYCCABKAsyGC5zdGFja3BhbmVsLmRiLkFwcERlcGxveRpSChFFbnZpcm9ubWVudHNFbnRyeRILCgNrZXkYASABKAkSLAoFdmFsdWUYAiABKAsyHS5zdGFja3BhbmVsLmRiLkFwcEVudmlyb25tZW50OgI4AUIOCgxfZGVzY3JpcHRpb25CBwoFX3R5cGVCBwoFX3BvcnRCCQoHX2RvbWFpbiKQAQoJQXBwRGVwbG95Eg4KBmVuYWJsZRgBIAEoCBIPCgd0YXJnZXRzGAIgAygJEhEKBHJvbGUYAyABKAlIAIgBARIVCg1uaXhvc19tb2R1bGVzGAQgAygJEhMKBnN5c3RlbRgFIAEoCUgBiAEBEg8KB3NlY3JldHMYBiADKAlCBwoFX3JvbGVCCQoHX3N5c3RlbSKpAQoOQXBwRW52aXJvbm1lbnQSDAoEbmFtZRgBIAEoCRIYCgtkZXNjcmlwdGlvbhgCIAEoCUgAiAEBEjMKA2VudhgDIAMoCzImLnN0YWNrcGFuZWwuZGIuQXBwRW52aXJvbm1lbnQuRW52RW50cnkaKgoIRW52RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIOCgxfZGVzY3JpcHRpb24idAoEQXBwcxIrCgRhcHBzGAEgAygLMh0uc3RhY2twYW5lbC5kYi5BcHBzLkFwcHNFbnRyeRo/CglBcHBzRW50cnkSCwoDa2V5GAEgASgJEiEKBXZhbHVlGAIgASgLMhIuc3RhY2twYW5lbC5kYi5BcHA6AjgBQjpaOGdpdGh1Yi5jb20vZGFya21hdHRlci9zdGFja3BhbmVsL3BhY2thZ2VzL3Byb3RvL2dlbi9nb3BiYgZwcm90bzM");
 
 /**
  * Describes the message stackpanel.db.App.
@@ -18,16 +18,23 @@ export const AppSchema = /*@__PURE__*/
   messageDesc(file_apps, 0);
 
 /**
+ * Describes the message stackpanel.db.AppDeploy.
+ * Use `create(AppDeploySchema)` to create a new message.
+ */
+export const AppDeploySchema = /*@__PURE__*/
+  messageDesc(file_apps, 1);
+
+/**
  * Describes the message stackpanel.db.AppEnvironment.
  * Use `create(AppEnvironmentSchema)` to create a new message.
  */
 export const AppEnvironmentSchema = /*@__PURE__*/
-  messageDesc(file_apps, 1);
+  messageDesc(file_apps, 2);
 
 /**
  * Describes the message stackpanel.db.Apps.
  * Use `create(AppsSchema)` to create a new message.
  */
 export const AppsSchema = /*@__PURE__*/
-  messageDesc(file_apps, 2);
+  messageDesc(file_apps, 3);
 
