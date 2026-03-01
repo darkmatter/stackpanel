@@ -198,8 +198,23 @@ in
       sops = {
         file-path = lib.mkOption {
           type = lib.types.str;
-          default = ".stackpanel/secrets/infra.yaml";
-          description = "Path to SOPS-encrypted YAML file for infra outputs";
+          default = ".stackpanel/secrets/vars/dev.sops.yaml";
+          description = ''
+            Path to SOPS-encrypted YAML file for infra outputs.
+            Defaults to the dev group file. Uses `sops set` for non-destructive
+            per-key updates, preserving existing secrets in the file.
+          '';
+        };
+
+        group = lib.mkOption {
+          type = lib.types.str;
+          default = "dev";
+          description = ''
+            Secrets group to write outputs to (e.g., "dev", "prod", "common").
+            Used to resolve the SOPS file path from the secrets directory:
+              <secrets-dir>/vars/<group>.sops.yaml
+            When set, overrides file-path.
+          '';
         };
       };
 
