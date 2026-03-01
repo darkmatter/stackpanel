@@ -1,141 +1,84 @@
 ---
 title: Containers & Deployment
-description: Build containers and deploy your applications to production
+description: Host-aware deployment for Cloudflare and Fly.io
 icon: cloud
 ---
 
 import { Cards, Card } from "fumadocs-ui/components/card";
 import { Callout } from "fumadocs-ui/components/callout";
 
-Stackpanel supports building containers and deploying to multiple platforms—all configured from the same Nix source of truth as your dev environment. Container definitions, deployment targets, and infrastructure provisioning are declared alongside your services and apps, so everything stays in sync.
+Stackpanel deployment is app-first: each app opts into deployment, chooses a host, and then host-specific modules generate the files/scripts needed for that host.
 
-## The Deployment Story
+## Routing Model
 
-Stackpanel's approach to deployment follows the same philosophy as everything else: **declare it once, generate the artifacts your tools expect.**
+Deployment selection is resolved in this order:
 
-- Need a `Dockerfile`? Stackpanel generates one optimized for your stack.
-- Need a Cloudflare Workers config? Declared in Nix, generated as standard config files.
-- Need AWS infrastructure? The [infra module system](./infrastructure) provisions it with IAM, KMS, and OIDC already wired up.
-- Need to manage deployment targets? The [machines module](./machines) discovers EC2 instances or accepts static definitions.
+1. `stackpanel.apps.<name>.deployment.host` (explicit per app)
+2. `stackpanel.deployment.defaultHost` (global fallback, default: `"cloudflare"`)
 
-The generated files are standard—`Dockerfile`, `fly.toml`, `sst.config.ts`—committed to Git and usable without Nix. Your CI pipeline reads them as normal config. If you eject from Stackpanel, the files stay.
+An app is deployable when:
 
-## What's Available
+- `stackpanel.apps.<name>.deployment.enable = true`
+- one framework flag is enabled (for example `framework.tanstack-start.enable = true`)
 
-<Cards>
-  <Card title="Infrastructure" href="./infrastructure">
-    Provision cloud resources with the Alchemy-based infra module system
-  </Card>
-  <Card title="Machines" href="./machines">
-    Define and discover deployment target machines (static or AWS EC2)
-  </Card>
-  <Card title="Cloudflare" href="./cloudflare">
-    Deploy to Cloudflare Workers and Pages
-  </Card>
-  <Card title="Fly.io" href="./fly">
-    Deploy to Fly.io with generated fly.toml and Dockerfile
-  </Card>
-  <Card title="Containers" href="./containers">
-    Build OCI-compatible container images using Nix or Dockerfile generation
-  </Card>
-  <Card title="SST" href="./sst">
-    AWS infrastructure provisioning with KMS, IAM, and OIDC authentication
-  </Card>
-</Cards>
+## What Runs Where
 
-## Quick Example
+| Host | Provisioning path | Notes |
+|------|-------------------|-------|
+| `cloudflare` | `infra:deploy` (Alchemy infra module) | Framework × host maps to a Cloudflare Alchemy resource |
+| `fly` | Fly module workflow (`flyctl`, generated `fly.toml`) | Container-based deploy flow; not managed by infra deployment module |
 
-A typical deployment setup might combine containers with a deployment target:
+<Callout type="info">
+The infra deployment module currently provisions Cloudflare apps only. Fly apps are handled by the Fly deployment module.
+</Callout>
+
+## Minimal Example
 
 ```nix
 {
-  # Define your apps
+  stackpanel.deployment.defaultHost = "cloudflare";
+
+  stackpanel.apps.web = {
+    path = "apps/web";
+    framework.tanstack-start.enable = true;
+    deployment = {
+      enable = true;
+      # host omitted -> uses defaultHost (cloudflare)
+      bindings = [ "CORS_ORIGIN" "BETTER_AUTH_SECRET" ];
+      secrets = [ "BETTER_AUTH_SECRET" ];
+      cloudflare.workerName = "stackpanel-web";
+    };
+  };
+
   stackpanel.apps.api = {
-    port = 1;
-    root = "./apps/api";
-    build = "bun run build";
-  };
-
-  # Build a container for the API
-  stackpanel.containers.api = {
-    enable = true;
-    app = "api";
-    registry = "ghcr.io/my-org/myapp-api";
-  };
-
-  # Deploy to Fly.io
-  stackpanel.deployment.fly = {
-    enable = true;
-    apps.api = {
-      region = "iad";
-      vm-size = "shared-cpu-1x";
+    path = "apps/server";
+    framework.hono.enable = true;
+    deployment = {
+      enable = true;
+      host = "fly";
+      fly.appName = "stackpanel-api";
+      container = {
+        type = "bun";
+        port = 3000;
+      };
     };
   };
 }
 ```
 
-From this, Stackpanel generates a `Dockerfile` for the API, a `fly.toml` with the correct configuration, and optionally CI steps that build and deploy on merge to `main`.
+## Provider Guides
 
-## How Deployment Connects to CI
-
-Deployment configuration feeds into [CI generation](/docs/apps-ci/ci-generation). When you define a deployment target and enable the CI extension, the generated GitHub Actions workflow includes the appropriate deploy steps:
-
-```
-stackpanel.apps.api.container
-  → Generates container image
-  → CI workflow gets docker build + push steps
-
-stackpanel.apps.api.deployment.host = "fly"
-  → Generates fly.toml
-  → CI workflow gets flyctl deploy step
-
-stackpanel.apps.api.deployment.host = "cloudflare"
-  → Generates wrangler config
-  → CI workflow gets cloudflare deploy step
-```
-
-Each deployment platform adds its own steps to the CI pipeline. Multiple platforms can coexist—deploy your frontend to Cloudflare and your API to Fly.io from the same workflow.
-
-<Callout type="info">
-All deployment configuration generates standard files that work without Nix. Your CI runners don't need Nix installed—they use Docker, flyctl, wrangler, or sst directly.
-</Callout>
-
-## Container Strategies
-
-Stackpanel supports two approaches to building containers:
-
-| Strategy | How It Works | Best For |
-|----------|-------------|----------|
-| **Dockerfile generation** | Generates a standard `Dockerfile` optimized for your stack | Most projects, standard CI/CD pipelines |
-| **Nix-based containers** | Uses `nix2container` to build minimal OCI images directly from Nix | Minimal image size, reproducible builds |
-
-The Dockerfile approach is more portable—any Docker-compatible CI can build it. The Nix approach produces smaller, more reproducible images but requires Nix at build time. See [Containers](./containers) for details on both strategies.
-
-## Platform-Specific Notes
-
-### Cloudflare
-
-Cloudflare Workers and Pages deployments are lightweight—no containers involved. Stackpanel generates the `wrangler.toml` configuration and can produce the correct build output format for your framework (static export for Pages, Worker bundles for Workers).
-
-### Fly.io
-
-Fly.io deployments use containers. Stackpanel generates both the `Dockerfile` and `fly.toml`, with the correct ports, health checks, and environment variables wired up from your Stackpanel config.
-
-### Infrastructure (Alchemy)
-
-The [infra module system](./infrastructure) is the most comprehensive approach -- it provisions cloud infrastructure (KMS keys, IAM roles, databases, caches) alongside your deployment using Alchemy. It handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials. Use `infra:deploy --adopt` to bring existing resources under management.
-
-### Machines
-
-The [machines module](./machines) maintains an inventory of your deployment targets. Machines can be declared statically or discovered from AWS EC2 at deploy time. The inventory feeds into the Studio UI's Deploy panel and Colmena for NixOS deployments.
-
-### SST (Legacy)
-
-[SST](./sst) is an alternative infrastructure approach using the SST framework directly. For new projects, the [infra module system](./infrastructure) is recommended as it provides more flexibility and integrates with the broader Stackpanel infra pipeline.
-
-## Reference
-
-- [Options Reference → CI](/docs/reference/ci) for CI generation options
-- [Apps & CI](/docs/apps-ci) for how app definitions drive deployment
-- [Core Concepts → Building Source](/docs/concepts/building-source) for why deployment config is generated
-- [Core Concepts → File Generation](/docs/concepts/file-generation) for how generated files work
+<Cards>
+  <Card title="Cloudflare" href="./cloudflare">
+    Configure per-app Cloudflare options and deploy with `infra:deploy`
+  </Card>
+  <Card title="Fly.io" href="./fly">
+    Generate `fly.toml`, use wrapped `fly-<app>` commands, and deploy containers
+  </Card>
+  <Card title="Infrastructure" href="./infrastructure">
+    Understand infra modules, Alchemy generation, stages, and output sync
+  </Card>
+  <Card title="Machines" href="./machines">
+    Define machine inventory for Colmena and infrastructure-aware workflows
+  </Card>
+</Cards>

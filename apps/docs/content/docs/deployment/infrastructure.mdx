@@ -87,7 +87,7 @@ infra:deploy
 | Module | What it provisions | Key options |
 |--------|-------------------|-------------|
 | **aws-secrets** | IAM role, OIDC provider, KMS key + alias | `oidc.provider`, `iam.role-name`, `kms.alias` |
-| **deployment** | Cloudflare Workers/Pages per app | Per-app `deployment.host = "cloudflare"` |
+| **deployment** | Cloudflare app hosting per app | Per-app `deployment.host = "cloudflare"` (or `defaultHost`) |
 | **database** | Neon Postgres or devenv/Docker Postgres | `provider` (neon/devenv/docker) |
 | **cache** | Upstash Redis or devenv/Docker Redis | `provider` (upstash/devenv/docker) |
 | **machines** | Machine inventory (static or AWS EC2) | `source` (static/aws-ec2) |
@@ -277,7 +277,7 @@ stackpanel.infra.aws.secrets = {
 
 ## Deployment Module
 
-The deployment infra module provisions hosting resources for your apps. Currently supports Cloudflare Workers:
+The infra deployment module provisions hosting resources for apps targeting Cloudflare.
 
 ```nix
 stackpanel.apps.web = {
@@ -293,17 +293,24 @@ stackpanel.apps.web = {
 };
 ```
 
-Supported framework/host combinations:
+Host resolution uses app config first, then the global default:
 
-| Framework | Cloudflare | Fly.io |
-|-----------|-----------|--------|
-| `tanstack-start` | TanStackStart Worker | Container |
-| `nextjs` | Nextjs Worker | Container |
-| `vite` | Vite Worker | Container |
-| `hono` | Worker (Node compat) | Container |
-| `astro` | Astro Worker | Container |
-| `remix` | Remix Worker | Container |
-| `nuxt` | Nuxt Worker | Container |
+- `apps.<name>.deployment.host`
+- fallback: `stackpanel.deployment.defaultHost`
+
+Supported framework/host combinations in the infra deployment module:
+
+| Framework | Cloudflare resource |
+|-----------|---------------------|
+| `tanstack-start` | TanStackStart |
+| `nextjs` | Nextjs |
+| `vite` | cloudflare.Vite |
+| `hono` | cloudflare.Worker |
+| `astro` | Astro |
+| `remix` | Remix |
+| `nuxt` | Nuxt |
+
+Fly deployment is handled separately by the Fly deployment module (`flyctl` + generated `fly.toml`).
 
 ## Generated Files
 
