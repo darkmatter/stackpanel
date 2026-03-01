@@ -63,6 +63,7 @@
     "@stackpanel/auth": "workspace:*",
     "@stackpanel/docs-content": "workspace:*",
     "@gen/env": "workspace:*",
+    "@gen/featureflags": "workspace:*",
     "@stackpanel/proto": "workspace:*",
     "@stackpanel/ui-core": "workspace:*",
     "@stackpanel/ui-web": "workspace:*",

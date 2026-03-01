@@ -1,0 +1,4 @@
+{ ... }:
+{
+  imports = [ ./module.nix ];
+}
