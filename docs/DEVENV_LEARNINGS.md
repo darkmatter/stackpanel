@@ -220,17 +220,49 @@ gc/
 **What devenv does:**
 - Creates a unified profile derivation with all packages
 - Single symlink to profile in store
+- Uses Nix's `buildEnv` to merge all packages into one directory tree
+
+**Example structure:**
+```
+.devenv/profile/ -> /nix/store/...-devenv-profile/
+├── bin/           # 223 binaries (all symlinked to original store paths)
+│   ├── bun -> /nix/store/...-bun-1.3.5/bin/bun
+│   ├── cargo -> /nix/store/...-cargo-1.91.1/bin/cargo
+│   ├── git -> /nix/store/...-git-2.51.2/bin/git
+│   └── ... (220 more)
+├── lib/           # Merged libraries
+├── share/         # Merged share data (man pages, etc.)
+├── include/       # Merged headers
+└── etc/           # Merged configs
+```
 
 **Benefits:**
-- Single PATH entry instead of many
+- **Single PATH entry** instead of many (1 vs 92+ entries)
 - Consistent environment structure
-- Can inspect what's in the environment easily
-- Faster PATH lookups
+- Can inspect what's in the environment easily: `ls .devenv/profile/bin/`
+- **Faster PATH lookups** (shorter PATH = faster command resolution)
+- **Easier to understand** what's in the environment
 
 **Current Stackpanel approach:**
-- Add individual store paths to PATH
-- Longer PATH variable
+- Add individual store paths to PATH: **92 separate PATH entries**
+- Much longer PATH variable
 - More lookups during command resolution
+- Harder to see what's available at a glance
+
+**Example comparison:**
+
+*Devenv:*
+```bash
+PATH=".devenv/profile/bin:..."  # 1 entry for all packages
+ls .devenv/profile/bin/          # See all 223 available commands
+```
+
+*Stackpanel:*
+```bash
+PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/nix/store/...-dev/bin:..." 
+# 92 entries total
+# Harder to enumerate what's available
+```
 
 ## Recommendations for Stackpanel
 
@@ -363,34 +395,14 @@ gc/
 
 **Estimated effort:** Large (2-3 days)
 
-### Low Priority
+### ✅ Completed: Unified Profile
 
-#### 6. Unified Profile
+> Implemented in `nix/stackpanel/devshell/profile.nix`.
 
-**Task:** Build single profile derivation instead of many PATH entries
-
-**Goals:**
-- Create unified profile with all packages
-- Single PATH entry
-- Faster command lookups
-
-**Implementation:**
-- Build profile derivation in Nix
-- Symlink to `.stackpanel/state/profile/`
-- Update PATH to single entry
-- Maintain compatibility with devenv
-
-**Benefits:**
-- Cleaner PATH variable
-- Faster command resolution
-- Easier to inspect environment
-
-**Considerations:**
-- Might conflict with devenv integration
-- Need to ensure packages don't conflict
-- Profile building has overhead
-
-**Estimated effort:** Medium (1-2 days)
+**Result:** 92 individual PATH entries collapsed to 1 unified profile with 213 binaries.
+Symlinked to `.stackpanel/state/profile` as a GC root. Man pages and shell
+completions merged into `profile/share/`. Enabled by default; disable with
+`stackpanel.devshell.profile.enable = false`.
 
 ## Action Items
 
@@ -401,11 +413,13 @@ gc/
   - Update .envrc to use it
   - Show in status command
 
-- [ ] **Task #2**: Implement GC roots with generations
+- [x] **Task #2**: Implement GC roots with generations ✅
   - Create gc/ directory structure
-  - Numbered generation links
-  - Keep last N generations
-  - Add rollback command
+  - Numbered generation links (`profile-N-link`, `hook-N-link`)
+  - Keep last N generations (default: 3, configurable via `stackpanel.devshell.gc.retain`)
+  - Proper indirect GC roots via `nix-store --realise --add-root`
+  - Idempotent: skips if store path unchanged since last generation
+  - Implemented in `nix/stackpanel/devshell/gc-roots.nix`
 
 ### Phase 2: Caching (Week 2-3)
 - [ ] **Task #3**: Design SQLite caching schema
@@ -438,11 +452,12 @@ gc/
   - Skip logic
 
 ### Phase 4: Polish (Week 5)
-- [ ] **Task #8**: Unified profile (optional)
-  - Evaluate feasibility
-  - Build profile derivation
-  - Test with devenv integration
-  - Measure performance impact
+- [x] **Task #8**: Unified profile ✅
+  - `pkgs.buildEnv` merging all devshell packages
+  - 213 binaries in single profile, symlinked to original store paths
+  - GC root at `.stackpanel/state/profile`
+  - Both flake builders updated (`nix/flake/default.nix`, `nix/internal/flake/default.nix`)
+  - Implemented in `nix/stackpanel/devshell/profile.nix`
 
 ## Metrics
 

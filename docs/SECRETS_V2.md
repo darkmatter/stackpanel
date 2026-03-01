@@ -395,79 +395,92 @@ At shell entry, WITHOUT decrypting anything, generate:
 
 ## Migration Path
 
-### Phase 1: Infrastructure (implement now)
+### Phase 1: Infrastructure -- COMPLETE
 
-Everything below is backward-compatible. Existing `ref+sops://` variables
-continue to work. New artifacts are generated alongside.
+All infrastructure changes are backward-compatible with the previous system.
 
-- [ ] **Shell hook: stop auto-registering recipients**
-  - Remove auto-copy of local pub key to `recipients/`
-  - Add decrypt check for dev group
-  - Show "run `stackpanel secrets join`" message on failure
-  - Keep auto-generation of local AGE keypair (first time only)
+- [x] **Shell hook: stop auto-registering recipients**
+  - Removed auto-copy of local pub key to `recipients/`
+  - Added decrypt check for dev group (checks pubkey in .enc.age recipients)
+  - Shows "run `secrets:join`" message if not registered
+  - Kept auto-generation of local AGE keypair (first time only)
 
-- [ ] **SSH key support**
-  - Update `recipients/.sops.yaml` generation to handle `*.ed25519.pub`
-  - Add `ssh-to-age` to devshell packages
-  - Validate key types (reject RSA with clear error)
+- [x] **SSH key support**
+  - Updated `recipients/.sops.yaml` generation to handle `*.ed25519.pub`
+  - Added `ssh-to-age` to devshell packages
+  - Validates key types (rejects RSA with clear error)
 
-- [ ] **Default recipient groups**
-  - Create `recipients/team/` and `recipients/admins/` directories
-  - Generate `groups.json` with default mapping
-  - Update `.sops.yaml` generation to read `groups.json` and collect keys
+- [x] **Default recipient groups**
+  - Created `recipients/team/` and `recipients/admins/` directories
+  - Generates `groups.json` with default mapping
+  - Updated `.sops.yaml` generation to read `groups.json` and collect keys
     from group subdirectories
-  - Move existing flat recipient `.age.pub` files into `team/`
 
-- [ ] **`.vals` support for group key resolution**
-  - Update `sops-age-keys` script to check for `<group>.vals` before
+- [x] **`.vals` support for group key resolution**
+  - Updated `sops-age-keys` script to check for `<group>.vals` before
     falling back to `.enc.age`
-  - Add `vals` to optional devshell packages (only if `.vals` files exist)
+  - Added `vals` to optional devshell packages
 
-- [ ] **`common.sops.yaml` support**
-  - Add `common` to default groups in Nix config
-  - Generate `.sops.yaml` creation rule encrypted to all group public keys
-  - Create `common.sops.yaml` template if it doesn't exist
+- [x] **`common.sops.yaml` support**
+  - Added `common` to default groups in Nix config
+  - Generates `.sops.yaml` creation rule encrypted to all group public keys
 
-- [ ] **Thin GitHub workflow**
-  - Rewrite `secrets-rekey-workflow.yml.tpl` as thin wrapper
-  - Create `bin/rekey.sh` with full implementation
-  - Create `bin/add-recipient.sh` for manual dispatch
-  - Add `workflow_dispatch` trigger with public key input
+- [x] **Thin GitHub workflow**
+  - Rewrote `secrets-rekey-workflow.yml.tpl` as thin wrapper
+  - Created `bin/rekey.sh` with full implementation
+  - Created `bin/add-recipient.sh` for manual dispatch
 
-- [ ] **Gitignore via files module**
-  - Move all secrets gitignore entries to `stackpanel.files.entries`
-  - Add entries for `.vals` files, `state/` directory, SSH key patterns
-  - Remove any manual `.gitignore` writes from shell hooks
+- [x] **Gitignore via files module**
+  - Moved all secrets gitignore entries to `stackpanel.files.entries`
+  - Added entries for `.vals` files, `state/` directory, SSH key patterns
 
-- [ ] **Devshell codegen: v2 artifacts**
-  - Generate `state/manifest.json` from Nix variables config
-  - Generate updated `sops-age-key-cmd.sh` with `.vals` support
-  - Add `secrets:load`, `secrets:load-app`, `secrets:join` wrapper scripts
-  - Add `secrets:codegen` command (quicktype pipeline)
+- [x] **Devshell scripts: v2 commands**
+  - Generated `state/manifest.json` from Nix variables config
+  - Added `secrets:load`, `secrets:join`, `secrets:set`, `secrets:get`,
+    `secrets:list`, `secrets:show-keys`, `secrets:rekey` scripts
+  - `SOPS_AGE_KEY_CMD` set lazily with `.vals` fallback support
 
-### Phase 2: Consumer migration (implement later)
+### Phase 2: Consumer migration -- COMPLETE
 
-- [ ] **Variables system refactor**
-  - Variables declare group + key name instead of `ref+sops://` values
-  - Config.nix becomes a manifest, not a bag of vals references
-  - `secrets:load-app` becomes the primary way to load secrets at runtime
+All `ref+sops://` references have been removed. `vals` is no longer a hard
+dependency for secret resolution.
 
-- [ ] **Web UI updates**
-  - Remove `ref+sops://` reference building from frontend code
-  - Use manifest.json for variable display
-  - Edit secrets via `sops set` through agent API
+- [x] **Variables system refactor**
+  - Variable IDs encode group + key: `/dev/my-key` -> group=dev, key=my-key
+  - Variable `value` is empty string for secrets (actual value in SOPS file)
+  - Type detection is purely keygroup-based (ID prefix), not value-based
+  - `isValsRef`, `isSopsReference`, `buildSopsReference` all deleted
 
-- [ ] **Agent API updates**
-  - New endpoints for direct SOPS operations
-  - Manifest-based variable resolution
-  - Remove vals-reference-building logic
+- [x] **Web UI updates**
+  - Removed `valsRef` and `envPackageRef` from `GroupSecretWriteResponse`
+  - Secret variables store `value: ""` instead of `result.valsRef`
+  - Edit dialog shows "SOPS file: ..." instead of `ref+sops://` preview
+  - Deleted 10+ `ref+sops://` helper functions from constants.ts
+  - `getVariableType()` uses keygroup-based ID prefix detection
 
-- [ ] **Env package refactor**
-  - `packages/gen/env/data/` ships SOPS files directly
-  - No intermediate YAML with vals references
-  - `sops decrypt --output-type dotenv` at runtime
+- [x] **Agent API updates**
+  - `handleAgenixSecretRead()` decrypts directly from SOPS files via
+    `parseVariableID()` + `readGroupSecrets()`
+  - `evalValsRef()` deleted entirely
+  - `GroupSecretResponse` simplified (no ValsRef/EnvPackageRef fields)
+  - `handleGenerateEnvPackage()` writes values directly (no ref transformation)
 
-- [ ] **Remove vals as hard dependency**
-  - vals only needed if `.vals` files exist or decrypted values contain
-    `ref+` prefixes
-  - Document the two-step resolution for mixed backends
+- [x] **Nix option updates**
+  - `variables.nix` updated: `isSecret` computed from keygroup, `sopsFile`
+    corrected to `vars/<keyGroup>.sops.yaml`, header/examples updated
+  - `config.nix` migrated: all `ref+sops://` values replaced with `""`
+
+- [x] **Remove vals as hard dependency**
+  - vals only needed for `.vals` files (group key resolution from external stores)
+  - SOPS files decrypt directly via `sops decrypt` / `sops set`
+  - No `ref+sops://` references anywhere in the codebase
+
+### Phase 3: Infrastructure output integration -- COMPLETE
+
+- [x] **SOPS storage backend for infra outputs**
+  - `Infra.syncAll()` SOPS case rewritten from full-file overwrite to
+    per-key `sops set` (non-destructive, preserves existing secrets)
+  - Added `group` option to `stackpanel.infra.storage-backend.sops`
+  - Group resolves to `<secrets-dir>/vars/<group>.sops.yaml` automatically
+  - Alchemy database module outputs (e.g., `databaseUrl`) write directly
+    to the configured SOPS group file

@@ -20,15 +20,27 @@ The secret is now encrypted to the selected group's SOPS file.
 ### What Happens Behind the Scenes
 
 When you create a secret:
-1. The value is written to `.stackpanel/secrets/vars/<group>.sops.yaml` (SOPS-encrypted)
-2. A variable entry is created with a vals reference
-3. The reference is: `ref+sops://.stackpanel/secrets/vars/<group>.sops.yaml#/<key>`
+1. The value is written to `.stackpanel/secrets/vars/<group>.sops.yaml` using `sops set` (in-place, non-destructive)
+2. A variable entry is created with an empty value and a keygroup-based ID (e.g., `/dev/MY_KEY`)
+3. The variable ID encodes the group and key: `/<group>/<key>`
+
+The actual secret value lives **only** in the SOPS file. The variable's `value` field in config is an empty string for all secrets.
+
+### Via CLI
+
+```bash
+# Set a secret in the dev group
+secrets:set MY_API_KEY --group dev --value "sk-abc123"
+
+# Set from stdin (for piping)
+echo "password123" | secrets:set DATABASE_URL --group prod
+```
 
 ## Editing an Existing Secret
 
 1. Find the secret in the Variables panel
 2. Click **"Edit"** 
-3. You'll see the **group selector** - you can change which group it belongs to
+3. You'll see the **group selector** -- you can change which group it belongs to
 4. Update the value
 5. Click **"Save Changes"**
 
@@ -39,77 +51,88 @@ The secret will be re-encrypted to the new group's recipients if you changed gro
 ### What is a Group?
 
 A group is an **access control boundary**. Each group has:
-- Its own SOPS-encrypted YAML file
-- Specific AGE recipients (who can decrypt)
-- A separate encryption key
+- Its own SOPS-encrypted YAML file (`vars/<group>.sops.yaml`)
+- Its own AGE keypair (public key in `config.nix`, private key in `.enc.age`)
+- Separate encryption -- only holders of that group's private key can decrypt
 
 ### Default Groups
 
-- **dev** - For development secrets, typically accessible by all team members
-- **staging** - For staging environment, may have restricted access
-- **prod** - For production secrets, highly restricted access
+- **dev** -- For development secrets, typically accessible by all team members
+- **staging** -- For staging environment, may have restricted access
+- **prod** -- For production secrets, highly restricted access
+- **common** -- Shared config encrypted to ALL group keys (anyone with any group key can decrypt)
 
 ### Group Access Control
 
-Access to each group is controlled by the `.sops.yaml` configuration:
+Access to each group is controlled by the `.sops.yaml` configuration (auto-generated from `config.nix`):
 
 ```yaml
-# .stackpanel/secrets/vars/.sops.yaml
+# .stackpanel/secrets/vars/.sops.yaml (generated, gitignored)
 creation_rules:
-  # Dev: Everyone
   - path_regex: ^dev\.sops\.yaml$
     key_groups:
       - age:
-          - alice_key
-          - bob_key
-          - ci_key
-  
-  # Prod: Restricted
+          - age1...  # dev group public key
+
   - path_regex: ^prod\.sops\.yaml$
     key_groups:
       - age:
-          - alice_key  # Only admin
-          - ci_key     # Only CI
+          - age1...  # prod group public key
+
+  - path_regex: ^common\.sops\.yaml$
+    key_groups:
+      - age:
+          - age1...  # dev key
+          - age1...  # prod key (encrypted to ALL group keys)
 ```
 
 ## Using Secrets in Apps
 
 ### In App Environments
 
-When you create a secret, it automatically generates a vals reference. Use this in your app configs:
+Secrets are referenced by their variable ID, which encodes the group:
 
 ```nix
-# apps.nix
-{
-  apps.web.environments.dev.env = {
-    DATABASE_URL = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL";
+# .stackpanel/config.nix
+stackpanel.variables = {
+  "/dev/database-url" = {
+    key = "DATABASE_URL";
+    value = "";  # actual value in vars/dev.sops.yaml
   };
-  
-  apps.web.environments.prod.env = {
-    DATABASE_URL = "ref+sops://.stackpanel/secrets/vars/prod.sops.yaml#/DATABASE_URL";
+
+  "/prod/database-url" = {
+    key = "DATABASE_URL";
+    value = "";  # actual value in vars/prod.sops.yaml
   };
-}
+};
 ```
 
 ### At Runtime
 
-The `vals` tool automatically resolves these references:
+Use the `secrets:load` command to decrypt and export secrets:
 
 ```bash
-# Decrypt all secrets for an app/env
-vals eval -f packages/env/data/apps/web/dev.yaml
+# Export as environment variables
+eval $(secrets:load dev)
 
-# Load into environment
-eval $(vals env packages/env/data/apps/web/dev.yaml)
+# JSON output
+secrets:load dev --format json
+
+# YAML output
+secrets:load common --format yaml
+
+# Get a single secret
+secrets:get DATABASE_URL --group dev
 ```
 
 ## Best Practices
 
 ### 1. Choose the Right Group
 
-- **dev** - Non-production data, test API keys, local database URLs
-- **staging** - Pre-production data that mirrors prod structure
-- **prod** - Production credentials, live API keys, customer data
+- **dev** -- Non-production data, test API keys, local database URLs
+- **staging** -- Pre-production data that mirrors prod structure
+- **prod** -- Production credentials, live API keys, customer data
+- **common** -- Shared non-sensitive config (log levels, feature flags)
 
 ### 2. Minimize Prod Access
 
@@ -118,46 +141,28 @@ Only add AGE keys to the prod group for:
 - CI/CD systems
 - On-call engineers (if needed)
 
-### 3. Group by Sensitivity, Not Environment
-
-While the defaults are dev/staging/prod, you can create groups like:
-- `analytics` - Analytics service credentials
-- `payments` - Payment processor keys
-- `internal-tools` - Admin panel credentials
-
-### 4. Use Descriptive Names
+### 3. Use Descriptive Key Names
 
 Instead of:
 ```
-/my-secret
+/dev/my-secret
 ```
 
 Use:
 ```
-/stripe-api-key-production
-/postgres-url-analytics
+/dev/stripe-api-key
+/prod/postgres-url
 ```
 
 ## Common Workflows
 
-### Sharing a Secret Across Environments
+### Sharing Secrets Across Apps
 
-**Option 1: Same group, different apps**
+Since secrets are stored per-group (not per-app), all apps that need `DATABASE_URL` from the dev group simply reference it:
+
 ```nix
-apps.web.environments.dev.env.SHARED_API_KEY = 
-  "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/EXTERNAL_API_KEY";
-
-apps.api.environments.dev.env.SHARED_API_KEY = 
-  "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/EXTERNAL_API_KEY";
-```
-
-**Option 2: Different groups per environment**
-```nix
-apps.web.environments.dev.env.API_KEY = 
-  "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/API_KEY";
-
-apps.web.environments.prod.env.API_KEY = 
-  "ref+sops://.stackpanel/secrets/vars/prod.sops.yaml#/API_KEY";
+apps.web.environments.dev.env.DATABASE_URL = "";   # loaded from /dev/database-url
+apps.api.environments.dev.env.DATABASE_URL = "";   # same secret, same group
 ```
 
 ### Promoting Secrets from Dev to Prod
@@ -165,16 +170,33 @@ apps.web.environments.prod.env.API_KEY =
 1. In the UI, create the secret in the **dev** group
 2. Test it works in development
 3. Create a **new secret** in the **prod** group with the production value
-4. Update your prod environment config to reference the prod group
+4. The variable system automatically routes to the correct SOPS file based on the ID prefix
 
-**Don't** move the same secret value from dev to prod - use different credentials per environment!
+**Don't** move the same secret value from dev to prod -- use different credentials per environment!
 
 ### Rotating a Secret
 
 1. Generate the new credential value
-2. Edit the secret in the UI (same group)
-3. Update the value
+2. Update via CLI: `secrets:set MY_KEY --group dev --value "new-value"`
+3. Or edit in the UI
 4. Deploy your apps to pick up the new value
+
+## Infrastructure Outputs to Secrets
+
+When using the Alchemy infrastructure module (e.g., deploying a Neon database), outputs can be automatically written to SOPS group files:
+
+```nix
+stackpanel.infra = {
+  enable = true;
+  storage-backend = {
+    type = "sops";
+    sops.group = "dev";  # writes to vars/dev.sops.yaml
+  };
+  database.enable = true;
+};
+```
+
+After `infra:deploy`, the `databaseUrl` output is written to `vars/dev.sops.yaml` using `sops set` (non-destructive).
 
 ## Troubleshooting
 
@@ -183,9 +205,9 @@ apps.web.environments.prod.env.API_KEY =
 **Cause:** Your AGE key is not in the group's recipient list
 
 **Solution:**
-1. Check `.sops.yaml` to see which keys can decrypt the group
-2. Add your AGE public key to the group's creation rule
-3. Run `sops updatekeys .stackpanel/secrets/vars/<group>.sops.yaml` to re-encrypt
+1. Run `secrets:join` to register your key
+2. Commit and push your `.age.pub` file
+3. Wait for the rekey workflow (or ask a teammate to run `rekey.sh`)
 
 ### "Group not found"
 
@@ -193,7 +215,6 @@ apps.web.environments.prod.env.API_KEY =
 
 **Solution:**
 ```bash
-# Initialize the group
 secrets:init-group <group-name>
 ```
 
@@ -202,8 +223,8 @@ secrets:init-group <group-name>
 **Cause:** No recipients configured for the group
 
 **Solution:**
-1. Ensure the group is defined in `.sops.yaml`
-2. Add at least one AGE public key as a recipient
+1. Ensure the group's public key is in `config.nix`
+2. Re-enter the devshell
 3. Try writing the secret again
 
 ## Advanced: Creating Custom Groups
@@ -212,12 +233,10 @@ secrets:init-group <group-name>
 
 ```nix
 # .stackpanel/config.nix
-{
-  stackpanel.secrets.groups = {
-    analytics = {};  # Will be initialized later
-    payments = {};
-  };
-}
+stackpanel.secrets.groups = {
+  analytics = {};  # Will be initialized later
+  payments = {};
+};
 ```
 
 ### 2. Initialize the Group
@@ -227,39 +246,26 @@ secrets:init-group analytics
 secrets:init-group payments
 ```
 
-### 3. Configure Recipients
+### 3. Add Public Keys to Config
 
-Edit `.sops.yaml`:
+Copy the public keys printed by init-group into `config.nix`:
 
-```yaml
-creation_rules:
-  - path_regex: ^analytics\.sops\.yaml$
-    key_groups:
-      - age:
-          - alice_key
-          - analytics_service_key
+```nix
+stackpanel.secrets.groups = {
+  analytics.age-pub = "age1...";
+  payments.age-pub = "age1...";
+};
 ```
 
 ### 4. Use in UI
 
 The new groups will appear in the group selector when creating/editing secrets.
 
-## Migration from .age Files
-
-If you have existing secrets in `.stackpanel/secrets/vars/*.age`:
-
-1. **Create the secret in the UI** with the same key name and new group
-2. **Delete the old .age file**
-3. **Update references** in your configs to use the vals reference
-
-The old .age system is deprecated but still works for backward compatibility.
-
 ## Summary
 
-- **Creating**: Use the UI, select a group, enter value
-- **Editing**: Click edit, change group or value as needed
+- **Creating**: Use the UI or `secrets:set`, select a group, enter value
+- **Editing**: Click edit in UI, or `secrets:set` to overwrite
 - **Groups**: Control who can decrypt (dev = everyone, prod = restricted)
-- **In code**: Vals references are generated automatically
-- **At runtime**: `vals` resolves references by decrypting SOPS files
-
-For more details, see `SECRETS_REFACTOR.md` and `packages/env/ARCHITECTURE.md`.
+- **Variable IDs**: `/<group>/<key>` encodes the group and key name
+- **At runtime**: `secrets:load <group>` decrypts via SOPS directly
+- **No vals references**: Secret values live in SOPS files, not as `ref+sops://` pointers
