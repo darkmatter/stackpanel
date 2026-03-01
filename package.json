@@ -6,6 +6,7 @@
     "packages": [
       "apps/*",
       "packages/*",
+      "packages/ui/*",
       "packages/gen/*",
       "tooling/*"
     ],
@@ -28,6 +29,7 @@
       "tailwindcss": "^4.1.16",
       "sst": "^3.17.25",
       "@pulumi/aws": "^7.15.0",
+      "@aws-sdk/client-ec2": "^3.953.0",
       "@aws-sdk/client-iam": "^3.953.0",
       "@aws-sdk/client-kms": "^3.953.0",
       "@aws-sdk/client-sts": "^3.953.0",
