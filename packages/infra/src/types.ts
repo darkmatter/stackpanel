@@ -79,3 +79,25 @@ export interface DeploymentInputs {
 };
 }
 
+export interface MachinesInputs {
+  aws: {
+  envTagKeys: string[];
+  filters: string[];
+  hostPreference: string[];
+  instanceIds: string[];
+  nameTagKeys: string[];
+  region: string;
+  roleTagKeys: string[];
+  ssh: {
+  keyPath: any;
+  port: number;
+  user: string;
+};
+  tagKeys: string[];
+};
+  machines: {
+
+};
+  source: string;
+}
+
