@@ -929,6 +929,20 @@ in
           | `secrets:show-keys` | Show all configured master keys and groups |
           | `secrets:rekey <id> --keys k1,k2` | Re-encrypt a secret to different keys |
 
+          ## Standalone Scripts (`bin/`)
+
+          The `bin/` directory contains portable shell scripts that work **without the Nix devshell**. They only need `sops`, `age`, and `jq` in PATH.
+
+          | Script | Description |
+          |---|---|
+          | `bin/rekey.sh [group]` | Re-encrypt `.enc.age` files to all current recipients |
+          | `bin/rotate.sh <group>` | Rotate a group's AGE keypair (archive old, generate new, re-encrypt) |
+          | `bin/decrypt.sh <group>\|--all` | Decrypt `.enc.age` to plaintext `.age` for local use |
+          | `bin/add-recipient.sh --key <key> --name <name> [--group <group>]` | Add a public key to a recipient group |
+          | `bin/codegen.sh [--app <name>]` | Generate typed TypeScript env modules from secrets config |
+
+          Use these in CI/CD pipelines or environments where Nix isn't available.
+
           ## How Encryption Works
 
           1. **SOPS** encrypts YAML files using AGE public keys from `config.nix`
