@@ -20,7 +20,9 @@
 			"default": "./src/components/logo.tsx"
 		},
 		"./styles/globals.css": "./src/styles/globals.css",
-		"./styles/base.css": "./src/styles/base.css"
+		"./styles/base.css": "./src/styles/base.css",
+		"./styles/web.css": "./src/styles/web.css",
+		"./styles/docs.css": "./src/styles/docs.css"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
