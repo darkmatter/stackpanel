@@ -25,11 +25,21 @@ type Config struct {
 	ProjectRoot string `json:"projectRoot"`
 	BasePort    int    `json:"basePort"`
 
-	Paths    Paths              `json:"paths"`
-	Apps     map[string]App     `json:"apps"`
-	Services map[string]Service `json:"services"`
-	Network  Network            `json:"network"`
-	MOTD     MOTD               `json:"motd"`
+	Paths              Paths               `json:"paths"`
+	Apps               map[string]App      `json:"apps"`
+	Services           map[string]Service  `json:"services"`
+	Network            Network             `json:"network"`
+	MOTD               MOTD                `json:"motd"`
+	MissingFlakeInputs []MissingFlakeInput `json:"missingFlakeInputs"`
+}
+
+// MissingFlakeInput represents a flake input that an enabled module requires
+// but is not present in the user's flake.nix inputs.
+type MissingFlakeInput struct {
+	Name           string `json:"name"`
+	URL            string `json:"url"`
+	FollowsNixpkgs bool   `json:"followsNixpkgs"`
+	RequiredBy     string `json:"requiredBy"`
 }
 
 // Paths contains directory paths
