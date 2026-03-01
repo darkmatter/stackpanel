@@ -197,6 +197,29 @@ let
         ;
     }) missingFlakeInputs;
 
+    # Healthcheck definitions for the CLI to run locally (cached)
+    # Only includes fields needed to execute checks — no Nix store derivation paths
+    # since those are only valid within the devshell that generated this config.
+    healthchecks = map (check: {
+      inherit (check)
+        id
+        name
+        description
+        module
+        tags
+        enabled
+        ;
+      type = check.type;
+      severity = check.severity;
+      scriptPath = check.scriptPath;
+      httpUrl = check.httpUrl or null;
+      httpMethod = check.httpMethod or "GET";
+      httpExpectedStatus = check.httpExpectedStatus or 200;
+      tcpHost = check.tcpHost or null;
+      tcpPort = check.tcpPort or null;
+      timeout = check.timeout or 10;
+    }) (cfg.healthchecksList or [ ]);
+
     # UI configuration for the web interface
     ui = {
       # Extensions registered by modules (e.g., SST, CI, etc.)
@@ -225,10 +248,20 @@ let
   configFile = pkgs.writeText "stackpanel-config.json" configJson;
 in
 {
-  imports = [
-    ./options
-  ];
+  # ── Options (colocated from core/options/cli.nix) ────────────────────────────
+  options.stackpanel.cli = {
+    enable = lib.mkEnableOption "CLI-based file generation" // {
+      default = false;
+    };
 
+    quiet = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Suppress generation output messages";
+    };
+  };
+
+  # ── Config ───────────────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
     # Add the CLI to packages
     stackpanel.devshell.packages = [ stackpanel-cli ];

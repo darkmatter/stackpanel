@@ -1,7 +1,9 @@
 # ==============================================================================
 # theme.nix
 #
-# Terminal theme and prompt customization module for devenv.
+# Terminal theme and prompt customization module.
+#
+# Options + implementation colocated in a single self-contained module.
 #
 # This module configures Starship prompt for development shells, providing
 # a consistent and informative terminal experience. The theme shows git
@@ -28,6 +30,9 @@
 let
   cfg = config.stackpanel.theme;
 
+  # Import proto schema for theme data types
+  db = import ../db { inherit lib; };
+
   # Import shared theme library
   themeLib = import ../lib/theme.nix { inherit pkgs lib; };
   starshipTheme = themeLib.mkStarshipTheme { };
@@ -49,9 +54,36 @@ let
         text = builtins.readFile resolvedConfig;
         destination = "/starship.toml";
       };
-  resolvedConfigPath = if resolvedConfigFile == null then "" else "${resolvedConfigFile}/starship.toml";
+  resolvedConfigPath =
+    if resolvedConfigFile == null then "" else "${resolvedConfigFile}/starship.toml";
 in
 {
+  # ── Options ──────────────────────────────────────────────────────────────────
+  # Theme options derived from proto schema
+  # The proto defines: name, colors, starship, nerd_font, minimal
+  # These are converted to kebab-case: nerd-font
+  options.stackpanel.theme = db.mkOpt db.extend.theme {
+    # Nix-specific extension: enable option (not in data schema)
+    enable = lib.mkEnableOption "Starship prompt for stackpanel devenv";
+
+    preset = lib.mkOption {
+      type = lib.types.enum [
+        "stackpanel"
+        "starship-default"
+      ];
+      default = "stackpanel";
+      description = "Starship preset to apply when no custom config file is provided";
+    };
+
+    # Nix-specific extension: path to custom config file
+    config-file = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Custom starship.toml config file (uses stackpanel default if not set)";
+    };
+  };
+
+  # ── Config ───────────────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
     stackpanel.devshell.packages = starshipTheme.requiredPackages;
 
