@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@stackpanel/ui-core";
-import { Tabs as TabsPrimitive } from "@stackpanel/ui-primitives";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
 import type * as React from "react";
 
 function Tabs({

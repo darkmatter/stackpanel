@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@stackpanel/ui-core";
-import { Checkbox as CheckboxPrimitive } from "@stackpanel/ui-primitives";
+import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { CheckIcon } from "lucide-react";
 import type * as React from "react";
 

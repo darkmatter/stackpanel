@@ -1,7 +1,7 @@
 "use client";
 
 import { cn, cva, type VariantProps } from "@stackpanel/ui-core";
-import { Slot } from "@stackpanel/ui-primitives";
+import { Slot } from "@radix-ui/react-slot";
 import type * as React from "react";
 
 const buttonVariants = cva(

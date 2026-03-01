@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@stackpanel/ui-core";
-import { Avatar as AvatarPrimitive } from "@stackpanel/ui-primitives";
+import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import type * as React from "react";
 
 function Avatar({

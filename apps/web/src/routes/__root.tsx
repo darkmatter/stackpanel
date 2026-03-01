@@ -18,9 +18,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "@fontsource-variable/montserrat";
 import "@fontsource-variable/source-code-pro";
 import appCss from "@/styles.css?url";
-// import baseCss from "@stackpanel/ui/base.css?url";
+// import baseCss from "@stackpanel/ui-core/styles/base.css?url";
 import "@fontsource-variable/inter";
-import webcss from "@stackpanel/ui/web.css?url";
+import webcss from "@stackpanel/ui-core/styles/web.css?url";
 
 export interface RouterAppContext {
 	trpc: TRPCOptionsProxy<AppRouter>;
