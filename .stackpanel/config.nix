@@ -83,16 +83,16 @@
           "POLAR_SUCCESS_URL"
         ];
         enable = true;
+        fly = {
+          appName = "stackpanel-web";
+          region = "iad";
+        };
         host = "fly";
         secrets = [
           "DATABASE_URL"
           "BETTER_AUTH_SECRET"
           "POLAR_ACCESS_TOKEN"
         ];
-        fly = {
-          appName = "stackpanel-web";
-          region = "iad";
-        };
       };
       description = "Main web application";
       domain = "stackpanel";
@@ -345,6 +345,122 @@
     };
   };
 
+  infra = {
+    aws-ec2-app = {
+      apps = {
+        stackpanel-staging = {
+          ami = null;
+          associate-public-ip = true;
+          iam = {
+            enable = true;
+            role-name = "stackpanel-staging-ec2-role";
+          };
+          instance-count = 2;
+          instance-type = "t3.micro";
+          instances = [ ];
+          key-name = null;
+          key-pair = {
+            create = true;
+            name = "stackpanel-staging-key";
+            public-key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPg7wQoa2hMfuz9f9CLJNVY2z8iQD7EFlJk+sBztnIhe";
+          };
+          machine = {
+            arch = null;
+            roles = [
+              "docs"
+              "web"
+            ];
+            ssh = {
+              key-path = null;
+              port = 22;
+              user = "root";
+            };
+            tags = [ "staging" ];
+            target-env = "staging";
+          };
+          os-type = "nixos";
+          root-volume-size = null;
+          security-group = {
+            create = true;
+            description = null;
+            egress = [
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "All outbound";
+                from-port = 0;
+                protocol = "-1";
+                to-port = 0;
+              }
+            ];
+            ingress = [
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "SSH";
+                from-port = 22;
+                protocol = "tcp";
+                to-port = 22;
+              }
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "HTTP";
+                from-port = 80;
+                protocol = "tcp";
+                to-port = 80;
+              }
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "HTTPS";
+                from-port = 443;
+                protocol = "tcp";
+                to-port = 443;
+              }
+            ];
+            name = null;
+          };
+          security-group-ids = [ ];
+          subnet-ids = [ ];
+          tags = {
+            ManagedBy = "stackpanel-infra";
+            Name = "stackpanel-staging";
+          };
+          user-data = null;
+          vpc-id = null;
+        };
+      };
+      defaults = { };
+      enable = true;
+    };
+    database = {
+      enable = true;
+      neon = {
+        api-key-ssm-path = "/common/neon-api-key";
+        region = "aws-us-east-1";
+      };
+      provider = "neon";
+    };
+    enable = true;
+    machines = {
+      aws = {
+        filters = [
+          {
+            name = "instance-state-name";
+            values = [ "running" ];
+          }
+        ];
+        region = "us-west-2";
+      };
+      enable = true;
+      machines = { };
+      source = "aws-ec2";
+    };
+    storage-backend = {
+      sops = {
+        group = "dev";
+      };
+      type = "sops";
+    };
+  };
+
   languages = {
     go = {
       enable = true;
@@ -442,36 +558,6 @@
     };
     secrets-dir = ".stackpanel/secrets";
     system-keys = [ ];
-  };
-
-  infra = {
-    enable = true;
-    storage-backend = {
-      type = "sops";
-      sops.group = "dev";
-    };
-    database = {
-      enable = true;
-      provider = "neon";
-      neon = {
-        region = "aws-us-east-1";
-        api-key-ssm-path = "/common/neon-api-key";
-      };
-    };
-    machines = {
-      enable = true;
-      source = "aws-ec2";
-      aws = {
-        region = "us-west-2";
-        filters = [
-          {
-            name = "instance-state-name";
-            values = [ "running" ];
-          }
-        ];
-      };
-      machines = { };
-    };
   };
 
   # ---------------------------------------------------------------------------
@@ -651,3 +737,4 @@
   };
 
 }
+
