@@ -1,0 +1,25 @@
+---
+title: alchemy/codegen.nix
+description: "Code generation engine for the @gen/alchemy shared package."
+---
+
+Code generation engine for the @gen/alchemy shared package.
+
+Generates via stackpanel.files.entries:
+```nix
+- src/index.ts       (createApp factory, re-exports)
+- src/state-store.ts (state store provider factory)
+- src/helpers.ts     (shared utilities: SSM, bindings, port computation)
+- package.json       (via turbo.packages)
+- tsconfig.json
+```
+
+
+## Also
+
+```nix
+- Registers .alchemy in .gitignore
+- Sets ALCHEMY_STATE_TOKEN env var if sopsPath is configured
+- Registers as a stackpanel module for UI
+- Serializes config for the agent
+```

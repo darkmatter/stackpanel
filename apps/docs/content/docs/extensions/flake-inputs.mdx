@@ -1,0 +1,170 @@
+---
+title: Flake Inputs
+description: How extensions declare, detect, and auto-install required flake inputs
+icon: git-branch
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Some extensions need additional Nix flake inputs to work. For example, the **Process Compose** extension requires the `process-compose-flake` input, and **Git Hooks** requires `git-hooks`. Stackpanel can detect when these inputs are missing and help you add them.
+
+## How It Works
+
+Every extension can declare the flake inputs it needs in its `meta.nix` file. When you enable an extension whose inputs aren't in your `flake.nix`, Stackpanel:
+
+1. Detects the missing inputs during Nix evaluation
+2. Warns you in the MOTD when you enter the devshell
+3. Provides the exact command to fix it
+
+The warning looks like:
+
+```
+  Module "process-compose" requires flake input "process-compose-flake"
+  Fix: stackpanel flake add-input process-compose-flake github:Platonic-Systems/process-compose-flake
+```
+
+## Declaring Flake Inputs in an Extension
+
+If you're [writing an extension](/docs/extensions/writing-extensions) that depends on a flake input, declare it in `meta.nix`:
+
+```nix
+# meta.nix
+{
+  id = "my-extension";
+  name = "My Extension";
+  # ... other metadata ...
+
+  flakeInputs = [
+    {
+      name = "some-flake";                       # Input name in flake.nix
+      url = "github:someone/some-flake";         # Flake URL
+      followsNixpkgs = true;                     # Add inputs.nixpkgs.follows
+    }
+  ];
+}
+```
+
+Then wire it into the module registration in `module.nix`:
+
+```nix
+# module.nix
+stackpanel.modules.${meta.id} = {
+  enable = true;
+  meta = { inherit (meta) name description icon category author version homepage; };
+  source.type = "builtin";
+  features = meta.features;
+  flakeInputs = meta.flakeInputs or [];  # Required line
+  tags = meta.tags;
+  priority = meta.priority;
+};
+```
+
+<Callout type="warn">
+Every `module.nix` that registers via `stackpanel.modules` **must** include the `flakeInputs = meta.flakeInputs or [];` line. Without it, declared inputs won't flow through the detection pipeline.
+</Callout>
+
+### Field Reference
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `string` | required | The input attribute name as it appears in `flake.nix` (e.g., `"process-compose-flake"`) |
+| `url` | `string` | required | The flake URL (e.g., `"github:Platonic-Systems/process-compose-flake"`) |
+| `followsNixpkgs` | `bool` | `true` | Whether to add `inputs.<name>.inputs.nixpkgs.follows = "nixpkgs"` |
+
+## Adding Missing Inputs
+
+### Using the CLI
+
+The MOTD warning includes the fix command. You can also run it manually. See [Managing Flake Inputs](/docs/dev-environment/flake-inputs) for a full guide on the `stackpanel flake` command.
+
+```bash
+# Add a flake input
+stackpanel flake add-input process-compose-flake github:Platonic-Systems/process-compose-flake
+
+# Add with --no-follows to skip the nixpkgs.follows line
+stackpanel flake add-input some-input github:someone/some-input --no-follows
+
+# Preview the changes without writing
+stackpanel flake add-input some-input github:someone/some-input --dry-run
+```
+
+The `flake add-input` command:
+
+1. Parses your `flake.nix` using tree-sitter (preserving comments and formatting)
+2. Inserts the input declaration into the `inputs` block
+3. Optionally adds `inputs.<name>.inputs.nixpkgs.follows = "nixpkgs"`
+4. Runs `nix flake lock --update-input <name>` to fetch the input
+5. Creates a `.bak` backup and rolls back if `nix flake lock` fails
+
+### Using the CLI with stackpanelImports
+
+If the extension also needs to be imported into your flake's `stackpanelImports` list, use `--module-path`:
+
+```bash
+stackpanel flake add-input my-ext github:someone/my-ext \
+  --module-path "inputs.my-ext.stackpanelModules.default"
+```
+
+This adds both the input and the import entry in a single operation.
+
+### From Studio
+
+When installing an extension from the [registry](/docs/extensions/registry), Studio's install flow automatically adds the required flake inputs to your `flake.nix` and runs `nix flake lock`. No manual steps needed.
+
+### Manually
+
+You can always add inputs by hand:
+
+```nix
+# flake.nix
+{
+  inputs = {
+    # ... existing inputs ...
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+  };
+}
+```
+
+Then run `nix flake lock --update-input process-compose-flake`.
+
+## Builtin Extensions with Flake Inputs
+
+These builtin extensions require flake inputs that may not be in your `flake.nix`:
+
+| Extension | Input Name | URL | Follows Nixpkgs |
+|-----------|-----------|-----|-----------------|
+| Process Compose | `process-compose-flake` | `github:Platonic-Systems/process-compose-flake` | No |
+| Git Hooks | `git-hooks` | `https://flakehub.com/f/cachix/git-hooks.nix/*` | Yes |
+
+If you enable either of these and the input is missing, you'll see a warning in the MOTD with the fix command.
+
+<Callout type="info">
+Extensions that don't need flake inputs (most builtin extensions like Bun, Turbo, Go, OxLint) work out of the box with no additional setup.
+</Callout>
+
+## How Detection Works
+
+The detection pipeline spans Nix evaluation and the Go CLI:
+
+```
+meta.nix (declares flakeInputs)
+  -> module.nix (wires into stackpanel.modules.*.flakeInputs)
+    -> core/options/modules.nix (serializes to JSON via computeSerializableModule)
+      -> core/cli.nix (compares against flake inputs, computes missingFlakeInputs)
+        -> state file (.stackpanel/state/stackpanel.json)
+          -> Go CLI (nixconfig.Config.MissingFlakeInputs)
+            -> MOTD (CollectIssues generates warnings)
+```
+
+During Nix evaluation, `cli.nix` receives the flake's `inputs` via `specialArgs` and checks each enabled module's `flakeInputs` list against it. Any input that an enabled module declares but isn't present in `inputs` is added to the `missingFlakeInputs` array in the state file. The Go CLI reads this on `stackpanel motd` and renders warnings with fix commands.
+
+## How Auto-Install Works
+
+The `stackpanel flake add-input` command and the agent's registry install endpoint both use the `flakeedit` package (`apps/stackpanel-go/internal/flakeedit/`), which parses `flake.nix` with a vendored tree-sitter-nix grammar. This enables surgical byte-offset insertions that preserve all comments, whitespace, and formatting in the file.
+
+Key operations:
+- **`AddInput`** -- Finds the `inputs = { ... }` binding in the AST, inserts the new input before the closing `}`
+- **`AddStackpanelImport`** -- Finds the `stackpanelImports = [ ... ]` list anywhere in the tree, inserts the import expression
+- **`HasInput`** -- Checks if an input already exists (idempotent, no-op if present)
+
+The agent endpoint (`handleRegistryInstall`) combines both operations atomically: it adds the input, adds the import, writes the file, and runs `nix flake lock`. If any step fails, it falls back to returning code snippets for manual installation.

@@ -1,0 +1,33 @@
+---
+title: Entrypoints Module Implementation
+description: "Nix module for generating per-app entrypoint shell scripts."
+---
+
+Nix module for generating per-app entrypoint shell scripts.
+
+Each app defined in stackpanel.apps can have an entrypoint generated that:
+```nix
+- Auto-sources devshell in dev mode
+- Loads secrets for the appropriate environment
+- Sets up environment variables
+```
+
+
+IMPORTANT: Entrypoints ONLY inject environment variables. They do NOT run
+commands. The caller is responsible for running the actual command after
+sourcing the entrypoint.
+
+Generated entrypoints are written to packages/scripts/entrypoints/\<app\>.sh
+via the stackpanel.files system.
+
+Usage (source the entrypoint, then run your command):
+```nix
+source packages/scripts/entrypoints/web.sh --dev
+bun run dev
+```
+
+
+Or in process-compose:
+```nix
+command: "source packages/scripts/entrypoints/web.sh --dev && bun run dev"
+```

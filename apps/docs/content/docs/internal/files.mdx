@@ -1,0 +1,94 @@
+---
+title: files.nix
+description: "Derivation-based file generation with hash-check caching."
+---
+
+Derivation-based file generation with hash-check caching.
+
+Each file entry is converted to a Nix store derivation at eval time.
+The writer script compares on-disk content against the store path using
+sha256 hashes, skipping unchanged files. A manifest fast path allows
+the common case (no config changes) to exit after a single hash comparison.
+
+For type="text" files, content can be provided via:
+```nix
+- text: Inline text content
+- path: Path to file (content read at eval time)
+```
+
+
+For type="json" files, provide a Nix attrset via jsonValue. Multiple
+modules can contribute to the same file and values are deep-merged.
+
+Usage (inline text):
+```nix
+stackpanel.files.entries.".github/workflows/ci.yml" = {
+  type = "text";
+  text = "name: CI\n...";
+};
+```
+
+
+Usage (path to file):
+```nix
+stackpanel.files.entries.".github/workflows/ci.yml" = {
+  type = "text";
+  path = ./.stackpanel/src/files/.github/workflows/ci.yml;
+  description = "CI workflow";
+};
+```
+
+
+Usage (derivation):
+```nix
+stackpanel.files.entries."scripts/deploy.sh" = {
+  type = "derivation";
+  drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
+  mode = "0755";
+};
+```
+
+
+Usage (JSON - deep-mergeable):
+```nix
+stackpanel.files.entries."package.json" = {
+  type = "json";
+  jsonValue = {
+    name = "my-app";
+    scripts.dev = "bun dev";
+  };
+};
+```
+
+
+Usage (block-managed - preserves user content):
+```nix
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  managed = "block";    # only manage a marker-delimited block
+  dedupe = true;
+  sort = true;
+  lines = [ "node_modules" ".env" ];
+};
+```
+
+
+```nix
+This produces a file like:
+  # ... user-written content above ...
+```
+
+
+```nix
+  # ── BEGIN stackpanel ──
+  # DO NOT EDIT between these markers — managed by stackpanel
+  .env
+  node_modules
+  # ── END stackpanel ──
+```
+
+
+```nix
+User content outside the markers is never touched. On uninstall,
+only the managed block is removed (the file is kept if non-empty).
+```

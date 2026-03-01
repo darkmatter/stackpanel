@@ -1,0 +1,58 @@
+---
+title: stackpanel config get
+description: Get a configuration value by dot-path
+icon: Terminal
+---
+
+# stackpanel config get
+
+Get a value from the stackpanel configuration using a dot-separated path.
+
+Without a path, prints the entire configuration. With a path, traverses
+into the config and prints the value at that location.
+
+Scalar values (strings, numbers, booleans) are printed raw by default.
+Objects and arrays are printed as colorized JSON (via jq when available,
+plain JSON otherwise). Use --json to always get JSON output, or --raw to
+suppress any formatting.
+
+The lookup is performed directly by Nix evaluation, so only the requested
+attribute is evaluated — not the entire config tree.
+
+Examples:
+  stackpanel config get                           # Entire config as JSON
+  stackpanel config get project.name              # my-project
+  stackpanel config get apps.web.port             # 3000
+  stackpanel config get apps                      # \{ "web": \{ ... \}, ... \}
+  stackpanel config get apps.web.port --json      # 3000 (as JSON)
+  stackpanel config get project.name --raw        # my-project (no quotes)
+
+## Usage
+
+```bash
+stackpanel config get [dot.path]
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | `bool` | `false` | Always output as JSON |
+| `--raw` | `bool` | `false` | Output raw value (strip quotes from strings) |
+| `--timeout, -t` | `duration` | `30s` | Nix evaluation timeout |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

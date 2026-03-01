@@ -67,6 +67,83 @@ If you encounter a collision in the port calculation, you can set
 
 ---
 
+## `apps.<name>.deploy`
+
+Colmena deployment mapping for this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.deploy.enable`
+
+Enable deployment mapping for this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `apps.<name>.deploy.nixos-modules`
+
+Extra NixOS modules to import for this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.deploy.role`
+
+Deployment role label for this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.deploy.secrets`
+
+Secret references required by this app during deploy
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.deploy.system`
+
+Target system/architecture (e.g., x86_64-linux)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.deploy.targets`
+
+Target machine ids or tag selectors
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
 ## `apps.<name>.deployment.bindings`
 
 Environment variable names to bind to the deployed app.
