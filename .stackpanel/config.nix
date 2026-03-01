@@ -18,9 +18,7 @@
       domain = "docs";
       environments = {
         dev = {
-          env = {
-            PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/docs/port";
-          };
+          env = { };
           name = "dev";
         };
         prod = {
@@ -85,32 +83,28 @@
           "POLAR_SUCCESS_URL"
         ];
         enable = true;
-        host = "cloudflare";
+        host = "fly";
         secrets = [
           "DATABASE_URL"
           "BETTER_AUTH_SECRET"
           "POLAR_ACCESS_TOKEN"
         ];
+        fly = {
+          appName = "stackpanel-web";
+          region = "iad";
+        };
       };
       description = "Main web application";
       domain = "stackpanel";
       environments = {
         dev = {
           env = {
-            ALCHEMY_STATE_TOKEN = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/ALCHEMY_STATE_TOKEN";
-            APP_HOST = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/url";
-            CLOUDFLARE_API_TOKEN = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/CLOUDFLARE_API_TOKEN";
             MEMO_MEMOAS_AD = "foobar";
-            OPENAI_API_KEY = "ref+sops://packages/gen/env/data/web/dev.yaml#/OPENAI_API_KEY";
-            PORT = "ref+sops://.stackpanel/secrets/computed.yaml#/apps/web/port";
-            POSTGRES_URL = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL";
           };
           name = "dev";
         };
         prod = {
-          env = {
-            OPENAI_API_KEY = "ref+sops://packages/gen/env/data/web/prod.yaml#/OPENAI_API_KEY";
-          };
+          env = { };
           name = "prod";
         };
         staging = {
@@ -450,6 +444,22 @@
     system-keys = [ ];
   };
 
+  infra = {
+    enable = true;
+    storage-backend = {
+      type = "sops";
+      sops.group = "dev";
+    };
+    database = {
+      enable = true;
+      provider = "neon";
+      neon = {
+        region = "aws-us-east-1";
+        api-key-ssm-path = "/common/neon-api-key";
+      };
+    };
+  };
+
   # ---------------------------------------------------------------------------
   # SST
   # ---------------------------------------------------------------------------
@@ -614,9 +624,16 @@
   variables = {
     "/dev/openrouter-api-key" = {
       id = "/dev/openrouter-api-key";
-      value = "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/openrouter-api-key";
+      value = "";
+    };
+    "/dev/test-api-key" = {
+      id = "/dev/test-api-key";
+      value = "";
+    };
+    "/var/web-hostname-staging" = {
+      id = "/var/web-hostname-staging";
+      value = "staging.stackpanel.dev";
     };
   };
 
 }
-
