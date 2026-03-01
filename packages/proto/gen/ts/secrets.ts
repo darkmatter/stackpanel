@@ -221,6 +221,20 @@ export interface SecretsGroup {
      * @generated from protobuf field: optional string ref = 3
      */
     ref?: string;
+    /**
+     *
+     * Shell command that outputs the AGE private key to stdout.
+     * Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
+     * Defaults to: sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age
+     * Override for alternative key stores, e.g.:
+     *   - chamber read keys/stackpanel/dev current -q
+     *   - op read 'op://vault/stackpanel/dev-age-key'
+     *   - aws ssm get-parameter --name /keys/dev --with-decryption --query Parameter.Value --output text
+     *
+     *
+     * @generated from protobuf field: optional string key_cmd = 4
+     */
+    key_cmd?: string;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class CodegenTarget$Type extends MessageType<CodegenTarget> {
@@ -593,7 +607,8 @@ class SecretsGroup$Type extends MessageType<SecretsGroup> {
         super("stackpanel.db.SecretsGroup", [
             { no: 1, name: "age_pub", kind: "scalar", localName: "age_pub", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "ssm_path", kind: "scalar", localName: "ssm_path", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "ref", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "ref", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "key_cmd", kind: "scalar", localName: "key_cmd", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<SecretsGroup>): SecretsGroup {
@@ -616,6 +631,9 @@ class SecretsGroup$Type extends MessageType<SecretsGroup> {
                 case /* optional string ref */ 3:
                     message.ref = reader.string();
                     break;
+                case /* optional string key_cmd */ 4:
+                    message.key_cmd = reader.string();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -637,6 +655,9 @@ class SecretsGroup$Type extends MessageType<SecretsGroup> {
         /* optional string ref = 3; */
         if (message.ref !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.ref);
+        /* optional string key_cmd = 4; */
+        if (message.key_cmd !== undefined)
+            writer.tag(4, WireType.LengthDelimited).string(message.key_cmd);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
