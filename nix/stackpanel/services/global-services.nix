@@ -35,7 +35,7 @@ let
   # Import util for debug logging
   util = import ../lib/util.nix { inherit pkgs lib config; };
 
-  coreGlobalServices = import ../core/services/global-services.nix { inherit pkgs lib; };
+  coreGlobalServices = import ../core/lib/global-services.nix { inherit pkgs lib; };
 
   # Compute the full gs bundle (needed for caddy and port resolution)
   gs = coreGlobalServices.mkGlobalServices {
