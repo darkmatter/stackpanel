@@ -63,8 +63,13 @@ func convertDocToMdx(content string, moduleName string, isNixHeader bool) string
 
 		if isNixHeader {
 			// For .nix headers, first non-empty line is the title
-			if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "-") {
+			// Skip separator lines (e.g., "==============")
+			if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "-") && strings.Trim(trimmedLine, "=-*~#") != "" {
 				extractedTitle = trimmedLine
+				// Strip "filename.nix - " prefix if present (e.g., "module.nix - Bun Module" -> "Bun Module")
+				if idx := strings.Index(extractedTitle, ".nix - "); idx != -1 {
+					extractedTitle = extractedTitle[idx+len(".nix - "):]
+				}
 				foundTitle = true
 			}
 		} else {
