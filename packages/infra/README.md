@@ -5,7 +5,7 @@
 
 Infrastructure-as-code package for **stackpanel**, powered by [Alchemy](https://github.com/sam-goodwin/alchemy).
 
-## Modules (3)
+## Modules (4)
 
 ### AWS Secrets Infrastructure (`aws-secrets`)
 
@@ -39,6 +39,15 @@ Deploys apps to their configured hosts (fly)
 **Outputs:**
   - `webUrl` — Deployed URL for web *(synced)*
 
+### Machine Inventory (`machines`)
+
+Machine inventory provider for Colmena deployments
+
+Dependencies: `@aws-sdk/client-ec2`
+
+**Outputs:**
+  - `machines` — Machine inventory (JSON) *(synced)*
+
 
 ## Usage
 
@@ -68,4 +77,5 @@ packages/infra/
     ├── aws-secrets.ts
     ├── database.ts
     ├── deployment.ts
+    ├── machines.ts
 ```
