@@ -1,4 +1,4 @@
-# ==============================================================================
+#
 # module.nix - Colmena Module Implementation
 #
 # Provides Colmena deployment tooling with configurable defaults.
@@ -9,15 +9,9 @@
 #   3. Generates wrapper scripts: colmena-apply, colmena-build, colmena-eval
 #   4. Computes resolved flag sets in stackpanel.colmena.computed
 #   5. Registers health checks for CLI availability and hive config
+#   6. Generates Colmena hive files to .stackpanel/state/colmena/
+#   7. Serializes machine inventory + app deploy mapping for the agent
 #
-# Usage:
-#   stackpanel.colmena = {
-#     enable = true;
-#     flake = ".#colmena";
-#     parallel = 4;
-#     buildOnTarget = true;
-#   };
-# ==============================================================================
 {
   lib,
   config,
@@ -30,24 +24,11 @@ let
   cfg = sp.colmena;
 
   mkFlag = enabled: flag: lib.optionals enabled [ flag ];
-  mkValueFlag =
-    flag: value:
-    lib.optionals (value != null) [
-      flag
-      (toString value)
-    ];
-  mkListFlag =
-    flag: values:
-    lib.optionals (values != [ ]) [
-      flag
-      (lib.concatStringsSep "," values)
-    ];
+  mkValueFlag = flag: value: lib.optionals (value != null) [ flag (toString value) ];
+  mkListFlag = flag: values: lib.optionals (values != [ ]) [ flag (lib.concatStringsSep "," values) ];
 
   commonFlags =
-    (lib.optionals (cfg.flake == null) [
-      "--config"
-      cfg.config
-    ])
+    [ "--config" cfg.config ]
     ++ mkValueFlag "--flake" cfg.flake
     ++ mkListFlag "--on" cfg.on
     ++ mkListFlag "--exclude" cfg.exclude
@@ -101,6 +82,10 @@ let
       '';
     };
 
+  # ===========================================================================
+  # Machine type definitions
+  # ===========================================================================
+
   sshConfigType = lib.types.submodule {
     options = {
       user = lib.mkOption {
@@ -108,13 +93,11 @@ let
         default = "root";
         description = "SSH user for connecting to the machine.";
       };
-
       port = lib.mkOption {
         type = lib.types.int;
         default = 22;
         description = "SSH port for connecting to the machine.";
       };
-
       keyPath = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
@@ -130,91 +113,76 @@ let
         default = null;
         description = "Optional machine identifier (defaults to the attrset key).";
       };
-
       name = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Human-friendly machine name.";
       };
-
       host = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "SSH host or hostname for the machine.";
       };
-
       ssh = lib.mkOption {
         type = sshConfigType;
         default = { };
         description = "SSH connection settings for the machine.";
       };
-
       tags = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Tags used for grouping and target selection.";
       };
-
       roles = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Roles associated with this machine.";
       };
-
       provider = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Infrastructure provider name (aws, gcp, hetzner, etc.).";
       };
-
       arch = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Target system architecture (e.g., x86_64-linux).";
       };
-
       publicIp = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Public IPv4/IPv6 address for the machine.";
       };
-
       privateIp = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Private IPv4/IPv6 address for the machine.";
       };
-
       labels = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Arbitrary labels attached to the machine.";
       };
-
       nixosProfile = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "NixOS profile name to deploy on this machine.";
       };
-
       nixosModules = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "Extra NixOS modules to include for this machine.";
       };
-
       targetEnv = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Deployment environment label for this machine.";
       };
-
       env = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
         description = "Environment variables applied to this machine.";
       };
-
       metadata = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = { };
@@ -222,6 +190,10 @@ let
       };
     };
   };
+
+  # ===========================================================================
+  # Normalize machine inventories from various input shapes
+  # ===========================================================================
 
   normalizeMachines =
     machines:
@@ -242,15 +214,15 @@ let
           let
             isAttrs = builtins.isAttrs machine;
             rawId = if isAttrs then machine.id or null else null;
-            name = if isAttrs then machine.name or null else null;
-            host = if isAttrs then machine.host or null else null;
+            mName = if isAttrs then machine.name or null else null;
+            mHost = if isAttrs then machine.host or null else null;
             derivedId =
               if rawId != null then
                 rawId
-              else if name != null then
-                name
-              else if host != null then
-                host
+              else if mName != null then
+                mName
+              else if mHost != null then
+                mHost
               else
                 "machine-${toString idx}";
             base = if isAttrs then machine else { };
@@ -269,6 +241,156 @@ let
       ) machines
     else
       { };
+
+  # ===========================================================================
+  # Hive codegen helpers
+  # ===========================================================================
+
+  stateDir = sp.dirs.state or ".stackpanel/state";
+  colmenaStateDir = "${stateDir}/colmena";
+
+  # Resolve app deploy targets to machine IDs
+  resolveTargets =
+    targets:
+    let
+      allMachineIds = builtins.attrNames cfg.machinesComputed;
+      matchesTag =
+        pattern: machineId:
+        let
+          machine = cfg.machinesComputed.${machineId};
+          mTags = machine.tags or [ ];
+          mRoles = machine.roles or [ ];
+        in
+        builtins.elem pattern mTags || builtins.elem pattern mRoles || pattern == machineId;
+      matchAny = pattern: builtins.filter (matchesTag pattern) allMachineIds;
+    in
+    lib.unique (lib.concatMap matchAny targets);
+
+  # Build per-node Nix expression
+  mkNodeNix =
+    machineId: machine:
+    let
+      mHost = machine.host or null;
+      sshUser = (machine.ssh or { }).user or "root";
+      sshPort = (machine.ssh or { }).port or 22;
+      nixosProfile = machine.nixosProfile or null;
+      arch = machine.arch or "x86_64-linux";
+
+      appNames = builtins.attrNames (sp.apps or { });
+      appsTargeting = builtins.filter (
+        appName:
+        let
+          appCfg = sp.apps.${appName};
+          deploy = appCfg.deploy or { };
+          enabled = deploy.enable or false;
+          targets = deploy.targets or [ ];
+          resolved = resolveTargets targets;
+        in
+        enabled && builtins.elem machineId resolved
+      ) appNames;
+
+      appModuleImports = lib.concatMapStringsSep "\n" (
+        appName:
+        let
+          deploy = sp.apps.${appName}.deploy or { };
+          mods = deploy.nixosModules or [ ];
+        in
+        lib.concatMapStringsSep "\n" (mod: "      ${mod}") mods
+      ) appsTargeting;
+    in
+    ''
+      # Generated by stackpanel colmena module — do not edit manually.
+      # Machine: ${machineId}
+      { name, nodes, pkgs, ... }:
+      {
+        deployment = {
+          ${lib.optionalString (mHost != null) ''targetHost = "${mHost}";''}
+          targetUser = "${sshUser}";
+          ${lib.optionalString (sshPort != 22) ''targetPort = ${toString sshPort};''}
+          tags = ${builtins.toJSON ((machine.tags or [ ]) ++ (machine.roles or [ ]))};
+        };
+
+        ${lib.optionalString (nixosProfile != null) ''
+          imports = [
+            ${nixosProfile}
+            ${appModuleImports}
+          ];
+        ''}
+        ${lib.optionalString (nixosProfile == null && appModuleImports != "") ''
+          imports = [
+            ${appModuleImports}
+          ];
+        ''}
+
+        nixpkgs.system = "${arch}";
+      }
+    '';
+
+  # Build the hive.nix that imports all nodes
+  allMachineIds = builtins.attrNames cfg.machinesComputed;
+  hiveNix =
+    ''
+      # Generated by stackpanel colmena module — do not edit manually.
+      {
+        meta = {
+          nixpkgs = import <nixpkgs> { };
+        };
+
+    ''
+    + lib.concatMapStringsSep "\n" (
+      machineId:
+      ''
+          "${machineId}" = import ./nodes/${machineId}.nix;
+      ''
+    ) allMachineIds
+    + ''
+      }
+    '';
+
+  # Machines JSON for agent consumption
+  machinesJson = builtins.toJSON (
+    lib.mapAttrs (
+      id: machine:
+      {
+        inherit id;
+        name = machine.name or id;
+        host = machine.host or null;
+        ssh = {
+          user = (machine.ssh or { }).user or "root";
+          port = (machine.ssh or { }).port or 22;
+          keyPath = (machine.ssh or { }).keyPath or null;
+        };
+        tags = machine.tags or [ ];
+        roles = machine.roles or [ ];
+        provider = machine.provider or null;
+        arch = machine.arch or null;
+        publicIp = machine.publicIp or null;
+        privateIp = machine.privateIp or null;
+        targetEnv = machine.targetEnv or null;
+        labels = machine.labels or { };
+      }
+    ) cfg.machinesComputed
+  );
+
+  # App deploy mapping JSON for agent
+  appDeployJson = builtins.toJSON (
+    lib.filterAttrs (_: v: v.enable) (
+      lib.mapAttrs (
+        appName: appCfg:
+        let
+          deploy = appCfg.deploy or { };
+        in
+        {
+          enable = deploy.enable or false;
+          targets = deploy.targets or [ ];
+          resolvedTargets = resolveTargets (deploy.targets or [ ]);
+          role = deploy.role or null;
+          nixosModules = deploy.nixosModules or [ ];
+          system = deploy.system or null;
+        }
+      ) (sp.apps or { })
+    )
+  );
 in
 {
   options.stackpanel.colmena = {
@@ -282,8 +404,14 @@ in
 
     config = lib.mkOption {
       type = lib.types.str;
-      default = "colmena.nix";
+      default = "${colmenaStateDir}/hive.nix";
       description = "Path to the Colmena hive config passed via --config.";
+    };
+
+    generateHive = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Generate Colmena hive files from machinesComputed.";
     };
 
     flake = lib.mkOption {
@@ -482,8 +610,101 @@ in
         flags = evalFlags;
         description = "Run colmena eval with stackpanel defaults";
       };
+
+      colmena-validate = {
+        description = "Validate Colmena machine inventory and app targets";
+        exec = ''
+          set -euo pipefail
+          echo "Colmena Validation"
+          echo "=================="
+          echo ""
+          echo "Machine source: ${cfg.machineSource}"
+          echo "Hive config:    ${cfg.config}"
+          echo "Generate hive:  ${if cfg.generateHive then "yes" else "no"}"
+          echo ""
+
+          MACHINES_FILE="${stateDir}/colmena-machines.json"
+          if [ -f "$MACHINES_FILE" ]; then
+            COUNT=$(${pkgs.jq}/bin/jq 'length' "$MACHINES_FILE")
+            echo "Machines: $COUNT"
+            ${pkgs.jq}/bin/jq -r 'to_entries[] | "  \(.key): \(.value.host // "no host") [\(.value.tags | join(", "))]"' "$MACHINES_FILE"
+          else
+            echo "Machines: (no state file yet)"
+          fi
+
+          echo ""
+          DEPLOY_FILE="${stateDir}/colmena-app-deploy.json"
+          if [ -f "$DEPLOY_FILE" ]; then
+            echo "App deploy mapping:"
+            ${pkgs.jq}/bin/jq -r 'to_entries[] | "  \(.key): targets=\(.value.targets | join(",")) resolved=\(.value.resolvedTargets | join(","))"' "$DEPLOY_FILE"
+          else
+            echo "App deploy: (no state file yet)"
+          fi
+        '';
+      };
     };
 
+    # =========================================================================
+    # Hive codegen: generate .stackpanel/state/colmena/{hive.nix, nodes/*.nix}
+    # =========================================================================
+    stackpanel.files.entries = lib.mkIf cfg.generateHive (
+      {
+        "${colmenaStateDir}/hive.nix" = {
+          text = hiveNix;
+          mode = "0644";
+          description = "Generated Colmena hive (imports all nodes)";
+          source = "colmena";
+        };
+
+        "${stateDir}/colmena-machines.json" = {
+          text = machinesJson;
+          mode = "0644";
+          description = "Colmena machine inventory (JSON for agent)";
+          source = "colmena";
+        };
+
+        "${stateDir}/colmena-app-deploy.json" = {
+          text = appDeployJson;
+          mode = "0644";
+          description = "App deploy mapping (JSON for agent)";
+          source = "colmena";
+        };
+      }
+      // lib.listToAttrs (
+        map (
+          machineId:
+          lib.nameValuePair "${colmenaStateDir}/nodes/${machineId}.nix" {
+            text = mkNodeNix machineId cfg.machinesComputed.${machineId};
+            mode = "0644";
+            description = "Colmena node config for ${machineId}";
+            source = "colmena";
+          }
+        ) allMachineIds
+      )
+    );
+
+    # =========================================================================
+    # Serialization for agent
+    # =========================================================================
+    stackpanel.serializable.colmena = {
+      inherit (cfg) enable machineSource generateHive;
+      config = cfg.config;
+      machineCount = builtins.length allMachineIds;
+      machineIds = allMachineIds;
+    };
+
+    # =========================================================================
+    # Environment variables
+    # =========================================================================
+    stackpanel.devshell.env = {
+      STACKPANEL_COLMENA_MACHINES = "${stateDir}/colmena-machines.json";
+      STACKPANEL_COLMENA_APP_DEPLOY = "${stateDir}/colmena-app-deploy.json";
+      STACKPANEL_COLMENA_HIVE = "${colmenaStateDir}/hive.nix";
+    };
+
+    # =========================================================================
+    # Health checks
+    # =========================================================================
     stackpanel.healthchecks.modules.${meta.id} = {
       enable = true;
       displayName = meta.name;
@@ -513,6 +734,9 @@ in
       };
     };
 
+    # =========================================================================
+    # Module registration
+    # =========================================================================
     stackpanel.modules.${meta.id} = {
       enable = true;
       meta = {
@@ -526,7 +750,6 @@ in
       };
       source.type = "builtin";
       features = meta.features;
-      flakeInputs = meta.flakeInputs or [ ];
       tags = meta.tags;
       priority = meta.priority;
       healthcheckModule = meta.id;
