@@ -67,7 +67,12 @@ in
     ]
     ++ lib.optional cfg.tools.delve pkgs.delve
     ++ lib.optional cfg.tools.gotools pkgs.gotools
-    ++ lib.optional cfg.lsp.enable cfg.lsp.package;
+    ++ lib.optional cfg.lsp.enable cfg.lsp.package
+    # CGO on macOS needs system frameworks + libresolv for the net package.
+    # Required when any Go dependency uses CGO (e.g., tree-sitter bindings).
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      pkgs.apple-sdk_15
+    ];
 
     # GOROOT is a static nix store path so it can go in env.
     # GOPATH references $STACKPANEL_STATE_DIR which is set by an earlier hook,
