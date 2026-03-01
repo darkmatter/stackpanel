@@ -172,7 +172,7 @@ let
     let
       appPath = appCfg.path or ".";
       envExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (cmdCfg.env or { })
+        lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (cmdCfg.env or { })
       );
     in
     pkgs.writeShellApplication {
@@ -201,7 +201,7 @@ let
       appPath = appCfg.path or ".";
       repoRoot = ../../../..;
       envExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (k: v: ''export ${k}=${lib.escapeShellArg v}'') (cmdCfg.env or { })
+        lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (cmdCfg.env or { })
       );
     in
     pkgs.runCommand "${appName}-${cmdName}"
@@ -280,21 +280,25 @@ let
       apps = lib.filterAttrs (_: v: v.outputType == "app") validOutputs;
 
       # Convert to output format, using the computed name as key
-      mkOutputWithName = outputs: lib.listToAttrs (
-        lib.mapAttrsToList (_cmdName: v: {
-          name = v.name;  # Use the computed name (e.g., "web-dev" not "dev")
-          value = v.drv;
-        }) outputs
-      );
-      mkAppsWithName = outputs: lib.listToAttrs (
-        lib.mapAttrsToList (_cmdName: v: {
-          name = v.name;
-          value = {
-            type = "app";
-            program = lib.getExe v.drv;
-          };
-        }) outputs
-      );
+      mkOutputWithName =
+        outputs:
+        lib.listToAttrs (
+          lib.mapAttrsToList (_cmdName: v: {
+            name = v.name; # Use the computed name (e.g., "web-dev" not "dev")
+            value = v.drv;
+          }) outputs
+        );
+      mkAppsWithName =
+        outputs:
+        lib.listToAttrs (
+          lib.mapAttrsToList (_cmdName: v: {
+            name = v.name;
+            value = {
+              type = "app";
+              program = lib.getExe v.drv;
+            };
+          }) outputs
+        );
     in
     {
       packages = mkOutputWithName packages;
@@ -361,44 +365,42 @@ in
         allAppOutputs = lib.mapAttrs collectAppOutputs appsWithCommands;
 
         # Build healthchecks from app check commands
-        appCheckModules =
-          lib.mapAttrs'
-            (appName: appCfg:
-              let
-                rawCommands = appCfg.commands or null;
-                commands = if rawCommands == null then { } else rawCommands;
-                checkCommands = lib.filterAttrs (
-                  _: cmd:
-                  cmd != null &&
-                  (cmd.enable or true) &&
-                  (cmd.outputType or "app") == "check" &&
-                  cmd.command != null
-                ) commands;
+        appCheckModules = lib.mapAttrs' (
+          appName: appCfg:
+          let
+            rawCommands = appCfg.commands or null;
+            commands = if rawCommands == null then { } else rawCommands;
+            checkCommands = lib.filterAttrs (
+              _: cmd:
+              cmd != null && (cmd.enable or true) && (cmd.outputType or "app") == "check" && cmd.command != null
+            ) commands;
 
-                mkCheck =
-                  cmdName: cmdCfg: {
-                    name = cmdCfg.description or "${appName} ${cmdName}";
-                    description = cmdCfg.description or "App check command";
-                    type = "script";
-                    severity = "warning";
-                    scriptPackage = mkCommandScript appName appCfg cmdName cmdCfg;
-                  };
-              in
-              if checkCommands == { } then
-                lib.nameValuePair "app-${appName}" { enable = false; checks = { }; displayName = appName; }
-              else
-                lib.nameValuePair "app-${appName}" {
-                  enable = true;
-                  displayName = "${appName} checks";
-                  checks = lib.mapAttrs mkCheck checkCommands;
-                }
-            )
-            appsWithCommands;
+            mkCheck = cmdName: cmdCfg: {
+              name = cmdCfg.description or "${appName} ${cmdName}";
+              description = cmdCfg.description or "App check command";
+              type = "script";
+              severity = "warning";
+              scriptPackage = mkCommandScript appName appCfg cmdName cmdCfg;
+            };
+          in
+          if checkCommands == { } then
+            lib.nameValuePair "app-${appName}" {
+              enable = false;
+              checks = { };
+              displayName = appName;
+            }
+          else
+            lib.nameValuePair "app-${appName}" {
+              enable = true;
+              displayName = "${appName} checks";
+              checks = lib.mapAttrs mkCheck checkCommands;
+            }
+        ) appsWithCommands;
 
         # Merge all outputs
-        mergedPackages = lib.foldl' (
-          acc: outputs: acc // outputs.packages
-        ) { } (lib.attrValues allAppOutputs);
+        mergedPackages = lib.foldl' (acc: outputs: acc // outputs.packages) { } (
+          lib.attrValues allAppOutputs
+        );
 
         mergedChecks = lib.foldl' (acc: outputs: acc // outputs.checks) { } (lib.attrValues allAppOutputs);
 
@@ -433,6 +435,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
         };

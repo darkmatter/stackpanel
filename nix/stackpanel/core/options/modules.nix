@@ -341,6 +341,31 @@ let
           description = "Other modules that conflict with this module";
         };
 
+        # Flake inputs required by this module (for auto-installation)
+        flakeInputs = lib.mkOption {
+          type = lib.types.listOf (
+            lib.types.submodule {
+              options = {
+                name = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Input name in flake.nix (e.g., \"my-module\")";
+                };
+                url = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Flake URL (e.g., \"github:author/my-module\")";
+                };
+                followsNixpkgs = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Whether to add inputs.nixpkgs.follows = \"nixpkgs\"";
+                };
+              };
+            }
+          );
+          default = [ ];
+          description = "Flake inputs required by this module. Used for auto-installation from the registry.";
+        };
+
         # Load order
         priority = lib.mkOption {
           type = lib.types.int;
@@ -446,6 +471,11 @@ let
     };
     requires = mod.requires;
     conflicts = mod.conflicts;
+    flakeInputs = map (fi: {
+      name = fi.name;
+      url = fi.url;
+      followsNixpkgs = fi.followsNixpkgs;
+    }) mod.flakeInputs;
     priority = mod.priority;
     tags = mod.tags;
     configSchema = mod.configSchema;

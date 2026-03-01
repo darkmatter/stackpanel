@@ -372,6 +372,7 @@ let
         tooling = appCfg.tooling;
         # Only compute wrappedTooling when pkgs is available
         wrappedTooling = if mkWrappedTooling != null then mkWrappedTooling name appCfg else null;
+        deployTargets = if appCfg.deploy.enable then appCfg.deploy.targets else [ ];
 
         # Framework mutual exclusivity check
         _frameworkNames = [
@@ -396,6 +397,7 @@ let
             url
             tooling
             wrappedTooling
+            deployTargets
             ;
           inherit (appCfg) tls offset;
         };

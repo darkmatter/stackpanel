@@ -54,6 +54,20 @@ proto.mkProtoFile {
   enums = { };
 
   messages = {
+    # Colmena deployment mapping
+    AppDeploy = proto.mkMessage {
+      name = "AppDeploy";
+      description = "Deployment mapping for Colmena (targets, roles, and modules)";
+      fields = {
+        enable = proto.bool 1 "Enable deployment mapping for this app";
+        targets = proto.repeated (proto.string 2 "Target machine ids or tag selectors");
+        role = proto.optional (proto.string 3 "Deployment role label for this app");
+        nixos_modules = proto.repeated (proto.string 4 "Extra NixOS modules to import for this app");
+        system = proto.optional (proto.string 5 "Target system/architecture (e.g., x86_64-linux)");
+        secrets = proto.repeated (proto.string 6 "Secret references required by this app during deploy");
+      };
+    };
+
     # Environment configuration
     AppEnvironment = proto.mkMessage {
       name = "AppEnvironment";
@@ -85,6 +99,7 @@ proto.mkProtoFile {
         environments = proto.map "string" "AppEnvironment" 7 ''
           Environment configurations (key = environment name like "dev", "prod").
         '';
+        deploy = proto.message "AppDeploy" 8 "Colmena deployment mapping for this app";
       };
     };
 

@@ -54,7 +54,7 @@ in
           defaultPkg = pkgs.awscli2;
         };
       };
-      default = {};
+      default = { };
       description = "AWS CLI wrapper configuration.";
     };
 
@@ -65,7 +65,7 @@ in
           defaultPkg = pkgs.opentofu;
         };
       };
-      default = {};
+      default = { };
       description = "OpenTofu wrapper configuration.";
     };
 
@@ -76,7 +76,7 @@ in
           defaultPkg = pkgs.terraform;
         };
       };
-      default = {};
+      default = { };
       description = "Terraform wrapper configuration.";
     };
   };
@@ -156,6 +156,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
           healthcheckModule = meta.id;

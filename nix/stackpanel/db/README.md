@@ -75,11 +75,10 @@ packages/proto/
 
 ```bash
 # Full pipeline: Nix → Proto → Go/TypeScript
-./nix/stackpanel/core/generate-types.sh
+nix develop --impure -c ./nix/stackpanel/core/generate-types.sh
 
 # Or use the proto package directly
-cd packages/proto
-./generate.sh
+nix develop --impure -c ./packages/proto/generate.sh
 ```
 
 ### List All Schemas
@@ -264,7 +263,7 @@ dataSchemas = {
 4. **Regenerate types:**
 
 ```bash
-./nix/stackpanel/core/generate-types.sh
+nix develop --impure -c ./nix/stackpanel/core/generate-types.sh
 ```
 
 5. **Use the generated types:**
