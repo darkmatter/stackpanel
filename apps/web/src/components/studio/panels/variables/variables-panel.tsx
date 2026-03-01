@@ -680,8 +680,7 @@ export function VariablesPanel() {
             onOpenChange={(open) => {
               if (!open) setEditingSecret(null);
             }}
-            onSuccess={(_valsRef) => {
-              // valsRef could be used to update the variable value if needed
+            onSuccess={() => {
               refetch();
             }}
           />

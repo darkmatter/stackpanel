@@ -6,7 +6,7 @@ import type { AppEnvironment } from "@stackpanel/proto";
  * 
  * With the simplified model, env is now map<string, string>:
  * - Key = ENV_VAR_NAME (e.g., "DATABASE_URL")
- * - Value = literal string OR vals reference (e.g., "ref+sops://...")
+ * - Value = literal string (secrets have empty values; SOPS file is source of truth)
  */
 export interface AppVariableMapping {
 	/** Environment variable name (e.g., "DATABASE_URL") */
@@ -113,40 +113,4 @@ export function buildEnvironmentsMap(
 	return result;
 }
 
-/**
- * Check if a value is a vals reference (starts with "ref+").
- */
-export function isValsReference(value: string): boolean {
-	return value.startsWith("ref+");
-}
 
-/**
- * Check if a value is a SOPS secret reference.
- */
-export function isSopsReference(value: string): boolean {
-	return value.startsWith("ref+sops://");
-}
-
-/**
- * Build a SOPS reference for a secret.
- * @param keyGroup - The key group (e.g., "dev", "prod")
- * @param key - The secret key name (e.g., "DATABASE_URL")
- */
-export function buildSopsReference(keyGroup: string, key: string): string {
-	return `ref+sops://.stackpanel/secrets/${keyGroup}.yaml#/${key}`;
-}
-
-/**
- * Build a YAML reference for a plaintext config value.
- * @param key - The config key name (e.g., "LOG_LEVEL")
- */
-export function buildYamlReference(key: string): string {
-	return `ref+yaml://.stackpanel/secrets/vars/var.sops.yaml#/${key}`;
-}
-
-/**
- * Check if a value is a plaintext YAML reference.
- */
-export function isYamlReference(value: string): boolean {
-	return value.startsWith("ref+yaml://");
-}
