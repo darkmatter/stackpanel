@@ -508,6 +508,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
           healthcheckModule = meta.id;

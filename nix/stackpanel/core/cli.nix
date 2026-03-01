@@ -21,6 +21,7 @@
   lib,
   config,
   pkgs,
+  inputs ? { },
   ...
 }:
 let
@@ -98,6 +99,21 @@ let
   # Combine devshell packages with user packages (user packages already have source = "user")
   serializedPackages = serializedDevshellPackages ++ userPackagesSerialized;
 
+  # =========================================================================
+  # Missing flake inputs detection
+  # =========================================================================
+  # For each enabled module, check if its declared flakeInputs are present
+  # in the flake's inputs. Produces a flat list for the CLI/MOTD to warn about.
+  enabledModules = lib.filterAttrs (_: mod: mod.enable) (cfg.modules or { });
+
+  allRequiredFlakeInputs = lib.concatLists (
+    lib.mapAttrsToList (
+      modName: mod: map (fi: fi // { requiredBy = modName; }) (mod.flakeInputs or [ ])
+    ) enabledModules
+  );
+
+  missingFlakeInputs = builtins.filter (fi: !(inputs ? ${fi.name})) allRequiredFlakeInputs;
+
   # The schema expected by the CLI should not be coupled to the actual Nix
   # options structure. We build a separate config object here.
   fullConfig = {
@@ -169,6 +185,17 @@ let
     # Module requirements (what variables each module needs)
     # Serialized for agent/UI to show missing variables
     moduleRequirements = cfg.moduleRequirements;
+
+    # Missing flake inputs that enabled modules require but aren't in the flake
+    # Each entry: { name, url, followsNixpkgs, requiredBy }
+    missingFlakeInputs = map (fi: {
+      inherit (fi)
+        name
+        url
+        followsNixpkgs
+        requiredBy
+        ;
+    }) missingFlakeInputs;
 
     # UI configuration for the web interface
     ui = {

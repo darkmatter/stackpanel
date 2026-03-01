@@ -97,6 +97,7 @@ in
         files = true;
         secrets = true;
       };
+      flakeInputs = meta.flakeInputs or [ ];
       tags = [
         "codegen"
         "secrets"

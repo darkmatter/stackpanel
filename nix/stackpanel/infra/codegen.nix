@@ -219,6 +219,16 @@ let
   kmsKeyTs = builtins.readFile ./templates/kms-key.ts;
   kmsAliasTs = builtins.readFile ./templates/kms-alias.ts;
   iamRoleTs = builtins.readFile ./templates/iam-role.ts;
+  securityGroupTs = builtins.readFile ./templates/security-group.ts;
+  keyPairTs = builtins.readFile ./templates/key-pair.ts;
+  iamInstanceProfileTs = builtins.readFile ./templates/iam-instance-profile.ts;
+  ec2InstanceTs = builtins.readFile ./templates/ec2-instance.ts;
+  albTs = builtins.readFile ./templates/application-load-balancer.ts;
+  targetGroupTs = builtins.readFile ./templates/target-group.ts;
+  listenerTs = builtins.readFile ./templates/listener.ts;
+  listenerRuleTs = builtins.readFile ./templates/listener-rule.ts;
+  targetGroupAttachmentTs = builtins.readFile ./templates/target-group-attachment.ts;
+  ecrRepositoryTs = builtins.readFile ./templates/ecr-repository.ts;
 
   # ============================================================================
   # Generated: src/types.ts (per-module input interfaces)
@@ -530,6 +540,66 @@ in
         description = "Custom IAM Role alchemy resource";
         source = "infra";
       };
+      "${outputDir}/src/resources/security-group.ts" = {
+        text = securityGroupTs;
+        mode = "0644";
+        description = "Custom Security Group alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/key-pair.ts" = {
+        text = keyPairTs;
+        mode = "0644";
+        description = "Custom Key Pair alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/iam-instance-profile.ts" = {
+        text = iamInstanceProfileTs;
+        mode = "0644";
+        description = "Custom IAM Instance Profile alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/ec2-instance.ts" = {
+        text = ec2InstanceTs;
+        mode = "0644";
+        description = "Custom EC2 Instance alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/application-load-balancer.ts" = {
+        text = albTs;
+        mode = "0644";
+        description = "Custom ALB alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/target-group.ts" = {
+        text = targetGroupTs;
+        mode = "0644";
+        description = "Custom Target Group alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/listener.ts" = {
+        text = listenerTs;
+        mode = "0644";
+        description = "Custom ALB Listener alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/listener-rule.ts" = {
+        text = listenerRuleTs;
+        mode = "0644";
+        description = "Custom ALB Listener Rule alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/target-group-attachment.ts" = {
+        text = targetGroupAttachmentTs;
+        mode = "0644";
+        description = "Custom Target Group Attachment alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/ecr-repository.ts" = {
+        text = ecrRepositoryTs;
+        mode = "0644";
+        description = "Custom ECR Repository alchemy resource";
+        source = "infra";
+      };
 
       # Orchestrator
       "${outputDir}/alchemy.run.ts" = {
@@ -705,6 +775,73 @@ in
               echo "}" >> "$OUTPUT_FILE"
               echo "Wrote outputs to $OUTPUT_FILE"
             ''
+          else if storageType == "sops" then
+            let
+              secretsDir = config.stackpanel.secrets.secrets-dir or ".stackpanel/secrets";
+              group = cfg.storage-backend.sops.group;
+              sopsFile =
+                if cfg.storage-backend.sops.group != "" then
+                  "${secretsDir}/vars/${group}.sops.yaml"
+                else
+                  cfg.storage-backend.sops.file-path;
+            in
+            ''
+              echo "Pulling outputs from SOPS..."
+              FILE_PATH="${sopsFile}"
+              OUTPUT_FILE="${outputsFile}"
+
+              if [ ! -f "$FILE_PATH" ]; then
+                echo "SOPS file not found: $FILE_PATH"
+                exit 1
+              fi
+
+              echo "{" > "$OUTPUT_FILE"
+              ${lib.concatMapStringsSep "\n" (
+                id:
+                let
+                  mod = cfg.modules.${id};
+                  syncKeys = builtins.filter (k: (mod.outputs.${k}.sync or false)) (builtins.attrNames mod.outputs);
+                in
+                ''
+                  echo '  ${id} = {' >> "$OUTPUT_FILE"
+                  ${lib.concatMapStringsSep "\n" (
+                    key:
+                    let
+                      formattedKey = builtins.replaceStrings [ "$module" "$key" ] [ id key ] cfg.key-format;
+                    in
+                    ''
+                      JSON_PATH='["${formattedKey}"]'
+                      RAW_VALUE=$(sops --extract "$JSON_PATH" "$FILE_PATH" 2>/dev/null || echo "")
+                      if [ -n "$RAW_VALUE" ] && [ "$RAW_VALUE" != "null" ]; then
+                        VALUE=$(printf '%s' "$RAW_VALUE" | python - <<'PY'
+import json,sys
+raw = sys.stdin.read().strip()
+if not raw or raw == "null":
+    sys.exit(0)
+try:
+    val = json.loads(raw)
+except Exception:
+    val = raw
+if val is None:
+    sys.exit(0)
+if not isinstance(val, str):
+    val = json.dumps(val, separators=(",", ":"))
+val = val.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+print(val)
+PY
+                        )
+                        if [ -n "$VALUE" ]; then
+                          echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
+                        fi
+                      fi
+                    ''
+                  ) syncKeys}
+                  echo '  };' >> "$OUTPUT_FILE"
+                ''
+              ) moduleIds}
+              echo "}" >> "$OUTPUT_FILE"
+              echo "Wrote outputs to $OUTPUT_FILE"
+            ''
           else if storageType == "ssm" then
             ''
               echo "Pulling outputs from SSM..."
@@ -741,7 +878,7 @@ in
           else
             ''
               echo "Storage backend '${storageType}' does not support pull-outputs."
-              echo "Supported backends: chamber, ssm"
+              echo "Supported backends: chamber, sops, ssm"
               exit 1
             '';
         description = "Pull infra outputs from storage backend into .stackpanel/data/infra-outputs.nix";
