@@ -870,7 +870,7 @@ in
 
     sync-outputs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "instanceIds" "publicIps" "publicDns" "privateIps" "machines" ];
+      default = [ "instanceIds" "publicIps" "publicDns" "privateIps" "machines" "albOutputs" "ecrOutputs" "ssmOutputs" ];
       description = "Which outputs to sync to the storage backend.";
     };
   };
@@ -908,6 +908,9 @@ in
           publicDns = mkOutput "publicDns" "Instance public DNS (JSON)";
           privateIps = mkOutput "privateIps" "Instance private IPs (JSON)";
           machines = mkOutput "machines" "Machine inventory (JSON)";
+          albOutputs = mkOutput "albOutputs" "ALB outputs per app (JSON)";
+          ecrOutputs = mkOutput "ecrOutputs" "ECR outputs per app (JSON)";
+          ssmOutputs = mkOutput "ssmOutputs" "SSM outputs per app (JSON)";
         };
     };
   };
