@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@stackpanel/ui-core";
-import { Dialog as DialogPrimitive } from "@stackpanel/ui-primitives";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
 

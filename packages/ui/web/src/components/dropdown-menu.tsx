@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@stackpanel/ui-core";
-import { DropdownMenu as DropdownMenuPrimitive } from "@stackpanel/ui-primitives";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 import type * as React from "react";
 
