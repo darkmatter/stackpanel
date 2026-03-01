@@ -30,6 +30,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@ui": resolve(__dirname, "src/components/ui"),
+      "@gen/featureflags": resolve(__dirname, "../../packages/gen/featureflags/src"),
     },
   },
   server: {
