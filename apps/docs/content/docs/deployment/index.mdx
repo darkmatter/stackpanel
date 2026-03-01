@@ -74,17 +74,17 @@ From this, Stackpanel generates a `Dockerfile` for the API, a `fly.toml` with th
 Deployment configuration feeds into [CI generation](/docs/apps-ci/ci-generation). When you define a deployment target and enable the CI extension, the generated GitHub Actions workflow includes the appropriate deploy steps:
 
 ```
-stackpanel.containers.api
-  → Generates Dockerfile
+stackpanel.apps.api.container
+  → Generates container image
   → CI workflow gets docker build + push steps
 
-stackpanel.deployment.fly.apps.api
+stackpanel.apps.api.deployment.host = "fly"
   → Generates fly.toml
   → CI workflow gets flyctl deploy step
 
-stackpanel.sst
-  → Generates sst.config.ts
-  → CI workflow gets sst deploy step with OIDC auth
+stackpanel.apps.api.deployment.host = "cloudflare"
+  → Generates wrangler config
+  → CI workflow gets cloudflare deploy step
 ```
 
 Each deployment platform adds its own steps to the CI pipeline. Multiple platforms can coexist—deploy your frontend to Cloudflare and your API to Fly.io from the same workflow.
