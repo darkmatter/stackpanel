@@ -14,7 +14,7 @@
 #   - hooks.before/main/after: Shell initialization hooks (ordered)
 #
 # Scripts are defined via stackpanel.scripts (see devshell/scripts.nix).
-# Files options are co-located with their implementation in devshell/files.nix.
+# Files options are defined by the top-level files module in nix/stackpanel/files/default.nix.
 #
 # This module is adapter-agnostic; the actual shell creation happens in
 # the devenv or flake adapter modules.

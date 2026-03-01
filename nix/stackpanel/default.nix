@@ -33,6 +33,9 @@ in
     # Core devshell schema (packages, hooks, commands, files)
     ./devshell/core.nix
 
+    # Generated files materialization (stackpanel.files.*)
+    ./files
+
     # Core configuration and options
     ./core
 
