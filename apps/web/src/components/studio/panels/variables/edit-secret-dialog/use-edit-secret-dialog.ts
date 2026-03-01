@@ -2,12 +2,10 @@
  * Hook for managing EditSecretDialog state.
  *
  * Supports both:
- * - Group-based SOPS secrets (new): Secrets stored in per-group SOPS files with vals references
+ * - Group-based SOPS secrets (new): Secrets stored in per-group SOPS files.
+ *   The variable value is empty; the SOPS file is the source of truth.
  * - Legacy agenix secrets: Individual .age files (deprecated, for backward compatibility)
  * - Chamber (AWS SSM): Uses AWS SSM Parameter Store
- *
- * When a group is specified, secrets are written to `.stackpanel/secrets/vars/<group>.sops.yaml`
- * and the variable value becomes a vals reference: `ref+sops://.stackpanel/secrets/vars/<group>.sops.yaml#/<key>`
  */
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -199,8 +197,8 @@ export function useEditSecretDialog(
     setIsSaving(true);
     try {
       if (useGroupSecrets) {
-        // New group-based secrets: write to group SOPS file and get vals reference
-        const result = await agentClient.writeGroupSecret({
+        // New group-based secrets: write to group SOPS file
+        await agentClient.writeGroupSecret({
           key: secretKey,
           value: value,
           group: group,
@@ -209,8 +207,7 @@ export function useEditSecretDialog(
 
         toast.success(`Secret saved to ${group} group`);
         onOpenChange(false);
-        // Pass the vals reference to the callback so the variable value can be updated
-        onSuccess(result.valsRef);
+        onSuccess();
       } else {
         // Legacy: write individual .age file
         await agentClient.writeAgenixSecret({

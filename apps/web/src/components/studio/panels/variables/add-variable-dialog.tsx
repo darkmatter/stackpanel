@@ -24,21 +24,23 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  Globe,
   Key,
   Loader2,
   Plus,
   Settings,
   Shield,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
 import {
+  SHARED_GROUP,
   formatSecretKeyError,
   getVariableName,
-  SECRET_GROUPS,
+  resolveGroup,
 } from "./constants";
 
 type VariableMode = "plaintext" | "secret";
@@ -71,10 +73,42 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
   const [varId, setVarId] = useState("");
   const [varValue, setVarValue] = useState("");
   const [varDescription, setVarDescription] = useState("");
-  const [group, setGroup] = useState<string>("dev");
+  const [group, setGroup] = useState<string>(SHARED_GROUP);
+
+  // Available groups loaded from agent API
+  const [availableGroups, setAvailableGroups] = useState<string[]>([]);
 
   // Validation state for vals references
   const [valsError, setValsError] = useState<string | null>(null);
+
+  // Load available groups from agent
+  const loadAvailableGroups = useCallback(async () => {
+    if (!token || isChamber) return;
+    try {
+      const result = await agentClient.listGroupSecrets();
+      if ("groups" in result && result.groups) {
+        setAvailableGroups(
+          Object.keys(result.groups).filter((g) => g.length > 0),
+        );
+      }
+    } catch (err) {
+      console.warn("Failed to load available groups:", err);
+      setAvailableGroups(["dev", "staging", "prod"]);
+    }
+  }, [token, isChamber, agentClient]);
+
+  useEffect(() => {
+    if (dialogOpen) {
+      loadAvailableGroups();
+    }
+  }, [dialogOpen, loadAvailableGroups]);
+
+  // Build group options: "shared" + dynamic groups from agent
+  // Filter out "common" (SOPS target for "shared" in secret mode) and empty strings
+  const groupOptions = [
+    SHARED_GROUP,
+    ...availableGroups.filter((g) => g && g !== "common"),
+  ];
 
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
@@ -85,7 +119,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
       setVarDescription("");
       setShowValue(false);
       setValsError(null);
-      setGroup("dev");
+      setGroup(SHARED_GROUP);
     }
   };
 
@@ -153,56 +187,56 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
         }
       }
 
-      if (mode === "secret") {
+      const { idPrefix, sopsGroup } = resolveGroup(group, mode);
+      const envKey = getVariableName(normalizedId);
+
+      // Validate key follows Chamber naming rules
+      const keyError = formatSecretKeyError(envKey);
+      if (keyError) {
+        toast.error(keyError);
+        setIsSaving(false);
+        return;
+      }
+
+      // Build the full variable ID with the group prefix
+      const fullId = `${idPrefix}${envKey}`;
+
+      if (mode === "secret" && sopsGroup) {
         // Write secret to group-based SOPS file
-        const envKey = getVariableName(normalizedId);
-
-        // Validate key follows Chamber naming rules
-        const keyError = formatSecretKeyError(envKey);
-        if (keyError) {
-          toast.error(keyError);
-          setIsSaving(false);
-          return;
-        }
-
-        const result = await client.writeGroupSecret({
+        await client.writeGroupSecret({
           key: envKey,
           value: trimmedValue,
-          group: group,
+          group: sopsGroup,
           description: varDescription.trim() || undefined,
         });
 
-        // Build the variable ID with the group prefix so Nix can extract
-        // the keygroup (e.g. "/dev/openrouter-api-key" → keyGroup "dev").
-        const secretId = `/${group}/${envKey}`;
-
-        // Create a variable entry with the vals reference
+        // Create a variable entry with empty value -- the SOPS file is the source of truth
         const variablesClient = client.nix.mapEntity<Variable>("variables");
         const newVariable: Variable = {
-          id: secretId,
-          value: result.valsRef, // Use the source project vals reference
+          id: fullId,
+          value: "",
         };
-        await variablesClient.set(secretId, newVariable);
+        await variablesClient.set(fullId, newVariable);
 
-        toast.success(`Created secret "${secretId}" in ${group} group`);
+        toast.success(`Created secret "${fullId}" in ${sopsGroup} group`);
       } else {
-        // Plaintext variable
+        // Plaintext variable (either "shared" → /var/ or a group like /dev/)
         const variablesClient = client.nix.mapEntity<Variable>("variables");
 
-        const existing = await variablesClient.get(normalizedId);
+        const existing = await variablesClient.get(fullId);
         if (existing) {
-          toast.error(`Variable "${normalizedId}" already exists`);
+          toast.error(`Variable "${fullId}" already exists`);
           setIsSaving(false);
           return;
         }
 
         const newVariable: Variable = {
-          id: normalizedId,
+          id: fullId,
           value: trimmedValue,
         };
 
-        await variablesClient.set(normalizedId, newVariable);
-        toast.success(`Created variable "${normalizedId}"`);
+        await variablesClient.set(fullId, newVariable);
+        toast.success(`Created variable "${fullId}"`);
       }
 
       handleOpenChange(false);
@@ -236,28 +270,37 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          {/* Group selector (for secrets only) */}
-          {mode === "secret" && !isChamber && (
+          {/* Group selector */}
+          {!isChamber && (
             <div className="space-y-2">
-              <Label htmlFor="group">Access Control Group *</Label>
+              <Label htmlFor="group">Group</Label>
               <Select value={group} onValueChange={setGroup}>
                 <SelectTrigger id="group">
                   <SelectValue placeholder="Select a group" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SECRET_GROUPS.map((g) => (
+                  {groupOptions.map((g) => (
                     <SelectItem key={g} value={g}>
                       <div className="flex items-center gap-2">
-                        <Shield className="h-3.5 w-3.5" />
-                        {g}
+                        {g === SHARED_GROUP ? (
+                          <Globe className="h-3.5 w-3.5" />
+                        ) : (
+                          <Shield className="h-3.5 w-3.5" />
+                        )}
+                        {g === SHARED_GROUP ? "shared" : g}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Determines who can decrypt this secret. Only users with access
-                to the {group} group can read this value.
+                {group === SHARED_GROUP
+                  ? mode === "secret"
+                    ? "Stored in common.sops.yaml, accessible to all groups."
+                    : "Not scoped to any group."
+                  : mode === "secret"
+                    ? `Encrypted in ${group}.sops.yaml. Only users with access to the ${group} group can decrypt.`
+                    : `Scoped to the ${group} group.`}
               </p>
             </div>
           )}

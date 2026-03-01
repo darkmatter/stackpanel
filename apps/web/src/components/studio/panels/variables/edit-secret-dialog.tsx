@@ -70,9 +70,9 @@ export function EditSecretDialog({
     onSuccess,
   });
 
-  // Build the vals reference preview
-  const valsRefPreview = useGroupSecrets
-    ? `ref+sops://.stackpanel/secrets/vars/${group}.sops.yaml#/${secretKey}`
+  // Build the SOPS file path preview
+  const sopsFilePreview = useGroupSecrets
+    ? `.stackpanel/secrets/vars/${group}.sops.yaml`
     : null;
 
   return (
@@ -104,7 +104,7 @@ export function EditSecretDialog({
               <SelectContent>
                 {(availableGroups.length > 0
                   ? availableGroups
-                  : ["dev", "staging", "prod"]
+                  : ["dev", "staging", "prod", "common"]
                 ).map((g) => (
                   <SelectItem key={g} value={g}>
                     {g}
@@ -116,10 +116,10 @@ export function EditSecretDialog({
               Secrets are encrypted per group. Only users with access to this
               group's keys can decrypt.
             </p>
-            {valsRefPreview && (
+            {sopsFilePreview && (
               <div className="mt-2 p-2 bg-muted rounded text-xs font-mono break-all">
-                <span className="text-muted-foreground">Reference: </span>
-                {valsRefPreview}
+                <span className="text-muted-foreground">SOPS file: </span>
+                {sopsFilePreview}
               </div>
             )}
           </div>

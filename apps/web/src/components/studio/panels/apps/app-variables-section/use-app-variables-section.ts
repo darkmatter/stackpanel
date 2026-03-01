@@ -3,7 +3,7 @@
  * 
  * Updated for simplified schema where variables are key-value pairs:
  * - envKey: Environment variable name (e.g., "DATABASE_URL")
- * - value: Literal string or vals reference (e.g., "ref+sops://...")
+ * - value: Literal string (secrets have empty values; SOPS file is source of truth)
  */
 import { useRef, useState } from "react";
 import type {

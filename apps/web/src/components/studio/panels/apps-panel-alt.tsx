@@ -38,9 +38,11 @@ import {
   computeStablePort,
   flattenEnvironmentVariables,
   getEnvironmentNames,
-  isSopsReference,
 } from "./apps/utils";
-import { getVariableType } from "./variables/constants";
+import {
+  getVariableType,
+  parseVariableLinkReference,
+} from "./variables/constants";
 import { PanelHeader } from "./shared/panel-header";
 import { Card, CardHeader } from "@/components/ui/card";
 
@@ -164,12 +166,8 @@ export function AppsPanelAlt() {
       // Use the full ID as the display name (e.g., "/dev/DATABASE_URL")
       // This avoids confusion when multiple vars have the same last segment (e.g., "port")
       const name = id;
-      // Determine type from value pattern
-      const typeName = isSopsReference(value)
-        ? ("secret" as const)
-        : value.startsWith("ref+")
-          ? ("computed" as const)
-          : ("config" as const);
+      // Determine type from ID prefix (keygroup)
+      const typeName = getVariableType(id, value);
       return { id, name, typeName };
     });
   }, [rawVariables]);
@@ -287,12 +285,18 @@ export function AppsPanelAlt() {
       // With simplified schema: env is map<string, string> (key -> value)
       const flattenedVars = flattenEnvironmentVariables(app.environments);
       const appVariables: DisplayVariable[] = flattenedVars.map((mapping) => {
-        // Derive type from value (is it a SOPS reference = secret)
-        const isSecret = isSopsReference(mapping.value);
-        const typeName = getVariableType(
-          `/${isSecret ? "dev" : "var"}/${mapping.envKey}`,
-          mapping.value,
-        );
+        const linkedVariableId = parseVariableLinkReference(mapping.value);
+        const linkedVariable = linkedVariableId
+          ? rawVariables?.[linkedVariableId]
+          : undefined;
+        const linkedValue =
+          typeof linkedVariable === "string"
+            ? linkedVariable
+            : (linkedVariable?.value ?? "");
+        const typeName = linkedVariableId
+          ? getVariableType(linkedVariableId, linkedValue)
+          : "config";
+        const isSecret = typeName === "secret";
         return {
           envKey: mapping.envKey,
           value: mapping.value,
@@ -327,7 +331,7 @@ export function AppsPanelAlt() {
         _resolved: app,
       };
     });
-  }, [resolvedApps, getTasksForApp, projectName, runningProcesses]);
+  }, [resolvedApps, getTasksForApp, projectName, rawVariables, runningProcesses]);
 
   // Derive the active framework from the app's type field
   const getFrameworkForApp = (appType?: string): AppFramework => {

@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import type { Variable } from "@/lib/types";
-import { isSopsReference, isEncryptedKeyGroup, getKeyGroup } from "./constants";
+import { isEncryptedKeyGroup, getKeyGroup } from "./constants";
 
 interface EditVariableDialogProps {
 	variable: {
@@ -83,9 +83,7 @@ export function EditVariableDialog({
 
 			await variablesClient.set(variable.id, updatedVariable);
 
-			const isSecret = isChamber
-				? isEncryptedKeyGroup(getKeyGroup(variable.id))
-				: isSopsReference(trimmedValue);
+			const isSecret = isEncryptedKeyGroup(getKeyGroup(variable.id));
 			toast.success(`Updated ${isSecret ? "secret" : "variable"} "${variable.id}"`);
 
 			handleOpenChange(false);
@@ -171,9 +169,9 @@ export function EditVariableDialog({
 							autoFocus
 						/>
 						<p className="text-xs text-muted-foreground">
-							{isChamber
-								? "Plain value. Encryption is handled by AWS KMS."
-								: "Literal value or vals reference (e.g., ref+sops://...#/KEY)"}
+						{isChamber
+							? "Plain value. Encryption is handled by AWS KMS."
+							: "Literal value. Secret values are managed via the Edit Secret dialog."}
 						</p>
 					</div>
 				</div>
