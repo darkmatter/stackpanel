@@ -135,7 +135,7 @@ apps/web
      -> @stackpanel/auth (Better Auth + Polar payments)
         -> @stackpanel/db (Drizzle ORM + Neon PostgreSQL)
   -> @stackpanel/agent-client -> @stackpanel/proto (Connect-RPC types)
-  -> @stackpanel/ui -> @stackpanel/ui-web -> @stackpanel/ui-core + @stackpanel/ui-primitives
+  -> @stackpanel/ui-web (shadcn components) -> @stackpanel/ui-core (cn, cva, Logo) + @radix-ui/*
 ```
 
 ## Secrets Architecture
@@ -208,15 +208,19 @@ imports = [
 
 ```
 nix/stackpanel/
-  core/              # Options definitions, CLI invocation, state, utilities
+  core/              # Core schema, CLI invocation, state, utilities
+    options/         # Centralized option definitions (multi-consumer options only)
+    lib/             # Pure service library functions (mkGlobalServices, etc.)
+    cli.nix          # CLI-based file generation (includes cli options)
+    state.nix        # Legacy state file generation (includes state options)
   devshell/          # Shell subsystem (scripts, files, codegen, bin wrappers)
-  network/           # Step CA certificates, port env vars
-  services/          # Service implementations (postgres, redis, caddy, aws)
+  network/           # Step CA certificates, port env vars, DNS (includes dns options)
+  services/          # Service implementations (postgres, redis, caddy, aws, binary-cache w/ options)
   secrets/           # Master-key encryption (agenix, SOPS, combined)
   ide/               # VS Code and Zed file generation
   modules/           # Auto-discovered directory modules
-  lib/               # Pure library functions
-  apps/              # App-level features and CI
-  tui/               # Terminal UI theme
+  lib/               # Pure library functions (ports, theme, IDE, paths)
+  apps/              # App-level features and CI (includes ci options)
+  tui/               # Terminal UI theme (includes theme options)
   packages/          # Nix package definitions
 ```

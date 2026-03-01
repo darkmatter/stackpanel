@@ -1,0 +1,444 @@
+---
+title: Machines
+description: Define and discover your deployment target machines for NixOS deployments
+icon: server
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+Stackpanel's machine inventory system lets you define the servers your applications deploy to. Machines can be declared statically in Nix or discovered dynamically from AWS EC2. The inventory feeds into Colmena for NixOS deployments and is visible in the Studio UI's Deploy panel.
+
+## How It Works
+
+Machine inventory flows through three layers:
+
+1. **Nix config** -- You declare machines (static) or EC2 discovery rules in `.stackpanel/config.nix`
+2. **Infra module** -- The machines infra module resolves the inventory at deploy time (for EC2, it queries the AWS API)
+3. **Studio UI** -- The Deploy panel reads the resolved inventory and displays machine cards, app-to-machine mappings, and Colmena actions
+
+## Quick Start
+
+<Steps>
+<Step>
+
+### Enable the machines module
+
+Add to your `.stackpanel/config.nix`:
+
+```nix
+stackpanel.infra.machines = {
+  enable = true;
+  source = "static";  # or "aws-ec2"
+
+  machines = {
+    web-1 = {
+      name = "Web Server 1";
+      host = "10.0.1.10";
+      roles = [ "web" ];
+      tags = [ "production" ];
+      arch = "x86_64-linux";
+      ssh.user = "deploy";
+    };
+  };
+};
+```
+
+</Step>
+<Step>
+
+### Deploy infrastructure
+
+Run `infra:deploy` to provision and register the machine inventory:
+
+```bash
+infra:deploy
+```
+
+</Step>
+<Step>
+
+### Pull outputs and reload
+
+Pull the resolved inventory into your local state and reload the devshell:
+
+```bash
+infra:pull-outputs
+exit && nix develop --impure
+```
+
+</Step>
+<Step>
+
+### View in Studio
+
+Open the Studio UI and navigate to **Deploy**. Your machines appear in the Machines tab with their status, roles, and connection info.
+
+</Step>
+</Steps>
+
+## Static Machines
+
+For fixed infrastructure (bare metal, pre-provisioned VMs, Hetzner, etc.), declare machines directly:
+
+```nix
+stackpanel.infra.machines = {
+  enable = true;
+  source = "static";
+
+  machines = {
+    web-1 = {
+      name = "Web Server 1";
+      host = "web1.example.com";
+      roles = [ "web" "app" ];
+      tags = [ "production" "us-east" ];
+      provider = "hetzner";
+      arch = "x86_64-linux";
+      publicIp = "203.0.113.10";
+      privateIp = "10.0.1.10";
+      targetEnv = "production";
+
+      ssh = {
+        user = "deploy";
+        port = 22;
+        keyPath = "~/.ssh/deploy_ed25519";
+      };
+
+      labels = {
+        team = "platform";
+        cost-center = "infra";
+      };
+    };
+
+    db-1 = {
+      name = "Database Primary";
+      host = "10.0.2.10";
+      roles = [ "database" ];
+      tags = [ "production" ];
+      arch = "x86_64-linux";
+      targetEnv = "production";
+      ssh.user = "root";
+    };
+  };
+};
+```
+
+### Machine Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | Human-friendly display name |
+| `host` | `string` | SSH hostname or IP address |
+| `ssh.user` | `string` | SSH user (default: `root`) |
+| `ssh.port` | `int` | SSH port (default: `22`) |
+| `ssh.keyPath` | `string?` | Path to SSH private key |
+| `roles` | `[string]` | Roles for app-to-machine targeting |
+| `tags` | `[string]` | Tags for grouping and filtering |
+| `provider` | `string?` | Infrastructure provider (aws, hetzner, etc.) |
+| `arch` | `string?` | System architecture (e.g., `x86_64-linux`) |
+| `publicIp` | `string?` | Public IP address |
+| `privateIp` | `string?` | Private IP address |
+| `targetEnv` | `string?` | Environment label (production, staging, etc.) |
+| `labels` | `{string: string}` | Arbitrary key-value metadata |
+| `nixosProfile` | `string?` | NixOS profile to deploy |
+| `nixosModules` | `[string]` | Extra NixOS modules for this machine |
+| `env` | `{string: string}` | Environment variables for this machine |
+| `metadata` | `{string: any}` | Extra metadata for downstream tooling |
+
+## AWS EC2 Discovery
+
+For dynamic infrastructure, Stackpanel can discover machines from AWS EC2 at deploy time:
+
+```nix
+stackpanel.infra.machines = {
+  enable = true;
+  source = "aws-ec2";
+
+  aws = {
+    region = "us-west-2";
+
+    # EC2 filters (same syntax as AWS CLI --filters)
+    filters = [
+      { name = "instance-state-name"; values = [ "running" ]; }
+      { name = "tag:Project"; values = [ "myapp" ]; }
+    ];
+  };
+};
+```
+
+When `infra:deploy` runs, the machines module queries the EC2 API using the specified filters and builds an inventory from the results.
+
+### EC2 Tag Mapping
+
+EC2 instances are mapped to machine properties using configurable tag keys:
+
+| Machine Property | Default Tag Keys | Example Tag Value |
+|-----------------|-----------------|-------------------|
+| `name` | `Name` | `web-server-1` |
+| `roles` | `stackpanel:role`, `role` | `web,app` |
+| `tags` | `stackpanel:tag`, `tag` | `production,us-west` |
+| `targetEnv` | `stackpanel:env`, `env`, `stage` | `production` |
+
+Customize the tag keys used for mapping:
+
+```nix
+stackpanel.infra.machines.aws = {
+  region = "us-west-2";
+
+  # Which EC2 tags map to machine roles
+  role-tag-keys = [ "stackpanel:role" "Role" ];
+
+  # Which EC2 tags map to machine tags
+  tag-keys = [ "stackpanel:tag" "Environment" ];
+
+  # Which EC2 tags map to target environment
+  env-tag-keys = [ "stackpanel:env" "Stage" ];
+
+  # Which EC2 tags provide the machine name
+  name-tag-keys = [ "Name" ];
+
+  filters = [
+    { name = "instance-state-name"; values = [ "running" ]; }
+  ];
+};
+```
+
+### Host Resolution
+
+When discovering EC2 instances, Stackpanel picks the SSH host using a preference order:
+
+```nix
+stackpanel.infra.machines.aws = {
+  # Try public DNS first, then public IP, then private IP
+  host-preference = [ "publicDns" "publicIp" "privateIp" ];
+};
+```
+
+For VPN or private-network setups where you connect to private IPs:
+
+```nix
+stackpanel.infra.machines.aws = {
+  host-preference = [ "privateIp" ];
+};
+```
+
+### Default SSH Settings for EC2
+
+Apply SSH defaults to all discovered EC2 machines:
+
+```nix
+stackpanel.infra.machines.aws = {
+  ssh = {
+    user = "ec2-user";
+    port = 22;
+    keyPath = "~/.ssh/aws_deploy";
+  };
+};
+```
+
+### Filtering by Instance IDs
+
+Target specific instances instead of using filters:
+
+```nix
+stackpanel.infra.machines.aws = {
+  instance-ids = [
+    "i-0abc123def456789a"
+    "i-0def456789abc1230"
+  ];
+};
+```
+
+## Studio UI: Deploy Panel
+
+The Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has four tabs:
+
+### Machines Tab
+
+Displays a card grid of all machines in your inventory. Each card shows:
+
+- Machine name and hostname
+- SSH connection info (user, port)
+- Architecture and provider
+- Roles (colored badges) and tags
+- Reachability status (green check or amber warning)
+
+When the inventory is empty, it shows guidance:
+
+> Run `infra:deploy` and `infra:pull-outputs` to populate it, then reload the shell.
+
+### App Targets Tab
+
+Shows which apps are configured for deployment and their target machines. Each row displays:
+
+- App name
+- Target machines (resolved from roles or explicit targets)
+- Role badge (if targeting by role)
+- Machine count
+
+### Actions Tab
+
+Provides buttons for Colmena deployment actions:
+
+- **colmena eval** -- Evaluate the NixOS configuration
+- **colmena build** -- Build the NixOS closures
+- **colmena apply** -- Deploy to target machines
+
+<Callout type="info">
+The Actions tab is disabled when no machines are in the inventory. Provision infrastructure first with `infra:deploy`.
+</Callout>
+
+### Settings Tab
+
+Displays the current Colmena configuration: machine source, hive config path, whether hive generation is enabled, and total machine count.
+
+## Mapping Apps to Machines
+
+After machines are in your inventory, configure apps to deploy to them:
+
+```nix
+stackpanel.apps.api = {
+  port = 1;
+  root = "./apps/api";
+
+  # Deploy this app to machines with the "web" role
+  deploy = {
+    enable = true;
+    role = "web";
+  };
+};
+
+stackpanel.apps.worker = {
+  port = 2;
+  root = "./apps/worker";
+
+  # Deploy to specific machines by name
+  deploy = {
+    enable = true;
+    targets = [ "worker-1" "worker-2" ];
+  };
+};
+```
+
+## End-to-End Example
+
+Here is a complete setup with AWS EC2 discovery, app targeting, and infra provisioning:
+
+```nix
+{
+  # Infrastructure provisioning
+  stackpanel.infra = {
+    enable = true;
+    storage-backend = {
+      type = "sops";
+      sops.group = "dev";
+    };
+
+    # AWS secrets (IAM role, KMS key)
+    aws.secrets = {
+      enable = true;
+      oidc.provider = "github-actions";
+      oidc.github-actions = {
+        org = "my-org";
+        repo = "my-repo";
+      };
+    };
+
+    # Machine discovery
+    machines = {
+      enable = true;
+      source = "aws-ec2";
+      aws = {
+        region = "us-west-2";
+        filters = [
+          { name = "instance-state-name"; values = [ "running" ]; }
+          { name = "tag:Project"; values = [ "myapp" ]; }
+        ];
+        ssh.user = "deploy";
+      };
+    };
+  };
+
+  # Apps with deployment targets
+  stackpanel.apps = {
+    web = {
+      port = 0;
+      root = "./apps/web";
+      deploy = {
+        enable = true;
+        role = "web";
+      };
+    };
+
+    api = {
+      port = 1;
+      root = "./apps/api";
+      deploy = {
+        enable = true;
+        role = "api";
+      };
+    };
+  };
+}
+```
+
+Then deploy:
+
+```bash
+# Provision infrastructure and discover machines
+infra:deploy
+
+# Pull machine inventory into local state
+infra:pull-outputs
+
+# Reload shell to pick up new inventory
+exit && nix develop --impure
+
+# View machines in Studio
+# Navigate to /studio/deploy
+
+# Deploy with Colmena
+colmena apply
+```
+
+## Troubleshooting
+
+### "No Machines" in the Deploy panel
+
+The machine inventory is populated by `infra:deploy`. If you see no machines:
+
+1. Run `infra:deploy` to execute the machines infra module
+2. Run `infra:pull-outputs` to sync the inventory to local state
+3. Reload your devshell (`exit && nix develop --impure`)
+4. Refresh the Deploy panel in Studio
+
+### EC2 discovery returns no instances
+
+Check your filters and region. Test directly with the AWS CLI:
+
+```bash
+aws ec2 describe-instances \
+  --region us-west-2 \
+  --filters "Name=instance-state-name,Values=running" "Name=tag:Project,Values=myapp" \
+  --query 'Reservations[].Instances[].{Id:InstanceId,Name:Tags[?Key==`Name`].Value|[0]}'
+```
+
+### SSH connection failures
+
+Verify SSH connectivity to the resolved host:
+
+```bash
+ssh -o ConnectTimeout=5 deploy@<machine-host> 'echo ok'
+```
+
+Common issues:
+- Security group doesn't allow SSH from your IP
+- SSH key path is incorrect
+- Using public DNS but instance only has a private IP (adjust `host-preference`)
+
+## Reference
+
+- [Deployment Overview](/docs/deployment) for all deployment options
+- [Infrastructure](/docs/deployment/infrastructure) for the infra module system
+- [Fly.io](/docs/deployment/fly) for container-based deployment
+- [Cloudflare](/docs/deployment/cloudflare) for edge deployment

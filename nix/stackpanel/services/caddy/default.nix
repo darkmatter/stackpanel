@@ -223,116 +223,116 @@ rec {
 
       # Script to add/update a virtual host
       caddyAddSite = pkgs.writeShellScriptBin "caddy-add-site" ''
-                  set -euo pipefail
-                  CADDY_CONFIG_DIR="''${CADDY_CONFIG_DIR:-$HOME/.config/caddy}"
-                  CADDY_SITES_DIR="$CADDY_CONFIG_DIR/sites.d"
+                          set -euo pipefail
+                          CADDY_CONFIG_DIR="''${CADDY_CONFIG_DIR:-$HOME/.config/caddy}"
+                          CADDY_SITES_DIR="$CADDY_CONFIG_DIR/sites.d"
 
-                  ${ensureConfigDir}/bin/caddy-ensure-config
+                          ${ensureConfigDir}/bin/caddy-ensure-config
 
-                  if [[ $# -lt 2 ]]; then
-                    echo "Usage: caddy-add-site <domain> <upstream> [options]"
-                    echo ""
-                    echo "Arguments:"
-                    echo "  domain    - The domain name (e.g., app.localhost, myapp.internal)"
-                    echo "  upstream  - The upstream address (e.g., localhost:3000, 127.0.0.1:8080)"
-                    echo ""
-                echo "Options:"
-                echo "  --project <name>           Project name prefix for site file (avoids collisions)"
-                echo "  --tls-internal             Use Caddy's built-in self-signed TLS"
-                echo "  --tls-cert <path>          Path to TLS certificate file (e.g., from step ca certificate)"
-                echo "  --tls-key <path>           Path to TLS private key file"
-                echo "  --tls-step-ca-url <url>    Step CA ACME directory URL for TLS certs"
-                echo "  --tls-step-ca-root <path>  Path to Step CA root certificate"
-                echo "  --tls-off                  Disable TLS"
-                echo ""
-                echo "Examples:"
-                echo "  caddy-add-site app.localhost localhost:3000 --project myapp"
-                echo "  caddy-add-site api.internal localhost:8080 --tls-internal --project myapp"
-                echo "  caddy-add-site app.localhost localhost:3000 --tls-cert /path/to/cert.crt --tls-key /path/to/key.key"
-                    exit 1
-                  fi
+                          if [[ $# -lt 2 ]]; then
+                            echo "Usage: caddy-add-site <domain> <upstream> [options]"
+                            echo ""
+                            echo "Arguments:"
+                            echo "  domain    - The domain name (e.g., app.localhost, myapp.internal)"
+                            echo "  upstream  - The upstream address (e.g., localhost:3000, 127.0.0.1:8080)"
+                            echo ""
+                        echo "Options:"
+                        echo "  --project <name>           Project name prefix for site file (avoids collisions)"
+                        echo "  --tls-internal             Use Caddy's built-in self-signed TLS"
+                        echo "  --tls-cert <path>          Path to TLS certificate file (e.g., from step ca certificate)"
+                        echo "  --tls-key <path>           Path to TLS private key file"
+                        echo "  --tls-step-ca-url <url>    Step CA ACME directory URL for TLS certs"
+                        echo "  --tls-step-ca-root <path>  Path to Step CA root certificate"
+                        echo "  --tls-off                  Disable TLS"
+                        echo ""
+                        echo "Examples:"
+                        echo "  caddy-add-site app.localhost localhost:3000 --project myapp"
+                        echo "  caddy-add-site api.internal localhost:8080 --tls-internal --project myapp"
+                        echo "  caddy-add-site app.localhost localhost:3000 --tls-cert /path/to/cert.crt --tls-key /path/to/key.key"
+                            exit 1
+                          fi
 
-                  domain="$1"
-                  upstream="$2"
-                  shift 2
+                          domain="$1"
+                          upstream="$2"
+                          shift 2
 
-                  tls_config=""
-                  project_prefix=""
-                  step_ca_url=""
-                  step_ca_root=""
-                  tls_cert=""
-                  tls_key=""
-                  while [[ $# -gt 0 ]]; do
-                    case "$1" in
-                      --project)
-                        project_prefix="$2_"
-                        shift 2
-                        ;;
-                      --tls-internal)
-                        tls_config="tls internal"
-                        shift
-                        ;;
-                      --tls-cert)
-                        tls_cert="$2"
-                        shift 2
-                        ;;
-                      --tls-key)
-                        tls_key="$2"
-                        shift 2
-                        ;;
-                      --tls-step-ca-url)
-                        step_ca_url="$2"
-                        shift 2
-                        ;;
-                      --tls-step-ca-root)
-                        step_ca_root="$2"
-                        shift 2
-                        ;;
-                      --tls-off)
-                        tls_config=""
-                        step_ca_url=""
-                        step_ca_root=""
-                        tls_cert=""
-                        tls_key=""
-                        shift
-                        ;;
-                      *)
-                        echo "Unknown option: $1"
-                        exit 1
-                        ;;
-                    esac
-                  done
+                          tls_config=""
+                          project_prefix=""
+                          step_ca_url=""
+                          step_ca_root=""
+                          tls_cert=""
+                          tls_key=""
+                          while [[ $# -gt 0 ]]; do
+                            case "$1" in
+                              --project)
+                                project_prefix="$2_"
+                                shift 2
+                                ;;
+                              --tls-internal)
+                                tls_config="tls internal"
+                                shift
+                                ;;
+                              --tls-cert)
+                                tls_cert="$2"
+                                shift 2
+                                ;;
+                              --tls-key)
+                                tls_key="$2"
+                                shift 2
+                                ;;
+                              --tls-step-ca-url)
+                                step_ca_url="$2"
+                                shift 2
+                                ;;
+                              --tls-step-ca-root)
+                                step_ca_root="$2"
+                                shift 2
+                                ;;
+                              --tls-off)
+                                tls_config=""
+                                step_ca_url=""
+                                step_ca_root=""
+                                tls_cert=""
+                                tls_key=""
+                                shift
+                                ;;
+                              *)
+                                echo "Unknown option: $1"
+                                exit 1
+                                ;;
+                            esac
+                          done
 
-                  # Build TLS config: cert/key files > Step CA ACME > tls internal
-                  if [[ -n "$tls_cert" && -n "$tls_key" ]]; then
-                    tls_config="tls $tls_cert $tls_key"
-                  elif [[ -n "$step_ca_url" ]]; then
-                    tls_config="tls {
-          ca $step_ca_url"
-                    if [[ -n "$step_ca_root" ]]; then
-                      tls_config="$tls_config
-          ca_root $step_ca_root"
-                    fi
-                    tls_config="$tls_config
+                          # Build TLS config: cert/key files > Step CA ACME > tls internal
+                          if [[ -n "$tls_cert" && -n "$tls_key" ]]; then
+                            tls_config="tls $tls_cert $tls_key"
+                          elif [[ -n "$step_ca_url" ]]; then
+                            tls_config="tls {
+                  ca $step_ca_url"
+                            if [[ -n "$step_ca_root" ]]; then
+                              tls_config="$tls_config
+                  ca_root $step_ca_root"
+                            fi
+                            tls_config="$tls_config
+                }"
+                          fi
+
+                          # Sanitize domain for filename, with optional project prefix
+                          domain_part=$(echo "$domain" | tr '.' '_' | tr ':' '_')
+                          filename="''${project_prefix}''${domain_part}"
+                          sitefile="$CADDY_SITES_DIR/$filename.caddy"
+
+                          # Build site content (avoid heredoc — Nix indentation breaks EOF terminators)
+                          site_content="# Site: $domain -> $upstream
+        $domain {
+          $tls_config
+          reverse_proxy $upstream
         }"
-                  fi
+                          printf '%s\n' "$site_content" > "$sitefile"
 
-                  # Sanitize domain for filename, with optional project prefix
-                  domain_part=$(echo "$domain" | tr '.' '_' | tr ':' '_')
-                  filename="''${project_prefix}''${domain_part}"
-                  sitefile="$CADDY_SITES_DIR/$filename.caddy"
-
-                  cat > "$sitefile" <<EOF
-            # Site: $domain -> $upstream
-            $domain {
-              $tls_config
-              reverse_proxy $upstream
-            }
-            EOF
-
-                  echo "Site configuration saved to $sitefile"
-                  echo ""
-                  echo "Run 'caddy-start' or 'caddy-restart' to apply changes"
+                          echo "Site configuration saved to $sitefile"
+                          echo ""
+                          echo "Run 'caddy-start' or 'caddy-restart' to apply changes"
       '';
 
       # Script to remove a virtual host

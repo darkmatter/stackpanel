@@ -19,24 +19,36 @@ The core module system provides:
 ```
 core/
 ├── default.nix          # Main entry point - imports options, sets up hooks
-├── cli.nix              # CLI-based file generation (invokes Go CLI)
-├── state.nix            # Legacy state file generation (when CLI disabled)
+├── cli.nix              # CLI-based file generation (includes cli options)
+├── state.nix            # Legacy state file generation (includes state options)
+├── aliases.nix          # Shell alias definitions
+├── util.nix             # Debug logging utilities
 ├── lib/
-│   └── evalconfig.nix   # Configuration evaluator for Go CLI/agent
-├── options/             # Option definitions (schema only, no implementation)
-│   ├── default.nix      # Imports all option modules
-│   ├── core.nix         # Root paths, directories, basic settings
-│   ├── apps.nix         # Application port and domain configuration
-│   ├── ports.nix        # Deterministic port computation options
-│   ├── devshell.nix     # Shell environment (packages, hooks, commands)
-│   └── ...              # Additional feature-specific options
-└── services/            # Service configuration and helpers
-    ├── default.nix      # Core library functions
-    ├── services.nix     # Service registry and factory
-    ├── global-services.nix  # Global singleton services
-    ├── ports.nix        # Port computation utilities (pure functions)
-    └── <service>.nix    # Individual service definitions
+│   ├── evalconfig.nix       # Configuration evaluator for Go CLI/agent
+│   ├── envvars.nix          # Environment variable generation
+│   ├── services-default.nix # Library entry point (ports, globalServices)
+│   ├── services.nix         # Service registry and factory
+│   └── global-services.nix  # Global singleton services (mkGlobalServices)
+└── options/             # Centralized option definitions (multi-consumer only)
+    ├── default.nix      # Imports all option modules
+    ├── core.nix         # Root paths, directories, basic settings
+    ├── apps.nix         # Application port and domain configuration
+    ├── ports.nix        # Deterministic port computation options
+    ├── devshell.nix     # Shell environment (packages, hooks, commands)
+    ├── aws.nix          # AWS Roles Anywhere (6 consumers)
+    ├── step-ca.nix      # Step CA certificates (5 consumers)
+    ├── motd.nix         # MOTD accumulator (13+ producers)
+    ├── variables.nix    # Variable data bus (multiple producers/consumers)
+    └── ...              # Additional shared options
 ```
+
+Note: Single-consumer options are colocated with their implementation modules:
+- `dns` options live in `network/dns.nix`
+- `binary-cache` options live in `services/binary-cache.nix`
+- `theme` options live in `tui/theme.nix`
+- `cli` options live in `core/cli.nix`
+- `state` options live in `core/state.nix`
+- `ci` options live in `apps/ci.nix`
 
 ## Usage
 
@@ -82,10 +94,11 @@ Development services (PostgreSQL, Redis, Minio) run as global singletons to avoi
 ## Extending
 
 To add new options:
-1. Create a new file in `options/` following the existing pattern
-2. Import it in `options/default.nix`
-3. Implement the feature in the appropriate module
+
+**If the option has a single consumer module** (preferred): define `options.stackpanel.<feature>` directly in the implementation module alongside `config = ...`. This keeps the module self-contained.
+
+**If the option is consumed by multiple modules** (shared data): create a new file in `options/` and import it in `options/default.nix`. Examples: `aws.nix` (6 consumers), `motd.nix` (13+ producers).
 
 To add new services:
-1. Create a new file in `services/<name>.nix`
-2. Register it in `services/services.nix`
+1. Create implementation in `nix/stackpanel/services/<name>.nix`
+2. Register in `core/lib/services.nix`

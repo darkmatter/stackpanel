@@ -306,7 +306,7 @@ func listCaddySites() {
 			line = strings.TrimSpace(line)
 			if strings.HasPrefix(line, "# Site:") {
 				parts := strings.TrimPrefix(line, "# Site: ")
-				output.Dimmed(fmt.Sprintf("    • %s", parts))
+				output.Dimmed(fmt.Sprintf("    • %s (filename = %s)", parts, e.Name()))
 				break
 			}
 		}

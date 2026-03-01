@@ -47,29 +47,18 @@ let
   turbo = "${pkgs.turbo}/bin/turbo";
   jq = "${pkgs.jq}/bin/jq";
 
-  # Entrypoint scripts directory (relative to repo root)
-  entrypointsDir = "packages/scripts/entrypoints";
-
-  # Generate command that sources entrypoint (if available) then runs the actual command
-  # Entrypoints ONLY set up environment (secrets, devshell). They do NOT run commands.
+  # Generate the default dev command for an app.
+  # Uses `bun run -F <filter> <task>` instead of turbo because:
+  #   1. Process-compose already handles parallelism
+  #   2. Turbo sanitizes the environment which breaks CGO on macOS (strips NIX_LDFLAGS)
+  #   3. Dev tasks are uncached anyway, so turbo adds no value here
   mkDefaultCommand =
     name: app: taskKey:
     let
-      appPath = app.path or name;
-      entrypointScript = "${entrypointsDir}/${name}.sh";
-      # If packageName is explicitly set, use it; otherwise read from package.json at runtime
-      filterExpr =
-        if app.packageName or null != null then
-          "\"${app.packageName}\""
-        else
-          "$(${jq} -r .name ${appPath}/package.json 2>/dev/null || echo '${name}')";
-      directCommand = "${turbo} run -F ${filterExpr} ${taskKey}";
-      # Source entrypoint to set up environment, then run the command
-      # The entrypoint exports env vars; we then exec the actual command
-      commandWithEntrypoint = "source ${entrypointScript} --dev && exec ${directCommand}";
+      packageName = app.packageName or null;
+      filterExpr = if packageName != null then packageName else name;
     in
-    # Source entrypoint if it exists (for env setup), then run the command
-    "if [[ -f ${entrypointScript} ]]; then ${commandWithEntrypoint}; else exec ${directCommand}; fi";
+    "bun run -F ${filterExpr} ${taskKey}";
 
   # watchexec for file watching
   watchexec = "${pkgs.watchexec}/bin/watchexec";
@@ -170,7 +159,9 @@ let
     {
       ${processName} = {
         command = devCommand;
-        working_dir = app.path or null;
+      }
+      // lib.optionalAttrs (app.path or null != null) {
+        working_dir = app.path;
       }
       // lib.optionalAttrs (pcAppCfg.namespace or null != null) {
         namespace = pcAppCfg.namespace;
@@ -349,12 +340,15 @@ let
       commandName,
     }:
     let
-      # Convert environment attrset to list of "KEY=VALUE" strings
+      # Process-compose inherits the full devshell environment from the parent
+      # process. Only emit an environment block if there are vars that are NOT
+      # already in devshell.env (e.g., vars computed only for process-compose).
+      # Omitting the block entirely lets process-compose inherit NIX_LDFLAGS,
+      # NIX_CFLAGS_COMPILE, and other stdenv hook vars that CGO needs on macOS.
       envList = lib.mapAttrsToList (k: v: "${k}=${v}") environment;
       configData = {
         version = "0.5";
         inherit processes;
-        environment = envList;
         shell = {
           shell_command = "${pkgs.bash}/bin/bash";
           shell_argument = "-c";

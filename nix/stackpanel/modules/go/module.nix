@@ -286,6 +286,11 @@ let
       # For per-app layout, build from current dir; for workspace, specify subpackage
       subPackages = if hasPerAppGoMod then [ "." ] else [ appPath ];
 
+      # CGO with tree-sitter needs the macOS SDK for libresolv + frameworks
+      nativeBuildInputs = lib.optionals pkgs.stdenv.isDarwin [
+        pkgs.apple-sdk_15
+      ];
+
       doCheck = false; # Tests run separately via checks
 
       ldflags = [
@@ -470,7 +475,7 @@ in
                 version=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
                 major=$(echo "$version" | cut -d. -f1)
                 minor=$(echo "$version" | cut -d. -f2)
-                [ "$major" -gt 1 ] || ([ "$major" -eq 1 ] && [ "$minor" -ge 21 ])
+                [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 21 ]; }
               '';
               severity = "warning";
               timeout = 5;
