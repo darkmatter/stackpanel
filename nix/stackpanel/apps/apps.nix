@@ -124,9 +124,10 @@ let
   appsWithVhosts = lib.filter (name: computedApps.${name}.domain != null) appNames;
 in
 {
-  imports = [
-    ../core/options
-  ];
+  # NOTE: ../core/options is already imported by ../core/default.nix
+  # which is a sibling import in the parent default.nix. The NixOS module
+  # system deduplicates by path identity, so repeating it here was harmless
+  # but misleading. Removed to clarify the actual import graph.
 
   config = lib.mkIf (rawApps != { }) {
     # Expose ports as environment variables
