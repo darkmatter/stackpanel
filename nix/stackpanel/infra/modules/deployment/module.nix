@@ -59,13 +59,23 @@ let
     if enabled == [ ] then null else lib.head enabled;
 
   # ---------------------------------------------------------------------------
-  # Collect deployable apps (enabled + framework + host set)
+  # Resolve host for an app (per-app host overrides global defaultHost)
   # ---------------------------------------------------------------------------
+  getHost = appCfg: appCfg.deployment.host or cfg.deployment.defaultHost;
+
+  # ---------------------------------------------------------------------------
+  # Collect deployable apps for infra module.
+  #
+  # IMPORTANT: this infra module currently provisions Cloudflare resources only.
+  # Fly deploys are handled by the Fly deployment module (flyctl + fly.toml).
+  # ---------------------------------------------------------------------------
+  supportedHosts = [ "cloudflare" ];
+
   deployableApps = lib.filterAttrs (
     _: appCfg:
     (appCfg.deployment.enable or false)
     && (getFramework appCfg) != null
-    && appCfg.deployment.host != null
+    && lib.elem (getHost appCfg) supportedHosts
   ) (cfg.apps or { });
 
   hasDeployableApps = deployableApps != { };
@@ -73,13 +83,9 @@ let
   # ---------------------------------------------------------------------------
   # Determine which hosts are in use (for npm dependencies)
   # ---------------------------------------------------------------------------
-  hosts = lib.unique (lib.mapAttrsToList (_: appCfg: appCfg.deployment.host) deployableApps);
+  hosts = lib.unique (lib.mapAttrsToList (_: appCfg: getHost appCfg) deployableApps);
 
   hasCloudflare = lib.elem "cloudflare" hosts;
-  hasFly = lib.elem "fly" hosts;
-  hasVercel = lib.elem "vercel" hosts;
-  hasAws = lib.elem "aws" hosts;
-
   # ---------------------------------------------------------------------------
   # Build pure-data inputs for the TS module
   # ---------------------------------------------------------------------------
@@ -91,7 +97,7 @@ let
     in
     {
       framework = fw;
-      host = appCfg.deployment.host;
+      host = getHost appCfg;
       path = appCfg.path or "apps/${appName}";
       bindings = appCfg.deployment.bindings;
       secrets = appCfg.deployment.secrets;
@@ -99,7 +105,7 @@ let
     # Include framework-specific options as extra keys
     // lib.optionalAttrs (fw == "vite") {
       ssr = fwCfg.ssr or false;
-      assetsDir = fwCfg.assets-dir or "dist";
+      assetsDir = fwCfg."assets-dir" or "dist";
     }
     // lib.optionalAttrs (fw == "hono") {
       entrypoint = fwCfg.entrypoint or "src/index.ts";
@@ -135,7 +141,7 @@ let
     }
   ) deployableApps;
 
-in 
+in
 {
   config = lib.mkIf hasDeployableApps {
     # Auto-enable the infra system
