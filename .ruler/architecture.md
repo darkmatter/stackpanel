@@ -95,6 +95,49 @@ nix/stackpanel/
 - **serviceModules**: Modules inject per-service options. Process-compose adds readiness probes, namespaces.
 - **Directory modules** (`nix/stackpanel/modules/`): Auto-discovered. Each has `meta.nix` (pure data), `module.nix` (options + config), `ui.nix` (UI panel definitions).
 
+### Flake Input Auto-Installation
+
+Modules can declare the flake inputs they require via `flakeInputs` in their `meta.nix`. When an enabled module's required input is missing from the user's `flake.nix`, the system detects it and warns the user.
+
+**Declaration** (in `meta.nix`):
+```nix
+flakeInputs = [
+  {
+    name = "process-compose-flake";
+    url = "github:Platonic-Systems/process-compose-flake";
+    followsNixpkgs = false;
+  }
+];
+```
+
+**Data flow**:
+```
+meta.nix (declares flakeInputs)
+  -> module.nix (wires to stackpanel.modules.*.flakeInputs via `flakeInputs = meta.flakeInputs or []`)
+    -> core/options/modules.nix computeSerializableModule (serializes to JSON)
+      -> core/cli.nix (compares declared inputs against actual `inputs`, computes missingFlakeInputs)
+        -> state file JSON (missingFlakeInputs field)
+          -> Go nixconfig.Config.MissingFlakeInputs
+            -> cmd/cli/motd.go (passes to MOTD data)
+              -> tui/motd_data.go CollectIssues (generates warnings with fix commands)
+```
+
+**Key files**:
+| File | Role |
+|---|---|
+| `nix/stackpanel/modules/*/meta.nix` | Declares `flakeInputs` (pure data) |
+| `nix/stackpanel/modules/*/module.nix` | Wires `meta.flakeInputs or []` into module registration |
+| `nix/stackpanel/core/options/modules.nix` | Defines `flakeInputs` option type, serializes in `computeSerializableModule` |
+| `nix/stackpanel/core/cli.nix` | Receives `inputs` via specialArgs, computes `missingFlakeInputs` by filtering enabled modules' declared inputs against available flake inputs |
+| `apps/stackpanel-go/internal/nixconfig/nixconfig.go` | `MissingFlakeInput` struct, parsed from state file |
+| `apps/stackpanel-go/internal/tui/motd_data.go` | `CollectIssues` generates warnings for missing inputs |
+| `apps/stackpanel-go/cmd/cli/motd.go` | Passes config's missing inputs into MOTD data |
+
+**CLI auto-install** (`apps/stackpanel-go/internal/flakeedit/`):
+The `flakeedit` package uses tree-sitter-nix to surgically edit `flake.nix` -- adding inputs and `stackpanelImports` entries without disturbing comments or formatting. The CLI command `stackpanel flake add-input <name> <url>` writes the input, optionally adds a `stackpanelImports` entry, and runs `nix flake lock`. The agent's `handleRegistryInstall` endpoint uses `flakeedit` to auto-install inputs when modules are installed from the registry.
+
+**Convention**: Every `module.nix` registration block must include `flakeInputs = meta.flakeInputs or [];` so that when a module author adds inputs to `meta.nix`, they automatically flow through the detection pipeline.
+
 ### Proto-Nix Schema System
 
 `.proto.nix` files in `nix/stackpanel/db/schemas/` serve as single source of truth. They generate: Nix module options, Go types (protobuf), TypeScript types, and JSON schemas from one definition.
@@ -320,7 +363,7 @@ Use this matrix to identify what else needs updating when you change something:
 | What Changed | Also Update |
 |---|---|
 | **Nix module options** | Proto schema if the option feeds into types, Go CLI if it reads the option, `@gen/env` codegen templates if it's an env var, docs content (`apps/docs/`), module `ui.nix` if it should appear in Studio, module `meta.nix` if metadata changed |
-| **Proto schema (`.proto.nix`)** | Run `packages/proto/generate.sh` to regenerate Go + TS types, update any Go/TS code consuming the changed types, update UI components displaying the data |
+| **Proto schema (`.proto.nix`)** | Run `nix develop --impure -c ./packages/proto/generate.sh` to regenerate Go + TS types, update any Go/TS code consuming the changed types, update UI components displaying the data |
 | **Go CLI command** | Doc generation templates (`apps/stackpanel-go/internal/docgen/`), docs site content (`apps/docs/`), `meta.nix` if the command relates to a module |
 | **Go agent API endpoint** | TypeScript agent client (`packages/agent-client/`), UI components consuming the endpoint (`apps/web/`), tRPC routers if proxied (`packages/api/`) |
 | **UI component** | Ensure proto types are current, check if the component is used in Studio module panels (`ui.nix` references) |
@@ -337,7 +380,7 @@ Use this matrix to identify what else needs updating when you change something:
 
 When completing any task, verify the following before considering it done:
 
-1. **Types are current**: If you changed a schema or data structure, regenerate types (`packages/proto/generate.sh`, `nix/stackpanel/core/generate-types.sh`)
+1. **Types are current**: If you changed a schema or data structure, regenerate types (`nix develop --impure -c ./packages/proto/generate.sh`, `nix develop --impure -c ./nix/stackpanel/core/generate-types.sh`)
 2. **Codegen is current**: If you changed Nix options or templates, re-run the relevant codegen and verify output
 3. **UI reflects changes**: If you changed a module's behavior or options, update `ui.nix` and any Studio components
 4. **Docs are updated**: If you changed user-facing behavior, update `apps/docs/` content and any relevant `docs/` files

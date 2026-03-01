@@ -6,7 +6,7 @@ todos:
     content: Update extensions.proto.nix with ExtensionPanel message and PanelType enum
     status: pending
   - id: regenerate-proto
-    content: Regenerate protobuf files (nix run .#generate-protos)
+    content: Regenerate protobuf files (nix develop --impure -c ./packages/proto/generate.sh)
     status: pending
     dependencies:
       - proto-schema

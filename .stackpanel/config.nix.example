@@ -1,0 +1,3693 @@
+# ==============================================================================
+# config.nix.example
+#
+# Stackpanel project configuration example with inline documentation.
+#
+# This file is auto-generated from option descriptions. Copy sections you need
+# to your config.nix and customize as needed.
+#
+# To regenerate: run 'generate-config-example' in your devshell
+# For minimal version: run 'generate-config-example --no-comments'
+# ==============================================================================
+{
+  # ----------------------------------------------------------------------------
+  # _moduleMetas
+  # ----------------------------------------------------------------------------
+  # Fast module metadata for discovery without full module evaluation. Each key
+  # is a module ID, value is the contents of that module's meta.nix. This is set
+  # automatically by the module auto-discovery in modules/default.nix.
+  _moduleMetas = { };
+
+  # ----------------------------------------------------------------------------
+  # AppModules
+  # ----------------------------------------------------------------------------
+  # Additional modules to extend app configuration options. This allows other
+  # modules to add functionality to each app, such as scaffolding, IDE support,
+  # deployment settings, etc. These modules are applied to each app under
+  # `stackpanel.apps.<appName>.<module>`.
+  appModules = [ ];
+
+  # ----------------------------------------------------------------------------
+  # Apps
+  # ----------------------------------------------------------------------------
+  apps = {
+    # Colmena deployment mapping for this app
+    <name> = {
+      deploy = { };
+    };
+
+    # Enable deployment mapping for this app
+    <name> = {
+      deploy = {
+        enable = false;
+      };
+    };
+
+    # Extra NixOS modules to import for this app
+    <name> = {
+      deploy = {
+        nixos-modules = [ ];
+      };
+    };
+
+    # Deployment role label for this app
+    <name> = {
+      deploy = {
+        role = null;
+      };
+    };
+
+    # Secret references required by this app during deploy
+    <name> = {
+      deploy = {
+        secrets = [ ];
+      };
+    };
+
+    # Target system/architecture (e.g., x86_64-linux)
+    <name> = {
+      deploy = {
+        system = null;
+      };
+    };
+
+    # Target machine ids or tag selectors
+    <name> = {
+      deploy = {
+        targets = [ ];
+      };
+    };
+
+    # Environment variable names to bind to the deployed app. Each name is read
+    # from `process.env` at deploy time. Mark sensitive ones in `secrets`.
+    <name> = {
+      deployment = {
+        bindings = [
+  "DATABASE_URL"
+  "CORS_ORIGIN"
+  "BETTER_AUTH_SECRET"
+];
+      };
+    };
+
+    # Whether to enable deployment for this app.
+    <name> = {
+      deployment = {
+        enable = true;
+      };
+    };
+
+    # Deployment host/platform. Combined with `framework` to determine the
+    # alchemy resource type: framework × host → alchemy resource
+    # tanstack-start × cloudflare → TanStackStart nextjs × cloudflare →
+    # Nextjs vite × cloudflare → cloudflare.Vite hono × cloudflare →
+    # cloudflare.Worker * × fly → Fly container
+    <name> = {
+      deployment = {
+        host = "cloudflare";
+      };
+    };
+
+    # Subset of `bindings` that contain sensitive values. These are wrapped with
+    # `alchemy.secret()` at deploy time.
+    <name> = {
+      deployment = {
+        secrets = [
+  "DATABASE_URL"
+  "BETTER_AUTH_SECRET"
+];
+      };
+    };
+
+    # Description of the app
+    <name> = {
+      description = null;
+    };
+
+    # Local development domain
+    <name> = {
+      domain = null;
+    };
+
+    # Environment configurations (key = environment name like "dev", "prod").
+    <name> = {
+      environments = { };
+    };
+
+    # (optional) Description of the environment
+    <name> = {
+      environments = {
+        <name> = {
+          description = null;
+        };
+      };
+    };
+
+    # Environment variables for this environment. Key: Environment variable name
+    # (e.g., DATABASE_URL) Value: Literal string or vals reference (e.g.,
+    # ref+sops://...)
+    <name> = {
+      environments = {
+        <name> = {
+          env = { };
+        };
+      };
+    };
+
+    # Name of the environment
+    <name> = {
+      environments = {
+        <name> = {
+          name = "";
+        };
+      };
+    };
+
+    # Whether to enable Astro (static/SSR).
+    <name> = {
+      framework = {
+        astro = {
+          enable = true;
+        };
+      };
+    };
+
+    # Whether to enable Hono API server.
+    <name> = {
+      framework = {
+        hono = {
+          enable = true;
+        };
+      };
+    };
+
+    # Entrypoint file for the Hono worker.
+    <name> = {
+      framework = {
+        hono = {
+          entrypoint = "src/index.ts";
+        };
+      };
+    };
+
+    # Whether to enable Next.js (App Router or Pages).
+    <name> = {
+      framework = {
+        nextjs = {
+          enable = true;
+        };
+      };
+    };
+
+    # Next.js output mode.
+    <name> = {
+      framework = {
+        nextjs = {
+          output = "standalone";
+        };
+      };
+    };
+
+    # Whether to enable Nuxt.
+    <name> = {
+      framework = {
+        nuxt = {
+          enable = true;
+        };
+      };
+    };
+
+    # Whether to enable Remix.
+    <name> = {
+      framework = {
+        remix = {
+          enable = true;
+        };
+      };
+    };
+
+    # Whether to enable TanStack Start (full-stack SSR with TanStack Router +
+    # Nitro).
+    <name> = {
+      framework = {
+        tanstack-start = {
+          enable = true;
+        };
+      };
+    };
+
+    # Output directory for built assets.
+    <name> = {
+      framework = {
+        vite = {
+          assets-dir = "dist";
+        };
+      };
+    };
+
+    # Whether to enable Vite SPA (React, Vue, Svelte, etc.).
+    <name> = {
+      framework = {
+        vite = {
+          enable = true;
+        };
+      };
+    };
+
+    # Enable Vite SSR mode.
+    <name> = {
+      framework = {
+        vite = {
+          ssr = false;
+        };
+      };
+    };
+
+    # Display name of the app
+    <name> = {
+      name = "";
+    };
+
+    # Port offset from base port. If null, offset is determined by position in
+    # apps attrset.
+    <name> = {
+      offset = 5;
+    };
+
+    # NPM package name for turbo filter (e.g., "@stackpanel/web"). If null,
+    # defaults to the app name.
+    <name> = {
+      packageName = "@myorg/web";
+    };
+
+    # Relative path to the app directory
+    <name> = {
+      path = "";
+    };
+
+    # Development server port
+    <name> = {
+      port = null;
+    };
+
+    # Enable TLS for the vhost (requires Step CA)
+    <name> = {
+      tls = false;
+    };
+
+    # Build tool definition (wrapped).
+    <name> = {
+      tooling = {
+        build = null;
+      };
+    };
+
+    # Additional build steps (wrapped).
+    <name> = {
+      tooling = {
+        build-steps = [ ];
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            args = [ ];
+          };
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            bin = null;
+          };
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            configArg = null;
+          };
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            configPath = null;
+          };
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            cwd = null;
+          };
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            env = { };
+          };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        build-steps = {
+          * = {
+            package = pkgs.package-name;
+          };
+        };
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        build = {
+          args = [ ];
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        build = {
+          bin = null;
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        build = {
+          configArg = null;
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        build = {
+          configPath = null;
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        build = {
+          cwd = null;
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        build = {
+          env = { };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        build = {
+          package = pkgs.package-name;
+        };
+      };
+    };
+
+    # Dev tool definition (wrapped).
+    <name> = {
+      tooling = {
+        dev = null;
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        dev = {
+          args = [ ];
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        dev = {
+          bin = null;
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        dev = {
+          configArg = null;
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        dev = {
+          configPath = null;
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        dev = {
+          cwd = null;
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        dev = {
+          env = { };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        dev = {
+          package = pkgs.package-name;
+        };
+      };
+    };
+
+    # Formatter definitions (wrapped).
+    <name> = {
+      tooling = {
+        formatters = [ ];
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            args = [ ];
+          };
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            bin = null;
+          };
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            configArg = null;
+          };
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            configPath = null;
+          };
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            cwd = null;
+          };
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            env = { };
+          };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        formatters = {
+          * = {
+            package = pkgs.package-name;
+          };
+        };
+      };
+    };
+
+    # Install tool definition (wrapped).
+    <name> = {
+      tooling = {
+        install = null;
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        install = {
+          args = [ ];
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        install = {
+          bin = null;
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        install = {
+          configArg = null;
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        install = {
+          configPath = null;
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        install = {
+          cwd = null;
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        install = {
+          env = { };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        install = {
+          package = pkgs.package-name;
+        };
+      };
+    };
+
+    # Linter definitions (wrapped).
+    <name> = {
+      tooling = {
+        linters = [ ];
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            args = [ ];
+          };
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            bin = null;
+          };
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            configArg = null;
+          };
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            configPath = null;
+          };
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            cwd = null;
+          };
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            env = { };
+          };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        linters = {
+          * = {
+            package = pkgs.package-name;
+          };
+        };
+      };
+    };
+
+    # Test tool definition (wrapped).
+    <name> = {
+      tooling = {
+        test = null;
+      };
+    };
+
+    # Arguments passed to the tool.
+    <name> = {
+      tooling = {
+        test = {
+          args = [ ];
+        };
+      };
+    };
+
+    # Optional binary name if the package provides multiple executables.
+    <name> = {
+      tooling = {
+        test = {
+          bin = null;
+        };
+      };
+    };
+
+    # Argument prefix inserted before configPath (e.g. ["--config"]).
+    <name> = {
+      tooling = {
+        test = {
+          configArg = null;
+        };
+      };
+    };
+
+    # Repo-relative config file path for the tool.
+    <name> = {
+      tooling = {
+        test = {
+          configPath = null;
+        };
+      };
+    };
+
+    # Override working directory (repo-relative). Defaults to app path.
+    <name> = {
+      tooling = {
+        test = {
+          cwd = null;
+        };
+      };
+    };
+
+    # Environment variables for the tool.
+    <name> = {
+      tooling = {
+        test = {
+          env = { };
+        };
+      };
+    };
+
+    # Package that provides the tool binary.
+    <name> = {
+      tooling = {
+        test = {
+          package = pkgs.package-name;
+        };
+      };
+    };
+
+    # App type/runtime (bun, go, python, rust, etc.)
+    <name> = {
+      type = null;
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Aws
+  # ----------------------------------------------------------------------------
+  aws = {
+    # AWS profile name to use as default. Empty string means 'default'.
+    default-profile = "";
+
+    # Additional AWS config to append (raw INI format). Use this to define extra
+    # profiles or settings. Example: extra-config = '' [profile production]
+    # region = us-east-1 role_arn = arn:aws:iam::123456789012:role/ProdRole
+    # source_profile = default '';
+    extra-config = "";
+
+    # AWS account ID
+    roles-anywhere = {
+      account-id = "";
+    };
+
+    # Seconds before expiry to refresh cached credentials
+    roles-anywhere = {
+      cache-buffer-seconds = "";
+    };
+
+    # Enable AWS Roles Anywhere cert auth
+    roles-anywhere = {
+      enable = false;
+    };
+
+    # AWS Roles Anywhere profile ARN
+    roles-anywhere = {
+      profile-arn = "";
+    };
+
+    # Prompt for AWS cert-auth setup on shell entry if not configured
+    roles-anywhere = {
+      prompt-on-shell = false;
+    };
+
+    # AWS region
+    roles-anywhere = {
+      region = "";
+    };
+
+    # IAM role name to assume
+    roles-anywhere = {
+      role-name = "";
+    };
+
+    # AWS Roles Anywhere trust anchor ARN
+    roles-anywhere = {
+      trust-anchor-arn = "";
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Binary-cache
+  # ----------------------------------------------------------------------------
+  binary-cache = {
+    # Cachix cache name for pushing binaries
+    cachix = {
+      cache = "";
+    };
+
+    # Whether to enable Cachix integration.
+    cachix = {
+      enable = true;
+    };
+
+    # Path to a Cachix auth token file
+    cachix = {
+      token-path = null;
+    };
+
+    # Whether to enable Binary cache configuration.
+    enable = true;
+  };
+
+  # ----------------------------------------------------------------------------
+  # Caddy
+  # ----------------------------------------------------------------------------
+  caddy = {
+    # Automatically start Caddy when entering the shell
+    auto-start = false;
+
+    # Whether to enable Caddy reverse proxy.
+    enable = true;
+
+    # Project name used to compute a stable port. Set this to your project name
+    # for consistent port allocation.
+    project-name = "myapp";
+
+    # Stable port for Caddy. If null, computed from project-name.
+    project-port = 34521;
+
+    # Top-level domain for virtual hosts. Virtual hosts use the format:
+    # <app>.<project>.<tld> For example, with project "myapp" and tld
+    # "localhost": - web app gets domain: web.myapp.localhost - api app gets
+    # domain: api.myapp.localhost Change to "lan" or "local" for custom DNS
+    # setups.
+    tld = "lan";
+
+    # Use Step CA for TLS certificates (requires stackpanel.network.step.enable)
+    use-step-tls = false;
+  };
+
+  # ----------------------------------------------------------------------------
+  # Checks
+  # ----------------------------------------------------------------------------
+  # Additional flake checks contributed by stackpanel modules.
+  checks = { };
+
+  # ----------------------------------------------------------------------------
+  # Ci
+  # ----------------------------------------------------------------------------
+  ci = {
+    # Whether to enable CI/CD generation.
+    enable = true;
+
+    # This option has no description.
+    github = {
+      checks = {
+        branches = [
+  "main"
+];
+      };
+    };
+
+    # This option has no description.
+    github = {
+      checks = {
+        commands = [
+  "nix flake check"
+  "nix build"
+];
+      };
+    };
+
+    # Whether to enable standard CI checks workflow.
+    github = {
+      checks = {
+        enable = true;
+      };
+    };
+
+    # Whether to enable GitHub Actions.
+    github = {
+      enable = true;
+    };
+
+    # Workflow name -> workflow definition (raw)
+    github = {
+      workflows = { };
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Cli
+  # ----------------------------------------------------------------------------
+  cli = {
+    # Whether to enable CLI-based file generation.
+    enable = true;
+
+    # Suppress generation output messages
+    quiet = false;
+  };
+
+  # ----------------------------------------------------------------------------
+  # Codegen
+  # ----------------------------------------------------------------------------
+  codegen = {
+    # Whether to enable Stackpanel codegen helpers.
+    enable = true;
+
+    # Code generators to run in the devenv on shell enter.
+    generators = { };
+
+    # This option has no description.
+    generators = {
+      <name> = {
+        cwd = null;
+      };
+    };
+
+    # This option has no description.
+    generators = {
+      <name> = {
+        env = { };
+      };
+    };
+
+    # This option has no description.
+    generators = {
+      <name> = {
+        exec = "";
+      };
+    };
+
+    # This option has no description.
+    generators = {
+      <name> = {
+        onEnter = null;
+      };
+    };
+
+    # This option has no description.
+    generators = {
+      <name> = {
+        runtimeInputs = [ ];
+      };
+    };
+
+    # This option has no description.
+    runOnEnter = false;
+  };
+
+  # ----------------------------------------------------------------------------
+  # Debug
+  # ----------------------------------------------------------------------------
+  # Whether to enable Enable Stackpanel Debug Mode.
+  debug = true;
+
+  # ----------------------------------------------------------------------------
+  # Devshell
+  # ----------------------------------------------------------------------------
+  devshell = {
+    # This option has no description.
+    _commandsSerializable = {
+      <name> = {
+        description = null;
+      };
+    };
+
+    # This option has no description.
+    _commandsSerializable = {
+      <name> = {
+        env = { };
+      };
+    };
+
+    # This option has no description.
+    _commandsSerializable = {
+      <name> = {
+        exec = "";
+      };
+    };
+
+    # This option has no description.
+    _commandsSerializable = {
+      <name> = {
+        name = "";
+      };
+    };
+
+    # This option has no description.
+    buildInputs = [ ];
+
+    # List of shell aliases to unset when entering the devshell. Use this if you
+    # have aliases that conflict with stackpanel scripts (e.g., "dev").
+    clean = {
+      aliases = [
+  "dev"
+  "start"
+];
+    };
+
+    # Whether to enable clean environment mode.
+    clean = {
+      enable = true;
+    };
+
+    # Whether to use --impure flag when entering the devshell. --impure allows
+    # Nix to access environment variables and system state, but prevents
+    # effective caching between runs. Set to false if you want better caching
+    # and your devshell doesn't need access to parent environment state.
+    clean = {
+      impure = true;
+    };
+
+    # Environment variables to preserve when clean.enable is true. These
+    # variables are passed through from the parent environment. Use `nix develop
+    # --ignore-environment --impure` with `--keep` flags for each variable in
+    # this list, or use the generated wrapper script.
+    clean = {
+      keep = [
+  "HOME"
+  "USER"
+  "SSH_AUTH_SOCK"
+  "DISPLAY"
+];
+    };
+
+    # Direnv state variables. Only needed if using direnv inside the clean
+    # shell.
+    clean = {
+      keepDirenv = [
+  "DIRENV_DIR"
+  "DIRENV_FILE"
+];
+    };
+
+    # Environment variables for fzf configuration. Add to clean.keep if you want
+    # to preserve your fzf settings.
+    clean = {
+      keepFzf = [
+  "FZF_DEFAULT_COMMAND"
+  "FZF_DEFAULT_OPTS"
+  "FZF_CTRL_T_COMMAND"
+  "FZF_ALT_C_COMMAND"
+];
+    };
+
+    # Additional environment variables to keep for GUI applications. These are
+    # NOT included by default. Add them to clean.keep if needed:
+    # stackpanel.devshell.clean.keep = config.stackpanel.devshell.clean.keep ++
+    # config.stackpanel.devshell.clean.keepGui;
+    clean = {
+      keepGui = [
+  "DISPLAY"
+  "WAYLAND_DISPLAY"
+  "XDG_RUNTIME_DIR"
+  "DBUS_SESSION_BUS_ADDRESS"
+];
+    };
+
+    # Environment variables for Warp terminal features. Add to clean.keep if
+    # using Warp terminal.
+    clean = {
+      keepWarp = [
+  "WARP_HONOR_PS1"
+  "WARP_IS_LOCAL_SHELL_SESSION"
+  "WARP_USE_SSH_WRAPPER"
+];
+    };
+
+    # XDG base directory environment variables (often set by home-manager). Add
+    # to clean.keep if you want to preserve these paths.
+    clean = {
+      keepXdg = [
+  "XDG_CACHE_HOME"
+  "XDG_CONFIG_HOME"
+  "XDG_DATA_HOME"
+  "XDG_STATE_HOME"
+];
+    };
+
+    # This option has no description.
+    env = { };
+
+    # This option has no description.
+    hooks = {
+      after = [ ];
+    };
+
+    # This option has no description.
+    hooks = {
+      before = [ ];
+    };
+
+    # This option has no description.
+    hooks = {
+      main = [ ];
+    };
+
+    # This option has no description.
+    nativeBuildInputs = [ ];
+
+    # This option has no description.
+    packages = [ ];
+
+    # This option has no description.
+    path = {
+      append = [ ];
+    };
+
+    # This option has no description.
+    path = {
+      prepend = [ ];
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Direnv
+  # ----------------------------------------------------------------------------
+  direnv = {
+    # Hide the 'direnv: export +VAR...' log line (requires user's direnv.toml)
+    hide-env-diff = true;
+  };
+
+  # ----------------------------------------------------------------------------
+  # Dirs
+  # ----------------------------------------------------------------------------
+  dirs = {
+    # Directory for stackpanel configuration files.
+    config = /Users/cm/git/darkmatter/stackpanel/.stackpanel/config.nix;
+
+    # Root directory for stackpanel files (relative to project root). This is
+    # the ONLY configurable directory option. Subdirectories are automatically
+    # computed: - state/ (gitignored) - runtime state files - gen/ (checked in)
+    # - generated IDE configs, schemas - data/ (checked in) - nix-backed
+    # configuration db Example: ".stackpanel" → state at ".stackpanel/state"
+    home = ".stackpanel";
+  };
+
+  # ----------------------------------------------------------------------------
+  # Dns
+  # ----------------------------------------------------------------------------
+  dns = {
+    # Automatically configure DNS on shell entry. For apple-container backend,
+    # this runs the DNS setup commands.
+    auto-setup = true;
+
+    # DNS backend for local development domains. - caddy: Use Caddy reverse
+    # proxy (handles both DNS-like routing and TLS) - apple-container: Use
+    # Apple's container DNS system (macOS only) Runs: sudo container system dns
+    # create <domain> --localhost <ip> - manual: No automatic DNS configuration
+    # (user manages /etc/hosts)
+    backend = "caddy";
+
+    # Additional domains to register with the DNS backend. App domains are
+    # automatically included based on stackpanel.apps configuration.
+    domains = [
+  "api.localhost"
+  "dashboard.localhost"
+];
+
+    # Whether to enable local DNS configuration.
+    enable = true;
+
+    # The host domain for Apple container DNS. This is the base domain that
+    # containers use to reach the host.
+    host = "host.container.internal";
+
+    # IP address for localhost DNS entries. For Apple container DNS, you may
+    # want to use a specific IP like 203.0.113.113 to avoid conflicts. The
+    # container tool will route this to localhost automatically.
+    localhost-ip = "203.0.113.113";
+  };
+
+  # ----------------------------------------------------------------------------
+  # Enable
+  # ----------------------------------------------------------------------------
+  # Whether to enable Enable Stackpanel.
+  enable = true;
+
+  # ----------------------------------------------------------------------------
+  # Extensions
+  # ----------------------------------------------------------------------------
+  extensions = {
+    # Per-app extension data (app name -> extension data)
+    <name> = {
+      apps = { };
+    };
+
+    # Extension config for this app (string key-value pairs)
+    <name> = {
+      apps = {
+        <name> = {
+          config = { };
+        };
+      };
+    };
+
+    # Whether extension is enabled for this app
+    <name> = {
+      apps = {
+        <name> = {
+          enabled = true;
+        };
+      };
+    };
+
+    # Whether this is a built-in extension shipped with stackpanel
+    <name> = {
+      builtin = false;
+    };
+
+    # Category for grouping in UI
+    <name> = {
+      category = "EXTENSION_CATEGORY_UNSPECIFIED";
+    };
+
+    # Other extensions this depends on
+    <name> = {
+      dependencies = [ ];
+    };
+
+    # Human-readable description of what the extension does
+    <name> = {
+      description = null;
+    };
+
+    # Whether this extension is enabled
+    <name> = {
+      enabled = true;
+    };
+
+    # Which core stackpanel features this extension configures
+    <name> = {
+      features = { };
+    };
+
+    # Extension defines checks/validations
+    <name> = {
+      features = {
+        checks = false;
+      };
+    };
+
+    # Extension generates files via stackpanel.files
+    <name> = {
+      features = {
+        files = false;
+      };
+    };
+
+    # Extension adds devshell packages
+    <name> = {
+      features = {
+        packages = false;
+      };
+    };
+
+    # Extension provides shell scripts/commands
+    <name> = {
+      features = {
+        scripts = false;
+      };
+    };
+
+    # Extension manages secrets/variables
+    <name> = {
+      features = {
+        secrets = false;
+      };
+    };
+
+    # Extension configures services/processes
+    <name> = {
+      features = {
+        services = false;
+      };
+    };
+
+    # Extension adds shell hooks
+    <name> = {
+      features = {
+        shell-hooks = false;
+      };
+    };
+
+    # Extension defines tasks
+    <name> = {
+      features = {
+        tasks = false;
+      };
+    };
+
+    # Display name of the extension
+    <name> = {
+      name = "";
+    };
+
+    # UI panels provided by this extension
+    <name> = {
+      panels = [ ];
+    };
+
+    # Panel description
+    <name> = {
+      panels = {
+        * = {
+          description = null;
+        };
+      };
+    };
+
+    # Panel configuration fields
+    <name> = {
+      panels = {
+        * = {
+          fields = [ ];
+        };
+      };
+    };
+
+    # Field name (maps to component prop)
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              name = "";
+            };
+          };
+        };
+      };
+    };
+
+    # Options for select fields
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              options = [ ];
+            };
+          };
+        };
+      };
+    };
+
+    # Field type
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              type = "FIELD_TYPE_STRING";
+            };
+          };
+        };
+      };
+    };
+
+    # Field value (JSON-encoded for complex types)
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              value = "";
+            };
+          };
+        };
+      };
+    };
+
+    # Unique panel identifier
+    <name> = {
+      panels = {
+        * = {
+          id = "";
+        };
+      };
+    };
+
+    # Display order (lower = first)
+    <name> = {
+      panels = {
+        * = {
+          order = 100;
+        };
+      };
+    };
+
+    # Display title
+    <name> = {
+      panels = {
+        * = {
+          title = "";
+        };
+      };
+    };
+
+    # Panel type (determines which component to render)
+    <name> = {
+      panels = {
+        * = {
+          type = "PANEL_TYPE_STATUS";
+        };
+      };
+    };
+
+    # Load order priority (lower = earlier)
+    <name> = {
+      priority = 100;
+    };
+
+    # Extension source configuration
+    <name> = {
+      source = { };
+    };
+
+    # Path to the Nix module within the source
+    <name> = {
+      source = {
+        module-path = null;
+      };
+    };
+
+    # NPM package name for npm source type
+    <name> = {
+      source = {
+        package = null;
+      };
+    };
+
+    # Local path for local source type
+    <name> = {
+      source = {
+        path = null;
+      };
+    };
+
+    # Git ref (branch, tag, commit) for github source type
+    <name> = {
+      source = {
+        ref = null;
+      };
+    };
+
+    # GitHub repository (owner/repo) for github source type
+    <name> = {
+      source = {
+        repo = null;
+      };
+    };
+
+    # Source type for the extension
+    <name> = {
+      source = {
+        type = "EXTENSION_SOURCE_TYPE_BUILTIN";
+      };
+    };
+
+    # URL for url source type
+    <name> = {
+      source = {
+        url = null;
+      };
+    };
+
+    # Path to extension's src/ directory for scripts, checks, and files. When
+    # specified, the extension system will auto-discover resources: -
+    # src/scripts/*.sh -> stackpanel.scripts.<extName>:<scriptName> -
+    # src/checks/*.sh -> stackpanel.healthchecks.<extName>:<checkName> -
+    # src/files/* -> available for stackpanel.files.entries Resources are
+    # automatically namespaced with the extension name. Explicit Nix definitions
+    # take priority over auto-discovered resources. Example: srcDir = ./src; #
+    # Relative to extension module
+    <name> = {
+      srcDir = "./src";
+    };
+
+    # Tags for categorizing/filtering extensions
+    <name> = {
+      tags = [ ];
+    };
+
+    # Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+    <name> = {
+      version = null;
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # FlakeApps
+  # ----------------------------------------------------------------------------
+  flakeApps = {
+    # Path to the executable.
+    <name> = {
+      program = "";
+    };
+
+    # App type (always 'app' for Nix apps).
+    <name> = {
+      type = "app";
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Git-hooks
+  # ----------------------------------------------------------------------------
+  # Git hooks configuration fragment (consumed by git-hooks.nix).
+  git-hooks = { };
+
+  # ----------------------------------------------------------------------------
+  # Github
+  # ----------------------------------------------------------------------------
+  # DEPRECATED: Use stackpanel.project.owner and stackpanel.project.repo
+  # instead. GitHub repository in 'owner/repo' format for this project. This
+  # value is used as a key for certain features like stable port calculation and
+  # user sync.
+  github = "darkmatter/stackpanel";
+
+  # ----------------------------------------------------------------------------
+  # Gitignore
+  # ----------------------------------------------------------------------------
+  gitignore = {
+    # Whether to add the root marker file to the project's .gitignore.
+    addProjectMarker = false;
+  };
+
+  # ----------------------------------------------------------------------------
+  # GlobalServices
+  # ----------------------------------------------------------------------------
+  globalServices = {
+    # Whether to enable Global Caddy reverse proxy.
+    caddy = {
+      enable = true;
+    };
+
+    # Sites to register with Caddy (domain -> upstream)
+    caddy = {
+      sites = {
+  "api.localhost" = "localhost:8080";
+  "myapp.localhost" = "localhost:3000";
+};
+    };
+
+    # Whether to enable Global singleton development services.
+    enable = true;
+
+    # Minio console port. If null, uses computed port from stackpanel.ports.
+    minio = {
+      console-port = null;
+    };
+
+    # Whether to enable Global Minio (S3) service.
+    minio = {
+      enable = true;
+    };
+
+    # Minio package to use
+    minio = {
+      package = pkgs.package-name;
+    };
+
+    # Minio API port. If null, uses computed port from stackpanel.ports.
+    minio = {
+      port = null;
+    };
+
+    # List of databases to create for this project
+    postgres = {
+      databases = [
+  "myapp"
+  "myapp_test"
+];
+    };
+
+    # Whether to enable Global PostgreSQL service.
+    postgres = {
+      enable = true;
+    };
+
+    # PostgreSQL package to use
+    postgres = {
+      package = pkgs.package-name;
+    };
+
+    # PostgreSQL port. If null, uses computed port from stackpanel.ports.
+    postgres = {
+      port = null;
+    };
+
+    # Project name used for registering databases and sites
+    project-name = "stackpanel";
+
+    # Whether to enable Global Redis service.
+    redis = {
+      enable = true;
+    };
+
+    # Redis package to use
+    redis = {
+      package = pkgs.package-name;
+    };
+
+    # Redis port. If null, uses computed port from stackpanel.ports.
+    redis = {
+      port = null;
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Healthchecks
+  # ----------------------------------------------------------------------------
+  healthchecks = {
+    # Default interval for automatic healthcheck runs in seconds. Set to null to
+    # disable automatic checks.
+    defaultInterval = 30;
+
+    # Default timeout for healthchecks in seconds
+    defaultTimeout = 10;
+
+    # Enable the healthchecks system
+    enable = true;
+
+    # Healthchecks organized by module. Each module can declare multiple
+    # healthchecks that verify its functionality. The UI displays a traffic
+    # light for each module based on the aggregate status of its healthchecks.
+    modules = {
+  go = {
+    displayName = "Go";
+    checks = {
+      # Inline script
+      go-installed = {
+        script = "command -v go >/dev/null 2>&1";
+        severity = "critical";
+      };
+    };
+  };
+
+  postgres = {
+    displayName = "PostgreSQL";
+    checks = {
+      # TCP check
+      running = {
+        type = "tcp";
+        tcpHost = "localhost";
+        tcpPort = 5432;
+        severity = "critical";
+      };
+      # Path to script file
+      has-tables = {
+        path = ./.stackpanel/src/checks/postgres/has-tables.sh;
+        severity = "warning";
+      };
+    };
+  };
+
+  # Extension module
+  sst = {
+    displayName = "SST";
+    checks = {
+      configured = {
+        path = ./src/checks/configured.sh;
+        severity = "critical";
+      };
+    };
+  };
+}
+;
+
+    # Healthchecks for this module
+    modules = {
+      <name> = {
+        checks = { };
+      };
+    };
+
+    # Description of what this check verifies
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            description = null;
+          };
+        };
+      };
+    };
+
+    # Whether this healthcheck is enabled
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            enable = true;
+          };
+        };
+      };
+    };
+
+    # Expected HTTP status code for a healthy response
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            httpExpectedStatus = 200;
+          };
+        };
+      };
+    };
+
+    # HTTP method to use for http-type checks
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            httpMethod = "GET";
+          };
+        };
+      };
+    };
+
+    # URL to check for http-type checks
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            httpUrl = "http://localhost:3000/health";
+          };
+        };
+      };
+    };
+
+    # How often to run this check in seconds. If null, check runs only on
+    # demand.
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            interval = null;
+          };
+        };
+      };
+    };
+
+    # Display name for the healthcheck
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            name = "‹name›";
+          };
+        };
+      };
+    };
+
+    # Nix expression to evaluate for nix-type checks. Should evaluate to true
+    # for healthy, false for unhealthy.
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            nixExpr = "builtins.pathExists /nix/store";
+          };
+        };
+      };
+    };
+
+    # Path to script file for script-type checks. Content is read and used as
+    # the script body. Mutually exclusive with `script` and `scriptRef`.
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            path = ./.stackpanel/src/checks/postgres/can-connect.sh;
+          };
+        };
+      };
+    };
+
+    # Shell script content for script-type checks (inline). Should exit 0 for
+    # healthy, non-zero for unhealthy. Mutually exclusive with `path` and
+    # `scriptRef`.
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            script = "command -v go >/dev/null 2>&1";
+          };
+        };
+      };
+    };
+
+    # A derivation that provides the healthcheck script. The script should be at
+    # $out/bin/<name> or $out.
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            scriptPackage = null;
+          };
+        };
+      };
+    };
+
+    # Reference to a stackpanel.scripts.* entry. The referenced script is used
+    # as the healthcheck command. Mutually exclusive with `script` and `path`.
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            scriptRef = "db-connect";
+          };
+        };
+      };
+    };
+
+    # How critical this check is: - critical: Failing = unhealthy (red light) -
+    # warning: Failing = degraded (yellow light) - info: Informational only,
+    # doesn't affect status
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            severity = "warning";
+          };
+        };
+      };
+    };
+
+    # Tags for filtering/grouping checks
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            tags = [
+  "database"
+  "critical"
+];
+          };
+        };
+      };
+    };
+
+    # Host to connect to for tcp-type checks
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            tcpHost = "localhost";
+          };
+        };
+      };
+    };
+
+    # Port to connect to for tcp-type checks
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            tcpPort = 5432;
+          };
+        };
+      };
+    };
+
+    # Timeout for the check in seconds
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            timeout = 10;
+          };
+        };
+      };
+    };
+
+    # Type of healthcheck (script, nix, http, tcp)
+    modules = {
+      <name> = {
+        checks = {
+          <name> = {
+            type = "script";
+          };
+        };
+      };
+    };
+
+    # Display name for the module in the UI
+    modules = {
+      <name> = {
+        displayName = "‹name›";
+      };
+    };
+
+    # Enable healthchecks for this module
+    modules = {
+      <name> = {
+        enable = true;
+      };
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Ide
+  # ----------------------------------------------------------------------------
+  ide = {
+    # Whether to enable Cursor editor integration (not yet implemented).
+    cursor = {
+      enable = true;
+    };
+
+    # Generate IDE configuration files into .stackpanel/gen/ide/
+    enable = true;
+
+    # Generate VS Code workspace and configuration files
+    vscode = {
+      enable = true;
+    };
+
+    # Path to existing VS Code settings.json to merge with generated settings.
+    # WARNING: This creates IMPURE evaluation - the file must exist at Nix
+    # evaluation time.
+    vscode = {
+      existing-settings-path = null;
+    };
+
+    # Recommended VS Code extension IDs
+    vscode = {
+      extensions = [ ];
+    };
+
+    # Additional workspace folders to include
+    vscode = {
+      extra-folders = [ ];
+    };
+
+    # Where to output VS Code settings: - "workspace": Generate
+    # .stackpanel/gen/ide/vscode/stackpanel.code-workspace (default, safe) -
+    # "settingsJson": Generate .vscode/settings.json (CAUTION: may overwrite
+    # existing file)
+    vscode = {
+      output-mode = "workspace";
+    };
+
+    # VS Code settings to include in the generated configuration. These take
+    # highest priority and will override any existing or generated settings.
+    vscode = {
+      settings = { };
+    };
+
+    # Name for the generated .code-workspace file (without extension)
+    vscode = {
+      workspace-name = "stackpanel";
+    };
+
+    # Generate Zed configuration files
+    zed = {
+      enable = true;
+    };
+
+    # Path to existing Zed settings.json to merge with generated settings.
+    # WARNING: This creates IMPURE evaluation - the file must exist at Nix
+    # evaluation time.
+    zed = {
+      existing-settings-path = null;
+    };
+
+    # Recommended Zed extension IDs
+    zed = {
+      extensions = [ ];
+    };
+
+    # Where to output Zed settings: - "generated": Generate to
+    # .stackpanel/gen/zed/ (default, safe) - requires manual symlink - "dotZed":
+    # Generate to .zed/settings.json (CAUTION: may overwrite existing file)
+    zed = {
+      output-mode = "generated";
+    };
+
+    # Zed settings to include in the generated configuration. These take highest
+    # priority and will override any existing or generated settings.
+    zed = {
+      settings = { };
+    };
+
+    # Zed tasks to include in the generated tasks.json. Each task is an attrset
+    # with label, command, args, etc.
+    zed = {
+      tasks = [
+  {
+    args = [
+      "run"
+      "dev"
+    ];
+    command = "bun";
+    label = "dev";
+  }
+];
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # ModuleChecks
+  # ----------------------------------------------------------------------------
+  moduleChecks = {
+    # Configuration check - verifies config generation works correctly.
+    # Recommended for modules that generate config files.
+    <name> = {
+      config = null;
+    };
+
+    # The derivation that runs this check (must succeed to pass)
+    <name> = {
+      config = {
+        derivation = pkgs.package-name;
+      };
+    };
+
+    # Human-readable description of what this check verifies
+    <name> = {
+      config = {
+        description = "";
+      };
+    };
+
+    # Whether this check is required for module certification
+    <name> = {
+      config = {
+        required = false;
+      };
+    };
+
+    # Timeout in seconds for this check
+    <name> = {
+      config = {
+        timeout = 300;
+      };
+    };
+
+    # Custom module-specific checks. Use this for checks that don't fit the
+    # standard categories.
+    <name> = {
+      custom = { };
+    };
+
+    # The derivation that runs this check (must succeed to pass)
+    <name> = {
+      custom = {
+        <name> = {
+          derivation = pkgs.package-name;
+        };
+      };
+    };
+
+    # Human-readable description of what this check verifies
+    <name> = {
+      custom = {
+        <name> = {
+          description = "";
+        };
+      };
+    };
+
+    # Whether this check is required for module certification
+    <name> = {
+      custom = {
+        <name> = {
+          required = false;
+        };
+      };
+    };
+
+    # Timeout in seconds for this check
+    <name> = {
+      custom = {
+        <name> = {
+          timeout = 300;
+        };
+      };
+    };
+
+    # Evaluation check - verifies the module evaluates without errors. Required
+    # for module certification.
+    <name> = {
+      eval = null;
+    };
+
+    # The derivation that runs this check (must succeed to pass)
+    <name> = {
+      eval = {
+        derivation = pkgs.package-name;
+      };
+    };
+
+    # Human-readable description of what this check verifies
+    <name> = {
+      eval = {
+        description = "";
+      };
+    };
+
+    # Whether this check is required for module certification
+    <name> = {
+      eval = {
+        required = false;
+      };
+    };
+
+    # Timeout in seconds for this check
+    <name> = {
+      eval = {
+        timeout = 300;
+      };
+    };
+
+    # Integration check - verifies module works with a sample project.
+    # Recommended for complex modules.
+    <name> = {
+      integration = null;
+    };
+
+    # The derivation that runs this check (must succeed to pass)
+    <name> = {
+      integration = {
+        derivation = pkgs.package-name;
+      };
+    };
+
+    # Human-readable description of what this check verifies
+    <name> = {
+      integration = {
+        description = "";
+      };
+    };
+
+    # Whether this check is required for module certification
+    <name> = {
+      integration = {
+        required = false;
+      };
+    };
+
+    # Timeout in seconds for this check
+    <name> = {
+      integration = {
+        timeout = 300;
+      };
+    };
+
+    # Lint check - verifies the module's code passes linting. Optional.
+    <name> = {
+      lint = null;
+    };
+
+    # The derivation that runs this check (must succeed to pass)
+    <name> = {
+      lint = {
+        derivation = pkgs.package-name;
+      };
+    };
+
+    # Human-readable description of what this check verifies
+    <name> = {
+      lint = {
+        description = "";
+      };
+    };
+
+    # Whether this check is required for module certification
+    <name> = {
+      lint = {
+        required = false;
+      };
+    };
+
+    # Timeout in seconds for this check
+    <name> = {
+      lint = {
+        timeout = 300;
+      };
+    };
+
+    # Packages check - verifies required packages are available. Required for
+    # module certification.
+    <name> = {
+      packages = null;
+    };
+
+    # The derivation that runs this check (must succeed to pass)
+    <name> = {
+      packages = {
+        derivation = pkgs.package-name;
+      };
+    };
+
+    # Human-readable description of what this check verifies
+    <name> = {
+      packages = {
+        description = "";
+      };
+    };
+
+    # Whether this check is required for module certification
+    <name> = {
+      packages = {
+        required = false;
+      };
+    };
+
+    # Timeout in seconds for this check
+    <name> = {
+      packages = {
+        timeout = 300;
+      };
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # ModuleRequirements
+  # ----------------------------------------------------------------------------
+  moduleRequirements = {
+    # Environment variables provided by this module after setup
+    <name> = {
+      provides = [ ];
+    };
+
+    # Variables required by this module
+    <name> = {
+      requires = [ ];
+    };
+
+    # Action to resolve this variable if missing
+    <name> = {
+      requires = {
+        * = {
+          action = null;
+        };
+      };
+    };
+
+    # Button/link label
+    <name> = {
+      requires = {
+        * = {
+          action = {
+            label = "";
+          };
+        };
+      };
+    };
+
+    # Action type: add-secret, add-variable, external
+    <name> = {
+      requires = {
+        * = {
+          action = {
+            type = "";
+          };
+        };
+      };
+    };
+
+    # External URL for creating the value
+    <name> = {
+      requires = {
+        * = {
+          action = {
+            url = null;
+          };
+        };
+      };
+    };
+
+    # Description of the variable
+    <name> = {
+      requires = {
+        * = {
+          description = "";
+        };
+      };
+    };
+
+    # Environment variable name
+    <name> = {
+      requires = {
+        * = {
+          key = "";
+        };
+      };
+    };
+
+    # Whether the value should be treated as a secret
+    <name> = {
+      requires = {
+        * = {
+          sensitive = false;
+        };
+      };
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Modules
+  # ----------------------------------------------------------------------------
+  modules = {
+    # Per-app module data (app name -> module data)
+    <name> = {
+      apps = { };
+    };
+
+    # Module config for this app (string key-value pairs)
+    <name> = {
+      apps = {
+        <name> = {
+          config = { };
+        };
+      };
+    };
+
+    # Whether module is enabled for this app
+    <name> = {
+      apps = {
+        <name> = {
+          enabled = true;
+        };
+      };
+    };
+
+    # JSON Schema string for generating configuration forms in the UI. The
+    # schema should describe the module's configurable options.
+    <name> = {
+      configSchema = ''
+  {
+    "type": "object",
+    "properties": {
+      "port": { "type": "integer", "default": 5432 },
+      "version": { "type": "string", "enum": ["15", "16"], "default": "16" }
+    }
+  }
+'';
+    };
+
+    # Other modules that conflict with this module
+    <name> = {
+      conflicts = [ ];
+    };
+
+    # Whether to enable the ‹name› module.
+    <name> = {
+      enable = true;
+    };
+
+    # Which stackpanel features this module uses
+    <name> = {
+      features = { };
+    };
+
+    # Module extends per-app configuration via appModules
+    <name> = {
+      features = {
+        appModule = false;
+      };
+    };
+
+    # Module generates files via stackpanel.files
+    <name> = {
+      features = {
+        files = false;
+      };
+    };
+
+    # Module defines health checks
+    <name> = {
+      features = {
+        healthchecks = false;
+      };
+    };
+
+    # Module adds devshell packages
+    <name> = {
+      features = {
+        packages = false;
+      };
+    };
+
+    # Module provides shell scripts/commands
+    <name> = {
+      features = {
+        scripts = false;
+      };
+    };
+
+    # Module manages secrets/variables
+    <name> = {
+      features = {
+        secrets = false;
+      };
+    };
+
+    # Module configures background services/processes
+    <name> = {
+      features = {
+        services = false;
+      };
+    };
+
+    # Module defines turborepo tasks
+    <name> = {
+      features = {
+        tasks = false;
+      };
+    };
+
+    # Flake inputs required by this module. Used for auto-installation from the
+    # registry.
+    <name> = {
+      flakeInputs = [ ];
+    };
+
+    # Whether to add inputs.nixpkgs.follows = "nixpkgs"
+    <name> = {
+      flakeInputs = {
+        * = {
+          followsNixpkgs = true;
+        };
+      };
+    };
+
+    # Input name in flake.nix (e.g., "my-module")
+    <name> = {
+      flakeInputs = {
+        * = {
+          name = "";
+        };
+      };
+    };
+
+    # Flake URL (e.g., "github:author/my-module")
+    <name> = {
+      flakeInputs = {
+        * = {
+          url = "";
+        };
+      };
+    };
+
+    # Name of the healthcheck module that provides health checks for this
+    # module. This links to stackpanel.healthchecks.modules.<name>.
+    <name> = {
+      healthcheckModule = null;
+    };
+
+    # Module metadata for display in the UI
+    <name> = {
+      meta = {
+  name = "‹name›";
+};
+    };
+
+    # Author or maintainer of the module
+    <name> = {
+      meta = {
+        author = null;
+      };
+    };
+
+    # Category for grouping in the UI
+    <name> = {
+      meta = {
+        category = "unspecified";
+      };
+    };
+
+    # Human-readable description of what the module does
+    <name> = {
+      meta = {
+        description = null;
+      };
+    };
+
+    # URL to module documentation or repository
+    <name> = {
+      meta = {
+        homepage = null;
+      };
+    };
+
+    # Lucide icon name for the module (e.g., 'database', 'box', 'cloud')
+    <name> = {
+      meta = {
+        icon = null;
+      };
+    };
+
+    # Display name of the module
+    <name> = {
+      meta = {
+        name = "";
+      };
+    };
+
+    # Module version
+    <name> = {
+      meta = {
+        version = null;
+      };
+    };
+
+    # UI panels provided by this module
+    <name> = {
+      panels = [ ];
+    };
+
+    # Panel description
+    <name> = {
+      panels = {
+        * = {
+          description = null;
+        };
+      };
+    };
+
+    # Panel configuration fields
+    <name> = {
+      panels = {
+        * = {
+          fields = [ ];
+        };
+      };
+    };
+
+    # Field name (maps to component prop)
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              name = "";
+            };
+          };
+        };
+      };
+    };
+
+    # Options for select fields
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              options = [ ];
+            };
+          };
+        };
+      };
+    };
+
+    # Field type
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              type = "FIELD_TYPE_STRING";
+            };
+          };
+        };
+      };
+    };
+
+    # Field value (JSON-encoded for complex types)
+    <name> = {
+      panels = {
+        * = {
+          fields = {
+            * = {
+              value = "";
+            };
+          };
+        };
+      };
+    };
+
+    # Unique panel identifier
+    <name> = {
+      panels = {
+        * = {
+          id = "";
+        };
+      };
+    };
+
+    # Display order (lower = first)
+    <name> = {
+      panels = {
+        * = {
+          order = 100;
+        };
+      };
+    };
+
+    # Display title
+    <name> = {
+      panels = {
+        * = {
+          title = "";
+        };
+      };
+    };
+
+    # Panel type (determines which component to render)
+    <name> = {
+      panels = {
+        * = {
+          type = "PANEL_TYPE_STATUS";
+        };
+      };
+    };
+
+    # Load order priority (lower = earlier)
+    <name> = {
+      priority = 100;
+    };
+
+    # Other modules that must be enabled for this module to work
+    <name> = {
+      requires = [ ];
+    };
+
+    # Module source configuration
+    <name> = {
+      source = { };
+    };
+
+    # Name of the flake input (for flake-input source type)
+    <name> = {
+      source = {
+        flakeInput = null;
+      };
+    };
+
+    # Local path to the module (for local source type)
+    <name> = {
+      source = {
+        path = null;
+      };
+    };
+
+    # Git ref (branch, tag, commit) for remote modules
+    <name> = {
+      source = {
+        ref = null;
+      };
+    };
+
+    # Registry identifier (for registry source type, e.g., 'stackpanel/docker')
+    <name> = {
+      source = {
+        registryId = null;
+      };
+    };
+
+    # Source type for the module
+    <name> = {
+      source = {
+        type = "builtin";
+      };
+    };
+
+    # Tags for categorizing/filtering modules
+    <name> = {
+      tags = [ ];
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Motd
+  # ----------------------------------------------------------------------------
+  motd = {
+    # List of available commands to show in MOTD
+    commands = [ ];
+
+    # Command description
+    commands = {
+      * = {
+        description = "";
+      };
+    };
+
+    # Command name
+    commands = {
+      * = {
+        name = "";
+      };
+    };
+
+    # Show MOTD with help text on shell entry
+    enable = true;
+
+    # List of enabled features to show in MOTD
+    features = [ ];
+
+    # List of hints to show in MOTD
+    hints = [ ];
+  };
+
+  # ----------------------------------------------------------------------------
+  # Name
+  # ----------------------------------------------------------------------------
+  # Name of your project. May be used for naming things and diplay purposes.
+  name = "my-project";
+
+  # ----------------------------------------------------------------------------
+  # Outputs
+  # ----------------------------------------------------------------------------
+  # Output derivations to expose. These will be available as: - `nix build
+  # .#<name>` (via flake) - for direct packages - `nix run .#<group>.<name>`
+  # (via flake) - for grouped packages (like scripts) - `devenv outputs.<name>`
+  # (via devenv) Example: stackpanel.outputs = { my-docs = pkgs.runCommand
+  # "docs" {} "..."; my-script = pkgs.writeShellScriptBin "foo" "..."; # Grouped
+  # packages (available via nix run .#scripts.<name>) scripts = { foo =
+  # pkgs.writeShellScriptBin "foo" "..."; }; };
+  outputs = {
+  docs-json = optionsDoc.optionsJSON;
+  docs-md = optionsDoc.optionsCommonMark;
+  scripts = { my-script = pkgs.writeShellScriptBin "test" "echo hello"; };
+}
+;
+
+  # ----------------------------------------------------------------------------
+  # Packages
+  # ----------------------------------------------------------------------------
+  # Packages to include in the devshell. Can be either: - Actual Nix packages
+  # (e.g., pkgs.git) - String package names (e.g., "git") - resolved from
+  # nixpkgs String packages are resolved via nixpkgs attribute paths, supporting
+  # nested paths like "nodePackages.typescript".
+  packages = [
+  pkgs.git
+  "ripgrep"
+  "nodePackages.typescript"
+]
+;
+
+  # ----------------------------------------------------------------------------
+  # Panels
+  # ----------------------------------------------------------------------------
+  panels = {
+    # Per-app data for apps grid panels
+    <name> = {
+      apps = { };
+    };
+
+    # This option has no description.
+    <name> = {
+      apps = {
+        <name> = {
+          config = { };
+        };
+      };
+    };
+
+    # This option has no description.
+    <name> = {
+      apps = {
+        <name> = {
+          enabled = true;
+        };
+      };
+    };
+
+    # Column definitions for table panels
+    <name> = {
+      columns = [ ];
+    };
+
+    # Column key (matches row data)
+    <name> = {
+      columns = {
+        * = {
+          key = "";
+        };
+      };
+    };
+
+    # Column header label
+    <name> = {
+      columns = {
+        * = {
+          label = "";
+        };
+      };
+    };
+
+    # Optional description shown below the title
+    <name> = {
+      description = null;
+    };
+
+    # Whether this panel is enabled and should be shown
+    <name> = {
+      enabled = true;
+    };
+
+    # Panel configuration fields passed to the component
+    <name> = {
+      fields = [ ];
+    };
+
+    # Nix config path for saving field value (e.g.,
+    # 'stackpanel.deployment.fly.organization')
+    <name> = {
+      fields = {
+        * = {
+          configPath = null;
+        };
+      };
+    };
+
+    # Help text shown below the field
+    <name> = {
+      fields = {
+        * = {
+          description = null;
+        };
+      };
+    };
+
+    # Dot-separated path within the app's config for writes. E.g.,
+    # "go.mainPackage" tells the agent to patch apps.<appId>.go.mainPackage in
+    # the data file.
+    <name> = {
+      fields = {
+        * = {
+          editPath = null;
+        };
+      };
+    };
+
+    # Whether the field can be modified from the UI
+    <name> = {
+      fields = {
+        * = {
+          editable = false;
+        };
+      };
+    };
+
+    # Example value shown as help text
+    <name> = {
+      fields = {
+        * = {
+          example = null;
+        };
+      };
+    };
+
+    # Human-readable label for the field (defaults to name if null)
+    <name> = {
+      fields = {
+        * = {
+          label = null;
+        };
+      };
+    };
+
+    # Field name (maps to component prop)
+    <name> = {
+      fields = {
+        * = {
+          name = "";
+        };
+      };
+    };
+
+    # Options for select fields (strings or {value, label} objects)
+    <name> = {
+      fields = {
+        * = {
+          options = [ ];
+        };
+      };
+    };
+
+    # Placeholder text for input fields
+    <name> = {
+      fields = {
+        * = {
+          placeholder = null;
+        };
+      };
+    };
+
+    # Field type
+    <name> = {
+      fields = {
+        * = {
+          type = "FIELD_TYPE_STRING";
+        };
+      };
+    };
+
+    # Field value (JSON-encoded for complex types, null if unset)
+    <name> = {
+      fields = {
+        * = {
+          value = "";
+        };
+      };
+    };
+
+    # Icon name from lucide-react (e.g., 'server', 'database')
+    <name> = {
+      icon = null;
+    };
+
+    # The core module this panel belongs to (e.g., "go", "caddy",
+    # "healthchecks"). Used for grouping panels in the UI.
+    <name> = {
+      module = "";
+    };
+
+    # Display order within the module (lower = first)
+    <name> = {
+      order = 100;
+    };
+
+    # Module documentation in markdown format. Rendered in the UI panel to help
+    # users understand the module's configuration.
+    <name> = {
+      readme = null;
+    };
+
+    # Row data for table panels
+    <name> = {
+      rows = [ ];
+    };
+
+    # Display title for the panel
+    <name> = {
+      title = "";
+    };
+
+    # Panel type (determines which component to render)
+    <name> = {
+      type = "PANEL_TYPE_STATUS";
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Ports
+  # ----------------------------------------------------------------------------
+  ports = {
+    # Whether to enable Automatic port assignment.
+    enable = true;
+
+    # Project name used for port computation. Set this to match your project
+    # name.
+    project-name = "myapp";
+
+    # Attrset of infrastructure services that need ports. Each service gets a
+    # deterministic port based on project name + service key. Provided via
+    # STACKPANEL_SERVICES_CONFIG (JSON).
+    services = {
+  POSTGRES = { name = "PostgreSQL"; };
+  REDIS = { name = "Redis"; };
+  MINIO = { name = "Minio"; };
+  MINIO_CONSOLE = { name = "Minio Console"; };
+}
+;
+
+    # Human-readable name for display (defaults to attrset key)
+    services = {
+      <name> = {
+        name = "PostgreSQL";
+      };
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Project
+  # ----------------------------------------------------------------------------
+  project = {
+    # Project name (defaults to stackpanel.name)
+    name = "my-project";
+
+    # Owner/organization of the project repository
+    owner = "darkmatter";
+
+    # Repository name
+    repo = "stackpanel";
+
+    # Project type (e.g., 'github', 'gitlab', 'local')
+    type = "github";
+  };
+
+  # ----------------------------------------------------------------------------
+  # Root
+  # ----------------------------------------------------------------------------
+  # Absolute path to the project root. If set, this overrides PWD-based
+  # detection. For pure flake evaluation (like `nix flake check`), use the
+  # readStackpanelRoot flake module which reads this from a flake input: ```nix
+  # # flake.nix inputs inputs.stackpanel-root = { url = "file+file:///dev/null";
+  # flake = false; }; # imports imports = [
+  # inputs.stackpanel.flakeModules.readStackpanelRoot ]; ``` Then in .envrc:
+  # `echo "$PWD" > .stackpanel-root`
+  root = null;
+
+  # ----------------------------------------------------------------------------
+  # Root-marker
+  # ----------------------------------------------------------------------------
+  # Filename for the root marker file written to the project root. Contains the
+  # absolute path to the project root, allowing tools to find the project from
+  # any subdirectory. Add to .dockerignore and .gitignore so containers create
+  # their own marker.
+  root-marker = ".stackpanel-root";
+
+  # ----------------------------------------------------------------------------
+  # Secrets
+  # ----------------------------------------------------------------------------
+  secrets = {
+    # Secret storage backend. This is the single source of truth that controls
+    # how secrets are stored, how entrypoints inject them, how the agent
+    # reads/writes them, and what options are available in the UI. "vals"
+    # (default): AGE/SOPS encryption with vals for external references.
+    # "chamber": AWS SSM Parameter Store via the chamber CLI.
+    backend = "vals";
+
+    # Chamber service prefix. The full chamber service path is:
+    # {service-prefix}/{env} For example, with prefix "darkmatter/stackpanel"
+    # and a variable /dev/DATABASE_URL: chamber write darkmatter/stackpanel/dev
+    # DATABASE_URL <value> chamber exec darkmatter/stackpanel/dev -- <command>
+    # Defaults to "{owner}/{repo}" when project owner/repo are configured,
+    # otherwise falls back to the project name.
+    chamber = {
+      service-prefix = "my-project";
+    };
+
+    # Code generation targets keyed by name (e.g., typescript, go, python). Used
+    # to drive language-specific env/secret helpers.
+    codegen = { };
+
+    # Output directory for generated code (repo-relative)
+    codegen = {
+      <name> = {
+        directory = null;
+      };
+    };
+
+    # Target language for generated code (e.g., "typescript", "go", "python").
+    # Informational only for now; codegen selection is based on the target key.
+    codegen = {
+      <name> = {
+        language = null;
+      };
+    };
+
+    # Name of the generated package/module (defaults to the target key)
+    codegen = {
+      <name> = {
+        name = null;
+      };
+    };
+
+    # Enable secrets management
+    enable = false;
+
+    # Environment-specific secrets configuration (SOPS sources + recipients).
+    # Keyed by environment identifier (e.g., dev, staging, prod).
+    environments = { };
+
+    # Name of the environment (e.g., dev, staging, production)
+    environments = {
+      <name> = {
+        name = null;
+      };
+    };
+
+    # AGE public keys that can decrypt secrets for this environment. New secrets
+    # for this env are encrypted to these recipients.
+    environments = {
+      <name> = {
+        public-keys = [ ];
+      };
+    };
+
+    # List of SOPS-encrypted source files for this environment (without .yaml
+    # extension). These files are decrypted and merged to provide secrets for
+    # the environment.
+    environments = {
+      <name> = {
+        sources = [ ];
+      };
+    };
+
+    # Secrets groups for access control. Each group has its own AGE keypair. The
+    # private key is stored externally (e.g., AWS SSM Parameter Store) so that
+    # IAM policies control who can decrypt that group's secrets. Default groups:
+    # dev, prod After defining groups, initialize them with: secrets:init-group
+    # dev secrets:init-group prod This generates an AGE keypair, stores the
+    # private key in SSM, and writes the public key to your config.
+    groups = {
+  dev = {
+    age-pub = "age1abc...";  # set after init
+  };
+  prod = {
+    age-pub = "age1xyz...";  # set after init
+    ssm-path = "/custom/path/keys/prod";  # override default
+  };
+}
+;
+
+    # AGE public key for this group. Set after running `secrets:init-group
+    # <name>`. Format: age1... (bech32-encoded)
+    groups = {
+      <name> = {
+        age-pub = null;
+      };
+    };
+
+    # Shell command that outputs the AGE private key to stdout. Used by
+    # SOPS_AGE_KEY_CMD to lazily retrieve the group's private key. Defaults to:
+    # sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age Override for
+    # alternative key stores, e.g.: - chamber read keys/stackpanel/dev current
+    # -q - op read 'op://vault/stackpanel/dev-age-key' - aws ssm get-parameter
+    # --name /keys/dev --with-decryption --query Parameter.Value --output text
+    groups = {
+      <name> = {
+        key-cmd = null;
+      };
+    };
+
+    # Vals reference that resolves to the AGE private key. Auto-computed from
+    # ssm-path as ref+awsssm://{ssm-path} when using chamber backend. Can be
+    # overridden for other backends (Vault, file, etc.).
+    groups = {
+      <name> = {
+        ref = null;
+      };
+    };
+
+    # SSM Parameter Store path where the AGE private key is stored. Defaults to
+    # /{chamber.service-prefix}/keys/{group-name}. Example:
+    # /my-org/my-repo/keys/dev
+    groups = {
+      <name> = {
+        ssm-path = null;
+      };
+    };
+
+    # Directory containing SOPS-encrypted secrets (legacy SOPS layout). Used
+    # when decrypting/merging YAML sources defined under environments.
+    input-directory = null;
+
+    # Master keys for encrypting/decrypting secrets. Each secret (variable with
+    # type=SECRET) specifies which master keys can decrypt it via the
+    # `master-keys` field. The .age file is encrypted to ALL specified master
+    # keys as recipients. A default "local" key is auto-generated in
+    # .stackpanel/state/keys/ ensuring secrets can always be created without
+    # external configuration. NOTE: Initialized secrets groups automatically
+    # create master-key entries. You do not need to manually add group keys
+    # here.
+    master-keys = {
+  local = {
+    age-pub = "age1...";
+    ref = "ref+file://.stackpanel/state/keys/local.txt";
+  };
+  dev = {
+    age-pub = "age1...";
+    ref = "ref+awsssm://my-org/my-repo/keys/dev";
+  };
+  prod = {
+    age-pub = "age1...";
+    ref = "ref+awsssm://my-org/my-repo/keys/prod";
+  };
+}
+;
+
+    # AGE public key for encrypting secrets to this key. Format: age1...
+    # (bech32-encoded)
+    master-keys = {
+      <name> = {
+        age-pub = "";
+      };
+    };
+
+    # Vals reference that resolves to the AGE private key. Examples: -
+    # ref+file://.stackpanel/state/keys/local.txt (local file) -
+    # ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store) -
+    # ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+    master-keys = {
+      <name> = {
+        ref = "";
+      };
+    };
+
+    # Custom command to resolve the private key (overrides ref). The command
+    # should output the AGE private key to stdout. Example: op read
+    # 'op://vault/stackpanel/age-key'
+    master-keys = {
+      <name> = {
+        resolve-cmd = null;
+      };
+    };
+
+    # Directory where secret .age files are stored (default:
+    # .stackpanel/secrets)
+    secrets-dir = null;
+
+    # System-level AGE public keys (CI, deploy servers, etc.). These keys can
+    # decrypt all secrets regardless of environment restrictions.
+    system-keys = [ ];
+  };
+
+  # ----------------------------------------------------------------------------
+  # Serializable
+  # ----------------------------------------------------------------------------
+  # Serializable configuration data for the agent and CLI. Modules can
+  # contribute their JSON-safe config here. This data is included in
+  # stackpanelConfig for external tools.
+  serializable = { };
+
+  # ----------------------------------------------------------------------------
+  # ServiceModules
+  # ----------------------------------------------------------------------------
+  # Additional modules to extend service configuration options. This allows
+  # other modules (like process-compose) to inject per-service options into
+  # every service definition. Works identically to appModules. Example: The
+  # process-compose module injects process-compose.namespace,
+  # process-compose.readiness_probe, etc. into every service.
+  serviceModules = [ ];
+
+  # ----------------------------------------------------------------------------
+  # Services
+  # ----------------------------------------------------------------------------
+  services = {
+    # Whether to auto-start this service when `dev` is run. If false, the
+    # service is visible in the process-compose TUI but must be started
+    # manually.
+    <name> = {
+      autoStart = true;
+    };
+
+    # Command to start the service in foreground mode. This should be an
+    # idempotent script that initializes data directories if needed, then exec's
+    # the service binary. Process-compose manages the lifecycle (restart,
+    # shutdown).
+    <name> = {
+      command = "${postgresStartScript}/bin/postgres-start";
+    };
+
+    # Path where this service stores its data. Typically under
+    # .stackpanel/state/services/<name>/.
+    <name> = {
+      dataDir = null;
+    };
+
+    # Short description of the service.
+    <name> = {
+      description = "Relational database for application data";
+    };
+
+    # Human-readable display name for the service.
+    <name> = {
+      displayName = "PostgreSQL";
+    };
+
+    # Whether to enable this service.
+    <name> = {
+      enable = true;
+    };
+
+    # Environment variables contributed by this service to the devshell. These
+    # are available to all processes and the interactive shell.
+    <name> = {
+      env = {
+  DATABASE_URL = "postgresql://localhost:5432/mydb";
+  PGHOST = "/tmp/postgres";
+}
+;
+    };
+
+    # Packages added to the devshell PATH when this service is enabled.
+    # Typically includes the service binary and CLI tools (psql, redis-cli,
+    # etc.).
+    <name> = {
+      packages = [ ];
+    };
+
+    # Primary port for this service. Optional - some services (like file
+    # watchers) don't use ports.
+    <name> = {
+      port = 5432;
+    };
+
+    # Shell hook code run during devshell initialization. Used for environment
+    # setup that can't be expressed as static env vars.
+    <name> = {
+      shellHook = "";
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # State
+  # ----------------------------------------------------------------------------
+  state = {
+    # Arbitrary state data contributed by modules. Use this for module-specific
+    # state that should be serialized.
+    custom = { };
+
+    # Devenv-related state for serialization. Populated by devenv integration
+    # modules (services, languages, pre-commit). Structure: { services = {
+    # available = [...]; enabled = [...]; }; languages = { available = [...];
+    # enabled = [...]; }; preCommit = { available = [...]; enabled = [...]; }; }
+    devenv = { };
+
+    # Name of the state file written to the state directory.
+    file = "stackpanel.json";
+  };
+
+  # ----------------------------------------------------------------------------
+  # Step-ca
+  # ----------------------------------------------------------------------------
+  step-ca = {
+    # Step CA root certificate fingerprint for verification
+    ca-fingerprint = "";
+
+    # Step CA server URL (e.g., https://ca.internal:443)
+    ca-url = "";
+
+    # Common name for the device certificate
+    cert-name = "";
+
+    # Enable Step CA certificate management
+    enable = false;
+
+    # Prompt for certificate setup on shell entry if not configured
+    prompt-on-shell = false;
+
+    # Step CA provisioner name
+    provisioner = "";
+  };
+
+  # ----------------------------------------------------------------------------
+  # TaskModules
+  # ----------------------------------------------------------------------------
+  # Additional modules to extend task configuration options.
+  taskModules = [ ];
+
+  # ----------------------------------------------------------------------------
+  # Tasks
+  # ----------------------------------------------------------------------------
+  tasks = {
+    # (Stackpanel extension) Tasks that depend on this task completing first.
+    # Automatically adds this task to the target tasks' `dependsOn`. Example: if
+    # `compile.before = [ "build" ]`, then `build.dependsOn` will automatically
+    # include `compile`. This is a convenience for defining dependencies from
+    # the dependency's perspective rather than the dependent's.
+    <name> = {
+      before = [
+  "build"
+];
+    };
+
+    # Enable Turborepo caching (default: true)
+    <name> = {
+      cache = null;
+    };
+
+    # Working directory for the task (relative to repo root)
+    <name> = {
+      cwd = null;
+    };
+
+    # Tasks that must complete first (use ^ for deps)
+    <name> = {
+      depends-on = [ ];
+    };
+
+    # Tasks that must complete before this task runs. Matches Turborepo's
+    # `dependsOn` option in turbo.json. Use `^taskname` to reference the same
+    # task in dependencies. Use `$taskname` for package-level dependencies.
+    # Example: `dependsOn = [ "deps" "^build" ];`
+    <name> = {
+      dependsOn = [
+  "deps"
+  "^build"
+];
+    };
+
+    # Human-readable description of the task
+    <name> = {
+      description = null;
+    };
+
+    # Environment variables for the task
+    <name> = {
+      env = { };
+    };
+
+    # Shell script to execute (compiled to Nix derivation)
+    <name> = {
+      exec = null;
+    };
+
+    # Input file globs for cache key (e.g. $TURBO_DEFAULT$)
+    <name> = {
+      inputs = [ ];
+    };
+
+    # Task accepts stdin input
+    <name> = {
+      interactive = null;
+    };
+
+    # Output file globs for caching (e.g. dist/**)
+    <name> = {
+      outputs = [ ];
+    };
+
+    # (Stackpanel extension) Package name to scope this task to. When set, the
+    # task key in turbo.json becomes "package#taskName". This is useful for
+    # tasks that should only run in a specific package, such as deployment tasks
+    # that only exist in @stackpanel/infra. Example: `package =
+    # "@stackpanel/infra";`
+    <name> = {
+      package = "@stackpanel/infra";
+    };
+
+    # Long-running process (e.g. dev server)
+    <name> = {
+      persistent = null;
+    };
+
+    # (Stackpanel extension) Packages to include in PATH when running the task
+    # script. Used with `exec` to create hermetic writeShellApplication
+    # derivations. These are pinned to specific Nix store paths, ensuring
+    # reproducible builds.
+    <name> = {
+      runtimeInputs = [ pkgs.nodejs pkgs.pnpm ];
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Theme
+  # ----------------------------------------------------------------------------
+  theme = {
+    # Color scheme configuration
+    colors = { };
+
+    # Error/negative color
+    colors = {
+      error = "";
+    };
+
+    # Muted/subtle color
+    colors = {
+      muted = "";
+    };
+
+    # Primary accent color
+    colors = {
+      primary = "";
+    };
+
+    # Secondary accent color
+    colors = {
+      secondary = "";
+    };
+
+    # Success/positive color
+    colors = {
+      success = "";
+    };
+
+    # Warning color
+    colors = {
+      warning = "";
+    };
+
+    # Custom starship.toml config file (uses stackpanel default if not set)
+    config-file = null;
+
+    # Whether to enable Starship prompt for stackpanel devenv.
+    enable = true;
+
+    # Use minimal prompt (fewer segments)
+    minimal = false;
+
+    # Theme name
+    name = "";
+
+    # Use Nerd Font icons in prompt
+    nerd-font = false;
+
+    # Starship preset to apply when no custom config file is provided
+    preset = "stackpanel";
+
+    # Starship prompt configuration
+    starship = { };
+
+    # Add blank line before prompt
+    starship = {
+      add-newline = false;
+    };
+
+    # Timeout for commands (ms)
+    starship = {
+      command-timeout = 0;
+    };
+
+    # Continuation prompt for multi-line input
+    starship = {
+      continuation-prompt = "";
+    };
+
+    # Custom prompt format string
+    starship = {
+      format = null;
+    };
+
+    # Right-side prompt format
+    starship = {
+      right-format = null;
+    };
+
+    # Timeout for directory scanning (ms)
+    starship = {
+      scan-timeout = 0;
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # UserPackages
+  # ----------------------------------------------------------------------------
+  userPackages = {
+    # Whether to enable user-installed packages from
+    # .stackpanel/data/packages.nix.
+    enable = true;
+  };
+
+  # ----------------------------------------------------------------------------
+  # Users
+  # ----------------------------------------------------------------------------
+  users = {
+    # Email address
+    <name> = {
+      email = null;
+    };
+
+    # GitHub username
+    <name> = {
+      github = null;
+    };
+
+    # Display name of the user
+    <name> = {
+      name = "";
+    };
+
+    # SSH or AGE public keys for the user
+    <name> = {
+      public-keys = [ ];
+    };
+
+    # Environments this user can access secrets for (e.g., dev, staging,
+    # production)
+    <name> = {
+      secrets-allowed-environments = [ ];
+    };
+  };
+
+  # ----------------------------------------------------------------------------
+  # Variables
+  # ----------------------------------------------------------------------------
+  variables = {
+    # Variable identifier. Format: /<keygroup>/<NAME> The keygroup determines
+    # which SOPS file the secret lives in: /dev/FOO ->
+    # .stackpanel/secrets/dev.yaml /prod/FOO -> .stackpanel/secrets/prod.yaml
+    # Computed variables use /computed/<source>/<path>: /computed/apps/web/port
+    # /computed/services/postgres/port
+    <name> = {
+      id = "‹name›";
+    };
+
+    # The value of this variable. For plaintext variables (/var/*): the literal
+    # value. For secrets (/dev/*, /prod/*, /common/*): empty string (SOPS file
+    # is source of truth). For computed (/computed/*): the computed value from
+    # Nix. Legacy: ref+sops:// values are still supported during migration.
+    <name> = {
+      value = "";
+    };
+  };
+}
