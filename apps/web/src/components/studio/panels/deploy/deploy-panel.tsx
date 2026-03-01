@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+/**
+ * Deploy Panel - Colmena-centric deployment management.
+ *
+ * Shows machine inventory, app-to-machine mapping, and deploy actions
+ * (eval/build/apply). Data comes from the agent via colmena-machines.json
+ * and colmena-app-deploy.json state files.
+ */
+
+import { useState, useMemo } from "react";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import {
@@ -10,849 +18,529 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@ui/card";
-import { Field, FieldGroup, FieldRow, SwitchField } from "@ui/field";
-import { Input } from "@ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@ui/select";
-import { Switch } from "@ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
-import { TooltipProvider } from "@ui/tooltip";
 import {
+	Activity,
 	AlertCircle,
-	Cloud,
+	CheckCircle,
 	CloudOff,
+	Cpu,
+	HardDrive,
 	Loader2,
+	Network,
 	Play,
 	RefreshCw,
 	Rocket,
-	Save,
+	Server,
 	Settings,
-	Trash2,
+	Shield,
+	XCircle,
 } from "lucide-react";
 import { useAgentContext } from "@/lib/agent-provider";
-import { useVariablesBackend } from "@/lib/use-agent";
+import { useNixConfig } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
+import { cn } from "@/lib/utils";
 
+// =============================================================================
 // Types
-interface DeploymentConfig {
-	enable: boolean;
-	provider: "fly";
-	fly: {
-		appName: string;
-		region: string;
-		memory: string;
-		cpuKind: "shared" | "performance";
-		cpus: number;
-		autoStop: "off" | "stop" | "suspend";
-		autoStart: boolean;
-		minMachines: number;
-		forceHttps: boolean;
-		env: Record<string, string>;
-	};
-	container: {
-		type: "bun" | "node" | "go" | "static" | "custom";
-		port: number;
-		buildCommand: string | null;
-		entrypoint: string | null;
-		aws: {
-			enable: boolean;
-			chamberService: string | null;
-		};
-	};
-}
+// =============================================================================
 
-interface DeployableApp {
+interface MachineInfo {
+	id: string;
 	name: string;
-	path: string;
-	config: DeploymentConfig;
-	status: {
-		deployed: boolean;
-		lastDeployedAt?: string;
-		url?: string;
+	host: string | null;
+	ssh: {
+		user: string;
+		port: number;
+		keyPath: string | null;
 	};
+	tags: string[];
+	roles: string[];
+	provider: string | null;
+	arch: string | null;
+	publicIp: string | null;
+	privateIp: string | null;
+	targetEnv: string | null;
+	labels: Record<string, string>;
 }
 
-// Constants
-const FLY_REGIONS = [
-	{ value: "iad", label: "Ashburn, Virginia (US)" },
-	{ value: "ord", label: "Chicago, Illinois (US)" },
-	{ value: "sjc", label: "San Jose, California (US)" },
-	{ value: "lax", label: "Los Angeles, California (US)" },
-	{ value: "sea", label: "Seattle, Washington (US)" },
-	{ value: "dfw", label: "Dallas, Texas (US)" },
-	{ value: "ewr", label: "Secaucus, NJ (US)" },
-	{ value: "yyz", label: "Toronto, Canada" },
-	{ value: "lhr", label: "London, UK" },
-	{ value: "ams", label: "Amsterdam, Netherlands" },
-	{ value: "fra", label: "Frankfurt, Germany" },
-	{ value: "cdg", label: "Paris, France" },
-	{ value: "nrt", label: "Tokyo, Japan" },
-	{ value: "sin", label: "Singapore" },
-	{ value: "syd", label: "Sydney, Australia" },
-];
+interface AppDeployMapping {
+	enable: boolean;
+	targets: string[];
+	resolvedTargets: string[];
+	role: string | null;
+	nixosModules: string[];
+	system: string | null;
+}
 
-const MEMORY_OPTIONS = ["256mb", "512mb", "1gb", "2gb", "4gb", "8gb"];
+interface ColmenaConfig {
+	enable: boolean;
+	machineSource: string;
+	generateHive: boolean;
+	config: string;
+	machineCount: number;
+	machineIds: string[];
+}
 
-const CONTAINER_TYPES = [
-	{ value: "bun", label: "Bun/TypeScript" },
-	{ value: "node", label: "Node.js" },
-	{ value: "go", label: "Go" },
-	{ value: "static", label: "Static Site" },
-	{ value: "custom", label: "Custom" },
-];
+// =============================================================================
+// Hooks
+// =============================================================================
 
-// Default deployment config
-const defaultConfig: DeploymentConfig = {
-	enable: false,
-	provider: "fly",
-	fly: {
-		appName: "",
-		region: "iad",
-		memory: "512mb",
-		cpuKind: "shared",
-		cpus: 1,
-		autoStop: "suspend",
-		autoStart: true,
-		minMachines: 0,
-		forceHttps: true,
-		env: {},
-	},
-	container: {
-		type: "bun",
-		port: 3000,
-		buildCommand: null,
-		entrypoint: null,
-		aws: {
-			enable: false,
-			chamberService: null,
-		},
-	},
-};
+function useColmenaData() {
+	const { data: nixConfig, isLoading, refetch } = useNixConfig();
 
-// Status Card Component
-function StatusCard({
-	icon: Icon,
-	label,
-	value,
-	active,
-}: {
-	icon: React.ElementType;
-	label: string;
-	value: string;
-	active: boolean;
-}) {
+	const result = useMemo(() => {
+		const cfg = nixConfig as Record<string, unknown> | null | undefined;
+		if (!cfg) return { machines: {}, appDeploy: {}, colmenaConfig: null };
+
+		const serializable = cfg.serializable as Record<string, unknown> | undefined;
+		const colmenaConfig = (serializable?.colmena ?? null) as ColmenaConfig | null;
+
+		// Try to get machines from colmena serialized data or panels
+		const colmenaData = cfg.colmena as Record<string, unknown> | undefined;
+		const machinesComputed = (colmenaData?.machinesComputed ?? {}) as Record<string, MachineInfo>;
+
+		// Apps with deploy config
+		const rawApps = (cfg.apps ?? cfg.appsComputed ?? {}) as Record<string, Record<string, unknown>>;
+		const appDeploy: Record<string, AppDeployMapping> = {};
+
+		for (const [appName, appCfg] of Object.entries(rawApps)) {
+			const deploy = appCfg.deploy as Record<string, unknown> | undefined;
+			if (deploy?.enable) {
+				appDeploy[appName] = {
+					enable: true,
+					targets: (deploy.targets as string[]) ?? [],
+					resolvedTargets: (deploy.resolvedTargets as string[]) ?? [],
+					role: (deploy.role as string | null) ?? null,
+					nixosModules: (deploy.nixosModules as string[]) ?? [],
+					system: (deploy.system as string | null) ?? null,
+				};
+			}
+		}
+
+		return { machines: machinesComputed, appDeploy, colmenaConfig };
+	}, [nixConfig]);
+
+	return { ...result, isLoading, refetch };
+}
+
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+function MachineCard({ machine }: { machine: MachineInfo }) {
+	const isReachable = machine.host !== null;
+
 	return (
-		<Card
-			className={active ? "border-accent/50 bg-accent/5" : "border-border/50"}
-		>
-			<CardContent className="flex items-center gap-3 p-4">
-				<div
-					className={`flex h-10 w-10 items-center justify-center rounded-lg ${active ? "bg-accent/20" : "bg-secondary"}`}
-				>
-					<Icon
-						className={`h-5 w-5 ${active ? "text-accent" : "text-muted-foreground"}`}
-					/>
+		<Card className={cn(
+			"transition-colors",
+			isReachable ? "border-border" : "border-amber-500/30",
+		)}>
+			<CardContent className="p-4">
+				<div className="flex items-start justify-between mb-3">
+					<div className="flex items-center gap-2">
+						<Server className="h-4 w-4 text-muted-foreground" />
+						<span className="font-medium text-sm">{machine.name}</span>
+					</div>
+					<div className="flex items-center gap-1.5">
+						{isReachable ? (
+							<Badge variant="secondary" className="text-[10px] gap-1">
+								<CheckCircle className="h-3 w-3 text-green-500" />
+								{machine.host}
+							</Badge>
+						) : (
+							<Badge variant="outline" className="text-[10px] gap-1 text-amber-500 border-amber-500/30">
+								<XCircle className="h-3 w-3" />
+								no host
+							</Badge>
+						)}
+					</div>
 				</div>
-				<div>
-					<p className="text-muted-foreground text-xs">{label}</p>
-					<p className="font-medium text-foreground">{value}</p>
+
+				<div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+					<div className="flex items-center gap-1.5">
+						<Shield className="h-3 w-3" />
+						<span>{machine.ssh.user}@{machine.ssh.port}</span>
+					</div>
+					{machine.arch && (
+						<div className="flex items-center gap-1.5">
+							<Cpu className="h-3 w-3" />
+							<span>{machine.arch}</span>
+						</div>
+					)}
+					{machine.provider && (
+						<div className="flex items-center gap-1.5">
+							<HardDrive className="h-3 w-3" />
+							<span>{machine.provider}</span>
+						</div>
+					)}
+					{machine.targetEnv && (
+						<div className="flex items-center gap-1.5">
+							<Activity className="h-3 w-3" />
+							<span>{machine.targetEnv}</span>
+						</div>
+					)}
 				</div>
+
+				{(machine.tags.length > 0 || machine.roles.length > 0) && (
+					<div className="mt-2 flex flex-wrap gap-1">
+						{machine.roles.map((role) => (
+							<Badge key={`role-${role}`} variant="default" className="text-[10px] px-1.5 py-0">
+								{role}
+							</Badge>
+						))}
+						{machine.tags.map((tag) => (
+							<Badge key={`tag-${tag}`} variant="secondary" className="text-[10px] px-1.5 py-0">
+								{tag}
+							</Badge>
+						))}
+					</div>
+				)}
 			</CardContent>
 		</Card>
 	);
 }
 
+function AppTargetRow({
+	appName,
+	deploy,
+	machines,
+}: {
+	appName: string;
+	deploy: AppDeployMapping;
+	machines: Record<string, MachineInfo>;
+}) {
+	const resolvedNames = deploy.resolvedTargets.map(
+		(id) => machines[id]?.name ?? id,
+	);
+
+	return (
+		<div className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
+			<div className="flex items-center gap-3">
+				<div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+					<Rocket className="h-4 w-4 text-primary" />
+				</div>
+				<div>
+					<p className="font-medium text-sm">{appName}</p>
+					<p className="text-xs text-muted-foreground">
+						{deploy.targets.length > 0
+							? `Targets: ${deploy.targets.join(", ")}`
+							: "No targets defined"}
+					</p>
+				</div>
+			</div>
+			<div className="flex items-center gap-2">
+				{deploy.role && (
+					<Badge variant="outline" className="text-[10px]">
+						{deploy.role}
+					</Badge>
+				)}
+				<Badge variant="secondary" className="text-[10px]">
+					{resolvedNames.length} machine{resolvedNames.length !== 1 ? "s" : ""}
+				</Badge>
+			</div>
+		</div>
+	);
+}
+
+// =============================================================================
+// Main Component
+// =============================================================================
+
 export function DeployPanel() {
 	const { isConnected } = useAgentContext();
-	const { data: backendData } = useVariablesBackend();
-	const isChamber = backendData?.backend === "chamber";
-	const chamberServicePrefix = backendData?.chamber?.servicePrefix;
+	const { machines, appDeploy, colmenaConfig, isLoading, refetch } = useColmenaData();
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
-	// Mock data - in real implementation, this would come from the agent
-	const [apps] = useState<DeployableApp[]>([
-		{
-			name: "web",
-			path: "apps/web",
-			config: {
-				...defaultConfig,
-				enable: true,
-				fly: { ...defaultConfig.fly, appName: "stackpanel-web" },
-			},
-			status: { deployed: false },
-		},
-		{
-			name: "server",
-			path: "apps/server",
-			config: defaultConfig,
-			status: { deployed: false },
-		},
-	]);
+	const machineList = Object.values(machines);
+	const machineCount = machineList.length;
+	const appDeployEntries = Object.entries(appDeploy);
+	const healthyCount = machineList.filter((m) => m.host !== null).length;
+	const unhealthyCount = machineCount - healthyCount;
 
-	const [selectedApp, setSelectedApp] = useState<string>(apps[0]?.name || "");
-	const [formData, setFormData] = useState<DeploymentConfig>(
-		apps[0]?.config || defaultConfig,
-	);
-	const [hasChanges, setHasChanges] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
-	const [isDeploying, setIsDeploying] = useState(false);
-	const [deployStage, setDeployStage] = useState("prod");
-	const [deployOutput, setDeployOutput] = useState("");
-
-	const currentApp = apps.find((a) => a.name === selectedApp);
-
-	// Update form when app changes
-	const handleAppChange = useCallback(
-		(appName: string) => {
-			setSelectedApp(appName);
-			const app = apps.find((a) => a.name === appName);
-			if (app) {
-				setFormData(app.config);
-				setHasChanges(false);
-			}
-		},
-		[apps],
-	);
-
-	// Update form field
-	const updateField = useCallback(
-		<K extends keyof DeploymentConfig>(key: K, value: DeploymentConfig[K]) => {
-			setFormData((prev) => ({ ...prev, [key]: value }));
-			setHasChanges(true);
-		},
-		[],
-	);
-
-	// Update nested fly field
-	const updateFlyField = useCallback(
-		(key: keyof DeploymentConfig["fly"], value: unknown) => {
-			setFormData((prev) => ({
-				...prev,
-				fly: { ...prev.fly, [key]: value },
-			}));
-			setHasChanges(true);
-		},
-		[],
-	);
-
-	// Update nested container field
-	const updateContainerField = useCallback(
-		(key: keyof DeploymentConfig["container"], value: unknown) => {
-			setFormData((prev) => ({
-				...prev,
-				container: { ...prev.container, [key]: value },
-			}));
-			setHasChanges(true);
-		},
-		[],
-	);
-
-	// Update AWS config
-	const updateAwsField = useCallback(
-		(key: keyof DeploymentConfig["container"]["aws"], value: unknown) => {
-			setFormData((prev) => ({
-				...prev,
-				container: {
-					...prev.container,
-					aws: { ...prev.container.aws, [key]: value },
-				},
-			}));
-			setHasChanges(true);
-		},
-		[],
-	);
-
-	// Save configuration
-	const handleSave = async () => {
-		setIsSaving(true);
-		// TODO: Call agent to save configuration
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		setIsSaving(false);
-		setHasChanges(false);
-	};
-
-	// Run deploy step
-	const handleDeployStep = async (step: "clean" | "build" | "push" | "full") => {
-		setIsDeploying(true);
-		setDeployOutput(`Running deploy:${selectedApp}:${step}...\n`);
-
-		// Simulate deployment progress
-		const steps =
-			step === "full" ? ["clean", "build", "push", "deploy"] : [step];
-
-		for (const s of steps) {
-			setDeployOutput((prev) => prev + `\n$ turbo run deploy:${selectedApp}:${s}\n`);
-			await new Promise((resolve) => setTimeout(resolve, 1500));
-			setDeployOutput((prev) => prev + `Step ${s} complete.\n`);
+	const handleRefresh = async () => {
+		setIsRefreshing(true);
+		try {
+			await refetch();
+		} finally {
+			setIsRefreshing(false);
 		}
-
-		setDeployOutput((prev) => prev + `\nDeployment complete!\n`);
-		setIsDeploying(false);
 	};
 
-	// Not connected state
 	if (!isConnected) {
 		return (
-			<TooltipProvider>
-				<div className="space-y-6">
+			<div className="space-y-6">
 				<PanelHeader
 					title="Deploy"
-					description="Deploy applications to cloud providers"
+					description="Colmena deployment management (Recommended)"
 				/>
-					<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
-						<CardContent className="flex flex-col items-center justify-center gap-4 p-8">
-							<CloudOff className="h-12 w-12 text-muted-foreground" />
-							<div className="text-center">
-								<p className="font-medium text-foreground">
-									Agent Not Connected
-								</p>
-								<p className="text-muted-foreground text-sm">
-									Connect to the stackpanel agent to manage deployments.
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
-			</TooltipProvider>
+				<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
+					<CardContent className="flex flex-col items-center justify-center gap-4 p-8">
+						<CloudOff className="h-12 w-12 text-muted-foreground" />
+						<div className="text-center">
+							<p className="font-medium text-foreground">Agent Not Connected</p>
+							<p className="text-muted-foreground text-sm">
+								Connect to the stackpanel agent to manage deployments.
+							</p>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
 		);
 	}
 
-	const isEnabled = formData.enable;
-	const isDeployed = currentApp?.status.deployed ?? false;
+	if (isLoading) {
+		return (
+			<div className="flex min-h-[400px] items-center justify-center">
+				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+			</div>
+		);
+	}
 
 	return (
-		<TooltipProvider>
-			<div className="space-y-6">
+		<div className="space-y-6">
 			<PanelHeader
 				title="Deploy"
-				description="Deploy applications to cloud providers"
+				description="Colmena deployment management (Recommended)"
 				actions={
-						hasChanges && (
-							<Button onClick={handleSave} disabled={isSaving} className="gap-2">
-								{isSaving ? (
-									<Loader2 className="h-4 w-4 animate-spin" />
-								) : (
-									<Save className="h-4 w-4" />
-								)}
-								Save Changes
-							</Button>
-						)
-					}
-				/>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={handleRefresh}
+						disabled={isRefreshing}
+					>
+						<RefreshCw
+							className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")}
+						/>
+						{isRefreshing ? "Refreshing..." : "Refresh"}
+					</Button>
+				}
+			/>
 
-				{/* App Selector */}
+			{/* Status overview */}
+			<div className="grid gap-4 sm:grid-cols-4">
 				<Card>
-					<CardContent className="p-4">
-						<FieldRow>
-							<Field label="Select App">
-								<Select value={selectedApp} onValueChange={handleAppChange}>
-									<SelectTrigger>
-										<SelectValue placeholder="Select an app" />
-									</SelectTrigger>
-									<SelectContent>
-										{apps.map((app) => (
-											<SelectItem key={app.name} value={app.name}>
-												{app.name}{" "}
-												{app.config.enable && (
-													<Badge variant="secondary" className="ml-2">
-														Configured
-													</Badge>
-												)}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</Field>
-						</FieldRow>
+					<CardContent className="flex items-center gap-3 p-4">
+						<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+							<Server className="h-5 w-5 text-primary" />
+						</div>
+						<div>
+							<p className="text-muted-foreground text-xs">Machines</p>
+							<p className="font-medium text-foreground">{machineCount}</p>
+						</div>
 					</CardContent>
 				</Card>
-
-				{/* Status Cards */}
-				<div className="grid gap-4 sm:grid-cols-3">
-					<StatusCard
-						icon={Settings}
-						label="Enabled"
-						value={isEnabled ? "Yes" : "No"}
-						active={isEnabled}
-					/>
-					<StatusCard
-						icon={Cloud}
-						label="Deployed"
-						value={isDeployed ? "Yes" : "No"}
-						active={isDeployed}
-					/>
-					<StatusCard
-						icon={Rocket}
-						label="Provider"
-						value={isEnabled ? "Fly.io" : "Not configured"}
-						active={isEnabled}
-					/>
-				</div>
-
-				{/* Tabs */}
-				<Tabs defaultValue="status">
-					<TabsList>
-						<TabsTrigger value="status">Status</TabsTrigger>
-						<TabsTrigger value="configure">Configure</TabsTrigger>
-						<TabsTrigger value="deploy">Deploy</TabsTrigger>
-						<TabsTrigger value="logs">Logs</TabsTrigger>
-					</TabsList>
-
-					{/* Status Tab */}
-					<TabsContent className="mt-6 space-y-4" value="status">
-						{!isEnabled ? (
-							<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
-								<CardContent className="p-6">
-									<p className="font-medium text-foreground text-sm">
-										Deployment not configured
-									</p>
-									<p className="text-muted-foreground text-xs mt-1">
-										Enable deployment in the Configure tab to deploy this app.
-									</p>
-								</CardContent>
-							</Card>
-						) : (
-							<Card className="border-accent/20 bg-accent/5">
-								<CardContent className="flex items-center gap-4 p-4">
-									<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-										<Rocket className="h-5 w-5 text-accent" />
-									</div>
-									<div className="flex-1">
-										<p className="font-medium text-foreground text-sm">
-											{formData.fly.appName || selectedApp}
-										</p>
-										<p className="text-muted-foreground text-xs">
-											Region:{" "}
-											{FLY_REGIONS.find((r) => r.value === formData.fly.region)
-												?.label || formData.fly.region}{" "}
-											| Memory: {formData.fly.memory} | Port:{" "}
-											{formData.container.port}
-										</p>
-									</div>
-									<Badge variant={isDeployed ? "default" : "secondary"}>
-										{isDeployed ? "Deployed" : "Not Deployed"}
-									</Badge>
-								</CardContent>
-							</Card>
-						)}
-
-						{isEnabled && (
-							<Card>
-								<CardHeader>
-									<CardTitle className="text-base">
-										Configuration Summary
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-3">
-									<div className="grid gap-3 sm:grid-cols-2">
-										<div className="rounded-lg border border-border bg-secondary/30 p-3">
-											<p className="text-muted-foreground text-xs">
-												Container Type
-											</p>
-											<p className="font-medium text-foreground text-sm">
-												{CONTAINER_TYPES.find(
-													(t) => t.value === formData.container.type,
-												)?.label || formData.container.type}
-											</p>
-										</div>
-										<div className="rounded-lg border border-border bg-secondary/30 p-3">
-											<p className="text-muted-foreground text-xs">Auto Stop</p>
-											<p className="font-medium text-foreground text-sm capitalize">
-												{formData.fly.autoStop}
-											</p>
-										</div>
-										<div className="rounded-lg border border-border bg-secondary/30 p-3">
-											<p className="text-muted-foreground text-xs">
-												AWS Integration
-											</p>
-											<p className="font-medium text-foreground text-sm">
-												{formData.container.aws.enable
-													? "Enabled"
-													: "Disabled"}
-											</p>
-										</div>
-										<div className="rounded-lg border border-border bg-secondary/30 p-3">
-											<p className="text-muted-foreground text-xs">
-												Min Machines
-											</p>
-											<p className="font-medium text-foreground text-sm">
-												{formData.fly.minMachines}
-											</p>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						)}
-					</TabsContent>
-
-					{/* Configure Tab */}
-					<TabsContent className="mt-6 space-y-4" value="configure">
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">
-									Deployment Configuration
-								</CardTitle>
-								<CardDescription>
-									Configure Fly.io deployment for {selectedApp}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-6">
-								{/* Enable Toggle */}
-								<SwitchField
-									label="Enable Deployment"
-									description="Enable Fly.io deployment for this app"
-								>
-									<Switch
-										checked={formData.enable}
-										onCheckedChange={(checked) => updateField("enable", checked)}
-									/>
-								</SwitchField>
-
-								{formData.enable && (
-									<>
-										{/* Fly.io Settings */}
-										<FieldGroup
-											title="Fly.io Settings"
-											description="Configure Fly.io app settings"
-										>
-											<FieldRow>
-												<Field label="App Name">
-													<Input
-														value={formData.fly.appName}
-														onChange={(e) =>
-															updateFlyField("appName", e.target.value)
-														}
-														placeholder={selectedApp}
-													/>
-												</Field>
-												<Field label="Region">
-													<Select
-														value={formData.fly.region}
-														onValueChange={(v) => updateFlyField("region", v)}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Select region" />
-														</SelectTrigger>
-														<SelectContent>
-															{FLY_REGIONS.map((region) => (
-																<SelectItem
-																	key={region.value}
-																	value={region.value}
-																>
-																	{region.label}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</Field>
-											</FieldRow>
-
-											<FieldRow>
-												<Field label="Memory">
-													<Select
-														value={formData.fly.memory}
-														onValueChange={(v) => updateFlyField("memory", v)}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Select memory" />
-														</SelectTrigger>
-														<SelectContent>
-															{MEMORY_OPTIONS.map((mem) => (
-																<SelectItem key={mem} value={mem}>
-																	{mem}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</Field>
-												<Field label="Auto Stop">
-													<Select
-														value={formData.fly.autoStop}
-														onValueChange={(v) =>
-															updateFlyField(
-																"autoStop",
-																v as "off" | "stop" | "suspend",
-															)
-														}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Select behavior" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="off">Off</SelectItem>
-															<SelectItem value="stop">Stop</SelectItem>
-															<SelectItem value="suspend">Suspend</SelectItem>
-														</SelectContent>
-													</Select>
-												</Field>
-											</FieldRow>
-
-											<Field label="Minimum Machines">
-												<Input
-													type="number"
-													min={0}
-													value={formData.fly.minMachines}
-													onChange={(e) =>
-														updateFlyField(
-															"minMachines",
-															parseInt(e.target.value) || 0,
-														)
-													}
-												/>
-											</Field>
-										</FieldGroup>
-
-										{/* Container Settings */}
-										<FieldGroup
-											title="Container Settings"
-											description="Configure container build and runtime"
-										>
-											<FieldRow>
-												<Field label="Container Type">
-													<Select
-														value={formData.container.type}
-														onValueChange={(v) =>
-															updateContainerField(
-																"type",
-																v as DeploymentConfig["container"]["type"],
-															)
-														}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Select type" />
-														</SelectTrigger>
-														<SelectContent>
-															{CONTAINER_TYPES.map((type) => (
-																<SelectItem key={type.value} value={type.value}>
-																	{type.label}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</Field>
-												<Field label="Port">
-													<Input
-														type="number"
-														value={formData.container.port}
-														onChange={(e) =>
-															updateContainerField(
-																"port",
-																parseInt(e.target.value) || 3000,
-															)
-														}
-													/>
-												</Field>
-											</FieldRow>
-
-											{formData.container.type === "custom" && (
-												<Field
-													label="Build Command"
-													description="Custom build command to run"
-												>
-													<Input
-														value={formData.container.buildCommand || ""}
-														onChange={(e) =>
-															updateContainerField(
-																"buildCommand",
-																e.target.value || null,
-															)
-														}
-														placeholder="npm run build"
-													/>
-												</Field>
-											)}
-										</FieldGroup>
-
-										{/* AWS Integration */}
-										<FieldGroup
-											title="AWS Integration"
-											description="Configure AWS credentials via Fly OIDC"
-										>
-											<SwitchField
-												label="Enable AWS OIDC"
-												description="Get AWS credentials via Fly.io OIDC"
-											>
-												<Switch
-													checked={formData.container.aws.enable}
-													onCheckedChange={(checked) =>
-														updateAwsField("enable", checked)
-													}
-												/>
-											</SwitchField>
-
-											{formData.container.aws.enable && (
-												<Field
-													label="Chamber Service"
-													description={
-														isChamber && chamberServicePrefix
-															? `Auto-derived from variables backend: ${chamberServicePrefix}/{stage}`
-															: "Service path for Chamber secrets (e.g., myapp/prod)"
-													}
-												>
-													<Input
-														value={formData.container.aws.chamberService || ""}
-														onChange={(e) =>
-															updateAwsField(
-																"chamberService",
-																e.target.value || null,
-															)
-														}
-														placeholder={
-															isChamber && chamberServicePrefix
-																? `${chamberServicePrefix}/prod`
-																: "myapp/prod"
-														}
-													/>
-													{isChamber && chamberServicePrefix && !formData.container.aws.chamberService && (
-														<p className="text-xs text-muted-foreground mt-1">
-															Leave empty to auto-derive from the project's chamber service prefix.
-														</p>
-													)}
-												</Field>
-											)}
-										</FieldGroup>
-									</>
-								)}
-							</CardContent>
-						</Card>
-					</TabsContent>
-
-					{/* Deploy Tab */}
-					<TabsContent className="mt-6 space-y-4" value="deploy">
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">Deploy to Fly.io</CardTitle>
-								<CardDescription>
-									Run the deployment pipeline for {selectedApp}
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								{!isEnabled ? (
-									<div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
-										<div className="flex items-center gap-3">
-											<AlertCircle className="h-5 w-5 text-amber-500" />
-											<p className="text-amber-700 dark:text-amber-300 text-sm">
-												Deployment is not enabled for this app. Enable it in
-												the Configure tab first.
-											</p>
-										</div>
-									</div>
-								) : (
-									<>
-										{hasChanges && (
-											<div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
-												<div className="flex items-center gap-3">
-													<AlertCircle className="h-5 w-5 text-amber-500" />
-													<p className="text-amber-700 dark:text-amber-300 text-sm">
-														You have unsaved changes. Save your configuration
-														before deploying.
-													</p>
-												</div>
-											</div>
-										)}
-
-										<FieldRow>
-											<Field label="Stage">
-												<Select
-													value={deployStage}
-													onValueChange={setDeployStage}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Select stage" />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="dev">Development</SelectItem>
-														<SelectItem value="staging">Staging</SelectItem>
-														<SelectItem value="prod">Production</SelectItem>
-													</SelectContent>
-												</Select>
-											</Field>
-										</FieldRow>
-
-										<div className="flex flex-wrap gap-2">
-											<Button
-												variant="outline"
-												disabled={isDeploying || hasChanges}
-												onClick={() => handleDeployStep("clean")}
-												className="gap-2"
-											>
-												<Trash2 className="h-4 w-4" />
-												Clean
-											</Button>
-											<Button
-												variant="outline"
-												disabled={isDeploying || hasChanges}
-												onClick={() => handleDeployStep("build")}
-												className="gap-2"
-											>
-												<Settings className="h-4 w-4" />
-												Build
-											</Button>
-											<Button
-												variant="outline"
-												disabled={isDeploying || hasChanges}
-												onClick={() => handleDeployStep("push")}
-												className="gap-2"
-											>
-												<Cloud className="h-4 w-4" />
-												Push
-											</Button>
-										</div>
-
-										<div className="border-t border-border pt-4">
-											<Button
-												disabled={isDeploying || hasChanges}
-												onClick={() => handleDeployStep("full")}
-												className="gap-2 w-full sm:w-auto"
-											>
-												{isDeploying ? (
-													<Loader2 className="h-4 w-4 animate-spin" />
-												) : (
-													<Play className="h-4 w-4" />
-												)}
-												{isDeploying ? "Deploying..." : "Deploy to Fly.io"}
-											</Button>
-										</div>
-									</>
-								)}
-							</CardContent>
-						</Card>
-					</TabsContent>
-
-					{/* Logs Tab */}
-					<TabsContent className="mt-6 space-y-4" value="logs">
-						<Card>
-							<CardHeader className="flex flex-row items-center justify-between">
-								<CardTitle className="text-base">Deployment Logs</CardTitle>
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={() => setDeployOutput("")}
-									className="gap-2"
-								>
-									<RefreshCw className="h-4 w-4" />
-									Clear
-								</Button>
-							</CardHeader>
-							<CardContent>
-								{deployOutput ? (
-									<pre className="max-h-96 overflow-auto rounded-lg border border-border bg-secondary/50 p-4 font-mono text-xs text-muted-foreground whitespace-pre-wrap">
-										{deployOutput}
-									</pre>
-								) : (
-									<p className="text-muted-foreground text-sm">
-										No deployment logs yet. Run a deployment to see output here.
-									</p>
-								)}
-							</CardContent>
-						</Card>
-					</TabsContent>
-				</Tabs>
+				<Card>
+					<CardContent className="flex items-center gap-3 p-4">
+						<div className={cn(
+							"flex h-10 w-10 items-center justify-center rounded-lg",
+							healthyCount > 0 ? "bg-green-500/10" : "bg-secondary",
+						)}>
+							<CheckCircle className={cn(
+								"h-5 w-5",
+								healthyCount > 0 ? "text-green-500" : "text-muted-foreground",
+							)} />
+						</div>
+						<div>
+							<p className="text-muted-foreground text-xs">Reachable</p>
+							<p className="font-medium text-foreground">{healthyCount}</p>
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="flex items-center gap-3 p-4">
+						<div className={cn(
+							"flex h-10 w-10 items-center justify-center rounded-lg",
+							unhealthyCount > 0 ? "bg-amber-500/10" : "bg-secondary",
+						)}>
+							<AlertCircle className={cn(
+								"h-5 w-5",
+								unhealthyCount > 0 ? "text-amber-500" : "text-muted-foreground",
+							)} />
+						</div>
+						<div>
+							<p className="text-muted-foreground text-xs">Unreachable</p>
+							<p className="font-medium text-foreground">{unhealthyCount}</p>
+						</div>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardContent className="flex items-center gap-3 p-4">
+						<div className={cn(
+							"flex h-10 w-10 items-center justify-center rounded-lg",
+							appDeployEntries.length > 0 ? "bg-blue-500/10" : "bg-secondary",
+						)}>
+							<Rocket className={cn(
+								"h-5 w-5",
+								appDeployEntries.length > 0 ? "text-blue-500" : "text-muted-foreground",
+							)} />
+						</div>
+						<div>
+							<p className="text-muted-foreground text-xs">Deploy-enabled apps</p>
+							<p className="font-medium text-foreground">{appDeployEntries.length}</p>
+						</div>
+					</CardContent>
+				</Card>
 			</div>
-		</TooltipProvider>
+
+			<Tabs defaultValue="machines">
+				<TabsList>
+					<TabsTrigger value="machines">
+						Machines
+						{machineCount > 0 && (
+							<Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+								{machineCount}
+							</Badge>
+						)}
+					</TabsTrigger>
+					<TabsTrigger value="targets">
+						App Targets
+						{appDeployEntries.length > 0 && (
+							<Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+								{appDeployEntries.length}
+							</Badge>
+						)}
+					</TabsTrigger>
+					<TabsTrigger value="actions">Actions</TabsTrigger>
+					<TabsTrigger value="settings">Settings</TabsTrigger>
+				</TabsList>
+
+				{/* Machines Tab */}
+				<TabsContent className="mt-6 space-y-4" value="machines">
+					{machineCount === 0 ? (
+						<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
+							<CardContent className="flex flex-col items-center justify-center gap-4 p-8">
+								<Server className="h-12 w-12 text-muted-foreground/50" />
+								<div className="text-center">
+									<p className="font-medium text-foreground">No Machines</p>
+									<p className="text-muted-foreground text-sm max-w-md">
+										Machine inventory is empty. Run <code className="text-xs bg-secondary px-1 py-0.5 rounded">infra:deploy</code> and <code className="text-xs bg-secondary px-1 py-0.5 rounded">infra:pull-outputs</code> to populate it, then reload the shell.
+									</p>
+								</div>
+							</CardContent>
+						</Card>
+					) : (
+						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							{machineList.map((machine) => (
+								<MachineCard key={machine.id} machine={machine} />
+							))}
+						</div>
+					)}
+				</TabsContent>
+
+				{/* App Targets Tab */}
+				<TabsContent className="mt-6 space-y-4" value="targets">
+					{appDeployEntries.length === 0 ? (
+						<Card className="border-dashed border-muted-foreground/40 bg-secondary/20">
+							<CardContent className="flex flex-col items-center justify-center gap-4 p-8">
+								<Network className="h-12 w-12 text-muted-foreground/50" />
+								<div className="text-center">
+									<p className="font-medium text-foreground">No App Targets</p>
+									<p className="text-muted-foreground text-sm max-w-md">
+										No apps have deployment enabled. Add <code className="text-xs bg-secondary px-1 py-0.5 rounded">deploy.enable = true</code> and <code className="text-xs bg-secondary px-1 py-0.5 rounded">deploy.targets</code> to your app config.
+									</p>
+								</div>
+							</CardContent>
+						</Card>
+					) : (
+						<div className="space-y-3">
+							{appDeployEntries.map(([appName, deploy]) => (
+								<AppTargetRow
+									key={appName}
+									appName={appName}
+									deploy={deploy}
+									machines={machines}
+								/>
+							))}
+						</div>
+					)}
+				</TabsContent>
+
+				{/* Actions Tab */}
+				<TabsContent className="mt-6 space-y-4" value="actions">
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Colmena Actions</CardTitle>
+							<CardDescription>
+								Run Colmena commands against your fleet
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							{machineCount === 0 ? (
+								<div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
+									<div className="flex items-center gap-3">
+										<AlertCircle className="h-5 w-5 text-amber-500" />
+										<p className="text-amber-700 dark:text-amber-300 text-sm">
+											No machines in inventory. Provision infrastructure first.
+										</p>
+									</div>
+								</div>
+							) : (
+								<>
+									<div className="flex flex-wrap gap-3">
+										<Button variant="outline" className="gap-2">
+											<Settings className="h-4 w-4" />
+											colmena eval
+										</Button>
+										<Button variant="outline" className="gap-2">
+											<HardDrive className="h-4 w-4" />
+											colmena build
+										</Button>
+										<Button className="gap-2">
+											<Play className="h-4 w-4" />
+											colmena apply
+										</Button>
+									</div>
+									<p className="text-xs text-muted-foreground">
+										Actions run the generated wrapper scripts with your configured defaults.
+										Use the CLI for advanced options: <code className="bg-secondary px-1 py-0.5 rounded">colmena-apply --on tag:prod</code>
+									</p>
+								</>
+							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				{/* Settings Tab */}
+				<TabsContent className="mt-6 space-y-4" value="settings">
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Colmena Configuration</CardTitle>
+							<CardDescription>
+								Current Colmena module settings
+							</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="grid gap-3 sm:grid-cols-2">
+								<div className="rounded-lg border border-border bg-secondary/30 p-3">
+									<p className="text-muted-foreground text-xs">Machine Source</p>
+									<p className="font-medium text-foreground text-sm">
+										{colmenaConfig?.machineSource ?? "infra"}
+									</p>
+								</div>
+								<div className="rounded-lg border border-border bg-secondary/30 p-3">
+									<p className="text-muted-foreground text-xs">Hive Config</p>
+									<p className="font-medium text-foreground text-sm font-mono text-[11px]">
+										{colmenaConfig?.config ?? ".stackpanel/state/colmena/hive.nix"}
+									</p>
+								</div>
+								<div className="rounded-lg border border-border bg-secondary/30 p-3">
+									<p className="text-muted-foreground text-xs">Generate Hive</p>
+									<p className="font-medium text-foreground text-sm">
+										{colmenaConfig?.generateHive ? "Yes" : "No"}
+									</p>
+								</div>
+								<div className="rounded-lg border border-border bg-secondary/30 p-3">
+									<p className="text-muted-foreground text-xs">Machine Count</p>
+									<p className="font-medium text-foreground text-sm">
+										{colmenaConfig?.machineCount ?? machineCount}
+									</p>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				</TabsContent>
+			</Tabs>
+		</div>
 	);
 }
