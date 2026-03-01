@@ -66,6 +66,13 @@ export declare type App = Message<"stackpanel.db.App"> & {
    * @generated from field: map<string, stackpanel.db.AppEnvironment> environments = 7;
    */
   environments: { [key: string]: AppEnvironment };
+
+  /**
+   * Colmena deployment mapping for this app
+   *
+   * @generated from field: stackpanel.db.AppDeploy deploy = 8;
+   */
+  deploy?: AppDeploy;
 };
 
 /**
@@ -73,6 +80,61 @@ export declare type App = Message<"stackpanel.db.App"> & {
  * Use `create(AppSchema)` to create a new message.
  */
 export declare const AppSchema: GenMessage<App>;
+
+/**
+ * Deployment mapping for Colmena (targets, roles, and modules)
+ *
+ * @generated from message stackpanel.db.AppDeploy
+ */
+export declare type AppDeploy = Message<"stackpanel.db.AppDeploy"> & {
+  /**
+   * Enable deployment mapping for this app
+   *
+   * @generated from field: bool enable = 1;
+   */
+  enable: boolean;
+
+  /**
+   * Target machine ids or tag selectors
+   *
+   * @generated from field: repeated string targets = 2;
+   */
+  targets: string[];
+
+  /**
+   * Deployment role label for this app
+   *
+   * @generated from field: optional string role = 3;
+   */
+  role?: string;
+
+  /**
+   * Extra NixOS modules to import for this app
+   *
+   * @generated from field: repeated string nixos_modules = 4;
+   */
+  nixosModules: string[];
+
+  /**
+   * Target system/architecture (e.g., x86_64-linux)
+   *
+   * @generated from field: optional string system = 5;
+   */
+  system?: string;
+
+  /**
+   * Secret references required by this app during deploy
+   *
+   * @generated from field: repeated string secrets = 6;
+   */
+  secrets: string[];
+};
+
+/**
+ * Describes the message stackpanel.db.AppDeploy.
+ * Use `create(AppDeploySchema)` to create a new message.
+ */
+export declare const AppDeploySchema: GenMessage<AppDeploy>;
 
 /**
  * Environment configuration (e.g., dev, staging, production)
