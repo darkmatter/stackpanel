@@ -8,15 +8,11 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 Stackpanel can generate Fly.io deployment configuration from your project definition—`fly.toml` files, Dockerfiles, and OIDC-based authentication for passwordless deploys from CI. Instead of hand-maintaining Fly config that drifts from your actual app setup, the deployment extension derives everything from your Stackpanel config.
 
-## Enable the Fly Extension
+## Enable Deployment
 
-```nix
-stackpanel.deployment.fly = {
-  enable = true;
-};
-```
+Deployment configuration is per-app. You don't need a global "Fly extension" - just configure your apps with `deployment.host = "fly"`.
 
-When enabled, Stackpanel adds the `flyctl` CLI to your devshell and generates Fly.io configuration files based on your [app definitions](/docs/apps-ci/defining-apps).
+Stackpanel will automatically add the `flyctl` CLI to your devshell when you have apps configured for Fly.io deployment.
 
 ## Defining Fly Apps
 
@@ -29,21 +25,16 @@ stackpanel.apps = {
     root = "./apps/api";
     build = "bun run build";
 
-    deployment.fly = {
+    deployment = {
       enable = true;
-      app-name = "myapp-api";
-      region = "iad";
+      host = "fly";
       
-      # Resource allocation
-      vm = {
-        size = "shared-cpu-1x";
-        memory = 256;
-      };
-
-      # Health check
-      http-service = {
-        internal-port = 8080;
-        force-https = true;
+      fly = {
+        appName = "myapp-api";
+        region = "iad";
+        memory = "512mb";
+        cpus = 1;
+        forceHttps = true;
       };
     };
   };
@@ -53,16 +44,20 @@ stackpanel.apps = {
     root = "./apps/web";
     build = "bun run build";
 
-    deployment.fly = {
+    deployment = {
       enable = true;
-      app-name = "myapp-web";
-      region = "iad";
+      host = "fly";
+      
+      fly = {
+        appName = "myapp-web";
+        region = "iad";
+      };
     };
   };
 };
 ```
 
-Stackpanel generates a `fly.toml` for each app in its working directory, configured with the correct internal port, health checks, and resource settings.
+Stackpanel generates deployment configuration for each app, wiring up the correct ports, health checks, and resource settings.
 
 ## Generated Files
 
@@ -88,40 +83,46 @@ You can inspect the generated `fly.toml` at any time. It's a standard file that 
 
 ## Container Builds
 
-Fly.io deploys container images. The Fly extension works with Stackpanel's [container system](/docs/deployment/containers) to build images for your apps:
+Fly.io deploys container images. Configure containers alongside your app deployment:
 
 ```nix
-stackpanel.apps.api.deployment.fly = {
-  enable = true;
-  app-name = "myapp-api";
+stackpanel.apps.api = {
+  port = 1;
+  root = "./apps/api";
+  build = "bun run build";
 
-  # Use the Stackpanel container builder
-  build = {
-    # Dockerfile is generated from your Nix config
-    # or you can point to an existing one
-    dockerfile = "./apps/api/Dockerfile";
+  deployment = {
+    enable = true;
+    host = "fly";
+    
+    fly = {
+      appName = "myapp-api";
+      region = "iad";
+    };
+  };
+
+  container = {
+    enable = true;
+    entrypoint = [ "${pkgs.bun}/bin/bun" "run" "dist/index.js" ];
   };
 };
 ```
 
-If you don't have a Dockerfile, the [container extension](/docs/deployment/containers) can generate one based on your app's framework, language, and dependencies.
+Or define containers separately using the [containers module](/docs/deployment/containers) with matching names.
 
 ## OIDC Authentication
 
-For CI/CD deployments, the Fly extension supports OIDC-based authentication—no long-lived API tokens stored as secrets:
+For CI/CD deployments, configure OIDC authentication at the global deployment level:
 
 ```nix
-stackpanel.deployment.fly = {
-  enable = true;
-
-  oidc = {
-    enable = true;
-    org = "my-fly-org";
+stackpanel.deployment = {
+  fly = {
+    organization = "my-fly-org";
   };
 };
 ```
 
-When OIDC is enabled, the [CI generation](/docs/apps-ci/ci-generation) produces GitHub Actions steps that authenticate with Fly using GitHub's OIDC token. This means:
+When configured, the [CI generation](/docs/apps-ci/ci-generation) can produce GitHub Actions steps that authenticate with Fly using GitHub's OIDC token. This means:
 
 - No `FLY_API_TOKEN` secret to manage
 - Tokens are short-lived and scoped to each CI run
@@ -147,27 +148,25 @@ Deploy to multiple Fly.io regions for lower latency:
 
 ```nix
 stackpanel.apps.api.deployment.fly = {
-  enable = true;
-  app-name = "myapp-api";
+  appName = "myapp-api";
   region = "iad";
   
-  # Additional regions for replica placement
-  regions = [ "iad" "lhr" "nrt" ];
+  # Note: Multi-region configuration is managed through Fly.io directly
+  # Set your primary region here and use flyctl to scale to additional regions
 };
 ```
 
-Fly handles request routing to the nearest region automatically.
+After deploying to your primary region, use `flyctl scale` to add machines in additional regions.
 
 ## Environment and Secrets
 
-Stackpanel can sync your [variables](/docs/secrets/variables) to Fly.io secrets:
+Configure environment variables and secrets for your Fly.io deployments:
 
 ```nix
 stackpanel.apps.api.deployment.fly = {
-  enable = true;
-  app-name = "myapp-api";
+  appName = "myapp-api";
 
-  # These Stackpanel variables get set as Fly secrets
+  # These get set as Fly secrets
   secrets = [
     "DATABASE_URL"
     "API_KEY"
@@ -182,7 +181,7 @@ stackpanel.apps.api.deployment.fly = {
 };
 ```
 
-Static environment variables are written into `fly.toml`. Secrets are managed through `flyctl secrets set` and never appear in generated files.
+Environment variables are included in deployment configuration. Secrets are managed through Stackpanel's [secrets system](/docs/secrets/variables) and synced to Fly.io.
 
 ## Deployment Scripts
 
@@ -206,27 +205,30 @@ These are standard Stackpanel [scripts](/docs/dev-environment/packages-scripts) 
 
 ## Databases on Fly
 
-If your app needs a managed database, you can configure Fly Postgres:
+For managed databases, use Fly's CLI to create Postgres instances, then reference them in your app:
+
+```bash
+# Create a Postgres cluster
+flyctl postgres create --name myapp-db --region iad
+
+# Attach it to your app
+flyctl postgres attach myapp-db --app myapp-api
+```
+
+Then reference the database in your deployment config:
 
 ```nix
 stackpanel.apps.api.deployment.fly = {
-  enable = true;
-  app-name = "myapp-api";
-
-  postgres = {
-    enable = true;
-    name = "myapp-db";
-    region = "iad";
-    vm-size = "shared-cpu-1x";
-    volume-size = 1; # GB
-  };
+  appName = "myapp-api";
+  
+  secrets = [
+    "DATABASE_URL"  # Automatically set by Fly when attached
+  ];
 };
 ```
 
-The extension generates the necessary `flyctl postgres create` commands and wires the `DATABASE_URL` into your app's environment.
-
 <Callout type="info">
-Fly Postgres is a managed PostgreSQL instance running on Fly's infrastructure. For local development, use Stackpanel's built-in [PostgreSQL service](/docs/services/postgres) instead.
+For local development, use Stackpanel's built-in [PostgreSQL service](/docs/services/postgres) instead of Fly Postgres.
 </Callout>
 
 ## Combining with Other Deployment Targets
@@ -237,37 +239,39 @@ You can deploy different apps in your monorepo to different platforms:
 stackpanel.apps = {
   web = {
     port = 0;
-    # Deploy the frontend to Cloudflare Pages
-    deployment.cloudflare.enable = true;
+    # Deploy the frontend to Cloudflare
+    deployment = {
+      enable = true;
+      host = "cloudflare";
+    };
   };
 
   api = {
     port = 1;
     # Deploy the API to Fly.io
-    deployment.fly = {
+    deployment = {
       enable = true;
-      app-name = "myapp-api";
+      host = "fly";
+      fly.appName = "myapp-api";
     };
   };
 };
 ```
 
-Each deployment target generates its own configuration files independently. The [CI generation](/docs/apps-ci/ci-generation) produces workflow steps for all enabled deployment targets.
+Each deployment target generates its own configuration independently. The [CI generation](/docs/apps-ci/ci-generation) produces workflow steps for all enabled deployment targets.
 
 ## CLI Commands
 
-The Fly extension adds `flyctl` to your devshell and registers convenience scripts:
+When you have apps configured for Fly.io deployment, `flyctl` is automatically added to your devshell:
 
 ```bash
-# Direct flyctl access (always available when extension is enabled)
+# Direct flyctl access
 flyctl status --app myapp-api
 flyctl logs --app myapp-api
 flyctl ssh console --app myapp-api
 
-# Stackpanel wrapper scripts
-fly:deploy api          # Deploy a specific app
-fly:logs api            # Stream logs
-fly:status              # Show status of all Fly apps
+# Build containers for deployment
+nix build .#packages.x86_64-linux.container-api
 ```
 
 ## Troubleshooting

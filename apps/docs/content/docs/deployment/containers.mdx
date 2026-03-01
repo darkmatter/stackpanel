@@ -56,13 +56,13 @@ Build a container image from the command line:
 
 ```bash
 # Build a specific container
-nix build .#containers.api
+nix build --impure .#packages.x86_64-linux.container-api
 
 # Load it into Docker
 docker load < result
 
 # Or build and load in one step
-nix build .#containers.api && docker load < result
+nix build --impure .#packages.x86_64-linux.container-api && docker load < result
 ```
 
 The output is a standard OCI image that works with Docker, Podman, containerd, or any OCI-compatible runtime.
@@ -153,12 +153,18 @@ This gives you Docker-like layer caching without writing `COPY package.json` tri
 Push built images to a container registry:
 
 ```bash
-# Build and push to a registry
-nix run .#containers.api.copyToRegistry
+# Build the container
+nix build --impure .#packages.x86_64-linux.container-api
+docker load < result
 
-# Or use Docker/Podman after loading
-docker load < $(nix build .#containers.api --print-out-paths)
+# Push to registry
+docker tag myapp-api:latest ghcr.io/my-org/myapp-api:latest
 docker push ghcr.io/my-org/myapp-api:latest
+
+# Or use skopeo for direct copy
+nix run nixpkgs#skopeo -- copy \
+  docker-archive:./result \
+  docker://ghcr.io/my-org/myapp-api:latest
 ```
 
 For CI, the [CI generation](/docs/apps-ci/ci-generation) system can produce Docker build and push steps in your GitHub Actions workflow automatically.
@@ -204,7 +210,7 @@ Stackpanel can also generate Dockerfiles through the [Docker module](/docs/deplo
 Check what's being pulled in as dependencies:
 
 ```bash
-nix path-info -rsSh .#containers.api
+nix path-info -rsSh .#packages.x86_64-linux.container-api
 ```
 
 This shows every store path in the image closure and its size. Look for unexpected dependencies—a common issue is accidentally including build-time tools in the runtime closure.
