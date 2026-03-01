@@ -13,10 +13,11 @@
     ./schema.nix
     ./scripts.nix
     ./codegen.nix
-    ./files.nix
     ./clean.nix
     ./direnv.nix
     ./tui.nix
     ./bin.nix
+    ./profile.nix
+    ./gc-roots.nix
   ];
 }
