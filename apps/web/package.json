@@ -64,7 +64,6 @@
     "@stackpanel/docs-content": "workspace:*",
     "@gen/env": "workspace:*",
     "@stackpanel/proto": "workspace:*",
-    "@stackpanel/ui": "workspace:*",
     "@stackpanel/ui-core": "workspace:*",
     "@stackpanel/ui-web": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
