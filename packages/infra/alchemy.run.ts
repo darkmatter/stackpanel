@@ -19,6 +19,8 @@ const databaseOutputs = (await import("./modules/database.ts")).default;
 
 const deploymentOutputs = (await import("./modules/deployment.ts")).default;
 
+const machinesOutputs = (await import("./modules/machines.ts")).default;
+
 
 // Sync declared outputs to storage backend
 await Infra.syncAll({
@@ -33,6 +35,10 @@ await Infra.syncAll({
 "deployment": {
   outputs: deploymentOutputs,
   syncKeys: ["webUrl"],
+},
+"machines": {
+  outputs: machinesOutputs,
+  syncKeys: ["machines"],
 },
 });
 
