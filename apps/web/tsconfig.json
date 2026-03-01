@@ -24,7 +24,9 @@
 		"paths": {
 			"@/*": ["./src/*"],
 			"@ui": ["./src/components/ui"],
-			"@ui/*": ["./src/components/ui/*"]
+			"@ui/*": ["./src/components/ui/*"],
+			"@gen/featureflags": ["../../packages/gen/featureflags/src/index.ts"],
+			"@gen/featureflags/*": ["../../packages/gen/featureflags/src/*"]
 		}
 	}
 }

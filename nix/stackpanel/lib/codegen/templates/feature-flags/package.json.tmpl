@@ -1,0 +1,19 @@
+{
+  "name": "{{PACKAGE_NAME}}",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/feature-flags.tsx"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "dependencies": {
+    "@tanstack/react-router": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
