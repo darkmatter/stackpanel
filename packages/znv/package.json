@@ -1,7 +1,7 @@
 {
 	"name": "znv",
 	"version": "0.5.0",
-	"description": "Parse your environment with Zod schemas",
+	"description": "Parse your environment with Zod schemas. Vendored from github.com/lostfictions/znv v0.5.0, patched for Zod 4 compatibility (upstream requires Zod 3).",
 	"keywords": [
 		"env",
 		"process.env",
