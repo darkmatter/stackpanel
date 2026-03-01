@@ -426,8 +426,33 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		content.WriteString("\n")
 	}
 
-	// Health status row
-	if data.Health.Enabled && data.Health.TotalChecks > 0 {
+	// Health status row — per-module breakdown if available, else summary bar
+	if len(data.HealthModules) > 0 {
+		content.WriteString("  ")
+		content.WriteString(motdLabelStyle.Render("Health    "))
+		content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
+		content.WriteString("\n")
+
+		// Per-module detail lines
+		for _, m := range data.HealthModules {
+			content.WriteString("    ")
+			if m.FailingCount == 0 {
+				content.WriteString(motdStatusRunning.Render("●"))
+			} else if m.Severity == "HEALTHCHECK_SEVERITY_CRITICAL" {
+				content.WriteString(motdStatusStopped.Render("●"))
+			} else {
+				content.WriteString(motdStatusWarning.Render("●"))
+			}
+			content.WriteString(" ")
+			label := m.Module
+			if m.DisplayName != "" && m.DisplayName != m.Module {
+				label = m.DisplayName
+			}
+			content.WriteString(motdEnvStyle.Render(label))
+			content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  %d/%d", m.PassingCount, m.TotalChecks)))
+			content.WriteString("\n")
+		}
+	} else if data.Health.Enabled && data.Health.TotalChecks > 0 {
 		content.WriteString("  ")
 		content.WriteString(motdLabelStyle.Render("Health    "))
 		content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))

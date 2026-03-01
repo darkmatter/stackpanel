@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
 )
 
 // MOTDFullData contains all data needed to render the improved MOTD
@@ -42,6 +44,9 @@ type MOTDFullData struct {
 	StudioURL     string
 	DocsURL       string
 	AgentPort     int
+
+	// Healthcheck results (per-module, from local runner or cache)
+	HealthModules []ModuleHealthResult
 
 	// Missing flake inputs (from Nix config)
 	MissingFlakeInputs []MissingFlakeInput
@@ -754,8 +759,23 @@ func CollectIssues(data *MOTDFullData) []Issue {
 		})
 	}
 
-	// Health check failures
-	if data.Health.Enabled && data.Health.FailingCount > 0 {
+	// Health check failures — report per-module if detail is available
+	if len(data.HealthModules) > 0 {
+		for _, m := range data.HealthModules {
+			if m.FailingCount > 0 {
+				sev := "warning"
+				if m.Severity == "HEALTHCHECK_SEVERITY_CRITICAL" {
+					sev = "error"
+				}
+				msg := fmt.Sprintf("%s: %d/%d checks failing", m.Module, m.FailingCount, m.TotalChecks)
+				issues = append(issues, Issue{
+					Severity:   sev,
+					Message:    msg,
+					FixCommand: "sp status",
+				})
+			}
+		}
+	} else if data.Health.Enabled && data.Health.FailingCount > 0 {
 		msg := fmt.Sprintf("%d health check(s) failing", data.Health.FailingCount)
 		issues = append(issues, Issue{
 			Severity:   "warning",
@@ -787,8 +807,19 @@ func CollectIssues(data *MOTDFullData) []Issue {
 	return issues
 }
 
+// CollectMOTDDataOpts configures what data CollectMOTDData collects.
+type CollectMOTDDataOpts struct {
+	// Healthcheck definitions from Nix config (if available).
+	// When set, healthchecks are run locally (or loaded from cache)
+	// instead of querying the agent API.
+	Healthchecks []nixconfig.Healthcheck
+
+	// StateDir is the path to .stackpanel/state/ for cache files.
+	StateDir string
+}
+
 // CollectMOTDData gathers all data needed for the MOTD
-func CollectMOTDData(projectName, projectRoot, version string, agentPort int) *MOTDFullData {
+func CollectMOTDData(projectName, projectRoot, version string, agentPort int, opts *CollectMOTDDataOpts) *MOTDFullData {
 	if agentPort == 0 {
 		agentPort = DefaultAgentPort
 	}
@@ -802,17 +833,27 @@ func CollectMOTDData(projectName, projectRoot, version string, agentPort int) *M
 		ShortcutAlias: "x", // Default, could be read from config
 	}
 
-	// Collect status in parallel for better performance
-	// For now, do it sequentially for simplicity
-
 	// Agent status (fast, do first)
 	data.Agent = CheckAgentStatus(agentPort)
 
 	// Only check these if agent is running (they depend on agent API)
 	if data.Agent.Running {
 		data.Files = CheckFilesStatus(projectRoot)
-		data.Health = GetHealthSummary()
 		data.UserCommands, data.TotalCommands = GetUserCommands(5)
+	}
+
+	// Run healthchecks locally (cached) if definitions are provided
+	if opts != nil && len(opts.Healthchecks) > 0 {
+		stateDir := opts.StateDir
+		if stateDir == "" {
+			stateDir = filepath.Join(projectRoot, ".stackpanel", "state")
+		}
+		results := RunOrLoadHealthchecks(stateDir, opts.Healthchecks)
+		data.Health = HealthSummaryFromResults(results)
+		data.HealthModules = AggregateByModule(results)
+	} else if data.Agent.Running {
+		// Fallback: query agent API if no local definitions
+		data.Health = GetHealthSummary()
 	}
 
 	// These don't require the agent
