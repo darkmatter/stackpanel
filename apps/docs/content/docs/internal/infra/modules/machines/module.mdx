@@ -1,0 +1,10 @@
+---
+title: infra/modules/machines/module.nix
+description: Machine inventory infra module.
+---
+
+Machine inventory infra module.
+
+Accepts a machine inventory definition in Nix and emits a JSON string
+output that can be stored via the infra output backend. Colmena consumes
+this inventory from stackpanel.infra.outputs.machines.

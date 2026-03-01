@@ -1,0 +1,37 @@
+---
+title: alchemy/default.nix
+description: "Lower-level primitive module for Alchemy IaC configuration."
+---
+
+Lower-level primitive module for Alchemy IaC configuration.
+
+Provides centralized alchemy SDK configuration consumed by other modules
+(infra/, deployment/, etc.):
+```nix
+- Alchemy version management
+- State store configuration (Cloudflare, filesystem, auto)
+- A generated shared TypeScript package (@gen/alchemy) with:
+  - createApp() factory function
+  - State store provider
+  - Shared helpers (SSM reads, secret wrapping, binding resolution)
+- ALCHEMY_STATE_TOKEN secret management
+- .gitignore for .alchemy directories
+```
+
+
+## Usage
+
+```nix
+stackpanel.alchemy = {
+  enable = true;
+  stateStore.provider = "auto";
+};
+```
+
+
+Other modules consume this via:
+```nix
+config.stackpanel.alchemy.version     (npm version)
+config.stackpanel.alchemy.package.*   (generated package config)
+@gen/alchemy                          (TypeScript import)
+```

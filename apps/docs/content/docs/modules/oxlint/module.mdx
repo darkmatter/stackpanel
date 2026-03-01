@@ -1,0 +1,16 @@
+---
+title: OxLint Module Implementation
+description: "OxLint (https://oxc.rs) is a blazing fast JavaScript/TypeScript linter"
+---
+
+OxLint (https://oxc.rs) is a blazing fast JavaScript/TypeScript linter
+written in Rust. This module provides:
+
+```nix
+1. Devshell packages (oxlint)
+2. Per-app linting configuration via stackpanel.apps.*.linting.oxlint
+3. Config file generation (.oxlintrc.json)
+4. Shell scripts (lint, lint:fix)
+5. Git hooks integration (pre-commit linting)
+6. Health checks
+```

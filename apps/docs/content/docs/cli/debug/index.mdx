@@ -1,29 +1,34 @@
 ---
 title: stackpanel debug
-description: Manage debug mode (run stackpanel from source)
+description: Run stackpanel from source via 'go run'
 icon: Terminal
 ---
 
 # stackpanel debug
 
-Manage debug mode settings for the stackpanel CLI.
+Run the stackpanel CLI from source using 'go run'.
 
-When debug mode is enabled, the CLI will forward all commands to 'go run'
-in your local stackpanel repository. This allows you to test changes
-without rebuilding or reinstalling the binary.
+Without subcommands (enable/disable/status), this is equivalent to:
+  cd \<repo-path\>/apps/stackpanel-go && go run . [args...]
+
+The repo path is resolved in order:
+  1. STACKPANEL_DEV_REPO environment variable
+  2. dev_mode.repo_path from ~/.config/stackpanel/stackpanel.yaml
+  3. Auto-detected from the current working directory
+
+Any arguments after 'debug' are forwarded to the 'go run' invocation.
 
 Examples:
+  stackpanel debug                           # Run 'go run .' (shows help)
+  stackpanel debug nixify .gitignore         # Run 'go run . nixify .gitignore'
   stackpanel debug status                    # Show current debug mode settings
   stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
   stackpanel debug disable                   # Disable debug mode
 
-Alias:
-  stackpanel dev ... (legacy alias)
-
 ## Usage
 
 ```bash
-stackpanel debug
+stackpanel debug [args...]
 ```
 
 **Aliases:** `dev`

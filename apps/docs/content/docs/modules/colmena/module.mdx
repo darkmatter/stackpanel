@@ -1,0 +1,27 @@
+---
+title: Colmena Module Implementation
+description: Provides Colmena deployment tooling with configurable defaults.
+---
+
+Provides Colmena deployment tooling with configurable defaults.
+
+This module:
+```nix
+1. Defines options under stackpanel.colmena.*
+2. Adds colmena to devshell packages
+3. Generates wrapper scripts: colmena-apply, colmena-build, colmena-eval
+4. Computes resolved flag sets in stackpanel.colmena.computed
+5. Registers health checks for CLI availability and hive config
+```
+
+
+## Usage
+
+```nix
+stackpanel.colmena = {
+  enable = true;
+  flake = ".#colmena";
+  parallel = 4;
+  buildOnTarget = true;
+};
+```
