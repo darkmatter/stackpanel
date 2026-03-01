@@ -50,15 +50,6 @@ type GroupSecretResponse struct {
 	// Path is the relative path to the SOPS file (from project root)
 	Path string `json:"path"`
 
-	// ValsRef is the vals reference to use in app configs
-	// For source project: ref+sops://<secrets-dir>/vars/<group>.sops.yaml#/<key>
-	// For env package: ref+sops://vars/<group>.sops.yaml#/<key>
-	ValsRef string `json:"valsRef"`
-
-	// EnvPackageRef is the vals reference for use in the deployed env package
-	// This uses relative paths: ref+sops://vars/<group>.sops.yaml#/<key>
-	EnvPackageRef string `json:"envPackageRef"`
-
 	// RecipientCount is the number of AGE recipients the file is encrypted to
 	RecipientCount int `json:"recipientCount"`
 }
@@ -153,25 +144,6 @@ func (s *Server) getGroupFilePath(group string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(groupsDir, safeGroup+".sops.yaml"), nil
-}
-
-// buildValsRef builds a vals reference for a secret in a group
-// The path is relative to the project root (for use in source configs)
-func (s *Server) buildValsRef(group, key string) (string, error) {
-	cfg, err := s.getSecretsConfig()
-	if err != nil {
-		return "", err
-	}
-	// Path relative to project root
-	relPath := filepath.Join(cfg.SecretsDir, cfg.VarsSubdir, group+".sops.yaml")
-	return fmt.Sprintf("ref+sops://%s#/%s", relPath, key), nil
-}
-
-// buildEnvPackageRef builds a vals reference for the deployed env package
-// This uses paths relative to the env package data directory
-func buildEnvPackageRef(group, key string) string {
-	// In the env package, vars are at ./vars/<group>.sops.yaml
-	return fmt.Sprintf("ref+sops://vars/%s.sops.yaml#/%s", group, key)
 }
 
 // getGroupRecipients gets the AGE public keys for a group from the Nix config
@@ -355,13 +327,6 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Build the vals references
-	valsRef, err := s.buildValsRef(safeGroup, req.Key)
-	if err != nil {
-		valsRef = buildEnvPackageRef(safeGroup, req.Key) // Fall back to relative ref
-	}
-	envPackageRef := buildEnvPackageRef(safeGroup, req.Key)
-
 	groupPath, _ := s.getGroupFilePath(safeGroup)
 	relPath, _ := filepath.Rel(s.config.ProjectRoot, groupPath)
 
@@ -369,8 +334,6 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 		Str("key", req.Key).
 		Str("group", safeGroup).
 		Str("path", relPath).
-		Str("valsRef", valsRef).
-		Str("envPackageRef", envPackageRef).
 		Int("recipients", len(recipients)).
 		Msg("Secret written to group")
 
@@ -378,8 +341,6 @@ func (s *Server) handleGroupSecretWrite(w http.ResponseWriter, r *http.Request) 
 		Key:            req.Key,
 		Group:          safeGroup,
 		Path:           relPath,
-		ValsRef:        valsRef,
-		EnvPackageRef:  envPackageRef,
 		RecipientCount: len(recipients),
 	})
 }
@@ -611,18 +572,18 @@ func (s *Server) handleListAllGroups(w http.ResponseWriter, r *http.Request) {
 
 // EnvPackageData contains info about the generated env package
 type EnvPackageData struct {
-	Apps   map[string]map[string]map[string]string `json:"apps"`   // app -> env -> key -> valsRef
+	Apps   map[string]map[string]map[string]string `json:"apps"`   // app -> env -> key -> value
 	Groups []string                                `json:"groups"` // list of group names
 }
 
 // handleGenerateEnvPackage generates the packages/env data directory
 // POST /api/secrets/generate-env-package
 //
-// The generated structure uses RELATIVE vals references so it's portable:
+// The generated structure:
 //
 //	packages/env/data/
-//	├── .sops.yaml           # SOPS config
-//	├── apps/<app>/<env>.yaml  # Plain YAML with vals refs: ref+sops://vars/<group>.sops.yaml#/<key>
+//	├── .sops.yaml             # SOPS config for the env package
+//	├── apps/<app>/<env>.yaml  # Plain YAML with env var values (secrets have empty values)
 //	└── vars/<group>.sops.yaml # SOPS-encrypted files (copied from source)
 func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -666,8 +627,8 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Create apps directory structure with vals references
-	// These refs are RELATIVE to the env package: ref+sops://vars/<group>.sops.yaml#/<key>
+	// Create apps directory structure with environment variable mappings
+	// Secret values are empty here; the runtime loader decrypts from vars/ SOPS files
 	appsDir := filepath.Join(envPkgDir, "apps")
 	if err := os.MkdirAll(appsDir, 0o755); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to create apps directory: "+err.Error())
@@ -685,16 +646,12 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 				continue
 			}
 
-			// Transform source vals refs to relative refs for the env package
-			transformedEnv := make(map[string]string)
-			for key, value := range env.Env {
-				transformedEnv[key] = s.transformValsRefForEnvPackage(value)
-			}
-
-			// Write the env YAML with transformed vals references (NOT encrypted)
+			// Write the env YAML with variable values directly.
+			// Secret variables will have empty values here -- the runtime loader
+			// resolves them by decrypting the SOPS files in vars/ directly.
 			envPath := filepath.Join(appDir, envName+".yaml")
-			envData, _ := yaml.Marshal(transformedEnv)
-			header := fmt.Sprintf("# %s/%s environment variables\n# Contains vals references - resolved at runtime by vals\n# Refs are relative to this data directory\n", appName, envName)
+			envData, _ := yaml.Marshal(env.Env)
+			header := fmt.Sprintf("# %s/%s environment variables\n# Secret values are resolved at runtime from SOPS files in vars/\n", appName, envName)
 			if err := os.WriteFile(envPath, []byte(header+string(envData)), 0o644); err != nil {
 				log.Warn().Err(err).Str("path", envPath).Msg("Failed to write env file")
 			}
@@ -753,45 +710,6 @@ func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request
 		"apps":   len(apps),
 		"groups": copiedGroups,
 	})
-}
-
-// transformValsRefForEnvPackage converts a source vals ref to a relative ref for the env package
-// Source: ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/KEY
-// Output: ref+sops://vars/dev.sops.yaml#/KEY
-func (s *Server) transformValsRefForEnvPackage(value string) string {
-	if !strings.HasPrefix(value, "ref+sops://") {
-		return value
-	}
-
-	// Parse the vals ref
-	// Format: ref+sops://<path>#/<key>
-	parts := strings.SplitN(value, "#", 2)
-	if len(parts) != 2 {
-		return value
-	}
-
-	pathPart := strings.TrimPrefix(parts[0], "ref+sops://")
-	keyPart := parts[1]
-
-	// Check if this is a vars reference
-	cfg, _ := s.getSecretsConfig()
-	varsPath := filepath.Join(cfg.SecretsDir, cfg.VarsSubdir)
-
-	if strings.HasPrefix(pathPart, varsPath+"/") {
-		// Extract just the filename
-		filename := filepath.Base(pathPart)
-		return fmt.Sprintf("ref+sops://vars/%s#%s", filename, keyPart)
-	}
-
-	// For other refs, try to make them relative to vars/
-	if strings.Contains(pathPart, "/vars/") {
-		idx := strings.LastIndex(pathPart, "/vars/")
-		filename := pathPart[idx+len("/vars/"):]
-		return fmt.Sprintf("ref+sops://vars/%s#%s", filename, keyPart)
-	}
-
-	// Return as-is if we can't transform it
-	return value
 }
 
 // generateEnvPackageSopsConfig generates a .sops.yaml for the env package
