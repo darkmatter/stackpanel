@@ -189,11 +189,19 @@ rec {
     fi
 
     # ── Step 3: Check decrypt access ──
-    # Try to decrypt the dev group's .enc.age file to verify the user is registered.
-    # This is a non-fatal check — secrets still work if other group keys are available.
-    DEV_ENC_AGE="$RECIPIENTS_DIR/dev.enc.age"
-    if [[ -f "$DEV_ENC_AGE" && -f "$LOCAL_KEY" ]]; then
-      if ! ${pkgs.age}/bin/age -d -i "$LOCAL_KEY" "$DEV_ENC_AGE" >/dev/null 2>&1; then
+    # Verify the user's public key is listed as a recipient in the first
+    # available .enc.age file. The .enc.age files are SOPS-encrypted JSON,
+    # so we grep for the pubkey in the "recipient" fields rather than
+    # attempting raw AGE decryption (which would fail on SOPS JSON format).
+    PUBLIC_KEY=$(cat "$LOCAL_PUB" 2>/dev/null | tr -d '[:space:]')
+    FIRST_ENC_AGE=""
+    for enc_file in "$RECIPIENTS_DIR"/*.enc.age; do
+      [[ -f "$enc_file" ]] || continue
+      FIRST_ENC_AGE="$enc_file"
+      break
+    done
+    if [[ -n "$FIRST_ENC_AGE" && -n "$PUBLIC_KEY" ]]; then
+      if ! grep -q "$PUBLIC_KEY" "$FIRST_ENC_AGE" 2>/dev/null; then
         echo "" >&2
         echo "╭─ Secrets ──────────────────────────────────────────────────╮" >&2
         echo "│  Your key is not yet registered as a team recipient.       │" >&2
