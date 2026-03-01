@@ -255,31 +255,19 @@ const appsWithBuild = useMemo(() =>
 
 ---
 
-### 3.2 UI Package Fragmentation
+### 3.2 UI Package Fragmentation -- RESOLVED
 
-**Location:** `packages/ui*`
+**Location:** `packages/ui/`
 
-**What:** 5 separate UI packages:
-- `@stackpanel/ui` - Just re-exports
-- `@stackpanel/ui-core` - cn, cva, logo
-- `@stackpanel/ui-primitives` - Radix wrappers
-- `@stackpanel/ui-web` - Web components
-- `@stackpanel/ui-native` - React Native (placeholder?)
+**What was done:** 5 UI packages consolidated to 2:
+- Deleted `@stackpanel/ui` facade (unused indirection)
+- Deleted `@stackpanel/ui-primitives` (merged 27 `@radix-ui/*` deps into `ui-web`)
+- Deleted `@stackpanel/ui-native` (empty stub, zero components)
+- Kept `@stackpanel/ui-core` (cn, cva, Logo, CSS) at `packages/ui/core/`
+- Kept `@stackpanel/ui-web` (16 shadcn components) at `packages/ui/web/`
+- Updated 11 imports in `ui-web` from `@stackpanel/ui-primitives` to direct `@radix-ui/*`
 
-**Why Problematic:**
-- Complex dependency graph
-- Import confusion (`@ui/button` vs `@stackpanel/ui-web/button`)
-- Primitive layer adds indirection without value
-
-**Simplification Strategy:**
-Collapse to 2 packages:
-```
-@stackpanel/ui          # Web components (current ui-web + ui-core)
-@stackpanel/ui-native   # Native if needed
-```
-The primitives layer isn't providing value - just import Radix directly.
-
-**Impact:** MEDIUM - Removes 2 packages, simplifies imports
+**Impact:** 5 packages down to 2, cleaner dependency graph, no facade indirection
 
 ---
 
@@ -510,7 +498,7 @@ Derived hooks can be inline utilities or removed.
 | Abstractions | Delete WebSocket client | HIGH | LOW | P1 |
 | State Mgmt | Setup wizard reducer | HIGH | MEDIUM | P1 |
 | Duplicates | Consolidate app hooks | MEDIUM | LOW | P1 |
-| UI | Collapse UI packages | MEDIUM | MEDIUM | P2 |
+| UI | ~~Collapse UI packages~~ | ~~MEDIUM~~ | ~~MEDIUM~~ | DONE |
 | Nix | Simplify SST module | MEDIUM | MEDIUM | P2 |
 | API | Reduce exported hooks | MEDIUM | LOW | P2 |
 | Nix | Skip proto for simple opts | MEDIUM | HIGH | P3 |
