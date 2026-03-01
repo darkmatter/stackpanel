@@ -1,0 +1,49 @@
+---
+title: stackpanel nixify
+description: Convert a file into a Nix file entry expression
+icon: Terminal
+---
+
+# stackpanel nixify
+
+Convert an existing file into a stackpanel.files.entries Nix expression.
+
+This reads the file at the given path and produces a Nix snippet that,
+when added to your stackpanel configuration, will generate an identical file.
+
+Supported types:
+  line-set   Treats each non-empty line as an entry in a deduplicated, sorted
+             set (ideal for .gitignore, .dockerignore, etc.)
+
+Examples:
+  stackpanel nixify .gitignore                       # auto-detects line-set
+  stackpanel nixify .gitignore --type line-set       # explicit type
+  stackpanel nixify path/to/.dockerignore            # works for any path
+
+## Usage
+
+```bash
+stackpanel nixify <path>
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--type, -t` | `string` | _none_ | Content type (line-set). Auto-detected when omitted. |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

@@ -15,9 +15,11 @@ Variables can be:
   - EXEC: Shell command outputs
 
 Examples:
-  stackpanel vars list              # List all variables
-  stackpanel vars list --type SECRET  # List only secrets
-  stackpanel vars get /apps/web/port  # Get a specific variable
+  stackpanel vars list                         # List all variables
+  stackpanel vars list --type SECRET           # List only secrets
+  stackpanel vars get /apps/web/port           # Get a specific variable
+  stackpanel vars set /my/api-host api.example.com  # Set a literal variable
+  stackpanel vars delete /my/api-host          # Remove a variable
 
 ## Usage
 
@@ -44,6 +46,8 @@ These flags are inherited from parent commands.
 
 | Command | Description |
 |---------|-------------|
+| [`delete`](./delete) | Delete a variable |
 | [`get`](./get) | Get a specific variable |
 | [`list`](./list) | List all workspace variables |
+| [`set`](./set) | Set a variable |
 

@@ -271,6 +271,50 @@ Module defines turborepo tasks
 
 ---
 
+## `modules.<name>.flakeInputs`
+
+Flake inputs required by this module. Used for auto-installation from the registry.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.flakeInputs.*.followsNixpkgs`
+
+Whether to add inputs.nixpkgs.follows = "nixpkgs"
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `modules.<name>.flakeInputs.*.name`
+
+Input name in flake.nix (e.g., "my-module")
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.flakeInputs.*.url`
+
+Flake URL (e.g., "github:author/my-module")
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
 ## `modules.<name>.healthcheckModule`
 
 Name of the healthcheck module that provides health checks for this module.

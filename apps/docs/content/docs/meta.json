@@ -11,6 +11,7 @@
     "networking",
     "secrets",
     "extensions",
+    "modules",
     "apps-ci",
     "deployment",
     "ide",

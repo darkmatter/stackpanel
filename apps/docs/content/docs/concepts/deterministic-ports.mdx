@@ -5,6 +5,7 @@ icon: hash
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 Every Stackpanel project gets a stable set of port numbers derived from the project name. The same project always gets the same ports—on every machine, for every team member, with zero manual configuration.
 
@@ -79,6 +80,175 @@ Port environment variables are set during shell entry (the Nix evaluation phase)
 Random ports solve conflicts but create a different problem: every time you restart your environment, everything gets a new address. Bookmarked URLs break, database connection strings change, and browser cookies stop working.
 
 Deterministic ports give you the best of both worlds: no conflicts between projects, and stable addresses that never change.
+
+## Implementation
+
+The algorithm is intentionally simple so you can reimplement it in any language. This is useful when external tools or scripts need to compute ports without access to Nix or the Stackpanel CLI.
+
+The core function `computeOverRange` does all the work:
+
+1. MD5-hash the input key
+2. Take the first 4 hex characters (yields a value 0--65535)
+3. Modulo by the range size to constrain the result
+4. Round down to the nearest `modulus`
+5. Add the minimum port
+
+**Base port**: `computeOverRange(projectName, min=3000, max=10000, modulus=100)`
+
+**Service port**: `computeOverRange(serviceKey, min=basePort, max=basePort+100, modulus=1)`
+
+<Tabs items={["TypeScript", "Go", "Python", "Bash", "Nix"]}>
+
+<Tab value="TypeScript">
+```typescript
+import { createHash } from "node:crypto";
+
+function computeOverRange(
+  key: string,
+  min: number,
+  max: number,
+  modulus: number,
+): number {
+  const hash = createHash("md5").update(key).digest("hex");
+  const n = parseInt(hash.substring(0, 4), 16);
+  const offset = n % (max - min);
+  const rounded = offset - (offset % modulus);
+  return min + rounded;
+}
+
+function basePort(projectName: string): number {
+  return computeOverRange(projectName, 3000, 10000, 100);
+}
+
+function servicePort(projectName: string, serviceKey: string): number {
+  const base = basePort(projectName);
+  return computeOverRange(serviceKey, base, base + 100, 1);
+}
+
+// Example
+console.log(basePort("myapp"));                    // e.g. 4200
+console.log(servicePort("myapp", "POSTGRES"));     // e.g. 4237
+```
+</Tab>
+
+<Tab value="Go">
+```go
+package ports
+
+import (
+	"crypto/md5"
+	"fmt"
+	"strconv"
+)
+
+func computeOverRange(key string, min, max, mod int) int {
+	h := md5.Sum([]byte(key))
+	hex := fmt.Sprintf("%x", h)[:4]
+	n, _ := strconv.ParseInt(hex, 16, 64)
+	offset := n % int64(max-min)
+	rounded := offset - (offset % int64(mod))
+	return min + int(rounded)
+}
+
+func BasePort(projectName string) int {
+	return computeOverRange(projectName, 3000, 10000, 100)
+}
+
+func ServicePort(projectName, serviceKey string) int {
+	base := BasePort(projectName)
+	return computeOverRange(serviceKey, base, base+100, 1)
+}
+```
+</Tab>
+
+<Tab value="Python">
+```python
+import hashlib
+
+def compute_over_range(key: str, min_port: int, max_port: int, modulus: int) -> int:
+    h = hashlib.md5(key.encode()).hexdigest()
+    n = int(h[:4], 16)
+    offset = n % (max_port - min_port)
+    rounded = offset - (offset % modulus)
+    return min_port + rounded
+
+def base_port(project_name: str) -> int:
+    return compute_over_range(project_name, 3000, 10000, 100)
+
+def service_port(project_name: str, service_key: str) -> int:
+    base = base_port(project_name)
+    return compute_over_range(service_key, base, base + 100, 1)
+
+# Example
+print(base_port("myapp"))                   # e.g. 4200
+print(service_port("myapp", "POSTGRES"))    # e.g. 4237
+```
+</Tab>
+
+<Tab value="Bash">
+```bash
+compute_over_range() {
+  local key="$1" min="$2" max="$3" mod="$4"
+  local hash hex_part n range offset rounded
+
+  hash=$(echo -n "$key" | md5sum | cut -c1-4)
+  n=$((16#$hash))
+  range=$((max - min))
+  offset=$((n % range))
+  rounded=$((offset - (offset % mod)))
+  echo $((min + rounded))
+}
+
+base_port() {
+  compute_over_range "$1" 3000 10000 100
+}
+
+service_port() {
+  local base
+  base=$(base_port "$1")
+  compute_over_range "$2" "$base" $((base + 100)) 1
+}
+
+# Example
+base_port "myapp"                   # e.g. 4200
+service_port "myapp" "POSTGRES"     # e.g. 4237
+```
+</Tab>
+
+<Tab value="Nix">
+```nix
+# This is the actual implementation from nix/stackpanel/lib/ports.nix
+{ lib }:
+let
+  computeOverRange = { key, min, max, modulus }:
+    let
+      range = max - min;
+      rawHash = builtins.hashString "md5" key;
+      hash = builtins.substring 0 4 rawHash;
+      n = lib.trivial.fromHexString hash;
+      offset = lib.mod n range;
+      roundedOffset = offset - (lib.mod offset modulus);
+    in
+      min + roundedOffset;
+
+  basePort = name:
+    computeOverRange { key = name; min = 3000; max = 10000; modulus = 100; };
+
+  servicePort = projectName: serviceKey:
+    let base = basePort projectName;
+    in computeOverRange { key = serviceKey; min = base; max = base + 100; modulus = 1; };
+in
+{
+  inherit basePort servicePort computeOverRange;
+}
+```
+</Tab>
+
+</Tabs>
+
+<Callout type="info">
+All implementations must produce identical results for the same inputs. The parameters are fixed: MD5 hash, first 4 hex chars, min=3000, max=10000, modulus=100 for base ports, modulus=1 for service ports. If you reimplement this, test against the Nix or Go version to verify.
+</Callout>
 
 ## Reference
 

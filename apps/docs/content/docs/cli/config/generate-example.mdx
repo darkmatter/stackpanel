@@ -1,0 +1,48 @@
+---
+title: stackpanel config generate-example
+description: Generate annotated config.nix.example with option descriptions
+icon: Terminal
+---
+
+# stackpanel config generate-example
+
+Generate an annotated config.nix.example file with inline documentation from option descriptions.
+
+This command reads the stackpanel options JSON (from nixosOptionsDoc) and generates
+a comprehensive example configuration file with inline comments explaining each option.
+
+Examples:
+  stackpanel config generate-example --options-json options.json --output config.nix.example
+  stackpanel config generate-example --options-json options.json --output config.nix.example --no-comments
+  stackpanel config generate-example --options-json options.json --current-config config.nix --output example.nix
+
+## Usage
+
+```bash
+stackpanel config generate-example
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--current-config` | `string` | _none_ | Path to current config.nix (optional, used as reference) |
+| `--no-comments` | `bool` | `false` | Skip inline documentation comments |
+| `--options-json` | `string` | _none_ | Path to options.json from nixosOptionsDoc |
+| `--output` | `string` | _none_ | Output path for generated config.nix.example |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

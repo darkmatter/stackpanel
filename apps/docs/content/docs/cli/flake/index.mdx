@@ -1,0 +1,37 @@
+---
+title: stackpanel flake
+description: Manage flake.nix configuration
+icon: Terminal
+---
+
+# stackpanel flake
+
+Commands for managing flake.nix inputs and configuration.
+
+## Usage
+
+```bash
+stackpanel flake
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`add-input`](./add-input) | Add a flake input to flake.nix |
+

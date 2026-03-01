@@ -1,0 +1,31 @@
+---
+title: "oxlint-app.proto.nix"
+description: "Unified field definitions for OxLint per-app configuration."
+---
+
+Unified field definitions for OxLint per-app configuration.
+
+This is the SINGLE SOURCE OF TRUTH for OxLint module per-app options.
+It defines SpFields that simultaneously serve as:
+```nix
+1. Proto fields → OxlintAppConfig message (for Go/TS codegen)
+2. Nix option source → oxlint/module.nix uses asOption to create lib.mkOption
+3. UI panel source → oxlint/ui.nix uses fields for auto-generated panels
+```
+
+
+NOTE: The `package` option is Nix-only (listOf package has no proto equivalent)
+and remains as a manual lib.mkOption in module.nix.
+
+Usage from module.nix:
+```nix
+let oxlintSchema = import ./schema.nix { inherit lib; };
+in { options = lib.mapAttrs (_: sp.asOption) oxlintSchema.fields; }
+```
+
+
+Usage from ui.nix:
+```nix
+let oxlintSchema = import ./schema.nix { inherit lib; };
+in panelsLib.mkPanelFromSpFields { fields = oxlintSchema.fields; ... }
+```
