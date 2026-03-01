@@ -13,7 +13,9 @@ const app = await alchemy("stackpanel-infra", {
 });
 
 // Import and run infra modules
-const aws_secretsOutputs = (await import("./modules/aws-secrets.ts")).default;
+const aws_secretsOutputs = (await import("./modules/aws-secrets/index.ts")).default;
+
+const databaseOutputs = (await import("./modules/database.ts")).default;
 
 const deploymentOutputs = (await import("./modules/deployment.ts")).default;
 
@@ -23,6 +25,10 @@ await Infra.syncAll({
 "aws-secrets": {
   outputs: aws_secretsOutputs,
   syncKeys: ["kmsAliasName","kmsKeyArn","kmsKeyId","oidcProviderArn","roleArn","roleName"],
+},
+"database": {
+  outputs: databaseOutputs,
+  syncKeys: ["databaseUrl","provider"],
 },
 "deployment": {
   outputs: deploymentOutputs,

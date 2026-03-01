@@ -42,7 +42,7 @@ let
   defaultGithubRepo = if projectCfg.repo != "" then projectCfg.repo else "*";
 
   # Secrets groups config (for SSM key paths)
-  secretsGroups = config.stackpanel.secrets.groups or {};
+  secretsGroups = config.stackpanel.secrets.groups or { };
   chamberPrefix = config.stackpanel.secrets.chamber.service-prefix or projectName;
 
   # Collect all SSM paths from groups
@@ -189,7 +189,7 @@ in
 
       additional-paths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = ''
           Additional SSM parameter paths to grant access to.
           These are added alongside the group key paths.
@@ -223,7 +223,7 @@ in
     stackpanel.infra.modules.aws-secrets = {
       name = "AWS Secrets Infrastructure";
       description = "OIDC provider, IAM role, and KMS key for secrets management";
-      path = ./index.ts;
+      path = ./module;
       inputs = {
         region = cfg.region;
         accountId = cfg.account-id;

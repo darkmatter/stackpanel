@@ -6,7 +6,25 @@ import * as path from "node:path";
 
 // Embedded project config
 // @ts-ignore
-const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","storageBackend":{"type":"none"}} as const;
+const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","storageBackend":{"filePath":".stackpanel/secrets/vars/dev.sops.yaml","group":"dev","type":"sops"}} as const;
+
+/**
+ * Resolve the project root directory.
+ */
+function getRoot(): string {
+  return (
+    PROJECT_CONFIG.root ||
+    process.env.STACKPANEL_ROOT ||
+    execSync("git rev-parse --show-toplevel", { encoding: "utf-8" }).trim() ||
+    process.cwd()
+  );
+}
+
+let _root: string | undefined;
+function ROOT(): string {
+  if (!_root) _root = getRoot();
+  return _root;
+}
 
 /**
  * Read and parse the infra inputs JSON file.
@@ -15,15 +33,10 @@ const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","s
  *   2. .stackpanel/state/infra-inputs.json (default location)
  */
 function loadAllInputs(): Record<string, any> {
-  const ROOT =
-    PROJECT_CONFIG.root ||
-    process.env.STACKPANEL_ROOT ||
-    execSync("git rev-parse --show-toplevel", { encoding: "utf-8" }).trim() ||
-    process.cwd();
   const relPath =
     process.env.STACKPANEL_INFRA_INPUTS ??
     ".stackpanel/state/infra-inputs.json";
-  const inputsPath = path.resolve(ROOT, relPath);
+  const inputsPath = path.resolve(ROOT(), relPath);
 
   try {
     const raw = fs.readFileSync(inputsPath, "utf-8");
@@ -215,29 +228,62 @@ export default class Infra {
 
       case "sops": {
         const filePath = (backend as any).filePath;
-        const yaml = entries
-          .map(
-            ({ formattedKey, value }) =>
-              `${formattedKey}: ${JSON.stringify(value)}`,
-          )
-          .join("\n");
-        const tmpPath = `${filePath}.tmp`;
         const dir = path.dirname(filePath);
 
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(tmpPath, yaml);
 
+        // Create the SOPS file if it doesn't exist yet
+        if (!fs.existsSync(filePath)) {
+          const initYaml = `_init: true\n`;
+          const tmpPath = `${filePath}.tmp`;
+          fs.writeFileSync(tmpPath, initYaml);
+          try {
+            execSync(`sops --encrypt --in-place "${tmpPath}"`, {
+              stdio: "pipe",
+            });
+            fs.renameSync(tmpPath, filePath);
+            console.log(`  Created new SOPS file: ${filePath}`);
+          } catch (err) {
+            console.error(`  ✗ Failed to create SOPS file:`, err);
+            if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+            break;
+          }
+        }
+
+        // Use `sops set` for each key — non-destructive, preserves existing secrets
+        for (const { formattedKey, value } of entries) {
+          try {
+            const jsonPath = JSON.stringify([formattedKey]);
+            const jsonValue = JSON.stringify(value);
+            execSync(`sops set ${JSON.stringify(filePath)} ${JSON.stringify(jsonPath)} ${JSON.stringify(jsonValue)}`, {
+              stdio: "pipe",
+              cwd: ROOT(),
+            });
+            console.log(`  ✓ sops set ${formattedKey} in ${filePath}`);
+          } catch (err) {
+            console.error(
+              `  ✗ Failed to set ${formattedKey} in ${filePath}:`,
+              err,
+            );
+          }
+        }
+
+        // Clean up _init placeholder if it exists
         try {
-          execSync(`sops --encrypt "${tmpPath}" > "${filePath}"`, {
-            stdio: "pipe",
+          const decrypted = execSync(`sops decrypt ${JSON.stringify(filePath)}`, {
+            encoding: "utf-8",
+            stdio: ["pipe", "pipe", "pipe"],
           });
-          console.log(`  ✓ Wrote encrypted outputs to ${filePath}`);
-        } catch (err) {
-          console.error(`  ✗ Failed to encrypt ${filePath}:`, err);
-          fs.renameSync(tmpPath, filePath);
-          console.log(`  Wrote unencrypted file for debugging`);
-        } finally {
-          if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+          if (decrypted.includes("_init:")) {
+            const tmpPath = `${filePath}.tmp`;
+            // Remove _init key via yq, re-encrypt
+            execSync(
+              `sops decrypt ${JSON.stringify(filePath)} | yq 'del(._init)' > "${tmpPath}" && sops --encrypt --in-place "${tmpPath}" && mv "${tmpPath}" ${JSON.stringify(filePath)}`,
+              { stdio: "pipe" },
+            );
+          }
+        } catch {
+          // Non-fatal: _init cleanup is best-effort
         }
         break;
       }

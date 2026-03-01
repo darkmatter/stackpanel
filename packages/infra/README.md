@@ -5,7 +5,7 @@
 
 Infrastructure-as-code package for **stackpanel**, powered by [Alchemy](https://github.com/sam-goodwin/alchemy).
 
-## Modules (2)
+## Modules (3)
 
 ### AWS Secrets Infrastructure (`aws-secrets`)
 
@@ -21,9 +21,19 @@ Dependencies: `@aws-sdk/client-iam`, `@aws-sdk/client-kms`, `@aws-sdk/client-ssm
   - `roleArn` — IAM role ARN for OIDC authentication *(synced)*
   - `roleName` — IAM role name *(synced)*
 
+### Database (`database`)
+
+Postgres database provisioning (Neon / devenv / Docker)
+
+Dependencies: `alchemy`
+
+**Outputs:**
+  - `databaseUrl` — PostgreSQL connection URL *(synced)*
+  - `provider` — Active database provider (neon, devenv, docker) *(synced)*
+
 ### App Deployment (`deployment`)
 
-Deploys apps to their configured hosts (cloudflare)
+Deploys apps to their configured hosts (fly)
 
 
 **Outputs:**
@@ -42,7 +52,7 @@ cd packages/infra && bun run alchemy.run.ts --destroy
 
 ## Storage Backend
 
-None (outputs not persisted)
+SOPS (encrypted YAML file)
 
 ## Architecture
 
@@ -56,5 +66,6 @@ packages/infra/
 │   └── types.ts            # Per-module TypeScript interfaces
 └── modules/
     ├── aws-secrets.ts
+    ├── database.ts
     ├── deployment.ts
 ```

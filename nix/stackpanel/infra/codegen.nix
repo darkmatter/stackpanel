@@ -33,6 +33,16 @@ let
   moduleIds = builtins.attrNames cfg.modules;
   sortedModuleIds = lib.sort (a: b: a < b) moduleIds;
 
+  modulePathIsDirectory =
+    id:
+    let
+      modPath = cfg.modules.${id}.path;
+    in
+    builtins.pathExists (modPath + "/index.ts");
+
+  moduleImportPath =
+    id: if modulePathIsDirectory id then "./modules/${id}/index.ts" else "./modules/${id}.ts";
+
   # ============================================================================
   # Module bunDeps handling
   #
@@ -66,9 +76,15 @@ let
         service = cfg.storage-backend.chamber.service;
       }
     else if cfg.storage-backend.type == "sops" then
+      let
+        secretsDir = config.stackpanel.secrets.secrets-dir or ".stackpanel/secrets";
+        group = cfg.storage-backend.sops.group;
+        resolvedPath = "${secretsDir}/vars/${group}.sops.yaml";
+      in
       {
         type = "sops";
-        filePath = cfg.storage-backend.sops.file-path;
+        filePath = resolvedPath;
+        inherit group;
       }
     else if cfg.storage-backend.type == "ssm" then
       {
@@ -202,6 +218,7 @@ let
   # Static resource files (no substitution needed)
   kmsKeyTs = builtins.readFile ./templates/kms-key.ts;
   kmsAliasTs = builtins.readFile ./templates/kms-alias.ts;
+  iamRoleTs = builtins.readFile ./templates/iam-role.ts;
 
   # ============================================================================
   # Generated: src/types.ts (per-module input interfaces)
@@ -243,7 +260,7 @@ let
         ''
           const ${
             builtins.replaceStrings [ "-" ] [ "_" ] id
-          }Outputs = (await import("./modules/${id}.ts")).default;
+          }Outputs = (await import("${moduleImportPath id}")).default;
         ''
       ) moduleIds;
 
@@ -432,15 +449,34 @@ let
   # ============================================================================
   # Module .ts file entries (copied from paths)
   # ============================================================================
-  moduleFileEntries = lib.mapAttrs' (
-    id: mod:
-    lib.nameValuePair "${outputDir}/modules/${id}.ts" {
-      text = builtins.readFile mod.path;
-      mode = "0644";
-      description = "Infra module: ${mod.name}";
-      source = "infra";
-    }
-  ) cfg.modules;
+  moduleFileEntries = lib.foldlAttrs (
+    acc: id: mod:
+    if modulePathIsDirectory id then
+      let
+        entries = builtins.readDir mod.path;
+        tsFiles = lib.filterAttrs (name: kind: kind == "regular" && lib.hasSuffix ".ts" name) entries;
+        copied = lib.mapAttrs' (
+          name: _kind:
+          lib.nameValuePair "${outputDir}/modules/${id}/${name}" {
+            text = builtins.readFile (mod.path + "/${name}");
+            mode = "0644";
+            description = "Infra module: ${mod.name} (${name})";
+            source = "infra";
+          }
+        ) tsFiles;
+      in
+      acc // copied
+    else
+      acc
+      // {
+        "${outputDir}/modules/${id}.ts" = {
+          text = builtins.readFile mod.path;
+          mode = "0644";
+          description = "Infra module: ${mod.name}";
+          source = "infra";
+        };
+      }
+  ) { } cfg.modules;
 
 in
 {
@@ -485,6 +521,13 @@ in
         text = kmsAliasTs;
         mode = "0644";
         description = "Custom KMS Alias alchemy resource";
+        source = "infra";
+      };
+
+      "${outputDir}/src/resources/iam-role.ts" = {
+        text = iamRoleTs;
+        mode = "0644";
+        description = "Custom IAM Role alchemy resource";
         source = "infra";
       };
 
@@ -770,7 +813,8 @@ in
         service = cfg.storage-backend.chamber.service;
       }
       // lib.optionalAttrs (cfg.storage-backend.type == "sops") {
-        file-path = cfg.storage-backend.sops.file-path;
+        file-path = storageBackendConfig.filePath;
+        group = cfg.storage-backend.sops.group;
       }
       // lib.optionalAttrs (cfg.storage-backend.type == "ssm") {
         prefix = cfg.storage-backend.ssm.prefix;
