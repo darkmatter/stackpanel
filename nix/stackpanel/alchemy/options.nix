@@ -6,12 +6,13 @@
 # Defines:
 #   - stackpanel.alchemy.enable
 #   - stackpanel.alchemy.version (npm version constraint)
-#   - stackpanel.alchemy.stateStore (provider, cloudflare, filesystem config)
-#   - stackpanel.alchemy.appName (default alchemy app name)
+#   - stackpanel.alchemy.state-store (provider, cloudflare, filesystem config)
+#   - stackpanel.alchemy.app-name (default alchemy app name)
 #   - stackpanel.alchemy.stage (default stage)
 #   - stackpanel.alchemy.package (generated @gen/alchemy config)
-#   - stackpanel.alchemy.secrets (ALCHEMY_STATE_TOKEN management)
+#   - stackpanel.alchemy.secrets (ALCHEMY_STATE_TOKEN + CLOUDFLARE_API_TOKEN management)
 #   - stackpanel.alchemy.helpers (which helpers to include in generated package)
+#   - stackpanel.alchemy.deploy (setup scripts, token provisioning, deploy wrapper)
 # ==============================================================================
 {
   lib,
@@ -45,7 +46,7 @@ in
     # ==========================================================================
     # State Store
     # ==========================================================================
-    stateStore = {
+    state-store = {
       provider = lib.mkOption {
         type = lib.types.enum [
           "cloudflare"
@@ -66,7 +67,7 @@ in
       };
 
       cloudflare = {
-        apiTokenEnvVar = lib.mkOption {
+        api-token-env-var = lib.mkOption {
           type = lib.types.str;
           default = "CLOUDFLARE_API_TOKEN";
           description = "Environment variable name for the Cloudflare API token";
@@ -85,7 +86,7 @@ in
     # ==========================================================================
     # App Defaults
     # ==========================================================================
-    appName = lib.mkOption {
+    app-name = lib.mkOption {
       type = lib.types.str;
       default = projectName;
       description = ''
@@ -142,19 +143,46 @@ in
     # Secrets
     # ==========================================================================
     secrets = {
-      stateTokenEnvVar = lib.mkOption {
+      state-token-env-var = lib.mkOption {
         type = lib.types.str;
         default = "ALCHEMY_STATE_TOKEN";
         description = "Environment variable name for the alchemy state store token";
       };
 
-      stateTokenSopsPath = lib.mkOption {
+      state-token-sops-path = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = ''
           SOPS reference path for the state token.
-          Example: "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/ALCHEMY_STATE_TOKEN"
+          Example: "ref+sops://.stackpanel/secrets/vars/common.sops.yaml#/alchemy-state-token"
           When set, the token is automatically injected into the devshell environment.
+        '';
+      };
+
+      cloudflare-token-env-var = lib.mkOption {
+        type = lib.types.str;
+        default = "CLOUDFLARE_API_TOKEN";
+        description = "Environment variable name for the Cloudflare API token";
+      };
+
+      cloudflare-token-sops-path = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          SOPS reference path for the Cloudflare API token.
+          Example: "ref+sops://.stackpanel/secrets/vars/common.sops.yaml#/cloudflare-api-token"
+          When set, the token is automatically injected into the devshell environment.
+        '';
+      };
+
+      sops-group = lib.mkOption {
+        type = lib.types.str;
+        default = "common";
+        description = ''
+          SOPS group to store alchemy tokens in.
+          "common" is encrypted to all group keys, so any team member with
+          access to any group can decrypt. Use a specific group (e.g. "dev")
+          to restrict access.
         '';
       };
     };
@@ -175,10 +203,70 @@ in
         description = "Include resolveBindings() helper for env var resolution with secret wrapping";
       };
 
-      computePort = lib.mkOption {
+      compute-port = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Include computeProjectPort() helper (mirrors Nix mkProjectPort)";
+      };
+    };
+
+    # ==========================================================================
+    # Deploy - setup scripts, token provisioning, deploy wrapper
+    # ==========================================================================
+    deploy = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Enable deploy scripts (alchemy:setup, deploy).
+
+          When enabled, registers:
+            - alchemy:setup: Interactive Cloudflare authentication and token provisioning
+            - deploy: Smart deploy wrapper that auto-runs setup if needed
+
+          The setup flow uses alchemy's OAuth to authenticate, creates a
+          properly-scoped API token via `alchemy util create-cloudflare-token`,
+          generates an ALCHEMY_STATE_TOKEN, stores both in the secrets module,
+          and bootstraps the CloudflareStateStore worker.
+        '';
+      };
+
+      auto-provision-state-store = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Automatically provision the CloudflareStateStore worker during setup.
+
+          After creating tokens, runs a bootstrap alchemy deploy that uses
+          filesystem state to deploy the alchemy-state-service Cloudflare Worker.
+          This solves the chicken-and-egg problem: subsequent deploys can use
+          CloudflareStateStore because the worker already exists.
+        '';
+      };
+
+      token-scopes = lib.mkOption {
+        type = lib.types.enum [
+          "profile"
+          "god"
+        ];
+        default = "profile";
+        description = ''
+          How to scope the generated Cloudflare API token.
+
+          - profile: Create a token mirroring the OAuth scopes from the alchemy
+            profile. This is the principle of least privilege.
+          - god: Create a token with full write access to everything. Simpler
+            but overly permissive. Use only for personal projects.
+        '';
+      };
+
+      run-file = lib.mkOption {
+        type = lib.types.str;
+        default = "alchemy.run.ts";
+        description = ''
+          Path to the main alchemy.run.ts file (relative to project root).
+          Used by the deploy wrapper to invoke alchemy deploy.
+        '';
       };
     };
   };

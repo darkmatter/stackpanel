@@ -7,12 +7,14 @@
 #   - src/index.ts       (createApp factory, re-exports)
 #   - src/state-store.ts (state store provider factory)
 #   - src/helpers.ts     (shared utilities: SSM, bindings, port computation)
+#   - bootstrap.run.ts   (state store bootstrap, if deploy enabled)
 #   - package.json       (via turbo.packages)
 #   - tsconfig.json
 #
 # Also:
 #   - Registers .alchemy in .gitignore
-#   - Sets ALCHEMY_STATE_TOKEN env var if sopsPath is configured
+#   - Sets ALCHEMY_STATE_TOKEN + CLOUDFLARE_API_TOKEN env vars if sops-path configured
+#   - Registers alchemy:setup and deploy scripts (if deploy enabled)
 #   - Registers as a stackpanel module for UI
 #   - Serializes config for the agent
 # ==============================================================================
@@ -23,24 +25,26 @@
 }:
 let
   cfg = config.stackpanel.alchemy;
+  deployCfg = cfg.deploy;
   outputDir = cfg.package.output-dir;
 
   # ============================================================================
   # Template processing: src/index.ts
   # ============================================================================
   indexTemplate = builtins.readFile ./templates/index.tmpl.ts;
-  indexTs = builtins.replaceStrings
-    [
-      "__APP_NAME__"
-      "__STATE_STORE_PROVIDER__"
-      "__CF_API_TOKEN_ENV_VAR__"
-    ]
-    [
-      cfg.appName
-      cfg.stateStore.provider
-      cfg.stateStore.cloudflare.apiTokenEnvVar
-    ]
-    indexTemplate;
+  indexTs =
+    builtins.replaceStrings
+      [
+        "__APP_NAME__"
+        "__STATE_STORE_PROVIDER__"
+        "__CF_API_TOKEN_ENV_VAR__"
+      ]
+      [
+        cfg.app-name
+        cfg.state-store.provider
+        cfg.state-store.cloudflare.api-token-env-var
+      ]
+      indexTemplate;
 
   # ============================================================================
   # Template processing: src/state-store.ts
@@ -130,7 +134,7 @@ let
       "";
 
   computePortHelper =
-    if cfg.helpers.computePort then
+    if cfg.helpers.compute-port then
       ''
         /**
          * Compute a stable port from a project name.
@@ -162,27 +166,90 @@ let
     else
       "";
 
-  # Build the helpers imports line (only crypto if computePort is enabled)
-  helperImports =
-    if cfg.helpers.computePort then
-      ""
-    else
-      "";
+  # Build the helpers imports line (only crypto if compute-port is enabled)
+  helperImports = if cfg.helpers.compute-port then "" else "";
 
-  helpersTs = builtins.replaceStrings
-    [
-      "__HELPER_IMPORTS__"
-      "__SSM_HELPER__"
-      "__BINDINGS_HELPER__"
-      "__COMPUTE_PORT_HELPER__"
-    ]
-    [
-      helperImports
-      ssmHelper
-      bindingsHelper
-      computePortHelper
-    ]
-    helpersTemplate;
+  helpersTs =
+    builtins.replaceStrings
+      [
+        "__HELPER_IMPORTS__"
+        "__SSM_HELPER__"
+        "__BINDINGS_HELPER__"
+        "__COMPUTE_PORT_HELPER__"
+      ]
+      [
+        helperImports
+        ssmHelper
+        bindingsHelper
+        computePortHelper
+      ]
+      helpersTemplate;
+
+  # ============================================================================
+  # Template processing: bootstrap.run.ts (deploy)
+  # ============================================================================
+  bootstrapTemplate = builtins.readFile ./templates/bootstrap.tmpl.ts;
+  bootstrapTs =
+    builtins.replaceStrings
+      [
+        "__APP_NAME__"
+        "__CF_API_TOKEN_ENV_VAR__"
+        "__STATE_TOKEN_ENV_VAR__"
+      ]
+      [
+        cfg.app-name
+        cfg.secrets.cloudflare-token-env-var
+        cfg.secrets.state-token-env-var
+      ]
+      bootstrapTemplate;
+
+  bootstrapFile = "${outputDir}/bootstrap.run.ts";
+
+  # ============================================================================
+  # Template processing: setup script (deploy)
+  # ============================================================================
+  setupTemplate = builtins.readFile ./templates/setup.tmpl.sh;
+  setupSh =
+    builtins.replaceStrings
+      [
+        "__APP_NAME__"
+        "__SOPS_GROUP__"
+        "__CF_TOKEN_ENV_VAR__"
+        "__STATE_TOKEN_ENV_VAR__"
+        "__TOKEN_SCOPES__"
+        "__AUTO_PROVISION__"
+        "__BOOTSTRAP_FILE__"
+      ]
+      [
+        cfg.app-name
+        cfg.secrets.sops-group
+        cfg.secrets.cloudflare-token-env-var
+        cfg.secrets.state-token-env-var
+        deployCfg.token-scopes
+        (if deployCfg.auto-provision-state-store then "true" else "false")
+        bootstrapFile
+      ]
+      setupTemplate;
+
+  # ============================================================================
+  # Template processing: deploy wrapper (deploy)
+  # ============================================================================
+  deployTemplate = builtins.readFile ./templates/deploy.tmpl.sh;
+  deploySh =
+    builtins.replaceStrings
+      [
+        "__CF_TOKEN_ENV_VAR__"
+        "__STATE_TOKEN_ENV_VAR__"
+        "__ALCHEMY_RUN_FILE__"
+        "__STATE_PROVIDER__"
+      ]
+      [
+        cfg.secrets.cloudflare-token-env-var
+        cfg.secrets.state-token-env-var
+        deployCfg.run-file
+        cfg.state-store.provider
+      ]
+      deployTemplate;
 
   # ============================================================================
   # tsconfig.json
@@ -216,12 +283,17 @@ let
     alchemy = "catalog:";
   };
 
-  helperDeps =
-    lib.optionalAttrs cfg.helpers.ssm {
-      "@aws-sdk/client-ssm" = "catalog:";
-    };
+  helperDeps = lib.optionalAttrs cfg.helpers.ssm {
+    "@aws-sdk/client-ssm" = "catalog:";
+  };
 
   allDeps = baseDeps // helperDeps // cfg.package.extra-dependencies;
+
+  # ============================================================================
+  # Flags for conditional features
+  # ============================================================================
+  hasSecrets =
+    cfg.secrets.state-token-sops-path != null || cfg.secrets.cloudflare-token-sops-path != null;
 
 in
 {
@@ -262,6 +334,20 @@ in
         description = "TypeScript configuration for @gen/alchemy";
         source = "alchemy";
       };
+
+      # .gitignore
+      ".gitignore".lines = [
+        ".alchemy"
+      ];
+    }
+    # Bootstrap file (generated when deploy is enabled with auto-provision)
+    // lib.optionalAttrs (deployCfg.enable && deployCfg.auto-provision-state-store) {
+      "${bootstrapFile}" = {
+        text = bootstrapTs;
+        mode = "0644";
+        description = "Alchemy state store bootstrap (uses filesystem state to provision CF worker)";
+        source = "alchemy";
+      };
     };
 
     # ==========================================================================
@@ -278,22 +364,73 @@ in
         "./*" = {
           default = "./src/*.ts";
         };
-      } // cfg.package.extra-exports;
+      }
+      // cfg.package.extra-exports;
     };
-
-    # ==========================================================================
-    # .gitignore entries
-    # ==========================================================================
-    stackpanel.files.entries.".gitignore".lines = [
-      ".alchemy"
-    ];
 
     # ==========================================================================
     # Devshell environment
+    #
+    # Wire SOPS-stored tokens to env vars so they're auto-loaded on shell entry.
     # ==========================================================================
-    stackpanel.devshell.env = lib.optionalAttrs (cfg.secrets.stateTokenSopsPath != null) {
-      ${cfg.secrets.stateTokenEnvVar} = cfg.secrets.stateTokenSopsPath;
+    stackpanel.devshell.env =
+      lib.optionalAttrs (cfg.secrets.state-token-sops-path != null) {
+        ${cfg.secrets.state-token-env-var} = cfg.secrets.state-token-sops-path;
+      }
+      // lib.optionalAttrs (cfg.secrets.cloudflare-token-sops-path != null) {
+        ${cfg.secrets.cloudflare-token-env-var} = cfg.secrets.cloudflare-token-sops-path;
+      };
+
+    # ==========================================================================
+    # Deploy scripts
+    # ==========================================================================
+    stackpanel.scripts = lib.mkIf deployCfg.enable {
+      "alchemy:setup" = {
+        exec = setupSh;
+        description = "One-time Cloudflare deployment setup (OAuth, token creation, secrets)";
+        args = [
+          {
+            name = "--force";
+            description = "Re-run setup even if tokens already exist";
+          }
+          {
+            name = "--skip-secrets";
+            description = "Print tokens to stdout instead of storing in SOPS";
+          }
+        ];
+      };
+
+      "deploy" = {
+        exec = deploySh;
+        description = "Deploy via alchemy (auto-runs setup if Cloudflare is not configured)";
+        args = [
+          {
+            name = "stage";
+            description = "Deployment stage (default: $USER)";
+          }
+          {
+            name = "...";
+            description = "Additional alchemy deploy arguments (after --)";
+          }
+        ];
+      };
     };
+
+    # ==========================================================================
+    # MOTD
+    # ==========================================================================
+    stackpanel.motd.commands = lib.mkIf deployCfg.enable [
+      {
+        name = "deploy <stage>";
+        description = "Deploy to Cloudflare";
+      }
+      {
+        name = "alchemy:setup";
+        description = "Configure Cloudflare tokens";
+      }
+    ];
+
+    stackpanel.motd.features = [ "Alchemy IaC" ] ++ lib.optional deployCfg.enable "Cloudflare deploy";
 
     # ==========================================================================
     # Stackpanel module registration
@@ -302,7 +439,7 @@ in
       enable = true;
       meta = {
         name = "Alchemy";
-        description = "Shared Alchemy IaC configuration and helpers (@gen/alchemy)";
+        description = "Shared Alchemy IaC configuration, deploy scripts, and helpers (@gen/alchemy)";
         icon = "flask-conical";
         category = "infrastructure";
         author = "Stackpanel";
@@ -311,11 +448,11 @@ in
       source.type = "builtin";
       features = {
         files = true;
-        scripts = false;
+        scripts = deployCfg.enable;
         packages = false;
         healthchecks = false;
         services = false;
-        secrets = cfg.secrets.stateTokenSopsPath != null;
+        secrets = hasSecrets;
         tasks = false;
         appModule = false;
       };
@@ -324,6 +461,8 @@ in
         "alchemy"
         "iac"
         "codegen"
+        "cloudflare"
+        "deploy"
       ];
       priority = 10; # Load very early -- other modules depend on alchemy config
     };
@@ -332,15 +471,33 @@ in
     # Agent serialization
     # ==========================================================================
     stackpanel.serializable.alchemy = {
-      inherit (cfg) enable version appName stage;
-      stateStore = {
-        inherit (cfg.stateStore) provider;
+      inherit (cfg)
+        enable
+        version
+        app-name
+        stage
+        ;
+      state-store = {
+        inherit (cfg.state-store) provider;
       };
       package = {
         inherit (cfg.package) name output-dir;
       };
       helpers = {
-        inherit (cfg.helpers) ssm bindings computePort;
+        inherit (cfg.helpers) ssm bindings compute-port;
+      };
+      deploy = {
+        inherit (deployCfg)
+          enable
+          token-scopes
+          run-file
+          auto-provision-state-store
+          ;
+      };
+      secrets = {
+        inherit (cfg.secrets) sops-group;
+        has-cloudflare-token = cfg.secrets.cloudflare-token-sops-path != null;
+        has-state-token = cfg.secrets.state-token-sops-path != null;
       };
     };
   };

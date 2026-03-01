@@ -21,8 +21,9 @@
 #   };
 #
 # Other modules consume this via:
-#   config.stackpanel.alchemy.version     (npm version)
-#   config.stackpanel.alchemy.package.*   (generated package config)
+#   config.stackpanel.alchemy.version      (npm version)
+#   config.stackpanel.alchemy.package.*    (generated package config)
+#   config.stackpanel.alchemy.deploy.*     (setup + deploy scripts)
 #   @gen/alchemy                          (TypeScript import)
 # ==============================================================================
 { ... }:

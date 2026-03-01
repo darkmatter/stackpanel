@@ -688,11 +688,179 @@ in
     # Shell scripts
     # ==========================================================================
     stackpanel.scripts = {
+      "infra:new-module" = {
+        exec = ''
+          MODULE_ID="''${1:?Usage: infra:new-module <module-id>}"
+
+          # Validate module ID
+          if ! echo "$MODULE_ID" | grep -qE '^[a-z][a-z0-9-]*$'; then
+            echo "Error: Module ID must be lowercase alphanumeric with hyphens (e.g., my-module)"
+            exit 1
+          fi
+
+          MODULE_DIR="nix/stackpanel/infra/modules/$MODULE_ID"
+          if [ -d "$MODULE_DIR" ]; then
+            echo "Error: Module directory $MODULE_DIR already exists"
+            exit 1
+          fi
+
+          MODULE_NAME=$(echo "$MODULE_ID" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)} 1')
+
+          echo "Creating infra module: $MODULE_ID ($MODULE_NAME)"
+          mkdir -p "$MODULE_DIR"
+
+          # Generate module.nix
+          cat > "$MODULE_DIR/module.nix" << 'NIXEOF'
+          # ==============================================================================
+          # infra/modules/MODULE_ID/module.nix
+          # ==============================================================================
+          {
+            lib,
+            config,
+            ...
+          }:
+          let
+            cfg = config.stackpanel.infra.MODULE_ID;
+          in
+          {
+            options.stackpanel.infra.MODULE_ID = {
+              enable = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Enable MODULE_NAME provisioning.";
+              };
+
+              # Add your module options here. Example:
+              # region = lib.mkOption {
+              #   type = lib.types.str;
+              #   default = "us-east-1";
+              #   description = "AWS region.";
+              # };
+            };
+
+            config = lib.mkIf cfg.enable {
+              stackpanel.infra.enable = lib.mkDefault true;
+
+              stackpanel.infra.modules.MODULE_ID = {
+                name = "MODULE_NAME";
+                description = "MODULE_NAME infrastructure provisioning";
+                path = ./index.ts;
+
+                # Nix values serialized to JSON and available at runtime
+                # via infra.inputs() in the TypeScript file.
+                inputs = {
+                  # Add your input values here. Example:
+                  # region = cfg.region;
+                };
+
+                # NPM packages required by the TypeScript implementation.
+                dependencies = {
+                  # "@aws-sdk/client-s3" = "catalog:";
+                };
+
+                # Outputs the TypeScript module's default export must provide.
+                # Keys with sync=true are written to the storage backend.
+                outputs = {
+                  # exampleArn = {
+                  #   description = "ARN of the provisioned resource";
+                  #   sensitive = false;
+                  #   sync = true;
+                  # };
+                };
+              };
+            };
+          }
+          NIXEOF
+
+          # Replace placeholders
+          sed -i "" "s/MODULE_ID/$MODULE_ID/g" "$MODULE_DIR/module.nix"
+          sed -i "" "s/MODULE_NAME/$MODULE_NAME/g" "$MODULE_DIR/module.nix"
+
+          # Generate index.ts
+          cat > "$MODULE_DIR/index.ts" << 'TSEOF'
+          // ==============================================================================
+          // MODULE_NAME Infra Module
+          //
+          // This module is executed by `infra:deploy` via Alchemy.
+          //
+          // The default export must be a Record<string, string> matching the output
+          // keys declared in module.nix.
+          // ==============================================================================
+          import Infra from "@stackpanel/infra";
+
+          // Typed inputs — define an interface matching your module.nix inputs.
+          interface Inputs {
+            // region: string;
+          }
+
+          const infra = new Infra("MODULE_ID");
+          const inputs = infra.inputs<Inputs>(
+            process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES,
+          );
+
+          // ---------------------------------------------------------------------------
+          // Provision resources here.
+          //
+          // Use Alchemy resources or AWS SDK clients:
+          //
+          //   import { SomeResource } from "@stackpanel/infra/resources/some-resource";
+          //   const resource = await SomeResource(infra.id("my-resource"), { ... });
+          //
+          // Or use alchemy built-in resources:
+          //
+          //   import { Role } from "alchemy/aws";
+          //   const role = await Role(infra.id("role"), { roleName: "...", ... });
+          //
+          // ---------------------------------------------------------------------------
+
+          // Export outputs matching the keys in module.nix outputs.
+          export default {
+            // exampleArn: resource.arn,
+          };
+          TSEOF
+
+          sed -i "" "s/MODULE_ID/$MODULE_ID/g" "$MODULE_DIR/index.ts"
+          sed -i "" "s/MODULE_NAME/$MODULE_NAME/g" "$MODULE_DIR/index.ts"
+
+          # Trim leading whitespace from heredoc indentation
+          sed -i "" 's/^          //' "$MODULE_DIR/module.nix"
+          sed -i "" 's/^          //' "$MODULE_DIR/index.ts"
+
+          echo ""
+          echo "Created:"
+          echo "  $MODULE_DIR/module.nix  — Nix options and module registration"
+          echo "  $MODULE_DIR/index.ts    — TypeScript Alchemy implementation"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Add your options to module.nix"
+          echo "  2. Implement provisioning logic in index.ts"
+          echo "  3. Import the module in nix/stackpanel/infra/default.nix:"
+          echo "       ./modules/$MODULE_ID/module.nix"
+          echo "  4. Enable in .stackpanel/config.nix:"
+          echo "       stackpanel.infra.$MODULE_ID.enable = true;"
+          echo "  5. Run: infra:deploy"
+        '';
+        description = "Scaffold a new infra module";
+        args = [
+          {
+            name = "<module-id>";
+            description = "Module identifier (lowercase, hyphens, e.g., my-s3-buckets)";
+          }
+        ];
+      };
+
       "infra:deploy" = {
         exec = ''
+          ${lib.optionalString (config.stackpanel.aws-vault.enable or false) ''
+            # Use aws-vault with profile fallback if enabled
+            if [ -n "${lib.concatStringsSep " " (config.stackpanel.aws-vault.profiles or [])}" ]; then
+              echo "Using aws-vault with multi-profile fallback" >&2
+              # aws wrapper is already configured with multi-profile support
+            fi
+          ''}
           cd "${outputDir}" && bunx alchemy deploy "$@"
         '';
-        description = "Deploy infrastructure via alchemy";
+        description = "Deploy infrastructure via alchemy (aws-vault integration if enabled)";
         args = [
           {
             name = "--stage";
@@ -707,9 +875,16 @@ in
 
       "infra:destroy" = {
         exec = ''
+          ${lib.optionalString (config.stackpanel.aws-vault.enable or false) ''
+            # Use aws-vault with profile fallback if enabled
+            if [ -n "${lib.concatStringsSep " " (config.stackpanel.aws-vault.profiles or [])}" ]; then
+              echo "Using aws-vault with multi-profile fallback" >&2
+              # aws wrapper is already configured with multi-profile support
+            fi
+          ''}
           cd "${outputDir}" && bunx alchemy destroy "$@"
         '';
-        description = "Destroy infrastructure via alchemy";
+        description = "Destroy infrastructure via alchemy (aws-vault integration if enabled)";
         args = [
           {
             name = "--stage";
