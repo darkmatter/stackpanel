@@ -22,7 +22,8 @@
 # │                                                                             │
 # │  3. Categorize it in STEP 2 below (dataSchemas, rootSchemas, etc.)          │
 # │                                                                             │
-# │  4. Run `nix run .#generate-protos` to regenerate Go/TS types               │
+# │  4. Run `nix develop --impure -c ./packages/proto/generate.sh`              │
+# │     to regenerate Go/TS types                                               │
 # │                                                                             │
 # │  Options are auto-generated via mkSchemaBundle. Access via db.extend.*      │
 # └─────────────────────────────────────────────────────────────────────────────┘

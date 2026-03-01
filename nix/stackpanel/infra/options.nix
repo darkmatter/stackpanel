@@ -285,7 +285,7 @@ in
     # Outputs stub (cross-resource references)
     # ==========================================================================
     outputs = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+      type = lib.types.attrsOf (lib.types.attrsOf lib.types.anything);
       default = { };
       description = ''
         Infrastructure outputs from the last deployment.
@@ -294,6 +294,23 @@ in
         Populated by running `infra:pull-outputs` after deployment,
         which reads from the storage backend and writes to
         .stackpanel/data/infra-outputs.nix.
+
+        Outputs are typically strings, but may include structured values
+        (e.g., machine inventories) when modules emit complex outputs.
+
+        Machine inventories are expected at:
+          config.stackpanel.infra.outputs.machines.machines
+
+        Suggested shape:
+          machines = {
+            web-1 = {
+              host = "web-1.example.com";
+              ssh = { user = "root"; port = 22; };
+              roles = [ "web" ];
+              tags = [ "prod" ];
+              arch = "x86_64-linux";
+            };
+          };
 
         Example usage in other Nix modules:
           config.stackpanel.infra.outputs.aws-secrets.roleArn

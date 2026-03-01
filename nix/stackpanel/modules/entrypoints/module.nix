@@ -35,7 +35,8 @@ let
   # Variables backend config
   variablesBackend = cfg.secrets.backend or "vals";
   isChamber = variablesBackend == "chamber";
-  chamberServicePrefix = if isChamber then (cfg.secrets.chamber.service-prefix or cfg.name or "stackpanel") else "";
+  chamberServicePrefix =
+    if isChamber then (cfg.secrets.chamber.service-prefix or cfg.name or "stackpanel") else "";
 
   # Get master keys config for secrets loading (use empty default to avoid recursion)
   secretsCfg = cfg.secrets or { };
@@ -50,10 +51,11 @@ let
 
   # Generate entrypoint shell script for an app
   # NOTE: This function is called lazily inside mkIf, so it's safe to access app options
-  # 
+  #
   # IMPORTANT: Entrypoints ONLY set up environment variables. They do NOT run commands.
   # The caller should source this script, then run their command.
-  generateEntrypointSh = name: app:
+  generateEntrypointSh =
+    name: app:
     let
       appPath = app.path or "apps/${name}";
     in
@@ -73,43 +75,43 @@ let
       # Or inline:
       #   source packages/scripts/entrypoints/${name}.sh --dev && bun run dev
       # ==============================================================================
-      
+
       # Prevent execution - this script should only be sourced
       if [[ "''${BASH_SOURCE[0]}" == "''${0}" ]]; then
         echo "[ERROR] This script should be sourced, not executed directly." >&2
         echo "Usage: source $0 [--dev] [--env <env>] [--no-secrets]" >&2
         exit 1
       fi
-      
+
       # Find script directory and source common library
       _ENTRYPOINT_SCRIPT_DIR="$(cd "$(dirname "''${BASH_SOURCE[0]}")" && pwd)"
       _ENTRYPOINT_LIB_DIR="$(dirname "$_ENTRYPOINT_SCRIPT_DIR")/lib"
-      
+
       if [[ -f "$_ENTRYPOINT_LIB_DIR/common.sh" ]]; then
         source "$_ENTRYPOINT_LIB_DIR/common.sh"
       else
         echo "[ERROR] Could not find common.sh at $_ENTRYPOINT_LIB_DIR/common.sh" >&2
         return 1
       fi
-      
+
       # ==============================================================================
       # App Configuration (from Nix)
       # ==============================================================================
-      
+
       export STACKPANEL_APP_NAME="${name}"
       export STACKPANEL_APP_PATH="${appPath}"
       export STACKPANEL_VARIABLES_BACKEND="${variablesBackend}"
       ${if isChamber then ''export STACKPANEL_CHAMBER_SERVICE_PREFIX="${chamberServicePrefix}"'' else ""}
       export STACKPANEL_MASTER_KEYS='${masterKeysJson}'
-      
+
       # ==============================================================================
       # Argument Parsing
       # ==============================================================================
-      
+
       _ENTRYPOINT_DEV_MODE=false
       _ENTRYPOINT_ENVIRONMENT=""
       _ENTRYPOINT_SKIP_SECRETS=false
-      
+
       while [[ $# -gt 0 ]]; do
         case "$1" in
           --dev)
@@ -130,7 +132,7 @@ let
             ;;
         esac
       done
-      
+
       # Set default environment
       if [[ -z "$_ENTRYPOINT_ENVIRONMENT" ]]; then
         if [[ "$_ENTRYPOINT_DEV_MODE" == "true" ]]; then
@@ -139,38 +141,38 @@ let
           _ENTRYPOINT_ENVIRONMENT="prod"
         fi
       fi
-      
+
       # Export environment for downstream use
       export STACKPANEL_ENVIRONMENT="$_ENTRYPOINT_ENVIRONMENT"
       export STACKPANEL_DEV_MODE="$_ENTRYPOINT_DEV_MODE"
-      
+
       log_debug "Entrypoint: ${name}"
       log_debug "Environment: $_ENTRYPOINT_ENVIRONMENT"
       log_debug "Dev mode: $_ENTRYPOINT_DEV_MODE"
-      
+
       # ==============================================================================
       # Environment Setup
       # ==============================================================================
-      
+
       _ENTRYPOINT_PROJECT_ROOT=$(find_project_root) || { log_error "Could not find project root"; return 1; }
       export STACKPANEL_PROJECT_ROOT="$_ENTRYPOINT_PROJECT_ROOT"
-      
+
       # Dev mode: ensure devshell environment
       if [[ "$_ENTRYPOINT_DEV_MODE" == "true" ]]; then
         ensure_devshell || { log_error "Failed to set up devshell"; return 1; }
       fi
-      
+
       # Load secrets (unless skipped)
       if [[ "$_ENTRYPOINT_SKIP_SECRETS" != "true" ]] && [[ "''${STACKPANEL_NO_SECRETS:-}" != "1" ]]; then
         load_secrets "$STACKPANEL_APP_NAME" "$_ENTRYPOINT_ENVIRONMENT" || log_warn "Secrets loading failed, continuing anyway"
       fi
-      
+
       # ==============================================================================
       # Done - environment is now set up
       # ==============================================================================
-      
+
       log_debug "Entrypoint complete - environment ready for ${name}"
-      
+
       # Clean up internal variables (keep exported ones)
       unset _ENTRYPOINT_SCRIPT_DIR _ENTRYPOINT_LIB_DIR
       unset _ENTRYPOINT_DEV_MODE _ENTRYPOINT_ENVIRONMENT _ENTRYPOINT_SKIP_SECRETS
@@ -178,20 +180,22 @@ let
     '';
 
   # Entrypoint options submodule - defined at top level
-  entrypointModule = { lib, ... }: {
-    options = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Whether to generate an entrypoint for this app.
-          
-          Entrypoints only set up environment variables (devshell, secrets).
-          They do NOT run commands - the caller is responsible for that.
-        '';
+  entrypointModule =
+    { lib, ... }:
+    {
+      options = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Whether to generate an entrypoint for this app.
+
+            Entrypoints only set up environment variables (devshell, secrets).
+            They do NOT run commands - the caller is responsible for that.
+          '';
+        };
       };
     };
-  };
 
 in
 {
@@ -202,27 +206,30 @@ in
     # Add entrypoint option to all apps via appModules
     {
       stackpanel.appModules = [
-        ({ lib, ... }: {
-          options.entrypoint = lib.mkOption {
-            type = lib.types.submodule entrypointModule;
-            default = { };
-            description = ''
-              Entrypoint configuration for this app.
-              
-              When enabled (default), generates a sourceable shell script at
-              packages/scripts/entrypoints/<app>.sh that:
-              - Auto-sources devshell in --dev mode
-              - Loads secrets for the appropriate environment
-              - Exports environment variables
-              
-              IMPORTANT: Entrypoints ONLY set up environment. They do NOT run
-              commands. Source the script, then run your command:
-              
-                source packages/scripts/entrypoints/<app>.sh --dev
-                bun run dev
-            '';
-          };
-        })
+        (
+          { lib, ... }:
+          {
+            options.entrypoint = lib.mkOption {
+              type = lib.types.submodule entrypointModule;
+              default = { };
+              description = ''
+                Entrypoint configuration for this app.
+
+                When enabled (default), generates a sourceable shell script at
+                packages/scripts/entrypoints/<app>.sh that:
+                - Auto-sources devshell in --dev mode
+                - Loads secrets for the appropriate environment
+                - Exports environment variables
+
+                IMPORTANT: Entrypoints ONLY set up environment. They do NOT run
+                commands. Source the script, then run your command:
+
+                  source packages/scripts/entrypoints/<app>.sh --dev
+                  bun run dev
+              '';
+            };
+          }
+        )
       ];
     }
 
@@ -234,14 +241,10 @@ in
         # Filter apps that have entrypoints enabled
         # Only check for 'path' attribute which is user-defined (not via appModules)
         # The entrypoint.enable check is done lazily in the filter function
-        appsWithPaths = lib.filterAttrs (
-          name: app: (app.path or null) != null
-        ) cfg.apps;
-        
+        appsWithPaths = lib.filterAttrs (name: app: (app.path or null) != null) cfg.apps;
+
         # Further filter by entrypoint.enable (now safe since we're inside mkMerge)
-        appsWithEntrypoints = lib.filterAttrs (
-          name: app: (app.entrypoint.enable or true)
-        ) appsWithPaths;
+        appsWithEntrypoints = lib.filterAttrs (name: app: (app.entrypoint.enable or true)) appsWithPaths;
 
         hasApps = appsWithEntrypoints != { };
       in
@@ -251,7 +254,7 @@ in
           lib.mapAttrsToList (name: app: {
             "packages/scripts/entrypoints/${name}.sh" = {
               type = "text";
-              mode = "0755";  # executable
+              mode = "0755"; # executable
               text = generateEntrypointSh name app;
               source = meta.id;
               description = "Entrypoint script for ${name}";
@@ -283,6 +286,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
         };

@@ -26,5 +26,12 @@
     ./modules/deployment/module.nix
     ./modules/database/module.nix
     ./modules/cache/module.nix
+    ./modules/machines/module.nix
+    ./modules/aws-network/module.nix
+    ./modules/aws-security-groups/module.nix
+    ./modules/aws-key-pairs/module.nix
+    ./modules/aws-iam/module.nix
+    ./modules/aws-ec2/module.nix
+    ./modules/aws-ec2-app/module.nix
   ];
 }

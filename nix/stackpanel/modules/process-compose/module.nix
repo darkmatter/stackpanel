@@ -52,7 +52,8 @@ let
 
   # Generate command that sources entrypoint (if available) then runs the actual command
   # Entrypoints ONLY set up environment (secrets, devshell). They do NOT run commands.
-  mkDefaultCommand = name: app: taskKey:
+  mkDefaultCommand =
+    name: app: taskKey:
     let
       appPath = app.path or name;
       entrypointScript = "${entrypointsDir}/${name}.sh";
@@ -552,11 +553,9 @@ in
 
       # Default environment with ports and devshell env vars
       # Merge devshell.env so services like postgres provide DATABASE_URL to processes
-      stackpanel.process-compose.environment =
-        (cfg.devshell.env or {})
-        // {
-          STACKPANEL_PORTS = builtins.toJSON (cfg.ports or { });
-        };
+      stackpanel.process-compose.environment = (cfg.devshell.env or { }) // {
+        STACKPANEL_PORTS = builtins.toJSON (cfg.ports or { });
+      };
     })
 
     # When process-compose is enabled, build wrapper and add to devshell
@@ -564,11 +563,7 @@ in
       let
         # Resolve port: explicit config > computed from base port + fixed offset
         # Uses base-port + 90 to avoid hash collisions with other services
-        resolvedPort =
-          if pcCfg.port != null then
-            pcCfg.port
-          else
-            cfg.ports.base-port + 90;
+        resolvedPort = if pcCfg.port != null then pcCfg.port else cfg.ports.base-port + 90;
 
         configFile = mkConfigFile {
           commandName = pcCfg.commandName;
@@ -616,6 +611,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
         };
