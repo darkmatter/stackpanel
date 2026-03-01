@@ -136,6 +136,7 @@ When creating or modifying Nix modules in `nix/stackpanel/`:
 4. **File generation via `stackpanel.files.entries`** - See nix-templating.md for patterns
 5. **Library functions go in `nix/stackpanel/lib/`** - Keep modules focused on options/config
 6. **Follow the module convention** - Each module gets `default.nix`, `module.nix`, `ui.nix`, `meta.nix` (see `nix/stackpanel/modules/_template/`)
+7. **Wire `flakeInputs` in module registration** - Every `module.nix` that registers via `stackpanel.modules.${meta.id}` must include `flakeInputs = meta.flakeInputs or [];`. This enables the missing flake inputs detection pipeline (see architecture.md). If the module requires a flake input, declare it in `meta.nix` under `flakeInputs`.
 
 ## YAML Configuration
 
