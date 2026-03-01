@@ -132,6 +132,7 @@ devenv.local.yaml
 .stackpanel/secrets/state/
 .stackpanel/secrets/vars/.sops.yaml
 .stackpanel/state/
+.tasks
 /.devenv*
 /.devenv-root
 /.stackpanel/state
