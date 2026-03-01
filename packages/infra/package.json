@@ -1,6 +1,8 @@
 {
   "dependencies": {
     "@aws-sdk/client-ec2": "catalog:",
+    "@aws-sdk/client-ecr": "catalog:",
+    "@aws-sdk/client-elastic-load-balancing-v2": "catalog:",
     "@aws-sdk/client-iam": "catalog:",
     "@aws-sdk/client-kms": "catalog:",
     "@aws-sdk/client-ssm": "catalog:",

@@ -7,6 +7,22 @@ Infrastructure-as-code package for **stackpanel**, powered by [Alchemy](https://
 
 ## Modules (4)
 
+### AWS EC2 Apps (`aws-ec2-app`)
+
+Provision EC2 instances for apps and emit machine inventory
+
+Dependencies: `@aws-sdk/client-ec2`, `@aws-sdk/client-ecr`, `@aws-sdk/client-elastic-load-balancing-v2`, `@aws-sdk/client-iam`, `@aws-sdk/client-ssm`, `@aws-sdk/client-sts`
+
+**Outputs:**
+  - `albOutputs` — ALB outputs per app (JSON) *(synced)*
+  - `ecrOutputs` — ECR outputs per app (JSON) *(synced)*
+  - `instanceIds` — Instance IDs (JSON) *(synced)*
+  - `machines` — Machine inventory (JSON) *(synced)*
+  - `privateIps` — Instance private IPs (JSON) *(synced)*
+  - `publicDns` — Instance public DNS (JSON) *(synced)*
+  - `publicIps` — Instance public IPs (JSON) *(synced)*
+  - `ssmOutputs` — SSM outputs per app (JSON) *(synced)*
+
 ### AWS Secrets Infrastructure (`aws-secrets`)
 
 OIDC provider, IAM role, and KMS key for secrets management
@@ -30,14 +46,6 @@ Dependencies: `alchemy`
 **Outputs:**
   - `databaseUrl` — PostgreSQL connection URL *(synced)*
   - `provider` — Active database provider (neon, devenv, docker) *(synced)*
-
-### App Deployment (`deployment`)
-
-Deploys apps to their configured hosts (fly)
-
-
-**Outputs:**
-  - `webUrl` — Deployed URL for web *(synced)*
 
 ### Machine Inventory (`machines`)
 
@@ -74,8 +82,8 @@ packages/infra/
 │   ├── index.ts            # Infra class (input resolution, output sync)
 │   └── types.ts            # Per-module TypeScript interfaces
 └── modules/
+    ├── aws-ec2-app.ts
     ├── aws-secrets.ts
     ├── database.ts
-    ├── deployment.ts
     ├── machines.ts
 ```
