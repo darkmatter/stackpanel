@@ -274,7 +274,7 @@ export interface FileRoutesByFullPath {
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
   '/studio/variables': typeof StudioVariablesRoute
-  '/docs': typeof DocsIndexRoute
+  '/docs/': typeof DocsIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -396,7 +396,7 @@ export interface FileRouteTypes {
     | '/studio/team'
     | '/studio/terminal'
     | '/studio/variables'
-    | '/docs'
+    | '/docs/'
     | '/studio/'
     | '/api/auth/$'
     | '/api/trpc/$'
@@ -550,7 +550,7 @@ declare module '@tanstack/react-router' {
     '/docs/': {
       id: '/docs/'
       path: '/docs'
-      fullPath: '/docs'
+      fullPath: '/docs/'
       preLoaderRoute: typeof DocsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
