@@ -1,11 +1,7 @@
 ---
-title: "=============================================================================="
-description: infra/options.nix
+title: infra/options.nix
+description: Core options for the infrastructure module system
 ---
-
-infra/options.nix
-
-Core options for the infrastructure module system.
 
 ## Defines
 
@@ -17,4 +13,63 @@ Core options for the infrastructure module system.
 - stackpanel.infra.outputs (stub for cross-resource references)
 ```
 
-==============================================================================
+## Storage Backend
+
+The `storage-backend` option controls where infrastructure outputs (e.g., database URLs, IAM role ARNs) are persisted after deployment.
+
+### SOPS Backend
+
+The recommended backend for projects using stackpanel secrets. Writes outputs directly to SOPS group files using `sops set` (non-destructive, preserves existing secrets).
+
+```nix
+stackpanel.infra.storage-backend = {
+  type = "sops";
+  sops.group = "dev";  # resolves to <secrets-dir>/vars/dev.sops.yaml
+};
+```
+
+Options:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `sops.group` | `"dev"` | Secrets group to write outputs to. Resolves to `<secrets-dir>/vars/<group>.sops.yaml` |
+| `sops.file-path` | (computed from group) | Override the SOPS file path directly |
+
+### Chamber Backend
+
+Writes to AWS SSM via Chamber:
+
+```nix
+stackpanel.infra.storage-backend = {
+  type = "chamber";
+  chamber.service = "my-project";
+};
+```
+
+### SSM Backend
+
+Creates `SSMParameter` alchemy resources:
+
+```nix
+stackpanel.infra.storage-backend = {
+  type = "ssm";
+  ssm.prefix = "/my-project/infra";
+};
+```
+
+### None (default)
+
+Outputs are returned but not persisted:
+
+```nix
+stackpanel.infra.storage-backend.type = "none";
+```
+
+## Key Format
+
+Controls how output keys are formatted in storage:
+
+```nix
+stackpanel.infra.key-format = "$module-$key";  # default
+# Example: database module's databaseUrl -> "database-databaseUrl"
+```
