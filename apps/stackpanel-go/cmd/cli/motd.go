@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
@@ -73,12 +74,30 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Build options for local healthcheck execution
+	var motdOpts *tui.CollectMOTDDataOpts
+	if len(cfg.Healthchecks) > 0 {
+		stateDir := cfg.Paths.State
+		if stateDir == "" {
+			stateDir = ".stackpanel/state"
+		}
+		// Make stateDir absolute relative to project root
+		if cfg.ProjectRoot != "" && !filepath.IsAbs(stateDir) {
+			stateDir = filepath.Join(cfg.ProjectRoot, stateDir)
+		}
+		motdOpts = &tui.CollectMOTDDataOpts{
+			Healthchecks: cfg.Healthchecks,
+			StateDir:     stateDir,
+		}
+	}
+
 	// Collect all MOTD data
 	data := tui.CollectMOTDData(
 		cfg.ProjectName,
 		cfg.ProjectRoot,
 		Version,
 		9876, // Default agent port
+		motdOpts,
 	)
 
 	// Pass missing flake inputs from Nix config
