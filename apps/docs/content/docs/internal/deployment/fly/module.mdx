@@ -1,9 +1,7 @@
 ---
-title: "=============================================================================="
-description: "module.nix - Fly.io Deployment Module Implementation"
+title: Fly.io Deployment Module Implementation
+description: Provides Fly.io deployment support using nix2container (default) or dockerTools.
 ---
-
-module.nix - Fly.io Deployment Module Implementation
 
 Provides Fly.io deployment support using nix2container (default) or dockerTools.
 
@@ -32,7 +30,10 @@ Generated layout:
 packages/infra/
 ├── package.json           # "deploy:web" script (merged via SST)
 └── turbo.json             # Per-package turbo config (extends root)
+```
 
+
+```nix
 apps/<appName>/
 └── fly.toml               # Fly.io app configuration
 ```
@@ -51,5 +52,3 @@ stackpanel.apps.web = {
   };
 };
 ```
-
-==============================================================================
