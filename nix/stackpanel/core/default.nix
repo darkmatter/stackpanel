@@ -55,6 +55,7 @@ in
       lines = [
         "${cfg.dirs.home}/state/"
         "${cfg.dirs.home}/config.local.nix"
+        ".tasks"
       ]
       ++ lib.optional cfg.gitignore.addProjectMarker cfg.root-marker;
     };
