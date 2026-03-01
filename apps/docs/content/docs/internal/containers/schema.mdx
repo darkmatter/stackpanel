@@ -1,9 +1,7 @@
 ---
-title: "=============================================================================="
-description: "schema.nix - Container App Configuration Schema"
+title: Container App Configuration Schema
+description: "Unified field definitions for container per-app configuration."
 ---
-
-schema.nix - Container App Configuration Schema
 
 Unified field definitions for container per-app configuration.
 
@@ -31,5 +29,3 @@ Usage from ui.nix:
 let containerSchema = import ./schema.nix { inherit lib; };
 in panelsLib.mkPanelFromSpFields { fields = containerSchema.fields; ... }
 ```
-
-==============================================================================
