@@ -4,6 +4,8 @@ import type { Context } from "alchemy";
 import { Resource } from "alchemy";
 
 export interface KmsKeyProps {
+  /** Existing alias name used to adopt an already-created key */
+  aliasName?: string;
   /** Description of the key */
   description?: string;
   /** Enable automatic key rotation (default: true) */
@@ -21,6 +23,8 @@ export interface KmsKey extends KmsKeyProps {
   arn: string;
   /** Key ID */
   keyId: string;
+  /** True when key was adopted from an existing alias */
+  adopted?: boolean;
 }
 
 export const KmsKey = Resource(
@@ -39,10 +43,14 @@ export const KmsKey = Resource(
       PutKeyPolicyCommand,
       ScheduleKeyDeletionCommand,
       TagResourceCommand,
+      ListAliasesCommand,
     } = await import("@aws-sdk/client-kms");
     const client = new KMSClient({});
 
     if (this.phase === "delete") {
+      if (this.output?.adopted) {
+        return this.destroy();
+      }
       if (this.output?.keyId) {
         try {
           await client.send(
@@ -58,25 +66,52 @@ export const KmsKey = Resource(
       return this.destroy();
     }
 
-    let keyId: string;
+    let keyId: string | undefined;
+    let adopted = this.output?.adopted ?? false;
 
     if (this.phase === "create") {
-      const result = await client.send(
-        new CreateKeyCommand({
-          Description: props.description,
-          KeyUsage: "ENCRYPT_DECRYPT",
-          Origin: "AWS_KMS",
-          Tags: [
-            ...Object.entries(props.tags ?? {}).map(([Key, Value]) => ({ TagKey: Key, TagValue: Value })),
-            { TagKey: "alchemy_stage", TagValue: this.stage },
-            { TagKey: "alchemy_resource", TagValue: this.id },
-          ],
-          ...(props.policy ? { Policy: props.policy } : {}),
-        })
-      );
-      keyId = result.KeyMetadata!.KeyId!;
+      const aliasName = props.aliasName?.startsWith("alias/")
+        ? props.aliasName
+        : props.aliasName
+          ? `alias/${props.aliasName}`
+          : undefined;
+
+      if (aliasName) {
+        let marker: string | undefined;
+        do {
+          const listed = await client.send(new ListAliasesCommand({ Marker: marker }));
+          const existing = (listed.Aliases ?? []).find((item) => item.AliasName === aliasName);
+          if (existing?.TargetKeyId) {
+            keyId = existing.TargetKeyId;
+            adopted = true;
+            break;
+          }
+          marker = listed.NextMarker;
+        } while (marker);
+      }
+
+      if (!keyId) {
+        const result = await client.send(
+          new CreateKeyCommand({
+            Description: props.description,
+            KeyUsage: "ENCRYPT_DECRYPT",
+            Origin: "AWS_KMS",
+            Tags: [
+              ...Object.entries(props.tags ?? {}).map(([Key, Value]) => ({ TagKey: Key, TagValue: Value })),
+              { TagKey: "alchemy_stage", TagValue: this.stage },
+              { TagKey: "alchemy_resource", TagValue: this.id },
+            ],
+            ...(props.policy ? { Policy: props.policy } : {}),
+          })
+        );
+        keyId = result.KeyMetadata!.KeyId!;
+      }
     } else {
       keyId = this.output!.keyId;
+    }
+
+    if (!keyId) {
+      throw new Error("Unable to resolve KMS key id");
     }
 
     // Enable/disable key rotation
@@ -117,6 +152,7 @@ export const KmsKey = Resource(
       ...props,
       arn: desc.KeyMetadata!.Arn!,
       keyId: desc.KeyMetadata!.KeyId!,
+      adopted,
     };
   }
 );

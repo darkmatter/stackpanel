@@ -36,6 +36,37 @@ export interface AwsSecretsInputs {
 };
 }
 
+export interface DatabaseInputs {
+  devenv: {
+  database: string;
+  host: string;
+  password: string;
+  port: number;
+  user: string;
+};
+  docker: {
+  image: string;
+  network: string;
+  password: string;
+  port: number;
+  tag: string;
+  user: string;
+};
+  name: string;
+  neon: {
+  apiKeySsmPath: string;
+  enable-branching: boolean;
+  pgVersion: number;
+  region: string;
+};
+  projectName: string;
+  provider: string;
+  ssm: {
+  enable: boolean;
+  pathPrefix: string;
+};
+}
+
 export interface DeploymentInputs {
   apps: {
   web: {
