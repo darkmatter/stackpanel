@@ -28,24 +28,19 @@ import {
 } from "@/components/ui/combobox";
 import { useMemo, useState, type RefObject } from "react";
 import type { AvailableVariable, DisplayVariable, EditMode } from "./types";
-import { isSopsReference, isValsReference } from "../utils";
+import {
+  buildVariableLinkReference,
+} from "../../variables/constants";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Build a vals reference from a variable ID.
- * E.g., "/dev/DATABASE_URL" → "ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#/DATABASE_URL"
+ * Build the value stored in app env when linking a workspace variable.
  */
-function buildValsReference(variableId: string): string {
-  const parts = variableId.split("/").filter(Boolean);
-  if (parts.length >= 2) {
-    const group = parts[0];
-    const name = parts.slice(1).join("/");
-    return `ref+sops://.stackpanel/secrets/vars/${group}.sops.yaml#/${name}`;
-  }
-  return `ref+sops://.stackpanel/secrets/vars/dev.sops.yaml#${variableId}`;
+function getLinkedVariableValue(variableId: string): string {
+  return buildVariableLinkReference(variableId);
 }
 
 /**
@@ -119,7 +114,7 @@ export function EditInterface({
     (): ComboboxItemType[] => [
       {
         id: LITERAL_ID,
-        name: "Literal or ref+sops://...",
+        name: "Literal value...",
         typeName: "config" as AvailableVariable["typeName"],
         _isLiteral: true,
       },
@@ -131,7 +126,7 @@ export function EditInterface({
   const handleSelectVariable = (variableId: string) => {
     const variable = availableVariables?.find((v) => v.id === variableId);
     if (!variable) return;
-    setEditValue(buildValsReference(variable.id));
+    setEditValue(getLinkedVariableValue(variable.id));
     if (!newEnvKey) {
       setNewEnvKey(suggestEnvKey(variable.id));
     }
@@ -179,7 +174,7 @@ export function EditInterface({
           ref={literalInputRef}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          placeholder="literal value or ref+sops://..."
+          placeholder="literal value..."
           className="cursor-pointer h-7 flex-1 border-0 bg-transparent text-xs font-mono text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 p-0"
         />
       ) : (
@@ -296,8 +291,7 @@ export function VariableRow({
   onStartEditing,
   renderEditInterface,
 }: VariableRowProps) {
-  const isComputed =
-    isValsReference(variable.value) && !isSopsReference(variable.value);
+  const isComputed = variable.value.startsWith("ref+");
 
   if (isCurrentlyEditing) {
     return <>{renderEditInterface()}</>;
