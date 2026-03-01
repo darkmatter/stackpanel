@@ -13,21 +13,17 @@ const app = await alchemy("stackpanel-infra", {
 });
 
 // Import and run infra modules
-const aws_ec2_appOutputs = (await import("./modules/aws-ec2-app.ts")).default;
-
 const aws_secretsOutputs = (await import("./modules/aws-secrets/index.ts")).default;
 
 const databaseOutputs = (await import("./modules/database.ts")).default;
+
+const deploymentOutputs = (await import("./modules/deployment.ts")).default;
 
 const machinesOutputs = (await import("./modules/machines.ts")).default;
 
 
 // Sync declared outputs to storage backend
 await Infra.syncAll({
-"aws-ec2-app": {
-  outputs: aws_ec2_appOutputs,
-  syncKeys: ["albOutputs","ecrOutputs","instanceIds","machines","privateIps","publicDns","publicIps","ssmOutputs"],
-},
 "aws-secrets": {
   outputs: aws_secretsOutputs,
   syncKeys: ["kmsAliasName","kmsKeyArn","kmsKeyId","oidcProviderArn","roleArn","roleName"],
@@ -35,6 +31,10 @@ await Infra.syncAll({
 "database": {
   outputs: databaseOutputs,
   syncKeys: ["databaseUrl","provider"],
+},
+"deployment": {
+  outputs: deploymentOutputs,
+  syncKeys: ["webUrl"],
 },
 "machines": {
   outputs: machinesOutputs,
