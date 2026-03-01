@@ -23,15 +23,15 @@
   imports = [
     ./apps.nix
     ./aws.nix
-    ./binary-cache.nix
+    # binary-cache.nix -- colocated into services/binary-cache.nix
     ./caddy.nix
     ./checks.nix
-    ./ci.nix
-    ./cli.nix
+    # ci.nix -- colocated into apps/ci.nix
+    # cli.nix -- colocated into core/cli.nix
     ./codegen.nix
     ./core.nix
     ./devshell.nix
-    ./dns.nix
+    # dns.nix -- colocated into network/dns.nix
     ./extensions.nix
     ./global-services.nix
     ./healthchecks.nix
@@ -41,12 +41,12 @@
     ./outputs.nix
     ./panels.nix
     ./step-ca.nix
-    ./state.nix
+    # state.nix -- colocated into core/state.nix
     ./tasks.nix
     ./ports.nix
     ./secrets.nix
     ./services.nix
-    ./theme.nix
+    # theme.nix -- colocated into tui/theme.nix
     ./user-packages.nix
     ./users.nix
     ./variables.nix
