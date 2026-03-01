@@ -249,9 +249,88 @@ stackpanel.infra.machines.aws = {
 };
 ```
 
+## Provisioning EC2 Instances
+
+Beyond discovering existing machines, Stackpanel can **provision new EC2 instances** via the `aws-ec2-app` infra module. This creates instances with auto-resolved AMIs (Ubuntu 24.04 or NixOS), security groups, IAM roles, and key pairs.
+
+### From the Studio UI
+
+1. Open the **Deploy** panel and go to the **Provision** tab
+2. Click **Provision EC2** to open the configuration dialog
+3. Fill in the instance group: app ID, count, instance type, OS, networking, SSH key, IAM
+4. Click **Add to Config** -- this writes to your Nix config
+5. Run `infra:deploy` from the terminal to create the instances
+6. Run `infra:pull-outputs` and reload the shell to see them in the Machines tab
+
+### From Nix Config
+
+```nix
+stackpanel.infra.aws-ec2-app = {
+  enable = true;
+
+  apps = {
+    web-server = {
+      instance-count = 2;
+      instance-type = "t3.small";
+      os-type = "ubuntu";              # or "nixos"
+      associate-public-ip = true;
+
+      # Auto-creates a security group with SSH + HTTP + HTTPS
+      security-group.create = true;
+
+      # Auto-creates IAM role with SSM + ECR access
+      iam.enable = true;
+
+      # Import your SSH public key
+      key-pair = {
+        create = true;
+        public-key = "ssh-ed25519 AAAA...";
+      };
+
+      # Machine metadata for Colmena targeting
+      machine = {
+        roles = [ "web" ];
+        tags = [ "production" ];
+        target-env = "production";
+      };
+    };
+  };
+};
+```
+
+Then deploy:
+
+```bash
+infra:deploy
+infra:pull-outputs
+exit && nix develop --impure
+```
+
+The provisioned instances automatically appear in your machine inventory with their public IPs, and can be targeted by Colmena for NixOS deployments.
+
+### What Gets Created
+
+For each app group, `aws-ec2-app` provisions:
+
+| Resource | Created when |
+|----------|-------------|
+| Security Group | `security-group.create = true` (default) |
+| SSH Key Pair | `key-pair.create = true` |
+| IAM Role + Instance Profile | `iam.enable = true` (default) |
+| EC2 Instances | Always (count from `instance-count`) |
+| ALB + Target Group | `alb.enable = true` |
+| ECR Repository | `ecr.enable = true` |
+| SSM Parameters | `ssm.enable = true` |
+
+VPC and subnets are auto-discovered from your default VPC unless you specify `vpc-id` and `subnet-ids` explicitly.
+
+<Callout type="info">
+The `aws-ec2-app` module auto-resolves AMIs. For Ubuntu, it finds the latest Ubuntu 24.04 LTS from Canonical. For NixOS, it finds the latest Determinate Systems NixOS image. You can override with an explicit `ami` value.
+</Callout>
+
 ## Studio UI: Deploy Panel
 
-The Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has four tabs:
+The Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has five tabs:
 
 ### Machines Tab
 
@@ -263,9 +342,13 @@ Displays a card grid of all machines in your inventory. Each card shows:
 - Roles (colored badges) and tags
 - Reachability status (green check or amber warning)
 
-When the inventory is empty, it shows guidance:
+Click a machine card to edit its configuration. Use the **Add Machine** button in the header to add static machines.
 
-> Run `infra:deploy` and `infra:pull-outputs` to populate it, then reload the shell.
+When the inventory is empty, it shows guidance to add machines or configure EC2 discovery.
+
+### Provision Tab
+
+Configure EC2 instances to create. Each row shows the instance group with its count, type, OS, and what resources will be created (SG, IAM, Key). Click **Provision EC2** to define a new group. After configuring, run `infra:deploy` to create the actual instances.
 
 ### App Targets Tab
 

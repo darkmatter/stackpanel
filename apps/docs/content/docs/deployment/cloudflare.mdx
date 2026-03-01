@@ -1,313 +1,94 @@
 ---
 title: Cloudflare
-description: Deploy applications to Cloudflare Workers and Pages
+description: Configure Cloudflare app settings and deploy through infra
 icon: cloud
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-Stackpanel includes a Cloudflare deployment module that generates the configuration needed to deploy your applications to [Cloudflare Workers](https://workers.cloudflare.com/) and [Cloudflare Pages](https://pages.cloudflare.com/). Like everything in Stackpanel, the deployment config is derived from your project's source of truth—no hand-maintained `wrangler.toml` files that drift out of sync.
+Cloudflare deployment in Stackpanel is driven by app deployment config plus the infra deployment module.
 
-## Enable Cloudflare Deployment
+## How Cloudflare Deployment Works
 
-Deployment configuration is per-app. You don't need a global "Cloudflare extension" - just configure your apps with `deployment.host = "cloudflare"`.
+- Set `deployment.enable = true` on an app
+- Set `deployment.host = "cloudflare"` (or rely on `stackpanel.deployment.defaultHost`)
+- Enable one framework flag (for example `framework.tanstack-start.enable = true`)
+- Run `infra:deploy`
 
-Stackpanel will automatically add the `wrangler` CLI to your devshell when you have apps configured for Cloudflare deployment.
+The infra deployment module maps `framework × cloudflare` to the right Alchemy resource.
 
 ## Configuration
 
-### Global Settings
-
-Set your Cloudflare account ID at the global deployment level:
+### Global Cloudflare Settings
 
 ```nix
-stackpanel.deployment = {
-  cloudflare = {
-    accountId = "your-cloudflare-account-id";
-    compatibilityDate = "2024-01-01";
-  };
+stackpanel.deployment.cloudflare = {
+  accountId = "abc123def456";
+  compatibilityDate = "2024-12-01";
+  defaultRoute = "*.example.com/*";
 };
 ```
 
-### Per-App Deployment
-
-Configure each app with Cloudflare-specific deployment settings:
+### Per-App Settings
 
 ```nix
 stackpanel.apps.web = {
-  port = 0;
-  framework = "tanstack-start";
-  root = "./apps/web";
-  build = "bun run build";
+  path = "apps/web";
+  framework.tanstack-start.enable = true;
 
   deployment = {
     enable = true;
     host = "cloudflare";
-    
+
+    # Inputs resolved from process.env during infra deploy
+    bindings = [ "CORS_ORIGIN" "BETTER_AUTH_SECRET" "DATABASE_URL" ];
+    secrets = [ "BETTER_AUTH_SECRET" "DATABASE_URL" ];
+
     cloudflare = {
-      workerName = "myapp-web";
-      type = "CLOUDFLARE_WORKER_TYPE_VITE";
-      route = "myapp.com/*";
-      bindings = {
-        DATABASE_URL = "...";
-      };
+      workerName = "stackpanel-web";
+      route = "app.example.com/*";
+      compatibility = "node";
+      kvNamespaces = [ "CACHE" ];
+      d1Databases = [ "MAIN_DB" ];
+      r2Buckets = [ "UPLOADS" ];
     };
   };
 };
 ```
-
-### Environment Variables
-
-Pass environment variables to your Workers at deploy time:
-
-```nix
-stackpanel.apps.api = {
-  port = 1;
-  root = "./apps/api";
-  
-  deployment = {
-    enable = true;
-    host = "cloudflare";
-    
-    cloudflare = {
-      workerName = "myapp-api";
-      bindings = {
-        APP_ENV = "production";
-        API_VERSION = "v1";
-      };
-    };
-  };
-};
-```
-
-For sensitive values, use Cloudflare's secret bindings instead of plain vars. You can set these through the Wrangler CLI:
-
-```bash
-wrangler secret put API_KEY --name myapp-api
-```
-
-<Callout type="warn">
-Never put sensitive values in `vars`—they're visible in your generated config and committed to Git. Use Wrangler secrets or Stackpanel's [secrets system](/docs/secrets) for anything confidential.
-</Callout>
-
-## Generated Files
-
-The Cloudflare module generates standard Wrangler configuration files:
-
-```
-wrangler.toml              # or per-app: apps/web/wrangler.toml
-```
-
-These are normal Wrangler config files that the `wrangler` CLI reads directly. If you eject from Stackpanel, the files stay and work as-is.
-
-Like all Stackpanel-generated files, they're committed to Git so that team members and CI can deploy without Nix.
-
-## Scripts
-
-When Cloudflare deployment is enabled, the following scripts are registered:
-
-| Script | Description |
-|--------|-------------|
-| `cloudflare:deploy` | Deploy all configured Workers |
-| `cloudflare:deploy:<app>` | Deploy a specific Worker |
-| `cloudflare:dev` | Start Wrangler dev mode |
-| `cloudflare:tail` | Tail Worker logs in real time |
-
-```bash
-# Deploy everything
-cloudflare:deploy
-
-# Deploy just the API
-cloudflare:deploy:api
-
-# Start local dev with Wrangler
-cloudflare:dev
-
-# Tail production logs
-cloudflare:tail
-```
-
-## CI Integration
-
-When you have apps configured for Cloudflare deployment and [CI generation](/docs/apps-ci/ci-generation) is enabled, the generated GitHub Actions workflow includes Cloudflare deploy steps:
-
-```nix
-{
-  stackpanel.deployment = {
-    cloudflare = {
-      accountId = "your-account-id";
-    };
-  };
-
-  stackpanel.apps.api = {
-    port = 1;
-    deployment = {
-      enable = true;
-      host = "cloudflare";
-      cloudflare.workerName = "myapp-api";
-    };
-  };
-
-  stackpanel.ci = {
-    enable = true;
-    secrets = {
-      "CLOUDFLARE_API_TOKEN" = "CF_API_TOKEN";  # GitHub secret name
-    };
-  };
-}
-```
-
-The generated workflow uses `wrangler deploy` with proper authentication via the `CLOUDFLARE_API_TOKEN` GitHub Actions secret.
 
 <Callout type="info">
-You'll need to create a Cloudflare API token with the appropriate permissions and add it as a GitHub Actions secret. See the [Cloudflare docs](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) for token creation.
+`deployment.cloudflare.type` is not a configuration option. Runtime behavior is determined by the app framework flags (`framework.*.enable`) plus `deployment.host`.
 </Callout>
 
-## Workers with Bindings
+## Supported Framework Mapping
 
-Cloudflare Workers support various bindings—KV namespaces, R2 buckets, D1 databases, Durable Objects, and more. Configure them through the module:
+Current Cloudflare mappings in the infra deployment module:
 
-```nix
-stackpanel.apps.api = {
-  port = 1;
-  
-  deployment = {
-    enable = true;
-    host = "cloudflare";
-    
-    cloudflare = {
-      workerName = "myapp-api";
-      kvNamespaces = [ "CACHE" ];
-      r2Buckets = [ "UPLOADS" ];
-      d1Databases = [ "DB" ];
-      bindings = {
-        CACHE = "abc123";
-        DB = "def456";
-      };
-    };
-  };
-};
-```
+- `tanstack-start` -> `TanStackStart`
+- `nextjs` -> `Nextjs`
+- `vite` -> `cloudflare.Vite`
+- `hono` -> `cloudflare.Worker`
+- `astro` -> `Astro`
+- `remix` -> `Remix`
+- `nuxt` -> `Nuxt`
 
-These bindings are written into the generated `wrangler.toml` and available as typed bindings in your Worker code.
-
-## Pages Deployment
-
-For static sites or frameworks with static export (like Next.js static export or Astro), use Cloudflare Pages:
-
-```nix
-stackpanel.apps.docs = {
-  port = 2;
-  
-  deployment = {
-    enable = true;
-    host = "cloudflare";
-    
-    cloudflare = {
-      workerName = "myapp-docs";
-      type = "CLOUDFLARE_WORKER_TYPE_PAGES";
-    };
-  };
-};
-```
-
-Pages deployments use `wrangler pages deploy` under the hood.
-
-## Local Development with Wrangler
-
-The Cloudflare module adds `wrangler` to your devshell, so you can use Wrangler's local development features alongside Stackpanel's dev environment:
+## Deploy Commands
 
 ```bash
-# Start Wrangler dev server (uses miniflare locally)
-wrangler dev --config apps/api/wrangler.toml
+# Deploy active infra modules (including Cloudflare deployment module)
+infra:deploy
 
-# Or use the registered script
-cloudflare:dev
+# Stage-specific deploy
+infra:deploy --stage staging
+
+# Destroy stage resources
+infra:destroy --stage staging
 ```
 
-Wrangler's dev mode emulates the Workers runtime locally, including KV, R2, D1, and other bindings. This complements Stackpanel's [process-compose](/docs/services/process-compose) setup—you can run Wrangler alongside your other local services.
+`bindings` are read from environment variables at deploy time; names listed in `secrets` are wrapped with `alchemy.secret(...)`.
 
-## Combining with Other Deployment Targets
+## Related Docs
 
-Not every app in your project needs to deploy to Cloudflare. You can mix deployment targets:
-
-```nix
-{
-  stackpanel.apps = {
-    web = {
-      port = 0;
-      framework = "nextjs";
-      deployment = {
-        enable = true;
-        host = "fly";
-        fly.appName = "myapp-web";
-      };
-    };
-
-    api = {
-      port = 1;
-      framework = "hono";
-      deployment = {
-        enable = true;
-        host = "cloudflare";
-        cloudflare.workerName = "myapp-api";
-      };
-    };
-
-    docs = {
-      port = 2;
-      framework = "nextjs";
-      deployment = {
-        enable = true;
-        host = "cloudflare";
-        cloudflare = {
-          workerName = "myapp-docs";
-          type = "CLOUDFLARE_WORKER_TYPE_PAGES";
-        };
-      };
-    };
-  };
-}
-```
-
-Each deployment target generates its own config files and scripts independently.
-
-## Troubleshooting
-
-### "Authentication error" during deploy
-
-Make sure your Cloudflare API token is set. For local deploys:
-
-```bash
-export CLOUDFLARE_API_TOKEN="your-token"
-cloudflare:deploy
-```
-
-Or log in interactively:
-
-```bash
-wrangler login
-```
-
-### "Worker not found" errors
-
-Verify the Worker name matches what's in your Cloudflare dashboard. Workers are created on first deploy if they don't exist, but the account ID must be correct.
-
-### Generated `wrangler.toml` not updating
-
-If your Stackpanel config changed but the generated file hasn't, trigger a rebuild:
-
-```bash
-# The agent watches for changes, but you can force a rebuild
-stackpanel status
-```
-
-Or check the file status in [Studio](/docs/studio) to see if it's marked as stale.
-
-## Reference
-
-- [Options Reference → CI](/docs/reference/ci) for CI configuration that includes Cloudflare deploys
-- [Apps & CI → CI Generation](/docs/apps-ci/ci-generation) for automated deployment pipelines
-- [Fly.io](./fly) for an alternative deployment target
-- [SST](./sst) for AWS infrastructure provisioning
-- [Cloudflare Workers docs](https://developers.cloudflare.com/workers/) for Workers-specific configuration
+- [Infrastructure](./infrastructure)
+- [Deployment Overview](./)
+- [Fly.io](./fly)
