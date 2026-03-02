@@ -113,13 +113,63 @@ let
       inherit pname version src;
       packageJson = packageJsonPath;
 
-      buildPhase = bunCfg.buildPhase;
       startScript = bunCfg.startScript;
       runtimeInputs = bunCfg.runtimeInputs;
       runtimeEnv = bunCfg.runtimeEnv;
       inheritPath = bunCfg.inheritPath;
 
       bunDeps = pkgs.bun2nix.fetchBunDeps { bunNix = bunNixPath; };
+
+      # For workspace layout, build from the app directory
+      buildPhase = if isStandalone then bunCfg.buildPhase
+        else "cd ${appPath} && ${bunCfg.buildPhase}";
+
+      # Workaround: bun install always downloads npm registry manifests even
+      # with --frozen-lockfile, which fails in the Nix sandbox (no network).
+      # The module-populator (bun2nix PR #82) already constructs node_modules
+      # from the Nix cache, so we skip bun install entirely by shadowing the
+      # bun binary with a bash function during the install phase.
+      # See: https://github.com/nix-community/bun2nix/issues/77
+      preBunNodeModulesInstallPhase = ''
+        _bun2nix_real_bun="$(command -v bun)"
+        bun() {
+          if [ "$1" = "install" ]; then
+            echo "bun install skipped (node_modules pre-populated by module-populator)"
+            return 0
+          fi
+          "$_bun2nix_real_bun" "$@"
+        }
+      '';
+      postBunNodeModulesInstallPhase = ''
+        unset -f bun
+        # module-populator copies files from Nix store without write/execute bits.
+        # patchShebangs ran before node_modules existed, so we need to fix up
+        # permissions and shebangs here.
+        chmod -R u+w node_modules/
+        # Fix all bin/ directories (native binaries like esbuild, etc.)
+        find node_modules -path "*/bin/*" -type f -exec chmod +x {} +
+        # Fix .bin symlink targets
+        for f in node_modules/.bin/*; do
+          target=$(readlink -f "$f" 2>/dev/null) && [ -f "$target" ] && chmod +x "$target"
+        done
+        # Patch shebangs in node_modules (also sets +x on shebang files)
+        patchShebangs node_modules/
+      '' + lib.optionalString (!isStandalone) ''
+        # For workspace layout: merge root node_modules into app's node_modules
+        # so relative imports (e.g., ../node_modules/@pkg/...) resolve correctly.
+        # Use copies instead of symlinks to survive cp to $out.
+        if [ -d "${appPath}/node_modules" ]; then
+          echo "Merging root node_modules into ${appPath}/node_modules..."
+          cp -rn node_modules/. "${appPath}/node_modules/" 2>/dev/null || true
+        else
+          cp -r node_modules "${appPath}/node_modules"
+        fi
+      '';
+
+      # module-populator creates symlinks to the build-time cache that break
+      # when copied to $out. Disable the broken symlinks check since we only
+      # need the build artifacts (JS bundles), not the raw node_modules.
+      dontFixup = true;
     };
 
   # ---------------------------------------------------------------------------
