@@ -737,17 +737,16 @@ in
             ...
           }:
           let
-            cfg = config.stackpanel.infra.MODULE_ID;
+            inherit (import ../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
           in
-          {
-            options.stackpanel.infra.MODULE_ID = {
-              enable = lib.mkOption {
-                type = lib.types.bool;
-                default = false;
-                description = "Enable MODULE_NAME provisioning.";
-              };
+          mkInfraModule {
+            id = "MODULE_ID";
+            name = "MODULE_NAME";
+            path = ./index.ts;
+            inherit config;
 
-              # Add your module options here. Example:
+            # Module-specific options (beyond enable + sync-outputs which are automatic).
+            options = {
               # region = lib.mkOption {
               #   type = lib.types.str;
               #   default = "us-east-1";
@@ -755,36 +754,21 @@ in
               # };
             };
 
-            config = lib.mkIf cfg.enable {
-              stackpanel.infra.enable = lib.mkDefault true;
+            # Map Nix config values to TypeScript runtime inputs.
+            # Kebab-case keys are auto-converted to camelCase.
+            inputs = cfg: {
+              # region = cfg.region;
+            };
 
-              stackpanel.infra.modules.MODULE_ID = {
-                name = "MODULE_NAME";
-                description = "MODULE_NAME infrastructure provisioning";
-                path = ./index.ts;
+            # NPM packages required by the TypeScript implementation.
+            dependencies = {
+              # "@aws-sdk/client-s3" = "catalog:";
+            };
 
-                # Nix values serialized to JSON and available at runtime
-                # via infra.inputs() in the TypeScript file.
-                inputs = {
-                  # Add your input values here. Example:
-                  # region = cfg.region;
-                };
-
-                # NPM packages required by the TypeScript implementation.
-                dependencies = {
-                  # "@aws-sdk/client-s3" = "catalog:";
-                };
-
-                # Outputs the TypeScript module's default export must provide.
-                # Keys with sync=true are written to the storage backend.
-                outputs = {
-                  # exampleArn = {
-                  #   description = "ARN of the provisioned resource";
-                  #   sensitive = false;
-                  #   sync = true;
-                  # };
-                };
-              };
+            # Output declarations. Short form: { key = "description"; }
+            # All outputs sync by default. Use { description; sensitive; sync; } for control.
+            outputs = {
+              # exampleArn = "ARN of the provisioned resource";
             };
           }
           NIXEOF
@@ -798,14 +782,12 @@ in
           // ==============================================================================
           // MODULE_NAME Infra Module
           //
-          // This module is executed by `infra:deploy` via Alchemy.
-          //
-          // The default export must be a Record<string, string> matching the output
-          // keys declared in module.nix.
+          // Executed by `infra:deploy` via Alchemy.
+          // Default export must be Record<string, string> matching module.nix outputs.
           // ==============================================================================
           import Infra from "@stackpanel/infra";
 
-          // Typed inputs — define an interface matching your module.nix inputs.
+          // ── Params (from module.nix inputs) ────────────────────────────────
           interface Inputs {
             // region: string;
           }
@@ -815,22 +797,15 @@ in
             process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES,
           );
 
-          // ---------------------------------------------------------------------------
-          // Provision resources here.
+          // ── Resources ──────────────────────────────────────────────────────
           //
-          // Use Alchemy resources or AWS SDK clients:
+          // import { SomeResource } from "@stackpanel/infra/resources/some-resource";
+          // const resource = await SomeResource(infra.id("my-resource"), { ... });
           //
-          //   import { SomeResource } from "@stackpanel/infra/resources/some-resource";
-          //   const resource = await SomeResource(infra.id("my-resource"), { ... });
-          //
-          // Or use alchemy built-in resources:
-          //
-          //   import { Role } from "alchemy/aws";
-          //   const role = await Role(infra.id("role"), { roleName: "...", ... });
-          //
-          // ---------------------------------------------------------------------------
+          // import { Role } from "alchemy/aws";
+          // const role = await Role(infra.id("role"), { roleName: "...", ... });
 
-          // Export outputs matching the keys in module.nix outputs.
+          // ── Outputs ────────────────────────────────────────────────────────
           export default {
             // exampleArn: resource.arn,
           };
