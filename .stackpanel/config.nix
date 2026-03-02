@@ -41,10 +41,6 @@
       path = "apps/docs";
       type = "bun";
     };
-    server = {
-      name = "server";
-      path = "apps/server";
-    };
     stackpanel-go = {
       description = "Stackpanel CLI and agent (Go)";
       environments = {
