@@ -285,6 +285,21 @@ in
       description = "Stackpanel minimal setup";
     };
     # =========================================================================
+    # Examples (review-friendly template variants)
+    # =========================================================================
+    example-basic = {
+      path = ../../examples/basic;
+      description = "Example: single app starter";
+    };
+    example-multi-app = {
+      path = ../../examples/multi-app;
+      description = "Example: monorepo with multiple apps and services";
+    };
+    example-cloudflare = {
+      path = ../../examples/cloudflare;
+      description = "Example: edge deployment config for Cloudflare";
+    };
+    # =========================================================================
     # Test Fixtures (for module authors and CI testing)
     # =========================================================================
     test-basic = {
