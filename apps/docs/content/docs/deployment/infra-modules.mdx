@@ -1,0 +1,345 @@
+---
+title: Writing Infra Modules
+description: Create custom infrastructure modules for the Alchemy-based provisioning system
+icon: puzzle
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+Stackpanel's infrastructure system is modular. Each infra module is a pair of files -- a Nix module that declares options and a TypeScript file that provisions resources via Alchemy. You can write your own modules to provision any cloud resource.
+
+## Module Anatomy
+
+Every infra module has exactly two files:
+
+```
+nix/stackpanel/infra/modules/<module-id>/
+  module.nix    # Nix options + module registration
+  index.ts      # TypeScript Alchemy implementation
+```
+
+**`module.nix`** declares:
+- Options under `stackpanel.infra.<module-id>` (what users configure)
+- Registration in `stackpanel.infra.modules.<module-id>` with:
+  - `name` / `description` -- metadata
+  - `path` -- pointer to the TypeScript file
+  - `inputs` -- Nix values serialized to JSON for the TypeScript runtime
+  - `dependencies` -- NPM packages the TypeScript file needs
+  - `outputs` -- what the module produces (ARNs, URLs, etc.)
+
+**`index.ts`** implements:
+- Reads inputs via `infra.inputs<T>()`
+- Provisions resources using Alchemy resources or AWS SDK clients
+- Default-exports a `Record<string, string>` matching the output keys declared in `module.nix`
+
+## Scaffold a Module
+
+The fastest way to start:
+
+```bash
+infra:new-module my-s3-buckets
+```
+
+This creates `nix/stackpanel/infra/modules/my-s3-buckets/` with a working `module.nix` and `index.ts` skeleton. Then:
+
+<Steps>
+<Step>
+
+### Add options
+
+Edit `module.nix` to declare what users configure:
+
+```nix
+options.stackpanel.infra.my-s3-buckets = {
+  enable = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Enable S3 bucket provisioning.";
+  };
+
+  buckets = lib.mkOption {
+    type = lib.types.attrsOf (lib.types.submodule {
+      options = {
+        region = lib.mkOption {
+          type = lib.types.str;
+          default = "us-east-1";
+        };
+        versioning = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+        };
+      };
+    });
+    default = {};
+    description = "S3 buckets to create.";
+  };
+};
+```
+
+</Step>
+<Step>
+
+### Wire inputs and outputs
+
+In the `config` block of `module.nix`, pass Nix values to the TypeScript runtime and declare what the module produces:
+
+```nix
+config = lib.mkIf cfg.enable {
+  stackpanel.infra.enable = lib.mkDefault true;
+
+  stackpanel.infra.modules.my-s3-buckets = {
+    name = "S3 Buckets";
+    description = "Provision S3 buckets with versioning";
+    path = ./index.ts;
+
+    inputs = {
+      buckets = cfg.buckets;
+    };
+
+    dependencies = {
+      "@aws-sdk/client-s3" = "catalog:";
+    };
+
+    outputs = {
+      bucketArns = {
+        description = "Bucket ARNs (JSON)";
+        sync = true;
+      };
+    };
+  };
+};
+```
+
+</Step>
+<Step>
+
+### Implement provisioning
+
+Edit `index.ts` to provision resources:
+
+```typescript
+import Infra from "@stackpanel/infra";
+
+interface BucketInput {
+  region: string;
+  versioning: boolean;
+}
+
+interface Inputs {
+  buckets: Record<string, BucketInput>;
+}
+
+const infra = new Infra("my-s3-buckets");
+const inputs = infra.inputs<Inputs>(
+  process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES,
+);
+
+const {
+  S3Client,
+  CreateBucketCommand,
+  PutBucketVersioningCommand,
+} = await import("@aws-sdk/client-s3");
+
+const bucketArns: Record<string, string> = {};
+
+for (const [name, bucket] of Object.entries(inputs.buckets)) {
+  const client = new S3Client({ region: bucket.region });
+
+  try {
+    await client.send(new CreateBucketCommand({ Bucket: name }));
+  } catch (err: any) {
+    if (err.name !== "BucketAlreadyOwnedByYou") throw err;
+  }
+
+  if (bucket.versioning) {
+    await client.send(new PutBucketVersioningCommand({
+      Bucket: name,
+      VersioningConfiguration: { Status: "Enabled" },
+    }));
+  }
+
+  bucketArns[name] = `arn:aws:s3:::${name}`;
+}
+
+export default {
+  bucketArns: JSON.stringify(bucketArns),
+};
+```
+
+</Step>
+<Step>
+
+### Register the module
+
+Add the import to `nix/stackpanel/infra/default.nix`:
+
+```nix
+imports = [
+  # ... existing modules
+  ./modules/my-s3-buckets/module.nix
+];
+```
+
+</Step>
+<Step>
+
+### Enable and deploy
+
+In `.stackpanel/config.nix`:
+
+```nix
+stackpanel.infra.my-s3-buckets = {
+  enable = true;
+  buckets = {
+    "myapp-uploads" = {
+      region = "us-west-2";
+      versioning = true;
+    };
+    "myapp-backups" = {
+      region = "us-west-2";
+      versioning = false;
+    };
+  };
+};
+```
+
+Then deploy:
+
+```bash
+infra:deploy
+```
+
+</Step>
+</Steps>
+
+## Module Contract
+
+### Inputs
+
+Inputs are Nix values that get serialized to JSON. The TypeScript file reads them at runtime:
+
+```typescript
+const infra = new Infra("my-module");
+const inputs = infra.inputs<MyInputs>(
+  process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES,
+);
+```
+
+**Key-case transformation**: Nix uses `kebab-case`, TypeScript receives `camelCase`. The codegen handles the conversion automatically. So `api-key-ssm-path` in Nix becomes `apiKeySsmPath` in TypeScript.
+
+### Outputs
+
+The TypeScript file's default export must be a `Record<string, string>` where keys match the `outputs` declared in `module.nix`:
+
+```typescript
+// module.nix declares: outputs.bucketArns, outputs.roleArn
+export default {
+  bucketArns: JSON.stringify(arns),  // complex values as JSON strings
+  roleArn: role.arn,                 // simple strings directly
+};
+```
+
+Outputs with `sync = true` are written to the storage backend (SOPS, SSM, or Chamber) by the Alchemy orchestrator after all modules complete.
+
+Outputs with `sensitive = true` are marked for encryption in the storage backend.
+
+### Dependencies
+
+NPM dependencies are declared in `module.nix` and merged into the generated `packages/infra/package.json`:
+
+```nix
+dependencies = {
+  "@aws-sdk/client-s3" = "catalog:";     # from bun catalog
+  "some-package" = "^1.2.3";             # pinned version
+};
+```
+
+### Using Alchemy Resources
+
+For common AWS resources, use the custom Alchemy resources in `@stackpanel/infra/resources/`:
+
+```typescript
+import { IamRole } from "@stackpanel/infra/resources/iam-role";
+import { KmsKey } from "@stackpanel/infra/resources/kms-key";
+import { Ec2Instance } from "@stackpanel/infra/resources/ec2-instance";
+import { SecurityGroup } from "@stackpanel/infra/resources/security-group";
+```
+
+These resources are adopt-safe (they detect and import existing resources rather than failing).
+
+You can also use Alchemy's built-in resources:
+
+```typescript
+import { Role } from "alchemy/aws";
+import { GitHubOIDCProvider } from "alchemy/aws/oidc";
+```
+
+### Resource IDs
+
+Use `infra.id()` to generate namespaced resource IDs that avoid collisions between modules:
+
+```typescript
+const role = await IamRole(infra.id("role"), { ... });
+const key = await KmsKey(infra.id("kms"), { ... });
+```
+
+This produces IDs like `my-module/role` and `my-module/kms`.
+
+## Directory Modules
+
+For complex modules, split the TypeScript into multiple files by using a directory:
+
+```
+nix/stackpanel/infra/modules/my-module/
+  module.nix           # set path = ./impl;
+  impl/
+    index.ts           # main entry point (default export)
+    policies.ts        # helper functions
+    constants.ts       # shared constants
+```
+
+In `module.nix`, set `path = ./impl;` (pointing to the directory). The codegen copies all `*.ts` files from the directory to `packages/infra/modules/my-module/`.
+
+Import between files uses standard relative imports:
+
+```typescript
+// index.ts
+import { buildPolicy } from "./policies";
+```
+
+## Existing Modules Reference
+
+Study these modules as examples:
+
+| Module | Complexity | Good example of |
+|--------|-----------|-----------------|
+| `aws-key-pairs` | Simple (84 lines Nix, 42 lines TS) | Minimal module, loop over inputs |
+| `aws-security-groups` | Simple (145 lines Nix, 69 lines TS) | Nested submodule types |
+| `aws-iam` | Medium (128 lines Nix, 71 lines TS) | IAM role + instance profile |
+| `cache` | Medium (200 lines Nix, variable TS) | Multi-provider pattern |
+| `aws-secrets` | Medium (directory module) | Split into policies.ts + index.ts |
+| `aws-ec2-app` | Complex (918 lines Nix, 962 lines TS) | Per-app loop, auto-discovery, multiple resource types |
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `infra:new-module <id>` | Scaffold a new module with `module.nix` + `index.ts` |
+| `infra:deploy` | Deploy all enabled modules |
+| `infra:destroy` | Remove provisioned resources |
+| `infra:pull-outputs` | Pull outputs from storage backend |
+
+## Tips
+
+- **Start small**: Begin with a single resource type and add complexity later
+- **Use adopt patterns**: Check if a resource exists before creating it, especially for IAM roles and KMS keys
+- **JSON-encode complex outputs**: Outputs must be strings. Use `JSON.stringify()` for arrays and objects
+- **Test locally**: Run `infra:deploy --stage dev-$USER` to test without affecting shared infrastructure
+- **Check the generated code**: Look at `packages/infra/modules/<your-module>.ts` to verify the codegen output matches your source
+
+## Reference
+
+- [Infrastructure](/docs/deployment/infrastructure) for the infra system overview
+- [Machines](/docs/deployment/machines) for machine inventory
+- [Deployment Overview](/docs/deployment) for all deployment options
