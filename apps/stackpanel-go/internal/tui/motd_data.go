@@ -48,6 +48,15 @@ type MOTDFullData struct {
 	// Healthcheck results (per-module, from local runner or cache)
 	HealthModules []ModuleHealthResult
 
+	// HealthchecksAge is the time elapsed since the last healthcheck run.
+	// Zero value means healthchecks have never been run.
+	HealthchecksAge time.Duration
+
+	// HealthchecksRunCommand is the command the user should run to
+	// (re-)execute healthchecks. Shown in the MOTD when results are
+	// stale or have never been collected.
+	HealthchecksRunCommand string
+
 	// Missing flake inputs (from Nix config)
 	MissingFlakeInputs []MissingFlakeInput
 
@@ -771,7 +780,7 @@ func CollectIssues(data *MOTDFullData) []Issue {
 				issues = append(issues, Issue{
 					Severity:   sev,
 					Message:    msg,
-					FixCommand: "sp status",
+					FixCommand: "sp healthcheck",
 				})
 			}
 		}
@@ -780,7 +789,7 @@ func CollectIssues(data *MOTDFullData) []Issue {
 		issues = append(issues, Issue{
 			Severity:   "warning",
 			Message:    msg,
-			FixCommand: "sp status",
+			FixCommand: "sp healthcheck",
 		})
 	}
 
@@ -842,17 +851,24 @@ func CollectMOTDData(projectName, projectRoot, version string, agentPort int, op
 		data.UserCommands, data.TotalCommands = GetUserCommands(5)
 	}
 
-	// Run healthchecks locally (cached) if definitions are provided
+	// Load cached healthcheck results — never run checks during entry.
+	// If no cache exists, show "never run" with a hint command.
 	if opts != nil && len(opts.Healthchecks) > 0 {
+		data.HealthchecksRunCommand = "sp healthcheck"
 		stateDir := opts.StateDir
 		if stateDir == "" {
 			stateDir = filepath.Join(projectRoot, ".stackpanel", "state")
 		}
-		results := RunOrLoadHealthchecks(stateDir, opts.Healthchecks)
-		data.Health = HealthSummaryFromResults(results)
-		data.HealthModules = AggregateByModule(results)
+		cache := LoadHealthcheckResults(stateDir)
+		if cache != nil {
+			data.Health = HealthSummaryFromResults(cache.Results)
+			data.HealthModules = AggregateByModule(cache.Results)
+			data.HealthchecksAge = time.Since(cache.Timestamp)
+		}
+		// If cache is nil, Health stays at zero-value (Enabled=false)
+		// and the MOTD will show "never run" with the run command.
 	} else if data.Agent.Running {
-		// Fallback: query agent API if no local definitions
+		// Fallback: query agent API for cached results only
 		data.Health = GetHealthSummary()
 	}
 
