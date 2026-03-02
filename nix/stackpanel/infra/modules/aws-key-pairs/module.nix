@@ -9,7 +9,7 @@
   ...
 }:
 let
-  cfg = config.stackpanel.infra.aws-key-pairs;
+  inherit (import ../../../lib/mkInfraModule.nix { inherit lib; }) mkInfraModule;
 
   keyType = lib.types.submodule {
     options = {
@@ -32,52 +32,31 @@ let
     };
   };
 in
-{
-  options.stackpanel.infra.aws-key-pairs = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable AWS key pair provisioning.";
-    };
+mkInfraModule {
+  id = "aws-key-pairs";
+  name = "AWS Key Pairs";
+  description = "Import or create EC2 key pairs";
+  path = ./index.ts;
+  inherit config;
 
+  options = {
     keys = lib.mkOption {
       type = lib.types.attrsOf keyType;
       default = { };
       description = "Key pair definitions keyed by key name.";
     };
-
-    sync-outputs = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ "keyNames" "keyPairIds" ];
-      description = "Which outputs to sync to the storage backend.";
-    };
   };
 
-  config = lib.mkIf cfg.enable {
-    stackpanel.infra.enable = lib.mkDefault true;
+  inputs = cfg: {
+    keys = cfg.keys;
+  };
 
-    stackpanel.infra.modules.aws-key-pairs = {
-      name = "AWS Key Pairs";
-      description = "Import or create EC2 key pairs";
-      path = ./index.ts;
-      inputs = {
-        keys = cfg.keys;
-      };
-      dependencies = {
-        "@aws-sdk/client-ec2" = "catalog:";
-      };
-      outputs =
-        let
-          mkOutput = key: desc: {
-            description = desc;
-            sensitive = false;
-            sync = builtins.elem key cfg.sync-outputs;
-          };
-        in
-        {
-          keyNames = mkOutput "keyNames" "Key pair names (JSON)";
-          keyPairIds = mkOutput "keyPairIds" "Key pair IDs (JSON)";
-        };
-    };
+  dependencies = {
+    "@aws-sdk/client-ec2" = "catalog:";
+  };
+
+  outputs = {
+    keyNames = "Key pair names (JSON)";
+    keyPairIds = "Key pair IDs (JSON)";
   };
 }
