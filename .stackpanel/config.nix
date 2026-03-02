@@ -69,6 +69,9 @@
       type = "go";
     };
     web = {
+      bun.enable = true;
+      bun.generateFiles = false;
+      bun.buildPhase = "bun run build:fly";
       commands = {
         dev = {
           command = "bun run -F web dev";
