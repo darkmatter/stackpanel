@@ -51,12 +51,12 @@ let
   # Timeout presets for common script types
   # These provide sensible defaults for different use cases
   timeouts = {
-    quick = 30;        # 30 seconds - quick checks, simple commands
-    default = 300;     # 5 minutes - most scripts (network calls, builds)
-    build = 900;       # 15 minutes - complex builds, compilations
-    deploy = 1800;     # 30 minutes - deployments, migrations
-    long = 3600;       # 1 hour - long-running data processing
-    none = 0;          # No timeout - use with caution
+    quick = 30; # 30 seconds - quick checks, simple commands
+    default = 300; # 5 minutes - most scripts (network calls, builds)
+    build = 900; # 15 minutes - complex builds, compilations
+    deploy = 1800; # 30 minutes - deployments, migrations
+    long = 3600; # 1 hour - long-running data processing
+    none = 0; # No timeout - use with caution
   };
 
   # Resolve script content from either exec or path
@@ -93,20 +93,24 @@ let
       # Wrap script with timeout if configured
       # The timeout command from coreutils will SIGTERM after the specified duration
       # and SIGKILL after an additional 10 seconds if the process doesn't terminate
-      wrappedContent = if hasTimeout then ''
-        # Script timeout: ${toString timeoutSeconds} seconds (${toString (timeoutSeconds / 60.0)} minutes)
-        # This prevents the script from hanging indefinitely on network issues, waiting for input, etc.
-        # Note: We use a temp file instead of a heredoc (bash -s <<EOF) because heredocs
-        # consume stdin, which causes commands like `nix build` to receive EOF on stdin
-        # and exit with "error: interrupted by user".
-        _sp_script_tmp=$(mktemp)
-        trap 'rm -f "$_sp_script_tmp"' EXIT
-        cat > "$_sp_script_tmp" <<'SCRIPT_TIMEOUT_EOF'
-        set -euo pipefail
-        ${scriptContent}
-        SCRIPT_TIMEOUT_EOF
-        timeout ${toString timeoutSeconds} bash "$_sp_script_tmp" "$@"
-      '' else scriptContent;
+      wrappedContent =
+        if hasTimeout then
+          ''
+            # Script timeout: ${toString timeoutSeconds} seconds (${toString (timeoutSeconds / 60.0)} minutes)
+            # This prevents the script from hanging indefinitely on network issues, waiting for input, etc.
+            # Note: We use a temp file instead of a heredoc (bash -s <<EOF) because heredocs
+            # consume stdin, which causes commands like `nix build` to receive EOF on stdin
+            # and exit with "error: interrupted by user".
+            _sp_script_tmp=$(mktemp)
+            trap 'rm -f "$_sp_script_tmp"' EXIT
+            cat > "$_sp_script_tmp" <<'SCRIPT_TIMEOUT_EOF'
+            set -euo pipefail
+            ${scriptContent}
+            SCRIPT_TIMEOUT_EOF
+            timeout ${toString timeoutSeconds} bash "$_sp_script_tmp" "$@"
+          ''
+        else
+          scriptContent;
     in
     pkgs.writeShellApplication {
       inherit name;
@@ -153,7 +157,7 @@ let
     }
   ) cfg;
 
-  hasScripts = cfg != { };
+  hasScripts = builtins.length (builtins.attrNames cfg) > 0;
 
   # Generate package.json scripts map for optional Turbo workspace package
   generatedPackageScripts = lib.mapAttrs (_name: _scriptCfg: _name) cfg;
@@ -200,8 +204,6 @@ let
           '';
           example = lib.literalExpression "./.stackpanel/src/scripts/my-script.sh";
         };
-
-
 
         runtimeInputs = lib.mkOption {
           type = lib.types.listOf lib.types.package;
@@ -402,37 +404,39 @@ in
     };
   };
 
-  config = lib.mkIf (hasScripts && scriptsCfg.enable) (lib.mkMerge [
-    {
-      # Add the scripts package to devshell
-      stackpanel.devshell.packages = [ scriptsPackage ];
+  config = lib.mkIf (hasScripts && scriptsCfg.enable) (
+    lib.mkMerge [
+      {
+        # Add the scripts package to devshell
+        stackpanel.devshell.packages = [ scriptsPackage ];
 
-      # Store serializable definitions for CLI/TUI access
-      stackpanel.devshell._commandsSerializable = serializableScripts;
+        # Store serializable definitions for CLI/TUI access
+        stackpanel.devshell._commandsSerializable = serializableScripts;
 
-      # Expose individual script packages as flake outputs
-      # Available via: nix run .#scripts.<script-name>
-      stackpanel.outputs.scripts = scriptPackages;
+        # Expose individual script packages as flake outputs
+        # Available via: nix run .#scripts.<script-name>
+        stackpanel.outputs.scripts = scriptPackages;
 
-      # Also expose the combined package
-      stackpanel.outputs.stackpanel-scripts = scriptsPackage;
+        # Also expose the combined package
+        stackpanel.outputs.stackpanel-scripts = scriptsPackage;
 
-      # Print available scripts on shell entry
-      stackpanel.devshell.hooks.main = [
-        ''
-          echo "📜 stackpanel scripts loaded"
-        ''
-      ];
-    }
+        # Print available scripts on shell entry
+        stackpanel.devshell.hooks.main = [
+          ''
+            echo "📜 stackpanel scripts loaded"
+          ''
+        ];
+      }
 
-    (lib.mkIf scriptsCfg.generateTurboPackage {
-      stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
-        name = scriptsCfg.turboPackageName;
-        path = scriptsCfg.turboPackagePath;
-        scripts = lib.mapAttrs (_scriptName: command: { exec = command; }) generatedPackageScripts;
-      };
+      (lib.mkIf scriptsCfg.generateTurboPackage {
+        stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
+          name = scriptsCfg.turboPackageName;
+          path = scriptsCfg.turboPackagePath;
+          scripts = lib.mapAttrs (_scriptName: command: { exec = command; }) generatedPackageScripts;
+        };
 
-      stackpanel.tasks = generatedTurboTasks;
-    })
-  ]);
+        stackpanel.tasks = generatedTurboTasks;
+      })
+    ]
+  );
 }
