@@ -530,7 +530,10 @@ func (s *AgentServiceServer) GetProcesses(
 // Healthchecks Handler
 // =============================================================================
 
-// GetHealthchecks returns the current health status.
+// GetHealthchecks returns the current health status from cache.
+// This endpoint never auto-runs checks — it only returns previously cached
+// results. Checks that have never been run are reported as unknown/unhealthy.
+// Use the REST POST /api/healthchecks endpoint to explicitly run checks.
 func (s *AgentServiceServer) GetHealthchecks(
 	ctx context.Context,
 	req *connect.Request[gopb.GetHealthchecksRequest],
@@ -549,20 +552,28 @@ func (s *AgentServiceServer) GetHealthchecks(
 			continue
 		}
 
-		result := s.server.runHealthcheck(ctx, check)
+		// Use cached result only — never auto-run
+		cached := s.server.getCachedResult(check.ID)
 
-		healthy := result.Status == HealthStatusHealthy
+		var healthy bool
+		var msg, details string
+
+		if cached != nil {
+			healthy = cached.Status == HealthStatusHealthy
+			if cached.Message != nil {
+				msg = *cached.Message
+			}
+			if cached.Output != nil {
+				details = *cached.Output
+			}
+		} else {
+			// No cached result — report as not yet run
+			healthy = false
+			msg = "Check has not been run yet"
+		}
+
 		if !healthy {
 			allHealthy = false
-		}
-
-		msg := ""
-		if result.Message != nil {
-			msg = *result.Message
-		}
-		details := ""
-		if result.Output != nil {
-			details = *result.Output
 		}
 
 		results = append(results, &gopb.HealthcheckInfo{

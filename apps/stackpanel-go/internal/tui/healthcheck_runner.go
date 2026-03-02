@@ -49,6 +49,71 @@ const (
 	healthcheckCacheTTL  = 5 * time.Minute
 )
 
+// LoadHealthcheckResults loads cached healthcheck results from disk without
+// ever running checks. Returns nil if no cache file exists. Unlike
+// LoadHealthcheckCache this ignores the TTL — results are always returned
+// regardless of age so callers can display elapsed time and a re-run hint.
+func LoadHealthcheckResults(stateDir string) *HealthcheckCache {
+	path := filepath.Join(stateDir, healthcheckCacheFile)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+
+	var cache HealthcheckCache
+	if err := json.Unmarshal(data, &cache); err != nil {
+		return nil
+	}
+
+	return &cache
+}
+
+// RunFailedHealthchecks re-runs only checks whose cached status is "fail" or
+// "error" (or that have never been run). Checks that already have a "pass"
+// result are kept as-is. The merged result set is persisted back to disk.
+func RunFailedHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []HealthcheckResult {
+	if len(checks) == 0 {
+		return nil
+	}
+
+	// Load existing cache (ignore TTL)
+	existingCache := LoadHealthcheckResults(stateDir)
+	cachedByID := make(map[string]HealthcheckResult)
+	if existingCache != nil {
+		for _, r := range existingCache.Results {
+			cachedByID[r.CheckID] = r
+		}
+	}
+
+	// Partition checks into those that need re-running and those that can be kept
+	var checksToRun []nixconfig.Healthcheck
+	var keptResults []HealthcheckResult
+
+	for _, check := range checks {
+		if !check.Enabled {
+			continue
+		}
+		cached, hasCached := cachedByID[check.ID]
+		if hasCached && cached.Status == "pass" {
+			keptResults = append(keptResults, cached)
+		} else {
+			checksToRun = append(checksToRun, check)
+		}
+	}
+
+	// Run the failed/unknown checks
+	freshResults := RunHealthchecks(checksToRun)
+
+	// Merge
+	allResults := append(keptResults, freshResults...)
+
+	// Persist
+	_ = SaveHealthcheckCache(stateDir, allResults)
+
+	return allResults
+}
+
 // RunHealthchecks executes all healthcheck definitions and returns results.
 // Script-type checks are run in parallel with a per-check timeout.
 // Non-script checks (HTTP, TCP) are also run. Nix checks are skipped in CLI context.
