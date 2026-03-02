@@ -166,7 +166,12 @@ in
           inherit (cfg.devenv) host port;
         };
         docker = {
-          inherit (cfg.docker) image tag port network;
+          inherit (cfg.docker)
+            image
+            tag
+            port
+            network
+            ;
         };
         ssm = {
           inherit (cfg.ssm) enable;
@@ -174,7 +179,7 @@ in
         };
       };
       dependencies = {
-        "alchemy" = "catalog:";
+        "alchemy" = config.stackpanel.alchemy.version;
       }
       // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
         ${config.stackpanel.alchemy.package.name} = "workspace:*";

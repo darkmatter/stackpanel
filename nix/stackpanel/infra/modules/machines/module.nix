@@ -228,11 +228,13 @@ in
       };
 
       host-preference = lib.mkOption {
-        type = lib.types.listOf (lib.types.enum [
-          "publicDns"
-          "publicIp"
-          "privateIp"
-        ]);
+        type = lib.types.listOf (
+          lib.types.enum [
+            "publicDns"
+            "publicIp"
+            "privateIp"
+          ]
+        );
         default = [
           "publicDns"
           "publicIp"
@@ -288,7 +290,7 @@ in
         };
       };
       dependencies = lib.optionalAttrs (cfg.source == "aws-ec2") {
-        "@aws-sdk/client-ec2" = "catalog:";
+        "@aws-sdk/client-ec2" = "^3.953.0";
       };
       outputs =
         let

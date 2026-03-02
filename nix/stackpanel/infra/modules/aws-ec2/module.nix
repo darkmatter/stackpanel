@@ -167,7 +167,13 @@ in
 
     sync-outputs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "instanceIds" "publicIps" "publicDns" "privateIps" "machines" ];
+      default = [
+        "instanceIds"
+        "publicIps"
+        "publicDns"
+        "privateIps"
+        "machines"
+      ];
       description = "Which outputs to sync to the storage backend.";
     };
   };
@@ -184,7 +190,7 @@ in
         instances = cfg.instances;
       };
       dependencies = {
-        "@aws-sdk/client-ec2" = "catalog:";
+        "@aws-sdk/client-ec2" = "^3.953.0";
       };
       outputs =
         let
