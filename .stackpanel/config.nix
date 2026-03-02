@@ -345,9 +345,122 @@
     };
   };
 
+  aws-vault = {
+    enable = true;
+    # Enable wrappers so aws/terraform automatically use aws-vault
+    awscliWrapper.enable = true;
+    terraformWrapper.enable = true;
+
+    # Show which profile is being tried (useful for debugging)
+    showProfileAttempts = true;
+
+    # Stop after first success (default behavior)
+    stopOnFirstSuccess = true;
+    profiles = ["sso-prod" "sso-staging"];
+
+    awsProfiles = {
+      "sso-prod" = {
+        region = "us-east-1";
+        output = "json";
+        extraConfig = {
+          sso_start_url = "https://mycompany.awsapps.com/start";
+          sso_region = "us-east-1";
+          sso_account_id = "123456789012";
+          sso_role_name = "ProductionAccess";
+        };
+      };
+
+      "sso-staging" = {
+        region = "us-east-1";
+        output = "json";
+        extraConfig = {
+          sso_start_url = "https://mycompany.awsapps.com/start";
+          sso_region = "us-east-1";
+          sso_account_id = "123456789012";
+          sso_role_name = "StagingAccess";
+        };
+      };
+    };
+  };
+
   infra = {
     aws-ec2-app = {
       apps = {
+        docs = {
+          ami = null;
+          associate-public-ip = true;
+          iam = {
+            enable = true;
+            role-name = "docs-ec2-role";
+          };
+          instance-count = 1;
+          instance-type = "t3.micro";
+          instances = [ ];
+          key-name = null;
+          key-pair = {
+            create = false;
+            name = null;
+            public-key = null;
+          };
+          machine = {
+            arch = null;
+            roles = [ "docs" ];
+            ssh = {
+              key-path = null;
+              port = 22;
+              user = "root";
+            };
+            tags = [ ];
+            target-env = "staging";
+          };
+          os-type = "nixos";
+          root-volume-size = null;
+          security-group = {
+            create = true;
+            description = null;
+            egress = [
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "All outbound";
+                from-port = 0;
+                protocol = "-1";
+                to-port = 0;
+              }
+            ];
+            ingress = [
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "SSH";
+                from-port = 22;
+                protocol = "tcp";
+                to-port = 22;
+              }
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "HTTP";
+                from-port = 80;
+                protocol = "tcp";
+                to-port = 80;
+              }
+              {
+                cidr-blocks = [ "0.0.0.0/0" ];
+                description = "HTTPS";
+                from-port = 443;
+                protocol = "tcp";
+                to-port = 443;
+              }
+            ];
+            name = null;
+          };
+          security-group-ids = [ ];
+          subnet-ids = [ ];
+          tags = {
+            ManagedBy = "stackpanel-infra";
+            Name = "docs";
+          };
+          user-data = null;
+          vpc-id = null;
+        };
         stackpanel-staging = {
           ami = null;
           associate-public-ip = true;
@@ -737,4 +850,3 @@
   };
 
 }
-
