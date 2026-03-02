@@ -8,7 +8,7 @@
 #   stackpanel.turbo.packages.infra = {
 #     name = "@stackpanel/infra";
 #     path = "packages/infra";
-#     dependencies = { alchemy = "catalog:"; };
+#     dependencies = { alchemy = "^0.81.2"; };
 #     scripts.deploy = {
 #       exec = "alchemy deploy";
 #       turbo = { enable = true; cache = false; };
@@ -27,7 +27,7 @@
 let
   cfg = config.stackpanel.turbo;
   pkgsCfg = cfg.packages;
-  hasPkgs = pkgsCfg != { };
+  hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;
 
   # ============================================================================
   # Submodule: turbo task config for a script
@@ -254,7 +254,7 @@ in
         infra = {
           name = "@stackpanel/infra";
           path = "packages/infra";
-          dependencies = { alchemy = "catalog:"; };
+          dependencies = { alchemy = "^0.81.2"; };
           scripts.deploy = {
             exec = "alchemy deploy";
             turbo = { enable = true; cache = false; };
