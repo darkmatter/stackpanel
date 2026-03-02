@@ -45,7 +45,11 @@ let
   ];
 
   # Optional override hook. Keep stable if unset.
-  definitions = featureFlagsCfg.definitions or defaultDefinitions;
+  definitions =
+    if (featureFlagsCfg.definitions or null) != null then
+      featureFlagsCfg.definitions
+    else
+      defaultDefinitions;
   normalizedDefinitions = map (flag: builtins.removeAttrs flag [ "jsKey" ]) definitions;
 
   packageDir = featureFlagsOutputDir;
