@@ -32,27 +32,6 @@ let
   stateDir = config.stackpanel.dirs.state;
   moduleIds = builtins.attrNames cfg.modules;
 
-  # ============================================================================
-  # Catalog versions for NPM packages used by infra modules via "catalog:".
-  #
-  # Defined once here so that:
-  #   1. Module dependencies reference "catalog:" (workspace dedup)
-  #   2. stackpanel.bun.catalog gets the real version (root package.json)
-  #
-  # When adding a new AWS SDK or other catalog dependency to an infra module,
-  # add the version here too.
-  # ============================================================================
-  infraCatalogVersions = {
-    "@aws-sdk/client-ec2" = "^3.953.0";
-    "@aws-sdk/client-ecr" = "^3.953.0";
-    "@aws-sdk/client-elastic-load-balancing-v2" = "^3.953.0";
-    "@aws-sdk/client-iam" = "^3.953.0";
-    "@aws-sdk/client-kms" = "^3.953.0";
-    "@aws-sdk/client-ssm" = "^3.953.0";
-    "@aws-sdk/client-sts" = "^3.953.0";
-    "@pulumi/aws" = "^7.15.0";
-    "sst" = "^3.17.25";
-  };
   sortedModuleIds = lib.sort (a: b: a < b) moduleIds;
 
   modulePathIsDirectory =
@@ -144,7 +123,7 @@ let
       "string[]"
     else if builtins.isAttrs value then
       let
-        fields = lib.mapAttrsToList (k: v: "  ${k}: ${nixTypeToTs v};") value;
+        fields = lib.mapAttrsToList (k: v: "  ${lib.strings.toCamelCase k}: ${nixTypeToTs v};") value;
       in
       "{\n${lib.concatStringsSep "\n" fields}\n}"
     else
@@ -232,25 +211,25 @@ let
   # ============================================================================
 
   # Read and process the Infra class template
-  infraTemplate = builtins.readFile ./templates/infra.tmpl.ts;
+  infraTemplate = builtins.readFile ./templates/infra.tpl.ts;
   infraClassTs =
     builtins.replaceStrings [ "__PROJECT_CONFIG__" ] [ (builtins.toJSON inputsJson.__config__) ]
       infraTemplate;
 
   # Static resource files (no substitution needed)
-  kmsKeyTs = builtins.readFile ./templates/kms-key.ts;
-  kmsAliasTs = builtins.readFile ./templates/kms-alias.ts;
-  iamRoleTs = builtins.readFile ./templates/iam-role.ts;
-  securityGroupTs = builtins.readFile ./templates/security-group.ts;
-  keyPairTs = builtins.readFile ./templates/key-pair.ts;
-  iamInstanceProfileTs = builtins.readFile ./templates/iam-instance-profile.ts;
-  ec2InstanceTs = builtins.readFile ./templates/ec2-instance.ts;
-  albTs = builtins.readFile ./templates/application-load-balancer.ts;
-  targetGroupTs = builtins.readFile ./templates/target-group.ts;
-  listenerTs = builtins.readFile ./templates/listener.ts;
-  listenerRuleTs = builtins.readFile ./templates/listener-rule.ts;
-  targetGroupAttachmentTs = builtins.readFile ./templates/target-group-attachment.ts;
-  ecrRepositoryTs = builtins.readFile ./templates/ecr-repository.ts;
+  kmsKeyTs = builtins.readFile ./templates/kms-key.tpl.ts;
+  kmsAliasTs = builtins.readFile ./templates/kms-alias.tpl.ts;
+  iamRoleTs = builtins.readFile ./templates/iam-role.tpl.ts;
+  securityGroupTs = builtins.readFile ./templates/security-group.tpl.ts;
+  keyPairTs = builtins.readFile ./templates/key-pair.tpl.ts;
+  iamInstanceProfileTs = builtins.readFile ./templates/iam-instance-profile.tpl.ts;
+  ec2InstanceTs = builtins.readFile ./templates/ec2-instance.tpl.ts;
+  albTs = builtins.readFile ./templates/application-load-balancer.tpl.ts;
+  targetGroupTs = builtins.readFile ./templates/target-group.tpl.ts;
+  listenerTs = builtins.readFile ./templates/listener.tpl.ts;
+  listenerRuleTs = builtins.readFile ./templates/listener-rule.tpl.ts;
+  targetGroupAttachmentTs = builtins.readFile ./templates/target-group-attachment.tpl.ts;
+  ecrRepositoryTs = builtins.readFile ./templates/ecr-repository.tpl.ts;
 
   # ============================================================================
   # Generated: src/types.ts (per-module input interfaces)
@@ -369,15 +348,14 @@ let
     acc // mod.dependencies
   ) { } cfg.modules;
 
-  # Collect catalog versions for every "catalog:" dependency across all modules.
-  # Only includes deps whose value is literally "catalog:" — direct version
-  # strings are left alone (they don't need a catalog entry).
-  allCatalogDeps = lib.filterAttrs (_: v: v == "catalog:") allDeps;
-  catalogEntries = lib.mapAttrs (
-    name: _:
-    infraCatalogVersions.${name}
-      or (builtins.throw "infra module dependency '${name}' uses catalog: but has no version in infraCatalogVersions — add it to infra/codegen.nix")
-  ) allCatalogDeps;
+  # Infra modules must declare concrete dependency versions/ranges.
+  # Reject unresolved catalog placeholders to keep generated package.json explicit.
+  catalogDepNames = builtins.attrNames (lib.filterAttrs (_: v: v == "catalog:") allDeps);
+  validatedDeps =
+    if catalogDepNames != [ ] then
+      builtins.throw "infra module dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep ", " catalogDepNames})"
+    else
+      allDeps;
 
   # ============================================================================
   # README.md — tailored to registered modules
@@ -667,25 +645,27 @@ in
       STACKPANEL_INFRA_INPUTS = "${stateDir}/infra-inputs.json";
     };
 
-    # ==========================================================================
-    # Bun catalog — register actual versions for all "catalog:" references
-    # ==========================================================================
-    stackpanel.bun.catalog = catalogEntries;
-
-    # ==========================================================================
     # Turbo workspace package (generates package.json + turbo.json tasks)
     # ==========================================================================
     stackpanel.turbo.packages.infra = {
       name = cfg.package.name;
       path = outputDir;
-      dependencies = {
-        alchemy = "catalog:";
-      }
-      // lib.optionalAttrs config.stackpanel.alchemy.enable {
-        ${config.stackpanel.alchemy.package.name} = "workspace:*";
-      }
-      // allDeps
-      // cfg.package.dependencies;
+      dependencies =
+        let
+          packageDeps = {
+            alchemy = config.stackpanel.alchemy.version;
+          }
+          // lib.optionalAttrs config.stackpanel.alchemy.enable {
+            ${config.stackpanel.alchemy.package.name} = "workspace:*";
+          }
+          // validatedDeps
+          // cfg.package.dependencies;
+          invalidCatalogDeps = builtins.attrNames (lib.filterAttrs (_: v: v == "catalog:") packageDeps);
+        in
+        if invalidCatalogDeps != [ ] then
+          builtins.throw "infra package dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep ", " invalidCatalogDeps})"
+        else
+          packageDeps;
       devDependencies = {
         bun2nix = "latest";
       };
@@ -890,7 +870,7 @@ in
         exec = ''
           ${lib.optionalString (config.stackpanel.aws-vault.enable or false) ''
             # Use aws-vault with profile fallback if enabled
-            if [ -n "${lib.concatStringsSep " " (config.stackpanel.aws-vault.profiles or [])}" ]; then
+            if [ -n "${lib.concatStringsSep " " (config.stackpanel.aws-vault.profiles or [ ])}" ]; then
               echo "Using aws-vault with multi-profile fallback" >&2
               # aws wrapper is already configured with multi-profile support
             fi
@@ -914,7 +894,7 @@ in
         exec = ''
           ${lib.optionalString (config.stackpanel.aws-vault.enable or false) ''
             # Use aws-vault with profile fallback if enabled
-            if [ -n "${lib.concatStringsSep " " (config.stackpanel.aws-vault.profiles or [])}" ]; then
+            if [ -n "${lib.concatStringsSep " " (config.stackpanel.aws-vault.profiles or [ ])}" ]; then
               echo "Using aws-vault with multi-profile fallback" >&2
               # aws wrapper is already configured with multi-profile support
             fi
@@ -1022,30 +1002,30 @@ in
                       formattedKey = builtins.replaceStrings [ "$module" "$key" ] [ id key ] cfg.key-format;
                     in
                     ''
-                      JSON_PATH='["${formattedKey}"]'
-                      RAW_VALUE=$(sops --extract "$JSON_PATH" "$FILE_PATH" 2>/dev/null || echo "")
-                      if [ -n "$RAW_VALUE" ] && [ "$RAW_VALUE" != "null" ]; then
-                        VALUE=$(printf '%s' "$RAW_VALUE" | python - <<'PY'
-import json,sys
-raw = sys.stdin.read().strip()
-if not raw or raw == "null":
-    sys.exit(0)
-try:
-    val = json.loads(raw)
-except Exception:
-    val = raw
-if val is None:
-    sys.exit(0)
-if not isinstance(val, str):
-    val = json.dumps(val, separators=(",", ":"))
-val = val.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
-print(val)
-PY
-                        )
-                        if [ -n "$VALUE" ]; then
-                          echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
-                        fi
-                      fi
+                                            JSON_PATH='["${formattedKey}"]'
+                                            RAW_VALUE=$(sops --extract "$JSON_PATH" "$FILE_PATH" 2>/dev/null || echo "")
+                                            if [ -n "$RAW_VALUE" ] && [ "$RAW_VALUE" != "null" ]; then
+                                              VALUE=$(printf '%s' "$RAW_VALUE" | python - <<'PY'
+                      import json,sys
+                      raw = sys.stdin.read().strip()
+                      if not raw or raw == "null":
+                          sys.exit(0)
+                      try:
+                          val = json.loads(raw)
+                      except Exception:
+                          val = raw
+                      if val is None:
+                          sys.exit(0)
+                      if not isinstance(val, str):
+                          val = json.dumps(val, separators=(",", ":"))
+                      val = val.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+                      print(val)
+                      PY
+                                              )
+                                              if [ -n "$VALUE" ]; then
+                                                echo '    ${key} = "'"$VALUE"'";' >> "$OUTPUT_FILE"
+                                              fi
+                                            fi
                     ''
                   ) syncKeys}
                   echo '  };' >> "$OUTPUT_FILE"
