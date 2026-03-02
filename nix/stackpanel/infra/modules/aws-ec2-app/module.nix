@@ -263,7 +263,11 @@ let
       };
 
       protocol = lib.mkOption {
-        type = lib.types.enum [ "HTTP" "HTTPS" "TCP" ];
+        type = lib.types.enum [
+          "HTTP"
+          "HTTPS"
+          "TCP"
+        ];
         default = "HTTP";
         description = "Health check protocol.";
       };
@@ -315,7 +319,11 @@ let
       };
 
       protocol = lib.mkOption {
-        type = lib.types.enum [ "HTTP" "HTTPS" "TCP" ];
+        type = lib.types.enum [
+          "HTTP"
+          "HTTPS"
+          "TCP"
+        ];
         default = "HTTP";
         description = "Target group protocol.";
       };
@@ -349,13 +357,19 @@ let
       };
 
       scheme = lib.mkOption {
-        type = lib.types.enum [ "internet-facing" "internal" ];
+        type = lib.types.enum [
+          "internet-facing"
+          "internal"
+        ];
         default = "internet-facing";
         description = "ALB scheme.";
       };
 
       ip-address-type = lib.mkOption {
-        type = lib.types.enum [ "ipv4" "dualstack" ];
+        type = lib.types.enum [
+          "ipv4"
+          "dualstack"
+        ];
         default = "ipv4";
         description = "ALB IP address type.";
       };
@@ -507,7 +521,10 @@ let
       };
 
       image-tag-mutability = lib.mkOption {
-        type = lib.types.enum [ "MUTABLE" "IMMUTABLE" ];
+        type = lib.types.enum [
+          "MUTABLE"
+          "IMMUTABLE"
+        ];
         default = "MUTABLE";
         description = "ECR image tag mutability.";
       };
@@ -639,7 +656,10 @@ let
       };
 
       os-type = lib.mkOption {
-        type = lib.types.enum [ "ubuntu" "nixos" ];
+        type = lib.types.enum [
+          "ubuntu"
+          "nixos"
+        ];
         default = "ubuntu";
         description = "Operating system type for AMI lookup.";
       };
@@ -733,7 +753,10 @@ let
       };
 
       os-type = lib.mkOption {
-        type = lib.types.enum [ "ubuntu" "nixos" ];
+        type = lib.types.enum [
+          "ubuntu"
+          "nixos"
+        ];
         default = "ubuntu";
         description = "Operating system type for AMI lookup.";
       };
@@ -870,7 +893,16 @@ in
 
     sync-outputs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "instanceIds" "publicIps" "publicDns" "privateIps" "machines" "albOutputs" "ecrOutputs" "ssmOutputs" ];
+      default = [
+        "instanceIds"
+        "publicIps"
+        "publicDns"
+        "privateIps"
+        "machines"
+        "albOutputs"
+        "ecrOutputs"
+        "ssmOutputs"
+      ];
       description = "Which outputs to sync to the storage backend.";
     };
   };
@@ -886,13 +918,15 @@ in
         defaults = cfg.defaults;
         apps = cfg.apps;
       };
-      dependencies = {
-        "@aws-sdk/client-ec2" = "catalog:";
-        "@aws-sdk/client-iam" = "catalog:";
-        "@aws-sdk/client-elastic-load-balancing-v2" = "catalog:";
-        "@aws-sdk/client-ecr" = "catalog:";
-        "@aws-sdk/client-ssm" = "catalog:";
-        "@aws-sdk/client-sts" = "catalog:";
+      dependencies = let
+        version = "^3.953.0";
+      in {
+        "@aws-sdk/client-ec2" = version;
+        "@aws-sdk/client-iam" = version;
+        "@aws-sdk/client-elastic-load-balancing-v2" = version;
+        "@aws-sdk/client-ecr" = version;
+        "@aws-sdk/client-ssm" = version;
+        "@aws-sdk/client-sts" = version;
       };
       outputs =
         let

@@ -80,7 +80,12 @@ in
 
     sync-outputs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "roleArn" "roleName" "instanceProfileArn" "instanceProfileName" ];
+      default = [
+        "roleArn"
+        "roleName"
+        "instanceProfileArn"
+        "instanceProfileName"
+      ];
       description = "Which outputs to sync to the storage backend.";
     };
   };
@@ -106,7 +111,7 @@ in
         };
       };
       dependencies = {
-        "@aws-sdk/client-iam" = "catalog:";
+        "@aws-sdk/client-iam" = "^3.953.0";
       };
       outputs =
         let
