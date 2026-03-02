@@ -775,11 +775,28 @@ in
     stackpanel.scripts."write-files" = {
       exec = ''${writerDrv}/bin/write-files "$@"'';
       description = "Write generated files to the project (with hash-check caching)";
+      turbo = {
+        enable = true;
+        cache = false;
+        inputs = [
+          ".stackpanel/**"
+          "nix/stackpanel/**"
+        ];
+      };
     };
 
     stackpanel.scripts."check-files" = {
       exec = ''${driftCheckScript}/bin/check-files-drift "$@"'';
       description = "Check if generated files are up-to-date (drift detection)";
+      turbo = {
+        enable = true;
+        cache = false;
+        dependsOn = [ "write-files" ];
+        inputs = [
+          ".stackpanel/**"
+          "nix/stackpanel/**"
+        ];
+      };
     };
   };
 }

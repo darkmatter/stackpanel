@@ -1,5 +1,5 @@
 # ==============================================================================
-# aws.nix
+# services/aws/options.nix
 #
 # AWS configuration options including Roles Anywhere certificate authentication.
 #

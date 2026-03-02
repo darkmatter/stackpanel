@@ -299,6 +299,15 @@ in
 {
   config = lib.mkIf cfg.enable {
     # ==========================================================================
+    # Bun catalog — register actual versions for "catalog:" references
+    # ==========================================================================
+    stackpanel.bun.catalog = {
+      alchemy = cfg.version;
+    } // lib.optionalAttrs cfg.helpers.ssm {
+      "@aws-sdk/client-ssm" = "^3.953.0";
+    };
+
+    # ==========================================================================
     # File generation
     # ==========================================================================
     stackpanel.files.entries = {

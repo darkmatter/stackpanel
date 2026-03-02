@@ -22,7 +22,7 @@
 {
   imports = [
     ./apps.nix
-    ./aws.nix
+    # aws.nix -- colocated into services/aws/options.nix
     # binary-cache.nix -- colocated into services/binary-cache.nix
     ./caddy.nix
     ./checks.nix

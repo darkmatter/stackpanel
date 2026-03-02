@@ -48,8 +48,8 @@ let
   stepCertPath = "${stepStateDir}/device-root.chain.crt";
   stepKeyPath = "${stepStateDir}/device.key";
 
-  # Import shared AWS library
-  awsLib = import ../lib/services/aws.nix { inherit pkgs lib; };
+  # Import shared AWS library (colocated)
+  awsLib = import ./lib.nix { inherit pkgs lib; };
 in
 {
   config = lib.mkIf cfg.enable (

@@ -16,7 +16,17 @@
 #   ├── minio/default.nix     # MinIO implementation
 #   ├── caddy/default.nix     # Caddy scripts library
 #   ├── caddy.nix             # Caddy devenv module
-#   ├── aws.nix               # AWS Roles Anywhere
+#   ├── aws/                  # All AWS code (consolidated)
+#   │   ├── default.nix       # Sub-module aggregator
+#   │   ├── lib.nix           # Pure library (mkAwsCredScripts, etc.)
+#   │   ├── options.nix       # Option declarations (stackpanel.aws.*)
+#   │   ├── roles-anywhere.nix # Roles Anywhere devenv module
+#   │   └── vault/            # aws-vault integration
+#   │       ├── module.nix    # Wrappers, multi-profile fallback
+#   │       ├── meta.nix      # Module metadata
+#   │       ├── ui.nix        # Studio panel definitions
+#   │       ├── example.nix   # Example configurations
+#   │       └── README.md     # Documentation
 #   ├── binary-cache.nix      # Nix binary cache
 #   └── security-healthchecks.nix
 #
@@ -27,7 +37,7 @@
 { ... }:
 {
   imports = [
-    ./aws.nix
+    ./aws
     ./binary-cache.nix
     ./caddy.nix
     ./global-services.nix

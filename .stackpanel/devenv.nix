@@ -1,0 +1,3 @@
+{...}: {
+  languages.go.enable = true;
+}
