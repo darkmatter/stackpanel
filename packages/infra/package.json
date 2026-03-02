@@ -1,13 +1,15 @@
 {
   "dependencies": {
-    "@aws-sdk/client-ec2": "catalog:",
-    "@aws-sdk/client-iam": "catalog:",
-    "@aws-sdk/client-kms": "catalog:",
-    "@aws-sdk/client-ssm": "catalog:",
-    "@aws-sdk/client-sts": "catalog:",
-    "@pulumi/aws": "catalog:",
-    "alchemy": "catalog:",
-    "sst": "catalog:"
+    "@aws-sdk/client-ec2": "^3.953.0",
+    "@aws-sdk/client-ecr": "^3.953.0",
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.953.0",
+    "@aws-sdk/client-iam": "^3.953.0",
+    "@aws-sdk/client-kms": "^3.953.0",
+    "@aws-sdk/client-ssm": "^3.953.0",
+    "@aws-sdk/client-sts": "^3.953.0",
+    "@pulumi/aws": "^7.15.0",
+    "alchemy": "^0.81.2",
+    "sst": "^3.17.25"
   },
   "devDependencies": {
     "bun2nix": "latest"
