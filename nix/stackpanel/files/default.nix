@@ -84,7 +84,7 @@ let
   enabledFiles = cfg.entries;
 
   # Check if there are any files to write (and global enable is true)
-  hasFiles = enabledFiles != { };
+  hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;
 
   fileCount = builtins.length (builtins.attrNames enabledFiles);
 
@@ -771,32 +771,5 @@ in
       ''
     ];
 
-    # Also expose as stackpanel scripts
-    stackpanel.scripts."write-files" = {
-      exec = ''${writerDrv}/bin/write-files "$@"'';
-      description = "Write generated files to the project (with hash-check caching)";
-      turbo = {
-        enable = true;
-        cache = false;
-        inputs = [
-          ".stackpanel/**"
-          "nix/stackpanel/**"
-        ];
-      };
-    };
-
-    stackpanel.scripts."check-files" = {
-      exec = ''${driftCheckScript}/bin/check-files-drift "$@"'';
-      description = "Check if generated files are up-to-date (drift detection)";
-      turbo = {
-        enable = true;
-        cache = false;
-        dependsOn = [ "write-files" ];
-        inputs = [
-          ".stackpanel/**"
-          "nix/stackpanel/**"
-        ];
-      };
-    };
   };
 }
