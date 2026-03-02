@@ -280,11 +280,11 @@ let
   # Determine dependencies based on enabled helpers
   # ============================================================================
   baseDeps = {
-    alchemy = "catalog:";
+    alchemy = cfg.version;
   };
 
   helperDeps = lib.optionalAttrs cfg.helpers.ssm {
-    "@aws-sdk/client-ssm" = "catalog:";
+    "@aws-sdk/client-ssm" = "^3.953.0";
   };
 
   allDeps = baseDeps // helperDeps // cfg.package.extra-dependencies;
@@ -298,15 +298,6 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    # ==========================================================================
-    # Bun catalog — register actual versions for "catalog:" references
-    # ==========================================================================
-    stackpanel.bun.catalog = {
-      alchemy = cfg.version;
-    } // lib.optionalAttrs cfg.helpers.ssm {
-      "@aws-sdk/client-ssm" = "^3.953.0";
-    };
-
     # ==========================================================================
     # File generation
     # ==========================================================================
