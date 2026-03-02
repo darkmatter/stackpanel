@@ -2,5 +2,5 @@
   "title": "Containers & Deployment",
   "description": "Build containers and deploy to production",
   "icon": "cloud-upload",
-  "pages": ["index", "infrastructure", "machines", "cloudflare", "fly", "containers", "sst"]
+  "pages": ["index", "infrastructure", "machines", "infra-modules", "cloudflare", "fly", "containers", "sst"]
 }
