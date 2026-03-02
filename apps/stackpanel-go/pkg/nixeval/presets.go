@@ -42,10 +42,16 @@ in
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
   configPath = root + "/.stackpanel/config.nix";
+  rawConfig =
+    if builtins.pathExists configPath
+    then import configPath
+    else {};
+  evaluatedConfig =
+    if builtins.isFunction rawConfig
+    then rawConfig { pkgs = null; lib = null; config = {}; inputs = {}; }
+    else rawConfig;
 in
-  if builtins.pathExists configPath
-  then (import configPath { pkgs = null; lib = null; config = {}; inputs = {}; }).stackpanel or {}
-  else {}
+  evaluatedConfig.stackpanel or evaluatedConfig or {}
 `
 
 	// StackpanelSerializablePreset evaluates the serializable config from the flake output
