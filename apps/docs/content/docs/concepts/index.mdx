@@ -6,6 +6,12 @@ icon: lightbulb
 
 Stackpanel introduces a few ideas that are worth understanding before you dive into the feature docs. None of them are complicated, but they'll change how you think about your codebase.
 
+## What Stackpanel Adds
+
+Nix already gives you reproducible environments and hermetic builds. Stackpanel bridges the gap between what Nix can express and what your day-to-day workflow actually needs—runtime healthchecks, deterministic ports, multi-module file generation, secrets with codegen, and a visual UI for Nix capabilities. Each feature is explained with concrete "with vs. without" examples.
+
+[Read more →](./what-stackpanel-adds)
+
 ## Config as Build Output
 
 Most tools expect configuration files to live at specific paths—`package.json` at the root, `.github/workflows/*.yml` in the right directory, `tsconfig.json` next to your source. Fighting this is pointless, so Stackpanel embraces it: your config files become **build output**, generated from a single source of truth.
