@@ -124,7 +124,7 @@ in
   # AWS cert-auth utilities
   aws =
     if pkgs != null then
-      import ./services/aws.nix { inherit pkgs lib; }
+      import ../services/aws/lib.nix { inherit pkgs lib; }
     else
       throw "stackpanel.lib.aws requires pkgs to be passed";
 

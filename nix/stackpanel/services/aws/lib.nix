@@ -1,5 +1,5 @@
 # ==============================================================================
-# services/aws.nix
+# services/aws/lib.nix
 #
 # AWS IAM Roles Anywhere authentication utilities using X.509 certificates.
 # Pure functions that work with any Nix module system.
@@ -10,7 +10,7 @@
 #
 # == USAGE ==
 #
-#   let awsLib = import ./aws.nix { inherit pkgs lib; };
+#   let awsLib = import ./lib.nix { inherit pkgs lib; };
 #
 #   # For certificates known at build time (embedded in Nix store):
 #   awsLib.mkAwsCredentialProcess {

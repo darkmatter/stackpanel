@@ -2,7 +2,7 @@
   id = "aws-vault";
   name = "AWS Vault";
   description = "AWS Vault integration for secure AWS credential management";
-  category = "cloud";
+  category = "infrastructure";
   version = "1.0.0";
   icon = "aws";
   homepage = "https://github.com/99designs/aws-vault";

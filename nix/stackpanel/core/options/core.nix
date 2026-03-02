@@ -9,7 +9,7 @@
 #   - root-marker: Filename for the root marker file (.stackpanel-root)
 #   - dirs: Directory configuration (home, state, gen, config)
 #   - direnv: Direnv integration settings
-#   - gitignore: Whether to auto-add root marker to .gitignore
+#   - gitignore: Reserved options for managed .gitignore generation
 #
 # The root marker system allows tools to find the project root from any
 # subdirectory by walking up the tree looking for the marker file.
@@ -25,7 +25,7 @@
   ...
 }:
 {
-  # Base stackpanel options for devenv
+  # Base stackpanel options
   options.stackpanel = {
     enable = lib.mkEnableOption "Enable Stackpanel" // {
       default = true;
@@ -166,9 +166,10 @@
     };
     useDevenv = lib.mkOption {
       description = ''
-        DEPRECATED: This option is no longer used. Devenv is always the shell backend.
+        DEPRECATED: This option is no longer used.
 
-        The flakeModule now always uses devenv for shell creation.
+        Shell backend selection is now handled by the active integration layer
+        (for example, flake modules or shell adapters), not by this option.
         This option is kept for backwards compatibility but has no effect.
       '';
       type = lib.types.bool;
@@ -211,13 +212,78 @@
       type = lib.types.str;
       default = ".stackpanel-root";
     };
-    gitignore = {
-      # Whether to append the marker to the project's .gitignore
-      addProjectMarker = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Whether to add the root marker file to the project's .gitignore.";
+    gitignore = lib.mkOption {
+      description = ''
+        Reserved options for managed `.gitignore` generation.
+
+        Stackpanel core owns a block-managed section in `.gitignore` and merges
+        entries from this option. This provides a stable, explicit API for common
+        `.gitignore` presets while still allowing modules to contribute entries.
+
+        The generated block is deduplicated and sorted.
+      '';
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether Stackpanel should manage a `.gitignore` block.";
+          };
+
+          entries = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Additional `.gitignore` entries to include in the managed block.
+
+              Example:
+                [ "dist/" ".env.local" ]
+            '';
+          };
+
+          defaults = lib.mkOption {
+            type = lib.types.submodule {
+              options = {
+                stackpanelState = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Include `${config.stackpanel.dirs.home}/state/`.";
+                };
+
+                localConfig = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Include `${config.stackpanel.dirs.home}/config.local.nix`.";
+                };
+
+                tasksDir = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Include `.tasks`.";
+                };
+
+                projectMarker = lib.mkOption {
+                  type = lib.types.bool;
+                  default = false;
+                  description = "Include the root marker file (`stackpanel.root-marker`).";
+                };
+
+                addProjectMarker = lib.mkOption {
+                  type = lib.types.bool;
+                  default = false;
+                  description = ''
+                    DEPRECATED: Use `stackpanel.gitignore.defaults.projectMarker` instead.
+                    Backward-compatible alias for including `stackpanel.root-marker` in `.gitignore`.
+                  '';
+                };
+              };
+            };
+            default = { };
+            description = "Toggle built-in `.gitignore` presets managed by Stackpanel.";
+          };
+        };
       };
+      default = { };
     };
 
     # ----------------------------------------------------------------------------

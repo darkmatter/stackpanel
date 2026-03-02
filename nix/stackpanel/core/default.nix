@@ -40,24 +40,36 @@ in
     # (marker walking / git root / flake.nix detection). Not baked into the
     # derivation so the shell hash stays stable across machines.
 
-    # Core gitignore entries — other modules contribute via
-    # stackpanel.files.entries.".gitignore".lines = [ "entry" ];
+    # Core gitignore entries — use reserved stackpanel.gitignore options.
     #
     # Uses managed = "block" so that user-written gitignore content is
     # preserved. Stackpanel only owns the marker-delimited block within
     # the file; everything outside it is untouched. On module uninstall,
     # only the managed block is removed (the file itself is kept).
-    stackpanel.files.entries.".gitignore" = {
+    #
+    # Backward compatibility:
+    # - defaults.projectMarker is the new flag
+    # - defaults.addProjectMarker is deprecated alias
+    stackpanel.files.entries.".gitignore" = lib.mkIf cfg.gitignore.enable {
       type = "line-set";
       managed = "block";
       dedupe = true;
       sort = true;
-      lines = [
-        "${cfg.dirs.home}/state/"
-        "${cfg.dirs.home}/config.local.nix"
-        ".tasks"
-      ]
-      ++ lib.optional cfg.gitignore.addProjectMarker cfg.root-marker;
+      lines =
+        (lib.optionals cfg.gitignore.defaults.stackpanelState [
+          "${cfg.dirs.home}/state/"
+        ])
+        ++ (lib.optionals cfg.gitignore.defaults.localConfig [
+          "${cfg.dirs.home}/config.local.nix"
+        ])
+        ++ (lib.optionals cfg.gitignore.defaults.tasksDir [
+          ".tasks"
+        ])
+        ++ (lib.optional
+          (cfg.gitignore.defaults.projectMarker || cfg.gitignore.defaults.addProjectMarker)
+          cfg.root-marker
+        )
+        ++ cfg.gitignore.entries;
     };
 
     # Core hook: define funcs, resolve paths, ensure dirs + marker + gitignore

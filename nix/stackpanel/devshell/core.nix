@@ -19,5 +19,6 @@
     ./bin.nix
     ./profile.nix
     ./gc-roots.nix
+    ./setup-tasks.nix
   ];
 }
