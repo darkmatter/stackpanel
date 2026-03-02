@@ -126,7 +126,10 @@ let
         devenv.root = effectiveRoot;
         # Fails checking cliVersion otherwise
         devenv.warnOnNewVersion = false;
-        # cliVersion = inputs.devenv.version;
+        # Provide explicit CLI version for newer devenv modules that compare
+        # process manager defaults against devenv CLI major versions.
+        devenv.cli.version = "2.0";
+        devenv.cliVersion = "2.0";
         # Ignore devenv's enterShell. We need the enterShell of the
         # other submodules, but the top level one adds things that
         # conflict with our shellHook (like PS1 modifications,
@@ -203,10 +206,7 @@ let
   profileDrv = devshellOutputs.profile.package or null;
 
   shellPackages =
-    if profileEnabled && profileDrv != null then
-      [ profileDrv ] ++ devenvPackages
-    else
-      allPackages;
+    if profileEnabled && profileDrv != null then [ profileDrv ] ++ devenvPackages else allPackages;
 
   # ===================================================================
   # Combine all env vars
