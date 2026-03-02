@@ -259,10 +259,10 @@ in
         };
       };
       dependencies = {
-        "@aws-sdk/client-sts" = "catalog:"; # AccountId from alchemy/aws
-        "@aws-sdk/client-iam" = "catalog:"; # Role, GitHubOIDCProvider
-        "@aws-sdk/client-kms" = "catalog:"; # KmsKey, KmsAlias
-        "@aws-sdk/client-ssm" = "catalog:"; # SSM for group key storage
+        "@aws-sdk/client-sts" = "^3.953.0"; # AccountId from alchemy/aws
+        "@aws-sdk/client-iam" = "^3.953.0"; # Role, GitHubOIDCProvider
+        "@aws-sdk/client-kms" = "^3.953.0"; # KmsKey, KmsAlias
+        "@aws-sdk/client-ssm" = "^3.953.0"; # SSM for group key storage
       };
       outputs =
         let

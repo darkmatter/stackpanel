@@ -126,7 +126,7 @@ in
         groups = cfg.groups;
       };
       dependencies = {
-        "@aws-sdk/client-ec2" = "catalog:";
+        "@aws-sdk/client-ec2" = "^3.953.0";
       };
       outputs =
         let

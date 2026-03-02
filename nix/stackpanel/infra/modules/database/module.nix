@@ -227,10 +227,23 @@ in
           apiKeySsmPath = cfg.neon.api-key-ssm-path;
         };
         devenv = {
-          inherit (cfg.devenv) database user password host port;
+          inherit (cfg.devenv)
+            database
+            user
+            password
+            host
+            port
+            ;
         };
         docker = {
-          inherit (cfg.docker) image tag user password port network;
+          inherit (cfg.docker)
+            image
+            tag
+            user
+            password
+            port
+            network
+            ;
         };
         ssm = {
           inherit (cfg.ssm) enable;
@@ -238,7 +251,7 @@ in
         };
       };
       dependencies = {
-        "alchemy" = "catalog:";
+        "alchemy" = config.stackpanel.alchemy.version;
       }
       // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
         ${config.stackpanel.alchemy.package.name} = "workspace:*";
