@@ -42,30 +42,10 @@ export type FeatureFlagValue = string | boolean;
 
 type RawOverrides = Record<string, string>;
 
-export const FEATURE_FLAG_KEYS = {
-  overviewLayout: "studio.overview.layout",
-  overviewPulseBanner: "studio.overview.pulse-banner",
-} as const;
+export const FEATURE_FLAG_KEYS = {"overviewLayout":"studio.overview.layout","overviewPulseBanner":"studio.overview.pulse-banner"} as const;
 
-export const featureFlagDefinitions: readonly FeatureFlagDefinition[] = [
-  {
-    key: FEATURE_FLAG_KEYS.overviewLayout,
-    kind: "variant",
-    label: "Overview layout",
-    description: "Select between classic and compact studio overview layouts for experiments.",
-    defaultValue: "classic",
-    variants: ["classic", "compact"],
-    rollout: 100,
-  },
-  {
-    key: FEATURE_FLAG_KEYS.overviewPulseBanner,
-    kind: "boolean",
-    label: "Pulse banner on overview",
-    description: "Show the experimental pulse indicator in the overview panel.",
-    defaultValue: false,
-    rollout: 0,
-  },
-] as const;
+export const featureFlagDefinitions: readonly FeatureFlagDefinition[] =
+  [{"defaultValue":"classic","description":"Select between classic and compact studio overview layouts for experiments.","key":"studio.overview.layout","kind":"variant","label":"Overview layout","rollout":100,"variants":["classic","compact"]},{"defaultValue":false,"description":"Show the experimental pulse indicator in the overview panel.","key":"studio.overview.pulse-banner","kind":"boolean","label":"Pulse banner on overview","rollout":0}] as const;
 
 const STORAGE_KEY = "stackpanel.feature-flags";
 const IDENTIFIER_KEY = "stackpanel.feature-flags.identity";
@@ -181,7 +161,9 @@ function loadOverrides(): RawOverrides {
       !Array.isArray(parsed)
     ) {
       const overrides: RawOverrides = {};
-      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      for (const [key, value] of Object.entries(
+        parsed as Record<string, unknown>,
+      )) {
         if (typeof value === "string" || typeof value === "number") {
           overrides[key] = String(value);
         }
@@ -495,7 +477,9 @@ export function FeatureFlagProvider({ children }: { children: ReactNode }) {
 export function useFeatureFlags(): FeatureFlagsContextValue {
   const context = useContext(FeatureFlagsContext);
   if (!context) {
-    throw new Error("useFeatureFlags must be used within <FeatureFlagProvider />");
+    throw new Error(
+      "useFeatureFlags must be used within <FeatureFlagProvider />",
+    );
   }
 
   return context;

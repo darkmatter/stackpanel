@@ -22,6 +22,14 @@ let
   meta = import ./meta.nix;
   featureFlagsOutputDir = cfg."feature-flags".output-dir or "packages/gen/featureflags";
 
+  # Catalog versions for dependencies used by the generated package.json template.
+  # These must stay in sync with the "catalog:" references in
+  # lib/codegen/templates/feature-flags/package.json.tmpl
+  featureFlagsCatalogDeps = {
+    "@tanstack/react-router" = "^1.143.6";
+    "react" = "19.2.4";
+  };
+
   featureFlagsPackage = import ../../lib/codegen/feature-flags-package.nix {
     inherit lib config;
   };
@@ -103,6 +111,9 @@ in
   # Config
   # ==========================================================================
   config = lib.mkIf shouldGenerate {
+    # Catalog entries — register actual versions for "catalog:" references
+    stackpanel.bun.catalog = lib.mkIf cfg.enable featureFlagsCatalogDeps;
+
     # Register generated files with the Stackpanel file system bridge.
     stackpanel.files.entries = featureFlagsPackage.fileEntries;
 

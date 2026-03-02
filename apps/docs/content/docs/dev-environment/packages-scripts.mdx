@@ -58,6 +58,8 @@ These are merged into the shell alongside the project packages but don't show up
 
 Scripts are named shell commands available in your dev shell. They're defined in `stackpanel.scripts` and become executables on your `PATH`.
 
+You can also opt into **Turbo integration** so scripts are materialized as a generated workspace package (default: `packages/gen/scripts`, package name `@gen/scripts`) and can run through `turbo run <script-name>` with dependency/caching metadata.
+
 ### Inline Scripts
 
 For simple commands, use `exec` to define the script inline:
@@ -212,8 +214,85 @@ Scripts are also exposed as flake outputs, so you can run them outside the dev s
 nix run .#scripts.db-seed
 ```
 
+## Turbo Integration
+
+To connect scripts to Turborepo, enable generated package support:
+
+```nix
+stackpanel.scriptsConfig = {
+  generateTurboPackage = true;
+  # Optional overrides:
+  # turboPackageId = "scripts";
+  # turboPackageName = "@gen/scripts";
+  # turboPackagePath = "packages/gen/scripts";
+};
+```
+
+When enabled, Stackpanel generates/merges a Turbo package declaration for scripts. The resulting workspace package contributes `package.json` scripts where each script command maps to its script name, so Turbo can execute them directly.
+
+### Per-Script Turbo Metadata
+
+Each script can declare Turbo task metadata under `turbo`:
+
+```nix
+stackpanel.scripts = {
+  "write-files" = {
+    exec = "write-files";
+    description = "Materialize generated files";
+    turbo = {
+      enable = true;
+      cache = false;
+      inputs = [ ".stackpanel/**" "nix/stackpanel/**" ];
+    };
+  };
+
+  "check-files" = {
+    exec = "check-files";
+    description = "Verify generated files are current";
+    turbo = {
+      enable = true;
+      dependsOn = [ "write-files" ];
+      cache = false;
+      inputs = [ ".stackpanel/**" "nix/stackpanel/**" ];
+    };
+  };
+
+  "build:ui" = {
+    exec = "bun run --filter @stackpanel/web build";
+    description = "Build web UI";
+    turbo = {
+      enable = true;
+      dependsOn = [ "^build" "check-files" ];
+      outputs = [ "apps/web/.next/**" ];
+    };
+  };
+};
+```
+
+Supported `turbo` fields:
+
+- `enable`: Register this script as a Turbo task
+- `dependsOn`: Task dependencies (supports `^task` syntax)
+- `outputs`: Output globs for caching
+- `inputs`: Input globs for cache keys
+- `cache`: Override Turbo cache behavior
+- `persistent`: Mark long-running tasks
+- `interactive`: Mark tasks that read stdin
+
+### Running Through Turbo
+
+After generating files (`write-files`) and with Turbo configured, run scripts via:
+
+```bash
+turbo run write-files
+turbo run check-files
+turbo run build:ui
+```
+
+This gives you Turbo dependency ordering and cache behavior while keeping script definitions in one place (`stackpanel.scripts`).
+
 ## Reference
 
-- [Options Reference → Devshell](/docs/reference/devshell) for `stackpanel.devshell.packages` and related options
+- [Options Reference → Devshell](/docs/reference/devshell) for `stackpanel.devshell.packages`, `stackpanel.scripts`, and `stackpanel.scriptsConfig`
 - [Options Reference → Packages](/docs/reference/packages) for the full packages configuration
 - [Options Reference → UserPackages](/docs/reference/userPackages) for per-user package overrides

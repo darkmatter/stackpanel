@@ -31,6 +31,28 @@ let
   outputDir = cfg.output-dir;
   stateDir = config.stackpanel.dirs.state;
   moduleIds = builtins.attrNames cfg.modules;
+
+  # ============================================================================
+  # Catalog versions for NPM packages used by infra modules via "catalog:".
+  #
+  # Defined once here so that:
+  #   1. Module dependencies reference "catalog:" (workspace dedup)
+  #   2. stackpanel.bun.catalog gets the real version (root package.json)
+  #
+  # When adding a new AWS SDK or other catalog dependency to an infra module,
+  # add the version here too.
+  # ============================================================================
+  infraCatalogVersions = {
+    "@aws-sdk/client-ec2" = "^3.953.0";
+    "@aws-sdk/client-ecr" = "^3.953.0";
+    "@aws-sdk/client-elastic-load-balancing-v2" = "^3.953.0";
+    "@aws-sdk/client-iam" = "^3.953.0";
+    "@aws-sdk/client-kms" = "^3.953.0";
+    "@aws-sdk/client-ssm" = "^3.953.0";
+    "@aws-sdk/client-sts" = "^3.953.0";
+    "@pulumi/aws" = "^7.15.0";
+    "sst" = "^3.17.25";
+  };
   sortedModuleIds = lib.sort (a: b: a < b) moduleIds;
 
   modulePathIsDirectory =
@@ -347,6 +369,16 @@ let
     acc // mod.dependencies
   ) { } cfg.modules;
 
+  # Collect catalog versions for every "catalog:" dependency across all modules.
+  # Only includes deps whose value is literally "catalog:" — direct version
+  # strings are left alone (they don't need a catalog entry).
+  allCatalogDeps = lib.filterAttrs (_: v: v == "catalog:") allDeps;
+  catalogEntries = lib.mapAttrs (
+    name: _:
+    infraCatalogVersions.${name}
+      or (builtins.throw "infra module dependency '${name}' uses catalog: but has no version in infraCatalogVersions — add it to infra/codegen.nix")
+  ) allCatalogDeps;
+
   # ============================================================================
   # README.md — tailored to registered modules
   # ============================================================================
@@ -634,6 +666,11 @@ in
     stackpanel.devshell.env = {
       STACKPANEL_INFRA_INPUTS = "${stateDir}/infra-inputs.json";
     };
+
+    # ==========================================================================
+    # Bun catalog — register actual versions for all "catalog:" references
+    # ==========================================================================
+    stackpanel.bun.catalog = catalogEntries;
 
     # ==========================================================================
     # Turbo workspace package (generates package.json + turbo.json tasks)

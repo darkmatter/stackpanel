@@ -638,6 +638,14 @@ in {
 
     (lib.mkIf cfg.enable {
       # =========================================================================
+      # Bun catalog — register actual versions for "catalog:" references
+      # =========================================================================
+      stackpanel.bun.catalog = {
+        sst = "^3.17.25";
+        "@pulumi/aws" = "^7.15.0";
+      };
+
+      # =========================================================================
       # Extension Registration
       # =========================================================================
       # Register SST as a builtin extension so it appears in the extensions UI
