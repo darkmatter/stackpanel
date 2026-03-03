@@ -162,7 +162,6 @@ devenv.local.yaml
 /packages/infra/sst.config.ts
 /packages/infra/tsconfig.json
 /packages/scripts/entrypoints/docs.sh
-/packages/scripts/entrypoints/server.sh
 /packages/scripts/entrypoints/stackpanel-go.sh
 /packages/scripts/entrypoints/web.sh
 /process-compose.yaml
