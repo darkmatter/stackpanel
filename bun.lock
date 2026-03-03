@@ -34,6 +34,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@fontsource-variable/google-sans-code": "^5.2.3",
+        "@fontsource-variable/inter": "^5.2.8",
         "@fontsource-variable/montserrat": "^5.2.8",
         "@fontsource-variable/source-code-pro": "^5.2.7",
         "@fontsource/monaspace-neon": "^5.2.5",
@@ -5465,6 +5466,8 @@
     "@stackpanel/auth/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@stackpanel/db/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+
+    "@stackpanel/infra/bun2nix": ["bun2nix@2.0.8", "", { "dependencies": { "sade": "^1.8.1" }, "bin": { "bun2nix": "index.ts" } }, "sha512-pwq35hA81X1Kjsi5Xo69Aii9aY3zZHhWXwqF1QRz/uB35KzKbwJZ16WrhadiG9/T6bjOsRrPZtzuAyqmlXopLw=="],
 
     "@tailwindcss/node/tailwindcss": ["tailwindcss@4.1.17", "", {}, "sha512-j9Ee2YjuQqYT9bbRTfTZht9W/ytp5H+jJpZKiYdP/bpnXARAuELt9ofP0lPnmHjbga7SNQIxdTAXCmtKVYjN+Q=="],
 
