@@ -10,6 +10,7 @@
     "container:push": "./.tasks/bin/container-push",
     "deploy": "./.tasks/bin/deploy",
     "dev": "vite dev --host",
+    "start": "bun .output/server/index.mjs",
     "serve": "vite preview",
     "test": "vitest run --exclude 'src/test/integration/**'",
     "test:watch": "vitest --exclude 'src/test/integration/**'",

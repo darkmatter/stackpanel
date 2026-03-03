@@ -34,7 +34,7 @@
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.inputs.flake-utils.follows = "flake-utils";
-    bun2nix.url = "github:nix-community/bun2nix";
+    bun2nix.url = "github:poly2it/bun2nix/module-populator";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
   };

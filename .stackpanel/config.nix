@@ -14,6 +14,10 @@
   # ---------------------------------------------------------------------------
   apps = {
     docs = {
+      bun.enable = true;
+      bun.generateFiles = false;
+      bun.buildPhase = "bun run build";
+      bun.startScript = "bun serve.ts";
       description = "Documentation site";
       domain = "docs";
       environments = {
@@ -69,6 +73,9 @@
       type = "go";
     };
     web = {
+      bun.enable = true;
+      bun.generateFiles = false;
+      bun.buildPhase = "bun run build:fly";
       commands = {
         dev = {
           command = "bun run -F web dev";
