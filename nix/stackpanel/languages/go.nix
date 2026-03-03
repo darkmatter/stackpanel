@@ -20,7 +20,7 @@
 }:
 let
   cfg = config.stackpanel.languages.go;
-  stateDir = config.stackpanel.dirs.state or ".stackpanel/state";
+  stateDir = config.stackpanel.dirs.state or ".stack/profile";
 in
 {
   options.stackpanel.languages.go = {

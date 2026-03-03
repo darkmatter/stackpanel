@@ -83,7 +83,9 @@
             system
             projectRoot
             ;
-          stackpanelImports = [ ./.stackpanel/modules ];
+          stackpanelImports =
+            if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
+            else [ (self + "/.stackpanel/modules") ];
         };
       in
       {

@@ -37,9 +37,11 @@ let
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =
     cfg.dirs or {
-      home = ".stackpanel";
-      state = ".stackpanel/state";
-      gen = ".stackpanel/gen";
+      home = ".stack";
+      state = ".stack/profile";
+      profile = ".stack/profile";
+      keys = ".stack/keys";
+      gen = ".stack/gen";
       config = ./.;
     };
 
@@ -57,7 +59,7 @@ let
     # Directories
     paths = {
       root = dirs.home;
-      state = dirs.state;
+      state = dirs.profile;
       gen = dirs.gen;
       config = toString dirs.config;
     };
@@ -95,43 +97,6 @@ let
   stateJson = builtins.toJSON stateData;
 in
 {
-  # ── Options (colocated from core/options/state.nix) ──────────────────────────
-  options.stackpanel.state = {
-    file = lib.mkOption {
-      type = lib.types.str;
-      default = "stackpanel.json";
-      description = "Name of the state file written to the state directory.";
-    };
-
-    # Devenv integration state (populated by devenv-*.nix modules)
-    devenv = lib.mkOption {
-      type = lib.types.attrsOf lib.types.anything;
-      default = { };
-      description = ''
-        Devenv-related state for serialization.
-        Populated by devenv integration modules (services, languages, pre-commit).
-
-        Structure:
-          {
-            services = { available = [...]; enabled = [...]; };
-            languages = { available = [...]; enabled = [...]; };
-            preCommit = { available = [...]; enabled = [...]; };
-          }
-      '';
-    };
-
-    # Arbitrary module-contributed state
-    custom = lib.mkOption {
-      type = lib.types.attrsOf lib.types.anything;
-      default = { };
-      description = ''
-        Arbitrary state data contributed by modules.
-        Use this for module-specific state that should be serialized.
-      '';
-    };
-  };
-
-  # ── Config ───────────────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
     # Write state file on shell entry
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)

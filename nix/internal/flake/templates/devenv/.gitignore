@@ -1,4 +1,7 @@
 .devenv/
 .direnv/
-.stackpanel/state/
+.stackpanel-root
+.stack/profile/
+.stack/keys/
+.stack/gen/
 devenv.lock

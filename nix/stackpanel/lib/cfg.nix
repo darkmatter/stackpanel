@@ -145,22 +145,23 @@ let
 
   knownPaths = {
     # Core directories
-    "paths.root" = ".stackpanel";
-    "paths.state" = ".stackpanel/state";
-    "paths.keys" = ".stackpanel/state/keys";
-    "paths.gen" = ".stackpanel/gen";
+    "paths.root" = ".stack";
+    "paths.state" = ".stack/profile";
+    "paths.profile" = ".stack/profile";
+    "paths.keys" = ".stack/keys";
+    "paths.gen" = ".stack/gen";
 
     # Secrets
-    "secrets.secrets-dir" = ".stackpanel/secrets";
-    "secrets.vars-dir" = ".stackpanel/secrets/vars";
-    "secrets.recipients-dir" = ".stackpanel/secrets/recipients";
-    "secrets.recipients-archive-dir" = ".stackpanel/secrets/recipients/.archive";
-    "secrets.bin-dir" = ".stackpanel/secrets/bin";
+    "secrets.secrets-dir" = ".stack/secrets";
+    "secrets.vars-dir" = ".stack/secrets/vars";
+    "secrets.recipients-dir" = ".stack/secrets/recipients";
+    "secrets.recipients-archive-dir" = ".stack/secrets/recipients/.archive";
+    "secrets.bin-dir" = ".stack/gen/secrets";
 
     # Files
-    "paths.state-file" = ".stackpanel/state/stackpanel.json";
-    "paths.local-key" = ".stackpanel/state/keys/local.txt";
-    "paths.local-pub" = ".stackpanel/state/keys/local.pub";
+    "paths.state-file" = ".stack/profile/stackpanel.json";
+    "paths.local-key" = ".stack/keys/local.txt";
+    "paths.local-pub" = ".stack/keys/local.pub";
   };
 
   # Get a well-known path (uses registry default if config not available)

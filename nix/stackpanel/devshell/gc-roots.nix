@@ -68,7 +68,7 @@ let
   gcUpdateScript = pkgs.writeShellScript "stackpanel-gc-update" ''
     set -euo pipefail
 
-    GC_DIR="''${STACKPANEL_STATE_DIR:-.stackpanel/state}/gc"
+    GC_DIR="''${STACKPANEL_STATE_DIR:-.stack/profile}/gc"
     mkdir -p "$GC_DIR"
 
     RETAIN=${toString retain}

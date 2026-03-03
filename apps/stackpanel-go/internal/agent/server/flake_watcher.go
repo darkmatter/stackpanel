@@ -97,6 +97,7 @@ func (fw *FlakeWatcher) Start() error {
 	watchPaths := []string{
 		filepath.Join(fw.projectRoot, "flake.nix"),
 		filepath.Join(fw.projectRoot, "flake.lock"),
+		filepath.Join(fw.projectRoot, ".stack"),
 		filepath.Join(fw.projectRoot, ".stackpanel"),
 		filepath.Join(fw.projectRoot, "nix"),
 	}

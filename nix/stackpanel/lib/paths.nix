@@ -42,9 +42,10 @@
 let
   # Default configuration (can be overridden)
   defaults = {
-    rootDir = ".stackpanel";
+    rootDir = ".stack";
     rootMarker = ".stackpanel-root";
-    stateDir = "state";
+    stateDir = "profile";
+    keysDir = "keys";
     genDir = "gen";
   };
 
@@ -105,6 +106,7 @@ let
     {
       rootDir ? defaults.rootDir,
       stateDir ? defaults.stateDir,
+      keysDir ? defaults.keysDir,
       genDir ? defaults.genDir,
       rootMarker ? defaults.rootMarker,
     }:
@@ -125,6 +127,7 @@ let
         export STACKPANEL_ROOT="$root"
         export STACKPANEL_ROOT_DIR="$root/${rootDir}"
         export STACKPANEL_STATE_DIR="$root/${rootDir}/${stateDir}"
+        export STACKPANEL_KEYS_DIR="$root/${rootDir}/${keysDir}"
         export STACKPANEL_GEN_DIR="$root/${rootDir}/${genDir}"
       }
     '';
@@ -140,21 +143,29 @@ in
       rootDir = cfg.rootDir or defaults.rootDir;
       rootMarker = cfg.rootMarker or defaults.rootMarker;
       stateDir = cfg.stateDir or defaults.stateDir;
+      keysDir = cfg.keysDir or defaults.keysDir;
       genDir = cfg.genDir or defaults.genDir;
 
-      # Validate that stateDir doesn't look like a full path (starts with ".")
       validatedStateDir =
         if lib.hasPrefix "." stateDir && stateDir != "." then
           throw ''
-            paths.nix: stateDir should be a subdirectory name (e.g., "state"), not a full path!
+            paths.nix: stateDir should be a subdirectory name (e.g., "profile"), not a full path!
             Got: "${stateDir}"
-            Expected: just the subdirectory name like "state"
+            Expected: just the subdirectory name like "profile"
             The full path is computed as: $root/${rootDir}/${stateDir}
           ''
         else
           stateDir;
 
-      # Validate that genDir doesn't look like a full path (starts with ".")
+      validatedKeysDir =
+        if lib.hasPrefix "." keysDir && keysDir != "." then
+          throw ''
+            paths.nix: keysDir should be a subdirectory name (e.g., "keys"), not a full path!
+            Got: "${keysDir}"
+          ''
+        else
+          keysDir;
+
       validatedGenDir =
         if lib.hasPrefix "." genDir && genDir != "." then
           throw ''
@@ -172,6 +183,7 @@ in
       ${mkShellResolvePaths {
         rootDir = rootDir;
         stateDir = validatedStateDir;
+        keysDir = validatedKeysDir;
         genDir = validatedGenDir;
       }}
     '';
@@ -186,12 +198,14 @@ in
     {
       rootDir ? defaults.rootDir,
       stateDir ? defaults.stateDir,
+      keysDir ? defaults.keysDir,
       genDir ? defaults.genDir,
       configDir ? null,
     }:
     {
       root = rootDir;
       state = "${rootDir}/${stateDir}";
+      keys = "${rootDir}/${keysDir}";
       gen = "${rootDir}/${genDir}";
       config = if configDir != null then toString configDir else null;
     };
@@ -205,11 +219,13 @@ in
     {
       rootMarker ? defaults.rootMarker,
       stateDir ? defaults.stateDir,
+      keysDir ? defaults.keysDir,
       extraEntries ? [ ],
     }:
     lib.concatStringsSep "\n" (
       [
         "${stateDir}/"
+        "${keysDir}/"
         rootMarker
       ]
       ++ extraEntries

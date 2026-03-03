@@ -34,9 +34,9 @@ let
   # (e.g., ".stackpanel/state", not just "state")
   defaultConfig = {
     projectName = "default";
-    stateDir = ".stackpanel/state"; # Full path from project root
-    genDir = ".stackpanel/gen"; # Full path from project root
-    dataDir = ".stackpanel"; # Full path from project root
+    stateDir = ".stack/profile"; # Full path from project root
+    genDir = ".stack/gen"; # Full path from project root
+    dataDir = ".stack"; # Full path from project root
     ports = { };
     postgres = {
       enable = false;

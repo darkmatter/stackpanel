@@ -3,13 +3,11 @@
 #
 # Main entry point for the Stackpanel core module.
 #
-# This module initializes the Stackpanel development environment by:
-#   - Importing all option modules from ./options/
-#   - Setting up environment variables for root marker and directories
-#   - Creating devshell hooks to resolve paths, create directories, and
-#     ensure the root marker file and .gitignore entries exist.
+# Imports core-only options and implementation, then sets up the foundational
+# development environment: root marker, directories, env vars, shell hooks.
 #
-# Imported by devenv.nix to enable the Stackpanel module system.
+# Feature-specific options live in their own directories (apps/, services/,
+# network/, secrets/, ide/, tui/, variables/).
 # ==============================================================================
 {
   config,
@@ -25,9 +23,22 @@ let
 in
 {
   imports = [
-    ./options
     ./aliases.nix
+    ./checks.nix
+    ./ci.nix
     ./cli.nix
+    ./cli-options.nix
+    ./codegen.nix
+    ./extensions.nix
+    ./modules-options.nix
+    ./motd.nix
+    ./options-core.nix
+    ./outputs.nix
+    ./panels.nix
+    ./state-options.nix
+    ./tasks.nix
+    ./user-packages.nix
+    ./users-options.nix
     ./util.nix
   ];
 
@@ -57,7 +68,8 @@ in
       sort = true;
       lines =
         (lib.optionals cfg.gitignore.defaults.stackpanelState [
-          "${cfg.dirs.home}/state/"
+          "${cfg.dirs.home}/keys/"
+          "${cfg.dirs.home}/profile/"
         ])
         ++ (lib.optionals cfg.gitignore.defaults.localConfig [
           "${cfg.dirs.home}/config.local.nix"
@@ -65,10 +77,9 @@ in
         ++ (lib.optionals cfg.gitignore.defaults.tasksDir [
           ".tasks"
         ])
-        ++ (lib.optional
-          (cfg.gitignore.defaults.projectMarker || cfg.gitignore.defaults.addProjectMarker)
-          cfg.root-marker
-        )
+        ++ (lib.optional (
+          cfg.gitignore.defaults.projectMarker || cfg.gitignore.defaults.addProjectMarker
+        ) cfg.root-marker)
         ++ cfg.gitignore.entries;
     };
 
@@ -83,13 +94,14 @@ in
       ''
       ++ [
         ''
+          # syntax: bash
           set -euo pipefail
 
           ${pathsLib.mkShellPathUtils {
             rootDir = cfg.dirs.home;
             rootMarker = cfg.root-marker;
-            # Hardcoded subdirectory names - these are not configurable
-            stateDir = "state";
+            stateDir = "profile";
+            keysDir = "keys";
             genDir = "gen";
           }}
 
@@ -100,7 +112,7 @@ in
             stackpanel_resolve_paths
           fi
 
-          mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_GEN_DIR"
+          mkdir -p "$STACKPANEL_STATE_DIR" "$STACKPANEL_KEYS_DIR" "$STACKPANEL_GEN_DIR"
 
           # Shell logging disabled by default (requires bash for process substitution)
           # Set STACKPANEL_SHELL_LOG before entering shell to enable
@@ -119,7 +131,7 @@ in
             local files=(
               "$STACKPANEL_ROOT/flake.nix"
               "$STACKPANEL_ROOT/flake.lock"
-              "$STACKPANEL_ROOT/.stackpanel/config.nix"
+              "$STACKPANEL_ROOT/${cfg.dirs.home}/config.nix"
               "$STACKPANEL_ROOT/devenv.nix"
               "$STACKPANEL_ROOT/devenv.yaml"
             )
@@ -153,7 +165,7 @@ in
           echo ""
           echo "═══════════════════════════════════════════════════════════════"
           echo "Shell hook completed at $(date '+%Y-%m-%d %H:%M:%S')"
-          echo "Log saved to: ''${STACKPANEL_STATE_DIR:-$PWD/.stackpanel/state}/shell.log"
+          echo "Log saved to: ''${STACKPANEL_STATE_DIR:-$PWD/.stack/profile}/shell.log"
           echo "═══════════════════════════════════════════════════════════════"
         fi
       ''
