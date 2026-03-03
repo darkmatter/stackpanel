@@ -47,9 +47,11 @@ let
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =
     cfg.dirs or {
-      home = ".stackpanel";
-      state = ".stackpanel/state";
-      gen = ".stackpanel/gen";
+      home = ".stack";
+      state = ".stack/profile";
+      profile = ".stack/profile";
+      keys = ".stack/keys";
+      gen = ".stack/gen";
       config = ./.;
     };
 
@@ -123,13 +125,12 @@ let
     basePort = portsCfg.base-port;
     processComposePort = if pcCfg.port != null then pcCfg.port else portsCfg.base-port + 90;
 
-    # Note: these must match the Go Paths struct fields (state, gen, data)
-    # dirs.config is intentionally excluded - it's a Nix-time path that becomes
-    # a store path, and the CLI doesn't need it at runtime.
+    # Note: these must match the Go Paths struct fields (state/profile, keys, gen, data)
     paths = {
-      state = dirs.state;
+      state = dirs.profile;
+      keys = dirs.keys;
       gen = dirs.gen;
-      data = dirs.home; # "data" in Go corresponds to dirs.home (.stackpanel)
+      data = dirs.home;
     };
 
     # Apps with computed ports and domains
@@ -248,20 +249,6 @@ let
   configFile = pkgs.writeText "stackpanel-config.json" configJson;
 in
 {
-  # ── Options (colocated from core/options/cli.nix) ────────────────────────────
-  options.stackpanel.cli = {
-    enable = lib.mkEnableOption "CLI-based file generation" // {
-      default = false;
-    };
-
-    quiet = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Suppress generation output messages";
-    };
-  };
-
-  # ── Config ───────────────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
     # Add the CLI to packages
     stackpanel.devshell.packages = [ stackpanel-cli ];

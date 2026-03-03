@@ -60,7 +60,7 @@ let
   catalogHash = builtins.hashString "sha256" catalogFingerprint;
 
   # State directory for writing the hash file
-  stateDir = sp.dirs.state or ".stackpanel/state";
+  stateDir = sp.dirs.state or ".stack/profile";
 
 in
 {

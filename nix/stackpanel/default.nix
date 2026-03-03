@@ -56,11 +56,12 @@ in
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
     ./docs # Documentation generation (README, etc.)
+    ./variables # Workspace variables and backend configuration
 
-    # Feature modules - auto-discovered from ./modules/
+    # Feature plugins - auto-discovered from ./plugins/
     # Supports both single files (module.nix) and directories (module/default.nix)
-    # See modules/default.nix for the discovery logic
-    ./modules
+    # See plugins/default.nix for the discovery logic
+    ./plugins
 
     # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,
     # devenv-pre-commit.nix) are NOT auto-imported here. They require devenvSchema

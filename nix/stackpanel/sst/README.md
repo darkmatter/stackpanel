@@ -1,0 +1,43 @@
+# SST Module
+
+AWS infrastructure provisioning via SST (Serverless Stack).
+
+## Overview
+
+Manages foundational AWS resources: KMS encryption keys, IAM roles, and OIDC identity providers for CI/CD. Supports GitHub Actions, Fly.io, and Roles Anywhere authentication patterns.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `default.nix` | Module entry point and imports |
+| `sst.nix` | SST options, scripts, and shell hooks |
+| `sst.config.example.ts` | Example SST configuration |
+| `src/scripts/` | Shell scripts for SST operations |
+
+## Usage
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "my-project";
+  region = "us-east-1";
+  account-id = "123456789012";
+
+  kms.enable = true;
+
+  oidc.provider = "github-actions";
+  oidc.github-actions = {
+    org = "my-org";
+    repo = "my-repo";
+  };
+};
+```
+
+## OIDC Providers
+
+| Provider | Description |
+|----------|-------------|
+| `github-actions` | GitHub Actions workflow authentication |
+| `flyio` | Fly.io machine authentication |
+| `roles-anywhere` | AWS Roles Anywhere with Step CA certificates |

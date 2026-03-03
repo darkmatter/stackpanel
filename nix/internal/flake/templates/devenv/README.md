@@ -39,7 +39,7 @@ bun run dev
 ├── devenv.yaml            # Devenv inputs and imports
 ├── devenv.nix             # Devenv configuration
 ├── devenv.lock            # Locked dependencies (auto-generated)
-└── .stackpanel/
+└── .stack/
     └── config.nix         # Stackpanel options
 ```
 
@@ -47,7 +47,7 @@ bun run dev
 
 ### Stackpanel Config
 
-Edit `.stackpanel/config.nix`:
+Edit `.stack/config.nix`:
 
 ```nix
 {

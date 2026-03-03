@@ -1,6 +1,0 @@
-# Runtime state (gitignored)
-state/
-
-# Local config overrides (per-user, gitignored)
-config.local.nix
-

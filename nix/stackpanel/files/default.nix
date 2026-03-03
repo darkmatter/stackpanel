@@ -369,7 +369,7 @@ let
 
       cd "$ROOT"
 
-      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+      STATE_DIR="''${STACKPANEL_STATE_DIR:-$ROOT/.stack/profile}"
       MANIFEST_FILE="$STATE_DIR/.files-manifest"
 
       # ── Manifest fast path ──────────────────────────────────────────────

@@ -107,15 +107,24 @@ let
 
   # ===========================================================================
   # Priority 2: Read from state file
-  # Try explicit stateDir first, then derive from root
+  # Try explicit stateDir first, then derive from root (.stack/profile, then .stackpanel/state)
   # ===========================================================================
-  stateFile =
+  stateFileCandidates =
     if effectiveStateDir != null then
-      effectiveStateDir + "/stackpanel.json"
+      [ (effectiveStateDir + "/stackpanel.json") ]
     else if effectiveRoot != null then
-      effectiveRoot + "/.stackpanel/state/stackpanel.json"
+      [
+        (effectiveRoot + "/.stack/profile/stackpanel.json")
+        (effectiveRoot + "/.stackpanel/state/stackpanel.json")
+      ]
     else
-      null;
+      [ ];
+
+  stateFile =
+    let
+      existing = builtins.filter (p: builtins.pathExists p) stateFileCandidates;
+    in
+    if existing != [ ] then builtins.head existing else null;
 
   configFromState =
     if stateFile != null && builtins.pathExists stateFile then
@@ -135,7 +144,7 @@ else
       if root == null then
         "Pass --argstr root /path/to/project, or run from within a devenv shell"
       else
-        "No config at ${effectiveRoot}/.stackpanel/state/stackpanel.json — run 'stackpanel preflight' first";
+        "No config at ${effectiveRoot}/.stack/profile/stackpanel.json (or .stackpanel/state) — run 'stackpanel preflight' first";
     projectRoot = effectiveRoot;
     stateFile = stateFile;
     configJsonPath = effectiveConfigJson;

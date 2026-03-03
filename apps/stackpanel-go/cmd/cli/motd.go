@@ -79,7 +79,7 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 	if len(cfg.Healthchecks) > 0 {
 		stateDir := cfg.Paths.State
 		if stateDir == "" {
-			stateDir = ".stackpanel/state"
+			stateDir = ".stack/profile"
 		}
 		// Make stateDir absolute relative to project root
 		if cfg.ProjectRoot != "" && !filepath.IsAbs(stateDir) {

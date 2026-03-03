@@ -60,7 +60,7 @@ func runHealthcheck(cmd *cobra.Command, args []string) error {
 	// Resolve state directory
 	stateDir := cfg.Paths.State
 	if stateDir == "" {
-		stateDir = ".stackpanel/state"
+		stateDir = ".stack/profile"
 	}
 	if cfg.ProjectRoot != "" && !filepath.IsAbs(stateDir) {
 		stateDir = filepath.Join(cfg.ProjectRoot, stateDir)

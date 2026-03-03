@@ -55,7 +55,7 @@ let
 in
 {
   imports = [
-    ../core/options
+    ./options.nix
   ];
 
   config = lib.mkIf cfg.enable {

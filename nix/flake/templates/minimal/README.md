@@ -37,7 +37,7 @@ bun run dev
 .
 ├── flake.nix              # Nix flake (main entry point)
 ├── flake.lock             # Locked dependencies (auto-generated)
-├── .stackpanel/
+├── .stack/
 │   └── config.nix         # Stackpanel options
 └── .envrc                 # direnv configuration
 ```
@@ -46,7 +46,7 @@ bun run dev
 
 ### Stackpanel Config
 
-Edit `.stackpanel/config.nix`:
+Edit `.stack/config.nix`:
 
 ```nix
 {

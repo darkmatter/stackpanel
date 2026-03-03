@@ -94,7 +94,7 @@ in
         # syntax: bash
         # Set the config path for starship
         # Use STACKPANEL_STATE_DIR (native) or DEVENV_STATE (devenv)
-        _starship_state_dir="''${STACKPANEL_STATE_DIR:-''${DEVENV_STATE:-$PWD/.stackpanel/state}}"
+        _starship_state_dir="''${STACKPANEL_STATE_DIR:-''${DEVENV_STATE:-$PWD/.stack/profile}}"
         mkdir -p "$_starship_state_dir"
 
         if [[ -n "${resolvedConfigPath}" ]]; then

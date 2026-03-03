@@ -6,15 +6,15 @@
 # Getting started:
 #   1. Run: nix flake init -t github:darkmatter/stackpanel
 #   2. Run: direnv allow
-#   3. Configure stackpanel in ./.stackpanel/config.nix
+#   3. Configure stackpanel in ./.stack/config.nix
 #
 # Shell options:
 #   nix develop     # Pure stackpanel shell (fast, reproducible)
 #   devenv shell    # Devenv shell with languages/services (if devenv.nix exists)
 #
 # The flakeModule:
-#   - Auto-loads .stackpanel/config.nix (and _internal.nix if present)
-#   - Auto-loads .stackpanel/devenv.nix for additional packages/env
+#   - Auto-loads .stack/config.nix
+#   - Auto-loads .stack/devenv.nix for additional packages/env
 #   - Creates devShells.default via pkgs.mkShell (NOT devenv)
 #   - Exposes stackpanelConfig, stackpanelFullConfig, stackpanelPackages
 # ==============================================================================
@@ -49,7 +49,7 @@
       perSystem =
         { pkgs, ... }:
         {
-          # The flakeModule auto-loads .stackpanel/config.nix
+          # The flakeModule auto-loads .stack/config.nix
           # and creates devShells.default automatically when stackpanel.enable = true
 
           packages.default = pkgs.hello;

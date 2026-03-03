@@ -43,7 +43,7 @@ nix flake init -t github:darkmatter/stackpanel
 ├── flake.nix              # Flake entry with flake-parts
 ├── nix/
 │   └── devenv.nix         # Devenv options (packages, languages, etc.)
-├── .stackpanel/
+├── .stack/
 │   └── config.nix         # Stackpanel options
 └── .envrc                 # direnv configuration
 ```
@@ -68,7 +68,7 @@ nix flake init -t github:darkmatter/stackpanel#native
 ```
 .
 ├── flake.nix              # Flake with flakeModules.native
-├── .stackpanel/
+├── .stack/
 │   └── config.nix         # Stackpanel options
 └── .envrc                 # direnv configuration
 ```
@@ -94,7 +94,7 @@ nix flake init -t github:darkmatter/stackpanel#devenv
 .
 ├── devenv.yaml            # Devenv inputs and imports
 ├── devenv.nix             # Devenv + Stackpanel options
-├── .stackpanel/
+├── .stack/
 │   └── config.nix         # Stackpanel options
 └── .envrc                 # direnv configuration
 ```
@@ -119,7 +119,7 @@ nix flake init -t github:darkmatter/stackpanel#minimal
 ```
 .
 ├── flake.nix              # Standard Nix flake
-├── .stackpanel/
+├── .stack/
 │   └── config.nix         # Stackpanel options
 └── .envrc                 # direnv configuration
 ```
@@ -131,7 +131,7 @@ nix flake init -t github:darkmatter/stackpanel#minimal
 
 ## Configuration
 
-All templates use the same `.stackpanel/config.nix` structure:
+All templates use the same `.stack/config.nix` structure:
 
 ```nix
 {

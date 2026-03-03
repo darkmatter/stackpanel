@@ -14,12 +14,14 @@ import (
 // Preset Nix expressions for common evaluations
 // These are self-contained snippets that can be evaluated directly
 const (
-	// UsersPreset evaluates the users configuration from .stackpanel/data/users.nix
+	// UsersPreset evaluates the users configuration from .stack/data or .stackpanel/data
 	// Returns the users attrset in stackpanel.users format
 	UsersPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  usersPath = root + "/.stackpanel/data/users.nix";
+  usersStack = root + "/.stack/data/users.nix";
+  usersLegacy = root + "/.stackpanel/data/users.nix";
+  usersPath = if builtins.pathExists usersStack then usersStack else usersLegacy;
 in
   if builtins.pathExists usersPath
   then import usersPath
@@ -30,18 +32,24 @@ in
 	GitHubCollaboratorsPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  collabsPath = root + "/.stackpanel/data/github-collaborators.nix";
+  collabsStack = root + "/.stack/data/github-collaborators.nix";
+  collabsLegacy = root + "/.stackpanel/external/github-collaborators.nix";
+  collabsPath = if builtins.pathExists collabsStack then collabsStack
+    else if builtins.pathExists (root + "/.stackpanel/data/github-collaborators.nix") then root + "/.stackpanel/data/github-collaborators.nix"
+    else collabsLegacy;
 in
   if builtins.pathExists collabsPath
   then import collabsPath
   else { collaborators = {}; }
 `
 
-	// StackpanelConfigPreset evaluates the full stackpanel config from .stackpanel/config.nix
+	// StackpanelConfigPreset evaluates the full stackpanel config from .stack or .stackpanel
 	StackpanelConfigPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  configPath = root + "/.stackpanel/config.nix";
+  configStack = root + "/.stack/config.nix";
+  configLegacy = root + "/.stackpanel/config.nix";
+  configPath = if builtins.pathExists configStack then configStack else configLegacy;
   rawConfig =
     if builtins.pathExists configPath
     then import configPath
@@ -409,21 +417,23 @@ func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions)
 		}
 	}
 
-	// Fast path 3: try state file
+	// Fast path 3: try state file (.stack/profile then .stackpanel/state)
 	if projectRoot != "" {
-		stateFile := projectRoot + "/.stackpanel/state/stackpanel.json"
-		packages, err := getInstalledPackagesFromJSON(stateFile)
-		if err == nil && len(packages) > 0 {
-			return packages, nil
+		for _, p := range []string{projectRoot + "/.stack/profile/stackpanel.json", projectRoot + "/.stackpanel/state/stackpanel.json"} {
+			packages, err := getInstalledPackagesFromJSON(p)
+			if err == nil && len(packages) > 0 {
+				return packages, nil
+			}
 		}
 	}
 
-	// Fast path 4: try generated config
+	// Fast path 4: try generated config (.stack/gen then .stackpanel/gen)
 	if projectRoot != "" {
-		genConfig := projectRoot + "/.stackpanel/gen/config.json"
-		packages, err := getInstalledPackagesFromJSON(genConfig)
-		if err == nil && len(packages) > 0 {
-			return packages, nil
+		for _, p := range []string{projectRoot + "/.stack/gen/config.json", projectRoot + "/.stackpanel/gen/config.json"} {
+			packages, err := getInstalledPackagesFromJSON(p)
+			if err == nil && len(packages) > 0 {
+				return packages, nil
+			}
 		}
 	}
 
@@ -474,15 +484,16 @@ func getInstalledPackagesFromJSON(configPath string) ([]InstalledPackage, error)
 	return config.Packages, nil
 }
 
-// getUserPackagesFromDataFile reads user-installed packages from .stackpanel/data/packages.nix
+// getUserPackagesFromDataFile reads user-installed packages from .stack/data or .stackpanel/data
 // This is a fallback when the config JSON doesn't have packages or doesn't exist yet.
 // The file format is a simple Nix list of attribute path strings:
 //
 //	[ "ripgrep" "jq" "htop" ]
 func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error) {
-	packagesFile := projectRoot + "/.stackpanel/data/packages.nix"
-
-	// Check if file exists
+	packagesFile := projectRoot + "/.stack/data/packages.nix"
+	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {
+		packagesFile = projectRoot + "/.stackpanel/data/packages.nix"
+	}
 	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {
 		return nil, err
 	}

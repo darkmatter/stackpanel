@@ -118,10 +118,10 @@ var (
 	// StackpanelRootDirName is the name of the .stackpanel directory
 	StackpanelRootDirName = EnvVar{
 		Name:        "STACKPANEL_ROOT_DIR_NAME",
-		Description: "Name of the .stackpanel directory within the project",
+		Description: "Name of the config directory within the project (.stack or .stackpanel)",
 		Category:    CategoryCore,
 		Source:      SourceNix,
-		Default:     ".stackpanel",
+		Default:     ".stack",
 	}
 
 	// StackpanelShellID is a unique identifier for the current shell session
@@ -136,10 +136,10 @@ var (
 	// StackpanelNixConfig is the path to the source Nix config file
 	StackpanelNixConfig = EnvVar{
 		Name:        "STACKPANEL_NIX_CONFIG",
-		Description: "Path to the source Nix config file (.stackpanel/config.nix)",
+		Description: "Path to the source Nix config file (.stack/config.nix or .stackpanel/config.nix)",
 		Category:    CategoryCore,
 		Source:      SourceNix,
-		Example:     "/home/user/my-project/.stackpanel/config.nix",
+		Example:     "/home/user/my-project/.stack/config.nix",
 		GoField:     "NixConfigPath",
 	}
 
@@ -159,14 +159,14 @@ var (
 // ===========================================================================
 
 var (
-	// StackpanelStateDir is the directory for runtime state
+	// StackpanelStateDir is the directory for runtime state (profile - ephemeral)
 	StackpanelStateDir = EnvVar{
 		Name:        "STACKPANEL_STATE_DIR",
-		Description: "Directory for runtime state (credentials, caches, etc.)",
+		Description: "Directory for runtime state (profile: stackpanel.json, shell.log)",
 		Category:    CategoryPaths,
 		Source:      SourceNix,
 		Required:    true,
-		Example:     "/home/user/my-project/.stackpanel/state",
+		Example:     "/home/user/my-project/.stack/profile",
 		GoField:     "StateDir",
 	}
 
@@ -176,7 +176,7 @@ var (
 		Description: "Full path to the stackpanel.json state file",
 		Category:    CategoryPaths,
 		Source:      SourceNix,
-		Example:     "/home/user/my-project/.stackpanel/state/stackpanel.json",
+		Example:     "/home/user/my-project/.stack/profile/stackpanel.json",
 		GoField:     "StateFile",
 	}
 
@@ -186,7 +186,7 @@ var (
 		Description: "Log file capturing shell entry output",
 		Category:    CategoryPaths,
 		Source:      SourceNix,
-		Example:     "/home/user/my-project/.stackpanel/state/shell.log",
+		Example:     "/home/user/my-project/.stack/profile/shell.log",
 		GoField:     "ShellLog",
 	}
 
@@ -196,7 +196,7 @@ var (
 		Description: "Directory for generated files (configs, scripts)",
 		Category:    CategoryPaths,
 		Source:      SourceNix,
-		Example:     "/home/user/my-project/.stackpanel/gen",
+		Example:     "/home/user/my-project/.stack/gen",
 		GoField:     "GenDir",
 	}
 
@@ -206,7 +206,7 @@ var (
 		Description: "Directory for persistent data (databases, etc.)",
 		Category:    CategoryPaths,
 		Source:      SourceNix,
-		Example:     "/home/user/my-project/.stackpanel/data",
+		Example:     "/home/user/my-project/.stack/data",
 		GoField:     "DataDir",
 	}
 )

@@ -7,12 +7,19 @@ import (
 )
 
 // Paths resolves filesystem locations for Nix data files relative to a
-// project root directory. It encapsulates the legacy (per-entity files in
-// .stackpanel/data/) vs consolidated (.stackpanel/config.nix) layout.
+// project root directory. Prefers .stack with .stackpanel fallback for
+// backward compatibility.
 type Paths struct {
-	// ProjectRoot is the absolute path to the project directory that
-	// contains the .stackpanel/ folder.
 	ProjectRoot string
+}
+
+// configDir returns the config directory name: ".stack" if it exists, else ".stackpanel".
+func (p *Paths) configDir() string {
+	stackDir := filepath.Join(p.ProjectRoot, ".stack")
+	if info, err := os.Stat(stackDir); err == nil && info.IsDir() {
+		return ".stack"
+	}
+	return ".stackpanel"
 }
 
 // NewPaths creates a Paths resolver for the given project root.
@@ -20,10 +27,14 @@ func NewPaths(projectRoot string) *Paths {
 	return &Paths{ProjectRoot: projectRoot}
 }
 
-// Dir returns the .stackpanel directory inside the project root.
-// This is the top-level directory for all Stackpanel metadata.
+// Dir returns the config directory (.stack or .stackpanel) inside the project root.
 func (p *Paths) Dir() string {
-	return filepath.Join(p.ProjectRoot, ".stackpanel")
+	return filepath.Join(p.ProjectRoot, p.configDir())
+}
+
+// ConfigDirName returns the config directory name (".stack" or ".stackpanel") for the given project root.
+func ConfigDirName(projectRoot string) string {
+	return (&Paths{ProjectRoot: projectRoot}).configDir()
 }
 
 // ConfigFilePath returns the path to the single consolidated config.nix
@@ -40,11 +51,11 @@ func (p *Paths) LegacyDataDir() string {
 	return filepath.Join(p.Dir(), "data")
 }
 
-// ExternalDataDir returns the path to the external/ directory where
-// read-only data files from external sources (e.g. GitHub collaborators)
-// are stored.
+// ExternalDataDir returns the path to the data/ directory where
+// external/collaborator data is stored (e.g. github-collaborators.nix).
+// Merged from legacy external/ into data/.
 func (p *Paths) ExternalDataDir() string {
-	return filepath.Join(p.Dir(), "external")
+	return filepath.Join(p.Dir(), "data")
 }
 
 // EntityPath returns the filesystem path for a given entity name.
@@ -65,12 +76,16 @@ func (p *Paths) EntityPath(entity string) string {
 }
 
 // ExternalEntityPath returns the path for a read-only external entity.
-// The "external-" prefix is stripped to form the filename:
+// The "external-" prefix is stripped. Prefers data/ then legacy external/:
 //
-//	"external-github-collaborators" → .stackpanel/external/github-collaborators.nix
+//	"external-github-collaborators" → .stack/data/github-collaborators.nix (or .stackpanel/external/...)
 func (p *Paths) ExternalEntityPath(entity string) string {
 	name := strings.TrimPrefix(entity, "external-")
-	return filepath.Join(p.ExternalDataDir(), name+".nix")
+	dataPath := filepath.Join(p.Dir(), "data", name+".nix")
+	if _, err := os.Stat(dataPath); err == nil {
+		return dataPath
+	}
+	return filepath.Join(p.Dir(), "external", name+".nix")
 }
 
 // IsUsingConsolidatedConfig returns true if the given entity is stored in

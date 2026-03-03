@@ -6,8 +6,11 @@
 { ... }:
 {
   imports = [
-    ./network.nix # Step CA certificates
-    ./ports.nix # Deterministic port computation
-    ./dns.nix # Local DNS configuration (Apple container, etc.)
+    ./dns.nix
+    ./dns-options.nix
+    ./network.nix
+    ./ports.nix
+    ./ports-options.nix
+    ./step-ca-options.nix
   ];
 }
