@@ -10,7 +10,8 @@
 #   { devShells, checks, apps, legacyPackages, packages }
 #
 # Architecture:
-#   - Auto-loads config from .stackpanel/_internal.nix or .stackpanel/config.nix
+#   - Auto-loads config from .stack/config.nix or .stackpanel/config.nix (prefers .stack)
+#   - Merge: config.nix + imports + data/github-collaborators.nix + config.local.nix
 #   - Uses lib.evalModules for internal stackpanel config (NixOS module system)
 #   - Creates devShells.default via pkgs.mkShell with full passthru
 #   - Optionally integrates devenv for languages/services if available
@@ -45,13 +46,22 @@ let
   effectiveRoot = if projectRoot != null then projectRoot else toString self;
 
   # ===================================================================
-  # Auto-load stackpanel config from .stackpanel/
+  # Config directory: .stack (preferred) with .stackpanel fallback
   # Always use `self` for file discovery (works in pure evaluation)
   # ===================================================================
-  internalConfigPath = self + "/.stackpanel/_internal.nix";
-  simpleConfigPath = self + "/.stackpanel/config.nix";
+  hasStackConfig = builtins.pathExists (self + "/.stack/config.nix");
+  hasStackpanelConfig = builtins.pathExists (self + "/.stackpanel/config.nix");
+  configDir =
+    if hasStackConfig then
+      ".stack"
+    else if hasStackpanelConfig then
+      ".stackpanel"
+    else
+      ".stack";
 
-  hasInternalConfig = builtins.pathExists internalConfigPath;
+  configDirPath = self + "/${configDir}";
+  simpleConfigPath = configDirPath + "/config.nix";
+
   hasSimpleConfig = builtins.pathExists simpleConfigPath;
 
   loadConfig =
@@ -61,11 +71,82 @@ let
     in
     if builtins.isFunction raw then raw { inherit pkgs lib; } else raw;
 
+  # In-flake merge: replaces _internal.nix when it's absent (preferred for .stack)
+  # Merge order: config.nix + imports → + data/github-collaborators.nix → + config.local.nix
+  stackpanelRootFromMarker =
+    let
+      markerPath = self + "/.stackpanel-root";
+    in
+    if builtins.pathExists markerPath then
+      let
+        content = lib.removeSuffix "\n" (builtins.readFile markerPath);
+      in
+      if content != "" && content != "." then content else null
+    else
+      null;
+
+  localConfigPath =
+    if stackpanelRootFromMarker != null then
+      stackpanelRootFromMarker + "/${configDir}/config.local.nix"
+    else
+      null;
+  hasLocalConfig = localConfigPath != null && builtins.pathExists localConfigPath;
+  rawLocalConfig = if hasLocalConfig then import localConfigPath else { };
+  localConfig =
+    if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
+
+  processImports =
+    config:
+    let
+      imports = config.imports or [ ];
+      configWithoutImports = builtins.removeAttrs config [ "imports" ];
+      importModule =
+        path:
+        let
+          imported = import path;
+          result = if builtins.isFunction imported then imported { inherit pkgs lib; } else imported;
+        in
+        processImports result;
+      importedConfigs = map importModule imports;
+    in
+    lib.foldl lib.recursiveUpdate { } (importedConfigs ++ [ configWithoutImports ]);
+
+  ghCollabsPath = configDirPath + "/data/github-collaborators.nix";
+  ghCollabsPathLegacy = configDirPath + "/external/github-collaborators.nix";
+  ghCollabs =
+    if builtins.pathExists ghCollabsPath then
+      import ghCollabsPath
+    else if builtins.pathExists ghCollabsPathLegacy then
+      import ghCollabsPathLegacy
+    else
+      { collaborators = { }; };
+
+  toUser = name: collab: {
+    inherit name;
+    github = collab.login or name;
+    public-keys = collab.publicKeys or [ ];
+    secrets-allowed-environments =
+      if collab.isAdmin or false then
+        [
+          "dev"
+          "staging"
+          "production"
+        ]
+      else
+        [ "dev" ];
+  };
+  github-team = lib.mapAttrs (name: user: toUser name user) ghCollabs.collaborators;
+
   loadedConfig =
-    if hasInternalConfig then
-      loadConfig internalConfigPath
-    else if hasSimpleConfig then
-      loadConfig simpleConfigPath
+    if hasSimpleConfig then
+      let
+        baseUserConfig = loadConfig simpleConfigPath;
+        userConfig = processImports baseUserConfig;
+        configWithUsers = userConfig // {
+          users = lib.recursiveUpdate github-team (userConfig.users or { });
+        };
+      in
+      lib.recursiveUpdate configWithUsers localConfig
     else
       { };
 
@@ -107,7 +188,7 @@ let
   # setup (PS1, DEVENV_STATE dirs, profile linking) that conflicts with ours.
   # ===================================================================
 
-  devenvConfigPath = self + "/.stackpanel/devenv.nix";
+  devenvConfigPath = configDirPath + "/devenv.nix";
   hasDevenvConfig = builtins.pathExists devenvConfigPath;
 
   devenvModule =
@@ -149,7 +230,7 @@ let
     };
   };
 
-  # Extract devenv config if available
+  # Extract devenv config if available (only when both devenv input and config file exist)
   devenvConfig = if hasDevenv && hasDevenvConfig then devenvEval.config else null;
 
   # Get packages from devenv (includes languages.* computed packages like delve, gopls)
@@ -226,6 +307,7 @@ let
   # Build complete shellHook content
   # ===================================================================
   shellHookContent = ''
+    # syntax: bash
     # ================================================================
     # Stackpanel Shell Hook (wrapper)
     # Generated by: nix/flake/default.nix
@@ -251,13 +333,13 @@ let
     }
 
     # Run the hook with all output to stderr (so direnv doesn't capture/evaluate it)
-    # Optionally tee to log file if state dir exists
-    if [[ -d "''${STACKPANEL_STATE_DIR:-.stackpanel/state}" ]] 2>/dev/null; then
+    # Optionally tee to log file if profile dir exists
+    if [[ -d "''${STACKPANEL_STATE_DIR:-.stack/profile}" ]] 2>/dev/null; then
       CLICOLOR_FORCE=1 \
       FORCE_COLOR=3 \
       COLORTERM=truecolor \
       __stackpanel_shell_hook_main 2> \
-          >(tee -a "''${STACKPANEL_STATE_DIR:-.stackpanel/state}/shell.log" >&2) \
+          >(tee -a "''${STACKPANEL_STATE_DIR:-.stack/profile}/shell.log" >&2) \
         || status=$?
     else
       __stackpanel_shell_hook_main >&2 \
@@ -311,12 +393,12 @@ let
     DEVENV_SKIP_TASKS = "1";
 
     # Minimal shellHook that sources the full hook from the store
-    # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stackpanel/state/shellhook.sh)
+    # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stack/profile/shellhook.sh)
     shellHook = ''
       # Source the full shellHook from the Nix store
       source "${shellHookFile}/shellhook.sh"
 
-      # Symlink to state dir for easy inspection (after STACKPANEL_STATE_DIR is set)
+      # Symlink to profile dir for easy inspection (after STACKPANEL_STATE_DIR is set)
       if [[ -n "''${STACKPANEL_STATE_DIR:-}" ]]; then
         mkdir -p "$STACKPANEL_STATE_DIR"
         ln -sf "${shellHookFile}/shellhook.sh" "$STACKPANEL_STATE_DIR/shellhook.sh"

@@ -190,7 +190,7 @@ in
           severity = "critical";
           timeout = 5;
           script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
             KEY_PATH="$STACKPANEL_STATE_DIR/step/device.key"
 
@@ -216,7 +216,7 @@ in
           severity = "critical";
           timeout = 10;
           script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
             if [ ! -f "$CERT_PATH" ]; then
@@ -245,7 +245,7 @@ in
           severity = "warning";
           timeout = 10;
           script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
             if [ ! -f "$CERT_PATH" ]; then
@@ -323,7 +323,7 @@ in
           severity = "critical";
           timeout = 5;
           script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
             KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
@@ -350,7 +350,7 @@ in
           severity = "critical";
           timeout = 30;
           script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
             KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
@@ -477,7 +477,7 @@ in
             "keys"
           ];
           script = ''
-            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stackpanel/state}"
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
 
             # Check common AGE key locations
             # Check SOPS_AGE_KEY_CMD first (lazy key command)

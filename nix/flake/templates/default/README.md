@@ -35,7 +35,7 @@ bun run dev
 
 ### Stackpanel Config
 
-Edit `.stackpanel/config.nix` to configure your environment:
+Edit `.stack/config.nix` to configure your environment:
 
 ```nix
 {
@@ -88,10 +88,10 @@ Edit `nix/devenv.nix` for packages, languages, and processes:
 
 ```
 .
-├── .stackpanel/           # Stackpanel configuration
+├── .stack/                # Stackpanel configuration
 │   ├── config.nix         # Main config
-│   ├── state/             # Runtime state (gitignored)
-│   └── gen/               # Generated files
+│   ├── profile/           # Runtime state (gitignored)
+│   └── gen/               # Generated files (gitignored)
 ├── nix/
 │   └── devenv.nix         # Devenv options
 ├── flake.nix              # Nix flake entrypoint

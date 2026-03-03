@@ -7,7 +7,7 @@
 # Getting started:
 #   1. Run: nix flake init -t github:darkmatter/stackpanel#minimal
 #   2. Run: direnv allow
-#   3. Configure stackpanel in ./.stackpanel/config.nix
+#   3. Configure stackpanel in ./.stack/config.nix
 # ==============================================================================
 {
   description = "My project powered by stackpanel";

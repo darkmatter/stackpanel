@@ -34,7 +34,7 @@
 let
   cfg = config.stackpanel.aws.roles-anywhere;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
+  dirs = config.stackpanel.dirs or { state = ".stack/profile"; profile = ".stack/profile"; };
   baseStateDir = dirs.state;
 
   # Import util for debug logging

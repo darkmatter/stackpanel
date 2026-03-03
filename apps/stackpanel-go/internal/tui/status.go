@@ -407,17 +407,28 @@ func findStepStateDir() string {
 	cwd, _ := os.Getwd()
 	dir := cwd
 	for {
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
-			return filepath.Join(dir, ".stackpanel", "state", "step")
+		stackDir := filepath.Join(dir, ".stack")
+		stackpanelDir := filepath.Join(dir, ".stackpanel")
+		if info, err := os.Stat(stackDir); err == nil && info.IsDir() {
+			return filepath.Join(stackDir, "profile", "step")
+		}
+		if info, err := os.Stat(stackpanelDir); err == nil && info.IsDir() {
+			return filepath.Join(stackpanelDir, "state", "step")
 		}
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return filepath.Join(dir, ".stackpanel", "state", "step")
+			if _, err := os.Stat(stackDir); err == nil {
+				return filepath.Join(stackDir, "profile", "step")
+			}
+			return filepath.Join(stackpanelDir, "state", "step")
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			break
 		}
 		dir = parent
+	}
+	if info, err := os.Stat(filepath.Join(cwd, ".stack")); err == nil && info.IsDir() {
+		return filepath.Join(cwd, ".stack", "profile", "step")
 	}
 	return filepath.Join(cwd, ".stackpanel", "state", "step")
 }

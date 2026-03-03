@@ -21,7 +21,7 @@ let
 in
 {
   imports = [
-    ../core/options
+    ./options.nix
   ];
 
   # Base rendering: env + PATH become mkBefore hook parts, so feature hooks run after

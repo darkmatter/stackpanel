@@ -1,46 +1,25 @@
 # ==============================================================================
 # services/default.nix
 #
-# Development services module aggregator.
+# Development services — options and implementations co-located.
 #
-# This module imports all service-related devenv modules. Service implementations
-# live in subdirectories (postgres/, redis/, minio/, caddy/) and are used by
-# the modules imported here.
-#
-# Structure:
-#   services/
-#   ├── default.nix           # This file - imports all modules
-#   ├── global-services.nix   # Maps globalServices to stackpanel.services
-#   ├── postgres/default.nix  # PostgreSQL implementation
-#   ├── redis/default.nix     # Redis implementation
-#   ├── minio/default.nix     # MinIO implementation
-#   ├── caddy/default.nix     # Caddy scripts library
-#   ├── caddy.nix             # Caddy devenv module
-#   ├── aws/                  # All AWS code (consolidated)
-#   │   ├── default.nix       # Sub-module aggregator
-#   │   ├── lib.nix           # Pure library (mkAwsCredScripts, etc.)
-#   │   ├── options.nix       # Option declarations (stackpanel.aws.*)
-#   │   ├── roles-anywhere.nix # Roles Anywhere devenv module
-#   │   └── vault/            # aws-vault integration
-#   │       ├── module.nix    # Wrappers, multi-profile fallback
-#   │       ├── meta.nix      # Module metadata
-#   │       ├── ui.nix        # Studio panel definitions
-#   │       ├── example.nix   # Example configurations
-#   │       └── README.md     # Documentation
-#   ├── binary-cache.nix      # Nix binary cache
-#   └── security-healthchecks.nix
-#
-# Usage:
-#   # In devenv or flake module:
-#   imports = [ ./services ];
+# Imports both option definitions (*-options.nix) and implementation modules
+# for AWS, Caddy, binary cache, global services, healthchecks, and the
+# canonical service type system.
 # ==============================================================================
 { ... }:
 {
   imports = [
-    ./aws
+    ./aws.nix
+    ./aws-options.nix
     ./binary-cache.nix
+    ./binary-cache-options.nix
     ./caddy.nix
+    ./caddy/options.nix
     ./global-services.nix
+    ./global-services-options.nix
+    ./healthchecks-options.nix
     ./security-healthchecks.nix
+    ./services-options.nix
   ];
 }

@@ -36,9 +36,11 @@ type Config struct {
 	Hint  string `json:"hint,omitempty"`
 }
 
-// Paths contains directory paths (relative to project root)
+// Paths contains directory paths (relative to project root).
+// State is the profile dir (ephemeral); Keys is for persistent credentials.
 type Paths struct {
-	State string `json:"state"`
+	State string `json:"state"` // profile dir: stackpanel.json, shell.log
+	Keys  string `json:"keys"`  // persistent: AGE keys, AWS config, step
 	Gen   string `json:"gen"`
 	Data  string `json:"data"`
 }
@@ -162,6 +164,7 @@ func New(projectRoot string, opts ...Option) (*Evaluator, error) {
 	// }
 	defaultWatchPaths := []string{
 		filepath.Join(absRoot, "flake.nix"),
+		filepath.Join(absRoot, ".stack"),
 		filepath.Join(absRoot, ".stackpanel"),
 	}
 	if os.Getenv("STACKPANEL_CONFIG_JSON") != "" {
@@ -193,6 +196,7 @@ func NewWatchConfig(projectRoot string, opts ...Option) (*Evaluator, error) {
 	defaultOpts := []Option{
 		WithWatchPaths([]string{
 			filepath.Join(projectRoot, "flake.nix"),
+			filepath.Join(projectRoot, ".stack"),
 			filepath.Join(projectRoot, ".stackpanel"),
 		}),
 		WithNixFile(nixFile),

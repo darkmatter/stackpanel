@@ -251,25 +251,21 @@ func loadFromStateDirEnv(stateDir string) (*Config, error) {
 	return &config, nil
 }
 
-// loadFromStateFile loads config from the state.json file
+// loadFromStateFile loads config from the state file.
+// Tries .stack/profile/stackpanel.json then .stackpanel/state/stackpanel.json.
 func loadFromStateFile(projectRoot string) (*Config, error) {
-	stateFile := filepath.Join(projectRoot, ".stackpanel", "state", "stackpanel.json")
-
-	data, err := os.ReadFile(stateFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read state file: %w", err)
+	for _, subpath := range []string{".stack/profile/stackpanel.json", ".stackpanel/state/stackpanel.json"} {
+		stateFile := filepath.Join(projectRoot, subpath)
+		if data, err := os.ReadFile(stateFile); err == nil {
+			var cfg Config
+			if err := json.Unmarshal(data, &cfg); err != nil {
+				continue
+			}
+			cfg.ProjectRoot = projectRoot
+			return &cfg, nil
+		}
 	}
-
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse state file: %w", err)
-	}
-
-	if config.ProjectRoot == "" {
-		config.ProjectRoot = projectRoot
-	}
-
-	return &config, nil
+	return nil, fmt.Errorf("no stackpanel state file found under .stack/profile or .stackpanel/state")
 }
 
 // findProjectRoot searches for the project root by looking for devenv.nix

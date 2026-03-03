@@ -68,7 +68,7 @@ nix flake show github:darkmatter/stackpanel --json | jq '.templates | keys'
 ## Creating New Fixtures
 
 1. Copy an existing fixture as a starting point
-2. Modify `.stackpanel/config.nix` for your scenario
+2. Modify `.stack/config.nix` for your scenario
 3. Add any test apps in `apps/` if needed
 4. Add test checks in `flake.nix` if needed
 
@@ -78,9 +78,8 @@ nix flake show github:darkmatter/stackpanel --json | jq '.templates | keys'
 fixture-name/
 ├── flake.nix                 # Flake with stackpanel + test checks
 ├── flake.lock                # Optional: lock file for reproducibility
-├── .stackpanel/
-│   ├── config.nix            # Scenario configuration
-│   └── _internal.nix         # Optional: internal config
+├── .stack/
+│   └── config.nix            # Scenario configuration
 └── apps/                     # Optional: test apps
     └── web/
         ├── src/

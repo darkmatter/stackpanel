@@ -1,0 +1,2 @@
+# Local config overrides (per-user, gitignored)
+config.local.nix

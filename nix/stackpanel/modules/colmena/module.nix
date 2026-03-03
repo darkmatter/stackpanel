@@ -246,7 +246,7 @@ let
   # Hive codegen helpers
   # ===========================================================================
 
-  stateDir = sp.dirs.state or ".stackpanel/state";
+  stateDir = sp.dirs.state or ".stack/profile";
   colmenaStateDir = "${stateDir}/colmena";
 
   # Resolve app deploy targets to machine IDs

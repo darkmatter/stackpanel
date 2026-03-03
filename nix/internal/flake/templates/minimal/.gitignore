@@ -7,8 +7,9 @@ result-*
 
 # stackpanel state (regenerated on shell entry)
 .stackpanel-root
-.stackpanel/state/
-.stackpanel/gen/
+.stack/profile/
+.stack/keys/
+.stack/gen/
 
 # devenv
 .devenv/
