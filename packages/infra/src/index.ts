@@ -6,7 +6,7 @@ import * as path from "node:path";
 
 // Embedded project config
 // @ts-ignore
-const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","storageBackend":{"filePath":".stackpanel/secrets/vars/dev.sops.yaml","group":"dev","type":"sops"}} as const;
+const PROJECT_CONFIG = {"keyFormat":"$module-$key","projectName":"stackpanel","storageBackend":{"filePath":".stack/secrets/vars/dev.sops.yaml","group":"dev","type":"sops"}} as const;
 
 /**
  * Resolve the project root directory.
@@ -30,12 +30,12 @@ function ROOT(): string {
  * Read and parse the infra inputs JSON file.
  * Resolution order:
  *   1. STACKPANEL_INFRA_INPUTS env var (path to JSON file)
- *   2. .stackpanel/state/infra-inputs.json (default location)
+ *   2. .stack/state/infra-inputs.json (default location)
  */
 function loadAllInputs(): Record<string, any> {
   const relPath =
     process.env.STACKPANEL_INFRA_INPUTS ??
-    ".stackpanel/state/infra-inputs.json";
+    ".stack/state/infra-inputs.json";
   const inputsPath = path.resolve(ROOT(), relPath);
 
   try {

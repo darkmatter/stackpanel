@@ -94,11 +94,11 @@ in
   #
   #   imports = [
   #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
   #
   # Or for multiple local config paths:
   #   ] ++ stackpanelLib.optionalLocalConfigs [
-  #     ./.stackpanel/config.local.nix
+  #     ./.stack/config.local.nix
   #     ./stackpanel.local.nix
   #   ];
   #

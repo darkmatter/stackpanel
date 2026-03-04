@@ -112,12 +112,9 @@ let
     lib.foldl lib.recursiveUpdate { } (importedConfigs ++ [ configWithoutImports ]);
 
   ghCollabsPath = configDirPath + "/data/github-collaborators.nix";
-  ghCollabsPathLegacy = configDirPath + "/external/github-collaborators.nix";
   ghCollabs =
     if builtins.pathExists ghCollabsPath then
       import ghCollabsPath
-    else if builtins.pathExists ghCollabsPathLegacy then
-      import ghCollabsPathLegacy
     else
       { collaborators = { }; };
 
@@ -301,7 +298,14 @@ let
     "PROCESS_COMPOSE_CONFIG"
   ];
   # Our env (devshellOutputs) takes priority over devenv's
-  allEnv = filteredDevenvEnv // (devshellOutputs.env or { });
+  allEnv = builtins.removeAttrs (filteredDevenvEnv // (devshellOutputs.env or { })) [
+    "name"
+    "packages"
+    "nativeBuildInputs"
+    "buildInputs"
+    "shellHook"
+    "passthru"
+  ];
 
   # ===================================================================
   # Build complete shellHook content
@@ -379,31 +383,37 @@ let
   # ===================================================================
   # Create OUR shell with pkgs.mkShell
   # ===================================================================
-  stackpanelShell = pkgs.mkShell {
-    name = "stackpanel-${spConfig.name or "dev"}";
+  stackpanelShell = pkgs.mkShell (
+    # Pass allEnv as direct mkShell attributes so they appear as top-level
+    # exports in `nix print-dev-env`. This is what lets the Go agent (and
+    # anything else that doesn't run shellHook) see SOPS_AGE_KEY_CMD,
+    # GOPATH, STACKPANEL_* vars, etc.
+    allEnv
+    // {
+      name = "stackpanel-${spConfig.name or "dev"}";
 
-    packages = shellPackages;
-    nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
-    buildInputs = devshellOutputs.buildInputs or [ ];
+      packages = shellPackages;
+      nativeBuildInputs = devshellOutputs.nativeBuildInputs or [ ];
+      buildInputs = devshellOutputs.buildInputs or [ ];
 
-    # Export path to shellHook file for inspection/debugging
-    STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
+      # Export path to shellHook file for inspection/debugging
+      STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";
 
-    # Avoid running devenv tasks
-    DEVENV_SKIP_TASKS = "1";
+      # Avoid running devenv tasks
+      DEVENV_SKIP_TASKS = "1";
 
-    # Minimal shellHook that sources the full hook from the store
-    # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stack/profile/shellhook.sh)
-    shellHook = ''
-      # Source the full shellHook from the Nix store
-      source "${shellHookFile}/shellhook.sh"
+      # Minimal shellHook that sources the full hook from the store
+      # The full hook is at $STACKPANEL_SHELL_HOOK_PATH (also symlinked to .stack/profile/shellhook.sh)
+      shellHook = ''
+        # Source the full shellHook from the Nix store
+        source "${shellHookFile}/shellhook.sh"
 
-      # Symlink to profile dir for easy inspection (after STACKPANEL_STATE_DIR is set)
-      if [[ -n "''${STACKPANEL_STATE_DIR:-}" ]]; then
-        mkdir -p "$STACKPANEL_STATE_DIR"
-        ln -sf "${shellHookFile}/shellhook.sh" "$STACKPANEL_STATE_DIR/shellhook.sh"
-      fi
-    '';
+        # Symlink to profile dir for easy inspection (after STACKPANEL_STATE_DIR is set)
+        if [[ -n "''${STACKPANEL_STATE_DIR:-}" ]]; then
+          mkdir -p "$STACKPANEL_STATE_DIR"
+          ln -sf "${shellHookFile}/shellhook.sh" "$STACKPANEL_STATE_DIR/shellhook.sh"
+        fi
+      '';
 
     # FULL CONTROL over passthru
     passthru = {
@@ -438,7 +448,7 @@ let
         root = spConfig.root or null;
       };
     };
-  };
+  });
 
   # ===================================================================
   # Build outputs conditionally based on config

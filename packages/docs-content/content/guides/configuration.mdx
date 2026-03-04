@@ -8,7 +8,7 @@ Stackpanel configuration is split between project-local and global settings.
 ## File Structure
 
 ```
-.stackpanel/                # Project root
+.stack/                # Project root
 ├── config.nix              # Main configuration
 ├── data/                   # Data tables
 │   ├── apps.nix            # App definitions
@@ -48,10 +48,10 @@ The main configuration file:
 
 ## Custom Modules
 
-Add `.nix` files to `.stackpanel/modules/` for reusable configuration:
+Add `.nix` files to `.stack/modules/` for reusable configuration:
 
 ```nix
-# .stackpanel/modules/my-feature.nix
+# .stack/modules/my-feature.nix
 { config, lib, pkgs, ... }:
 {
   stackpanel.devshell.packages = [ pkgs.ripgrep ];

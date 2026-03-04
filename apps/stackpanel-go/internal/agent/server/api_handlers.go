@@ -283,7 +283,7 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleFilesList lists files in a directory
-// GET /api/files/list?path=.stackpanel/state
+// GET /api/files/list?path=.stack/state
 func (s *Server) handleFilesList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

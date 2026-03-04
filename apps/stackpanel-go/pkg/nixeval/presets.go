@@ -33,10 +33,8 @@ in
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
   collabsStack = root + "/.stack/data/github-collaborators.nix";
-  collabsLegacy = root + "/.stackpanel/external/github-collaborators.nix";
-  collabsPath = if builtins.pathExists collabsStack then collabsStack
-    else if builtins.pathExists (root + "/.stackpanel/data/github-collaborators.nix") then root + "/.stackpanel/data/github-collaborators.nix"
-    else collabsLegacy;
+  collabsLegacy = root + "/.stackpanel/data/github-collaborators.nix";
+  collabsPath = if builtins.pathExists collabsStack then collabsStack else collabsLegacy;
 in
   if builtins.pathExists collabsPath
   then import collabsPath
@@ -247,7 +245,7 @@ func GetGitHubCollaborators(ctx context.Context) (*GitHubCollaboratorsData, erro
 	return &data, nil
 }
 
-// GetStackpanelConfig evaluates the stackpanel section from .stackpanel/config.nix
+// GetStackpanelConfig evaluates the stackpanel section from .stack/config.nix
 // Note: This is a simplified evaluation that doesn't have access to pkgs/lib
 func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 	result, err := EvalExpr(ctx, StackpanelConfigPreset)
@@ -291,7 +289,7 @@ func GetInitFiles(ctx context.Context) (map[string]string, error) {
 // Example:
 //
 //	files, err := GetInitFilesFromFlake(ctx, "github:darkmatter/stackpanel")
-//	// files[".stackpanel/config.nix"] = "..."
+//	// files[".stack/config.nix"] = "..."
 func GetInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
 	// Evaluate <flakeRef>#lib.initFiles
 	flakeAttr := flakeRef + "#lib.initFiles"
@@ -387,8 +385,8 @@ type GetInstalledPackagesOptions struct {
 // It tries multiple fast paths before falling back to slow nix eval:
 //  1. Explicit configJSONPath (if provided in options)
 //  2. STACKPANEL_CONFIG_JSON env var (pre-computed at shell entry)
-//  3. State file at .stackpanel/state/stackpanel.json
-//  4. Generated config at .stackpanel/gen/config.json
+//  3. State file at .stack/profile/stackpanel.json (or .stackpanel/state/stackpanel.json)
+//  4. Generated config at .stack/gen/config.json (or .stackpanel/gen/config.json)
 //  5. Nix eval against the flake (slow, last resort)
 //
 // If projectRoot is empty, it will attempt to find it from STACKPANEL_ROOT env var

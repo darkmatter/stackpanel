@@ -187,7 +187,7 @@ let
           throw ''
             stackpanel.containers: cfg.root is not set. Cannot build containers without a project root.
 
-            Fix: set stackpanel.root in your devenv.nix or .stackpanel/config.local.nix:
+            Fix: set stackpanel.root in your devenv.nix or .stack/config.local.nix:
               stackpanel.root = "/absolute/path/to/project";
 
             Or use the readStackpanelRoot flake module (recommended):

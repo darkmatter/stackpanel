@@ -128,7 +128,7 @@ See [Secrets](/docs/secrets) for more on encrypted variables and master keys.
 Sometimes team members need different values—a local database path, a personal API token, a debug flag. Use `config.local.nix` (which is gitignored) for per-user overrides:
 
 ```nix
-# .stackpanel/config.local.nix
+# .stack/config.local.nix
 {
   stackpanel.devshell.env = {
     DATABASE_URL = "postgresql://localhost:5432/myapp_local";

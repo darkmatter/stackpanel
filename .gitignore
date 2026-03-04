@@ -7,7 +7,7 @@ node_modules
 dist
 build
 *.tsbuildinfo
-.stackpanel/.token
+.stack/.token
 .sst
 
 # Environment variables
@@ -91,7 +91,9 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+/.stack/state
 /.stackpanel/state
+/.stackpanel/bin
 /.devenv*
 /.devenv-root
 /bts.jsonc
@@ -101,13 +103,13 @@ devenv.local.yaml
 # Stackpanel root marker (machine-specific)
 
 # Stackpanel generated files (cache)
-.stackpanel/state/
+.stack/state/
 
 # ── BEGIN stackpanel ──
 # DO NOT EDIT between these markers — managed by stackpanel
-!.stackpanel/secrets/recipients/**/*.ed25519.pub
-!.stackpanel/secrets/recipients/*.age.pub
-!.stackpanel/secrets/recipients/*.enc.age
+!.stack/secrets/recipients/**/*.ed25519.pub
+!.stack/secrets/recipients/*.age.pub
+!.stack/secrets/recipients/*.enc.age
 *.log
 *.swo
 *.swp
@@ -122,20 +124,22 @@ devenv.local.yaml
 .env
 .env*.local
 .idea
-.stackpanel/.token
-.stackpanel/bin
-.stackpanel/config.local.nix
-.stackpanel/secrets/recipients/*.age
-.stackpanel/secrets/recipients/*.vals
-.stackpanel/secrets/recipients/.archive/
-.stackpanel/secrets/recipients/.sops.yaml
-.stackpanel/secrets/state/
-.stackpanel/secrets/vars/.sops.yaml
-.stackpanel/state/
+.stack/.token
+.stack/bin
+.stack/config.local.nix
+.stack/keys/
+.stack/profile/
+.stack/secrets/recipients/*.age
+.stack/secrets/recipients/*.vals
+.stack/secrets/recipients/.archive/
+.stack/secrets/recipients/.sops.yaml
+.stack/secrets/state/
+.stack/secrets/vars/.sops.yaml
+.stack/state/
 .tasks
 /.devenv*
 /.devenv-root
-/.stackpanel/state
+/.stack/state
 /result
 build
 devenv.local.nix

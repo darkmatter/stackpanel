@@ -61,7 +61,7 @@ in
     # Feature plugins - auto-discovered from ./plugins/
     # Supports both single files (module.nix) and directories (module/default.nix)
     # See plugins/default.nix for the discovery logic
-    ./plugins
+    ./modules
 
     # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,
     # devenv-pre-commit.nix) are NOT auto-imported here. They require devenvSchema

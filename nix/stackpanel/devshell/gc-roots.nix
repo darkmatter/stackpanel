@@ -11,7 +11,7 @@
 # Inspired by devenv's `.devenv/gc/` directory, which keeps numbered
 # generation symlinks:
 #
-#   .stackpanel/state/gc/
+#   .stack/state/gc/
 #   ├── profile            -> profile-3-link     (current pointer)
 #   ├── profile-1-link     -> /nix/store/…       (old generation)
 #   ├── profile-2-link     -> /nix/store/…       (old generation)

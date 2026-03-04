@@ -234,7 +234,7 @@ in
 
     # Init files for scaffolding new projects
     # Returns a map of relative paths to file contents:
-    #   { ".stackpanel/config.nix" = "..."; ".stackpanel/_internal.nix" = "..."; ... }
+    #   { ".stack/config.nix" = "..."; ... }
     #
     # Usage from CLI:
     #   nix eval github:darkmatter/stackpanel#lib.initFiles --json

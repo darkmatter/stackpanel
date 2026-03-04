@@ -143,8 +143,8 @@ func detectStackpanelProject() string {
 
 	dir := cwd
 	for {
-		// Check for .stackpanel/config.nix
-		configPath := filepath.Join(dir, ".stackpanel", "config.nix")
+		// Check for .stack/config.nix
+		configPath := filepath.Join(dir, ".stack", "config.nix")
 		if _, err := os.Stat(configPath); err == nil {
 			return dir
 		}

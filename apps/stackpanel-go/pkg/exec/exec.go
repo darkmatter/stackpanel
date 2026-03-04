@@ -156,12 +156,12 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 // parseDevEnvOutput parses the output of `nix print-dev-env` and extracts
 // environment variable assignments.
 //
-// The output format is a bash script with export statements like:
+// The output format is a bash script with variable declarations:
 //
-//	export PATH="/nix/store/xxx:$PATH"
 //	export FOO="bar"
+//	declare -x FOO="bar"
 //
-// We extract these and return them as KEY=value strings.
+// Both forms are supported (Nix versions vary in which they use).
 func parseDevEnvOutput(output string) []string {
 	var envVars []string
 
@@ -169,40 +169,40 @@ func parseDevEnvOutput(output string) []string {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		// Look for export statements
-		if strings.HasPrefix(line, "export ") {
-			// Remove "export " prefix
-			assignment := strings.TrimPrefix(line, "export ")
-
-			// Find the = sign
-			eqIdx := strings.Index(assignment, "=")
-			if eqIdx == -1 {
-				continue
-			}
-
-			key := assignment[:eqIdx]
-			value := assignment[eqIdx+1:]
-
-			// Remove surrounding quotes if present
-			if len(value) >= 2 {
-				if (value[0] == '"' && value[len(value)-1] == '"') ||
-					(value[0] == '\'' && value[len(value)-1] == '\'') {
-					value = value[1 : len(value)-1]
-				}
-			}
-
-			// Skip certain variables that shouldn't be overridden
-			if shouldSkipEnvVar(key) {
-				continue
-			}
-
-			envVars = append(envVars, key+"="+value)
+		var assignment string
+		switch {
+		case strings.HasPrefix(line, "export "):
+			assignment = strings.TrimPrefix(line, "export ")
+		case strings.HasPrefix(line, "declare -x "):
+			assignment = strings.TrimPrefix(line, "declare -x ")
+		default:
+			continue
 		}
+
+		eqIdx := strings.Index(assignment, "=")
+		if eqIdx == -1 {
+			continue
+		}
+
+		key := assignment[:eqIdx]
+		value := assignment[eqIdx+1:]
+
+		if len(value) >= 2 {
+			if (value[0] == '"' && value[len(value)-1] == '"') ||
+				(value[0] == '\'' && value[len(value)-1] == '\'') {
+				value = value[1 : len(value)-1]
+			}
+		}
+
+		if shouldSkipEnvVar(key) {
+			continue
+		}
+
+		envVars = append(envVars, key+"="+value)
 	}
 
 	return envVars

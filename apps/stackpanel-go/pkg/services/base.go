@@ -24,7 +24,7 @@ const (
 )
 
 // BaseDir is the root directory for all service data.
-// By default, this is project-local (.stackpanel/state/services).
+// By default, this is project-local (.stack/state/services).
 // Call InitForProject() to set this based on project root.
 var BaseDir string
 
@@ -50,7 +50,7 @@ func InitForProject(projectDir string) {
 		projectDir = detectProjectRoot()
 	}
 	projectRoot = projectDir
-	BaseDir = filepath.Join(projectDir, ".stackpanel", "state", "services")
+	BaseDir = filepath.Join(projectDir, ".stack", "state", "services")
 	initialized = true
 }
 
@@ -67,7 +67,7 @@ func IsInitialized() bool {
 	return initialized
 }
 
-// detectProjectRoot walks up from cwd looking for .stackpanel or .git
+// detectProjectRoot walks up from cwd looking for .stack or .git
 func detectProjectRoot() string {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -76,8 +76,8 @@ func detectProjectRoot() string {
 
 	dir := cwd
 	for {
-		// Check for .stackpanel directory
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
+		// Check for .stack directory
+		if _, err := os.Stat(filepath.Join(dir, ".stack")); err == nil {
 			return dir
 		}
 		// Check for .git directory (fallback)

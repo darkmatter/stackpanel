@@ -20,17 +20,17 @@ const defaultStackpanelFlake = "github:darkmatter/stackpanel"
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a new stackpanel project",
-	Long: `Initialize creates the .stackpanel directory structure with boilerplate files.
+	Long: `Initialize creates the .stack directory structure with boilerplate files.
 
 This command evaluates the stackpanel flake to get the list of files to create,
 then writes them to the appropriate locations. Existing files are NOT overwritten
 unless --force is specified.
 
 The initialized structure includes:
-  - .stackpanel/config.nix       User-editable configuration file
-  - .stackpanel/_internal.nix    Internal merging logic (do not edit)
-  - .stackpanel/data.nix         Agent-editable data file
-  - .stackpanel/.gitignore       Gitignore for state and local config
+  - .stack/config.nix       User-editable configuration file
+  - .stack/_internal.nix    Internal merging logic (do not edit)
+  - .stack/data.nix         Agent-editable data file
+  - .stack/.gitignore       Gitignore for state and local config
 
 Example:
   stackpanel init                              # Create files in current directory
@@ -58,7 +58,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	ctx := context.Background()
 
-	// Determine target directory (where to create .stackpanel/)
+	// Determine target directory (where to create .stack/)
 	targetDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -170,8 +170,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		if created > 0 {
 			fmt.Println()
 			output.Info("Next steps:")
-			output.Dimmed("  1. Review the generated files in .stackpanel/")
-			output.Dimmed("  2. Edit .stackpanel/config.nix to configure your project")
+			output.Dimmed("  1. Review the generated files in .stack/")
+			output.Dimmed("  2. Edit .stack/config.nix to configure your project")
 			output.Dimmed("  3. Create a flake.nix that imports stackpanel (or use 'nix flake init -t github:darkmatter/stackpanel')")
 			output.Dimmed("  4. Run 'nix develop --impure' to enter the dev shell")
 		}
@@ -219,7 +219,7 @@ func getInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]str
 }
 
 // findProjectRoot walks up the directory tree to find a project root
-// (directory containing flake.nix or .stackpanel)
+// (directory containing flake.nix or .stack)
 func findProjectRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -231,15 +231,15 @@ func findProjectRoot() (string, error) {
 		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
 			return dir, nil
 		}
-		// Check for .stackpanel
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
+		// Check for .stack
+		if _, err := os.Stat(filepath.Join(dir, ".stack")); err == nil {
 			return dir, nil
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			// Reached root without finding project
-			return "", fmt.Errorf("no project root found (looking for flake.nix or .stackpanel)")
+			return "", fmt.Errorf("no project root found (looking for flake.nix or .stack)")
 		}
 		dir = parent
 	}

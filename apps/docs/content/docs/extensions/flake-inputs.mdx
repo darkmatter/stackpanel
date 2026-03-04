@@ -151,7 +151,7 @@ meta.nix (declares flakeInputs)
   -> module.nix (wires into stackpanel.modules.*.flakeInputs)
     -> core/options/modules.nix (serializes to JSON via computeSerializableModule)
       -> core/cli.nix (compares against flake inputs, computes missingFlakeInputs)
-        -> state file (.stackpanel/state/stackpanel.json)
+        -> state file (.stack/state/stackpanel.json)
           -> Go CLI (nixconfig.Config.MissingFlakeInputs)
             -> MOTD (CollectIssues generates warnings)
 ```

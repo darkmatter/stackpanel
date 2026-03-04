@@ -24,7 +24,7 @@
 #
 # Usage (path to file):
 #   stackpanel.scripts.db-seed = {
-#     path = ./.stackpanel/src/scripts/db-seed.sh;
+#     path = ./.stack/src/scripts/db-seed.sh;
 #     description = "Seed the database with test data";
 #     runtimeInputs = [ pkgs.nodejs ];
 #   };
@@ -202,7 +202,7 @@ let
             Path to script file. Content is read and used as the script body.
             Mutually exclusive with `exec` - use one or the other.
           '';
-          example = lib.literalExpression "./.stackpanel/src/scripts/my-script.sh";
+          example = lib.literalExpression "./.stack/src/scripts/my-script.sh";
         };
 
         runtimeInputs = lib.mkOption {
@@ -333,7 +333,7 @@ in
 
         # Path to script file
         deploy = {
-          path = ./.stackpanel/src/scripts/deploy.sh;
+          path = ./.stack/src/scripts/deploy.sh;
           description = "Deploy the application";
           runtimeInputs = [ pkgs.awscli2 ];
         };

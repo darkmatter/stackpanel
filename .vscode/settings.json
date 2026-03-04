@@ -56,7 +56,7 @@
     "Devshell": {
       "args": [
         "-c",
-        "${workspaceFolder}/.stackpanel/gen/vscode/devshell-loader.sh"
+        "${workspaceFolder}/.stack/gen/vscode/devshell-loader.sh"
       ],
       "path": "/bin/bash"
     }
@@ -65,7 +65,7 @@
     "Devshell": {
       "args": [
         "-c",
-        "${workspaceFolder}/.stackpanel/gen/vscode/devshell-loader.sh"
+        "${workspaceFolder}/.stack/gen/vscode/devshell-loader.sh"
       ],
       "path": "/bin/bash"
     }

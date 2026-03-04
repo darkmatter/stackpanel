@@ -229,12 +229,12 @@ export function getSopsFilePath(keyGroup: string): string | null {
   if (keyGroup === "var" || keyGroup === "computed") {
     return null;
   }
-  return `.stackpanel/secrets/vars/${keyGroup}.sops.yaml`;
+  return `.stack/secrets/vars/${keyGroup}.sops.yaml`;
 }
 
 /**
  * Available secret groups for access control.
- * These correspond to SOPS files in .stackpanel/secrets/vars/
+ * These correspond to SOPS files in .stack/secrets/vars/
  */
 export const SECRET_GROUPS = ["dev", "staging", "prod", "common"] as const;
 

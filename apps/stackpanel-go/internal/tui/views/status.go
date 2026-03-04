@@ -441,7 +441,7 @@ func findStateDir() string {
 	dir := cwd
 	for {
 		stackDir := filepath.Join(dir, ".stack")
-		stackpanelDir := filepath.Join(dir, ".stackpanel")
+		stackpanelDir := filepath.Join(dir, ".stack")
 		if info, err := os.Stat(stackDir); err == nil && info.IsDir() {
 			return filepath.Join(stackDir, "profile", "step")
 		}
@@ -463,7 +463,7 @@ func findStateDir() string {
 	if info, err := os.Stat(filepath.Join(cwd, ".stack")); err == nil && info.IsDir() {
 		return filepath.Join(cwd, ".stack", "profile", "step")
 	}
-	return filepath.Join(cwd, ".stackpanel", "state", "step")
+	return filepath.Join(cwd, ".stack", "state", "step")
 }
 
 // RunStatusView launches the status dashboard as a standalone program

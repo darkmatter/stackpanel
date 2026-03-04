@@ -181,7 +181,7 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 	}
 
 	// Strategy 3: Try to find a cached config in the project
-	cachedPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "gen", "config.json")
+	cachedPath := filepath.Join(s.config.ProjectRoot, ".stack", "gen", "config.json")
 	if config, err = s.loadConfigFromJSON(cachedPath); err == nil {
 		s.cacheConfig(config)
 		return config, nil
@@ -198,8 +198,8 @@ func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values (functions, modules)
 	attributePaths := []string{
 		// User projects: devshell passthru has the stackpanel config
-		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
-		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
+		".#devShells." + getCurrentSystem() + ".default.passthru.stackSerializable",
+		".#devShells." + getCurrentSystem() + ".default.passthru.stackConfig",
 		// Stackpanel repo: direct flake outputs
 		".#stackpanelConfig",
 	}
@@ -260,7 +260,7 @@ func (s *Server) cacheConfig(config map[string]any) {
 
 // saveConfigToCache saves the config to a local JSON file for persistence
 func (s *Server) saveConfigToCache(config map[string]any) {
-	cacheDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "gen")
+	cacheDir := filepath.Join(s.config.ProjectRoot, ".stack", "gen")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		log.Warn().Err(err).Msg("Failed to create cache directory")
 		return

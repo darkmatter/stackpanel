@@ -75,7 +75,7 @@ You can also manage services through [Studio](/docs/studio), which shows service
 PostgreSQL stores its data in a project-local directory so that each project has its own isolated database cluster:
 
 ```
-.stackpanel/state/services/postgres/data/
+.stack/state/services/postgres/data/
 ```
 
 This directory is gitignored by default. Deleting it resets the database to a clean state—useful when you want to start fresh.
@@ -154,7 +154,7 @@ stackpanel.globalServices.postgres = {
 ```
 
 <Callout type="warn">
-The initial script only runs when the data directory is first created. If you've already started PostgreSQL, delete the data directory to re-run it: `rm -rf .stackpanel/state/services/postgres/data/`
+The initial script only runs when the data directory is first created. If you've already started PostgreSQL, delete the data directory to re-run it: `rm -rf .stack/state/services/postgres/data/`
 </Callout>
 
 ## Using with Drizzle
@@ -179,7 +179,7 @@ A common pattern is to pair PostgreSQL with Drizzle ORM. Stackpanel can generate
   };
 
   stackpanel.scripts."db:seed" = {
-    path = ./.stackpanel/src/scripts/db-seed.sh;
+    path = ./.stack/src/scripts/db-seed.sh;
     description = "Seed the database with test data";
   };
 }
@@ -217,7 +217,7 @@ createdb myapp
 Or reset the data directory to trigger a fresh initialization:
 
 ```bash
-rm -rf .stackpanel/state/services/postgres/data/
+rm -rf .stack/state/services/postgres/data/
 stackpanel services restart postgres
 ```
 

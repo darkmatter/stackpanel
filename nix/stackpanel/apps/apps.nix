@@ -125,7 +125,6 @@ let
 in
 {
   imports = [
-    ./options.nix
   ];
 
   config = lib.mkIf (rawApps != { }) {

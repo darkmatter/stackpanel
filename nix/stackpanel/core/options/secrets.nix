@@ -36,7 +36,7 @@ let
   # Default local key configuration
   defaultLocalKey = {
     age-pub = ""; # computed at runtime from private key
-    ref = "ref+file://.stackpanel/state/keys/local.txt";
+    ref = "ref+file://.stack/keys/local.txt";
   };
 
   # Master key submodule using proto-derived options
@@ -70,7 +70,7 @@ let
         computed-ref = config.ref or "ref+awsssm://${config.ssm-path}";
 
         # Default key-cmd: decrypt .enc.age with sops (plain .age files are loaded globally by sops-age-keys)
-        key-cmd = lib.mkDefault "sops --decrypt .stackpanel/secrets/recipients/${name}.enc.age";
+        key-cmd = lib.mkDefault "sops --decrypt .stack/secrets/recipients/${name}.enc.age";
       };
     };
 
@@ -115,7 +115,7 @@ in
           can decrypt it via the `master-keys` field. The .age file is encrypted
           to ALL specified master keys as recipients.
 
-          A default "local" key is auto-generated in .stackpanel/state/keys/
+          A default "local" key is auto-generated in .stack/keys/
           ensuring secrets can always be created without external configuration.
 
           NOTE: Initialized secrets groups automatically create master-key entries.
@@ -125,7 +125,7 @@ in
           {
             local = {
               age-pub = "age1...";
-              ref = "ref+file://.stackpanel/state/keys/local.txt";
+              ref = "ref+file://.stack/keys/local.txt";
             };
             dev = {
               age-pub = "age1...";

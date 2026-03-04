@@ -102,7 +102,7 @@ ensure_devshell() {
 # Cache the devshell environment to a file for faster subsequent loads
 # Usage: cache_devshell_env <cache_file>
 cache_devshell_env() {
-  local cache_file="${1:-.stackpanel/state/dev-env.sh}"
+  local cache_file="${1:-.stack/state/dev-env.sh}"
   local project_root
   
   if ! project_root=$(find_project_root); then
@@ -133,7 +133,7 @@ cache_devshell_env() {
 # Load devshell from cache if available and fresh
 # Usage: load_cached_devshell_env <cache_file> <max_age_seconds>
 load_cached_devshell_env() {
-  local cache_file="${1:-.stackpanel/state/dev-env.sh}"
+  local cache_file="${1:-.stack/state/dev-env.sh}"
   local max_age="${2:-3600}"  # Default: 1 hour
   local project_root
   
@@ -180,7 +180,7 @@ ensure_devshell_cached() {
     return 0
   fi
   
-  local cache_file="${1:-.stackpanel/state/dev-env.sh}"
+  local cache_file="${1:-.stack/state/dev-env.sh}"
   local max_age="${2:-3600}"
   
   # Try loading from cache first

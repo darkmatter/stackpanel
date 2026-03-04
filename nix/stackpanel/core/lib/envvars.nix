@@ -102,7 +102,7 @@ rec {
       description = "Name of the .stackpanel directory within the project";
       category = categories.core;
       source = "nix";
-      default = ".stackpanel";
+      default = ".stack";
     };
 
     STACKPANEL_SHELL_ID = mkEnvVar {
@@ -115,10 +115,10 @@ rec {
 
     STACKPANEL_NIX_CONFIG = mkEnvVar {
       name = "STACKPANEL_NIX_CONFIG";
-      description = "Path to the source Nix config file (.stackpanel/config.nix)";
+      description = "Path to the source Nix config file (.stack/config.nix)";
       category = categories.core;
       source = "nix";
-      example = "/home/user/my-project/.stackpanel/config.nix";
+      example = "/home/user/my-project/.stack/config.nix";
       goField = "NixConfigPath";
     };
 
@@ -142,7 +142,7 @@ rec {
       category = categories.paths;
       source = "nix";
       required = true;
-      example = "/home/user/my-project/.stackpanel/state";
+      example = "/home/user/my-project/.stack/state";
       goField = "StateDir";
     };
 
@@ -151,7 +151,7 @@ rec {
       description = "Full path to the stackpanel.json state file";
       category = categories.paths;
       source = "nix";
-      example = "/home/user/my-project/.stackpanel/state/stackpanel.json";
+      example = "/home/user/my-project/.stack/state/stackpanel.json";
       goField = "StateFile";
     };
 
@@ -160,7 +160,7 @@ rec {
       description = "Log file capturing shell entry output";
       category = categories.paths;
       source = "nix";
-      example = "/home/user/my-project/.stackpanel/state/shell.log";
+      example = "/home/user/my-project/.stack/state/shell.log";
       goField = "ShellLog";
     };
 
@@ -169,7 +169,7 @@ rec {
       description = "Directory for generated files (configs, scripts)";
       category = categories.paths;
       source = "nix";
-      example = "/home/user/my-project/.stackpanel/gen";
+      example = "/home/user/my-project/.stack/gen";
       goField = "GenDir";
     };
 
@@ -178,7 +178,7 @@ rec {
       description = "Directory for persistent data (databases, etc.)";
       category = categories.paths;
       source = "nix";
-      example = "/home/user/my-project/.stackpanel/data";
+      example = "/home/user/my-project/.stack/data";
       goField = "DataDir";
     };
   };

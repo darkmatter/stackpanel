@@ -115,7 +115,7 @@
     "**/.zed": true,
     "**/.git": true,
     "**/gen": false,
-    "**/.stackpanel/gen": false,
+    "**/.stack/gen": false,
     "**/.svn": true,
     "**/.hg": true,
     "**/.DS_Store": true,

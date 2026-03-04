@@ -3,7 +3,7 @@
 #
 # Unified config value resolution with defined precedence.
 #
-# Problem: Scripts hardcode defaults like ".stackpanel/state" in multiple places.
+# Problem: Scripts hardcode defaults like ".stack/state" in multiple places.
 # If config overrides this path, scripts don't pick it up → drift and bugs.
 #
 # Solution: Single-identity variable resolution with precedence order:
@@ -67,8 +67,8 @@ let
     #   3. Default: passed as second argument
     #
     # Usage:
-    #   STATE_DIR=$(sp_get "paths.state" ".stackpanel/state")
-    #   KEYS_DIR=$(sp_get "paths.keys" ".stackpanel/state/keys")
+    #   STATE_DIR=$(sp_get "paths.state" ".stack/state")
+    #   KEYS_DIR=$(sp_get "paths.keys" ".stack/keys")
     #
     # ==========================================================================
     sp_get() {
@@ -128,7 +128,7 @@ let
           1. Pass config when importing cfg.nix:
              cfg = import ./cfg.nix { inherit lib config; };
           2. Use cfg.getWithDefault to specify default explicitly:
-             cfg.getWithDefault "paths.state" ".stackpanel/state"
+             cfg.getWithDefault "paths.state" ".stack/state"
       ''
     else
       ''$(sp_get "${path}" "${default}")'';
@@ -156,7 +156,7 @@ let
     "secrets.vars-dir" = ".stack/secrets/vars";
     "secrets.recipients-dir" = ".stack/secrets/recipients";
     "secrets.recipients-archive-dir" = ".stack/secrets/recipients/.archive";
-    "secrets.bin-dir" = ".stack/gen/secrets";
+    "secrets.bin-dir" = ".stack/secrets/bin";
 
     # Files
     "paths.state-file" = ".stack/profile/stackpanel.json";

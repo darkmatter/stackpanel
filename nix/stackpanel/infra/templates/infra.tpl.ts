@@ -30,12 +30,12 @@ function ROOT(): string {
  * Read and parse the infra inputs JSON file.
  * Resolution order:
  *   1. STACKPANEL_INFRA_INPUTS env var (path to JSON file)
- *   2. .stackpanel/state/infra-inputs.json (default location)
+ *   2. .stack/state/infra-inputs.json (default location)
  */
 function loadAllInputs(): Record<string, any> {
   const relPath =
     process.env.STACKPANEL_INFRA_INPUTS ??
-    ".stackpanel/state/infra-inputs.json";
+    ".stack/state/infra-inputs.json";
   const inputsPath = path.resolve(ROOT(), relPath);
 
   try {

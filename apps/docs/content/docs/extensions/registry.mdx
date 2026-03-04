@@ -33,7 +33,7 @@ Each extension card shows its name, description, category, and whether it's curr
 2. Find the extension you want
 3. Click **Enable**
 4. Configure any required options in the form that appears
-5. Studio writes the configuration to your `.stackpanel/config.nix`
+5. Studio writes the configuration to your `.stack/config.nix`
 
 That's it. The next time your shell reloads, the extension is active—its packages are on your `PATH`, its scripts are available, and its generated files are written to disk.
 
@@ -42,7 +42,7 @@ That's it. The next time your shell reloads, the extension is active—its packa
 You can also enable extensions directly in your configuration:
 
 ```nix
-# .stackpanel/config.nix
+# .stack/config.nix
 {
   stackpanel.extensions.sst = {
     enabled = true;

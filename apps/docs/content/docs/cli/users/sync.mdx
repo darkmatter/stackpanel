@@ -11,8 +11,8 @@ Sync users from GitHub repository collaborators.
 This command:
 1. Fetches collaborators from the GitHub repository using gh CLI
 2. Fetches public SSH keys for each collaborator from github.com/\<user\>.keys
-3. Generates .stackpanel/data/github-collaborators.nix with raw collaborator data
-4. Creates .stackpanel/data/users.nix that transforms data to stackpanel.users format
+3. Generates .stack/data/github-collaborators.nix with raw collaborator data
+4. Creates .stack/data/users.nix that transforms data to stackpanel.users format
 
 The github-collaborators.nix file is auto-generated and should not be edited.
 Edit users.nix to customize permissions or add non-GitHub users.
@@ -30,7 +30,7 @@ stackpanel users sync
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--data-dir` | `string` | _none_ | Data directory path (default: .stackpanel/data) |
+| `--data-dir` | `string` | _none_ | Data directory path (default: .stack/data) |
 | `--no-keys` | `bool` | `false` | Skip fetching public keys |
 | `--owner` | `string` | _none_ | GitHub repository owner (default: current repo) |
 | `--repo` | `string` | _none_ | GitHub repository name (default: current repo) |

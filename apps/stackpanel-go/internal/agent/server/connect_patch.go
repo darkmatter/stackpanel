@@ -18,10 +18,10 @@ import (
 // convention). Path segments are converted to kebab-case when navigating the
 // Nix data structure.
 //
-// All patches now go to .stackpanel/config.nix (the single source of truth).
+// All patches now go to .stack/config.nix (the single source of truth).
 //
 // Example: PatchNixData(entity="config", path="stackpanel.deployment.fly.organization", value="\"my-org\"")
-// This writes to .stackpanel/config.nix at deployment.fly.organization
+// This writes to .stack/config.nix at deployment.fly.organization
 func (s *AgentServiceServer) PatchNixData(
 	ctx context.Context,
 	req *connect.Request[gopb.PatchNixDataRequest],

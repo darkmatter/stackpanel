@@ -8,8 +8,8 @@
 # All codegen is kicked off as a result of this invocation.
 #
 # Generated files (by CLI):
-#   - .stackpanel/state/stackpanel.json (runtime state)
-#   - .stackpanel/gen/ide/vscode/* (VS Code workspace, loader script)
+#   - .stack/state/stackpanel.json (runtime state)
+#   - .stack/gen/ide/vscode/* (VS Code workspace, loader script)
 #
 # The configuration is serialized to JSON and passed to the CLI, which handles
 # the actual file generation. This keeps Nix pure while delegating imperative
@@ -64,7 +64,7 @@ let
   commandPkgs = cfg.devshell._commandPkgs or [ ];
   allPackages = devshellPackages ++ commandPkgs;
 
-  # User-installed packages from .stackpanel/data/packages.nix
+  # User-installed packages from .stack/data/packages.nix
   userPackagesCfg =
     cfg.userPackages or {
       enable = false;

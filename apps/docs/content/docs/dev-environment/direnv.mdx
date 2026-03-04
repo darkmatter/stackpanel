@@ -88,7 +88,7 @@ From now on, entering the project directory activates the dev environment automa
 
 ## Why `--impure`?
 
-Stackpanel needs `--impure` evaluation because it reads the current working directory at eval time to determine project paths, locate `.stackpanel/` config files, and compute state. Pure evaluation doesn't allow this, so `--impure` is required.
+Stackpanel needs `--impure` evaluation because it reads the current working directory at eval time to determine project paths, locate `.stack/` config files, and compute state. Pure evaluation doesn't allow this, so `--impure` is required.
 
 <Callout type="warn">
 If you omit `--impure`, you'll get errors like _"devenv was not able to determine the current directory"_ or missing attribute errors during `nix flake check`.
@@ -172,7 +172,7 @@ Run `direnv allow` to trust the `.envrc` file. Direnv blocks `.envrc` files by d
 
 ### Environment not updating after config changes
 
-Direnv watches `flake.nix` and `flake.lock` for changes, but it doesn't automatically detect changes to files imported by your flake (like `.stackpanel/config.nix`). To force a reload:
+Direnv watches `flake.nix` and `flake.lock` for changes, but it doesn't automatically detect changes to files imported by your flake (like `.stack/config.nix`). To force a reload:
 
 ```bash
 # Touch the flake to trigger direnv
@@ -186,8 +186,8 @@ With `nix-direnv`, you can also add watched files:
 
 ```bash
 # .envrc
-watch_file .stackpanel/config.nix
-watch_file .stackpanel/_internal.nix
+watch_file .stack/config.nix
+watch_file .stack/_internal.nix
 use flake . --impure
 ```
 

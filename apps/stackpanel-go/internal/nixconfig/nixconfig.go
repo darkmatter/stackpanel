@@ -192,5 +192,5 @@ func (c *Config) DataDir() string {
 	}
 
 	// Default
-	return ".stackpanel/data"
+	return ".stack/data"
 }

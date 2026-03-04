@@ -3,7 +3,7 @@
 #
 # State file generation for stackpanel (legacy mode).
 #
-# Generates a JSON state file in .stackpanel/state/stackpanel.json that is
+# Generates a JSON state file in .stack/state/stackpanel.json that is
 # used by the Go CLI and agent to understand the current devenv configuration
 # without needing to evaluate Nix.
 #

@@ -20,8 +20,8 @@ proto.mkProtoFile {
       # enable = true;
       #
       # # Directory containing SOPS-encrypted secrets (legacy layout)
-      # # Usually .stackpanel/secrets
-      # input-directory = ".stackpanel/secrets";
+      # # Usually .stack/secrets
+      # input-directory = ".stack/secrets";
       #
       # # Master keys for encrypting/decrypting secrets
       # # Each secret specifies which master keys can decrypt it
@@ -29,7 +29,7 @@ proto.mkProtoFile {
       #   # Default local key - auto-generated, always works
       #   local = {
       #     age-pub = "age1...";  # computed from private key
-      #     ref = "ref+file://.stackpanel/state/keys/local.txt";
+      #     ref = "ref+file://.stack/keys/local.txt";
       #   };
       #
       #   # Team dev key - stored in AWS SSM
@@ -150,7 +150,7 @@ proto.mkProtoFile {
           proto.string 4 ''
             Shell command that outputs the AGE private key to stdout.
             Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
-            Defaults to: sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age
+            Defaults to: sops --decrypt .stack/secrets/recipients/<group>.enc.age
             Override for alternative key stores, e.g.:
               - chamber read keys/stackpanel/dev current -q
               - op read 'op://vault/stackpanel/dev-age-key'
@@ -178,7 +178,7 @@ proto.mkProtoFile {
           ''
         );
         secrets_dir = proto.optional (
-          proto.string 4 "Directory where secret .age files are stored (default: .stackpanel/secrets)"
+          proto.string 4 "Directory where secret .age files are stored (default: .stack/secrets)"
         );
         system_keys = proto.repeated (
           proto.string 5 ''
@@ -215,7 +215,7 @@ proto.mkProtoFile {
         ref = proto.string 2 ''
           Vals reference that resolves to the AGE private key.
           Examples:
-            - ref+file://.stackpanel/state/keys/local.txt (local file)
+            - ref+file://.stack/keys/local.txt (local file)
             - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
             - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
         '';

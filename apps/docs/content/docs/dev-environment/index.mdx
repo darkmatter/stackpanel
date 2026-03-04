@@ -8,7 +8,7 @@ import { Cards, Card } from "fumadocs-ui/components/card";
 
 When you enter a Stackpanel dev shell, you get a fully configured environment: the right tools on your `PATH`, environment variables set, scripts registered, and files generated. Everything is reproducible—the same config produces the same environment on every machine.
 
-All of this is configured through `stackpanel.devshell.*` and `stackpanel.scripts.*` options, either in your `.stackpanel/config.nix` or through the Studio UI.
+All of this is configured through `stackpanel.devshell.*` and `stackpanel.scripts.*` options, either in your `.stack/config.nix` or through the Studio UI.
 
 ## What's in the Dev Shell
 
@@ -25,7 +25,7 @@ These all compose through the [module system](/docs/concepts/module-system)—yo
 ## Quick Example
 
 ```nix
-# .stackpanel/config.nix
+# .stack/config.nix
 { pkgs, ... }: {
   # Packages on PATH
   stackpanel.devshell.packages = with pkgs; [

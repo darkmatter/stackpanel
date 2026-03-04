@@ -24,7 +24,7 @@
 # Usage (path to file):
 #   stackpanel.files.entries.".github/workflows/ci.yml" = {
 #     type = "text";
-#     path = ./.stackpanel/src/files/.github/workflows/ci.yml;
+#     path = ./.stack/src/files/.github/workflows/ci.yml;
 #     description = "CI workflow";
 #   };
 #

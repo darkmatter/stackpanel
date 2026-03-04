@@ -7,11 +7,16 @@
 # ensuring all generated files are created on devshell entry.
 #
 # Generated files:
-#   packages/gen/env/data/.sops.yaml         - SOPS creation rules
-#   packages/gen/env/data/shared/vars.yaml   - Shared plaintext config
-#   packages/gen/env/data/<app>/<env>.yaml   - Per-app secrets (boilerplate)
-#   packages/gen/env/src/generated/          - TypeScript znv modules
-#   packages/gen/env/src/entrypoints/        - App entrypoint loaders
+#   packages/env/gen/                    — 100% generated (do not edit)
+#     data/.sops.yaml, data/shared/vars.yaml, data/<app>/<env>.yaml
+#     src/<app>/<env>.ts, src/<app>/index.ts, src/index.ts
+#     src/<app>.ts                      — app-level env export (@gen/env/web)
+#     src/entrypoints/<app>.ts, src/entrypoints/index.ts
+#     src/loader.ts, src/docker-entrypoint.ts
+#     README.md
+#   packages/env/package.json           — exports point into gen/
+#   packages/env/tsconfig.json           — includes gen/
+#   packages/env/README.md               — "Generated code is in gen/. Do not edit gen/."
 #
 # Usage:
 #   # The module is automatically enabled when apps have environments
@@ -113,10 +118,10 @@ in
       checks = {
         sops-yaml-exists = {
           name = "SOPS Config Generated";
-          description = "Check if ${envOutputDir}/data/.sops.yaml exists";
+          description = "Check if ${envOutputDir}/gen/data/.sops.yaml exists";
           type = "script";
           script = ''
-            [ -f "${envOutputDir}/data/.sops.yaml" ]
+            [ -f "${envOutputDir}/gen/data/.sops.yaml" ]
           '';
           severity = "warning";
           timeout = 5;
@@ -130,7 +135,7 @@ in
           description = "Check if generated TypeScript modules exist";
           type = "script";
           script = ''
-            [ -d "${envOutputDir}/src/generated" ] && [ -f "${envOutputDir}/src/generated/index.ts" ]
+            [ -d "${envOutputDir}/gen/src" ] && [ -f "${envOutputDir}/gen/src/index.ts" ]
           '';
           severity = "warning";
           timeout = 5;

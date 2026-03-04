@@ -9,8 +9,8 @@
 #
 #   - Faster command resolution (shorter PATH)
 #   - Cleaner environment (easier to inspect)
-#   - GC root protection (symlinked to .stackpanel/state/profile)
-#   - Easy introspection: ls .stackpanel/state/profile/bin/
+#   - GC root protection (symlinked to .stack/state/profile)
+#   - Easy introspection: ls .stack/state/profile/bin/
 #
 # Inspired by devenv's .devenv/profile approach.
 #
@@ -18,7 +18,7 @@
 # at shell entry. Individual binaries inside the profile are symlinks back to
 # their original store paths, so there is no file copying:
 #
-#   .stackpanel/state/profile/
+#   .stack/state/profile/
 #   ├── bin/
 #   │   ├── node -> /nix/store/…-nodejs-22.22.0/bin/node
 #   │   ├── bun  -> /nix/store/…-bun-1.3.3/bin/bun
@@ -135,7 +135,7 @@ in
     # This serves two purposes:
     #   1. GC root – the symlink from the worktree keeps the store path alive
     #      across `nix-collect-garbage` runs.
-    #   2. Introspection – `ls .stackpanel/state/profile/bin/` instantly shows
+    #   2. Introspection – `ls .stack/state/profile/bin/` instantly shows
     #      every command available in the devshell.
     stackpanel.devshell.hooks.after = [
       ''

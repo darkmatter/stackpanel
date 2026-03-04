@@ -7,7 +7,7 @@
 # This module handles TOOLCHAIN setup (compiler, env, PATH).
 # App-level config (building, packaging, air, gomod2nix) is in modules/go/.
 #
-# Usage in .stackpanel/config.nix:
+# Usage in .stack/config.nix:
 #   languages.go.enable = true;
 #
 # Or auto-enabled when any app has go.enable = true.

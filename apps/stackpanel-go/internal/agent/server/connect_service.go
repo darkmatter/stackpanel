@@ -41,7 +41,7 @@ func (s *AgentServiceServer) GetProject(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no project selected"))
 	}
 
-	homeDir := filepath.Join(proj.Path, ".stackpanel")
+	homeDir := filepath.Join(proj.Path, ".stack")
 	return connect.NewResponse(&gopb.GetProjectResponse{
 		Project: &gopb.Project{
 			Path:   proj.Path,
@@ -138,7 +138,7 @@ func (s *AgentServiceServer) SetAgeIdentity(
 	ctx context.Context,
 	req *connect.Request[gopb.SetAgeIdentityRequest],
 ) (*connect.Response[gopb.AgeIdentityResponse], error) {
-	stateDir := filepath.Join(s.server.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.server.config.ProjectRoot, ".stack", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create state dir: %w", err))
 	}

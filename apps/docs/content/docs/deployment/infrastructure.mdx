@@ -13,7 +13,7 @@ Stackpanel includes a modular infrastructure provisioning system built on [Alche
 
 The infra system has three parts:
 
-1. **Nix modules** declare what infrastructure you need (`.stackpanel/config.nix`)
+1. **Nix modules** declare what infrastructure you need (`.stack/config.nix`)
 2. **Code generation** produces TypeScript modules in `packages/infra/` with typed inputs
 3. **Alchemy runtime** provisions the actual cloud resources when you run `infra:deploy`
 
@@ -26,7 +26,7 @@ Infrastructure outputs (ARNs, URLs, keys) are synced back to your storage backen
 
 ### Enable infrastructure
 
-Add to `.stackpanel/config.nix`:
+Add to `.stack/config.nix`:
 
 ```nix
 stackpanel.infra = {
@@ -153,7 +153,7 @@ Outputs are written to a SOPS-encrypted YAML file in your repo:
 ```nix
 stackpanel.infra.storage-backend = {
   type = "sops";
-  sops.group = "dev";  # writes to .stackpanel/secrets/vars/dev.sops.yaml
+  sops.group = "dev";  # writes to .stack/secrets/vars/dev.sops.yaml
 };
 ```
 
@@ -346,7 +346,7 @@ After deploying, pull outputs from your storage backend into the local Nix state
 infra:pull-outputs
 ```
 
-This reads outputs from Chamber/SSM and writes them to `.stackpanel/data/infra-outputs.nix`, making them available as `config.stackpanel.infra.outputs.*` in your Nix config.
+This reads outputs from Chamber/SSM and writes them to `.stack/data/infra-outputs.nix`, making them available as `config.stackpanel.infra.outputs.*` in your Nix config.
 
 ## CLI Reference
 

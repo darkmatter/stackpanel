@@ -9,7 +9,7 @@
 #
 # Generated files:
 # - .envrc.local: User-specific direnv settings (gitignored)
-# - .stackpanel/gen/direnv-wrapper.sh: Wrapper script for nix print-dev-env
+# - .stack/gen/direnv-wrapper.sh: Wrapper script for nix print-dev-env
 # ==============================================================================
 {
   config,
@@ -99,17 +99,17 @@ let
 
     # Use wrapper script for nix print-dev-env (respects clean settings)
     # Override the default ./devshell --direnv behavior if needed
-    _sp_direnv_wrapper="$PWD/.stackpanel/gen/direnv-wrapper.sh"
+    _sp_direnv_wrapper="$PWD/.stack/gen/direnv-wrapper.sh"
     if [[ -f "$_sp_direnv_wrapper" ]]; then
       # Custom function to use our wrapper instead of ./devshell --direnv
       use_stackpanel_clean() {
-        watch_file .stackpanel/config.nix
-        watch_file .stackpanel/config.local.nix
+        watch_file .stack/config.nix
+        watch_file .stack/config.local.nix
         watch_file flake.nix
         watch_file flake.lock
 
         # Use cached env if available, otherwise generate fresh
-        _sp_cached_env="$PWD/.stackpanel/gen/nix-print-dev-env.sh"
+        _sp_cached_env="$PWD/.stack/gen/nix-print-dev-env.sh"
         if [[ -f "$_sp_cached_env" ]]; then
           watch_file "$_sp_cached_env"
           source "$_sp_cached_env"
@@ -152,7 +152,7 @@ in
 
         When enabled, generates:
         - .envrc.local with clean mode configuration
-        - .stackpanel/gen/direnv-wrapper.sh for nix print-dev-env
+        - .stack/gen/direnv-wrapper.sh for nix print-dev-env
 
         This allows direnv to respect stackpanel.devshell.clean settings.
       '';
@@ -171,7 +171,7 @@ in
 
   config = lib.mkIf spCfg.enable {
     # Generate direnv wrapper script
-    stackpanel.files.entries.".stackpanel/gen/direnv-wrapper.sh" = {
+    stackpanel.files.entries.".stack/gen/direnv-wrapper.sh" = {
       enable = true;
       type = "text";
       text = builtins.readFile direnvWrapperScript;

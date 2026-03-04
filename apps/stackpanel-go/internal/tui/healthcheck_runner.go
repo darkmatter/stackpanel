@@ -26,7 +26,7 @@ type HealthcheckResult struct {
 	DurationMs int64  `json:"durationMs"`
 }
 
-// HealthcheckCache is the on-disk cache format written to .stackpanel/state/healthchecks.json.
+// HealthcheckCache is the on-disk cache format written to .stack/state/healthchecks.json.
 type HealthcheckCache struct {
 	Version   int                 `json:"version"`
 	Timestamp time.Time           `json:"timestamp"`

@@ -25,7 +25,7 @@
 load_secrets() {
 	local app="${1:-}"
 	local environment="${2:-dev}"
-	local secrets_dir="${STACKPANEL_SECRETS_DIR:-.stackpanel/secrets}"
+	local secrets_dir="${STACKPANEL_SECRETS_DIR:-.stack/secrets}"
 	local backend="${STACKPANEL_VARIABLES_BACKEND:-vals}"
 
 	log_debug "Loading secrets for app='$app' env='$environment' backend='$backend'"

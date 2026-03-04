@@ -56,7 +56,7 @@ The Agent wraps [process-compose](/docs/services/process-compose) to provide a u
 
 ### Watches for Changes
 
-The Agent watches your `flake.nix`, `flake.lock`, and `.stackpanel/` directory for changes. When a config file changes, it:
+The Agent watches your `flake.nix`, `flake.lock`, and `.stack/` directory for changes. When a config file changes, it:
 
 1. Re-evaluates the Nix configuration
 2. Detects which generated files are stale
@@ -175,7 +175,7 @@ If the Agent reports Nix evaluation errors, the issue is in your Nix configurati
 nix eval .#stackpanel --impure 2>&1
 ```
 
-Common causes: syntax errors in `.stackpanel/config.nix`, missing flake inputs, or `--impure` flag not being used.
+Common causes: syntax errors in `.stack/config.nix`, missing flake inputs, or `--impure` flag not being used.
 
 ### Stale state after config changes
 

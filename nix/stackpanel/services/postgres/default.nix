@@ -15,7 +15,7 @@
 #   - Shell hooks for automatic environment setup
 #
 # Usage:
-#   let pgLib = import ./postgres { inherit pkgs lib; baseDir = ".stackpanel/state"; };
+#   let pgLib = import ./postgres { inherit pkgs lib; baseDir = ".stack/state"; };
 #   in pgLib.mkService { projectName = "myapp"; port = 5432; databases = ["app"]; }
 # ==============================================================================
 {

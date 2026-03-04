@@ -154,7 +154,7 @@ in
         default = null;
         description = ''
           SOPS reference path for the state token.
-          Example: "ref+sops://.stackpanel/secrets/vars/common.sops.yaml#/alchemy-state-token"
+          Example: "ref+sops://.stack/secrets/vars/common.sops.yaml#/alchemy-state-token"
           When set, the token is automatically injected into the devshell environment.
         '';
       };
@@ -170,7 +170,7 @@ in
         default = null;
         description = ''
           SOPS reference path for the Cloudflare API token.
-          Example: "ref+sops://.stackpanel/secrets/vars/common.sops.yaml#/cloudflare-api-token"
+          Example: "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token"
           When set, the token is automatically injected into the devshell environment.
         '';
       };

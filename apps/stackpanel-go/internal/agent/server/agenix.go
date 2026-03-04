@@ -374,13 +374,13 @@ func (s *Server) handleAgenixSecretsList(w http.ResponseWriter, r *http.Request)
 // getAgenixRecipients returns the list of age/SSH public keys for encryption
 func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 	// Try multiple user sources in order of priority:
-	// 1. .stackpanel/data/external/users.nix (auto-synced from GitHub)
-	// 2. .stackpanel/data/users.nix (manual user definitions)
+	// 1. .stack/data/external/users.nix (auto-synced from GitHub)
+	// 2. .stack/data/users.nix (manual user definitions)
 	// Users are read from Nix files only (legacy users.yaml is no longer supported)
 
 	userPaths := []string{
-		filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "external", "users.nix"),
-		filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "users.nix"),
+		filepath.Join(s.config.ProjectRoot, ".stack", "data", "external", "users.nix"),
+		filepath.Join(s.config.ProjectRoot, ".stack", "data", "users.nix"),
 	}
 
 	var allUsers map[string]struct {
@@ -425,7 +425,7 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 
 	// If no Nix users found, return empty with error
 	if allUsers == nil || len(allUsers) == 0 {
-		return nil, fmt.Errorf("no users found in .stackpanel/data/users.nix or .stackpanel/data/external/users.nix")
+		return nil, fmt.Errorf("no users found in .stack/data/users.nix or .stack/data/external/users.nix")
 	}
 
 	var recipients []string
@@ -469,13 +469,13 @@ func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 // getAgenixRecipientsFromYAML is deprecated - users are now read from Nix files only.
 // Kept as a stub for backwards compatibility with secrets_groups.go fallback.
 func (s *Server) getAgenixRecipientsFromYAML() ([]string, error) {
-	return nil, fmt.Errorf("legacy users.yaml is no longer supported - use .stackpanel/data/users.nix")
+	return nil, fmt.Errorf("legacy users.yaml is no longer supported - use .stack/data/users.nix")
 }
 
 // getSystemKeys returns system-level AGE keys (CI, deploy servers, etc.)
 func (s *Server) getSystemKeys() []string {
 	// Read from secrets config
-	configPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "secrets.nix")
+	configPath := filepath.Join(s.config.ProjectRoot, ".stack", "data", "secrets.nix")
 
 	args := []string{"eval", "--impure", "--json", "-f", configPath}
 	res, err := s.exec.RunNix(args...)
@@ -531,7 +531,7 @@ func (s *Server) writeAgeSecret(path string, value string, recipients []string) 
 
 // updateVariableEntry updates the variables.nix file with secret metadata
 func (s *Server) updateVariableEntry(id, key, description string, environments []string) error {
-	dataPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "variables.nix")
+	dataPath := filepath.Join(s.config.ProjectRoot, ".stack", "data", "variables.nix")
 
 	// Read existing variables
 	var variables map[string]map[string]any
@@ -582,7 +582,7 @@ func (s *Server) updateVariableEntry(id, key, description string, environments [
 
 // removeVariableEntry removes a variable from variables.nix
 func (s *Server) removeVariableEntry(id string) error {
-	dataPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "variables.nix")
+	dataPath := filepath.Join(s.config.ProjectRoot, ".stack", "data", "variables.nix")
 
 	var variables map[string]map[string]any
 
@@ -675,13 +675,13 @@ type AgeIdentityResponse struct {
 
 // getAgeIdentityPath returns the path to the age identity state file
 func (s *Server) getAgeIdentityPath() string {
-	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
 	return filepath.Join(stateDir, ageIdentityFileName)
 }
 
 // getAgeIdentityKeyPath returns the path to the actual key file (for key content storage)
 func (s *Server) getAgeIdentityKeyPath() string {
-	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
 	return filepath.Join(stateDir, "age-key.txt")
 }
 
@@ -777,7 +777,7 @@ func (s *Server) handleAgeIdentitySet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create state dir: %v", err))
 		return
@@ -909,7 +909,7 @@ type KMSConfigResponse struct {
 
 // getKMSConfigPath returns the path to the KMS config state file
 func (s *Server) getKMSConfigPath() string {
-	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
 	return filepath.Join(stateDir, kmsConfigFileName)
 }
 
@@ -961,7 +961,7 @@ func (s *Server) handleKMSConfigSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to create state dir: %v", err))
 		return

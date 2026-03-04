@@ -357,7 +357,7 @@ func (m Model) viewRecipients() string {
 	if len(m.recipients) == 0 {
 		b.WriteString(dimStyle.Render("No recipients registered.") + "\n\n")
 		b.WriteString(dimStyle.Render("Recipients are auto-registered when team members enter the devshell.") + "\n")
-		b.WriteString(dimStyle.Render("Their public key is saved to .stackpanel/secrets/recipients/<name>.age.pub") + "\n")
+		b.WriteString(dimStyle.Render("Their public key is saved to .stack/secrets/recipients/<name>.age.pub") + "\n")
 	} else {
 		for _, r := range m.recipients {
 			b.WriteString(fmt.Sprintf("  %s %s  %s\n",

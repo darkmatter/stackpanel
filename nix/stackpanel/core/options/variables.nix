@@ -30,7 +30,7 @@ let
   cfg = config.stackpanel;
 
   # Secrets directory relative to project root
-  secretsDir = cfg.secrets.secrets-dir or ".stackpanel/secrets";
+  secretsDir = cfg.secrets.secrets-dir or ".stack/secrets";
 
   # Extract keygroup from variable ID
   # "/dev/DATABASE_URL" -> "dev"
@@ -68,8 +68,8 @@ let
             Variable identifier. Format: /<keygroup>/<NAME>
 
             The keygroup determines which SOPS file the secret lives in:
-              /dev/FOO -> .stackpanel/secrets/dev.yaml
-              /prod/FOO -> .stackpanel/secrets/prod.yaml
+              /dev/FOO -> .stack/secrets/dev.yaml
+              /prod/FOO -> .stack/secrets/prod.yaml
 
             Computed variables use /computed/<source>/<path>:
               /computed/apps/web/port

@@ -752,7 +752,7 @@ export class AgentHttpClient {
 
   /**
    * Write a secret to a group's SOPS-encrypted YAML file.
-   * Secrets are stored in .stackpanel/secrets/vars/<group>.sops.yaml
+   * Secrets are stored in .stack/secrets/vars/<group>.sops.yaml
    */
   async writeAgenixSecret(
     request: AgenixSecretRequest,

@@ -42,7 +42,7 @@ nix search nixpkgs python3
 Individual developers can add personal packages that don't affect the rest of the team using `stackpanel.userPackages`:
 
 ```nix
-# .stackpanel/config.local.nix (gitignored)
+# .stack/config.local.nix (gitignored)
 {
   stackpanel.userPackages = with pkgs; [
     lazygit
@@ -97,7 +97,7 @@ For anything longer than a one-liner, point `path` at a shell script file:
 
 ```nix
 stackpanel.scripts.deploy = {
-  path = ./.stackpanel/src/scripts/deploy.sh;
+  path = ./.stack/src/scripts/deploy.sh;
   description = "Deploy the application";
   runtimeInputs = [ pkgs.awscli2 pkgs.jq ];
   env.AWS_REGION = "us-west-2";
@@ -150,7 +150,7 @@ stackpanel.scripts = {
   };
 
   "db:restore" = {
-    path = ./.stackpanel/src/scripts/db-restore.sh;
+    path = ./.stack/src/scripts/db-restore.sh;
     description = "Restore database from backup";
     timeout = 1800;     # 30 minutes
   };
@@ -242,7 +242,7 @@ stackpanel.scripts = {
     turbo = {
       enable = true;
       cache = false;
-      inputs = [ ".stackpanel/**" "nix/stackpanel/**" ];
+      inputs = [ ".stack/**" "nix/stackpanel/**" ];
     };
   };
 
@@ -253,7 +253,7 @@ stackpanel.scripts = {
       enable = true;
       dependsOn = [ "write-files" ];
       cache = false;
-      inputs = [ ".stackpanel/**" "nix/stackpanel/**" ];
+      inputs = [ ".stack/**" "nix/stackpanel/**" ];
     };
   };
 

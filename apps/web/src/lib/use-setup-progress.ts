@@ -121,7 +121,7 @@ export function useSetupProgress(): SetupProgress | null {
 			// Check config verification (vars/.sops.yaml exists)
 			try {
 				await client.readFile(
-					".stackpanel/secrets/vars/.sops.yaml",
+					".stack/secrets/vars/.sops.yaml",
 				);
 					configVerified = true;
 				} catch {

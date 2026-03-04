@@ -29,7 +29,7 @@
 #
 # Usage (path to file):
 #   stackpanel.healthchecks.modules.postgres.checks.can-connect = {
-#     path = ./.stackpanel/src/checks/postgres/can-connect.sh;
+#     path = ./.stack/src/checks/postgres/can-connect.sh;
 #     severity = "critical";
 #   };
 #
@@ -132,7 +132,7 @@ let
             Content is read and used as the script body.
             Mutually exclusive with `script` and `scriptRef`.
           '';
-          example = lib.literalExpression "./.stackpanel/src/checks/postgres/can-connect.sh";
+          example = lib.literalExpression "./.stack/src/checks/postgres/can-connect.sh";
         };
 
         scriptRef = lib.mkOption {
@@ -438,7 +438,7 @@ in
               };
               # Path to script file
               has-tables = {
-                path = ./.stackpanel/src/checks/postgres/has-tables.sh;
+                path = ./.stack/src/checks/postgres/has-tables.sh;
                 severity = "warning";
               };
             };

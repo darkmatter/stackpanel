@@ -14,7 +14,7 @@
 #   - Shell hooks for automatic environment setup
 #
 # Usage:
-#   let redisLib = import ./default.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
+#   let redisLib = import ./default.nix { inherit pkgs lib; baseDir = ".stack/state"; };
 #   in redisLib.mkService { projectName = "myapp"; port = 6379; }
 # ==============================================================================
 {
