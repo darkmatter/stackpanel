@@ -17,7 +17,7 @@ stackpanel.ide = {
 };
 ```
 
-When enabled, Stackpanel generates VS Code configuration files into `.vscode/` and `.stackpanel/gen/ide/vscode/`. These are standard VS Code files—no custom extension required.
+When enabled, Stackpanel generates VS Code configuration files into `.vscode/` and `.stack/gen/ide/vscode/`. These are standard VS Code files—no custom extension required.
 
 ## What Gets Generated
 
@@ -25,7 +25,7 @@ When enabled, Stackpanel generates VS Code configuration files into `.vscode/` a
 |------|---------|
 | `.vscode/settings.json` | Workspace settings (formatters, linters, Nix LSP, etc.) |
 | `.vscode/extensions.json` | Recommended extensions for your stack |
-| `.stackpanel/gen/ide/vscode/` | Devshell loader and workspace configuration |
+| `.stack/gen/ide/vscode/` | Devshell loader and workspace configuration |
 
 Like all Stackpanel-generated files, these are committed to Git so that new team members get the right configuration immediately after cloning.
 
@@ -95,7 +95,7 @@ One of the trickiest parts of using Nix with VS Code is making sure the editor s
 - **Formatters and linters** — Tools run from the Nix store, not from global installs
 - **Environment variables** — The same env vars available in your terminal are available to extensions
 
-This is handled through a generated VS Code workspace file in `.stackpanel/gen/ide/vscode/` that sets up the correct `PATH` and environment.
+This is handled through a generated VS Code workspace file in `.stack/gen/ide/vscode/` that sets up the correct `PATH` and environment.
 
 <Callout type="info">
 For the devshell integration to work, you should open VS Code from within your Nix devshell (e.g., run `code .` from the terminal after entering the shell) or use the [direnv VS Code extension](https://marketplace.visualstudio.com/items?itemName=mkhl.direnv) to automatically load the environment.
@@ -165,8 +165,8 @@ If you prefer not to see generated files in the VS Code file explorer, add exclu
 ```nix
 stackpanel.ide.vscode.settings = {
   "files.exclude" = {
-    ".stackpanel/state" = true;
-    ".stackpanel/gen" = true;
+    ".stack/state" = true;
+    ".stack/gen" = true;
     "process-compose.yaml" = true;
   };
 };

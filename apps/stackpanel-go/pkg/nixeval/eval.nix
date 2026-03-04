@@ -10,7 +10,7 @@
 # Configuration sources (in priority order):
 #   1. configJson arg  - Nix store path to JSON config (passed by caller)
 #   2. stateDir arg    - directory containing stackpanel.json (passed by caller)
-#   3. root arg        - project root, state file derived as root/.stackpanel/state/stackpanel.json
+#   3. root arg        - project root, state file derived as root/.stack/profile/stackpanel.json
 #   4. env fallbacks   - STACKPANEL_CONFIG_JSON / STACKPANEL_STATE_DIR / STACKPANEL_ROOT / PWD
 #                        (only used when args are null, requires --impure)
 #

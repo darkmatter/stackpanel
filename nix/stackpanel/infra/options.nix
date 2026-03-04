@@ -81,7 +81,7 @@ let
         default = { };
         description = ''
           Configuration values passed to the module at runtime.
-          Serialized to JSON in .stackpanel/state/infra-inputs.json.
+          Serialized to JSON in .stack/state/infra-inputs.json.
           Values matching ENC[age,...] are decrypted at runtime.
         '';
       };
@@ -198,7 +198,7 @@ in
       sops = {
         file-path = lib.mkOption {
           type = lib.types.str;
-          default = ".stackpanel/secrets/vars/dev.sops.yaml";
+          default = ".stack/secrets/vars/dev.sops.yaml";
           description = ''
             Path to SOPS-encrypted YAML file for infra outputs.
             Defaults to the dev group file. Uses `sops set` for non-destructive
@@ -293,7 +293,7 @@ in
 
         Populated by running `infra:pull-outputs` after deployment,
         which reads from the storage backend and writes to
-        .stackpanel/data/infra-outputs.nix.
+        .stack/data/infra-outputs.nix.
 
         Outputs are typically strings, but may include structured values
         (e.g., machine inventories) when modules emit complex outputs.
@@ -327,7 +327,7 @@ in
     stackpanel.infra.outputs =
       let
         root = if config.stackpanel.root != null then config.stackpanel.root else ./.;
-        outputsFile = root + "/.stackpanel/data/infra-outputs.nix";
+        outputsFile = root + "/.stack/data/infra-outputs.nix";
       in
       lib.mkDefault (lib.optionalAttrs (builtins.pathExists outputsFile) (import outputsFile));
   };

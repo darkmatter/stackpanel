@@ -289,7 +289,7 @@ let
       imports ? [ ],
       options ? { },
       syntax ? "proto3",
-      # Boilerplate Nix content for scaffolding .stackpanel/config.nix or .stackpanel/data/<name>.nix files
+      # Boilerplate Nix content for scaffolding .stack/config.nix or .stack/data/<name>.nix files
       # Should be a string containing valid Nix that conforms to this schema
       boilerplate ? null,
       # Internal boilerplate for _internal.nix (only used by config schema)

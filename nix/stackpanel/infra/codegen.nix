@@ -78,7 +78,7 @@ let
       }
     else if cfg.storage-backend.type == "sops" then
       let
-        secretsDir = config.stackpanel.secrets.secrets-dir or ".stackpanel/secrets";
+        secretsDir = config.stackpanel.secrets.secrets-dir or ".stack/secrets";
         group = cfg.storage-backend.sops.group;
         resolvedPath = "${secretsDir}/vars/${group}.sops.yaml";
       in
@@ -828,7 +828,7 @@ in
           echo "  2. Implement provisioning logic in index.ts"
           echo "  3. Import the module in nix/stackpanel/infra/default.nix:"
           echo "       ./modules/$MODULE_ID/module.nix"
-          echo "  4. Enable in .stackpanel/config.nix:"
+          echo "  4. Enable in .stack/config.nix:"
           echo "       stackpanel.infra.$MODULE_ID.enable = true;"
           echo "  5. Run: infra:deploy"
         '';
@@ -944,7 +944,7 @@ in
             ''
           else if storageType == "sops" then
             let
-              secretsDir = config.stackpanel.secrets.secrets-dir or ".stackpanel/secrets";
+              secretsDir = config.stackpanel.secrets.secrets-dir or ".stack/secrets";
               group = cfg.storage-backend.sops.group;
               sopsFile =
                 if cfg.storage-backend.sops.group != "" then
@@ -1048,7 +1048,7 @@ in
               echo "Supported backends: chamber, sops, ssm"
               exit 1
             '';
-        description = "Pull infra outputs from storage backend into .stackpanel/data/infra-outputs.nix";
+        description = "Pull infra outputs from storage backend into .stack/data/infra-outputs.nix";
       };
     };
 

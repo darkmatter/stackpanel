@@ -15,9 +15,10 @@
 # subdirectory by walking up the tree looking for the marker file.
 #
 # Directory layout:
-#   .stackpanel/           (dirs.home)
-#   ├── state/             (dirs.state - gitignored, runtime state)
-#   └── gen/               (dirs.gen - checked in, generated files)
+#   .stack/               (dirs.home)
+#   ├── keys/             (dirs.keys - gitignored, persistent credentials)
+#   ├── profile/          (dirs.profile - gitignored, ephemeral runtime/cache)
+#   └── gen/              (dirs.gen - gitignored, generated files)
 # ==============================================================================
 {
   lib,
@@ -297,7 +298,7 @@
             config = lib.mkOption {
               description = "Directory for stackpanel configuration files.";
               type = lib.types.path;
-              default = ../../../../.stackpanel/config.nix;
+              default = ../../../../.stack/config.nix;
             };
             home = lib.mkOption {
               description = ''
@@ -305,27 +306,45 @@
                 This is the ONLY configurable directory option.
 
                 Subdirectories are automatically computed:
-                  - state/ (gitignored) - runtime state files
-                  - gen/   (checked in) - generated IDE configs, schemas
+                  - keys/   (gitignored) - persistent credentials (AGE, AWS, step)
+                  - profile/ (gitignored) - ephemeral runtime/cache (safe to rm)
+                  - gen/   (gitignored) - generated IDE configs, schemas
                   - data/ (checked in) -  nix-backed configuration db
 
-                Example: ".stackpanel" → state at ".stackpanel/state"
+                Example: ".stack" → keys at ".stack/keys", profile at ".stack/profile"
               '';
               type = lib.types.str;
-              default = ".stackpanel";
+              default = ".stack";
             };
             # ================================================================
             # COMPUTED PATHS (read-only, derived from home)
             # These cannot be configured - change `home` instead.
             # ================================================================
-            state = lib.mkOption {
+            keys = lib.mkOption {
               description = ''
-                Full state directory path (relative to project root).
-                Computed as: dirs.home + "/state"
-                This is read-only - configure dirs.home instead.
+                Full keys directory path (relative to project root).
+                Persistent credentials only. Computed as: dirs.home + "/keys"
               '';
               type = lib.types.str;
-              default = "${config.home}/state";
+              default = "${config.home}/keys";
+              readOnly = true;
+            };
+            profile = lib.mkOption {
+              description = ''
+                Full profile directory path (relative to project root).
+                Ephemeral runtime/cache (safe to delete). Computed as: dirs.home + "/profile"
+                Replaces legacy state/ for stackpanel.json, shell.log, etc.
+              '';
+              type = lib.types.str;
+              default = "${config.home}/profile";
+              readOnly = true;
+            };
+            state = lib.mkOption {
+              description = ''
+                DEPRECATED: Use dirs.profile. Alias for profile for backward compatibility.
+              '';
+              type = lib.types.str;
+              default = "${config.home}/profile";
               readOnly = true;
             };
             data = lib.mkOption {
@@ -411,8 +430,8 @@
   #
   #   imports = [
   #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
   #
-  # The file .stackpanel/config.local.nix is automatically gitignored.
+  # The file .stack/config.local.nix is automatically gitignored.
   # ============================================================================
 }

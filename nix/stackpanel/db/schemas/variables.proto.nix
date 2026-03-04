@@ -13,8 +13,8 @@
 # - /literal/* → User-defined literal values (optional organization)
 #
 # Secrets are stored in SOPS-encrypted YAML files:
-# - .stackpanel/secrets/dev.yaml → All /dev/* variables
-# - .stackpanel/secrets/prod.yaml → All /prod/* variables
+# - .stack/secrets/dev.yaml → All /dev/* variables
+# - .stack/secrets/prod.yaml → All /prod/* variables
 # ==============================================================================
 { lib }:
 let
@@ -52,7 +52,7 @@ proto.mkProtoFile {
             "3000"
           
           Vals references:
-            "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+            "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
             "ref+awsssm://prod/api-key"
             "ref+exec://echo $RANDOM"
         '';

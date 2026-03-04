@@ -60,11 +60,11 @@ gives you your secrets directly. `vals` becomes optional for edge cases
 │   ├── staging.enc.age
 │   ├── prod.enc.age
 │   └── .archive/                 # Rotated keys
-├── bin/
-│   ├── join.sh                   # Add your key to a recipient group
-│   ├── rekey.sh                  # Re-encrypt .enc.age for current recipients
-│   ├── decrypt-env.sh            # sops decrypt → dotenv for a group/app
-│   └── rotate.sh                 # Generate new group keypair + rekey
+(.stack/secrets/bin/ contains:)
+├── join.sh                   # Add your key to a recipient group
+├── rekey.sh                  # Re-encrypt .enc.age for current recipients
+├── decrypt-env.sh            # sops decrypt → dotenv for a group/app
+└── rotate.sh                 # Generate new group keypair + rekey
 └── state/                        # Generated at shell entry (gitignored)
     ├── manifest.json             # Apps → groups → keys mapping
     └── sops-age-key-cmd.sh       # Generated SOPS_AGE_KEY_CMD script
@@ -261,7 +261,7 @@ jobs:
       - name: Add key (manual dispatch only)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          .stackpanel/secrets/bin/add-recipient.sh \
+          .stack/secrets/bin/add-recipient.sh \
             --key "${{ inputs.public_key }}" \
             --name "${{ inputs.username }}" \
             --group "${{ inputs.group }}"
@@ -272,7 +272,7 @@ jobs:
           SECRETS_AGE_KEY_DEV: ${{ secrets.SECRETS_AGE_KEY_DEV }}
           SECRETS_AGE_KEY_STAGING: ${{ secrets.SECRETS_AGE_KEY_STAGING }}
           SECRETS_AGE_KEY_PROD: ${{ secrets.SECRETS_AGE_KEY_PROD }}
-        run: .stackpanel/secrets/bin/rekey.sh
+        run: .stack/secrets/bin/rekey.sh
 
       - name: Commit and push
         run: |
@@ -283,7 +283,7 @@ jobs:
           git push
 ```
 
-### `bin/add-recipient.sh`
+### `secrets/bin/add-recipient.sh`
 
 Detects key type from prefix, writes the `.pub` file:
 
@@ -298,7 +298,7 @@ esac
 echo "$KEY" > "recipients/${GROUP}/${NAME}.${EXT}"
 ```
 
-### `bin/rekey.sh`
+### `secrets/bin/rekey.sh`
 
 Collects all recipient pub keys (converting SSH keys via `ssh-to-age`),
 re-encrypts all `.enc.age` files to the full recipient set:
@@ -427,8 +427,8 @@ All infrastructure changes are backward-compatible with the previous system.
 
 - [x] **Thin GitHub workflow**
   - Rewrote `secrets-rekey-workflow.yml.tpl` as thin wrapper
-  - Created `bin/rekey.sh` with full implementation
-  - Created `bin/add-recipient.sh` for manual dispatch
+  - Created `secrets/bin/rekey.sh` with full implementation
+  - Created `secrets/bin/add-recipient.sh` for manual dispatch
 
 - [x] **Gitignore via files module**
   - Moved all secrets gitignore entries to `stackpanel.files.entries`

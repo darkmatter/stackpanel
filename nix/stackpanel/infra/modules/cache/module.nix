@@ -8,7 +8,7 @@
 #   - Local (devenv): Devenv-managed Redis (read-only reference)
 #   - Local (docker): Docker Valkey/Redis container (fallback)
 #
-# Usage in .stackpanel/config.nix:
+# Usage in .stack/config.nix:
 #   stackpanel.infra.cache = {
 #     enable = true;
 #     provider = "auto";

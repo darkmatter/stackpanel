@@ -62,7 +62,7 @@ stackpanel commands
 For project-specific logic, create a module in your config:
 
 ```nix
-# .stackpanel/modules/seed-data.nix
+# .stack/modules/seed-data.nix
 { config, lib, pkgs, ... }:
 let
   cfg = config.stackpanel.seed-data;
@@ -94,7 +94,7 @@ in
 Then import and enable it:
 
 ```nix
-# .stackpanel/config.nix
+# .stack/config.nix
 {
   imports = [ ./modules/seed-data.nix ];
   stackpanel.seed-data.enable = true;

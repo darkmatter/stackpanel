@@ -37,7 +37,7 @@ func (s *Server) handleSecretsRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Construct path to secrets file
-	secretsPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", fmt.Sprintf("%s.yaml", env))
+	secretsPath := filepath.Join(s.config.ProjectRoot, ".stack", "secrets", fmt.Sprintf("%s.yaml", env))
 
 	// Check if file exists
 	if _, err := os.Stat(secretsPath); os.IsNotExist(err) {
@@ -129,7 +129,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Construct path to secrets file
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets")
+	secretsDir := filepath.Join(s.config.ProjectRoot, ".stack", "secrets")
 	secretsPath := filepath.Join(secretsDir, fmt.Sprintf("%s.yaml", req.Environment))
 
 	// Ensure directory exists
@@ -194,7 +194,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 		if len(recipients) == 0 {
 			s.writeJSON(w, http.StatusOK, apiResponse{
 				Success: false,
-				Error:   "No age recipients found. Ensure .stackpanel/data/users.nix has public-keys defined, or configure .sops.yaml",
+				Error:   "No age recipients found. Ensure .stack/data/users.nix has public-keys defined, or configure .sops.yaml",
 			})
 			return
 		}
@@ -277,7 +277,7 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", fmt.Sprintf("%s.yaml", env))
+	secretsPath := filepath.Join(s.config.ProjectRoot, ".stack", "secrets", fmt.Sprintf("%s.yaml", env))
 
 	// Decrypt existing secrets
 	result, err := s.exec.Run("sops", "-d", "--output-type", "json", secretsPath)
@@ -340,7 +340,7 @@ func (s *Server) handleSecretsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets")
+	secretsDir := filepath.Join(s.config.ProjectRoot, ".stack", "secrets")
 
 	// List all .yaml files in the secrets directory
 	entries, err := os.ReadDir(secretsDir)

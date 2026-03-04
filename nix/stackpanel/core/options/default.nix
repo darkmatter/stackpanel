@@ -26,13 +26,13 @@
     # binary-cache.nix -- colocated into services/binary-cache.nix
     ./caddy.nix
     ./checks.nix
-    # ci.nix -- colocated into apps/ci.nix
-    # cli.nix -- colocated into core/cli.nix
+    ./ci.nix
+    ./cli.nix
     ./codegen.nix
     ./core.nix
     ./devshell.nix
     # dns.nix -- colocated into network/dns.nix
-    ./extensions.nix
+    # extensions.nix -- flattened into core/extensions.nix
     ./global-services.nix
     ./healthchecks.nix
     ./ide.nix
@@ -41,14 +41,14 @@
     ./outputs.nix
     ./panels.nix
     ./step-ca.nix
-    # state.nix -- colocated into core/state.nix
-    ./tasks.nix
+    ./state.nix
+    # tasks.nix -- flattened into core/tasks.nix
     ./ports.nix
     ./secrets.nix
     ./services.nix
     # theme.nix -- colocated into tui/theme.nix
     ./user-packages.nix
-    ./users.nix
+    # users.nix -- flattened into core/users-options.nix
     ./variables.nix
     ./variables-backend.nix
   ];

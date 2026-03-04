@@ -85,7 +85,9 @@
             ;
           stackpanelImports =
             if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
-            else [ (self + "/.stackpanel/modules") ];
+            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+            else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
+            else [ ];
         };
       in
       {

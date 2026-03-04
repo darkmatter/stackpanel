@@ -18,7 +18,7 @@ var servicesCmd = &cobra.Command{
 	Short:   "Manage development services",
 	Long: `Manage project-local development services (PostgreSQL, Redis, Minio, etc.)
 
-Services are project-local by default, with data stored in .stackpanel/state/services/
+Services are project-local by default, with data stored in .stack/state/services/
 This allows different projects to use different versions and configurations.
 
 Note: Caddy is a global service (shared across projects) to avoid port 443 conflicts.`,
@@ -307,7 +307,7 @@ func StartServiceByName(name string) error {
 }
 
 // GetServicesBaseDir returns the current services base directory
-// This is project-local by default (.stackpanel/state/services/)
+// This is project-local by default (.stack/state/services/)
 func GetServicesBaseDir() string {
 	return svc.BaseDir
 }

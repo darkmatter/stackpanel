@@ -10,7 +10,7 @@
 # Configuration sources (in priority order):
 #   1. configJson arg  - Nix store path to JSON config (passed by caller)
 #   2. stateDir arg    - directory containing stackpanel.json (passed by caller)
-#   3. root arg        - project root, state file derived as root/.stackpanel/state/stackpanel.json
+#   3. root arg        - project root, state file derived as root/.stack/state/stackpanel.json
 #   4. env fallbacks   - STACKPANEL_CONFIG_JSON / STACKPANEL_STATE_DIR / STACKPANEL_ROOT / PWD
 #                        (only used when args are null, requires --impure)
 #
@@ -113,7 +113,7 @@ let
     if effectiveStateDir != null then
       effectiveStateDir + "/stackpanel.json"
     else if effectiveRoot != null then
-      effectiveRoot + "/.stackpanel/state/stackpanel.json"
+      effectiveRoot + "/.stack/state/stackpanel.json"
     else
       null;
 
@@ -135,7 +135,7 @@ else
       if root == null then
         "Pass --argstr root /path/to/project, or run from within a devenv shell"
       else
-        "No config at ${effectiveRoot}/.stackpanel/state/stackpanel.json — run 'stackpanel preflight' first";
+        "No config at ${effectiveRoot}/.stack/state/stackpanel.json — run 'stackpanel preflight' first";
     projectRoot = effectiveRoot;
     stateFile = stateFile;
     configJsonPath = effectiveConfigJson;

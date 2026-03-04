@@ -122,7 +122,7 @@ func normalizeEnv(env string) (string, error) {
 }
 
 // secretsUser was used for the legacy users.yaml format - now deprecated.
-// Users are read from .stackpanel/data/users.nix via Nix evaluation.
+// Users are read from .stack/data/users.nix via Nix evaluation.
 
 func (s *Server) setSopsSecret(env string, key string, value string) (string, error) {
 	// Get recipients from Nix user config (replaces legacy users.yaml)
@@ -132,10 +132,10 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 		recipients = s.getAgeRecipients()
 	}
 	if len(recipients) == 0 {
-		return "", errors.New("no recipients found - ensure .stackpanel/data/users.nix has public-keys defined")
+		return "", errors.New("no recipients found - ensure .stack/data/users.nix has public-keys defined")
 	}
 
-	secretsRel := fmt.Sprintf(".stackpanel/secrets/%s.yaml", env)
+	secretsRel := fmt.Sprintf(".stack/secrets/%s.yaml", env)
 	secretsPath, err := safeJoin(s.config.ProjectRoot, secretsRel)
 	if err != nil {
 		return "", err

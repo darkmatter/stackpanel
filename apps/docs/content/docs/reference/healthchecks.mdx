@@ -80,7 +80,7 @@ based on the aggregate status of its healthchecks.
       };
       # Path to script file
       has-tables = {
-        path = ./.stackpanel/src/checks/postgres/has-tables.sh;
+        path = ./.stack/src/checks/postgres/has-tables.sh;
         severity = "warning";
       };
     };
@@ -226,7 +226,7 @@ Mutually exclusive with `script` and `scriptRef`.
 
 **Example:**
 
-`./.stackpanel/src/checks/postgres/can-connect.sh`
+`./.stack/src/checks/postgres/can-connect.sh`
 
 
 ---

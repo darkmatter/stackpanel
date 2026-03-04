@@ -7,10 +7,7 @@
 {
   imports = [
     ./dns.nix
-    ./dns-options.nix
     ./network.nix
     ./ports.nix
-    ./ports-options.nix
-    ./step-ca-options.nix
   ];
 }

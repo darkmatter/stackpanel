@@ -34,9 +34,9 @@ var (
 type ValidationLevel int
 
 const (
-	// ValidationStrict requires .stackpanel/config.nix with valid content
+	// ValidationStrict requires .stack/config.nix with valid content
 	ValidationStrict ValidationLevel = iota
-	// ValidationNormal accepts .stackpanel/config.nix or flake.nix with stackpanel references
+	// ValidationNormal accepts .stack/config.nix or flake.nix with stackpanel references
 	ValidationNormal
 	// ValidationLenient accepts any flake.nix (for potential stackpanel projects)
 	ValidationLenient
@@ -243,7 +243,7 @@ func ValidateProject(projectPath string) error {
 	return result.Error
 }
 
-// ValidateProjectStrict performs strict validation requiring .stackpanel/config.nix
+// ValidateProjectStrict performs strict validation requiring .stack/config.nix
 func ValidateProjectStrict(projectPath string) error {
 	opts := DefaultValidationOptions()
 	opts.Level = ValidationStrict
@@ -303,8 +303,8 @@ func ValidateProjectWithOptions(projectPath string, opts ValidationOptions) *Val
 		return result
 	}
 
-	// Check for .stackpanel/config.nix (primary indicator)
-	stackpanelConfig := filepath.Join(projectPath, ".stackpanel", "config.nix")
+	// Check for .stack/config.nix (primary indicator)
+	stackpanelConfig := filepath.Join(projectPath, ".stack", "config.nix")
 	if _, err := os.Stat(stackpanelConfig); err == nil {
 		// Validate the config.nix content
 		if err := validateStackpanelConfig(stackpanelConfig); err != nil {
@@ -741,7 +741,7 @@ func checkFlakeTextForStackpanel(flakePath string) (bool, []string) {
 		"stackpanel",
 		"Stackpanel",
 		"STACKPANEL",
-		".stackpanel",
+		".stack",
 		"stackpanelConfig",
 		"stackpanelModules",
 	}
@@ -812,10 +812,10 @@ func DetectProject() (string, error) {
 
 	dir := cwd
 	for {
-		// Check for .stackpanel/config.nix
-		configPath := filepath.Join(dir, ".stackpanel", "config.nix")
+		// Check for .stack/config.nix
+		configPath := filepath.Join(dir, ".stack", "config.nix")
 		if _, err := os.Stat(configPath); err == nil {
-			log.Debug().Str("path", dir).Msg("Found Stackpanel project via .stackpanel/config.nix")
+			log.Debug().Str("path", dir).Msg("Found Stackpanel project via .stack/config.nix")
 			return dir, nil
 		}
 

@@ -27,7 +27,7 @@ let
 
   # Secrets groups for per-group checks
   secretsGroups = secretsCfg.groups or { };
-  secretsDir = secretsCfg.secrets-dir or ".stackpanel/secrets";
+  secretsDir = secretsCfg.secrets-dir or ".stack/secrets";
 
   # Infra config for checking if KMS/IAM is deployed
   infraCfg = config.stackpanel.infra or { enable = false; };
@@ -419,7 +419,7 @@ in
             if [ $errors -gt 0 ]; then
               echo ""
               echo "$errors configuration item(s) missing"
-              echo "Configure in .stackpanel/config.nix under aws.roles-anywhere"
+              echo "Configure in .stack/config.nix under aws.roles-anywhere"
               exit 1
             fi
 

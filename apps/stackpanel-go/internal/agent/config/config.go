@@ -11,7 +11,7 @@ import (
 // Configuration is loaded from environment variables and auto-detection.
 // No config file is needed - run the agent from within a project directory.
 type Config struct {
-	// Project root directory (contains .stackpanel/config.nix)
+	// Project root directory (contains .stack/config.nix)
 	// Auto-detected from current directory or STACKPANEL_PROJECT_ROOT
 	ProjectRoot string
 
@@ -38,7 +38,7 @@ type Config struct {
 	// Allowed commands (empty = all allowed)
 	AllowedCommands []string
 
-	// Data directory for agent state (~/.stackpanel)
+	// Data directory for agent state (~/.stack)
 	DataDir string
 
 	// Allowed web UI origins (CORS + WebSocket Origin)
@@ -59,7 +59,7 @@ func DefaultConfig() *Config {
 		BindAddress:     "127.0.0.1",
 		APIEndpoint:     "https://stackpanel.dev/api/agent",
 		AllowedCommands: []string{},
-		DataDir:         filepath.Join(home, ".stackpanel"),
+		DataDir:         filepath.Join(home, ".stack"),
 		AllowedOrigins:  []string{},
 	}
 }
@@ -83,7 +83,7 @@ func (c *Config) ApplyDefaults() error {
 		if err != nil {
 			return err
 		}
-		c.DataDir = filepath.Join(home, ".stackpanel")
+		c.DataDir = filepath.Join(home, ".stack")
 	}
 
 	// Ensure data directory exists

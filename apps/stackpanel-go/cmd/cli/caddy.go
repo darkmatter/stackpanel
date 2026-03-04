@@ -31,7 +31,7 @@ Site configs are stored in ~/.config/caddy/sites.d/ and can be
 contributed to by multiple projects.
 
 When you add a site, a symlink is created in your project at:
-  .stackpanel/caddy/<domain>.caddy -> ~/.config/caddy/sites.d/<domain>.caddy
+  .stack/caddy/<domain>.caddy -> ~/.config/caddy/sites.d/<domain>.caddy
 
 This allows you to:
   - See which sites belong to your project
@@ -246,7 +246,7 @@ func addCaddySite(domain, upstream string, useTls bool, tlsCert, tlsKey, stepCaU
 	// Create symlink from project to global config
 	projectRoot := svc.GetProjectRoot()
 	if projectRoot != "" {
-		projectCaddyDir := filepath.Join(projectRoot, ".stackpanel", "caddy")
+		projectCaddyDir := filepath.Join(projectRoot, ".stack", "caddy")
 		if err := os.MkdirAll(projectCaddyDir, 0755); err == nil {
 			symlinkPath := filepath.Join(projectCaddyDir, filename+".caddy")
 			// Remove existing symlink if it exists
@@ -278,7 +278,7 @@ func removeCaddySite(domain string) {
 	// Also remove symlink from project if it exists
 	projectRoot := svc.GetProjectRoot()
 	if projectRoot != "" {
-		symlinkPath := filepath.Join(projectRoot, ".stackpanel", "caddy", filename+".caddy")
+		symlinkPath := filepath.Join(projectRoot, ".stack", "caddy", filename+".caddy")
 		os.Remove(symlinkPath) // Ignore error - might not exist
 	}
 

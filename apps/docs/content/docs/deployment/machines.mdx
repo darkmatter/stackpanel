@@ -13,7 +13,7 @@ Stackpanel's machine inventory system lets you define the servers your applicati
 
 Machine inventory flows through three layers:
 
-1. **Nix config** -- You declare machines (static) or EC2 discovery rules in `.stackpanel/config.nix`
+1. **Nix config** -- You declare machines (static) or EC2 discovery rules in `.stack/config.nix`
 2. **Infra module** -- The machines infra module resolves the inventory at deploy time (for EC2, it queries the AWS API)
 3. **Studio UI** -- The Deploy panel reads the resolved inventory and displays machine cards, app-to-machine mappings, and Colmena actions
 
@@ -24,7 +24,7 @@ Machine inventory flows through three layers:
 
 ### Enable the machines module
 
-Add to your `.stackpanel/config.nix`:
+Add to your `.stack/config.nix`:
 
 ```nix
 stackpanel.infra.machines = {

@@ -23,21 +23,13 @@ let
 in
 {
   imports = [
+    ./options
     ./aliases.nix
-    ./checks.nix
-    ./ci.nix
     ./cli.nix
-    ./cli-options.nix
-    ./codegen.nix
     ./extensions.nix
-    ./modules-options.nix
-    ./motd.nix
-    ./options-core.nix
-    ./outputs.nix
-    ./panels.nix
-    ./state-options.nix
+  
+    ./state.nix
     ./tasks.nix
-    ./user-packages.nix
     ./users-options.nix
     ./util.nix
   ];

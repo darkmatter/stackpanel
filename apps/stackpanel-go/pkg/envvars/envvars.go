@@ -115,7 +115,7 @@ var (
 		GoField:     "RootMarker",
 	}
 
-	// StackpanelRootDirName is the name of the .stackpanel directory
+	// StackpanelRootDirName is the name of the .stack directory
 	StackpanelRootDirName = EnvVar{
 		Name:        "STACKPANEL_ROOT_DIR_NAME",
 		Description: "Name of the config directory within the project (.stack or .stackpanel)",

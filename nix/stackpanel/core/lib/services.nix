@@ -7,7 +7,7 @@
 # together. Each service file exports a `mkService` function.
 #
 # Services are PROJECT-LOCAL by default, storing data in:
-#   <projectRoot>/.stackpanel/state/services/
+#   <projectRoot>/.stack/state/services/
 #
 # This allows different projects to use different versions and configurations.
 # Caddy remains GLOBAL to avoid port 443 conflicts.
@@ -28,7 +28,7 @@
 {
   pkgs,
   lib,
-  # Project root directory - services will be stored in <projectRoot>/.stackpanel/state/services/
+  # Project root directory - services will be stored in <projectRoot>/.stack/state/services/
   # If not provided, falls back to legacy global directory
   projectRoot ? null,
 }:
@@ -37,7 +37,7 @@ let
   # Project-local by default, with fallback to global for backwards compatibility
   baseDir =
     if projectRoot != null then
-      "${projectRoot}/.stackpanel/state/services"
+      "${projectRoot}/.stack/state/services"
     else
       "$HOME/.local/share/devservices";
 

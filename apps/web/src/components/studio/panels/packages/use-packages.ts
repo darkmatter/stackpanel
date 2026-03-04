@@ -32,7 +32,7 @@ export function usePackages() {
 		refresh: refreshInstalled,
 	} = useInstalledPackages();
 
-	// User packages from .stackpanel/data/packages.nix
+	// User packages from .stack/data/packages.nix
 	const { data: userPackages, mutate: setUserPackages } = useNixData<string[]>(
 		"packages",
 		{ initialData: [] },
@@ -109,7 +109,7 @@ export function usePackages() {
 		[checkInstalled],
 	);
 
-	// Check if a package is user-installed (from .stackpanel/data/packages.nix)
+	// Check if a package is user-installed (from .stack/data/packages.nix)
 	const isUserInstalledPackage = useCallback(
 		(pkg: NixpkgsPackage): boolean => {
 			const currentPackages = userPackages ?? [];

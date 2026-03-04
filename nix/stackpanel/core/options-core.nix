@@ -363,8 +363,8 @@
   #
   #   imports = [
   #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
   #
-  # The file .stackpanel/config.local.nix is automatically gitignored.
+  # The file .stack/config.local.nix is automatically gitignored.
   # ============================================================================
 }
