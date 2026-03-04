@@ -24,7 +24,7 @@ Whether to enable Cursor editor integration (not yet implemented).
 
 ## `ide.enable`
 
-Generate IDE configuration files into .stackpanel/gen/ide/
+Generate IDE configuration files into .stack/gen/ide/
 
 | Property | Value |
 |----------|-------|
@@ -92,7 +92,7 @@ Additional workspace folders to include
 ## `ide.vscode.output-mode`
 
 Where to output VS Code settings:
-- "workspace": Generate .stackpanel/gen/ide/vscode/stackpanel.code-workspace (default, safe)
+- "workspace": Generate .stack/gen/ide/vscode/stackpanel.code-workspace (default, safe)
 - "settingsJson": Generate .vscode/settings.json (CAUTION: may overwrite existing file)
 
 | Property | Value |
@@ -168,7 +168,7 @@ Recommended Zed extension IDs
 ## `ide.zed.output-mode`
 
 Where to output Zed settings:
-- "generated": Generate to .stackpanel/gen/zed/ (default, safe) - requires manual symlink
+- "generated": Generate to .stack/gen/zed/ (default, safe) - requires manual symlink
 - "dotZed": Generate to .zed/settings.json (CAUTION: may overwrite existing file)
 
 | Property | Value |

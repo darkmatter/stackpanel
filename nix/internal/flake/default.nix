@@ -2,7 +2,7 @@
 # default.nix - Stackpanel Flake Module
 #
 # THE single flake-parts module for stackpanel. This module:
-#   1. Auto-loads config from .stackpanel/_internal.nix or .stackpanel/config.nix
+#   1. Auto-loads config from .stack/config.nix
 #   2. Evaluates stackpanel modules via lib.evalModules
 #   3. Creates devShells.default via pkgs.mkShell with full passthru
 #   4. Full control over passthru, shellHook ordering, packages
@@ -103,11 +103,11 @@ in
             projectRoot = flakeCfg.projectRoot or self;
 
             # ===================================================================
-            # Auto-load stackpanel config from .stackpanel/
+            # Auto-load stackpanel config from .stack/
             # Always use `self` for file discovery (works in pure evaluation)
             # ===================================================================
-            internalConfigPath = self + "/.stackpanel/_internal.nix";
-            simpleConfigPath = self + "/.stackpanel/config.nix";
+            internalConfigPath = self + "/.stack/_internal.nix";
+            simpleConfigPath = self + "/.stack/config.nix";
 
             hasInternalConfig = builtins.pathExists internalConfigPath;
             hasSimpleConfig = builtins.pathExists simpleConfigPath;

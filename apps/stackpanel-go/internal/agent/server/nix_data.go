@@ -14,7 +14,7 @@ import (
 // nixDataRequest represents a request to read or write a Nix data file.
 type nixDataRequest struct {
 	// Entity is the name of the data file (without .nix extension).
-	// Maps to .stackpanel/data/<entity>.nix or a key in .stackpanel/config.nix.
+	// Maps to .stack/data/<entity>.nix or a key in .stack/config.nix.
 	Entity string `json:"entity"`
 
 	// Key is the specific key to update within the entity (optional).
@@ -35,7 +35,7 @@ type nixDataRequest struct {
 // HTTP Handlers
 // =============================================================================
 
-// handleNixData handles CRUD operations on Nix data files in .stackpanel/.
+// handleNixData handles CRUD operations on Nix data files in .stack/.
 // GET: Read and evaluate a data file, returning the JSON result.
 // POST: Write a data file by serializing the provided data to Nix.
 // DELETE: Remove a data file.
@@ -299,7 +299,7 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 	paths := s.store.Paths()
 	var entities []string
 
-	// Read .stackpanel/ directory (consolidated config files)
+	// Read .stack/ directory (consolidated config files)
 	if entries, err := os.ReadDir(paths.Dir()); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".nix") {
@@ -312,7 +312,7 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read legacy .stackpanel/data/ directory
+	// Read legacy .stack/data/ directory
 	if entries, err := os.ReadDir(paths.LegacyDataDir()); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".nix") {
@@ -322,7 +322,7 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Read .stackpanel/external/ directory
+	// Read external entities from data/ directory
 	if entries, err := os.ReadDir(paths.ExternalDataDir()); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".nix") {
@@ -435,7 +435,7 @@ func (s *Server) writeNixEntityJSON(entity string, data []byte) error {
 	return err
 }
 
-// readConsolidatedData reads the entire .stackpanel/config.nix as a map.
+// readConsolidatedData reads the entire .stack/config.nix as a map.
 func (s *Server) readConsolidatedData() (map[string]any, error) {
 	return s.store.ReadConsolidatedData()
 }

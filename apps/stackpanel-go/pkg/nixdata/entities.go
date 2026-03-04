@@ -34,7 +34,7 @@ func ValidateEntityName(name string) error {
 
 // IsExternalEntity returns true if the entity is provided by an external
 // source (e.g. "external-github-collaborators"). External entities are
-// read-only and live under .stackpanel/external/.
+// read-only and live under data/.
 func IsExternalEntity(name string) bool {
 	return len(name) > 9 && name[:9] == "external-"
 }

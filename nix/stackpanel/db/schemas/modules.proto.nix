@@ -14,7 +14,7 @@
 #
 # Data flow:
 #   Read:  Nix evaluates stackpanel.modulesComputed -> JSON -> Agent serves via RPC
-#   Write: UI edits -> Agent writes to .stackpanel/data/modules.nix -> Nix re-evaluates
+#   Write: UI edits -> Agent writes to .stack/data/modules.nix -> Nix re-evaluates
 # ==============================================================================
 { lib }:
 let

@@ -17,7 +17,7 @@
 # Apps should use MINIO_ENDPOINT and S3_ENDPOINT for MinIO access.
 #
 # Usage:
-#   let minioLib = import ./default.nix { inherit pkgs lib; baseDir = ".stackpanel/state"; };
+#   let minioLib = import ./default.nix { inherit pkgs lib; baseDir = ".stack/state"; };
 #   in minioLib.mkService { projectName = "myapp"; port = 9000; }
 # ==============================================================================
 {

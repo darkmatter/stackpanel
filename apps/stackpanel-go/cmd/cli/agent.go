@@ -24,7 +24,7 @@ var agentCmd = &cobra.Command{
 The agent runs on your machine and exposes a localhost API used by the Stackpanel web UI
 to run commands, evaluate Nix, and read/write files in the project.
 
-The agent auto-detects projects by looking for .stackpanel/config.nix in the current
+The agent auto-detects projects by looking for .stack/config.nix in the current
 directory or parent directories.`,
 	RunE: runAgent,
 }

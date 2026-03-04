@@ -53,8 +53,8 @@ Plaintext variables store their value directly.
 Variable identifier. Format: //
 
 The keygroup determines which SOPS file the secret lives in:
-  /dev/FOO -\> .stackpanel/secrets/dev.yaml
-  /prod/FOO -\> .stackpanel/secrets/prod.yaml
+  /dev/FOO -\> .stack/secrets/dev.yaml
+  /prod/FOO -\> .stack/secrets/prod.yaml
 
 Computed variables use /computed/\<source\>/\<path\>:
   /computed/apps/web/port

@@ -60,7 +60,7 @@ func (p *Paths) ExternalDataDir() string {
 
 // EntityPath returns the filesystem path for a given entity name.
 //
-// If a legacy per-entity file exists at .stackpanel/data/<entity>.nix it
+// If a legacy per-entity file exists at .stack/data/<entity>.nix it
 // is returned for backwards compatibility. Otherwise the consolidated
 // config.nix path is returned (the entity is expected to be a top-level
 // key within that file).
@@ -76,16 +76,12 @@ func (p *Paths) EntityPath(entity string) string {
 }
 
 // ExternalEntityPath returns the path for a read-only external entity.
-// The "external-" prefix is stripped. Prefers data/ then legacy external/:
+// The "external-" prefix is stripped. All external data now lives in data/:
 //
-//	"external-github-collaborators" → .stack/data/github-collaborators.nix (or .stackpanel/external/...)
+//	"external-github-collaborators" → .stack/data/github-collaborators.nix
 func (p *Paths) ExternalEntityPath(entity string) string {
 	name := strings.TrimPrefix(entity, "external-")
-	dataPath := filepath.Join(p.Dir(), "data", name+".nix")
-	if _, err := os.Stat(dataPath); err == nil {
-		return dataPath
-	}
-	return filepath.Join(p.Dir(), "external", name+".nix")
+	return filepath.Join(p.Dir(), "data", name+".nix")
 }
 
 // IsUsingConsolidatedConfig returns true if the given entity is stored in
@@ -96,7 +92,7 @@ func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
 	return os.IsNotExist(err)
 }
 
-// EnsureDir creates the .stackpanel directory (and parents) if it does not
+// EnsureDir creates the .stack directory (and parents) if it does not
 // already exist.
 func (p *Paths) EnsureDir() error {
 	return os.MkdirAll(p.Dir(), 0o755)
@@ -116,7 +112,7 @@ const ConfigNixHeader = `# =====================================================
 #
 # Machine writes will sort keys alphabetically and format with nixfmt.
 # For config that needs pkgs/lib (computed values, custom packages),
-# use .stackpanel/modules/ which has full NixOS module context.
+# use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
 # ==============================================================================
 `
 

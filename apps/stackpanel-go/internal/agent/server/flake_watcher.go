@@ -302,8 +302,9 @@ func (fw *FlakeWatcher) handleFileChange(changedFile string) {
 	reEvalConfig := true
 	reEvalPackages := filename == "packages.nix" || filename == "flake.nix" || filename == "flake.lock"
 
-	// For general .nix changes in .stackpanel, re-evaluate both
-	if filepath.Dir(changedFile) == filepath.Join(fw.projectRoot, ".stackpanel", "data") {
+	// For general .nix changes in .stack/data, re-evaluate both
+	if filepath.Dir(changedFile) == filepath.Join(fw.projectRoot, ".stack", "data") ||
+		filepath.Dir(changedFile) == filepath.Join(fw.projectRoot, ".stackpanel", "data") {
 		reEvalPackages = true
 	}
 

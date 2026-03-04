@@ -6,7 +6,5 @@
 { ... }:
 {
   imports = [
-    ./variables-options.nix
-    ./variables-backend-options.nix
   ];
 }

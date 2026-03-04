@@ -10,16 +10,10 @@
 { ... }:
 {
   imports = [
-    ./aws.nix
-    ./aws-options.nix
+    ./aws
     ./binary-cache.nix
-    ./binary-cache-options.nix
     ./caddy.nix
-    ./caddy/options.nix
     ./global-services.nix
-    ./global-services-options.nix
-    ./healthchecks-options.nix
     ./security-healthchecks.nix
-    ./services-options.nix
   ];
 }

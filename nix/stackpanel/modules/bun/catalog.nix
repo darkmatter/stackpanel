@@ -15,7 +15,7 @@
 #   Modules declare dependencies with real version constraints via
 #   `stackpanel.bun.catalog`. This module:
 #     1. Merges all declarations into a single catalog
-#     2. Generates a manifest at .stackpanel/state/catalog.json
+#     2. Generates a manifest at .stack/state/catalog.json
 #     3. The CLI reads the manifest and syncs missing entries into root package.json
 #     4. Computes a content hash for staleness detection (bun.lock / bun.nix)
 #     5. Exposes a healthcheck that warns when the catalog or lockfiles are stale
@@ -27,7 +27,7 @@
 #     "@tanstack/react-router" = "^1.143.6";
 #   };
 #
-# The generated manifest (.stackpanel/state/catalog.json) contains:
+# The generated manifest (.stack/state/catalog.json) contains:
 #   { "catalog": { "@aws-sdk/client-ecr": "^3.953.0", ... }, "hash": "..." }
 #
 # The CLI (or shell hook) reads this manifest and:
@@ -109,7 +109,7 @@ in
       SHA-256 hash of the resolved catalog contents.
 
       Used for staleness detection: if this hash differs from the one
-      recorded in .stackpanel/state/catalog-hash, the lockfiles (bun.lock
+      recorded in .stack/state/catalog-hash, the lockfiles (bun.lock
       and bun.nix) need to be regenerated.
 
       This is a read-only computed value.

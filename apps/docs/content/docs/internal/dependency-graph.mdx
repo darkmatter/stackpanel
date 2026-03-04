@@ -58,7 +58,7 @@ flowchart TD
 
 - `flake.nix` is the root entrypoint and calls `nix/flake/default.nix` per system.
 - `nix/flake/default.nix` is the shell builder and evaluation orchestrator:
-  - loads `.stackpanel/_internal.nix` or `.stackpanel/config.nix`
+  - loads `.stack/_internal.nix` or `.stack/config.nix`
   - evaluates `../stackpanel` via `lib.evalModules`
   - creates `stackpanelShell` using `pkgs.mkShell`
 - `nix/stackpanel/default.nix` is the adapter-agnostic module aggregator. It imports `core`, `devshell`, `network`, `services`, `modules`, and other subsystems.

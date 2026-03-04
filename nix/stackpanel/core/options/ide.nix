@@ -3,7 +3,7 @@
 #
 # IDE integration options - VS Code, Zed, Cursor configurations.
 #
-# Generates IDE configuration files into .stackpanel/gen/ide/ to provide
+# Generates IDE configuration files into .stack/gen/ide/ to provide
 # a consistent development experience with Nix-managed settings.
 #
 # VS Code options:
@@ -22,14 +22,14 @@
 #   - output-mode: "generated" or "dotZed"
 #   - extensions: Recommended extension IDs
 #
-# Generated files are in .stackpanel/gen/ide/{editor}/ and should be symlinked
+# Generated files are in .stack/gen/ide/{editor}/ and should be symlinked
 # or opened as appropriate for each editor.
 # ==============================================================================
 { lib, ... }:
 {
   options.stackpanel.ide = {
     enable = lib.mkEnableOption "IDE integration" // {
-      description = "Generate IDE configuration files into .stackpanel/gen/ide/";
+      description = "Generate IDE configuration files into .stack/gen/ide/";
     };
 
     vscode = {
@@ -64,7 +64,7 @@
         default = "workspace";
         description = ''
           Where to output VS Code settings:
-          - "workspace": Generate .stackpanel/gen/ide/vscode/stackpanel.code-workspace (default, safe)
+          - "workspace": Generate .stack/gen/ide/vscode/stackpanel.code-workspace (default, safe)
           - "settingsJson": Generate .vscode/settings.json (CAUTION: may overwrite existing file)
         '';
       };
@@ -120,7 +120,7 @@
         default = "generated";
         description = ''
           Where to output Zed settings:
-          - "generated": Generate to .stackpanel/gen/zed/ (default, safe) - requires manual symlink
+          - "generated": Generate to .stack/gen/zed/ (default, safe) - requires manual symlink
           - "dotZed": Generate to .zed/settings.json (CAUTION: may overwrite existing file)
         '';
       };

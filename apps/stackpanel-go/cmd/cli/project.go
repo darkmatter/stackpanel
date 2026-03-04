@@ -332,7 +332,7 @@ var projectAddCmd = &cobra.Command{
 Without arguments, adds the current directory.
 With a path argument, adds that directory.
 
-The project must be a valid Stackpanel project (has .stackpanel/config.nix or flake.nix).
+The project must be a valid Stackpanel project (has .stack/config.nix or flake.nix).
 
 Examples:
   stackpanel project add              # Add current directory (with confirmation)

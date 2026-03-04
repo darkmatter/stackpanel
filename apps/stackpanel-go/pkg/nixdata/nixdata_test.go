@@ -352,7 +352,7 @@ func TestRoundTripTransforms(t *testing.T) {
 }
 
 func TestSetKey(t *testing.T) {
-	path := "/.stackpanel/config.nix"
+	path := "/.stack/config.nix"
 	root := os.Getenv("STACKPANEL_ROOT")
 	curr, err := os.ReadFile(root + path)
 	if err != nil {
@@ -432,19 +432,19 @@ func TestTransformPreservesMapFieldKeysRoundTrip(t *testing.T) {
 func TestPaths(t *testing.T) {
 	p := NewPaths("/home/user/myproject")
 
-	if got := p.Dir(); got != "/home/user/myproject/.stackpanel" {
+	if got := p.Dir(); got != "/home/user/myproject/.stack" {
 		t.Errorf("Dir() = %q", got)
 	}
-	if got := p.ConfigFilePath(); got != "/home/user/myproject/.stackpanel/config.nix" {
+	if got := p.ConfigFilePath(); got != "/home/user/myproject/.stack/config.nix" {
 		t.Errorf("ConfigFilePath() = %q", got)
 	}
-	if got := p.LegacyDataDir(); got != "/home/user/myproject/.stackpanel/data" {
+	if got := p.LegacyDataDir(); got != "/home/user/myproject/.stack/data" {
 		t.Errorf("LegacyDataDir() = %q", got)
 	}
-	if got := p.ExternalDataDir(); got != "/home/user/myproject/.stackpanel/external" {
+	if got := p.ExternalDataDir(); got != "/home/user/myproject/.stack/data" {
 		t.Errorf("ExternalDataDir() = %q", got)
 	}
-	if got := p.ExternalEntityPath("external-github-collaborators"); got != "/home/user/myproject/.stackpanel/external/github-collaborators.nix" {
+	if got := p.ExternalEntityPath("external-github-collaborators"); got != "/home/user/myproject/.stack/data/github-collaborators.nix" {
 		t.Errorf("ExternalEntityPath() = %q", got)
 	}
 }

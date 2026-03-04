@@ -8,13 +8,13 @@
 # -----------------------------
 # This library uses SUBDIRECTORY NAMES, not full paths:
 #   - rootDir = ".stackpanel"  (the stackpanel home directory)
-#   - stateDir = "state"       (subdirectory name, NOT ".stackpanel/state")
-#   - genDir = "gen"           (subdirectory name, NOT ".stackpanel/gen")
+#   - stateDir = "state"       (subdirectory name, NOT ".stack/state")
+#   - genDir = "gen"           (subdirectory name, NOT ".stack/gen")
 #
 # Full paths are computed as: $root/${rootDir}/${stateDir}
-# For example: /path/to/project/.stackpanel/state
+# For example: /path/to/project/.stack/state
 #
-# If you're getting duplicate path segments like ".stackpanel/.stackpanel/state",
+# If you're getting duplicate path segments like ".stack/.stack/state",
 # you're passing a full path where a subdirectory name is expected!
 #
 # Uses a root marker file pattern (similar to devenv's .devenv-root) to allow

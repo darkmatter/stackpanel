@@ -289,7 +289,7 @@ func (s *Server) findCertificatePath() string {
 
 	// Check in project state directory if we have a project
 	if s.config.ProjectRoot != "" {
-		stateDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "state", "step")
+		stateDir := filepath.Join(s.config.ProjectRoot, ".stack", "state", "step")
 		certPath := filepath.Join(stateDir, hostname+".crt")
 		if _, err := os.Stat(certPath); err == nil {
 			return certPath
@@ -305,8 +305,8 @@ func (s *Server) findCertificatePath() string {
 			return certPath
 		}
 
-		// Check ~/.stackpanel/certs
-		certPath = filepath.Join(homeDir, ".stackpanel", "certs", hostname+".crt")
+		// Check ~/.stack/certs
+		certPath = filepath.Join(homeDir, ".stack", "certs", hostname+".crt")
 		if _, err := os.Stat(certPath); err == nil {
 			return certPath
 		}

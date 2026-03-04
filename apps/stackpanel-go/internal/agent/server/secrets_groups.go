@@ -72,7 +72,7 @@ type GroupSecretReadResponse struct {
 
 // SecretsConfig holds paths and settings from Nix config
 type SecretsConfig struct {
-	SecretsDir    string `json:"secretsDir"`    // e.g., ".stackpanel/secrets"
+	SecretsDir    string `json:"secretsDir"`    // e.g., ".stack/secrets"
 	VarsSubdir    string `json:"varsSubdir"`    // e.g., "vars" (relative to secretsDir)
 	EnvPackageDir string `json:"envPackageDir"` // e.g., "packages/env/data"
 }
@@ -117,7 +117,7 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 
 	// Fall back to defaults
 	return &SecretsConfig{
-		SecretsDir:    ".stackpanel/secrets",
+		SecretsDir:    ".stack/secrets",
 		VarsSubdir:    "vars",
 		EnvPackageDir: "packages/env/data",
 	}, nil

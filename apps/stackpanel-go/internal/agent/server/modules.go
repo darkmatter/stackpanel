@@ -498,8 +498,8 @@ func (s *Server) saveModuleConfig(name string, config ModuleConfig) error {
 
 // moduleConfigPath returns the path to a module's config file
 func (s *Server) moduleConfigPath(name string) string {
-	// Config stored in .stackpanel/data/modules/{name}.yaml
-	return filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "modules", name+".yaml")
+	// Config stored in .stack/data/modules/{name}.yaml
+	return filepath.Join(s.config.ProjectRoot, ".stack", "data", "modules", name+".yaml")
 }
 
 // getPendingModuleEnables returns a set of module IDs that have been enabled via UI
@@ -508,7 +508,7 @@ func (s *Server) getPendingModuleEnables() map[string]bool {
 	pendingEnables := make(map[string]bool)
 
 	// Scan the modules data directory for config files
-	modulesDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "modules")
+	modulesDir := filepath.Join(s.config.ProjectRoot, ".stack", "data", "modules")
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// Directory doesn't exist or can't be read - no pending enables

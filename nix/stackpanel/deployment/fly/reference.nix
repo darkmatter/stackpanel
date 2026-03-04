@@ -58,11 +58,11 @@ let
   # Hardcoded per-environment — when you need staging/production, duplicate
   # this file or parameterize via a config.local.nix value:
   #
-  #   # .stackpanel/config.local.nix
+  #   # .stack/config.local.nix
   #   { deployment = { envname = "production"; }; }
   #
   #   # then read it here:
-  #   envname = (import ../../.stackpanel/config.local.nix).deployment.envname or "dev";
+  #   envname = (import ../../.stack/config.local.nix).deployment.envname or "dev";
   envname = "dev";
 
   # Equivalent to FROM alpine:latest. hash makes it reproducible. try "distroless"

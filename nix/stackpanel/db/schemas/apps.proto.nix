@@ -6,7 +6,7 @@
 #
 # Environment variables are simple string maps:
 #   ENV_VAR_NAME = "literal-value"
-#   ENV_VAR_NAME = "ref+sops://.stackpanel/secrets/dev.yaml#/KEY"
+#   ENV_VAR_NAME = "ref+sops://.stack/secrets/dev.yaml#/KEY"
 #   ENV_VAR_NAME = "ref+awsssm://path/to/param"
 #
 # Note: Complex tooling configuration (install, build, test, etc.) is
@@ -40,7 +40,7 @@ proto.mkProtoFile {
       #   port = 3000;
       #   domain = "web.local";
       #   environments.dev = {
-      #     DATABASE_URL = "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL";
+      #     DATABASE_URL = "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL";
       #     PORT = "3000";
       #   };
       # };

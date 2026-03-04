@@ -12,7 +12,7 @@
 # the appropriate backend. Outputs a DATABASE_URL that other modules
 # and apps can consume.
 #
-# Usage in .stackpanel/config.nix:
+# Usage in .stack/config.nix:
 #   stackpanel.infra.database = {
 #     enable = true;
 #     name = "my-project";

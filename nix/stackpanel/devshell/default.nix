@@ -31,7 +31,7 @@ let
 
   # Default configuration
   # NOTE: stateDir, genDir, dataDir are FULL PATHS relative to project root
-  # (e.g., ".stackpanel/state", not just "state")
+  # (e.g., ".stack/state", not just "state")
   defaultConfig = {
     projectName = "default";
     stateDir = ".stack/profile"; # Full path from project root

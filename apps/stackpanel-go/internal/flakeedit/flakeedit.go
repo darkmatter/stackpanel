@@ -169,7 +169,7 @@ func (e *FlakeEditor) AddStackpanelImport(importExpr string) ([]byte, error) {
 	var insertText string
 	if openBracket.StartPosition().Row == closingBracket.StartPosition().Row {
 		// Single-line list: insert before `]` with a space
-		// e.g., `[ ./.stackpanel/modules ]` -> `[ ./.stackpanel/modules inputs.foo.bar ]`
+		// e.g., `[ ./.stack/nix ]` -> `[ ./.stack/nix inputs.foo.bar ]`
 		insertText = importExpr + " "
 	} else {
 		// Multi-line list: add a new line with proper indentation

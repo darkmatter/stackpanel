@@ -714,7 +714,7 @@ func computeConfigHash(projectRoot string) string {
 	configFiles := []string{
 		filepath.Join(projectRoot, "flake.nix"),
 		filepath.Join(projectRoot, "flake.lock"),
-		filepath.Join(projectRoot, ".stackpanel", "config.nix"),
+		filepath.Join(projectRoot, ".stack", "config.nix"),
 		filepath.Join(projectRoot, "devenv.nix"),
 		filepath.Join(projectRoot, "devenv.yaml"),
 	}
@@ -823,7 +823,7 @@ type CollectMOTDDataOpts struct {
 	// instead of querying the agent API.
 	Healthchecks []nixconfig.Healthcheck
 
-	// StateDir is the path to .stackpanel/state/ for cache files.
+	// StateDir is the path to .stack/state/ for cache files.
 	StateDir string
 }
 
@@ -857,7 +857,7 @@ func CollectMOTDData(projectName, projectRoot, version string, agentPort int, op
 		data.HealthchecksRunCommand = "sp healthcheck"
 		stateDir := opts.StateDir
 		if stateDir == "" {
-			stateDir = filepath.Join(projectRoot, ".stackpanel", "state")
+			stateDir = filepath.Join(projectRoot, ".stack", "state")
 		}
 		cache := LoadHealthcheckResults(stateDir)
 		if cache != nil {

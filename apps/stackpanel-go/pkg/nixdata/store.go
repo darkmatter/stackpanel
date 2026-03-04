@@ -397,7 +397,7 @@ func (s *Store) writeMap(entity string, data map[string]any) (string, error) {
 // Consolidated config.nix
 // ---------------------------------------------------------------------------
 
-// ReadConsolidatedData reads the entire .stackpanel/config.nix file and
+// ReadConsolidatedData reads the entire .stack/config.nix file and
 // returns its top-level attributes as a map.
 func (s *Store) ReadConsolidatedData() (map[string]any, error) {
 	dataPath := s.paths.ConfigFilePath()

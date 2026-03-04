@@ -74,7 +74,7 @@ func runPreflight(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write config.local.nix
-	configPath := filepath.Join(projectRoot, ".stackpanel", "config.local.nix")
+	configPath := filepath.Join(projectRoot, ".stack", "config.local.nix")
 	if !preflightForce {
 		if _, err := os.Stat(configPath); err == nil {
 			return fmt.Errorf("config.local.nix already exists (use --force to overwrite)")
@@ -160,7 +160,7 @@ func generateNixConfig(cfg envConfig) string {
 	sb.WriteString("# enabling pure mode evaluation (nix develop without --impure).\n")
 	sb.WriteString("#\n")
 	sb.WriteString("# To regenerate: stackpanel preflight --force\n")
-	sb.WriteString("# To remove: rm .stackpanel/config.local.nix && use impure mode again\n")
+	sb.WriteString("# To remove: rm .stack/config.local.nix && use impure mode again\n")
 	sb.WriteString("{\n")
 
 	hasAnyConfig := false

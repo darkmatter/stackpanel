@@ -259,7 +259,7 @@ func (s *Server) handleProjectValidate(w http.ResponseWriter, r *http.Request) {
 			message = "Directory is not a git repository (no .git folder found)"
 		case project.ErrNotStackpanel:
 			errorCode = "not_stackpanel"
-			message = "Directory is not a valid Stackpanel project (no .stackpanel/config.nix found)"
+			message = "Directory is not a valid Stackpanel project (no .stack/config.nix found)"
 		case project.ErrProjectNotFound:
 			errorCode = "not_found"
 			message = "Directory does not exist"

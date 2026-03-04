@@ -331,7 +331,7 @@ in
           # Path to file
           stackpanel.files.entries.".github/workflows/deploy.yml" = {
             type = "text";
-            path = ./.stackpanel/src/files/.github/workflows/deploy.yml;
+            path = ./.stack/src/files/.github/workflows/deploy.yml;
             description = "Deployment workflow";
           };
 
@@ -430,7 +430,7 @@ in
                   Content is read from this file at eval time.
                   Mutually exclusive with `text` - use one or the other.
                 '';
-                example = lib.literalExpression "./.stackpanel/src/files/.github/workflows/ci.yml";
+                example = lib.literalExpression "./.stack/src/files/.github/workflows/ci.yml";
               };
 
               drv = lib.mkOption {

@@ -42,7 +42,7 @@ let
   cfg = config.stackpanel.ide;
   stackpanelCfg = config.stackpanel;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = stackpanelCfg.dirs or { gen = ".stackpanel/gen"; };
+  dirs = stackpanelCfg.dirs or { gen = ".stack/gen"; };
 
   # Detect if stackpanel.files is available
   hasFilesOption = options ? stackpanel.files;
@@ -98,7 +98,7 @@ let
   workspaceName = stackpanelCfg.name or cfg.vscode.workspace-name or "stackpanel";
 
   # Generate workspace content using shared lib
-  # rootPath is relative from .stackpanel/gen/vscode/ to repo root
+  # rootPath is relative from .stack/gen/vscode/ to repo root
   workspaceContent = ideLib.mkWorkspaceContent {
     settings = vscodeMergedSettings;
     extraFolders = cfg.vscode.extra-folders;

@@ -24,7 +24,7 @@ Directory for stackpanel configuration files.
 | Property | Value |
 |----------|-------|
 | **Type** | `absolute path` |
-| **Default** | `/Users/cm/git/darkmatter/stackpanel/.stackpanel/config.nix` |
+| **Default** | `/Users/cm/git/darkmatter/stackpanel/.stack/config.nix` |
 
 ---
 
@@ -37,7 +37,7 @@ This is read-only - configure dirs.home instead.
 | Property | Value |
 |----------|-------|
 | **Type** | `string` |
-| **Default** | `".stackpanel/data"` |
+| **Default** | `".stack/data"` |
 | **Read Only** | `true` |
 
 ---
@@ -51,7 +51,7 @@ This is read-only - configure dirs.home instead.
 | Property | Value |
 |----------|-------|
 | **Type** | `string` |
-| **Default** | `".stackpanel/gen"` |
+| **Default** | `".stack/gen"` |
 | **Read Only** | `true` |
 
 ---
@@ -66,7 +66,7 @@ Subdirectories are automatically computed:
   - gen/   (checked in) - generated IDE configs, schemas
   - data/ (checked in) -  nix-backed configuration db
 
-Example: ".stackpanel" → state at ".stackpanel/state"
+Example: ".stackpanel" → state at ".stack/state"
 
 | Property | Value |
 |----------|-------|
@@ -84,7 +84,7 @@ This is read-only - configure dirs.home instead.
 | Property | Value |
 |----------|-------|
 | **Type** | `string` |
-| **Default** | `".stackpanel/state"` |
+| **Default** | `".stack/state"` |
 | **Read Only** | `true` |
 
 ---

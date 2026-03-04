@@ -9,7 +9,7 @@
 #   3. Generates wrapper scripts: colmena-apply, colmena-build, colmena-eval
 #   4. Computes resolved flag sets in stackpanel.colmena.computed
 #   5. Registers health checks for CLI availability and hive config
-#   6. Generates Colmena hive files to .stackpanel/state/colmena/
+#   6. Generates Colmena hive files to .stack/state/colmena/
 #   7. Serializes machine inventory + app deploy mapping for the agent
 #
 {
@@ -645,7 +645,7 @@ in
     };
 
     # =========================================================================
-    # Hive codegen: generate .stackpanel/state/colmena/{hive.nix, nodes/*.nix}
+    # Hive codegen: generate .stack/state/colmena/{hive.nix, nodes/*.nix}
     # =========================================================================
     stackpanel.files.entries = lib.mkIf cfg.generateHive (
       {
