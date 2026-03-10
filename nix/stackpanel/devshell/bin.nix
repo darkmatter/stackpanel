@@ -33,9 +33,8 @@ let
   allPackages = devshellCfg.packages or [ ];
 
   # Build a list of all bin directories from packages
-  # Filter to packages that have a /bin directory
-  binDirs = lib.filter (p: builtins.pathExists "${p}/bin") allPackages;
-  binDirPaths = map (p: "${p}/bin") binDirs;
+  # No eval-time filter — the runtime script checks `[[ -d $bindir ]]`
+  binDirPaths = map (p: "${p}/bin") allPackages;
 
   # Create a script that generates symlinks at shell entry
   # This runs at runtime so it can iterate over the actual binaries
