@@ -400,6 +400,17 @@ let
     else
       { };
 
+  # ===================================================================
+  # Deploy outputs (nixosModules, nixosConfigurations, colmenaHive)
+  # ===================================================================
+  deployLib = import ../stackpanel/lib/deploy.nix { inherit lib; };
+  deployArgs = {
+    config = spConfig;
+    inherit inputs;
+    nixpkgs = inputs.nixpkgs or null;
+  };
+  hasNixpkgs = inputs ? nixpkgs;
+
 in
 # Return the flake outputs for this system
 {
@@ -419,4 +430,16 @@ in
   checks = if enabled then allChecks // gitHooksCheck else { };
 
   apps = if enabled then spApps // containerApps // processComposeApp else { };
+
+  # NixOS deployment outputs
+  # nixosModules:        per-app NixOS service modules (for use in other NixOS configs)
+  # nixosConfigurations: full NixOS system configs per machine (nix build .#nixosConfigurations.*.config.system.build.toplevel)
+  # colmenaHive:         colmena hive attrset (colmena apply)
+  nixosModules = if enabled then spConfig.nixosModules or { } else { };
+
+  nixosConfigurations =
+    if enabled && hasNixpkgs then deployLib.mkNixosConfigurations deployArgs else { };
+
+  colmenaHive =
+    if enabled && hasNixpkgs then deployLib.mkHive deployArgs else { };
 }
