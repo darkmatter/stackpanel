@@ -43,6 +43,27 @@ in
     '';
   };
 
+  # NixOS modules - per-app NixOS service modules for colmena / nixos-rebuild
+  # Written by: deploy module (modules/deploy/module.nix)
+  # Read by:    flake adapter (nix/flake/default.nix) → nixosModules flake output
+  options.stackpanel.nixosModules = lib.mkOption {
+    type = types.attrsOf types.deferredModule;
+    default = { };
+    description = ''
+      Per-app NixOS modules for deployment via colmena or nixos-rebuild.
+
+      Each entry is a NixOS module function that configures the systemd
+      service, system user, and (optionally) sops secrets for an app.
+
+      Populated automatically by the deploy module when an app has:
+        deployment.enable = true;
+        deployment.backend = "colmena"; # or "nixos-rebuild"
+
+      These are exposed as the flake's nixosModules output and consumed
+      by mkHive / mkNixosConfigurations from nix/stackpanel/lib/deploy.nix.
+    '';
+  };
+
   # Flake apps - runnable via `nix run .#<name>`
   options.stackpanel.flakeApps = lib.mkOption {
     type = types.attrsOf (types.submodule {
