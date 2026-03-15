@@ -188,6 +188,7 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/nix/files", s.withCORS(s.requireAuth(s.requireProject(s.handleNixFiles))))
 	mux.HandleFunc("/api/nix/data", s.withCORS(s.requireAuth(s.requireProject(s.handleNixData))))
 	mux.HandleFunc("/api/nix/data/list", s.withCORS(s.requireAuth(s.requireProject(s.handleNixDataList))))
+	mux.HandleFunc("/api/apps/links", s.withCORS(s.requireAuth(s.requireProject(s.handleAppVariableLinks))))
 	mux.HandleFunc("/api/files", s.withCORS(s.requireAuth(s.requireProject(s.handleFiles))))
 	mux.HandleFunc("/api/files/list", s.withCORS(s.requireAuth(s.requireProject(s.handleFilesList))))
 	mux.HandleFunc("/api/scripts/source", s.withCORS(s.requireAuth(s.requireProject(s.handleScriptSource))))
@@ -213,7 +214,6 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/secrets/group/read", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretRead))))
 	mux.HandleFunc("/api/secrets/group/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretDelete))))
 	mux.HandleFunc("/api/secrets/group/list", s.withCORS(s.requireAuth(s.requireProject(s.handleGroupSecretsList))))
-	mux.HandleFunc("/api/secrets/generate-env-package", s.withCORS(s.requireAuth(s.requireProject(s.handleGenerateEnvPackage))))
 
 	// Recipients management (AGE public keys for team access)
 	mux.HandleFunc("/api/secrets/recipients", s.withCORS(s.requireAuth(s.requireProject(s.handleRecipientsRoute))))

@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 )
 
 // captureStdout runs fn while capturing everything written to os.Stdout.
@@ -95,6 +98,43 @@ func TestConfigGetSubcommandRegistered(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected 'get' subcommand to be registered under 'config'")
+	}
+}
+
+func TestConfigSetCommandHelp(t *testing.T) {
+	t.Cleanup(func() {
+		rootCmd.SetArgs(nil)
+		rootCmd.SetOut(nil)
+		rootCmd.SetErr(nil)
+	})
+
+	buf := &bytes.Buffer{}
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"config", "set", "--help"})
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("config set --help should succeed: %v", err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{"dot.path", "--type", "nix_expr"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected help to mention %q, got:\n%s", want, out)
+		}
+	}
+}
+
+func TestConfigSetSubcommandRegistered(t *testing.T) {
+	found := false
+	for _, sub := range configCmd.Commands() {
+		if sub.Name() == "set" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected 'set' subcommand to be registered under 'config'")
 	}
 }
 
@@ -561,5 +601,81 @@ func TestPrintRaw_StringWithNewlines(t *testing.T) {
 	got := captureStdout(t, func() { printRaw("line1\nline2") })
 	if got != "line1\nline2" {
 		t.Errorf("printRaw(multiline) = %q, want %q", got, "line1\nline2")
+	}
+}
+
+func TestParseConfigSetValue_AutoDetectsNumber(t *testing.T) {
+	value, valueType, err := parseConfigSetValue("12", "auto")
+	if err != nil {
+		t.Fatalf("parseConfigSetValue returned error: %v", err)
+	}
+	if valueType != "number" {
+		t.Fatalf("valueType = %q, want %q", valueType, "number")
+	}
+	if got, ok := value.(float64); !ok || got != 12 {
+		t.Fatalf("value = %#v, want float64(12)", value)
+	}
+}
+
+func TestParseConfigSetValue_StringOverride(t *testing.T) {
+	value, valueType, err := parseConfigSetValue("12", "string")
+	if err != nil {
+		t.Fatalf("parseConfigSetValue returned error: %v", err)
+	}
+	if valueType != "string" {
+		t.Fatalf("valueType = %q, want %q", valueType, "string")
+	}
+	if got, ok := value.(string); !ok || got != "12" {
+		t.Fatalf("value = %#v, want %q", value, "12")
+	}
+}
+
+func TestParseConfigSetValue_NixExpr(t *testing.T) {
+	value, valueType, err := parseConfigSetValue(`config.variables."/dev/API_URL".value`, "nix-expr")
+	if err != nil {
+		t.Fatalf("parseConfigSetValue returned error: %v", err)
+	}
+	if valueType != "nix_expr" {
+		t.Fatalf("valueType = %q, want %q", valueType, "nix_expr")
+	}
+	if got, ok := value.(nixdata.RawExpr); !ok || string(got) != `config.variables."/dev/API_URL".value` {
+		t.Fatalf("value = %#v, want raw expr", value)
+	}
+}
+
+func TestSetConfigValue(t *testing.T) {
+	projectRoot := t.TempDir()
+	configDir := filepath.Join(projectRoot, ".stack")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.nix")
+	initial := `{ config, ... }: {
+  apps = {};
+}
+`
+	if err := os.WriteFile(configPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+
+	writtenPath, err := setConfigValue(projectRoot, "apps.docs.port", float64(12))
+	if err != nil {
+		t.Fatalf("setConfigValue returned error: %v", err)
+	}
+	if writtenPath != configPath {
+		t.Fatalf("writtenPath = %q, want %q", writtenPath, configPath)
+	}
+
+	updated, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read updated config.nix: %v", err)
+	}
+	text := string(updated)
+	if !strings.Contains(text, `{ config, ... }:`) {
+		t.Fatalf("expected function wrapper to remain, got:\n%s", text)
+	}
+	if !strings.Contains(text, `port = 12;`) {
+		t.Fatalf("expected numeric binding in file, got:\n%s", text)
 	}
 }
