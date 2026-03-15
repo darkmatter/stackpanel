@@ -104,6 +104,12 @@ func SerializeWithSections(v any, indent string, sectionHeaders map[string]strin
 	return formatNix(b.String(), indent), nil
 }
 
+// FormatSource formats raw Nix source using nixfmt when available, with a
+// simple formatter fallback.
+func FormatSource(source string, indent string) string {
+	return formatNix(source, indent)
+}
+
 func serializeValue(v reflect.Value, depth int) (string, error) {
 	// Handle invalid (nil interface)
 	if !v.IsValid() {

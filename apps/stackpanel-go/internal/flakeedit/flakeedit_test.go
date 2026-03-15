@@ -677,3 +677,107 @@ func TestInsertAt(t *testing.T) {
 	result = insertAt(source, 5, []byte(" beautiful"))
 	assert.Equal(t, "hello beautiful world", string(result))
 }
+
+func TestPatchNixPath_PlainAttrset(t *testing.T) {
+	source := `{
+  apps = {
+    web = {
+      environments = {
+        dev = {
+          name = "dev";
+          env = {
+            PORT = "3000";
+          };
+        };
+      };
+    };
+  };
+}
+`
+
+	modified, err := PatchNixPath([]byte(source), []string{"apps", "web", "environments", "dev", "env", "PORT"}, `config.variables."/computed/apps/web/port".value`)
+	require.NoError(t, err)
+	assert.Contains(t, string(modified), `PORT = config.variables."/computed/apps/web/port".value;`)
+}
+
+func TestPatchNixPath_FunctionRootCreatesNestedBindings(t *testing.T) {
+	source := `{ pkgs, lib, config, ... }:
+{
+  apps = { };
+}
+`
+
+	modified, err := PatchNixPath([]byte(source), []string{"apps", "docs", "environments", "dev", "env", "PORT"}, `config.variables."/computed/apps/docs/port".value`)
+	require.NoError(t, err)
+	result := string(modified)
+	assert.Contains(t, result, `{ pkgs, lib, config, ... }:`)
+	assert.Contains(t, result, `docs = {`)
+	assert.Contains(t, result, `PORT = config.variables."/computed/apps/docs/port".value;`)
+}
+
+func TestDeleteNixPath_RemovesBinding(t *testing.T) {
+	source := `{
+  apps = {
+    web = {
+      environments = {
+        dev = {
+          name = "dev";
+          env = {
+            PORT = config.variables."/computed/apps/web/port".value;
+            HOST = "localhost";
+          };
+        };
+      };
+    };
+  };
+}
+`
+
+	modified, err := DeleteNixPath([]byte(source), []string{"apps", "web", "environments", "dev", "env", "PORT"})
+	require.NoError(t, err)
+	assert.NotContains(t, string(modified), `PORT = config.variables."/computed/apps/web/port".value;`)
+	assert.Contains(t, string(modified), `HOST = "localhost";`)
+}
+
+func TestReplaceNixEditableAttrset_PreservesFunctionWrapper(t *testing.T) {
+	source := `{ pkgs, lib, config, ... }:
+{
+  apps = { };
+}
+`
+
+	modified, err := ReplaceNixEditableAttrset([]byte(source), "{\n  variables = { };\n}\n")
+	require.NoError(t, err)
+	assert.Equal(t, `{ pkgs, lib, config, ... }:
+{
+  variables = { };
+}
+`, string(modified))
+}
+
+func TestExtractAppVariableLinksFromSource(t *testing.T) {
+	source := `{
+  apps = {
+    web = {
+      environments = {
+        dev = {
+          name = "dev";
+          env = {
+            PORT = config.variables."/computed/apps/web/port".value;
+            API_KEY = config.variables."/dev/api-key".value;
+            HOST = "localhost";
+          };
+        };
+      };
+    };
+  };
+}
+`
+
+	links, err := ExtractAppVariableLinksFromSource([]byte(source))
+	require.NoError(t, err)
+	require.Equal(t, "/computed/apps/web/port", links["web"]["dev"]["PORT"])
+	require.Equal(t, "/dev/api-key", links["web"]["dev"]["API_KEY"])
+	_, exists := links["web"]["dev"]["HOST"]
+	assert.False(t, exists)
+}

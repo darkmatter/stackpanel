@@ -116,8 +116,21 @@ in
               path:
               let
                 raw = import path;
+                result =
+                  if builtins.isFunction raw then
+                    raw {
+                      inherit
+                        pkgs
+                        lib
+                        inputs
+                        self
+                        ;
+                      config = result;
+                    }
+                  else
+                    raw;
               in
-              if builtins.isFunction raw then raw { inherit pkgs lib; } else raw;
+              result;
 
             loadedConfig =
               if hasInternalConfig then
@@ -201,11 +214,7 @@ in
             profileEnabled = devshellOutputs.profile.enable or false;
             profileDrv = devshellOutputs.profile.package or null;
 
-            shellPackages =
-              if profileEnabled && profileDrv != null then
-                [ profileDrv ]
-              else
-                allPackages;
+            shellPackages = if profileEnabled && profileDrv != null then [ profileDrv ] else allPackages;
 
             # ===================================================================
             # All env vars (from stackpanel modules only)

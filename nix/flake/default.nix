@@ -68,8 +68,21 @@ let
     path:
     let
       raw = import path;
+      result =
+        if builtins.isFunction raw then
+          raw {
+            inherit
+              pkgs
+              lib
+              inputs
+              self
+              ;
+            config = result;
+          }
+        else
+          raw;
     in
-    if builtins.isFunction raw then raw { inherit pkgs lib; } else raw;
+    result;
 
   # In-flake merge: replaces _internal.nix when it's absent (preferred for .stack)
   # Merge order: config.nix + imports → + data/github-collaborators.nix → + config.local.nix
@@ -93,7 +106,22 @@ let
   hasLocalConfig = localConfigPath != null && builtins.pathExists localConfigPath;
   rawLocalConfig = if hasLocalConfig then import localConfigPath else { };
   localConfig =
-    if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
+    let
+      result =
+        if builtins.isFunction rawLocalConfig then
+          rawLocalConfig {
+            inherit
+              pkgs
+              lib
+              inputs
+              self
+              ;
+            config = result;
+          }
+        else
+          rawLocalConfig;
+    in
+    result;
 
   processImports =
     config:
@@ -104,7 +132,19 @@ let
         path:
         let
           imported = import path;
-          result = if builtins.isFunction imported then imported { inherit pkgs lib; } else imported;
+          result =
+            if builtins.isFunction imported then
+              imported {
+                inherit
+                  pkgs
+                  lib
+                  inputs
+                  self
+                  ;
+                config = result;
+              }
+            else
+              imported;
         in
         processImports result;
       importedConfigs = map importModule imports;
@@ -113,10 +153,7 @@ let
 
   ghCollabsPath = configDirPath + "/data/github-collaborators.nix";
   ghCollabs =
-    if builtins.pathExists ghCollabsPath then
-      import ghCollabsPath
-    else
-      { collaborators = { }; };
+    if builtins.pathExists ghCollabsPath then import ghCollabsPath else { collaborators = { }; };
 
   toUser = name: collab: {
     inherit name;
@@ -415,40 +452,41 @@ let
         fi
       '';
 
-    # FULL CONTROL over passthru
-    passthru = {
-      # Stackpanel config (serializable version for JSON/CLI access)
-      # Full config is available via legacyPackages.stackpanelFullConfig
-      stackpanelConfig = stackpanelSerializable;
+      # FULL CONTROL over passthru
+      passthru = {
+        # Stackpanel config (serializable version for JSON/CLI access)
+        # Full config is available via legacyPackages.stackpanelFullConfig
+        stackpanelConfig = stackpanelSerializable;
 
-      # JSON-safe serialized config for CLI/agent
-      stackpanelSerializable = stackpanelSerializable;
+        # JSON-safe serialized config for CLI/agent
+        stackpanelSerializable = stackpanelSerializable;
 
-      # Pre-serialized packages for fast access
-      stackpanelPackages = allSerializedPackages;
+        # Pre-serialized packages for fast access
+        stackpanelPackages = allSerializedPackages;
 
-      # Devshell outputs for introspection
-      devshellConfig = devshellOutputs;
+        # Devshell outputs for introspection
+        devshellConfig = devshellOutputs;
 
-      # All packages in the shell
-      packages = allPackages;
+        # All packages in the shell
+        packages = allPackages;
 
-      # All env vars
-      env = allEnv;
+        # All env vars
+        env = allEnv;
 
-      # Process definitions (for process-compose integration)
-      processes = devenvProcesses // (spConfig.process-compose.processes or { });
+        # Process definitions (for process-compose integration)
+        processes = devenvProcesses // (spConfig.process-compose.processes or { });
 
-      # Devenv info
-      devenv = {
-        evaluated = devenvConfig != null;
-        packages = devenvPackages;
-        env = devenvEnv;
-        processes = devenvProcesses;
-        root = spConfig.root or null;
+        # Devenv info
+        devenv = {
+          evaluated = devenvConfig != null;
+          packages = devenvPackages;
+          env = devenvEnv;
+          processes = devenvProcesses;
+          root = spConfig.root or null;
+        };
       };
-    };
-  });
+    }
+  );
 
   # ===================================================================
   # Build outputs conditionally based on config

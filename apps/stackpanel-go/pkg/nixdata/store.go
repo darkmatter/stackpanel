@@ -7,10 +7,17 @@ import (
 	"os"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/flakeedit"
 	executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
 	nixser "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nix"
 	"github.com/rs/zerolog/log"
 )
+
+// RawExpr is a raw Nix expression that should be written without quoting.
+type RawExpr string
+
+// DeleteValue removes the target binding when patching config.nix.
+type DeleteValue struct{}
 
 // NixRunner is the interface required by Store to evaluate Nix expressions.
 //
@@ -75,9 +82,11 @@ func (s *Store) ReadEntity(entity string) (any, error) {
 		return nil, nil // entity does not exist
 	}
 
-	args := []string{"eval", "--impure", "--json", "-f", dataPath}
+	args := []string{"eval", "--impure", "--json"}
 	if isConsolidated {
-		args = append(args, entity)
+		args = append(args, "--expr", s.configEntityEvalExpr(entity))
+	} else {
+		args = append(args, "-f", dataPath)
 	}
 
 	res, err := s.nix.RunNix(args...)
@@ -116,9 +125,11 @@ func (s *Store) ReadEntityJSON(entity string) ([]byte, error) {
 		return []byte("{}"), nil
 	}
 
-	args := []string{"eval", "--impure", "--json", "-f", dataPath}
+	args := []string{"eval", "--impure", "--json"}
 	if isConsolidated {
-		args = append(args, entity)
+		args = append(args, "--expr", s.configEntityEvalExpr(entity))
+	} else {
+		args = append(args, "-f", dataPath)
 	}
 
 	res, err := s.nix.RunNix(args...)
@@ -150,7 +161,7 @@ func (s *Store) ReadEntityJSON(entity string) ([]byte, error) {
 // where the raw file value (not the merged flake output) is needed.
 func (s *Store) ReadRawNixFile(entity string) (any, error) {
 	dataPath := s.paths.EntityPath(entity)
-	expr := "builtins.fromJSON (builtins.toJSON (import " + dataPath + "))"
+	expr := "builtins.fromJSON (builtins.toJSON (" + s.importExpr(dataPath) + "))"
 
 	res, err := s.nix.RunNix("eval", "--impure", "--json", "--expr", expr)
 	if err != nil {
@@ -406,7 +417,7 @@ func (s *Store) ReadConsolidatedData() (map[string]any, error) {
 		return make(map[string]any), nil
 	}
 
-	res, err := s.nix.RunNix("eval", "--impure", "--json", "-f", dataPath)
+	res, err := s.nix.RunNix("eval", "--impure", "--json", "--expr", s.configEvalExpr())
 	if err != nil {
 		return nil, fmt.Errorf("nix eval: %w", err)
 	}
@@ -436,6 +447,12 @@ func (s *Store) WriteConsolidatedData(data map[string]any) error {
 
 	dataPath := s.paths.ConfigFilePath()
 	content := ConfigNixHeader + nixExpr + "\n"
+	if existing, err := os.ReadFile(dataPath); err == nil && len(existing) > 0 {
+		wrapped, wrapErr := flakeedit.ReplaceNixEditableAttrset(existing, nixExpr+"\n")
+		if wrapErr == nil {
+			content = string(wrapped)
+		}
+	}
 	if err := os.WriteFile(dataPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("write config.nix: %w", err)
 	}
@@ -454,38 +471,141 @@ func (s *Store) WriteConsolidatedData(data map[string]any) error {
 //
 // Intermediate maps are created automatically if they do not exist.
 func (s *Store) PatchConsolidatedData(path string, value any) error {
-	data, err := s.ReadConsolidatedData()
-	if err != nil {
-		return fmt.Errorf("read config.nix: %w", err)
+	dataPath := s.paths.ConfigFilePath()
+	if err := s.paths.EnsureDir(); err != nil {
+		return fmt.Errorf("create data directory: %w", err)
 	}
 
-	parts := strings.Split(path, ".")
-	target := data
-
-	for i, part := range parts {
-		kebabPart := CamelToKebab(part)
-
-		if i == len(parts)-1 {
-			// Last segment — set the value.
-			target[kebabPart] = value
-		} else {
-			// Intermediate segment — navigate or create.
-			child, ok := target[kebabPart]
-			if !ok {
-				newMap := make(map[string]any)
-				target[kebabPart] = newMap
-				target = newMap
-				continue
+	source, err := os.ReadFile(dataPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = s.WriteConsolidatedData(map[string]any{})
+			if err != nil {
+				return fmt.Errorf("initialize config.nix: %w", err)
 			}
-			childMap, ok := child.(map[string]any)
-			if !ok {
-				return fmt.Errorf("path segment %q is not a map", part)
-			}
-			target = childMap
+			source, err = os.ReadFile(dataPath)
+		}
+		if err != nil {
+			return fmt.Errorf("read config.nix: %w", err)
 		}
 	}
 
-	return s.WriteConsolidatedData(data)
+	parts := NormalizeConfigPathParts(path)
+	valueExpr, shouldDelete, err := serializePatchedValue(value)
+	if err != nil {
+		return err
+	}
+
+	var modified []byte
+	if shouldDelete {
+		modified, err = flakeedit.DeleteNixPath(source, parts)
+	} else {
+		modified, err = flakeedit.PatchNixPath(source, parts, valueExpr)
+	}
+	if err != nil {
+		return fmt.Errorf("patch config.nix: %w", err)
+	}
+
+	formatted := nixser.FormatSource(string(modified), "  ")
+	if err := os.WriteFile(dataPath, []byte(formatted), 0o644); err != nil {
+		return fmt.Errorf("write config.nix: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) importExpr(dataPath string) string {
+	quotedPath := fmt.Sprintf("%q", dataPath)
+	return fmt.Sprintf(`
+let
+  path = %s;
+  raw = import path;
+  config = if builtins.isFunction raw then raw {
+    pkgs = null;
+    lib = null;
+    inputs = { };
+    self = null;
+    inherit config;
+  } else raw;
+in
+  config
+`, quotedPath)
+}
+
+func (s *Store) configEvalExpr() string {
+	return s.importExpr(s.paths.ConfigFilePath())
+}
+
+func (s *Store) configEntityEvalExpr(entity string) string {
+	defaultExpr := "null"
+	if IsMapEntity(entity) {
+		defaultExpr = "{}"
+	}
+	return fmt.Sprintf(`
+let
+  config = %s;
+in
+  if builtins.hasAttr %q config
+  then builtins.getAttr %q config
+  else %s
+`, s.configEvalExpr(), entity, entity, defaultExpr)
+}
+
+func serializePatchedValue(value any) (string, bool, error) {
+	switch v := value.(type) {
+	case DeleteValue:
+		return "", true, nil
+	case RawExpr:
+		return string(v), false, nil
+	default:
+		expr, err := nixser.Serialize(value)
+		if err != nil {
+			return "", false, fmt.Errorf("serialize patch value: %w", err)
+		}
+		return expr, false, nil
+	}
+}
+
+// ReadAppVariableLinks returns app/env/envKey -> variable ID mappings parsed
+// from raw config.nix source.
+func (s *Store) ReadAppVariableLinks() (map[string]map[string]map[string]string, error) {
+	dataPath := s.paths.ConfigFilePath()
+	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+		return map[string]map[string]map[string]string{}, nil
+	}
+	source, err := os.ReadFile(dataPath)
+	if err != nil {
+		return nil, fmt.Errorf("read config.nix: %w", err)
+	}
+	return flakeedit.ExtractAppVariableLinksFromSource(source)
+}
+
+// NormalizeConfigPathParts converts a dotted UI/config path into Nix attribute
+// segments while preserving user-defined keys under map fields like apps,
+// environments, env, and variables.
+func NormalizeConfigPathParts(path string) []string {
+	parts := strings.Split(path, ".")
+	if len(parts) == 0 {
+		return nil
+	}
+	mapFields := MapFieldNames()
+	normalized := make([]string, 0, len(parts))
+	preserveNext := false
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		if preserveNext {
+			normalized = append(normalized, part)
+			preserveNext = false
+		} else {
+			kebab := CamelToKebab(part)
+			normalized = append(normalized, kebab)
+			if _, ok := mapFields[kebab]; ok {
+				preserveNext = true
+			}
+		}
+	}
+	return normalized
 }
 
 // DeleteEntity removes the data file for entity. For consolidated configs

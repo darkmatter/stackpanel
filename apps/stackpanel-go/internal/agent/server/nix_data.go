@@ -337,6 +337,27 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleAppVariableLinks returns app/env/envKey -> variable ID link mappings
+// parsed from raw config.nix source.
+func (s *Server) handleAppVariableLinks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if s.store == nil {
+		s.writeAPIError(w, http.StatusPreconditionRequired, "no project open")
+		return
+	}
+	links, err := s.store.ReadAppVariableLinks()
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	s.writeAPI(w, http.StatusOK, map[string]any{
+		"links": links,
+	})
+}
+
 // handleKeyLevelWrite handles updating or deleting a single key in a map entity.
 func (s *Server) handleKeyLevelWrite(w http.ResponseWriter, req nixDataRequest) {
 	log.Debug().

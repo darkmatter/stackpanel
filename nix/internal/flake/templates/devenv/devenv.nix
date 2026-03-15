@@ -16,7 +16,20 @@
   # ---------------------------------------------------------------------------
   # Stackpanel Configuration (edit ./.stack/config.nix)
   # ---------------------------------------------------------------------------
-  stackpanel = import ./.stack/config.nix;
+  stackpanel =
+    let
+      raw = import ./.stack/config.nix;
+      cfg =
+        if builtins.isFunction raw then
+          raw {
+            inherit pkgs lib config;
+            inputs = { };
+            self = ./.;
+          }
+        else
+          raw;
+    in
+    cfg;
 
   # ---------------------------------------------------------------------------
   # Packages - Available in the dev shell

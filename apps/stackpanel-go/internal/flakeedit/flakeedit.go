@@ -9,6 +9,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	tree_sitter_nix "github.com/darkmatter/stackpanel/stackpanel-go/internal/treesitter/nix"
@@ -461,5 +464,517 @@ func insertAt(source []byte, offset uint, text []byte) []byte {
 	result = append(result, source[:offset]...)
 	result = append(result, text...)
 	result = append(result, source[offset:]...)
+	return result
+}
+
+var configVariableExprPattern = regexp.MustCompile(`^\s*config\.variables\.("(?:[^"\\]|\\.)+")\.value\s*$`)
+
+// NixEditor provides source-preserving edits for general Nix files.
+type NixEditor struct {
+	source []byte
+	tree   *tree_sitter.Tree
+	parser *tree_sitter.Parser
+}
+
+// NewNixEditor parses a Nix source and returns a source-preserving editor.
+func NewNixEditor(source []byte) (*NixEditor, error) {
+	parser := tree_sitter.NewParser()
+	lang := tree_sitter.NewLanguage(tree_sitter_nix.Language())
+	if err := parser.SetLanguage(lang); err != nil {
+		parser.Close()
+		return nil, fmt.Errorf("failed to set Nix language: %w", err)
+	}
+
+	tree := parser.Parse(source, nil)
+	if tree == nil {
+		parser.Close()
+		return nil, errors.New("failed to parse source")
+	}
+
+	return &NixEditor{source: source, tree: tree, parser: parser}, nil
+}
+
+// Close releases tree-sitter resources.
+func (e *NixEditor) Close() {
+	if e.tree != nil {
+		e.tree.Close()
+	}
+	if e.parser != nil {
+		e.parser.Close()
+	}
+}
+
+// PatchNixPath sets a value expression at the given dotted path.
+func PatchNixPath(source []byte, path []string, valueExpr string) ([]byte, error) {
+	editor, err := NewNixEditor(source)
+	if err != nil {
+		return nil, err
+	}
+	defer editor.Close()
+	return editor.PatchPath(path, valueExpr)
+}
+
+// DeleteNixPath removes the binding at the given dotted path.
+func DeleteNixPath(source []byte, path []string) ([]byte, error) {
+	editor, err := NewNixEditor(source)
+	if err != nil {
+		return nil, err
+	}
+	defer editor.Close()
+	return editor.DeletePath(path)
+}
+
+// ReplaceNixEditableAttrset replaces the editable root attrset while preserving
+// any surrounding function wrapper.
+func ReplaceNixEditableAttrset(source []byte, attrsetExpr string) ([]byte, error) {
+	editor, err := NewNixEditor(source)
+	if err != nil {
+		return nil, err
+	}
+	defer editor.Close()
+	return editor.ReplaceEditableAttrset(attrsetExpr)
+}
+
+// ExtractAppVariableLinksFromSource returns app/env/envKey -> variable ID
+// mappings for bindings that use config.variables."/...".value.
+func ExtractAppVariableLinksFromSource(source []byte) (map[string]map[string]map[string]string, error) {
+	editor, err := NewNixEditor(source)
+	if err != nil {
+		return nil, err
+	}
+	defer editor.Close()
+	return editor.ExtractAppVariableLinks(), nil
+}
+
+// PatchPath sets a value expression at the given dotted path.
+func (e *NixEditor) PatchPath(path []string, valueExpr string) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("path is required")
+	}
+	root := e.findEditableAttrset()
+	if root == nil {
+		return nil, errors.New("could not find editable attrset")
+	}
+	return e.patchWithinAttrset(root, path, valueExpr)
+}
+
+// DeletePath removes the binding at the given dotted path.
+func (e *NixEditor) DeletePath(path []string) ([]byte, error) {
+	if len(path) == 0 {
+		return nil, errors.New("path is required")
+	}
+	root := e.findEditableAttrset()
+	if root == nil {
+		return nil, errors.New("could not find editable attrset")
+	}
+	return e.deleteWithinAttrset(root, path)
+}
+
+// ReplaceEditableAttrset replaces the editable root attrset body.
+func (e *NixEditor) ReplaceEditableAttrset(attrsetExpr string) ([]byte, error) {
+	root := e.findEditableAttrset()
+	if root == nil {
+		return nil, errors.New("could not find editable attrset")
+	}
+	replaceEnd := root.EndByte()
+	if strings.HasSuffix(attrsetExpr, "\n") && replaceEnd < uint(len(e.source)) && e.source[replaceEnd] == '\n' {
+		replaceEnd++
+	}
+	return replaceRange(e.source, root.StartByte(), replaceEnd, []byte(attrsetExpr)), nil
+}
+
+// ExtractAppVariableLinks returns app/env/envKey -> variable ID mappings.
+func (e *NixEditor) ExtractAppVariableLinks() map[string]map[string]map[string]string {
+	links := make(map[string]map[string]map[string]string)
+	appsNode := e.findAttrsetAtPath([]string{"apps"})
+	if appsNode == nil {
+		return links
+	}
+
+	for _, appBinding := range e.bindings(appsNode) {
+		appPath := e.bindingAttrpath(appBinding)
+		if len(appPath) != 1 {
+			continue
+		}
+		appID := appPath[0]
+		appAttrset := e.bindingAttrsetValue(appBinding)
+		if appAttrset == nil {
+			continue
+		}
+		envsNode := e.findAttrsetWithin(appAttrset, []string{"environments"})
+		if envsNode == nil {
+			continue
+		}
+
+		for _, envBinding := range e.bindings(envsNode) {
+			envPath := e.bindingAttrpath(envBinding)
+			if len(envPath) != 1 {
+				continue
+			}
+			envName := envPath[0]
+			envAttrset := e.bindingAttrsetValue(envBinding)
+			if envAttrset == nil {
+				continue
+			}
+			envVarsNode := e.findAttrsetWithin(envAttrset, []string{"env"})
+			if envVarsNode == nil {
+				continue
+			}
+
+			for _, envVarBinding := range e.bindings(envVarsNode) {
+				envKeyPath := e.bindingAttrpath(envVarBinding)
+				if len(envKeyPath) != 1 {
+					continue
+				}
+				envKey := envKeyPath[0]
+				valueNode := e.bindingValue(envVarBinding)
+				if valueNode == nil {
+					continue
+				}
+				variableID, ok := parseConfigVariableExpr(e.nodeText(valueNode))
+				if !ok {
+					continue
+				}
+				if links[appID] == nil {
+					links[appID] = make(map[string]map[string]string)
+				}
+				if links[appID][envName] == nil {
+					links[appID][envName] = make(map[string]string)
+				}
+				links[appID][envName][envKey] = variableID
+			}
+		}
+	}
+
+	return links
+}
+
+func (e *NixEditor) patchWithinAttrset(attrset *tree_sitter.Node, path []string, valueExpr string) ([]byte, error) {
+	binding, matched, valueNode := e.findBestBinding(attrset, path)
+	if binding != nil {
+		switch {
+		case len(matched) == len(path):
+			if valueNode == nil {
+				return nil, errors.New("could not find binding value")
+			}
+			return replaceRange(e.source, valueNode.StartByte(), valueNode.EndByte(), []byte(valueExpr)), nil
+		case valueNode != nil && valueNode.Kind() == "attrset_expression":
+			return e.patchWithinAttrset(valueNode, path[len(matched):], valueExpr)
+		default:
+			return nil, fmt.Errorf("path segment %q is not an attrset", matched[len(matched)-1])
+		}
+	}
+
+	closingBrace := e.findClosingBrace(attrset)
+	if closingBrace == nil {
+		return nil, errors.New("could not find closing brace for attrset")
+	}
+
+	insertText := e.buildNestedBinding(e.detectBindingIndent(attrset), path, valueExpr)
+	insertPos := e.startOfLine(closingBrace.StartByte())
+	return insertAt(e.source, insertPos, []byte(insertText)), nil
+}
+
+func (e *NixEditor) deleteWithinAttrset(attrset *tree_sitter.Node, path []string) ([]byte, error) {
+	binding, matched, valueNode := e.findBestBinding(attrset, path)
+	if binding == nil {
+		return e.source, nil
+	}
+
+	if len(matched) == len(path) {
+		start := e.startOfLine(binding.StartByte())
+		end := e.endOfBinding(binding.EndByte())
+		return deleteRange(e.source, start, end), nil
+	}
+
+	if valueNode == nil || valueNode.Kind() != "attrset_expression" {
+		return e.source, nil
+	}
+
+	return e.deleteWithinAttrset(valueNode, path[len(matched):])
+}
+
+func (e *NixEditor) findEditableAttrset() *tree_sitter.Node {
+	var candidates []*tree_sitter.Node
+	var walk func(node *tree_sitter.Node, hasAttrsetAncestor bool)
+	walk = func(node *tree_sitter.Node, hasAttrsetAncestor bool) {
+		if node == nil {
+			return
+		}
+		isAttrset := node.Kind() == "attrset_expression"
+		if isAttrset && !hasAttrsetAncestor {
+			candidates = append(candidates, node)
+		}
+		for i := uint(0); i < uint(node.ChildCount()); i++ {
+			walk(node.Child(i), hasAttrsetAncestor || isAttrset)
+		}
+	}
+	walk(e.tree.RootNode(), false)
+	if len(candidates) == 0 {
+		return nil
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].StartByte() < candidates[j].StartByte()
+	})
+	return candidates[len(candidates)-1]
+}
+
+func (e *NixEditor) findAttrsetAtPath(path []string) *tree_sitter.Node {
+	current := e.findEditableAttrset()
+	if current == nil {
+		return nil
+	}
+	remaining := path
+	for len(remaining) > 0 {
+		binding, matched, valueNode := e.findBestBinding(current, remaining)
+		if binding == nil || len(matched) == 0 || valueNode == nil || valueNode.Kind() != "attrset_expression" {
+			return nil
+		}
+		if len(matched) == len(remaining) {
+			return valueNode
+		}
+		current = valueNode
+		remaining = remaining[len(matched):]
+	}
+	return current
+}
+
+func (e *NixEditor) findAttrsetWithin(attrset *tree_sitter.Node, path []string) *tree_sitter.Node {
+	current := attrset
+	remaining := path
+	for len(remaining) > 0 {
+		binding, matched, valueNode := e.findBestBinding(current, remaining)
+		if binding == nil || len(matched) == 0 || valueNode == nil || valueNode.Kind() != "attrset_expression" {
+			return nil
+		}
+		if len(matched) == len(remaining) {
+			return valueNode
+		}
+		current = valueNode
+		remaining = remaining[len(matched):]
+	}
+	return current
+}
+
+func (e *NixEditor) findBestBinding(attrset *tree_sitter.Node, path []string) (*tree_sitter.Node, []string, *tree_sitter.Node) {
+	var bestBinding *tree_sitter.Node
+	var bestPath []string
+	var bestValue *tree_sitter.Node
+	for _, binding := range e.bindings(attrset) {
+		attrpath := e.bindingAttrpath(binding)
+		if len(attrpath) == 0 || len(attrpath) > len(path) {
+			continue
+		}
+		if !pathsEqual(attrpath, path[:len(attrpath)]) {
+			continue
+		}
+		if len(attrpath) > len(bestPath) {
+			bestBinding = binding
+			bestPath = attrpath
+			bestValue = e.bindingValue(binding)
+		}
+	}
+	return bestBinding, bestPath, bestValue
+}
+
+func (e *NixEditor) bindings(attrset *tree_sitter.Node) []*tree_sitter.Node {
+	bindingSet := e.findChildByKind(attrset, "binding_set")
+	if bindingSet == nil {
+		return nil
+	}
+	var bindings []*tree_sitter.Node
+	for i := uint(0); i < uint(bindingSet.ChildCount()); i++ {
+		child := bindingSet.Child(i)
+		if child != nil && child.Kind() == "binding" {
+			bindings = append(bindings, child)
+		}
+	}
+	return bindings
+}
+
+func (e *NixEditor) bindingAttrsetValue(binding *tree_sitter.Node) *tree_sitter.Node {
+	valueNode := e.bindingValue(binding)
+	if valueNode == nil || valueNode.Kind() != "attrset_expression" {
+		return nil
+	}
+	return valueNode
+}
+
+func (e *NixEditor) bindingValue(binding *tree_sitter.Node) *tree_sitter.Node {
+	for i := uint(0); i < uint(binding.ChildCount()); i++ {
+		child := binding.Child(i)
+		if child == nil || child.Kind() == "attrpath" || !child.IsNamed() {
+			continue
+		}
+		return child
+	}
+	return nil
+}
+
+func (e *NixEditor) bindingAttrpath(binding *tree_sitter.Node) []string {
+	attrpath := e.findChildByKind(binding, "attrpath")
+	if attrpath == nil {
+		return nil
+	}
+	var segments []string
+	for i := uint(0); i < uint(attrpath.ChildCount()); i++ {
+		child := attrpath.Child(i)
+		if child == nil || !child.IsNamed() {
+			continue
+		}
+		text := strings.TrimSpace(e.nodeText(child))
+		if text == "" {
+			continue
+		}
+		if unquoted, err := strconv.Unquote(text); err == nil {
+			text = unquoted
+		}
+		segments = append(segments, text)
+	}
+	return segments
+}
+
+func (e *NixEditor) buildNestedBinding(baseIndent string, path []string, valueExpr string) string {
+	const step = "  "
+	var b strings.Builder
+	indent := baseIndent
+	for i, segment := range path {
+		b.WriteString(indent)
+		b.WriteString(serializeAttrName(segment))
+		b.WriteString(" = ")
+		if i == len(path)-1 {
+			b.WriteString(valueExpr)
+			b.WriteString(";\n")
+			break
+		}
+		b.WriteString("{\n")
+		indent += step
+	}
+	for i := len(path) - 2; i >= 0; i-- {
+		indent = indent[:len(indent)-len(step)]
+		b.WriteString(indent)
+		b.WriteString("};\n")
+	}
+	return b.String()
+}
+
+func (e *NixEditor) detectBindingIndent(attrset *tree_sitter.Node) string {
+	for _, binding := range e.bindings(attrset) {
+		return strings.Repeat(" ", int(binding.StartPosition().Column))
+	}
+	return strings.Repeat(" ", int(attrset.StartPosition().Column)+2)
+}
+
+func (e *NixEditor) findChildByKind(node *tree_sitter.Node, kind string) *tree_sitter.Node {
+	for i := uint(0); i < uint(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child != nil && child.Kind() == kind {
+			return child
+		}
+	}
+	return nil
+}
+
+func (e *NixEditor) findClosingBrace(node *tree_sitter.Node) *tree_sitter.Node {
+	for i := uint(0); i < uint(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child != nil && child.Kind() == "}" {
+			return child
+		}
+	}
+	return nil
+}
+
+func (e *NixEditor) startOfLine(pos uint) uint {
+	for i := int(pos) - 1; i >= 0; i-- {
+		if e.source[i] == '\n' {
+			return uint(i + 1)
+		}
+	}
+	return 0
+}
+
+func (e *NixEditor) nodeText(node *tree_sitter.Node) string {
+	return string(e.source[node.StartByte():node.EndByte()])
+}
+
+func (e *NixEditor) endOfBinding(pos uint) uint {
+	for i := pos; i < uint(len(e.source)); i++ {
+		if e.source[i] == '\n' {
+			return i + 1
+		}
+	}
+	return uint(len(e.source))
+}
+
+func parseConfigVariableExpr(expr string) (string, bool) {
+	matches := configVariableExprPattern.FindStringSubmatch(strings.TrimSpace(expr))
+	if len(matches) != 2 {
+		return "", false
+	}
+	variableID, err := strconv.Unquote(matches[1])
+	if err != nil {
+		return "", false
+	}
+	return variableID, true
+}
+
+func serializeAttrName(name string) string {
+	if isValidIdentifier(name) {
+		return name
+	}
+	return strconv.Quote(name)
+}
+
+func isValidIdentifier(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		if i == 0 {
+			if !isIdentStart(r) {
+				return false
+			}
+			continue
+		}
+		if !isIdentChar(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func isIdentStart(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
+}
+
+func isIdentChar(r rune) bool {
+	return isIdentStart(r) || (r >= '0' && r <= '9') || r == '-' || r == '\''
+}
+
+func pathsEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func replaceRange(source []byte, start uint, end uint, text []byte) []byte {
+	result := make([]byte, 0, len(source)-int(end-start)+len(text))
+	result = append(result, source[:start]...)
+	result = append(result, text...)
+	result = append(result, source[end:]...)
+	return result
+}
+
+func deleteRange(source []byte, start uint, end uint) []byte {
+	result := make([]byte, 0, len(source)-int(end-start))
+	result = append(result, source[:start]...)
+	result = append(result, source[end:]...)
 	return result
 }

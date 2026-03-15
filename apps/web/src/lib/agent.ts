@@ -25,7 +25,6 @@ import type {
   GroupSecretReadResponse,
   GroupSecretListResponse,
   AllGroupsListResponse,
-  GenerateEnvPackageResponse,
   RecipientListResponse,
   AddRecipientRequest,
   Recipient,
@@ -66,12 +65,12 @@ export interface DeleteResponse {
   error?: string;
 }
 
+export type AppVariableLinks = Record<string, Record<string, Record<string, string>>>;
+
 /**
  * EntityClient - CRUD client for a specific Nix entity file.
- * (Currently unused but kept for future use)
  */
-// @ts-expect-error Kept for future use
-class _EntityClient<T> {
+class EntityClient<T> {
   constructor(
     private client: AgentHttpClient,
     private entityName: string,
@@ -519,7 +518,10 @@ export class AgentHttpClient {
     variables: new MapEntityClient<Variable>(this, "variables"),
     tasks: new MapEntityClient<Task>(this, "tasks"),
 
-    /** Generic entity client for custom paths */
+    /** Generic entity client for full-object entities */
+    objectEntity: <T>(name: string) => new EntityClient<T>(this, name),
+
+    /** Generic map client for custom paths */
     entity: <T>(name: string) => new MapEntityClient<T>(this, name),
 
     /** Alias for entity() to maintain compatibility with NixClient */
@@ -632,11 +634,27 @@ export class AgentHttpClient {
     return res.data as GeneratedFilesResponse;
   }
 
+  public async getAppVariableLinks(): Promise<AppVariableLinks> {
+    const res = await this.get<{
+      success: boolean;
+      data?: { links?: AppVariableLinks };
+      error?: string;
+    }>("/api/apps/links");
+    if (!res.success) {
+      throw new Error(res.error ?? "Failed to get app variable links");
+    }
+    return res.data?.links ?? {};
+  }
+
   /**
    * Compatibility helper to map Nix data entities.
    */
   public mapEntity<T>(name: string) {
     return this.nix.mapEntity<T>(name);
+  }
+
+  public entity<T>(name: string) {
+    return this.nix.objectEntity<T>(name);
   }
 
   /**
@@ -1439,18 +1457,11 @@ export class AgentHttpClient {
     return data.data;
   }
 
-  /**
-   * Generate the packages/env data directory.
-   * Creates:
-   * - apps/<app>/<env>.yaml - Plain YAML with vals references
-   * - vars/<group>.sops.yaml - SOPS-encrypted files
-   * - .sops.yaml - SOPS configuration
-   */
   // ===========================================================================
   // Recipients & team access
   // ===========================================================================
 
-  /** List all recipients (AGE public keys in the recipients directory) */
+  /** List all recipients resolved from Nix-configured secrets state */
   async listRecipients(): Promise<RecipientListResponse> {
     const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
       headers: this.getHeaders(false),
@@ -1512,22 +1523,6 @@ export class AgentHttpClient {
     return data.data;
   }
 
-  // ===========================================================================
-  // Env package generation
-  // ===========================================================================
-
-  async generateEnvPackage(): Promise<GenerateEnvPackageResponse> {
-    const res = await fetch(
-      `${this.baseUrl}/api/secrets/generate-env-package`,
-      {
-        method: "POST",
-        headers: this.getHeaders(false),
-      },
-    );
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-    return data.data;
-  }
 }
 
 // Default export singleton

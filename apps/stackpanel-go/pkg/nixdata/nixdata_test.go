@@ -3,6 +3,7 @@ package nixdata
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -467,6 +468,22 @@ func TestParseConfigPath(t *testing.T) {
 				t.Errorf("ParseConfigPath(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestNormalizeConfigPathParts_PreservesMapKeys(t *testing.T) {
+	got := NormalizeConfigPathParts("apps.web.environments.dev.env.PORT")
+	want := []string{"apps", "web", "environments", "dev", "env", "PORT"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("NormalizeConfigPathParts() = %#v, want %#v", got, want)
+	}
+}
+
+func TestNormalizeConfigPathParts_ConvertsRegularFields(t *testing.T) {
+	got := NormalizeConfigPathParts("deployment.fly.organization")
+	want := []string{"deployment", "fly", "organization"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("NormalizeConfigPathParts() = %#v, want %#v", got, want)
 	}
 }
 
