@@ -1,0 +1,28 @@
+---
+title: Entrypoints Module Entry Point
+description: "Per-app entrypoint shell scripts with devshell and secrets loading."
+---
+
+Per-app entrypoint shell scripts with devshell and secrets loading.
+
+IMPORTANT: Entrypoints ONLY inject environment variables. They do NOT run
+commands. The caller is responsible for running the actual command after
+sourcing the entrypoint.
+
+## Components
+
+- meta.nix: Static metadata for discovery
+- module.nix: Options and script generation
+- ui.nix: UI panel definitions
+
+Usage (source the entrypoint, then run your command):
+```nix
+source packages/scripts/entrypoints/web.sh --dev
+bun run dev
+```
+
+
+Or inline:
+```nix
+source packages/scripts/entrypoints/web.sh --dev && bun run dev
+```

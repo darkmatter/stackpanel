@@ -1,26 +1,33 @@
 ---
-title: infra/default.nix
-description: Infrastructure module system for stackpanel.
+title: Infra Module
+description: Documentation for the infra module
 ---
 
-Infrastructure module system for stackpanel.
+Alchemy-based infrastructure-as-code with pluggable output storage.
 
-This module provides a framework for infra modules (AWS, Fly, Cloudflare, etc.)
-that generates an alchemy-based IaC package with:
-```nix
-- A generated @stackpanel/infra library (Infra class)
-- Pluggable output storage (SOPS, Chamber, SSM)
-- Per-module TypeScript implementations
-- An orchestrator (alchemy.run.ts) that imports modules and syncs outputs
-```
+## Overview
 
+Provides a module system for defining infrastructure resources using [Alchemy](https://alchemy.run). Supports multiple storage backends for IaC outputs (chamber, SOPS, SSM, none) and includes a built-in AWS secrets module for KMS and IAM configuration.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `default.nix` | Module entry point |
+| `options.nix` | Infra options and module registry schema |
+| `codegen.nix` | TypeScript codegen for Alchemy resources |
+| `modules/aws-secrets/` | Built-in AWS secrets infrastructure module |
+| `templates/` | Alchemy project templates |
 
 ## Usage
 
 ```nix
 stackpanel.infra = {
   enable = true;
-  storage-backend = { type = "chamber"; chamber.service = "my-project"; };
+  storage-backend = {
+    type = "chamber";
+    chamber.service = "my-project";
+  };
   aws.secrets.enable = true;
 };
 ```

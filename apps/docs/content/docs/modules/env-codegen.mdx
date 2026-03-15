@@ -14,11 +14,10 @@ Generates the `packages/gen/env` structure from `stackpanel.apps` configuration.
 
 ```
 packages/gen/env/
-  data/.sops.yaml              — SOPS creation rules
-  data/shared/vars.yaml        — Shared plaintext config
-  data/<app>/<env>.yaml        — Per-app secrets (boilerplate)
-  src/generated/               — TypeScript znv modules
+  src/<app>/                   — TypeScript znv modules by app/env
+  src/embedded-data.ts         — Embedded plaintext vars + encrypted SOPS payloads
   src/entrypoints/             — App entrypoint loaders
+  src/loader.ts                — Runtime resolver/decrypter
 ```
 
 ## Options
@@ -37,6 +36,6 @@ stackpanel.apps.web.environments.dev.env = {
 };
 
 # Optional: customize output location
-stackpanel.env.output-dir = "packages/env";
+stackpanel.env.output-dir = "packages/custom-env";
 stackpanel.env.package-name = "@myorg/env";
 ```

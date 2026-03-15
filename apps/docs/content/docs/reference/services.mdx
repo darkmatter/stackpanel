@@ -6,6 +6,23 @@ icon: Settings
 
 # Services Options
 
+## `serviceModules`
+
+Additional modules to extend service configuration options.
+
+This allows other modules (like process-compose) to inject per-service
+options into every service definition. Works identically to appModules.
+
+Example: The process-compose module injects process-compose.namespace,
+process-compose.readiness_probe, etc. into every service.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of module` |
+| **Default** | `[ ]` |
+
+---
+
 ## `services`
 
 Development services managed by process-compose.
