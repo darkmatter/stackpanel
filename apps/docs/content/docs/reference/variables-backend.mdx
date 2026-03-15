@@ -1,0 +1,43 @@
+---
+title: variables-backend
+description: Configuration options for stackpanel.variables-backend
+icon: Settings
+---
+
+# Variables-backend Options
+
+## `secrets.backend`
+
+Secret storage backend. This is the single source of truth that controls
+how secrets are stored, how entrypoints inject them, how the agent
+reads/writes them, and what options are available in the UI.
+
+"vals" (default): AGE/SOPS encryption with vals for external references.
+"chamber": AWS SSM Parameter Store via the chamber CLI.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "vals", "chamber"` |
+| **Default** | `"vals"` |
+
+---
+
+## `secrets.chamber.service-prefix`
+
+Chamber service prefix. The full chamber service path is:
+  \{service-prefix\}/\{env\}
+
+For example, with prefix "darkmatter/stackpanel" and a variable /dev/DATABASE_URL:
+  chamber write darkmatter/stackpanel/dev DATABASE_URL 
+  chamber exec darkmatter/stackpanel/dev -- 
+
+Defaults to "\{owner\}/\{repo\}" when project owner/repo are configured,
+otherwise falls back to the project name.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"my-project"` |
+
+---
+

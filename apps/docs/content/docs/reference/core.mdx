@@ -1,0 +1,555 @@
+---
+title: core
+description: Configuration options for stackpanel.core
+icon: Settings
+---
+
+# Core Options
+
+## `checks`
+
+Additional flake checks contributed by stackpanel modules.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of package` |
+| **Default** | `{ }` |
+
+---
+
+## `debug`
+
+Whether to enable Enable Stackpanel Debug Mode.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `direnv.hide-env-diff`
+
+Hide the 'direnv: export +VAR...' log line (requires user's direnv.toml)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `dirs`
+
+Directories used by stackpanel.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `dirs.config`
+
+Directory for stackpanel configuration files.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `absolute path` |
+| **Default** | `/Users/cm/git/darkmatter/stackpanel/.stack/config.nix` |
+
+---
+
+## `dirs.data`
+
+Full data directory path (relative to project root).
+Computed as: dirs.home + "/data"
+This is read-only - configure dirs.home instead.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stack/data"` |
+| **Read Only** | `true` |
+
+---
+
+## `dirs.gen`
+
+Full generated files directory path (relative to project root).
+Computed as: dirs.home + "/gen"
+This is read-only - configure dirs.home instead.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stack/gen"` |
+| **Read Only** | `true` |
+
+---
+
+## `dirs.home`
+
+Root directory for stackpanel files (relative to project root).
+This is the ONLY configurable directory option.
+
+Subdirectories are automatically computed:
+  - keys/   (gitignored) - persistent credentials (AGE, AWS, step)
+  - profile/ (gitignored) - ephemeral runtime/cache (safe to rm)
+  - gen/   (gitignored) - generated IDE configs, schemas
+  - data/ (checked in) -  nix-backed configuration db
+
+Example: ".stack" → keys at ".stack/keys", profile at ".stack/profile"
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stack"` |
+
+---
+
+## `dirs.keys`
+
+Full keys directory path (relative to project root).
+Persistent credentials only. Computed as: dirs.home + "/keys"
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stack/keys"` |
+| **Read Only** | `true` |
+
+---
+
+## `dirs.profile`
+
+Full profile directory path (relative to project root).
+Ephemeral runtime/cache (safe to delete). Computed as: dirs.home + "/profile"
+Replaces legacy state/ for stackpanel.json, shell.log, etc.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stack/profile"` |
+| **Read Only** | `true` |
+
+---
+
+## `dirs.state`
+
+DEPRECATED: Use dirs.profile. Alias for profile for backward compatibility.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stack/profile"` |
+| **Read Only** | `true` |
+
+---
+
+## `enable`
+
+Whether to enable Enable Stackpanel.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `git-hooks`
+
+Git hooks configuration fragment (consumed by git-hooks.nix).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+---
+
+## `github`
+
+DEPRECATED: Use stackpanel.project.owner and stackpanel.project.repo instead.
+
+GitHub repository in 'owner/repo' format for this project. This value is
+used as a key for certain features like stable port calculation and
+user sync.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+**Example:**
+
+`"darkmatter/stackpanel"`
+
+
+---
+
+## `gitignore`
+
+Reserved options for managed `.gitignore` generation.
+
+Stackpanel core owns a block-managed section in `.gitignore` and merges
+entries from this option. This provides a stable, explicit API for common
+`.gitignore` presets while still allowing modules to contribute entries.
+
+The generated block is deduplicated and sorted.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `gitignore.defaults`
+
+Toggle built-in `.gitignore` presets managed by Stackpanel.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `gitignore.defaults.addProjectMarker`
+
+DEPRECATED: Use `stackpanel.gitignore.defaults.projectMarker` instead.
+Backward-compatible alias for including `stackpanel.root-marker` in `.gitignore`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `gitignore.defaults.localConfig`
+
+Include `.stack/config.local.nix`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `gitignore.defaults.projectMarker`
+
+Include the root marker file (`stackpanel.root-marker`).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `gitignore.defaults.stackpanelState`
+
+Include `.stack/state/`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `gitignore.defaults.tasksDir`
+
+Include `.tasks`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `gitignore.enable`
+
+Whether Stackpanel should manage a `.gitignore` block.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `gitignore.entries`
+
+Additional `.gitignore` entries to include in the managed block.
+
+Example:
+  [ "dist/" ".env.local" ]
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `moduleRequirements`
+
+Variable requirements declared by enabled modules.
+Modules add entries here to declare what environment variables they need.
+The agent/UI can query this to show what's missing.
+
+Format: \{ moduleName = \{ requires = [ ... ]; provides = [ ... ]; \}; \}
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `moduleRequirements.<name>.provides`
+
+Environment variables provided by this module after setup
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `moduleRequirements.<name>.requires`
+
+Variables required by this module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action`
+
+Action to resolve this variable if missing
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action.label`
+
+Button/link label
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action.type`
+
+Action type: add-secret, add-variable, external
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleRequirements.<name>.requires.*.action.url`
+
+External URL for creating the value
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.description`
+
+Description of the variable
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `moduleRequirements.<name>.requires.*.key`
+
+Environment variable name
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleRequirements.<name>.requires.*.sensitive`
+
+Whether the value should be treated as a secret
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `name`
+
+Name of your project. May be used for naming things and diplay purposes.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"my-project"` |
+
+---
+
+## `project`
+
+Project metadata including type, owner, and repository information.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `project.name`
+
+Project name (defaults to stackpanel.name)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"my-project"` |
+
+---
+
+## `project.owner`
+
+Owner/organization of the project repository
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+**Example:**
+
+`"darkmatter"`
+
+
+---
+
+## `project.repo`
+
+Repository name
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+**Example:**
+
+`"stackpanel"`
+
+
+---
+
+## `project.type`
+
+Project type (e.g., 'github', 'gitlab', 'local')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"github"` |
+
+---
+
+## `root`
+
+Absolute path to the project root. If set, this overrides PWD-based detection.
+
+For pure flake evaluation (like `nix flake check`), use the readStackpanelRoot
+flake module which reads this from a flake input:
+
+```nix
+# flake.nix inputs
+inputs.stackpanel-root = {
+  url = "file+file:///dev/null";
+  flake = false;
+};
+
+# imports
+imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
+```
+
+Then in .envrc: `echo "$PWD" > .stackpanel-root`
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `root-marker`
+
+Filename for the root marker file written to the project root.
+Contains the absolute path to the project root, allowing tools
+to find the project from any subdirectory. Add to .dockerignore
+and .gitignore so containers create their own marker.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `".stackpanel-root"` |
+
+---
+
+## `serializable`
+
+Serializable configuration data for the agent and CLI.
+Modules can contribute their JSON-safe config here.
+This data is included in stackpanelConfig for external tools.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+---
+

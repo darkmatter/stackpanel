@@ -6,6 +6,22 @@ icon: AppWindow
 
 # Apps Options
 
+## `appModules`
+
+Additional modules to extend app configuration options.
+
+This allows other modules to add functionality to each app, such as
+scaffolding, IDE support, deployment settings, etc.
+
+These modules are applied to each app under `stackpanel.apps..`.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of module` |
+| **Default** | `[ ]` |
+
+---
+
 ## `apps`
 
 # Stackpanel apps
@@ -1156,6 +1172,21 @@ App type/runtime (bun, go, python, rust, etc.)
 |----------|-------|
 | **Type** | `null or string` |
 | **Default** | `null` |
+
+---
+
+## `appsComputed`
+
+Computed app configurations with ports and URLs.
+
+When pkgs is available, includes wrappedTooling derivations.
+When pkgs is not available (e.g., flake-parts top-level), wrappedTooling is null.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
 
 ---
 

@@ -1,0 +1,62 @@
+---
+title: Bun Workspace Catalog Management
+description: Collects NPM dependency declarations from Nix modules and generates a
+---
+
+Collects NPM dependency declarations from Nix modules and generates a
+catalog manifest that the CLI can sync into the root package.json.
+
+## Problem
+
+```nix
+Modules declare dependencies as `"@aws-sdk/client-ecr" = "catalog:";` in
+workspace package.json files, but the root package.json catalog (which maps
+package names to actual version constraints) is maintained by hand. When a
+module adds a new catalog reference, `bun install` fails because the
+catalog entry doesn't exist.
+```
+
+
+## Solution
+
+```nix
+Modules declare dependencies with real version constraints via
+`stackpanel.bun.catalog`. This module:
+  1. Merges all declarations into a single catalog
+  2. Generates a manifest at .stack/state/catalog.json
+  3. The CLI reads the manifest and syncs missing entries into root package.json
+  4. Computes a content hash for staleness detection (bun.lock / bun.nix)
+  5. Exposes a healthcheck that warns when the catalog or lockfiles are stale
+```
+
+
+Usage (from any module):
+```nix
+stackpanel.bun.catalog = {
+  "@aws-sdk/client-ecr" = "^3.953.0";
+  "@aws-sdk/client-elastic-load-balancing-v2" = "^3.953.0";
+  "@tanstack/react-router" = "^1.143.6";
+};
+```
+
+
+The generated manifest (.stack/state/catalog.json) contains:
+```nix
+{ "catalog": { "@aws-sdk/client-ecr": "^3.953.0", ... }, "hash": "..." }
+```
+
+
+The CLI (or shell hook) reads this manifest and:
+```nix
+1. Compares it against the root package.json workspaces.catalog
+2. Reports missing or outdated entries
+3. Offers to sync them automatically (`sp catalog sync`)
+```
+
+
+Staleness detection:
+```nix
+The catalog hash is exported as STACKPANEL_CATALOG_HASH. A healthcheck
+compares the Nix-computed catalog against what's in the root package.json.
+If they differ, the MOTD warns that `sp catalog sync` is needed.
+```

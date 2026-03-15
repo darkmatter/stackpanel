@@ -1,18 +1,22 @@
 ---
-title: sst/default.nix
-description: SST infrastructure provisioning module for stackpanel.
+title: SST Module
+description: Documentation for the sst module
 ---
 
-SST infrastructure provisioning module for stackpanel.
+AWS infrastructure provisioning via SST (Serverless Stack).
 
-This module provides:
-```nix
-- KMS key creation for secrets encryption/decryption
-- IAM role with OIDC-based authentication
-- Support for multiple OIDC providers (GitHub Actions, Fly.io, Roles Anywhere)
-- SST config file generation
-```
+## Overview
 
+Manages foundational AWS resources: KMS encryption keys, IAM roles, and OIDC identity providers for CI/CD. Supports GitHub Actions, Fly.io, and Roles Anywhere authentication patterns.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `default.nix` | Module entry point and imports |
+| `sst.nix` | SST options, scripts, and shell hooks |
+| `sst.config.example.ts` | Example SST configuration |
+| `src/scripts/` | Shell scripts for SST operations |
 
 ## Usage
 
@@ -20,9 +24,23 @@ This module provides:
 stackpanel.sst = {
   enable = true;
   project-name = "my-project";
-  region = "us-west-2";
+  region = "us-east-1";
+  account-id = "123456789012";
+
   kms.enable = true;
+
   oidc.provider = "github-actions";
-  oidc.github-actions = { org = "my-org"; repo = "my-repo"; };
+  oidc.github-actions = {
+    org = "my-org";
+    repo = "my-repo";
+  };
 };
 ```
+
+## OIDC Providers
+
+| Provider | Description |
+|----------|-------------|
+| `github-actions` | GitHub Actions workflow authentication |
+| `flyio` | Fly.io machine authentication |
+| `roles-anywhere` | AWS Roles Anywhere with Step CA certificates |
