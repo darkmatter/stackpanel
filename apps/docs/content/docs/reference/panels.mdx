@@ -6,6 +6,18 @@ icon: Settings
 
 # Panels Options
 
+## `panelModules`
+
+List of module names that have registered panels
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
 ## `panels`
 
 UI panels for core Stackpanel modules.
@@ -361,6 +373,42 @@ Panel type (determines which component to render)
 |----------|-------|
 | **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM", "PANEL_TYPE_APP_CONFIG"` |
 | **Default** | `"PANEL_TYPE_STATUS"` |
+
+---
+
+## `panelsByModule`
+
+Panels grouped by their parent module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panelsComputed`
+
+Serializable panels for UI consumption
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panelsList`
+
+List of all panels sorted by order
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
 
 ---
 

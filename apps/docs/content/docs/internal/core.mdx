@@ -1,104 +1,48 @@
 ---
-title: Stackpanel Core Module System
+title: Core Module
 description: Documentation for the core module
 ---
 
-This directory contains the core module system for Stackpanel - a Nix-based development environment management framework.
+Foundational options and boot logic for the Stackpanel module system.
 
 ## Overview
 
-The core module system provides:
+The core module defines the root configuration schema (project name, directories, root marker) and sets up the devshell environment: environment variables, directory creation, shell hooks, and CLI integration.
 
-- **Option definitions**: Declarative schema for all Stackpanel configuration
-- **Service management**: PostgreSQL, Redis, Minio, and Caddy integration
-- **Port computation**: Deterministic port assignment based on project name
-- **File generation**: State files, IDE configs, and JSON schemas
+Feature-specific options live in their own directories (`apps/`, `services/`, `network/`, `secrets/`, `ide/`, `tui/`, `variables/`).
 
-## Directory Structure
+## Files
 
-```
-core/
-├── default.nix          # Main entry point - imports options, sets up hooks
-├── cli.nix              # CLI-based file generation (includes cli options)
-├── state.nix            # Legacy state file generation (includes state options)
-├── aliases.nix          # Shell alias definitions
-├── util.nix             # Debug logging utilities
-├── lib/
-│   ├── evalconfig.nix       # Configuration evaluator for Go CLI/agent
-│   ├── envvars.nix          # Environment variable generation
-│   ├── services-default.nix # Library entry point (ports, globalServices)
-│   ├── services.nix         # Service registry and factory
-│   └── global-services.nix  # Global singleton services (mkGlobalServices)
-└── options/             # Centralized option definitions (multi-consumer only)
-    ├── default.nix      # Imports all option modules
-    ├── core.nix         # Root paths, directories, basic settings
-    ├── apps.nix         # Application port and domain configuration
-    ├── ports.nix        # Deterministic port computation options
-    ├── devshell.nix     # Shell environment (packages, hooks, commands)
-    ├── aws.nix          # AWS Roles Anywhere (6 consumers)
-    ├── step-ca.nix      # Step CA certificates (5 consumers)
-    ├── motd.nix         # MOTD accumulator (13+ producers)
-    ├── variables.nix    # Variable data bus (multiple producers/consumers)
-    └── ...              # Additional shared options
-```
-
-Note: Single-consumer options are colocated with their implementation modules:
-- `dns` options live in `network/dns.nix`
-- `binary-cache` options live in `services/binary-cache.nix`
-- `theme` options live in `tui/theme.nix`
-- `cli` options live in `core/cli.nix`
-- `state` options live in `core/state.nix`
-- `ci` options live in `apps/ci.nix`
+| File | Description |
+|------|-------------|
+| `default.nix` | Entry point — imports all core modules, sets up hooks |
+| `options-core.nix` | Root options: enable, name, root, dirs, direnv, git-hooks, checks |
+| `outputs.nix` | Flake output derivations and apps |
+| `checks.nix` | Module check schema for `nix flake check` |
+| `motd.nix` | Message of the Day configuration |
+| `codegen.nix` | Code generator definitions |
+| `cli.nix` | CLI-based file generation (invokes Go CLI) |
+| `cli-options.nix` | CLI enable/quiet options |
+| `state.nix` | Legacy state file generation |
+| `state-options.nix` | State file options |
+| `user-packages.nix` | User-installed packages from `.stackpanel/data/packages.nix` |
+| `users-options.nix` | Team member definitions |
+| `panels.nix` | UI panel system for the web studio |
+| `tasks.nix` | Turborepo task definitions |
+| `ci.nix` | CI/CD workflow generation |
+| `modules-options.nix` | Module registry schema |
+| `extensions.nix` | Extension system (backward compat alias to modules) |
+| `aliases.nix` | Shell alias management |
+| `util.nix` | Internal logging utilities |
 
 ## Usage
 
-The core module is typically imported by a devenv adapter:
+The core module is imported automatically via `nix/stackpanel/default.nix`. Configure it in your project:
 
 ```nix
-# In devenv.nix or a flake module
-{
-  imports = [
-    ./nix/stackpanel/core
-  ];
-
-  stackpanel = {
-    enable = true;
-    ports.project-name = "myproject";
-    apps = {
-      web = {};
-      api = { domain = "api"; tls = true; };
-    };
-  };
-}
+stackpanel = {
+  enable = true;
+  name = "my-project";
+  dirs.home = ".stackpanel";
+};
 ```
-
-## Key Concepts
-
-### Port Computation
-
-Ports are computed deterministically from the project name:
-- Base port is derived from MD5 hash of project name
-- Apps get offsets 0-9 from base port
-- Services get offsets 10-99 from base port
-
-### File Generation
-
-Two modes are available:
-1. **CLI mode** (default): Nix exports config as JSON, Go CLI writes files
-2. **State mode** (legacy): Nix writes state file directly in enterShell
-
-### Global Services
-
-Development services (PostgreSQL, Redis, Minio) run as global singletons to avoid resource duplication. Projects register their databases/sites with the shared services.
-
-## Extending
-
-To add new options:
-
-**If the option has a single consumer module** (preferred): define `options.stackpanel.<feature>` directly in the implementation module alongside `config = ...`. This keeps the module self-contained.
-
-**If the option is consumed by multiple modules** (shared data): create a new file in `options/` and import it in `options/default.nix`. Examples: `aws.nix` (6 consumers), `motd.nix` (13+ producers).
-
-To add new services:
-1. Create implementation in `nix/stackpanel/services/<name>.nix`
-2. Register in `core/lib/services.nix`

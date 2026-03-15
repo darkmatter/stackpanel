@@ -1,0 +1,51 @@
+---
+title: stackpanel healthcheck
+description: Run project healthchecks
+icon: Terminal
+---
+
+# stackpanel healthcheck
+
+Run healthchecks for the current project.
+
+By default only checks that have failed, errored, or have never been run
+are re-executed. Checks that already have a passing result are skipped.
+
+Use --force to re-run all checks regardless of their cached status.
+
+Examples:
+  stackpanel healthcheck              # Run failed/unknown checks
+  stackpanel healthcheck --force      # Re-run all checks
+  stackpanel healthcheck --module go  # Only checks for the "go" module
+
+## Usage
+
+```bash
+stackpanel healthcheck
+```
+
+**Aliases:** `hc`, `health`
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force` | `bool` | `false` | Re-run all checks, even passing ones |
+| `--json` | `bool` | `false` | Output results as JSON |
+| `--module` | `string` | _none_ | Only run checks for a specific module |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
