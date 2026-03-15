@@ -162,6 +162,9 @@ func (s *Store) ReadEntityJSON(entity string) ([]byte, error) {
 func (s *Store) ReadRawNixFile(entity string) (any, error) {
 	dataPath := s.paths.EntityPath(entity)
 	expr := "builtins.fromJSON (builtins.toJSON (" + s.importExpr(dataPath) + "))"
+	if s.paths.IsUsingConsolidatedConfig(entity) {
+		expr = "builtins.fromJSON (builtins.toJSON (" + s.configEntityEvalExpr(entity) + "))"
+	}
 
 	res, err := s.nix.RunNix("eval", "--impure", "--json", "--expr", expr)
 	if err != nil {
@@ -272,9 +275,9 @@ func (s *Store) WriteEntityJSON(entity string, data []byte) (string, error) {
 // Key-level updates
 // ---------------------------------------------------------------------------
 
-// SetKey performs a key-level upsert on a map entity. It reads the current
-// file, sets key to value, and writes the result back. Only the targeted
-// key is modified; all sibling keys are preserved.
+// SetKey performs a key-level upsert on a map entity. For consolidated
+// config.nix entities it uses source-preserving path patching; for legacy
+// per-entity files it falls back to read/modify/write.
 func (s *Store) SetKey(entity, key string, value any) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return "", err
@@ -284,6 +287,13 @@ func (s *Store) SetKey(entity, key string, value any) (string, error) {
 	}
 	if key == "" {
 		return "", errors.New("key is required")
+	}
+	if s.paths.IsUsingConsolidatedConfig(entity) {
+		path := entity + "." + EscapeConfigPathSegment(key)
+		if err := s.PatchConsolidatedData(path, value); err != nil {
+			return "", err
+		}
+		return s.paths.ConfigFilePath(), nil
 	}
 
 	existing, err := s.readExistingMap(entity)
@@ -296,7 +306,9 @@ func (s *Store) SetKey(entity, key string, value any) (string, error) {
 	return s.writeMap(entity, existing)
 }
 
-// DeleteKey removes a single key from a map entity. It is a no-op if the
+// DeleteKey removes a single key from a map entity. For consolidated
+// config.nix entities it uses source-preserving path patching; for legacy
+// per-entity files it falls back to read/modify/write. It is a no-op if the
 // key does not exist.
 func (s *Store) DeleteKey(entity, key string) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
@@ -307,6 +319,13 @@ func (s *Store) DeleteKey(entity, key string) (string, error) {
 	}
 	if key == "" {
 		return "", errors.New("key is required")
+	}
+	if s.paths.IsUsingConsolidatedConfig(entity) {
+		path := entity + "." + EscapeConfigPathSegment(key)
+		if err := s.PatchConsolidatedData(path, DeleteValue{}); err != nil {
+			return "", err
+		}
+		return s.paths.ConfigFilePath(), nil
 	}
 
 	existing, err := s.readExistingMap(entity)
@@ -583,7 +602,7 @@ func (s *Store) ReadAppVariableLinks() (map[string]map[string]map[string]string,
 // segments while preserving user-defined keys under map fields like apps,
 // environments, env, and variables.
 func NormalizeConfigPathParts(path string) []string {
-	parts := strings.Split(path, ".")
+	parts := SplitConfigPath(path)
 	if len(parts) == 0 {
 		return nil
 	}

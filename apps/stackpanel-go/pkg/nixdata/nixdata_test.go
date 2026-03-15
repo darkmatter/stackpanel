@@ -3,6 +3,7 @@ package nixdata
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -484,6 +485,101 @@ func TestNormalizeConfigPathParts_ConvertsRegularFields(t *testing.T) {
 	want := []string{"deployment", "fly", "organization"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("NormalizeConfigPathParts() = %#v, want %#v", got, want)
+	}
+}
+
+func TestEscapeConfigPathSegment(t *testing.T) {
+	got := EscapeConfigPathSegment(`/dev/foo.bar\baz`)
+	want := `/dev/foo\.bar\\baz`
+	if got != want {
+		t.Fatalf("EscapeConfigPathSegment() = %q, want %q", got, want)
+	}
+}
+
+func TestSplitConfigPath_EscapedDots(t *testing.T) {
+	got := SplitConfigPath(`variables./dev/foo\.bar.value`)
+	want := []string{"variables", "/dev/foo.bar", "value"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("SplitConfigPath() = %#v, want %#v", got, want)
+	}
+}
+
+func TestNormalizeConfigPathParts_PreservesEscapedDots(t *testing.T) {
+	got := NormalizeConfigPathParts(`variables./dev/foo\.bar.value`)
+	want := []string{"variables", "/dev/foo.bar", "value"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("NormalizeConfigPathParts() = %#v, want %#v", got, want)
+	}
+}
+
+func TestSetKey_ConsolidatedConfigEscapesDots(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
+	configPath := filepath.Join(configDir, "config.nix")
+	initial := `{ config, ... }: {
+  variables = {};
+}
+`
+	if err := os.WriteFile(configPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	if _, err := store.SetKey("variables", "/dev/foo.bar", map[string]any{"value": "hello"}); err != nil {
+		t.Fatalf("SetKey() error = %v", err)
+	}
+
+	updated, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config.nix: %v", err)
+	}
+	text := string(updated)
+	variablesIndex := strings.Index(text, `variables = {`)
+	keyIndex := strings.Index(text, `"/dev/foo.bar" = {`)
+	if variablesIndex == -1 || keyIndex == -1 || variablesIndex > keyIndex {
+		t.Fatalf("expected variable binding nested under variables attrset, got:\n%s", text)
+	}
+	if !strings.Contains(text, `"/dev/foo.bar" = {`) {
+		t.Fatalf("expected escaped variable binding, got:\n%s", text)
+	}
+	if !strings.Contains(text, `value = "hello";`) {
+		t.Fatalf("expected value binding, got:\n%s", text)
+	}
+}
+
+func TestDeleteKey_ConsolidatedConfigEscapesDots(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
+	configPath := filepath.Join(configDir, "config.nix")
+	initial := `{ config, ... }: {
+  variables = {
+    "/dev/foo.bar" = {
+      value = "hello";
+    };
+  };
+}
+`
+	if err := os.WriteFile(configPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	if _, err := store.DeleteKey("variables", "/dev/foo.bar"); err != nil {
+		t.Fatalf("DeleteKey() error = %v", err)
+	}
+
+	updated, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config.nix: %v", err)
+	}
+	if strings.Contains(string(updated), `"/dev/foo.bar"`) {
+		t.Fatalf("expected variable binding to be removed, got:\n%s", string(updated))
 	}
 }
 
