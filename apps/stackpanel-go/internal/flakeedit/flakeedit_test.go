@@ -781,3 +781,17 @@ func TestExtractAppVariableLinksFromSource(t *testing.T) {
 	_, exists := links["web"]["dev"]["HOST"]
 	assert.False(t, exists)
 }
+
+func TestPatchNixPath_IntoInlineEmptyAttrset(t *testing.T) {
+	source := `{ config, ... }: {
+  variables = {};
+}
+`
+
+	modified, err := PatchNixPath([]byte(source), []string{"variables", "/dev/foo.bar", "value"}, `"hello"`)
+	require.NoError(t, err)
+	result := string(modified)
+	assert.Contains(t, result, `variables = {`)
+	assert.Contains(t, result, `"/dev/foo.bar" = {`)
+	assert.True(t, strings.Index(result, `variables = {`) < strings.Index(result, `"/dev/foo.bar" = {`))
+}

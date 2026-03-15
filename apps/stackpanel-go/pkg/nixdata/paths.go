@@ -157,3 +157,52 @@ func SectionHeaders() map[string]string {
 func ParseConfigPath(configPath string) string {
 	return strings.TrimPrefix(configPath, "stackpanel.")
 }
+
+// EscapeConfigPathSegment escapes a single dotted-path segment so it can be
+// embedded in a config patch path without splitting on literal dots.
+func EscapeConfigPathSegment(segment string) string {
+	segment = strings.ReplaceAll(segment, "\\", "\\\\")
+	segment = strings.ReplaceAll(segment, ".", "\\.")
+	return segment
+}
+
+// SplitConfigPath splits a dotted config path on unescaped dots and unescapes
+// any literal dots or backslashes within each segment.
+func SplitConfigPath(path string) []string {
+	if path == "" {
+		return nil
+	}
+
+	parts := make([]string, 0, 8)
+	var current strings.Builder
+	escaped := false
+
+	for _, r := range path {
+		switch {
+		case escaped:
+			current.WriteRune(r)
+			escaped = false
+		case r == '\\':
+			escaped = true
+		case r == '.':
+			parts = append(parts, current.String())
+			current.Reset()
+		default:
+			current.WriteRune(r)
+		}
+	}
+
+	if escaped {
+		current.WriteRune('\\')
+	}
+	parts = append(parts, current.String())
+
+	filtered := parts[:0]
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		filtered = append(filtered, part)
+	}
+	return filtered
+}

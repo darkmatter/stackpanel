@@ -50,7 +50,8 @@ func (s *AgentServiceServer) PatchNixData(
 
 	// Validate path
 	path := strings.TrimSpace(msg.Path)
-	if path == "" {
+	key := strings.TrimSpace(msg.Key)
+	if path == "" && key == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("path is required"))
 	}
 
@@ -72,8 +73,11 @@ func (s *AgentServiceServer) PatchNixData(
 	// For entity-based patches (e.g., entity="apps", key="web", path="container.enable")
 	// Construct the full path: apps.web.container.enable
 	var fullPath string
-	if msg.Key != "" && msg.Key != "_root" && msg.Key != "_global" {
-		fullPath = entity + "." + msg.Key + "." + path
+	if key != "" && key != "_root" && key != "_global" {
+		fullPath = entity + "." + nixdata.EscapeConfigPathSegment(key)
+		if path != "" {
+			fullPath += "." + path
+		}
 	} else {
 		fullPath = entity + "." + path
 	}
