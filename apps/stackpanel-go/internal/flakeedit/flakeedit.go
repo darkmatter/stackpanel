@@ -672,6 +672,10 @@ func (e *NixEditor) patchWithinAttrset(attrset *tree_sitter.Node, path []string,
 
 	insertText := e.buildNestedBinding(e.detectBindingIndent(attrset), path, valueExpr)
 	insertPos := e.startOfLine(closingBrace.StartByte())
+	if attrset.StartPosition().Row == closingBrace.StartPosition().Row {
+		insertPos = closingBrace.StartByte()
+		insertText = "\n" + insertText + strings.Repeat(" ", e.lineIndent(attrset.StartByte()))
+	}
 	return insertAt(e.source, insertPos, []byte(insertText)), nil
 }
 
@@ -862,7 +866,23 @@ func (e *NixEditor) detectBindingIndent(attrset *tree_sitter.Node) string {
 	for _, binding := range e.bindings(attrset) {
 		return strings.Repeat(" ", int(binding.StartPosition().Column))
 	}
-	return strings.Repeat(" ", int(attrset.StartPosition().Column)+2)
+	return strings.Repeat(" ", e.lineIndent(attrset.StartByte())+2)
+}
+
+func (e *NixEditor) lineIndent(pos uint) int {
+	lineStart := e.startOfLine(pos)
+	indent := 0
+	for i := lineStart; i < uint(len(e.source)); i++ {
+		switch e.source[i] {
+		case ' ':
+			indent++
+		case '\t':
+			indent++
+		default:
+			return indent
+		}
+	}
+	return indent
 }
 
 func (e *NixEditor) findChildByKind(node *tree_sitter.Node, kind string) *tree_sitter.Node {
