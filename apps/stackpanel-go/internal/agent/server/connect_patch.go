@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/rs/zerolog/log"
 )
 
@@ -143,7 +144,7 @@ func (s *AgentServiceServer) patchConsolidatedConfig(
 // parseValueJSON parses a JSON-encoded value string with an optional type hint.
 // Returns the Go value suitable for Nix serialization.
 func parseValueJSON(value string, valueType string) (any, error) {
-	if value == "" && valueType != "string" {
+	if value == "" && valueType != "string" && valueType != "delete" {
 		return nil, fmt.Errorf("value is required")
 	}
 
@@ -194,6 +195,12 @@ func parseValueJSON(value string, valueType string) (any, error) {
 
 	case "null":
 		return nil, nil
+
+	case "nix_expr":
+		return nixdata.RawExpr(value), nil
+
+	case "delete":
+		return nixdata.DeleteValue{}, nil
 
 	default:
 		// Auto-detect type from JSON

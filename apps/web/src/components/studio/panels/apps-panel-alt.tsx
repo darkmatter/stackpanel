@@ -24,7 +24,12 @@ import {
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useAgentSSEEvent } from "@/lib/agent-sse-provider";
 import type { App } from "@/lib/types";
-import { useApps, useNixConfig, useVariables } from "@/lib/use-agent";
+import {
+  useAppVariableLinks,
+  useApps,
+  useNixConfig,
+  useVariables,
+} from "@/lib/use-agent";
 import { AddAppDialog } from "./apps/add-app-dialog";
 import {
   AppExpandedContent,
@@ -40,6 +45,7 @@ import {
   getEnvironmentNames,
 } from "./apps/utils";
 import {
+  buildVariableLinkReference,
   getVariableType,
   parseVariableLinkReference,
 } from "./variables/constants";
@@ -52,6 +58,8 @@ export function AppsPanelAlt() {
   const { data: rawApps, isLoading, error, refetch } = useApps();
   const { data: nixConfig } = useNixConfig();
   const { data: rawVariables } = useVariables();
+  const { data: appVariableLinks, refetch: refetchAppVariableLinks } =
+    useAppVariableLinks();
 
   // Get project name from config, fallback to "stackpanel"
   const projectName =
@@ -223,6 +231,7 @@ export function AppsPanelAlt() {
   // Subscribe to config.changed events for auto-refetch
   useAgentSSEEvent("config.changed", () => {
     refetch();
+    refetchAppVariableLinks();
   });
 
   // Get turbo tasks for a specific app path from the package graph
@@ -285,7 +294,11 @@ export function AppsPanelAlt() {
       // With simplified schema: env is map<string, string> (key -> value)
       const flattenedVars = flattenEnvironmentVariables(app.environments);
       const appVariables: DisplayVariable[] = flattenedVars.map((mapping) => {
-        const linkedVariableId = parseVariableLinkReference(mapping.value);
+        const linkedVariableId =
+          mapping.environments
+            .map((envName) => appVariableLinks?.[appId]?.[envName]?.[mapping.envKey])
+            .find(Boolean) ??
+          parseVariableLinkReference(mapping.value);
         const linkedVariable = linkedVariableId
           ? rawVariables?.[linkedVariableId]
           : undefined;
@@ -299,7 +312,9 @@ export function AppsPanelAlt() {
         const isSecret = typeName === "secret";
         return {
           envKey: mapping.envKey,
-          value: mapping.value,
+          value: linkedVariableId
+            ? buildVariableLinkReference(linkedVariableId)
+            : mapping.value,
           environments: mapping.environments,
           isSecret,
           typeName,
@@ -331,7 +346,7 @@ export function AppsPanelAlt() {
         _resolved: app,
       };
     });
-  }, [resolvedApps, getTasksForApp, projectName, rawVariables, runningProcesses]);
+  }, [appVariableLinks, resolvedApps, getTasksForApp, projectName, rawVariables, runningProcesses]);
 
   // Derive the active framework from the app's type field
   const getFrameworkForApp = (appType?: string): AppFramework => {

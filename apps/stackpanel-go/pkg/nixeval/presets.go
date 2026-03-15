@@ -54,7 +54,13 @@ let
     else {};
   evaluatedConfig =
     if builtins.isFunction rawConfig
-    then rawConfig { pkgs = null; lib = null; config = {}; inputs = {}; }
+    then rawConfig {
+      pkgs = null;
+      lib = null;
+      inputs = {};
+      self = null;
+      config = evaluatedConfig;
+    }
     else rawConfig;
 in
   evaluatedConfig.stackpanel or evaluatedConfig or {}

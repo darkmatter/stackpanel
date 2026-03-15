@@ -14,6 +14,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import type { AppEntity } from "@/lib/types";
+import { usePatchNixData } from "@/lib/use-agent";
 
 import {
 	type AppForm,
@@ -28,6 +29,8 @@ interface AddAppDialogProps {
 
 export function AddAppDialog({ onSuccess }: AddAppDialogProps) {
 	const { token } = useAgentContext();
+	const client = useAgentClient();
+	const patchNixData = usePatchNixData();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [formRef, setFormRef] = useState<AppForm | null>(null);
@@ -71,8 +74,6 @@ export function AddAppDialog({ onSuccess }: AddAppDialogProps) {
 
 		setIsSaving(true);
 		try {
-			const client = useAgentClient();
-			if (token) client.setToken(token);
 			const appsClient = client.nix.mapEntity<AppEntity>("apps");
 
 			const existingApp = await appsClient.get(values.id);
@@ -97,7 +98,13 @@ export function AddAppDialog({ onSuccess }: AddAppDialogProps) {
 				},
 			};
 
-			await appsClient.set(values.id, newApp);
+			await patchNixData.mutateAsync({
+				entity: "apps",
+				key: "_root",
+				path: values.id,
+				value: JSON.stringify(newApp),
+				valueType: "object",
+			});
 			toast.success(
 				`Created app "${values.id}". You can now configure tasks and variables.`,
 			);

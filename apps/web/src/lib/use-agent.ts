@@ -42,7 +42,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";
 import { createAgentTransport } from "./connect-transport";
-import { AgentHttpClient } from "./agent";
+import { AgentHttpClient, type AppVariableLinks } from "./agent";
 import type { RecipientListResponse, RekeyWorkflowStatus } from "./types";
 
 // =============================================================================
@@ -167,6 +167,7 @@ export const agentQueryKeys = {
 	users: () => [...agentQueryKeys.all, "users"] as const,
 	aws: () => [...agentQueryKeys.all, "aws"] as const,
 	apps: () => [...agentQueryKeys.all, "apps"] as const,
+	appVariableLinks: () => [...agentQueryKeys.apps(), "links"] as const,
 	variables: () => [...agentQueryKeys.all, "variables"] as const,
 
 	// Services
@@ -362,6 +363,20 @@ export function useSetApps() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: agentQueryKeys.apps() });
+		},
+	});
+}
+
+/**
+ * Fetch raw app env -> variable link metadata from config.nix source.
+ */
+export function useAppVariableLinks() {
+	const client = useAgentClient();
+
+	return useQuery({
+		queryKey: agentQueryKeys.appVariableLinks(),
+		queryFn: async (): Promise<AppVariableLinks> => {
+			return client.getAppVariableLinks();
 		},
 	});
 }
@@ -1034,6 +1049,7 @@ export function useAddRecipient() {
 			name: string;
 			publicKey?: string;
 			sshPublicKey?: string;
+			tags?: string[];
 		}) => {
 			if (!client) throw new Error("No agent client");
 			return client.addRecipient(request);
@@ -1041,6 +1057,9 @@ export function useAddRecipient() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: agentQueryKeys.recipients(),
+			});
+			queryClient.invalidateQueries({
+				queryKey: agentQueryKeys.nixConfig(),
 			});
 		},
 	});
@@ -1061,6 +1080,9 @@ export function useRemoveRecipient() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: agentQueryKeys.recipients(),
+			});
+			queryClient.invalidateQueries({
+				queryKey: agentQueryKeys.nixConfig(),
 			});
 		},
 	});
@@ -1262,6 +1284,48 @@ export function useNixMapData<V>(
 		set: (key: string, value: V) => setMutation.mutateAsync({ key, value }),
 		update: (key: string, updates: Partial<V>) => updateMutation.mutateAsync({ key, updates }),
 		remove: (key: string) => removeMutation.mutateAsync(key),
+		refetch: query.refetch,
+	};
+}
+
+export function useNixEntityData<T>(
+	entity: string,
+	options: { initialData?: T | null; autoRefetch?: boolean } = {},
+) {
+	const { initialData, autoRefetch = true } = options;
+	const client = useAgentClient();
+	const queryClient = useQueryClient();
+	const entityClient = useMemo(() => client.entity<T>(entity), [client, entity]);
+
+	const queryKey = [...agentQueryKeys.all, "entity", entity];
+
+	const query = useQuery({
+		queryKey,
+		queryFn: async () => entityClient.get(),
+		initialData,
+		refetchOnWindowFocus: autoRefetch,
+	});
+
+	const setMutation = useMutation({
+		mutationFn: async (data: T) => entityClient.set(data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
+		},
+	});
+
+	const updateMutation = useMutation({
+		mutationFn: async (updates: Partial<T>) => entityClient.update(updates),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+			queryClient.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
+		},
+	});
+
+	return {
+		...query,
+		set: (data: T) => setMutation.mutateAsync(data),
+		update: (updates: Partial<T>) => updateMutation.mutateAsync(updates),
 		refetch: query.refetch,
 	};
 }
@@ -1742,6 +1806,9 @@ export function usePatchNixData() {
 				if (typeof keyFn === "function") {
 					queryClient.invalidateQueries({ queryKey: (keyFn as () => readonly string[])() });
 				}
+			}
+			if (params.entity === "apps") {
+				queryClient.invalidateQueries({ queryKey: agentQueryKeys.appVariableLinks() });
 			}
 			// Also invalidate the full nix config (it includes panel data)
 			queryClient.invalidateQueries({ queryKey: agentQueryKeys.nixConfig() });
