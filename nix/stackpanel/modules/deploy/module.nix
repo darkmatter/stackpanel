@@ -157,10 +157,17 @@ in
               '';
             };
 
-            extraModules = lib.mkOption {
+            modules = lib.mkOption {
               type = lib.types.listOf lib.types.deferredModule;
               default = [ ];
-              description = "Additional NixOS modules to include in this machine's configuration.";
+              description = ''
+                Additional NixOS modules to include in this machine's configuration.
+                Use for arbitrary NixOS config (firewall, extra services, etc.).
+                SSH keys can also go here, but prefer `authorizedKeys` for discoverability.
+              '';
+              example = [ { networking.firewall.allowedTCPPorts = [ 80 443 ]; } ];
+            };
+
             };
           };
         }
