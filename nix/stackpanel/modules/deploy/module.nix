@@ -168,6 +168,20 @@ in
               example = [ { networking.firewall.allowedTCPPorts = [ 80 443 ]; } ];
             };
 
+            authorizedKeys = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              description = ''
+                SSH public keys authorized to connect to this machine as the deployment
+                user (see `user`, default "root"). Written to
+                `users.users.<user>.openssh.authorizedKeys.keys` in the NixOS config.
+
+                These are plain public key strings — safe to commit to the repo.
+              '';
+              example = [
+                "ssh-ed25519 AAAA... alice@laptop"
+                "ssh-ed25519 AAAA... ci-runner"
+              ];
             };
           };
         }
