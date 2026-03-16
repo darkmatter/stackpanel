@@ -66,7 +66,7 @@ let
       projectRoot ? null,
       stackpanelImports ? [ ],
     }@args:
-    import ./default.nix args;
+    import ./per-system-outputs.nix args;
 
 in
 {
@@ -122,25 +122,34 @@ in
       let
         # Combine stackpanel's required overlays with user's overlays
         allOverlays = stackpanelOverlays ++ overlays;
+
+        # Per-system outputs (devShells, packages, checks, apps, legacyPackages)
+        perSystem = flake-utils.lib.eachSystem systems (
+          system:
+          let
+            pkgs = import nixpkgs {
+              inherit system;
+              overlays = allOverlays;
+            };
+          in
+          mkOutputs {
+            inherit
+              pkgs
+              inputs
+              self
+              system
+              stackpanelImports
+              ;
+          }
+        );
+
+        # Global outputs (nixosModules, nixosConfigurations, colmenaHive).
+        # Evaluated once using lib only — no per-system pkgs instantiation.
+        globalOutputs = import ./global-outputs.nix {
+          inherit inputs self stackpanelImports;
+        };
       in
-      flake-utils.lib.eachSystem systems (
-        system:
-        let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = allOverlays;
-          };
-        in
-        mkOutputs {
-          inherit
-            pkgs
-            inputs
-            self
-            system
-            stackpanelImports
-            ;
-        }
-      );
+      perSystem // globalOutputs;
 
     # =========================================================================
     # Required overlays for stackpanel
