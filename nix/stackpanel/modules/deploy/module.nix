@@ -33,11 +33,20 @@ let
     "nixos-rebuild"
   ];
 
-  # Apps that have NixOS deployment enabled
+  # Platforms that imply a non-NixOS backend (cloudflare → alchemy, fly → fly)
+  cloudPlatforms = [
+    "cloudflare"
+    "fly"
+  ];
+
+  # Apps that have NixOS deployment enabled.
+  # Exclude apps whose `deployment.host` identifies a cloud platform —
+  # those use alchemy/fly and don't need a NixOS module.
   nixosApps = lib.filterAttrs (
     _: app:
     (app.deployment.enable or false)
     && builtins.elem (app.deployment.backend or "colmena") nixosBackends
+    && !(builtins.elem (app.deployment.host or "") cloudPlatforms)
   ) cfg.apps;
 in
 {
