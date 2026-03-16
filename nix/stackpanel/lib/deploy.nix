@@ -57,8 +57,14 @@ let
       hardwareMods = lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig;
 
       extraMods = machineCfg.modules or [ ];
+
+      sshUser = machineCfg.user or "root";
+      keys = machineCfg.authorizedKeys or [ ];
+      keysMod = lib.optional (keys != [ ]) {
+        users.users.${sshUser}.openssh.authorizedKeys.keys = keys;
+      };
     in
-    appModules ++ hardwareMods ++ extraMods;
+    keysMod ++ appModules ++ hardwareMods ++ extraMods;
 in
 {
   # ============================================================================

@@ -21,9 +21,10 @@ import (
 
 // DeployMachineConfig holds the serializable fields of a deployment machine.
 type DeployMachineConfig struct {
-	Host   string `json:"host"`
-	User   string `json:"user"`
-	System string `json:"system"`
+	Host           string   `json:"host"`
+	User           string   `json:"user"`
+	System         string   `json:"system"`
+	AuthorizedKeys []string `json:"authorizedKeys"`
 }
 
 // AppDeploymentOptions holds the serializable deployment options for an app.
