@@ -67,8 +67,13 @@ in
   };
   users.groups.${name} = { };
 
-  # Requires sops-nix (https://github.com/Mic92/sops-nix) to be imported
-  sops.secrets."${name}-env" = lib.mkIf hasSecrets {
+  # Requires sops-nix (https://github.com/Mic92/sops-nix) to be imported.
+  # lib.optionalAttrs (not lib.mkIf) is used here so that the sops option
+  # path is never defined when hasSecrets is false — lib.mkIf still registers
+  # the definition and NixOS would fail if sops-nix is not imported.
+}
+// lib.optionalAttrs hasSecrets {
+  sops.secrets."${name}-env" = {
     format = "dotenv";
     sopsFile = ".stackpanel/secrets/${defaultEnv}.yaml";
   };
