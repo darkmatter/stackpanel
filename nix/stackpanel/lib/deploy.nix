@@ -38,8 +38,10 @@ let
     ) (config.apps or { });
 
   # Collect the NixOS modules for a machine:
+  #   - Base module: mkDefault values satisfying NixOS assertions (no hardware needed)
+  #   - SSH authorized keys module (when authorizedKeys is non-empty)
   #   - NixOS modules for apps targeting this machine (from self.nixosModules)
-  #   - Hardware configuration module (if provided)
+  #   - Hardware configuration module (if provided) — overrides base module defaults
   #   - Extra user-provided modules
   modulesForMachine =
     config: inputs: machineName: machineCfg:
@@ -63,8 +65,24 @@ let
       keysMod = lib.optional (keys != [ ]) {
         users.users.${sshUser}.openssh.authorizedKeys.keys = keys;
       };
+
+      # Minimal defaults that satisfy NixOS assertions so `nix flake check` passes
+      # for machines that don't yet have a hardwareConfig (e.g. pre-provisioning).
+      # Only injected when hardwareConfig is absent — once a real hardware config is
+      # provided it takes full responsibility for boot/filesystem declarations and
+      # any omission there should surface as an error, not be silently papered over.
+      baseMods = lib.optionals (hardwareMods == [ ]) [
+        {
+          boot.loader.grub.device = lib.mkDefault "/dev/sda";
+          fileSystems."/" = lib.mkDefault {
+            device = "/dev/disk/by-label/nixos";
+            fsType = "ext4";
+          };
+          system.stateVersion = lib.mkDefault "24.11";
+        }
+      ];
     in
-    keysMod ++ appModules ++ hardwareMods ++ extraMods;
+    baseMods ++ keysMod ++ appModules ++ hardwareMods ++ extraMods;
 in
 {
   # ============================================================================
