@@ -56,7 +56,7 @@ let
       # Hardware configuration: pass the path directly — NixOS accepts paths as modules
       hardwareMods = lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig;
 
-      extraMods = machineCfg.extraModules or [ ];
+      extraMods = machineCfg.modules or [ ];
     in
     appModules ++ hardwareMods ++ extraMods;
 in
