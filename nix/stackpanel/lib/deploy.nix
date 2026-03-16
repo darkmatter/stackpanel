@@ -113,7 +113,21 @@ in
     in
     {
       meta = {
-        nixpkgs = import nixpkgs { system = "x86_64-linux"; };
+        # Fallback nixpkgs for the hive (used for machines without an explicit
+        # system override).  Derived from the first declared machine's system
+        # so we avoid hardcoding x86_64-linux.
+        nixpkgs = import nixpkgs {
+          system =
+            if machines == { } then
+              "x86_64-linux"
+            else
+              (lib.head (lib.mapAttrsToList (_: m: m.system or "x86_64-linux") machines));
+        };
+        # Per-node nixpkgs — each machine gets a nixpkgs instance for its own
+        # declared system, eliminating any remaining cross-system assumptions.
+        nodeNixpkgs = lib.mapAttrs (
+          _: machineCfg: import nixpkgs { system = machineCfg.system or "x86_64-linux"; }
+        ) machines;
       };
     }
     // lib.mapAttrs (

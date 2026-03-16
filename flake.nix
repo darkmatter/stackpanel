@@ -52,6 +52,14 @@
 
       # Overlays for nixpkgs
       overlays = exports.lib.requiredOverlays;
+
+      # Global outputs (nixosModules, nixosConfigurations, colmenaHive).
+      # Evaluated once using lib only — no per-system pkgs instantiation.
+      # Machine-specific nixpkgs is derived from each machine's declared system.
+      globalOutputs = import ./nix/flake/global-outputs.nix {
+        inherit inputs self;
+        stackpanelImports = [ ./.stackpanel/modules ];
+      };
     in
     # Per-system outputs
     flake-utils.lib.eachSystem exports.supportedSystems (
@@ -65,7 +73,7 @@
         packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
 
         # Stackpanel outputs (devShells, checks, apps, legacyPackages)
-        spOutputs = import ./nix/flake/default.nix {
+        spOutputs = import ./nix/flake/per-system-outputs.nix {
           inherit
             pkgs
             inputs
@@ -100,9 +108,18 @@
     // {
       inherit (exports)
         lib
-        nixosModules
         devenvModules
         templates
+        ;
+
+      # nixosModules merges:
+      #   - framework modules from exports (aws, network, caddy, …)
+      #   - per-app generated service modules from globalOutputs
+      nixosModules = exports.nixosModules // globalOutputs.nixosModules;
+
+      inherit (globalOutputs)
+        nixosConfigurations
+        colmenaHive
         ;
     };
 }
