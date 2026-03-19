@@ -200,6 +200,8 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/secrets/delete", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsDeleteDispatch))))
 	mux.HandleFunc("/api/secrets/list", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsListDispatch))))
 	mux.HandleFunc("/api/secrets/identity", s.withCORS(s.requireAuth(s.requireProject(s.handleAgeIdentity))))
+	mux.HandleFunc("/api/secrets/sops-age-keys/status", s.withCORS(s.requireAuth(s.requireProject(s.handleSopsAgeKeysStatus))))
+	mux.HandleFunc("/api/secrets/sops-age-keys/validate-source", s.withCORS(s.requireAuth(s.requireProject(s.handleValidateSopsAgeKeySource))))
 	mux.HandleFunc("/api/secrets/kms", s.withCORS(s.requireAuth(s.requireProject(s.handleKMSConfig))))
 	mux.HandleFunc("/api/secrets/backend", s.withCORS(s.requireAuth(s.requireProject(s.handleSecretsBackend))))
 

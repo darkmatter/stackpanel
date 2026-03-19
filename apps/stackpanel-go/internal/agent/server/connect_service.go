@@ -210,43 +210,25 @@ func (s *AgentServiceServer) GetKMSConfig(
 		}
 
 		// Try to get the actual KMS ARN from state if available
-		configFile := s.server.getKMSConfigPath()
-		data, err := os.ReadFile(configFile)
-		if err == nil {
-			var stateConfig KMSConfigResponse
-			if err := json.Unmarshal(data, &stateConfig); err == nil {
-				resp.KeyArn = stateConfig.KeyArn
-				resp.AwsProfile = stateConfig.AwsProfile
-			}
+		if stateConfig, err := s.server.readKMSConfig(); err == nil {
+			resp.KeyArn = stateConfig.KeyArn
+			resp.AwsProfile = stateConfig.AwsProfile
 		}
 
 		return connect.NewResponse(resp), nil
 	}
 
-	configFile := s.server.getKMSConfigPath()
-	resp := &gopb.KMSConfigResponse{
-		Enable:     false,
-		KeyArn:     "",
-		AwsProfile: "",
-		Source:     "",
-	}
-
-	data, err := os.ReadFile(configFile)
+	stateConfig, err := s.server.readKMSConfig()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return connect.NewResponse(resp), nil
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read KMS config: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var stateConfig KMSConfigResponse
-	if err := json.Unmarshal(data, &stateConfig); err == nil {
-		resp.Enable = stateConfig.Enable
-		resp.KeyArn = stateConfig.KeyArn
-		resp.AwsProfile = stateConfig.AwsProfile
+	resp := &gopb.KMSConfigResponse{
+		Enable:     stateConfig.Enable,
+		KeyArn:     stateConfig.KeyArn,
+		AwsProfile: stateConfig.AwsProfile,
+		Source:     stateConfig.Source,
 	}
-
-	resp.Source = "state"
 	return connect.NewResponse(resp), nil
 }
 
@@ -261,17 +243,21 @@ func (s *AgentServiceServer) SetKMSConfig(
 		}
 	}
 
-	resp := &gopb.KMSConfigResponse{
+	resp, err := s.server.saveKMSConfig(KMSConfigRequest{
 		Enable:     req.Msg.Enable,
 		KeyArn:     req.Msg.KeyArn,
 		AwsProfile: req.Msg.AwsProfile,
-		Source:     "state",
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// TODO: Save to file
-	log.Info().Bool("enable", req.Msg.Enable).Str("keyArn", req.Msg.KeyArn).Msg("KMS config saved")
-
-	return connect.NewResponse(resp), nil
+	return connect.NewResponse(&gopb.KMSConfigResponse{
+		Enable:     resp.Enable,
+		KeyArn:     resp.KeyArn,
+		AwsProfile: resp.AwsProfile,
+		Source:     resp.Source,
+	}), nil
 }
 
 // =============================================================================
