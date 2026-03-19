@@ -6,411 +6,274 @@ icon: Settings
 
 # Healthchecks Options
 
-## `healthchecks.defaultInterval`
-
+<NixOption
+  path={"healthchecks.defaultInterval"}
+  type={"null or signed integer"}
+  defaultValue={"30"}
+  module={"healthchecks"}
+>
 Default interval for automatic healthcheck runs in seconds.
 Set to null to disable automatic checks.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or signed integer` |
-| **Default** | `30` |
-
----
-
-## `healthchecks.defaultTimeout`
-
+<NixOption
+  path={"healthchecks.defaultTimeout"}
+  type={"signed integer"}
+  defaultValue={"10"}
+  module={"healthchecks"}
+>
 Default timeout for healthchecks in seconds
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `10` |
-
----
-
-## `healthchecks.enable`
-
+<NixOption
+  path={"healthchecks.enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"healthchecks"}
+>
 Enable the healthchecks system
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `healthchecks.modules`
-
+<NixOption
+  path={"healthchecks.modules"}
+  type={"attribute set of (submodule)"}
+  defaultValue={"{ }"}
+  exampleCode={"{\n  go = {\n    displayName = \"Go\";\n    checks = {\n      # Inline script\n      go-installed = {\n        script = \"command -v go >/dev/null 2>&1\";\n        severity = \"critical\";\n      };\n    };\n  };\n\n  postgres = {\n    displayName = \"PostgreSQL\";\n    checks = {\n      # TCP check\n      running = {\n        type = \"tcp\";\n        tcpHost = \"localhost\";\n        tcpPort = 5432;\n        severity = \"critical\";\n      };\n      # Path to script file\n      has-tables = {\n        path = ./.stack/src/checks/postgres/has-tables.sh;\n        severity = \"warning\";\n      };\n    };\n  };\n\n  # Extension module\n  sst = {\n    displayName = \"SST\";\n    checks = {\n      configured = {\n        path = ./src/checks/configured.sh;\n        severity = \"critical\";\n      };\n    };\n  };\n}"}
+  module={"healthchecks"}
+>
 Healthchecks organized by module.
 
 Each module can declare multiple healthchecks that verify its
 functionality. The UI displays a traffic light for each module
 based on the aggregate status of its healthchecks.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
-**Example:**
-
-```nix
-{
-  go = {
-    displayName = "Go";
-    checks = {
-      # Inline script
-      go-installed = {
-        script = "command -v go >/dev/null 2>&1";
-        severity = "critical";
-      };
-    };
-  };
-
-  postgres = {
-    displayName = "PostgreSQL";
-    checks = {
-      # TCP check
-      running = {
-        type = "tcp";
-        tcpHost = "localhost";
-        tcpPort = 5432;
-        severity = "critical";
-      };
-      # Path to script file
-      has-tables = {
-        path = ./.stack/src/checks/postgres/has-tables.sh;
-        severity = "warning";
-      };
-    };
-  };
-
-  # Extension module
-  sst = {
-    displayName = "SST";
-    checks = {
-      configured = {
-        path = ./src/checks/configured.sh;
-        severity = "critical";
-      };
-    };
-  };
-}
-```
-
-
----
-
-## `healthchecks.modules.<name>.checks`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks"}
+  type={"attribute set of (submodule)"}
+  defaultValue={"{ }"}
+  module={"healthchecks"}
+>
 Healthchecks for this module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.description`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.description"}
+  type={"null or string"}
+  defaultValue={"null"}
+  module={"healthchecks"}
+>
 Description of what this check verifies
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.enable`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"healthchecks"}
+>
 Whether this healthcheck is enabled
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.httpExpectedStatus`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.httpExpectedStatus"}
+  type={"signed integer"}
+  defaultValue={"200"}
+  module={"healthchecks"}
+>
 Expected HTTP status code for a healthy response
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `200` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.httpMethod`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.httpMethod"}
+  type={"string"}
+  defaultValue={"\"GET\""}
+  module={"healthchecks"}
+>
 HTTP method to use for http-type checks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"GET"` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.httpUrl`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.httpUrl"}
+  type={"null or string"}
+  defaultValue={"null"}
+  exampleCode={"\"http://localhost:3000/health\""}
+  module={"healthchecks"}
+>
 URL to check for http-type checks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
-**Example:**
-
-`"http://localhost:3000/health"`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.interval`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.interval"}
+  type={"null or signed integer"}
+  defaultValue={"null"}
+  module={"healthchecks"}
+>
 How often to run this check in seconds.
 If null, check runs only on demand.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or signed integer` |
-| **Default** | `null` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.name`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.name"}
+  type={"string"}
+  defaultValue={"\"‹name›\""}
+  module={"healthchecks"}
+>
 Display name for the healthcheck
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"‹name›"` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.nixExpr`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.nixExpr"}
+  type={"null or string"}
+  defaultValue={"null"}
+  exampleCode={"\"builtins.pathExists /nix/store\""}
+  module={"healthchecks"}
+>
 Nix expression to evaluate for nix-type checks.
 Should evaluate to true for healthy, false for unhealthy.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
-**Example:**
-
-`"builtins.pathExists /nix/store"`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.path`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.path"}
+  type={"null or absolute path"}
+  defaultValue={"null"}
+  exampleCode={"./.stack/src/checks/postgres/can-connect.sh"}
+  module={"healthchecks"}
+>
 Path to script file for script-type checks.
 Content is read and used as the script body.
 Mutually exclusive with `script` and `scriptRef`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or absolute path` |
-| **Default** | `null` |
-
-**Example:**
-
-`./.stack/src/checks/postgres/can-connect.sh`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.script`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.script"}
+  type={"null or string"}
+  defaultValue={"null"}
+  exampleCode={"\"command -v go >/dev/null 2>&1\""}
+  module={"healthchecks"}
+>
 Shell script content for script-type checks (inline).
 Should exit 0 for healthy, non-zero for unhealthy.
 Mutually exclusive with `path` and `scriptRef`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
-**Example:**
-
-`"command -v go >/dev/null 2>&1"`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.scriptPackage`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.scriptPackage"}
+  type={"null or package"}
+  defaultValue={"null"}
+  module={"healthchecks"}
+>
 A derivation that provides the healthcheck script.
 The script should be at $out/bin/ or $out.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or package` |
-| **Default** | `null` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.scriptRef`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.scriptRef"}
+  type={"null or string"}
+  defaultValue={"null"}
+  exampleCode={"\"db-connect\""}
+  module={"healthchecks"}
+>
 Reference to a stackpanel.scripts.* entry.
 The referenced script is used as the healthcheck command.
 Mutually exclusive with `script` and `path`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
-**Example:**
-
-`"db-connect"`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.severity`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.severity"}
+  type={"one of \"critical\", \"warning\", \"info\""}
+  defaultValue={"\"warning\""}
+  module={"healthchecks"}
+>
 How critical this check is:
 - critical: Failing = unhealthy (red light)
 - warning: Failing = degraded (yellow light)
 - info: Informational only, doesn't affect status
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "critical", "warning", "info"` |
-| **Default** | `"warning"` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.tags`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.tags"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  exampleCode={"[\n  \"database\"\n  \"critical\"\n]"}
+  module={"healthchecks"}
+>
 Tags for filtering/grouping checks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
-**Example:**
-
-```nix
-[
-  "database"
-  "critical"
-]
-```
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.tcpHost`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.tcpHost"}
+  type={"null or string"}
+  defaultValue={"null"}
+  exampleCode={"\"localhost\""}
+  module={"healthchecks"}
+>
 Host to connect to for tcp-type checks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
-**Example:**
-
-`"localhost"`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.tcpPort`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.tcpPort"}
+  type={"null or signed integer"}
+  defaultValue={"null"}
+  exampleCode={"5432"}
+  module={"healthchecks"}
+>
 Port to connect to for tcp-type checks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or signed integer` |
-| **Default** | `null` |
-
-**Example:**
-
-`5432`
-
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.timeout`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.timeout"}
+  type={"signed integer"}
+  defaultValue={"10"}
+  module={"healthchecks"}
+>
 Timeout for the check in seconds
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `10` |
-
----
-
-## `healthchecks.modules.<name>.checks.<name>.type`
-
+<NixOption
+  path={"healthchecks.modules.<name>.checks.<name>.type"}
+  type={"one of \"script\", \"nix\", \"http\", \"tcp\""}
+  defaultValue={"\"script\""}
+  module={"healthchecks"}
+>
 Type of healthcheck (script, nix, http, tcp)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "script", "nix", "http", "tcp"` |
-| **Default** | `"script"` |
-
----
-
-## `healthchecks.modules.<name>.displayName`
-
+<NixOption
+  path={"healthchecks.modules.<name>.displayName"}
+  type={"string"}
+  defaultValue={"\"‹name›\""}
+  module={"healthchecks"}
+>
 Display name for the module in the UI
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"‹name›"` |
-
----
-
-## `healthchecks.modules.<name>.enable`
-
+<NixOption
+  path={"healthchecks.modules.<name>.enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"healthchecks"}
+>
 Enable healthchecks for this module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `healthchecksComputed`
-
+<NixOption
+  path={"healthchecksComputed"}
+  type={"attribute set of attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  readonly
+  module={"healthchecks"}
+>
 Computed healthcheck configurations (for agent API)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `healthchecksList`
-
+<NixOption
+  path={"healthchecksList"}
+  type={"list of unspecified value"}
+  defaultValue={"[ ]"}
+  readonly
+  module={"healthchecks"}
+>
 Flat list of all healthchecks (for agent API)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of unspecified value` |
-| **Default** | `[ ]` |
-| **Read Only** | `true` |
-
----
+</NixOption>
 

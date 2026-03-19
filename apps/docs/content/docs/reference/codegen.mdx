@@ -6,96 +6,75 @@ icon: Code
 
 # Codegen Options
 
-## `codegen.enable`
-
+<NixOption
+  path={"codegen.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"codegen"}
+>
 Whether to enable Stackpanel codegen helpers.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `codegen.generators`
-
+<NixOption
+  path={"codegen.generators"}
+  type={"attribute set of (submodule)"}
+  defaultValue={"{ }"}
+  module={"codegen"}
+>
 Code generators to run in the devenv on shell enter.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
----
-
-## `codegen.generators.<name>.cwd`
-
+<NixOption
+  path={"codegen.generators.<name>.cwd"}
+  type={"null or string"}
+  defaultValue={"null"}
+  module={"codegen"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `codegen.generators.<name>.env`
-
+<NixOption
+  path={"codegen.generators.<name>.env"}
+  type={"attribute set of string"}
+  defaultValue={"{ }"}
+  module={"codegen"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of string` |
-| **Default** | `{ }` |
-
----
-
-## `codegen.generators.<name>.exec`
-
+<NixOption
+  path={"codegen.generators.<name>.exec"}
+  type={"string"}
+  module={"codegen"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `codegen.generators.<name>.onEnter`
-
+<NixOption
+  path={"codegen.generators.<name>.onEnter"}
+  type={"null or boolean"}
+  defaultValue={"null"}
+  module={"codegen"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or boolean` |
-| **Default** | `null` |
-
----
-
-## `codegen.generators.<name>.runtimeInputs`
-
+<NixOption
+  path={"codegen.generators.<name>.runtimeInputs"}
+  type={"list of package"}
+  defaultValue={"[ ]"}
+  module={"codegen"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of package` |
-| **Default** | `[ ]` |
-
----
-
-## `codegen.runOnEnter`
-
+<NixOption
+  path={"codegen.runOnEnter"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"codegen"}
+>
 This option has no description.
-
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
+</NixOption>
 

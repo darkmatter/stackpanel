@@ -6,69 +6,55 @@ icon: MessageSquare
 
 # Motd Options
 
-## `motd.commands`
-
+<NixOption
+  path={"motd.commands"}
+  type={"list of (submodule)"}
+  defaultValue={"[ ]"}
+  module={"motd"}
+>
 List of available commands to show in MOTD
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
-
----
-
-## `motd.commands.*.description`
-
+<NixOption
+  path={"motd.commands.*.description"}
+  type={"string"}
+  module={"motd"}
+>
 Command description
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `motd.commands.*.name`
-
+<NixOption
+  path={"motd.commands.*.name"}
+  type={"string"}
+  module={"motd"}
+>
 Command name
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `motd.enable`
-
+<NixOption
+  path={"motd.enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"motd"}
+>
 Show MOTD with help text on shell entry
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `motd.features`
-
+<NixOption
+  path={"motd.features"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"motd"}
+>
 List of enabled features to show in MOTD
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `motd.hints`
-
+<NixOption
+  path={"motd.hints"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"motd"}
+>
 List of hints to show in MOTD
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
+</NixOption>
 

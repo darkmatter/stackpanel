@@ -6,69 +6,57 @@ icon: Settings
 
 # Step-ca Options
 
-## `step-ca.ca-fingerprint`
-
+<NixOption
+  path={"step-ca.ca-fingerprint"}
+  type={"string"}
+  defaultValue={"\"\""}
+  module={"step-ca"}
+>
 Step CA root certificate fingerprint for verification
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `step-ca.ca-url`
-
+<NixOption
+  path={"step-ca.ca-url"}
+  type={"string"}
+  defaultValue={"\"\""}
+  module={"step-ca"}
+>
 Step CA server URL (e.g., https://ca.internal:443)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `step-ca.cert-name`
-
+<NixOption
+  path={"step-ca.cert-name"}
+  type={"string"}
+  defaultValue={"\"\""}
+  module={"step-ca"}
+>
 Common name for the device certificate
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `step-ca.enable`
-
+<NixOption
+  path={"step-ca.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"step-ca"}
+>
 Enable Step CA certificate management
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `step-ca.prompt-on-shell`
-
+<NixOption
+  path={"step-ca.prompt-on-shell"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"step-ca"}
+>
 Prompt for certificate setup on shell entry if not configured
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `step-ca.provisioner`
-
+<NixOption
+  path={"step-ca.provisioner"}
+  type={"string"}
+  defaultValue={"\"\""}
+  module={"step-ca"}
+>
 Step CA provisioner name
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
+</NixOption>
 

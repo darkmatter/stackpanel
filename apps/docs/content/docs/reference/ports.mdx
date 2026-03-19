@@ -6,101 +6,66 @@ icon: Plug
 
 # Ports Options
 
-## `ports.base-port`
-
+<NixOption
+  path={"ports.base-port"}
+  type={"16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
+  defaultValue={"3600"}
+  readonly
+  module={"ports"}
+>
 The computed base port for this project
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
-| **Default** | `3600` |
-| **Read Only** | `true` |
-
----
-
-## `ports.enable`
-
+<NixOption
+  path={"ports.enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  exampleCode={"true"}
+  module={"ports"}
+>
 Whether to enable Automatic port assignment.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ports.project-name`
-
+<NixOption
+  path={"ports.project-name"}
+  type={"string"}
+  defaultValue={"\"default\""}
+  exampleCode={"\"myapp\""}
+  module={"ports"}
+>
 Project name used for port computation. Set this to match your project name.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"default"` |
-
-**Example:**
-
-`"myapp"`
-
-
----
-
-## `ports.service`
-
+<NixOption
+  path={"ports.service"}
+  type={"attribute set of attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  readonly
+  module={"ports"}
+>
 Computed service information by key.
 Access: config.stackpanel.ports.service.POSTGRES.port
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `ports.services`
-
+<NixOption
+  path={"ports.services"}
+  type={"attribute set of (submodule)"}
+  defaultValue={"{ }"}
+  exampleCode={"{\n  POSTGRES = { name = \"PostgreSQL\"; };\n  REDIS = { name = \"Redis\"; };\n  MINIO = { name = \"Minio\"; };\n  MINIO_CONSOLE = { name = \"Minio Console\"; };\n}"}
+  module={"ports"}
+>
 Attrset of infrastructure services that need ports.
 Each service gets a deterministic port based on project name + service key.
 Provided via STACKPANEL_SERVICES_CONFIG (JSON).
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
-**Example:**
-
-```nix
-{
-  POSTGRES = { name = "PostgreSQL"; };
-  REDIS = { name = "Redis"; };
-  MINIO = { name = "Minio"; };
-  MINIO_CONSOLE = { name = "Minio Console"; };
-}
-```
-
-
----
-
-## `ports.services.<name>.name`
-
+<NixOption
+  path={"ports.services.<name>.name"}
+  type={"string"}
+  defaultValue={"\"‹name›\""}
+  exampleCode={"\"PostgreSQL\""}
+  module={"ports"}
+>
 Human-readable name for display (defaults to attrset key)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"‹name›"` |
-
-**Example:**
-
-`"PostgreSQL"`
-
-
----
+</NixOption>
 

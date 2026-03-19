@@ -153,11 +153,11 @@ Outputs are written to a SOPS-encrypted YAML file in your repo:
 ```nix
 stackpanel.infra.storage-backend = {
   type = "sops";
-  sops.group = "dev";  # writes to .stack/secrets/vars/dev.sops.yaml
+  sops.group = "dev";  # implementation-specific SOPS target group
 };
 ```
 
-After `infra:deploy`, outputs like `aws-secrets-roleArn` appear in the SOPS file. They're decrypted at runtime using your team's AGE keys.
+After `infra:deploy`, outputs like `aws-secrets-roleArn` appear in the configured SOPS file. They're decrypted at runtime using your configured SOPS recipients.
 
 ### AWS SSM Parameter Store
 

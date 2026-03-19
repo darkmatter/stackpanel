@@ -6,96 +6,82 @@ icon: Settings
 
 # Core Options
 
-## `checks`
-
+<NixOption
+  path={"checks"}
+  type={"attribute set of package"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Additional flake checks contributed by stackpanel modules.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of package` |
-| **Default** | `{ }` |
-
----
-
-## `debug`
-
+<NixOption
+  path={"debug"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"core"}
+>
 Whether to enable Enable Stackpanel Debug Mode.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `direnv.hide-env-diff`
-
+<NixOption
+  path={"direnv.hide-env-diff"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"core"}
+>
 Hide the 'direnv: export +VAR...' log line (requires user's direnv.toml)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `dirs`
-
+<NixOption
+  path={"dirs"}
+  type={"submodule"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Directories used by stackpanel.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | `{ }` |
-
----
-
-## `dirs.config`
-
+<NixOption
+  path={"dirs.config"}
+  type={"absolute path"}
+  defaultValue={"/Users/cm/git/darkmatter/stackpanel/.stack/config.nix"}
+  module={"core"}
+>
 Directory for stackpanel configuration files.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `absolute path` |
-| **Default** | `/Users/cm/git/darkmatter/stackpanel/.stack/config.nix` |
-
----
-
-## `dirs.data`
-
+<NixOption
+  path={"dirs.data"}
+  type={"string"}
+  defaultValue={"\".stack/data\""}
+  readonly
+  module={"core"}
+>
 Full data directory path (relative to project root).
 Computed as: dirs.home + "/data"
 This is read-only - configure dirs.home instead.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stack/data"` |
-| **Read Only** | `true` |
-
----
-
-## `dirs.gen`
-
+<NixOption
+  path={"dirs.gen"}
+  type={"string"}
+  defaultValue={"\".stack/gen\""}
+  readonly
+  module={"core"}
+>
 Full generated files directory path (relative to project root).
 Computed as: dirs.home + "/gen"
 This is read-only - configure dirs.home instead.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stack/gen"` |
-| **Read Only** | `true` |
-
----
-
-## `dirs.home`
-
+<NixOption
+  path={"dirs.home"}
+  type={"string"}
+  defaultValue={"\".stack\""}
+  module={"core"}
+>
 Root directory for stackpanel files (relative to project root).
 This is the ONLY configurable directory option.
 
@@ -106,102 +92,80 @@ Subdirectories are automatically computed:
   - data/ (checked in) -  nix-backed configuration db
 
 Example: ".stack" → keys at ".stack/keys", profile at ".stack/profile"
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stack"` |
-
----
-
-## `dirs.keys`
-
+<NixOption
+  path={"dirs.keys"}
+  type={"string"}
+  defaultValue={"\".stack/keys\""}
+  readonly
+  module={"core"}
+>
 Full keys directory path (relative to project root).
 Persistent credentials only. Computed as: dirs.home + "/keys"
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stack/keys"` |
-| **Read Only** | `true` |
-
----
-
-## `dirs.profile`
-
+<NixOption
+  path={"dirs.profile"}
+  type={"string"}
+  defaultValue={"\".stack/profile\""}
+  readonly
+  module={"core"}
+>
 Full profile directory path (relative to project root).
 Ephemeral runtime/cache (safe to delete). Computed as: dirs.home + "/profile"
 Replaces legacy state/ for stackpanel.json, shell.log, etc.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stack/profile"` |
-| **Read Only** | `true` |
-
----
-
-## `dirs.state`
-
+<NixOption
+  path={"dirs.state"}
+  type={"string"}
+  defaultValue={"\".stack/profile\""}
+  readonly
+  module={"core"}
+>
 DEPRECATED: Use dirs.profile. Alias for profile for backward compatibility.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stack/profile"` |
-| **Read Only** | `true` |
-
----
-
-## `enable`
-
+<NixOption
+  path={"enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  exampleCode={"true"}
+  module={"core"}
+>
 Whether to enable Enable Stackpanel.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `git-hooks`
-
+<NixOption
+  path={"git-hooks"}
+  type={"attribute set of anything"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Git hooks configuration fragment (consumed by git-hooks.nix).
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of anything` |
-| **Default** | `{ }` |
-
----
-
-## `github`
-
+<NixOption
+  path={"github"}
+  type={"string"}
+  defaultValue={"\"\""}
+  exampleCode={"\"darkmatter/stackpanel\""}
+  module={"core"}
+>
 DEPRECATED: Use stackpanel.project.owner and stackpanel.project.repo instead.
 
 GitHub repository in 'owner/repo' format for this project. This value is
 used as a key for certain features like stable port calculation and
 user sync.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
-**Example:**
-
-`"darkmatter/stackpanel"`
-
-
----
-
-## `gitignore`
-
+<NixOption
+  path={"gitignore"}
+  type={"submodule"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Reserved options for managed `.gitignore` generation.
 
 Stackpanel core owns a block-managed section in `.gitignore` and merges
@@ -209,298 +173,238 @@ entries from this option. This provides a stable, explicit API for common
 `.gitignore` presets while still allowing modules to contribute entries.
 
 The generated block is deduplicated and sorted.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | `{ }` |
-
----
-
-## `gitignore.defaults`
-
+<NixOption
+  path={"gitignore.defaults"}
+  type={"submodule"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Toggle built-in `.gitignore` presets managed by Stackpanel.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | `{ }` |
-
----
-
-## `gitignore.defaults.addProjectMarker`
-
+<NixOption
+  path={"gitignore.defaults.addProjectMarker"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"core"}
+>
 DEPRECATED: Use `stackpanel.gitignore.defaults.projectMarker` instead.
 Backward-compatible alias for including `stackpanel.root-marker` in `.gitignore`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `gitignore.defaults.localConfig`
-
+<NixOption
+  path={"gitignore.defaults.localConfig"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"core"}
+>
 Include `.stack/config.local.nix`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `gitignore.defaults.projectMarker`
-
+<NixOption
+  path={"gitignore.defaults.projectMarker"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"core"}
+>
 Include the root marker file (`stackpanel.root-marker`).
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `gitignore.defaults.stackpanelState`
-
+<NixOption
+  path={"gitignore.defaults.stackpanelState"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"core"}
+>
 Include `.stack/state/`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `gitignore.defaults.tasksDir`
-
+<NixOption
+  path={"gitignore.defaults.tasksDir"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"core"}
+>
 Include `.tasks`.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `gitignore.enable`
-
+<NixOption
+  path={"gitignore.enable"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"core"}
+>
 Whether Stackpanel should manage a `.gitignore` block.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `gitignore.entries`
-
+<NixOption
+  path={"gitignore.entries"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"core"}
+>
 Additional `.gitignore` entries to include in the managed block.
 
 Example:
   [ "dist/" ".env.local" ]
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `moduleRequirements`
-
+<NixOption
+  path={"moduleRequirements"}
+  type={"attribute set of (submodule)"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Variable requirements declared by enabled modules.
 Modules add entries here to declare what environment variables they need.
 The agent/UI can query this to show what's missing.
 
 Format: \{ moduleName = \{ requires = [ ... ]; provides = [ ... ]; \}; \}
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
----
-
-## `moduleRequirements.<name>.provides`
-
+<NixOption
+  path={"moduleRequirements.<name>.provides"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"core"}
+>
 Environment variables provided by this module after setup
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `moduleRequirements.<name>.requires`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires"}
+  type={"list of (submodule)"}
+  defaultValue={"[ ]"}
+  module={"core"}
+>
 Variables required by this module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
-
----
-
-## `moduleRequirements.<name>.requires.*.action`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.action"}
+  type={"null or (submodule)"}
+  defaultValue={"null"}
+  module={"core"}
+>
 Action to resolve this variable if missing
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or (submodule)` |
-| **Default** | `null` |
-
----
-
-## `moduleRequirements.<name>.requires.*.action.label`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.action.label"}
+  type={"string"}
+  defaultValue={"\"\""}
+  module={"core"}
+>
 Button/link label
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `moduleRequirements.<name>.requires.*.action.type`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.action.type"}
+  type={"string"}
+  module={"core"}
+>
 Action type: add-secret, add-variable, external
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `moduleRequirements.<name>.requires.*.action.url`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.action.url"}
+  type={"null or string"}
+  defaultValue={"null"}
+  module={"core"}
+>
 External URL for creating the value
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `moduleRequirements.<name>.requires.*.description`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.description"}
+  type={"string"}
+  defaultValue={"\"\""}
+  module={"core"}
+>
 Description of the variable
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `moduleRequirements.<name>.requires.*.key`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.key"}
+  type={"string"}
+  module={"core"}
+>
 Environment variable name
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `moduleRequirements.<name>.requires.*.sensitive`
-
+<NixOption
+  path={"moduleRequirements.<name>.requires.*.sensitive"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"core"}
+>
 Whether the value should be treated as a secret
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `name`
-
+<NixOption
+  path={"name"}
+  type={"string"}
+  defaultValue={"\"my-project\""}
+  module={"core"}
+>
 Name of your project. May be used for naming things and diplay purposes.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"my-project"` |
-
----
-
-## `project`
-
+<NixOption
+  path={"project"}
+  type={"submodule"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Project metadata including type, owner, and repository information.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | `{ }` |
-
----
-
-## `project.name`
-
+<NixOption
+  path={"project.name"}
+  type={"string"}
+  defaultValue={"\"my-project\""}
+  module={"core"}
+>
 Project name (defaults to stackpanel.name)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"my-project"` |
-
----
-
-## `project.owner`
-
+<NixOption
+  path={"project.owner"}
+  type={"string"}
+  defaultValue={"\"\""}
+  exampleCode={"\"darkmatter\""}
+  module={"core"}
+>
 Owner/organization of the project repository
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
-**Example:**
-
-`"darkmatter"`
-
-
----
-
-## `project.repo`
-
+<NixOption
+  path={"project.repo"}
+  type={"string"}
+  defaultValue={"\"\""}
+  exampleCode={"\"stackpanel\""}
+  module={"core"}
+>
 Repository name
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
-**Example:**
-
-`"stackpanel"`
-
-
----
-
-## `project.type`
-
+<NixOption
+  path={"project.type"}
+  type={"string"}
+  defaultValue={"\"github\""}
+  module={"core"}
+>
 Project type (e.g., 'github', 'gitlab', 'local')
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"github"` |
-
----
-
-## `root`
-
+<NixOption
+  path={"root"}
+  type={"null or string"}
+  defaultValue={"null"}
+  module={"core"}
+>
 Absolute path to the project root. If set, this overrides PWD-based detection.
 
 For pure flake evaluation (like `nix flake check`), use the readStackpanelRoot
@@ -518,38 +422,28 @@ imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
 ```
 
 Then in .envrc: `echo "$PWD" > .stackpanel-root`
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `root-marker`
-
+<NixOption
+  path={"root-marker"}
+  type={"string"}
+  defaultValue={"\".stackpanel-root\""}
+  module={"core"}
+>
 Filename for the root marker file written to the project root.
 Contains the absolute path to the project root, allowing tools
 to find the project from any subdirectory. Add to .dockerignore
 and .gitignore so containers create their own marker.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `".stackpanel-root"` |
-
----
-
-## `serializable`
-
+<NixOption
+  path={"serializable"}
+  type={"attribute set of anything"}
+  defaultValue={"{ }"}
+  module={"core"}
+>
 Serializable configuration data for the agent and CLI.
 Modules can contribute their JSON-safe config here.
 This data is included in stackpanelConfig for external tools.
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of anything` |
-| **Default** | `{ }` |
-
----
+</NixOption>
 

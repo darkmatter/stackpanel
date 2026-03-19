@@ -6,21 +6,26 @@ icon: Settings
 
 # Modules Options
 
-## `_moduleMetas`
+## Modules
 
+<NixOption
+  path={"_moduleMetas"}
+  type={"attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  module={"modules"}
+>
 Fast module metadata for discovery without full module evaluation.
 Each key is a module ID, value is the contents of that module's meta.nix.
 This is set automatically by the module auto-discovery in modules/default.nix.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-
----
-
-## `modules`
-
+<NixOption
+  path={"modules"}
+  type={"open submodule of attribute set of (submodule)"}
+  defaultValue={"{ }"}
+  exampleCode={"{\n  postgres = {\n    enable = true;\n    meta = {\n      name = \"PostgreSQL\";\n      description = \"PostgreSQL database server\";\n      icon = \"database\";\n      category = \"database\";\n    };\n    source.type = \"builtin\";\n    features = {\n      services = true;\n      healthchecks = true;\n      packages = true;\n    };\n    healthcheckModule = \"postgres\";\n    panels = [{\n      id = \"postgres-status\";\n      title = \"PostgreSQL Status\";\n      type = \"PANEL_TYPE_STATUS\";\n      fields = [{\n        name = \"metrics\";\n        type = \"FIELD_TYPE_JSON\";\n        value = \"[{\\\"label\\\":\\\"Status\\\",\\\"value\\\":\\\"Running\\\",\\\"status\\\":\\\"ok\\\"}]\";\n      }];\n    }];\n  };\n\n  my-custom-module = {\n    enable = true;\n    meta = {\n      name = \"My Custom Module\";\n      description = \"Does something useful\";\n      category = \"development\";\n    };\n    source = {\n      type = \"flake-input\";\n      flakeInput = \"my-module\";\n    };\n  };\n}"}
+  module={"modules"}
+>
 Stackpanel modules that provide features and UI panels.
 
 Modules are the unified way to extend stackpanel functionality:
@@ -43,689 +48,452 @@ Modules can be:
   - Builtin: Shipped with stackpanel
   - Local: Defined in your project
   - Remote: Installed via flake inputs or module registry
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
-**Example:**
-
-```nix
-{
-  postgres = {
-    enable = true;
-    meta = {
-      name = "PostgreSQL";
-      description = "PostgreSQL database server";
-      icon = "database";
-      category = "database";
-    };
-    source.type = "builtin";
-    features = {
-      services = true;
-      healthchecks = true;
-      packages = true;
-    };
-    healthcheckModule = "postgres";
-    panels = [{
-      id = "postgres-status";
-      title = "PostgreSQL Status";
-      type = "PANEL_TYPE_STATUS";
-      fields = [{
-        name = "metrics";
-        type = "FIELD_TYPE_JSON";
-        value = "[{\"label\":\"Status\",\"value\":\"Running\",\"status\":\"ok\"}]";
-      }];
-    }];
-  };
-
-  my-custom-module = {
-    enable = true;
-    meta = {
-      name = "My Custom Module";
-      description = "Does something useful";
-      category = "development";
-    };
-    source = {
-      type = "flake-input";
-      flakeInput = "my-module";
-    };
-  };
-}
-```
+</NixOption>
 
 
----
+## Modules
 
-## `modules.<name>.apps`
-
+<NixOption
+  path={"modules.<name>.apps"}
+  type={"attribute set of (submodule)"}
+  defaultValue={"{ }"}
+>
 Per-app module data (app name -\> module data)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (submodule)` |
-| **Default** | `{ }` |
-
----
-
-## `modules.<name>.apps.<name>.config`
-
+<NixOption
+  path={"modules.<name>.apps.<name>.config"}
+  type={"attribute set of string"}
+  defaultValue={"{ }"}
+>
 Module config for this app (string key-value pairs)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of string` |
-| **Default** | `{ }` |
-
----
-
-## `modules.<name>.apps.<name>.enabled`
-
+<NixOption
+  path={"modules.<name>.apps.<name>.enabled"}
+  type={"boolean"}
+  defaultValue={"true"}
+>
 Whether module is enabled for this app
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `modules.<name>.configSchema`
-
+<NixOption
+  path={"modules.<name>.configSchema"}
+  type={"null or string"}
+  defaultValue={"null"}
+  exampleCode={"''\n  {\n    \"type\": \"object\",\n    \"properties\": {\n      \"port\": { \"type\": \"integer\", \"default\": 5432 },\n      \"version\": { \"type\": \"string\", \"enum\": [\"15\", \"16\"], \"default\": \"16\" }\n    }\n  }\n''"}
+>
 JSON Schema string for generating configuration forms in the UI.
 The schema should describe the module's configurable options.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
-**Example:**
-
-```nix
-''
-  {
-    "type": "object",
-    "properties": {
-      "port": { "type": "integer", "default": 5432 },
-      "version": { "type": "string", "enum": ["15", "16"], "default": "16" }
-    }
-  }
-''
-```
-
-
----
-
-## `modules.<name>.conflicts`
-
+<NixOption
+  path={"modules.<name>.conflicts"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+>
 Other modules that conflict with this module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.enable`
-
+<NixOption
+  path={"modules.<name>.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+>
 Whether to enable the ‹name› module.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `modules.<name>.features`
-
+<NixOption
+  path={"modules.<name>.features"}
+  type={"submodule"}
+  defaultValue={"{ }"}
+>
 Which stackpanel features this module uses
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | `{ }` |
-
----
-
-## `modules.<name>.features.appModule`
-
+<NixOption
+  path={"modules.<name>.features.appModule"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module extends per-app configuration via appModules
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.files`
-
+<NixOption
+  path={"modules.<name>.features.files"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module generates files via stackpanel.files
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.healthchecks`
-
+<NixOption
+  path={"modules.<name>.features.healthchecks"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module defines health checks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.packages`
-
+<NixOption
+  path={"modules.<name>.features.packages"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module adds devshell packages
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.scripts`
-
+<NixOption
+  path={"modules.<name>.features.scripts"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module provides shell scripts/commands
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.secrets`
-
+<NixOption
+  path={"modules.<name>.features.secrets"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module manages secrets/variables
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.services`
-
+<NixOption
+  path={"modules.<name>.features.services"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module configures background services/processes
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.features.tasks`
-
+<NixOption
+  path={"modules.<name>.features.tasks"}
+  type={"boolean"}
+  defaultValue={"false"}
+>
 Module defines turborepo tasks
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `modules.<name>.flakeInputs`
-
+<NixOption
+  path={"modules.<name>.flakeInputs"}
+  type={"list of (submodule)"}
+  defaultValue={"[ ]"}
+>
 Flake inputs required by this module. Used for auto-installation from the registry.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.flakeInputs.*.followsNixpkgs`
-
+<NixOption
+  path={"modules.<name>.flakeInputs.*.followsNixpkgs"}
+  type={"boolean"}
+  defaultValue={"true"}
+>
 Whether to add inputs.nixpkgs.follows = "nixpkgs"
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `modules.<name>.flakeInputs.*.name`
-
+<NixOption
+  path={"modules.<name>.flakeInputs.*.name"}
+  type={"string"}
+>
 Input name in flake.nix (e.g., "my-module")
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.flakeInputs.*.url`
-
+<NixOption
+  path={"modules.<name>.flakeInputs.*.url"}
+  type={"string"}
+>
 Flake URL (e.g., "github:author/my-module")
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.healthcheckModule`
-
+<NixOption
+  path={"modules.<name>.healthcheckModule"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Name of the healthcheck module that provides health checks for this module.
 This links to stackpanel.healthchecks.modules..
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.meta`
-
+<NixOption
+  path={"modules.<name>.meta"}
+  type={"submodule"}
+  defaultCode={"{\n  name = \"‹name›\";\n}"}
+>
 Module metadata for display in the UI
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-{
-  name = "‹name›";
-}
-```
-
-
----
-
-## `modules.<name>.meta.author`
-
+<NixOption
+  path={"modules.<name>.meta.author"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Author or maintainer of the module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.meta.category`
-
+<NixOption
+  path={"modules.<name>.meta.category"}
+  type={"one of \"unspecified\", \"infrastructure\", \"ci-cd\", \"database\", \"secrets\", \"deployment\", \"development\", \"monitoring\", \"integration\", \"language\", \"service\""}
+  defaultValue={"\"unspecified\""}
+>
 Category for grouping in the UI
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "unspecified", "infrastructure", "ci-cd", "database", "secrets", "deployment", "development", "monitoring", "integration", "language", "service"` |
-| **Default** | `"unspecified"` |
-
----
-
-## `modules.<name>.meta.description`
-
+<NixOption
+  path={"modules.<name>.meta.description"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Human-readable description of what the module does
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.meta.homepage`
-
+<NixOption
+  path={"modules.<name>.meta.homepage"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 URL to module documentation or repository
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.meta.icon`
-
+<NixOption
+  path={"modules.<name>.meta.icon"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Lucide icon name for the module (e.g., 'database', 'box', 'cloud')
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.meta.name`
-
+<NixOption
+  path={"modules.<name>.meta.name"}
+  type={"string"}
+>
 Display name of the module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.meta.version`
-
+<NixOption
+  path={"modules.<name>.meta.version"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Module version
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.panels`
-
+<NixOption
+  path={"modules.<name>.panels"}
+  type={"list of (submodule)"}
+  defaultValue={"[ ]"}
+>
 UI panels provided by this module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.panels.*.description`
-
+<NixOption
+  path={"modules.<name>.panels.*.description"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Panel description
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.panels.*.fields`
-
+<NixOption
+  path={"modules.<name>.panels.*.fields"}
+  type={"list of (submodule)"}
+  defaultValue={"[ ]"}
+>
 Panel configuration fields
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (submodule)` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.panels.*.fields.*.name`
-
+<NixOption
+  path={"modules.<name>.panels.*.fields.*.name"}
+  type={"string"}
+>
 Field name (maps to component prop)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.panels.*.fields.*.options`
-
+<NixOption
+  path={"modules.<name>.panels.*.fields.*.options"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+>
 Options for select fields
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.panels.*.fields.*.type`
-
+<NixOption
+  path={"modules.<name>.panels.*.fields.*.type"}
+  type={"one of \"FIELD_TYPE_UNSPECIFIED\", \"FIELD_TYPE_STRING\", \"FIELD_TYPE_NUMBER\", \"FIELD_TYPE_BOOLEAN\", \"FIELD_TYPE_SELECT\", \"FIELD_TYPE_MULTISELECT\", \"FIELD_TYPE_APP_FILTER\", \"FIELD_TYPE_COLUMNS\", \"FIELD_TYPE_JSON\""}
+  defaultValue={"\"FIELD_TYPE_STRING\""}
+>
 Field type
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "FIELD_TYPE_UNSPECIFIED", "FIELD_TYPE_STRING", "FIELD_TYPE_NUMBER", "FIELD_TYPE_BOOLEAN", "FIELD_TYPE_SELECT", "FIELD_TYPE_MULTISELECT", "FIELD_TYPE_APP_FILTER", "FIELD_TYPE_COLUMNS", "FIELD_TYPE_JSON"` |
-| **Default** | `"FIELD_TYPE_STRING"` |
-
----
-
-## `modules.<name>.panels.*.fields.*.value`
-
+<NixOption
+  path={"modules.<name>.panels.*.fields.*.value"}
+  type={"string"}
+  defaultValue={"\"\""}
+>
 Field value (JSON-encoded for complex types)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `""` |
-
----
-
-## `modules.<name>.panels.*.id`
-
+<NixOption
+  path={"modules.<name>.panels.*.id"}
+  type={"string"}
+>
 Unique panel identifier
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.panels.*.order`
-
+<NixOption
+  path={"modules.<name>.panels.*.order"}
+  type={"signed integer"}
+  defaultValue={"100"}
+>
 Display order (lower = first)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `100` |
-
----
-
-## `modules.<name>.panels.*.title`
-
+<NixOption
+  path={"modules.<name>.panels.*.title"}
+  type={"string"}
+>
 Display title
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `modules.<name>.panels.*.type`
-
+<NixOption
+  path={"modules.<name>.panels.*.type"}
+  type={"one of \"PANEL_TYPE_UNSPECIFIED\", \"PANEL_TYPE_STATUS\", \"PANEL_TYPE_APPS_GRID\", \"PANEL_TYPE_FORM\", \"PANEL_TYPE_TABLE\", \"PANEL_TYPE_CUSTOM\""}
+  defaultValue={"\"PANEL_TYPE_STATUS\""}
+>
 Panel type (determines which component to render)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM"` |
-| **Default** | `"PANEL_TYPE_STATUS"` |
-
----
-
-## `modules.<name>.priority`
-
+<NixOption
+  path={"modules.<name>.priority"}
+  type={"signed integer"}
+  defaultValue={"100"}
+>
 Load order priority (lower = earlier)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `signed integer` |
-| **Default** | `100` |
-
----
-
-## `modules.<name>.requires`
-
+<NixOption
+  path={"modules.<name>.requires"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+>
 Other modules that must be enabled for this module to work
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `modules.<name>.source`
-
+<NixOption
+  path={"modules.<name>.source"}
+  type={"submodule"}
+  defaultValue={"{ }"}
+>
 Module source configuration
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `submodule` |
-| **Default** | `{ }` |
-
----
-
-## `modules.<name>.source.flakeInput`
-
+<NixOption
+  path={"modules.<name>.source.flakeInput"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Name of the flake input (for flake-input source type)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.source.path`
-
+<NixOption
+  path={"modules.<name>.source.path"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Local path to the module (for local source type)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.source.ref`
-
+<NixOption
+  path={"modules.<name>.source.ref"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Git ref (branch, tag, commit) for remote modules
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.source.registryId`
-
+<NixOption
+  path={"modules.<name>.source.registryId"}
+  type={"null or string"}
+  defaultValue={"null"}
+>
 Registry identifier (for registry source type, e.g., 'stackpanel/docker')
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `modules.<name>.source.type`
-
+<NixOption
+  path={"modules.<name>.source.type"}
+  type={"one of \"builtin\", \"local\", \"flake-input\", \"registry\""}
+  defaultValue={"\"builtin\""}
+>
 Source type for the module
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "builtin", "local", "flake-input", "registry"` |
-| **Default** | `"builtin"` |
-
----
-
-## `modules.<name>.tags`
-
+<NixOption
+  path={"modules.<name>.tags"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+>
 Tags for categorizing/filtering modules
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
+## Modules
 
----
-
-## `modulesBuiltin`
-
+<NixOption
+  path={"modulesBuiltin"}
+  type={"attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  readonly
+  module={"modules"}
+>
 Builtin modules shipped with stackpanel
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesComputed`
-
+<NixOption
+  path={"modulesComputed"}
+  type={"attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  readonly
+  module={"modules"}
+>
 Computed module configurations (only enabled modules, serializable)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesComputedAll`
-
+<NixOption
+  path={"modulesComputedAll"}
+  type={"attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  readonly
+  module={"modules"}
+>
 Computed module configurations (all modules including disabled, serializable)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesExternal`
-
+<NixOption
+  path={"modulesExternal"}
+  type={"attribute set of unspecified value"}
+  defaultValue={"{ }"}
+  readonly
+  module={"modules"}
+>
 External modules (local, flake-input, or registry)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of unspecified value` |
-| **Default** | `{ }` |
-| **Read Only** | `true` |
-
----
-
-## `modulesList`
-
+<NixOption
+  path={"modulesList"}
+  type={"list of unspecified value"}
+  defaultValue={"[ ]"}
+  readonly
+  module={"modules"}
+>
 Flat list of enabled modules (for API consumption)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of unspecified value` |
-| **Default** | `[ ]` |
-| **Read Only** | `true` |
-
----
-
-## `modulesListAll`
-
+<NixOption
+  path={"modulesListAll"}
+  type={"list of unspecified value"}
+  defaultValue={"[ ]"}
+  readonly
+  module={"modules"}
+>
 Flat list of all modules including disabled (for API consumption)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of unspecified value` |
-| **Default** | `[ ]` |
-| **Read Only** | `true` |
-
----
+</NixOption>
 

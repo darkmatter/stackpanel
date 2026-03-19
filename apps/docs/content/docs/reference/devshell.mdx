@@ -6,101 +6,76 @@ icon: Terminal
 
 # Devshell Options
 
-## `devshell._commandsSerializable.<name>.description`
-
+<NixOption
+  path={"devshell._commandsSerializable.<name>.description"}
+  type={"null or string"}
+  defaultValue={"null"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or string` |
-| **Default** | `null` |
-
----
-
-## `devshell._commandsSerializable.<name>.env`
-
+<NixOption
+  path={"devshell._commandsSerializable.<name>.env"}
+  type={"attribute set of string"}
+  defaultValue={"{ }"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of string` |
-| **Default** | `{ }` |
-
----
-
-## `devshell._commandsSerializable.<name>.exec`
-
+<NixOption
+  path={"devshell._commandsSerializable.<name>.exec"}
+  type={"string"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `devshell._commandsSerializable.<name>.name`
-
+<NixOption
+  path={"devshell._commandsSerializable.<name>.name"}
+  type={"string"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | _none_ |
-
----
-
-## `devshell.buildInputs`
-
+<NixOption
+  path={"devshell.buildInputs"}
+  type={"list of package"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of package` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.clean.aliases`
-
+<NixOption
+  path={"devshell.clean.aliases"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  exampleCode={"[\n  \"dev\"\n  \"start\"\n]"}
+  module={"devshell"}
+>
 List of shell aliases to unset when entering the devshell.
 Use this if you have aliases that conflict with stackpanel scripts (e.g., "dev").
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
-**Example:**
-
-```nix
-[
-  "dev"
-  "start"
-]
-```
-
-
----
-
-## `devshell.clean.enable`
-
+<NixOption
+  path={"devshell.clean.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"devshell"}
+>
 Whether to enable clean environment mode.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `devshell.clean.impure`
-
+<NixOption
+  path={"devshell.clean.impure"}
+  type={"boolean"}
+  defaultValue={"true"}
+  module={"devshell"}
+>
 Whether to use --impure flag when entering the devshell.
 
 --impure allows Nix to access environment variables and system state,
@@ -108,279 +83,153 @@ but prevents effective caching between runs.
 
 Set to false if you want better caching and your devshell doesn't
 need access to parent environment state.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `true` |
-
----
-
-## `devshell.clean.keep`
-
+<NixOption
+  path={"devshell.clean.keep"}
+  type={"list of string"}
+  defaultCode={"[\n  \"HOME\"\n  \"USER\"\n  \"LOGNAME\"\n  \"SHELL\"\n  \"TMPDIR\"\n  \"TERM\"\n  \"COLORTERM\"\n  \"TERM_PROGRAM\"\n  \"TERM_PROGRAM_VERSION\"\n  \"LANG\"\n  \"LC_ALL\"\n  \"LC_CTYPE\"\n  \"SSH_AUTH_SOCK\"\n  \"SSH_SOCKET_DIR\"\n  \"GPG_AGENT_INFO\"\n  \"GNUPGHOME\"\n  \"EDITOR\"\n  \"VISUAL\"\n  \"PAGER\"\n  \"__CF_USER_TEXT_ENCODING\"\n  \"COMMAND_MODE\"\n]"}
+  exampleCode={"[\n  \"HOME\"\n  \"USER\"\n  \"SSH_AUTH_SOCK\"\n  \"DISPLAY\"\n]"}
+  module={"devshell"}
+>
 Environment variables to preserve when clean.enable is true.
 These variables are passed through from the parent environment.
 
 Use `nix develop --ignore-environment --impure` with `--keep` flags
 for each variable in this list, or use the generated wrapper script.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "HOME"
-  "USER"
-  "LOGNAME"
-  "SHELL"
-  "TMPDIR"
-  "TERM"
-  "COLORTERM"
-  "TERM_PROGRAM"
-  "TERM_PROGRAM_VERSION"
-  "LANG"
-  "LC_ALL"
-  "LC_CTYPE"
-  "SSH_AUTH_SOCK"
-  "SSH_SOCKET_DIR"
-  "GPG_AGENT_INFO"
-  "GNUPGHOME"
-  "EDITOR"
-  "VISUAL"
-  "PAGER"
-  "__CF_USER_TEXT_ENCODING"
-  "COMMAND_MODE"
-]
-```
-
-
-**Example:**
-
-```nix
-[
-  "HOME"
-  "USER"
-  "SSH_AUTH_SOCK"
-  "DISPLAY"
-]
-```
-
-
----
-
-## `devshell.clean.keepDirenv`
-
+<NixOption
+  path={"devshell.clean.keepDirenv"}
+  type={"list of string"}
+  defaultCode={"[\n  \"DIRENV_DIR\"\n  \"DIRENV_FILE\"\n]"}
+  module={"devshell"}
+>
 Direnv state variables. Only needed if using direnv inside the clean shell.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "DIRENV_DIR"
-  "DIRENV_FILE"
-]
-```
-
-
----
-
-## `devshell.clean.keepFzf`
-
+<NixOption
+  path={"devshell.clean.keepFzf"}
+  type={"list of string"}
+  defaultCode={"[\n  \"FZF_DEFAULT_COMMAND\"\n  \"FZF_DEFAULT_OPTS\"\n  \"FZF_CTRL_T_COMMAND\"\n  \"FZF_ALT_C_COMMAND\"\n]"}
+  module={"devshell"}
+>
 Environment variables for fzf configuration.
 Add to clean.keep if you want to preserve your fzf settings.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "FZF_DEFAULT_COMMAND"
-  "FZF_DEFAULT_OPTS"
-  "FZF_CTRL_T_COMMAND"
-  "FZF_ALT_C_COMMAND"
-]
-```
-
-
----
-
-## `devshell.clean.keepGui`
-
+<NixOption
+  path={"devshell.clean.keepGui"}
+  type={"list of string"}
+  defaultCode={"[\n  \"DISPLAY\"\n  \"WAYLAND_DISPLAY\"\n  \"XDG_RUNTIME_DIR\"\n  \"DBUS_SESSION_BUS_ADDRESS\"\n]"}
+  module={"devshell"}
+>
 Additional environment variables to keep for GUI applications.
 These are NOT included by default. Add them to clean.keep if needed:
 
   stackpanel.devshell.clean.keep = config.stackpanel.devshell.clean.keep
     ++ config.stackpanel.devshell.clean.keepGui;
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "DISPLAY"
-  "WAYLAND_DISPLAY"
-  "XDG_RUNTIME_DIR"
-  "DBUS_SESSION_BUS_ADDRESS"
-]
-```
-
-
----
-
-## `devshell.clean.keepWarp`
-
+<NixOption
+  path={"devshell.clean.keepWarp"}
+  type={"list of string"}
+  defaultCode={"[\n  \"WARP_HONOR_PS1\"\n  \"WARP_IS_LOCAL_SHELL_SESSION\"\n  \"WARP_USE_SSH_WRAPPER\"\n]"}
+  module={"devshell"}
+>
 Environment variables for Warp terminal features.
 Add to clean.keep if using Warp terminal.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "WARP_HONOR_PS1"
-  "WARP_IS_LOCAL_SHELL_SESSION"
-  "WARP_USE_SSH_WRAPPER"
-]
-```
-
-
----
-
-## `devshell.clean.keepXdg`
-
+<NixOption
+  path={"devshell.clean.keepXdg"}
+  type={"list of string"}
+  defaultCode={"[\n  \"XDG_CACHE_HOME\"\n  \"XDG_CONFIG_HOME\"\n  \"XDG_DATA_HOME\"\n  \"XDG_STATE_HOME\"\n]"}
+  module={"devshell"}
+>
 XDG base directory environment variables (often set by home-manager).
 Add to clean.keep if you want to preserve these paths.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "XDG_CACHE_HOME"
-  "XDG_CONFIG_HOME"
-  "XDG_DATA_HOME"
-  "XDG_STATE_HOME"
-]
-```
-
-
----
-
-## `devshell.env`
-
+<NixOption
+  path={"devshell.env"}
+  type={"attribute set of string"}
+  defaultValue={"{ }"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of string` |
-| **Default** | `{ }` |
-
----
-
-## `devshell.hooks.after`
-
+<NixOption
+  path={"devshell.hooks.after"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.hooks.before`
-
+<NixOption
+  path={"devshell.hooks.before"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.hooks.main`
-
+<NixOption
+  path={"devshell.hooks.main"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.nativeBuildInputs`
-
+<NixOption
+  path={"devshell.nativeBuildInputs"}
+  type={"list of package"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of package` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.packages`
-
+<NixOption
+  path={"devshell.packages"}
+  type={"list of package"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of package` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.path.append`
-
+<NixOption
+  path={"devshell.path.append"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `devshell.path.prepend`
-
+<NixOption
+  path={"devshell.path.prepend"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"devshell"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `packages`
-
+<NixOption
+  path={"packages"}
+  type={"list of (package or string)"}
+  defaultValue={"[ ]"}
+  exampleCode={"[\n  pkgs.git\n  \"ripgrep\"\n  \"nodePackages.typescript\"\n]"}
+  module={"devshell"}
+>
 Packages to include in the devshell.
 
 Can be either:
@@ -389,22 +238,5 @@ Can be either:
 
 String packages are resolved via nixpkgs attribute paths, supporting
 nested paths like "nodePackages.typescript".
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of (package or string)` |
-| **Default** | `[ ]` |
-
-**Example:**
-
-```nix
-[
-  pkgs.git
-  "ripgrep"
-  "nodePackages.typescript"
-]
-```
-
-
----
+</NixOption>
 

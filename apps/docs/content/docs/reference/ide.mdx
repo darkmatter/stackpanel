@@ -6,215 +6,154 @@ icon: MonitorSmartphone
 
 # Ide Options
 
-## `ide.cursor.enable`
-
+<NixOption
+  path={"ide.cursor.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ide"}
+>
 Whether to enable Cursor editor integration (not yet implemented).
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ide.enable`
-
+<NixOption
+  path={"ide.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ide"}
+>
 Generate IDE configuration files into .stack/gen/ide/
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ide.vscode.enable`
-
+<NixOption
+  path={"ide.vscode.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ide"}
+>
 Generate VS Code workspace and configuration files
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ide.vscode.existing-settings-path`
-
+<NixOption
+  path={"ide.vscode.existing-settings-path"}
+  type={"null or absolute path"}
+  defaultValue={"null"}
+  module={"ide"}
+>
 Path to existing VS Code settings.json to merge with generated settings.
 
 WARNING: This creates IMPURE evaluation - the file must exist at Nix evaluation time.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or absolute path` |
-| **Default** | `null` |
-
----
-
-## `ide.vscode.extensions`
-
+<NixOption
+  path={"ide.vscode.extensions"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"ide"}
+>
 Recommended VS Code extension IDs
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `ide.vscode.extra-folders`
-
+<NixOption
+  path={"ide.vscode.extra-folders"}
+  type={"list of attribute set of string"}
+  defaultValue={"[ ]"}
+  module={"ide"}
+>
 Additional workspace folders to include
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of attribute set of string` |
-| **Default** | `[ ]` |
-
----
-
-## `ide.vscode.output-mode`
-
+<NixOption
+  path={"ide.vscode.output-mode"}
+  type={"one of \"workspace\", \"settingsJson\""}
+  defaultValue={"\"workspace\""}
+  module={"ide"}
+>
 Where to output VS Code settings:
 - "workspace": Generate .stack/gen/ide/vscode/stackpanel.code-workspace (default, safe)
 - "settingsJson": Generate .vscode/settings.json (CAUTION: may overwrite existing file)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "workspace", "settingsJson"` |
-| **Default** | `"workspace"` |
-
----
-
-## `ide.vscode.settings`
-
+<NixOption
+  path={"ide.vscode.settings"}
+  type={"attribute set of anything"}
+  defaultValue={"{ }"}
+  module={"ide"}
+>
 VS Code settings to include in the generated configuration.
 These take highest priority and will override any existing or generated settings.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of anything` |
-| **Default** | `{ }` |
-
----
-
-## `ide.vscode.workspace-name`
-
+<NixOption
+  path={"ide.vscode.workspace-name"}
+  type={"string"}
+  defaultValue={"\"stackpanel\""}
+  module={"ide"}
+>
 Name for the generated .code-workspace file (without extension)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"stackpanel"` |
-
----
-
-## `ide.zed.enable`
-
+<NixOption
+  path={"ide.zed.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ide"}
+>
 Generate Zed configuration files
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ide.zed.existing-settings-path`
-
+<NixOption
+  path={"ide.zed.existing-settings-path"}
+  type={"null or absolute path"}
+  defaultValue={"null"}
+  module={"ide"}
+>
 Path to existing Zed settings.json to merge with generated settings.
 
 WARNING: This creates IMPURE evaluation - the file must exist at Nix evaluation time.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or absolute path` |
-| **Default** | `null` |
-
----
-
-## `ide.zed.extensions`
-
+<NixOption
+  path={"ide.zed.extensions"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  module={"ide"}
+>
 Recommended Zed extension IDs
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
----
-
-## `ide.zed.output-mode`
-
+<NixOption
+  path={"ide.zed.output-mode"}
+  type={"one of \"generated\", \"dotZed\""}
+  defaultValue={"\"generated\""}
+  module={"ide"}
+>
 Where to output Zed settings:
 - "generated": Generate to .stack/gen/zed/ (default, safe) - requires manual symlink
 - "dotZed": Generate to .zed/settings.json (CAUTION: may overwrite existing file)
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "generated", "dotZed"` |
-| **Default** | `"generated"` |
-
----
-
-## `ide.zed.settings`
-
+<NixOption
+  path={"ide.zed.settings"}
+  type={"attribute set of anything"}
+  defaultValue={"{ }"}
+  module={"ide"}
+>
 Zed settings to include in the generated configuration.
 These take highest priority and will override any existing or generated settings.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of anything` |
-| **Default** | `{ }` |
-
----
-
-## `ide.zed.tasks`
-
+<NixOption
+  path={"ide.zed.tasks"}
+  type={"list of attribute set of anything"}
+  defaultValue={"[ ]"}
+  exampleCode={"[\n  {\n    args = [\n      \"run\"\n      \"dev\"\n    ];\n    command = \"bun\";\n    label = \"dev\";\n  }\n]"}
+  module={"ide"}
+>
 Zed tasks to include in the generated tasks.json.
 Each task is an attrset with label, command, args, etc.
-
-| Property | Value |
-|----------|-------|
-| **Type** | `list of attribute set of anything` |
-| **Default** | `[ ]` |
-
-**Example:**
-
-```nix
-[
-  {
-    args = [
-      "run"
-      "dev"
-    ];
-    command = "bun";
-    label = "dev";
-  }
-]
-```
-
-
----
+</NixOption>
 
