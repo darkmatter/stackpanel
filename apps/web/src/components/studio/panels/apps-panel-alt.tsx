@@ -58,8 +58,7 @@ export function AppsPanelAlt() {
   const { data: rawApps, isLoading, error, refetch } = useApps();
   const { data: nixConfig } = useNixConfig();
   const { data: rawVariables } = useVariables();
-  const { data: appVariableLinks, refetch: refetchAppVariableLinks } =
-    useAppVariableLinks();
+  const { data: appVariableLinks } = useAppVariableLinks();
 
   // Get project name from config, fallback to "stackpanel"
   const projectName =
@@ -226,12 +225,6 @@ export function AppsPanelAlt() {
   // Subscribe to turbo.changed events for auto-refetch
   useAgentSSEEvent("turbo.changed", () => {
     fetchPackageGraph();
-  });
-
-  // Subscribe to config.changed events for auto-refetch
-  useAgentSSEEvent("config.changed", () => {
-    refetch();
-    refetchAppVariableLinks();
   });
 
   // Get turbo tasks for a specific app path from the package graph

@@ -28,7 +28,6 @@ import {
 	useNixData,
 	useVariablesBackend,
 	useRecipients,
-	useRekeyWorkflowStatus,
 } from "@/lib/use-agent";
 import { HelpButton } from "../shared/help-button";
 
@@ -40,6 +39,7 @@ import {
 	KmsConfigStep,
 	ProjectInfoStep,
 	SecretsBackendStep,
+	SopsAgeKeysStep,
 	TeamAccessStep,
 	VerifyConfigStep,
 } from "./steps";
@@ -91,9 +91,8 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 	const [sstFormData, setSstFormData] = useState<SSTData>({});
 	const [sstSaving, setSstSaving] = useState(false);
 
-	// Recipients and rekey workflow (fetched via hooks)
+	// Recipients
 	const { data: recipientsData } = useRecipients();
-	const { data: _rekeyWorkflowData } = useRekeyWorkflowStatus();
 	const recipientsCount =
 		(recipientsData as { recipients?: { length: number } } | undefined)
 			?.recipients?.length ?? 0;
@@ -169,23 +168,20 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			setKmsConfig(null);
 		}
 
-		// Check if groups are initialized by listing group secrets
-		try {
-			const groupList = await client.listGroupSecrets();
-			if ("groups" in groupList) {
-				const groups = groupList.groups as Record<string, string[]>;
-				const initMap: Record<string, boolean> = {};
-				for (const g of Object.keys(groups)) {
-					initMap[g] = true;
-				}
-				setGroupsInitialized(initMap);
-			}
-		} catch {
-			setGroupsInitialized({});
+		const configRoot = (nixConfig as Record<string, Record<string, unknown>>)
+			?.config;
+		const secretsConfig = configRoot?.secrets as
+			| Record<string, unknown>
+			| undefined;
+		const groupsConfig = (secretsConfig?.groups ?? {}) as Record<string, unknown>;
+		const initMap: Record<string, boolean> = {};
+		for (const groupName of Object.keys(groupsConfig)) {
+			initMap[groupName] = true;
 		}
+		setGroupsInitialized(initMap);
 
 		setIsLoading(false);
-	}, [token, agentClient]);
+	}, [token, agentClient, nixConfig]);
 
 	useEffect(() => {
 		loadConfig();
@@ -315,8 +311,8 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		},
 		{
 			id: "init-groups",
-			title: "Initialize Groups",
-			description: "Generate group encryption keys",
+			title: "Review Groups",
+			description: "Review SOPS group files and recipients",
 			status: isChamber
 				? "complete"
 				: groupsVerified
@@ -486,8 +482,9 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 					<div className="space-y-4">
 						<ConnectAgentStep />
 						<ProjectInfoStep />
-						<SecretsBackendStep />
-						<InfrastructureStep />
+					<SecretsBackendStep />
+					<SopsAgeKeysStep />
+					<InfrastructureStep />
 						<InitGroupsStep />
 						<TeamAccessStep />
 						<KmsConfigStep />
