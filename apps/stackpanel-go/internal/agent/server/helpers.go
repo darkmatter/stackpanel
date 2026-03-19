@@ -125,14 +125,14 @@ func normalizeEnv(env string) (string, error) {
 // Users are read from .stack/data/users.nix via Nix evaluation.
 
 func (s *Server) setSopsSecret(env string, key string, value string) (string, error) {
-	// Get recipients from Nix user config (replaces legacy users.yaml)
+	// Get recipients from Nix config.
 	recipients, err := s.getAgenixRecipients(nil)
 	if err != nil || len(recipients) == 0 {
-		// Fall back to all-public-keys from master keys
+		// Fall back to recipients resolved from the serialized secrets config
 		recipients = s.getAgeRecipients()
 	}
 	if len(recipients) == 0 {
-		return "", errors.New("no recipients found - ensure .stack/data/users.nix has public-keys defined")
+		return "", errors.New("no recipients found - configure stackpanel.secrets.recipients or stackpanel.users public-keys")
 	}
 
 	secretsRel := fmt.Sprintf(".stack/secrets/%s.yaml", env)
@@ -177,10 +177,7 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 	}
 
 	// Encrypt with SOPS using explicit recipients (so we don't rely on .sops.yaml).
-	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml"}
-	for _, r := range recipients {
-		args = append(args, "--age", r)
-	}
+	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
 	args = append(args, tmpPath)
 
 	enc, execErr := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, args...)

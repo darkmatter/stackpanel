@@ -300,12 +300,21 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 	var entities []string
 
 	// Read .stack/ directory (consolidated config files)
+	seen := map[string]struct{}{}
 	if entries, err := os.ReadDir(paths.Dir()); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".nix") {
 				continue
 			}
-			entities = append(entities, strings.TrimSuffix(entry.Name(), ".nix"))
+			name := strings.TrimSuffix(entry.Name(), ".nix")
+			if name == "config" {
+				continue
+			}
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			seen[name] = struct{}{}
+			entities = append(entities, name)
 		}
 	} else if !os.IsNotExist(err) {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to read data directory: "+err.Error())
@@ -318,7 +327,15 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".nix") {
 				continue
 			}
-			entities = append(entities, strings.TrimSuffix(entry.Name(), ".nix"))
+			name := strings.TrimSuffix(entry.Name(), ".nix")
+			if nixdata.PrefersConsolidatedConfig(name) {
+				continue
+			}
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			seen[name] = struct{}{}
+			entities = append(entities, name)
 		}
 	}
 
@@ -328,7 +345,12 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".nix") {
 				continue
 			}
-			entities = append(entities, "external-"+strings.TrimSuffix(entry.Name(), ".nix"))
+			name := "external-" + strings.TrimSuffix(entry.Name(), ".nix")
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			seen[name] = struct{}{}
+			entities = append(entities, name)
 		}
 	}
 

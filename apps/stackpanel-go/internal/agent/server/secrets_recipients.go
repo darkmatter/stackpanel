@@ -7,22 +7,25 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 // Recipient represents an AGE public key recipient.
 type Recipient struct {
-	Name      string `json:"name"`
-	PublicKey string `json:"publicKey"`
+	Name      string   `json:"name"`
+	PublicKey string   `json:"publicKey"`
+	Tags      []string `json:"tags,omitempty"`
+	Source    string   `json:"source,omitempty"`
+	CanDelete bool     `json:"canDelete,omitempty"`
 }
 
 // RecipientRequest is the body for adding a new recipient.
 type RecipientRequest struct {
-	Name         string `json:"name"`
-	PublicKey    string `json:"publicKey,omitempty"`
-	SSHPublicKey string `json:"sshPublicKey,omitempty"`
+	Name         string   `json:"name"`
+	PublicKey    string   `json:"publicKey,omitempty"`
+	SSHPublicKey string   `json:"sshPublicKey,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
 
 // RekeyWorkflowStatus describes the state of the GitHub Actions rekey workflow.
@@ -44,13 +47,116 @@ type SecretsVerifyResponse struct {
 // recipientNameRegex allows alphanumeric, hyphens, underscores, and dots.
 var recipientNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
-// getRecipientsDir returns the absolute path to the recipients directory.
-func (s *Server) getRecipientsDir() (string, error) {
-	secretsCfg, err := s.getSecretsConfig()
-	if err != nil {
-		return "", fmt.Errorf("failed to get secrets config: %w", err)
+func normalizeRecipientTags(tags []string) []string {
+	seen := make(map[string]struct{}, len(tags))
+	normalized := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		trimmed := strings.TrimSpace(tag)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		normalized = append(normalized, trimmed)
 	}
-	return filepath.Join(s.config.ProjectRoot, secretsCfg.SecretsDir, "recipients"), nil
+	sort.Strings(normalized)
+	return normalized
+}
+
+func normalizeRecipientPublicKey(req RecipientRequest) (string, error) {
+	publicKey := strings.TrimSpace(req.PublicKey)
+	sshPublicKey := strings.TrimSpace(req.SSHPublicKey)
+
+	if publicKey != "" && sshPublicKey != "" {
+		return "", fmt.Errorf("provide either publicKey or sshPublicKey, not both")
+	}
+
+	key := publicKey
+	if key == "" {
+		key = sshPublicKey
+	}
+	if key == "" {
+		return "", fmt.Errorf("either publicKey or sshPublicKey is required")
+	}
+
+	if strings.HasPrefix(key, "age1") || strings.HasPrefix(key, "ssh-") {
+		return key, nil
+	}
+
+	return "", fmt.Errorf("public key must start with 'age1' or 'ssh-'")
+}
+
+func (s *Server) explicitSecretsRecipients() (map[string]map[string]any, error) {
+	data, err := s.readConsolidatedData()
+	if err != nil {
+		return nil, fmt.Errorf("read config.nix: %w", err)
+	}
+
+	secretsRaw, ok := data["secrets"]
+	if !ok {
+		return map[string]map[string]any{}, nil
+	}
+	secrets, ok := secretsRaw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("config secrets is not an attribute set")
+	}
+
+	recipientsRaw, ok := secrets["recipients"]
+	if !ok {
+		return map[string]map[string]any{}, nil
+	}
+	recipientsMap, ok := recipientsRaw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("config secrets.recipients is not an attribute set")
+	}
+
+	result := make(map[string]map[string]any, len(recipientsMap))
+	for name, raw := range recipientsMap {
+		recipientMap, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		result[name] = recipientMap
+	}
+	return result, nil
+}
+
+func (s *Server) mutableSecretsRecipientsConfig() (map[string]any, map[string]any, map[string]any, error) {
+	data, err := s.readConsolidatedData()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("read config.nix: %w", err)
+	}
+
+	secrets, ok := data["secrets"].(map[string]any)
+	if !ok {
+		secrets = map[string]any{}
+		data["secrets"] = secrets
+	}
+
+	recipients, ok := secrets["recipients"].(map[string]any)
+	if !ok {
+		recipients = map[string]any{}
+		secrets["recipients"] = recipients
+	}
+
+	return data, secrets, recipients, nil
+}
+
+func (s *Server) notifyRecipientConfigChange(path string, action string) {
+	if s.flakeWatcher != nil {
+		s.flakeWatcher.InvalidateConfig()
+	}
+
+	s.broadcastSSE(SSEEvent{
+		Event: "config.changed",
+		Data: map[string]any{
+			"entity": "config",
+			"path":   path,
+			"source": action,
+		},
+	})
 }
 
 // handleRecipientsRoute dispatches GET/POST/DELETE to sub-handlers.
@@ -69,48 +175,40 @@ func (s *Server) handleRecipientsRoute(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleListRecipients returns all recipients in the recipients directory.
+// handleListRecipients returns all recipients from the Nix-configured secrets state.
 func (s *Server) handleListRecipients(w http.ResponseWriter, _ *http.Request) {
-	recipientsDir, err := s.getRecipientsDir()
+	serializable, err := s.getSerializableSecretsConfig()
 	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read secrets config: %v", err))
 		return
 	}
-
-	entries, err := os.ReadDir(recipientsDir)
+	explicitRecipients, err := s.explicitSecretsRecipients()
 	if err != nil {
-		if os.IsNotExist(err) {
-			s.writeAPI(w, http.StatusOK, map[string]any{"recipients": []Recipient{}})
-			return
-		}
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read recipients dir: %v", err))
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read config recipients: %v", err))
 		return
 	}
-
-	recipients := []Recipient{}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".age.pub") {
-			continue
+	recipients := make([]Recipient, 0, len(serializable.Recipients))
+	for name, recipient := range serializable.Recipients {
+		_, explicit := explicitRecipients[name]
+		source := "users"
+		if explicit {
+			source = "secrets"
 		}
-		name := strings.TrimSuffix(entry.Name(), ".age.pub")
-		content, err := os.ReadFile(filepath.Join(recipientsDir, entry.Name()))
-		if err != nil {
-			log.Warn().Err(err).Str("file", entry.Name()).Msg("failed to read recipient pub file")
-			continue
-		}
-		pubKey := strings.TrimSpace(string(content))
-		if pubKey != "" {
-			recipients = append(recipients, Recipient{
-				Name:      name,
-				PublicKey: pubKey,
-			})
-		}
+		recipients = append(recipients, Recipient{
+			Name:      name,
+			PublicKey: recipient.PublicKey,
+			Tags:      normalizeRecipientTags(recipient.Tags),
+			Source:    source,
+			CanDelete: explicit,
+		})
 	}
+	sort.Slice(recipients, func(i, j int) bool {
+		return recipients[i].Name < recipients[j].Name
+	})
 
 	s.writeAPI(w, http.StatusOK, map[string]any{"recipients": recipients})
 }
 
-// handleAddRecipient adds a new recipient .pub file.
 func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 	var req RecipientRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -118,88 +216,74 @@ func (s *Server) handleAddRecipient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
 		s.writeAPIError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-	if !recipientNameRegex.MatchString(req.Name) {
+	if !recipientNameRegex.MatchString(name) {
 		s.writeAPIError(w, http.StatusBadRequest, "name must be alphanumeric (hyphens, underscores, dots allowed)")
 		return
 	}
 
-	var pubKey string
-
-	if req.SSHPublicKey != "" {
-		// Convert SSH public key to AGE public key via ssh-to-age
-		// Write SSH key to a temp file since we can't pipe stdin
-		sshTmp, tmpErr := os.CreateTemp("", "sp-ssh-*.pub")
-		if tmpErr != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to create temp file for SSH key")
-			return
-		}
-		sshTmpPath := sshTmp.Name()
-		defer os.Remove(sshTmpPath)
-		if _, tmpErr = sshTmp.WriteString(req.SSHPublicKey); tmpErr != nil {
-			sshTmp.Close()
-			s.writeAPIError(w, http.StatusInternalServerError, "failed to write SSH key to temp file")
-			return
-		}
-		sshTmp.Close()
-
-		res, err := s.exec.RunWithOptions("ssh-to-age", s.config.ProjectRoot, nil, "-i", sshTmpPath)
-		if err != nil {
-			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("ssh-to-age conversion failed: %v", err))
-			return
-		}
-		if res.ExitCode != 0 {
-			s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("ssh-to-age conversion failed: %s", strings.TrimSpace(res.Stderr)))
-			return
-		}
-		pubKey = strings.TrimSpace(res.Stdout)
-		if pubKey == "" || !strings.HasPrefix(pubKey, "age1") {
-			s.writeAPIError(w, http.StatusBadRequest, "ssh-to-age conversion produced invalid output")
-			return
-		}
-	} else if req.PublicKey != "" {
-		pubKey = strings.TrimSpace(req.PublicKey)
-		if !strings.HasPrefix(pubKey, "age1") {
-			s.writeAPIError(w, http.StatusBadRequest, "public key must start with 'age1'")
-			return
-		}
-	} else {
-		s.writeAPIError(w, http.StatusBadRequest, "either publicKey or sshPublicKey is required")
+	publicKey, err := normalizeRecipientPublicKey(req)
+	if err != nil {
+		s.writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	recipientsDir, err := s.getRecipientsDir()
+	tags := normalizeRecipientTags(req.Tags)
+	if len(tags) == 0 {
+		s.writeAPIError(w, http.StatusBadRequest, "at least one tag is required")
+		return
+	}
+
+	existingRecipients, err := s.getSerializableSecretsConfig()
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read secrets config: %v", err))
+		return
+	}
+	explicitRecipients, err := s.explicitSecretsRecipients()
+	if err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read config recipients: %v", err))
+		return
+	}
+	if _, exists := existingRecipients.Recipients[name]; exists {
+		if _, explicit := explicitRecipients[name]; explicit {
+			s.writeAPIError(w, http.StatusConflict, fmt.Sprintf("recipient %q already exists", name))
+			return
+		}
+		s.writeAPIError(w, http.StatusConflict, fmt.Sprintf("recipient %q is managed by stackpanel.users; choose a different name or edit that user entry", name))
+		return
+	}
+
+	configData, _, recipientsMap, err := s.mutableSecretsRecipientsConfig()
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	// Ensure directory exists
-	if err := os.MkdirAll(recipientsDir, 0o755); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to create recipients dir: %v", err))
-		return
+	recipientsMap[name] = map[string]any{
+		"public-key": publicKey,
+		"tags":       tags,
 	}
 
-	pubFile := filepath.Join(recipientsDir, req.Name+".age.pub")
-	if err := os.WriteFile(pubFile, []byte(pubKey+"\n"), 0o644); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to write recipient file: %v", err))
+	if err := s.writeConsolidatedData(configData); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to update config.nix: %v", err))
 		return
 	}
-
-	log.Info().Str("name", req.Name).Str("pubKey", pubKey).Msg("added recipient")
+	s.notifyRecipientConfigChange("stackpanel.secrets.recipients."+name, "recipient.add")
 
 	s.writeAPI(w, http.StatusOK, Recipient{
-		Name:      req.Name,
-		PublicKey: pubKey,
+		Name:      name,
+		PublicKey: publicKey,
+		Tags:      tags,
+		Source:    "secrets",
+		CanDelete: true,
 	})
 }
 
-// handleDeleteRecipient removes a recipient .pub file.
 func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
 	if name == "" {
 		s.writeAPIError(w, http.StatusBadRequest, "name query parameter is required")
 		return
@@ -209,24 +293,33 @@ func (s *Server) handleDeleteRecipient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recipientsDir, err := s.getRecipientsDir()
+	configData, secretsMap, recipientsMap, err := s.mutableSecretsRecipientsConfig()
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	pubFile := filepath.Join(recipientsDir, name+".age.pub")
-	if _, err := os.Stat(pubFile); os.IsNotExist(err) {
-		s.writeAPIError(w, http.StatusNotFound, fmt.Sprintf("recipient '%s' not found", name))
+	if _, exists := recipientsMap[name]; !exists {
+		serializable, serr := s.getSerializableSecretsConfig()
+		if serr == nil {
+			if _, derived := serializable.Recipients[name]; derived {
+				s.writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("recipient %q is managed by stackpanel.users and must be removed there", name))
+				return
+			}
+		}
+		s.writeAPIError(w, http.StatusNotFound, fmt.Sprintf("recipient %q not found", name))
 		return
 	}
 
-	if err := os.Remove(pubFile); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to remove recipient: %v", err))
-		return
+	delete(recipientsMap, name)
+	if len(recipientsMap) == 0 {
+		delete(secretsMap, "recipients")
 	}
 
-	log.Info().Str("name", name).Msg("removed recipient")
+	if err := s.writeConsolidatedData(configData); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to update config.nix: %v", err))
+		return
+	}
+	s.notifyRecipientConfigChange("stackpanel.secrets.recipients."+name, "recipient.remove")
 
 	s.writeAPI(w, http.StatusOK, map[string]any{"name": name, "deleted": true})
 }
@@ -310,10 +403,7 @@ func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	tmpFile.Close()
 
 	// Encrypt with sops
-	encryptArgs := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml"}
-	for _, r := range recipients {
-		encryptArgs = append(encryptArgs, "--age", r)
-	}
+	encryptArgs := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
 	encryptArgs = append(encryptArgs, tmpPath)
 
 	encRes, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, encryptArgs...)

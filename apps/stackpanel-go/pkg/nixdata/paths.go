@@ -68,6 +68,9 @@ func (p *Paths) ExternalDataDir() string {
 // For external entities (names starting with "external-"), use
 // ExternalEntityPath instead.
 func (p *Paths) EntityPath(entity string) string {
+	if PrefersConsolidatedConfig(entity) {
+		return p.ConfigFilePath()
+	}
 	legacyPath := filepath.Join(p.LegacyDataDir(), entity+".nix")
 	if _, err := os.Stat(legacyPath); err == nil {
 		return legacyPath
@@ -87,6 +90,9 @@ func (p *Paths) ExternalEntityPath(entity string) string {
 // IsUsingConsolidatedConfig returns true if the given entity is stored in
 // the consolidated config.nix rather than a legacy individual file.
 func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
+	if PrefersConsolidatedConfig(entity) {
+		return true
+	}
 	legacyPath := filepath.Join(p.LegacyDataDir(), entity+".nix")
 	_, err := os.Stat(legacyPath)
 	return os.IsNotExist(err)

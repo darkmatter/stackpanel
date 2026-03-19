@@ -72,9 +72,111 @@ type GroupSecretReadResponse struct {
 
 // SecretsConfig holds paths and settings from Nix config
 type SecretsConfig struct {
-	SecretsDir    string `json:"secretsDir"`    // e.g., ".stack/secrets"
-	VarsSubdir    string `json:"varsSubdir"`    // e.g., "vars" (relative to secretsDir)
-	EnvPackageDir string `json:"envPackageDir"` // e.g., "packages/env/data"
+	SecretsDir string `json:"secretsDir"` // e.g., ".stack/secrets"
+	VarsSubdir string `json:"varsSubdir"` // e.g., "vars" (relative to secretsDir)
+}
+
+type SerializableSecretsConfig struct {
+	SecretsDir     string `json:"secretsDir"`
+	SopsConfigFile string `json:"sopsConfigFile,omitempty"`
+	Recipients     map[string]struct {
+		PublicKey string   `json:"publicKey"`
+		Tags      []string `json:"tags,omitempty"`
+	} `json:"recipients,omitempty"`
+	Variables map[string]struct {
+		File       string   `json:"file,omitempty"`
+		YamlKey    string   `json:"yamlKey,omitempty"`
+		Tags       []string `json:"tags,omitempty"`
+		Recipients []string `json:"recipients,omitempty"`
+	} `json:"variables,omitempty"`
+	RecipientGroups map[string]struct {
+		Recipients []string `json:"recipients,omitempty"`
+	} `json:"recipientGroups,omitempty"`
+	CreationRules []struct {
+		PathRegex               string   `json:"pathRegex,omitempty"`
+		Recipients              []string `json:"recipients,omitempty"`
+		DirectRecipients        []string `json:"directRecipients,omitempty"`
+		RecipientGroups         []string `json:"recipientGroups,omitempty"`
+		UnencryptedCommentRegex string   `json:"unencryptedCommentRegex,omitempty"`
+	} `json:"creationRules,omitempty"`
+	Groups map[string]struct {
+		Tags       []string `json:"tags,omitempty"`
+		Recipients []string `json:"recipients,omitempty"`
+	} `json:"groups,omitempty"`
+}
+
+func (s *Server) getSerializableSecretsConfig() (*SerializableSecretsConfig, error) {
+	args := []string{
+		"eval", "--impure", "--json",
+		".#stackpanelFullConfig.serializable.secrets",
+	}
+	res, err := s.exec.RunNix(args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate secrets config: %w", err)
+	}
+	if res.ExitCode != 0 {
+		return nil, fmt.Errorf("failed to evaluate secrets config: %s", strings.TrimSpace(res.Stderr))
+	}
+
+	var serializable SerializableSecretsConfig
+	if err := json.Unmarshal([]byte(res.Stdout), &serializable); err != nil {
+		return nil, fmt.Errorf("failed to parse secrets config: %w", err)
+	}
+	if serializable.Recipients == nil {
+		serializable.Recipients = map[string]struct {
+			PublicKey string   `json:"publicKey"`
+			Tags      []string `json:"tags,omitempty"`
+		}{}
+	}
+	if serializable.Variables == nil {
+		serializable.Variables = map[string]struct {
+			File       string   `json:"file,omitempty"`
+			YamlKey    string   `json:"yamlKey,omitempty"`
+			Tags       []string `json:"tags,omitempty"`
+			Recipients []string `json:"recipients,omitempty"`
+		}{}
+	}
+	if serializable.RecipientGroups == nil {
+		serializable.RecipientGroups = map[string]struct {
+			Recipients []string `json:"recipients,omitempty"`
+		}{}
+	}
+	if serializable.Groups == nil {
+		serializable.Groups = map[string]struct {
+			Tags       []string `json:"tags,omitempty"`
+			Recipients []string `json:"recipients,omitempty"`
+		}{}
+	}
+	return &serializable, nil
+}
+
+func (s *Server) getVariableSecretMeta(variableID string) (struct {
+	File       string
+	YamlKey    string
+	Tags       []string
+	Recipients []string
+}, bool, error) {
+	serializable, err := s.getSerializableSecretsConfig()
+	if err != nil {
+		return struct {
+			File       string
+			YamlKey    string
+			Tags       []string
+			Recipients []string
+		}{}, false, err
+	}
+	meta, ok := serializable.Variables[variableID]
+	return struct {
+		File       string
+		YamlKey    string
+		Tags       []string
+		Recipients []string
+	}{
+		File:       meta.File,
+		YamlKey:    meta.YamlKey,
+		Tags:       meta.Tags,
+		Recipients: meta.Recipients,
+	}, ok, nil
 }
 
 // getSecretsConfig reads secrets configuration from Nix
@@ -91,9 +193,8 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 		}
 		if err := json.Unmarshal([]byte(res.Stdout), &serializable); err == nil && serializable.SecretsDir != "" {
 			return &SecretsConfig{
-				SecretsDir:    serializable.SecretsDir,
-				VarsSubdir:    "vars",
-				EnvPackageDir: "packages/env/data",
+				SecretsDir: serializable.SecretsDir,
+				VarsSubdir: "vars",
 			}, nil
 		}
 	}
@@ -108,18 +209,16 @@ func (s *Server) getSecretsConfig() (*SecretsConfig, error) {
 		var secretsDir string
 		if err := json.Unmarshal([]byte(res.Stdout), &secretsDir); err == nil && secretsDir != "" {
 			return &SecretsConfig{
-				SecretsDir:    secretsDir,
-				VarsSubdir:    "vars",
-				EnvPackageDir: "packages/env/data",
+				SecretsDir: secretsDir,
+				VarsSubdir: "vars",
 			}, nil
 		}
 	}
 
 	// Fall back to defaults
 	return &SecretsConfig{
-		SecretsDir:    ".stack/secrets",
-		VarsSubdir:    "vars",
-		EnvPackageDir: "packages/env/data",
+		SecretsDir: ".stack/secrets",
+		VarsSubdir: "vars",
 	}, nil
 }
 
@@ -146,36 +245,39 @@ func (s *Server) getGroupFilePath(group string) (string, error) {
 	return filepath.Join(groupsDir, safeGroup+".sops.yaml"), nil
 }
 
-// getGroupRecipients gets the AGE public keys for a group from the Nix config
+// getGroupRecipients gets the configured public keys for a group from Nix.
 func (s *Server) getGroupRecipients(group string) ([]string, error) {
-	// First, try to get group-specific recipients from the Nix evaluation
-	args := []string{
-		"eval", "--impure", "--json",
-		fmt.Sprintf(".#stackpanelFullConfig.secrets.groups.%s.recipients or []", group),
+	serializable, err := s.getSerializableSecretsConfig()
+	if err != nil {
+		return nil, err
 	}
-	res, err := s.exec.RunNix(args...)
-	if err == nil && res.ExitCode == 0 {
-		var recipients []string
-		if err := json.Unmarshal([]byte(res.Stdout), &recipients); err == nil && len(recipients) > 0 {
-			return recipients, nil
-		}
+	groupCfg, ok := serializable.Groups[group]
+	if !ok {
+		return nil, fmt.Errorf("group %q not found in secrets config", group)
 	}
 
-	// Fall back to all-public-keys from master keys
-	args = []string{
-		"eval", "--impure", "--json",
-		".#stackpanelFullConfig.secrets.all-public-keys",
-	}
-	res, err = s.exec.RunNix(args...)
-	if err == nil && res.ExitCode == 0 {
-		var recipients []string
-		if err := json.Unmarshal([]byte(res.Stdout), &recipients); err == nil && len(recipients) > 0 {
-			return recipients, nil
+	publicKeys := make([]string, 0, len(groupCfg.Recipients))
+	seen := make(map[string]struct{}, len(groupCfg.Recipients))
+	for _, recipientName := range groupCfg.Recipients {
+		recipient, ok := serializable.Recipients[recipientName]
+		if !ok {
+			continue
 		}
+		publicKey := strings.TrimSpace(recipient.PublicKey)
+		if publicKey == "" {
+			continue
+		}
+		if _, exists := seen[publicKey]; exists {
+			continue
+		}
+		seen[publicKey] = struct{}{}
+		publicKeys = append(publicKeys, publicKey)
+	}
+	if len(publicKeys) > 0 {
+		return publicKeys, nil
 	}
 
-	// Fall back to users.yaml
-	return s.getAgenixRecipientsFromYAML()
+	return nil, fmt.Errorf("no recipients configured for group %q", group)
 }
 
 // readGroupSecrets reads and decrypts a group's SOPS file
@@ -241,10 +343,7 @@ func (s *Server) writeGroupSecrets(group string, secrets map[string]interface{},
 	tmp.Close()
 
 	// Encrypt with SOPS using explicit AGE recipients
-	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml"}
-	for _, r := range recipients {
-		args = append(args, "--age", r)
-	}
+	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
 	args = append(args, tmpPath)
 
 	enc, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, args...)
@@ -571,199 +670,3 @@ func (s *Server) handleListAllGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 // EnvPackageData contains info about the generated env package
-type EnvPackageData struct {
-	Apps   map[string]map[string]map[string]string `json:"apps"`   // app -> env -> key -> value
-	Groups []string                                `json:"groups"` // list of group names
-}
-
-// handleGenerateEnvPackage generates the packages/env data directory
-// POST /api/secrets/generate-env-package
-//
-// The generated structure:
-//
-//	packages/env/data/
-//	├── .sops.yaml             # SOPS config for the env package
-//	├── apps/<app>/<env>.yaml  # Plain YAML with env var values (secrets have empty values)
-//	└── vars/<group>.sops.yaml # SOPS-encrypted files (copied from source)
-func (s *Server) handleGenerateEnvPackage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-
-	cfg, err := s.getSecretsConfig()
-	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to get secrets config: "+err.Error())
-		return
-	}
-
-	// Get apps configuration from Nix
-	args := []string{"eval", "--impure", "--json", ".#stackpanelFullConfig.apps"}
-	res, err := s.exec.RunNix(args...)
-	if err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to evaluate apps config: "+err.Error())
-		return
-	}
-	if res.ExitCode != 0 {
-		s.writeAPIError(w, http.StatusInternalServerError, "nix eval failed: "+res.Stderr)
-		return
-	}
-
-	var apps map[string]struct {
-		Environments map[string]struct {
-			Name string            `json:"name"`
-			Env  map[string]string `json:"env"`
-		} `json:"environments"`
-	}
-	if err := json.Unmarshal([]byte(res.Stdout), &apps); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to parse apps config: "+err.Error())
-		return
-	}
-
-	// Build the env package data directory
-	envPkgDir := filepath.Join(s.config.ProjectRoot, cfg.EnvPackageDir)
-	if err := os.MkdirAll(envPkgDir, 0o755); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to create env package directory: "+err.Error())
-		return
-	}
-
-	// Create apps directory structure with environment variable mappings
-	// Secret values are empty here; the runtime loader decrypts from vars/ SOPS files
-	appsDir := filepath.Join(envPkgDir, "apps")
-	if err := os.MkdirAll(appsDir, 0o755); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to create apps directory: "+err.Error())
-		return
-	}
-
-	for appName, app := range apps {
-		appDir := filepath.Join(appsDir, appName)
-		if err := os.MkdirAll(appDir, 0o755); err != nil {
-			continue
-		}
-
-		for envName, env := range app.Environments {
-			if len(env.Env) == 0 {
-				continue
-			}
-
-			// Write the env YAML with variable values directly.
-			// Secret variables will have empty values here -- the runtime loader
-			// resolves them by decrypting the SOPS files in vars/ directly.
-			envPath := filepath.Join(appDir, envName+".yaml")
-			envData, _ := yaml.Marshal(env.Env)
-			header := fmt.Sprintf("# %s/%s environment variables\n# Secret values are resolved at runtime from SOPS files in vars/\n", appName, envName)
-			if err := os.WriteFile(envPath, []byte(header+string(envData)), 0o644); err != nil {
-				log.Warn().Err(err).Str("path", envPath).Msg("Failed to write env file")
-			}
-		}
-	}
-
-	// Copy vars directory (SOPS-encrypted files)
-	srcGroupsDir := filepath.Join(s.config.ProjectRoot, cfg.SecretsDir, cfg.VarsSubdir)
-	dstGroupsDir := filepath.Join(envPkgDir, "vars")
-	if err := os.MkdirAll(dstGroupsDir, 0o755); err != nil {
-		s.writeAPIError(w, http.StatusInternalServerError, "failed to create groups directory: "+err.Error())
-		return
-	}
-
-	var copiedGroups []string
-	if entries, err := os.ReadDir(srcGroupsDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sops.yaml") {
-				continue
-			}
-
-			srcPath := filepath.Join(srcGroupsDir, entry.Name())
-			dstPath := filepath.Join(dstGroupsDir, entry.Name())
-
-			content, err := os.ReadFile(srcPath)
-			if err != nil {
-				log.Warn().Err(err).Str("path", srcPath).Msg("Failed to read group file")
-				continue
-			}
-
-			if err := os.WriteFile(dstPath, content, 0o644); err != nil {
-				log.Warn().Err(err).Str("path", dstPath).Msg("Failed to write group file")
-				continue
-			}
-
-			groupName := strings.TrimSuffix(entry.Name(), ".sops.yaml")
-			copiedGroups = append(copiedGroups, groupName)
-		}
-	}
-
-	// Generate .sops.yaml for the env package
-	sopsConfig := s.generateEnvPackageSopsConfig(copiedGroups)
-	sopsPath := filepath.Join(envPkgDir, ".sops.yaml")
-	if err := os.WriteFile(sopsPath, []byte(sopsConfig), 0o644); err != nil {
-		log.Warn().Err(err).Msg("Failed to write .sops.yaml")
-	}
-
-	log.Info().
-		Int("apps", len(apps)).
-		Int("groups", len(copiedGroups)).
-		Str("path", envPkgDir).
-		Msg("Generated env package data")
-
-	s.writeAPI(w, http.StatusOK, map[string]interface{}{
-		"path":   envPkgDir,
-		"apps":   len(apps),
-		"groups": copiedGroups,
-	})
-}
-
-// generateEnvPackageSopsConfig generates a .sops.yaml for the env package
-func (s *Server) generateEnvPackageSopsConfig(groups []string) string {
-	var sb strings.Builder
-
-	sb.WriteString("# Auto-generated SOPS config for packages/env\n")
-	sb.WriteString("# Regenerate with: stackpanel secrets:generate-env-package\n")
-	sb.WriteString("#\n")
-	sb.WriteString("# Paths are relative to this directory (packages/env/data/)\n\n")
-
-	// Get all public keys
-	args := []string{"eval", "--impure", "--json", ".#stackpanelFullConfig.secrets.all-public-keys"}
-	res, _ := s.exec.RunNix(args...)
-
-	var pubKeys []string
-	if res != nil && res.ExitCode == 0 {
-		json.Unmarshal([]byte(res.Stdout), &pubKeys)
-	}
-
-	// Define keys section
-	sb.WriteString("keys:\n")
-	for i, key := range pubKeys {
-		sb.WriteString(fmt.Sprintf("  - &key%d %s\n", i, key))
-	}
-	sb.WriteString("\n")
-
-	// Creation rules
-	sb.WriteString("creation_rules:\n")
-
-	// Apps directory is NOT encrypted (contains only vals references)
-	sb.WriteString("  # Apps contain vals references, not actual secrets\n")
-	sb.WriteString("  - path_regex: ^apps/.*\\.yaml$\n")
-	sb.WriteString("    unencrypted_regex: \".*\"\n\n")
-
-	// Vars directory IS encrypted
-	sb.WriteString("  # Vars contain encrypted secret values\n")
-	for _, group := range groups {
-		sb.WriteString(fmt.Sprintf("  - path_regex: ^vars/%s\\.sops\\.yaml$\n", group))
-		sb.WriteString("    key_groups:\n")
-		sb.WriteString("      - age:\n")
-		for i := range pubKeys {
-			sb.WriteString(fmt.Sprintf("          - *key%d\n", i))
-		}
-	}
-
-	// Fallback rule
-	sb.WriteString("\n  # Fallback for any other yaml files\n")
-	sb.WriteString("  - path_regex: .*\\.yaml$\n")
-	sb.WriteString("    key_groups:\n")
-	sb.WriteString("      - age:\n")
-	for i := range pubKeys {
-		sb.WriteString(fmt.Sprintf("          - *key%d\n", i))
-	}
-
-	return sb.String()
-}
