@@ -6,103 +6,61 @@ icon: GitBranch
 
 # Ci Options
 
-## `ci.enable`
-
+<NixOption
+  path={"ci.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ci"}
+>
 Whether to enable CI/CD generation.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ci.github.checks.branches`
-
+<NixOption
+  path={"ci.github.checks.branches"}
+  type={"list of string"}
+  defaultCode={"[\n  \"main\"\n]"}
+  module={"ci"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | _see below_ |
-
-**Default:**
-
-```nix
-[
-  "main"
-]
-```
-
-
----
-
-## `ci.github.checks.commands`
-
+<NixOption
+  path={"ci.github.checks.commands"}
+  type={"list of string"}
+  defaultValue={"[ ]"}
+  exampleCode={"[\n  \"nix flake check\"\n  \"nix build\"\n]"}
+  module={"ci"}
+>
 This option has no description.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `list of string` |
-| **Default** | `[ ]` |
-
-**Example:**
-
-```nix
-[
-  "nix flake check"
-  "nix build"
-]
-```
-
-
----
-
-## `ci.github.checks.enable`
-
+<NixOption
+  path={"ci.github.checks.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ci"}
+>
 Whether to enable standard CI checks workflow.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ci.github.enable`
-
+<NixOption
+  path={"ci.github.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"ci"}
+>
 Whether to enable GitHub Actions.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `ci.github.workflows`
-
+<NixOption
+  path={"ci.github.workflows"}
+  type={"attribute set of (attribute set)"}
+  defaultValue={"{ }"}
+  module={"ci"}
+>
 Workflow name -\> workflow definition (raw)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `attribute set of (attribute set)` |
-| **Default** | `{ }` |
-
----
+</NixOption>
 

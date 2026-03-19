@@ -1,0 +1,55 @@
+---
+title: stackpanel config set
+description: Set a configuration value by dot-path
+icon: Terminal
+---
+
+# stackpanel config set
+
+Set a value in .stack/config.nix using a dot-separated path.
+
+Values default to auto-detection:
+  - valid JSON numbers become numbers
+  - true/false become booleans
+  - null becomes null
+  - JSON arrays/objects become list/object values
+  - anything else is written as a string
+
+Use --type to force the interpretation when needed.
+
+Examples:
+  stackpanel config set apps.docs.name docs-site
+  stackpanel config set ports.base 6400
+  stackpanel config set apps.docs.tls true
+  stackpanel config set apps.docs.tags '["docs","public"]'
+  stackpanel config set apps.docs.env.PORT var://computed/apps/docs/port --type string
+  stackpanel config set apps.docs.env.API_URL 'config.variables."/dev/API_URL".value' --type nix_expr
+
+## Usage
+
+```bash
+stackpanel config set <dot.path> <value>
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | `bool` | `false` | Output result as JSON |
+| `--type` | `string` | `auto` | Value type: auto, string, bool, number, list, object, null, nix_expr |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
