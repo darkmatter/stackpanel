@@ -1,7 +1,5 @@
 import {
-  kebabToSnake,
   kebabToSnakeValues,
-  snakeToKebab,
   snakeToKebabValues,
 } from "./nix-data";
 import type {
@@ -83,13 +81,13 @@ class EntityClient<T> {
       data: DataResponse<T>;
     }>(`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`);
     const res = apiRes.data;
-    return res.exists && res.data ? kebabToSnake(res.data) : null;
+    return res.exists && res.data ? res.data : null;
   }
 
   async set(data: T): Promise<WriteResponse> {
     return this.client.post<WriteResponse>("/api/nix/data", {
       entity: this.entityName,
-      data: snakeToKebab(data),
+      data,
     });
   }
 
@@ -205,6 +203,26 @@ export interface AgeIdentityResponse {
   value: string;
   /** KeyPath is the actual file path used for decryption */
   keyPath: string;
+}
+
+export interface SopsAgeKeysStatusResponse {
+  available: boolean;
+  keyCount: number;
+  publicKeys: string[];
+  matchedPublicKeys: string[];
+  recipientMatch: boolean;
+  matchingRecipients: string[];
+  decryptableGroups: string[];
+  keychainService: string;
+  userKeyPath: string;
+  repoKeyPath: string;
+  configuredPaths: string[];
+  configuredOpRefs: string[];
+  localKeyPath: string;
+  localKeyExists: boolean;
+  storageTier: "none" | "local-only" | "external";
+  recommendation?: string;
+  error?: string;
 }
 
 /** Request to set KMS configuration */
@@ -912,6 +930,46 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data ?? { type: "", value: "", keyPath: "" };
+  }
+
+  async getSopsAgeKeysStatus(): Promise<SopsAgeKeysStatusResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/sops-age-keys/status`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data ?? {
+      available: false,
+      keyCount: 0,
+      publicKeys: [],
+      matchedPublicKeys: [],
+      recipientMatch: false,
+      matchingRecipients: [],
+      decryptableGroups: [],
+      keychainService: "stackpanel.sops-age-key",
+      userKeyPath: "",
+      repoKeyPath: ".stack/keys/local.txt",
+      configuredPaths: [],
+      configuredOpRefs: [],
+      localKeyPath: ".stack/keys/local.txt",
+      localKeyExists: false,
+      storageTier: "none",
+    };
+  }
+
+  async validateSopsAgeKeySource(source: {
+    type: string;
+    value: string;
+    account?: string;
+  }): Promise<SopsAgeKeysStatusResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/sops-age-keys/validate-source`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(source),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
   }
 
   /**

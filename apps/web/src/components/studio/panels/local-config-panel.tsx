@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { useAgent } from "@/lib/use-agent";
 import { PanelHeader } from "./shared/panel-header";
 
-const LOCAL_CONFIG_PATH = ".stackpanel/config.local.nix";
+const LOCAL_CONFIG_PATH = ".stack/config.local.nix";
 
 const DEFAULT_TEMPLATE = `# ==============================================================================
 # config.local.nix
@@ -41,9 +41,9 @@ const DEFAULT_TEMPLATE = `# ====================================================
 #   - Test configuration changes before committing
 #
 # Priority (lowest to highest):
-#   1. Data tables (.stackpanel/data/*.nix)
-#   2. Main config (.stackpanel/config.nix)
-#   3. Local overrides (.stackpanel/config.local.nix) ← You are here
+#   1. Data tables (.stack/data/*.nix)
+#   2. Main config (.stack/config.nix)
+#   3. Local overrides (.stack/config.local.nix) ← You are here
 # ==============================================================================
 { pkgs }:
 {

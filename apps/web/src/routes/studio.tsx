@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AgentProvider, useAgentContext } from "@/lib/agent-provider";
 import { AgentSSEProvider } from "@/lib/agent-sse-provider";
+import { useAgentLiveQuerySync } from "@/lib/use-agent";
 import { ProjectProvider } from "@/lib/project-provider";
 import { cn } from "@/lib/utils";
 import { FeatureFlagProvider } from "@gen/featureflags";
@@ -34,6 +35,7 @@ function StudioLayout() {
     // SSE provider is outside so AgentProvider can consume SSE status for health
     <AgentSSEProvider>
       <AgentProvider>
+        <AgentQuerySync />
         <ProjectProvider initialProjectId={project}>
           <FeatureFlagProvider>
             <SidebarProvider>
@@ -49,6 +51,11 @@ function StudioLayout() {
       </AgentProvider>
     </AgentSSEProvider>
   );
+}
+
+function AgentQuerySync() {
+  useAgentLiveQuerySync();
+  return null;
 }
 
 function EnsureAgent() {
