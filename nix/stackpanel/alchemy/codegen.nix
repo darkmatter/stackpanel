@@ -7,6 +7,7 @@
 #   - src/index.ts       (createApp factory, re-exports)
 #   - src/state-store.ts (state store provider factory)
 #   - src/helpers.ts     (shared utilities: SSM, bindings, port computation)
+#   - src/file.ts        (SOPS-aware file helper module)
 #   - bootstrap.run.ts   (state store bootstrap, if deploy enabled)
 #   - package.json       (via turbo.packages)
 #   - tsconfig.json
@@ -57,6 +58,11 @@ let
   # Conditionally includes helper functions based on cfg.helpers.*
   # ============================================================================
   helpersTemplate = builtins.readFile ./templates/helpers.tmpl.ts;
+
+  # ============================================================================
+  # Template processing: src/file.ts
+  # ============================================================================
+  fileTemplate = builtins.readFile ./templates/file.tmpl.ts;
 
   ssmHelper =
     if cfg.helpers.ssm then
@@ -281,6 +287,7 @@ let
   # ============================================================================
   baseDeps = {
     alchemy = cfg.version;
+    "sops-age" = "^4.0.2";
   };
 
   helperDeps = lib.optionalAttrs cfg.helpers.ssm {
@@ -326,6 +333,14 @@ in
         source = "alchemy";
       };
 
+      # SOPS-aware file helper module
+      "${outputDir}/src/file.ts" = {
+        text = fileTemplate;
+        mode = "0644";
+        description = "Alchemy file helper that supports ref+sops:// reads";
+        source = "alchemy";
+      };
+
       # TSConfig
       "${outputDir}/tsconfig.json" = {
         type = "json";
@@ -360,6 +375,9 @@ in
       exports = {
         "." = {
           default = "./src/index.ts";
+        };
+        "./file" = {
+          default = "./src/file.ts";
         };
         "./*" = {
           default = "./src/*.ts";

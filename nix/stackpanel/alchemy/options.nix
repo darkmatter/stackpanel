@@ -180,9 +180,8 @@ in
         default = "common";
         description = ''
           SOPS group to store alchemy tokens in.
-          "common" is encrypted to all group keys, so any team member with
-          access to any group can decrypt. Use a specific group (e.g. "dev")
-          to restrict access.
+          Files in `vars/common.sops.yaml` use the shared recipient set. Use a
+          specific group (e.g. "dev") when you want a separate SOPS file.
         '';
       };
     };

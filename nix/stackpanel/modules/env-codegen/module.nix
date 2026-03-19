@@ -7,16 +7,14 @@
 # ensuring all generated files are created on devshell entry.
 #
 # Generated files:
-#   packages/env/gen/                    — 100% generated (do not edit)
-#     data/.sops.yaml, data/shared/vars.yaml, data/<app>/<env>.yaml
-#     src/<app>/<env>.ts, src/<app>/index.ts, src/index.ts
-#     src/<app>.ts                      — app-level env export (@gen/env/web)
-#     src/entrypoints/<app>.ts, src/entrypoints/index.ts
-#     src/loader.ts, src/docker-entrypoint.ts
-#     README.md
-#   packages/env/package.json           — exports point into gen/
-#   packages/env/tsconfig.json           — includes gen/
-#   packages/env/README.md               — "Generated code is in gen/. Do not edit gen/."
+#   packages/gen/env/                    — generated package shell
+#     package.json, tsconfig.json, README.md
+#     src/                               — 100% generated (do not edit)
+#       <app>/<env>.ts, <app>/index.ts, index.ts
+#       <app>.ts                         — app-level env export (@gen/env/web)
+#       embedded-data.ts                 — embedded plaintext + encrypted payloads
+#       entrypoints/<app>.ts, entrypoints/index.ts
+#       loader.ts, docker-entrypoint.ts
 #
 # Usage:
 #   # The module is automatically enabled when apps have environments
@@ -117,11 +115,11 @@ in
       displayName = meta.name;
       checks = {
         sops-yaml-exists = {
-          name = "SOPS Config Generated";
-          description = "Check if ${envOutputDir}/gen/data/.sops.yaml exists";
+          name = "Embedded Secrets Generated";
+          description = "Check if ${envOutputDir}/src/embedded-data.ts exists";
           type = "script";
           script = ''
-            [ -f "${envOutputDir}/gen/data/.sops.yaml" ]
+            [ -f "${envOutputDir}/src/embedded-data.ts" ]
           '';
           severity = "warning";
           timeout = 5;
@@ -135,7 +133,7 @@ in
           description = "Check if generated TypeScript modules exist";
           type = "script";
           script = ''
-            [ -d "${envOutputDir}/gen/src" ] && [ -f "${envOutputDir}/gen/src/index.ts" ]
+            [ -d "${envOutputDir}/src" ] && [ -f "${envOutputDir}/src/index.ts" ]
           '';
           severity = "warning";
           timeout = 5;

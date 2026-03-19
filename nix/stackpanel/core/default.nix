@@ -27,7 +27,8 @@ in
     ./aliases.nix
     ./cli.nix
     ./extensions.nix
-  
+    ./options-schema.nix
+
     ./state.nix
     ./tasks.nix
     ./users-options.nix

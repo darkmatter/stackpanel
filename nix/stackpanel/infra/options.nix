@@ -198,10 +198,10 @@ in
       sops = {
         file-path = lib.mkOption {
           type = lib.types.str;
-          default = ".stack/secrets/vars/dev.sops.yaml";
+          default = ".stack/secrets/infra/dev.sops.yaml";
           description = ''
             Path to SOPS-encrypted YAML file for infra outputs.
-            Defaults to the dev group file. Uses `sops set` for non-destructive
+            Defaults to a dedicated infra file. Uses `sops set` for non-destructive
             per-key updates, preserving existing secrets in the file.
           '';
         };

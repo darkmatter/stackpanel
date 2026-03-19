@@ -5,7 +5,7 @@ Centralized Alchemy IaC module for stackpanel.
 This module provides:
 
 - Shared Alchemy configuration under `stackpanel.alchemy.*`
-- Generated `@gen/alchemy` package (`createApp`, state store factory, helpers)
+- Generated `@gen/alchemy` package (`createApp`, state store factory, helpers, SOPS-aware file module)
 - First-run Cloudflare setup script (`alchemy:setup`)
 - One-command deploy wrapper (`deploy`)
 - Optional bootstrap flow to solve Cloudflare state-store chicken-and-egg
@@ -15,7 +15,7 @@ This module provides:
 - `default.nix` - module entrypoint (imports options + codegen)
 - `options.nix` - option schema for `stackpanel.alchemy.*`
 - `codegen.nix` - generates package files/scripts and wires devshell env
-- `templates/` - TypeScript and shell templates used by codegen
+- `templates/` - TypeScript and shell templates used by codegen (including `file.tmpl.ts`)
 
 ## Core Options
 
@@ -46,8 +46,8 @@ When these paths are set, values are injected into the devshell environment:
 
 ```nix
 stackpanel.alchemy.secrets = {
-  cloudflare-token-sops-path = "ref+sops://.stackpanel/secrets/vars/common.sops.yaml#/cloudflare-api-token";
-  state-token-sops-path = "ref+sops://.stackpanel/secrets/vars/common.sops.yaml#/alchemy-state-token";
+  cloudflare-token-sops-path = "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token";
+  state-token-sops-path = "ref+sops://.stack/secrets/vars/common.sops.yaml#/alchemy-state-token";
   sops-group = "common";
 };
 ```
@@ -67,6 +67,45 @@ When `stackpanel.alchemy.deploy.enable = true`:
   - Loads tokens from env/secrets
   - Auto-runs `alchemy:setup` if Cloudflare is not configured
   - Executes `bunx alchemy deploy <run-file> --stage <stage>`
+
+## Generated File Module (SOPS-aware)
+
+The generated package now includes `@gen/alchemy/file` composed with Alchemy's FS provider (`File` from `alchemy/fs`) and a secret-aware read layer:
+
+- `AlchemyFile` - re-export of Alchemy's `File` resource from `alchemy/fs`
+- `AlchemyFileModule` - composes plain-file reads with `ref+sops://...` resolution
+- `createDefaultSopsResolver()` - default resolver backed by `sops-age` (pure JS)
+- `createAlchemyFileModule()` - convenience factory
+- `secret(value)` - wraps plaintext into Alchemy-native secret values (`alchemy.secret(...)`)
+- `readSecret(pathOrRef)` - reads from plain file or SOPS ref, then returns an Alchemy-native secret wrapper
+
+Example:
+
+```ts
+import { AlchemyFile, createAlchemyFileModule } from "@gen/alchemy/file";
+
+const files = createAlchemyFileModule();
+
+// Use Alchemy FS File resource (create/update/delete managed file)
+await AlchemyFile("config.txt", {
+  path: "config.txt",
+  content: "hello from alchemy fs",
+});
+
+// Plain file read
+const packageJson = await files.readFile("package.json");
+
+// SOPS ref read (resolved through sops-age)
+const apiToken = await files.readFile(
+  "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token",
+);
+
+// Native Alchemy secret wrappers
+const apiTokenSecret = await files.readSecret(
+  "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token",
+);
+const dbPasswordSecret = files.secret("local-dev-password");
+```
 
 ## Bootstrap State Store
 

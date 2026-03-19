@@ -91,18 +91,7 @@
     }:
     {
       # Configure terminal to use the devshell loader
-      terminal = {
-        shell = {
-          with_arguments = {
-            program = "/bin/bash";
-            args = [
-              "-c"
-              loaderPath
-            ];
-            title_override = "devshell";
-          };
-        };
-      };
+      load_direnv = "shell_hook";
     };
 
   # Generate Zed tasks.json content as an attrset

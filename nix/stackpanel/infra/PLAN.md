@@ -240,7 +240,7 @@ Key formatting uses the `keyFormat` template: `"$module-$key"` -> `"aws-secrets-
 | `key-format` | `str` | `"$module-$key"` | Template for output storage keys |
 | `storage-backend.type` | `enum` | `"none"` | `"chamber"`, `"sops"`, `"ssm"`, `"none"` |
 | `storage-backend.chamber.service` | `str` | `""` | Chamber service name |
-| `storage-backend.sops.file-path` | `str` | `".stackpanel/secrets/infra.yaml"` | SOPS output file |
+| `storage-backend.sops.file-path` | `str` | `".stack/secrets/vars/infra.sops.yaml"` | SOPS output file |
 | `storage-backend.ssm.prefix` | `str` | `""` | SSM path prefix |
 | `modules` | `attrsOf submodule` | `{}` | Internal module registry (see below) |
 | `package.name` | `str` | `"@${projectName}/infra"` | Package name |

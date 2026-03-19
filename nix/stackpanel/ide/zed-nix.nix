@@ -19,12 +19,11 @@
   config,
   pkgs,
   ...
-}:
-let
+}: let
   ideCfg = config.stackpanel.ide;
   zedCfg = ideCfg.zed;
   stackpanelCfg = config.stackpanel;
-  libnixd = import ./lib/nixd.nix { inherit lib; };
+  libnixd = import ./lib/nixd.nix {inherit lib;};
   # Expression to get stackpanel options from the flake
   nixdValues = libnixd.mkValues {
     project = stackpanelCfg.project;
@@ -38,12 +37,10 @@ let
   # Helper to get submodule options
   # For stackpanel repo: use local evalModules
   # For external users: use flake-based expression
-  mkSubOptionsExpr =
-    optionPath:
-    if nixdValues.isStackpanelRepo && nixdValues.hasValidLocalRoot then
-      "${nixdValues.localStackpanelOptionsExpr}.${optionPath}.type.getSubOptions []"
-    else
-      "${nixdValues.flakeOptionsExpr}.${optionPath}.type.getSubOptions []";
+  mkSubOptionsExpr = optionPath:
+    if nixdValues.isStackpanelRepo && nixdValues.hasValidLocalRoot
+    then "${nixdValues.localStackpanelOptionsExpr}.${optionPath}.type.getSubOptions []"
+    else "${nixdValues.flakeOptionsExpr}.${optionPath}.type.getSubOptions []";
 
   # Wrapper script for nixd that disables pure-eval.
   # nixd option expressions require importing nixpkgs and local module paths,
@@ -53,8 +50,7 @@ let
     $NIX_CONFIG}"
     exec ${pkgs.nixd}/bin/nixd "$@"
   '';
-in
-{
+in {
   config = lib.mkIf (ideCfg.enable && zedCfg.enable) {
     stackpanel.devshell.packages = [
       pkgs.nixd
@@ -73,7 +69,7 @@ in
               };
               initialization_options = {
                 "formatting" = {
-                  "command" = [ "nixfmt" ];
+                  "command" = ["nixfmt"];
                 };
               };
               settings = {
@@ -101,9 +97,12 @@ in
               };
             };
             nil = {
+              binary = {
+                path = "${pkgs.nil}/bin/nil";
+              };
               initialization_options = {
                 "formatting" = {
-                  "command" = [ "alejandra" ];
+                  "command" = ["alejandra"];
                 };
               };
               settings = {
