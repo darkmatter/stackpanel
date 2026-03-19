@@ -1,8 +1,12 @@
 # ==============================================================================
 # users.nix
 #
-# User configuration for stackpanel.users option.
-# Imports from github-collaborators.nix and transforms to required format.
+# Helper data for stackpanel users.
+# Imports from github-collaborators.nix and transforms to stackpanel user shape.
+#
+# This file is intended to be imported from `.stack/config.nix` when you want
+# reusable user aliases. It is NOT the writable source of truth for the
+# `users` entity anymore; the agent reads/writes `users` from `.stack/config.nix`.
 #
 # Edit this file to:
 #   - Add non-GitHub users (e.g., CI bots)
