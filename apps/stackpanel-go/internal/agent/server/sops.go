@@ -240,18 +240,26 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getAgeRecipients gets age public keys from the Nix config (all-public-keys).
+// getAgeRecipients gets recipient public keys from the Nix-configured secrets state.
 func (s *Server) getAgeRecipients() []string {
 	recipients, err := s.getAgenixRecipients(nil)
 	if err != nil || len(recipients) == 0 {
-		// Fall back to all-public-keys from master keys
-		args := []string{"eval", "--impure", "--json", ".#stackpanelFullConfig.secrets.all-public-keys"}
-		res, err := s.exec.RunNix(args...)
-		if err == nil && res.ExitCode == 0 {
-			var keys []string
-			if err := json.Unmarshal([]byte(res.Stdout), &keys); err == nil {
-				return keys
+		serializable, err := s.getSerializableSecretsConfig()
+		if err == nil {
+			keys := make([]string, 0, len(serializable.Recipients))
+			seen := make(map[string]struct{}, len(serializable.Recipients))
+			for _, recipient := range serializable.Recipients {
+				key := strings.TrimSpace(recipient.PublicKey)
+				if key == "" {
+					continue
+				}
+				if _, exists := seen[key]; exists {
+					continue
+				}
+				seen[key] = struct{}{}
+				keys = append(keys, key)
 			}
+			return keys
 		}
 		return nil
 	}

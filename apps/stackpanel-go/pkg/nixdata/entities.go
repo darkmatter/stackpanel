@@ -65,6 +65,18 @@ func IsEvaluatedEntity(entity string) bool {
 	}
 }
 
+// PrefersConsolidatedConfig returns true for entities that should always be read
+// and written through .stack/config.nix, even if a legacy .stack/data/<entity>.nix
+// file still exists on disk.
+func PrefersConsolidatedConfig(entity string) bool {
+	switch entity {
+	case "variables", "users", "secrets":
+		return true
+	default:
+		return false
+	}
+}
+
 // MapFieldNames returns the set of JSON/Nix attribute names whose children
 // are user-defined map keys that must NOT be case-transformed. For example,
 // within "variables" the keys are variable IDs like "/apps/web/port" and

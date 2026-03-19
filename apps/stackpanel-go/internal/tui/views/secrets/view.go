@@ -356,8 +356,7 @@ func (m Model) viewRecipients() string {
 
 	if len(m.recipients) == 0 {
 		b.WriteString(dimStyle.Render("No recipients registered.") + "\n\n")
-		b.WriteString(dimStyle.Render("Recipients are auto-registered when team members enter the devshell.") + "\n")
-		b.WriteString(dimStyle.Render("Their public key is saved to .stack/secrets/recipients/<name>.age.pub") + "\n")
+		b.WriteString(dimStyle.Render("Recipients are configured in Nix and rendered into .stack/secrets/.sops.yaml.") + "\n")
 	} else {
 		for _, r := range m.recipients {
 			b.WriteString(fmt.Sprintf("  %s %s  %s\n",
@@ -422,9 +421,9 @@ func (m Model) viewHelp() string {
 			"Invalid: DATABASE_URL, /dev/key, my.secret",
 		}},
 		{"Team Onboarding", []string{
-			"1. New member enters devshell (key auto-registered)",
-			"2. Push the recipients/*.pub file",
-			"3. GitHub Actions re-keys automatically",
+			"1. New member adds their public key in Nix config",
+			"2. Re-enter the devshell to regenerate .stack/secrets/.sops.yaml",
+			"3. Run .stack/secrets/bin/rekey.sh",
 			"4. Pull — secrets are now accessible",
 		}},
 	}
