@@ -3,8 +3,7 @@
 #
 # Agenix compatibility layer (minimal).
 #
-# With the group-based SOPS model, individual .age files are no longer used.
-# Group keys are stored as SOPS-encrypted .enc.age files in keys/.
+# Stackpanel now encrypts SOPS files directly to recipient public keys.
 # This module is kept for backwards compatibility but is largely a no-op.
 # ==============================================================================
 {

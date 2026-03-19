@@ -8,7 +8,13 @@
 # For config that needs pkgs/lib (computed values, custom packages),
 # use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
 # ==============================================================================
-{
+{config, ...}: {
+  alchemy = {
+    deploy = {
+      enable = true;
+    };
+  };
+
   # ---------------------------------------------------------------------------
   # Apps
   # ---------------------------------------------------------------------------
@@ -18,7 +24,12 @@
       domain = "docs";
       environments = {
         dev = {
-          env = { };
+          env = {
+            FOO = "var://computed/apps/docs/port";
+            HELLO = "var://computed/apps/docs/port";
+            PORT = "var://computed/apps/docs/port";
+            POSTGRES_URL = "var://secret/cool-secre";
+          };
           name = "dev";
         };
         prod = {
@@ -26,7 +37,10 @@
           name = "prod";
         };
         staging = {
-          env = { };
+          env = {
+            PORT = "var://computed/apps/docs/port";
+            POSTGRES_URL = "var://secret/cool-secre";
+          };
           name = "staging";
         };
       };
@@ -99,16 +113,35 @@
       environments = {
         dev = {
           env = {
-            MEMO_MEMOAS_AD = "foobar";
+            BETTER_AUTH_SECRET = "";
+            BETTER_AUTH_URL = "";
+            CORS_ORIGIN = "";
+            POLAR_ACCESS_TOKEN = "";
+            POLAR_SUCCESS_URL = "";
+            POSTGRES_URL = "var://secret/postgres-url";
           };
           name = "dev";
         };
         prod = {
-          env = { };
+          env = {
+            BETTER_AUTH_SECRET = "";
+            BETTER_AUTH_URL = "";
+            CORS_ORIGIN = "";
+            POLAR_ACCESS_TOKEN = "";
+            POLAR_SUCCESS_URL = "";
+            POSTGRES_URL = "var://secret/postgres-url";
+          };
           name = "prod";
         };
         staging = {
-          env = { };
+          env = {
+            BETTER_AUTH_SECRET = "";
+            BETTER_AUTH_URL = "";
+            CORS_ORIGIN = "";
+            POLAR_ACCESS_TOKEN = "";
+            POLAR_SUCCESS_URL = "";
+            POSTGRES_URL = "var://secret/postgres-url";
+          };
           name = "staging";
         };
       };
@@ -149,6 +182,44 @@
       region = "us-west-2";
       role-name = "darkmatter-dev";
       trust-anchor-arn = "arn:aws:rolesanywhere:us-west-2:950224716579:trust-anchor/c99a9383-6be1-48ba-8e63-c3ab6b7069cb";
+    };
+  };
+
+  aws-vault = {
+    awsProfiles = {
+      sso-prod = {
+        extraConfig = {
+          sso_account_id = "950224716579";
+          sso_region = "us-east-1";
+          sso_role_name = "admin-profile";
+          sso_start_url = "https://dark-matter.awsapps.com/start";
+        };
+        output = "json";
+        region = "us-east-1";
+      };
+      sso-staging = {
+        extraConfig = {
+          sso_account_id = "123456789012";
+          sso_region = "us-east-1";
+          sso_role_name = "StagingAccess";
+          sso_start_url = "https://dark-matter.awsapps.com/start";
+        };
+        output = "json";
+        region = "us-east-1";
+      };
+    };
+    awscliWrapper = {
+      enable = true;
+    };
+    enable = false;
+    profiles = [
+      "sso-prod"
+      "sso-staging"
+    ];
+    showProfileAttempts = true;
+    stopOnFirstSuccess = true;
+    terraformWrapper = {
+      enable = true;
     };
   };
 
@@ -342,44 +413,6 @@
     zed = {
       enable = true;
       output-mode = "dotZed";
-    };
-  };
-
-  aws-vault = {
-    enable = true;
-    # Enable wrappers so aws/terraform automatically use aws-vault
-    awscliWrapper.enable = true;
-    terraformWrapper.enable = true;
-
-    # Show which profile is being tried (useful for debugging)
-    showProfileAttempts = true;
-
-    # Stop after first success (default behavior)
-    stopOnFirstSuccess = true;
-    profiles = ["sso-prod" "sso-staging"];
-
-    awsProfiles = {
-      "sso-prod" = {
-        region = "us-east-1";
-        output = "json";
-        extraConfig = {
-          sso_start_url = "https://mycompany.awsapps.com/start";
-          sso_region = "us-east-1";
-          sso_account_id = "123456789012";
-          sso_role_name = "ProductionAccess";
-        };
-      };
-
-      "sso-staging" = {
-        region = "us-east-1";
-        output = "json";
-        extraConfig = {
-          sso_start_url = "https://mycompany.awsapps.com/start";
-          sso_region = "us-east-1";
-          sso_account_id = "123456789012";
-          sso_role_name = "StagingAccess";
-        };
-      };
     };
   };
 
@@ -647,29 +680,103 @@
     };
   };
 
+  project = {
+    owner = "darkmatter";
+    repo = "stackpanel";
+  };
+
   # ---------------------------------------------------------------------------
   # Secrets
   # ---------------------------------------------------------------------------
   secrets = {
-    backend = "chamber";
+    backend = "sops";
     codegen = {
       typescript = {
-        directory = "packages/gen/env/src/generated";
+        directory = "packages/gen/env/src";
         language = "CODEGEN_LANGUAGE_TYPESCRIPT";
         name = "env";
       };
     };
+    creation-rules = [
+      {
+        path-regex = ".*";
+        recipient-groups = [ "everyone" ];
+        recipients = [ ];
+      }
+    ];
     enable = true;
     environments = { };
     groups = {
-      dev = {
-        age-pub = "age1783kahlc7yxv2md9vtpx4wq899csvqxty03fatcs5s7lqfh5334s6p7r0l";
-      };
-      prod = {
-        age-pub = "age1tvczw6y7g4v0ma7cn05adrnst9jnnsh9j8ge0t0flls8ucq5yg9qe37jhe";
+      dev = { };
+      prod = { };
+      test = { };
+    };
+    kms = {
+      key-arn = "arn:aws:kms:us-west-2:950224716579:key/853ce333-ce7d-468a-a752-bb23b7231d4a";
+    };
+    recipient-groups = {
+      everyone = {
+        recipients = [
+          "arximboldi"
+          "arximboldi_2"
+          "arximboldi_3"
+          "callumelvidge"
+          "callumelvidge_2"
+          "CasLinden"
+          "CasLinden_2"
+          "cooper"
+          "coopmoney"
+          "coopmoney_2"
+          "coopmoney_3"
+          "coopmoney_4"
+          "fkb032"
+          "jjkoh95"
+          "scottmcmaster"
+          "scottmcmaster_2"
+        ];
       };
     };
     secrets-dir = ".stack/secrets";
+    sops-age-keys = {
+      op-refs = [ ];
+      paths = [ ];
+      repo-key-path = ".stack/keys/local.txt";
+      sources = [
+        {
+          enabled = true;
+          id = "w9nmu0oca";
+          name = "Repo Key Path";
+          priority = 0;
+          type = "repo-key-path";
+          value = ".stack/keys/local.txt";
+        }
+        {
+          enabled = true;
+          id = "da2z16rpb";
+          name = "User Key Path";
+          priority = 1;
+          type = "user-key-path";
+          value = "\$XDG_CONFIG_HOME/sops/age/keys.txt";
+        }
+        {
+          enabled = true;
+          id = "dojq058ew";
+          name = "SSH Private Key";
+          priority = 2;
+          type = "ssh-key";
+          value = "~/.ssh/id_ed25519";
+        }
+        {
+          enabled = true;
+          id = "hncecqshi";
+          name = "SOPS Keyservice";
+          priority = 3;
+          type = "keyservice";
+          value = "tcp://100.116.189.36:5000";
+        }
+      ];
+      user-key-path = "\$XDG_CONFIG_HOME/sops/age/keys.txt";
+    };
     system-keys = [ ];
   };
 
@@ -835,18 +942,28 @@
   # Variables
   # ---------------------------------------------------------------------------
   variables = {
-    "/dev/openrouter-api-key" = {
-      id = "/dev/openrouter-api-key";
+    "/secret/allvar" = {
       value = "";
     };
-    "/dev/test-api-key" = {
-      id = "/dev/test-api-key";
+    "/secret/cool" = {
+      value = "";
+    };
+    "/secret/cool-secre" = {
+      value = "";
+    };
+    "/secret/openrouter-api-key" = {
+      value = "";
+    };
+    "/secret/postgres-url" = {
+      value = "";
+    };
+    "/secret/test-api-key" = {
       value = "";
     };
     "/var/web-hostname-staging" = {
-      id = "/var/web-hostname-staging";
       value = "staging.stackpanel.dev";
     };
   };
 
 }
+

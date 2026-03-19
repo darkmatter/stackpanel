@@ -128,13 +128,13 @@ check-age-keys
 
 ```bash
 # Automatic (if module is enabled)
-sops vars/dev.sops.yaml
+sops .stack/secrets/dev/web.sops.yaml
 
 # Manual
-SOPS_AGE_KEY_CMD=age-key-cmd sops vars/dev.sops.yaml
+SOPS_AGE_KEY_CMD=age-key-cmd sops .stack/secrets/dev/web.sops.yaml
 
 # Using wrapped sops command
-${ageKeyTools.sopsWithAgeKey}/bin/sops vars/dev.sops.yaml
+${ageKeyTools.sopsWithAgeKey}/bin/sops .stack/secrets/dev/web.sops.yaml
 ```
 
 ## Configuration
@@ -304,7 +304,7 @@ SOPS_KEYS_DIR=/tmp/test-keys fetch-age-key
 SOPS_KEYS_DIR=/tmp/test-keys age-key-cmd
 
 # Test with SOPS
-SOPS_KEYS_DIR=/tmp/test-keys sops vars/dev.sops.yaml
+SOPS_KEYS_DIR=/tmp/test-keys sops .stack/secrets/dev/web.sops.yaml
 ```
 
 ### Adding New Key Sources
