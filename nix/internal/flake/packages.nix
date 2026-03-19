@@ -10,6 +10,7 @@
 {
   pkgs,
   inputs,
+  self
 }:
 let
   # Unified CLI + Agent package
@@ -24,5 +25,5 @@ in
 
   # Default package
   default = stackpanel;
-}
 
+}

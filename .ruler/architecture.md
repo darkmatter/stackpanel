@@ -220,7 +220,7 @@ apps/web
   -> @stackpanel/api (tRPC routers + types)
      -> @stackpanel/auth (Better Auth + Polar payments)
         -> @stackpanel/db (Drizzle ORM + Neon PostgreSQL)
-        -> @gen/env (validated env vars)
+        -> @gen/env (generated env package)
      -> @stackpanel/db
   -> @stackpanel/agent-client -> @stackpanel/proto (Connect-RPC types)
   -> @stackpanel/ui -> @stackpanel/ui-web -> @stackpanel/ui-core + @stackpanel/ui-primitives (Radix)
@@ -233,7 +233,7 @@ apps/web
 | `@stackpanel/api` | tRPC routers (agent, github). Creates context with `{ authApi, session, db }`. Defines `publicProcedure` and `protectedProcedure`. |
 | `@stackpanel/auth` | Better Auth with Drizzle adapter, email/password, Polar payments plugin. |
 | `@stackpanel/db` | Drizzle ORM with Neon serverless PostgreSQL. Auth schema (user, session, account, verification). |
-| `@gen/env` | Type-safe env vars via Zod schemas. Per-app/per-env codegen from Nix. Multi-entrypoint (web, web-client, web-server, auth, loader). |
+| `@gen/env` | Generated, type-safe env package. Per-app/per-env codegen from Nix with app exports like `@gen/env/web`, a runtime loader under `src/entrypoints/`, and embedded encrypted payloads in `src/embedded-data.ts`. |
 | `@stackpanel/proto` | 23+ protobuf modules for agent communication. Generated Go + TypeScript types. |
 | `@stackpanel/agent-client` | Connect-RPC client factory with JWT interceptor. |
 | `@stackpanel/ui` | Facade: re-exports ui-web (or ui-native) + ui-core utilities. |
@@ -251,24 +251,21 @@ All packages use the `exports` field with `.` and `./*` patterns. Source TypeScr
 
 ## Secrets Architecture
 
-Three-tier system:
+Two-layer system:
 
-1. **Master keys**: AGE-encrypted master keys (local auto-generated, team-shared). Local key at `.stackpanel/state/keys/`.
-2. **SOPS-encrypted YAML**: Per-environment files in `vars/` (`dev.sops.yaml`, `staging.sops.yaml`, `prod.sops.yaml`). Plaintext values use `# safe` comment marker (SOPS `unencrypted_comment_regex`).
-3. **Group keys**: Per-group `.enc.age` files in `recipients/`, encrypted to all team recipients. Decrypted at runtime for secret access.
+1. **Local AGE identity**: Auto-generated on shell entry at `.stack/keys/local.txt` for SOPS decryption.
+2. **SOPS-encrypted YAML**: Secret files live in `.stack/secrets/vars/*.sops.yaml` and use `# safe` / `# plaintext` comments for unencrypted values.
 
 Key directories:
-- `.stackpanel/secrets/recipients/` -- AGE public keys per team member (`*.age.pub`, committed, auto-registered on shell entry)
-- `.stackpanel/secrets/recipients/*.enc.age` -- SOPS-encrypted group private keys (committed, encrypted to all recipients)
-- `.stackpanel/secrets/recipients/.sops.yaml` -- Auto-generated from all `recipients/**/*.age.pub` files
-- `.stackpanel/secrets/vars/.sops.yaml` -- GENERATED at shell entry from `config.nix` group keys (gitignored, never committed)
-- `.stackpanel/secrets/recipients/.archive/` -- Rotated/old keys
+- `.stack/secrets/.sops.yaml` -- Generated from `stackpanel.secrets.recipients` and tag-based group selection
+- `.stack/secrets/vars/` -- SOPS-encrypted secret files (`dev.sops.yaml`, `prod.sops.yaml`, etc.)
+- `.stack/keys/` -- Local AGE identity material
 
-Key integrity: `config.nix` is the single source of truth for group public keys. A wrapped SOPS binary resolves group pubkeys from Nix at build time (injects `--age` per file), and `vars/.sops.yaml` is generated as a fallback. This eliminates key drift between config files.
+Key integrity: Nix config is the single source of truth for recipients and tags. Shell entry regenerates `.stack/secrets/.sops.yaml`, and `rekey.sh` reapplies those rules to existing files.
 
-Team onboarding: self-service via Git push. New member enters devshell -> pub key registered in `recipients/` -> push triggers GitHub Actions rekey workflow -> `.enc.age` files re-encrypted for all recipients -> pull to access secrets. Group private keys stored as GitHub Actions secrets (`SECRETS_AGE_KEY_<GROUP>`).
+Team onboarding: add a public key in `stackpanel.secrets.recipients` or `stackpanel.users`, re-enter the devshell to regenerate `.sops.yaml`, then run `.stack/secrets/bin/rekey.sh` so existing secret files pick up the new recipients.
 
-Codegen: Nix generates typed TypeScript env modules in `packages/env/src/generated/` per app per environment.
+Codegen: Nix generates the env package under `packages/gen/env/src/`, including typed TypeScript modules, embedded encrypted payloads, and runtime loaders.
 
 Runtime resolution chain: `secrets:env` script -> AGE decryption -> vals (SSM/Vault/SOPS) -> env files -> chamber (AWS SSM).
 
@@ -371,7 +368,7 @@ Use this matrix to identify what else needs updating when you change something:
 | **Flake template** | Update ALL template variants (`default/`, `minimal/`, `devenv/`), run template tests (`tests/`), update docs if user-facing behavior changed |
 | **Codegen template** | Re-run the relevant generation script, verify generated output compiles/type-checks, update tests |
 | **Package public API** | Check all downstream consumers in the dependency chain, update re-exports in `packages/ui/` if it's a UI package |
-| **Secrets / SOPS config** | Update `.stackpanel/secrets/` schema, verify group key derivation, check env var propagation |
+| **Secrets / SOPS config** | Update `.stack/secrets/` schema, verify recipient/tag derivation, check env var propagation |
 | **Database schema** | Update proto schema, regenerate types, update Drizzle schema (`packages/db/`), run migrations |
 | **Docs content** | Verify code examples are current, check cross-references to other doc pages |
 | **Config schema (YAML/JSON Schema)** | Update validation schemas, Nix option types, docs, and any Go/TS code that parses the config |

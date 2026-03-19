@@ -11,6 +11,8 @@ import alchemy from "alchemy";
 import type { Scope } from "alchemy";
 // @ts-ignore
 import { createStateStore } from "./state-store";
+// @ts-ignore
+export * from "./file";
 
 // Project config embedded at codegen time
 const PROJECT_CONFIG = {

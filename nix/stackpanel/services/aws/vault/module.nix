@@ -9,6 +9,7 @@ let
   meta = import ./meta.nix;
   cfg = config.stackpanel.aws-vault;
   sp = config.stackpanel;
+  awsVaultExe = lib.getExe cfg.package;
 
   wrapperType =
     { name, defaultPkg }:
@@ -23,10 +24,12 @@ let
 
   mkWrapper =
     { name, wrappedPkg }:
-    pkgs.writeScriptBin name ''
-      #!${pkgs.bash}/bin/bash
-      exec ${lib.getExe cfg.package} exec ${cfg.profile} -- ${lib.getExe wrappedPkg} "$@"
-    '';
+    pkgs.writeShellApplication {
+      inherit name;
+      text = ''
+        exec ${awsVaultExe} exec ${lib.escapeShellArg cfg.profile} -- ${lib.getExe wrappedPkg} "$@"
+      '';
+    };
 in
 {
   # ===========================================================================
@@ -292,97 +295,114 @@ in
       mkMultiProfileWrapper =
         { name, wrappedPkg }:
         if cfg.profiles != [ ] then
-          pkgs.writeScriptBin name ''
-            #!${pkgs.bash}/bin/bash
-            set -e
-
-            ${lib.optionalString cfg.debug ''
-              echo "[$(date)] ${name} called with args: $*" >> ~/.aws-vault-debug.log
-            ''}
-
-            PROFILES=(${lib.concatMapStringsSep " " lib.escapeShellArg cfg.profiles})
-            LAST_EXIT_CODE=1
-
-            for profile in "''${PROFILES[@]}"; do
-              ${lib.optionalString cfg.showProfileAttempts ''
-                echo "→ Trying AWS profile: $profile" >&2
-              ''}
-
+          pkgs.writeShellApplication {
+            inherit name;
+            text = ''
               ${lib.optionalString cfg.debug ''
-                echo "[$(date)] Trying profile: $profile for ${name}" >> ~/.aws-vault-debug.log
+                echo "[$(date)] ${name} called with args: $*" >> ~/.aws-vault-debug.log
               ''}
 
-              if ${lib.getExe cfg.package} exec "$profile" -- ${lib.getExe wrappedPkg} "$@" 2>&1; then
+              PROFILES=(${lib.concatMapStringsSep " " lib.escapeShellArg cfg.profiles})
+              LAST_EXIT_CODE=1
+
+              for profile in "''${PROFILES[@]}"; do
                 ${lib.optionalString cfg.showProfileAttempts ''
-                  echo "✓ Success with profile: $profile" >&2
+                  echo "→ Trying AWS profile: $profile" >&2
                 ''}
+
                 ${lib.optionalString cfg.debug ''
-                  echo "[$(date)] Success with profile: $profile" >> ~/.aws-vault-debug.log
+                  echo "[$(date)] Trying profile: $profile for ${name}" >> ~/.aws-vault-debug.log
                 ''}
-                ${lib.optionalString cfg.stopOnFirstSuccess "exit 0"}
-                LAST_EXIT_CODE=0
-              else
-                LAST_EXIT_CODE=$?
-                ${lib.optionalString cfg.showProfileAttempts ''
-                  echo "✗ Failed with profile: $profile (exit code: $LAST_EXIT_CODE)" >&2
-                ''}
-                ${lib.optionalString cfg.debug ''
-                  echo "[$(date)] Failed with profile: $profile (exit: $LAST_EXIT_CODE)" >> ~/.aws-vault-debug.log
-                ''}
+
+                if ${awsVaultExe} exec "$profile" -- ${lib.getExe wrappedPkg} "$@"; then
+                  ${lib.optionalString cfg.showProfileAttempts ''
+                    echo "✓ Success with profile: $profile" >&2
+                  ''}
+                  ${lib.optionalString cfg.debug ''
+                    echo "[$(date)] Success with profile: $profile" >> ~/.aws-vault-debug.log
+                  ''}
+                  LAST_EXIT_CODE=0
+                  ${lib.optionalString cfg.stopOnFirstSuccess "break"}
+                else
+                  LAST_EXIT_CODE=$?
+                  ${lib.optionalString cfg.showProfileAttempts ''
+                    echo "✗ Failed with profile: $profile (exit code: $LAST_EXIT_CODE)" >&2
+                  ''}
+                  ${lib.optionalString cfg.debug ''
+                    echo "[$(date)] Failed with profile: $profile (exit: $LAST_EXIT_CODE)" >> ~/.aws-vault-debug.log
+                  ''}
+                fi
+              done
+
+              if [ $LAST_EXIT_CODE -ne 0 ]; then
+                echo "" >&2
+                echo "✗ All profiles failed" >&2
+                echo "Tried: ${lib.concatStringsSep ", " cfg.profiles}" >&2
               fi
-            done
 
-            if [ $LAST_EXIT_CODE -ne 0 ]; then
-              echo "" >&2
-              echo "✗ All profiles failed" >&2
-              echo "Tried: ${lib.concatStringsSep ", " cfg.profiles}" >&2
-            fi
-
-            exit $LAST_EXIT_CODE
-          ''
+              exit $LAST_EXIT_CODE
+            '';
+          }
         else
           mkWrapper { inherit name wrappedPkg; };
 
-      # Scripts for working with multiple profiles
+      awsVaultListProfiles = pkgs.writeShellApplication {
+        name = "aws-vault:list-profiles";
+        runtimeInputs = [ pkgs.gnugrep ];
+        text = ''
+          echo "AWS Vault Profiles (in order):"
+          echo ""
+          ${lib.concatMapStringsSep "\n" (profile: ''
+            echo "  ${profile}:"
+            if ${awsVaultExe} list --profiles 2>/dev/null | grep -q "^${profile}$"; then
+              echo "    Status: ✓ Configured"
+            else
+              echo "    Status: ✗ Not configured (run: aws-vault add ${profile})"
+            fi
+          '') cfg.profiles}
+          echo ""
+          echo "Default profile: ${cfg.profile}"
+        '';
+      };
+
+      awsVaultWithProfile = pkgs.writeShellApplication {
+        name = "aws-vault:with-profile";
+        text = ''
+          if [ $# -lt 2 ]; then
+            echo "Usage: aws-vault:with-profile <profile> <command> [args...]" >&2
+            echo "" >&2
+            echo "Available profiles: ${lib.concatStringsSep ", " cfg.profiles}" >&2
+            exit 1
+          fi
+
+          PROFILE="$1"
+          shift
+
+          ${lib.optionalString cfg.debug ''
+            echo "[$(date)] aws-vault:with-profile called: $PROFILE with args: $*" >> ~/.aws-vault-debug.log
+          ''}
+
+          echo "→ Using AWS profile: $PROFILE" >&2
+          exec ${awsVaultExe} exec "$PROFILE" -- "$@"
+        '';
+      };
+
+      multiProfileHelperPackages = lib.optionals (cfg.profiles != [ ]) [
+        awsVaultListProfiles
+        awsVaultWithProfile
+      ];
+
       multiProfileScripts = lib.optionalAttrs (cfg.profiles != [ ]) {
         "aws-vault:list-profiles" = {
-          exec = ''
-            echo "AWS Vault Profiles (in order):"
-            echo ""
-            ${lib.concatMapStringsSep "\n" (profile: ''
-              echo "  ${profile}:"
-              if aws-vault list --profiles 2>/dev/null | grep -q "^${profile}$"; then
-                echo "    Status: ✓ Configured"
-              else
-                echo "    Status: ✗ Not configured (run: aws-vault add ${profile})"
-              fi
-            '') cfg.profiles}
-            echo ""
-            echo "Default profile: ${cfg.profile}"
-          '';
+          exec = "${awsVaultListProfiles}/bin/aws-vault:list-profiles \"$@\"";
           description = "List configured AWS Vault profiles";
+          timeout = 0;
         };
 
         "aws-vault:with-profile" = {
-          exec = ''
-            if [ $# -lt 2 ]; then
-              echo "Usage: aws-vault:with-profile <profile> <command> [args...]" >&2
-              echo "" >&2
-              echo "Available profiles: ${lib.concatStringsSep ", " cfg.profiles}" >&2
-              exit 1
-            fi
-
-            PROFILE="$1"
-            shift
-
-            ${lib.optionalString cfg.debug ''
-              echo "[$(date)] aws-vault:with-profile called: $PROFILE with args: $*" >> ~/.aws-vault-debug.log
-            ''}
-
-            echo "→ Using AWS profile: $PROFILE" >&2
-            exec ${lib.getExe cfg.package} exec "$PROFILE" -- "$@"
-          '';
+          exec = "${awsVaultWithProfile}/bin/aws-vault:with-profile \"$@\"";
           description = "Run command with specific AWS Vault profile";
+          timeout = 0;
         };
       };
     in
@@ -391,8 +411,18 @@ in
       {
         stackpanel.devshell.packages = [ cfg.package ];
 
-        # Add multi-profile helper scripts if enabled
         stackpanel.scripts = multiProfileScripts;
+
+        stackpanel.motd.commands = lib.optionals (cfg.profiles != [ ]) [
+          {
+            name = "aws-vault:list-profiles";
+            description = "List configured AWS Vault profiles";
+          }
+          {
+            name = "aws-vault:with-profile";
+            description = "Run a command with a specific AWS Vault profile";
+          }
+        ];
 
         # ── Module checks ──────────────────────────────────────────────
         stackpanel.moduleChecks.${meta.id} = {
@@ -410,7 +440,7 @@ in
             derivation =
               pkgs.runCommand "sp-check-${meta.id}-packages"
                 {
-                  buildInputs = [ cfg.package ];
+                  buildInputs = [ cfg.package ] ++ multiProfileHelperPackages;
                 }
                 ''
                   mkdir -p $out
