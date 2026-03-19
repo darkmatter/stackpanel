@@ -1,3 +1,0 @@
-# web prod environment secrets
-# Auto-generated boilerplate - edit values, then encrypt with: sops web/prod.yaml
-OPENAI_API_KEY: PLACEHOLDER_OPENAI_API_KEY
