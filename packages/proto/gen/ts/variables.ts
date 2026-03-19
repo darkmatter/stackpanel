@@ -38,7 +38,7 @@ export interface Variable {
      *   "3000"
      *
      * Vals references:
-     *   "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+     *   "ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
      *   "ref+awsssm://prod/api-key"
      *   "ref+exec://echo $RANDOM"
      *

@@ -41,7 +41,7 @@ type Variable struct {
 	//
 	// Vals references:
 	//
-	//	"ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+	//	"ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL"
 	//	"ref+awsssm://prod/api-key"
 	//	"ref+exec://echo $RANDOM"
 	Value         string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
