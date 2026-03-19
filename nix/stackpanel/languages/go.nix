@@ -21,6 +21,7 @@
 let
   cfg = config.stackpanel.languages.go;
   stateDir = config.stackpanel.dirs.state or ".stack/profile";
+  ideCfg = config.stackpanel.ide;
 in
 {
   options.stackpanel.languages.go = {
@@ -89,6 +90,22 @@ in
       CGO_LDFLAGS = "-L${pkgs.darwin.libresolv}/lib";
     };
 
+    # IDE Integration
+    stackpanel.ide.zed.settings-modules = [
+      {
+        config = {
+          lsp.gopls.binary.path = lib.mkIf ideCfg.zed.enable "${pkgs.gopls}/bin/gopls";
+        };
+      }
+    ];
+    stackpanel.ide.vscode.settings-modules = [
+      {
+        config = {
+          "go.alternateTools".gopls = lib.mkIf ideCfg.vscode.enable "${pkgs.gopls}/bin/gopls";
+        };
+      }
+    ];
+
     stackpanel.devshell.hooks.main = [
       ''
         # Go toolchain: set GOPATH and add $GOPATH/bin to PATH
@@ -96,8 +113,6 @@ in
         export PATH="$GOPATH/bin:$PATH"
       ''
     ];
-
-
 
     stackpanel.motd.features = [ "Go ${cfg.package.version or ""}" ];
   };
