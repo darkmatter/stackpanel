@@ -16,7 +16,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
-import type { Variable } from "@/lib/types";
 import { isEncryptedKeyGroup, getKeyGroup } from "./constants";
 
 interface EditVariableDialogProps {
@@ -74,10 +73,9 @@ export function EditVariableDialog({
 		try {
 			const client = agentClient;
 			if (token) client.setToken(token);
-			const variablesClient = client.nix.mapEntity<Variable>("variables");
+			const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
-			const updatedVariable: Variable = {
-				id: variable.id,
+			const updatedVariable = {
 				value: trimmedValue,
 			};
 
@@ -112,7 +110,7 @@ export function EditVariableDialog({
 		try {
 			const client = agentClient;
 			if (token) client.setToken(token);
-			const variablesClient = client.nix.mapEntity<Variable>("variables");
+			const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
 			await variablesClient.remove(variable.id);
 			toast.success(`Deleted variable "${variable.id}"`);

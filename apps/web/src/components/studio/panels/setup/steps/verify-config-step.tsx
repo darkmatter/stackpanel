@@ -34,13 +34,8 @@ export function VerifyConfigStep() {
     | undefined;
 
   const groups = useMemo(
-    () =>
-      groupsConfig
-        ? Object.keys(groupsConfig).filter(
-            (g) => groupsConfig[g]?.["age-pub"],
-          )
-        : [],
-    [groupsConfig],
+	() => (groupsConfig ? Object.keys(groupsConfig) : []),
+	[groupsConfig],
   );
 
   const checkSopsConfig = useCallback(async () => {
@@ -48,7 +43,7 @@ export function VerifyConfigStep() {
     setCheckingSops(true);
     try {
       const res = await agentClient.readFile(
-        ".stackpanel/secrets/vars/.sops.yaml",
+        ".stack/secrets/.sops.yaml",
       );
       setSopsExists(!!res);
     } catch {
@@ -108,7 +103,7 @@ export function VerifyConfigStep() {
           <div className="flex items-center gap-2">
             <FileCheck className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">
-              vars/.sops.yaml (auto-generated)
+              .stack/secrets/.sops.yaml (auto-generated)
             </span>
           </div>
           {checkingSops ? (
@@ -125,12 +120,12 @@ export function VerifyConfigStep() {
             config.
           </p>
         )}
-        {sopsExists && (
-          <p className="text-xs text-muted-foreground">
-            Generated from config.nix group public keys. This file is gitignored
-            and regenerated on every shell entry.
-          </p>
-        )}
+		{sopsExists && (
+		  <p className="text-xs text-muted-foreground">
+			Generated from the current recipient public keys. This file is
+			gitignored and regenerated on every shell entry.
+		  </p>
+		)}
       </div>
 
       {/* Encrypt/Decrypt Verification */}
@@ -195,18 +190,18 @@ export function VerifyConfigStep() {
         </div>
       )}
 
-      {groups.length === 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
-          <p className="text-sm text-amber-700 dark:text-amber-400">
-            No groups initialized yet.{" "}
-            <button
-              className="underline font-medium"
-              onClick={() => goToStep("init-groups")}
-            >
-              Initialize a group first
-            </button>
-          </p>
-        </div>
+		{groups.length === 0 && (
+		  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
+			<p className="text-sm text-amber-700 dark:text-amber-400">
+					No SOPS creation rules configured yet.{" "}
+			  <button
+				className="underline font-medium"
+				onClick={() => goToStep("init-groups")}
+			  >
+				Review your groups first
+			  </button>
+			</p>
+		  </div>
       )}
 
       {allPassed && (

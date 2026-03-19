@@ -19,6 +19,8 @@ import {
 } from "@ui/collapsible";
 import { ScrollArea, ScrollBar } from "@ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
+import { Textarea } from "@ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import {
   AlertTriangle,
   Check,
@@ -32,6 +34,7 @@ import {
   FolderOpen,
   Info,
   Loader2,
+  Pencil,
   Play,
   Puzzle,
   RefreshCw,
@@ -39,7 +42,9 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import type { editor } from "monaco-editor";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -57,7 +62,19 @@ import {
   type InspectorStateFile,
   useInspectorData,
 } from "@/lib/use-inspector-data";
+import { useAgentContext } from "@/lib/agent-provider";
+import {
+  buildLocalConfigJsonSchema,
+  CONFIG_FILE_PROJECTION_EVALS,
+  renderNixFile,
+  STACKPANEL_OPTIONS_DOC_EVAL,
+  type ConfigFileProjection,
+  type ConfigFileTarget,
+  type JsonSchema,
+  type StackpanelOptionDoc,
+} from "@/lib/stackpanel-config-editor";
 import { cn } from "@/lib/utils";
+import { JsonSchemaEditor } from "./shared/json-schema-editor";
 import { PanelHeader } from "./shared/panel-header";
 
 // =============================================================================
@@ -902,6 +919,70 @@ function DataFilesTab({ files }: { files: InspectorDataFile[] }) {
 // Config Tab
 // =============================================================================
 
+interface FileReadResult {
+  content?: string;
+  exists?: boolean;
+}
+
+type ConfigViewMode = "evaluated" | ConfigFileTarget;
+
+interface ConfigFileState {
+  status: "idle" | "loading" | "ready";
+  path: string;
+  exists: boolean;
+  isFunction: boolean;
+  rawMode: boolean;
+  config: Record<string, unknown> | null;
+  jsonText: string;
+  savedJsonText: string;
+  rawContent: string;
+  savedRawContent: string;
+  error: string | null;
+}
+
+const EMPTY_JSON_TEXT = JSON.stringify({}, null, 2);
+
+const CONFIG_FILE_DEFAULT_PATHS: Record<ConfigFileTarget, string> = {
+  config: ".stack/config.nix",
+  local: ".stack/config.local.nix",
+};
+
+const CONFIG_FILE_LABELS: Record<ConfigFileTarget, string> = {
+  config: "Config",
+  local: "Local Overrides",
+};
+
+const CONFIG_FILE_DESCRIPTIONS: Record<ConfigFileTarget, string> = {
+  config: "Shared source config from config.nix",
+  local: "Local-only overrides from config.local.nix",
+};
+
+const CONFIG_FILE_DEFAULT_HEADERS: Record<ConfigFileTarget, string | null> = {
+  config: "{ config, ... }:",
+  local: null,
+};
+
+function createEmptyConfigFileState(target: ConfigFileTarget): ConfigFileState {
+  return {
+    status: "idle",
+    path: CONFIG_FILE_DEFAULT_PATHS[target],
+    exists: false,
+    isFunction: false,
+    rawMode: false,
+    config: {},
+    jsonText: EMPTY_JSON_TEXT,
+    savedJsonText: EMPTY_JSON_TEXT,
+    rawContent: "",
+    savedRawContent: "",
+    error: null,
+  };
+}
+
+const EMPTY_CONFIG_FILE_STATES: Record<ConfigFileTarget, ConfigFileState> = {
+  config: createEmptyConfigFileState("config"),
+  local: createEmptyConfigFileState("local"),
+};
+
 function ConfigSourceBadge({ source }: { source: string | null }) {
   if (!source) return null;
 
@@ -1011,13 +1092,153 @@ function ConfigTab({
   config,
   configSource,
   contributorFilter,
+  refreshConfig,
 }: {
   config: Record<string, unknown> | null;
   configSource: string | null;
   contributorFilter?: string | null;
+  refreshConfig: () => Promise<void>;
 }) {
+  const { isConnected, nixEval, readFile, writeFile } = useAgentContext();
   const [filter, setFilter] = useState("");
   const [showFilterHint, setShowFilterHint] = useState(true);
+  const [viewMode, setViewMode] = useState<ConfigViewMode>("evaluated");
+  const [editingTarget, setEditingTarget] = useState<ConfigFileTarget | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [fileStates, setFileStates] = useState<Record<ConfigFileTarget, ConfigFileState>>(
+    EMPTY_CONFIG_FILE_STATES,
+  );
+  const [configSchema, setConfigSchema] = useState<JsonSchema | null>(null);
+  const [schemaStatus, setSchemaStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [schemaError, setSchemaError] = useState<string | null>(null);
+  const [editorMarkers, setEditorMarkers] = useState<editor.IMarker[]>([]);
+
+  const updateFileState = useCallback(
+    (
+      target: ConfigFileTarget,
+      updater: (state: ConfigFileState) => ConfigFileState,
+    ) => {
+      setFileStates((prev) => ({
+        ...prev,
+        [target]: updater(prev[target]),
+      }));
+    },
+    [],
+  );
+
+  const loadConfigFile = useCallback(async (target: ConfigFileTarget) => {
+    if (!isConnected) {
+      return;
+    }
+
+    updateFileState(target, (prev) => ({
+      ...prev,
+      status: "loading",
+      error: null,
+    }));
+
+    try {
+      const projection = await nixEval<ConfigFileProjection>(
+        CONFIG_FILE_PROJECTION_EVALS[target],
+      );
+      const path = projection.path || CONFIG_FILE_DEFAULT_PATHS[target];
+      const rawFile = (await readFile(path)) as FileReadResult;
+      const nextConfig = isRecord(projection.config) ? projection.config : {};
+      const jsonText = JSON.stringify(nextConfig, null, 2);
+      const rawContent = rawFile.exists ? rawFile.content ?? "" : "";
+
+      setFileStates((prev) => ({
+        ...prev,
+        [target]: {
+        status: "ready",
+        path,
+        exists: Boolean(projection.exists),
+        isFunction: Boolean(projection.isFunction),
+        rawMode: false,
+        config: nextConfig,
+        jsonText,
+        savedJsonText: jsonText,
+        rawContent,
+        savedRawContent: rawContent,
+        error: null,
+        },
+      }));
+    } catch (error) {
+      const fallback = await readConfigFileFallback(target, readFile);
+      setFileStates((prev) => ({
+        ...prev,
+        [target]: {
+        status: "ready",
+        path: fallback.path,
+        exists: fallback.exists,
+        isFunction: detectFunctionWrapper(fallback.content),
+        rawMode: true,
+        config: null,
+        jsonText: EMPTY_JSON_TEXT,
+        savedJsonText: EMPTY_JSON_TEXT,
+        rawContent: fallback.content,
+        savedRawContent: fallback.content,
+        error:
+          error instanceof Error
+            ? error.message
+            : `Could not render ${getConfigFileName(target)} as JSON`,
+        },
+      }));
+    }
+  }, [isConnected, nixEval, readFile, updateFileState]);
+
+  const loadConfigSchema = useCallback(async () => {
+    if (!isConnected || schemaStatus === "loading" || schemaStatus === "ready") {
+      return;
+    }
+
+    setSchemaStatus("loading");
+    setSchemaError(null);
+
+    try {
+      const optionsDoc = await nixEval<Record<string, StackpanelOptionDoc>>(
+        STACKPANEL_OPTIONS_DOC_EVAL,
+      );
+      setConfigSchema(buildLocalConfigJsonSchema(optionsDoc));
+      setSchemaStatus("ready");
+    } catch (error) {
+      setSchemaStatus("error");
+      setSchemaError(
+        error instanceof Error ? error.message : "Failed to load config schema",
+      );
+    }
+  }, [isConnected, nixEval, schemaStatus]);
+
+  const currentTarget = viewMode === "evaluated" ? null : viewMode;
+  const currentFileState = currentTarget ? fileStates[currentTarget] : null;
+  const isEditing = currentTarget !== null && editingTarget === currentTarget;
+  const currentFileLabel = currentTarget ? CONFIG_FILE_LABELS[currentTarget] : null;
+  const currentFileDescription = currentTarget
+    ? CONFIG_FILE_DESCRIPTIONS[currentTarget]
+    : null;
+  const currentFileDefaultPath = currentTarget
+    ? CONFIG_FILE_DEFAULT_PATHS[currentTarget]
+    : null;
+  const currentModelPath = currentTarget
+    ? `file:///stackpanel/${currentTarget === "config" ? "config" : "config.local"}.json`
+    : "file:///stackpanel/config.json";
+
+  useEffect(() => {
+    if (currentTarget && currentFileState?.status === "idle") {
+      void loadConfigFile(currentTarget);
+    }
+  }, [currentFileState?.status, currentTarget, loadConfigFile]);
+
+  useEffect(() => {
+    if (currentTarget) {
+      void loadConfigSchema();
+    }
+  }, [currentTarget, loadConfigSchema]);
+
+  useEffect(() => {
+    setEditingTarget(null);
+    setEditorMarkers([]);
+  }, [viewMode]);
 
   if (!config) {
     return (
@@ -1032,41 +1253,50 @@ function ConfigTab({
 
   const configString = JSON.stringify(config, null, 2);
   const contributorFilterLower = contributorFilter?.toLowerCase() ?? "";
+  const isCurrentFileReady = currentTarget !== null && currentFileState?.status === "ready";
+  const activeJsonObject =
+    viewMode === "evaluated"
+      ? config
+      : !isCurrentFileReady
+        ? null
+        : currentFileState?.rawMode
+        ? null
+        : currentFileState?.config ?? null;
+  const activeJsonString =
+    viewMode === "evaluated"
+      ? configString
+      : !isCurrentFileReady
+        ? ""
+        : currentFileState?.rawMode
+        ? currentFileState.rawContent
+        : currentFileState?.jsonText ?? EMPTY_JSON_TEXT;
+  const hasJsonFiltering = !isEditing && Boolean(activeJsonObject);
+  const hasValidationErrors = editorMarkers.some((marker) => marker.severity === 8);
+  const hasFileChanges = currentFileState
+    ? currentFileState.rawMode
+      ? currentFileState.rawContent !== currentFileState.savedRawContent
+      : currentFileState.jsonText !== currentFileState.savedJsonText
+    : false;
 
-  // ---------------------------------------------------------------------------
-  // Filtering strategy:
-  //   1. If the filter text resolves as a dot-path (e.g. "ide.zed"), show the
-  //      value at that path wrapped in its parent keys so the context is clear.
-  //   2. Otherwise, do a key-path substring search across the whole tree,
-  //      returning every branch whose path contains the filter text.
-  //   3. If neither yields results, fall through to the raw JSON string.
-  //   4. Contributor filter is applied separately as a line-level filter on the
-  //      final JSON string.
-  // ---------------------------------------------------------------------------
-  let filteredConfig: string;
+  let filteredConfig = activeJsonString;
 
-  if (filter) {
+  if (hasJsonFiltering && activeJsonObject && filter) {
     const trimmed = filter.trim();
-
-    // Attempt 1: exact dot-path resolution
-    const exactMatch = resolveConfigPath(config, trimmed);
-    // Attempt 2: key-path substring search
-    const fuzzyMatch = filterConfigByKeySearch(config, trimmed);
+    const exactMatch = resolveConfigPath(activeJsonObject, trimmed);
+    const fuzzyMatch = filterConfigByKeySearch(activeJsonObject, trimmed);
 
     if (exactMatch !== undefined) {
-      // Wrap the result back into its path for context
       const segments = trimmed.split(".");
       let wrapped: unknown = exactMatch;
       for (let i = segments.length - 1; i >= 0; i--) {
-        // Find the actual key (preserving original casing)
-        let lookupObj: unknown = config;
+        let lookupObj: unknown = activeJsonObject;
         for (let j = 0; j < i; j++) {
           const rec = lookupObj as Record<string, unknown>;
           const realKey =
             segments[j] in rec
               ? segments[j]
               : Object.keys(rec).find(
-                  (k) => k.toLowerCase() === segments[j].toLowerCase(),
+                  (key) => key.toLowerCase() === segments[j].toLowerCase(),
                 ) ?? segments[j];
           lookupObj = rec[realKey];
         }
@@ -1075,7 +1305,7 @@ function ConfigTab({
           segments[i] in rec
             ? segments[i]
             : Object.keys(rec).find(
-                (k) => k.toLowerCase() === segments[i].toLowerCase(),
+                (key) => key.toLowerCase() === segments[i].toLowerCase(),
               ) ?? segments[i];
         wrapped = { [realKey]: wrapped };
       }
@@ -1083,52 +1313,234 @@ function ConfigTab({
     } else if (fuzzyMatch !== undefined) {
       filteredConfig = JSON.stringify(fuzzyMatch, null, 2);
     } else {
-      // Nothing matched via path – show empty
       filteredConfig = "// No matching config paths found";
     }
-  } else {
-    filteredConfig = configString;
   }
 
-  // Apply contributor line-level filter on top, if present
-  if (contributorFilterLower) {
+  if (viewMode === "evaluated" && contributorFilterLower && !isEditing) {
     filteredConfig = filteredConfig
       .split("\n")
       .filter((line) => line.toLowerCase().includes(contributorFilterLower))
       .join("\n");
   }
 
+  const handleStartEditing = async () => {
+    if (!currentTarget) {
+      return;
+    }
+
+    if (currentFileState?.status === "idle") {
+      await loadConfigFile(currentTarget);
+    }
+
+    void loadConfigSchema();
+    setFilter("");
+    setEditingTarget(currentTarget);
+  };
+
+  const handleCancelEditing = () => {
+    if (!currentTarget) {
+      return;
+    }
+
+    updateFileState(currentTarget, (prev) => ({
+      ...prev,
+      jsonText: prev.savedJsonText,
+      rawContent: prev.savedRawContent,
+    }));
+    setEditorMarkers([]);
+    setEditingTarget(null);
+  };
+
+  const handleSaveConfigFile = async () => {
+    if (!currentTarget || !currentFileState) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      let nextContent = currentFileState.rawContent.trim()
+        ? currentFileState.rawContent
+        : getDefaultEmptySource(currentTarget, currentFileState.isFunction);
+
+      if (!currentFileState.rawMode) {
+        const parsed = JSON.parse(currentFileState.jsonText);
+        nextContent = renderNixFile(parsed, {
+          existingSource: currentFileState.savedRawContent,
+          defaultFunctionHeader:
+            currentFileState.isFunction || currentTarget === "config"
+              ? CONFIG_FILE_DEFAULT_HEADERS[currentTarget]
+              : null,
+        });
+      }
+
+      await writeFile(currentFileState.path, nextContent);
+      await Promise.all([loadConfigFile(currentTarget), refreshConfig()]);
+      setEditingTarget(null);
+      setEditorMarkers([]);
+      toast.success(`${CONFIG_FILE_LABELS[currentTarget]} saved`, {
+        description: `Updated ${currentFileState.path}`,
+      });
+    } catch (error) {
+      toast.error(`Failed to save ${currentFileLabel?.toLowerCase() ?? "config"}`, {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Full evaluated Nix configuration</span>
-          <ConfigSourceBadge source={configSource} />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            {viewMode === "evaluated"
+              ? "Full evaluated Nix configuration"
+              : currentFileDescription}
+          </span>
+          {viewMode === "evaluated" ? (
+            <ConfigSourceBadge source={configSource} />
+          ) : (
+            <>
+              <Badge variant="outline" className="text-xs">
+                {currentFileState?.path ?? currentFileDefaultPath}
+              </Badge>
+              {currentFileState && !currentFileState.exists && (
+                <Badge variant="secondary" className="text-xs">
+                  New file
+                </Badge>
+              )}
+              {currentFileState?.rawMode && (
+                <Badge variant="secondary" className="text-xs">
+                  Raw Nix fallback
+                </Badge>
+              )}
+            </>
+          )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigator.clipboard.writeText(configString)}
-        >
-          <Copy className="mr-2 h-3 w-3" />
-          Copy JSON
-        </Button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(value) => {
+              if (value === "evaluated" || value === "config" || value === "local") {
+                setViewMode(value);
+              }
+            }}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="evaluated" aria-label="View evaluated config">
+              Evaluated
+            </ToggleGroupItem>
+            <ToggleGroupItem value="config" aria-label="View source config">
+              Config
+            </ToggleGroupItem>
+            <ToggleGroupItem value="local" aria-label="View local overrides">
+              Local Overrides
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          {currentTarget && !isEditing ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleStartEditing()}
+              disabled={currentFileState?.status === "loading"}
+            >
+              <Pencil className="mr-2 h-3 w-3" />
+              Edit
+            </Button>
+          ) : null}
+
+          {currentTarget && isEditing ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelEditing}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => void handleSaveConfigFile()}
+                disabled={isSaving || !hasFileChanges || hasValidationErrors}
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-3 w-3" />
+                )}
+                Save
+              </Button>
+            </>
+          ) : null}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigator.clipboard.writeText(activeJsonString)}
+            disabled={currentTarget !== null && !isCurrentFileReady}
+          >
+            <Copy className="mr-2 h-3 w-3" />
+            {currentFileState?.rawMode ? "Copy source" : "Copy JSON"}
+          </Button>
+        </div>
       </div>
 
-      {/* Filter */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Filter by path (e.g. ide.zed) or keyword..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="w-full rounded-md border bg-background px-9 py-2 text-sm"
-        />
-      </div>
+      {currentTarget && currentFileState?.error ? (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              This file currently falls back to raw Nix because
+              {" "}<code>{currentFileState.path}</code>{" "}
+              could not be projected to JSON. Schema hints apply once it evaluates to plain JSON-compatible data again.
+            </span>
+          </div>
+        </div>
+      ) : null}
 
-      {/* Filter hint notice */}
-      {showFilterHint && (
+      {currentTarget && isEditing && !currentFileState?.rawMode ? (
+        <div className="rounded-md border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-blue-900 dark:text-blue-200">
+          <div className="flex items-start gap-2">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <div className="space-y-1">
+              <p>Editing the JSON projection of <code>{currentFileState?.path}</code>.</p>
+              <p>
+                Save converts the edited object back into Nix so {currentFileLabel?.toLowerCase() ?? "this file"} stays in sync.
+              </p>
+              {schemaStatus === "loading" ? <p>Loading option hints...</p> : null}
+              {schemaStatus === "error" && schemaError ? <p>{schemaError}</p> : null}
+              {hasValidationErrors ? (
+                <p className="text-destructive">
+                  Fix {editorMarkers.filter((marker) => marker.severity === 8).length} validation error(s) before saving.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {hasJsonFiltering ? (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Filter by path (e.g. ide.zed) or keyword..."
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            className="w-full rounded-md border bg-background px-9 py-2 text-sm"
+          />
+        </div>
+      ) : null}
+
+      {hasJsonFiltering && showFilterHint ? (
         <div className="relative flex gap-3 rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2.5 text-xs text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <div className="space-y-1">
@@ -1152,15 +1564,130 @@ function ConfigTab({
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-      )}
+      ) : null}
 
-      <ScrollArea className="h-[500px]">
-        <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-4 font-mono text-xs">
-          {filteredConfig}
-        </pre>
-      </ScrollArea>
+      {currentTarget && currentFileState?.status === "loading" ? (
+        <div className="flex h-[500px] items-center justify-center rounded-md border bg-muted/20">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : null}
+
+      {currentTarget && currentFileState?.status === "ready" && isEditing ? (
+        currentFileState.rawMode ? (
+          <Textarea
+            className="min-h-[500px] resize-y font-mono text-xs"
+            value={currentFileState.rawContent}
+            onChange={(event) =>
+              updateFileState(currentTarget, (prev) => ({
+                ...prev,
+                rawContent: event.target.value,
+              }))
+            }
+            spellCheck={false}
+          />
+        ) : (
+          <div className="overflow-hidden rounded-md border">
+            <JsonSchemaEditor
+              modelPath={currentModelPath}
+              value={currentFileState.jsonText}
+              onChange={(value) =>
+                updateFileState(currentTarget, (prev) => ({
+                  ...prev,
+                  jsonText: value,
+                }))
+              }
+              schema={configSchema}
+              onValidate={setEditorMarkers}
+            />
+          </div>
+        )
+      ) : null}
+
+      {(!isEditing || viewMode === "evaluated") &&
+      !(currentTarget && currentFileState?.status === "loading") ? (
+        <ScrollArea className="h-[500px]">
+          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md border bg-muted/30 p-4 font-mono text-xs">
+            {filteredConfig || (currentTarget ? "{ }" : "")}
+          </pre>
+        </ScrollArea>
+      ) : null}
     </div>
   );
+}
+
+async function readConfigFileFallback(
+  target: ConfigFileTarget,
+  readFile: (path: string) => Promise<unknown>,
+): Promise<{ path: string; exists: boolean; content: string }> {
+  const stackPath =
+    target === "config" ? ".stack/config.nix" : ".stack/config.local.nix";
+  const legacyPath =
+    target === "config" ? ".stackpanel/config.nix" : ".stackpanel/config.local.nix";
+  const [stackFile, legacyFile] = await Promise.all([
+    readFile(stackPath) as Promise<FileReadResult>,
+    readFile(legacyPath) as Promise<FileReadResult>,
+  ]);
+
+  if (stackFile.exists) {
+    return {
+      path: stackPath,
+      exists: true,
+      content: stackFile.content ?? "",
+    };
+  }
+
+  if (legacyFile.exists) {
+    return {
+      path: legacyPath,
+      exists: true,
+      content: legacyFile.content ?? "",
+    };
+  }
+
+  if (target === "config") {
+    return {
+      path: stackPath,
+      exists: false,
+      content: "",
+    };
+  }
+
+  const [stackConfig, legacyConfig] = await Promise.all([
+    readFile(".stack/config.nix") as Promise<FileReadResult>,
+    readFile(".stackpanel/config.nix") as Promise<FileReadResult>,
+  ]);
+
+  return {
+    path: legacyConfig.exists && !stackConfig.exists ? legacyPath : stackPath,
+    exists: false,
+    content: "",
+  };
+}
+
+function getConfigFileName(target: ConfigFileTarget): string {
+  return target === "config" ? "config.nix" : "config.local.nix";
+}
+
+function getDefaultEmptySource(
+  target: ConfigFileTarget,
+  isFunction: boolean,
+): string {
+  const defaultHeader = CONFIG_FILE_DEFAULT_HEADERS[target];
+  if (isFunction && defaultHeader) {
+    return `${defaultHeader}\n{ }\n`;
+  }
+  if (target === "config" && defaultHeader) {
+    return `${defaultHeader}\n{ }\n`;
+  }
+  return "{ }\n";
+}
+
+function detectFunctionWrapper(source: string): boolean {
+  return /^\s*(#.*\n\s*)*\{[\s\S]*\}:/.test(source);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 // =============================================================================
@@ -1254,14 +1781,13 @@ interface InspectorPanelProps {
 }
 
 export function InspectorPanel({ initialContributor }: InspectorPanelProps = {}) {
-  const { data, isLoading, isError, error, refetch } = useInspectorData();
+  const { data, isLoading, isError, error, refetch, refreshConfig } = useInspectorData();
 
   const contributors = data?.contributors ?? [];
   const [selectedContributor, setSelectedContributor] = useState<string | null>(
     initialContributor ?? null,
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [_exportCopied, setExportCopied] = useState(false);
 
   const displayData = useMemo(() => {
     if (!data) return null;
@@ -1269,8 +1795,6 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
     return filterInspectorDataByContributor(data, selectedContributor);
   }, [data, selectedContributor]);
 
-  const _activeContributor =
-    contributors.find((c) => c.id === selectedContributor) ?? null;
   const inspectorData = displayData;
 
   const handleRefresh = async () => {
@@ -1280,18 +1804,6 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  const _handleExport = () => {
-    const exportSource = displayData ?? data;
-    if (!exportSource) return;
-    const exportData = {
-      exportedAt: new Date().toISOString(),
-      ...exportSource,
-    };
-    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
-    setExportCopied(true);
-    setTimeout(() => setExportCopied(false), 2000);
   };
 
   if (isLoading) {
@@ -1540,6 +2052,7 @@ export function InspectorPanel({ initialContributor }: InspectorPanelProps = {})
                 config={inspectorData?.config ?? null}
                 configSource={inspectorData?.configSource ?? null}
                 contributorFilter={selectedContributor}
+                refreshConfig={refreshConfig}
               />
             </CardContent>
           </Card>

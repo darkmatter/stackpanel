@@ -28,6 +28,7 @@ import {
 } from "@ui/sidebar";
 import {
   Activity,
+  AlertTriangle,
   AppWindow,
   BookOpen,
   CheckCircle2,
@@ -67,6 +68,7 @@ import {
   CONFIGURATION_SECTIONS,
   type ConfigurationSection,
 } from "./panels/configuration";
+import { useSopsConfigStatus } from "./panels/variables/use-sops-config-status";
 import { useAllPanelsGroupedByModule } from "./panels/panels-panel";
 import { getModuleIconById } from "./panels/shared";
 
@@ -147,7 +149,7 @@ const coceptsNavItems: NavItem[] = [
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
 ];
 
-function NavMenuItem({ item }: { item: NavItem }) {
+function NavMenuItem({ item, showBadge = false }: { item: NavItem; showBadge?: boolean }) {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
   const { state } = useSidebar();
@@ -171,6 +173,11 @@ function NavMenuItem({ item }: { item: NavItem }) {
         >
           <Icon className="size-3 text-sidebar-foreground" />
           <span className="flex-1">{item.label}</span>
+          {showBadge && !isCollapsed ? (
+            <Badge variant="outline" className="px-1.5 py-0 border-amber-500/40 text-amber-600">
+              <AlertTriangle className="h-3 w-3" />
+            </Badge>
+          ) : null}
         </SidebarMenuButton>
       </Link>
     </SidebarMenuItem>
@@ -460,6 +467,7 @@ function SetupMenuItem() {
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const sopsConfigStatus = useSopsConfigStatus();
 
   return (
     <Sidebar collapsible="icon">
@@ -517,7 +525,7 @@ export function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
-                <NavMenuItem key={item.id} item={item} />
+                <NavMenuItem key={item.id} item={item} showBadge={item.id === "variables" && sopsConfigStatus.needsAttention} />
               ))}
               <ModulePanelsMenuItem />
             </SidebarMenu>

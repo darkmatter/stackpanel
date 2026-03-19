@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
+const reactCompilerPlugin = "babel-plugin-react-compiler";
 import alchemy from "alchemy/cloudflare/tanstack-start";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
@@ -25,12 +26,19 @@ export default defineConfig({
     // Use alchemy for Cloudflare deployment, nitro for local dev (HMR)
     ...(useAlchemy ? [alchemy()] : [nitro()]),
     tanstackStart(),
-    viteReact(),
+    viteReact({
+      babel: {
+        plugins: [reactCompilerPlugin],
+      },
+    }),
   ],
   resolve: {
     alias: {
       "@ui": resolve(__dirname, "src/components/ui"),
-      "@gen/featureflags": resolve(__dirname, "../../packages/gen/featureflags/src"),
+      "@gen/featureflags": resolve(
+        __dirname,
+        "../../packages/gen/featureflags/src",
+      ),
     },
   },
   server: {

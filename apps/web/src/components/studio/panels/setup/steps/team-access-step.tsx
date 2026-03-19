@@ -1,15 +1,14 @@
 "use client";
 
 import { Button } from "@ui/button";
+import { Badge } from "@ui/badge";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import {
-	CheckCircle2,
 	Loader2,
 	Plus,
 	Trash2,
 	Users,
-	XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,7 +16,6 @@ import {
 	useRecipients,
 	useAddRecipient,
 	useRemoveRecipient,
-	useRekeyWorkflowStatus,
 } from "@/lib/use-agent";
 import { useSetupContext } from "../setup-context";
 import { StepCard } from "../step-card";
@@ -28,12 +26,12 @@ export function TeamAccessStep() {
 		useSetupContext();
 
 	const { data: recipients, isLoading: recipientsLoading } = useRecipients();
-	const { data: workflowStatus } = useRekeyWorkflowStatus();
 	const addRecipient = useAddRecipient();
 	const removeRecipient = useRemoveRecipient();
 
 	const [newName, setNewName] = useState("");
 	const [newKey, setNewKey] = useState("");
+	const [newTags, setNewTags] = useState("");
 	const [keyType, setKeyType] = useState<"age" | "ssh">("age");
 
 	const recipientList = recipients?.recipients ?? [];
@@ -55,21 +53,30 @@ export function TeamAccessStep() {
 	const handleAdd = async () => {
 		const trimmedName = newName.trim();
 		const trimmedKey = newKey.trim();
+		const parsedTags = newTags
+			.split(",")
+			.map((tag) => tag.trim())
+			.filter(Boolean);
 
 		if (!trimmedName || !trimmedKey) {
 			toast.error("Name and public key are required");
+			return;
+		}
+		if (parsedTags.length === 0) {
+			toast.error("Add at least one tag");
 			return;
 		}
 
 		try {
 			await addRecipient.mutateAsync(
 				keyType === "ssh"
-					? { name: trimmedName, sshPublicKey: trimmedKey }
-					: { name: trimmedName, publicKey: trimmedKey },
+					? { name: trimmedName, sshPublicKey: trimmedKey, tags: parsedTags }
+					: { name: trimmedName, publicKey: trimmedKey, tags: parsedTags },
 			);
 			toast.success(`Added recipient "${trimmedName}"`);
 			setNewName("");
 			setNewKey("");
+			setNewTags("");
 		} catch (err) {
 			toast.error(
 				err instanceof Error ? err.message : "Failed to add recipient",
@@ -101,8 +108,11 @@ export function TeamAccessStep() {
 			<div className="space-y-4">
 				<p className="text-sm text-muted-foreground">
 					Manage AGE public keys for team members who need to decrypt
-					secrets. Keys are stored in the recipients directory and committed
-					to git.
+					secrets. Keys are configured in Nix and rendered into
+					<code>.stack/secrets/.sops.yaml</code>.
+				</p>
+				<p className="text-xs text-muted-foreground">
+					Recipients marked <code>users</code> come from <code>stackpanel.users</code> and are read-only here.
 				</p>
 
 				{/* Self-service flow explanation */}
@@ -110,33 +120,11 @@ export function TeamAccessStep() {
 					<h4 className="font-medium text-sm">Self-service onboarding:</h4>
 					<ol className="list-decimal list-inside space-y-1.5 text-sm text-muted-foreground">
 						<li>New team member enters the devshell — local key is auto-generated</li>
-						<li>Their public key is registered in the recipients directory</li>
-						<li>They push — GitHub Actions re-encrypts secrets for all recipients</li>
-						<li>They pull — secrets are now accessible</li>
+						<li>They add their public key and tags in the UI or Nix config</li>
+						<li>An existing recipient runs <code>.stack/secrets/bin/rekey.sh</code></li>
+						<li>They pull the updated <code>vars/*.sops.yaml</code> files</li>
 					</ol>
 				</div>
-
-				{/* Rekey workflow status */}
-				{workflowStatus && (
-					<div className="rounded-lg border p-3 flex items-center gap-2">
-						{workflowStatus.exists ? (
-							<>
-								<CheckCircle2 className="h-4 w-4 text-emerald-500" />
-								<span className="text-sm">
-									Rekey workflow is configured
-								</span>
-							</>
-						) : (
-							<>
-								<XCircle className="h-4 w-4 text-amber-500" />
-								<span className="text-sm text-muted-foreground">
-									Rekey workflow not found. Run{" "}
-									<code>secrets:init-group</code> to generate it.
-								</span>
-							</>
-						)}
-					</div>
-				)}
 
 				{/* Current recipients */}
 				<div>
@@ -150,8 +138,7 @@ export function TeamAccessStep() {
 						</div>
 					) : recipientList.length === 0 ? (
 						<p className="text-sm text-muted-foreground py-2">
-							No recipients yet. Enter the devshell to auto-register your key,
-							or add team members below.
+							No recipients yet. Add them in Nix config, then re-enter the devshell.
 						</p>
 					) : (
 						<div className="space-y-2">
@@ -161,19 +148,31 @@ export function TeamAccessStep() {
 									className="flex items-center justify-between rounded-lg border px-3 py-2"
 								>
 									<div>
-										<p className="text-sm font-medium">{r.name}</p>
+										<div className="flex items-center gap-2 flex-wrap">
+											<p className="text-sm font-medium">{r.name}</p>
+											<Badge variant="outline">
+												{r.source === "secrets" ? "config" : "users"}
+											</Badge>
+											{(r.tags ?? []).map((tag) => (
+												<Badge key={`${r.name}-${tag}`} variant="secondary">
+													{tag}
+												</Badge>
+											))}
+										</div>
 										<p className="text-xs text-muted-foreground font-mono">
 											{r.publicKey.slice(0, 32)}...
 										</p>
 									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => handleRemove(r.name)}
-										disabled={removeRecipient.isPending}
-									>
-										<Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-									</Button>
+									{r.canDelete ? (
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => handleRemove(r.name)}
+											disabled={removeRecipient.isPending}
+										>
+											<Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+										</Button>
+									) : null}
 								</div>
 							))}
 						</div>
@@ -232,6 +231,18 @@ export function TeamAccessStep() {
 							value={newKey}
 							onChange={(e) => setNewKey(e.target.value)}
 							className="mt-1 font-mono text-xs"
+						/>
+					</div>
+					<div>
+						<Label htmlFor="recipient-tags" className="text-xs">
+							Tags
+						</Label>
+						<Input
+							id="recipient-tags"
+							placeholder="e.g. dev, prod, shared"
+							value={newTags}
+							onChange={(e) => setNewTags(e.target.value)}
+							className="mt-1"
 						/>
 					</div>
 					<Button

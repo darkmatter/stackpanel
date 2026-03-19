@@ -5,6 +5,7 @@ import {
 	Database,
 	FileCog,
 	FolderOpen,
+	KeyRound,
 	type LucideIcon,
 	Shield,
 	ShieldCheck,
@@ -82,6 +83,8 @@ export function useSetupProgress(): SetupProgress | null {
 		let hasRecipients = false;
 		let kmsEnabled = false;
 		let configVerified = false;
+		let sopsKeysReady = false;
+		let sopsKeysMatchRecipients = false;
 
 		if (token) {
 			try {
@@ -91,13 +94,14 @@ export function useSetupProgress(): SetupProgress | null {
 				projectConfirmed =
 					localStorage.getItem("stackpanel-project-confirmed") === "true";
 
-				// Check if any groups are initialized (have .enc.age files)
+				// Check if any SOPS creation rules exist
 				try {
-					const groupSecrets = await client.listGroupSecrets();
-					if ("groups" in groupSecrets) {
-						hasInitializedGroups =
-							Object.keys(groupSecrets.groups).length > 0;
-					}
+					const nixConfig = await client.nix.config();
+					const config = (nixConfig as { config?: { secrets?: { "creation-rules"?: unknown[] } } }).config;
+					const secrets = (config?.secrets ?? {}) as {
+						"creation-rules"?: unknown[];
+					};
+					hasInitializedGroups = (secrets["creation-rules"]?.length ?? 0) > 0;
 				} catch {
 					// Ignore
 				}
@@ -118,12 +122,21 @@ export function useSetupProgress(): SetupProgress | null {
 					// Ignore
 				}
 
-			// Check config verification (vars/.sops.yaml exists)
+				try {
+					const sopsKeyStatus = await client.getSopsAgeKeysStatus();
+					sopsKeysReady = sopsKeyStatus.available;
+					sopsKeysMatchRecipients = sopsKeyStatus.recipientMatch;
+				} catch {
+					// Ignore
+				}
+
+			// Check config verification (.stack/secrets/.sops.yaml exists)
 			try {
 				await client.readFile(
-					".stack/secrets/vars/.sops.yaml",
+					".stack/secrets/.sops.yaml",
 				);
 					configVerified = true;
+					hasInitializedGroups = true;
 				} catch {
 					// File doesn't exist
 				}
@@ -172,6 +185,22 @@ export function useSetupProgress(): SetupProgress | null {
 				icon: Database,
 			},
 			{
+				id: "sops-age-keys",
+				title: "Decryption Keys",
+				shortTitle: "Keys",
+				description: "Confirm that sops-age-keys can return at least one AGE private key",
+				status: isChamber
+					? "complete"
+					: sopsKeysReady && sopsKeysMatchRecipients
+						? "complete"
+						: projectConfirmed
+							? "incomplete"
+							: "blocked",
+				required: !isChamber,
+				dependsOn: ["secrets-backend"],
+				icon: KeyRound,
+			},
+			{
 				id: "infrastructure",
 				title: "AWS Auto-Config",
 				shortTitle: "Auto-Deploy (AWS)",
@@ -183,16 +212,16 @@ export function useSetupProgress(): SetupProgress | null {
 						? "incomplete"
 						: "optional",
 				required: isChamber,
-				dependsOn: ["secrets-backend"],
+				dependsOn: ["sops-age-keys"],
 				icon: Cloud,
 			},
 			{
 				id: "init-groups",
-				title: "Initialize Groups",
+				title: "Review Groups",
 				shortTitle: "Groups",
 				description: isChamber
 					? "Not needed for Chamber backend"
-					: "Initialize secret groups and verify encryption",
+					: "Review SOPS group files and verify encryption",
 				status: isChamber
 					? "complete"
 					: hasInitializedGroups
@@ -201,7 +230,7 @@ export function useSetupProgress(): SetupProgress | null {
 							? "incomplete"
 							: "blocked",
 				required: !isChamber,
-				dependsOn: ["secrets-backend"],
+				dependsOn: ["sops-age-keys"],
 				icon: ShieldCheck,
 			},
 			{

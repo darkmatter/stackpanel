@@ -71,7 +71,7 @@ export function CacheSection({ config }: CacheSectionProps) {
             <Label htmlFor="cachix-token">Cachix token path</Label>
             <Input
               id="cachix-token"
-              placeholder=".stackpanel/secrets/cachix.token"
+              placeholder=".stack/secrets/cachix.token"
               value={config.cachixTokenPath}
               onChange={(event) =>
                 config.setCachixTokenPath(event.target.value)
