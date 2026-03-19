@@ -12,7 +12,7 @@ age:fetch
 age:check
 
 # 3. Use SOPS as normal
-sops vars/dev.sops.yaml
+sops .stack/secrets/dev/web.sops.yaml
 ```
 
 That's it! If you're already set up, skip to [Usage](#usage).
@@ -89,10 +89,10 @@ Once your keys are set up, use SOPS normally:
 
 ```bash
 # Create/edit a secret
-sops vars/dev.sops.yaml
+sops .stack/secrets/dev/web.sops.yaml
 
 # View a secret
-sops decrypt vars/dev.sops.yaml
+sops decrypt .stack/secrets/dev/web.sops.yaml
 
 # Use stackpanel secrets commands
 secrets:set API_KEY myvalue --group dev
@@ -133,7 +133,7 @@ op signin
 age:fetch
 
 # 5. You're ready!
-sops vars/dev.sops.yaml
+sops .stack/secrets/dev/web.sops.yaml
 ```
 
 ### "Keys aren't working"
@@ -170,13 +170,10 @@ OP_ITEM="op://production/sops-prod" age:fetch
 ### "Starting a new environment"
 
 ```bash
-# Initialize a new group
-secrets:init-group staging --key-cmd
+# Add the group name in config, then re-enter the devshell
+nix develop --impure
 
-# This creates:
-# - New age keypair
-# - Group configuration
-# - SOPS creation rules
+# .stack/secrets/.sops.yaml is regenerated from the current recipients
 ```
 
 ## Directory Structure
@@ -185,8 +182,7 @@ After running `age:fetch`, you'll have:
 
 ```
 .keys/
-├── dev.age          # Private key (never commit!)
-└── dev.age.pub      # Public key
+└── local.age        # Local private key material (never commit!)
 ```
 
 The `.keys/` directory is automatically added to `.gitignore`.

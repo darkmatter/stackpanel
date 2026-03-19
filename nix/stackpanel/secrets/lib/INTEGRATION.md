@@ -139,7 +139,7 @@ let
     runtimeInputs = [ pkgs.sops ];
     text = ''
       # Step 1: Local AGE key (existing logic)
-      LOCAL_KEY_FILE=.stackpanel/secrets/recipients/local.age
+      LOCAL_KEY_FILE=.stack/keys/local.txt
       if [[ -f "$LOCAL_KEY_FILE" ]]; then
         LOCAL_KEY=$(grep "^AGE-SECRET-KEY-" "$LOCAL_KEY_FILE" 2>/dev/null || true)
         if [[ -n "$LOCAL_KEY" ]]; then
@@ -152,8 +152,7 @@ let
         ${ageKeyTools.readAgeKeys}/bin/read-age-keys 2>/dev/null || true
       fi
 
-      # Step 3: Group keys (existing logic)
-      # ... your existing group key logic ...
+      # Step 3: The generated .stack/secrets/.sops.yaml drives recipient selection
     '';
   };
 
@@ -314,7 +313,7 @@ If migrating from the old `age-key-cmd.sh`:
 - [ ] Ensure `.keys/` is in `.gitignore`
 - [ ] Test key fetching: `age:fetch`
 - [ ] Test key availability: `age:check`
-- [ ] Test SOPS operations: `sops vars/dev.sops.yaml`
+- [ ] Test SOPS operations: `sops .stack/secrets/dev/web.sops.yaml`
 - [ ] Remove references to old `age-key-cmd.sh` script
 - [ ] Update team documentation with new commands
 
