@@ -157,7 +157,7 @@ type MasterKey struct {
 	AgePub string `protobuf:"bytes,1,opt,name=age_pub,json=agePub,proto3" json:"age_pub,omitempty"`
 	// Vals reference that resolves to the AGE private key.
 	// Examples:
-	//   - ref+file://.stackpanel/state/keys/local.txt (local file)
+	//   - ref+file://.stack/keys/local.txt (local file)
 	//   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
 	//   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
 	Ref string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
@@ -231,7 +231,7 @@ type Secrets struct {
 	// Directory containing SOPS-encrypted secrets (legacy SOPS layout).
 	// Used when decrypting/merging YAML sources defined under environments.
 	InputDirectory *string `protobuf:"bytes,3,opt,name=input_directory,json=inputDirectory,proto3,oneof" json:"input_directory,omitempty"`
-	SecretsDir     *string `protobuf:"bytes,4,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"` // Directory where secret .age files are stored (default: .stackpanel/secrets)
+	SecretsDir     *string `protobuf:"bytes,4,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"` // Directory where secret .age files are stored (default: .stack/secrets)
 	// System-level AGE public keys (CI, deploy servers, etc.).
 	// These keys can decrypt all secrets regardless of environment restrictions.
 	SystemKeys []string `protobuf:"bytes,5,rep,name=system_keys,json=systemKeys,proto3" json:"system_keys,omitempty"`
@@ -241,10 +241,9 @@ type Secrets struct {
 	// Code generation targets keyed by name (e.g., typescript, go, python).
 	// Used to drive language-specific env/secret helpers.
 	Codegen map[string]*CodegenTarget `protobuf:"bytes,7,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Secrets groups for access control. Each group has an AGE keypair with
-	// the private key stored externally (e.g., SSM). Secrets are encrypted to
-	// group public keys, and IAM policies control who can retrieve the private key.
-	// Default groups: dev, prod.
+	// Secrets groups organize SOPS files such as vars/dev.sops.yaml.
+	// Files are encrypted directly to recipient public keys resolved from
+	// Nix configuration. Default groups: dev, prod.
 	Groups        map[string]*SecretsGroup `protobuf:"bytes,8,rep,name=groups,proto3" json:"groups,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -336,30 +335,18 @@ func (x *Secrets) GetGroups() map[string]*SecretsGroup {
 	return nil
 }
 
-// A secrets group is an access control boundary.
-// Each group has its own AGE keypair. The private key is stored externally
-// (e.g., AWS SSM) so that IAM policies control who can decrypt that group's secrets.
-// Variables specify which group(s) they belong to via the master-keys field.
+// A secrets group organizes SOPS files like vars/dev.sops.yaml.
+// Stackpanel encrypts those files directly to recipient public keys
+// resolved from Nix configuration.
 type SecretsGroup struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// AGE public key for this group. Set after running `secrets:init-group <name>`.
-	// Format: age1... (bech32-encoded)
+	// Deprecated. Group-level public keys are no longer used.
 	AgePub *string `protobuf:"bytes,1,opt,name=age_pub,json=agePub,proto3,oneof" json:"age_pub,omitempty"`
-	// SSM Parameter Store path where the AGE private key is stored.
-	// Defaults to /{chamber.service-prefix}/keys/{group-name}.
-	// Example: /my-org/my-repo/keys/dev
+	// Deprecated. Group-level private keys are no longer used.
 	SsmPath *string `protobuf:"bytes,2,opt,name=ssm_path,json=ssmPath,proto3,oneof" json:"ssm_path,omitempty"`
-	// Vals reference that resolves to the AGE private key.
-	// Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
-	// Can be overridden for other backends (Vault, file, etc.).
+	// Deprecated. Group-level private keys are no longer used.
 	Ref *string `protobuf:"bytes,3,opt,name=ref,proto3,oneof" json:"ref,omitempty"`
-	// Shell command that outputs the AGE private key to stdout.
-	// Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
-	// Defaults to: sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age
-	// Override for alternative key stores, e.g.:
-	//   - chamber read keys/stackpanel/dev current -q
-	//   - op read 'op://vault/stackpanel/dev-age-key'
-	//   - aws ssm get-parameter --name /keys/dev --with-decryption --query Parameter.Value --output text
+	// Deprecated. Group-level private keys are no longer used.
 	KeyCmd        *string `protobuf:"bytes,4,opt,name=key_cmd,json=keyCmd,proto3,oneof" json:"key_cmd,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

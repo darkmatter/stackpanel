@@ -82,7 +82,7 @@ export interface MasterKey {
      *
      * Vals reference that resolves to the AGE private key.
      * Examples:
-     *   - ref+file://.stackpanel/state/keys/local.txt (local file)
+     *   - ref+file://.stack/keys/local.txt (local file)
      *   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
      *   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
      *
@@ -135,7 +135,7 @@ export interface Secrets {
     /**
      * @generated from protobuf field: optional string secrets_dir = 4
      */
-    secrets_dir?: string; // Directory where secret .age files are stored (default: .stackpanel/secrets)
+    secrets_dir?: string; // Directory where secret .age files are stored (default: .stack/secrets)
     /**
      *
      * System-level AGE public keys (CI, deploy servers, etc.).
@@ -169,10 +169,9 @@ export interface Secrets {
     };
     /**
      *
-     * Secrets groups for access control. Each group has an AGE keypair with
-     * the private key stored externally (e.g., SSM). Secrets are encrypted to
-     * group public keys, and IAM policies control who can retrieve the private key.
-     * Default groups: dev, prod.
+     * Secrets groups organize SOPS files such as vars/dev.sops.yaml.
+     * Files are encrypted directly to recipient public keys resolved from
+     * Nix configuration. Default groups: dev, prod.
      *
      *
      * @generated from protobuf field: map<string, stackpanel.db.SecretsGroup> groups = 8
@@ -183,10 +182,9 @@ export interface Secrets {
 }
 /**
  *
- * A secrets group is an access control boundary.
- * Each group has its own AGE keypair. The private key is stored externally
- * (e.g., AWS SSM) so that IAM policies control who can decrypt that group's secrets.
- * Variables specify which group(s) they belong to via the master-keys field.
+ * A secrets group organizes SOPS files like vars/dev.sops.yaml.
+ * Stackpanel encrypts those files directly to recipient public keys
+ * resolved from Nix configuration.
  *
  *
  * @generated from protobuf message stackpanel.db.SecretsGroup
@@ -194,8 +192,7 @@ export interface Secrets {
 export interface SecretsGroup {
     /**
      *
-     * AGE public key for this group. Set after running `secrets:init-group <name>`.
-     * Format: age1... (bech32-encoded)
+     * Deprecated. Group-level public keys are no longer used.
      *
      *
      * @generated from protobuf field: optional string age_pub = 1
@@ -203,9 +200,7 @@ export interface SecretsGroup {
     age_pub?: string;
     /**
      *
-     * SSM Parameter Store path where the AGE private key is stored.
-     * Defaults to /{chamber.service-prefix}/keys/{group-name}.
-     * Example: /my-org/my-repo/keys/dev
+     * Deprecated. Group-level private keys are no longer used.
      *
      *
      * @generated from protobuf field: optional string ssm_path = 2
@@ -213,9 +208,7 @@ export interface SecretsGroup {
     ssm_path?: string;
     /**
      *
-     * Vals reference that resolves to the AGE private key.
-     * Auto-computed from ssm-path as ref+awsssm://{ssm-path} when using chamber backend.
-     * Can be overridden for other backends (Vault, file, etc.).
+     * Deprecated. Group-level private keys are no longer used.
      *
      *
      * @generated from protobuf field: optional string ref = 3
@@ -223,13 +216,7 @@ export interface SecretsGroup {
     ref?: string;
     /**
      *
-     * Shell command that outputs the AGE private key to stdout.
-     * Used by SOPS_AGE_KEY_CMD to lazily retrieve the group's private key.
-     * Defaults to: sops --decrypt .stackpanel/secrets/recipients/<group>.enc.age
-     * Override for alternative key stores, e.g.:
-     *   - chamber read keys/stackpanel/dev current -q
-     *   - op read 'op://vault/stackpanel/dev-age-key'
-     *   - aws ssm get-parameter --name /keys/dev --with-decryption --query Parameter.Value --output text
+     * Deprecated. Group-level private keys are no longer used.
      *
      *
      * @generated from protobuf field: optional string key_cmd = 4

@@ -1,0 +1,29 @@
+{
+  "name": "@stackpanel/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./sops": {
+      "default": "./src/sops.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "alchemy": "^0.81.2",
+    "sops-age": "^4.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

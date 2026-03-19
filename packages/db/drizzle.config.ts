@@ -1,4 +1,4 @@
-import { env } from "@gen/env/web-server";
+import { env } from "@gen/env/web";
 import dotenv from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
