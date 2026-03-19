@@ -6,24 +6,27 @@ icon: Settings
 
 # Variables-backend Options
 
-## `secrets.backend`
-
+<NixOption
+  path={"secrets.backend"}
+  type={"one of \"sops\", \"vals\", \"chamber\""}
+  defaultValue={"\"sops\""}
+  module={"variables-backend"}
+>
 Secret storage backend. This is the single source of truth that controls
 how secrets are stored, how entrypoints inject them, how the agent
 reads/writes them, and what options are available in the UI.
 
-"vals" (default): AGE/SOPS encryption with vals for external references.
+"sops" (default): direct SOPS/AGE encryption using generated `.sops.yaml` files.
+"vals": legacy AGE/SOPS encryption with vals for external references.
 "chamber": AWS SSM Parameter Store via the chamber CLI.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `one of "vals", "chamber"` |
-| **Default** | `"vals"` |
-
----
-
-## `secrets.chamber.service-prefix`
-
+<NixOption
+  path={"secrets.chamber.service-prefix"}
+  type={"string"}
+  defaultValue={"\"my-project\""}
+  module={"variables-backend"}
+>
 Chamber service prefix. The full chamber service path is:
   \{service-prefix\}/\{env\}
 
@@ -33,11 +36,5 @@ For example, with prefix "darkmatter/stackpanel" and a variable /dev/DATABASE_UR
 
 Defaults to "\{owner\}/\{repo\}" when project owner/repo are configured,
 otherwise falls back to the project name.
-
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"my-project"` |
-
----
+</NixOption>
 

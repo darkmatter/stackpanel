@@ -17,6 +17,8 @@ Examples:
   stackpanel config get apps.web.port       # Get a nested value
   stackpanel config get devshell.env        # Get an object as JSON
   stackpanel config get --json apps.web     # Force JSON output
+  stackpanel config set apps.web.name ui    # Set a string value
+  stackpanel config set ports.base 6400     # Auto-detects as number
 
 ## Usage
 
@@ -45,4 +47,5 @@ These flags are inherited from parent commands.
 |---------|-------------|
 | [`generate-example`](./generate-example) | Generate annotated config.nix.example with option descriptions |
 | [`get`](./get) | Get a configuration value by dot-path |
+| [`set`](./set) | Set a configuration value by dot-path |
 

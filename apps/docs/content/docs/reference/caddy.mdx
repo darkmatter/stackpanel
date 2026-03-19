@@ -6,67 +6,52 @@ icon: Server
 
 # Caddy Options
 
-## `caddy.auto-start`
-
+<NixOption
+  path={"caddy.auto-start"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"caddy"}
+>
 Automatically start Caddy when entering the shell
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
-
-## `caddy.enable`
-
+<NixOption
+  path={"caddy.enable"}
+  type={"boolean"}
+  defaultValue={"false"}
+  exampleCode={"true"}
+  module={"caddy"}
+>
 Whether to enable Caddy reverse proxy.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
-**Example:**
-
-`true`
-
-
----
-
-## `caddy.project-name`
-
+<NixOption
+  path={"caddy.project-name"}
+  type={"string"}
+  defaultValue={"\"default\""}
+  exampleCode={"\"myapp\""}
+  module={"caddy"}
+>
 Project name used to compute a stable port. Set this to your project name for consistent port allocation.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"default"` |
-
-**Example:**
-
-`"myapp"`
-
-
----
-
-## `caddy.project-port`
-
+<NixOption
+  path={"caddy.project-port"}
+  type={"null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
+  defaultValue={"null"}
+  exampleCode={"34521"}
+  module={"caddy"}
+>
 Stable port for Caddy. If null, computed from project-name.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
-| **Default** | `null` |
-
-**Example:**
-
-`34521`
-
-
----
-
-## `caddy.tld`
-
+<NixOption
+  path={"caddy.tld"}
+  type={"string"}
+  defaultValue={"\"localhost\""}
+  exampleCode={"\"lan\""}
+  module={"caddy"}
+>
 Top-level domain for virtual hosts.
 
 Virtual hosts use the format: ..
@@ -75,27 +60,14 @@ For example, with project "myapp" and tld "localhost":
   - api app gets domain: api.myapp.localhost
 
 Change to "lan" or "local" for custom DNS setups.
+</NixOption>
 
-| Property | Value |
-|----------|-------|
-| **Type** | `string` |
-| **Default** | `"localhost"` |
-
-**Example:**
-
-`"lan"`
-
-
----
-
-## `caddy.use-step-tls`
-
+<NixOption
+  path={"caddy.use-step-tls"}
+  type={"boolean"}
+  defaultValue={"false"}
+  module={"caddy"}
+>
 Use Step CA for TLS certificates (requires stackpanel.network.step.enable)
-
-| Property | Value |
-|----------|-------|
-| **Type** | `boolean` |
-| **Default** | `false` |
-
----
+</NixOption>
 
