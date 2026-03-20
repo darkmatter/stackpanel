@@ -62,8 +62,10 @@ let
             This defaults to the attribute key, so it normally does not need to
             be written in config files.
 
-            Secret variables use a flat namespace:
-              /secret/postgres-url -> .stack/secrets/vars/postgres-url.sops.yaml
+            Variables are stored in group-based SOPS files by prefix:
+              /secret/postgres-url -> .stack/secrets/vars/secret.sops.yaml (key: postgres_url)
+              /dev/postgres-url    -> .stack/secrets/vars/dev.sops.yaml (key: postgres_url)
+              /test/api-url        -> .stack/secrets/vars/test.sops.yaml (key: api_url)
 
             Computed variables use /computed/<source>/<path>:
               /computed/apps/web/port
@@ -74,11 +76,11 @@ let
         value = lib.mkOption {
           type = lib.types.str;
           default = "";
+          apply = value: if !(isComputed name) && value == "" then "var://${name}" else value;
           description = ''
             The value of this variable.
 
-            For plaintext variables (/var/*): the literal value.
-            For secrets (/secret/*): empty string (SOPS file is source of truth).
+            For non-computed variables: a variable link marker used by codegen/runtime resolution.
             For computed (/computed/*): the computed value from Nix.
 
             Legacy: ref+sops:// values are still supported during migration.
@@ -89,7 +91,7 @@ let
         keyGroup = lib.mkOption {
           type = lib.types.str;
           readOnly = true;
-          description = "Key group extracted from ID (e.g., 'secret', 'var', 'computed')";
+          description = "Key group extracted from ID (e.g., 'secret', 'dev', 'test', 'computed')";
         };
 
         varName = lib.mkOption {
@@ -101,7 +103,7 @@ let
         isSecret = lib.mkOption {
           type = lib.types.bool;
           readOnly = true;
-          description = "Whether this is a SOPS-encrypted secret";
+          description = "Whether this variable is backed by a grouped SOPS file";
         };
 
         isComputed = lib.mkOption {
@@ -119,26 +121,26 @@ let
         sopsFile = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           readOnly = true;
-          description = "Path to the SOPS file for this keygroup (null for /var/* and /computed/*)";
+          description = "Path to the SOPS file for this variable's group (null for /computed/*)";
         };
 
         secretYamlKey = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           readOnly = true;
-          description = "Deterministic YAML key used inside the per-variable SOPS file";
+          description = "Deterministic YAML key used inside the group SOPS file";
         };
 
         isPlaintext = lib.mkOption {
           type = lib.types.bool;
           readOnly = true;
-          description = "Whether this is a plaintext config variable (/var/*)";
+          description = "Whether this variable is stored directly in config instead of a SOPS group";
         };
       };
 
       config =
         let
           keyGroup = getKeyGroup config.id;
-          usesSops = keyGroup == "secret";
+          usesSops = !(isComputed config.id);
         in
         {
           keyGroup = keyGroup;
@@ -146,8 +148,8 @@ let
           isSecret = usesSops;
           isComputed = isComputed config.id;
           isValsRef = false;
-          isPlaintext = keyGroup == "var";
-          sopsFile = if usesSops then "${secretsDir}/vars/${secretFileStem config.id}.sops.yaml" else null;
+          isPlaintext = !usesSops;
+          sopsFile = if usesSops then "${secretsDir}/vars/${keyGroup}.sops.yaml" else null;
           secretYamlKey = if usesSops then secretYamlKey config.id else null;
         };
     };
@@ -156,12 +158,10 @@ let
      Workspace variables keyed by their full variable ID.
 
     Prefixes determine storage:
-      /var/*      - Shared config (plaintext, NOT encrypted)
-      /secret/*   - Flat secrets (one SOPS file per variable)
       /computed/* - Nix-computed values (read-only)
+      /*         - Grouped SOPS-backed variables stored in `vars/<prefix>.sops.yaml`
 
-    Secret variable values are empty strings; the SOPS file is the source of truth.
-    Plaintext variables store their value directly.
+    Non-computed variable values resolve to variable-link markers; the group SOPS file is the source of truth.
   '';
 
   example = lib.literalExpression ''
@@ -170,8 +170,11 @@ let
        "/var/LOG_LEVEL" = { value = "info"; };
        "/var/API_VERSION" = { value = "v1"; };
 
-      # Secret (value lives in vars/postgres-url.sops.yaml)
+      # Grouped variable (value lives in vars/secret.sops.yaml under key postgres_url)
        "/secret/postgres-url" = { value = ""; };
+
+      # Env-scoped grouped variable (value lives in vars/dev.sops.yaml under key postgres_url)
+       "/dev/postgres-url" = { value = ""; };
      }
   '';
 in

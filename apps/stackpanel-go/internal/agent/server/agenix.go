@@ -58,8 +58,20 @@ type AgenixDecryptResponse struct {
 	Value string `json:"value"`
 }
 
+// groupFromID returns the path prefix used as the SOPS file group.
+// "/dev/postgres-url" → "dev", "/prod/api-key" → "prod", "/secret/foo" → "secret"
+func groupFromID(id string) string {
+	trimmed := strings.Trim(strings.TrimSpace(id), "/")
+	parts := strings.SplitN(trimmed, "/", 2)
+	if len(parts) > 0 && parts[0] != "" {
+		return parts[0]
+	}
+	return "dev"
+}
+
 func isFlatSecretVariableID(id string) bool {
-	return strings.HasPrefix(strings.TrimSpace(id), "/secret/")
+	group := groupFromID(id)
+	return group != "" && group != "var" && group != "computed"
 }
 
 func variableNameFromID(id string) string {
@@ -90,14 +102,15 @@ func secretYAMLKeyFromID(id string) string {
 }
 
 func (s *Server) getFlatSecretFilePath(id string) (string, string, error) {
+	// Check Nix-computed metadata first (allows overrides)
 	meta, ok, err := s.getVariableSecretMeta(id)
-	if err != nil {
-		return "", "", err
-	}
-	if ok && strings.TrimSpace(meta.File) != "" {
+	if err == nil && ok && strings.TrimSpace(meta.File) != "" {
 		return filepath.Join(s.config.ProjectRoot, ".stack", "secrets", meta.File), meta.YamlKey, nil
 	}
-	return filepath.Join(s.config.ProjectRoot, ".stack", "secrets", "vars", secretFileStemFromID(id)+".sops.yaml"), secretYAMLKeyFromID(id), nil
+	// Default: path-based grouping — /dev/postgres-url → vars/dev.sops.yaml, key: postgres_url
+	group := groupFromID(id)
+	yamlKey := secretYAMLKeyFromID(id)
+	return filepath.Join(s.config.ProjectRoot, ".stack", "secrets", "vars", group+".sops.yaml"), yamlKey, nil
 }
 
 func (s *Server) readFlatSecret(id string) (string, error) {
@@ -108,8 +121,7 @@ func (s *Server) readFlatSecret(id string) (string, error) {
 	if _, err := os.Stat(secretPath); os.IsNotExist(err) {
 		return "", fmt.Errorf("secret file not found")
 	}
-	relPath, _ := filepath.Rel(s.config.ProjectRoot, secretPath)
-	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, "--decrypt", relPath)
+	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsDecryptArgs(secretPath)...)
 	if err != nil {
 		return "", fmt.Errorf("failed to run sops: %w", err)
 	}
@@ -135,22 +147,38 @@ func (s *Server) writeFlatSecret(id string, value string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(secretPath), 0o755); err != nil {
 		return "", fmt.Errorf("failed to create vars directory: %w", err)
 	}
-	plainBytes, err := yaml.Marshal(map[string]any{yamlKey: value})
+
+	// Read and decrypt existing group file so we can upsert the key.
+	existing := map[string]interface{}{}
+	if _, statErr := os.Stat(secretPath); statErr == nil {
+		decRes, decErr := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsDecryptArgs(secretPath)...)
+		if decErr == nil && decRes.ExitCode == 0 {
+			_ = yaml.Unmarshal([]byte(decRes.Stdout), &existing)
+		}
+	}
+
+	// Upsert the key.
+	existing[yamlKey] = value
+
+	// Write merged plaintext, then encrypt in-place.
+	plainBytes, err := yaml.Marshal(existing)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal secret yaml: %w", err)
+		return "", fmt.Errorf("failed to marshal group secrets: %w", err)
 	}
 	if err := os.WriteFile(secretPath, plainBytes, 0o600); err != nil {
-		return "", fmt.Errorf("failed to write plaintext secret file: %w", err)
+		return "", fmt.Errorf("failed to write group secrets file: %w", err)
 	}
-	relPath, _ := filepath.Rel(s.config.ProjectRoot, secretPath)
-	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, "--encrypt", "--in-place", relPath)
+	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsEncryptArgs(secretPath)...)
 	if err != nil {
+		_ = os.Remove(secretPath)
 		return "", fmt.Errorf("failed to run sops: %w", err)
 	}
 	if res.ExitCode != 0 {
+		_ = os.Remove(secretPath)
 		return "", fmt.Errorf("sops encrypt failed: %s", strings.TrimSpace(res.Stderr))
 	}
 	_ = os.Chmod(secretPath, 0o644)
+	relPath, _ := filepath.Rel(s.config.ProjectRoot, secretPath)
 	return relPath, nil
 }
 
@@ -1635,9 +1663,34 @@ func (s *Server) readKMSConfig() (KMSConfigResponse, error) {
 	return resp, nil
 }
 
-func renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMSConfigResponse) string {
+// normalizePublicKeyForSops converts an SSH public key to its AGE equivalent.
+// Returns the key unchanged if it is already AGE format or conversion fails.
+// This is a package-level helper so it can be used without a Server receiver.
+func normalizePublicKeyForSops(pub string, sshToAgeFn func(string) string) string {
+	pub = strings.TrimSpace(pub)
+	if pub == "" {
+		return ""
+	}
+	if strings.HasPrefix(pub, "age1") {
+		return pub
+	}
+	if strings.HasPrefix(pub, "ssh-") {
+		if converted := sshToAgeFn(pub); converted != "" {
+			return converted
+		}
+		// Conversion failed — return raw so it is still written; SOPS handles SSH natively
+		return pub
+	}
+	return pub
+}
+
+func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMSConfigResponse) string {
 	if serializable == nil {
 		serializable = &SerializableSecretsConfig{}
+	}
+
+	normFn := func(pub string) string {
+		return normalizePublicKeyForSops(pub, s.sshPublicKeyToAge)
 	}
 
 	recipientNames := make([]string, 0, len(serializable.Recipients))
@@ -1663,7 +1716,7 @@ func renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMS
 		sb.WriteString("keys:\n")
 		for _, name := range recipientNames {
 			recipient := serializable.Recipients[name]
-			publicKey := strings.TrimSpace(recipient.PublicKey)
+			publicKey := normFn(recipient.PublicKey)
 			if publicKey == "" {
 				continue
 			}
@@ -1677,12 +1730,12 @@ func renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMS
 
 	rules := make([]string, 0, len(groupNames)+1)
 	for _, groupName := range groupNames {
-		rule := renderSecretsSopsRule(fmt.Sprintf("^vars/%s\\.sops\\.yaml$", groupName), serializable, serializable.Groups[groupName].Recipients, kmsCfg, kmsEnabled)
+		rule := s.renderSecretsSopsRule(fmt.Sprintf("^vars/%s\\.sops\\.yaml$", groupName), serializable, serializable.Groups[groupName].Recipients, kmsCfg, kmsEnabled, normFn)
 		if rule != "" {
 			rules = append(rules, rule)
 		}
 	}
-	catchAll := renderSecretsSopsRule(`.*(secret|\.enc\.).*`, serializable, recipientNames, kmsCfg, kmsEnabled)
+	catchAll := s.renderSecretsSopsRule(`.*(secret|\.enc\.).*`, serializable, recipientNames, kmsCfg, kmsEnabled, normFn)
 	if catchAll != "" {
 		rules = append(rules, catchAll)
 	}
@@ -1700,7 +1753,7 @@ func renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMS
 	return sb.String()
 }
 
-func renderSecretsSopsRule(pathRegex string, serializable *SerializableSecretsConfig, recipients []string, kmsCfg KMSConfigResponse, kmsEnabled bool) string {
+func (s *Server) renderSecretsSopsRule(pathRegex string, serializable *SerializableSecretsConfig, recipients []string, kmsCfg KMSConfigResponse, kmsEnabled bool, normFn func(string) string) string {
 	if len(recipients) == 0 && !kmsEnabled {
 		return ""
 	}
@@ -1714,7 +1767,12 @@ func renderSecretsSopsRule(pathRegex string, serializable *SerializableSecretsCo
 		sb.WriteString("    age:\n")
 		for _, recipientName := range recipients {
 			recipient, ok := serializable.Recipients[recipientName]
-			if !ok || strings.TrimSpace(recipient.PublicKey) == "" {
+			if !ok {
+				continue
+			}
+			// Skip if neither raw nor normalized key exists
+			normalizedKey := normFn(recipient.PublicKey)
+			if normalizedKey == "" {
 				continue
 			}
 			anchor := sanitizeSecretID(recipientName)
@@ -1757,7 +1815,7 @@ func (s *Server) regenerateSecretsSopsConfig(kmsCfg KMSConfigResponse) error {
 		sopsConfigPath = filepath.Join(s.config.ProjectRoot, sopsConfigPath)
 	}
 
-	content := renderSecretsSopsConfig(serializable, kmsCfg)
+	content := s.renderSecretsSopsConfig(serializable, kmsCfg)
 	if err := os.MkdirAll(filepath.Dir(sopsConfigPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create secrets config dir: %w", err)
 	}

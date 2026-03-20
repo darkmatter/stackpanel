@@ -6,61 +6,66 @@ icon: Settings
 
 # Outputs Options
 
-<NixOption
-  path={"flakeApps"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  module={"outputs"}
->
-Flake apps to expose via `nix run .#`.
+## `flakeApps`
+
+Flake apps to expose via nix run .#\<name\>.
 
 Each app must have:
-  - type: "app"
-  - program: Path to executable (usually from a derivation)
 
-Example:
-  stackpanel.flakeApps = \{
-    web = \{ type = "app"; program = "$\{myPackage\}/bin/web"; \};
-  \};
-</NixOption>
+Example: stackpanel.flakeApps = \{ web = \{ type = "app"; program = "$\{myPackage\}/bin/web"; \}; \};
 
-<NixOption
-  path={"flakeApps.<name>.program"}
-  type={"string"}
-  module={"outputs"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `flakeApps.<name>.program`
+
 Path to the executable.
-</NixOption>
 
-<NixOption
-  path={"flakeApps.<name>.type"}
-  type={"string"}
-  defaultValue={"\"app\""}
-  module={"outputs"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `flakeApps.<name>.type`
+
 App type (always 'app' for Nix apps).
-</NixOption>
 
-<NixOption
-  path={"outputs"}
-  type={"attribute set of (package or attribute set of package)"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  docs-json = optionsDoc.optionsJSON;\n  docs-md = optionsDoc.optionsCommonMark;\n  scripts = { my-script = pkgs.writeShellScriptBin \"test\" \"echo hello\"; };\n}"}
-  module={"outputs"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"app"` |
+
+---
+
+## `outputs`
+
 Output derivations to expose.
 
 These will be available as:
-  - `nix build .#` (via flake) - for direct packages
-  - `nix run .#.` (via flake) - for grouped packages (like scripts)
-  - `devenv outputs.` (via devenv)
 
-Example:
-  stackpanel.outputs = \{
-    my-docs = pkgs.runCommand "docs" \{\} "...";
-    my-script = pkgs.writeShellScriptBin "foo" "...";
-    # Grouped packages (available via nix run .#scripts.)
-    scripts = \{ foo = pkgs.writeShellScriptBin "foo" "..."; \};
-  \};
-</NixOption>
+Example: stackpanel.outputs = \{ my-docs = pkgs.runCommand "docs" \{\} "..."; my-script = pkgs.writeShellScriptBin "foo" "..."; # Grouped packages (available via nix run .#scripts.) scripts = \{ foo = pkgs.writeShellScriptBin "foo" "..."; \}; \};
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (package or attribute set of package)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  docs-json = optionsDoc.optionsJSON;
+  docs-md = optionsDoc.optionsCommonMark;
+  scripts = { my-script = pkgs.writeShellScriptBin "test" "echo hello"; };
+}
+```
+
+
+---
 

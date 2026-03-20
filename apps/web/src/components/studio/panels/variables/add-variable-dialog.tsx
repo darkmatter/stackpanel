@@ -58,6 +58,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
   const [varId, setVarId] = useState("");
   const [varValue, setVarValue] = useState("");
   const [varDescription, setVarDescription] = useState("");
+  const [secretGroup, setSecretGroup] = useState("shared");
   // Validation state for vals references
   const [valsError, setValsError] = useState<string | null>(null);
 
@@ -137,7 +138,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
         }
       }
 
-      const { idPrefix } = resolveGroup("shared", mode);
+      const { idPrefix } = resolveGroup(secretGroup, mode);
       const envKey = getVariableName(normalizedId);
 
       // Validate key follows Chamber naming rules
@@ -255,9 +256,42 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
               {mode === "secret" &&
                 (isChamber
                   ? "Stored in AWS SSM Parameter Store. Encryption is handled by AWS KMS."
-                  : "Stored in its own SOPS file under .stack/secrets/vars/. Environment links determine which tagged recipients can decrypt it.")}
+                  : `Encrypted and stored in .stack/secrets/vars/${secretGroup}.sops.yaml.`)}
             </p>
           </div>
+
+          {/* Secret group selector */}
+          {mode === "secret" && !isChamber && (
+            <div className="space-y-2">
+              <Label>Group</Label>
+              <div className="flex gap-1.5 flex-wrap">
+                {["shared", "dev", "staging", "prod"].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setSecretGroup(g)}
+                    className={`px-3 py-1 rounded-md text-xs font-mono font-medium border transition-colors ${
+                      secretGroup === g
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-input bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+                <input
+                  type="text"
+                  value={["shared","dev","staging","prod"].includes(secretGroup) ? "" : secretGroup}
+                  onChange={(e) => e.target.value && setSecretGroup(e.target.value)}
+                  placeholder="custom…"
+                  className="px-3 py-1 rounded-md text-xs font-mono border border-input bg-background w-24 focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Determines the SOPS file: <code className="font-mono">vars/{secretGroup}.sops.yaml</code>
+              </p>
+            </div>
+          )}
 
           {/* Variable name */}
           <div className="space-y-2">

@@ -6,900 +6,1161 @@ icon: AppWindow
 
 # Apps Options
 
-<NixOption
-  path={"appModules"}
-  type={"list of module"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+## `appModules`
+
 Additional modules to extend app configuration options.
 
-This allows other modules to add functionality to each app, such as
-scaffolding, IDE support, deployment settings, etc.
+This allows other modules to add functionality to each app, such as scaffolding, IDE support, deployment settings, etc.
 
-These modules are applied to each app under `stackpanel.apps..`.
-</NixOption>
+These modules are applied to each app under stackpanel.apps.\<appName\>.\<module\>.
 
-<NixOption
-  path={"apps"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  web = {\n    name = \"web\";\n    path = \"apps/web\";\n    tls = true;\n    # Go app example - enable go features\n    go = {\n      enable = true;\n      # Watch directories for live reload\n      watchDirs = [ \"cmd\" \"pkg\" \"internal\" ];\n      # tools.go will be automatically created, add dev tools here\n      tools = [\n        \"github.com/golangci/golangci-lint/cmd/golangci-lint\"\n      ];\n      # By default, turborepo integration (package.json), air live reload (.air.toml),\n      # tools.go is all scaffolded automatically, but can be suppressed here\n      generateFiles = true;\n    };\n  };\n  server = { offset = 1; };\n  docs = { domain = \"docs\"; };\n  api = { domain = \"api\"; tls = true; };\n}"}
-  module={"apps"}
->
-# Stackpanel apps
+| Property | Value |
+|----------|-------|
+| **Type** | `list of module` |
+| **Default** | `[ ]` |
 
-Configuration options for defining and managing applications within
-the Stackpanel environment. This module allows you to declare app-specific
-settings, dependencies, and runtime configurations that integrate with the
-Stackpanel orchestration system.
+---
 
-Core configuration options are defined here. These options are extended
-by other modules to add functionality such as scaffolding, IDE support,
-and deployment settings. These are typically configured at
-`stackpanel.apps..`.
+## `apps`
 
-A core stackpanel feature and convention is that each app is assigned a stable,
-deterministic port based on the repo (`organization/repo`) and app/service
-name. This allows the port to be known ahead of time without having to
-pass it around manually.
+Stackpanel apps
 
-This key will also be used as the default value by other modules lke Caddy
-to create virtual hosts for the app.
+Configuration options for defining and managing applications within the Stackpanel environment. This module allows you to declare app-specific settings, dependencies, and runtime configurations that integrate with the Stackpanel orchestration system.
 
-If you encounter a collision in the port calculation, you can set
-`` to a different name to get a different port range.
-</NixOption>
+Core configuration options are defined here. These options are extended by other modules to add functionality such as scaffolding, IDE support, and deployment settings. These are typically configured at stackpanel.apps.\<appName\>.\<module\>.
 
-<NixOption
-  path={"apps.<name>.deploy"}
-  type={"submodule"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+A core stackpanel feature and convention is that each app is assigned a stable, deterministic port based on the repo (organization/repo) and app/service name. This allows the port to be known ahead of time without having to pass it around manually.
+
+This key will also be used as the default value by other modules lke Caddy to create virtual hosts for the app.
+
+If you encounter a collision in the port calculation, you can set \<appName\> to a different name to get a different port range.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  web = {
+    name = "web";
+    path = "apps/web";
+    tls = true;
+    # Go app example - enable go features
+    go = {
+      enable = true;
+      # Watch directories for live reload
+      watchDirs = [ "cmd" "pkg" "internal" ];
+      # tools.go will be automatically created, add dev tools here
+      tools = [
+        "github.com/golangci/golangci-lint/cmd/golangci-lint"
+      ];
+      # By default, turborepo integration (package.json), air live reload (.air.toml),
+      # tools.go is all scaffolded automatically, but can be suppressed here
+      generateFiles = true;
+    };
+  };
+  server = { offset = 1; };
+  docs = { domain = "docs"; };
+  api = { domain = "api"; tls = true; };
+}
+```
+
+
+---
+
+## `apps.<name>.deploy`
+
 Colmena deployment mapping for this app
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deploy.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.deploy.enable`
+
 Enable deployment mapping for this app
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deploy.nixos-modules"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `apps.<name>.deploy.nixos-modules`
+
 Extra NixOS modules to import for this app
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deploy.role"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.deploy.role`
+
 Deployment role label for this app
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deploy.secrets"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.deploy.secrets`
+
 Secret references required by this app during deploy
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deploy.system"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.deploy.system`
+
 Target system/architecture (e.g., x86_64-linux)
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deploy.targets"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.deploy.targets`
+
 Target machine ids or tag selectors
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deployment.bindings"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  exampleCode={"[\n  \"DATABASE_URL\"\n  \"CORS_ORIGIN\"\n  \"BETTER_AUTH_SECRET\"\n]"}
-  module={"apps"}
->
-Environment variable names to bind to the deployed app.
-Each name is read from `process.env` at deploy time.
-Mark sensitive ones in `secrets`.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
 
-<NixOption
-  path={"apps.<name>.deployment.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+---
+
+## `apps.<name>.deployment.bindings`
+
+Environment variable names to bind to the deployed app. Each name is read from process.env at deploy time. Mark sensitive ones in secrets.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "DATABASE_URL"
+  "CORS_ORIGIN"
+  "BETTER_AUTH_SECRET"
+]
+```
+
+
+---
+
+## `apps.<name>.deployment.enable`
+
 Whether to enable deployment for this app.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.deployment.host"}
-  type={"null or one of \"cloudflare\", \"fly\", \"vercel\", \"aws\""}
-  defaultValue={"null"}
-  exampleCode={"\"cloudflare\""}
-  module={"apps"}
->
-Deployment host/platform. Combined with `framework` to determine
-the alchemy resource type:
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
 
-  framework × host → alchemy resource
-  tanstack-start × cloudflare → TanStackStart
-  nextjs × cloudflare → Nextjs
-  vite × cloudflare → cloudflare.Vite
-  hono × cloudflare → cloudflare.Worker
-  * × fly → Fly container
-</NixOption>
+**Example:**
 
-<NixOption
-  path={"apps.<name>.deployment.secrets"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  exampleCode={"[\n  \"DATABASE_URL\"\n  \"BETTER_AUTH_SECRET\"\n]"}
-  module={"apps"}
->
-Subset of `bindings` that contain sensitive values.
-These are wrapped with `alchemy.secret()` at deploy time.
-</NixOption>
+`true`
 
-<NixOption
-  path={"apps.<name>.description"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+
+---
+
+## `apps.<name>.deployment.host`
+
+Deployment host/platform. Combined with framework to determine the alchemy resource type:
+
+framework × host → alchemy resource tanstack-start × cloudflare → TanStackStart nextjs × cloudflare → Nextjs vite × cloudflare → cloudflare.Vite hono × cloudflare → cloudflare.Worker
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or one of "cloudflare", "fly", "vercel", "aws"` |
+| **Default** | `null` |
+
+**Example:**
+
+`"cloudflare"`
+
+
+---
+
+## `apps.<name>.deployment.secrets`
+
+Subset of bindings that contain sensitive values. These are wrapped with alchemy.secret() at deploy time.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "DATABASE_URL"
+  "BETTER_AUTH_SECRET"
+]
+```
+
+
+---
+
+## `apps.<name>.description`
+
 Description of the app
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.domain"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.domain`
+
 Local development domain
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.environments"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.environments`
+
 Environment configurations (key = environment name like "dev", "prod").
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.environments.<name>.description"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.environments.<name>.description`
+
 (optional) Description of the environment
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.environments.<name>.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
-Environment variables for this environment.
-Key: Environment variable name (e.g., DATABASE_URL)
-Value: Literal string or vals reference (e.g., ref+sops://...)
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
 
-<NixOption
-  path={"apps.<name>.environments.<name>.name"}
-  type={"string"}
-  defaultValue={"\"\""}
-  module={"apps"}
->
+---
+
+## `apps.<name>.environments.<name>.env`
+
+Environment variables for this environment. Key: Environment variable name (e.g., DATABASE_URL) Value: Literal string or vals reference (e.g., ref+sops://...)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.environments.<name>.name`
+
 Name of the environment
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.astro.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.framework.astro.enable`
+
 Whether to enable Astro (static/SSR).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.hono.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.hono.enable`
+
 Whether to enable Hono API server.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.hono.entrypoint"}
-  type={"string"}
-  defaultValue={"\"src/index.ts\""}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.hono.entrypoint`
+
 Entrypoint file for the Hono worker.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.nextjs.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"src/index.ts"` |
+
+---
+
+## `apps.<name>.framework.nextjs.enable`
+
 Whether to enable Next.js (App Router or Pages).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.nextjs.output"}
-  type={"one of \"standalone\", \"export\""}
-  defaultValue={"\"standalone\""}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.nextjs.output`
+
 Next.js output mode.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.nuxt.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "standalone", "export"` |
+| **Default** | `"standalone"` |
+
+---
+
+## `apps.<name>.framework.nuxt.enable`
+
 Whether to enable Nuxt.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.remix.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.remix.enable`
+
 Whether to enable Remix.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.tanstack-start.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.tanstack-start.enable`
+
 Whether to enable TanStack Start (full-stack SSR with TanStack Router + Nitro).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.vite.assets-dir"}
-  type={"string"}
-  defaultValue={"\"dist\""}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.vite.assets-dir`
+
 Output directory for built assets.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.vite.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"dist"` |
+
+---
+
+## `apps.<name>.framework.vite.enable`
+
 Whether to enable Vite SPA (React, Vue, Svelte, etc.).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.framework.vite.ssr"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `apps.<name>.framework.vite.ssr`
+
 Enable Vite SSR mode.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.name"}
-  type={"string"}
-  defaultValue={"\"\""}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `apps.<name>.name`
+
 Display name of the app
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.offset"}
-  type={"null or signed integer"}
-  defaultValue={"null"}
-  exampleCode={"5"}
-  module={"apps"}
->
-Port offset from base port.
-If null, offset is determined by position in apps attrset.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
 
-<NixOption
-  path={"apps.<name>.packageName"}
-  type={"null or string"}
-  defaultValue={"null"}
-  exampleCode={"\"@myorg/web\""}
-  module={"apps"}
->
-NPM package name for turbo filter (e.g., "@stackpanel/web").
-If null, defaults to the app name.
-</NixOption>
+---
 
-<NixOption
-  path={"apps.<name>.path"}
-  type={"string"}
-  defaultValue={"\"\""}
-  module={"apps"}
->
+## `apps.<name>.offset`
+
+Port offset from base port. If null, offset is determined by position in apps attrset.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `null` |
+
+**Example:**
+
+`5`
+
+
+---
+
+## `apps.<name>.packageName`
+
+NPM package name for turbo filter (e.g., "@stackpanel/web"). If null, defaults to the app name.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+`"@myorg/web"`
+
+
+---
+
+## `apps.<name>.path`
+
 Relative path to the app directory
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.port"}
-  type={"null or signed integer"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `apps.<name>.port`
+
 Development server port
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tls"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or signed integer` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tls`
+
 Enable TLS for the vhost (requires Step CA)
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `apps.<name>.tooling.build`
+
 Build tool definition (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps"}
-  type={"list of (submodule)"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps`
+
 Additional build steps (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build-steps.*.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.build-steps.*.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.build.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.build.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.build.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.build.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.build.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.dev`
+
 Dev tool definition (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.dev.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.dev.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.dev.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.dev.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters"}
-  type={"list of (submodule)"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.formatters`
+
 Formatter definitions (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.formatters.*.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.formatters.*.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.install`
+
 Install tool definition (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.install.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.install.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.install.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.install.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters"}
-  type={"list of (submodule)"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.linters`
+
 Linter definitions (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.linters.*.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.linters.*.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.linters.*.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.linters.*.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.linters.*.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.tooling.test`
+
 Test tool definition (wrapped).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.args"}
-  type={"list of string"}
-  defaultValue={"[ ]"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.args`
+
 Arguments passed to the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.bin"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `apps.<name>.tooling.test.bin`
+
 Optional binary name if the package provides multiple executables.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.configArg"}
-  type={"null or (list of string)"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.configArg`
+
 Argument prefix inserted before configPath (e.g. ["--config"]).
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (list of string)` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.configPath`
+
 Repo-relative config file path for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.cwd"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.cwd`
+
 Override working directory (repo-relative). Defaults to app path.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `apps.<name>.tooling.test.env`
+
 Environment variables for the tool.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.tooling.test.package"}
-  type={"package"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `apps.<name>.tooling.test.package`
+
 Package that provides the tool binary.
-</NixOption>
 
-<NixOption
-  path={"apps.<name>.type"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `apps.<name>.type`
+
 App type/runtime (bun, go, python, rust, etc.)
-</NixOption>
 
-<NixOption
-  path={"appsComputed"}
-  type={"attribute set of attribute set of unspecified value"}
-  readonly
-  module={"apps"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `appsComputed`
+
 Computed app configurations with ports and URLs.
 
-When pkgs is available, includes wrappedTooling derivations.
-When pkgs is not available (e.g., flake-parts top-level), wrappedTooling is null.
-</NixOption>
+When pkgs is available, includes wrappedTooling derivations. When pkgs is not available (e.g., flake-parts top-level), wrappedTooling is null.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
 

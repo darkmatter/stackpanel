@@ -71,8 +71,7 @@
   lib,
   pkgs,
   ...
-}:
-let
+}: let
   cfg = config.stackpanel.files;
 
   # Import util for debug logging
@@ -90,32 +89,35 @@ let
 
   # ── Resolve content ──────────────────────────────────────────────────────
   # Resolve text content from either text, path, or jsonValue
-  resolveTextContent =
-    path: fileConfig:
-    let
-      fileType = fileConfig.type or "text";
-      hasText = fileConfig.text or null != null;
-      hasPath = fileConfig.path or null != null;
+  resolveTextContent = path: fileConfig: let
+    fileType = fileConfig.type or "text";
+    hasText = fileConfig.text or null != null;
+    hasPath = fileConfig.path or null != null;
+  in
+    if fileType == "json"
+    then builtins.toJSON fileConfig.jsonValue
+    else if fileType == "line-set"
+    then let
+      raw = fileConfig.lines;
+      deduped =
+        if fileConfig.dedupe or false
+        then lib.unique raw
+        else raw;
+      sorted =
+        if fileConfig.sort or false
+        then lib.sort lib.lessThan deduped
+        else deduped;
     in
-    if fileType == "json" then
-      builtins.toJSON fileConfig.jsonValue
-    else if fileType == "line-set" then
-      let
-        raw = fileConfig.lines;
-        deduped = if fileConfig.dedupe or false then lib.unique raw else raw;
-        sorted = if fileConfig.sort or false then lib.sort lib.lessThan deduped else deduped;
-      in
       lib.concatStringsSep "\n" sorted + "\n"
-    else if fileType == "line-map" then
-      lib.concatStringsSep "\n" (lib.attrNames (lib.filterAttrs (_: v: v) fileConfig.mapLines)) + "\n"
-    else if hasText && hasPath then
-      throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
-    else if hasPath then
-      builtins.readFile fileConfig.path
-    else if hasText then
-      fileConfig.text
-    else
-      throw "File '${path}': type 'text' requires either 'text' or 'path' to be set";
+    else if fileType == "line-map"
+    then lib.concatStringsSep "\n" (lib.attrNames (lib.filterAttrs (_: v: v) fileConfig.mapLines)) + "\n"
+    else if hasText && hasPath
+    then throw "File '${path}': cannot specify both 'text' and 'path' - use one or the other"
+    else if hasPath
+    then builtins.readFile fileConfig.path
+    else if hasText
+    then fileConfig.text
+    else throw "File '${path}': type 'text' requires either 'text' or 'path' to be set";
 
   # ── Store path resolution ────────────────────────────────────────────────
   # Convert each entry into a Nix store derivation. This is the single source
@@ -123,75 +125,78 @@ let
   #
   # For JSON files, the store path contains jq-formatted output so that
   # hash comparisons work correctly (the on-disk file is also jq-formatted).
-  mkStorePath =
-    path: fileConfig:
-    let
-      fileType = fileConfig.type or "text";
-      baseName = builtins.baseNameOf path;
-    in
-    if fileType == "text" || fileType == "line-set" || fileType == "line-map" then
-      pkgs.writeText baseName (resolveTextContent path fileConfig)
-    else if fileType == "json" then
+  mkStorePath = path: fileConfig: let
+    fileType = fileConfig.type or "text";
+    baseName = builtins.baseNameOf path;
+  in
+    if fileType == "text" || fileType == "line-set" || fileType == "line-map"
+    then pkgs.writeText baseName (resolveTextContent path fileConfig)
+    else if fileType == "json"
+    then
       # Pre-format JSON with jq at build time so the store path content
       # matches what gets written on disk (jq-formatted).
       let
         rawJson = pkgs.writeText "${baseName}.raw" (resolveTextContent path fileConfig);
       in
-      pkgs.runCommand baseName { nativeBuildInputs = [ pkgs.jq ]; } ''
-        ${pkgs.jq}/bin/jq '.' ${rawJson} > $out
-      ''
-    else if fileType == "derivation" then
-      fileConfig.drv
-    else
-      null; # symlink doesn't have a store path
+        pkgs.runCommand baseName {nativeBuildInputs = [pkgs.jq];} ''
+          ${pkgs.jq}/bin/jq '.' ${rawJson} > $out
+        ''
+    else if fileType == "derivation"
+    then fileConfig.drv
+    else null; # symlink doesn't have a store path
 
   # Attrset of { path = storePath; } for all non-symlink entries
-  storePathsByFile = lib.mapAttrs (
-    path: fileConfig:
-    let
-      fileType = fileConfig.type or "text";
-    in
-    if fileType == "symlink" then null else mkStorePath path fileConfig
-  ) enabledFiles;
+  storePathsByFile =
+    lib.mapAttrs (
+      path: fileConfig: let
+        fileType = fileConfig.type or "text";
+      in
+        if fileType == "symlink"
+        then null
+        else mkStorePath path fileConfig
+    )
+    enabledFiles;
 
   # ── Manifest (for state tracking and fast path) ──────────────────────────
-  manifestEntries = lib.mapAttrsToList (
-    path: fileConfig:
-    let
-      fileType = fileConfig.type or "text";
-      storePath = storePathsByFile.${path};
-      # Determine content source for text files
-      contentSource =
-        if fileType == "text" then
-          if fileConfig.path or null != null then
-            "path"
-          else if fileConfig.text or null != null then
-            "inline"
-          else
-            "unknown"
-        else if fileType == "json" then
-          "json"
-        else if fileType == "derivation" then
-          "derivation"
-        else if fileType == "symlink" then
-          "symlink"
-        else
-          "unknown";
-    in
-    {
-      inherit path;
-      type = fileType;
-      managed = fileConfig.managed or "full";
-      blockLabel = fileConfig.blockLabel or "stackpanel";
-      commentPrefix = fileConfig.commentPrefix or "#";
-      mode = fileConfig.mode or null;
-      source = fileConfig.source or null;
-      description = fileConfig.description or null;
-      target = fileConfig.target or null;
-      contentSource = contentSource;
-      storePath = if storePath != null then builtins.toString storePath else null;
-    }
-  ) enabledFiles;
+  manifestEntries =
+    lib.mapAttrsToList (
+      path: fileConfig: let
+        fileType = fileConfig.type or "text";
+        storePath = storePathsByFile.${path};
+        # Determine content source for text files
+        contentSource =
+          if fileType == "text"
+          then
+            if fileConfig.path or null != null
+            then "path"
+            else if fileConfig.text or null != null
+            then "inline"
+            else "unknown"
+          else if fileType == "json"
+          then "json"
+          else if fileType == "derivation"
+          then "derivation"
+          else if fileType == "symlink"
+          then "symlink"
+          else "unknown";
+      in {
+        inherit path;
+        type = fileType;
+        managed = fileConfig.managed or "full";
+        blockLabel = fileConfig.blockLabel or "stackpanel";
+        commentPrefix = fileConfig.commentPrefix or "#";
+        mode = fileConfig.mode or null;
+        source = fileConfig.source or null;
+        description = fileConfig.description or null;
+        target = fileConfig.target or null;
+        contentSource = contentSource;
+        storePath =
+          if storePath != null
+          then builtins.toString storePath
+          else null;
+      }
+    )
+    enabledFiles;
 
   manifestJson = builtins.toJSON {
     version = 2;
@@ -205,36 +210,34 @@ let
   #
   # We include symlink targets in the hash too so symlink target changes
   # are detected.
-  manifestHashInput = lib.concatMapStringsSep "\n" (
-    entry:
-    let
-      value =
-        if entry.storePath != null then
-          entry.storePath
-        else if entry.target or null != null then
-          "symlink:${entry.target}"
-        else
-          "unknown";
-    in
-    "${entry.path}=${value}"
-  ) manifestEntries;
+  manifestHashInput =
+    lib.concatMapStringsSep "\n" (
+      entry: let
+        value =
+          if entry.storePath != null
+          then entry.storePath
+          else if entry.target or null != null
+          then "symlink:${entry.target}"
+          else "unknown";
+      in "${entry.path}=${value}"
+    )
+    manifestEntries;
 
   manifestHash = builtins.hashString "sha256" manifestHashInput;
 
   # ── Per-file write snippets ──────────────────────────────────────────────
-  mkWriteSnippet =
-    path: fileConfig:
-    let
-      mode = fileConfig.mode;
-      fileType = fileConfig.type;
-      managed = fileConfig.managed;
-      storePath = storePathsByFile.${path};
-      symlinkTarget = fileConfig.target or null;
-      beginMarker = "${fileConfig.commentPrefix} ── BEGIN ${fileConfig.blockLabel} ──";
-      endMarker = "${fileConfig.commentPrefix} ── END ${fileConfig.blockLabel} ──";
-      noEditNotice = "${fileConfig.commentPrefix} DO NOT EDIT between these markers — managed by stackpanel";
-    in
-    if fileType == "symlink" then
+  mkWriteSnippet = path: fileConfig: let
+    mode = fileConfig.mode;
+    fileType = fileConfig.type;
+    managed = fileConfig.managed;
+    storePath = storePathsByFile.${path};
+    symlinkTarget = fileConfig.target or null;
+    beginMarker = "${fileConfig.commentPrefix} ── BEGIN ${fileConfig.blockLabel} ──";
+    endMarker = "${fileConfig.commentPrefix} ── END ${fileConfig.blockLabel} ──";
+    noEditNotice = "${fileConfig.commentPrefix} DO NOT EDIT between these markers — managed by stackpanel";
+  in
+    if fileType == "symlink"
+    then
       # Symlinks are always recreated (cheap operation, no hash check needed)
       ''
         # ${path} (symlink)
@@ -251,7 +254,8 @@ let
           echo "  write ${path} -> ${symlinkTarget}"
         fi
       ''
-    else if managed == "block" then
+    else if managed == "block"
+    then
       # Block mode: only manage a marker-delimited section within the file.
       # User content outside the markers is preserved.
       ''
@@ -481,16 +485,18 @@ let
   #
   # NOTE: This check requires IFD (import-from-derivation) or must be run
   # against a checkout. We build it as a script that takes ROOT as an argument.
-  driftCheckScript =
-    let
-      # Only check files that have a store path (skip symlinks)
-      checkableFiles = lib.filterAttrs (_: v: v != null) storePathsByFile;
+  driftCheckScript = let
+    # Only check files that have a store path (skip symlinks)
+    checkableFiles = lib.filterAttrs (_: v: v != null) storePathsByFile;
 
-      # Full-managed files: compare entire file hash
-      fullManagedFiles = lib.filterAttrs (
+    # Full-managed files: compare entire file hash
+    fullManagedFiles =
+      lib.filterAttrs (
         path: _: (enabledFiles.${path}.managed or "full") == "full"
-      ) checkableFiles;
-      fullCheckSnippets = lib.mapAttrsToList (path: storePath: ''
+      )
+      checkableFiles;
+    fullCheckSnippets =
+      lib.mapAttrsToList (path: storePath: ''
         _dst="$ROOT/${path}"
         if [[ ! -f "$_dst" ]]; then
           echo "DRIFT: ${path} is missing (expected from store)"
@@ -503,21 +509,23 @@ let
             DRIFT=1
           fi
         fi
-      '') fullManagedFiles;
+      '')
+      fullManagedFiles;
 
-      # Block-managed files: extract the block and compare against expected content
-      blockManagedFiles = lib.filterAttrs (
+    # Block-managed files: extract the block and compare against expected content
+    blockManagedFiles =
+      lib.filterAttrs (
         path: _: (enabledFiles.${path}.managed or "full") == "block"
-      ) checkableFiles;
-      blockCheckSnippets = lib.mapAttrsToList (
-        path: storePath:
-        let
+      )
+      checkableFiles;
+    blockCheckSnippets =
+      lib.mapAttrsToList (
+        path: storePath: let
           fc = enabledFiles.${path};
           beginMarker = "${fc.commentPrefix} ── BEGIN ${fc.blockLabel} ──";
           endMarker = "${fc.commentPrefix} ── END ${fc.blockLabel} ──";
           noEditNotice = "${fc.commentPrefix} DO NOT EDIT between these markers — managed by stackpanel";
-        in
-        ''
+        in ''
           _dst="$ROOT/${path}"
           if [[ ! -f "$_dst" ]]; then
             echo "DRIFT: ${path} is missing (expected block-managed file)"
@@ -540,11 +548,13 @@ let
             fi
           fi
         ''
-      ) blockManagedFiles;
+      )
+      blockManagedFiles;
 
-      # Also check symlinks
-      symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") enabledFiles;
-      symlinkSnippets = lib.mapAttrsToList (path: fileConfig: ''
+    # Also check symlinks
+    symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") enabledFiles;
+    symlinkSnippets =
+      lib.mapAttrsToList (path: fileConfig: ''
         _dst="$ROOT/${path}"
         if [[ ! -L "$_dst" ]]; then
           echo "DRIFT: ${path} is not a symlink (expected -> ${fileConfig.target})"
@@ -553,8 +563,9 @@ let
           echo "DRIFT: ${path} points to $(readlink "$_dst"), expected ${fileConfig.target}"
           DRIFT=1
         fi
-      '') symlinkFiles;
-    in
+      '')
+      symlinkFiles;
+  in
     pkgs.writeShellApplication {
       name = "check-files-drift";
       runtimeInputs = [
@@ -588,12 +599,13 @@ let
         fi
       '';
     };
-in
-{
+in {
   options.stackpanel.files = {
-    enable = lib.mkEnableOption "file generation" // {
-      default = true;
-    };
+    enable =
+      lib.mkEnableOption "file generation"
+      // {
+        default = true;
+      };
 
     entries = lib.mkOption {
       description = ''
@@ -609,12 +621,13 @@ in
       '';
       type = lib.types.attrsOf (
         lib.types.submodule (
-          { name, ... }:
-          {
+          {name, ...}: {
             options = {
-              enable = lib.mkEnableOption "Generate this file" // {
-                default = true;
-              };
+              enable =
+                lib.mkEnableOption "Generate this file"
+                // {
+                  default = true;
+                };
 
               type = lib.mkOption {
                 type = lib.types.enum [
@@ -648,13 +661,13 @@ in
 
               jsonValue = lib.mkOption {
                 type = lib.types.attrsOf lib.types.anything;
-                default = { };
+                default = {};
                 description = "Nix attrset to serialize as formatted JSON (when type = 'json'). Deep-merged across modules.";
               };
 
               lines = lib.mkOption {
                 type = lib.types.listOf lib.types.str;
-                default = [ ];
+                default = [];
                 description = "List of lines (when type = 'line-set'). Merged across modules via list concatenation.";
               };
 
@@ -672,7 +685,7 @@ in
 
               mapLines = lib.mkOption {
                 type = lib.types.attrsOf lib.types.bool;
-                default = { };
+                default = {};
                 description = "Attrset of lines (when type = 'line-map'). Keys with true become lines; false excludes them.";
               };
 
@@ -752,11 +765,20 @@ in
           }
         )
       );
-      default = { };
+      default = {};
+    };
+
+    _storePathsByFile = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = {};
+      internal = true;
+      description = "Resolved Nix store paths for each generated file entry. Null for symlinks.";
     };
   };
 
   config = lib.mkIf hasFiles {
+    stackpanel.files._storePathsByFile = storePathsByFile;
+
     # Make the executable available in PATH
     stackpanel.devshell.packages = [
       writerDrv
@@ -770,6 +792,5 @@ in
         ${writerDrv}/bin/write-files
       ''
     ];
-
   };
 }
