@@ -46,6 +46,7 @@ let
     inherit (scripts)
       sopsAgeKeys
       sopsWrapped
+      rekeyScriptText
       secretsSet
       secretsGet
       secretsList
