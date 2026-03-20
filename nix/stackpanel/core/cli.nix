@@ -276,6 +276,12 @@ in
       ''
     ];
 
+    stackpanel.devshell.hooks.after = [
+      ''
+        ${stackpanel-cli}/bin/stackpanel preflight run ${lib.optionalString cfg.cli.quiet "--quiet"}
+      ''
+    ];
+
     # Export paths for other tools
     stackpanel.devshell.env = {
       # Path to the source Nix config file (for nix eval/import)

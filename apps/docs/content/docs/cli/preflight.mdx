@@ -1,42 +1,46 @@
 ---
 title: stackpanel preflight
-description: Generate config.local.nix from environment variables for pure mode
+description: Run shell-entry preparation tasks and explicit env imports
 icon: Terminal
 ---
 
 # stackpanel preflight
 
-Generate config.local.nix from environment variables.
+Run shell-entry preparation tasks and explicit environment imports.
 
-The purpose of this command is to allow pure evaluation while still providing a
-way to configure modules using environment variables.
+`stackpanel preflight run` is the safe entrypoint for tasks that should happen on
+shell entry, such as host-side code generation.
 
-We add a preflight stage before the actual evaluation where all relevant environment
-variables are collected into `config.initial-env = { KEY = VALUE; ... }`
+`stackpanel preflight import-env` explicitly generates `.stack/config.local.nix`
+from environment variables for pure mode.
 
-It simply represents the environment variables that were defined at eval time, except
-as an attribute set so that it can be read by nix. This file can be gitignored but
-that would require impure eval to read, so we recommend checking it in as a blank file
-with changes untracked.
+Use `import-env` when you want to materialize relevant environment variables into
+Nix configuration. This is intentionally explicit because it changes local config
+and makes the current shell stale.
 
 In pure mode, all environment variables are cleaned except those in `devshell.clean.keep`
 
-After running this, you can use 'nix develop' (without --impure) and direnv
-will work in pure mode, making evaluation fully reproducible.
+After running `stackpanel preflight import-env`, you can use `nix develop`
+(without `--impure`) and `direnv allow` in pure mode.
 
 ## Usage
 
 ```bash
-stackpanel preflight
+stackpanel preflight run
+stackpanel preflight import-env
 ```
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `stackpanel preflight run [module...]` | Run safe shell-entry tasks, including host-side codegen |
+| `stackpanel preflight import-env` | Generate `.stack/config.local.nix` from environment variables |
 
 
 ## Flags
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--dry-run` | `bool` | `false` | Show what would be generated without writing files |
-| `--force` | `bool` | `false` | Overwrite existing config.local.nix |
+The root `preflight` command has no direct flags; use a subcommand.
 
 
 ## Global Flags
@@ -49,6 +53,5 @@ These flags are inherited from parent commands.
 | `--no-color` | `bool` | `false` | Disable color output |
 | `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
 | `--verbose, -v` | `bool` | `false` | Enable verbose output |
-
 
 

@@ -9,9 +9,14 @@
 #
 # This file is kept for backwards compatibility but delegates to env-package.nix.
 # ==============================================================================
-{ lib, config, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
-  envPackage = import ./env-package.nix { inherit lib config; };
+  envPackage = import ./env-package.nix { inherit lib config pkgs; };
 in
 {
   # Re-export everything from env-package

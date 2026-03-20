@@ -2,19 +2,15 @@
 
 import {
 	Cloud,
-	Database,
 	FileCog,
 	FolderOpen,
-	KeyRound,
 	type LucideIcon,
-	Shield,
 	ShieldCheck,
 	Terminal,
-	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "./agent-provider";
-import { useNixData, useVariablesBackend } from "./use-agent";
+import { useNixData } from "./use-agent";
 
 // =============================================================================
 // Types
@@ -72,16 +68,13 @@ export function useSetupProgress(): SetupProgress | null {
 		initialData: { enable: false },
 	});
 
-	// Load secrets backend
-	const { data: backendData } = useVariablesBackend();
-	const secretsBackend: "vals" | "chamber" = backendData?.backend ?? "vals";
-	const isChamber = secretsBackend === "chamber";
+	// Chamber is detected from Nix config, not a mutable UI selector
+	const [isChamber, setIsChamber] = useState(false);
 
 	const loadProgress = useCallback(async () => {
 		let projectConfirmed = false;
 		let hasInitializedGroups = false;
 		let hasRecipients = false;
-		let kmsEnabled = false;
 		let configVerified = false;
 		let sopsKeysReady = false;
 		let sopsKeysMatchRecipients = false;
@@ -94,14 +87,11 @@ export function useSetupProgress(): SetupProgress | null {
 				projectConfirmed =
 					localStorage.getItem("stackpanel-project-confirmed") === "true";
 
-				// Check if any SOPS creation rules exist
+				// Detect chamber mode from Nix config
 				try {
-					const nixConfig = await client.nix.config();
-					const config = (nixConfig as { config?: { secrets?: { "creation-rules"?: unknown[] } } }).config;
-					const secrets = (config?.secrets ?? {}) as {
-						"creation-rules"?: unknown[];
-					};
-					hasInitializedGroups = (secrets["creation-rules"]?.length ?? 0) > 0;
+					const nixCfg = await client.nix.config();
+					const cfgSecrets = ((nixCfg as { config?: { secrets?: { backend?: string } } }).config?.secrets);
+					setIsChamber((cfgSecrets?.backend ?? "") === "chamber");
 				} catch {
 					// Ignore
 				}
@@ -114,15 +104,7 @@ export function useSetupProgress(): SetupProgress | null {
 					// Ignore
 				}
 
-				// Check KMS config
-				try {
-					const kmsConfig = await client.getKMSConfig();
-					kmsEnabled = kmsConfig?.enable ?? false;
-				} catch {
-					// Ignore
-				}
-
-				try {
+			try {
 					const sopsKeyStatus = await client.getSopsAgeKeysStatus();
 					sopsKeysReady = sopsKeyStatus.available;
 					sopsKeysMatchRecipients = sopsKeyStatus.recipientMatch;
@@ -170,99 +152,39 @@ export function useSetupProgress(): SetupProgress | null {
 				dependsOn: ["connect-agent"],
 				icon: FolderOpen,
 			},
-			{
-				id: "secrets-backend",
-				title: "Secrets Backend",
-				shortTitle: "Backend",
-				description: "Choose how secrets are stored and managed",
-				status: secretsBackend
+		{
+			id: "secrets",
+			title: "Secrets",
+			shortTitle: "Secrets",
+			description: "Generate local key, add sources, configure recipients, verify round-trip",
+			status: isChamber
+				? "complete"
+				: sopsKeysReady && sopsKeysMatchRecipients && hasRecipients
 					? "complete"
 					: projectConfirmed
 						? "incomplete"
 						: "blocked",
-				required: true,
-				dependsOn: ["project-info"],
-				icon: Database,
-			},
-			{
-				id: "sops-age-keys",
-				title: "Decryption Keys",
-				shortTitle: "Keys",
-				description: "Confirm that sops-age-keys can return at least one AGE private key",
-				status: isChamber
-					? "complete"
-					: sopsKeysReady && sopsKeysMatchRecipients
-						? "complete"
-						: projectConfirmed
-							? "incomplete"
-							: "blocked",
-				required: !isChamber,
-				dependsOn: ["secrets-backend"],
-				icon: KeyRound,
-			},
-			{
-				id: "infrastructure",
-				title: "AWS Auto-Config",
-				shortTitle: "Auto-Deploy (AWS)",
-				description:
-					"Automatically create required AWS resources for production-ready secrets management",
-				status: sstData?.enable
-					? "complete"
-					: isChamber
-						? "incomplete"
-						: "optional",
-				required: isChamber,
-				dependsOn: ["sops-age-keys"],
-				icon: Cloud,
-			},
-			{
-				id: "init-groups",
-				title: "Review Groups",
-				shortTitle: "Groups",
-				description: isChamber
-					? "Not needed for Chamber backend"
-					: "Review SOPS group files and verify encryption",
-				status: isChamber
-					? "complete"
-					: hasInitializedGroups
-						? "complete"
-						: projectConfirmed
-							? "incomplete"
-							: "blocked",
-				required: !isChamber,
-				dependsOn: ["sops-age-keys"],
-				icon: ShieldCheck,
-			},
-			{
-				id: "team-access",
-				title: "Team Access",
-				shortTitle: "Team",
-				description:
-					"Manage team members who can access encrypted secrets",
-				status: isChamber
-					? "complete"
-					: hasRecipients
-						? "complete"
-						: "optional",
-				required: false,
-				icon: Users,
-			},
-			{
-				id: "kms",
-				title: "AWS KMS Config",
-				shortTitle: "KMS",
-				description:
-					"Configure your local machine to use an existing AWS KMS key",
-				status: isChamber
-					? "complete"
-					: kmsEnabled
-						? "complete"
-						: "optional",
-				required: false,
-				icon: Shield,
-			},
-			{
-				id: "verify-config",
+			required: !isChamber,
+			dependsOn: ["project-info"],
+			icon: ShieldCheck,
+		},
+		{
+			id: "infrastructure",
+			title: "AWS Auto-Config",
+			shortTitle: "Auto-Deploy (AWS)",
+			description:
+				"Automatically create required AWS resources for production-ready secrets management",
+			status: sstData?.enable
+				? "complete"
+				: isChamber
+					? "incomplete"
+					: "optional",
+			required: isChamber,
+			dependsOn: ["secrets"],
+			icon: Cloud,
+		},
+		{
+			id: "verify-config",
 				title: "Verify Configuration",
 				shortTitle: "Verify",
 				description:
@@ -294,7 +216,7 @@ export function useSetupProgress(): SetupProgress | null {
 			requiredTotal: requiredSteps.length,
 			isComplete: requiredComplete === requiredSteps.length,
 		});
-	}, [token, isConnected, sstData, agentClient, secretsBackend, isChamber]);
+	}, [token, isConnected, sstData, agentClient, isChamber]);
 
 	useEffect(() => {
 		loadProgress();

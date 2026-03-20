@@ -2,6 +2,7 @@
 
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
+import { useQuery } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -9,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@ui/tooltip";
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Circle,
@@ -24,6 +26,7 @@ import {
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useAgentSSEEvent } from "@/lib/agent-sse-provider";
 import type { App } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import {
   useAppVariableLinks,
   useApps,
@@ -52,13 +55,48 @@ import {
 import { PanelHeader } from "./shared/panel-header";
 import { Card, CardHeader } from "@/components/ui/card";
 
+interface CodegenWarning {
+  app: string;
+  environment: string;
+  envKey: string;
+  variableId?: string;
+  path?: string;
+  key?: string;
+  message: string;
+}
+
+interface CodegenWarningsFile {
+  schemaVersion: number;
+  warnings: CodegenWarning[];
+}
+
 export function AppsPanelAlt() {
-  const { token } = useAgentContext();
+  const { token, readFile } = useAgentContext();
   const agentClient = useAgentClient();
   const { data: rawApps, isLoading, error, refetch } = useApps();
   const { data: nixConfig } = useNixConfig();
   const { data: rawVariables } = useVariables();
   const { data: appVariableLinks } = useAppVariableLinks();
+  const { data: codegenWarnings } = useQuery({
+    queryKey: ["agent", "codegenWarnings", "appsPanel"],
+    enabled: !!token,
+    queryFn: async () => {
+      const result = (await readFile(
+        ".stack/gen/codegen/env-warnings.json",
+      )) as {
+        exists?: boolean;
+        content?: string;
+      };
+
+      if (!result?.exists || !result.content) {
+        return [] as CodegenWarning[];
+      }
+
+      const parsed = JSON.parse(result.content) as CodegenWarningsFile;
+      return Array.isArray(parsed.warnings) ? parsed.warnings : [];
+    },
+    refetchOnWindowFocus: true,
+  });
 
   // Get project name from config, fallback to "stackpanel"
   const projectName =
@@ -162,6 +200,17 @@ export function AppsPanelAlt() {
     );
     return Array.from(new Set([...defaults, ...appDefined]));
   }, [resolvedApps]);
+
+  const warningsByApp = useMemo(() => {
+    const grouped: Record<string, CodegenWarning[]> = {};
+    for (const warning of codegenWarnings ?? []) {
+      if (!grouped[warning.app]) {
+        grouped[warning.app] = [];
+      }
+      grouped[warning.app].push(warning);
+    }
+    return grouped;
+  }, [codegenWarnings]);
 
   // Transform raw variables into AvailableVariable format for the dropdown
   const availableVariables: AvailableVariable[] = useMemo(() => {
@@ -431,12 +480,26 @@ export function AppsPanelAlt() {
             {apps.map((app) => {
               const isExpanded = expandedApp === app.id;
               const isBeingDeleted = isDeleting === app.id;
+              const appWarnings = warningsByApp[app.id] ?? [];
+              const hasWarnings = appWarnings.length > 0;
 
               return (
-                <Card key={app.id} className="animate-in zoom-in">
+                <Card
+                  key={app.id}
+                  className={cn(
+                    "animate-in zoom-in",
+                    hasWarnings &&
+                      "border-amber-300/70 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/10",
+                  )}
+                >
                   {/* App Header */}
                   <CardHeader
-                    className="flex items-center gap-3 -my-4 py-2  cursor-pointer hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      "flex items-center gap-3 -my-4 py-2 cursor-pointer transition-colors",
+                      hasWarnings
+                        ? "hover:bg-amber-100/40 dark:hover:bg-amber-950/20"
+                        : "hover:bg-muted/30",
+                    )}
                     onClick={() => setExpandedApp(isExpanded ? null : app.id)}
                   >
                     <button
@@ -465,6 +528,28 @@ export function AppsPanelAlt() {
                         <Badge variant="outline" className="text-xs shrink-0">
                           {app.type}
                         </Badge>
+                      )}
+                      {hasWarnings && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className="gap-1 border-amber-400/70 bg-amber-100/70 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                            >
+                              <AlertTriangle className="h-3 w-3" />
+                              {appWarnings.length}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div className="space-y-1 text-xs">
+                              {appWarnings.map((warning, index) => (
+                                <div key={`${warning.message}-${index}`}>
+                                  {warning.message}
+                                </div>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
 
@@ -513,59 +598,76 @@ export function AppsPanelAlt() {
 
                   {/* Expanded Content with subnav */}
                   {isExpanded && (
-                    <AppExpandedContent
-                      app={app}
-                      framework={getFrameworkForApp(app.type)}
-                      environmentOptions={environmentOptions}
-                      availableVariables={availableVariables}
-                      disabled={!token}
-                      modulePanels={modulePanels.filter(
-                        (p) => p.apps[app.id] != null,
+                    <>
+                      {hasWarnings && (
+                        <div className="mx-6 mb-4 rounded-md border border-amber-300/70 bg-amber-50/70 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
+                          <div className="mb-1 flex items-center gap-2 font-medium">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                            Generated env warnings
+                          </div>
+                          <ul className="space-y-1 text-xs font-mono sm:text-sm">
+                            {appWarnings.map((warning, index) => (
+                              <li key={`${warning.message}-${index}`}>
+                                {warning.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
-                      containerPanels={containerPanels.filter(
-                        (p) => p.apps[app.id] != null,
-                      )}
-                      deploymentPanels={deploymentPanels.filter(
-                        (p) => p.apps[app.id] != null,
-                      )}
-                      editingTask={editingTask}
-                      taskCommandOverride={taskCommandOverride}
-                      onTaskEdit={handleTaskEdit}
-                      onTaskSave={handleTaskSave}
-                      onTaskCancel={handleTaskCancel}
-                      onTaskCommandChange={setTaskCommandOverride}
-                      onAddVariable={(envKey, value, environments) =>
-                        handleAddVariableToApp(
-                          app.id,
-                          envKey,
-                          value,
-                          environments,
-                        )
-                      }
-                      onUpdateVariable={(
-                        oldEnvKey,
-                        newEnvKey,
-                        value,
-                        environments,
-                      ) =>
-                        handleUpdateVariableInApp(
-                          app.id,
+                      <AppExpandedContent
+                        app={app}
+                        framework={getFrameworkForApp(app.type)}
+                        environmentOptions={environmentOptions}
+                        availableVariables={availableVariables}
+                        disabled={!token}
+                        modulePanels={modulePanels.filter(
+                          (p) => p.apps[app.id] != null,
+                        )}
+                        containerPanels={containerPanels.filter(
+                          (p) => p.apps[app.id] != null,
+                        )}
+                        deploymentPanels={deploymentPanels.filter(
+                          (p) => p.apps[app.id] != null,
+                        )}
+                        editingTask={editingTask}
+                        taskCommandOverride={taskCommandOverride}
+                        onTaskEdit={handleTaskEdit}
+                        onTaskSave={handleTaskSave}
+                        onTaskCancel={handleTaskCancel}
+                        onTaskCommandChange={setTaskCommandOverride}
+                        onAddVariable={(envKey, value, environments) =>
+                          handleAddVariableToApp(
+                            app.id,
+                            envKey,
+                            value,
+                            environments,
+                          )
+                        }
+                        onUpdateVariable={(
                           oldEnvKey,
                           newEnvKey,
                           value,
                           environments,
-                        )
-                      }
-                      onDeleteVariable={(envKey) =>
-                        handleDeleteVariableFromApp(app.id, envKey)
-                      }
-                      onUpdateEnvironments={(environments) =>
-                        handleUpdateEnvironmentsForApp(app.id, environments)
-                      }
-                      onFrameworkChange={(fw) =>
-                        handleUpdateFramework(app.id, fw)
-                      }
-                    />
+                        ) =>
+                          handleUpdateVariableInApp(
+                            app.id,
+                            oldEnvKey,
+                            newEnvKey,
+                            value,
+                            environments,
+                          )
+                        }
+                        onDeleteVariable={(envKey) =>
+                          handleDeleteVariableFromApp(app.id, envKey)
+                        }
+                        onUpdateEnvironments={(environments) =>
+                          handleUpdateEnvironmentsForApp(app.id, environments)
+                        }
+                        onFrameworkChange={(fw) =>
+                          handleUpdateFramework(app.id, fw)
+                        }
+                      />
+                    </>
                   )}
                 </Card>
               );

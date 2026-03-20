@@ -17,6 +17,7 @@ import { useEffect, useMemo } from "react";
 import { useAgentContext } from "@/lib/agent-provider";
 import { useModuleHealth } from "@/lib/healthchecks/use-healthchecks";
 import { useVariables, useVariablesBackend } from "@/lib/use-agent";
+import { useNixConfig } from "@/lib/use-agent";
 import { PanelHeader } from "../shared/panel-header";
 import { AddVariableDialog } from "./add-variable-dialog";
 import { type VariablesBackend } from "./constants";
@@ -32,8 +33,10 @@ export function VariablesPanel() {
   const { data: variables, isLoading, error, refetch } = useVariables();
   const { token, isConnected } = useAgentContext();
   const { data: backendData } = useVariablesBackend();
-  const backend: VariablesBackend = backendData?.backend ?? "vals";
-  const isChamber = backend === "chamber";
+  const { data: nixConfig } = useNixConfig();
+  const nixSecrets = ((nixConfig as Record<string, unknown>)?.secrets as Record<string, unknown> | undefined);
+  const isChamber = (nixSecrets?.backend as string | undefined) === "chamber";
+  const backend: VariablesBackend = isChamber ? "chamber" : "vals";
   const sopsConfigStatus = useSopsConfigStatus();
 
   const { data: sopsHealth } = useModuleHealth("sops", {

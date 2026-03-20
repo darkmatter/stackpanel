@@ -6,306 +6,394 @@ icon: Settings
 
 # Panels Options
 
-<NixOption
-  path={"panelModules"}
-  type={"list of string"}
-  readonly
-  module={"panels"}
->
-List of module names that have registered panels
-</NixOption>
+## `panelModules`
 
-<NixOption
-  path={"panels"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  go-status = {\n    module = \"go\";\n    title = \"Go Environment\";\n    type = \"PANEL_TYPE_STATUS\";\n    order = 10;\n    fields = [\n      {\n        name = \"metrics\";\n        type = \"FIELD_TYPE_STRING\";\n        value = builtins.toJSON [\n          { label = \"Go Version\"; value = \"1.22\"; status = \"ok\"; }\n          { label = \"Apps\"; value = \"3\"; status = \"ok\"; }\n        ];\n      }\n    ];\n  };\n  caddy-status = {\n    module = \"caddy\";\n    title = \"Reverse Proxy\";\n    type = \"PANEL_TYPE_STATUS\";\n    order = 20;\n    fields = [ ... ];\n  };\n}"}
-  module={"panels"}
->
+List of module names that have registered panels
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panels`
+
 UI panels for core Stackpanel modules.
 
-Panels are UI components that display information about a module's state,
-configuration, or managed resources. Unlike extension panels, these belong
-to built-in modules like Go, Caddy, Healthchecks, etc.
+Panels are UI components that display information about a module's state, configuration, or managed resources. Unlike extension panels, these belong to built-in modules like Go, Caddy, Healthchecks, etc.
 
-Example:
-  stackpanel.panels.go-status = \{
+Example: stackpanel.panels.go-status = \{ module = "go"; title = "Go Environment"; type = "PANEL_TYPE_STATUS"; order = 10; fields = [ \{ name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; \} ]; \};
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  go-status = {
     module = "go";
     title = "Go Environment";
     type = "PANEL_TYPE_STATUS";
     order = 10;
     fields = [
-      \{ name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; \}
+      {
+        name = "metrics";
+        type = "FIELD_TYPE_STRING";
+        value = builtins.toJSON [
+          { label = "Go Version"; value = "1.22"; status = "ok"; }
+          { label = "Apps"; value = "3"; status = "ok"; }
+        ];
+      }
     ];
-  \};
-</NixOption>
+  };
+  caddy-status = {
+    module = "caddy";
+    title = "Reverse Proxy";
+    type = "PANEL_TYPE_STATUS";
+    order = 20;
+    fields = [ ... ];
+  };
+}
+```
 
-<NixOption
-  path={"panels.<name>.apps"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  module={"panels"}
->
+
+---
+
+## `panels.<name>.apps`
+
 Per-app data for apps grid panels
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.apps.<name>.config"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `panels.<name>.apps.<name>.config`
+
 This option has no description.
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.apps.<name>.enabled"}
-  type={"boolean"}
-  defaultValue={"true"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `panels.<name>.apps.<name>.enabled`
+
 This option has no description.
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.columns"}
-  type={"list of (submodule)"}
-  defaultValue={"[ ]"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `panels.<name>.columns`
+
 Column definitions for table panels
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.columns.*.key"}
-  type={"string"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.columns.*.key`
+
 Column key (matches row data)
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.columns.*.label"}
-  type={"string"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.columns.*.label`
+
 Column header label
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.description"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.description`
+
 Optional description shown below the title
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.enabled"}
-  type={"boolean"}
-  defaultValue={"true"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.enabled`
+
 Whether this panel is enabled and should be shown
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields"}
-  type={"list of (submodule)"}
-  defaultValue={"[ ]"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `panels.<name>.fields`
+
 Panel configuration fields passed to the component
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.configPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.fields.*.configPath`
+
 Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization')
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.description"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.description`
+
 Help text shown below the field
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.editPath"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
-Dot-separated path within the app's config for writes.
-E.g., "go.mainPackage" tells the agent to patch
-apps..go.mainPackage in the data file.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
 
-<NixOption
-  path={"panels.<name>.fields.*.editable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"panels"}
->
+---
+
+## `panels.<name>.fields.*.editPath`
+
+Dot-separated path within the app's config for writes. E.g., "go.mainPackage" tells the agent to patch apps..go.mainPackage in the data file.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.editable`
+
 Whether the field can be modified from the UI
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.example"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `panels.<name>.fields.*.example`
+
 Example value shown as help text
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.label"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.label`
+
 Human-readable label for the field (defaults to name if null)
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.name"}
-  type={"string"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.name`
+
 Field name (maps to component prop)
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.options"}
-  type={"list of (string or (submodule))"}
-  defaultValue={"[ ]"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.fields.*.options`
+
 Options for select fields (strings or \{value, label\} objects)
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.placeholder"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (string or (submodule))` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.fields.*.placeholder`
+
 Placeholder text for input fields
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.type"}
-  type={"one of \"FIELD_TYPE_UNSPECIFIED\", \"FIELD_TYPE_STRING\", \"FIELD_TYPE_NUMBER\", \"FIELD_TYPE_BOOLEAN\", \"FIELD_TYPE_SELECT\", \"FIELD_TYPE_MULTISELECT\", \"FIELD_TYPE_APP_FILTER\", \"FIELD_TYPE_COLUMNS\", \"FIELD_TYPE_JSON\", \"FIELD_TYPE_CODE\""}
-  defaultValue={"\"FIELD_TYPE_STRING\""}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.type`
+
 Field type
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.fields.*.value"}
-  type={"null or string"}
-  defaultValue={"\"\""}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "FIELD_TYPE_UNSPECIFIED", "FIELD_TYPE_STRING", "FIELD_TYPE_NUMBER", "FIELD_TYPE_BOOLEAN", "FIELD_TYPE_SELECT", "FIELD_TYPE_MULTISELECT", "FIELD_TYPE_APP_FILTER", "FIELD_TYPE_COLUMNS", "FIELD_TYPE_JSON", "FIELD_TYPE_CODE"` |
+| **Default** | `"FIELD_TYPE_STRING"` |
+
+---
+
+## `panels.<name>.fields.*.value`
+
 Field value (JSON-encoded for complex types, null if unset)
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.icon"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `""` |
+
+---
+
+## `panels.<name>.icon`
+
 Icon name from lucide-react (e.g., 'server', 'database')
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.module"}
-  type={"string"}
-  module={"panels"}
->
-The core module this panel belongs to (e.g., "go", "caddy", "healthchecks").
-Used for grouping panels in the UI.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
 
-<NixOption
-  path={"panels.<name>.order"}
-  type={"signed integer"}
-  defaultValue={"100"}
-  module={"panels"}
->
+---
+
+## `panels.<name>.module`
+
+The core module this panel belongs to (e.g., "go", "caddy", "healthchecks"). Used for grouping panels in the UI.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.order`
+
 Display order within the module (lower = first)
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.readme"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"panels"}
->
-Module documentation in markdown format.
-Rendered in the UI panel to help users understand the module's configuration.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `100` |
 
-<NixOption
-  path={"panels.<name>.rows"}
-  type={"list of attribute set of string"}
-  defaultValue={"[ ]"}
-  module={"panels"}
->
+---
+
+## `panels.<name>.readme`
+
+Module documentation in markdown format. Rendered in the UI panel to help users understand the module's configuration.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.rows`
+
 Row data for table panels
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.title"}
-  type={"string"}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of attribute set of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.title`
+
 Display title for the panel
-</NixOption>
 
-<NixOption
-  path={"panels.<name>.type"}
-  type={"one of \"PANEL_TYPE_UNSPECIFIED\", \"PANEL_TYPE_STATUS\", \"PANEL_TYPE_APPS_GRID\", \"PANEL_TYPE_FORM\", \"PANEL_TYPE_TABLE\", \"PANEL_TYPE_CUSTOM\", \"PANEL_TYPE_APP_CONFIG\""}
-  defaultValue={"\"PANEL_TYPE_STATUS\""}
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.type`
+
 Panel type (determines which component to render)
-</NixOption>
 
-<NixOption
-  path={"panelsByModule"}
-  type={"attribute set of attribute set of unspecified value"}
-  readonly
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM", "PANEL_TYPE_APP_CONFIG"` |
+| **Default** | `"PANEL_TYPE_STATUS"` |
+
+---
+
+## `panelsByModule`
+
 Panels grouped by their parent module
-</NixOption>
 
-<NixOption
-  path={"panelsComputed"}
-  type={"attribute set of unspecified value"}
-  readonly
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panelsComputed`
+
 Serializable panels for UI consumption
-</NixOption>
 
-<NixOption
-  path={"panelsList"}
-  type={"list of unspecified value"}
-  readonly
-  module={"panels"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panelsList`
+
 List of all panels sorted by order
-</NixOption>
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
 

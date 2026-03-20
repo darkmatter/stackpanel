@@ -292,9 +292,8 @@ func (s *Server) readGroupSecrets(group string) (map[string]interface{}, error) 
 		return make(map[string]interface{}), nil
 	}
 
-	// Decrypt with SOPS
-	relPath, _ := filepath.Rel(s.config.ProjectRoot, groupPath)
-	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, "--decrypt", relPath)
+	// Decrypt with SOPS — use the absolute path so --config lookup is consistent
+	res, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsDecryptArgs(groupPath)...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run sops: %w", err)
 	}
@@ -308,6 +307,42 @@ func (s *Server) readGroupSecrets(group string) (map[string]interface{}, error) 
 	}
 
 	return secrets, nil
+}
+
+// sopsConfigPath returns the absolute path to the generated .sops.yaml if it exists.
+func (s *Server) sopsConfigPath() string {
+	candidates := []string{
+		filepath.Join(s.config.ProjectRoot, ".stack", "secrets", ".sops.yaml"),
+		filepath.Join(s.config.ProjectRoot, ".sops.yaml"),
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	return ""
+}
+
+// sopsEncryptArgs builds the base sops encrypt argument list, always injecting
+// --config when the generated .sops.yaml exists so that sops doesn't fall back
+// to CWD lookup and fail when encrypting temp files.
+func (s *Server) sopsEncryptArgs(targetFile string) []string {
+	args := []string{"--encrypt", "--in-place"}
+	if cfg := s.sopsConfigPath(); cfg != "" {
+		args = append(args, "--config", cfg)
+	}
+	args = append(args, targetFile)
+	return args
+}
+
+// sopsDecryptArgs builds the base sops decrypt argument list with --config injection.
+func (s *Server) sopsDecryptArgs(targetFile string) []string {
+	args := []string{"--decrypt"}
+	if cfg := s.sopsConfigPath(); cfg != "" {
+		args = append(args, "--config", cfg)
+	}
+	args = append(args, targetFile)
+	return args
 }
 
 // writeGroupSecrets encrypts and writes secrets to a group's SOPS file
@@ -328,35 +363,20 @@ func (s *Server) writeGroupSecrets(group string, secrets map[string]interface{},
 		return fmt.Errorf("failed to marshal secrets: %w", err)
 	}
 
-	// Write to temp file
-	tmp, err := os.CreateTemp("", "stackpanel-group-*.yaml")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+	// Write plaintext to the destination first, then encrypt in-place.
+	// This ensures sops can use the .sops.yaml creation rule matched by the file path.
+	if err := os.WriteFile(groupPath, plainBytes, 0o600); err != nil {
+		return fmt.Errorf("failed to write plain group file: %w", err)
 	}
-	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
 
-	if err := os.WriteFile(tmpPath, plainBytes, 0o600); err != nil {
-		tmp.Close()
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-	tmp.Close()
-
-	// Encrypt with SOPS using explicit AGE recipients
-	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
-	args = append(args, tmpPath)
-
-	enc, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, args...)
+	enc, err := s.exec.RunWithOptions("sops", s.config.ProjectRoot, nil, s.sopsEncryptArgs(groupPath)...)
 	if err != nil {
+		_ = os.Remove(groupPath)
 		return fmt.Errorf("failed to run sops: %w", err)
 	}
 	if enc.ExitCode != 0 {
+		_ = os.Remove(groupPath)
 		return fmt.Errorf("sops encrypt failed: %s", strings.TrimSpace(enc.Stderr))
-	}
-
-	// Write encrypted content
-	if err := os.WriteFile(groupPath, []byte(enc.Stdout), 0o644); err != nil {
-		return fmt.Errorf("failed to write group file: %w", err)
 	}
 
 	return nil

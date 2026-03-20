@@ -6,11 +6,47 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/spf13/cobra"
 )
 
 var preflightCmd = &cobra.Command{
 	Use:   "preflight",
+	Short: "Run shell-entry preparation tasks",
+	Long: `Run shell-entry preparation tasks and explicit environment imports.
+
+Use 'stackpanel preflight run' for safe entry tasks like host-side code generation.
+Use 'stackpanel preflight import-env' to explicitly materialize environment values
+into .stack/config.local.nix for pure-mode evaluation.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+var (
+	preflightProjectRoot  string
+	preflightQuiet        bool
+	preflightCodegenForce bool
+
+	preflightImportEnvDryRun bool
+	preflightImportEnvForce  bool
+)
+
+var preflightRunCmd = &cobra.Command{
+	Use:   "run [module...]",
+	Short: "Run safe shell-entry tasks",
+	Long: `Run safe shell-entry tasks.
+
+This is the entrypoint that shell startup should use. It performs idempotent,
+host-side preparation such as code generation without materializing ambient
+environment variables into tracked config files.
+
+When module names are provided, only those codegen modules are built.`,
+	RunE: runPreflightRun,
+}
+
+var preflightImportEnvCmd = &cobra.Command{
+	Use:   "import-env",
 	Short: "Generate config.local.nix from environment variables for pure mode",
 	Long: `Generate config.local.nix from environment variables.
 
@@ -29,54 +65,70 @@ In pure mode, all environment variables are cleaned except those in ` + "`" + `d
 
 After running this, you can use 'nix develop' (without --impure) and direnv
 will work in pure mode, making evaluation fully reproducible.`,
-	RunE: runPreflight,
+	RunE: runPreflightImportEnv,
 }
-
-var (
-	preflightDryRun bool
-	preflightForce  bool
-)
 
 func init() {
 	rootCmd.AddCommand(preflightCmd)
-	preflightCmd.Flags().BoolVar(&preflightDryRun, "dry-run", false, "Show what would be generated without writing files")
-	preflightCmd.Flags().BoolVar(&preflightForce, "force", false, "Overwrite existing config.local.nix")
+
+	preflightCmd.AddCommand(preflightRunCmd)
+	preflightCmd.AddCommand(preflightImportEnvCmd)
+
+	preflightRunCmd.Flags().StringVar(&preflightProjectRoot, "project-root", "", "Project root (defaults to the current stackpanel project)")
+	preflightRunCmd.Flags().BoolVar(&preflightQuiet, "quiet", false, "Suppress codegen summary output")
+	preflightRunCmd.Flags().BoolVar(&preflightCodegenForce, "force", false, "Rewrite generated files even when contents are unchanged")
+
+	preflightImportEnvCmd.Flags().BoolVar(&preflightImportEnvDryRun, "dry-run", false, "Show what would be generated without writing files")
+	preflightImportEnvCmd.Flags().BoolVar(&preflightImportEnvForce, "force", false, "Overwrite existing config.local.nix")
 }
 
-func runPreflight(cmd *cobra.Command, args []string) error {
-	// Find project root
-	projectRoot := os.Getenv("STACKPANEL_ROOT")
-	if projectRoot == "" {
-		var err error
-		projectRoot, err = findProjectRoot()
-		if err != nil {
-			return fmt.Errorf("could not find project root: %w", err)
-		}
+func runPreflightRun(cmd *cobra.Command, args []string) error {
+	projectRoot, err := resolvePreflightProjectRoot(preflightProjectRoot)
+	if err != nil {
+		return err
 	}
 
-	// Collect environment variables to materialize
-	envConfig := collectEnvConfig()
+	if err := writeProjectRootMarker(projectRoot); err != nil {
+		return err
+	}
 
-	// Generate Nix expression
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	summary, err := buildCodegenModules(cmd.Context(), projectRoot, args, preflightCodegenForce, verbose)
+	if err != nil {
+		return err
+	}
+
+	if !preflightQuiet {
+		printCodegenSummary(summary, verbose)
+		output.Success(fmt.Sprintf("Preflight completed with %d codegen module(s)", len(summary.Results)))
+	}
+
+	return nil
+}
+
+func runPreflightImportEnv(cmd *cobra.Command, args []string) error {
+	projectRoot, err := resolvePreflightProjectRoot("")
+	if err != nil {
+		return fmt.Errorf("could not find project root: %w", err)
+	}
+
+	envConfig := collectEnvConfig()
 	nixExpr := generateNixConfig(envConfig)
 
-	if preflightDryRun {
+	if preflightImportEnvDryRun {
 		fmt.Println("# Would generate the following config.local.nix:")
 		fmt.Println(nixExpr)
 		fmt.Printf("\n# Project root: %s\n", projectRoot)
 		return nil
 	}
 
-	// Write .stackpanel-root marker
-	markerPath := filepath.Join(projectRoot, ".stackpanel-root")
-	if err := os.WriteFile(markerPath, []byte(projectRoot+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write .stackpanel-root marker: %w", err)
+	if err := writeProjectRootMarker(projectRoot); err != nil {
+		return err
 	}
 
-	// Write config.local.nix
 	configPath := filepath.Join(projectRoot, ".stack", "config.local.nix")
-	if !preflightForce {
-		if _, err := os.Stat(configPath); err == nil {
+	if !preflightImportEnvForce {
+		if _, statErr := os.Stat(configPath); statErr == nil {
 			return fmt.Errorf("config.local.nix already exists (use --force to overwrite)")
 		}
 	}
@@ -95,9 +147,26 @@ func runPreflight(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// envConfig holds environment variable configuration
+func resolvePreflightProjectRoot(flagValue string) (string, error) {
+	if flagValue != "" {
+		return flagValue, nil
+	}
+	if envRoot := os.Getenv("STACKPANEL_ROOT"); envRoot != "" {
+		return envRoot, nil
+	}
+	return findProjectRoot()
+}
+
+func writeProjectRootMarker(projectRoot string) error {
+	markerPath := filepath.Join(projectRoot, ".stackpanel-root")
+	if err := os.WriteFile(markerPath, []byte(projectRoot+"\n"), 0644); err != nil {
+		return fmt.Errorf("failed to write .stackpanel-root marker: %w", err)
+	}
+	return nil
+}
+
+// envConfig holds environment variable configuration.
 type envConfig struct {
-	// AWS Configuration
 	AWSProfileARN      string
 	AWSRoleARN         string
 	AWSTrustAnchorARN  string
@@ -106,42 +175,33 @@ type envConfig struct {
 	AWSSecretAccessKey string
 	AWSSessionToken    string
 
-	// Step CA Configuration
 	StepCAURL         string
 	StepCAFingerprint string
 	StepCACert        string
 
-	// Stackpanel paths (not typically needed, but available)
 	StackpanelRoot       string
 	StackpanelConfigJSON string
 	StackpanelStateDir   string
 }
 
-// collectEnvConfig reads relevant environment variables
 func collectEnvConfig() envConfig {
 	return envConfig{
-		// AWS
-		AWSProfileARN:      os.Getenv("AWS_PROFILE_ARN"),
-		AWSRoleARN:         os.Getenv("AWS_ROLE_ARN"),
-		AWSTrustAnchorARN:  os.Getenv("AWS_TRUST_ANCHOR_ARN"),
-		AWSRegion:          getAWSRegion(),
-		AWSAccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
-		AWSSecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		AWSSessionToken:    os.Getenv("AWS_SESSION_TOKEN"),
-
-		// Step CA
-		StepCAURL:         os.Getenv("STEP_CA_URL"),
-		StepCAFingerprint: os.Getenv("STEP_CA_FINGERPRINT"),
-		StepCACert:        os.Getenv("STEP_CA_CERT"),
-
-		// Stackpanel (usually not needed in config.local.nix)
+		AWSProfileARN:        os.Getenv("AWS_PROFILE_ARN"),
+		AWSRoleARN:           os.Getenv("AWS_ROLE_ARN"),
+		AWSTrustAnchorARN:    os.Getenv("AWS_TRUST_ANCHOR_ARN"),
+		AWSRegion:            getAWSRegion(),
+		AWSAccessKeyID:       os.Getenv("AWS_ACCESS_KEY_ID"),
+		AWSSecretAccessKey:   os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		AWSSessionToken:      os.Getenv("AWS_SESSION_TOKEN"),
+		StepCAURL:            os.Getenv("STEP_CA_URL"),
+		StepCAFingerprint:    os.Getenv("STEP_CA_FINGERPRINT"),
+		StepCACert:           os.Getenv("STEP_CA_CERT"),
 		StackpanelRoot:       os.Getenv("STACKPANEL_ROOT"),
 		StackpanelConfigJSON: os.Getenv("STACKPANEL_CONFIG_JSON"),
 		StackpanelStateDir:   os.Getenv("STACKPANEL_STATE_DIR"),
 	}
 }
 
-// getAWSRegion returns AWS region with fallback
 func getAWSRegion() string {
 	if region := os.Getenv("AWS_REGION"); region != "" {
 		return region
@@ -149,23 +209,21 @@ func getAWSRegion() string {
 	return os.Getenv("AWS_DEFAULT_REGION")
 }
 
-// generateNixConfig generates a Nix expression from environment config
 func generateNixConfig(cfg envConfig) string {
 	var sb strings.Builder
 
 	sb.WriteString("# config.local.nix\n")
-	sb.WriteString("# Generated by: stackpanel preflight\n")
+	sb.WriteString("# Generated by: stackpanel preflight import-env\n")
 	sb.WriteString("#\n")
 	sb.WriteString("# This file materializes environment variables into Nix configuration,\n")
 	sb.WriteString("# enabling pure mode evaluation (nix develop without --impure).\n")
 	sb.WriteString("#\n")
-	sb.WriteString("# To regenerate: stackpanel preflight --force\n")
+	sb.WriteString("# To regenerate: stackpanel preflight import-env --force\n")
 	sb.WriteString("# To remove: rm .stack/config.local.nix && use impure mode again\n")
 	sb.WriteString("{\n")
 
 	hasAnyConfig := false
 
-	// AWS Configuration
 	if hasAWSConfig(cfg) {
 		hasAnyConfig = true
 		sb.WriteString("  # AWS Configuration\n")
@@ -187,7 +245,6 @@ func generateNixConfig(cfg envConfig) string {
 		sb.WriteString("  };\n\n")
 	}
 
-	// Step CA Configuration
 	if hasStepCAConfig(cfg) {
 		hasAnyConfig = true
 		sb.WriteString("  # Step CA Configuration\n")
@@ -206,7 +263,6 @@ func generateNixConfig(cfg envConfig) string {
 		sb.WriteString("  };\n\n")
 	}
 
-	// Note about secrets
 	if cfg.AWSAccessKeyID != "" || cfg.AWSSecretAccessKey != "" || cfg.AWSSessionToken != "" {
 		sb.WriteString("  # Note: AWS credentials are NOT included in config.local.nix for security.\n")
 		sb.WriteString("  # Use secrets management (vals/sops) or shell environment for credentials.\n")
@@ -222,20 +278,16 @@ func generateNixConfig(cfg envConfig) string {
 	}
 
 	sb.WriteString("}\n")
-
 	return sb.String()
 }
 
-// nixString escapes a string for Nix
 func nixString(s string) string {
-	// Escape special characters for Nix strings
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "\"", "\\\"")
 	s = strings.ReplaceAll(s, "${", "\\${")
 	return fmt.Sprintf(`"%s"`, s)
 }
 
-// hasAWSConfig checks if any AWS configuration is present
 func hasAWSConfig(cfg envConfig) bool {
 	return cfg.AWSProfileARN != "" ||
 		cfg.AWSRoleARN != "" ||
@@ -243,7 +295,6 @@ func hasAWSConfig(cfg envConfig) bool {
 		cfg.AWSRegion != ""
 }
 
-// hasStepCAConfig checks if any Step CA configuration is present
 func hasStepCAConfig(cfg envConfig) bool {
 	return cfg.StepCAURL != "" ||
 		cfg.StepCAFingerprint != "" ||

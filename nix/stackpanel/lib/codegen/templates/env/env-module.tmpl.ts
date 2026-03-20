@@ -7,9 +7,18 @@ export interface Env {
 
 let cached: Env | null = null;
 
+type EnvInput = Record<string, string | undefined>;
+
+function defaultInput(): EnvInput {
+  if (typeof process === "undefined") {
+    return {};
+  }
+  return process.env as EnvInput;
+}
+
 export const getEnv = (
-  input: Record<string, string | undefined> = process.env,
-) => {
+  input: EnvInput = defaultInput(),
+): Env => {
   if (!cached) cached = input as unknown as Env;
   return cached;
 };

@@ -6,311 +6,394 @@ icon: Settings
 
 # Checks Options
 
-<NixOption
-  path={"moduleChecks"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  oxlint = {\n    eval = {\n      description = \"OxLint module evaluates correctly\";\n      required = true;\n      derivation = pkgs.runCommand \"oxlint-eval\" {} \"touch $out\";\n    };\n    packages = {\n      description = \"OxLint package is available\";\n      required = true;\n      derivation = pkgs.runCommand \"oxlint-packages\" {\n        nativeBuildInputs = [ pkgs.oxlint ];\n      } \"oxlint --version > $out\";\n    };\n  };\n}"}
-  module={"checks"}
->
-Structured module checks organized by module ID.
-These are derivations that run during `nix flake check` and in CI.
+## `moduleChecks`
+
+Structured module checks organized by module ID. These are derivations that run during nix flake check and in CI.
 
 Each module can define checks in standard categories:
-- eval (required for certification)
-- packages (required for certification)
-- config (recommended)
-- integration (recommended)
-- lint (optional)
-- custom.* (module-specific)
 
-For simple flake checks, use stackpanel.checks instead.
-This option provides structured metadata for certification.
-</NixOption>
+For simple flake checks, use stackpanel.checks instead. This option provides structured metadata for certification.
 
-<NixOption
-  path={"moduleChecks.<name>.config"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"checks"}
->
-Configuration check - verifies config generation works correctly.
-Recommended for modules that generate config files.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
 
-<NixOption
-  path={"moduleChecks.<name>.config.derivation"}
-  type={"package"}
-  module={"checks"}
->
+**Example:**
+
+```nix
+{
+  oxlint = {
+    eval = {
+      description = "OxLint module evaluates correctly";
+      required = true;
+      derivation = pkgs.runCommand "oxlint-eval" {} "touch $out";
+    };
+    packages = {
+      description = "OxLint package is available";
+      required = true;
+      derivation = pkgs.runCommand "oxlint-packages" {
+        nativeBuildInputs = [ pkgs.oxlint ];
+      } "oxlint --version > $out";
+    };
+  };
+}
+```
+
+
+---
+
+## `moduleChecks.<name>.config`
+
+Configuration check - verifies config generation works correctly. Recommended for modules that generate config files.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.config.derivation`
+
 The derivation that runs this check (must succeed to pass)
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.config.description"}
-  type={"string"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.config.description`
+
 Human-readable description of what this check verifies
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.config.required"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.config.required`
+
 Whether this check is required for module certification
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.config.timeout"}
-  type={"signed integer"}
-  defaultValue={"300"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.config.timeout`
+
 Timeout in seconds for this check
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.custom"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  module={"checks"}
->
-Custom module-specific checks.
-Use this for checks that don't fit the standard categories.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
 
-<NixOption
-  path={"moduleChecks.<name>.custom.<name>.derivation"}
-  type={"package"}
-  module={"checks"}
->
+---
+
+## `moduleChecks.<name>.custom`
+
+Custom module-specific checks. Use this for checks that don't fit the standard categories.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.derivation`
+
 The derivation that runs this check (must succeed to pass)
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.custom.<name>.description"}
-  type={"string"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.description`
+
 Human-readable description of what this check verifies
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.custom.<name>.required"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.required`
+
 Whether this check is required for module certification
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.custom.<name>.timeout"}
-  type={"signed integer"}
-  defaultValue={"300"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.custom.<name>.timeout`
+
 Timeout in seconds for this check
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.eval"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"checks"}
->
-Evaluation check - verifies the module evaluates without errors.
-Required for module certification.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
 
-<NixOption
-  path={"moduleChecks.<name>.eval.derivation"}
-  type={"package"}
-  module={"checks"}
->
+---
+
+## `moduleChecks.<name>.eval`
+
+Evaluation check - verifies the module evaluates without errors. Required for module certification.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.eval.derivation`
+
 The derivation that runs this check (must succeed to pass)
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.eval.description"}
-  type={"string"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.eval.description`
+
 Human-readable description of what this check verifies
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.eval.required"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.eval.required`
+
 Whether this check is required for module certification
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.eval.timeout"}
-  type={"signed integer"}
-  defaultValue={"300"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.eval.timeout`
+
 Timeout in seconds for this check
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.integration"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"checks"}
->
-Integration check - verifies module works with a sample project.
-Recommended for complex modules.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
 
-<NixOption
-  path={"moduleChecks.<name>.integration.derivation"}
-  type={"package"}
-  module={"checks"}
->
+---
+
+## `moduleChecks.<name>.integration`
+
+Integration check - verifies module works with a sample project. Recommended for complex modules.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.integration.derivation`
+
 The derivation that runs this check (must succeed to pass)
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.integration.description"}
-  type={"string"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.integration.description`
+
 Human-readable description of what this check verifies
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.integration.required"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.integration.required`
+
 Whether this check is required for module certification
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.integration.timeout"}
-  type={"signed integer"}
-  defaultValue={"300"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.integration.timeout`
+
 Timeout in seconds for this check
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.lint"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"checks"}
->
-Lint check - verifies the module's code passes linting.
-Optional.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
 
-<NixOption
-  path={"moduleChecks.<name>.lint.derivation"}
-  type={"package"}
-  module={"checks"}
->
+---
+
+## `moduleChecks.<name>.lint`
+
+Lint check - verifies the module's code passes linting. Optional.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.lint.derivation`
+
 The derivation that runs this check (must succeed to pass)
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.lint.description"}
-  type={"string"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.lint.description`
+
 Human-readable description of what this check verifies
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.lint.required"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.lint.required`
+
 Whether this check is required for module certification
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.lint.timeout"}
-  type={"signed integer"}
-  defaultValue={"300"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.lint.timeout`
+
 Timeout in seconds for this check
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.packages"}
-  type={"null or (submodule)"}
-  defaultValue={"null"}
-  module={"checks"}
->
-Packages check - verifies required packages are available.
-Required for module certification.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
 
-<NixOption
-  path={"moduleChecks.<name>.packages.derivation"}
-  type={"package"}
-  module={"checks"}
->
+---
+
+## `moduleChecks.<name>.packages`
+
+Packages check - verifies required packages are available. Required for module certification.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or (submodule)` |
+| **Default** | `null` |
+
+---
+
+## `moduleChecks.<name>.packages.derivation`
+
 The derivation that runs this check (must succeed to pass)
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.packages.description"}
-  type={"string"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.packages.description`
+
 Human-readable description of what this check verifies
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.packages.required"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `moduleChecks.<name>.packages.required`
+
 Whether this check is required for module certification
-</NixOption>
 
-<NixOption
-  path={"moduleChecks.<name>.packages.timeout"}
-  type={"signed integer"}
-  defaultValue={"300"}
-  module={"checks"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `moduleChecks.<name>.packages.timeout`
+
 Timeout in seconds for this check
-</NixOption>
 
-<NixOption
-  path={"moduleChecksCertification"}
-  type={"attribute set of unspecified value"}
-  defaultValue={"{ }"}
-  readonly
-  module={"checks"}
->
-Certification status for each module.
-Shows which required checks are present/missing.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `300` |
 
-<NixOption
-  path={"moduleChecksFlattened"}
-  type={"attribute set of package"}
-  defaultValue={"{ }"}
-  readonly
-  module={"checks"}
->
-Flattened module check derivations for use in flake checks output.
-Keys are "-" (e.g., "oxlint-eval").
-</NixOption>
+---
+
+## `moduleChecksCertification`
+
+Certification status for each module. Shows which required checks are present/missing.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
+
+## `moduleChecksFlattened`
+
+Flattened module check derivations for use in flake checks output. Keys are "-" (e.g., "oxlint-eval").
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of package` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
 

@@ -8,7 +8,8 @@
 # For config that needs pkgs/lib (computed values, custom packages),
 # use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
 # ==============================================================================
-{config, ...}: {
+{ config, ... }:
+{
   alchemy = {
     deploy = {
       enable = true;
@@ -23,14 +24,19 @@
       description = "Documentation site";
       domain = "docs";
       environments = {
+        shared = {
+          env = {
+            PORT = "var://computed/apps/docs/port";
+          };
+          name = "shared";
+        };
         dev = {
           env = {
-            FOO = "var://computed/apps/docs/port";
-            HELLO = "var://computed/apps/docs/port";
             PORT = "var://computed/apps/docs/port";
-            POSTGRES_URL = "var://secret/cool-secre";
+            HOSTNAME = "stackpanel.lan";
           };
           name = "dev";
+          extends = [ "common" ];
         };
         prod = {
           env = { };
@@ -38,10 +44,14 @@
         };
         staging = {
           env = {
-            PORT = "var://computed/apps/docs/port";
-            POSTGRES_URL = "var://secret/cool-secre";
           };
           name = "staging";
+        };
+        test = {
+          env = {
+            POSTGRES_URL = config.variables."/test/postgres-url".value;
+          };
+          name = "test";
         };
       };
       linting = {
@@ -316,6 +326,18 @@
 
   env = {
     package-name = "@gen/env";
+    references = {
+      docs = {
+        dev = {
+          HELLO = "/secret/cool-secre";
+          POSTGRES_URL = "/dev/postgres-url";
+        };
+        shared = {
+          HELLO = "/secret/cool-secre";
+          POSTGRES_URL = "/dev/postgres-url";
+        };
+      };
+    };
   };
 
   files = {
@@ -711,28 +733,53 @@
       prod = { };
       test = { };
     };
-    kms = {
-      key-arn = "arn:aws:kms:us-west-2:950224716579:key/853ce333-ce7d-468a-a752-bb23b7231d4a";
-    };
-    recipient-groups = {
-      everyone = {
-        recipients = [
-          "arximboldi"
-          "arximboldi_2"
-          "arximboldi_3"
-          "callumelvidge"
-          "callumelvidge_2"
-          "CasLinden"
-          "CasLinden_2"
-          "cooper"
-          "coopmoney"
-          "coopmoney_2"
-          "coopmoney_3"
-          "coopmoney_4"
-          "fkb032"
-          "jjkoh95"
-          "scottmcmaster"
-          "scottmcmaster_2"
+    recipient-groups =
+      let
+        ghdata = import ./data/external/github-collaborators.nix;
+      in
+      {
+        github-team = {
+          recipients = builtins.attrNames ghdata.collaborators;
+        };
+        everyone = {
+          recipients = [
+            "arximboldi"
+            "arximboldi_2"
+            "arximboldi_3"
+            "callumelvidge"
+            "callumelvidge_2"
+            "CasLinden"
+            "CasLinden_2"
+            "cooper"
+            "coopmoney"
+            "coopmoney_2"
+            "coopmoney_3"
+            "coopmoney_4"
+            "fkb032"
+            "jjkoh95"
+            "scottmcmaster"
+            "scottmcmaster_2"
+          ];
+        };
+      };
+    recipients = {
+      keyservice = {
+        public-key = "age16wuzuxnkcgfuxzvzgk5e5a5f6hhs386adjewyv54m9esr4yj6uuslpn6tp";
+        tags = [
+          "dev"
+          "staging"
+        ];
+      };
+      local = {
+        public-key = "age16rkvks3tljju3y6xu0l7luhjzx634et97g3xe58xf2dgfn2865rqkq6t8f";
+        tags = [ "dev" ];
+      };
+      github-actions = {
+        public-key = "age1eqcj2g0fdekj2wpqp4y0fg9c5myydjdt9zlr5scr0grk6fxszymqkpw5jf";
+        tags = [
+          "dev"
+          "staging"
+          "production"
         ];
       };
     };
@@ -756,7 +803,7 @@
           name = "User Key Path";
           priority = 1;
           type = "user-key-path";
-          value = "\$XDG_CONFIG_HOME/sops/age/keys.txt";
+          value = "~/.config/sops/age/keys.txt";
         }
         {
           enabled = true;
@@ -963,7 +1010,11 @@
     "/var/web-hostname-staging" = {
       value = "staging.stackpanel.dev";
     };
+    "/dev/postgres-url" = {
+      value = "";
+    };
+    "/test/postgres-url" = {
+      value = "";
+    };
   };
-
 }
-

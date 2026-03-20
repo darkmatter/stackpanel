@@ -126,14 +126,12 @@ func escapeMDX(text string) string {
 
 	lines := strings.Split(text, "\n")
 	inFencedBlock := false
-	inJSXTag := false  // true while scanning inside <Tag … > (may span lines)
-	jsxBraceDepth := 0 // nesting depth of { } inside a JSX tag
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Toggle fenced code block state on ``` lines (only outside JSX tags)
-		if !inJSXTag && strings.HasPrefix(trimmed, "```") {
+		// Toggle fenced code block state on ``` lines
+		if strings.HasPrefix(trimmed, "```") {
 			inFencedBlock = !inFencedBlock
 			result.WriteString(line)
 			if i < len(lines)-1 {
@@ -152,33 +150,12 @@ func escapeMDX(text string) string {
 		}
 
 		// Outside code blocks — escape character-by-character,
-		// skipping inline code spans, already-escaped sequences, and JSX tags.
+		// skipping inline code spans delimited by backticks.
+		// Also skip already-escaped sequences (preceded by \).
 		inInlineCode := false
 		for j := 0; j < len(line); j++ {
 			ch := line[j]
 
-			// ── Inside a JSX tag ────────────────────────────────────────────
-			// Pass every character through unchanged. Track brace depth so that
-			// a '>' inside a prop expression like {"apps.<name>.foo"} is not
-			// mistaken for the tag-closing '>'.
-			if inJSXTag {
-				result.WriteByte(ch)
-				switch ch {
-				case '{':
-					jsxBraceDepth++
-				case '}':
-					if jsxBraceDepth > 0 {
-						jsxBraceDepth--
-					}
-				case '>':
-					if jsxBraceDepth == 0 {
-						inJSXTag = false
-					}
-				}
-				continue
-			}
-
-			// ── Inline code span ────────────────────────────────────────────
 			if ch == '`' {
 				inInlineCode = !inInlineCode
 				result.WriteByte(ch)
@@ -190,7 +167,8 @@ func escapeMDX(text string) string {
 				continue
 			}
 
-			// ── Already-escaped sequences ───────────────────────────────────
+			// If this is a backslash followed by a char we'd escape,
+			// pass both through unchanged (already escaped).
 			if ch == '\\' && j+1 < len(line) {
 				next := line[j+1]
 				if next == '<' || next == '>' || next == '{' || next == '}' {
@@ -201,23 +179,6 @@ func escapeMDX(text string) string {
 				}
 			}
 
-			// ── JSX tag detection ───────────────────────────────────────────
-			// Only PascalCase names (uppercase first letter) are treated as JSX
-			// component tags, e.g. <NixOption>, </NixOption>.
-			// Lowercase tokens like <name> in plain text are still escaped.
-			if ch == '<' && j+1 < len(line) {
-				next := line[j+1]
-				isOpenTag := isUpperLetter(next)
-				isCloseTag := next == '/' && j+2 < len(line) && isUpperLetter(line[j+2])
-				if isOpenTag || isCloseTag {
-					inJSXTag = true
-					jsxBraceDepth = 0
-					result.WriteByte(ch)
-					continue
-				}
-			}
-
-			// ── Default: escape MDX-special characters ──────────────────────
 			switch ch {
 			case '{':
 				result.WriteString("\\{")
@@ -238,18 +199,6 @@ func escapeMDX(text string) string {
 	}
 
 	return result.String()
-}
-
-// isLetter reports whether b is an ASCII letter (used for JSX tag detection).
-func isLetter(b byte) bool {
-	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
-}
-
-// isUpperLetter reports whether b is an uppercase ASCII letter.
-// Used to detect PascalCase JSX component tags (e.g. <NixOption>) so that
-// plain-text tokens like <name> are still escaped by escapeMDX.
-func isUpperLetter(b byte) bool {
-	return b >= 'A' && b <= 'Z'
 }
 
 // generateCommandDocs generates documentation for a single command and its subcommands

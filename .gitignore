@@ -48,68 +48,10 @@ coverage
 *.tgz
 .cache
 tmp
-temp
-
-
-# We deliberately ignore files that are usually checked in because we generate them
-/.claude
-/.alchemy
-/.cache
-/.tasks
-# These files will be ignored once we finish the modules for them
-# /.github
-# /.ruler
-# /.vscode
-
-# START Ruler Generated Files
-/.codex/config.json
-/.codex/config.json.bak
-/.codex/config.toml
-/.codex/config.toml.bak
-/.cursor/mcp.json
-/.cursor/mcp.json.bak
-/.mcp.json
-/.mcp.json.bak
-/.vscode/mcp.json
-/.vscode/mcp.json.bak
-/AGENTS.md
-/AGENTS.md.bak
-/CLAUDE.md
-/CLAUDE.md.bak
-/WARP.md
-/WARP.md.bak
-# END Ruler Generated Files
-
-# Devenv
-.devenv
-.devenv.flake.nix
-devenv.local.nix
-devenv.local.yaml
-
-# direnv
-.direnv
-
-# pre-commit
-.pre-commit-config.yaml
-/.stack/state
-/.stackpanel/state
-/.stackpanel/bin
-/.devenv*
-/.devenv-root
-/bts.jsonc
-
-/result
-
-# Stackpanel root marker (machine-specific)
-
-# Stackpanel generated files (cache)
-.stack/state/
-
+.alchemy
+.turbo
 # ── BEGIN stackpanel ──
 # DO NOT EDIT between these markers — managed by stackpanel
-!.stack/secrets/recipients/**/*.ed25519.pub
-!.stack/secrets/recipients/*.age.pub
-!.stack/secrets/recipients/*.enc.age
 *.log
 *.swo
 *.swp
@@ -129,14 +71,11 @@ devenv.local.yaml
 .stack/config.local.nix
 .stack/keys/
 .stack/profile/
-.stack/secrets/recipients/*.age
-.stack/secrets/recipients/*.vals
-.stack/secrets/recipients/.archive/
-.stack/secrets/recipients/.sops.yaml
 .stack/secrets/state/
 .stack/secrets/vars/.sops.yaml
 .stack/state/
 .tasks
+.turbo
 /.devenv*
 /.devenv-root
 /.stack/state

@@ -341,7 +341,7 @@ func TestGenerateCategoryMdx(t *testing.T) {
 
 	result := generateCategoryMdx("ports", options)
 
-	// Frontmatter from template must still be present.
+	// Check frontmatter now emitted by template
 	if !strings.Contains(result, "title: ports") {
 		t.Error("expected lowercase category title in frontmatter")
 	}
@@ -349,282 +349,23 @@ func TestGenerateCategoryMdx(t *testing.T) {
 		t.Error("expected description in frontmatter")
 	}
 
-	// ## headings must be present so Fumadocs includes them in the TOC.
+	// Check options are included
 	if !strings.Contains(result, "## `stackpanel.ports.base`") {
-		t.Error("expected ## heading for ports.base (required for TOC)")
+		t.Error("expected ports.base option")
 	}
 	if !strings.Contains(result, "## `stackpanel.ports.projectName`") {
-		t.Error("expected ## heading for ports.projectName (required for TOC)")
+		t.Error("expected ports.projectName option")
+	}
+	if !strings.Contains(result, "| **Read Only** | `true` |") {
+		t.Error("expected read-only property row for read-only option")
 	}
 
-	// Metadata is rendered via the inline <NixOptionMeta /> self-closing component.
-	if !strings.Contains(result, "<NixOptionMeta") {
-		t.Error("expected <NixOptionMeta> JSX component")
+	// Check table structure
+	if !strings.Contains(result, "| **Type** | `int` |") {
+		t.Error("expected type in table")
 	}
-	if !strings.Contains(result, `type={"int"}`) {
-		t.Error("expected type prop for int option")
-	}
-	if !strings.Contains(result, `defaultValue={"6400"}`) {
-		t.Error("expected defaultValue prop")
-	}
-	// Read-only options use the boolean JSX prop (no value needed).
-	if !strings.Contains(result, "  readonly") {
-		t.Error("expected readonly prop for read-only option")
-	}
-	// Self-closing tag — there must be no children.
-	if strings.Contains(result, "</NixOptionMeta>") {
-		t.Error("NixOptionMeta must be self-closing, not a wrapper")
-	}
-
-	// Old markdown-table syntax must NOT appear.
-	if strings.Contains(result, "| **Type** |") {
-		t.Error("old markdown table syntax should not appear in JSX output")
-	}
-	if strings.Contains(result, "| **Read Only** |") {
-		t.Error("old read-only table row should not appear in JSX output")
-	}
-
-	// path must NOT be a prop (it lives in the ## heading now).
-	if strings.Contains(result, "path=") {
-		t.Error("path must not be a prop on NixOptionMeta — it belongs in the ## heading")
-	}
-}
-
-func TestGenerateCategoryMdx_ModuleAttribution(t *testing.T) {
-	deployDecl := "/nix/stackpanel/modules/deploy/module.nix"
-	options := OptionsJSON{
-		"apps.<name>.deploy.enable": NixOption{
-			Type:         "boolean",
-			Description:  "Enable deployment",
-			Default:      &NixValue{Text: "false"},
-			Declarations: Declarations{{Name: deployDecl}},
-		},
-	}
-
-	result := generateCategoryMdx("deploy", options)
-
-	// Heading must still be present for TOC.
-	if !strings.Contains(result, "## `apps.<name>.deploy.enable`") {
-		t.Error("expected ## heading for option")
-	}
-	if !strings.Contains(result, `module={"deploy"}`) {
-		t.Error("expected module attribution prop on NixOptionMeta")
-	}
-}
-
-func TestGenerateCategoryMdx_MultiModule(t *testing.T) {
-	deployDecl := "/nix/stackpanel/modules/deploy/module.nix"
-	frameworkDecl := "/nix/stackpanel/modules/framework/module.nix"
-	options := OptionsJSON{
-		"apps.<name>.deploy.enable": NixOption{
-			Type:         "boolean",
-			Declarations: Declarations{{Name: deployDecl}},
-		},
-		"apps.<name>.framework.enable": NixOption{
-			Type:         "boolean",
-			Declarations: Declarations{{Name: frameworkDecl}},
-		},
-	}
-
-	result := generateCategoryMdx("apps", options)
-
-	// Section headings must be emitted when options come from multiple modules.
-	if !strings.Contains(result, "## Deploy") {
-		t.Error("expected 'Deploy' section heading for multi-module page")
-	}
-	if !strings.Contains(result, "## Framework") {
-		t.Error("expected 'Framework' section heading for multi-module page")
-	}
-}
-
-func TestRenderNixOption(t *testing.T) {
-	t.Run("basic option", func(t *testing.T) {
-		opt := NixOption{
-			Type:        "boolean",
-			Description: "Enable the feature",
-			Default:     &NixValue{Text: "false"},
-		}
-		out := renderNixOption("apps.<name>.feature.enable", opt, "")
-
-		// Path lives in the ## heading, not as a prop.
-		if !strings.Contains(out, "## `apps.<name>.feature.enable`") {
-			t.Error("expected ## heading with path (required for TOC)")
-		}
-		if strings.Contains(out, "path=") {
-			t.Error("path must not appear as a JSX prop")
-		}
-		// Metadata row is a self-closing NixOptionMeta component.
-		if !strings.Contains(out, "<NixOptionMeta") {
-			t.Error("expected <NixOptionMeta> self-closing component")
-		}
-		if strings.Contains(out, "</NixOptionMeta>") {
-			t.Error("NixOptionMeta must be self-closing")
-		}
-		if !strings.Contains(out, `type={"boolean"}`) {
-			t.Error("expected type prop")
-		}
-		if !strings.Contains(out, `defaultValue={"false"}`) {
-			t.Error("expected defaultValue prop")
-		}
-		// Description is plain markdown after the component, not children.
-		if !strings.Contains(out, "Enable the feature") {
-			t.Error("expected description as plain markdown")
-		}
-		// Section separator.
-		if !strings.Contains(out, "---") {
-			t.Error("expected --- section separator")
-		}
-	})
-
-	t.Run("readonly option", func(t *testing.T) {
-		opt := NixOption{Type: "string", ReadOnly: true}
-		out := renderNixOption("apps.computed", opt, "")
-
-		if !strings.Contains(out, "  readonly\n") {
-			t.Error("expected boolean readonly prop")
-		}
-		// Must NOT emit readonly as a value prop.
-		if strings.Contains(out, `readonly=`) {
-			t.Error("readonly must be a boolean prop, not a value prop")
-		}
-	})
-
-	t.Run("module attribution", func(t *testing.T) {
-		opt := NixOption{Type: "boolean"}
-		out := renderNixOption("apps.<name>.bun.enable", opt, "bun")
-
-		if !strings.Contains(out, `module={"bun"}`) {
-			t.Error("expected module prop")
-		}
-	})
-
-	t.Run("multiline default is a fenced code block", func(t *testing.T) {
-		opt := NixOption{
-			Type:    "list of string",
-			Default: &NixValue{Text: "[\n  \"default\"\n]"},
-		}
-		out := renderNixOption("apps.<name>.targets", opt, "")
-
-		// Multi-line defaults must NOT appear as a prop (they'd bloat the tag).
-		if strings.Contains(out, "defaultCode=") {
-			t.Error("multiline default must not be a prop — use a fenced code block")
-		}
-		if strings.Contains(out, "defaultValue=") {
-			t.Error("multiline default must not be a defaultValue prop")
-		}
-		// Must appear as a ```nix code block in the markdown body.
-		if !strings.Contains(out, "```nix") {
-			t.Error("expected fenced nix code block for multiline default")
-		}
-		if !strings.Contains(out, "**Default:**") {
-			t.Error("expected **Default:** label before code block")
-		}
-	})
-
-	t.Run("single-line example is inline code", func(t *testing.T) {
-		opt := NixOption{
-			Type:    "string",
-			Example: &NixValue{Text: "\"my-project\""},
-		}
-		out := renderNixOption("ports.projectName", opt, "")
-
-		if !strings.Contains(out, "**Example:**") {
-			t.Error("expected **Example:** label")
-		}
-		// Single-line example rendered as inline code, not a fenced block.
-		if strings.Contains(out, "```nix") {
-			t.Error("single-line example should not use a fenced code block")
-		}
-	})
-
-	t.Run("multi-line example is fenced code block", func(t *testing.T) {
-		opt := NixOption{
-			Type:    "list of string",
-			Example: &NixValue{Text: "[\n  \"prod\"\n  \"staging\"\n]"},
-		}
-		out := renderNixOption("apps.<name>.targets", opt, "")
-
-		if !strings.Contains(out, "```nix") {
-			t.Error("expected fenced nix code block for multiline example")
-		}
-	})
-}
-
-func TestJsxStr(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"boolean", `{"boolean"}`},
-		{"apps.<name>.foo", `{"apps.<name>.foo"}`},
-		{"null or string", `{"null or string"}`},
-		{`he said "hi"`, `{"he said \"hi\""}`},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			got := jsxStr(tc.input)
-			if got != tc.want {
-				// Note: json.Marshal HTML-escapes < > & by default (\u003c etc.).
-				// jsxStr must use SetEscapeHTML(false) so that angle brackets in
-				// option paths like apps.<name>.foo are preserved literally.
-				t.Errorf("jsxStr(%q) = %q, want %q", tc.input, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestEscapeMDX_JSX(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		want  string
-	}{
-		{
-			// PascalCase component tags (and their JSX expression props) must pass
-			// through escapeMDX completely unchanged — angle brackets and braces
-			// inside the tag must not be escaped.
-			name:  "JSX opening tag passes through",
-			input: `<NixOption path={"apps.<name>.foo"} type={"boolean"}>`,
-			want:  `<NixOption path={"apps.<name>.foo"} type={"boolean"}>`,
-		},
-		{
-			name:  "JSX closing tag passes through",
-			input: "</NixOption>",
-			want:  "</NixOption>",
-		},
-		{
-			name:  "JSX self-closing tag passes through",
-			input: `<NixOption path={"x"} />`,
-			want:  `<NixOption path={"x"} />`,
-		},
-		{
-			// Only PascalCase (<UpperLetter…>) is treated as a JSX tag.
-			// Lowercase tokens like <name> in option paths must still be escaped.
-			name:  "angle bracket in plain text is still escaped",
-			input: "see apps.<name>.foo for details",
-			want:  `see apps.\<name\>.foo for details`,
-		},
-		{
-			name:  "JSX tag and plain text on same line",
-			input: `text <NixOption type={"boolean"}> more`,
-			// "text " has no special chars, tag passes through, " more" has none
-			want: `text <NixOption type={"boolean"}> more`,
-		},
-		{
-			name:  "full NixOption block across multiple lines",
-			input: "<NixOption\n  path={\"apps.<name>.foo\"}\n>\ndescription\n</NixOption>",
-			want:  "<NixOption\n  path={\"apps.<name>.foo\"}\n>\ndescription\n</NixOption>",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := escapeMDX(tc.input)
-			if got != tc.want {
-				t.Errorf("escapeMDX(%q)\n got  %q\nwant %q", tc.input, got, tc.want)
-			}
-		})
+	if !strings.Contains(result, "| **Default** | `6400` |") {
+		t.Error("expected default in table")
 	}
 }
 
@@ -743,7 +484,7 @@ func TestConvertReadmeToMdx(t *testing.T) {
 			content:       "Some content without title.\n\n## Section",
 			moduleName:    "noheader",
 			expectTitle:   "title: Noheader",
-			expectDesc:    "description: Documentation for the noheader module",
+			expectDesc:    "description: Some content without title.",
 			expectContent: "Some content",
 		},
 	}

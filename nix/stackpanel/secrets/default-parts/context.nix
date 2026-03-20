@@ -187,6 +187,26 @@ let
   ) enabledSopsAgeSources;
   recipientNames = lib.sort lib.lessThan (lib.attrNames recipientsConfig);
 
+  # Normalize a recipient public key to AGE format for .sops.yaml.
+  # SSH Ed25519 public keys are converted at eval time using ssh-to-age.
+  # Other formats (RSA, ECDSA) are kept as-is since ssh-to-age only supports Ed25519.
+  normalizeRecipientPublicKey =
+    publicKey:
+    let
+      trimmed = lib.trim publicKey;
+      sshToAge = pkgs.ssh-to-age;
+    in
+    if lib.hasPrefix "ssh-ed25519 " trimmed then
+      lib.removeSuffix "\n" (
+        builtins.readFile (
+          pkgs.runCommand "ssh-to-age-${builtins.hashString "md5" trimmed}" { } ''
+            printf '%s\n' ${lib.escapeShellArg trimmed} | ${sshToAge}/bin/ssh-to-age > $out
+          ''
+        )
+      )
+    else
+      trimmed;
+
   normalizeAnchor =
     name: lib.replaceStrings [ "-" "." "/" "@" ":" "+" ] [ "_" "_" "_" "_" "_" "_" ] name;
 
@@ -271,11 +291,23 @@ let
       ) recipientNames;
 
   secretFilesMeta = lib.genAttrs secretIds (variableId: {
-    file = "vars/${secretFileStem variableId}.sops.yaml";
+    # Group-based path: /dev/postgres-url → vars/dev.sops.yaml
+    file = "vars/${getKeyGroup variableId}.sops.yaml";
     yamlKey = secretYamlKey variableId;
     tags = secretTags variableId;
     recipients = secretRecipients variableId;
   });
+
+  # Merge all variables that share the same group file into one rule entry.
+  secretFilesByGroup = lib.foldl' (
+    acc: variableId:
+    let
+      file = secretFilesMeta.${variableId}.file;
+      recipients = secretFilesMeta.${variableId}.recipients;
+      existing = acc.${file} or [ ];
+    in
+    acc // { ${file} = lib.unique (existing ++ recipients); }
+  ) { } secretIds;
 
   mkRuleLines =
     pathRegex: names: unencryptedCommentRegex:
@@ -325,12 +357,8 @@ let
       ) creationRulesConfig;
 
       legacyRuleStrings = lib.concatMap (
-        variableId:
-        mkRuleLines "^${
-          secretFilesMeta.${variableId}.file
-        }$" secretFilesMeta.${variableId}.recipients ''^\s?(safe|plaintext)''
-        ++ [ "" ]
-      ) secretIds;
+        file: mkRuleLines "^${file}$" secretFilesByGroup.${file} ''^\s?(safe|plaintext)'' ++ [ "" ]
+      ) (lib.sort lib.lessThan (lib.attrNames secretFilesByGroup));
 
       defaultRuleStrings = mkRuleLines ".*" recipientNames ''^\s?(safe|plaintext)'' ++ [ "" ];
 
@@ -360,7 +388,8 @@ let
         keys:${if recipientNames == [ ] then " []" else ""}
         ${lib.optionalString (recipientNames != [ ]) (
           lib.concatMapStringsSep "\n" (
-            name: "  - &${normalizeAnchor name} ${recipientsConfig.${name}.public-key}"
+            name:
+            "  - &${normalizeAnchor name} ${normalizeRecipientPublicKey recipientsConfig.${name}.public-key}"
           ) recipientNames
         )}
         creation_rules:
@@ -442,6 +471,7 @@ in
     sopsAgeSourceLines
     sopsAgeKeyPaths
     sopsAgeKeyOpRefs
+    sopsKeyservices
     normalizeVariableId
     getVarName
     getKeyGroup

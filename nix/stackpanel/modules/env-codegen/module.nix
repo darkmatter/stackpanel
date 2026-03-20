@@ -12,9 +12,11 @@
 #     src/                               — 100% generated (do not edit)
 #       <app>/<env>.ts, <app>/index.ts, index.ts
 #       <app>.ts                         — app-level env export (@gen/env/web)
-#       embedded-data.ts                 — embedded plaintext + encrypted payloads
+#       embedded-data.ts                 — runtime metadata manifest
 #       entrypoints/<app>.ts, entrypoints/index.ts
 #       loader.ts, docker-entrypoint.ts
+#     data/
+#       <env>/<app>.sops.json            — encrypted runtime payloads (built by `stackpanel codegen build`)
 #
 # Usage:
 #   # The module is automatically enabled when apps have environments
@@ -33,7 +35,7 @@ let
   envOutputDir = config.stackpanel.env.output-dir;
 
   # Import the codegen library
-  envPackage = import ../../lib/codegen/env-package.nix { inherit lib config; };
+  envPackage = import ../../lib/codegen/env-package.nix { inherit lib config pkgs; };
 
   # Check if we should generate files
   hasAppsWithEnvs = envPackage.enabled;
@@ -76,6 +78,23 @@ in
       '';
       example = "@gen/env";
     };
+
+    references = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.attrsOf (lib.types.attrsOf lib.types.str));
+      default = { };
+      description = ''
+        Explicit variable reference metadata for generated env payloads.
+
+        Structure: env.references.<app>.<environment>.<ENV_KEY> = "/group/variable-id";
+
+        Use this when an environment variable aliases a grouped variable through
+        an expression such as `config.variables."/secret/foo".value` and the
+        generated manifest should preserve the original variable reference.
+      '';
+      example = {
+        docs.dev.HELLO = "/secret/cool-secre";
+      };
+    };
   };
 
   # ===========================================================================
@@ -114,18 +133,18 @@ in
       enable = true;
       displayName = meta.name;
       checks = {
-        sops-yaml-exists = {
-          name = "Embedded Secrets Generated";
-          description = "Check if ${envOutputDir}/src/embedded-data.ts exists";
+        runtime-manifest-exists = {
+          name = "Env Runtime Manifest Generated";
+          description = "Check if the generated env runtime manifests exist";
           type = "script";
           script = ''
-            [ -f "${envOutputDir}/src/embedded-data.ts" ]
+            [ -f "${envOutputDir}/src/embedded-data.ts" ] && [ -f ".stack/gen/codegen/env-manifest.json" ]
           '';
           severity = "warning";
           timeout = 5;
           tags = [
             "codegen"
-            "sops"
+            "env"
           ];
         };
         generated-ts-exists = {

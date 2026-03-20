@@ -6,142 +6,205 @@ icon: Settings
 
 # Services Options
 
-<NixOption
-  path={"serviceModules"}
-  type={"list of module"}
-  defaultValue={"[ ]"}
-  module={"services"}
->
+## `serviceModules`
+
 Additional modules to extend service configuration options.
 
-This allows other modules (like process-compose) to inject per-service
-options into every service definition. Works identically to appModules.
+This allows other modules (like process-compose) to inject per-service options into every service definition. Works identically to appModules.
 
-Example: The process-compose module injects process-compose.namespace,
-process-compose.readiness_probe, etc. into every service.
-</NixOption>
+Example: The process-compose module injects process-compose.namespace, process-compose.readiness_probe, etc. into every service.
 
-<NixOption
-  path={"services"}
-  type={"attribute set of (submodule)"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  postgres = {\n    enable = true;\n    displayName = \"PostgreSQL\";\n    command = \"${postgresStartScript}/bin/postgres-start\";\n    port = 5432;\n    autoStart = true;\n    env = {\n      DATABASE_URL = \"postgresql://localhost:5432/mydb\";\n    };\n    packages = [ pkgs.postgresql_17 ];\n  };\n  redis = {\n    enable = true;\n    displayName = \"Redis\";\n    command = \"${redisStartScript}/bin/redis-start\";\n    port = 6379;\n  };\n}"}
-  module={"services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of module` |
+| **Default** | `[ ]` |
+
+---
+
+## `services`
+
 Development services managed by process-compose.
 
-Each service is a long-running process (database, cache, object store, etc.)
-that gets a process-compose entry under the "services" namespace.
+Each service is a long-running process (database, cache, object store, etc.) that gets a process-compose entry under the "services" namespace.
 
-Services can be defined directly here or via the stackpanel.globalServices
-convenience layer (which maps into this option internally).
+Services can be defined directly here or via the stackpanel.globalServices convenience layer (which maps into this option internally).
 
-The process-compose module injects additional per-service options
-(namespace, readiness_probe, availability, depends_on) via serviceModules.
-</NixOption>
+The process-compose module injects additional per-service options (namespace, readiness_probe, availability, depends_on) via serviceModules.
 
-<NixOption
-  path={"services.<name>.autoStart"}
-  type={"boolean"}
-  defaultValue={"true"}
-  module={"services"}
->
-Whether to auto-start this service when `dev` is run.
-If false, the service is visible in the process-compose TUI
-but must be started manually.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
 
-<NixOption
-  path={"services.<name>.command"}
-  type={"string"}
-  exampleCode={"\"${postgresStartScript}/bin/postgres-start\""}
-  module={"services"}
->
-Command to start the service in foreground mode.
-This should be an idempotent script that initializes data
-directories if needed, then exec's the service binary.
-Process-compose manages the lifecycle (restart, shutdown).
-</NixOption>
+**Example:**
 
-<NixOption
-  path={"services.<name>.dataDir"}
-  type={"null or string"}
-  defaultValue={"null"}
-  module={"services"}
->
-Path where this service stores its data.
-Typically under .stack/state/services//.
-</NixOption>
+```nix
+{
+  postgres = {
+    enable = true;
+    displayName = "PostgreSQL";
+    command = "${postgresStartScript}/bin/postgres-start";
+    port = 5432;
+    autoStart = true;
+    env = {
+      DATABASE_URL = "postgresql://localhost:5432/mydb";
+    };
+    packages = [ pkgs.postgresql_17 ];
+  };
+  redis = {
+    enable = true;
+    displayName = "Redis";
+    command = "${redisStartScript}/bin/redis-start";
+    port = 6379;
+  };
+}
+```
 
-<NixOption
-  path={"services.<name>.description"}
-  type={"string"}
-  defaultValue={"\"\""}
-  exampleCode={"\"Relational database for application data\""}
-  module={"services"}
->
+
+---
+
+## `services.<name>.autoStart`
+
+Whether to auto-start this service when dev is run. If false, the service is visible in the process-compose TUI but must be started manually.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `services.<name>.command`
+
+Command to start the service in foreground mode. This should be an idempotent script that initializes data directories if needed, then exec's the service binary. Process-compose manages the lifecycle (restart, shutdown).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+**Example:**
+
+`"${postgresStartScript}/bin/postgres-start"`
+
+
+---
+
+## `services.<name>.dataDir`
+
+Path where this service stores its data. Typically under .stack/state/services//.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `services.<name>.description`
+
 Short description of the service.
-</NixOption>
 
-<NixOption
-  path={"services.<name>.displayName"}
-  type={"string"}
-  defaultValue={"\"‹name›\""}
-  exampleCode={"\"PostgreSQL\""}
-  module={"services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+**Example:**
+
+`"Relational database for application data"`
+
+
+---
+
+## `services.<name>.displayName`
+
 Human-readable display name for the service.
-</NixOption>
 
-<NixOption
-  path={"services.<name>.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"‹name›"` |
+
+**Example:**
+
+`"PostgreSQL"`
+
+
+---
+
+## `services.<name>.enable`
+
 Whether to enable this service.
-</NixOption>
 
-<NixOption
-  path={"services.<name>.env"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  DATABASE_URL = \"postgresql://localhost:5432/mydb\";\n  PGHOST = \"/tmp/postgres\";\n}"}
-  module={"services"}
->
-Environment variables contributed by this service to the devshell.
-These are available to all processes and the interactive shell.
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
 
-<NixOption
-  path={"services.<name>.packages"}
-  type={"list of package"}
-  defaultValue={"[ ]"}
-  module={"services"}
->
-Packages added to the devshell PATH when this service is enabled.
-Typically includes the service binary and CLI tools (psql, redis-cli, etc.).
-</NixOption>
+**Example:**
 
-<NixOption
-  path={"services.<name>.port"}
-  type={"null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
-  defaultValue={"null"}
-  exampleCode={"5432"}
-  module={"services"}
->
-Primary port for this service. Optional - some services
-(like file watchers) don't use ports.
-</NixOption>
+`true`
 
-<NixOption
-  path={"services.<name>.shellHook"}
-  type={"strings concatenated with \"\\n\""}
-  defaultValue={"\"\""}
-  module={"services"}
->
-Shell hook code run during devshell initialization.
-Used for environment setup that can't be expressed as static env vars.
-</NixOption>
+
+---
+
+## `services.<name>.env`
+
+Environment variables contributed by this service to the devshell. These are available to all processes and the interactive shell.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  DATABASE_URL = "postgresql://localhost:5432/mydb";
+  PGHOST = "/tmp/postgres";
+}
+```
+
+
+---
+
+## `services.<name>.packages`
+
+Packages added to the devshell PATH when this service is enabled. Typically includes the service binary and CLI tools (psql, redis-cli, etc.).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of package` |
+| **Default** | `[ ]` |
+
+---
+
+## `services.<name>.port`
+
+Primary port for this service. Optional - some services (like file watchers) don't use ports.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
+| **Default** | `null` |
+
+**Example:**
+
+`5432`
+
+
+---
+
+## `services.<name>.shellHook`
+
+Shell hook code run during devshell initialization. Used for environment setup that can't be expressed as static env vars.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `strings concatenated with "\n"` |
+| **Default** | `""` |
+
+---
 

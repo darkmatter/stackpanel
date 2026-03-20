@@ -1,5 +1,8 @@
 # Test Fixture: With OxLint
 # Tests: OxLint module, file generation, scripts, health checks
+#
+# Usage:
+#   nix flake check --override-input stackpanel path:/path/to/stackpanel --no-write-lock-file
 {
   description = "Test fixture: stackpanel with oxlint module";
 
@@ -12,28 +15,63 @@
     stackpanel-root.flake = false;
   };
 
-  outputs = inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
       imports = [
         inputs.stackpanel.flakeModules.readStackpanelRoot
         inputs.stackpanel.flakeModules.default
       ];
 
-      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+      systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
 
-      perSystem = { pkgs, config, lib, ... }:
-        let
-          sp = config.legacyPackages.stackpanelFullConfig or {};
-        in {
-          checks = {
+      perSystem = {
+        pkgs,
+        config,
+        lib,
+        ...
+      }: let
+        sp = config.legacyPackages.stackpanelFullConfig or {};
+
+        # ── Snapshot ─────────────────────────────────────────────────
+        # Assemble all generated file contents into a single derivation
+        # for golden-file comparison.
+        storePathsByFile = sp.files._storePathsByFile or {};
+        snapshot = pkgs.runCommand "files-snapshot" {} (
+          ''
+            mkdir -p $out
+          ''
+          + lib.concatStringsSep "\n" (
+            lib.mapAttrsToList (
+              path: storePath:
+                lib.optionalString (storePath != null) ''
+                  mkdir -p "$out/$(dirname '${path}')"
+                  cp ${storePath} "$out/${path}"
+                ''
+            )
+            storePathsByFile
+          )
+        );
+
+        hasGolden = builtins.pathExists ./golden;
+      in {
+        packages = {
+          inherit snapshot;
+        };
+
+        checks =
+          {
             # Verify oxlint module is enabled
             oxlint-enabled = pkgs.runCommand "oxlint-enabled-check" {} ''
-              ${if sp.modules.oxlint.enable or false then ''
-                echo "✓ OxLint module is enabled"
-              '' else ''
-                echo "✗ OxLint module is NOT enabled"
-                exit 1
-              ''}
+              ${
+                if sp.modules.oxlint.enable or false
+                then ''
+                  echo "✓ OxLint module is enabled"
+                ''
+                else ''
+                  echo "✗ OxLint module is NOT enabled"
+                  exit 1
+                ''
+              }
               touch $out
             '';
 
@@ -62,7 +100,22 @@
               fi
               touch $out
             '';
+          }
+          // lib.optionalAttrs hasGolden {
+            # Compare generated files against checked-in golden directory
+            files-snapshot =
+              pkgs.runCommand "files-snapshot-check" {
+                nativeBuildInputs = [pkgs.diffutils];
+              } ''
+                diff -ru ${./golden} ${snapshot} && echo "✓ Snapshot matches golden files" || {
+                  echo ""
+                  echo "✗ Snapshot mismatch! Update golden files with:"
+                  echo "  ./update-golden.sh with-oxlint"
+                  exit 1
+                }
+                touch $out
+              '';
           };
-        };
+      };
     };
 }
