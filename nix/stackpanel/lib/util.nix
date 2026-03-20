@@ -3,26 +3,21 @@
   lib,
   config,
   ...
-}:
-let
+}: let
   debug = config.stackpanel.debug or false;
-  logDebug =
-    v:
-    lib.optionalString debug ''
-      ${pkgs.gum}/bin/gum log -l debug --prefix "step" "${v}"
-    '';
-  logInfo =
-    v:
-    lib.optionalString debug ''
-      ${pkgs.gum}/bin/gum log -l info --prefix "step" "${v}"
-    '';
-  logError =
-    v:
-    lib.optionalString debug ''
-      ${pkgs.gum}/bin/gum log -l error --prefix "step" "${v}"
-    '';
-in
-{
+  # Returns a shell snippet that logs when debug is enabled, or `true` (a
+  # shell no-op) when disabled.  Using `true` instead of an empty string
+  # keeps these safe as the sole statement inside if/else/fi branches.
+  mkLog = level: v:
+    if debug
+    then ''
+      ${pkgs.gum}/bin/gum log -l ${level} --prefix "step" "${v}"
+    ''
+    else "true";
+  logDebug = mkLog "debug";
+  logInfo = mkLog "info";
+  logError = mkLog "error";
+in {
   log = {
     debug = logDebug;
     info = logInfo;
@@ -35,10 +30,9 @@ in
   # variable, we use a single JSON encoded variable which matches the structure of
   # the stackpanel config. The key is encoded such that it can be passed to
   # jq to extract the value.
-  getConfigValue =
-    {
-      selector,
-      defaultValue,
-    }:
+  getConfigValue = {
+    selector,
+    defaultValue,
+  }:
     builtins.getAttr selector config.stackpanel or defaultValue;
 }
