@@ -24,6 +24,7 @@
   secretsLoad,
   sopsAgeKeychainSave,
   sopsAgeRecipientsInit,
+  rekeyScriptText,
   legacySecretsCleanupScript,
 }:
 let
@@ -236,8 +237,16 @@ in
 
             - `${cfg.secrets-dir}/vars/*.sops.yaml`
             - `${cfg.secrets-dir}/.sops.yaml`
+            - `${cfg.secrets-dir}/bin/rekey.sh`
             - `${cfg.secrets-dir}/state/manifest.json` (generated)
           '';
+        };
+
+        "${cfg.secrets-dir}/bin/rekey.sh" = {
+          type = "text";
+          source = "secrets";
+          mode = "0755";
+          text = rekeyScriptText;
         };
       }
     ];
