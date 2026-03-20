@@ -8,7 +8,7 @@
 
 ## User
 
-add a stackpanel module for configuring all colmena options. it should include the UI definitions to manage it via the UI
+add a stack module for configuring all colmena options. it should include the UI definitions to manage it via the UI
 
 ---
 
@@ -33,7 +33,7 @@ Tool: todowrite
     },
     {
       "id": "t2",
-      "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+      "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
       "status": "pending",
       "priority": "high"
     },
@@ -63,7 +63,7 @@ Tool: todowrite
   },
   {
     "id": "t2",
-    "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+    "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
     "status": "pending",
     "priority": "high"
   },
@@ -97,14 +97,14 @@ Tool: glob
 **Input:**
 ```json
 {
-  "pattern": "nix/stackpanel/modules/*"
+  "pattern": "nix/stack/modules/*"
 }
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo.test.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/.app-module-template.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo.test.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/.app-module-template.nix
 ```
 ```
 
@@ -114,46 +114,46 @@ Tool: glob
 **Input:**
 ```json
 {
-  "pattern": "nix/stackpanel/modules/**/{meta.nix,module.nix,ui.nix}"
+  "pattern": "nix/stack/modules/**/{meta.nix,module.nix,ui.nix}"
 }
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/env-codegen/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/env-codegen/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/git-hooks/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/git-hooks/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/git-hooks/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/env-codegen/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/env-codegen/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/git-hooks/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/git-hooks/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/git-hooks/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/meta.nix
 ```
 ```
 
@@ -186,7 +186,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/default.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/default.nix"
 }
 ```
 **Output:**
@@ -207,7 +207,7 @@ Tool: read
 00013| # The `_template/` directory provides the template for new modules.
 00014| #
 00015| # For fast metadata access without full evaluation, use:
-00016| #   config.stackpanel._moduleMetas.<module-id>
+00016| #   config.stack._moduleMetas.<module-id>
 00017| # ==============================================================================
 00018| {
 00019|   lib,
@@ -279,8 +279,8 @@ Tool: read
 00085|   imports = autoImports ++ legacyImports;
 00086| 
 00087|   # Expose module metadata for fast discovery
-00088|   # Access via: config.stackpanel._moduleMetas.oxlint.name
-00089|   config.stackpanel._moduleMetas = moduleMetas;
+00088|   # Access via: config.stack._moduleMetas.oxlint.name
+00089|   config.stack._moduleMetas = moduleMetas;
 00090| }
 00091| 
 
@@ -295,7 +295,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/meta.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/meta.nix"
 }
 ```
 **Output:**
@@ -335,7 +335,7 @@ Tool: read
 00032|   homepage = null;
 00033| 
 00034|   # Author or team
-00035|   author = "Stackpanel";
+00035|   author = "Stack";
 00036| 
 00037|   # Searchable tags
 00038|   tags = [ ];
@@ -367,7 +367,7 @@ Tool: read
 00064|   # The boilerplate will be injected into the "# STACKPANEL_MODULES_BEGIN" section
 00065|   configBoilerplate = ''
 00066|     # ${meta.name} - ${meta.description}
-00067|     # See: ${meta.homepage or "https://stackpanel.dev/docs/modules/${meta.id}"}
+00067|     # See: ${meta.homepage or "https://stack.dev/docs/modules/${meta.id}"}
 00068|     # my-module = {
 00069|     #   enable = true;
 00070|     #   # Add your configuration here
@@ -387,7 +387,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/module.nix"
 }
 ```
 **Output:**
@@ -400,7 +400,7 @@ Tool: read
 00005| # For complex modules, you can split this into options.nix and config.nix.
 00006| #
 00007| # The module should:
-00008| # 1. Define options under stackpanel.modules.<id>.*
+00008| # 1. Define options under stack.modules.<id>.*
 00009| # 2. Define per-app options via appModules if needed
 00010| # 3. Implement config = lib.mkIf cfg.enable { ... }
 00011| # 4. Define flake checks for CI (required for certification)
@@ -419,10 +419,10 @@ Tool: read
 00024|   meta = import ./meta.nix;
 00025| 
 00026|   # Shorthand for this module's config
-00027|   cfg = config.stackpanel.modules.${meta.id};
+00027|   cfg = config.stack.modules.${meta.id};
 00028| 
-00029|   # Shorthand for stackpanel config
-00030|   sp = config.stackpanel;
+00029|   # Shorthand for stack config
+00030|   sp = config.stack;
 00031| 
 00032|   # ---------------------------------------------------------------------------
 00033|   # Per-app options module (if this module adds per-app configuration)
@@ -437,14 +437,14 @@ Tool: read
 00042|   # };
 00043|   #
 00044|   # Then add to config below:
-00045|   #   stackpanel.appModules = [ appModule ];
+00045|   #   stack.appModules = [ appModule ];
 00046| 
 00047| in
 00048| {
 00049|   # ===========================================================================
 00050|   # Options
 00051|   # ===========================================================================
-00052|   options.stackpanel.modules.${meta.id} = {
+00052|   options.stack.modules.${meta.id} = {
 00053|     enable = lib.mkEnableOption meta.description;
 00054| 
 00055|     # Add module-specific options here
@@ -463,12 +463,12 @@ Tool: read
 00068|     # -------------------------------------------------------------------------
 00069|     # Packages - Add packages to devshell
 00070|     # -------------------------------------------------------------------------
-00071|     # stackpanel.devshell.packages = [ pkgs.my-package ];
+00071|     # stack.devshell.packages = [ pkgs.my-package ];
 00072| 
 00073|     # -------------------------------------------------------------------------
 00074|     # Files - Generate configuration files
 00075|     # -------------------------------------------------------------------------
-00076|     # stackpanel.files.entries = {
+00076|     # stack.files.entries = {
 00077|     #   "path/to/config.json" = {
 00078|     #     type = "text";
 00079|     #     text = builtins.toJSON { key = "value"; };
@@ -480,7 +480,7 @@ Tool: read
 00085|     # -------------------------------------------------------------------------
 00086|     # Scripts - Add shell commands
 00087|     # -------------------------------------------------------------------------
-00088|     # stackpanel.scripts = {
+00088|     # stack.scripts = {
 00089|     #   my-command = {
 00090|     #     exec = ''
 00091|     #       echo "Hello from ${meta.name}"
@@ -503,7 +503,7 @@ Tool: read
 00108|     #
 00109|     # For large modules, consider moving checks to a separate checks.nix file.
 00110|     # -------------------------------------------------------------------------
-00111|     stackpanel.moduleChecks.${meta.id} = {
+00111|     stack.moduleChecks.${meta.id} = {
 00112|       # REQUIRED: Verify module evaluates without errors
 00113|       eval = {
 00114|         description = "${meta.name} module evaluates correctly";
@@ -555,9 +555,9 @@ Tool: read
 00160|     # Health Checks (Runtime) - Shown in UI, run in devshell
 00161|     # =========================================================================
 00162|     # These checks run at runtime to verify the module is working correctly.
-00163|     # They are displayed in the Stackpanel UI and can be run manually.
+00163|     # They are displayed in the Stack UI and can be run manually.
 00164|     # -------------------------------------------------------------------------
-00165|     stackpanel.healthchecks.modules.${meta.id} = {
+00165|     stack.healthchecks.modules.${meta.id} = {
 00166|       enable = true;
 00167|       displayName = meta.name;
 00168|       checks = {
@@ -586,7 +586,7 @@ Tool: read
 00191|     # -------------------------------------------------------------------------
 00192|     # Module Registration - Required for UI discovery
 00193|     # -------------------------------------------------------------------------
-00194|     stackpanel.modules.${meta.id} = {
+00194|     stack.modules.${meta.id} = {
 00195|       enable = true;
 00196|       inherit meta;
 00197|       source.type = "builtin";
@@ -610,7 +610,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/ui.nix"
 }
 ```
 **Output:**
@@ -619,7 +619,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - UI Panel Definitions
 00003| #
-00004| # This file defines the UI panels and fields that appear in the Stackpanel UI.
+00004| # This file defines the UI panels and fields that appear in the Stack UI.
 00005| # It's evaluated lazily - only when the UI needs to display this module's panels.
 00006| #
 00007| # Panel Types:
@@ -646,11 +646,11 @@ Tool: read
 00028| }:
 00029| let
 00030|   meta = import ./meta.nix;
-00031|   cfg = config.stackpanel.modules.${meta.id};
+00031|   cfg = config.stack.modules.${meta.id};
 00032| in
 00033| lib.mkIf cfg.enable {
 00034|   # Register panel(s) for this module
-00035|   stackpanel.panels."${meta.id}-status" = {
+00035|   stack.panels."${meta.id}-status" = {
 00036|     module = meta.id;
 00037|     title = "${meta.name} Status";
 00038|     description = meta.description;
@@ -679,7 +679,7 @@ Tool: read
 00061|   };
 00062| 
 00063|   # Example: Configuration form panel
-00064|   # stackpanel.panels."${meta.id}-config" = {
+00064|   # stack.panels."${meta.id}-config" = {
 00065|   #   module = meta.id;
 00066|   #   title = "${meta.name} Configuration";
 00067|   #   type = "PANEL_TYPE_FORM";
@@ -713,7 +713,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/module.nix"
 }
 ```
 **Output:**
@@ -722,14 +722,14 @@ Tool: read
 00001| # ==============================================================================
 00002| # module.nix - Turbo Module Implementation
 00003| #
-00004| # Turborepo integration for stackpanel.
+00004| # Turborepo integration for stack.
 00005| #
 00006| # This module:
-00007| #   1. Generates turbo.json from stackpanel.tasks
+00007| #   1. Generates turbo.json from stack.tasks
 00008| #   2. Compiles task scripts with `exec` to Nix derivations
 00009| #   3. Creates symlinks in .tasks/bin/ for Turborepo to invoke
 00010| #   4. Generates package.json script entries
-00011| #   5. Handles per-app task overrides via stackpanel.apps.*.tasks
+00011| #   5. Handles per-app task overrides via stack.apps.*.tasks
 00012| #
 00013| # Architecture:
 00014| #   - Tasks with `exec` become writeShellApplication derivations
@@ -738,7 +738,7 @@ Tool: read
 00017| #   - turbo.json references task names with deps/outputs/caching
 00018| #
 00019| # Usage:
-00020| #   stackpanel.tasks = {
+00020| #   stack.tasks = {
 00021| #     build = {
 00022| #       exec = "npm run compile";
 00023| #       after = [ "deps" "^build" ];
@@ -759,7 +759,7 @@ Tool: read
 00038| }:
 00039| let
 00040|   meta = import ./meta.nix;
-00041|   cfg = config.stackpanel;
+00041|   cfg = config.stack;
 00042|   tasksCfg = cfg.tasks;
 00043|   # NOTE: Do NOT define appsCfg here - it causes infinite recursion when
 00044|   # combined with appModules. Access cfg.apps only inside mkIf blocks.
@@ -1080,7 +1080,7 @@ Tool: read
 00359|   # ===========================================================================
 00360|   # Options
 00361|   # ===========================================================================
-00362|   options.stackpanel.turbo = {
+00362|   options.stack.turbo = {
 00363|     enable = lib.mkEnableOption "Turborepo integration" // {
 00364|       default = true;
 00365|     };
@@ -1131,25 +1131,25 @@ Tool: read
 00410|   config = lib.mkMerge [
 00411|     # Add per-app turbo options via appModules
 00412|     {
-00413|       stackpanel.appModules = [ taskAppModule ];
+00413|       stack.appModules = [ taskAppModule ];
 00414|     }
 00415| 
-00416|     # When stackpanel is enabled and has tasks, generate outputs
+00416|     # When stack is enabled and has tasks, generate outputs
 00417|     (lib.mkIf (cfg.enable && hasTasks) {
 00418|       # Expose computed values
-00419|       stackpanel.turbo.config = turboConfig;
-00420|       stackpanel.turbo.scripts = taskScripts;
-00421|       stackpanel.turbo.packageJsonScripts = packageJsonScripts;
+00419|       stack.turbo.config = turboConfig;
+00420|       stack.turbo.scripts = taskScripts;
+00421|       stack.turbo.packageJsonScripts = packageJsonScripts;
 00422| 
 00423|       # Populate tasksComputed with generated derivations
-00424|       stackpanel.tasksComputed = lib.mapAttrs (taskName: taskCfg: {
+00424|       stack.tasksComputed = lib.mapAttrs (taskName: taskCfg: {
 00425|         script = taskScripts.${taskName} or null;
 00426|         turboConfig = mkTurboTask taskName taskCfg;
 00427|         dependsOn = (taskCfg.dependsOn or [ ]) ++ (reverseDeps.${taskName} or [ ]);
 00428|       }) tasksCfg;
 00429| 
-00430|       # Generate files via stackpanel.files system (workspace-level only)
-00431|       stackpanel.files.entries = lib.mkMerge [
+00430|       # Generate files via stack.files system (workspace-level only)
+00431|       stack.files.entries = lib.mkMerge [
 00432|         # Root turbo.json
 00433|         {
 00434|           "turbo.json" = {
@@ -1165,10 +1165,10 @@ Tool: read
 00444|       ];
 00445| 
 00446|       # Add turbo to devshell packages
-00447|       stackpanel.devshell.packages = [ pkgs.turbo ];
+00447|       stack.devshell.packages = [ pkgs.turbo ];
 00448| 
 00449|       # Add .tasks/ to gitignore reminder in MOTD
-00450|       stackpanel.motd.commands = lib.mkIf (taskScripts != { }) [
+00450|       stack.motd.commands = lib.mkIf (taskScripts != { }) [
 00451|         {
 00452|           name = "Tasks:";
 00453|           description = lib.concatStringsSep ", " (lib.attrNames taskScripts);
@@ -1176,7 +1176,7 @@ Tool: read
 00455|       ];
 00456| 
 00457|       # Register module
-00458|       stackpanel.modules.${meta.id} = {
+00458|       stack.modules.${meta.id} = {
 00459|         enable = true;
 00460|         meta = {
 00461|           name = meta.name;
@@ -1217,7 +1217,7 @@ Tool: read
 00496|         ) { } (lib.attrNames appsWithTasks);
 00497|       in
 00498|       lib.mkIf (cfg.enable && hasAppsWithTasks) {
-00499|         stackpanel.files.entries = appFileEntries;
+00499|         stack.files.entries = appFileEntries;
 00500|       }
 00501|     )
 00502|   ];
@@ -1235,7 +1235,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/ui.nix"
 }
 ```
 **Output:**
@@ -1244,7 +1244,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - Turbo UI Panel Definitions
 00003| #
-00004| # Defines the panels that appear in the Stackpanel UI for this module.
+00004| # Defines the panels that appear in the Stack UI for this module.
 00005| # ==============================================================================
 00006| {
 00007|   lib,
@@ -1253,12 +1253,12 @@ Tool: read
 00010| }:
 00011| let
 00012|   meta = import ./meta.nix;
-00013|   cfg = config.stackpanel;
+00013|   cfg = config.stack;
 00014|   tasksCfg = cfg.tasks or { };
 00015|   hasTasks = tasksCfg != { };
 00016| in
 00017| lib.mkIf (cfg.enable && hasTasks) {
-00018|   stackpanel.panels."${meta.id}-status" = {
+00018|   stack.panels."${meta.id}-status" = {
 00019|     module = meta.id;
 00020|     title = "Turborepo";
 00021|     description = meta.description;
@@ -1291,7 +1291,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/meta.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/meta.nix"
 }
 ```
 **Output:**
@@ -1325,7 +1325,7 @@ Tool: read
 00026|   homepage = "https://turbo.build/repo";
 00027| 
 00028|   # Author
-00029|   author = "Stackpanel";
+00029|   author = "Stack";
 00030| 
 00031|   # Searchable tags
 00032|   tags = [
@@ -1380,14 +1380,14 @@ Tool: grep
 ```json
 {
   "pattern": "PANEL_TYPE_FORM",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/modules",
   "include": "**/ui.nix"
 }
 ```
 **Output:**
 ```
 Found 2 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/ui.nix:
   Line 9: # - PANEL_TYPE_FORM: Editable configuration form
   Line 67:   #   type = "PANEL_TYPE_FORM";
 ```
@@ -1399,7 +1399,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/ui.nix"
 }
 ```
 **Output:**
@@ -1408,7 +1408,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - Process Compose UI Panel Definitions
 00003| #
-00004| # Defines the panels that appear in the Stackpanel UI for this module.
+00004| # Defines the panels that appear in the Stack UI for this module.
 00005| # ==============================================================================
 00006| {
 00007|   lib,
@@ -1417,11 +1417,11 @@ Tool: read
 00010| }:
 00011| let
 00012|   meta = import ./meta.nix;
-00013|   cfg = config.stackpanel;
+00013|   cfg = config.stack;
 00014|   pcCfg = cfg.process-compose or { };
 00015| in
 00016| lib.mkIf (cfg.enable && (pcCfg.enable or false)) {
-00017|   stackpanel.panels."${meta.id}-status" = {
+00017|   stack.panels."${meta.id}-status" = {
 00018|     module = meta.id;
 00019|     title = "Process Compose";
 00020|     description = meta.description;
@@ -1459,7 +1459,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/go/ui.nix"
 }
 ```
 **Output:**
@@ -1468,7 +1468,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - Go UI Panel Definitions
 00003| #
-00004| # Defines the panels that appear in the Stackpanel UI for this module.
+00004| # Defines the panels that appear in the Stack UI for this module.
 00005| #
 00006| # The APP_CONFIG panel is auto-generated from the SpField definitions in
 00007| # go-app.proto.nix. No manual field listing needed - the schema is the
@@ -1482,7 +1482,7 @@ Tool: read
 00015| }:
 00016| let
 00017|   meta = import ./meta.nix;
-00018|   cfg = config.stackpanel;
+00018|   cfg = config.stack;
 00019| 
 00020|   # Import field definitions and panel generator
 00021|   goSchema = import ./schema.nix { inherit lib; };
@@ -1497,7 +1497,7 @@ Tool: read
 00030|   # Status Panel - Overview of Go environment
 00031|   # (Hand-crafted: uses runtime data like pkgs.go.version)
 00032|   # ---------------------------------------------------------------------------
-00033|   stackpanel.panels."${meta.id}-status" = {
+00033|   stack.panels."${meta.id}-status" = {
 00034|     module = meta.id;
 00035|     title = "Go Environment";
 00036|     description = meta.description;
@@ -1528,7 +1528,7 @@ Tool: read
 00061|   # App Config Panel - Per-app Go configuration
 00062|   # (Auto-generated from go-app.proto.nix SpField definitions)
 00063|   # ---------------------------------------------------------------------------
-00064|   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+00064|   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 00065|     module = meta.id;
 00066|     title = "Go Configuration";
 00067|     icon = meta.icon;
@@ -1552,7 +1552,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/ui.nix"
 }
 ```
 **Output:**
@@ -1562,12 +1562,12 @@ Tool: read
 00002| 
 00003| let
 00004|   meta = import ./meta.nix;
-00005|   cfg = config.stackpanel.aws-vault;
-00006|   sp = config.stackpanel;
+00005|   cfg = config.stack.aws-vault;
+00006|   sp = config.stack;
 00007| in
 00008| {
 00009|   config = lib.mkIf (sp.enable && cfg.enable) {
-00010|     stackpanel.panels."${meta.id}-status" = {
+00010|     stack.panels."${meta.id}-status" = {
 00011|       module = meta.id;
 00012|       title = "AWS Vault";
 00013|       description = "AWS Vault configuration and wrapper status";
@@ -1615,7 +1615,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/ui.nix"
 }
 ```
 **Output:**
@@ -1624,7 +1624,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - Entrypoints UI Panel Definitions
 00003| #
-00004| # Defines the panels that appear in the Stackpanel UI for this module.
+00004| # Defines the panels that appear in the Stack UI for this module.
 00005| # ==============================================================================
 00006| {
 00007|   lib,
@@ -1633,7 +1633,7 @@ Tool: read
 00010| }:
 00011| let
 00012|   meta = import ./meta.nix;
-00013|   cfg = config.stackpanel;
+00013|   cfg = config.stack;
 00014| 
 00015|   # Filter apps with entrypoints
 00016|   appsWithPaths = lib.filterAttrs (
@@ -1647,7 +1647,7 @@ Tool: read
 00024|   hasApps = appsWithEntrypoints != { };
 00025| in
 00026| lib.mkIf (cfg.enable && hasApps) {
-00027|   stackpanel.panels."${meta.id}-status" = {
+00027|   stack.panels."${meta.id}-status" = {
 00028|     module = meta.id;
 00029|     title = "Entrypoints";
 00030|     description = meta.description;
@@ -1689,80 +1689,80 @@ Tool: grep
 **Input:**
 ```json
 {
-  "pattern": "stackpanel\\.panels\\.",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "pattern": "stack\\.panels\\.",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "**/*.nix"
 }
 ```
 **Output:**
 ```
 Found 31 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/ui.nix:
-  Line 10:     stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/ui.nix:
+  Line 10:     stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/ui.nix:
-  Line 47:   stackpanel.panels."fly-status" = {
-  Line 91:   stackpanel.panels."fly-config" = {
-  Line 166:   stackpanel.panels."fly-apps" = {
-  Line 197:   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/ui.nix:
+  Line 47:   stack.panels."fly-status" = {
+  Line 91:   stack.panels."fly-config" = {
+  Line 166:   stack.panels."fly-apps" = {
+  Line 197:   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/ui.nix:
-  Line 64:   stackpanel.panels."cloudflare-status" = {
-  Line 112:   stackpanel.panels."cloudflare-config" = {
-  Line 149:   stackpanel.panels."cloudflare-apps" = {
-  Line 180:   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/ui.nix:
+  Line 64:   stack.panels."cloudflare-status" = {
+  Line 112:   stack.panels."cloudflare-config" = {
+  Line 149:   stack.panels."cloudflare-apps" = {
+  Line 180:   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/services/caddy.nix:
-  Line 124:     stackpanel.panels.caddy-status = {
-  Line 160:     stackpanel.panels.caddy-apps = {
+/Users/cm/git/darkmatter/stack/nix/stack/services/caddy.nix:
+  Line 124:     stack.panels.caddy-status = {
+  Line 160:     stack.panels.caddy-apps = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/ui.nix:
-  Line 17:   stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/ui.nix:
+  Line 17:   stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/ui.nix:
-  Line 18:   stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/ui.nix:
+  Line 18:   stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/ui.nix:
-  Line 31:   stackpanel.panels."${meta.id}-status" = {
-  Line 72:   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/ui.nix:
+  Line 31:   stack.panels."${meta.id}-status" = {
+  Line 72:   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/ui.nix:
-  Line 33:   stackpanel.panels."${meta.id}-status" = {
-  Line 64:   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/ui.nix:
+  Line 33:   stack.panels."${meta.id}-status" = {
+  Line 64:   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/git-hooks/ui.nix:
-  Line 17:   stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/git-hooks/ui.nix:
+  Line 17:   stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/ui.nix:
-  Line 21:   stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/ui.nix:
+  Line 21:   stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/ui.nix:
-  Line 27:   stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/ui.nix:
+  Line 27:   stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/ui.nix:
-  Line 33:   stackpanel.panels."${meta.id}-status" = {
-  Line 64:   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/ui.nix:
+  Line 33:   stack.panels."${meta.id}-status" = {
+  Line 64:   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/ui.nix:
-  Line 35:   stackpanel.panels."${meta.id}-status" = {
-  Line 64:   # stackpanel.panels."${meta.id}-config" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/ui.nix:
+  Line 35:   stack.panels."${meta.id}-status" = {
+  Line 64:   # stack.panels."${meta.id}-config" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/ui.nix:
-  Line 27:   stackpanel.panels."${meta.id}-status" = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/ui.nix:
+  Line 27:   stack.panels."${meta.id}-status" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/panels.nix:
-  Line 57:   #   A panel definition suitable for stackpanel.panels.<id>
+/Users/cm/git/darkmatter/stack/nix/stack/lib/panels.nix:
+  Line 57:   #   A panel definition suitable for stack.panels.<id>
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/panels.nix:
-  Line 12: #   stackpanel.panels.go-status = {
-  Line 316:         stackpanel.panels.go-status = {
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/panels.nix:
+  Line 12: #   stack.panels.go-status = {
+  Line 316:         stack.panels.go-status = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/healthchecks.nix:
-  Line 495:     stackpanel.panels.healthchecks-overview = {
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/healthchecks.nix:
+  Line 495:     stack.panels.healthchecks-overview = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/containers/ui.nix:
-  Line 38:   stackpanel.panels."${meta.id}-status" = {
-  Line 101:   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+/Users/cm/git/darkmatter/stack/nix/stack/containers/ui.nix:
+  Line 38:   stack.panels."${meta.id}-status" = {
+  Line 101:   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 ```
 ```
 
@@ -1772,14 +1772,14 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/panels.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/lib/panels.nix"
 }
 ```
 **Output:**
 ```
 <file>
 00001| # ==============================================================================
-00002| # nix/stackpanel/lib/panels.nix
+00002| # nix/stack/lib/panels.nix
 00003| #
 00004| # Panel generation library for auto-generating UI panels from SpField definitions.
 00005| #
@@ -1834,7 +1834,7 @@ Tool: read
 00054|   #   readme       - Module documentation in markdown (optional, shown in UI)
 00055|   #
 00056|   # Returns:
-00057|   #   A panel definition suitable for stackpanel.panels.<id>
+00057|   #   A panel definition suitable for stack.panels.<id>
 00058|   #
 00059|   # ===========================================================================
 00060|   mkPanelFromSpFields =
@@ -1958,20 +1958,20 @@ Tool: grep
 ```json
 {
   "pattern": "FIELD_TYPE_",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "**/*.{nix,ts,tsx,go,proto}"
 }
 ```
 **Output:**
 ```
 Found 100 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/ui.nix:
   Line 19:           type = "FIELD_TYPE_STRING";
   Line 25:           type = "FIELD_TYPE_BOOLEAN";
   Line 31:           type = "FIELD_TYPE_BOOLEAN";
   Line 37:           type = "FIELD_TYPE_BOOLEAN";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/ui.nix:
   Line 57:         type = "FIELD_TYPE_STRING";
   Line 63:         type = "FIELD_TYPE_STRING";
   Line 69:         type = "FIELD_TYPE_STRING";
@@ -1980,7 +1980,7 @@ Found 100 matches
   Line 100:         type = "FIELD_TYPE_STRING";
   Line 108:         type = "FIELD_TYPE_SELECT";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/ui.nix:
   Line 74:         type = "FIELD_TYPE_STRING";
   Line 80:         type = "FIELD_TYPE_STRING";
   Line 90:         type = "FIELD_TYPE_STRING";
@@ -1990,7 +1990,7 @@ Found 100 matches
   Line 129:         type = "FIELD_TYPE_STRING";
   Line 137:         type = "FIELD_TYPE_STRING";
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/proto/modules.proto:
+/Users/cm/git/darkmatter/stack/packages/proto/proto/modules.proto:
   Line 23:   MODULE_FIELD_TYPE_UNSPECIFIED = 0;
   Line 24:   MODULE_FIELD_TYPE_STRING = 1;
   Line 25:   MODULE_FIELD_TYPE_NUMBER = 2;
@@ -2001,7 +2001,7 @@ Found 100 matches
   Line 30:   MODULE_FIELD_TYPE_COLUMNS = 7;
   Line 31:   MODULE_FIELD_TYPE_JSON = 8;
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/proto/extensions.proto:
+/Users/cm/git/darkmatter/stack/packages/proto/proto/extensions.proto:
   Line 31:   FIELD_TYPE_UNSPECIFIED = 0;
   Line 32:   FIELD_TYPE_STRING = 1;
   Line 33:   FIELD_TYPE_NUMBER = 2;
@@ -2012,7 +2012,7 @@ Found 100 matches
   Line 38:   FIELD_TYPE_COLUMNS = 7;
   Line 39:   FIELD_TYPE_JSON = 8;
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/gen/ts/modules.ts:
+/Users/cm/git/darkmatter/stack/packages/proto/gen/ts/modules.ts:
   Line 515:      * @generated from protobuf enum value: MODULE_FIELD_TYPE_UNSPECIFIED = 0;
   Line 519:      * @generated from protobuf enum value: MODULE_FIELD_TYPE_STRING = 1;
   Line 523:      * @generated from protobuf enum value: MODULE_FIELD_TYPE_NUMBER = 2;
@@ -2022,9 +2022,9 @@ Found 100 matches
   Line 539:      * @generated from protobuf enum value: MODULE_FIELD_TYPE_APP_FILTER = 6;
   Line 543:      * @generated from protobuf enum value: MODULE_FIELD_TYPE_COLUMNS = 7;
   Line 547:      * @generated from protobuf enum value: MODULE_FIELD_TYPE_JSON = 8;
-  Line 1645:             { no: 2, name: "type", kind: "enum", T: () => ["stackpanel.db.ModuleFieldType", ModuleFieldType, "MODULE_FIELD_TYPE_"] },
+  Line 1645:             { no: 2, name: "type", kind: "enum", T: () => ["stack.db.ModuleFieldType", ModuleFieldType, "MODULE_FIELD_TYPE_"] },
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/gen/ts/modules_pb.d.ts:
+/Users/cm/git/darkmatter/stack/packages/proto/gen/ts/modules_pb.d.ts:
   Line 845:    * @generated from enum value: MODULE_FIELD_TYPE_UNSPECIFIED = 0;
   Line 850:    * @generated from enum value: MODULE_FIELD_TYPE_STRING = 1;
   Line 855:    * @generated from enum value: MODULE_FIELD_TYPE_NUMBER = 2;
@@ -2035,7 +2035,7 @@ Found 100 matches
   Line 880:    * @generated from enum value: MODULE_FIELD_TYPE_COLUMNS = 7;
   Line 885:    * @generated from enum value: MODULE_FIELD_TYPE_JSON = 8;
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/gen/ts/extensions_pb.d.ts:
+/Users/cm/git/darkmatter/stack/packages/proto/gen/ts/extensions_pb.d.ts:
   Line 518:    * @generated from enum value: FIELD_TYPE_UNSPECIFIED = 0;
   Line 523:    * @generated from enum value: FIELD_TYPE_STRING = 1;
   Line 528:    * @generated from enum value: FIELD_TYPE_NUMBER = 2;
@@ -2046,7 +2046,7 @@ Found 100 matches
   Line 553:    * @generated from enum value: FIELD_TYPE_COLUMNS = 7;
   Line 558:    * @generated from enum value: FIELD_TYPE_JSON = 8;
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/gen/ts/extensions.ts:
+/Users/cm/git/darkmatter/stack/packages/proto/gen/ts/extensions.ts:
   Line 325:      * @generated from protobuf enum value: FIELD_TYPE_UNSPECIFIED = 0;
   Line 329:      * @generated from protobuf enum value: FIELD_TYPE_STRING = 1;
   Line 333:      * @generated from protobuf enum value: FIELD_TYPE_NUMBER = 2;
@@ -2056,9 +2056,9 @@ Found 100 matches
   Line 349:      * @generated from protobuf enum value: FIELD_TYPE_APP_FILTER = 6;
   Line 353:      * @generated from protobuf enum value: FIELD_TYPE_COLUMNS = 7;
   Line 357:      * @generated from protobuf enum value: FIELD_TYPE_JSON = 8;
-  Line 995:             { no: 2, name: "type", kind: "enum", T: () => ["stackpanel.db.FieldType", FieldType, "FIELD_TYPE_"] },
+  Line 995:             { no: 2, name: "type", kind: "enum", T: () => ["stack.db.FieldType", FieldType, "FIELD_TYPE_"] },
 
-/Users/cm/git/darkmatter/stackpanel/packages/proto/gen/gopb/modules.pb.go:
+/Users/cm/git/darkmatter/stack/packages/proto/gen/gopb/modules.pb.go:
   Line 102: 	ModuleFieldType_MODULE_FIELD_TYPE_UNSPECIFIED ModuleFieldType = 0
   Line 103: 	ModuleFieldType_MODULE_FIELD_TYPE_STRING      ModuleFieldType = 1
   Line 104: 	ModuleFieldType_MODULE_FIELD_TYPE_NUMBER      ModuleFieldType = 2
@@ -2105,7 +2105,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/panels.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/core/options/panels.nix"
 }
 ```
 **Output:**
@@ -2114,7 +2114,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # panels.nix
 00003| #
-00004| # UI Panel configuration for core Stackpanel modules.
+00004| # UI Panel configuration for core Stack modules.
 00005| #
 00006| # This is separate from extensions - panels here are for built-in modules like
 00007| # Go, Caddy, Healthchecks, Theme, etc. Extensions (like SST) define their own
@@ -2122,7 +2122,7 @@ Tool: read
 00009| #
 00010| # Core modules register panels like this:
 00011| #
-00012| #   stackpanel.panels.go-status = {
+00012| #   stack.panels.go-status = {
 00013| #     module = "go";
 00014| #     title = "Go Environment";
 00015| #     type = "PANEL_TYPE_STATUS";
@@ -2140,7 +2140,7 @@ Tool: read
 00027|   ...
 00028| }:
 00029| let
-00030|   cfg = config.stackpanel;
+00030|   cfg = config.stack;
 00031| 
 00032|   # ============================================================================
 00033|   # Type Definitions
@@ -2237,7 +2237,7 @@ Tool: read
 00124|       configPath = lib.mkOption {
 00125|         type = lib.types.nullOr lib.types.str;
 00126|         default = null;
-00127|         description = "Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization')";
+00127|         description = "Nix config path for saving field value (e.g., 'stack.deployment.fly.organization')";
 00128|       };
 00129|       description = lib.mkOption {
 00130|         type = lib.types.nullOr lib.types.str;
@@ -2415,18 +2415,18 @@ Tool: read
 00302|   # Options
 00303|   # ============================================================================
 00304| 
-00305|   options.stackpanel.panels = lib.mkOption {
+00305|   options.stack.panels = lib.mkOption {
 00306|     type = lib.types.attrsOf modulePanelType;
 00307|     default = { };
 00308|     description = ''
-00309|       UI panels for core Stackpanel modules.
+00309|       UI panels for core Stack modules.
 00310| 
 00311|       Panels are UI components that display information about a module's state,
 00312|       configuration, or managed resources. Unlike extension panels, these belong
 00313|       to built-in modules like Go, Caddy, Healthchecks, etc.
 00314| 
 00315|       Example:
-00316|         stackpanel.panels.go-status = {
+00316|         stack.panels.go-status = {
 00317|           module = "go";
 00318|           title = "Go Environment";
 00319|           type = "PANEL_TYPE_STATUS";
@@ -2466,28 +2466,28 @@ Tool: read
 00353|   };
 00354| 
 00355|   # Computed/serializable panels for nix eval
-00356|   options.stackpanel.panelsComputed = lib.mkOption {
+00356|   options.stack.panelsComputed = lib.mkOption {
 00357|     type = lib.types.attrsOf lib.types.unspecified;
 00358|     readOnly = true;
 00359|     description = "Serializable panels for UI consumption";
 00360|   };
 00361| 
 00362|   # Panels grouped by module
-00363|   options.stackpanel.panelsByModule = lib.mkOption {
+00363|   options.stack.panelsByModule = lib.mkOption {
 00364|     type = lib.types.attrsOf (lib.types.attrsOf lib.types.unspecified);
 00365|     readOnly = true;
 00366|     description = "Panels grouped by their parent module";
 00367|   };
 00368| 
 00369|   # List of panels (for iteration)
-00370|   options.stackpanel.panelsList = lib.mkOption {
+00370|   options.stack.panelsList = lib.mkOption {
 00371|     type = lib.types.listOf lib.types.unspecified;
 00372|     readOnly = true;
 00373|     description = "List of all panels sorted by order";
 00374|   };
 00375| 
 00376|   # List of modules that have panels
-00377|   options.stackpanel.panelModules = lib.mkOption {
+00377|   options.stack.panelModules = lib.mkOption {
 00378|     type = lib.types.listOf lib.types.str;
 00379|     readOnly = true;
 00380|     description = "List of module names that have registered panels";
@@ -2499,12 +2499,12 @@ Tool: read
 00386| 
 00387|   config = {
 00388|     # Serialize panels for UI
-00389|     stackpanel.panelsComputed = lib.mapAttrs serializePanel (
+00389|     stack.panelsComputed = lib.mapAttrs serializePanel (
 00390|       lib.filterAttrs (id: p: p.enabled) cfg.panels
 00391|     );
 00392| 
 00393|     # Group by module
-00394|     stackpanel.panelsByModule =
+00394|     stack.panelsByModule =
 00395|       let
 00396|         enabledPanels = lib.filterAttrs (id: p: p.enabled) cfg.panels;
 00397|         serialized = lib.mapAttrs serializePanel enabledPanels;
@@ -2512,7 +2512,7 @@ Tool: read
 00399|       groupPanelsByModule serialized;
 00400| 
 00401|     # Sorted list of panels
-00402|     stackpanel.panelsList =
+00402|     stack.panelsList =
 00403|       let
 00404|         enabledPanels = lib.filterAttrs (id: p: p.enabled) cfg.panels;
 00405|         serialized = lib.mapAttrs serializePanel enabledPanels;
@@ -2521,7 +2521,7 @@ Tool: read
 00408|       lib.sort (a: b: a.order < b.order) asList;
 00409| 
 00410|     # List of modules with panels
-00411|     stackpanel.panelModules =
+00411|     stack.panelModules =
 00412|       let
 00413|         enabledPanels = lib.filterAttrs (id: p: p.enabled) cfg.panels;
 00414|       in
@@ -2550,7 +2550,7 @@ Tool: grep
 ```json
 {
   "pattern": "colmena",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "**/*.nix"
 }
 ```
@@ -2567,7 +2567,7 @@ Tool: grep
 ```json
 {
   "pattern": "colmena",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "**/*.{md,nix,ts,tsx,go,json,yaml,yml}"
 }
 ```
@@ -2591,7 +2591,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/module.nix"
 }
 ```
 **Output:**
@@ -2604,7 +2604,7 @@ Tool: read
 00005| #
 00006| # This module:
 00007| #   1. Adds deployment.* options to each app via appModules
-00008| #   2. Auto-contributes to stackpanel.containers.images for deployable apps
+00008| #   2. Auto-contributes to stack.containers.images for deployable apps
 00009| #   3. Generates fly.toml into each app directory
 00010| #   4. Adds deploy scripts to packages/infra/package.json
 00011| #   5. Registers turbo tasks for build + deploy workflow
@@ -2625,7 +2625,7 @@ Tool: read
 00026| #   └── fly.toml               # Fly.io app configuration
 00027| #
 00028| # Usage:
-00029| #   stackpanel.apps.web = {
+00029| #   stack.apps.web = {
 00030| #     path = "apps/web";
 00031| #     deployment = {
 00032| #       enable = true;
@@ -2643,7 +2643,7 @@ Tool: read
 00044| }:
 00045| let
 00046|   meta = import ./meta.nix;
-00047|   cfg = config.stackpanel;
+00047|   cfg = config.stack;
 00048|   deployCfg = cfg.deployment;
 00049|   infraPath = "packages/infra";
 00050| 
@@ -2668,7 +2668,7 @@ Tool: read
 00069|           forceHttps = sp.asOption flySchema.fields.forceHttps;
 00070|           env = sp.asOption flySchema.fields.env;
 00071| 
-00072|           # App name defaults to stackpanel app name - needs special handling
+00072|           # App name defaults to stack app name - needs special handling
 00073|           appName = lib.mkOption {
 00074|             type = lib.types.str;
 00075|             default = name;
@@ -2770,7 +2770,7 @@ Tool: read
 00171|       '';
 00172|     in
 00173|     ''
-00174|       # Generated by stackpanel - do not edit manually
+00174|       # Generated by stack - do not edit manually
 00175|       # Regenerate by entering the devshell: nix develop --impure
 00176|       #
 00177|       # Deploy workflow (uses nix2container/dockerTools):
@@ -2932,7 +2932,7 @@ Tool: read
 00333| 
 00334|   # ---------------------------------------------------------------------------
 00335|   # Generate container configs for deployable apps
-00336|   # These are contributed to stackpanel.containers for nix2container builds
+00336|   # These are contributed to stack.containers for nix2container builds
 00337|   # ---------------------------------------------------------------------------
 00338|   mkContainerConfigs =
 00339|     deployableApps:
@@ -2976,7 +2976,7 @@ Tool: read
 00377|   # ===========================================================================
 00378|   # Options
 00379|   # ===========================================================================
-00380|   options.stackpanel.deployment = {
+00380|   options.stack.deployment = {
 00381|     enable = lib.mkEnableOption "deployment module" // {
 00382|       default = true;
 00383|     };
@@ -3019,27 +3019,27 @@ Tool: read
 00420|   config = lib.mkMerge [
 00421|     # Always add appModules (unconditionally)
 00422|     {
-00423|       stackpanel.appModules = [ deploymentAppModule ];
+00423|       stack.appModules = [ deploymentAppModule ];
 00424|     }
 00425| 
-00426|     # Apply config when stackpanel is enabled and has deployable apps
+00426|     # Apply config when stack is enabled and has deployable apps
 00427|     (lib.mkIf (cfg.enable && deployCfg.enable && hasDeployableApps) {
 00428|       # NOTE: Container configs are NOT contributed here.
 00429|       # The containers module reads deployment.fly.* settings and applies them.
 00430|       # This avoids conflicts when both container.enable and deployment.enable are true.
 00431| 
 00432|       # Enable docker tooling for skopeo
-00433|       stackpanel.docker.enable = true;
+00433|       stack.docker.enable = true;
 00434| 
 00435|       # -------------------------------------------------------------------------
 00436|       # Merge deploy scripts into SST's packages/infra/package.json
 00437|       # -------------------------------------------------------------------------
-00438|       stackpanel.sst.package.scripts = mkDeployPackageScripts deployableApps;
+00438|       stack.sst.package.scripts = mkDeployPackageScripts deployableApps;
 00439| 
 00440|       # -------------------------------------------------------------------------
 00441|       # Generated Files (fly.toml + per-app deploy scripts)
 00442|       # -------------------------------------------------------------------------
-00443|       stackpanel.files.entries = lib.mkMerge [
+00443|       stack.files.entries = lib.mkMerge [
 00444|         # packages/infra/turbo.json
 00445|         {
 00446|           "${infraPath}/turbo.json" = {
@@ -3072,7 +3072,7 @@ Tool: read
 00473|       # -------------------------------------------------------------------------
 00474|       # Turbo Tasks (global definitions)
 00475|       # -------------------------------------------------------------------------
-00476|       stackpanel.tasks = globalDeployTasks;
+00476|       stack.tasks = globalDeployTasks;
 00477| 
 00478|       # -------------------------------------------------------------------------
 00479|       # Per-app package.json scripts (injected into apps via appModules)
@@ -3082,7 +3082,7 @@ Tool: read
 00483|       # -------------------------------------------------------------------------
 00484|       # Devshell Packages
 00485|       # -------------------------------------------------------------------------
-00486|       stackpanel.devshell.packages = [
+00486|       stack.devshell.packages = [
 00487|         pkgs.flyctl
 00488|       ];
 00489| 
@@ -3090,7 +3090,7 @@ Tool: read
 00491|       # Wrapped fly commands per app (bakes in -c and -a flags)
 00492|       # Usage: fly-web status, fly-web logs, fly-web ssh console, etc.
 00493|       # -------------------------------------------------------------------------
-00494|       stackpanel.scripts = lib.mapAttrs' (
+00494|       stack.scripts = lib.mapAttrs' (
 00495|         appName: appCfg:
 00496|         let
 00497|           flyAppName = appCfg.deployment.fly.appName or appName;
@@ -3153,7 +3153,7 @@ Tool: read
 00554|       # -------------------------------------------------------------------------
 00555|       # Health Checks
 00556|       # -------------------------------------------------------------------------
-00557|       stackpanel.healthchecks.modules.${meta.id} = {
+00557|       stack.healthchecks.modules.${meta.id} = {
 00558|         enable = true;
 00559|         displayName = meta.name;
 00560|         checks = {
@@ -3180,7 +3180,7 @@ Tool: read
 00581|       # -------------------------------------------------------------------------
 00582|       # Module Registration
 00583|       # -------------------------------------------------------------------------
-00584|       stackpanel.modules.${meta.id} = {
+00584|       stack.modules.${meta.id} = {
 00585|         enable = true;
 00586|         meta = {
 00587|           name = meta.name;
@@ -3212,7 +3212,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/ui.nix"
 }
 ```
 **Output:**
@@ -3230,7 +3230,7 @@ Tool: read
 00010| }:
 00011| let
 00012|   meta = import ./meta.nix;
-00013|   cfg = config.stackpanel;
+00013|   cfg = config.stack;
 00014|   deployCfg = cfg.deployment;
 00015| 
 00016|   # Import schema and panel generator
@@ -3264,7 +3264,7 @@ Tool: read
 00044|   # -------------------------------------------------------------------------
 00045|   # Deployment Status Panel
 00046|   # -------------------------------------------------------------------------
-00047|   stackpanel.panels."fly-status" = {
+00047|   stack.panels."fly-status" = {
 00048|     module = meta.id;
 00049|     title = "Fly.io Deployments";
 00050|     description = "Container-based deployments on Fly.io";
@@ -3308,7 +3308,7 @@ Tool: read
 00088|   # -------------------------------------------------------------------------
 00089|   # Deployment Configuration Form
 00090|   # -------------------------------------------------------------------------
-00091|   stackpanel.panels."fly-config" = {
+00091|   stack.panels."fly-config" = {
 00092|     module = meta.id;
 00093|     title = "Fly.io Settings";
 00094|     description = "Configure Fly.io deployment settings";
@@ -3321,7 +3321,7 @@ Tool: read
 00101|         label = "Organization";
 00102|         description = "Fly.io organization name";
 00103|         value = deployCfg.fly.organization or "";
-00104|         configPath = "stackpanel.deployment.fly.organization";
+00104|         configPath = "stack.deployment.fly.organization";
 00105|       }
 00106|       {
 00107|         name = "defaultRegion";
@@ -3329,7 +3329,7 @@ Tool: read
 00109|         label = "Default Region";
 00110|         description = "Default region for new deployments";
 00111|         value = deployCfg.fly.defaultRegion or "iad";
-00112|         configPath = "stackpanel.deployment.fly.defaultRegion";
+00112|         configPath = "stack.deployment.fly.defaultRegion";
 00113|         options = [
 00114|           {
 00115|             value = "iad";
@@ -3383,7 +3383,7 @@ Tool: read
 00163|   # -------------------------------------------------------------------------
 00164|   # Per-App Deployment Table
 00165|   # -------------------------------------------------------------------------
-00166|   stackpanel.panels."fly-apps" = {
+00166|   stack.panels."fly-apps" = {
 00167|     module = meta.id;
 00168|     title = "Fly.io Apps";
 00169|     description = "Apps deployed to Fly.io";
@@ -3414,7 +3414,7 @@ Tool: read
 00194|   # Per-App Fly.io Configuration Panel (for Deployment tab)
 00195|   # Auto-generated from schema.nix SpField definitions
 00196|   # -------------------------------------------------------------------------
-00197|   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+00197|   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 00198|     module = meta.id;
 00199|     title = "Fly.io Configuration";
 00200|     icon = meta.icon;
@@ -3439,7 +3439,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/meta.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/meta.nix"
 }
 ```
 **Output:**
@@ -3473,7 +3473,7 @@ Tool: read
 00026|   homepage = "https://fly.io/docs/";
 00027| 
 00028|   # Author
-00029|   author = "Stackpanel";
+00029|   author = "Stack";
 00030| 
 00031|   # Searchable tags
 00032|   tags = [
@@ -3521,7 +3521,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/default.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/deployment/default.nix"
 }
 ```
 **Output:**
@@ -3547,9 +3547,9 @@ Tool: read
 00018| # config and creates the appropriate alchemy resources.
 00019| #
 00020| # Usage:
-00021| #   stackpanel.deployment.defaultHost = "cloudflare";
+00021| #   stack.deployment.defaultHost = "cloudflare";
 00022| #
-00023| #   stackpanel.apps.web = {
+00023| #   stack.apps.web = {
 00024| #     framework = "tanstack-start";
 00025| #     deployment = {
 00026| #       enable = true;
@@ -3586,16 +3586,16 @@ Tool: glob
 **Input:**
 ```json
 {
-  "pattern": "nix/stackpanel/modules/turbo/*"
+  "pattern": "nix/stack/modules/turbo/*"
 }
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/meta.nix
 ```
 ```
 
@@ -3605,7 +3605,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/default.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/default.nix"
 }
 ```
 **Output:**
@@ -3622,7 +3622,7 @@ Tool: read
 00009| # - ui.nix: UI panel definitions
 00010| #
 00011| # Usage:
-00012| #   stackpanel.tasks = {
+00012| #   stack.tasks = {
 00013| #     build = { exec = "npm run build"; outputs = [ "dist/**" ]; };
 00014| #     dev = { persistent = true; cache = false; };
 00015| #   };
@@ -3656,23 +3656,23 @@ Tool: glob
 **Input:**
 ```json
 {
-  "pattern": "nix/stackpanel/modules/*/default.nix"
+  "pattern": "nix/stack/modules/*/default.nix"
 }
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/aws-vault/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/env-codegen/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/git-hooks/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/aws-vault/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/env-codegen/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/git-hooks/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/default.nix
 ```
 ```
 
@@ -3690,7 +3690,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/module.nix"
 }
 ```
 **Output:**
@@ -3713,12 +3713,12 @@ Tool: read
 00015| #   - package.json in the app or root directory
 00016| #
 00017| # Architecture:
-00018| #   Generated files (package.json) are created via stackpanel.files system
+00018| #   Generated files (package.json) are created via stack.files system
 00019| #   and materialized on shell entry. package.json uses type="json" for
 00020| #   deep-merge support so other modules can contribute to the same file.
 00021| #
 00022| # App definition example:
-00023| #   stackpanel.apps.my-app = {
+00023| #   stack.apps.my-app = {
 00024| #     path = "apps/web";
 00025| #     bun = {
 00026| #       enable = true;
@@ -3738,14 +3738,14 @@ Tool: read
 00040| }:
 00041| let
 00042|   meta = import ./meta.nix;
-00043|   sp = config.stackpanel;
+00043|   sp = config.stack;
 00044| 
 00045|   # Import unified field definitions (single source of truth)
 00046|   bunSchema = import ./schema.nix { inherit lib; };
 00047|   spField = import ../../db/lib/field.nix { inherit lib; };
 00048| 
 00049|   # Compute npm scope prefix from config (project.repo or name)
-00050|   # e.g., "stackpanel" -> "@stackpanel"
+00050|   # e.g., "stack" -> "@stack"
 00051|   prefix = sp.project.repo or sp.name;
 00052| 
 00053|   # ---------------------------------------------------------------------------
@@ -3820,7 +3820,7 @@ Tool: read
 00122|       };
 00123|     };
 00124| 
-00125|   # Create file entries for materialization (uses stackpanel.files system)
+00125|   # Create file entries for materialization (uses stack.files system)
 00126|   # package.json uses type="json" for deep-merge support from other modules
 00127|   mkGeneratedFileEntries = name: app: {
 00128|     "${app.path}/package.json" = {
@@ -3837,13 +3837,13 @@ Tool: read
 00139|   # Options
 00140|   # ===========================================================================
 00141|   # Expose Bun packages for nix build (separate from modules attrsOf)
-00142|   options.stackpanel.bun.packages = lib.mkOption {
+00142|   options.stack.bun.packages = lib.mkOption {
 00143|     type = lib.types.attrsOf lib.types.unspecified;
 00144|     default = { };
 00145|     description = ''
 00146|       Bun packages for apps with bun.enable = true.
 00147|       These are exposed for `nix build` but NOT included in devshell.
-00148|       Access via config.stackpanel.bun.packages.apps.<name>.
+00148|       Access via config.stack.bun.packages.apps.<name>.
 00149|     '';
 00150|   };
 00151| 
@@ -3855,7 +3855,7 @@ Tool: read
 00157|     # Options are auto-generated from bun-app.proto.nix (single source of truth)
 00158|     # runtimeInputs is Nix-only (listOf package - no proto equivalent)
 00159|     {
-00160|       stackpanel.appModules = [
+00160|       stack.appModules = [
 00161|         (
 00162|           { lib, ... }:
 00163|           {
@@ -3878,26 +3878,26 @@ Tool: read
 00180|       ];
 00181|     }
 00182| 
-00183|     # Apply config when stackpanel is enabled and bun apps exist
+00183|     # Apply config when stack is enabled and bun apps exist
 00184|     (lib.mkIf (sp.enable && hasBunApps) {
 00185|       # -----------------------------------------------------------------------
 00186|       # Packages - Build Bun applications via writeBunApplication
 00187|       # -----------------------------------------------------------------------
-00188|       stackpanel.bun.packages = {
+00188|       stack.bun.packages = {
 00189|         apps = lib.mapAttrs mkBunPackage bunApps;
 00190|       };
 00191| 
 00192|       # -----------------------------------------------------------------------
 00193|       # Devshell - Add bun2nix CLI to shell environment
 00194|       # -----------------------------------------------------------------------
-00195|       stackpanel.devshell.packages = [
+00195|       stack.devshell.packages = [
 00196|         pkgs.bun2nix # Native bun2nix CLI (converts bun.lock -> bun.nix)
 00197|       ];
 00198| 
 00199|       # -----------------------------------------------------------------------
 00200|       # File Generation - package.json with bun2nix postinstall
 00201|       # -----------------------------------------------------------------------
-00202|       stackpanel.files.entries = lib.mkMerge (
+00202|       stack.files.entries = lib.mkMerge (
 00203|         lib.mapAttrsToList (
 00204|           name: app: lib.optionalAttrs app.bun.generateFiles (mkGeneratedFileEntries name app)
 00205|         ) bunApps
@@ -3906,7 +3906,7 @@ Tool: read
 00208|       # -----------------------------------------------------------------------
 00209|       # Scripts - Add run-<app> and test-<app> commands
 00210|       # -----------------------------------------------------------------------
-00211|       stackpanel.scripts = lib.mkMerge (
+00211|       stack.scripts = lib.mkMerge (
 00212|         lib.mapAttrsToList (name: app: {
 00213|           "run-${name}" = {
 00214|             exec = ''cd "$STACKPANEL_ROOT/${app.path}" && exec bun run ${app.bun.mainPackage} "$@"'';
@@ -3936,7 +3936,7 @@ Tool: read
 00238|       # -----------------------------------------------------------------------
 00239|       # Flake Checks (CI)
 00240|       # -----------------------------------------------------------------------
-00241|       stackpanel.moduleChecks.${meta.id} = {
+00241|       stack.moduleChecks.${meta.id} = {
 00242|         eval = {
 00243|           description = "${meta.name} module evaluates correctly";
 00244|           required = true;
@@ -3960,7 +3960,7 @@ Tool: read
 00262|       # -----------------------------------------------------------------------
 00263|       # Health Checks (Runtime)
 00264|       # -----------------------------------------------------------------------
-00265|       stackpanel.healthchecks.modules.${meta.id} = {
+00265|       stack.healthchecks.modules.${meta.id} = {
 00266|         enable = true;
 00267|         displayName = meta.name;
 00268|         checks = {
@@ -4010,7 +4010,7 @@ Tool: read
 00312|       # -----------------------------------------------------------------------
 00313|       # Module Registration
 00314|       # -----------------------------------------------------------------------
-00315|       stackpanel.modules.${meta.id} = {
+00315|       stack.modules.${meta.id} = {
 00316|         enable = true;
 00317|         meta = {
 00318|           name = meta.name;
@@ -4043,7 +4043,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/ui.nix"
 }
 ```
 **Output:**
@@ -4052,7 +4052,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - Bun UI Panel Definitions
 00003| #
-00004| # Defines the panels that appear in the Stackpanel UI for this module.
+00004| # Defines the panels that appear in the Stack UI for this module.
 00005| #
 00006| # The APP_CONFIG panel is auto-generated from the SpField definitions in
 00007| # bun-app.proto.nix. No manual field listing needed - the schema is the
@@ -4066,7 +4066,7 @@ Tool: read
 00015| }:
 00016| let
 00017|   meta = import ./meta.nix;
-00018|   cfg = config.stackpanel;
+00018|   cfg = config.stack;
 00019| 
 00020|   # Import field definitions and panel generator
 00021|   bunSchema = import ./schema.nix { inherit lib; };
@@ -4081,7 +4081,7 @@ Tool: read
 00030|   # Status Panel - Overview of Bun environment
 00031|   # (Hand-crafted: uses runtime data like pkgs.bun.version)
 00032|   # ---------------------------------------------------------------------------
-00033|   stackpanel.panels."${meta.id}-status" = {
+00033|   stack.panels."${meta.id}-status" = {
 00034|     module = meta.id;
 00035|     title = "Bun Environment";
 00036|     description = meta.description;
@@ -4112,7 +4112,7 @@ Tool: read
 00061|   # App Config Panel - Per-app Bun configuration
 00062|   # (Auto-generated from bun-app.proto.nix SpField definitions)
 00063|   # ---------------------------------------------------------------------------
-00064|   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+00064|   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 00065|     module = meta.id;
 00066|     title = "Bun Configuration";
 00067|     icon = meta.icon;
@@ -4136,7 +4136,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/meta.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/meta.nix"
 }
 ```
 **Output:**
@@ -4170,7 +4170,7 @@ Tool: read
 00026|   homepage = "https://nix-community.github.io/bun2nix/building-packages/writeBunApplication.html";
 00027| 
 00028|   # Author
-00029|   author = "Stackpanel";
+00029|   author = "Stack";
 00030| 
 00031|   # Searchable tags
 00032|   tags = [
@@ -4217,7 +4217,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/default.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/default.nix"
 }
 ```
 **Output:**
@@ -4234,8 +4234,8 @@ Tool: read
 00009| # - ui.nix: UI panel definitions
 00010| #
 00011| # Usage:
-00012| #   stackpanel.modules.bun.enable = true;
-00013| #   stackpanel.apps.my-app = {
+00012| #   stack.modules.bun.enable = true;
+00013| #   stack.apps.my-app = {
 00014| #     path = "apps/web";
 00015| #     bun.enable = true;
 00016| #   };
@@ -4276,7 +4276,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/module.nix"
 }
 ```
 **Output:**
@@ -4296,7 +4296,7 @@ Tool: read
 00012| }:
 00013| let
 00014|   meta = import ./meta.nix;
-00015|   cfg = config.stackpanel;
+00015|   cfg = config.stack;
 00016|   appsComputed = cfg.appsComputed or { };
 00017|   repoRoot = ../../../..;
 00018| 
@@ -4305,7 +4305,7 @@ Tool: read
 00021|   );
 00022| 
 00023|   formatterCheck =
-00024|     pkgs.runCommand "stackpanel-formatters"
+00024|     pkgs.runCommand "stack-formatters"
 00025|       {
 00026|         nativeBuildInputs = formatters;
 00027|       }
@@ -4330,12 +4330,12 @@ Tool: read
 00046|   # Configuration
 00047|   # ===========================================================================
 00048|   config = lib.mkIf cfg.enable {
-00049|     stackpanel.checks = lib.optionalAttrs (formatters != [ ]) {
+00049|     stack.checks = lib.optionalAttrs (formatters != [ ]) {
 00050|       formatters = formatterCheck;
 00051|     };
 00052| 
 00053|     # Register module
-00054|     stackpanel.modules.${meta.id} = {
+00054|     stack.modules.${meta.id} = {
 00055|       enable = true;
 00056|       meta = {
 00057|         name = meta.name;
@@ -4366,7 +4366,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/ui.nix"
 }
 ```
 **Output:**
@@ -4375,7 +4375,7 @@ Tool: read
 00001| # ==============================================================================
 00002| # ui.nix - CI Formatters UI Panel Definitions
 00003| #
-00004| # Defines the panels that appear in the Stackpanel UI for this module.
+00004| # Defines the panels that appear in the Stack UI for this module.
 00005| # ==============================================================================
 00006| {
 00007|   lib,
@@ -4384,7 +4384,7 @@ Tool: read
 00010| }:
 00011| let
 00012|   meta = import ./meta.nix;
-00013|   cfg = config.stackpanel;
+00013|   cfg = config.stack;
 00014|   appsComputed = cfg.appsComputed or { };
 00015| 
 00016|   formatters = lib.flatten (
@@ -4392,7 +4392,7 @@ Tool: read
 00018|   );
 00019| in
 00020| lib.mkIf (cfg.enable && formatters != [ ]) {
-00021|   stackpanel.panels."${meta.id}-status" = {
+00021|   stack.panels."${meta.id}-status" = {
 00022|     module = meta.id;
 00023|     title = "CI Formatters";
 00024|     description = meta.description;
@@ -4420,7 +4420,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/ci-formatters/meta.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/ci-formatters/meta.nix"
 }
 ```
 **Output:**
@@ -4454,7 +4454,7 @@ Tool: read
 00026|   homepage = null;
 00027| 
 00028|   # Author
-00029|   author = "Stackpanel";
+00029|   author = "Stack";
 00030| 
 00031|   # Searchable tags
 00032|   tags = [
@@ -4506,7 +4506,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/ui.nix"
 }
 ```
 **Output:**
@@ -4524,7 +4524,7 @@ Tool: read
 00010| }:
 00011| let
 00012|   meta = import ./meta.nix;
-00013|   cfg = config.stackpanel;
+00013|   cfg = config.stack;
 00014|   deployCfg = cfg.deployment;
 00015| 
 00016|   # Import schema and panel generator
@@ -4575,7 +4575,7 @@ Tool: read
 00061|   # -------------------------------------------------------------------------
 00062|   # Deployment Status Panel
 00063|   # -------------------------------------------------------------------------
-00064|   stackpanel.panels."cloudflare-status" = {
+00064|   stack.panels."cloudflare-status" = {
 00065|     module = meta.id;
 00066|     title = "Cloudflare Workers";
 00067|     description = "Edge deployments on Cloudflare Workers";
@@ -4623,7 +4623,7 @@ Tool: read
 00109|   # -------------------------------------------------------------------------
 00110|   # Deployment Configuration Form
 00111|   # -------------------------------------------------------------------------
-00112|   stackpanel.panels."cloudflare-config" = {
+00112|   stack.panels."cloudflare-config" = {
 00113|     module = meta.id;
 00114|     title = "Cloudflare Settings";
 00115|     description = "Configure Cloudflare Workers deployment settings";
@@ -4636,7 +4636,7 @@ Tool: read
 00122|         label = "Account ID";
 00123|         description = "Cloudflare account ID (from dashboard)";
 00124|         value = deployCfg.cloudflare.accountId or "";
-00125|         configPath = "stackpanel.deployment.cloudflare.accountId";
+00125|         configPath = "stack.deployment.cloudflare.accountId";
 00126|       }
 00127|       {
 00128|         name = "compatibilityDate";
@@ -4644,7 +4644,7 @@ Tool: read
 00130|         label = "Compatibility Date";
 00131|         description = "Workers API compatibility date";
 00132|         value = deployCfg.cloudflare.compatibilityDate or "2024-01-01";
-00133|         configPath = "stackpanel.deployment.cloudflare.compatibilityDate";
+00133|         configPath = "stack.deployment.cloudflare.compatibilityDate";
 00134|       }
 00135|       {
 00136|         name = "defaultRoute";
@@ -4652,7 +4652,7 @@ Tool: read
 00138|         label = "Default Route";
 00139|         description = "Default custom domain pattern (e.g., *.example.com/*)";
 00140|         value = deployCfg.cloudflare.defaultRoute or "";
-00141|         configPath = "stackpanel.deployment.cloudflare.defaultRoute";
+00141|         configPath = "stack.deployment.cloudflare.defaultRoute";
 00142|       }
 00143|     ];
 00144|   };
@@ -4660,7 +4660,7 @@ Tool: read
 00146|   # -------------------------------------------------------------------------
 00147|   # Per-App Workers Table
 00148|   # -------------------------------------------------------------------------
-00149|   stackpanel.panels."cloudflare-apps" = {
+00149|   stack.panels."cloudflare-apps" = {
 00150|     module = meta.id;
 00151|     title = "Cloudflare Workers";
 00152|     description = "Apps deployed as Cloudflare Workers";
@@ -4691,7 +4691,7 @@ Tool: read
 00177|   # Per-App Cloudflare Configuration Panel (for Deployment tab)
 00178|   # Auto-generated from schema.nix SpField definitions
 00179|   # -------------------------------------------------------------------------
-00180|   stackpanel.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
+00180|   stack.panels."${meta.id}-app-config" = panelsLib.mkPanelFromSpFields {
 00181|     module = meta.id;
 00182|     title = "Cloudflare Configuration";
 00183|     icon = meta.ui.icon or "cloud";
@@ -4730,7 +4730,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/modules.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/core/options/modules.nix"
 }
 ```
 **Output:**
@@ -4739,24 +4739,24 @@ Tool: read
 00001| # ==============================================================================
 00002| # modules.nix
 00003| #
-00004| # Stackpanel Module System - the unified system for extending stackpanel.
+00004| # Stack Module System - the unified system for extending stack.
 00005| #
-00006| # Modules are the primary way to extend stackpanel functionality. They can:
+00006| # Modules are the primary way to extend stack functionality. They can:
 00007| #   - Add devshell packages, hooks, and environment variables
-00008| #   - Generate files via stackpanel.files.entries
-00009| #   - Provide shell scripts/commands via stackpanel.scripts
-00010| #   - Define health checks via stackpanel.healthchecks
+00008| #   - Generate files via stack.files.entries
+00009| #   - Provide shell scripts/commands via stack.scripts
+00010| #   - Define health checks via stack.healthchecks
 00011| #   - Register UI panels for the web studio
-00012| #   - Extend per-app configuration via stackpanel.appModules
+00012| #   - Extend per-app configuration via stack.appModules
 00013| #
 00014| # Modules can be:
-00015| #   - Builtin: Shipped with stackpanel (e.g., postgres, redis, step-ca)
+00015| #   - Builtin: Shipped with stack (e.g., postgres, redis, step-ca)
 00016| #   - Local: Defined in the project repository
 00017| #   - Remote: Installed from flake inputs or a module registry
 00018| #
 00019| # Example module definition:
 00020| #
-00021| #   stackpanel.modules.myModule = {
+00021| #   stack.modules.myModule = {
 00022| #     enable = true;
 00023| #     meta = {
 00024| #       name = "My Module";
@@ -4773,8 +4773,8 @@ Tool: read
 00035| #     }];
 00036| #   };
 00037| #
-00038| # This module replaces the older stackpanel.extensions system.
-00039| # For backward compatibility, stackpanel.extensions is aliased to stackpanel.modules.
+00038| # This module replaces the older stack.extensions system.
+00039| # For backward compatibility, stack.extensions is aliased to stack.modules.
 00040| # ==============================================================================
 00041| {
 00042|   lib,
@@ -4782,7 +4782,7 @@ Tool: read
 00044|   ...
 00045| }:
 00046| let
-00047|   cfg = config.stackpanel;
+00047|   cfg = config.stack;
 00048| 
 00049|   # ============================================================================
 00050|   # Type Definitions
@@ -4790,7 +4790,7 @@ Tool: read
 00052| 
 00053|   # Module source types
 00054|   sourceTypeEnum = lib.types.enum [
-00055|     "builtin" # Shipped with stackpanel
+00055|     "builtin" # Shipped with stack
 00056|     "local" # Defined in project
 00057|     "flake-input" # Installed via flake input
 00058|     "registry" # Installed from module registry
@@ -4899,7 +4899,7 @@ Tool: read
 00161|       registryId = lib.mkOption {
 00162|         type = lib.types.nullOr lib.types.str;
 00163|         default = null;
-00164|         description = "Registry identifier (for registry source type, e.g., 'stackpanel/docker')";
+00164|         description = "Registry identifier (for registry source type, e.g., 'stack/docker')";
 00165|       };
 00166|       ref = lib.mkOption {
 00167|         type = lib.types.nullOr lib.types.str;
@@ -4909,13 +4909,13 @@ Tool: read
 00171|     };
 00172|   };
 00173| 
-00174|   # Module feature flags - which stackpanel features this module uses
+00174|   # Module feature flags - which stack features this module uses
 00175|   moduleFeaturesType = lib.types.submodule {
 00176|     options = {
 00177|       files = lib.mkOption {
 00178|         type = lib.types.bool;
 00179|         default = false;
-00180|         description = "Module generates files via stackpanel.files";
+00180|         description = "Module generates files via stack.files";
 00181|       };
 00182|       scripts = lib.mkOption {
 00183|         type = lib.types.bool;
@@ -5063,7 +5063,7 @@ Tool: read
 00325|         features = lib.mkOption {
 00326|           type = moduleFeaturesType;
 00327|           default = { };
-00328|           description = "Which stackpanel features this module uses";
+00328|           description = "Which stack features this module uses";
 00329|         };
 00330| 
 00331|         # Dependencies
@@ -5132,7 +5132,7 @@ Tool: read
 00394|           default = null;
 00395|           description = ''
 00396|             Name of the healthcheck module that provides health checks for this module.
-00397|             This links to stackpanel.healthchecks.modules.<name>.
+00397|             This links to stack.healthchecks.modules.<name>.
 00398|           '';
 00399|         };
 00400|       };
@@ -5223,13 +5223,13 @@ Tool: read
 00485|   # Options
 00486|   # ============================================================================
 00487| 
-00488|   options.stackpanel.modules = lib.mkOption {
+00488|   options.stack.modules = lib.mkOption {
 00489|     type = lib.types.attrsOf moduleType;
 00490|     default = { };
 00491|     description = ''
-00492|       Stackpanel modules that provide features and UI panels.
+00492|       Stack modules that provide features and UI panels.
 00493| 
-00494|       Modules are the unified way to extend stackpanel functionality:
+00494|       Modules are the unified way to extend stack functionality:
 00495|         - Add packages, scripts, and environment configuration
 00496|         - Generate files and manage secrets
 00497|         - Define health checks and background services
@@ -5240,13 +5240,13 @@ Tool: read
 00502|         - `enable`: Whether the module is active
 00503|         - `meta`: Display metadata (name, description, icon, category)
 00504|         - `source`: Where the module comes from (builtin, local, flake-input, registry)
-00505|         - `features`: Which stackpanel systems it uses
+00505|         - `features`: Which stack systems it uses
 00506|         - `panels`: UI panels to render in the web studio
 00507|         - `configSchema`: JSON Schema for configuration form generation
 00508|         - `healthcheckModule`: Link to health checks
 00509| 
 00510|       Modules can be:
-00511|         - Builtin: Shipped with stackpanel
+00511|         - Builtin: Shipped with stack
 00512|         - Local: Defined in your project
 00513|         - Remote: Installed via flake inputs or module registry
 00514|     '';
@@ -5299,42 +5299,42 @@ Tool: read
 00561|   # Computed Read-Only Options
 00562|   # ============================================================================
 00563| 
-00564|   options.stackpanel.modulesComputed = lib.mkOption {
+00564|   options.stack.modulesComputed = lib.mkOption {
 00565|     type = lib.types.attrsOf lib.types.unspecified;
 00566|     readOnly = true;
 00567|     default = modulesComputedEnabled;
 00568|     description = "Computed module configurations (only enabled modules, serializable)";
 00569|   };
 00570| 
-00571|   options.stackpanel.modulesComputedAll = lib.mkOption {
+00571|   options.stack.modulesComputedAll = lib.mkOption {
 00572|     type = lib.types.attrsOf lib.types.unspecified;
 00573|     readOnly = true;
 00574|     default = modulesComputed;
 00575|     description = "Computed module configurations (all modules including disabled, serializable)";
 00576|   };
 00577| 
-00578|   options.stackpanel.modulesList = lib.mkOption {
+00578|   options.stack.modulesList = lib.mkOption {
 00579|     type = lib.types.listOf lib.types.unspecified;
 00580|     readOnly = true;
 00581|     default = modulesListEnabled;
 00582|     description = "Flat list of enabled modules (for API consumption)";
 00583|   };
 00584| 
-00585|   options.stackpanel.modulesListAll = lib.mkOption {
+00585|   options.stack.modulesListAll = lib.mkOption {
 00586|     type = lib.types.listOf lib.types.unspecified;
 00587|     readOnly = true;
 00588|     default = modulesList;
 00589|     description = "Flat list of all modules including disabled (for API consumption)";
 00590|   };
 00591| 
-00592|   options.stackpanel.modulesBuiltin = lib.mkOption {
+00592|   options.stack.modulesBuiltin = lib.mkOption {
 00593|     type = lib.types.attrsOf lib.types.unspecified;
 00594|     readOnly = true;
 00595|     default = builtinModules;
-00596|     description = "Builtin modules shipped with stackpanel";
+00596|     description = "Builtin modules shipped with stack";
 00597|   };
 00598| 
-00599|   options.stackpanel.modulesExternal = lib.mkOption {
+00599|   options.stack.modulesExternal = lib.mkOption {
 00600|     type = lib.types.attrsOf lib.types.unspecified;
 00601|     readOnly = true;
 00602|     default = externalModules;
@@ -5343,7 +5343,7 @@ Tool: read
 00605| 
 00606|   # Fast metadata discovery - allows reading module metadata without full evaluation
 00607|   # Set by modules/default.nix from each module's meta.nix file
-00608|   options.stackpanel._moduleMetas = lib.mkOption {
+00608|   options.stack._moduleMetas = lib.mkOption {
 00609|     type = lib.types.attrsOf lib.types.unspecified;
 00610|     default = { };
 00611|     description = ''
@@ -5397,7 +5397,7 @@ Tool: todowrite
     },
     {
       "id": "t2",
-      "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+      "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
       "status": "in_progress",
       "priority": "high"
     },
@@ -5427,7 +5427,7 @@ Tool: todowrite
   },
   {
     "id": "t2",
-    "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+    "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
     "status": "in_progress",
     "priority": "high"
   },
@@ -5461,13 +5461,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/default.nix\n+{\n+  lib,\n+  config,\n+  pkgs,\n+  ...\n+}:\n+{\n+  imports = [\n+    ./module.nix\n+    ./ui.nix\n+  ];\n+}\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/default.nix\n+{\n+  lib,\n+  config,\n+  pkgs,\n+  ...\n+}:\n+{\n+  imports = [\n+    ./module.nix\n+    ./ui.nix\n+  ];\n+}\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-A nix/stackpanel/modules/colmena/default.nix
+A nix/stack/modules/colmena/default.nix
 ```
 ```
 
@@ -5481,13 +5481,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/meta.nix\n+{\n+  id = \"colmena\";\n+  name = \"Colmena\";\n+  description = \"NixOS fleet deployment orchestration with configurable colmena flags\";\n+  category = \"deployment\";\n+  version = \"1.0.0\";\n+  icon = \"ship\";\n+  homepage = \"https://colmena.cli.rs/\";\n+  author = \"Stackpanel\";\n+  tags = [\n+    \"colmena\"\n+    \"nixos\"\n+    \"deployment\"\n+    \"fleet\"\n+    \"orchestration\"\n+  ];\n+  requires = [ ];\n+  conflicts = [ ];\n+  features = {\n+    files = false;\n+    scripts = true;\n+    healthchecks = true;\n+    packages = true;\n+    services = false;\n+    secrets = false;\n+    tasks = false;\n+    appModule = false;\n+  };\n+  priority = 35;\n+}\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/meta.nix\n+{\n+  id = \"colmena\";\n+  name = \"Colmena\";\n+  description = \"NixOS fleet deployment orchestration with configurable colmena flags\";\n+  category = \"deployment\";\n+  version = \"1.0.0\";\n+  icon = \"ship\";\n+  homepage = \"https://colmena.cli.rs/\";\n+  author = \"Stack\";\n+  tags = [\n+    \"colmena\"\n+    \"nixos\"\n+    \"deployment\"\n+    \"fleet\"\n+    \"orchestration\"\n+  ];\n+  requires = [ ];\n+  conflicts = [ ];\n+  features = {\n+    files = false;\n+    scripts = true;\n+    healthchecks = true;\n+    packages = true;\n+    services = false;\n+    secrets = false;\n+    tasks = false;\n+    appModule = false;\n+  };\n+  priority = 35;\n+}\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-A nix/stackpanel/modules/colmena/meta.nix
+A nix/stack/modules/colmena/meta.nix
 ```
 ```
 
@@ -5501,13 +5501,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/module.nix\n+{\n+  lib,\n+  config,\n+  pkgs,\n+  ...\n+}:\n+let\n+  meta = import ./meta.nix;\n+  sp = config.stackpanel;\n+  cfg = sp.colmena;\n+\n+  mkFlag = enabled: flag: lib.optionals enabled [ flag ];\n+  mkValueFlag = flag: value: lib.optionals (value != null) [ flag (toString value) ];\n+  mkListFlag = flag: values: lib.optionals (values != [ ]) [ flag (lib.concatStringsSep \",\" values) ];\n+\n+  commonFlags =\n+    [ \"--config\" cfg.config ]\n+    ++ mkValueFlag \"--flake\" cfg.flake\n+    ++ mkListFlag \"--on\" cfg.on\n+    ++ mkListFlag \"--exclude\" cfg.exclude\n+    ++ mkFlag cfg.keepResult \"--keep-result\"\n+    ++ mkFlag cfg.verbose \"--verbose\"\n+    ++ mkFlag cfg.showTrace \"--show-trace\"\n+    ++ mkFlag cfg.impure \"--impure\"\n+    ++ mkValueFlag \"--eval-node-limit\" cfg.evalNodeLimit\n+    ++ mkValueFlag \"--parallel\" cfg.parallel\n+    ++ cfg.extraFlags;\n+\n+  applyFlags =\n+    commonFlags\n+    ++ mkFlag cfg.buildOnTarget \"--build-on-target\"\n+    ++ mkFlag cfg.uploadKeys \"--upload-keys\"\n+    ++ mkFlag cfg.noSubstitute \"--no-substitute\"\n+    ++ mkFlag cfg.substituteOnDestination \"--substitute-on-destination\"\n+    ++ mkFlag (!cfg.gzip) \"--no-gzip\"\n+    ++ mkFlag cfg.reboot \"--reboot\"\n+    ++ cfg.applyExtraFlags;\n+\n+  buildFlags =\n+    commonFlags\n+    ++ mkFlag cfg.buildOnTarget \"--build-on-target\"\n+    ++ mkFlag cfg.noSubstitute \"--no-substitute\"\n+    ++ mkFlag cfg.substituteOnDestination \"--substitute-on-destination\"\n+    ++ mkFlag (!cfg.gzip) \"--no-gzip\"\n+    ++ cfg.buildExtraFlags;\n+\n+  evalFlags = commonFlags ++ cfg.evalExtraFlags;\n+\n+  renderFlags = flags: lib.concatStringsSep \" \" (map lib.escapeShellArg flags);\n+\n+  mkColmenaScript =\n+    {\n+      subcommand,\n+      flags,\n+      description,\n+    }:\n+    {\n+      inherit description;\n+      args = [\n+        {\n+          name = \"...\";\n+          description = \"Additional arguments passed to colmena ${subcommand}\";\n+        }\n+      ];\n+      exec = ''\n+        set -euo pipefail\n+        exec ${lib.getExe cfg.package} ${subcommand} ${renderFlags flags} \"$@\"\n+      '';\n+    };\n+in\n+{\n+  options.stackpanel.colmena = {\n+    enable = lib.mkEnableOption \"Colmena deployment tooling\";\n+\n+    package = lib.mkOption {\n+      type = lib.types.package;\n+      default = pkgs.colmena;\n+      description = \"Colmena package to use for generated commands.\";\n+    };\n+\n+    config = lib.mkOption {\n+      type = lib.types.str;\n+      default = \"colmena.nix\";\n+      description = \"Path to the Colmena hive config passed via --config.\";\n+    };\n+\n+    flake = lib.mkOption {\n+      type = lib.types.nullOr lib.types.str;\n+      default = null;\n+      description = \"Optional flake reference passed via --flake.\";\n+    };\n+\n+    on = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Node names, tags, or patterns to include with --on.\";\n+    };\n+\n+    exclude = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Node names, tags, or patterns to exclude with --exclude.\";\n+    };\n+\n+    keepResult = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Keep build results in the GC roots (--keep-result).\";\n+    };\n+\n+    verbose = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Enable verbose Colmena output (--verbose).\";\n+    };\n+\n+    showTrace = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Show detailed Nix traces on evaluation failures (--show-trace).\";\n+    };\n+\n+    impure = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Evaluate with impure mode enabled (--impure).\";\n+    };\n+\n+    evalNodeLimit = lib.mkOption {\n+      type = lib.types.nullOr lib.types.int;\n+      default = null;\n+      description = \"Maximum number of nodes evaluated concurrently (--eval-node-limit).\";\n+    };\n+\n+    parallel = lib.mkOption {\n+      type = lib.types.nullOr lib.types.int;\n+      default = null;\n+      description = \"Maximum number of deployment jobs run concurrently (--parallel).\";\n+    };\n+\n+    buildOnTarget = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Build closures on target nodes (--build-on-target).\";\n+    };\n+\n+    uploadKeys = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Upload deployment keys before activation (--upload-keys).\";\n+    };\n+\n+    noSubstitute = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Disable binary cache substitution (--no-substitute).\";\n+    };\n+\n+    substituteOnDestination = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Allow substitution on destination nodes (--substitute-on-destination).\";\n+    };\n+\n+    gzip = lib.mkOption {\n+      type = lib.types.bool;\n+      default = true;\n+      description = \"Enable gzip compression for build closure transfer (use --no-gzip when false).\";\n+    };\n+\n+    reboot = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Allow Colmena to reboot machines if needed (--reboot).\";\n+    };\n+\n+    extraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to all generated Colmena commands.\";\n+    };\n+\n+    applyExtraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to the generated colmena-apply command.\";\n+    };\n+\n+    buildExtraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to the generated colmena-build command.\";\n+    };\n+\n+    evalExtraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to the generated colmena-eval command.\";\n+    };\n+\n+    computed = lib.mkOption {\n+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);\n+      readOnly = true;\n+      description = \"Computed Colmena flag sets for each generated command.\";\n+    };\n+  };\n+\n+  config = lib.mkIf (sp.enable && cfg.enable) {\n+    stackpanel.colmena.computed = {\n+      common = commonFlags;\n+      apply = applyFlags;\n+      build = buildFlags;\n+      eval = evalFlags;\n+    };\n+\n+    stackpanel.devshell.packages = [\n+      cfg.package\n+    ];\n+\n+    stackpanel.scripts = {\n+      colmena-apply = mkColmenaScript {\n+        subcommand = \"apply\";\n+        flags = applyFlags;\n+        description = \"Run colmena apply with stackpanel defaults\";\n+      };\n+\n+      colmena-build = mkColmenaScript {\n+        subcommand = \"build\";\n+        flags = buildFlags;\n+        description = \"Run colmena build with stackpanel defaults\";\n+      };\n+\n+      colmena-eval = mkColmenaScript {\n+        subcommand = \"eval\";\n+        flags = evalFlags;\n+        description = \"Run colmena eval with stackpanel defaults\";\n+      };\n+    };\n+\n+    stackpanel.healthchecks.modules.${meta.id} = {\n+      enable = true;\n+      displayName = meta.name;\n+      checks = {\n+        colmena-installed = {\n+          description = \"Colmena CLI is installed and accessible\";\n+          script = ''\n+            command -v colmena >/dev/null 2>&1 && colmena --help >/dev/null\n+          '';\n+          severity = \"critical\";\n+          timeout = 5;\n+        };\n+\n+        hive-config = {\n+          description = \"Configured Colmena hive file exists\";\n+          script = ''\n+            if [ -n \"${cfg.flake or \"\"}\" ]; then\n+              exit 0\n+            fi\n+\n+            ROOT=\"''${STACKPANEL_ROOT:-$(pwd)}\"\n+            test -f \"$ROOT/${cfg.config}\"\n+          '';\n+          severity = \"warning\";\n+          timeout = 5;\n+        };\n+      };\n+    };\n+\n+    stackpanel.modules.${meta.id} = {\n+      enable = true;\n+      meta = {\n+        name = meta.name;\n+        description = meta.description;\n+        icon = meta.icon;\n+        category = meta.category;\n+        author = meta.author;\n+        version = meta.version;\n+        homepage = meta.homepage;\n+      };\n+      source.type = \"builtin\";\n+      features = meta.features;\n+      tags = meta.tags;\n+      priority = meta.priority;\n+      healthcheckModule = meta.id;\n+    };\n+  };\n+}\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/module.nix\n+{\n+  lib,\n+  config,\n+  pkgs,\n+  ...\n+}:\n+let\n+  meta = import ./meta.nix;\n+  sp = config.stack;\n+  cfg = sp.colmena;\n+\n+  mkFlag = enabled: flag: lib.optionals enabled [ flag ];\n+  mkValueFlag = flag: value: lib.optionals (value != null) [ flag (toString value) ];\n+  mkListFlag = flag: values: lib.optionals (values != [ ]) [ flag (lib.concatStringsSep \",\" values) ];\n+\n+  commonFlags =\n+    [ \"--config\" cfg.config ]\n+    ++ mkValueFlag \"--flake\" cfg.flake\n+    ++ mkListFlag \"--on\" cfg.on\n+    ++ mkListFlag \"--exclude\" cfg.exclude\n+    ++ mkFlag cfg.keepResult \"--keep-result\"\n+    ++ mkFlag cfg.verbose \"--verbose\"\n+    ++ mkFlag cfg.showTrace \"--show-trace\"\n+    ++ mkFlag cfg.impure \"--impure\"\n+    ++ mkValueFlag \"--eval-node-limit\" cfg.evalNodeLimit\n+    ++ mkValueFlag \"--parallel\" cfg.parallel\n+    ++ cfg.extraFlags;\n+\n+  applyFlags =\n+    commonFlags\n+    ++ mkFlag cfg.buildOnTarget \"--build-on-target\"\n+    ++ mkFlag cfg.uploadKeys \"--upload-keys\"\n+    ++ mkFlag cfg.noSubstitute \"--no-substitute\"\n+    ++ mkFlag cfg.substituteOnDestination \"--substitute-on-destination\"\n+    ++ mkFlag (!cfg.gzip) \"--no-gzip\"\n+    ++ mkFlag cfg.reboot \"--reboot\"\n+    ++ cfg.applyExtraFlags;\n+\n+  buildFlags =\n+    commonFlags\n+    ++ mkFlag cfg.buildOnTarget \"--build-on-target\"\n+    ++ mkFlag cfg.noSubstitute \"--no-substitute\"\n+    ++ mkFlag cfg.substituteOnDestination \"--substitute-on-destination\"\n+    ++ mkFlag (!cfg.gzip) \"--no-gzip\"\n+    ++ cfg.buildExtraFlags;\n+\n+  evalFlags = commonFlags ++ cfg.evalExtraFlags;\n+\n+  renderFlags = flags: lib.concatStringsSep \" \" (map lib.escapeShellArg flags);\n+\n+  mkColmenaScript =\n+    {\n+      subcommand,\n+      flags,\n+      description,\n+    }:\n+    {\n+      inherit description;\n+      args = [\n+        {\n+          name = \"...\";\n+          description = \"Additional arguments passed to colmena ${subcommand}\";\n+        }\n+      ];\n+      exec = ''\n+        set -euo pipefail\n+        exec ${lib.getExe cfg.package} ${subcommand} ${renderFlags flags} \"$@\"\n+      '';\n+    };\n+in\n+{\n+  options.stack.colmena = {\n+    enable = lib.mkEnableOption \"Colmena deployment tooling\";\n+\n+    package = lib.mkOption {\n+      type = lib.types.package;\n+      default = pkgs.colmena;\n+      description = \"Colmena package to use for generated commands.\";\n+    };\n+\n+    config = lib.mkOption {\n+      type = lib.types.str;\n+      default = \"colmena.nix\";\n+      description = \"Path to the Colmena hive config passed via --config.\";\n+    };\n+\n+    flake = lib.mkOption {\n+      type = lib.types.nullOr lib.types.str;\n+      default = null;\n+      description = \"Optional flake reference passed via --flake.\";\n+    };\n+\n+    on = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Node names, tags, or patterns to include with --on.\";\n+    };\n+\n+    exclude = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Node names, tags, or patterns to exclude with --exclude.\";\n+    };\n+\n+    keepResult = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Keep build results in the GC roots (--keep-result).\";\n+    };\n+\n+    verbose = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Enable verbose Colmena output (--verbose).\";\n+    };\n+\n+    showTrace = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Show detailed Nix traces on evaluation failures (--show-trace).\";\n+    };\n+\n+    impure = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Evaluate with impure mode enabled (--impure).\";\n+    };\n+\n+    evalNodeLimit = lib.mkOption {\n+      type = lib.types.nullOr lib.types.int;\n+      default = null;\n+      description = \"Maximum number of nodes evaluated concurrently (--eval-node-limit).\";\n+    };\n+\n+    parallel = lib.mkOption {\n+      type = lib.types.nullOr lib.types.int;\n+      default = null;\n+      description = \"Maximum number of deployment jobs run concurrently (--parallel).\";\n+    };\n+\n+    buildOnTarget = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Build closures on target nodes (--build-on-target).\";\n+    };\n+\n+    uploadKeys = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Upload deployment keys before activation (--upload-keys).\";\n+    };\n+\n+    noSubstitute = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Disable binary cache substitution (--no-substitute).\";\n+    };\n+\n+    substituteOnDestination = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Allow substitution on destination nodes (--substitute-on-destination).\";\n+    };\n+\n+    gzip = lib.mkOption {\n+      type = lib.types.bool;\n+      default = true;\n+      description = \"Enable gzip compression for build closure transfer (use --no-gzip when false).\";\n+    };\n+\n+    reboot = lib.mkOption {\n+      type = lib.types.bool;\n+      default = false;\n+      description = \"Allow Colmena to reboot machines if needed (--reboot).\";\n+    };\n+\n+    extraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to all generated Colmena commands.\";\n+    };\n+\n+    applyExtraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to the generated colmena-apply command.\";\n+    };\n+\n+    buildExtraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to the generated colmena-build command.\";\n+    };\n+\n+    evalExtraFlags = lib.mkOption {\n+      type = lib.types.listOf lib.types.str;\n+      default = [ ];\n+      description = \"Extra flags appended to the generated colmena-eval command.\";\n+    };\n+\n+    computed = lib.mkOption {\n+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);\n+      readOnly = true;\n+      description = \"Computed Colmena flag sets for each generated command.\";\n+    };\n+  };\n+\n+  config = lib.mkIf (sp.enable && cfg.enable) {\n+    stack.colmena.computed = {\n+      common = commonFlags;\n+      apply = applyFlags;\n+      build = buildFlags;\n+      eval = evalFlags;\n+    };\n+\n+    stack.devshell.packages = [\n+      cfg.package\n+    ];\n+\n+    stack.scripts = {\n+      colmena-apply = mkColmenaScript {\n+        subcommand = \"apply\";\n+        flags = applyFlags;\n+        description = \"Run colmena apply with stack defaults\";\n+      };\n+\n+      colmena-build = mkColmenaScript {\n+        subcommand = \"build\";\n+        flags = buildFlags;\n+        description = \"Run colmena build with stack defaults\";\n+      };\n+\n+      colmena-eval = mkColmenaScript {\n+        subcommand = \"eval\";\n+        flags = evalFlags;\n+        description = \"Run colmena eval with stack defaults\";\n+      };\n+    };\n+\n+    stack.healthchecks.modules.${meta.id} = {\n+      enable = true;\n+      displayName = meta.name;\n+      checks = {\n+        colmena-installed = {\n+          description = \"Colmena CLI is installed and accessible\";\n+          script = ''\n+            command -v colmena >/dev/null 2>&1 && colmena --help >/dev/null\n+          '';\n+          severity = \"critical\";\n+          timeout = 5;\n+        };\n+\n+        hive-config = {\n+          description = \"Configured Colmena hive file exists\";\n+          script = ''\n+            if [ -n \"${cfg.flake or \"\"}\" ]; then\n+              exit 0\n+            fi\n+\n+            ROOT=\"''${STACKPANEL_ROOT:-$(pwd)}\"\n+            test -f \"$ROOT/${cfg.config}\"\n+          '';\n+          severity = \"warning\";\n+          timeout = 5;\n+        };\n+      };\n+    };\n+\n+    stack.modules.${meta.id} = {\n+      enable = true;\n+      meta = {\n+        name = meta.name;\n+        description = meta.description;\n+        icon = meta.icon;\n+        category = meta.category;\n+        author = meta.author;\n+        version = meta.version;\n+        homepage = meta.homepage;\n+      };\n+      source.type = \"builtin\";\n+      features = meta.features;\n+      tags = meta.tags;\n+      priority = meta.priority;\n+      healthcheckModule = meta.id;\n+    };\n+  };\n+}\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-A nix/stackpanel/modules/colmena/module.nix
+A nix/stack/modules/colmena/module.nix
 ```
 ```
 
@@ -5525,13 +5525,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/ui.nix\n+{\n+  lib,\n+  config,\n+  ...\n+}:\n+let\n+  meta = import ./meta.nix;\n+  sp = config.stackpanel;\n+  cfg = sp.colmena;\n+\n+  toBool = value: if value then \"true\" else \"false\";\n+  toJson = value: builtins.toJSON value;\n+  toNumOrEmpty = value: if value == null then \"\" else toString value;\n+in\n+lib.mkIf sp.enable {\n+  stackpanel.panels.\"${meta.id}-status\" = {\n+    module = meta.id;\n+    title = \"Colmena\";\n+    description = meta.description;\n+    icon = meta.icon;\n+    type = \"PANEL_TYPE_STATUS\";\n+    order = meta.priority;\n+    fields = [\n+      {\n+        name = \"metrics\";\n+        type = \"FIELD_TYPE_STRING\";\n+        value = toJson [\n+          {\n+            label = \"Enabled\";\n+            value = if cfg.enable then \"Yes\" else \"No\";\n+            status = if cfg.enable then \"ok\" else \"warning\";\n+          }\n+          {\n+            label = \"Hive Config\";\n+            value = cfg.config;\n+            status = \"ok\";\n+          }\n+          {\n+            label = \"Flake\";\n+            value = cfg.flake or \"(not set)\";\n+            status = \"ok\";\n+          }\n+        ];\n+      }\n+    ];\n+  };\n+\n+  stackpanel.panels.\"${meta.id}-config\" = {\n+    module = meta.id;\n+    title = \"Colmena Settings\";\n+    description = \"Configure Colmena defaults used by stackpanel scripts\";\n+    icon = meta.icon;\n+    type = \"PANEL_TYPE_FORM\";\n+    order = meta.priority + 1;\n+    fields = [\n+      {\n+        name = \"enable\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Enable Colmena\";\n+        description = \"Enable Colmena tooling, scripts, and health checks\";\n+        value = toBool cfg.enable;\n+        configPath = \"stackpanel.colmena.enable\";\n+      }\n+      {\n+        name = \"config\";\n+        type = \"FIELD_TYPE_STRING\";\n+        label = \"Hive Config Path\";\n+        description = \"Path to the Colmena hive config file\";\n+        value = cfg.config;\n+        configPath = \"stackpanel.colmena.config\";\n+      }\n+      {\n+        name = \"flake\";\n+        type = \"FIELD_TYPE_STRING\";\n+        label = \"Flake Reference\";\n+        description = \"Optional flake target to use instead of plain hive file\";\n+        value = cfg.flake or \"\";\n+        placeholder = \".#colmena\";\n+        configPath = \"stackpanel.colmena.flake\";\n+      }\n+      {\n+        name = \"on\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Target Filter\";\n+        description = \"List of node names, tags, or patterns passed to --on\";\n+        value = toJson cfg.on;\n+        configPath = \"stackpanel.colmena.on\";\n+      }\n+      {\n+        name = \"exclude\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Exclude Filter\";\n+        description = \"List of node names, tags, or patterns passed to --exclude\";\n+        value = toJson cfg.exclude;\n+        configPath = \"stackpanel.colmena.exclude\";\n+      }\n+      {\n+        name = \"keepResult\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Keep Result\";\n+        description = \"Keep build results in GC roots\";\n+        value = toBool cfg.keepResult;\n+        configPath = \"stackpanel.colmena.keepResult\";\n+      }\n+      {\n+        name = \"verbose\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Verbose\";\n+        description = \"Enable verbose Colmena output\";\n+        value = toBool cfg.verbose;\n+        configPath = \"stackpanel.colmena.verbose\";\n+      }\n+      {\n+        name = \"showTrace\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Show Trace\";\n+        description = \"Show detailed Nix traces on errors\";\n+        value = toBool cfg.showTrace;\n+        configPath = \"stackpanel.colmena.showTrace\";\n+      }\n+      {\n+        name = \"impure\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Impure Eval\";\n+        description = \"Allow impure Nix evaluation\";\n+        value = toBool cfg.impure;\n+        configPath = \"stackpanel.colmena.impure\";\n+      }\n+      {\n+        name = \"evalNodeLimit\";\n+        type = \"FIELD_TYPE_NUMBER\";\n+        label = \"Eval Node Limit\";\n+        description = \"Maximum nodes evaluated concurrently\";\n+        value = toNumOrEmpty cfg.evalNodeLimit;\n+        configPath = \"stackpanel.colmena.evalNodeLimit\";\n+      }\n+      {\n+        name = \"parallel\";\n+        type = \"FIELD_TYPE_NUMBER\";\n+        label = \"Parallel Jobs\";\n+        description = \"Maximum concurrent deployment jobs\";\n+        value = toNumOrEmpty cfg.parallel;\n+        configPath = \"stackpanel.colmena.parallel\";\n+      }\n+      {\n+        name = \"buildOnTarget\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Build On Target\";\n+        description = \"Build closures on target nodes\";\n+        value = toBool cfg.buildOnTarget;\n+        configPath = \"stackpanel.colmena.buildOnTarget\";\n+      }\n+      {\n+        name = \"uploadKeys\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Upload Keys\";\n+        description = \"Upload deployment keys before activation\";\n+        value = toBool cfg.uploadKeys;\n+        configPath = \"stackpanel.colmena.uploadKeys\";\n+      }\n+      {\n+        name = \"noSubstitute\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"No Substitute\";\n+        description = \"Disable binary cache substitution\";\n+        value = toBool cfg.noSubstitute;\n+        configPath = \"stackpanel.colmena.noSubstitute\";\n+      }\n+      {\n+        name = \"substituteOnDestination\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Substitute On Destination\";\n+        description = \"Allow substitution on destination nodes\";\n+        value = toBool cfg.substituteOnDestination;\n+        configPath = \"stackpanel.colmena.substituteOnDestination\";\n+      }\n+      {\n+        name = \"gzip\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Gzip Transfers\";\n+        description = \"Compress closure transfer streams\";\n+        value = toBool cfg.gzip;\n+        configPath = \"stackpanel.colmena.gzip\";\n+      }\n+      {\n+        name = \"reboot\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Allow Reboot\";\n+        description = \"Allow reboots when required by activation\";\n+        value = toBool cfg.reboot;\n+        configPath = \"stackpanel.colmena.reboot\";\n+      }\n+      {\n+        name = \"extraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Extra Flags\";\n+        description = \"Extra flags appended to every colmena command\";\n+        value = toJson cfg.extraFlags;\n+        configPath = \"stackpanel.colmena.extraFlags\";\n+      }\n+      {\n+        name = \"applyExtraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Apply Extra Flags\";\n+        description = \"Extra flags for colmena-apply only\";\n+        value = toJson cfg.applyExtraFlags;\n+        configPath = \"stackpanel.colmena.applyExtraFlags\";\n+      }\n+      {\n+        name = \"buildExtraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Build Extra Flags\";\n+        description = \"Extra flags for colmena-build only\";\n+        value = toJson cfg.buildExtraFlags;\n+        configPath = \"stackpanel.colmena.buildExtraFlags\";\n+      }\n+      {\n+        name = \"evalExtraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Eval Extra Flags\";\n+        description = \"Extra flags for colmena-eval only\";\n+        value = toJson cfg.evalExtraFlags;\n+        configPath = \"stackpanel.colmena.evalExtraFlags\";\n+      }\n+    ];\n+  };\n+}\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Add File: /Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/ui.nix\n+{\n+  lib,\n+  config,\n+  ...\n+}:\n+let\n+  meta = import ./meta.nix;\n+  sp = config.stack;\n+  cfg = sp.colmena;\n+\n+  toBool = value: if value then \"true\" else \"false\";\n+  toJson = value: builtins.toJSON value;\n+  toNumOrEmpty = value: if value == null then \"\" else toString value;\n+in\n+lib.mkIf sp.enable {\n+  stack.panels.\"${meta.id}-status\" = {\n+    module = meta.id;\n+    title = \"Colmena\";\n+    description = meta.description;\n+    icon = meta.icon;\n+    type = \"PANEL_TYPE_STATUS\";\n+    order = meta.priority;\n+    fields = [\n+      {\n+        name = \"metrics\";\n+        type = \"FIELD_TYPE_STRING\";\n+        value = toJson [\n+          {\n+            label = \"Enabled\";\n+            value = if cfg.enable then \"Yes\" else \"No\";\n+            status = if cfg.enable then \"ok\" else \"warning\";\n+          }\n+          {\n+            label = \"Hive Config\";\n+            value = cfg.config;\n+            status = \"ok\";\n+          }\n+          {\n+            label = \"Flake\";\n+            value = cfg.flake or \"(not set)\";\n+            status = \"ok\";\n+          }\n+        ];\n+      }\n+    ];\n+  };\n+\n+  stack.panels.\"${meta.id}-config\" = {\n+    module = meta.id;\n+    title = \"Colmena Settings\";\n+    description = \"Configure Colmena defaults used by stack scripts\";\n+    icon = meta.icon;\n+    type = \"PANEL_TYPE_FORM\";\n+    order = meta.priority + 1;\n+    fields = [\n+      {\n+        name = \"enable\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Enable Colmena\";\n+        description = \"Enable Colmena tooling, scripts, and health checks\";\n+        value = toBool cfg.enable;\n+        configPath = \"stack.colmena.enable\";\n+      }\n+      {\n+        name = \"config\";\n+        type = \"FIELD_TYPE_STRING\";\n+        label = \"Hive Config Path\";\n+        description = \"Path to the Colmena hive config file\";\n+        value = cfg.config;\n+        configPath = \"stack.colmena.config\";\n+      }\n+      {\n+        name = \"flake\";\n+        type = \"FIELD_TYPE_STRING\";\n+        label = \"Flake Reference\";\n+        description = \"Optional flake target to use instead of plain hive file\";\n+        value = cfg.flake or \"\";\n+        placeholder = \".#colmena\";\n+        configPath = \"stack.colmena.flake\";\n+      }\n+      {\n+        name = \"on\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Target Filter\";\n+        description = \"List of node names, tags, or patterns passed to --on\";\n+        value = toJson cfg.on;\n+        configPath = \"stack.colmena.on\";\n+      }\n+      {\n+        name = \"exclude\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Exclude Filter\";\n+        description = \"List of node names, tags, or patterns passed to --exclude\";\n+        value = toJson cfg.exclude;\n+        configPath = \"stack.colmena.exclude\";\n+      }\n+      {\n+        name = \"keepResult\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Keep Result\";\n+        description = \"Keep build results in GC roots\";\n+        value = toBool cfg.keepResult;\n+        configPath = \"stack.colmena.keepResult\";\n+      }\n+      {\n+        name = \"verbose\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Verbose\";\n+        description = \"Enable verbose Colmena output\";\n+        value = toBool cfg.verbose;\n+        configPath = \"stack.colmena.verbose\";\n+      }\n+      {\n+        name = \"showTrace\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Show Trace\";\n+        description = \"Show detailed Nix traces on errors\";\n+        value = toBool cfg.showTrace;\n+        configPath = \"stack.colmena.showTrace\";\n+      }\n+      {\n+        name = \"impure\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Impure Eval\";\n+        description = \"Allow impure Nix evaluation\";\n+        value = toBool cfg.impure;\n+        configPath = \"stack.colmena.impure\";\n+      }\n+      {\n+        name = \"evalNodeLimit\";\n+        type = \"FIELD_TYPE_NUMBER\";\n+        label = \"Eval Node Limit\";\n+        description = \"Maximum nodes evaluated concurrently\";\n+        value = toNumOrEmpty cfg.evalNodeLimit;\n+        configPath = \"stack.colmena.evalNodeLimit\";\n+      }\n+      {\n+        name = \"parallel\";\n+        type = \"FIELD_TYPE_NUMBER\";\n+        label = \"Parallel Jobs\";\n+        description = \"Maximum concurrent deployment jobs\";\n+        value = toNumOrEmpty cfg.parallel;\n+        configPath = \"stack.colmena.parallel\";\n+      }\n+      {\n+        name = \"buildOnTarget\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Build On Target\";\n+        description = \"Build closures on target nodes\";\n+        value = toBool cfg.buildOnTarget;\n+        configPath = \"stack.colmena.buildOnTarget\";\n+      }\n+      {\n+        name = \"uploadKeys\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Upload Keys\";\n+        description = \"Upload deployment keys before activation\";\n+        value = toBool cfg.uploadKeys;\n+        configPath = \"stack.colmena.uploadKeys\";\n+      }\n+      {\n+        name = \"noSubstitute\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"No Substitute\";\n+        description = \"Disable binary cache substitution\";\n+        value = toBool cfg.noSubstitute;\n+        configPath = \"stack.colmena.noSubstitute\";\n+      }\n+      {\n+        name = \"substituteOnDestination\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Substitute On Destination\";\n+        description = \"Allow substitution on destination nodes\";\n+        value = toBool cfg.substituteOnDestination;\n+        configPath = \"stack.colmena.substituteOnDestination\";\n+      }\n+      {\n+        name = \"gzip\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Gzip Transfers\";\n+        description = \"Compress closure transfer streams\";\n+        value = toBool cfg.gzip;\n+        configPath = \"stack.colmena.gzip\";\n+      }\n+      {\n+        name = \"reboot\";\n+        type = \"FIELD_TYPE_BOOLEAN\";\n+        label = \"Allow Reboot\";\n+        description = \"Allow reboots when required by activation\";\n+        value = toBool cfg.reboot;\n+        configPath = \"stack.colmena.reboot\";\n+      }\n+      {\n+        name = \"extraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Extra Flags\";\n+        description = \"Extra flags appended to every colmena command\";\n+        value = toJson cfg.extraFlags;\n+        configPath = \"stack.colmena.extraFlags\";\n+      }\n+      {\n+        name = \"applyExtraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Apply Extra Flags\";\n+        description = \"Extra flags for colmena-apply only\";\n+        value = toJson cfg.applyExtraFlags;\n+        configPath = \"stack.colmena.applyExtraFlags\";\n+      }\n+      {\n+        name = \"buildExtraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Build Extra Flags\";\n+        description = \"Extra flags for colmena-build only\";\n+        value = toJson cfg.buildExtraFlags;\n+        configPath = \"stack.colmena.buildExtraFlags\";\n+      }\n+      {\n+        name = \"evalExtraFlags\";\n+        type = \"FIELD_TYPE_JSON\";\n+        label = \"Eval Extra Flags\";\n+        description = \"Extra flags for colmena-eval only\";\n+        value = toJson cfg.evalExtraFlags;\n+        configPath = \"stack.colmena.evalExtraFlags\";\n+      }\n+    ];\n+  };\n+}\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-A nix/stackpanel/modules/colmena/ui.nix
+A nix/stack/modules/colmena/ui.nix
 ```
 ```
 
@@ -5549,13 +5549,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/module.nix\n@@\n     computed = lib.mkOption {\n       type = lib.types.attrsOf (lib.types.listOf lib.types.str);\n+      default = { };\n       readOnly = true;\n       description = \"Computed Colmena flag sets for each generated command.\";\n     };\n@@\n         hive-config = {\n           description = \"Configured Colmena hive file exists\";\n           script = ''\n-            if [ -n \"${cfg.flake or \"\"}\" ]; then\n+            if [ -n \"${if cfg.flake != null then cfg.flake else \"\"}\" ]; then\n               exit 0\n             fi\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/module.nix\n@@\n     computed = lib.mkOption {\n       type = lib.types.attrsOf (lib.types.listOf lib.types.str);\n+      default = { };\n       readOnly = true;\n       description = \"Computed Colmena flag sets for each generated command.\";\n     };\n@@\n         hive-config = {\n           description = \"Configured Colmena hive file exists\";\n           script = ''\n-            if [ -n \"${cfg.flake or \"\"}\" ]; then\n+            if [ -n \"${if cfg.flake != null then cfg.flake else \"\"}\" ]; then\n               exit 0\n             fi\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/modules/colmena/module.nix
+M nix/stack/modules/colmena/module.nix
 ```
 ```
 
@@ -5573,13 +5573,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/ui.nix\n@@\n   toBool = value: if value then \"true\" else \"false\";\n   toJson = value: builtins.toJSON value;\n   toNumOrEmpty = value: if value == null then \"\" else toString value;\n+  flakeDisplay = if cfg.flake != null then cfg.flake else \"(not set)\";\n+  flakeInputValue = if cfg.flake != null then cfg.flake else \"\";\n@@\n           {\n             label = \"Flake\";\n-            value = cfg.flake or \"(not set)\";\n+            value = flakeDisplay;\n             status = \"ok\";\n           }\n@@\n         label = \"Flake Reference\";\n         description = \"Optional flake target to use instead of plain hive file\";\n-        value = cfg.flake or \"\";\n+        value = flakeInputValue;\n         placeholder = \".#colmena\";\n         configPath = \"stackpanel.colmena.flake\";\n       }\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/ui.nix\n@@\n   toBool = value: if value then \"true\" else \"false\";\n   toJson = value: builtins.toJSON value;\n   toNumOrEmpty = value: if value == null then \"\" else toString value;\n+  flakeDisplay = if cfg.flake != null then cfg.flake else \"(not set)\";\n+  flakeInputValue = if cfg.flake != null then cfg.flake else \"\";\n@@\n           {\n             label = \"Flake\";\n-            value = cfg.flake or \"(not set)\";\n+            value = flakeDisplay;\n             status = \"ok\";\n           }\n@@\n         label = \"Flake Reference\";\n         description = \"Optional flake target to use instead of plain hive file\";\n-        value = cfg.flake or \"\";\n+        value = flakeInputValue;\n         placeholder = \".#colmena\";\n         configPath = \"stack.colmena.flake\";\n       }\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/modules/colmena/ui.nix
+M nix/stack/modules/colmena/ui.nix
 ```
 ```
 
@@ -5597,7 +5597,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/module.nix"
 }
 ```
 **Output:**
@@ -5611,7 +5611,7 @@ Tool: read
 00006| }:
 00007| let
 00008|   meta = import ./meta.nix;
-00009|   sp = config.stackpanel;
+00009|   sp = config.stack;
 00010|   cfg = sp.colmena;
 00011| 
 00012|   mkFlag = enabled: flag: lib.optionals enabled [ flag ];
@@ -5686,7 +5686,7 @@ Tool: read
 00081|     };
 00082| in
 00083| {
-00084|   options.stackpanel.colmena = {
+00084|   options.stack.colmena = {
 00085|     enable = lib.mkEnableOption "Colmena deployment tooling";
 00086| 
 00087|     package = lib.mkOption {
@@ -5824,38 +5824,38 @@ Tool: read
 00219|   };
 00220| 
 00221|   config = lib.mkIf (sp.enable && cfg.enable) {
-00222|     stackpanel.colmena.computed = {
+00222|     stack.colmena.computed = {
 00223|       common = commonFlags;
 00224|       apply = applyFlags;
 00225|       build = buildFlags;
 00226|       eval = evalFlags;
 00227|     };
 00228| 
-00229|     stackpanel.devshell.packages = [
+00229|     stack.devshell.packages = [
 00230|       cfg.package
 00231|     ];
 00232| 
-00233|     stackpanel.scripts = {
+00233|     stack.scripts = {
 00234|       colmena-apply = mkColmenaScript {
 00235|         subcommand = "apply";
 00236|         flags = applyFlags;
-00237|         description = "Run colmena apply with stackpanel defaults";
+00237|         description = "Run colmena apply with stack defaults";
 00238|       };
 00239| 
 00240|       colmena-build = mkColmenaScript {
 00241|         subcommand = "build";
 00242|         flags = buildFlags;
-00243|         description = "Run colmena build with stackpanel defaults";
+00243|         description = "Run colmena build with stack defaults";
 00244|       };
 00245| 
 00246|       colmena-eval = mkColmenaScript {
 00247|         subcommand = "eval";
 00248|         flags = evalFlags;
-00249|         description = "Run colmena eval with stackpanel defaults";
+00249|         description = "Run colmena eval with stack defaults";
 00250|       };
 00251|     };
 00252| 
-00253|     stackpanel.healthchecks.modules.${meta.id} = {
+00253|     stack.healthchecks.modules.${meta.id} = {
 00254|       enable = true;
 00255|       displayName = meta.name;
 00256|       checks = {
@@ -5884,7 +5884,7 @@ Tool: read
 00279|       };
 00280|     };
 00281| 
-00282|     stackpanel.modules.${meta.id} = {
+00282|     stack.modules.${meta.id} = {
 00283|       enable = true;
 00284|       meta = {
 00285|         name = meta.name;
@@ -5916,7 +5916,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/ui.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/ui.nix"
 }
 ```
 **Output:**
@@ -5929,7 +5929,7 @@ Tool: read
 00005| }:
 00006| let
 00007|   meta = import ./meta.nix;
-00008|   sp = config.stackpanel;
+00008|   sp = config.stack;
 00009|   cfg = sp.colmena;
 00010| 
 00011|   toBool = value: if value then "true" else "false";
@@ -5939,7 +5939,7 @@ Tool: read
 00015|   flakeInputValue = if cfg.flake != null then cfg.flake else "";
 00016| in
 00017| lib.mkIf sp.enable {
-00018|   stackpanel.panels."${meta.id}-status" = {
+00018|   stack.panels."${meta.id}-status" = {
 00019|     module = meta.id;
 00020|     title = "Colmena";
 00021|     description = meta.description;
@@ -5971,10 +5971,10 @@ Tool: read
 00047|     ];
 00048|   };
 00049| 
-00050|   stackpanel.panels."${meta.id}-config" = {
+00050|   stack.panels."${meta.id}-config" = {
 00051|     module = meta.id;
 00052|     title = "Colmena Settings";
-00053|     description = "Configure Colmena defaults used by stackpanel scripts";
+00053|     description = "Configure Colmena defaults used by stack scripts";
 00054|     icon = meta.icon;
 00055|     type = "PANEL_TYPE_FORM";
 00056|     order = meta.priority + 1;
@@ -5985,7 +5985,7 @@ Tool: read
 00061|         label = "Enable Colmena";
 00062|         description = "Enable Colmena tooling, scripts, and health checks";
 00063|         value = toBool cfg.enable;
-00064|         configPath = "stackpanel.colmena.enable";
+00064|         configPath = "stack.colmena.enable";
 00065|       }
 00066|       {
 00067|         name = "config";
@@ -5993,7 +5993,7 @@ Tool: read
 00069|         label = "Hive Config Path";
 00070|         description = "Path to the Colmena hive config file";
 00071|         value = cfg.config;
-00072|         configPath = "stackpanel.colmena.config";
+00072|         configPath = "stack.colmena.config";
 00073|       }
 00074|       {
 00075|         name = "flake";
@@ -6002,7 +6002,7 @@ Tool: read
 00078|         description = "Optional flake target to use instead of plain hive file";
 00079|         value = flakeInputValue;
 00080|         placeholder = ".#colmena";
-00081|         configPath = "stackpanel.colmena.flake";
+00081|         configPath = "stack.colmena.flake";
 00082|       }
 00083|       {
 00084|         name = "on";
@@ -6010,7 +6010,7 @@ Tool: read
 00086|         label = "Target Filter";
 00087|         description = "List of node names, tags, or patterns passed to --on";
 00088|         value = toJson cfg.on;
-00089|         configPath = "stackpanel.colmena.on";
+00089|         configPath = "stack.colmena.on";
 00090|       }
 00091|       {
 00092|         name = "exclude";
@@ -6018,7 +6018,7 @@ Tool: read
 00094|         label = "Exclude Filter";
 00095|         description = "List of node names, tags, or patterns passed to --exclude";
 00096|         value = toJson cfg.exclude;
-00097|         configPath = "stackpanel.colmena.exclude";
+00097|         configPath = "stack.colmena.exclude";
 00098|       }
 00099|       {
 00100|         name = "keepResult";
@@ -6026,7 +6026,7 @@ Tool: read
 00102|         label = "Keep Result";
 00103|         description = "Keep build results in GC roots";
 00104|         value = toBool cfg.keepResult;
-00105|         configPath = "stackpanel.colmena.keepResult";
+00105|         configPath = "stack.colmena.keepResult";
 00106|       }
 00107|       {
 00108|         name = "verbose";
@@ -6034,7 +6034,7 @@ Tool: read
 00110|         label = "Verbose";
 00111|         description = "Enable verbose Colmena output";
 00112|         value = toBool cfg.verbose;
-00113|         configPath = "stackpanel.colmena.verbose";
+00113|         configPath = "stack.colmena.verbose";
 00114|       }
 00115|       {
 00116|         name = "showTrace";
@@ -6042,7 +6042,7 @@ Tool: read
 00118|         label = "Show Trace";
 00119|         description = "Show detailed Nix traces on errors";
 00120|         value = toBool cfg.showTrace;
-00121|         configPath = "stackpanel.colmena.showTrace";
+00121|         configPath = "stack.colmena.showTrace";
 00122|       }
 00123|       {
 00124|         name = "impure";
@@ -6050,7 +6050,7 @@ Tool: read
 00126|         label = "Impure Eval";
 00127|         description = "Allow impure Nix evaluation";
 00128|         value = toBool cfg.impure;
-00129|         configPath = "stackpanel.colmena.impure";
+00129|         configPath = "stack.colmena.impure";
 00130|       }
 00131|       {
 00132|         name = "evalNodeLimit";
@@ -6058,7 +6058,7 @@ Tool: read
 00134|         label = "Eval Node Limit";
 00135|         description = "Maximum nodes evaluated concurrently";
 00136|         value = toNumOrEmpty cfg.evalNodeLimit;
-00137|         configPath = "stackpanel.colmena.evalNodeLimit";
+00137|         configPath = "stack.colmena.evalNodeLimit";
 00138|       }
 00139|       {
 00140|         name = "parallel";
@@ -6066,7 +6066,7 @@ Tool: read
 00142|         label = "Parallel Jobs";
 00143|         description = "Maximum concurrent deployment jobs";
 00144|         value = toNumOrEmpty cfg.parallel;
-00145|         configPath = "stackpanel.colmena.parallel";
+00145|         configPath = "stack.colmena.parallel";
 00146|       }
 00147|       {
 00148|         name = "buildOnTarget";
@@ -6074,7 +6074,7 @@ Tool: read
 00150|         label = "Build On Target";
 00151|         description = "Build closures on target nodes";
 00152|         value = toBool cfg.buildOnTarget;
-00153|         configPath = "stackpanel.colmena.buildOnTarget";
+00153|         configPath = "stack.colmena.buildOnTarget";
 00154|       }
 00155|       {
 00156|         name = "uploadKeys";
@@ -6082,7 +6082,7 @@ Tool: read
 00158|         label = "Upload Keys";
 00159|         description = "Upload deployment keys before activation";
 00160|         value = toBool cfg.uploadKeys;
-00161|         configPath = "stackpanel.colmena.uploadKeys";
+00161|         configPath = "stack.colmena.uploadKeys";
 00162|       }
 00163|       {
 00164|         name = "noSubstitute";
@@ -6090,7 +6090,7 @@ Tool: read
 00166|         label = "No Substitute";
 00167|         description = "Disable binary cache substitution";
 00168|         value = toBool cfg.noSubstitute;
-00169|         configPath = "stackpanel.colmena.noSubstitute";
+00169|         configPath = "stack.colmena.noSubstitute";
 00170|       }
 00171|       {
 00172|         name = "substituteOnDestination";
@@ -6098,7 +6098,7 @@ Tool: read
 00174|         label = "Substitute On Destination";
 00175|         description = "Allow substitution on destination nodes";
 00176|         value = toBool cfg.substituteOnDestination;
-00177|         configPath = "stackpanel.colmena.substituteOnDestination";
+00177|         configPath = "stack.colmena.substituteOnDestination";
 00178|       }
 00179|       {
 00180|         name = "gzip";
@@ -6106,7 +6106,7 @@ Tool: read
 00182|         label = "Gzip Transfers";
 00183|         description = "Compress closure transfer streams";
 00184|         value = toBool cfg.gzip;
-00185|         configPath = "stackpanel.colmena.gzip";
+00185|         configPath = "stack.colmena.gzip";
 00186|       }
 00187|       {
 00188|         name = "reboot";
@@ -6114,7 +6114,7 @@ Tool: read
 00190|         label = "Allow Reboot";
 00191|         description = "Allow reboots when required by activation";
 00192|         value = toBool cfg.reboot;
-00193|         configPath = "stackpanel.colmena.reboot";
+00193|         configPath = "stack.colmena.reboot";
 00194|       }
 00195|       {
 00196|         name = "extraFlags";
@@ -6122,7 +6122,7 @@ Tool: read
 00198|         label = "Extra Flags";
 00199|         description = "Extra flags appended to every colmena command";
 00200|         value = toJson cfg.extraFlags;
-00201|         configPath = "stackpanel.colmena.extraFlags";
+00201|         configPath = "stack.colmena.extraFlags";
 00202|       }
 00203|       {
 00204|         name = "applyExtraFlags";
@@ -6130,7 +6130,7 @@ Tool: read
 00206|         label = "Apply Extra Flags";
 00207|         description = "Extra flags for colmena-apply only";
 00208|         value = toJson cfg.applyExtraFlags;
-00209|         configPath = "stackpanel.colmena.applyExtraFlags";
+00209|         configPath = "stack.colmena.applyExtraFlags";
 00210|       }
 00211|       {
 00212|         name = "buildExtraFlags";
@@ -6138,7 +6138,7 @@ Tool: read
 00214|         label = "Build Extra Flags";
 00215|         description = "Extra flags for colmena-build only";
 00216|         value = toJson cfg.buildExtraFlags;
-00217|         configPath = "stackpanel.colmena.buildExtraFlags";
+00217|         configPath = "stack.colmena.buildExtraFlags";
 00218|       }
 00219|       {
 00220|         name = "evalExtraFlags";
@@ -6146,7 +6146,7 @@ Tool: read
 00222|         label = "Eval Extra Flags";
 00223|         description = "Extra flags for colmena-eval only";
 00224|         value = toJson cfg.evalExtraFlags;
-00225|         configPath = "stackpanel.colmena.evalExtraFlags";
+00225|         configPath = "stack.colmena.evalExtraFlags";
 00226|       }
 00227|     ];
 00228|   };
@@ -6164,7 +6164,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/meta.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/meta.nix"
 }
 ```
 **Output:**
@@ -6178,7 +6178,7 @@ Tool: read
 00006|   version = "1.0.0";
 00007|   icon = "ship";
 00008|   homepage = "https://colmena.cli.rs/";
-00009|   author = "Stackpanel";
+00009|   author = "Stack";
 00010|   tags = [
 00011|     "colmena"
 00012|     "nixos"
@@ -6213,7 +6213,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/colmena/default.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/colmena/default.nix"
 }
 ```
 **Output:**
@@ -6261,7 +6261,7 @@ Tool: todowrite
     },
     {
       "id": "t2",
-      "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+      "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
       "status": "completed",
       "priority": "high"
     },
@@ -6291,7 +6291,7 @@ Tool: todowrite
   },
   {
     "id": "t2",
-    "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+    "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
     "status": "completed",
     "priority": "high"
   },
@@ -6339,14 +6339,14 @@ copying path '/nix/store/ccxdi58zdh3qy7qsk68419gzldk8mqi3-css_v1.0.1' from 'http
 copying path '/nix/store/bhyr8aqc5v67p3hmrjdk0g6l310xiizf-dupword_v0.1.3' from 'https://darkmatter.cachix.org'...
 building '/nix/store/jf1rnkbcdgv0j572i8g86lwanw0s8zfl-vendor-env.drv'...
 building '/nix/store/hq9cwvqg8q1cbjzl53g7p58k6cswbaph-go-cache-env.drv'...
-building '/nix/store/aha1pkg9m6a779wa54b3rzinsb7ypxa8-stackpanel-0.1.0.drv'...
-building '/nix/store/wi0gr5y2g2gl8rxravxz5nb0xichs9aw-stackpanel-profile.drv'...
-building '/nix/store/mf1hlxznkl1319f8gv0ln3rjzy7ficbr-stackpanel-generate-bin.drv'...
-building '/nix/store/hdl0vkcmpysk6wxx37rfas8wjnvljw3a-stackpanel-gc-update.drv'...
-building '/nix/store/cw6mb0d87xxlqigin44awm9k6qmkrpkw-stackpanel-shellhook.drv'...
-building '/nix/store/nj8whgqqi3xcpxa465i6hhna3swpa2sc-stackpanel-stackpanel-env.drv'...
-Config validated for stackpanel
-✓ Stackpanel initialized
+building '/nix/store/aha1pkg9m6a779wa54b3rzinsb7ypxa8-stack-0.1.0.drv'...
+building '/nix/store/wi0gr5y2g2gl8rxravxz5nb0xichs9aw-stack-profile.drv'...
+building '/nix/store/mf1hlxznkl1319f8gv0ln3rjzy7ficbr-stack-generate-bin.drv'...
+building '/nix/store/hdl0vkcmpysk6wxx37rfas8wjnvljw3a-stack-gc-update.drv'...
+building '/nix/store/cw6mb0d87xxlqigin44awm9k6qmkrpkw-stack-shellhook.drv'...
+building '/nix/store/nj8whgqqi3xcpxa465i6hhna3swpa2sc-stack-stack-env.drv'...
+Config validated for stack
+✓ Stack initialized
 warning: unknown experimental feature 'build-time-fetch-tree'
 warning: unknown experimental feature 'parallel-eval'
 warning: unknown experimental feature 'external-builders'
@@ -6360,19 +6360,19 @@ Checking if device certificate exists... [0;32mOK[0m
 Checking if device certificate is valid... [0;32mOK[0m
 
 [0;32mAll checks passed![0m
-📜 stackpanel scripts loaded
+📜 stack scripts loaded
   write .gitignore (block, updated)
   write process-compose.yaml -> /nix/store/hf4j1580xwlcsiabb7ncqmyilc0bg2lv-process-compose.yaml
 files: 2 written, 63 unchanged
-Stackpanel development environment
+Stack development environment
 
-📦 Stackpanel Ports (project: stackpanel)
+📦 Stack Ports (project: stack)
    Stable port: 6400
 
    Apps:
-     docs: 5738 -> https://docs.stackpanel.lan
-     stackpanel-go: 5797
-     web: 5775 -> https://stackpanel.stackpanel.lan
+     docs: 5738 -> https://docs.stack.lan
+     stack-go: 5797
+     web: 5775 -> https://stack.stack.lan
 
    Services:
      Minio: 6498
@@ -6382,11 +6382,11 @@ Stackpanel development environment
 
    Tip: Set STACKPANEL_QUIET=1 to hide this message
 
-  → .stackpanel/bin: 219 binaries
+  → .stack/bin: 219 binaries
 Caddy config directories created at /Users/cm/.config/caddy
 Caddy config directories created at /Users/cm/.config/caddy
-✅ Stackpanel Nix module system initialized
-stackpanel core initialized
+✅ Stack Nix module system initialized
+stack core initialized
 [1;94m            |                 |                                |[0m
 [1;95m       __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |[0m
 [1;95m     \__ \  |    (   |  (       <   |   |  (   |  |   |   __/  |[0m
@@ -6433,10 +6433,10 @@ stackpanel core initialized
 
 ═══════════════════════════════════════════════════════════════
 Shell hook completed at 2026-02-28 22:42:41
-Log saved to: /Users/cm/git/darkmatter/stackpanel/.stackpanel/state/shell.log
+Log saved to: /Users/cm/git/darkmatter/stack/.stack/state/shell.log
 ═══════════════════════════════════════════════════════════════
  M process-compose.yaml
-?? nix/stackpanel/modules/colmena/
+?? nix/stack/modules/colmena/
 
 ```
 ```
@@ -6488,12 +6488,12 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/process-compose.yaml\n@@\n-/nix/store/hf4j1580xwlcsiabb7ncqmyilc0bg2lv-process-compose.yaml\n+/nix/store/prqh3bk4vf2gshgglq7ypy7pncdv0ifr-process-compose.yaml\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/process-compose.yaml\n@@\n-/nix/store/hf4j1580xwlcsiabb7ncqmyilc0bg2lv-process-compose.yaml\n+/nix/store/prqh3bk4vf2gshgglq7ypy7pncdv0ifr-process-compose.yaml\n*** End Patch"
 }
 ```
 **Error:**
 ```
-Error: apply_patch verification failed: Error: Failed to find expected lines in /Users/cm/git/darkmatter/stackpanel/process-compose.yaml:
+Error: apply_patch verification failed: Error: Failed to find expected lines in /Users/cm/git/darkmatter/stack/process-compose.yaml:
 /nix/store/hf4j1580xwlcsiabb7ncqmyilc0bg2lv-process-compose.yaml
 ```
 ```
@@ -6512,7 +6512,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/process-compose.yaml"
+  "filePath": "/Users/cm/git/darkmatter/stack/process-compose.yaml"
 }
 ```
 **Output:**
@@ -6522,7 +6522,7 @@ Tool: read
 00002| - AWS_CONFIG_FILE=/nix/store/j9az9mk6sq9gbnicca16wdrdgr4r47cl-aws-config
 00003| - AWS_REGION=us-west-2
 00004| - AWS_SHARED_CREDENTIALS_FILE=/dev/null
-00005| - CHAMBER_KMS_KEY_ALIAS=alias/stackpanel-secrets
+00005| - CHAMBER_KMS_KEY_ALIAS=alias/stack-secrets
 00006| - DATABASE_URL=postgresql://postgres@localhost:6404/postgres?host=$HOME/.local/share/devservices/postgres
 00007| - GOROOT=/nix/store/rwzizip34lp556kmagcfw0fszch22x0k-go-1.25.6/share/go/
 00008| - GOTOOLCHAIN=local
@@ -6548,27 +6548,27 @@ Tool: read
 00028| - REDIS_URL=redis://localhost:6494
 00029| - S3_ENDPOINT=http://localhost:6498
 00030| - "STACKPANEL_ALIAS_FUNC=# Internal helper shared by shortcuts\n_stackpanel_commands_runner()\
-00031|   \ {\n  if [ $# -eq 0 ]; then\n  stackpanel commands list\nelse\n  stackpanel commands\
-00032|   \ \"$@\"\nfi\n\n}\n\n# Stackpanel command shortcut: x\nx() {\n  _stackpanel_commands_runner\
-00033|   \ \"$@\"\n}\n\n# Short alias for the stackpanel CLI\nalias sp=\"stackpanel\"\n\n\
+00031|   \ {\n  if [ $# -eq 0 ]; then\n  stack commands list\nelse\n  stack commands\
+00032|   \ \"$@\"\nfi\n\n}\n\n# Stack command shortcut: x\nx() {\n  _stackpanel_commands_runner\
+00033|   \ \"$@\"\n}\n\n# Short alias for the stack CLI\nalias sp=\"stack\"\n\n\
 00034|   # Explicit commands runner shortcut\nspx() {\n  _stackpanel_commands_runner \"$@\"\
 00035|   \n}\n"
 00036| - STACKPANEL_CLEAN_IMPURE=0
 00037| - STACKPANEL_CLEAN_MODE=0
-00038| - STACKPANEL_CONFIG_JSON=/nix/store/bg37mkfd1g6awq7cyx4s07qbqzjkwpgf-stackpanel-config.json
-00039| - STACKPANEL_INFRA_INPUTS=.stackpanel/state/infra-inputs.json
-00040| - STACKPANEL_NIX_CONFIG=$STACKPANEL_ROOT/.stackpanel/config.nix
-00041| - STACKPANEL_PORTS={"base-port":6400,"enable":true,"project-name":"stackpanel","service":{"MINIO":{"displayName":"Minio","key":"MINIO","name":"Minio","port":6498},"MINIO_CONSOLE":{"displayName":"Minio
+00038| - STACKPANEL_CONFIG_JSON=/nix/store/bg37mkfd1g6awq7cyx4s07qbqzjkwpgf-stack-config.json
+00039| - STACKPANEL_INFRA_INPUTS=.stack/state/infra-inputs.json
+00040| - STACKPANEL_NIX_CONFIG=$STACKPANEL_ROOT/.stack/config.nix
+00041| - STACKPANEL_PORTS={"base-port":6400,"enable":true,"project-name":"stack","service":{"MINIO":{"displayName":"Minio","key":"MINIO","name":"Minio","port":6498},"MINIO_CONSOLE":{"displayName":"Minio
 00042|   Console","key":"MINIO_CONSOLE","name":"Minio Console","port":6436},"POSTGRES":{"displayName":"PostgreSQL","key":"POSTGRES","name":"PostgreSQL","port":6404},"REDIS":{"displayName":"Redis","key":"REDIS","name":"Redis","port":6494}},"services":{"MINIO":{"name":"Minio"},"MINIO_CONSOLE":{"name":"Minio
 00043|   Console"},"POSTGRES":{"name":"PostgreSQL"},"REDIS":{"name":"Redis"}}}
 00044| - STACKPANEL_REMOTE_BUILDER_HOST=100.102.113.26
-00045| - STACKPANEL_ROOT_DIR_NAME=.stackpanel
-00046| - STACKPANEL_ROOT_MARKER=.stackpanel-root
+00045| - STACKPANEL_ROOT_DIR_NAME=.stack
+00046| - STACKPANEL_ROOT_MARKER=.stack-root
 00047| - STACKPANEL_SERVICES_CONFIG=[{"key":"MINIO","name":"Minio","port":6498},{"key":"MINIO_CONSOLE","name":"Minio
 00048|   Console","port":6436},{"key":"POSTGRES","name":"PostgreSQL","port":6404},{"key":"REDIS","name":"Redis","port":6494}]
 00049| - STACKPANEL_STABLE_PORT=6400
-00050| - URL_DOCS=https://docs.stackpanel.lan
-00051| - URL_WEB=https://stackpanel.stackpanel.lan
+00050| - URL_DOCS=https://docs.stack.lan
+00051| - URL_WEB=https://stack.stack.lan
 00052| - __STACKPANEL_CLEAN_ENV=
 00053| processes:
 00054|   docs:
@@ -6624,16 +6624,16 @@ Tool: read
 00104|           -p 6494 ping
 00105|       initial_delay_seconds: 1
 00106|       period_seconds: 3
-00107|   stackpanel-go:
-00108|     command: if [[ -f packages/scripts/entrypoints/stackpanel-go.sh ]]; then source
-00109|       packages/scripts/entrypoints/stackpanel-go.sh --dev && exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
+00107|   stack-go:
+00108|     command: if [[ -f packages/scripts/entrypoints/stack-go.sh ]]; then source
+00109|       packages/scripts/entrypoints/stack-go.sh --dev && exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
 00110|       run -F $(/nix/store/fcjd369g57hxibl4iyggvdhfvwzz5mj9-jq-1.8.1-bin/bin/jq -r
-00111|       .name apps/stackpanel-go/package.json 2>/dev/null || echo 'stackpanel-go') dev;
+00111|       .name apps/stack-go/package.json 2>/dev/null || echo 'stack-go') dev;
 00112|       else exec /nix/store/1sf27aybrlvs4dja4rp4c8nsp47hsm05-turbo-2.7.3/bin/turbo
 00113|       run -F $(/nix/store/fcjd369g57hxibl4iyggvdhfvwzz5mj9-jq-1.8.1-bin/bin/jq -r
-00114|       .name apps/stackpanel-go/package.json 2>/dev/null || echo 'stackpanel-go') dev;
+00114|       .name apps/stack-go/package.json 2>/dev/null || echo 'stack-go') dev;
 00115|       fi
-00116|     working_dir: apps/stackpanel-go
+00116|     working_dir: apps/stack-go
 00117|   web:
 00118|     command: bun run -F web dev
 00119|     working_dir: apps/web
@@ -6669,7 +6669,7 @@ Tool: bash
 **Output:**
 ```
  M process-compose.yaml
-?? nix/stackpanel/modules/colmena/
+?? nix/stack/modules/colmena/
 
 ```
 ```
@@ -6720,7 +6720,7 @@ scripts
 sst.config.example.ts
 tests
 turbo.json
-?? nix/stackpanel/modules/colmena/
+?? nix/stack/modules/colmena/
 
 ```
 ```
@@ -6739,7 +6739,7 @@ Tool: bash
 **Input:**
 ```json
 {
-  "command": "nix develop --impure -c nix eval --impure --expr '(import ./nix/stackpanel/modules/colmena/meta.nix).id'",
+  "command": "nix develop --impure -c nix eval --impure --expr '(import ./nix/stack/modules/colmena/meta.nix).id'",
   "description": "Evaluate new colmena module metadata"
 }
 ```
@@ -6749,8 +6749,8 @@ Using saved setting for 'allow-import-from-derivation = true' from ~/.local/shar
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA= nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=' from ~/.local/share/nix/trusted-settings.json.
-Config validated for stackpanel
-✓ Stackpanel initialized
+Config validated for stack
+✓ Stack initialized
 warning: unknown experimental feature 'build-time-fetch-tree'
 warning: unknown experimental feature 'parallel-eval'
 warning: unknown experimental feature 'external-builders'
@@ -6764,16 +6764,16 @@ Checking if device certificate exists... [0;32mOK[0m
 Checking if device certificate is valid... [0;32mOK[0m
 
 [0;32mAll checks passed![0m
-📜 stackpanel scripts loaded
-Stackpanel development environment
+📜 stack scripts loaded
+Stack development environment
 
-📦 Stackpanel Ports (project: stackpanel)
+📦 Stack Ports (project: stack)
    Stable port: 6400
 
    Apps:
-     docs: 5738 -> https://docs.stackpanel.lan
-     stackpanel-go: 5797
-     web: 5775 -> https://stackpanel.stackpanel.lan
+     docs: 5738 -> https://docs.stack.lan
+     stack-go: 5797
+     web: 5775 -> https://stack.stack.lan
 
    Services:
      Minio: 6498
@@ -6783,11 +6783,11 @@ Stackpanel development environment
 
    Tip: Set STACKPANEL_QUIET=1 to hide this message
 
-  → .stackpanel/bin: 219 binaries
+  → .stack/bin: 219 binaries
 Caddy config directories created at /Users/cm/.config/caddy
 Caddy config directories created at /Users/cm/.config/caddy
-✅ Stackpanel Nix module system initialized
-stackpanel core initialized
+✅ Stack Nix module system initialized
+stack core initialized
 [1;94m            |                 |                                |[0m
 [1;95m       __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |[0m
 [1;95m     \__ \  |    (   |  (       <   |   |  (   |  |   |   __/  |[0m
@@ -6834,7 +6834,7 @@ stackpanel core initialized
 
 ═══════════════════════════════════════════════════════════════
 Shell hook completed at 2026-02-28 22:43:17
-Log saved to: /Users/cm/git/darkmatter/stackpanel/.stackpanel/state/shell.log
+Log saved to: /Users/cm/git/darkmatter/stack/.stack/state/shell.log
 ═══════════════════════════════════════════════════════════════
 "colmena"
 
@@ -6861,7 +6861,7 @@ Tool: bash
 ```
 **Output:**
 ```
-?? nix/stackpanel/modules/colmena/
+?? nix/stack/modules/colmena/
 
 ```
 ```
@@ -6889,7 +6889,7 @@ Tool: todowrite
     },
     {
       "id": "t2",
-      "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+      "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
       "status": "completed",
       "priority": "high"
     },
@@ -6919,7 +6919,7 @@ Tool: todowrite
   },
   {
     "id": "t2",
-    "content": "Implement new colmena module under nix/stackpanel/modules with full option set and computed config wiring",
+    "content": "Implement new colmena module under nix/stack/modules with full option set and computed config wiring",
     "status": "completed",
     "priority": "high"
   },
@@ -6947,28 +6947,28 @@ _Thinking:_
 
 
 
-Implemented a new built-in `colmena` stackpanel module with UI-editable settings and command wrappers, following the directory-module pattern used across `nix/stackpanel/modules`.
+Implemented a new built-in `colmena` stack module with UI-editable settings and command wrappers, following the directory-module pattern used across `nix/stack/modules`.
 
-- Added module entry + metadata in `nix/stackpanel/modules/colmena/default.nix` and `nix/stackpanel/modules/colmena/meta.nix`.
-- Added full Colmena configuration surface in `nix/stackpanel/modules/colmena/module.nix` under `stackpanel.colmena.*` (enable flag, hive/flake targeting, node filters, eval/deploy limits, transfer/build toggles, and per-command extra flags).
-- Implemented computed flag sets in `stackpanel.colmena.computed` so the resolved args are visible for `common`, `apply`, `build`, and `eval`.
-- Added generated scripts in `nix/stackpanel/modules/colmena/module.nix`:
+- Added module entry + metadata in `nix/stack/modules/colmena/default.nix` and `nix/stack/modules/colmena/meta.nix`.
+- Added full Colmena configuration surface in `nix/stack/modules/colmena/module.nix` under `stack.colmena.*` (enable flag, hive/flake targeting, node filters, eval/deploy limits, transfer/build toggles, and per-command extra flags).
+- Implemented computed flag sets in `stack.colmena.computed` so the resolved args are visible for `common`, `apply`, `build`, and `eval`.
+- Added generated scripts in `nix/stack/modules/colmena/module.nix`:
   - `colmena-apply`
   - `colmena-build`
   - `colmena-eval`
   each using your configured defaults and accepting extra passthrough args.
-- Added health checks in `nix/stackpanel/modules/colmena/module.nix` for Colmena availability and hive config presence.
-- Added UI panel definitions in `nix/stackpanel/modules/colmena/ui.nix`:
+- Added health checks in `nix/stack/modules/colmena/module.nix` for Colmena availability and hive config presence.
+- Added UI panel definitions in `nix/stack/modules/colmena/ui.nix`:
   - Status panel (`PANEL_TYPE_STATUS`)
   - Config form panel (`PANEL_TYPE_FORM`) with `configPath` mappings so fields can be edited from the UI (including `enable`, `config`, `flake`, filters, booleans, limits, and extra flag lists).
 
 Validation I ran:
 - Entered devshell successfully with `nix develop --impure -c true`.
-- Evaluated new metadata with `nix develop --impure -c nix eval --impure --expr '(import ./nix/stackpanel/modules/colmena/meta.nix).id'` (returned `"colmena"`).
+- Evaluated new metadata with `nix develop --impure -c nix eval --impure --expr '(import ./nix/stack/modules/colmena/meta.nix).id'` (returned `"colmena"`).
 - Final git status is clean except the new module directory.
 
 Natural next steps:
-1. Enable and tune it in your config via `stackpanel.colmena` (or directly in Studio once panels load).
+1. Enable and tune it in your config via `stack.colmena` (or directly in Studio once panels load).
 2. Reload shell (`exit && direnv allow` or re-enter `nix develop --impure`) and try `colmena-apply -- --help` to verify wrapper behavior with your defaults.
 
 ---
@@ -6991,25 +6991,25 @@ Tool: glob
 **Input:**
 ```json
 {
-  "pattern": "nix/stackpanel/deployment/**/*.{nix,md}"
+  "pattern": "nix/stack/deployment/**/*.{nix,md}"
 }
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/reference.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/ui.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/module.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/schema.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/schema.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/meta.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/default.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/lib/fly-oidc.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/container.nix
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/reference.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/ui.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/module.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/schema.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/schema.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/meta.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/default.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/lib/fly-oidc.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/container.nix
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/meta.nix
 ```
 ```
 
@@ -7024,32 +7024,32 @@ Tool: glob
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/secrets.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/setup.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/tasks.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/terminal.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/services.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/variables.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/team.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/network.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/processes.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/extensions.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/packages.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/modules.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/local-config.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/panels.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/files.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/inspector.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/infra.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/roadmap.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/index.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/checks.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/databases.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/devshells.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/deploy.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/configuration.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/dashboard.tsx
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/apps.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/secrets.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/setup.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/tasks.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/terminal.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/services.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/variables.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/team.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/network.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/processes.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/extensions.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/packages.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/modules.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/local-config.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/panels.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/files.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/inspector.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/infra.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/roadmap.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/index.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/checks.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/databases.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/devshells.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/deploy.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/configuration.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/dashboard.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/apps.tsx
 ```
 ```
 
@@ -7059,111 +7059,111 @@ Tool: glob
 **Input:**
 ```json
 {
-  "pattern": "apps/stackpanel-go/**/*.go"
+  "pattern": "apps/stack-go/**/*.go"
 }
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/docgen_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/convert.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/discovery.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/config_generate_example.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/agenix.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/secrets_groups.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/config.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/config_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval/eval.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixdata/store.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/secrets_recipients.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/root.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/secrets.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/caddy.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/exec/exec.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/server.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/security_status.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/vars.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/healthchecks.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/commands_tui.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/nixify.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/devmode.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixdata/nixdata_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/json_transform.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/nix_data.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixdata/paths.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixdata/transform.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixdata/entities.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/cli.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/users.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/modules.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/docgen.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/helpers.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/sops.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/ws.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nix/serialize.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/tools.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/services/registry_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/services/registry.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/services/process_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/userconfig/userconfig.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/services/base.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/services/process.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/services/base_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval/presets_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval/presets.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval/nixeval.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixeval/nixeval_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nix/serialize_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/exec/exec_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/envvars/envvars.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/common/logger.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/main.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/services/minio.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/services/redis.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/services/postgres.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/render.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/types.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/options.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/github/github.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/docgen/frontmatter.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/sst.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/server_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/shell_manager.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/sse.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/pair.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/project_context.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/nixpkgs_search.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/registry.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/process_compose.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/project_handlers.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/modules.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/jwt.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/nix_files.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/nix_ui.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/connect_service.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/flake_watcher.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/cors_auth.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/connect_handlers.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/connect_modules.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/connect_entities_gen.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/project/project.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/chamber.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/agenix_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/internal/agent/server/api_handlers.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/services.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/root_test.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/ports.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/status.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/project.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/preflight.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/templates.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/env.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/hook.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/gendocs.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/init.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/motd.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/logs.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/agent.go
-/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/cmd/cli/commands.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/docgen_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/convert.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/discovery.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/config_generate_example.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/agenix.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/secrets_groups.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/config.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/config_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixeval/eval.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixdata/store.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/secrets_recipients.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/root.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/secrets.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/caddy.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/exec/exec.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/server.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/security_status.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/vars.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/healthchecks.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/commands_tui.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/nixify.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/devmode.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixdata/nixdata_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/json_transform.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/nix_data.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixdata/paths.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixdata/transform.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixdata/entities.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/cli.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/users.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/modules.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/docgen.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/helpers.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/sops.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/ws.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nix/serialize.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/tools.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/services/registry_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/services/registry.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/services/process_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/userconfig/userconfig.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/services/base.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/services/process.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/services/base_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixeval/presets_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixeval/presets.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixeval/nixeval.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixeval/nixeval_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nix/serialize_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/exec/exec_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/envvars/envvars.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/common/logger.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/main.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/services/minio.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/services/redis.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/services/postgres.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/render.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/types.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/options.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/github/github.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/docgen/frontmatter.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/sst.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/server_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/shell_manager.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/sse.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/pair.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/project_context.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/nixpkgs_search.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/registry.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/process_compose.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/project_handlers.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/modules.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/jwt.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/nix_files.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/nix_ui.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/connect_service.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/flake_watcher.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/cors_auth.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/connect_handlers.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/connect_modules.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/connect_entities_gen.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/project/project.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/chamber.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/agenix_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/internal/agent/server/api_handlers.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/services.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/root_test.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/ports.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/status.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/project.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/preflight.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/templates.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/env.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/hook.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/gendocs.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/init.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/motd.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/logs.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/agent.go
+/Users/cm/git/darkmatter/stack/apps/stack-go/cmd/cli/commands.go
 
 (Results are truncated. Consider using a more specific path or pattern.)
 ```
@@ -7176,27 +7176,27 @@ Tool: grep
 ```json
 {
   "pattern": "colmena|deployment|machine|alchemy|sst",
-  "path": "/Users/cm/git/darkmatter/stackpanel/apps/web/src",
+  "path": "/Users/cm/git/darkmatter/stack/apps/web/src",
   "include": "**/*.{ts,tsx}"
 }
 ```
 **Output:**
 ```
 Found 100 matches
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/apps-panel-alt.tsx:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/apps-panel-alt.tsx:
   Line 88:   const deploymentPanels = useMemo(() => {
   Line 90:       (p) => p.module === "deployment-fly" || p.module === "deployment-cloudflare",
   Line 98:         p.module !== "deployment-fly" &&
   Line 99:         p.module !== "deployment-cloudflare",
   Line 520:                       deploymentPanels={deploymentPanels.filter(
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-setup-progress.ts:
+/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-setup-progress.ts:
   Line 70: 	const { data: sstData } = useNixData<SSTData>("sst", {
   Line 180: 				status: sstData?.enable
   Line 226: 					"Configure your local machine to use an existing AWS KMS key",
   Line 268: 	}, [token, isConnected, sstData, agentClient, secretsBackend, isChamber]);
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/agent.ts:
+/Users/cm/git/darkmatter/stack/apps/web/src/lib/agent.ts:
   Line 274: /** SST deployment status */
   Line 1152:     const res = await fetch(`${this.baseUrl}/api/sst/config`, {
   Line 1161:    * Get the current SST deployment status.
@@ -7206,7 +7206,7 @@ Found 100 matches
   Line 1200:     const res = await fetch(`${this.baseUrl}/api/sst/deploy`, {
   Line 1216:     const res = await fetch(`${this.baseUrl}/api/sst/remove`, {
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-agent.ts:
+/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-agent.ts:
   Line 17:  *   const { data: sst } = useSSTStatus();
   Line 24:  *       <p>SST Deployed: {sst?.deployed ? 'Yes' : 'No'}</p>
   Line 176: 	sst: () => [...agentQueryKeys.all, "sst"] as const,
@@ -7222,12 +7222,12 @@ Found 100 matches
   Line 704: 			queryClient.invalidateQueries({ queryKey: agentQueryKeys.sst() });
   Line 722: 			queryClient.invalidateQueries({ queryKey: agentQueryKeys.sst() });
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/setup/types.ts:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/setup/types.ts:
   Line 114: 	sstData: SSTData | null;
   Line 115: 	sstFormData: SSTFormData;
   Line 118: 	sstSaving: boolean;
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/setup/setup-wizard.tsx:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/setup/setup-wizard.tsx:
   Line 88: 	const { data: sstData, mutate: setSstData } = useNixData<SSTData>("sst", {
   Line 91: 	const [sstFormData, setSstFormData] = useState<SSTData>({});
   Line 92: 	const [sstSaving, setSstSaving] = useState(false);
@@ -7256,22 +7256,22 @@ Found 100 matches
   Line 403: 		sstFormData,
   Line 406: 		sstSaving,
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/inspector-panel.tsx:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/inspector-panel.tsx:
   Line 915:     passthru: { label: "Passthru", variant: "default" },
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-inspector-data.test.ts:
+/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-inspector-data.test.ts:
   Line 375:     passthru: "Passthru",
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/shared/panel-types.ts:
-  Line 44:   /** Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization') */
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/shared/panel-types.ts:
+  Line 44:   /** Nix config path for saving field value (e.g., 'stack.deployment.fly.organization') */
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/setup/steps/kms-config-step.tsx:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/setup/steps/kms-config-step.tsx:
   Line 15: 		description: "Configure your local machine to use an existing AWS KMS key",
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/setup/steps/project-info-step.tsx:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/setup/steps/project-info-step.tsx:
   Line 89:         "Runtime state like current configuration snapshot and your machine-specific configuration. Rebuilt each shell entry. Not tracked in git.",
 
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/setup/steps/infrastructure-step.tsx:
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/setup/steps/infrastructure-step.tsx:
   Line 25: 		sstData,
   Line 26: 		sstFormData,
   Line 29: 		sstSaving,
@@ -7325,7 +7325,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/deploy.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/deploy.tsx"
 }
 ```
 **Output:**
@@ -7354,7 +7354,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/apps-panel-alt.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/apps-panel-alt.tsx"
 }
 ```
 **Output:**
@@ -7415,11 +7415,11 @@ Tool: read
 00053|   const { data: nixConfig } = useNixConfig();
 00054|   const { data: rawVariables } = useVariables();
 00055| 
-00056|   // Get project name from config, fallback to "stackpanel"
+00056|   // Get project name from config, fallback to "stack"
 00057|   const projectName =
 00058|     (typeof nixConfig?.projectName === "string"
 00059|       ? nixConfig.projectName
-00060|       : null) ?? "stackpanel";
+00060|       : null) ?? "stack";
 00061| 
 00062|   // Extract PANEL_TYPE_APP_CONFIG panels from panelsComputed
 00063|   // Panels come from nix eval: config.panelsComputed (flake path) or config.ui.panels (CLI path)
@@ -7945,7 +7945,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/modules.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/modules.tsx"
 }
 ```
 **Output:**
@@ -7954,7 +7954,7 @@ Tool: read
 00001| /**
 00002|  * Modules Page
 00003|  *
-00004|  * Browse and configure Stackpanel modules. This is the new unified module
+00004|  * Browse and configure Stack modules. This is the new unified module
 00005|  * browser that replaces the old extensions system.
 00006|  *
 00007|  * Modules provide:
@@ -7996,7 +7996,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/panels.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/panels.tsx"
 }
 ```
 **Output:**
@@ -8035,7 +8035,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/infra.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/infra.tsx"
 }
 ```
 **Output:**

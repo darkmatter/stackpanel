@@ -17,7 +17,7 @@ Provides [skopeo](https://github.com/containers/skopeo) for OCI image operations
 ## Usage
 
 ```nix
-stackpanel.docker = {
+stack.docker = {
   enable = true;
   images.my-app = {
     name = "my-app";

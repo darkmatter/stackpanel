@@ -17,9 +17,9 @@ The AWS Vault module provides:
 ### Basic Setup
 
 ```nix
-# .stackpanel/config.nix
+# .stack/config.nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     profile = "mycompany-dev";
     
@@ -39,7 +39,7 @@ The AWS Vault module provides:
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     profile = "production";  # Default profile
     
@@ -60,45 +60,45 @@ The AWS Vault module provides:
 
 ### Core Options
 
-#### `stackpanel.aws-vault.enable`
+#### `stack.aws-vault.enable`
 - **Type**: `bool`
 - **Default**: `false`
 - **Description**: Enable AWS Vault integration
 
-#### `stackpanel.aws-vault.package`
+#### `stack.aws-vault.package`
 - **Type**: `package`
 - **Default**: `pkgs.aws-vault`
 - **Description**: The aws-vault package to use
 
-#### `stackpanel.aws-vault.profile`
+#### `stack.aws-vault.profile`
 - **Type**: `string`
 - **Default**: `"default"`
 - **Description**: Primary AWS profile to use
 
-#### `stackpanel.aws-vault.profiles`
+#### `stack.aws-vault.profiles`
 - **Type**: `listOf string`
 - **Default**: `[]`
 - **Description**: List of profiles to try in order (enables fallback behavior)
 - **Example**: `["production" "staging" "readonly"]`
 
-#### `stackpanel.aws-vault.stopOnFirstSuccess`
+#### `stack.aws-vault.stopOnFirstSuccess`
 - **Type**: `bool`
 - **Default**: `true`
 - **Description**: Stop trying profiles after first success
 
-#### `stackpanel.aws-vault.showProfileAttempts`
+#### `stack.aws-vault.showProfileAttempts`
 - **Type**: `bool`
 - **Default**: `true`
 - **Description**: Show which profile is being attempted
 
-#### `stackpanel.aws-vault.debug`
+#### `stack.aws-vault.debug`
 - **Type**: `bool`
 - **Default**: `false`
 - **Description**: Enable debug logging to `~/.aws-vault-debug.log` to diagnose issues
 
 ### AWS Config File Options
 
-#### `stackpanel.aws-vault.awsProfiles.<name>`
+#### `stack.aws-vault.awsProfiles.<name>`
 - **Type**: `submodule`
 - **Default**: `{}`
 - **Description**: Define AWS profiles programmatically (generates ~/.aws/config)
@@ -141,34 +141,34 @@ Each profile supports:
 - **Default**: `{}`
 - **Description**: Additional configuration options
 
-#### `stackpanel.aws-vault.configFile`
+#### `stack.aws-vault.configFile`
 - **Type**: `lines | null`
 - **Default**: `null`
 - **Description**: Raw contents for ~/.aws/config (overrides awsProfiles)
 
-#### `stackpanel.aws-vault.generateConfigFile`
+#### `stack.aws-vault.generateConfigFile`
 - **Type**: `bool`
 - **Default**: `true`
 - **Description**: Auto-generate ~/.aws/config from awsProfiles
 
 ### Wrapper Options
 
-#### `stackpanel.aws-vault.awscliWrapper.enable`
+#### `stack.aws-vault.awscliWrapper.enable`
 - **Type**: `bool`
 - **Default**: `false`
 - **Description**: Wrap AWS CLI with aws-vault
 
-#### `stackpanel.aws-vault.awscliWrapper.package`
+#### `stack.aws-vault.awscliWrapper.package`
 - **Type**: `package`
 - **Default**: `pkgs.awscli2`
 - **Description**: AWS CLI package to wrap
 
-#### `stackpanel.aws-vault.terraformWrapper.enable`
+#### `stack.aws-vault.terraformWrapper.enable`
 - **Type**: `bool`
 - **Default**: `false`
 - **Description**: Wrap Terraform with aws-vault
 
-#### `stackpanel.aws-vault.opentofuWrapper.enable`
+#### `stack.aws-vault.opentofuWrapper.enable`
 - **Type**: `bool`
 - **Default**: `false`
 - **Description**: Wrap OpenTofu with aws-vault
@@ -237,7 +237,7 @@ aws-vault login production
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     profile = "mycompany";
     awscliWrapper.enable = true;
@@ -265,7 +265,7 @@ $ terraform apply
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     profile = "production";
     
@@ -300,7 +300,7 @@ $ terraform plan
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     profile = "team-dev";
     
@@ -347,13 +347,13 @@ $ terraform plan
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     profiles = ["prod-deploy" "staging-deploy"];
     awscliWrapper.enable = true;
   };
   
-  stackpanel.infra.enable = true;
+  stack.infra.enable = true;
 }
 ```
 
@@ -371,7 +371,7 @@ Using aws-vault with multi-profile fallback
 ```nix
 { lib, ... }:
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     
     # Different profiles for different regions
@@ -473,7 +473,7 @@ If you're getting multiple keychain password prompts when entering the shell:
 **Solution 1 - Enable Debug Logging:**
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     debug = true;  # Logs all aws-vault exec calls
     profiles = ["sso-prod" "sso-staging"];
@@ -490,7 +490,7 @@ tail -f ~/.aws-vault-debug.log
 If you don't need automatic wrapping, disable the wrappers:
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     awscliWrapper.enable = false;  # Disable automatic wrapping
     profiles = ["sso-prod" "sso-staging"];
@@ -556,7 +556,7 @@ aws-vault:with-profile staging aws s3 ls
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     
     awsProfiles = {
@@ -611,7 +611,7 @@ For complete control, use `configFile`:
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     
     configFile = ''
@@ -640,7 +640,7 @@ If you want to manage `~/.aws/config` manually:
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     generateConfigFile = false;
   };
@@ -655,7 +655,7 @@ Configure using `awsProfiles`:
 
 ```nix
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     
     awsProfiles = {
@@ -705,7 +705,7 @@ let
   isAdmin = builtins.elem user ["alice" "bob"];
 in
 {
-  stackpanel.aws-vault = {
+  stack.aws-vault = {
     enable = true;
     
     profiles = lib.optionals isAdmin ["admin" "prod"]
@@ -752,11 +752,11 @@ in
 | `aws-vault remove <profile>` | Remove profile credentials |
 | `aws-vault rotate <profile>` | Rotate credentials for profile |
 
-### Stackpanel Commands (when profiles configured)
+### Stack Commands (when profiles configured)
 
 | Command | Description |
 |---------|-------------|
-| `aws-vault:list-profiles` | List profiles configured in Stackpanel |
+| `aws-vault:list-profiles` | List profiles configured in Stack |
 | `aws-vault:with-profile <profile> <cmd>` | Run command with specific profile |
 
 ### Wrapped Commands (when wrappers enabled)
@@ -793,5 +793,5 @@ in
 
 - [aws-vault GitHub](https://github.com/99designs/aws-vault)
 - [AWS CLI Configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
-- [Stackpanel Infrastructure Module](../../infra/README.md)
+- [Stack Infrastructure Module](../../infra/README.md)
 - [AWS Roles Anywhere](../roles-anywhere.nix)

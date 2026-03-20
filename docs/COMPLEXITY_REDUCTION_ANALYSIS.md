@@ -1,6 +1,6 @@
 # Complexity Reduction Analysis
 
-A comprehensive analysis of complexity reduction opportunities across the stackpanel codebase.
+A comprehensive analysis of complexity reduction opportunities across the stack codebase.
 
 ---
 
@@ -260,12 +260,12 @@ const appsWithBuild = useMemo(() =>
 **Location:** `packages/ui/`
 
 **What was done:** 5 UI packages consolidated to 2:
-- Deleted `@stackpanel/ui` facade (unused indirection)
-- Deleted `@stackpanel/ui-primitives` (merged 27 `@radix-ui/*` deps into `ui-web`)
-- Deleted `@stackpanel/ui-native` (empty stub, zero components)
-- Kept `@stackpanel/ui-core` (cn, cva, Logo, CSS) at `packages/ui/core/`
-- Kept `@stackpanel/ui-web` (16 shadcn components) at `packages/ui/web/`
-- Updated 11 imports in `ui-web` from `@stackpanel/ui-primitives` to direct `@radix-ui/*`
+- Deleted `@stack/ui` facade (unused indirection)
+- Deleted `@stack/ui-primitives` (merged 27 `@radix-ui/*` deps into `ui-web`)
+- Deleted `@stack/ui-native` (empty stub, zero components)
+- Kept `@stack/ui-core` (cn, cva, Logo, CSS) at `packages/ui/core/`
+- Kept `@stack/ui-web` (16 shadcn components) at `packages/ui/web/`
+- Updated 11 imports in `ui-web` from `@stack/ui-primitives` to direct `@radix-ui/*`
 
 **Impact:** 5 packages down to 2, cleaner dependency graph, no facade indirection
 
@@ -302,7 +302,7 @@ Create generic `EntityPanel` component:
 
 ### 4.1 Proto → Options → Computed Chain
 
-**Location:** `nix/stackpanel/db/`, `nix/stackpanel/core/options/`
+**Location:** `nix/stack/db/`, `nix/stack/core/options/`
 
 **What:** Three-layer system:
 1. `.proto.nix` files define schema
@@ -320,7 +320,7 @@ The chain: proto → mkOptionsFromMessage → options → computed values
 For simple modules, skip proto entirely:
 ```nix
 # Instead of defining in .proto.nix and generating options:
-options.stackpanel.name = lib.mkOption {
+options.stack.name = lib.mkOption {
   type = lib.types.str;
   default = "my-project";
 };
@@ -334,7 +334,7 @@ Reserve proto for types that need TypeScript/Go codegen.
 
 ### 4.2 Overly-Parameterized SST Module
 
-**Location:** `nix/stackpanel/sst/sst.nix` (684 lines)
+**Location:** `nix/stack/sst/sst.nix` (684 lines)
 
 **What:** Massive configuration surface:
 - Multiple OIDC providers (GitHub, Fly.io, Roles Anywhere)
@@ -358,7 +358,7 @@ Reserve proto for types that need TypeScript/Go codegen.
 
 ### 4.3 Ports Library Over-Engineering
 
-**Location:** `nix/stackpanel/lib/ports.nix` (216 lines)
+**Location:** `nix/stack/lib/ports.nix` (216 lines)
 
 **What:** Complex deterministic port assignment:
 - Hash-based port computation
@@ -373,11 +373,11 @@ Reserve proto for types that need TypeScript/Go codegen.
 **Simplification Strategy:**
 ```nix
 # Instead of complex computation:
-stackpanel.apps.web.port = 3000;
-stackpanel.apps.api.port = 3001;
+stack.apps.web.port = 3000;
+stack.apps.api.port = 3001;
 
 # Auto-assign only if not specified:
-port = config.stackpanel.apps.${name}.port or (3000 + offset);
+port = config.stack.apps.${name}.port or (3000 + offset);
 ```
 
 **Impact:** LOW - Simplifies for new users
@@ -431,7 +431,7 @@ Derived hooks can be inline utilities or removed.
 - Duplicates types from proto
 
 **Simplification Strategy:**
-- Import types from `@stackpanel/proto` where possible
+- Import types from `@stack/proto` where possible
 - Keep only types needed for public API
 - Use `ReturnType<typeof client.method>` for internal types
 
@@ -443,7 +443,7 @@ Derived hooks can be inline utilities or removed.
 
 ### 6.1 Generated Files Complexity
 
-**Location:** `nix/stackpanel/modules/turbo.nix`
+**Location:** `nix/stack/modules/turbo.nix`
 
 **What:** Complex system to:
 1. Generate turbo.json from Nix
@@ -467,7 +467,7 @@ Derived hooks can be inline utilities or removed.
 
 ### 6.2 Proto Codegen Complexity
 
-**Location:** `nix/stackpanel/db/`
+**Location:** `nix/stack/db/`
 
 **What:** System to:
 1. Define types in .proto.nix

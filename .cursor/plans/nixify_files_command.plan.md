@@ -1,5 +1,5 @@
 ---
-name: "stackpanel nixify — Progressive File Nixification"
+name: "stack nixify — Progressive File Nixification"
 overview: |
   Files like process-compose.yml, .vscode/settings.json, and .tasks/bin/*
   contain store paths or user-specific paths. They need to exist on disk for
@@ -11,7 +11,7 @@ overview: |
   the tool-specific file generated as an artifact (gitignored, materialized
   on shell entry by write-files).
 
-  `stackpanel nixify <file>` bridges the gap. It converts a git-tracked
+  `stack nixify <file>` bridges the gap. It converts a git-tracked
   configuration file into a Nix-generated one, so users can progressively
   adopt the pure-Nix approach when they're ready.
 
@@ -22,7 +22,7 @@ overview: |
   package/dependency management (package.json, go.mod, Cargo.lock). For those,
   users should use dedicated tools: bun2nix, gomod2nix, cargo2nix, etc.
 
-  Stackpanel's promise is: if removed, the right files are still in the right
+  Stack's promise is: if removed, the right files are still in the right
   place. So both modes must coexist. Tracked files stay in git. Gitignored
   files are generated from Nix. The nixify command moves files from the
   former to the latter.
@@ -48,7 +48,7 @@ design: |
   Each files.entries definition has a `gitignored` flag:
 
   ```nix
-  stackpanel.files.entries.".vscode/settings.json" = {
+  stack.files.entries.".vscode/settings.json" = {
     type = "json";
     gitignored = true;    # → added to .gitignore, regenerated on shell entry
     # gitignored = false;  # → tracked in git, --skip-worktree for store paths (default)
@@ -58,7 +58,7 @@ design: |
 
   ### `gitignored = false` (default)
   - File is written to disk as a regular file by write-files
-  - File is tracked in git (removing stackpanel leaves it intact)
+  - File is tracked in git (removing stack leaves it intact)
   - If file contains store paths, `git update-index --skip-worktree` is
     applied automatically to hide store-path churn from `git status`
   - Store paths in the file make cross-machine git diffs noisy
@@ -68,7 +68,7 @@ design: |
   - Tool-specific file is generated and written to disk on shell entry
   - File path is automatically added to `.gitignore` (via line-set merge)
   - write-files runs `git rm --cached` if the file was previously tracked
-  - Removing stackpanel removes the generated file (but the .nix source remains)
+  - Removing stack removes the generated file (but the .nix source remains)
   - No store paths in git, deterministic from flake inputs
 
   ### `type = "symlink"` implies `gitignored = true`
@@ -78,10 +78,10 @@ design: |
   ## The `nixify` Command
 
   ```
-  stackpanel nixify <file>              # Convert a file to gitignored Nix
-  stackpanel nixify --list              # Show which files are nixifiable
-  stackpanel nixify --status            # Show tracked vs gitignored status
-  stackpanel nixify --revert <file>     # Convert back to tracked
+  stack nixify <file>              # Convert a file to gitignored Nix
+  stack nixify --list              # Show which files are nixifiable
+  stack nixify --status            # Show tracked vs gitignored status
+  stack nixify --revert <file>     # Convert back to tracked
   ```
 
   ### What `nixify <file>` does
@@ -93,13 +93,13 @@ design: |
      - Line-based (gitignore, env) → `type = "line-set"; lines = [ ... ];`
      - Shell scripts → `type = "derivation"; drv = pkgs.writeScript ...;`
      - YAML/TOML → `type = "text"; text = lib.generators.toYAML {} { ... };`
-  4. **Write Nix module** — Create `.stackpanel/modules/<name>.nix` with the entry
+  4. **Write Nix module** — Create `.stack/modules/<name>.nix` with the entry
   5. **Set `gitignored = true`** — File is added to `.gitignore` automatically
   6. **Remove from git** — `git rm --cached <file>` (keeps on disk, removes from index)
 
   ### Detection of nixifiable files
 
-  Files managed by `stackpanel.files.entries` that have `gitignored = false`
+  Files managed by `stack.files.entries` that have `gitignored = false`
   are candidates. The `--list` command shows these with a hint about what the
   Nix module would look like.
 
@@ -112,8 +112,8 @@ design: |
   // Tracked .vscode/settings.json (in git, noisy diffs)
   { "nix.serverPath": "/nix/store/abc123-nixd-2.0/bin/nixd" }
 
-  // After nixify → .stackpanel/modules/vscode-settings.nix (in git, clean)
-  stackpanel.files.entries.".vscode/settings.json" = {
+  // After nixify → .stack/modules/vscode-settings.nix (in git, clean)
+  stack.files.entries.".vscode/settings.json" = {
     type = "json";
     gitignored = true;
     jsonValue = {
@@ -139,17 +139,17 @@ design: |
   fi
   ```
 
-  This is transparent — the file exists in git (stackpanel removal is safe)
+  This is transparent — the file exists in git (stack removal is safe)
   but local changes from store path updates don't pollute `git status`.
 
-  A `stackpanel unskip` command (or `--no-skip-worktree` flag) can undo this
+  A `stack unskip` command (or `--no-skip-worktree` flag) can undo this
   when the user wants to commit intentional changes.
 
   ## Progressive Migration Path
 
   1. **Day 0**: All files have `gitignored = false` (current behavior)
-  2. **User runs `stackpanel nixify .vscode/settings.json`**:
-     - Generates `.stackpanel/modules/vscode-settings.nix`
+  2. **User runs `stack nixify .vscode/settings.json`**:
+     - Generates `.stack/modules/vscode-settings.nix`
      - Sets `gitignored = true` on the entry
      - Removes file from git index, added to `.gitignore`
   3. **User sees cleaner git history**, tries more files
@@ -214,7 +214,7 @@ todos:
       In write-files, after writing a tracked (`gitignored = false`) file
       that contains store paths (/nix/store/), automatically apply
       `git update-index --skip-worktree` to reduce git noise. Add a
-      `stackpanel unskip [file]` command to undo this when the user wants
+      `stack unskip [file]` command to undo this when the user wants
       to commit intentional changes.
     status: pending
     dependencies:
@@ -222,9 +222,9 @@ todos:
 
   - id: cli-nixify-scaffold
     content: |
-      Add `stackpanel nixify` subcommand to the Go CLI. Start with JSON files
+      Add `stack nixify` subcommand to the Go CLI. Start with JSON files
       since builtins.fromJSON handles parsing. Read file, detect type, generate
-      a .stackpanel/modules/<name>.nix with the appropriate files.entries def.
+      a .stack/modules/<name>.nix with the appropriate files.entries def.
       All generated entries default to `gitignored = true`.
     status: pending
     dependencies:
@@ -282,7 +282,7 @@ todos:
 
   - id: cli-nixify-list
     content: |
-      Implement `stackpanel nixify --list` showing files managed by
+      Implement `stack nixify --list` showing files managed by
       files.entries that have `gitignored = false`. Show a preview of
       what the Nix module would look like.
     status: pending
@@ -291,7 +291,7 @@ todos:
 
   - id: cli-nixify-status
     content: |
-      Implement `stackpanel nixify --status` showing a table of all managed
+      Implement `stack nixify --status` showing a table of all managed
       files with their mode (tracked/gitignored), whether they contain
       store paths, and skip-worktree status.
     status: pending
@@ -301,7 +301,7 @@ todos:
 
   - id: cli-nixify-revert
     content: |
-      Implement `stackpanel nixify --revert <file>` to convert a gitignored
+      Implement `stack nixify --revert <file>` to convert a gitignored
       file back to tracked. Set `gitignored = false`, `git add` the file,
       remove from .gitignore line-set.
     status: pending
@@ -311,7 +311,7 @@ todos:
   - id: docs
     content: |
       Document the tracked vs gitignored file modes, the nixify command,
-      and the progressive migration path. Add to stackpanel docs site.
+      and the progressive migration path. Add to stack docs site.
     status: pending
     dependencies:
       - cli-nixify-json

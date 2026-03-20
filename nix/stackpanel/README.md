@@ -1,10 +1,10 @@
-# Stackpanel Nix Module System
+# Stack Nix Module System
 
-This directory contains the main Stackpanel Nix module system - a comprehensive framework for managing development environments with Nix.
+This directory contains the main Stack Nix module system - a comprehensive framework for managing development environments with Nix.
 
 ## Overview
 
-Stackpanel provides:
+Stack provides:
 - **Reproducible dev environments** via devenv/Nix
 - **Multi-app monorepo support** with automatic port assignment
 - **Secrets management** with SOPS/vals integration
@@ -17,7 +17,7 @@ Stackpanel provides:
 Options are co-located with their feature implementations. Each directory owns its options, logic, and helpers.
 
 ```
-stackpanel/
+stack/
 ├── default.nix      # Main entry point - imports all feature modules
 ├── core/            # Core options + boot logic (enable, dirs, root, CLI)
 ├── apps/            # App configuration, ports, and CI generation
@@ -37,18 +37,18 @@ stackpanel/
 ├── plugins/         # Auto-discovered feature plugins (bun, go, turbo, etc.)
 ├── db/              # Proto-derived schema system
 ├── lib/             # Shared pure library functions
-└── packages/        # Nix package definitions (stackpanel-cli)
+└── packages/        # Nix package definitions (stack-cli)
 ```
 
 ## Key Concepts
 
 ### Options System
 
-All configuration is defined through NixOS module options under `stackpanel.*`:
+All configuration is defined through NixOS module options under `stack.*`:
 
 ```nix
 {
-  stackpanel = {
+  stack = {
     name = "my-project";
     apps = {
       web = { port = 3000; };
@@ -83,17 +83,17 @@ Import this module in your devenv.nix:
 ```nix
 { inputs, ... }: {
   imports = [
-    inputs.stackpanel.devenvModules.default
+    inputs.stack.devenvModules.default
   ];
 
-  stackpanel.name = "my-project";
+  stack.name = "my-project";
 }
 ```
 
 Or use the flake template:
 
 ```bash
-nix flake init -t github:coopermaruyama/stackpanel
+nix flake init -t github:coopermaruyama/stack
 ```
 
 ## Module Documentation

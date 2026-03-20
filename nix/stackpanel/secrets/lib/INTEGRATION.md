@@ -1,20 +1,20 @@
 # Integration Guide: Age Key Tools in Secrets Module
 
-This guide shows how to integrate the new derivation-based age key tools into your Stackpanel secrets configuration.
+This guide shows how to integrate the new derivation-based age key tools into your Stack secrets configuration.
 
 ## Quick Start
 
 ### Option 1: Using the Module (Recommended)
 
-Add to your Stackpanel configuration:
+Add to your Stack configuration:
 
 ```nix
 {
   imports = [
-    ./nix/stackpanel/secrets/lib/age-key-cmd.nix
+    ./nix/stack/secrets/lib/age-key-cmd.nix
   ];
 
-  stackpanel.secrets.age-key-cmd = {
+  stack.secrets.age-key-cmd = {
     enable = true;
     keysDir = ".keys";
     onePassword = {
@@ -38,7 +38,7 @@ That's it! The module will:
 If you want to integrate directly into the secrets module without using the separate module:
 
 ```nix
-# In nix/stackpanel/secrets/default.nix
+# In nix/stack/secrets/default.nix
 
 let
   # ... existing lets ...
@@ -54,19 +54,19 @@ in {
   # ... existing config ...
 
   config = {
-    stackpanel.devshell.packages = [
+    stack.devshell.packages = [
       # ... existing packages ...
       ageKeyTools.fetchAgeKey
       ageKeyTools.ageKeyCmd
       ageKeyTools.checkAgeKeys
     ];
 
-    stackpanel.devshell.env = {
+    stack.devshell.env = {
       # ... existing env vars ...
       SOPS_AGE_KEY_CMD = "${ageKeyTools.ageKeyCmd}/bin/age-key-cmd";
     };
 
-    stackpanel.scripts = {
+    stack.scripts = {
       # ... existing scripts ...
       
       "age:fetch" = {
@@ -80,9 +80,9 @@ in {
       };
     };
 
-    stackpanel.files.entries.".gitignore".lines = [
+    stack.files.entries.".gitignore".lines = [
       # ... existing lines ...
-      "# Age keys (managed by stackpanel)"
+      "# Age keys (managed by stack)"
       "/.keys/"
     ];
   };
@@ -111,7 +111,7 @@ let
   };
 
 in {
-  stackpanel.scripts = {
+  stack.scripts = {
     "age:fetch:dev" = {
       exec = "${devAgeTools.fetchAgeKey}/bin/fetch-age-key";
       description = "Fetch development age keys";
@@ -158,7 +158,7 @@ let
 
 in {
   config = {
-    stackpanel.devshell.env = {
+    stack.devshell.env = {
       SOPS_AGE_KEY_CMD = "${sops-age-keys}/bin/sops-age-keys";
     };
   };
@@ -193,7 +193,7 @@ let
   });
 
 in {
-  stackpanel.devshell.env = {
+  stack.devshell.env = {
     SOPS_AGE_KEY_CMD = "${ageKeyTools.ageKeyCmd}/bin/age-key-cmd";
     SOPS_KEYS_DIR = ageConfig.${environment}.keysDir;
   };
@@ -259,7 +259,7 @@ $SOPS_AGE_KEY_CMD
 **Solution**: Ensure the module is imported or the tools are added to devShell packages:
 
 ```nix
-stackpanel.devshell.packages = [ ageKeyTools.ageKeyCmd ];
+stack.devshell.packages = [ ageKeyTools.ageKeyCmd ];
 ```
 
 ### Issue: `SOPS_AGE_KEY_CMD` not set
@@ -267,13 +267,13 @@ stackpanel.devshell.packages = [ ageKeyTools.ageKeyCmd ];
 **Solution**: Either enable auto-setup in the module:
 
 ```nix
-stackpanel.secrets.age-key-cmd.autoSetup = true;
+stack.secrets.age-key-cmd.autoSetup = true;
 ```
 
 Or manually set it:
 
 ```nix
-stackpanel.devshell.env.SOPS_AGE_KEY_CMD = "${ageKeyTools.ageKeyCmd}/bin/age-key-cmd";
+stack.devshell.env.SOPS_AGE_KEY_CMD = "${ageKeyTools.ageKeyCmd}/bin/age-key-cmd";
 ```
 
 ### Issue: Keys are fetched every time
@@ -333,9 +333,9 @@ If migrating from the old `age-key-cmd.sh`:
 ```nix
 # flake.nix or module config
 {
-  imports = [ ./nix/stackpanel/secrets/lib/age-key-cmd.nix ];
+  imports = [ ./nix/stack/secrets/lib/age-key-cmd.nix ];
   
-  stackpanel.secrets.age-key-cmd.enable = true;
+  stack.secrets.age-key-cmd.enable = true;
   # Uses all defaults - perfect for single-environment projects
 }
 ```
@@ -344,9 +344,9 @@ If migrating from the old `age-key-cmd.sh`:
 
 ```nix
 {
-  imports = [ ./nix/stackpanel/secrets/lib/age-key-cmd.nix ];
+  imports = [ ./nix/stack/secrets/lib/age-key-cmd.nix ];
   
-  stackpanel.secrets.age-key-cmd = {
+  stack.secrets.age-key-cmd = {
     enable = true;
     keysDir = ".secrets/keys/${environment}";
     onePassword = {
@@ -369,7 +369,7 @@ let
     prod = { keysDir = ".keys/prod"; opItem = "op://prod/prod"; };
   };
 in {
-  stackpanel.scripts = lib.mapAttrs' (env: tools:
+  stack.scripts = lib.mapAttrs' (env: tools:
     lib.nameValuePair "age:fetch:${env}" {
       exec = "${tools.fetchAgeKey}/bin/fetch-age-key";
       description = "Fetch ${env} age keys";

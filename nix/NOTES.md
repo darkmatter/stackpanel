@@ -13,7 +13,7 @@ let
     codegen = import ./modules/codegen.nix;
 
     # product defaults (compose multiple features)
-    stackpanel-defaults = import ./modules/stackpanel-defaults.nix;
+    stack-defaults = import ./modules/stack-defaults.nix;
   };
 in
 {
@@ -48,7 +48,7 @@ let
     hooks.before hooks.main hooks.after
   ]);
 
-  # Scripts are now handled by nix/stackpanel/devshell/scripts.nix
+  # Scripts are now handled by nix/stack/devshell/scripts.nix
   # which creates a package with all scripts in bin/
 in
 {
@@ -67,13 +67,13 @@ in
 # USAGE (FLAKE)
 
 ```nix
-devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
+devShells.${system}.default = inputs.stack.lib.mkDevShell {
   pkgs = pkgs;
   modules = [
-    inputs.stackpanel.lib.devshellModules.aws
+    inputs.stack.lib.devshellModules.aws
     ({ lib, pkgs, ... }: {
       # Example: Enable AWS Module
-      stackpanel.aws.enable = true;
+      stack.aws.enable = true;
       Exampple: Add package
       devshell.packages = [ pkgs.nodejs_22 pkgs.bun ];
       Example: Add Hook
@@ -89,10 +89,10 @@ devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
 # devenv.nix
 { inputs, ... }: {
   imports = [
-    inputs.stackpanel.devenvModules.default
-    inputs.stackpanel.lib.devshellModules.aws
+    inputs.stack.devenvModules.default
+    inputs.stack.lib.devshellModules.aws
   ];
 
-  stackpanel.aws.enable = true;
+  stack.aws.enable = true;
 }
 ```

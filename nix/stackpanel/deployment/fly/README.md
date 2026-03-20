@@ -16,7 +16,7 @@ Container-based deployment to [Fly.io](https://fly.io) with generated `fly.toml`
 ## Usage
 
 ```nix
-stackpanel.apps.web.deployment = {
+stack.apps.web.deployment = {
   enable = true;
   provider = "fly";
   fly = {

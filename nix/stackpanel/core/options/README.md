@@ -1,6 +1,6 @@
-# Stackpanel Options Schema
+# Stack Options Schema
 
-This directory contains all option definitions for the Stackpanel module system. These are **pure option declarations** - they define the schema and types, but contain no implementation logic.
+This directory contains all option definitions for the Stack module system. These are **pure option declarations** - they define the schema and types, but contain no implementation logic.
 
 ## Overview
 
@@ -26,22 +26,22 @@ Options are organized by feature area:
 
 ## Option Namespaces
 
-All options are under the `stackpanel` namespace:
+All options are under the `stack` namespace:
 
 ```nix
-stackpanel.enable           # Master switch
-stackpanel.root             # Project root path
-stackpanel.dirs.*           # Directory configuration
-stackpanel.apps.*           # Application definitions
-stackpanel.ports.*          # Port configuration
-stackpanel.devshell.*       # Shell environment
-stackpanel.globalServices.* # Development services
-stackpanel.network.*        # Network/TLS settings
-stackpanel.secrets.*        # Secrets management
-stackpanel.ide.*            # IDE integration
-stackpanel.cli.*            # CLI settings
-stackpanel.motd.*           # Help message
-stackpanel.theme.*          # Prompt theming
+stack.enable           # Master switch
+stack.root             # Project root path
+stack.dirs.*           # Directory configuration
+stack.apps.*           # Application definitions
+stack.ports.*          # Port configuration
+stack.devshell.*       # Shell environment
+stack.globalServices.* # Development services
+stack.network.*        # Network/TLS settings
+stack.secrets.*        # Secrets management
+stack.ide.*            # IDE integration
+stack.cli.*            # CLI settings
+stack.motd.*           # Help message
+stack.theme.*          # Prompt theming
 ```
 
 ## Design Principles
@@ -68,7 +68,7 @@ Implementation is provided by adapter modules that translate options to the targ
 Complex options use `lib.types.submodule` for nested configuration:
 
 ```nix
-options.stackpanel.apps = lib.mkOption {
+options.stack.apps = lib.mkOption {
   type = lib.types.attrsOf (lib.types.submodule {
     options = {
       offset = lib.mkOption { ... };
@@ -84,7 +84,7 @@ options.stackpanel.apps = lib.mkOption {
 Read-only options expose computed values:
 
 ```nix
-options.stackpanel.ports.base-port = lib.mkOption {
+options.stack.ports.base-port = lib.mkOption {
   type = lib.types.port;
   readOnly = true;
   default = basePort;  # Computed from project-name
@@ -95,7 +95,7 @@ options.stackpanel.ports.base-port = lib.mkOption {
 
 1. Create a new file following the naming convention: `<feature>.nix`
 2. Use the standard header format (see existing files)
-3. Define options under `options.stackpanel.<feature>`
+3. Define options under `options.stack.<feature>`
 4. Import the file in `default.nix`
 5. Implement the feature in the appropriate core module
 
@@ -110,7 +110,7 @@ Example template:
 # Detailed explanation of options, usage examples, etc.
 # ==============================================================================
 { lib, ... }: {
-  options.stackpanel.myfeature = {
+  options.stack.myfeature = {
     enable = lib.mkEnableOption "My feature description";
 
     setting = lib.mkOption {

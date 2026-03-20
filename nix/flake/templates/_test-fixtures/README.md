@@ -1,13 +1,13 @@
 # Test Fixtures
 
-These fixtures are used for testing stackpanel modules in CI. They are **not** meant for `nix flake init`.
+These fixtures are used for testing stack modules in CI. They are **not** meant for `nix flake init`.
 
 ## Notes
 
-- Fixtures use SSH URLs (`git+ssh://git@github.com/darkmatter/stackpanel`) which require SSH access to the repo
+- Fixtures use SSH URLs (`git+ssh://git@github.com/darkmatter/stack`) which require SSH access to the repo
 - Initial runs are slow due to fetching nixpkgs, flake-parts, etc. Subsequent runs use cached inputs
 - Use `--no-write-lock-file` to avoid modifying the fixture's lock file
-- Override `stackpanel` input with local path for development: `--override-input stackpanel path:.`
+- Override `stack` input with local path for development: `--override-input stack path:.`
 
 ## Scenarios
 
@@ -69,13 +69,13 @@ git add nix/flake/templates/_test-fixtures/with-oxlint/golden/
 ```bash
 # Build the snapshot derivation and browse its contents
 nix build ./nix/flake/templates/_test-fixtures/with-oxlint#snapshot \
-  --override-input stackpanel path:. --no-write-lock-file
+  --override-input stack path:. --no-write-lock-file
 ls -la result/
 ```
 
 ## Usage in CI
 
-### Testing stackpanel itself
+### Testing stack itself
 
 ```bash
 # Using the test script (recommended)
@@ -87,7 +87,7 @@ ls -la result/
 # Manual: Run all fixture checks
 for fixture in nix/flake/templates/_test-fixtures/*/; do
   echo "Testing $(basename $fixture)..."
-  nix flake check "$fixture" --override-input stackpanel path:. --no-write-lock-file
+  nix flake check "$fixture" --override-input stack path:. --no-write-lock-file
 done
 ```
 
@@ -97,7 +97,7 @@ Fixtures are exposed as flake templates for easy access:
 
 ```bash
 # Initialize a test fixture
-nix flake init -t github:darkmatter/stackpanel#test-external-module
+nix flake init -t github:darkmatter/stack#test-external-module
 
 # Override the module input with your module
 nix flake lock --override-input test-module path:../my-module
@@ -117,7 +117,7 @@ nix flake check
 
 ```bash
 # List all available templates
-nix flake show github:darkmatter/stackpanel --json | jq '.templates | keys'
+nix flake show github:darkmatter/stack --json | jq '.templates | keys'
 ```
 
 ## Creating New Fixtures
@@ -133,7 +133,7 @@ nix flake show github:darkmatter/stackpanel --json | jq '.templates | keys'
 
 ```
 fixture-name/
-├── flake.nix                 # Flake with stackpanel + test checks
+├── flake.nix                 # Flake with stack + test checks
 ├── flake.lock                # Optional: lock file for reproducibility
 ├── .stack/
 │   └── config.nix            # Scenario configuration

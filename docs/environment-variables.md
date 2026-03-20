@@ -1,10 +1,10 @@
-# Stackpanel Environment Variables Reference
+# Stack Environment Variables Reference
 
-This document provides a comprehensive reference for all environment variables used by Stackpanel.
+This document provides a comprehensive reference for all environment variables used by Stack.
 
 > **Source of Truth**: The authoritative definitions are in:
-> - Nix: `nix/stackpanel/core/lib/envvars.nix`
-> - Go: `packages/stackpanel-go/envvars/envvars.go`
+> - Nix: `nix/stack/core/lib/envvars.nix`
+> - Go: `packages/stack-go/envvars/envvars.go`
 
 ## Quick Reference
 
@@ -21,34 +21,34 @@ This document provides a comprehensive reference for all environment variables u
 
 ## CLI Commands
 
-Use the `stackpanel env` command to inspect and validate environment variables:
+Use the `stack env` command to inspect and validate environment variables:
 
 ```bash
 # List all environment variables
-stackpanel env list
+stack env list
 
 # Show current values
-stackpanel env list --values
+stack env list --values
 
 # Filter by category
-stackpanel env list --category aws
+stack env list --category aws
 
 # Show only missing required variables
-stackpanel env list --missing
+stack env list --missing
 
 # Validate required variables
-stackpanel env validate
+stack env validate
 
 # Get details about a specific variable
-stackpanel env get STACKPANEL_ROOT
+stack env get STACKPANEL_ROOT
 
 # Debug view of all variables
-stackpanel env debug
+stack env debug
 ```
 
 ---
 
-## Core Stackpanel
+## Core Stack
 
 ### `STACKPANEL_ROOT`
 
@@ -70,19 +70,19 @@ Filename used as a marker to identify project root.
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Default | `.stackpanel-root` |
+| Default | `.stack-root` |
 
-When searching for the project root, Stackpanel looks for this marker file walking up the directory tree.
+When searching for the project root, Stack looks for this marker file walking up the directory tree.
 
 ### `STACKPANEL_ROOT_DIR_NAME`
 
-Name of the .stackpanel directory within the project.
+Name of the .stack directory within the project.
 
 | Property | Value |
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Default | `.stackpanel` |
+| Default | `.stack` |
 
 ### `STACKPANEL_SHELL_ID`
 
@@ -98,13 +98,13 @@ Used to differentiate between multiple concurrent shell sessions.
 
 ### `STACKPANEL_NIX_CONFIG`
 
-Path to the source Nix config file (`.stackpanel/config.nix`).
+Path to the source Nix config file (`.stack/config.nix`).
 
 | Property | Value |
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Example | `/home/user/my-project/.stackpanel/config.nix` |
+| Example | `/home/user/my-project/.stack/config.nix` |
 
 This points to the source Nix configuration file that users edit. Use this for `nix eval` or `import` operations that need to evaluate the live configuration.
 
@@ -116,7 +116,7 @@ Path to the Nix-generated config JSON in the Nix store.
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Example | `/nix/store/xxx-stackpanel-config.json` |
+| Example | `/nix/store/xxx-stack-config.json` |
 
 This is set by the devenv shell hook and points to the pre-computed JSON configuration generated at shell entry time. The Go CLI uses this for fast config access without needing to evaluate Nix.
 
@@ -132,24 +132,24 @@ Directory for runtime state (credentials, caches, etc.).
 |----------|-------|
 | Source | nix |
 | Required | Yes |
-| Example | `/home/user/my-project/.stackpanel/state` |
+| Example | `/home/user/my-project/.stack/state` |
 
 Contains:
-- `stackpanel.json` - Runtime state file
+- `stack.json` - Runtime state file
 - `step/` - Step CA certificates and keys
 - `aws/` - AWS credential cache
 
 ### `STACKPANEL_STATE_FILE`
 
-Full path to the stackpanel.json state file.
+Full path to the stack.json state file.
 
 | Property | Value |
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Example | `/home/user/my-project/.stackpanel/state/stackpanel.json` |
+| Example | `/home/user/my-project/.stack/state/stack.json` |
 
-Derived from `STACKPANEL_STATE_DIR` + `/stackpanel.json`.
+Derived from `STACKPANEL_STATE_DIR` + `/stack.json`.
 
 ### `STACKPANEL_GEN_DIR`
 
@@ -159,7 +159,7 @@ Directory for generated files (configs, scripts).
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Example | `/home/user/my-project/.stackpanel/gen` |
+| Example | `/home/user/my-project/.stack/gen` |
 
 Contains generated configuration files like:
 - VS Code workspace settings
@@ -174,13 +174,13 @@ Directory for persistent data (databases, etc.).
 |----------|-------|
 | Source | nix |
 | Required | No |
-| Example | `/home/user/my-project/.stackpanel/data` |
+| Example | `/home/user/my-project/.stack/data` |
 
 ---
 
-## Stackpanel Agent
+## Stack Agent
 
-These variables configure the Stackpanel agent when it's spawned externally (e.g., from an IDE or CI).
+These variables configure the Stack agent when it's spawned externally (e.g., from an IDE or CI).
 
 ### `STACKPANEL_PROJECT_ROOT`
 
@@ -467,7 +467,7 @@ JSON array of service definitions with ports.
 In your `devenv.nix`:
 
 ```nix
-stackpanel.ports.services = [
+stack.ports.services = [
   { key = "POSTGRES"; name = "PostgreSQL"; }
   { key = "REDIS"; name = "Redis"; }
   { key = "MINIO"; name = "Minio"; }
@@ -559,12 +559,12 @@ If you see errors about missing required variables:
 
 2. Verify the shell hooks ran successfully:
    ```bash
-   stackpanel env validate
+   stack env validate
    ```
 
 3. Check for specific missing variables:
    ```bash
-   stackpanel env list --missing
+   stack env list --missing
    ```
 
 ### AWS Credentials Not Working
@@ -576,7 +576,7 @@ If you see errors about missing required variables:
 
 2. Check Roles Anywhere configuration:
    ```bash
-   stackpanel env list --category aws --values
+   stack env list --category aws --values
    ```
 
 3. Test credential fetching:
@@ -588,14 +588,14 @@ If you see errors about missing required variables:
 
 Check which ports are configured:
 ```bash
-stackpanel env list --category services --values
+stack env list --category services --values
 ```
 
 ### Debugging
 
 For a complete debug dump:
 ```bash
-stackpanel env debug
+stack env debug
 ```
 
 ---
@@ -604,8 +604,8 @@ stackpanel env debug
 
 When adding new environment variables:
 
-1. **Update Nix definitions** in `nix/stackpanel/core/lib/envvars.nix`
-2. **Update Go definitions** in `packages/stackpanel-go/envvars/envvars.go`
+1. **Update Nix definitions** in `nix/stack/core/lib/envvars.nix`
+2. **Update Go definitions** in `packages/stack-go/envvars/envvars.go`
 3. **Update this documentation**
 
 Both files should stay in sync to ensure consistent behavior between Nix and Go code.

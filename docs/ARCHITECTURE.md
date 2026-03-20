@@ -1,10 +1,10 @@
-# Stackpanel Architecture
+# Stack Architecture
 
-This document describes the internal architecture of Stackpanel for contributors and those interested in understanding how the system works.
+This document describes the internal architecture of Stack for contributors and those interested in understanding how the system works.
 
 ## Overview
 
-Stackpanel is a Nix-based development environment framework that provides deterministic dev environments, service orchestration, secrets management, IDE integration, and a web-based studio for managing everything.
+Stack is a Nix-based development environment framework that provides deterministic dev environments, service orchestration, secrets management, IDE integration, and a web-based studio for managing everything.
 
 ## Runtime Architecture
 
@@ -42,7 +42,7 @@ Browser (Studio UI)
 
 ### Core Design: Adapter-Agnostic Core + Thin Adapters
 
-All stackpanel logic lives in `nix/stackpanel/` and has zero dependency on devenv, NixOS, or any other module system. Adapters translate the core outputs to their target:
+All stack logic lives in `nix/stack/` and has zero dependency on devenv, NixOS, or any other module system. Adapters translate the core outputs to their target:
 
 - `nix/flake/default.nix` - flake-parts adapter
 - `nix/flake/modules/devenv.nix` - devenv adapter
@@ -53,32 +53,32 @@ All stackpanel logic lives in `nix/stackpanel/` and has zero dependency on deven
 ```
 User's flake.nix
   -> imports flakeModules.default (nix/flake/default.nix)
-    -> auto-loads .stackpanel/_internal.nix
-    -> lib.evalModules with nix/stackpanel/ (the core)
-    -> optionally imports .stackpanel/devenv.nix into devenv.shells.default
+    -> auto-loads .stack/_internal.nix
+    -> lib.evalModules with nix/stack/ (the core)
+    -> optionally imports .stack/devenv.nix into devenv.shells.default
     -> creates devShells.default via pkgs.mkShell
 ```
 
 ### Option Namespaces
 
-All options are under `options.stackpanel.*`:
+All options are under `options.stack.*`:
 
 | Namespace | Purpose |
 |-----------|---------|
-| `stackpanel.{enable, name, root, dirs}` | Project identity and paths |
-| `stackpanel.apps` / `stackpanel.appsComputed` | App definitions and computed ports/URLs |
-| `stackpanel.ports` | Deterministic port computation config |
-| `stackpanel.services` | Canonical service type system |
-| `stackpanel.globalServices` | Convenience service definitions (postgres, redis, minio) |
-| `stackpanel.devshell` | Shell environment (packages, hooks, env, files) |
-| `stackpanel.scripts` | Shell commands |
-| `stackpanel.modules` | Extension module registry |
-| `stackpanel.secrets` | Master-key secrets management |
-| `stackpanel.ide` | VS Code and Zed integration |
-| `stackpanel.theme` | Starship prompt theming |
-| `stackpanel.step-ca` | Certificate management |
-| `stackpanel.aws` | AWS Roles Anywhere |
-| `stackpanel.process-compose` | Process orchestration |
+| `stack.{enable, name, root, dirs}` | Project identity and paths |
+| `stack.apps` / `stack.appsComputed` | App definitions and computed ports/URLs |
+| `stack.ports` | Deterministic port computation config |
+| `stack.services` | Canonical service type system |
+| `stack.globalServices` | Convenience service definitions (postgres, redis, minio) |
+| `stack.devshell` | Shell environment (packages, hooks, env, files) |
+| `stack.scripts` | Shell commands |
+| `stack.modules` | Extension module registry |
+| `stack.secrets` | Master-key secrets management |
+| `stack.ide` | VS Code and Zed integration |
+| `stack.theme` | Starship prompt theming |
+| `stack.step-ca` | Certificate management |
+| `stack.aws` | AWS Roles Anywhere |
+| `stack.process-compose` | Process orchestration |
 
 ## Deterministic Port System
 
@@ -99,21 +99,21 @@ Environment variables: `STACKPANEL_<KEY>_PORT` (e.g., `STACKPANEL_POSTGRES_PORT=
 - **Framework**: TanStack Start (SSR-capable React) + Vite + Cloudflare Workers
 - **Router**: TanStack Router with file-based routing
 - **State**: TanStack Query with SuperJSON serialization
-- **Cloud API**: tRPC via `@stackpanel/api`
+- **Cloud API**: tRPC via `@stack/api`
 - **Agent API**: Dual protocol - HTTP REST and Connect-RPC
 - **Auth**: Better-Auth client with JWT session management
 - **UI**: Radix UI primitives + shadcn components + Tailwind CSS v4
 
-### apps/stackpanel-go/ - CLI + Agent (Go)
+### apps/stack-go/ - CLI + Agent (Go)
 
 Single Go binary with two modes:
 
 **CLI** (Cobra commands):
-- `stackpanel` - Interactive TUI navigator (default)
-- `stackpanel services {start,stop,status,restart,logs}` - Service management
-- `stackpanel caddy {start,stop,status,add,remove}` - Reverse proxy
-- `stackpanel status` - Status dashboard
-- `stackpanel agent` - Start the HTTP agent server
+- `stack` - Interactive TUI navigator (default)
+- `stack services {start,stop,status,restart,logs}` - Service management
+- `stack caddy {start,stop,status,add,remove}` - Reverse proxy
+- `stack status` - Status dashboard
+- `stack agent` - Start the HTTP agent server
 
 **Agent** (localhost HTTP server, port 9876):
 - JWT auth via popup pairing flow
@@ -131,11 +131,11 @@ Single Go binary with two modes:
 
 ```
 apps/web
-  -> @stackpanel/api (tRPC routers + types)
-     -> @stackpanel/auth (Better Auth + Polar payments)
-        -> @stackpanel/db (Drizzle ORM + Neon PostgreSQL)
-  -> @stackpanel/agent-client -> @stackpanel/proto (Connect-RPC types)
-  -> @stackpanel/ui-web (shadcn components) -> @stackpanel/ui-core (cn, cva, Logo) + @radix-ui/*
+  -> @stack/api (tRPC routers + types)
+     -> @stack/auth (Better Auth + Polar payments)
+        -> @stack/db (Drizzle ORM + Neon PostgreSQL)
+  -> @stack/agent-client -> @stack/proto (Connect-RPC types)
+  -> @stack/ui-web (shadcn components) -> @stack/ui-core (cn, cva, Logo) + @radix-ui/*
 ```
 
 ## Secrets Architecture
@@ -146,7 +146,7 @@ Three-tier system:
 2. **SOPS-encrypted YAML**: Per-environment files (`dev.yaml`, `staging.yaml`, `prod.yaml`)
 3. **Agenix**: Per-secret `.age` files encrypted to team member SSH public keys
 
-## .stackpanel/ Configuration
+## .stack/ Configuration
 
 ### Files
 
@@ -163,7 +163,7 @@ Three-tier system:
 
 | Path | Purpose |
 |------|---------|
-| `state/stackpanel.json` | Runtime state |
+| `state/stack.json` | Runtime state |
 | `state/shellhook.sh` | Generated shell hook |
 | `state/starship.toml` | Generated prompt config |
 | `gen/ide/vscode/` | VS Code workspace + devshell loader |
@@ -179,7 +179,7 @@ Three-tier system:
 
 ## Key Conventions
 
-- Nix modules implement behavior once in `nix/stackpanel/lib/`, called from thin adapter modules
+- Nix modules implement behavior once in `nix/stack/lib/`, called from thin adapter modules
 - The Go CLI is the single writer for generated files (avoids symlink issues, ensures atomicity)
 - Proto definitions in `packages/proto/` are the contract between Go agent and TypeScript web app
 - Environment variables follow the pattern `STACKPANEL_<KEY>_<PROPERTY>`
@@ -191,23 +191,23 @@ Plugins are just flake inputs:
 
 ```nix
 inputs = {
-  stackpanel.url = "github:darkmatter/stackpanel";
+  stack.url = "github:darkmatter/stack";
 
   # Community plugins
-  stackpanel-aws.url = "github:someone/stackpanel-aws";
-  stackpanel-stripe.url = "github:someone/stackpanel-stripe";
+  stack-aws.url = "github:someone/stack-aws";
+  stack-stripe.url = "github:someone/stack-stripe";
 };
 
 imports = [
-  inputs.stackpanel.flakeModules.default
-  inputs.stackpanel-aws.flakeModules.default
+  inputs.stack.flakeModules.default
+  inputs.stack-aws.flakeModules.default
 ];
 ```
 
 ## Directory Structure
 
 ```
-nix/stackpanel/
+nix/stack/
   core/              # Core schema, CLI invocation, state, utilities
     options/         # Centralized option definitions (multi-consumer options only)
     lib/             # Pure service library functions (mkGlobalServices, etc.)

@@ -1,10 +1,10 @@
 # nix/flake/devshells/
 
-Development shell creation utilities for stackpanel.
+Development shell creation utilities for stack.
 
 ## Overview
 
-This directory provides the infrastructure for creating Nix development shells with stackpanel's module system. It exports a factory function and core module that can be used directly or through higher-level integrations.
+This directory provides the infrastructure for creating Nix development shells with stack's module system. It exports a factory function and core module that can be used directly or through higher-level integrations.
 
 ## Files
 
@@ -53,7 +53,7 @@ in myShell
 ### With flake-parts
 
 ```nix
-stackpanel.devshell = {
+stack.devshell = {
   enable = true;
   modules = [ ./devshell.nix ];
 };
@@ -63,8 +63,8 @@ stackpanel.devshell = {
 
 ```nix
 devenv.shells.default = {
-  imports = [ inputs.stackpanel.devenvModules.default ];
-  stackpanel.enable = true;
+  imports = [ inputs.stack.devenvModules.default ];
+  stack.enable = true;
 };
 ```
 
@@ -72,10 +72,10 @@ devenv.shells.default = {
 
 ```nix
 # flake.nix
-devShells.${system}.default = inputs.stackpanel.lib.mkDevShell {
+devShells.${system}.default = inputs.stack.lib.mkDevShell {
   pkgs = pkgs;
   modules = [
-    inputs.stackpanel.lib.devshellModules.example
+    inputs.stack.lib.devshellModules.example
     ({ lib, pkgs, ... }: {
       devshell.packages = [ pkgs.nodejs_22 ];
       devshell.hooks.before = lib.mkBefore [ "echo consumer before" ];

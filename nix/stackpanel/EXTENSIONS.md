@@ -1,37 +1,37 @@
-# Stackpanel Extensions
+# Stack Extensions
 
-Extensions are feature modules that compose core stackpanel features to provide integrated functionality. They are the primary way to add new capabilities to a stackpanel project.
+Extensions are feature modules that compose core stack features to provide integrated functionality. They are the primary way to add new capabilities to a stack project.
 
 ## Overview
 
 An extension is a Nix module that:
-1. Defines its own configuration options under `stackpanel.<extensionName>.*`
+1. Defines its own configuration options under `stack.<extensionName>.*`
 2. Registers itself in the extensions system for UI visibility
-3. Uses core stackpanel features to implement functionality
+3. Uses core stack features to implement functionality
 
 ## Core Features Available to Extensions
 
-Extensions can use any of these core stackpanel features:
+Extensions can use any of these core stack features:
 
 | Feature | Option Path | Description |
 |---------|-------------|-------------|
-| **File Generation** | `stackpanel.files.entries` | Generate files into the project workspace |
-| **Scripts/Commands** | `stackpanel.scripts` | Add CLI commands to the devshell |
-| **Packages** | `stackpanel.devshell.packages` | Add packages to the devshell |
-| **Tasks** | `stackpanel.tasks` | Define runnable tasks |
-| **Shell Hooks** | `stackpanel.devshell.hooks` | Run code on shell entry |
-| **Variables/Secrets** | `stackpanel.secrets` | Manage secrets and variables |
-| **Services** | `stackpanel.services` | Configure background services |
-| **MOTD** | `stackpanel.motd` | Add entries to the shell greeting |
+| **File Generation** | `stack.files.entries` | Generate files into the project workspace |
+| **Scripts/Commands** | `stack.scripts` | Add CLI commands to the devshell |
+| **Packages** | `stack.devshell.packages` | Add packages to the devshell |
+| **Tasks** | `stack.tasks` | Define runnable tasks |
+| **Shell Hooks** | `stack.devshell.hooks` | Run code on shell entry |
+| **Variables/Secrets** | `stack.secrets` | Manage secrets and variables |
+| **Services** | `stack.services` | Configure background services |
+| **MOTD** | `stack.motd` | Add entries to the shell greeting |
 
 ## Extension Types
 
 ### Builtin Extensions
 
-Shipped with stackpanel. Examples: `sst`, `ci`, `docker`.
+Shipped with stack. Examples: `sst`, `ci`, `docker`.
 
 ```nix
-stackpanel.extensions.sst = {
+stack.extensions.sst = {
   name = "SST Infrastructure";
   enabled = true;
   builtin = true;  # Mark as builtin
@@ -44,7 +44,7 @@ stackpanel.extensions.sst = {
 Defined in the project's Nix configuration:
 
 ```nix
-stackpanel.extensions.my-feature = {
+stack.extensions.my-feature = {
   name = "My Feature";
   enabled = true;
   source.type = "EXTENSION_SOURCE_TYPE_LOCAL";
@@ -57,12 +57,12 @@ stackpanel.extensions.my-feature = {
 Installed from GitHub or other sources:
 
 ```nix
-stackpanel.extensions.some-extension = {
+stack.extensions.some-extension = {
   name = "Some Extension";
   enabled = true;
   source = {
     type = "EXTENSION_SOURCE_TYPE_GITHUB";
-    repo = "someorg/stackpanel-extension";
+    repo = "someorg/stack-extension";
     ref = "main";
   };
 };
@@ -80,7 +80,7 @@ Each extension has these fields:
 
   # Status
   enabled = true;                           # Whether the extension is active
-  builtin = false;                          # Whether shipped with stackpanel
+  builtin = false;                          # Whether shipped with stack
 
   # Source directory for file-based resources
   srcDir = ./src;                           # Optional: Path to src/ directory
@@ -103,10 +103,10 @@ Each extension has these fields:
 
   # Feature flags (what core features this uses)
   features = {
-    files = true;      # Uses stackpanel.files
-    scripts = true;    # Uses stackpanel.scripts
-    tasks = false;     # Uses stackpanel.tasks
-    secrets = true;    # Uses stackpanel.secrets
+    files = true;      # Uses stack.files
+    scripts = true;    # Uses stack.scripts
+    tasks = false;     # Uses stack.tasks
+    secrets = true;    # Uses stack.secrets
     shell-hooks = false;
     packages = true;
     services = false;
@@ -142,12 +142,12 @@ When `srcDir` is specified, the extension system can discover resources:
 
 ```
 src/
-  scripts/           # Shell scripts -> stackpanel.scripts
+  scripts/           # Shell scripts -> stack.scripts
     deploy.sh        # -> <extName>:deploy
     build.sh         # -> <extName>:build
-  checks/            # Healthchecks -> stackpanel.healthchecks
+  checks/            # Healthchecks -> stack.healthchecks
     aws-creds.sh     # -> <extName>:aws-creds
-  files/             # Available for stackpanel.files.entries
+  files/             # Available for stack.files.entries
     config.ts        # Content source for file generation
 ```
 
@@ -160,7 +160,7 @@ Here's the pattern for creating a builtin extension (using SST as example):
 ### 1. Create the Module File
 
 ```nix
-# nix/stackpanel/my-extension/default.nix
+# nix/stack/my-extension/default.nix
 { ... }:
 {
   imports = [ ./my-extension.nix ];
@@ -168,14 +168,14 @@ Here's the pattern for creating a builtin extension (using SST as example):
 ```
 
 ```nix
-# nix/stackpanel/my-extension/my-extension.nix
+# nix/stack/my-extension/my-extension.nix
 { pkgs, lib, config, ... }:
 let
-  cfg = config.stackpanel.my-extension;
+  cfg = config.stack.my-extension;
 in
 {
   # Define extension-specific options
-  options.stackpanel.my-extension = {
+  options.stack.my-extension = {
     enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -191,7 +191,7 @@ in
 
   config = lib.mkIf cfg.enable {
     # Register the extension
-    stackpanel.extensions.my-extension = {
+    stack.extensions.my-extension = {
       name = "My Extension";
       enabled = true;
       builtin = true;
@@ -222,37 +222,37 @@ in
     };
 
     # Use core features
-    stackpanel.files.entries."path/to/generated-file.ts" = {
+    stack.files.entries."path/to/generated-file.ts" = {
       text = ''
         // Generated by my-extension
         export const setting = "${cfg.some-setting}";
       '';
     };
 
-    stackpanel.scripts."my-extension:run" = {
+    stack.scripts."my-extension:run" = {
       description = "Run my extension command";
       exec = ''
         echo "Running with setting: ${cfg.some-setting}"
       '';
     };
 
-    stackpanel.devshell.packages = [ pkgs.some-tool ];
+    stack.devshell.packages = [ pkgs.some-tool ];
 
-    stackpanel.motd.features = [ "My Extension" ];
+    stack.motd.features = [ "My Extension" ];
   };
 }
 ```
 
 ### 2. Add to Core Imports
 
-Add the import to `nix/stackpanel/core/default.nix` or wherever modules are aggregated.
+Add the import to `nix/stack/core/default.nix` or wherever modules are aggregated.
 
 ### 3. Using File-Based Scripts (Recommended)
 
 Instead of inline scripts, use the `path` option to load script content from files:
 
 ```
-nix/stackpanel/my-extension/
+nix/stack/my-extension/
   my-extension.nix      # Extension module
   src/
     scripts/
@@ -266,21 +266,21 @@ nix/stackpanel/my-extension/
 # my-extension.nix
 config = lib.mkIf cfg.enable {
   # Register extension with srcDir for discovery
-  stackpanel.extensions.my-extension = {
+  stack.extensions.my-extension = {
     name = "My Extension";
     srcDir = ./src;  # Points to src/ directory
     # ...
   };
 
   # Scripts using path option (file-based)
-  stackpanel.scripts."my-extension:run" = {
+  stack.scripts."my-extension:run" = {
     description = "Run my extension command";
     path = ./src/scripts/run.sh;  # Load from file
     env.MY_SETTING = cfg.some-setting;  # Pass config via env
   };
 
   # Or use inline exec for simple commands
-  stackpanel.scripts."my-extension:status" = {
+  stack.scripts."my-extension:status" = {
     description = "Show status";
     exec = "echo 'Status: OK'";
   };
@@ -300,14 +300,14 @@ The `srcDir` option enables auto-discovery - scripts in `src/scripts/` are autom
 If your extension has user-editable data, create a proto schema:
 
 ```nix
-# nix/stackpanel/db/schemas/my-extension.proto.nix
+# nix/stack/db/schemas/my-extension.proto.nix
 { lib }:
 let
   proto = import ../lib/proto.nix { inherit lib; };
 in
 proto.mkProtoFile {
   name = "my_extension.proto";
-  package = "stackpanel.db";
+  package = "stack.db";
   
   messages = {
     MyExtension = proto.mkMessage {
@@ -350,10 +350,10 @@ Extensions are exposed for the agent/web UI:
 
 ```nix
 # In Nix
-config.stackpanel.extensions        # All extensions
-config.stackpanel.extensionsComputed # Only enabled extensions
-config.stackpanel.extensionsBuiltin  # Only builtin extensions
-config.stackpanel.extensionsExternal # Only external/local extensions
+config.stack.extensions        # All extensions
+config.stack.extensionsComputed # Only enabled extensions
+config.stack.extensionsBuiltin  # Only builtin extensions
+config.stack.extensionsExternal # Only external/local extensions
 ```
 
 The agent can query extensions via the Nix evaluator and serve them to the web UI.
@@ -362,7 +362,7 @@ The agent can query extensions via the Nix evaluator and serve them to the web U
 
 1. **Use feature flags** - Declare which core features your extension uses
 2. **Provide status panels** - Give users visibility into extension state
-3. **Document requirements** - Use `stackpanel.moduleRequirements` to declare needed secrets/variables
+3. **Document requirements** - Use `stack.moduleRequirements` to declare needed secrets/variables
 4. **Keep options minimal** - Only expose what users need to configure
 5. **Use sensible defaults** - Extensions should work with minimal configuration
 6. **Register MOTD entries** - Help users discover commands and features

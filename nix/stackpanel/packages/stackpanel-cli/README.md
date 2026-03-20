@@ -1,19 +1,19 @@
-# Stackpanel CLI Package
+# Stack CLI Package
 
-Nix derivation for the unified Stackpanel CLI and agent.
+Nix derivation for the unified Stack CLI and agent.
 
 ## Overview
 
-Builds the Go binary from `apps/stackpanel-go` using `buildGoApplication` with gomod2nix for reproducible builds. The resulting `stackpanel` binary provides the CLI, TUI, and local agent server.
+Builds the Go binary from `apps/stack-go` using `buildGoApplication` with gomod2nix for reproducible builds. The resulting `stack` binary provides the CLI, TUI, and local agent server.
 
 ## Usage
 
-The package is automatically added to the devshell when `stackpanel.cli.enable = true`.
+The package is automatically added to the devshell when `stack.cli.enable = true`.
 
 ```bash
-stackpanel          # Interactive TUI
-stackpanel agent    # Start local agent server
-stackpanel hook     # Shell hook (called by Nix on shell entry)
-stackpanel motd     # Display message of the day
-stackpanel caddy    # Caddy management subcommands
+stack          # Interactive TUI
+stack agent    # Start local agent server
+stack hook     # Shell hook (called by Nix on shell entry)
+stack motd     # Display message of the day
+stack caddy    # Caddy management subcommands
 ```

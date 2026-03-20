@@ -3,7 +3,7 @@
 ## Overview
 
 This document outlines the plan for:
-1. A UI to view and manage generated files in stackpanel
+1. A UI to view and manage generated files in stack
 2. Integration with process-compose for app running state
 
 ---
@@ -12,17 +12,17 @@ This document outlines the plan for:
 
 ### Current State
 
-Stackpanel has a Nix-based file generation system (`stackpanel.files`) that:
-- Allows modules to declare files to generate via `stackpanel.files.entries`
+Stack has a Nix-based file generation system (`stack.files`) that:
+- Allows modules to declare files to generate via `stack.files.entries`
 - Supports two types: `text` (inline content) and `derivation` (from Nix derivation)
 - Generates a `write-files` command that materializes files on shell entry
 - Files are written to the project root based on their key path
 
 **Current file contributors:**
-- `nix/stackpanel/ide/ide.nix` - VS Code workspace, devshell loader
-- `nix/stackpanel/modules/go.nix` - package.json, .air.toml for Go apps
-- `nix/stackpanel/modules/bun.nix` - package.json for Bun apps
-- `nix/stackpanel/modules/process-compose.nix` - (planned) process-compose.yml
+- `nix/stack/ide/ide.nix` - VS Code workspace, devshell loader
+- `nix/stack/modules/go.nix` - package.json, .air.toml for Go apps
+- `nix/stack/modules/bun.nix` - package.json for Bun apps
+- `nix/stack/modules/process-compose.nix` - (planned) process-compose.yml
 
 **Problem:** There's no visibility into:
 - What files are being generated
@@ -59,7 +59,7 @@ type GeneratedFilesResponse struct {
 ```
 
 **Implementation approach:**
-1. Evaluate `config.stackpanel.files.entries` via nix eval
+1. Evaluate `config.stack.files.entries` via nix eval
 2. For each entry, resolve the store path and compute metadata
 3. Compare with on-disk files to determine staleness
 
@@ -68,7 +68,7 @@ type GeneratedFilesResponse struct {
 Extend the files entry schema to include source tracking:
 
 ```nix
-# In stackpanel.files.entries
+# In stack.files.entries
 "path/to/file" = {
   type = "text" | "derivation";
   text = "...";           # if type = "text"
@@ -101,13 +101,13 @@ Create a new panel to display generated files.
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │ ▼ IDE (3 files)                                                │
-│   ├─ .vscode/stackpanel.code-workspace      ✓ up-to-date       │
-│   ├─ .stackpanel/gen/devshell-loader.sh     ✓ up-to-date       │
-│   └─ .stackpanel/gen/settings.json          ⚠ stale            │
+│   ├─ .vscode/stack.code-workspace      ✓ up-to-date       │
+│   ├─ .stack/gen/devshell-loader.sh     ✓ up-to-date       │
+│   └─ .stack/gen/settings.json          ⚠ stale            │
 │                                                                 │
 │ ▼ Go Apps (4 files)                                            │
-│   ├─ apps/stackpanel-go/package.json        ✓ up-to-date       │
-│   ├─ apps/stackpanel-go/.air.toml           ✓ up-to-date       │
+│   ├─ apps/stack-go/package.json        ✓ up-to-date       │
+│   ├─ apps/stack-go/.air.toml           ✓ up-to-date       │
 │   └─ ...                                                        │
 │                                                                 │
 │ ▼ Process Compose (1 file)                                     │
@@ -147,23 +147,23 @@ Create a new panel to display generated files.
 
 - Process-compose is available via `process-compose-flake` input
 - Devenv has process-compose integration but we want to avoid devenv dependency
-- `nix/stackpanel/modules/process-compose.nix` exists but generates devenv processes
+- `nix/stack/modules/process-compose.nix` exists but generates devenv processes
 - No standalone `.process-compose.yml` generation currently
 
 ### Proposed Solution
 
 #### 1. Generate `.process-compose.yml` from App Config
 
-Each app in `stackpanel.apps` should contribute a process definition.
+Each app in `stack.apps` should contribute a process definition.
 
-**New Nix module: `nix/stackpanel/modules/process-compose-standalone.nix`**
+**New Nix module: `nix/stack/modules/process-compose-standalone.nix`**
 
 ```nix
 # For each app with scripts.process-compose.enable = true:
 # Generate a process entry in .process-compose.yml
 
 {
-  stackpanel.files.entries.".process-compose.yml" = {
+  stack.files.entries.".process-compose.yml" = {
     type = "derivation";
     source = "process-compose";
     description = "Process orchestration config for all apps";
@@ -210,9 +210,9 @@ processes:
       postgres:
         condition: process_healthy
 
-  stackpanel-go:
+  stack-go:
     command: air
-    working_dir: apps/stackpanel-go
+    working_dir: apps/stack-go
     availability:
       restart: on_failure
 ```
@@ -314,7 +314,7 @@ const isRunning = processStatus?.processes?.find(
 ### Phase 3: Process-Compose Generation
 8. [ ] Create `process-compose-standalone.nix` module
 9. [ ] Extend app schema with process settings
-10. [ ] Generate `.process-compose.yml` via `stackpanel.files`
+10. [ ] Generate `.process-compose.yml` via `stack.files`
 
 ### Phase 4: Process Status Integration
 11. [ ] Add `/api/processes` endpoint to agent
@@ -333,7 +333,7 @@ const isRunning = processStatus?.processes?.find(
 
 2. **Where should `.process-compose.yml` live?**
    - Option A: Project root (standard location)
-   - Option B: `.stackpanel/gen/process-compose.yml` (grouped with other generated files)
+   - Option B: `.stack/gen/process-compose.yml` (grouped with other generated files)
    - Recommendation: Project root for better tooling compatibility
 
 3. **How to handle apps without dev commands?**
@@ -343,7 +343,7 @@ const isRunning = processStatus?.processes?.find(
 4. **Should we support custom process-compose processes?**
    - e.g., database services, queue workers
    - Could extend beyond just apps
-   - Consider `stackpanel.processes` separate from `stackpanel.apps`
+   - Consider `stack.processes` separate from `stack.apps`
 
 ---
 
@@ -363,11 +363,11 @@ apps/web/src/
 │   ├── use-generated-files.ts       # Hook for files API
 │   └── use-process-status.ts        # Hook for process API
 
-apps/stackpanel-go/internal/agent/server/
+apps/stack-go/internal/agent/server/
 ├── files.go                         # /api/nix/files handler
 └── processes.go                     # /api/processes handler
 
-nix/stackpanel/
+nix/stack/
 ├── modules/
 │   └── process-compose-standalone.nix  # New module
 └── devshell/

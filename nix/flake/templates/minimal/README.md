@@ -1,6 +1,6 @@
 # My Project
 
-Powered by [Stackpanel](https://stackpanel.dev) - reproducible dev environments without the complexity.
+Powered by [Stack](https://stack.dev) - reproducible dev environments without the complexity.
 
 > This is the **minimal** template - a bare Nix flake without flake-parts.
 
@@ -38,13 +38,13 @@ bun run dev
 ├── flake.nix              # Nix flake (main entry point)
 ├── flake.lock             # Locked dependencies (auto-generated)
 ├── .stack/
-│   └── config.nix         # Stackpanel options
+│   └── config.nix         # Stack options
 └── .envrc                 # direnv configuration
 ```
 
 ## Configuration
 
-### Stackpanel Config
+### Stack Config
 
 Edit `.stack/config.nix`:
 
@@ -103,6 +103,6 @@ This template uses a standard Nix flake without [flake-parts](https://flake.part
 
 ## Learn More
 
-- [Stackpanel Documentation](https://stackpanel.dev/docs)
-- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
+- [Stack Documentation](https://stack.dev/docs)
+- [Quick Start Guide](https://stack.dev/docs/quick-start)
 - [devenv Documentation](https://devenv.sh)

@@ -25,7 +25,7 @@ Manages project variables as a key-value store. Supports plaintext config, direc
 ## Usage
 
 ```nix
-stackpanel.variables = {
+stack.variables = {
   "/var/LOG_LEVEL" = { value = "info"; };
   "/var/DATABASE_URL" = {
     value = "ref+sops://.stack/secrets/dev/web.sops.yaml#/DATABASE_URL";

@@ -1,12 +1,12 @@
-# `@stackpanel/sdk`
+# `@stack/sdk`
 
-Stackpanel SDK package for reusable TypeScript utilities.
+Stack SDK package for reusable TypeScript utilities.
 
-This package is **not code-generated** and is intended to provide stable, hand-authored helpers you can use across Stackpanel apps and modules.
+This package is **not code-generated** and is intended to provide stable, hand-authored helpers you can use across Stack apps and modules.
 
 ## What it currently exports
 
-- `@stackpanel/sdk/sops`
+- `@stack/sdk/sops`
   - `AlchemyFile` (re-export from `alchemy/fs`)
   - `AlchemyFileModule`
   - `createAlchemyFileModule`
@@ -21,7 +21,7 @@ In this monorepo, consume it via workspace dependency:
 ```json
 {
   "dependencies": {
-    "@stackpanel/sdk": "workspace:*"
+    "@stack/sdk": "workspace:*"
   }
 }
 ```
@@ -40,7 +40,7 @@ The file module combines:
 ## Basic usage
 
 ```ts
-import { AlchemyFile, createAlchemyFileModule } from "@stackpanel/sdk/sops";
+import { AlchemyFile, createAlchemyFileModule } from "@stack/sdk/sops";
 
 const files = createAlchemyFileModule();
 

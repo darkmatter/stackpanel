@@ -1,6 +1,6 @@
 # Learnings from devenv's `.devenv/` Directory
 
-This document analyzes devenv's approach to managing development environment state and identifies improvements we can make to Stackpanel.
+This document analyzes devenv's approach to managing development environment state and identifies improvements we can make to Stack.
 
 ## Overview
 
@@ -87,7 +87,7 @@ CREATE TABLE env_input (
 - Invalidates cache only when actual content changes, not mtime
 - Supports environment variable tracking
 
-**Current Stackpanel approach:**
+**Current Stack approach:**
 - Single `.files-manifest` hash file
 - No file-level dependency tracking
 - No command result caching
@@ -124,7 +124,7 @@ CREATE TABLE watched_file (
 - Smart task skipping based on file changes
 - Debugging: can see when tasks last ran and their output
 
-**Current Stackpanel approach:**
+**Current Stack approach:**
 - Turbo tasks in `tasks/` directory
 - No persistent state tracking
 - No file dependency tracking per task
@@ -152,7 +152,7 @@ CREATE TABLE watched_file (
 - Helps debug "why did my shell change?"
 - Can be used by direnv for watch_file
 
-**Current Stackpanel approach:**
+**Current Stack approach:**
 - Manual `watch_file` calls scattered in `.envrc`
 - No generated list of dependencies
 
@@ -177,7 +177,7 @@ gc/
 - Numbered generations allow rollback
 - Can see shell history
 
-**Current Stackpanel approach:**
+**Current Stack approach:**
 - Single `shellhook.sh` symlink
 - No generation tracking
 - No rollback capability
@@ -194,8 +194,8 @@ gc/
 - Runtime data in tmpfs is faster
 - Better semantics
 
-**Current Stackpanel approach:**
-- Everything in `.stackpanel/state/`
+**Current Stack approach:**
+- Everything in `.stack/state/`
 - No distinction between persistent and ephemeral
 - Accumulates temporary files over time
 
@@ -211,8 +211,8 @@ gc/
 - Stable format for caching
 - Can diff between generations
 
-**Current Stackpanel approach:**
-- `stackpanel.json` is similar
+**Current Stack approach:**
+- `stack.json` is similar
 - Could add more structured data
 
 ### 7. Profile Linking (`profile/`)
@@ -243,7 +243,7 @@ gc/
 - **Faster PATH lookups** (shorter PATH = faster command resolution)
 - **Easier to understand** what's in the environment
 
-**Current Stackpanel approach:**
+**Current Stack approach:**
 - Add individual store paths to PATH: **92 separate PATH entries**
 - Much longer PATH variable
 - More lookups during command resolution
@@ -257,20 +257,20 @@ PATH=".devenv/profile/bin:..."  # 1 entry for all packages
 ls .devenv/profile/bin/          # See all 223 available commands
 ```
 
-*Stackpanel:*
+*Stack:*
 ```bash
 PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/nix/store/...-dev/bin:..." 
 # 92 entries total
 # Harder to enumerate what's available
 ```
 
-## Recommendations for Stackpanel
+## Recommendations for Stack
 
 ### High Priority
 
 #### 1. Add SQLite Caching System
 
-**Task:** Implement `nix-eval-cache.db` equivalent for Stackpanel
+**Task:** Implement `nix-eval-cache.db` equivalent for Stack
 
 **Goals:**
 - Cache file content hashes (not just mtimes)
@@ -279,7 +279,7 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 - Support environment variable change detection
 
 **Implementation:**
-- Create `.stackpanel/state/eval-cache.db`
+- Create `.stack/state/eval-cache.db`
 - Schema similar to devenv's (see above)
 - Use for `write-files` and other codegen
 - Invalidate only when actual content changes
@@ -303,10 +303,10 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 - Support rollback to previous generation
 
 **Implementation:**
-- Create `.stackpanel/state/gc/` directory
+- Create `.stack/state/gc/` directory
 - Create `shell` symlink pointing to `shell-N-link`
 - Increment N on each shell rebuild
-- Add `stackpanel rollback` command
+- Add `stack rollback` command
 - Clean up old generations (keep last N)
 
 **Benefits:**
@@ -319,7 +319,7 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 
 #### 3. Generate Input Paths List
 
-**Task:** Create `.stackpanel/state/input-paths.txt`
+**Task:** Create `.stack/state/input-paths.txt`
 
 **Goals:**
 - List all files that affect the shell environment
@@ -331,7 +331,7 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 - During shell build, track all imported files
 - Write to `input-paths.txt`
 - Update `.envrc` to read from this file
-- Show in `stackpanel status` when inputs changed
+- Show in `stack status` when inputs changed
 
 **Benefits:**
 - Clear documentation of dependencies
@@ -345,15 +345,15 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 
 #### 4. Separate State and Runtime Directories
 
-**Task:** Split `.stackpanel/state/` into `state/` and `run/`
+**Task:** Split `.stack/state/` into `state/` and `run/`
 
 **Goals:**
-- Move ephemeral data to `.stackpanel/run/`
-- Keep persistent data in `.stackpanel/state/`
+- Move ephemeral data to `.stack/run/`
+- Keep persistent data in `.stack/state/`
 - Optionally symlink `run/` to tmpfs
 
 **Implementation:**
-- Create `.stackpanel/run/` directory
+- Create `.stack/run/` directory
 - Move temporary files: PID files, sockets, temp logs
 - Keep persistent: databases, configs, generated files
 - Add cleanup on shell exit
@@ -381,10 +381,10 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 - Store task output for debugging
 
 **Implementation:**
-- Create `.stackpanel/state/tasks.db`
+- Create `.stack/state/tasks.db`
 - Schema similar to devenv's (see above)
 - Integrate with turbo tasks
-- Add `stackpanel tasks history` command
+- Add `stack tasks history` command
 - Show stale tasks in status
 
 **Benefits:**
@@ -397,12 +397,12 @@ PATH="/nix/store/...-turbo-2.7.3/bin:/nix/store/...-process-compose-1.78.0/bin:/
 
 ### ✅ Completed: Unified Profile
 
-> Implemented in `nix/stackpanel/devshell/profile.nix`.
+> Implemented in `nix/stack/devshell/profile.nix`.
 
 **Result:** 92 individual PATH entries collapsed to 1 unified profile with 213 binaries.
-Symlinked to `.stackpanel/state/profile` as a GC root. Man pages and shell
+Symlinked to `.stack/state/profile` as a GC root. Man pages and shell
 completions merged into `profile/share/`. Enabled by default; disable with
-`stackpanel.devshell.profile.enable = false`.
+`stack.devshell.profile.enable = false`.
 
 ## Action Items
 
@@ -416,15 +416,15 @@ completions merged into `profile/share/`. Enabled by default; disable with
 - [x] **Task #2**: Implement GC roots with generations ✅
   - Create gc/ directory structure
   - Numbered generation links (`profile-N-link`, `hook-N-link`)
-  - Keep last N generations (default: 3, configurable via `stackpanel.devshell.gc.retain`)
+  - Keep last N generations (default: 3, configurable via `stack.devshell.gc.retain`)
   - Proper indirect GC roots via `nix-store --realise --add-root`
   - Idempotent: skips if store path unchanged since last generation
-  - Implemented in `nix/stackpanel/devshell/gc-roots.nix`
+  - Implemented in `nix/stack/devshell/gc-roots.nix`
 
 ### Phase 2: Caching (Week 2-3)
 - [ ] **Task #3**: Design SQLite caching schema
   - Based on devenv's approach
-  - Adapt for Stackpanel's needs
+  - Adapt for Stack's needs
   - Document schema and usage
 
 - [ ] **Task #4**: Implement eval cache database
@@ -455,9 +455,9 @@ completions merged into `profile/share/`. Enabled by default; disable with
 - [x] **Task #8**: Unified profile ✅
   - `pkgs.buildEnv` merging all devshell packages
   - 213 binaries in single profile, symlinked to original store paths
-  - GC root at `.stackpanel/state/profile`
+  - GC root at `.stack/state/profile`
   - Both flake builders updated (`nix/flake/default.nix`, `nix/internal/flake/default.nix`)
-  - Implemented in `nix/stackpanel/devshell/profile.nix`
+  - Implemented in `nix/stack/devshell/profile.nix`
 
 ## Metrics
 

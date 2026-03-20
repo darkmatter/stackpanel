@@ -19,7 +19,7 @@ Provides a module system for defining infrastructure resources using [Alchemy](h
 ## Usage
 
 ```nix
-stackpanel.infra = {
+stack.infra = {
   enable = true;
   storage-backend = {
     type = "chamber";

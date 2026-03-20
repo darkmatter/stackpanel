@@ -1,6 +1,6 @@
-# Stackpanel Project Rules
+# Stack Project Rules
 
-Stackpanel is a Nix-based development environment framework that provides:
+Stack is a Nix-based development environment framework that provides:
 
 - **Consistent dev environments** via Nix flakes with reproducible shells
 - **Multi-app monorepo support** with automatic port assignment and Caddy reverse proxy
@@ -12,7 +12,7 @@ Stackpanel is a Nix-based development environment framework that provides:
 
 ```
 .
-├── .stackpanel/                    # Stackpanel configuration (checked in)
+├── .stack/                    # Stack configuration (checked in)
 │   ├── .gitignore                  # Ignores state/ only
 │   ├── config.nix                  # User-facing Nix config
 │   ├── _internal.nix               # Internal Nix config (generated)
@@ -29,11 +29,11 @@ Stackpanel is a Nix-based development environment framework that provides:
 │   │       ├── common.yaml         # Shared schema across environments
 │   │       └── {env}.yaml          # Per-environment schema + access
 │   └── state/                      # Runtime state (gitignored)
-│       └── stackpanel.json         # State file for CLI/agent
+│       └── stack.json         # State file for CLI/agent
 │
 ├── apps/                           # Application packages
 │   ├── web/                        # Studio UI (React + TanStack Start + Vite + Cloudflare Workers)
-│   ├── stackpanel-go/              # Go CLI + agent (Cobra commands, agent server)
+│   ├── stack-go/              # Go CLI + agent (Cobra commands, agent server)
 │   ├── docs/                       # Documentation site (Next.js + Fumadocs)
 │   └── tui/                        # Terminal UI (TypeScript/Bun)
 │
@@ -57,7 +57,7 @@ Stackpanel is a Nix-based development environment framework that provides:
 │   └── docs-content/               # Shared documentation content
 │
 ├── nix/                            # Nix modules and libraries
-│   ├── stackpanel/                 # Core framework
+│   ├── stack/                 # Core framework
 │   │   ├── core/                   # Core options, schema, state, CLI, aliases
 │   │   ├── lib/                    # Utility functions, port management, codegen
 │   │   ├── modules/                # Pluggable feature modules (bun, go, turbo, etc.)
@@ -84,9 +84,9 @@ Stackpanel is a Nix-based development environment framework that provides:
 
 ### State File
 
-The state file (`.stackpanel/state/stackpanel.json`) is generated on each devshell entry and provides the Go CLI and agent with access to the current configuration without evaluating Nix.
+The state file (`.stack/state/stack.json`) is generated on each devshell entry and provides the Go CLI and agent with access to the current configuration without evaluating Nix.
 
-**Location**: `.stackpanel/state/stackpanel.json` (gitignored)
+**Location**: `.stack/state/stack.json` (gitignored)
 
 **Go Usage** (with fallback):
 ```go
@@ -122,26 +122,26 @@ dev                    # Uses process-compose
 # Individual commands
 bun install            # Install dependencies
 bun run dev            # Start dev servers
-stackpanel status      # Check service status
-stackpanel services start  # Start PostgreSQL, Redis, etc.
+stack status      # Check service status
+stack services start  # Start PostgreSQL, Redis, etc.
 ```
 
 ## Nix Module Guidelines
 
-When creating or modifying Nix modules in `nix/stackpanel/`:
+When creating or modifying Nix modules in `nix/stack/`:
 
-1. **Options go in `options.stackpanel.*`** - Follow the existing pattern
+1. **Options go in `options.stack.*`** - Follow the existing pattern
 2. **Use `lib.mkOption` with descriptions** - Document all options
 3. **Config uses `lib.mkIf cfg.enable`** - Guard config blocks
-4. **File generation via `stackpanel.files.entries`** - See nix-templating.md for patterns
-5. **Library functions go in `nix/stackpanel/lib/`** - Keep modules focused on options/config
-6. **Follow the module convention** - Each module gets `default.nix`, `module.nix`, `ui.nix`, `meta.nix` (see `nix/stackpanel/modules/_template/`)
-7. **Wire `flakeInputs` in module registration** - Every `module.nix` that registers via `stackpanel.modules.${meta.id}` must include `flakeInputs = meta.flakeInputs or [];`. This enables the missing flake inputs detection pipeline (see architecture.md). If the module requires a flake input, declare it in `meta.nix` under `flakeInputs`.
+4. **File generation via `stack.files.entries`** - See nix-templating.md for patterns
+5. **Library functions go in `nix/stack/lib/`** - Keep modules focused on options/config
+6. **Follow the module convention** - Each module gets `default.nix`, `module.nix`, `ui.nix`, `meta.nix` (see `nix/stack/modules/_template/`)
+7. **Wire `flakeInputs` in module registration** - Every `module.nix` that registers via `stack.modules.${meta.id}` must include `flakeInputs = meta.flakeInputs or [];`. This enables the missing flake inputs detection pipeline (see architecture.md). If the module requires a flake input, declare it in `meta.nix` under `flakeInputs`.
 
 ## YAML Configuration
 
 All user-editable config files use YAML with JSON Schema validation:
-- Schemas are generated from Nix in `.stackpanel/gen/schemas/`
+- Schemas are generated from Nix in `.stack/gen/schemas/`
 - VS Code workspace maps schemas to file patterns
 - Install the Red Hat YAML extension for intellisense
 

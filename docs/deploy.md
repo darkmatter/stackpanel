@@ -23,7 +23,7 @@ container-build <app-name>
 Define containers in your `flake.nix`:
 
 ```nix
-stackpanel.apps.api = {
+stack.apps.api = {
   port = 1;
   root = "./apps/api";
   build = "bun run build";
@@ -38,7 +38,7 @@ stackpanel.apps.api = {
 Or define them separately:
 
 ```nix
-stackpanel.containers.api = {
+stack.containers.api = {
   enable = true;
   name = "myapp-api";
   tag = "latest";
@@ -57,7 +57,7 @@ stackpanel.containers.api = {
 Configure deployment for your apps:
 
 ```nix
-stackpanel.apps.api = {
+stack.apps.api = {
   port = 1;
   root = "./apps/api";
   
@@ -75,4 +75,4 @@ stackpanel.apps.api = {
 };
 ```
 
-See the full [deployment documentation](https://stackpanel.dev/docs/deployment) for more details.
+See the full [deployment documentation](https://stack.dev/docs/deployment) for more details.

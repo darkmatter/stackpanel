@@ -18,7 +18,7 @@ Manages foundational AWS resources: KMS encryption keys, IAM roles, and OIDC ide
 ## Usage
 
 ```nix
-stackpanel.sst = {
+stack.sst = {
   enable = true;
   project-name = "my-project";
   region = "us-east-1";

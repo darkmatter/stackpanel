@@ -1,6 +1,6 @@
 # Core Module
 
-Foundational options and boot logic for the Stackpanel module system.
+Foundational options and boot logic for the Stack module system.
 
 ## Overview
 
@@ -22,7 +22,7 @@ Feature-specific options live in their own directories (`apps/`, `services/`, `n
 | `cli-options.nix` | CLI enable/quiet options |
 | `state.nix` | Legacy state file generation |
 | `state-options.nix` | State file options |
-| `user-packages.nix` | User-installed packages from `.stackpanel/data/packages.nix` |
+| `user-packages.nix` | User-installed packages from `.stack/data/packages.nix` |
 | `users-options.nix` | Team member definitions |
 | `panels.nix` | UI panel system for the web studio |
 | `tasks.nix` | Turborepo task definitions |
@@ -34,12 +34,12 @@ Feature-specific options live in their own directories (`apps/`, `services/`, `n
 
 ## Usage
 
-The core module is imported automatically via `nix/stackpanel/default.nix`. Configure it in your project:
+The core module is imported automatically via `nix/stack/default.nix`. Configure it in your project:
 
 ```nix
-stackpanel = {
+stack = {
   enable = true;
   name = "my-project";
-  dirs.home = ".stackpanel";
+  dirs.home = ".stack";
 };
 ```

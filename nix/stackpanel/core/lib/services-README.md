@@ -1,12 +1,12 @@
 # Core Services Library
 
-Pure library functions for stackpanel service configuration.
+Pure library functions for stack service configuration.
 
 ## Overview
 
 This directory contains the **core library functions** for service configuration. These are pure functions that work with any Nix module system (flake-parts, devenv, NixOS, etc.).
 
-Service **implementations** live in `nix/stackpanel/services/{postgres,redis,minio,caddy}/`.
+Service **implementations** live in `nix/stack/services/{postgres,redis,minio,caddy}/`.
 
 ## Files
 
@@ -19,7 +19,7 @@ Service **implementations** live in `nix/stackpanel/services/{postgres,redis,min
 ## Architecture
 
 ```
-User Config (stackpanel.globalServices)
+User Config (stack.globalServices)
     ↓
 services/global-services.nix (devenv module)
     ↓
@@ -99,7 +99,7 @@ in {
 Services store data in project-local directories:
 
 ```
-<projectRoot>/.stackpanel/state/services/
+<projectRoot>/.stack/state/services/
 ├── postgres/
 │   └── data/
 ├── redis/
@@ -110,7 +110,7 @@ Services store data in project-local directories:
 
 ## Adding a New Service
 
-1. Create implementation in `nix/stackpanel/services/<service>/default.nix`
+1. Create implementation in `nix/stack/services/<service>/default.nix`
 2. Register in `core/services/services.nix`:
 
 ```nix
@@ -134,4 +134,4 @@ defaultPorts = {
 };
 ```
 
-See `nix/stackpanel/services/README.md` for implementation patterns.
+See `nix/stack/services/README.md` for implementation patterns.

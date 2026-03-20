@@ -1,6 +1,6 @@
 # My Project
 
-Powered by [Stackpanel](https://stackpanel.dev) - reproducible dev environments without the complexity.
+Powered by [Stack](https://stack.dev) - reproducible dev environments without the complexity.
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ bun run dev
 
 ## Configuration
 
-### Stackpanel Config
+### Stack Config
 
 Edit `.stack/config.nix` to configure your environment:
 
@@ -80,15 +80,15 @@ Edit `nix/devenv.nix` for packages, languages, and processes:
 |---------|-------------|
 | `dev` | Start development (all processes) |
 | `direnv allow` | Activate the dev environment |
-| `stackpanel status` | Check service status |
-| `stackpanel services start` | Start background services |
+| `stack status` | Check service status |
+| `stack services start` | Start background services |
 | `nix flake update` | Update dependencies |
 
 ## Project Structure
 
 ```
 .
-├── .stack/                # Stackpanel configuration
+├── .stack/                # Stack configuration
 │   ├── config.nix         # Main config
 │   ├── profile/           # Runtime state (gitignored)
 │   └── gen/               # Generated files (gitignored)
@@ -100,6 +100,6 @@ Edit `nix/devenv.nix` for packages, languages, and processes:
 
 ## Learn More
 
-- [Stackpanel Documentation](https://stackpanel.dev/docs)
-- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
-- [Configuration Reference](https://stackpanel.dev/docs/reference)
+- [Stack Documentation](https://stack.dev/docs)
+- [Quick Start Guide](https://stack.dev/docs/quick-start)
+- [Configuration Reference](https://stack.dev/docs/reference)

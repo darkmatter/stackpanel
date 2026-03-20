@@ -21,14 +21,14 @@ Builds container images for apps using either [nix2container](https://github.com
 
 ```nix
 # Per-app containers
-stackpanel.apps.web.container = {
+stack.apps.web.container = {
   enable = true;
   type = "bun";
   port = 3000;
 };
 
 # Or direct image definitions
-stackpanel.containers.images.my-image = {
+stack.containers.images.my-image = {
   name = "my-app";
   type = "bun";
   port = 3000;

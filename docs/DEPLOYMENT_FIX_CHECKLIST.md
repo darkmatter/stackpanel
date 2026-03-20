@@ -2,7 +2,7 @@
 
 Use this checklist if you're getting errors like:
 ```
-error: The option `stackpanel.deployment.fly.apps' does not exist.
+error: The option `stack.deployment.fly.apps' does not exist.
 ```
 
 ## Quick Fix Steps
@@ -11,16 +11,16 @@ error: The option `stackpanel.deployment.fly.apps' does not exist.
 
 Check these locations for deployment config:
 - [ ] `flake.nix` - Main configuration
-- [ ] `.stackpanel/config.nix` - Local overrides
-- [ ] `.stackpanel/config.local.nix` - Local-only settings
+- [ ] `.stack/config.nix` - Local overrides
+- [ ] `.stack/config.local.nix` - Local-only settings
 - [ ] Any imported config files referenced in your flake
 
 ### Step 2: Search for Old Patterns
 
 Search your config files for these **outdated** patterns:
-- [ ] `stackpanel.deployment.fly.apps`
-- [ ] `stackpanel.deployment.cloudflare.workers`
-- [ ] `stackpanel.deployment.cloudflare.pages`
+- [ ] `stack.deployment.fly.apps`
+- [ ] `stack.deployment.cloudflare.workers`
+- [ ] `stack.deployment.cloudflare.pages`
 - [ ] `deployment.fly.enable = true` (at global level)
 - [ ] `deployment.cloudflare.enable = true` (at global level)
 
@@ -30,7 +30,7 @@ For **each app** that needs deployment, update the config:
 
 #### ❌ OLD (Remove this)
 ```nix
-stackpanel.deployment.fly.apps.myapp = {
+stack.deployment.fly.apps.myapp = {
   region = "iad";
   vm-size = "shared-cpu-1x";
 };
@@ -38,7 +38,7 @@ stackpanel.deployment.fly.apps.myapp = {
 
 #### ✅ NEW (Use this)
 ```nix
-stackpanel.apps.myapp = {
+stack.apps.myapp = {
   port = 1;  # or your app's port
   root = "./apps/myapp";
   
@@ -58,11 +58,11 @@ stackpanel.apps.myapp = {
 
 ### Step 4: Update Global Settings (Optional)
 
-Global deployment settings are now under `stackpanel.deployment` directly:
+Global deployment settings are now under `stack.deployment` directly:
 
 #### ❌ OLD
 ```nix
-stackpanel.deployment.fly = {
+stack.deployment.fly = {
   enable = true;
   organization = "my-org";
 };
@@ -70,7 +70,7 @@ stackpanel.deployment.fly = {
 
 #### ✅ NEW
 ```nix
-stackpanel.deployment = {
+stack.deployment = {
   fly = {
     organization = "my-org";
     defaultRegion = "iad";
@@ -110,7 +110,7 @@ nix build --impure .#packages.x86_64-linux.container-myapp
 ```bash
 # Clean and rebuild
 rm -rf .devenv
-nix flake lock --update-input stackpanel  # Optional: update to latest
+nix flake lock --update-input stack  # Optional: update to latest
 nix develop --impure
 
 # Or with direnv
@@ -123,7 +123,7 @@ After making changes, verify:
 
 - [ ] `nix develop --impure` runs without errors
 - [ ] No error about `deployment.fly.apps` or similar
-- [ ] Apps show up correctly in Stackpanel studio
+- [ ] Apps show up correctly in Stack studio
 - [ ] Container builds work with new path
 - [ ] Deployment config appears in generated files
 
@@ -139,8 +139,8 @@ After making changes, verify:
    - All fields are now camelCase, not kebab-case
 
 4. **Leaving old global enables**
-   - Remove `stackpanel.deployment.fly.enable = true`
-   - Remove `stackpanel.deployment.cloudflare.enable = true`
+   - Remove `stack.deployment.fly.enable = true`
+   - Remove `stack.deployment.cloudflare.enable = true`
 
 5. **Wrong container path**
    - Use `.#packages.<system>.container-<name>` not `.#containers.<name>`
@@ -150,7 +150,7 @@ After making changes, verify:
 ### Before (OLD)
 ```nix
 {
-  stackpanel.deployment.fly = {
+  stack.deployment.fly = {
     enable = true;
     organization = "acme";
     
@@ -161,7 +161,7 @@ After making changes, verify:
     };
   };
   
-  stackpanel.deployment.cloudflare = {
+  stack.deployment.cloudflare = {
     enable = true;
     account-id = "abc123";
     
@@ -177,13 +177,13 @@ After making changes, verify:
 ```nix
 {
   # Global deployment settings (optional)
-  stackpanel.deployment = {
+  stack.deployment = {
     fly.organization = "acme";
     cloudflare.accountId = "abc123";
   };
   
   # App definitions with deployment config
-  stackpanel.apps = {
+  stack.apps = {
     api = {
       port = 1;
       root = "./apps/api";
@@ -220,7 +220,7 @@ After making changes, verify:
 ## Still Stuck?
 
 1. Check the full migration guide: `docs/DEPLOYMENT_MIGRATION.md`
-2. Review documentation: https://stackpanel.dev/docs/deployment
+2. Review documentation: https://stack.dev/docs/deployment
 3. Look at example configs in `nix/flake/templates/`
 4. Open an issue with your config (sanitized)
 

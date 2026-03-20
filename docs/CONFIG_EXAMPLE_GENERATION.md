@@ -2,7 +2,7 @@
 
 ## Overview
 
-Stackpanel can now generate an annotated `config.nix.example` file with inline documentation extracted from option descriptions. This makes it easier for users to understand available configuration options without reading separate documentation.
+Stack can now generate an annotated `config.nix.example` file with inline documentation extracted from option descriptions. This makes it easier for users to understand available configuration options without reading separate documentation.
 
 ## Features
 
@@ -22,7 +22,7 @@ Generate an annotated config example in your devshell:
 generate-config-example
 ```
 
-This creates `.stackpanel/config.nix.example` with inline documentation.
+This creates `.stack/config.nix.example` with inline documentation.
 
 ### Without Comments
 
@@ -55,7 +55,7 @@ generate-config-example --help
 # ==============================================================================
 # config.nix.example
 #
-# Stackpanel project configuration example with inline documentation.
+# Stack project configuration example with inline documentation.
 #
 # This file is auto-generated from option descriptions. Copy sections you need
 # to your config.nix and customize as needed.
@@ -67,7 +67,7 @@ generate-config-example --help
   # ---------------------------------------------------------------------------
   # Enable
   # ---------------------------------------------------------------------------
-  # Whether to enable Stackpanel for this project. When false, all Stackpanel
+  # Whether to enable Stack for this project. When false, all Stack
   # features are disabled and the devshell becomes a minimal Nix shell.
   enable = true;
 
@@ -160,7 +160,7 @@ generate-config-example --help
 # ==============================================================================
 # config.nix.example
 #
-# Stackpanel project configuration example with inline documentation.
+# Stack project configuration example with inline documentation.
 #
 # Minimal configuration example without inline documentation.
 # Run 'generate-config-example' (without --no-comments) for annotated version.
@@ -206,15 +206,15 @@ config.nix.example (with inline docs)
 
 ### File Locations
 
-- **Module**: `.stackpanel/modules/generate-config-example.nix`
-- **Go Implementation**: `apps/stackpanel-go/cmd/cli/config_generate_example.go`
-- **Generated Output**: `.stackpanel/config.nix.example` (default)
+- **Module**: `.stack/modules/generate-config-example.nix`
+- **Go Implementation**: `apps/stack-go/cmd/cli/config_generate_example.go`
+- **Generated Output**: `.stack/config.nix.example` (default)
 
 ## Implementation Details
 
 ### Nix Module
 
-The generation module (`.stackpanel/modules/generate-config-example.nix`) provides:
+The generation module (`.stack/modules/generate-config-example.nix`) provides:
 
 - Shell script wrapper that builds options JSON
 - Integration with existing Go CLI
@@ -280,7 +280,7 @@ When generating example values, the following priority is used:
 When defining new options in Nix modules, add descriptions:
 
 ```nix
-options.stackpanel.myFeature = {
+options.stack.myFeature = {
   enable = lib.mkEnableOption "my feature";
 
   setting = lib.mkOption {
@@ -359,7 +359,7 @@ Run `generate-docs` to also regenerate the MDX documentation.
 ### "Failed to generate options JSON"
 
 The Nix evaluation failed. Check:
-- Your `.stackpanel/config.nix` is valid
+- Your `.stack/config.nix` is valid
 - No syntax errors in imported modules
 - Options are properly defined
 
@@ -368,7 +368,7 @@ The Nix evaluation failed. Check:
 Check:
 - Options have `description` fields
 - Options are not marked `internal = true` or `readOnly = true`
-- Module is imported in `.stackpanel/modules/default.nix`
+- Module is imported in `.stack/modules/default.nix`
 
 ### Comments are too verbose
 

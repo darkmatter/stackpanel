@@ -5,7 +5,7 @@ Single app starter template.
 ## Initialize
 
 ```bash
-nix flake init -t github:darkmatter/stackpanel#example-basic
+nix flake init -t github:darkmatter/stack#example-basic
 ```
 
 ## Enter shell

@@ -4,7 +4,7 @@ Project-local Redis server for caching and queues.
 
 ## Overview
 
-Provides a `mkService` factory that creates a Redis instance with data stored under `.stackpanel/state/services/redis/`. Supports both TCP and Unix socket connections.
+Provides a `mkService` factory that creates a Redis instance with data stored under `.stack/state/services/redis/`. Supports both TCP and Unix socket connections.
 
 ## Environment Variables
 
@@ -13,10 +13,10 @@ Provides a `mkService` factory that creates a Redis instance with data stored un
 | `REDIS_URL` | `redis://localhost:6379` |
 | `REDIS_HOST` | `localhost` |
 | `REDIS_PORT` | `6379` |
-| `REDIS_SOCKET` | `.stackpanel/state/services/redis/redis.sock` |
+| `REDIS_SOCKET` | `.stack/state/services/redis/redis.sock` |
 
 ## Usage
 
 ```nix
-stackpanel.globalServices.redis.enable = true;
+stack.globalServices.redis.enable = true;
 ```

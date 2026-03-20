@@ -56,7 +56,7 @@ For users of the old `age-key-cmd.sh`:
 
 1. Enable the new module:
    ```nix
-   stackpanel.secrets.age-key-cmd.enable = true;
+   stack.secrets.age-key-cmd.enable = true;
    ```
 
 2. Remove manual `SOPS_AGE_KEY_CMD` exports
@@ -210,4 +210,4 @@ These issues led to the development of the derivation-based approach in v2.0.0.
 - [age Encryption Tool](https://age-encryption.org/)
 - [1Password CLI](https://developer.1password.com/docs/cli/)
 - [Nix Pills](https://nixos.org/guides/nix-pills/)
-- [Stackpanel Documentation](../../README.md)
+- [Stack Documentation](../../README.md)

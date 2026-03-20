@@ -1,10 +1,10 @@
 # nix/flake/
 
-This directory contains the flake outputs and exported modules for stackpanel's Nix integration.
+This directory contains the flake outputs and exported modules for stack's Nix integration.
 
 ## Overview
 
-The `nix/flake/` directory provides everything needed to integrate stackpanel into Nix projects, whether using pure flakes, flake-parts, or devenv.
+The `nix/flake/` directory provides everything needed to integrate stack into Nix projects, whether using pure flakes, flake-parts, or devenv.
 
 ## Directory Structure
 
@@ -29,8 +29,8 @@ Modules for [devenv](https://devenv.sh) integration:
 
 ```nix
 devenv.shells.default = {
-  imports = [ inputs.stackpanel.devenvModules.default ];
-  stackpanel.enable = true;
+  imports = [ inputs.stack.devenvModules.default ];
+  stack.enable = true;
 };
 ```
 
@@ -39,8 +39,8 @@ devenv.shells.default = {
 Modules for [flake-parts](https://flake.parts) integration:
 
 ```nix
-imports = [ inputs.stackpanel.flakeModules.devshell ];
-stackpanel.devshell.enable = true;
+imports = [ inputs.stack.flakeModules.devshell ];
+stack.devshell.enable = true;
 ```
 
 ### devshells
@@ -64,14 +64,14 @@ nix flake init -t github:stack-panel/nix#default
 
 ## Usage
 
-Add stackpanel to your flake inputs:
+Add stack to your flake inputs:
 
 ```nix
 {
-  inputs.stackpanel.url = "github:stack-panel/nix";
+  inputs.stack.url = "github:stack-panel/nix";
 
-  outputs = { stackpanel, ... }: {
-    # Use stackpanel exports here
+  outputs = { stack, ... }: {
+    # Use stack exports here
   };
 }
 ```
