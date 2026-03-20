@@ -6,22 +6,30 @@ icon: Settings
 
 # Cli Options
 
-<NixOption
-  path={"cli.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"cli"}
->
-Whether to enable CLI-based file generation.
-</NixOption>
+## `cli.enable`
 
-<NixOption
-  path={"cli.quiet"}
-  type={"boolean"}
-  defaultValue={"false"}
-  module={"cli"}
->
+Whether to enable CLI-based file generation.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `cli.quiet`
+
 Suppress generation output messages
-</NixOption>
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
 

@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	tree_sitter_nix "github.com/darkmatter/stackpanel/stackpanel-go/internal/treesitter/nix"
+	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
 // findReadmeFiles recursively finds README.md files in subdirectories
@@ -131,38 +134,53 @@ func isSeparatorLine(line string) bool {
 }
 
 // extractNixDocHeader extracts the documentation header from a .nix file
-// Returns the content if the file starts with a multi-line comment block (5+ lines)
+// using tree-sitter-nix to parse comment nodes at the start of the file.
+// Returns the content if the file starts with a multi-line comment block (5+ lines).
 func extractNixDocHeader(path string) string {
-	content, err := os.ReadFile(path)
+	source, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}
 
-	lines := strings.Split(string(content), "\n")
-	if len(lines) < 5 {
+	parser := tree_sitter.NewParser()
+	defer parser.Close()
+	lang := tree_sitter.NewLanguage(tree_sitter_nix.Language())
+	if err := parser.SetLanguage(lang); err != nil {
 		return ""
 	}
 
-	// Check if file starts with # comment lines
+	tree := parser.Parse(source, nil)
+	if tree == nil {
+		return ""
+	}
+	defer tree.Close()
+
+	root := tree.RootNode()
+
+	// Walk root's children, collecting consecutive comment nodes from the beginning.
+	// Stop at the first non-comment child node.
 	var docLines []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "#") {
-			// Remove the # prefix and leading space
-			docLine := strings.TrimPrefix(trimmed, "#")
-			docLine = strings.TrimPrefix(docLine, " ")
-			// Skip separator lines (e.g., "==============")
-			if isSeparatorLine(docLine) {
-				continue
-			}
-			docLines = append(docLines, docLine)
-		} else if trimmed == "" && len(docLines) > 0 {
-			// Allow empty lines within the doc block
-			docLines = append(docLines, "")
-		} else {
-			// Hit non-comment, non-empty line - end of doc block
+	childCount := root.ChildCount()
+	for i := uint(0); i < childCount; i++ {
+		child := root.Child(i)
+		if child == nil {
 			break
 		}
+		if child.Kind() != "comment" {
+			break
+		}
+
+		text := string(source[child.StartByte():child.EndByte()])
+		// Strip the leading # prefix and optional single space
+		text = strings.TrimPrefix(text, "#")
+		text = strings.TrimPrefix(text, " ")
+
+		// Skip separator lines (e.g., "==============")
+		if isSeparatorLine(text) {
+			continue
+		}
+
+		docLines = append(docLines, text)
 	}
 
 	// Require at least 5 lines to be considered a doc header

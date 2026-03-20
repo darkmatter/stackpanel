@@ -138,7 +138,6 @@ export interface SetupContextValue {
 	configVerified: boolean;
 	setConfigVerified: React.Dispatch<React.SetStateAction<boolean>>;
 
-	// Secrets backend
-	secretsBackend: "vals" | "chamber";
+	// Secrets backend (chamber = AWS SSM, detected from Nix config)
 	isChamber: boolean;
 }

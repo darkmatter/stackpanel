@@ -1,8 +1,13 @@
 package docgen
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 // convertReadmeToMdx converts README.md content to MDX with frontmatter
@@ -15,15 +20,115 @@ func convertNixHeaderToMdx(docHeader string, moduleName string) string {
 	return convertDocToMdx(docHeader, moduleName, true)
 }
 
-// convertDocToMdx converts documentation content to MDX with frontmatter
+// mdParse parses markdown source into a goldmark AST.
+func mdParse(source []byte) ast.Node {
+	md := goldmark.New()
+	reader := text.NewReader(source)
+	return md.Parser().Parse(reader)
+}
+
+// mdNodeText extracts the plain-text content of an AST node (concatenating
+// all inline text / code-span children). This replaces manual tag stripping.
+func mdNodeText(n ast.Node, source []byte) string {
+	var buf bytes.Buffer
+	for c := n.FirstChild(); c != nil; c = c.NextSibling() {
+		switch v := c.(type) {
+		case *ast.Text:
+			buf.Write(v.Segment.Value(source))
+			if v.SoftLineBreak() {
+				buf.WriteByte(' ')
+			}
+		case *ast.CodeSpan:
+			// Recurse into the code span's text segments.
+			for sc := v.FirstChild(); sc != nil; sc = sc.NextSibling() {
+				if t, ok := sc.(*ast.Text); ok {
+					buf.Write(t.Segment.Value(source))
+				}
+			}
+		default:
+			// Recurse for other inline nodes (emphasis, strong, links, etc.)
+			buf.WriteString(mdNodeText(c, source))
+		}
+	}
+	return buf.String()
+}
+
+// mdExtractTitle walks the AST looking for the first H1 heading and returns
+// its text content plus the byte offset where the heading ends so the caller
+// can slice the remaining content.  Returns ("", -1) when no H1 is found.
+func mdExtractTitle(doc ast.Node, source []byte) (title string, endByte int) {
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		h, ok := n.(*ast.Heading)
+		if !ok || h.Level != 1 {
+			continue
+		}
+		title = strings.TrimSpace(mdNodeText(h, source))
+		// The heading node's lines tell us where it ends in the source.
+		if h.Lines().Len() > 0 {
+			last := h.Lines().At(h.Lines().Len() - 1)
+			endByte = int(last.Stop)
+		}
+		return title, endByte
+	}
+	return "", -1
+}
+
+// mdExtractFirstParagraph walks the AST looking for the first Paragraph node
+// that appears after startByte in the source. Returns its text content.
+func mdExtractFirstParagraph(doc ast.Node, source []byte, startByte int) string {
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		p, ok := n.(*ast.Paragraph)
+		if !ok {
+			continue
+		}
+		// Only consider paragraphs that start after the heading.
+		if p.Lines().Len() > 0 && int(p.Lines().At(0).Start) < startByte {
+			continue
+		}
+		text := strings.TrimSpace(mdNodeText(p, source))
+		if text != "" && !strings.HasPrefix(text, "#") {
+			return text
+		}
+	}
+	return ""
+}
+
+// mdStripLeadingH1 removes the first H1 heading (and any preceding blank
+// lines) from markdown source, returning the remainder. If no H1 is found
+// the source is returned unchanged.
+func mdStripLeadingH1(source []byte) []byte {
+	doc := mdParse(source)
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		h, ok := n.(*ast.Heading)
+		if !ok || h.Level != 1 {
+			continue
+		}
+		if h.Lines().Len() > 0 {
+			last := h.Lines().At(h.Lines().Len() - 1)
+			rest := bytes.TrimLeft(source[last.Stop:], "\r\n")
+			return rest
+		}
+		break
+	}
+	return source
+}
+
+// convertDocToMdx converts documentation content to MDX with frontmatter.
+//
+// For README.md files the title is taken from YAML frontmatter if present,
+// otherwise from the first H1 heading. For Nix doc headers the first non-
+// empty, non-separator line is the title.
+//
+// The description is taken from frontmatter if present, otherwise from the
+// first paragraph after the title heading.
 func convertDocToMdx(content string, moduleName string, isNixHeader bool) string {
-	// Default metadata
-	title := strings.ToUpper(moduleName[:1]) + moduleName[1:]
+	defaultTitle := strings.ToUpper(moduleName[:1]) + moduleName[1:]
+	title := defaultTitle
 	description := fmt.Sprintf("Documentation for the %s module", moduleName)
 	icon := ""
 	contentBody := content
 
-	// Parse frontmatter if present (for README.md files)
+	// ── README path: try frontmatter first, then goldmark AST ──────────
 	if !isNixHeader {
 		fm, remaining := parseFrontmatter(content)
 		if fm.Title != "" {
@@ -36,93 +141,84 @@ func convertDocToMdx(content string, moduleName string, isNixHeader bool) string
 			icon = fm.Icon
 		}
 		contentBody = remaining
-	}
 
-	lines := strings.Split(contentBody, "\n")
-	contentStartIndex := 0
+		src := []byte(contentBody)
+		doc := mdParse(src)
 
-	// Look for title in first few lines (if not already found in frontmatter)
-	// For .nix headers, the first non-empty line is often the title (without #)
-	// For README.md without frontmatter, look for # heading
-	maxLines := 5
-	if len(lines) < maxLines {
-		maxLines = len(lines)
-	}
-
-	for i := 0; i < maxLines; i++ {
-		line := lines[i]
-		trimmedLine := strings.TrimSpace(line)
-
-		// Skip empty lines at the start
-		if trimmedLine == "" && contentStartIndex == 0 {
-			continue
+		// Extract H1 as title when frontmatter didn't provide one.
+		h1Text, h1End := mdExtractTitle(doc, src)
+		if h1Text != "" {
+			if title == defaultTitle {
+				title = strings.TrimSuffix(h1Text, "/")
+			}
+			// Strip the H1 from the body.
+			contentBody = strings.TrimSpace(string(src[h1End:]))
 		}
 
-		var foundTitle bool
-		var extractedTitle string
-
-		if isNixHeader {
-			// For .nix headers, first non-empty line is the title
-			// Skip separator lines (e.g., "==============")
-			if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "-") && strings.Trim(trimmedLine, "=-*~#") != "" {
-				extractedTitle = trimmedLine
-				// Strip "filename.nix - " prefix if present (e.g., "module.nix - Bun Module" -> "Bun Module")
-				if idx := strings.Index(extractedTitle, ".nix - "); idx != -1 {
-					extractedTitle = extractedTitle[idx+len(".nix - "):]
-				}
-				foundTitle = true
+		// Extract first paragraph as description when frontmatter didn't
+		// provide one.
+		if description == fmt.Sprintf("Documentation for the %s module", moduleName) {
+			startAt := 0
+			if h1End > 0 {
+				startAt = h1End
 			}
-		} else {
-			// For README.md, look for # heading (only if title not in frontmatter)
-			if strings.HasPrefix(line, "# ") && title == strings.ToUpper(moduleName[:1])+moduleName[1:] {
-				extractedTitle = strings.TrimPrefix(line, "# ")
-				foundTitle = true
-			} else if strings.HasPrefix(line, "# ") {
-				// Skip the heading if we already have title from frontmatter
-				contentStartIndex = i + 1
+			if para := mdExtractFirstParagraph(doc, src, startAt); para != "" {
+				description = para
+			}
+		}
+	} else {
+		// ── Nix header path ────────────────────────────────────────────
+		lines := strings.Split(contentBody, "\n")
+		contentStartIndex := 0
+
+		for i, line := range lines {
+			if i >= 5 {
+				break
+			}
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
 				continue
 			}
-		}
+			if strings.HasPrefix(trimmed, "-") || strings.Trim(trimmed, "=-*~#") == "" {
+				continue
+			}
 
-		if foundTitle {
-			// Clean up title
-			title = strings.TrimSuffix(extractedTitle, "/")
-			title = strings.TrimSpace(title)
+			extracted := trimmed
+			// Strip "filename.nix - " prefix
+			if idx := strings.Index(extracted, ".nix - "); idx != -1 {
+				extracted = extracted[idx+len(".nix - "):]
+			}
+			title = strings.TrimSpace(strings.TrimSuffix(extracted, "/"))
 			contentStartIndex = i + 1
 
-			// Look for description in the next non-empty line (only if not in frontmatter)
-			if description == fmt.Sprintf("Documentation for the %s module", moduleName) {
-				for j := i + 1; j < len(lines) && j < i+5; j++ {
-					nextLine := strings.TrimSpace(lines[j])
-					if nextLine != "" && !strings.HasPrefix(nextLine, "#") && !strings.HasPrefix(nextLine, "-") {
-						description = nextLine
-						break
-					}
+			// First paragraph after title → description
+			for j := i + 1; j < len(lines) && j < i+5; j++ {
+				next := strings.TrimSpace(lines[j])
+				if next != "" && !strings.HasPrefix(next, "#") && !strings.HasPrefix(next, "-") {
+					description = next
+					break
 				}
 			}
 			break
 		}
-	}
 
-	// Get content after the title and format it
-	var finalContent string
-	if contentStartIndex < len(lines) {
-		if isNixHeader {
-			finalContent = formatNixDocContent(lines[contentStartIndex:])
+		if contentStartIndex < len(lines) {
+			contentBody = formatNixDocContent(lines[contentStartIndex:])
 		} else {
-			finalContent = strings.TrimSpace(strings.Join(lines[contentStartIndex:], "\n"))
+			contentBody = ""
 		}
 	}
 
-	result, err := RenderModule(title, description, icon, finalContent)
+	result, err := RenderModule(title, description, icon, contentBody)
 	if err != nil {
-		// Fallback on error
-		return fmt.Sprintf("# %s\n\n%s", title, finalContent)
+		return fmt.Sprintf("# %s\n\n%s", title, contentBody)
 	}
 	return result
 }
 
-// convertDocToMdxWithFrontmatter converts content to MDX using pre-parsed frontmatter
+// convertDocToMdxWithFrontmatter converts content to MDX using pre-parsed frontmatter.
+// The first H1 heading is extracted with goldmark to avoid duplicating it in
+// the body (the title lives in the MDX frontmatter instead).
 func convertDocToMdxWithFrontmatter(fm Frontmatter, content string, moduleName string) string {
 	title := fm.Title
 	if title == "" {
@@ -136,36 +232,28 @@ func convertDocToMdxWithFrontmatter(fm Frontmatter, content string, moduleName s
 
 	icon := fm.Icon
 
-	// Process content to extract title if not in frontmatter
-	lines := strings.Split(content, "\n")
-	contentStartIndex := 0
+	src := []byte(content)
+	doc := mdParse(src)
 
-	for i := 0; i < len(lines) && i < 5; i++ {
-		line := lines[i]
-		if strings.HasPrefix(line, "# ") {
-			if fm.Title == "" {
-				title = strings.TrimPrefix(line, "# ")
-			}
-			contentStartIndex = i + 1
-			break
+	h1Text, h1End := mdExtractTitle(doc, src)
+	if h1Text != "" {
+		if fm.Title == "" {
+			title = h1Text
 		}
+		content = strings.TrimSpace(string(src[h1End:]))
 	}
 
-	var finalContent string
-	if contentStartIndex < len(lines) {
-		finalContent = strings.TrimSpace(strings.Join(lines[contentStartIndex:], "\n"))
-	}
-
-	result, err := RenderModule(title, description, icon, finalContent)
+	result, err := RenderModule(title, description, icon, content)
 	if err != nil {
-		return fmt.Sprintf("# %s\n\n%s", title, finalContent)
+		return fmt.Sprintf("# %s\n\n%s", title, content)
 	}
 	return result
 }
 
-// concatenateDocsToMdx merges multiple docs targeting the same output path
+// concatenateDocsToMdx merges multiple docs targeting the same output path.
+// Leading H1 headings are stripped with goldmark so the combined page can use
+// a single title from frontmatter.
 func concatenateDocsToMdx(docs []ParsedDoc) string {
-	// Use frontmatter from first doc that has it
 	var title, description, icon string
 	for _, doc := range docs {
 		if title == "" && doc.Frontmatter.Title != "" {
@@ -179,7 +267,6 @@ func concatenateDocsToMdx(docs []ParsedDoc) string {
 		}
 	}
 
-	// Default title from first module name
 	if title == "" {
 		title = strings.ToUpper(docs[0].Source.ModuleName[:1]) + docs[0].Source.ModuleName[1:]
 	}
@@ -187,26 +274,12 @@ func concatenateDocsToMdx(docs []ParsedDoc) string {
 		description = fmt.Sprintf("Documentation for %s", title)
 	}
 
-	// Concatenate content from all docs
 	var contentParts []string
 	for _, doc := range docs {
-		content := doc.Content
-
-		// Strip leading # heading if present (we'll use frontmatter title)
-		lines := strings.Split(content, "\n")
-		startIdx := 0
-		for i, line := range lines {
-			if strings.TrimSpace(line) == "" {
-				continue
-			}
-			if strings.HasPrefix(line, "# ") {
-				startIdx = i + 1
-			}
-			break
-		}
-
-		if startIdx < len(lines) {
-			contentParts = append(contentParts, strings.TrimSpace(strings.Join(lines[startIdx:], "\n")))
+		stripped := mdStripLeadingH1([]byte(doc.Content))
+		trimmed := strings.TrimSpace(string(stripped))
+		if trimmed != "" {
+			contentParts = append(contentParts, trimmed)
 		}
 	}
 
@@ -219,20 +292,65 @@ func concatenateDocsToMdx(docs []ParsedDoc) string {
 	return result
 }
 
-// escapeYAMLString ensures a string is safe for YAML frontmatter
+// escapeYAMLString ensures a string is safe for YAML frontmatter.
 // Quotes strings containing special characters like colons, brackets, etc.
 func escapeYAMLString(s string) string {
-	// Characters that need quoting in YAML
 	needsQuotes := strings.ContainsAny(s, `:{}[]&*#?|-<>=!%@\'"`)
 	if needsQuotes {
-		// Escape any existing double quotes and wrap in quotes
 		escaped := strings.ReplaceAll(s, `"`, `\"`)
 		return `"` + escaped + `"`
 	}
 	return s
 }
 
-// formatNixDocContent formats nix doc header content, converting indented blocks to code blocks
+// formatDescription cleans an option description that may contain docbook/XML
+// remnants.  Instead of manual < > scanning, the text is parsed as markdown
+// and the plain text content is extracted via the goldmark AST, which
+// transparently drops any inline HTML tags.
+func formatDescription(desc string) string {
+	if desc == "" {
+		return "_No description provided._"
+	}
+
+	src := []byte(desc)
+	doc := mdParse(src)
+
+	var parts []string
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		switch n.Kind() {
+		case ast.KindParagraph:
+			parts = append(parts, strings.TrimSpace(mdNodeText(n, src)))
+		case ast.KindFencedCodeBlock, ast.KindCodeBlock:
+			// Preserve code blocks verbatim from the source.
+			var cb bytes.Buffer
+			lines := n.Lines()
+			for i := 0; i < lines.Len(); i++ {
+				seg := lines.At(i)
+				cb.Write(seg.Value(src))
+			}
+			parts = append(parts, strings.TrimRight(cb.String(), "\n"))
+		default:
+			// For other block nodes (lists, blockquotes, etc.) fall back
+			// to the raw source segment so we don't lose structure.
+			if n.Lines().Len() > 0 {
+				first := n.Lines().At(0)
+				last := n.Lines().At(n.Lines().Len() - 1)
+				raw := string(src[first.Start:last.Stop])
+				parts = append(parts, strings.TrimSpace(raw))
+			}
+		}
+	}
+
+	result := strings.Join(parts, "\n\n")
+	if strings.TrimSpace(result) == "" {
+		return "_No description provided._"
+	}
+	return strings.TrimSpace(result)
+}
+
+// formatNixDocContent formats nix doc header content, converting indented
+// blocks to fenced code blocks. This handles the structured comment format
+// used in Nix module headers (e.g. "Usage:" sections with indented examples).
 func formatNixDocContent(lines []string) string {
 	var result strings.Builder
 	var inCodeBlock bool
@@ -244,7 +362,6 @@ func formatNixDocContent(lines []string) string {
 
 		// Check for section headers like "Usage:", "Example:", "Access:"
 		if strings.HasSuffix(trimmed, ":") && !strings.Contains(trimmed, " ") && len(trimmed) > 1 {
-			// Flush any pending code block
 			if inCodeBlock && len(codeBlockLines) > 0 {
 				result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
 				codeBlockLines = nil
@@ -255,40 +372,33 @@ func formatNixDocContent(lines []string) string {
 			continue
 		}
 
-		// Detect if this line is indented (starts with spaces after the comment prefix was removed)
 		isIndented := len(line) > 0 && (line[0] == ' ' || line[0] == '\t')
 
 		if isIndented && trimmed != "" {
-			// Start or continue code block
 			if !inCodeBlock {
 				inCodeBlock = true
 				codeBlockLines = nil
 			}
-			// Remove common indentation (usually 2 spaces)
 			codeLine := line
 			if strings.HasPrefix(line, "  ") {
 				codeLine = line[2:]
 			}
 			codeBlockLines = append(codeBlockLines, codeLine)
 		} else {
-			// Flush any pending code block
 			if inCodeBlock && len(codeBlockLines) > 0 {
 				result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
 				codeBlockLines = nil
 				inCodeBlock = false
 			}
 
-			// Regular text line
 			if trimmed != "" {
 				result.WriteString(trimmed + "\n")
 			} else if i > 0 && i < len(lines)-1 {
-				// Preserve paragraph breaks
 				result.WriteString("\n")
 			}
 		}
 	}
 
-	// Flush final code block if any
 	if inCodeBlock && len(codeBlockLines) > 0 {
 		result.WriteString(formatCodeBlock(codeBlockLines, lastSectionHeader))
 	}
@@ -296,13 +406,11 @@ func formatNixDocContent(lines []string) string {
 	return strings.TrimSpace(result.String())
 }
 
-// formatCodeBlock formats lines as a markdown code block
+// formatCodeBlock formats lines as a fenced markdown code block.
 func formatCodeBlock(lines []string, sectionHeader string) string {
-	// Determine language hint based on content or section header
 	lang := "nix"
 	content := strings.Join(lines, "\n")
 
-	// Check for bash-like content
 	if strings.Contains(content, "$") && !strings.Contains(content, "=") && !strings.Contains(content, "{") {
 		lang = "bash"
 	}

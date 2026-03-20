@@ -6,45 +6,69 @@ icon: Settings
 
 # User-packages Options
 
-<NixOption
-  path={"userPackages.enable"}
-  type={"boolean"}
-  defaultValue={"true"}
-  exampleCode={"true"}
-  module={"user-packages"}
->
+## `userPackages.enable`
+
 Whether to enable user-installed packages from .stack/data/packages.nix.
-</NixOption>
 
-<NixOption
-  path={"userPackages.packages"}
-  type={"list of string"}
-  defaultCode={"[\n  \"oxlint\"\n  \"oxfmt\"\n]"}
-  readonly
-  module={"user-packages"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `userPackages.packages`
+
 List of user-installed package attribute paths (read from packages.nix)
-</NixOption>
 
-<NixOption
-  path={"userPackages.resolved"}
-  type={"list of package"}
-  readonly
-  module={"user-packages"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+| **Read Only** | `true` |
+
+**Default:**
+
+```nix
+[
+  "oxlint"
+  "oxfmt"
+]
+```
+
+
+---
+
+## `userPackages.resolved`
+
 Resolved package derivations from user package list.
 
 Only populated when pkgs is available. Empty list otherwise.
-</NixOption>
 
-<NixOption
-  path={"userPackages.serialized"}
-  type={"list of (attribute set)"}
-  readonly
-  module={"user-packages"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of package` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `userPackages.serialized`
+
 Serialized package info for config JSON.
 
 Only populated when pkgs is available. Empty list otherwise.
-</NixOption>
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (attribute set)` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
 

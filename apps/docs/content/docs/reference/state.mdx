@@ -6,39 +6,38 @@ icon: Settings
 
 # State Options
 
-<NixOption
-  path={"state.custom"}
-  type={"attribute set of anything"}
-  defaultValue={"{ }"}
-  module={"state"}
->
-Arbitrary state data contributed by modules.
-Use this for module-specific state that should be serialized.
-</NixOption>
+## `state.custom`
 
-<NixOption
-  path={"state.devenv"}
-  type={"attribute set of anything"}
-  defaultValue={"{ }"}
-  module={"state"}
->
-Devenv-related state for serialization.
-Populated by devenv integration modules (services, languages, pre-commit).
+Arbitrary state data contributed by modules. Use this for module-specific state that should be serialized.
 
-Structure:
-  \{
-    services = \{ available = [...]; enabled = [...]; \};
-    languages = \{ available = [...]; enabled = [...]; \};
-    preCommit = \{ available = [...]; enabled = [...]; \};
-  \}
-</NixOption>
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
 
-<NixOption
-  path={"state.file"}
-  type={"string"}
-  defaultValue={"\"stackpanel.json\""}
-  module={"state"}
->
+---
+
+## `state.devenv`
+
+Devenv-related state for serialization. Populated by devenv integration modules (services, languages, pre-commit).
+
+Structure: \{ services = \{ available = [...]; enabled = [...]; \}; languages = \{ available = [...]; enabled = [...]; \}; preCommit = \{ available = [...]; enabled = [...]; \}; \}
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of anything` |
+| **Default** | `{ }` |
+
+---
+
+## `state.file`
+
 Name of the state file written to the state directory.
-</NixOption>
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"stackpanel.json"` |
+
+---
 

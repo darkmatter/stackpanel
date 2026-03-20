@@ -1,6 +1,10 @@
 package docgen
 
-import "strings"
+import (
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
 
 // parseFrontmatter parses YAML frontmatter from documentation content.
 // Returns the parsed Frontmatter and the remaining content (without frontmatter).
@@ -26,28 +30,23 @@ func parseFrontmatter(content string) (Frontmatter, string) {
 		return fm, content
 	}
 
-	// Parse frontmatter fields (simple YAML parsing)
-	for i := 1; i < endIdx; i++ {
-		line := lines[i]
-		if colonIdx := strings.Index(line, ":"); colonIdx > 0 {
-			key := strings.TrimSpace(line[:colonIdx])
-			value := strings.TrimSpace(line[colonIdx+1:])
-			// Remove quotes if present
-			value = strings.Trim(value, `"'`)
+	// Parse frontmatter fields using YAML parser
+	yamlContent := strings.Join(lines[1:endIdx], "\n")
 
-			switch strings.ToLower(key) {
-			case "title":
-				fm.Title = value
-			case "description":
-				fm.Description = value
-			case "icon":
-				fm.Icon = value
-			case "output":
-				fm.Output = value
-			case "skip":
-				fm.Skip = value == "true" || value == "yes" || value == "1" || value == ""
-			}
-		}
+	var raw struct {
+		Title       string `yaml:"title"`
+		Description string `yaml:"description"`
+		Icon        string `yaml:"icon"`
+		Output      string `yaml:"output"`
+		Skip        bool   `yaml:"skip"`
+	}
+
+	if err := yaml.Unmarshal([]byte(yamlContent), &raw); err == nil {
+		fm.Title = raw.Title
+		fm.Description = raw.Description
+		fm.Icon = raw.Icon
+		fm.Output = raw.Output
+		fm.Skip = raw.Skip
 	}
 
 	// Return remaining content (after frontmatter)

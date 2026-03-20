@@ -26,7 +26,6 @@ import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import {
 	useNixConfig,
 	useNixData,
-	useVariablesBackend,
 	useRecipients,
 } from "@/lib/use-agent";
 import { HelpButton } from "../shared/help-button";
@@ -34,13 +33,9 @@ import { HelpButton } from "../shared/help-button";
 import { SetupProvider } from "./setup-context";
 import {
 	ConnectAgentStep,
-	InitGroupsStep,
 	InfrastructureStep,
-	KmsConfigStep,
 	ProjectInfoStep,
-	SecretsBackendStep,
-	SopsAgeKeysStep,
-	TeamAccessStep,
+	SecretsStep,
 	VerifyConfigStep,
 } from "./steps";
 import type { SetupContextValue, SetupStep, SSTData } from "./types";
@@ -130,10 +125,10 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 	// Check if AWS KMS is configured
 	const hasAwsKms = sstData?.kms?.enable ?? false;
 
-	// Secrets backend
-	const { data: backendData } = useVariablesBackend();
-	const secretsBackend: "vals" | "chamber" = backendData?.backend ?? "vals";
-	const isChamber = secretsBackend === "chamber";
+	// Chamber mode is determined solely by Nix config, not a UI selector
+	const nixSecrets = ((nixConfig as Record<string, unknown>)?.secrets as Record<string, unknown> | undefined);
+	const isChamber = (nixSecrets?.backend as string | undefined) === "chamber";
+	const secretsBackend: "vals" | "chamber" = isChamber ? "chamber" : "vals";
 
 	// ==========================================================================
 	// Data Loading
@@ -418,8 +413,7 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		configVerified,
 		setConfigVerified,
 
-		// Secrets backend
-		secretsBackend,
+		// Chamber mode (from Nix config)
 		isChamber,
 	};
 
@@ -478,18 +472,14 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 						</CardContent>
 					</Card>
 
-					{/* Steps */}
-					<div className="space-y-4">
-						<ConnectAgentStep />
-						<ProjectInfoStep />
-					<SecretsBackendStep />
-					<SopsAgeKeysStep />
+				{/* Steps */}
+				<div className="space-y-4">
+					<ConnectAgentStep />
+					<ProjectInfoStep />
+					<SecretsStep />
 					<InfrastructureStep />
-						<InitGroupsStep />
-						<TeamAccessStep />
-						<KmsConfigStep />
-						<VerifyConfigStep />
-					</div>
+					<VerifyConfigStep />
+				</div>
 
 					{/* Next Steps */}
 					{requiredComplete === requiredSteps.length && (

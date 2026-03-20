@@ -6,143 +6,227 @@ icon: Settings
 
 # Global-services Options
 
-<NixOption
-  path={"globalServices.caddy.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"global-services"}
->
+## `globalServices.caddy.enable`
+
 Whether to enable Global Caddy reverse proxy.
-</NixOption>
 
-<NixOption
-  path={"globalServices.caddy.sites"}
-  type={"attribute set of string"}
-  defaultValue={"{ }"}
-  exampleCode={"{\n  \"api.localhost\" = \"localhost:8080\";\n  \"myapp.localhost\" = \"localhost:3000\";\n}"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `globalServices.caddy.sites`
+
 Sites to register with Caddy (domain -\> upstream)
-</NixOption>
 
-<NixOption
-  path={"globalServices.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  "api.localhost" = "localhost:8080";
+  "myapp.localhost" = "localhost:3000";
+}
+```
+
+
+---
+
+## `globalServices.enable`
+
 Whether to enable Global singleton development services.
-</NixOption>
 
-<NixOption
-  path={"globalServices.minio.console-port"}
-  type={"null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
-  defaultValue={"null"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `globalServices.minio.console-port`
+
 Minio console port. If null, uses computed port from stackpanel.ports.
-</NixOption>
 
-<NixOption
-  path={"globalServices.minio.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
+| **Default** | `null` |
+
+---
+
+## `globalServices.minio.enable`
+
 Whether to enable Global Minio (S3) service.
-</NixOption>
 
-<NixOption
-  path={"globalServices.minio.package"}
-  type={"package"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `globalServices.minio.package`
+
 Minio package to use
-</NixOption>
 
-<NixOption
-  path={"globalServices.minio.port"}
-  type={"null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
-  defaultValue={"null"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `globalServices.minio.port`
+
 Minio API port. If null, uses computed port from stackpanel.ports.
-</NixOption>
 
-<NixOption
-  path={"globalServices.postgres.databases"}
-  type={"list of string"}
-  defaultCode={"[\n  \"default\"\n]"}
-  exampleCode={"[\n  \"myapp\"\n  \"myapp_test\"\n]"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
+| **Default** | `null` |
+
+---
+
+## `globalServices.postgres.databases`
+
 List of databases to create for this project
-</NixOption>
 
-<NixOption
-  path={"globalServices.postgres.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "default"
+]
+```
+
+
+**Example:**
+
+```nix
+[
+  "myapp"
+  "myapp_test"
+]
+```
+
+
+---
+
+## `globalServices.postgres.enable`
+
 Whether to enable Global PostgreSQL service.
-</NixOption>
 
-<NixOption
-  path={"globalServices.postgres.package"}
-  type={"package"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `globalServices.postgres.package`
+
 PostgreSQL package to use
-</NixOption>
 
-<NixOption
-  path={"globalServices.postgres.port"}
-  type={"null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
-  defaultValue={"null"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `globalServices.postgres.port`
+
 PostgreSQL port. If null, uses computed port from stackpanel.ports.
-</NixOption>
 
-<NixOption
-  path={"globalServices.project-name"}
-  type={"string"}
-  defaultValue={"\"default\""}
-  exampleCode={"\"stackpanel\""}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
+| **Default** | `null` |
+
+---
+
+## `globalServices.project-name`
+
 Project name used for registering databases and sites
-</NixOption>
 
-<NixOption
-  path={"globalServices.redis.enable"}
-  type={"boolean"}
-  defaultValue={"false"}
-  exampleCode={"true"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"default"` |
+
+**Example:**
+
+`"stackpanel"`
+
+
+---
+
+## `globalServices.redis.enable`
+
 Whether to enable Global Redis service.
-</NixOption>
 
-<NixOption
-  path={"globalServices.redis.package"}
-  type={"package"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `globalServices.redis.package`
+
 Redis package to use
-</NixOption>
 
-<NixOption
-  path={"globalServices.redis.port"}
-  type={"null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"}
-  defaultValue={"null"}
-  module={"global-services"}
->
+| Property | Value |
+|----------|-------|
+| **Type** | `package` |
+| **Default** | _none_ |
+
+---
+
+## `globalServices.redis.port`
+
 Redis port. If null, uses computed port from stackpanel.ports.
-</NixOption>
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)` |
+| **Default** | `null` |
+
+---
 
