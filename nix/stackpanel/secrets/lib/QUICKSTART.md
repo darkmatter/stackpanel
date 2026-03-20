@@ -1,6 +1,6 @@
 # Quick Start: Age Key Management
 
-Get started with age key management in Stackpanel projects in under 5 minutes.
+Get started with age key management in Stack projects in under 5 minutes.
 
 ## TL;DR
 
@@ -21,15 +21,15 @@ That's it! If you're already set up, skip to [Usage](#usage).
 
 ### For New Projects
 
-Add to your Stackpanel configuration:
+Add to your Stack configuration:
 
 ```nix
 {
   imports = [
-    ./nix/stackpanel/secrets/lib/age-key-cmd.nix
+    ./nix/stack/secrets/lib/age-key-cmd.nix
   ];
 
-  stackpanel.secrets.age-key-cmd.enable = true;
+  stack.secrets.age-key-cmd.enable = true;
 }
 ```
 
@@ -94,7 +94,7 @@ sops .stack/secrets/dev/web.sops.yaml
 # View a secret
 sops decrypt .stack/secrets/dev/web.sops.yaml
 
-# Use stackpanel secrets commands
+# Use stack secrets commands
 secrets:set API_KEY myvalue --group dev
 secrets:get API_KEY --group dev
 secrets:list --group dev
@@ -258,10 +258,10 @@ If you're familiar with the old `age-key-cmd.sh` script:
 **Old way:**
 ```bash
 # Had to run shell script directly
-./nix/stackpanel/secrets/lib/age-key-cmd.sh
+./nix/stack/secrets/lib/age-key-cmd.sh
 
 # Had to manually set environment
-export SOPS_AGE_KEY_CMD="$(pwd)/nix/stackpanel/secrets/lib/age-key-cmd.sh"
+export SOPS_AGE_KEY_CMD="$(pwd)/nix/stack/secrets/lib/age-key-cmd.sh"
 
 # Keys stored relative to script
 ```
@@ -299,7 +299,7 @@ If you run into issues:
 ### Configuration (Module)
 
 ```nix
-stackpanel.secrets.age-key-cmd = {
+stack.secrets.age-key-cmd = {
   enable = true;                    # Enable age key tools
   keysDir = ".keys";                # Where to cache keys
   autoSetup = true;                 # Auto-configure environment

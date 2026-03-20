@@ -1,6 +1,6 @@
 # My Project
 
-Powered by [Stackpanel](https://stackpanel.dev) + [devenv](https://devenv.sh).
+Powered by [Stack](https://stack.dev) + [devenv](https://devenv.sh).
 
 > This template uses standalone devenv (no flake.nix required).
 
@@ -40,12 +40,12 @@ bun run dev
 ├── devenv.nix             # Devenv configuration
 ├── devenv.lock            # Locked dependencies (auto-generated)
 └── .stack/
-    └── config.nix         # Stackpanel options
+    └── config.nix         # Stack options
 ```
 
 ## Configuration
 
-### Stackpanel Config
+### Stack Config
 
 Edit `.stack/config.nix`:
 
@@ -95,7 +95,7 @@ Edit `devenv.nix`:
 
 ## Learn More
 
-- [Stackpanel Documentation](https://stackpanel.dev/docs)
-- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
+- [Stack Documentation](https://stack.dev/docs)
+- [Quick Start Guide](https://stack.dev/docs/quick-start)
 - [devenv Documentation](https://devenv.sh)
 - [devenv Options Reference](https://devenv.sh/reference/options/)

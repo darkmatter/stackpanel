@@ -3,11 +3,11 @@
 
 <!-- Source: .ruler/architecture.md -->
 
-# Stackpanel Architecture
+# Stack Architecture
 
-## What Stackpanel Is
+## What Stack Is
 
-Stackpanel is a Nix-based development environment framework and studio UI for managing multi-app monorepos. It provides deterministic dev environments, service orchestration, secrets management, IDE integration, and a web-based studio for visualizing and controlling everything.
+Stack is a Nix-based development environment framework and studio UI for managing multi-app monorepos. It provides deterministic dev environments, service orchestration, secrets management, IDE integration, and a web-based studio for visualizing and controlling everything.
 
 ## Runtime Architecture
 
@@ -36,10 +36,10 @@ Browser (Studio UI)
 
 ### Core Design: Adapter-Agnostic Core + Thin Adapters
 
-All stackpanel logic lives in `nix/stackpanel/` and has zero dependency on devenv, NixOS, or any other module system. Adapters translate the core outputs to their target:
+All stack logic lives in `nix/stack/` and has zero dependency on devenv, NixOS, or any other module system. Adapters translate the core outputs to their target:
 
 - `nix/flake/default.nix` -- flake-parts adapter: `lib.evalModules` with core, then `pkgs.mkShell`
-- `nix/flake/modules/devenv.nix` -- devenv adapter: maps `stackpanel.devshell.*` to devenv's outputs
+- `nix/flake/modules/devenv.nix` -- devenv adapter: maps `stack.devshell.*` to devenv's outputs
 - `nix/flake/devenv.nix` -- standalone devenv adapter
 
 ### Import Flow
@@ -47,37 +47,37 @@ All stackpanel logic lives in `nix/stackpanel/` and has zero dependency on deven
 ```
 User's flake.nix
   -> imports flakeModules.default (nix/flake/default.nix)
-    -> auto-loads .stackpanel/_internal.nix (merges config.nix + data/*.nix + overrides)
-    -> lib.evalModules with nix/stackpanel/ (the core)
-    -> optionally imports .stackpanel/devenv.nix into devenv.shells.default
+    -> auto-loads .stack/_internal.nix (merges config.nix + data/*.nix + overrides)
+    -> lib.evalModules with nix/stack/ (the core)
+    -> optionally imports .stack/devenv.nix into devenv.shells.default
     -> creates devShells.default via pkgs.mkShell
 ```
 
 ### Option Namespaces
 
-All options are under `options.stackpanel.*`:
+All options are under `options.stack.*`:
 
 | Namespace | Purpose |
 |---|---|
-| `stackpanel.{enable, name, root, dirs}` | Project identity and paths |
-| `stackpanel.apps` / `stackpanel.appsComputed` | App definitions and computed ports/URLs |
-| `stackpanel.ports` | Deterministic port computation config |
-| `stackpanel.services` | Canonical service type system |
-| `stackpanel.globalServices` | Convenience service definitions (postgres, redis, minio) |
-| `stackpanel.devshell` | Shell environment (packages, hooks, env, files) |
-| `stackpanel.scripts` | Shell commands |
-| `stackpanel.modules` | Extension module registry |
-| `stackpanel.secrets` | Master-key secrets management |
-| `stackpanel.ide` | VS Code and Zed integration |
-| `stackpanel.theme` | Starship prompt theming |
-| `stackpanel.step-ca` | Certificate management |
-| `stackpanel.aws` | AWS Roles Anywhere |
-| `stackpanel.process-compose` | Process orchestration |
+| `stack.{enable, name, root, dirs}` | Project identity and paths |
+| `stack.apps` / `stack.appsComputed` | App definitions and computed ports/URLs |
+| `stack.ports` | Deterministic port computation config |
+| `stack.services` | Canonical service type system |
+| `stack.globalServices` | Convenience service definitions (postgres, redis, minio) |
+| `stack.devshell` | Shell environment (packages, hooks, env, files) |
+| `stack.scripts` | Shell commands |
+| `stack.modules` | Extension module registry |
+| `stack.secrets` | Master-key secrets management |
+| `stack.ide` | VS Code and Zed integration |
+| `stack.theme` | Starship prompt theming |
+| `stack.step-ca` | Certificate management |
+| `stack.aws` | AWS Roles Anywhere |
+| `stack.process-compose` | Process orchestration |
 
 ### Key Module Directories
 
 ```
-nix/stackpanel/
+nix/stack/
   core/              # Options definitions (30+ files), CLI invocation, state, utilities
   core/options/      # ALL option definitions (the schema)
   core/services/     # Service computation (mkGlobalServices)
@@ -91,18 +91,18 @@ nix/stackpanel/
   lib/               # Pure library functions (ports, IDE, theme, serialization, service helpers)
   apps/              # App-level features and CI
   tui/               # Terminal UI theme
-  packages/          # Nix package definitions (stackpanel-cli)
+  packages/          # Nix package definitions (stack-cli)
 ```
 
 ### Extensibility Patterns
 
 - **appModules**: Modules inject per-app options. Go module adds `app.go.*`, process-compose adds `app.process-compose.*`, OxLint adds `app.linting.oxlint.*`.
 - **serviceModules**: Modules inject per-service options. Process-compose adds readiness probes, namespaces.
-- **Directory modules** (`nix/stackpanel/modules/`): Auto-discovered. Each has `meta.nix` (pure data), `module.nix` (options + config), `ui.nix` (UI panel definitions).
+- **Directory modules** (`nix/stack/modules/`): Auto-discovered. Each has `meta.nix` (pure data), `module.nix` (options + config), `ui.nix` (UI panel definitions).
 
 ### Proto-Nix Schema System
 
-`.proto.nix` files in `nix/stackpanel/db/schemas/` serve as single source of truth. They generate: Nix module options, Go types (protobuf), TypeScript types, and JSON schemas from one definition.
+`.proto.nix` files in `nix/stack/db/schemas/` serve as single source of truth. They generate: Nix module options, Go types (protobuf), TypeScript types, and JSON schemas from one definition.
 
 ## Deterministic Port System
 
@@ -123,7 +123,7 @@ Environment variables: `STACKPANEL_<KEY>_PORT` (e.g., `STACKPANEL_POSTGRES_PORT=
 - **Framework**: TanStack Start (SSR-capable React) + Vite + Cloudflare Workers
 - **Router**: TanStack Router with file-based routing
 - **State**: TanStack Query with SuperJSON serialization
-- **Cloud API**: tRPC via `@stackpanel/api` -- server uses `localLink` (in-process), client uses `httpBatchStreamLink`
+- **Cloud API**: tRPC via `@stack/api` -- server uses `localLink` (in-process), client uses `httpBatchStreamLink`
 - **Agent API**: Dual protocol -- HTTP REST (`AgentHttpClient`, 1244 lines) and Connect-RPC (proto-generated hooks, 1499 lines)
 - **Auth**: Better-Auth client with JWT session management
 - **UI**: Radix UI primitives + shadcn components + Tailwind CSS v4
@@ -137,20 +137,20 @@ Key routes:
 Agent connection pattern:
 1. `AgentProvider` manages JWT pairing via popup, stores token in localStorage, polls health
 2. `AgentSSEProvider` maintains EventSource to `/api/events` for real-time config changes
-3. `ProjectProvider` manages multi-project selection with `X-Stackpanel-Project` header
+3. `ProjectProvider` manages multi-project selection with `X-Stack-Project` header
 
-### apps/stackpanel-go/ -- CLI + Agent (Go)
+### apps/stack-go/ -- CLI + Agent (Go)
 
 Single Go binary with two modes:
 
 **CLI** (Cobra commands):
-- `stackpanel` -- Interactive TUI navigator (default)
-- `stackpanel services {start,stop,status,restart,logs}` -- Service management
-- `stackpanel caddy {start,stop,status,add,remove}` -- Reverse proxy
-- `stackpanel status` -- Status dashboard
-- `stackpanel agent` -- Start the HTTP agent server
-- `stackpanel init` -- Initialize from Nix config (called by Nix shell entry)
-- `stackpanel commands`, `users`, `env`, `vars`, `ports`, `scaffold`, `motd`, `gendocs`, `logs`, `project`
+- `stack` -- Interactive TUI navigator (default)
+- `stack services {start,stop,status,restart,logs}` -- Service management
+- `stack caddy {start,stop,status,add,remove}` -- Reverse proxy
+- `stack status` -- Status dashboard
+- `stack agent` -- Start the HTTP agent server
+- `stack init` -- Initialize from Nix config (called by Nix shell entry)
+- `stack commands`, `users`, `env`, `vars`, `ports`, `scaffold`, `motd`, `gendocs`, `logs`, `project`
 
 **Agent** (localhost HTTP server, port 9876):
 - JWT auth via popup pairing flow
@@ -179,32 +179,32 @@ Early-stage React-based terminal UI using OpenTUI. Separate from the Go Charmbra
 
 ```
 apps/web
-  -> @stackpanel/api (tRPC routers + types)
-     -> @stackpanel/auth (Better Auth + Polar payments)
-        -> @stackpanel/db (Drizzle ORM + Neon PostgreSQL)
+  -> @stack/api (tRPC routers + types)
+     -> @stack/auth (Better Auth + Polar payments)
+        -> @stack/db (Drizzle ORM + Neon PostgreSQL)
         -> @gen/env (generated env package)
-     -> @stackpanel/db
-  -> @stackpanel/agent-client -> @stackpanel/proto (Connect-RPC types)
-  -> @stackpanel/ui -> @stackpanel/ui-web -> @stackpanel/ui-core + @stackpanel/ui-primitives (Radix)
+     -> @stack/db
+  -> @stack/agent-client -> @stack/proto (Connect-RPC types)
+  -> @stack/ui -> @stack/ui-web -> @stack/ui-core + @stack/ui-primitives (Radix)
 ```
 
 ### Key Packages
 
 | Package | Purpose |
 |---|---|
-| `@stackpanel/api` | tRPC routers (agent, github). Creates context with `{ authApi, session, db }`. Defines `publicProcedure` and `protectedProcedure`. |
-| `@stackpanel/auth` | Better Auth with Drizzle adapter, email/password, Polar payments plugin. |
-| `@stackpanel/db` | Drizzle ORM with Neon serverless PostgreSQL. Auth schema (user, session, account, verification). |
+| `@stack/api` | tRPC routers (agent, github). Creates context with `{ authApi, session, db }`. Defines `publicProcedure` and `protectedProcedure`. |
+| `@stack/auth` | Better Auth with Drizzle adapter, email/password, Polar payments plugin. |
+| `@stack/db` | Drizzle ORM with Neon serverless PostgreSQL. Auth schema (user, session, account, verification). |
 | `@gen/env` | Generated, type-safe env package. Per-app/per-env codegen from Nix with app exports like `@gen/env/web`, a runtime loader under `src/entrypoints/`, and embedded encrypted payloads in `src/embedded-data.ts`. |
-| `@stackpanel/proto` | 23+ protobuf modules for agent communication. Generated Go + TypeScript types. |
-| `@stackpanel/agent-client` | Connect-RPC client factory with JWT interceptor. |
-| `@stackpanel/ui` | Facade: re-exports ui-web (or ui-native) + ui-core utilities. |
-| `@stackpanel/ui-web` | 16 shadcn-style components (Button, Card, Dialog, etc.) using Radix + Tailwind. |
-| `@stackpanel/ui-primitives` | Thin re-export of 27 Radix UI packages. |
-| `@stackpanel/ui-core` | `cn()` utility, `cva`, `clsx`, `twMerge`, Logo component. |
-| `@stackpanel/scripts` | Shell scripts for app orchestration: entrypoint.sh, devshell detection, secret loading (AGE + vals + chamber). |
-| `@stackpanel/docs-content` | Raw MDX guide content, importable as strings. |
-| `@stackpanel/infra` | SST IaC: GitHub OIDC, IAM roles, KMS keys for secrets. |
+| `@stack/proto` | 23+ protobuf modules for agent communication. Generated Go + TypeScript types. |
+| `@stack/agent-client` | Connect-RPC client factory with JWT interceptor. |
+| `@stack/ui` | Facade: re-exports ui-web (or ui-native) + ui-core utilities. |
+| `@stack/ui-web` | 16 shadcn-style components (Button, Card, Dialog, etc.) using Radix + Tailwind. |
+| `@stack/ui-primitives` | Thin re-export of 27 Radix UI packages. |
+| `@stack/ui-core` | `cn()` utility, `cva`, `clsx`, `twMerge`, Logo component. |
+| `@stack/scripts` | Shell scripts for app orchestration: entrypoint.sh, devshell detection, secret loading (AGE + vals + chamber). |
+| `@stack/docs-content` | Raw MDX guide content, importable as strings. |
+| `@stack/infra` | SST IaC: GitHub OIDC, IAM roles, KMS keys for secrets. |
 | `znv` | Vendored Zod-based env parser (`parseEnv()`). |
 
 ### Export Convention
@@ -222,7 +222,7 @@ Codegen: Nix generates the env package under `packages/gen/env/src/`, including 
 
 Runtime resolution chain: `secrets:env` script -> AGE decryption -> vals (SSM/Vault/SOPS) -> env files -> chamber (AWS SSM).
 
-## .stackpanel/ Configuration
+## .stack/ Configuration
 
 ### Files
 
@@ -240,7 +240,7 @@ Runtime resolution chain: `secrets:env` script -> AGE decryption -> vals (SSM/Va
 
 | Path | Purpose |
 |---|---|
-| `state/stackpanel.json` | Runtime state: evaluated apps, services, ports, URLs, extensions |
+| `state/stack.json` | Runtime state: evaluated apps, services, ports, URLs, extensions |
 | `state/shellhook.sh` | Generated shell hook |
 | `state/starship.toml` | Generated prompt config |
 | `state/keys/` | Local AGE key pair |
@@ -267,7 +267,7 @@ hooks.before
   -> Path utilities + root resolution
   -> Directory creation (state/, gen/)
   -> Marker file + .gitignore
-  -> CLI init: stackpanel init --config '${configJson}'
+  -> CLI init: stack init --config '${configJson}'
   -> State file generation
   -> Auto-generate local master key
   -> Shell hash computation
@@ -296,7 +296,7 @@ hooks.after
 
 ## Key Conventions
 
-- Nix modules implement behavior once in `nix/stackpanel/lib/`, called from thin adapter modules
+- Nix modules implement behavior once in `nix/stack/lib/`, called from thin adapter modules
 - The Go CLI is the single writer for generated files (avoids symlink issues, ensures atomicity)
 - Proto definitions in `packages/proto/` are the contract between Go agent and TypeScript web app
 - Environment variables follow the pattern `STACKPANEL_<KEY>_<PROPERTY>` (e.g., `STACKPANEL_POSTGRES_PORT`)
@@ -308,7 +308,7 @@ hooks.after
 
 # Better-T-Stack Project Rules
 
-This is a stackpanel project created with Better-T-Stack CLI.
+This is a stack project created with Better-T-Stack CLI.
 
 ## Project Structure
 
@@ -401,11 +401,11 @@ This project includes a `bts.jsonc` configuration file that stores your Better-T
 
 
 
-<!-- Source: .ruler/stackpanel.md -->
+<!-- Source: .ruler/stack.md -->
 
-# Stackpanel Project Rules
+# Stack Project Rules
 
-Stackpanel is a Nix-based development environment framework that provides:
+Stack is a Nix-based development environment framework that provides:
 
 - **Consistent dev environments** via devenv/Nix with reproducible shells
 - **Multi-app monorepo support** with automatic port assignment and Caddy reverse proxy
@@ -417,7 +417,7 @@ Stackpanel is a Nix-based development environment framework that provides:
 
 ```
 .
-├── .stackpanel/                    # Stackpanel configuration (checked in)
+├── .stack/                    # Stack configuration (checked in)
 │   ├── .gitignore                  # Ignores state/ only
 │   ├── gen/                        # Generated files (checked in, regenerated on devenv)
 │   │   ├── ide/vscode/             # VS Code workspace and devshell loader
@@ -432,7 +432,7 @@ Stackpanel is a Nix-based development environment framework that provides:
 │   │       ├── staging.yaml        # Staging-specific schema + access
 │   │       └── prod.yaml           # Production-specific schema + access
 │   └── state/                      # Runtime state (gitignored)
-│       └── stackpanel.json         # State file for CLI/agent
+│       └── stack.json         # State file for CLI/agent
 │
 ├── apps/                           # Application packages
 │   ├── web/                        # React frontend (TanStack Router)
@@ -449,8 +449,8 @@ Stackpanel is a Nix-based development environment framework that provides:
 │   └── config/                     # Shared TypeScript config
 │
 ├── nix/                            # Nix modules and libraries
-│   ├── modules/                    # Stackpanel modules (options + config)
-│   │   ├── stackpanel.nix          # Core module (dirs, motd, direnv)
+│   ├── modules/                    # Stack modules (options + config)
+│   │   ├── stack.nix          # Core module (dirs, motd, direnv)
 │   │   ├── apps.nix                # App definitions and port assignment
 │   │   ├── ports.nix               # Deterministic port allocation
 │   │   ├── ide.nix                 # VS Code integration
@@ -478,7 +478,7 @@ Stackpanel is a Nix-based development environment framework that provides:
 
 ### Ports
 
-Stackpanel assigns deterministic ports based on a hash of the project name, ensuring each project gets a unique, predictable port range that won't conflict with other stackpanel projects.
+Stack assigns deterministic ports based on a hash of the project name, ensuring each project gets a unique, predictable port range that won't conflict with other stack projects.
 
 **Computation Algorithm** (in `nix/modules/ports.nix`):
 
@@ -496,7 +496,7 @@ Stackpanel assigns deterministic ports based on a hash of the project name, ensu
 - **Apps** get ports at `basePort + 0-9` (sequential by definition order)
 - **Services** get ports at `basePort + 10-99` (sequential by registration order)
 
-**Example** for project `stackpanel`:
+**Example** for project `stack`:
 ```
 Base port: 6400
 
@@ -534,7 +534,7 @@ Secrets use a per-app architecture with environment inheritance:
 
 ### Generated Files
 
-Files in `.stackpanel/gen/` are regenerated on each `devenv` run:
+Files in `.stack/gen/` are regenerated on each `devenv` run:
 - Should be checked into git for IDE functionality without devenv
 - JSON schemas enable YAML intellisense in VS Code
 - Workspace file configures terminal integration
@@ -542,23 +542,23 @@ Files in `.stackpanel/gen/` are regenerated on each `devenv` run:
 
 ### State File
 
-The state file (`.stackpanel/state/stackpanel.json`) is generated on each devenv shell entry and provides the Go CLI and agent with access to the current devenv configuration without evaluating Nix.
+The state file (`.stack/state/stack.json`) is generated on each devenv shell entry and provides the Go CLI and agent with access to the current devenv configuration without evaluating Nix.
 
-**Location**: `.stackpanel/state/stackpanel.json` (gitignored)
+**Location**: `.stack/state/stack.json` (gitignored)
 
 **Contents**:
 ```json
 {
   "version": 1,
-  "projectName": "stackpanel",
+  "projectName": "stack",
   "basePort": 6400,
   "paths": {
-    "state": ".stackpanel/state",
-    "gen": ".stackpanel/gen",
-    "data": ".stackpanel"
+    "state": ".stack/state",
+    "gen": ".stack/gen",
+    "data": ".stack"
   },
   "apps": {
-    "web": { "port": 6402, "domain": "stackpanel.localhost", "url": "http://stackpanel.localhost", "tls": false },
+    "web": { "port": 6402, "domain": "stack.localhost", "url": "http://stack.localhost", "tls": false },
     "server": { "port": 6401, "domain": null, "url": null, "tls": false }
   },
   "services": {
@@ -587,7 +587,7 @@ nix eval --impure --json --expr 'import (builtins.getEnv "STACKPANEL_NIX_CONFIG"
 
 **Go Usage** (with fallback):
 ```go
-import "github.com/darkmatter/stackpanel/cli/state"
+import "github.com/darkmatter/stack/cli/state"
 
 // Load tries nix eval first, falls back to state file
 st, err := state.Load("")
@@ -617,15 +617,15 @@ dev                    # Uses process-compose
 # Individual commands
 bun install            # Install dependencies
 bun run dev            # Start dev servers
-stackpanel status      # Check service status
-stackpanel services start  # Start PostgreSQL, Redis, etc.
+stack status      # Check service status
+stack services start  # Start PostgreSQL, Redis, etc.
 ```
 
 ## Nix Module Guidelines
 
 When creating or modifying Nix modules:
 
-1. **Options go in `options.stackpanel.*`** - Follow the existing pattern
+1. **Options go in `options.stack.*`** - Follow the existing pattern
 2. **Use `lib.mkOption` with descriptions** - Document all options
 3. **Config uses `lib.mkIf cfg.enable`** - Guard config blocks
 4. **File generation via CLI** - Add data to `cli-generate.nix` config, not `devenv.files`
@@ -642,13 +642,13 @@ When adding new generated files:
 ## YAML Configuration
 
 All user-editable config files use YAML with JSON Schema validation:
-- Schemas are generated from Nix in `.stackpanel/gen/schemas/`
+- Schemas are generated from Nix in `.stack/gen/schemas/`
 - VS Code workspace maps schemas to file patterns
 - Install the Red Hat YAML extension for intellisense
 
 ## Docs
 
-The docs for stackpanel are in apps/docs/content - ALWAYS give the docs a quick scan so that you understand stackpanel.
+The docs for stack are in apps/docs/content - ALWAYS give the docs a quick scan so that you understand stack.
 
 
 
@@ -658,22 +658,22 @@ The docs for stackpanel are in apps/docs/content - ALWAYS give the docs a quick 
 
 ### Goal
 - **Primary entrypoint**: `nix develop --impure` (or `direnv allow`)
-- **Devenv compatibility**: Stackpanel modules work in devenv.shells for external users
+- **Devenv compatibility**: Stack modules work in devenv.shells for external users
 - Make it **obvious** what is:
   - **core logic** (reusable)
   - **module adapter** (options + wiring)
 - Remove duplication between modules and libraries.
 
 ### Current layout (achieved)
-- **`nix/stackpanel/lib/`**: shared behavior (pure-ish functions for ports, theme, IDE, services, etc.)
-- **`nix/stackpanel/core/`**: core schema, state, CLI integration
-- **`nix/stackpanel/modules/`**: thin adapters (options + wiring for bun, go, turbo, git-hooks, process-compose)
-- **`nix/stackpanel/services/`**: service modules (aws, caddy, global-services, binary-cache)
-- **`nix/stackpanel/network/`**: network modules (ports, step-ca)
-- **`nix/stackpanel/ide/`**: IDE integration (vscode)
-- **`nix/stackpanel/secrets/`**: secrets management (agenix, schemas, codegen)
+- **`nix/stack/lib/`**: shared behavior (pure-ish functions for ports, theme, IDE, services, etc.)
+- **`nix/stack/core/`**: core schema, state, CLI integration
+- **`nix/stack/modules/`**: thin adapters (options + wiring for bun, go, turbo, git-hooks, process-compose)
+- **`nix/stack/services/`**: service modules (aws, caddy, global-services, binary-cache)
+- **`nix/stack/network/`**: network modules (ports, step-ca)
+- **`nix/stack/ide/`**: IDE integration (vscode)
+- **`nix/stack/secrets/`**: secrets management (agenix, schemas, codegen)
 - **Entrypoints**
-  - `nix/stackpanel/default.nix`: main module aggregator
+  - `nix/stack/default.nix`: main module aggregator
   - `nix/flake/devenv.nix`: devenv integration
   - `flake.nix`: exports `flake.lib.*`, `flake.devenvModules.*`
 
@@ -688,32 +688,32 @@ The docs for stackpanel are in apps/docs/content - ALWAYS give the docs a quick 
 ## Todo list
 
 ### Completed
-- [x] Create shared core for global services: `nix/stackpanel/services/global-services.nix`
-- [x] Ports module with deterministic port computation: `nix/stackpanel/network/ports.nix`
-- [x] Caddy module: `nix/stackpanel/services/caddy.nix`
-- [x] Network / Step CA: `nix/stackpanel/network/network.nix`
-- [x] AWS Roles Anywhere: `nix/stackpanel/services/aws.nix`
-- [x] Theme / starship: `nix/stackpanel/lib/theme.nix`
-- [x] IDE integration: `nix/stackpanel/ide/ide.nix`
-- [x] Secrets management: `nix/stackpanel/secrets/`
-- [x] SST infrastructure module: `nix/stackpanel/sst/sst.nix`
-- [x] Process-compose: `nix/stackpanel/modules/process-compose.nix`
-- [x] Git hooks: `nix/stackpanel/modules/git-hooks.nix`
-- [x] CLI state integration: `nix/stackpanel/core/state.nix`
+- [x] Create shared core for global services: `nix/stack/services/global-services.nix`
+- [x] Ports module with deterministic port computation: `nix/stack/network/ports.nix`
+- [x] Caddy module: `nix/stack/services/caddy.nix`
+- [x] Network / Step CA: `nix/stack/network/network.nix`
+- [x] AWS Roles Anywhere: `nix/stack/services/aws.nix`
+- [x] Theme / starship: `nix/stack/lib/theme.nix`
+- [x] IDE integration: `nix/stack/ide/ide.nix`
+- [x] Secrets management: `nix/stack/secrets/`
+- [x] SST infrastructure module: `nix/stack/sst/sst.nix`
+- [x] Process-compose: `nix/stack/modules/process-compose.nix`
+- [x] Git hooks: `nix/stack/modules/git-hooks.nix`
+- [x] CLI state integration: `nix/stack/core/state.nix`
 
 ### Optional (high-leverage)
-- [ ] Centralize shared option types/defaults in `nix/stackpanel/core/options/` so both adapters share one schema.
-- [ ] Update docs to recommend `nix/stackpanel` import path everywhere.
+- [ ] Centralize shared option types/defaults in `nix/stack/core/options/` so both adapters share one schema.
+- [ ] Update docs to recommend `nix/stack` import path everywhere.
 
 ---
 
 ## Architecture (Current)
 
 The codebase follows a consistent pattern:
-1. **Libraries** (`nix/stackpanel/lib/*.nix`): Pure functions that implement behavior
-2. **Core** (`nix/stackpanel/core/*.nix`): Schema definitions, state management, CLI integration
-3. **Modules** (`nix/stackpanel/modules/*.nix`): Thin adapters for specific tooling (bun, go, turbo, etc.)
-4. **Services** (`nix/stackpanel/services/*.nix`): Service-specific modules (aws, caddy, global-services)
-5. **Network** (`nix/stackpanel/network/*.nix`): Networking modules (ports, step-ca)
-6. **IDE** (`nix/stackpanel/ide/*.nix`): IDE integration (vscode workspace, terminal profiles)
-7. **Secrets** (`nix/stackpanel/secrets/*.nix`): Secrets management (agenix, schemas, wrapped)
+1. **Libraries** (`nix/stack/lib/*.nix`): Pure functions that implement behavior
+2. **Core** (`nix/stack/core/*.nix`): Schema definitions, state management, CLI integration
+3. **Modules** (`nix/stack/modules/*.nix`): Thin adapters for specific tooling (bun, go, turbo, etc.)
+4. **Services** (`nix/stack/services/*.nix`): Service-specific modules (aws, caddy, global-services)
+5. **Network** (`nix/stack/network/*.nix`): Networking modules (ports, step-ca)
+6. **IDE** (`nix/stack/ide/*.nix`): IDE integration (vscode workspace, terminal profiles)
+7. **Secrets** (`nix/stack/secrets/*.nix`): Secrets management (agenix, schemas, wrapped)

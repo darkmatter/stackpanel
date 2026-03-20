@@ -2,25 +2,25 @@
 
 ## Overview
 
-Updated all Stackpanel documentation to reflect the current app-centric deployment configuration structure. The old provider-centric structure (`stackpanel.deployment.fly.apps.*`) has been replaced with per-app configuration (`stackpanel.apps.<name>.deployment.*`).
+Updated all Stack documentation to reflect the current app-centric deployment configuration structure. The old provider-centric structure (`stack.deployment.fly.apps.*`) has been replaced with per-app configuration (`stack.apps.<name>.deployment.*`).
 
 ## Files Updated
 
 ### 1. Deployment Documentation
 
 #### `apps/docs/content/docs/deployment/fly.mdx`
-- **Changed:** Removed references to global `stackpanel.deployment.fly.enable`
-- **Changed:** Updated all examples to use `stackpanel.apps.<name>.deployment.host = "fly"`
+- **Changed:** Removed references to global `stack.deployment.fly.enable`
+- **Changed:** Updated all examples to use `stack.apps.<name>.deployment.host = "fly"`
 - **Changed:** Updated field names from kebab-case to camelCase (e.g., `app-name` → `appName`)
 - **Changed:** Removed outdated OIDC config structure
 - **Changed:** Updated database configuration section to use Fly CLI instead of declarative config
 - **Changed:** Fixed container build commands to use correct output path
 - **Changed:** Updated multi-region deployment guidance
-- **Removed:** References to `stackpanel.deployment.fly.apps.*`
+- **Removed:** References to `stack.deployment.fly.apps.*`
 
 #### `apps/docs/content/docs/deployment/cloudflare.mdx`
-- **Changed:** Removed global `stackpanel.deployment.cloudflare.enable` requirement
-- **Changed:** Updated all examples to use `stackpanel.apps.<name>.deployment.host = "cloudflare"`
+- **Changed:** Removed global `stack.deployment.cloudflare.enable` requirement
+- **Changed:** Updated all examples to use `stack.apps.<name>.deployment.host = "cloudflare"`
 - **Changed:** Moved from `deployment.cloudflare.workers.*` to `apps.<name>.deployment.cloudflare.*`
 - **Changed:** Updated field names to camelCase
 - **Changed:** Consolidated bindings configuration (KV, R2, D1) into per-app deployment section
@@ -29,8 +29,8 @@ Updated all Stackpanel documentation to reflect the current app-centric deployme
 
 #### `apps/docs/content/docs/deployment/index.mdx`
 - **Changed:** Updated deployment flow diagram to show current app-based structure
-- **Changed:** Fixed examples from `stackpanel.deployment.fly.apps.api` to `stackpanel.apps.api.deployment`
-- **Changed:** Updated container reference from `stackpanel.containers.api` to `stackpanel.apps.api.container`
+- **Changed:** Fixed examples from `stack.deployment.fly.apps.api` to `stack.apps.api.deployment`
+- **Changed:** Updated container reference from `stack.containers.api` to `stack.apps.api.container`
 
 #### `apps/docs/content/docs/deployment/containers.mdx`
 - **Changed:** Fixed all container build commands from `.#containers.<name>` to `.#packages.x86_64-linux.container-<name>`
@@ -63,7 +63,7 @@ Updated all Stackpanel documentation to reflect the current app-centric deployme
 
 **OLD (No longer supported):**
 ```nix
-stackpanel.deployment.fly.apps.web = {
+stack.deployment.fly.apps.web = {
   region = "iad";
   vm-size = "shared-cpu-1x";
 };
@@ -71,7 +71,7 @@ stackpanel.deployment.fly.apps.web = {
 
 **NEW (Current):**
 ```nix
-stackpanel.apps.web = {
+stack.apps.web = {
   deployment = {
     enable = true;
     host = "fly";
@@ -110,20 +110,20 @@ nix build --impure .#packages.x86_64-linux.container-api
 
 ## Breaking Changes
 
-1. **Removed:** `stackpanel.deployment.fly.apps.*` - Use `stackpanel.apps.<name>.deployment.fly` instead
-2. **Removed:** `stackpanel.deployment.cloudflare.workers.*` - Use `stackpanel.apps.<name>.deployment.cloudflare` instead
-3. **Removed:** `stackpanel.deployment.cloudflare.pages.*` - Use `stackpanel.apps.<name>.deployment.cloudflare` with type
+1. **Removed:** `stack.deployment.fly.apps.*` - Use `stack.apps.<name>.deployment.fly` instead
+2. **Removed:** `stack.deployment.cloudflare.workers.*` - Use `stack.apps.<name>.deployment.cloudflare` instead
+3. **Removed:** `stack.deployment.cloudflare.pages.*` - Use `stack.apps.<name>.deployment.cloudflare` with type
 4. **Changed:** Container output from `.#containers.<name>` to `.#packages.<system>.container-<name>`
 5. **Changed:** All deployment field names from kebab-case to camelCase
 
 ## Error Resolution
 
-### "The option `stackpanel.deployment.fly.apps' does not exist"
+### "The option `stack.deployment.fly.apps' does not exist"
 
 This error indicates old configuration structure. Solution:
 
-1. Remove all `stackpanel.deployment.fly.apps.*` config
-2. Remove all `stackpanel.deployment.cloudflare.workers.*` and `.pages.*` config
+1. Remove all `stack.deployment.fly.apps.*` config
+2. Remove all `stack.deployment.cloudflare.workers.*` and `.pages.*` config
 3. Move deployment config into each app's `deployment` section
 4. Set `host` to target provider
 5. Add provider-specific config under provider name
@@ -151,20 +151,20 @@ See `docs/DEPLOYMENT_MIGRATION.md` for detailed migration steps.
 1. Consider deprecation warnings for old config structure (if not already present)
 2. Add validation to detect old structure and suggest migration
 3. Update any video tutorials or external documentation
-4. Consider adding `stackpanel migrate-deployment` command to automate migration
+4. Consider adding `stack migrate-deployment` command to automate migration
 5. Update changelog with migration guide reference
 
 ## Files That Don't Need Changes
 
-- Code implementation in `nix/stackpanel/deployment/` - already uses new structure
+- Code implementation in `nix/stack/deployment/` - already uses new structure
 - Proto schemas - already define current structure
-- Core options in `nix/stackpanel/core/options/apps.nix` - already correct
+- Core options in `nix/stack/core/options/apps.nix` - already correct
 - README.md - doesn't mention deployment specifics
 
 ## Verification
 
 All documentation now:
-- ✅ Uses `stackpanel.apps.<name>.deployment.*` structure
+- ✅ Uses `stack.apps.<name>.deployment.*` structure
 - ✅ Shows correct container build commands with system prefix
 - ✅ Uses camelCase for field names
 - ✅ References correct output paths

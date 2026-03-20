@@ -11,7 +11,7 @@ This module provides project-local database and infrastructure services with lif
 ```
 services/
 ├── default.nix           # Module aggregator - imports all service modules
-├── global-services.nix   # Maps globalServices to stackpanel.services
+├── global-services.nix   # Maps globalServices to stack.services
 ├── postgres/
 │   └── default.nix       # PostgreSQL service implementation
 ├── redis/
@@ -33,7 +33,7 @@ services/
 Database service with automatic database creation.
 
 ```nix
-stackpanel.globalServices.postgres = {
+stack.globalServices.postgres = {
   enable = true;
   databases = ["myapp" "myapp_test"];
 };
@@ -48,7 +48,7 @@ stackpanel.globalServices.postgres = {
 Key-value store for caching and queues.
 
 ```nix
-stackpanel.globalServices.redis.enable = true;
+stack.globalServices.redis.enable = true;
 ```
 
 **Environment**: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_SOCKET`
@@ -60,7 +60,7 @@ stackpanel.globalServices.redis.enable = true;
 S3-compatible object storage.
 
 ```nix
-stackpanel.globalServices.minio.enable = true;
+stack.globalServices.minio.enable = true;
 ```
 
 **Environment**: `MINIO_ENDPOINT`, `S3_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`
@@ -72,7 +72,7 @@ stackpanel.globalServices.minio.enable = true;
 Reverse proxy with virtual hosts and optional TLS.
 
 ```nix
-stackpanel.caddy = {
+stack.caddy = {
   enable = true;
   project-name = "myapp";
   use-step-tls = true;
@@ -99,7 +99,7 @@ Each service implementation should export:
 {
   pkgs,
   lib,
-  baseDir,  # Base directory for service data (e.g., ".stackpanel/state/services")
+  baseDir,  # Base directory for service data (e.g., ".stack/state/services")
 }:
 {
   # Required packages
@@ -132,7 +132,7 @@ Each service implementation should export:
 Passwordless AWS access using Step CA device certificates.
 
 ```nix
-stackpanel.aws.roles-anywhere = {
+stack.aws.roles-anywhere = {
   enable = true;
   account-id = "123456789";
   role-name = "developer";
@@ -145,12 +145,12 @@ stackpanel.aws.roles-anywhere = {
 
 ## Service Lifecycle
 
-All services are managed via the stackpanel CLI:
+All services are managed via the stack CLI:
 
 ```bash
-stackpanel services start    # Start all enabled services
-stackpanel services stop     # Stop all services
-stackpanel services status   # Check service status
+stack services start    # Start all enabled services
+stack services stop     # Stop all services
+stack services status   # Check service status
 ```
 
 Services run under process-compose and are configured with:
@@ -161,9 +161,9 @@ Services run under process-compose and are configured with:
 ## Architecture
 
 ```
-User Config (stackpanel.globalServices)
+User Config (stack.globalServices)
     ↓
-services/global-services.nix (maps to stackpanel.services)
+services/global-services.nix (maps to stack.services)
     ↓
 core/services/services.nix (service registry/factory)
     ↓

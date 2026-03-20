@@ -1,4 +1,4 @@
-# Nix develop: stackpanel package merge and infra catalog error
+# Nix develop: stack package merge and infra catalog error
 
 **Session ID:** ses_3522ddf88ffeQLC51HskErOGjv
 **Created:** 3/2/2026, 1:12:35 AM
@@ -9,37 +9,37 @@
 ## User
 
 whats causing this nix develop
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 error:
        … while evaluating the attribute 'packages'
-         at /Users/cm/git/darkmatter/stackpanel/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+         at /Users/cm/git/darkmatter/stack/flake.nix:91:9:
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
-         at /Users/cm/git/darkmatter/stackpanel/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+         at /Users/cm/git/darkmatter/stack/flake.nix:91:29:
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
-       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stack/devshell/scripts.nix':
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
-       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stack/files':
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
-       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stackpanel/modules/bun/catalog.nix':
+       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stack/modules/bun/catalog.nix':
 
-       … while evaluating the option `stackpanel.bun.catalog':
+       … while evaluating the option `stack.bun.catalog':
 
-       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stackpanel/infra/codegen.nix':
+       … while evaluating definitions from `/nix/store/5kkls2qggxhsxmji0nr3h765fqg4hy1x-source/nix/stack/infra/codegen.nix':
 
        (stack trace truncated; use '--show-trace' to show the full, detailed trace)
 
@@ -59,7 +59,7 @@ _Thinking:_
 ```json
 {
   "pattern": "infraCatalogVersions",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "*.nix"
 }
 ```
@@ -67,7 +67,7 @@ _Thinking:_
 **Output:**
 ```
 Found 3 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 45:   infraCatalogVersions = {
   Line 378:     infraCatalogVersions.${name}
   Line 379:       or (builtins.throw "infra module dependency '${name}' uses catalog: but has no version in infraCatalogVersions — add it to infra/codegen.nix")
@@ -79,7 +79,7 @@ Found 3 matches
 ```json
 {
   "pattern": "catalog:",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "*.nix"
 }
 ```
@@ -87,25 +87,25 @@ Found 3 matches
 **Output:**
 ```
 Found 39 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/feature-flags/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/feature-flags/module.nix:
   Line 26:   # These must stay in sync with the "catalog:" references in
   Line 114:     # Catalog entries — register actual versions for "catalog:" references
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix:
   Line 8: #   Modules declare dependencies as `"@aws-sdk/client-ecr" = "catalog:";` in
   Line 81:       real version, then reference it as `"catalog:"` in their workspace
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/sst/sst.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/sst/sst.nix:
   Line 468:     sst = "catalog:";
   Line 469:     "@pulumi/aws" = "catalog:";
   Line 641:       # Bun catalog — register actual versions for "catalog:" references
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
   Line 283:     alchemy = "catalog:";
   Line 287:     "@aws-sdk/client-ssm" = "catalog:";
   Line 302:     # Bun catalog — register actual versions for "catalog:" references
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 36:   # Catalog versions for NPM packages used by infra modules via "catalog:".
   Line 39:   #   1. Module dependencies reference "catalog:" (workspace dedup)
   Line 372:   # Collect catalog versions for every "catalog:" dependency across all modules.
@@ -116,31 +116,31 @@ Found 39 matches
   Line 682:         alchemy = "catalog:";
   Line 795:                   # "@aws-sdk/client-s3" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix:
   Line 291:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix:
   Line 129:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix:
   Line 262:         "@aws-sdk/client-sts" = "catalog:"; # AccountId from alchemy/aws
   Line 263:         "@aws-sdk/client-iam" = "catalog:"; # Role, GitHubOIDCProvider
   Line 264:         "@aws-sdk/client-kms" = "catalog:"; # KmsKey, KmsAlias
   Line 265:         "@aws-sdk/client-ssm" = "catalog:"; # SSM for group key storage
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix:
   Line 67:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix:
   Line 85:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix:
   Line 109:         "@aws-sdk/client-iam" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix:
   Line 187:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix:
   Line 890:         "@aws-sdk/client-ec2" = "catalog:";
   Line 891:         "@aws-sdk/client-iam" = "catalog:";
   Line 892:         "@aws-sdk/client-elastic-load-balancing-v2" = "catalog:";
@@ -148,13 +148,13 @@ Found 39 matches
   Line 894:         "@aws-sdk/client-ssm" = "catalog:";
   Line 895:         "@aws-sdk/client-sts" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix:
   Line 241:         "alchemy" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix:
   Line 177:         "alchemy" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix:
   Line 11: #     dependencies = { alchemy = "catalog:"; };
   Line 257:           dependencies = { alchemy = "catalog:"; };
 ```
@@ -165,7 +165,7 @@ Found 39 matches
 ```json
 {
   "pattern": "alchemy",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "*.nix"
 }
 ```
@@ -173,15 +173,15 @@ Found 39 matches
 **Output:**
 ```
 Found 164 matches (showing first 100)
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix:
   Line 91:           "alchemy" = "^0.81.2";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
   Line 2: # alchemy/codegen.nix
   Line 4: # Code generation engine for the @gen/alchemy shared package.
   Line 15: #   - Registers .alchemy in .gitignore
   Line 17: #   - Registers alchemy:setup and deploy scripts (if deploy enabled)
-  Line 27:   cfg = config.stackpanel.alchemy;
+  Line 27:   cfg = config.stack.alchemy;
   Line 68:          * during alchemy provisioning.
   Line 100:          * Resolve environment variable bindings, wrapping secrets with alchemy.secret().
   Line 103:          * with alchemy.secret() for safe handling in Cloudflare Workers bindings.
@@ -197,18 +197,18 @@ Found 164 matches (showing first 100)
   Line 344:         source = "alchemy";
   Line 349:         ".alchemy"
   Line 358:         source = "alchemy";
-  Line 365:     stackpanel.turbo.packages.alchemy = {
+  Line 365:     stack.turbo.packages.alchemy = {
   Line 397:       "alchemy:setup" = {
   Line 414:         description = "Deploy via alchemy (auto-runs setup if Cloudflare is not configured)";
   Line 422:             description = "Additional alchemy deploy arguments (after --)";
   Line 437:         name = "alchemy:setup";
-  Line 447:     stackpanel.modules.alchemy = {
+  Line 447:     stack.modules.alchemy = {
   Line 451:         description = "Shared Alchemy IaC configuration, deploy scripts, and helpers (@gen/alchemy)";
   Line 470:         "alchemy"
   Line 476:       priority = 10; # Load very early -- other modules depend on alchemy config
-  Line 482:     stackpanel.serializable.alchemy = {
+  Line 482:     stack.serializable.alchemy = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 9: #   - src/resources/*.ts  (custom alchemy resources: KMS Key, KMS Alias)
   Line 11: #   - alchemy.run.ts     (orchestrator)
   Line 278:   # Generated: alchemy.run.ts (orchestrator)
@@ -217,7 +217,7 @@ Found 164 matches (showing first 100)
   Line 283:   alchemyRunTs =
   Line 314:       # Use @gen/alchemy if the alchemy module is enabled, otherwise fall back
   Line 315:       # to inline alchemy initialization for backward compatibility.
-  Line 316:       alchemyCfg = config.stackpanel.alchemy;
+  Line 316:       alchemyCfg = config.stack.alchemy;
   Line 317:       useGenAlchemy = alchemyCfg.enable;
   Line 322:         import { createApp } from "@gen/alchemy";
   Line 340:         import alchemy from "alchemy";
@@ -247,8 +247,8 @@ Found 164 matches (showing first 100)
   Line 637:       "${outputDir}/alchemy.run.ts" = {
   Line 638:         text = alchemyRunTs;
   Line 682:         alchemy = "catalog:";
-  Line 684:       // lib.optionalAttrs config.stackpanel.alchemy.enable {
-  Line 685:         ${config.stackpanel.alchemy.package.name} = "workspace:*";
+  Line 684:       // lib.optionalAttrs config.stack.alchemy.enable {
+  Line 685:         ${config.stack.alchemy.package.name} = "workspace:*";
   Line 701:         "alchemy:deploy" = {
   Line 702:           exec = "alchemy deploy";
   Line 708:         "alchemy:destroy" = {
@@ -267,20 +267,20 @@ Found 164 matches (showing first 100)
   Line 945:             description = "Additional alchemy dev arguments";
   Line 1126:         "alchemy"
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/config.nix:
+/Users/cm/git/darkmatter/stack/.stack/config.nix:
   Line 726:     "alchemy:ensure" = {
   Line 727:       description = "Ensure alchemy is initialized - builds will error without this if using alchemy for deployments. creates wrangler.jsonc when using @cloudflare/vite-plugin";
   Line 729:       exec = "test -f .alchemy/local/wrangler.jsonc || (mkdir -p .alchemy/local && echo '{\"name\":\"web\",\"main\":\".alchemy/local/worker.js\",\"compatibility_date\":\"2025-01-01\",\"assets\":{\"directory\":\"dist\"}}' > .alchemy/local/wrangler.jsonc)";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/default.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/default.nix:
   Line 2: # alchemy/default.nix
   Line 6: # Provides centralized alchemy SDK configuration consumed by other modules
   Line 10: #   - A generated shared TypeScript package (@gen/alchemy) with:
   Line 15: #   - .gitignore for .alchemy directories
-  Line 18: #   stackpanel.alchemy = {
-  Line 24: #   config.stackpanel.alchemy.version      (npm version)
-  Line 25: #   config.stackpanel.alchemy.package.*    (generated package config)
-  Line 26: #   config.stackpanel.alchemy.deploy.*     (setup + deploy scripts)
+  Line 18: #   stack.alchemy = {
+  Line 24: #   config.stack.alchemy.version      (npm version)
+  Line 25: #   config.stack.alchemy.package.*    (generated package config)
+  Line 26: #   config.stack.alchemy.deploy.*     (setup + deploy scripts)
   Line 27: #   @gen/alchemy                          (TypeScript import)
 
 (Results truncated: showing 100 of 164 matches (64 hidden). Consider using a more specific path or pattern.)
@@ -299,7 +299,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 1,
   "limit": 140
 }
@@ -307,14 +307,14 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/codegen.nix
 3: #
 4: # Code generation engine for the infrastructure module system.
 5: #
-6: # Generates via stackpanel.files.entries:
+6: # Generates via stack.files.entries:
 7: #   - src/index.ts       (Infra class with embedded project config)
 8: #   - src/types.ts       (per-module input TypeScript interfaces)
 9: #   - src/resources/*.ts  (custom alchemy resources: KMS Key, KMS Alias)
@@ -327,7 +327,7 @@ _Thinking:_
 16: #   - Writes infra-inputs.json to state dir
 17: #   - Sets STACKPANEL_INFRA_INPUTS env var
 18: #   - Registers scripts (infra:deploy, infra:destroy, etc.)
-19: #   - Registers as a stackpanel module for UI
+19: #   - Registers as a stack module for UI
 20: #   - Serializes config for the agent
 21: # ==============================================================================
 22: {
@@ -337,10 +337,10 @@ _Thinking:_
 26:   ...
 27: }:
 28: let
-29:   cfg = config.stackpanel.infra;
-30:   projectName = config.stackpanel.name or "my-project";
+29:   cfg = config.stack.infra;
+30:   projectName = config.stack.name or "my-project";
 31:   outputDir = cfg.output-dir;
-32:   stateDir = config.stackpanel.dirs.state;
+32:   stateDir = config.stack.dirs.state;
 33:   moduleIds = builtins.attrNames cfg.modules;
 34: 
 35:   # ============================================================================
@@ -348,7 +348,7 @@ _Thinking:_
 37:   #
 38:   # Defined once here so that:
 39:   #   1. Module dependencies reference "catalog:" (workspace dedup)
-40:   #   2. stackpanel.bun.catalog gets the real version (root package.json)
+40:   #   2. stack.bun.catalog gets the real version (root package.json)
 41:   #
 42:   # When adding a new AWS SDK or other catalog dependency to an infra module,
 43:   # add the version here too.
@@ -410,7 +410,7 @@ _Thinking:_
 99:       }
 100:     else if cfg.storage-backend.type == "sops" then
 101:       let
-102:         secretsDir = config.stackpanel.secrets.secrets-dir or ".stackpanel/secrets";
+102:         secretsDir = config.stack.secrets.secrets-dir or ".stack/secrets";
 103:         group = cfg.storage-backend.sops.group;
 104:         resolvedPath = "${secretsDir}/vars/${group}.sops.yaml";
 105:       in
@@ -467,7 +467,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix",
   "offset": 140,
   "limit": 80
 }
@@ -475,7 +475,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix</path>
 <type>file</type>
 <content>140: 
 141:       path-prefix = lib.mkOption {
@@ -490,7 +490,7 @@ _Thinking:_
 150:   # Config: register in infra module system
 151:   # ============================================================================
 152:   config = lib.mkIf (infraCfg.enable && cfg.enable) {
-153:     stackpanel.infra.modules.cache = {
+153:     stack.infra.modules.cache = {
 154:       name = "Cache";
 155:       description = "Redis/Valkey cache provisioning (Upstash / devenv / Docker)";
 156:       path = ./index.ts;
@@ -516,8 +516,8 @@ _Thinking:_
 176:       dependencies = {
 177:         "alchemy" = "catalog:";
 178:       }
-179:       // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
-180:         ${config.stackpanel.alchemy.package.name} = "workspace:*";
+179:       // lib.optionalAttrs (config.stack.alchemy.enable) {
+180:         ${config.stack.alchemy.package.name} = "workspace:*";
 181:       };
 182:       outputs = {
 183:         redisUrl = {
@@ -547,7 +547,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix",
   "offset": 210,
   "limit": 70
 }
@@ -555,7 +555,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix</path>
 <type>file</type>
 <content>210:     };
 211:   };
@@ -564,7 +564,7 @@ _Thinking:_
 214:   # Config: register in infra module system
 215:   # ============================================================================
 216:   config = lib.mkIf (infraCfg.enable && cfg.enable) {
-217:     stackpanel.infra.modules.database = {
+217:     stack.infra.modules.database = {
 218:       name = "Database";
 219:       description = "Postgres database provisioning (Neon / devenv / Docker)";
 220:       path = ./index.ts;
@@ -590,8 +590,8 @@ _Thinking:_
 240:       dependencies = {
 241:         "alchemy" = "catalog:";
 242:       }
-243:       // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
-244:         ${config.stackpanel.alchemy.package.name} = "workspace:*";
+243:       // lib.optionalAttrs (config.stack.alchemy.enable) {
+244:         ${config.stack.alchemy.package.name} = "workspace:*";
 245:       };
 246:       outputs = {
 247:         databaseUrl = {
@@ -625,7 +625,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/flake.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/flake.nix",
   "offset": 70,
   "limit": 40
 }
@@ -633,16 +633,16 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/flake.nix</path>
+<path>/Users/cm/git/darkmatter/stack/flake.nix</path>
 <type>file</type>
 <content>70:         pkgs = import nixpkgs {
 71:           inherit system overlays;
 72:         };
 73: 
-74:         # Stackpanel packages (CLI, etc.)
+74:         # Stack packages (CLI, etc.)
 75:         packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
 76: 
-77:         # Stackpanel outputs (devShells, checks, apps, legacyPackages)
+77:         # Stack outputs (devShells, checks, apps, legacyPackages)
 78:         spOutputs = import ./nix/flake/default.nix {
 79:           inherit
 80:             pkgs
@@ -651,24 +651,24 @@ _Thinking:_
 83:             system
 84:             projectRoot
 85:             ;
-86:           stackpanelImports = [ ./.stackpanel/modules ];
+86:           stackpanelImports = [ ./.stack/modules ];
 87:         };
 88:       in
 89:       {
-90:         # Merge stackpanel packages with outputs packages
+90:         # Merge stack packages with outputs packages
 91:         packages = packages // (spOutputs.packages or { });
 92: 
-93:         # DevShells from stackpanel
+93:         # DevShells from stack
 94:         devShells = spOutputs.devShells;
 95: 
-96:         # Checks - include package checks plus stackpanel checks
+96:         # Checks - include package checks plus stack checks
 97:         checks = {
-98:           stackpanel = packages.stackpanel;
+98:           stack = packages.stack;
 99:           default-package = packages.default;
 100:         }
 101:         // spOutputs.checks;
 102: 
-103:         # Apps from stackpanel
+103:         # Apps from stack
 104:         apps = spOutputs.apps;
 105: 
 106:         # Legacy packages for introspection
@@ -693,7 +693,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 360,
   "limit": 30
 }
@@ -701,7 +701,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>360: 
 361:         await app.finalize();
@@ -751,7 +751,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix",
   "offset": 80,
   "limit": 20
 }
@@ -759,7 +759,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix</path>
 <type>file</type>
 <content>80:       Modules that need an NPM dependency should declare it here with the
 81:       real version, then reference it as `"catalog:"` in their workspace
@@ -770,7 +770,7 @@ _Thinking:_
 86:       `lib.mkForce` or `lib.mkOverride` to resolve conflicts explicitly.
 87: 
 88:       Example:
-89:         stackpanel.bun.catalog = {
+89:         stack.bun.catalog = {
 90:           "@aws-sdk/client-ecr" = "^3.953.0";
 91:           "alchemy" = "^0.81.2";
 92:           "react" = "19.2.4";
@@ -799,7 +799,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix",
   "offset": 270,
   "limit": 50
 }
@@ -807,7 +807,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix</path>
 <type>file</type>
 <content>270:       rootDir = ".";
 271:     };
@@ -843,7 +843,7 @@ _Thinking:_
 301:     # ==========================================================================
 302:     # Bun catalog — register actual versions for "catalog:" references
 303:     # ==========================================================================
-304:     stackpanel.bun.catalog = {
+304:     stack.bun.catalog = {
 305:       alchemy = cfg.version;
 306:     } // lib.optionalAttrs cfg.helpers.ssm {
 307:       "@aws-sdk/client-ssm" = "^3.953.0";
@@ -852,7 +852,7 @@ _Thinking:_
 310:     # ==========================================================================
 311:     # File generation
 312:     # ==========================================================================
-313:     stackpanel.files.entries = {
+313:     stack.files.entries = {
 314:       # Main entry: createApp factory + re-exports
 315:       "${outputDir}/src/index.ts" = {
 316:         text = indexTs;
@@ -870,14 +870,14 @@ _Thinking:_
 
 _Thinking:_
 
-**Inspecting stackpanel catalog setting**
+**Inspecting stack catalog setting**
 
 **Tool: read**
 
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 650,
   "limit": 50
 }
@@ -885,7 +885,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>650:         source = "infra";
 651:       };
@@ -903,26 +903,26 @@ _Thinking:_
 663:     # ==========================================================================
 664:     # Devshell environment
 665:     # ==========================================================================
-666:     stackpanel.devshell.env = {
+666:     stack.devshell.env = {
 667:       STACKPANEL_INFRA_INPUTS = "${stateDir}/infra-inputs.json";
 668:     };
 669: 
 670:     # ==========================================================================
 671:     # Bun catalog — register actual versions for all "catalog:" references
 672:     # ==========================================================================
-673:     stackpanel.bun.catalog = catalogEntries;
+673:     stack.bun.catalog = catalogEntries;
 674: 
 675:     # ==========================================================================
 676:     # Turbo workspace package (generates package.json + turbo.json tasks)
 677:     # ==========================================================================
-678:     stackpanel.turbo.packages.infra = {
+678:     stack.turbo.packages.infra = {
 679:       name = cfg.package.name;
 680:       path = outputDir;
 681:       dependencies = {
 682:         alchemy = "catalog:";
 683:       }
-684:       // lib.optionalAttrs config.stackpanel.alchemy.enable {
-685:         ${config.stackpanel.alchemy.package.name} = "workspace:*";
+684:       // lib.optionalAttrs config.stack.alchemy.enable {
+685:         ${config.stack.alchemy.package.name} = "workspace:*";
 686:       }
 687:       // allDeps
 688:       // cfg.package.dependencies;
@@ -955,7 +955,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/default.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy/default.nix",
   "offset": 1,
   "limit": 120
 }
@@ -963,7 +963,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/default.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/alchemy/default.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # alchemy/default.nix
@@ -982,15 +982,15 @@ _Thinking:_
 15: #   - .gitignore for .alchemy directories
 16: #
 17: # Usage:
-18: #   stackpanel.alchemy = {
+18: #   stack.alchemy = {
 19: #     enable = true;
 20: #     stateStore.provider = "auto";
 21: #   };
 22: #
 23: # Other modules consume this via:
-24: #   config.stackpanel.alchemy.version      (npm version)
-25: #   config.stackpanel.alchemy.package.*    (generated package config)
-26: #   config.stackpanel.alchemy.deploy.*     (setup + deploy scripts)
+24: #   config.stack.alchemy.version      (npm version)
+25: #   config.stack.alchemy.package.*    (generated package config)
+26: #   config.stack.alchemy.deploy.*     (setup + deploy scripts)
 27: #   @gen/alchemy                          (TypeScript import)
 28: # ==============================================================================
 29: { ... }:
@@ -1019,7 +1019,7 @@ _Thinking:_
 ```json
 {
   "pattern": "version",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy",
   "include": "*.nix"
 }
 ```
@@ -1027,18 +1027,18 @@ _Thinking:_
 **Output:**
 ```
 Found 10 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
   Line 302:     # Bun catalog — register actual versions for "catalog:" references
   Line 305:       alchemy = cfg.version;
   Line 455:         version = "1.0.0";
   Line 485:         version
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/default.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/default.nix:
   Line 8: #   - Alchemy version management
-  Line 24: #   config.stackpanel.alchemy.version      (npm version)
+  Line 24: #   config.stack.alchemy.version      (npm version)
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/options.nix:
-  Line 8: #   - stackpanel.alchemy.version (npm version constraint)
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/options.nix:
+  Line 8: #   - stack.alchemy.version (npm version constraint)
   Line 36:     version = lib.mkOption {
   Line 40:         Alchemy npm version constraint.
   Line 42:         Other modules should reference this instead of hardcoding a version.
@@ -1053,7 +1053,7 @@ Found 10 matches
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/options.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy/options.nix",
   "offset": 30,
   "limit": 30
 }
@@ -1061,7 +1061,7 @@ Found 10 matches
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/options.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/alchemy/options.nix</path>
 <type>file</type>
 <content>30:     enable = lib.mkOption {
 31:       type = lib.types.bool;
@@ -1109,56 +1109,56 @@ _Thinking:_
 You’ve got two separate things there:
 
 - `warning: Git tree ... has uncommitted changes` is just a warning from flakes (dirty repo), not the failure.
-- The real failure is a catalog version validation error in `nix/stackpanel/infra/codegen.nix:379`.
+- The real failure is a catalog version validation error in `nix/stack/infra/codegen.nix:379`.
 
 What’s happening:
 
-- Infra modules declare dependencies as `"catalog:"` (for dedup), e.g. `nix/stackpanel/infra/modules/cache/module.nix:177` and `nix/stackpanel/infra/modules/database/module.nix:241` both declare `alchemy = "catalog:"`.
-- `nix/stackpanel/infra/codegen.nix` then resolves every `"catalog:"` dep via `infraCatalogVersions` (`nix/stackpanel/infra/codegen.nix:45`).
-- That map is missing an `alchemy` entry, so it throws intentionally at `nix/stackpanel/infra/codegen.nix:379`:
+- Infra modules declare dependencies as `"catalog:"` (for dedup), e.g. `nix/stack/infra/modules/cache/module.nix:177` and `nix/stack/infra/modules/database/module.nix:241` both declare `alchemy = "catalog:"`.
+- `nix/stack/infra/codegen.nix` then resolves every `"catalog:"` dep via `infraCatalogVersions` (`nix/stack/infra/codegen.nix:45`).
+- That map is missing an `alchemy` entry, so it throws intentionally at `nix/stack/infra/codegen.nix:379`:
   `infra module dependency 'alchemy' uses catalog: but has no version...`
 
 So the root cause is: **`alchemy` is referenced as catalog in infra module deps, but not registered in `infraCatalogVersions`.**  
 That bubbles up and shows near `flake.nix:91` while merging outputs.
 
-Quick fix: add `alchemy` to `infraCatalogVersions` (preferably using `config.stackpanel.alchemy.version`).
+Quick fix: add `alchemy` to `infraCatalogVersions` (preferably using `config.stack.alchemy.version`).
 
 ---
 
 ## User
 
 nix develop
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 error:
        … while evaluating the attribute 'packages'
-         at /Users/cm/git/darkmatter/stackpanel/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+         at /Users/cm/git/darkmatter/stack/flake.nix:91:9:
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
-         at /Users/cm/git/darkmatter/stackpanel/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+         at /Users/cm/git/darkmatter/stack/flake.nix:91:29:
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
-       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stack/devshell/scripts.nix':
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
-       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stack/files':
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
-       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stackpanel/modules/turbo/packages.nix':
+       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stack/modules/turbo/packages.nix':
 
-       … while evaluating the option `stackpanel.turbo.packages':
+       … while evaluating the option `stack.turbo.packages':
 
-       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/67x4qil6i9skf56fw2q9py3qgg02xbsi-source/nix/stack/devshell/scripts.nix':
 
        (stack trace truncated; use '--show-trace' to show the full, detailed trace)
 
@@ -1185,14 +1185,14 @@ _Thinking:_
 **Output:**
 ```
  M .envrc
- M .stackpanel/config.nix
+ M .stack/config.nix
 A  apps/docs/content/docs/deployment/infra-modules.mdx
 A  apps/docs/content/docs/features.mdx
 A  apps/docs/content/docs/internal/dependency-graph.mdx
 A  apps/docs/content/docs/modules/feature-flags.mdx
 M  apps/docs/content/docs/reference/gitignore.mdx
 A  docs/nix.functions.md
-M  nix/stackpanel/infra/codegen.nix
+M  nix/stack/infra/codegen.nix
 M  packages/gen/env/src/docker-entrypoint.ts
  M packages/infra/package.json
  M packages/infra/src/types.ts
@@ -1204,7 +1204,7 @@ M  packages/gen/env/src/docker-entrypoint.ts
 **Input:**
 ```json
 {
-  "command": "git diff -- nix/stackpanel/infra/codegen.nix nix/stackpanel/alchemy/codegen.nix",
+  "command": "git diff -- nix/stack/infra/codegen.nix nix/stack/alchemy/codegen.nix",
   "description": "Shows diffs for infra and alchemy codegen files"
 }
 ```
@@ -1222,17 +1222,17 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "command": "git diff --cached -- nix/stackpanel/infra/codegen.nix",
+  "command": "git diff --cached -- nix/stack/infra/codegen.nix",
   "description": "Shows staged diff for infra codegen file"
 }
 ```
 
 **Output:**
 ```
-diff --git a/nix/stackpanel/infra/codegen.nix b/nix/stackpanel/infra/codegen.nix
+diff --git a/nix/stack/infra/codegen.nix b/nix/stack/infra/codegen.nix
 index cbca51d..4ecff56 100644
---- a/nix/stackpanel/infra/codegen.nix
-+++ b/nix/stackpanel/infra/codegen.nix
+--- a/nix/stack/infra/codegen.nix
++++ b/nix/stack/infra/codegen.nix
 @@ -144,12 +144,14 @@ let
        "string[]"
      else if builtins.isAttrs value then
@@ -1257,7 +1257,7 @@ index cbca51d..4ecff56 100644
 **Input:**
 ```json
 {
-  "command": "git diff -- nix/stackpanel/infra/codegen.nix",
+  "command": "git diff -- nix/stack/infra/codegen.nix",
   "description": "Shows unstaged diff for infra codegen file"
 }
 ```
@@ -1275,7 +1275,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 35,
   "limit": 40
 }
@@ -1283,14 +1283,14 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>35:   # ============================================================================
 36:   # Catalog versions for NPM packages used by infra modules via "catalog:".
 37:   #
 38:   # Defined once here so that:
 39:   #   1. Module dependencies reference "catalog:" (workspace dedup)
-40:   #   2. stackpanel.bun.catalog gets the real version (root package.json)
+40:   #   2. stack.bun.catalog gets the real version (root package.json)
 41:   #
 42:   # When adding a new AWS SDK or other catalog dependency to an infra module,
 43:   # add the version here too.
@@ -1351,7 +1351,7 @@ _Thinking:_
 
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -1359,14 +1359,14 @@ Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5
 error:
        … while evaluating the attribute 'packages'
          at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
          at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
@@ -1408,7 +1408,7 @@ error:
 
        … from call site
          at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/flake/default.nix:367:15:
-          366|   # Stackpanel outputs (packages from outputs option)
+          366|   # Stack outputs (packages from outputs option)
           367|   spOutputs = spConfig.outputs or { };
              |               ^
           368|   directPkgs = lib.filterAttrs (_: v: lib.isDerivation v) spOutputs;
@@ -1441,7 +1441,7 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
        … while evaluating the attribute 'mergedValue'
          at /nix/store/ck9q590fr700sr7jcigygbx3fpisik8m-source/lib/modules.nix:1192:5:
@@ -1513,7 +1513,7 @@ error:
              |           ^
          1163|             value:
 
-       … while evaluating definitions from `/nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/devshell/scripts.nix':
 
        … from call site
          at /nix/store/ck9q590fr700sr7jcigygbx3fpisik8m-source/lib/modules.nix:1171:80:
@@ -1565,18 +1565,18 @@ error:
          1472|   };
 
        … in the left operand of the AND (&&) operator
-         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/devshell/scripts.nix:405:33:
+         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/devshell/scripts.nix:405:33:
           404|
           405|   config = lib.mkIf (hasScripts && scriptsCfg.enable) (lib.mkMerge [
              |                                 ^
           406|     {
 
        … from call site
-         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/devshell/scripts.nix:48:9:
+         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/devshell/scripts.nix:48:9:
            47|
-           48|   cfg = config.stackpanel.scripts;
+           48|   cfg = config.stack.scripts;
              |         ^
-           49|   scriptsCfg = config.stackpanel.scriptsConfig;
+           49|   scriptsCfg = config.stack.scriptsConfig;
 
        … while calling anonymous lambda
          at /nix/store/ck9q590fr700sr7jcigygbx3fpisik8m-source/lib/attrsets.nix:1188:17:
@@ -1606,16 +1606,16 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
        (10 duplicate frames omitted)
 
-       … while evaluating definitions from `/nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/files':
 
        (7 duplicate frames omitted)
 
        … from call site
-         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/files/default.nix:84:18:
+         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/files/default.nix:84:18:
            83|   # Filter to only enabled files
            84|   enabledFiles = cfg.entries;
              |                  ^
@@ -1649,17 +1649,17 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
        (10 duplicate frames omitted)
 
-       … while evaluating definitions from `/nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/modules/turbo/packages.nix':
+       … while evaluating definitions from `/nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/modules/turbo/packages.nix':
 
        (8 duplicate frames omitted)
 
        … from call site
-         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stackpanel/modules/turbo/packages.nix:29:13:
-           28|   cfg = config.stackpanel.turbo;
+         at /nix/store/y33pndg9902k0h2jnvh11b5lrz9k73px-source/nix/stack/modules/turbo/packages.nix:29:13:
+           28|   cfg = config.stack.turbo;
            29|   pkgsCfg = cfg.packages;
              |             ^
            30|   hasPkgs = pkgsCfg != { };
@@ -1692,7 +1692,7 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.turbo.packages':
+       … while evaluating the option `stack.turbo.packages':
 
        (19 duplicate frames omitted)
 
@@ -1713,7 +1713,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix",
   "offset": 1,
   "limit": 260
 }
@@ -1721,7 +1721,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # packages.nix - Turbo Workspace Package Declarations
@@ -1730,8 +1730,8 @@ _Thinking:_
 5: # are managed by Nix. Single source of truth for both files.
 6: #
 7: # Usage:
-8: #   stackpanel.turbo.packages.infra = {
-9: #     name = "@stackpanel/infra";
+8: #   stack.turbo.packages.infra = {
+9: #     name = "@stack/infra";
 10: #     path = "packages/infra";
 11: #     dependencies = { alchemy = "catalog:"; };
 12: #     scripts.deploy = {
@@ -1750,7 +1750,7 @@ _Thinking:_
 25:   ...
 26: }:
 27: let
-28:   cfg = config.stackpanel.turbo;
+28:   cfg = config.stack.turbo;
 29:   pkgsCfg = cfg.packages;
 30:   hasPkgs = pkgsCfg != { };
 31: 
@@ -1831,7 +1831,7 @@ _Thinking:_
 106:     options = {
 107:       name = lib.mkOption {
 108:         type = lib.types.str;
-109:         description = "NPM package name (e.g. @stackpanel/infra)";
+109:         description = "NPM package name (e.g. @stack/infra)";
 110:       };
 111: 
 112:       path = lib.mkOption {
@@ -1918,12 +1918,12 @@ _Thinking:_
 193:     // pkg.extraFields;
 194: 
 195:   # ============================================================================
-196:   # Collect turbo-enabled scripts as stackpanel.tasks entries
+196:   # Collect turbo-enabled scripts as stack.tasks entries
 197:   # ============================================================================
 198:   collectTurboTasks =
 199:     let
 200:       # For each package, extract scripts with turbo.enable = true
-201:       # and build a task entry compatible with stackpanel.tasks schema
+201:       # and build a task entry compatible with stack.tasks schema
 202:       pkgTasks = lib.mapAttrsToList (
 203:         _pkgId: pkg:
 204:         lib.filterAttrs (_: v: v != null) (
@@ -1962,7 +1962,7 @@ _Thinking:_
 237:   # ============================================================================
 238:   # Options
 239:   # ============================================================================
-240:   options.stackpanel.turbo.packages = lib.mkOption {
+240:   options.stack.turbo.packages = lib.mkOption {
 241:     type = lib.types.attrsOf (lib.types.submodule packageOpts);
 242:     default = { };
 243:     description = ''
@@ -1977,7 +1977,7 @@ _Thinking:_
 252:     example = lib.literalExpression ''
 253:       {
 254:         infra = {
-255:           name = "@stackpanel/infra";
+255:           name = "@stack/infra";
 256:           path = "packages/infra";
 257:           dependencies = { alchemy = "catalog:"; };
 258:           scripts.deploy = {
@@ -1997,7 +1997,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix",
   "offset": 261,
   "limit": 80
 }
@@ -2005,7 +2005,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix</path>
 <type>file</type>
 <content>261:           };
 262:         };
@@ -2021,7 +2021,7 @@ _Thinking:_
 272:     # --------------------------------------------------------------------------
 273:     # Generate package.json for each declared package
 274:     # --------------------------------------------------------------------------
-275:     stackpanel.files.entries = lib.mapAttrs' (
+275:     stack.files.entries = lib.mapAttrs' (
 276:       pkgId: pkg:
 277:       lib.nameValuePair "${pkg.path}/package.json" {
 278:         type = "json";
@@ -2034,7 +2034,7 @@ _Thinking:_
 285:     # --------------------------------------------------------------------------
 286:     # Register turbo-enabled scripts as tasks (flows into turbo.json)
 287:     # --------------------------------------------------------------------------
-288:     stackpanel.tasks = collectTurboTasks;
+288:     stack.tasks = collectTurboTasks;
 289:   };
 290: }
 
@@ -2055,7 +2055,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix",
   "offset": 1,
   "limit": 460
 }
@@ -2063,18 +2063,18 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # scripts.nix
 3: #
-4: # Unified script management for stackpanel devshells.
+4: # Unified script management for stack devshells.
 5: #
 6: # This module consolidates script/command definitions into a single
-7: # `stackpanel.scripts` option. All scripts are bundled into a single package
+7: # `stack.scripts` option. All scripts are bundled into a single package
 8: # with executables in `bin/`, avoiding conflicts and providing clean namespace.
 9: #
-10: # Schema defined in: nix/stackpanel/db/schemas/scripts.proto.nix
+10: # Schema defined in: nix/stack/db/schemas/scripts.proto.nix
 11: #
 12: # Features:
 13: #   - Attribute set keyed by command name (ensures no conflicts)
@@ -2084,20 +2084,20 @@ _Thinking:_
 17: #   - Load script content from files via `path` option
 18: #
 19: # Usage (inline exec):
-20: #   stackpanel.scripts.db-seed = {
+20: #   stack.scripts.db-seed = {
 21: #     exec = "npm run seed";
 22: #     description = "Seed the database with test data";
 23: #   };
 24: #
 25: # Usage (path to file):
-26: #   stackpanel.scripts.db-seed = {
-27: #     path = ./.stackpanel/src/scripts/db-seed.sh;
+26: #   stack.scripts.db-seed = {
+27: #     path = ./.stack/src/scripts/db-seed.sh;
 28: #     description = "Seed the database with test data";
 29: #     runtimeInputs = [ pkgs.nodejs ];
 30: #   };
 31: #
 32: # Extension scripts use namespace prefix:
-33: #   stackpanel.scripts."sst:deploy" = {
+33: #   stack.scripts."sst:deploy" = {
 34: #     path = ./src/scripts/deploy.sh;
 35: #     description = "Deploy SST infrastructure";
 36: #   };
@@ -2112,8 +2112,8 @@ _Thinking:_
 45:   # Import proto-derived options from db
 46:   db = import ../db { inherit lib; };
 47: 
-48:   cfg = config.stackpanel.scripts;
-49:   scriptsCfg = config.stackpanel.scriptsConfig;
+48:   cfg = config.stack.scripts;
+49:   scriptsCfg = config.stack.scriptsConfig;
 50: 
 51:   # Timeout presets for common script types
 52:   # These provide sensible defaults for different use cases
@@ -2191,10 +2191,10 @@ _Thinking:_
 124: 
 125:   # Create a combined package with bin/ directory containing all scripts
 126:   scriptsPackage = pkgs.symlinkJoin {
-127:     name = "stackpanel-scripts";
+127:     name = "stack-scripts";
 128:     paths = lib.attrValues scriptPackages;
 129:     meta = {
-130:       description = "Stackpanel project scripts";
+130:       description = "Stack project scripts";
 131:     };
 132:   };
 133: 
@@ -2228,7 +2228,7 @@ _Thinking:_
 161:   # Collect scripts that declare turbo metadata
 162:   turboEnabledScripts = lib.filterAttrs (_name: script: (script.turbo.enable or false)) cfg;
 163: 
-164:   # Build stackpanel.tasks entries from per-script turbo metadata
+164:   # Build stack.tasks entries from per-script turbo metadata
 165:   generatedTurboTasks = lib.mapAttrs (
 166:     scriptName: scriptCfg:
 167:     { }
@@ -2265,7 +2265,7 @@ _Thinking:_
 198:             Path to script file. Content is read and used as the script body.
 199:             Mutually exclusive with `exec` - use one or the other.
 200:           '';
-201:           example = lib.literalExpression "./.stackpanel/src/scripts/my-script.sh";
+201:           example = lib.literalExpression "./.stack/src/scripts/my-script.sh";
 202:         };
 203: 
 204: 
@@ -2334,14 +2334,14 @@ _Thinking:_
 267:           description = ''
 268:             Optional Turborepo metadata for this script.
 269:             When turbo.enable = true and scriptsConfig.generateTurboPackage is enabled,
-270:             script metadata is exported to stackpanel.tasks and included in turbo.json.
+270:             script metadata is exported to stack.tasks and included in turbo.json.
 271:           '';
 272:         };
 273:       };
 274:     };
 275: in
 276: {
-277:   options.stackpanel.scriptModules = lib.mkOption {
+277:   options.stack.scriptModules = lib.mkOption {
 278:     type = lib.types.listOf lib.types.deferredModule;
 279:     default = [ ];
 280:     description = ''
@@ -2349,7 +2349,7 @@ _Thinking:_
 282:     '';
 283:   };
 284: 
-285:   options.stackpanel.scripts = lib.mkOption {
+285:   options.stack.scripts = lib.mkOption {
 286:     type = lib.types.attrsOf (
 287:       lib.types.submoduleWith {
 288:         modules = [
@@ -2360,7 +2360,7 @@ _Thinking:_
 293:           # Nix-only runtime options (runtimeInputs, path)
 294:           nixScriptOptionsModule
 295:         ]
-296:         ++ config.stackpanel.scriptModules;
+296:         ++ config.stack.scriptModules;
 297:         specialArgs = { inherit lib; };
 298:       }
 299:     );
@@ -2398,7 +2398,7 @@ _Thinking:_
 331: 
 332:         # Path to script file
 333:         deploy = {
-334:           path = ./.stackpanel/src/scripts/deploy.sh;
+334:           path = ./.stack/src/scripts/deploy.sh;
 335:           description = "Deploy the application";
 336:           runtimeInputs = [ pkgs.awscli2 ];
 337:         };
@@ -2413,7 +2413,7 @@ _Thinking:_
 346:     '';
 347:   };
 348: 
-349:   options.stackpanel.scriptsConfig = {
+349:   options.stack.scriptsConfig = {
 350:     enable = lib.mkOption {
 351:       type = lib.types.bool;
 352:       default = true;
@@ -2427,16 +2427,16 @@ _Thinking:_
 360:         Whether to generate a Turbo-managed workspace package for scripts at
 361:         scriptsConfig.turboPackagePath (default: packages/gen/scripts).
 362: 
-363:         When enabled, this creates/merges package.json scripts via stackpanel.turbo.packages
+363:         When enabled, this creates/merges package.json scripts via stack.turbo.packages
 364:         and registers script-level turbo metadata (when script.turbo.enable = true)
-365:         into stackpanel.tasks for turbo.json generation.
+365:         into stack.tasks for turbo.json generation.
 366:       '';
 367:     };
 368: 
 369:     turboPackageId = lib.mkOption {
 370:       type = lib.types.str;
 371:       default = "scripts";
-372:       description = "Identifier key under stackpanel.turbo.packages for the generated scripts package.";
+372:       description = "Identifier key under stack.turbo.packages for the generated scripts package.";
 373:     };
 374: 
 375:     turboPackageName = lib.mkOption {
@@ -2464,7 +2464,7 @@ _Thinking:_
 397:       default = scriptPackages;
 398:       description = ''
 399:         Individual script packages (read-only).
-400:         Use to reference specific scripts: config.stackpanel.scriptsConfig.packages.my-script
+400:         Use to reference specific scripts: config.stack.scriptsConfig.packages.my-script
 401:       '';
 402:     };
 403:   };
@@ -2472,34 +2472,34 @@ _Thinking:_
 405:   config = lib.mkIf (hasScripts && scriptsCfg.enable) (lib.mkMerge [
 406:     {
 407:       # Add the scripts package to devshell
-408:       stackpanel.devshell.packages = [ scriptsPackage ];
+408:       stack.devshell.packages = [ scriptsPackage ];
 409: 
 410:       # Store serializable definitions for CLI/TUI access
-411:       stackpanel.devshell._commandsSerializable = serializableScripts;
+411:       stack.devshell._commandsSerializable = serializableScripts;
 412: 
 413:       # Expose individual script packages as flake outputs
 414:       # Available via: nix run .#scripts.<script-name>
-415:       stackpanel.outputs.scripts = scriptPackages;
+415:       stack.outputs.scripts = scriptPackages;
 416: 
 417:       # Also expose the combined package
-418:       stackpanel.outputs.stackpanel-scripts = scriptsPackage;
+418:       stack.outputs.stack-scripts = scriptsPackage;
 419: 
 420:       # Print available scripts on shell entry
-421:       stackpanel.devshell.hooks.main = [
+421:       stack.devshell.hooks.main = [
 422:         ''
-423:           echo "📜 stackpanel scripts loaded"
+423:           echo "📜 stack scripts loaded"
 424:         ''
 425:       ];
 426:     }
 427: 
 428:     (lib.mkIf scriptsCfg.generateTurboPackage {
-429:       stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
+429:       stack.turbo.packages.${scriptsCfg.turboPackageId} = {
 430:         name = scriptsCfg.turboPackageName;
 431:         path = scriptsCfg.turboPackagePath;
 432:         scripts = lib.mapAttrs (_scriptName: command: { exec = command; }) generatedPackageScripts;
 433:       };
 434: 
-435:       stackpanel.tasks = generatedTurboTasks;
+435:       stack.tasks = generatedTurboTasks;
 436:     })
 437:   ]);
 438: }
@@ -2527,8 +2527,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "pattern": "stackpanel\\.turbo\\.packages",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "pattern": "stack\\.turbo\\.packages",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
@@ -2536,20 +2536,20 @@ _Thinking:_
 **Output:**
 ```
 Found 7 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
-  Line 680:     stackpanel.turbo.packages.infra = {
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
+  Line 680:     stack.turbo.packages.infra = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix:
-  Line 363:         When enabled, this creates/merges package.json scripts via stackpanel.turbo.packages
-  Line 372:       description = "Identifier key under stackpanel.turbo.packages for the generated scripts package.";
-  Line 429:       stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix:
+  Line 363:         When enabled, this creates/merges package.json scripts via stack.turbo.packages
+  Line 372:       description = "Identifier key under stack.turbo.packages for the generated scripts package.";
+  Line 429:       stack.turbo.packages.${scriptsCfg.turboPackageId} = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
-  Line 365:     stackpanel.turbo.packages.alchemy = {
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
+  Line 365:     stack.turbo.packages.alchemy = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix:
-  Line 8: #   stackpanel.turbo.packages.infra = {
-  Line 240:   options.stackpanel.turbo.packages = lib.mkOption {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix:
+  Line 8: #   stack.turbo.packages.infra = {
+  Line 240:   options.stack.turbo.packages = lib.mkOption {
 ```
 
 ---
@@ -2566,7 +2566,7 @@ _Thinking:_
 ```json
 {
   "pattern": "dependencies",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/infra",
   "include": "*.nix"
 }
 ```
@@ -2574,7 +2574,7 @@ _Thinking:_
 **Output:**
 ```
 Found 33 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 12: #   - package.json       (union of all module dependencies)
   Line 39:   #   1. Module dependencies reference "catalog:" (workspace dedup)
   Line 72:   # dependencies are already validated at the flake's eval time.
@@ -2585,12 +2585,12 @@ Found 33 matches
   Line 690:       // cfg.package.dependencies;
   Line 796:                 dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/deployment/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/deployment/module.nix:
   Line 84:   # Determine which hosts are in use (for npm dependencies)
   Line 119:   # Aggregate npm dependencies based on hosts in use
   Line 158:       dependencies = allDeps;
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/options.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/options.nix:
   Line 25:   # Maps alchemy resource imports to their required npm peer dependencies.
   Line 26:   # Used for validation to ensure all required dependencies are declared.
   Line 89:       dependencies = lib.mkOption {
@@ -2603,34 +2603,34 @@ Found 33 matches
   Line 269:           When provided, dependencies are validated at Nix evaluation time
   Line 271:           peer dependencies before runtime.
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix:
   Line 290:       dependencies = lib.optionalAttrs (cfg.source == "aws-ec2") {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix:
   Line 128:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix:
   Line 261:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix:
   Line 66:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix:
   Line 84:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix:
   Line 108:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix:
   Line 186:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix:
   Line 889:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix:
   Line 240:       dependencies = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix:
   Line 176:       dependencies = {
 ```
 
@@ -2647,7 +2647,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/options.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/options.nix",
   "offset": 70,
   "limit": 240
 }
@@ -2655,14 +2655,14 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/options.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/options.nix</path>
 <type>file</type>
 <content>70:       path = lib.mkOption {
 71:         type = lib.types.path;
 72:         description = ''
 73:           Path to the TypeScript module file.
 74:           Must default-export a Record<string, string> of outputs.
-75:           Use `import Infra from "@stackpanel/infra"` for the library.
+75:           Use `import Infra from "@stack/infra"` for the library.
 76:         '';
 77:       };
 78: 
@@ -2671,7 +2671,7 @@ _Thinking:_
 81:         default = { };
 82:         description = ''
 83:           Configuration values passed to the module at runtime.
-84:           Serialized to JSON in .stackpanel/state/infra-inputs.json.
+84:           Serialized to JSON in .stack/state/infra-inputs.json.
 85:           Values matching ENC[age,...] are decrypted at runtime.
 86:         '';
 87:       };
@@ -2725,7 +2725,7 @@ _Thinking:_
 135:   # ============================================================================
 136:   # Options
 137:   # ============================================================================
-138:   options.stackpanel.infra = {
+138:   options.stack.infra = {
 139:     enable = lib.mkOption {
 140:       type = lib.types.bool;
 141:       default = false;
@@ -2738,7 +2738,7 @@ _Thinking:_
 148:       description = ''
 149:         IaC framework to use for infrastructure provisioning.
 150:         Currently only "alchemy" is supported. The alchemy module at
-151:         config.stackpanel.alchemy provides the shared SDK configuration
+151:         config.stack.alchemy provides the shared SDK configuration
 152:         (version, state store, helpers) that this module consumes.
 153:       '';
 154:     };
@@ -2788,7 +2788,7 @@ _Thinking:_
 198:       sops = {
 199:         file-path = lib.mkOption {
 200:           type = lib.types.str;
-201:           default = ".stackpanel/secrets/vars/dev.sops.yaml";
+201:           default = ".stack/secrets/vars/dev.sops.yaml";
 202:           description = ''
 203:             Path to SOPS-encrypted YAML file for infra outputs.
 204:             Defaults to the dev group file. Uses `sops set` for non-destructive
@@ -2883,13 +2883,13 @@ _Thinking:_
 293: 
 294:         Populated by running `infra:pull-outputs` after deployment,
 295:         which reads from the storage backend and writes to
-296:         .stackpanel/data/infra-outputs.nix.
+296:         .stack/data/infra-outputs.nix.
 297: 
 298:         Outputs are typically strings, but may include structured values
 299:         (e.g., machine inventories) when modules emit complex outputs.
 300: 
 301:         Machine inventories are expected at:
-302:           config.stackpanel.infra.outputs.machines.machines
+302:           config.stack.infra.outputs.machines.machines
 303: 
 304:         Suggested shape:
 305:           machines = {
@@ -2916,7 +2916,7 @@ _Thinking:_
 ```json
 {
   "pattern": "=\\s*\"catalog:\"",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules",
   "include": "*.nix"
 }
 ```
@@ -2924,31 +2924,31 @@ _Thinking:_
 **Output:**
 ```
 Found 18 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix:
   Line 291:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix:
   Line 129:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix:
   Line 262:         "@aws-sdk/client-sts" = "catalog:"; # AccountId from alchemy/aws
   Line 263:         "@aws-sdk/client-iam" = "catalog:"; # Role, GitHubOIDCProvider
   Line 264:         "@aws-sdk/client-kms" = "catalog:"; # KmsKey, KmsAlias
   Line 265:         "@aws-sdk/client-ssm" = "catalog:"; # SSM for group key storage
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix:
   Line 67:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix:
   Line 85:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix:
   Line 109:         "@aws-sdk/client-iam" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix:
   Line 187:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix:
   Line 890:         "@aws-sdk/client-ec2" = "catalog:";
   Line 891:         "@aws-sdk/client-iam" = "catalog:";
   Line 892:         "@aws-sdk/client-elastic-load-balancing-v2" = "catalog:";
@@ -2956,10 +2956,10 @@ Found 18 matches
   Line 894:         "@aws-sdk/client-ssm" = "catalog:";
   Line 895:         "@aws-sdk/client-sts" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix:
   Line 241:         "alchemy" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix:
   Line 177:         "alchemy" = "catalog:";
 ```
 
@@ -2976,7 +2976,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/deployment/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/deployment/module.nix",
   "offset": 70,
   "limit": 120
 }
@@ -2984,7 +2984,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/deployment/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/deployment/module.nix</path>
 <type>file</type>
 <content>70:   # Fly deploys are handled by the Fly deployment module (flyctl + fly.toml).
 71:   # ---------------------------------------------------------------------------
@@ -3064,10 +3064,10 @@ _Thinking:_
 145: {
 146:   config = lib.mkIf hasDeployableApps {
 147:     # Auto-enable the infra system
-148:     stackpanel.infra.enable = lib.mkDefault true;
+148:     stack.infra.enable = lib.mkDefault true;
 149: 
 150:     # Register as an infra module
-151:     stackpanel.infra.modules.deployment = {
+151:     stack.infra.modules.deployment = {
 152:       name = "App Deployment";
 153:       description = "Deploys apps to their configured hosts (${lib.concatStringsSep ", " hosts})";
 154:       path = ./index.ts;
@@ -3097,7 +3097,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 300,
   "limit": 70
 }
@@ -3105,7 +3105,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>300: 
 301:       # syncAll argument
@@ -3125,12 +3125,12 @@ _Thinking:_
 315: 
 316:       # Use @gen/alchemy if the alchemy module is enabled, otherwise fall back
 317:       # to inline alchemy initialization for backward compatibility.
-318:       alchemyCfg = config.stackpanel.alchemy;
+318:       alchemyCfg = config.stack.alchemy;
 319:       useGenAlchemy = alchemyCfg.enable;
 320:     in
 321:     if useGenAlchemy then
 322:       ''
-323:         // Generated by stackpanel — do not edit manually.
+323:         // Generated by stack — do not edit manually.
 324:         import { createApp } from "@gen/alchemy";
 325:         import Infra from "./src/index.ts";
 326: 
@@ -3148,7 +3148,7 @@ _Thinking:_
 338:       ''
 339:     else
 340:       ''
-341:         // Generated by stackpanel — do not edit manually.
+341:         // Generated by stack — do not edit manually.
 342:         import alchemy from "alchemy";
 343:         import { CloudflareStateStore } from "alchemy/state";
 344:         import Infra from "./src/index.ts";
@@ -3195,8 +3195,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "pattern": "turbo\\.packages|scriptsConfig|stackpanel\\.scripts|stackpanel\\.tasks|infra\\.package",
-  "path": "/Users/cm/git/darkmatter/stackpanel/.stackpanel/config.nix"
+  "pattern": "turbo\\.packages|scriptsConfig|stack\\.scripts|stack\\.tasks|infra\\.package",
+  "path": "/Users/cm/git/darkmatter/stack/.stack/config.nix"
 }
 ```
 
@@ -3218,8 +3218,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "pattern": "turbo\\.packages|scriptsConfig|stackpanel\\.scripts|stackpanel\\.tasks|infra\\.package",
-  "path": "/Users/cm/git/darkmatter/stackpanel/.stackpanel",
+  "pattern": "turbo\\.packages|scriptsConfig|stack\\.scripts|stack\\.tasks|infra\\.package",
+  "path": "/Users/cm/git/darkmatter/stack/.stack",
   "include": "*.nix"
 }
 ```
@@ -3227,17 +3227,17 @@ _Thinking:_
 **Output:**
 ```
 Found 4 matches
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/generate-config-example.nix:
-  Line 150:   config.stackpanel.scripts.generate-config-example = lib.mkIf cfg.enable {
+/Users/cm/git/darkmatter/stack/.stack/modules/generate-config-example.nix:
+  Line 150:   config.stack.scripts.generate-config-example = lib.mkIf cfg.enable {
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/default.nix:
-  Line 14: #   - Custom scripts with dependencies (stackpanel.scripts)
+/Users/cm/git/darkmatter/stack/.stack/modules/default.nix:
+  Line 14: #   - Custom scripts with dependencies (stack.scripts)
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/prek-wrapper.nix:
-  Line 28:     stackpanel.scripts."stackpanel:prek" = {
+/Users/cm/git/darkmatter/stack/.stack/modules/prek-wrapper.nix:
+  Line 28:     stack.scripts."stack:prek" = {
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/generate-docs.nix:
-  Line 75:   config.stackpanel.scripts.generate-docs = {
+/Users/cm/git/darkmatter/stack/.stack/modules/generate-docs.nix:
+  Line 75:   config.stack.scripts.generate-docs = {
 ```
 
 ---
@@ -3253,8 +3253,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "command": "git diff --cached -- .stackpanel/config.nix",
-  "description": "Shows staged config changes for stackpanel config"
+  "command": "git diff --cached -- .stack/config.nix",
+  "description": "Shows staged config changes for stack config"
 }
 ```
 
@@ -3271,17 +3271,17 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "command": "git diff -- .stackpanel/config.nix",
-  "description": "Shows unstaged stackpanel config changes"
+  "command": "git diff -- .stack/config.nix",
+  "description": "Shows unstaged stack config changes"
 }
 ```
 
 **Output:**
 ```
-diff --git a/.stackpanel/config.nix b/.stackpanel/config.nix
+diff --git a/.stack/config.nix b/.stack/config.nix
 index 1294765..74c5e73 100644
---- a/.stackpanel/config.nix
-+++ b/.stackpanel/config.nix
+--- a/.stack/config.nix
++++ b/.stack/config.nix
 @@ -345,9 +345,122 @@
      };
    };
@@ -3396,13 +3396,13 @@ index 1294765..74c5e73 100644
 +          security-group-ids = [ ];
 +          subnet-ids = [ ];
 +          tags = {
-+            ManagedBy = "stackpanel-infra";
++            ManagedBy = "stack-infra";
 +            Name = "docs";
 +          };
 +          user-data = null;
 +          vpc-id = null;
 +        };
-         stackpanel-staging = {
+         stack-staging = {
            ami = null;
            associate-public-ip = true;
 @@ -737,4 +850,3 @@
@@ -3427,7 +3427,7 @@ _Thinking:_
 ```json
 {
   "pattern": "\"catalog:\";",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
@@ -3435,46 +3435,46 @@ _Thinking:_
 **Output:**
 ```
 Found 27 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 684:         alchemy = "catalog:";
   Line 797:                   # "@aws-sdk/client-s3" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix:
   Line 8: #   Modules declare dependencies as `"@aws-sdk/client-ecr" = "catalog:";` in
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/sst/sst.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/sst/sst.nix:
   Line 468:     sst = "catalog:";
   Line 469:     "@pulumi/aws" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
   Line 283:     alchemy = "catalog:";
   Line 287:     "@aws-sdk/client-ssm" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix:
   Line 291:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix:
   Line 129:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix:
   Line 262:         "@aws-sdk/client-sts" = "catalog:"; # AccountId from alchemy/aws
   Line 263:         "@aws-sdk/client-iam" = "catalog:"; # Role, GitHubOIDCProvider
   Line 264:         "@aws-sdk/client-kms" = "catalog:"; # KmsKey, KmsAlias
   Line 265:         "@aws-sdk/client-ssm" = "catalog:"; # SSM for group key storage
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix:
   Line 67:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix:
   Line 85:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix:
   Line 109:         "@aws-sdk/client-iam" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix:
   Line 187:         "@aws-sdk/client-ec2" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix:
   Line 890:         "@aws-sdk/client-ec2" = "catalog:";
   Line 891:         "@aws-sdk/client-iam" = "catalog:";
   Line 892:         "@aws-sdk/client-elastic-load-balancing-v2" = "catalog:";
@@ -3482,13 +3482,13 @@ Found 27 matches
   Line 894:         "@aws-sdk/client-ssm" = "catalog:";
   Line 895:         "@aws-sdk/client-sts" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix:
   Line 241:         "alchemy" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix:
   Line 177:         "alchemy" = "catalog:";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix:
   Line 11: #     dependencies = { alchemy = "catalog:"; };
   Line 257:           dependencies = { alchemy = "catalog:"; };
 ```
@@ -3506,7 +3506,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/sst/sst.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/sst/sst.nix",
   "offset": 430,
   "limit": 240
 }
@@ -3514,7 +3514,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/sst/sst.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/sst/sst.nix</path>
 <type>file</type>
 <content>430: 
 431:     export default $config({
@@ -3566,7 +3566,7 @@ _Thinking:_
 477:     dependencies = defaultPackageDeps // cfg.package.dependencies;
 478:   };
 479: in {
-480:   options.stackpanel.sst = {
+480:   options.stack.sst = {
 481:     enable = lib.mkOption {
 482:       type = lib.types.bool;
 483:       default = false;
@@ -3582,13 +3582,13 @@ _Thinking:_
 493:     region = lib.mkOption {
 494:       type = lib.types.str;
 495:       default = defaultRegion;
-496:       description = "AWS region for infrastructure (inherits from stackpanel.aws.roles-anywhere.region)";
+496:       description = "AWS region for infrastructure (inherits from stack.aws.roles-anywhere.region)";
 497:     };
 498: 
 499:     account-id = lib.mkOption {
 500:       type = lib.types.str;
 501:       default = defaultAccountId;
-502:       description = "AWS account ID (inherits from stackpanel.aws.roles-anywhere.account-id)";
+502:       description = "AWS account ID (inherits from stack.aws.roles-anywhere.account-id)";
 503:     };
 504: 
 505:     config-path = lib.mkOption {
@@ -3662,13 +3662,13 @@ _Thinking:_
 573:         org = lib.mkOption {
 574:           type = lib.types.str;
 575:           default = defaultGithubOrg;
-576:           description = "GitHub organization name (inherits from stackpanel.project.owner)";
+576:           description = "GitHub organization name (inherits from stack.project.owner)";
 577:         };
 578: 
 579:         repo = lib.mkOption {
 580:           type = lib.types.str;
 581:           default = defaultGithubRepo;
-582:           description = "GitHub repository name (inherits from stackpanel.project.repo, or * for all repos in org)";
+582:           description = "GitHub repository name (inherits from stack.project.repo, or * for all repos in org)";
 583:         };
 584: 
 585:         branch = lib.mkOption {
@@ -3721,15 +3721,15 @@ _Thinking:_
 632:     # =========================================================================
 633:     # Force KMS on when variables backend is "chamber"
 634:     # =========================================================================
-635:     (lib.mkIf (config.stackpanel.secrets.backend == "chamber") {
-636:       stackpanel.sst.kms.enable = lib.mkForce true;
+635:     (lib.mkIf (config.stack.secrets.backend == "chamber") {
+636:       stack.sst.kms.enable = lib.mkForce true;
 637:     })
 638: 
 639:     (lib.mkIf cfg.enable {
 640:       # =========================================================================
 641:       # Bun catalog — register actual versions for "catalog:" references
 642:       # =========================================================================
-643:       stackpanel.bun.catalog = {
+643:       stack.bun.catalog = {
 644:         sst = "^3.17.25";
 645:         "@pulumi/aws" = "^7.15.0";
 646:       };
@@ -3739,7 +3739,7 @@ _Thinking:_
 650:       # =========================================================================
 651:       # Register SST as a builtin extension so it appears in the extensions UI
 652:       # and can be managed like any other extension.
-653:       stackpanel.extensions.sst = {
+653:       stack.extensions.sst = {
 654:         name = "SST Infrastructure";
 655:         enabled = true;
 656:         builtin = true;
@@ -3774,7 +3774,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix",
   "offset": 250,
   "limit": 140
 }
@@ -3782,7 +3782,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix</path>
 <type>file</type>
 <content>250:         cfg.state-store.provider
 251:       ]
@@ -3838,7 +3838,7 @@ _Thinking:_
 301:     # ==========================================================================
 302:     # Bun catalog — register actual versions for "catalog:" references
 303:     # ==========================================================================
-304:     stackpanel.bun.catalog = {
+304:     stack.bun.catalog = {
 305:       alchemy = cfg.version;
 306:     } // lib.optionalAttrs cfg.helpers.ssm {
 307:       "@aws-sdk/client-ssm" = "^3.953.0";
@@ -3847,7 +3847,7 @@ _Thinking:_
 310:     # ==========================================================================
 311:     # File generation
 312:     # ==========================================================================
-313:     stackpanel.files.entries = {
+313:     stack.files.entries = {
 314:       # Main entry: createApp factory + re-exports
 315:       "${outputDir}/src/index.ts" = {
 316:         text = indexTs;
@@ -3899,7 +3899,7 @@ _Thinking:_
 362:     # ==========================================================================
 363:     # Turbo workspace package (generates package.json)
 364:     # ==========================================================================
-365:     stackpanel.turbo.packages.alchemy = {
+365:     stack.turbo.packages.alchemy = {
 366:       name = cfg.package.name;
 367:       path = outputDir;
 368:       dependencies = allDeps;
@@ -3919,7 +3919,7 @@ _Thinking:_
 382:     #
 383:     # Wire SOPS-stored tokens to env vars so they're auto-loaded on shell entry.
 384:     # ==========================================================================
-385:     stackpanel.devshell.env =
+385:     stack.devshell.env =
 386:       lib.optionalAttrs (cfg.secrets.state-token-sops-path != null) {
 387:         ${cfg.secrets.state-token-env-var} = cfg.secrets.state-token-sops-path;
 388:       }
@@ -3942,7 +3942,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix",
   "offset": 1,
   "limit": 330
 }
@@ -3950,7 +3950,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/machines/module.nix
@@ -3959,7 +3959,7 @@ _Thinking:_
 5: #
 6: # Accepts a machine inventory definition in Nix and emits a JSON string
 7: # output that can be stored via the infra output backend. Colmena consumes
-8: # this inventory from stackpanel.infra.outputs.machines.
+8: # this inventory from stack.infra.outputs.machines.
 9: # ==============================================================================
 10: {
 11:   lib,
@@ -3967,7 +3967,7 @@ _Thinking:_
 13:   ...
 14: }:
 15: let
-16:   cfg = config.stackpanel.infra.machines;
+16:   cfg = config.stack.infra.machines;
 17: 
 18:   sshConfigType = lib.types.submodule {
 19:     options = {
@@ -4107,7 +4107,7 @@ _Thinking:_
 153:   };
 154: in
 155: {
-156:   options.stackpanel.infra.machines = {
+156:   options.stack.infra.machines = {
 157:     enable = lib.mkOption {
 158:       type = lib.types.bool;
 159:       default = false;
@@ -4126,7 +4126,7 @@ _Thinking:_
 172:     aws = {
 173:       region = lib.mkOption {
 174:         type = lib.types.nullOr lib.types.str;
-175:         default = config.stackpanel.aws.roles-anywhere.region or null;
+175:         default = config.stack.aws.roles-anywhere.region or null;
 176:         description = "AWS region for EC2 inventory (falls back to AWS env defaults).";
 177:       };
 178: 
@@ -4156,7 +4156,7 @@ _Thinking:_
 202:       role-tag-keys = lib.mkOption {
 203:         type = lib.types.listOf lib.types.str;
 204:         default = [
-205:           "stackpanel:role"
+205:           "stack:role"
 206:           "role"
 207:         ];
 208:         description = "Tag keys used to derive machine roles.";
@@ -4165,7 +4165,7 @@ _Thinking:_
 211:       tag-keys = lib.mkOption {
 212:         type = lib.types.listOf lib.types.str;
 213:         default = [
-214:           "stackpanel:tag"
+214:           "stack:tag"
 215:           "tag"
 216:         ];
 217:         description = "Tag keys used to derive machine tags.";
@@ -4174,7 +4174,7 @@ _Thinking:_
 220:       env-tag-keys = lib.mkOption {
 221:         type = lib.types.listOf lib.types.str;
 222:         default = [
-223:           "stackpanel:env"
+223:           "stack:env"
 224:           "env"
 225:           "stage"
 226:         ];
@@ -4216,9 +4216,9 @@ _Thinking:_
 262:   };
 263: 
 264:   config = lib.mkIf cfg.enable {
-265:     stackpanel.infra.enable = lib.mkDefault true;
+265:     stack.infra.enable = lib.mkDefault true;
 266: 
-267:     stackpanel.infra.modules.machines = {
+267:     stack.infra.modules.machines = {
 268:       name = "Machine Inventory";
 269:       description = "Machine inventory provider for Colmena deployments";
 270:       path = ./index.ts;
@@ -4268,7 +4268,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix",
   "offset": 1,
   "limit": 180
 }
@@ -4276,7 +4276,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/aws-security-groups/module.nix
@@ -4289,7 +4289,7 @@ _Thinking:_
 9:   ...
 10: }:
 11: let
-12:   cfg = config.stackpanel.infra.aws-security-groups;
+12:   cfg = config.stack.infra.aws-security-groups;
 13: 
 14:   ruleType = lib.types.submodule {
 15:     options = {
@@ -4369,7 +4369,7 @@ _Thinking:_
 89:   };
 90: in
 91: {
-92:   options.stackpanel.infra.aws-security-groups = {
+92:   options.stack.infra.aws-security-groups = {
 93:     enable = lib.mkOption {
 94:       type = lib.types.bool;
 95:       default = false;
@@ -4395,9 +4395,9 @@ _Thinking:_
 115:   };
 116: 
 117:   config = lib.mkIf cfg.enable {
-118:     stackpanel.infra.enable = lib.mkDefault true;
+118:     stack.infra.enable = lib.mkDefault true;
 119: 
-120:     stackpanel.infra.modules.aws-security-groups = {
+120:     stack.infra.modules.aws-security-groups = {
 121:       name = "AWS Security Groups";
 122:       description = "Provision security groups in a VPC";
 123:       path = ./index.ts;
@@ -4432,7 +4432,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix",
   "offset": 1,
   "limit": 320
 }
@@ -4440,7 +4440,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/aws-secrets/module.nix
@@ -4453,11 +4453,11 @@ _Thinking:_
 9: #   - KMS key + alias for secrets encryption
 10: #   - SSM Parameter Store policies for secrets group key storage
 11: #
-12: # This is the direct replacement for the SST-based stackpanel.sst module.
+12: # This is the direct replacement for the SST-based stack.sst module.
 13: #
 14: # Usage:
-15: #   stackpanel.infra.enable = true;
-16: #   stackpanel.infra.aws.secrets = {
+15: #   stack.infra.enable = true;
+16: #   stack.infra.aws.secrets = {
 17: #     enable = true;
 18: #     oidc.provider = "github-actions";
 19: #     oidc.github-actions = { org = "my-org"; repo = "my-repo"; };
@@ -4470,24 +4470,24 @@ _Thinking:_
 26:   ...
 27: }:
 28: let
-29:   cfg = config.stackpanel.infra.aws.secrets;
+29:   cfg = config.stack.infra.aws.secrets;
 30: 
 31:   # Inherited defaults from core config
-32:   projectName = config.stackpanel.name or "my-project";
+32:   projectName = config.stack.name or "my-project";
 33: 
 34:   # AWS config (inherit from roles-anywhere if available)
-35:   awsCfg = config.stackpanel.aws.roles-anywhere or { };
+35:   awsCfg = config.stack.aws.roles-anywhere or { };
 36:   defaultRegion = awsCfg.region or "us-west-2";
 37:   defaultAccountId = awsCfg.account-id or "";
 38: 
 39:   # GitHub org/repo from project config
-40:   projectCfg = config.stackpanel.project;
+40:   projectCfg = config.stack.project;
 41:   defaultGithubOrg = projectCfg.owner;
 42:   defaultGithubRepo = if projectCfg.repo != "" then projectCfg.repo else "*";
 43: 
 44:   # Secrets groups config (for SSM key paths)
-45:   secretsGroups = config.stackpanel.secrets.groups or { };
-46:   chamberPrefix = config.stackpanel.secrets.chamber.service-prefix or projectName;
+45:   secretsGroups = config.stack.secrets.groups or { };
+46:   chamberPrefix = config.stack.secrets.chamber.service-prefix or projectName;
 47: 
 48:   # Collect all SSM paths from groups
 49:   groupSsmPaths = lib.mapAttrsToList (_: g: g.ssm-path) secretsGroups;
@@ -4501,7 +4501,7 @@ _Thinking:_
 57:   # ============================================================================
 58:   # Options
 59:   # ============================================================================
-60:   options.stackpanel.infra.aws.secrets = {
+60:   options.stack.infra.aws.secrets = {
 61:     enable = lib.mkOption {
 62:       type = lib.types.bool;
 63:       default = true;
@@ -4514,13 +4514,13 @@ _Thinking:_
 70:     region = lib.mkOption {
 71:       type = lib.types.str;
 72:       default = defaultRegion;
-73:       description = "AWS region (inherits from stackpanel.aws.roles-anywhere.region)";
+73:       description = "AWS region (inherits from stack.aws.roles-anywhere.region)";
 74:     };
 75: 
 76:     account-id = lib.mkOption {
 77:       type = lib.types.str;
 78:       default = defaultAccountId;
-79:       description = "AWS account ID (inherits from stackpanel.aws.roles-anywhere.account-id)";
+79:       description = "AWS account ID (inherits from stack.aws.roles-anywhere.account-id)";
 80:     };
 81: 
 82:     # KMS configuration
@@ -4662,9 +4662,9 @@ _Thinking:_
 218:   # ============================================================================
 219:   config = lib.mkIf cfg.enable {
 220:     # Auto-enable the infra system when this module is active
-221:     stackpanel.infra.enable = lib.mkDefault true;
+221:     stack.infra.enable = lib.mkDefault true;
 222: 
-223:     stackpanel.infra.modules.aws-secrets = {
+223:     stack.infra.modules.aws-secrets = {
 224:       name = "AWS Secrets Infrastructure";
 225:       description = "OIDC provider, IAM role, and KMS key for secrets management";
 226:       path = ./module;
@@ -4746,7 +4746,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix",
   "offset": 1,
   "limit": 130
 }
@@ -4754,7 +4754,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/aws-key-pairs/module.nix
@@ -4767,7 +4767,7 @@ _Thinking:_
 9:   ...
 10: }:
 11: let
-12:   cfg = config.stackpanel.infra.aws-key-pairs;
+12:   cfg = config.stack.infra.aws-key-pairs;
 13: 
 14:   keyType = lib.types.submodule {
 15:     options = {
@@ -4791,7 +4791,7 @@ _Thinking:_
 33:   };
 34: in
 35: {
-36:   options.stackpanel.infra.aws-key-pairs = {
+36:   options.stack.infra.aws-key-pairs = {
 37:     enable = lib.mkOption {
 38:       type = lib.types.bool;
 39:       default = false;
@@ -4812,9 +4812,9 @@ _Thinking:_
 54:   };
 55: 
 56:   config = lib.mkIf cfg.enable {
-57:     stackpanel.infra.enable = lib.mkDefault true;
+57:     stack.infra.enable = lib.mkDefault true;
 58: 
-59:     stackpanel.infra.modules.aws-key-pairs = {
+59:     stack.infra.modules.aws-key-pairs = {
 60:       name = "AWS Key Pairs";
 61:       description = "Import or create EC2 key pairs";
 62:       path = ./index.ts;
@@ -4849,7 +4849,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix",
   "offset": 1,
   "limit": 150
 }
@@ -4857,7 +4857,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/aws-network/module.nix
@@ -4873,10 +4873,10 @@ _Thinking:_
 12:   ...
 13: }:
 14: let
-15:   cfg = config.stackpanel.infra.aws-network;
+15:   cfg = config.stack.infra.aws-network;
 16: in
 17: {
-18:   options.stackpanel.infra.aws-network = {
+18:   options.stack.infra.aws-network = {
 19:     enable = lib.mkOption {
 20:       type = lib.types.bool;
 21:       default = false;
@@ -4885,7 +4885,7 @@ _Thinking:_
 24: 
 25:     region = lib.mkOption {
 26:       type = lib.types.nullOr lib.types.str;
-27:       default = config.stackpanel.aws.roles-anywhere.region or null;
+27:       default = config.stack.aws.roles-anywhere.region or null;
 28:       description = "AWS region for network discovery (defaults to AWS env).";
 29:     };
 30: 
@@ -4925,9 +4925,9 @@ _Thinking:_
 64:   };
 65: 
 66:   config = lib.mkIf cfg.enable {
-67:     stackpanel.infra.enable = lib.mkDefault true;
+67:     stack.infra.enable = lib.mkDefault true;
 68: 
-69:     stackpanel.infra.modules.aws-network = {
+69:     stack.infra.modules.aws-network = {
 70:       name = "AWS Network";
 71:       description = "Discover default VPC and subnet IDs";
 72:       path = ./index.ts;
@@ -4971,7 +4971,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix",
   "offset": 1,
   "limit": 160
 }
@@ -4979,7 +4979,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/aws-iam/module.nix
@@ -4992,7 +4992,7 @@ _Thinking:_
 9:   ...
 10: }:
 11: let
-12:   cfg = config.stackpanel.infra.aws-iam;
+12:   cfg = config.stack.infra.aws-iam;
 13: 
 14:   inlinePolicyType = lib.types.submodule {
 15:     options = {
@@ -5009,7 +5009,7 @@ _Thinking:_
 26:   };
 27: in
 28: {
-29:   options.stackpanel.infra.aws-iam = {
+29:   options.stack.infra.aws-iam = {
 30:     enable = lib.mkOption {
 31:       type = lib.types.bool;
 32:       default = false;
@@ -5069,9 +5069,9 @@ _Thinking:_
 86:   };
 87: 
 88:   config = lib.mkIf cfg.enable {
-89:     stackpanel.infra.enable = lib.mkDefault true;
+89:     stack.infra.enable = lib.mkDefault true;
 90: 
-91:     stackpanel.infra.modules.aws-iam = {
+91:     stack.infra.modules.aws-iam = {
 92:       name = "AWS IAM";
 93:       description = "IAM role and instance profile provisioning";
 94:       path = ./index.ts;
@@ -5126,7 +5126,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix",
   "offset": 1,
   "limit": 250
 }
@@ -5134,7 +5134,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix</path>
 <type>file</type>
 <content>1: # ==============================================================================
 2: # infra/modules/aws-ec2/module.nix
@@ -5147,7 +5147,7 @@ _Thinking:_
 9:   ...
 10: }:
 11: let
-12:   cfg = config.stackpanel.infra.aws-ec2;
+12:   cfg = config.stack.infra.aws-ec2;
 13: 
 14:   sshType = lib.types.submodule {
 15:     options = {
@@ -5279,7 +5279,7 @@ _Thinking:_
 141:   };
 142: in
 143: {
-144:   options.stackpanel.infra.aws-ec2 = {
+144:   options.stack.infra.aws-ec2 = {
 145:     enable = lib.mkOption {
 146:       type = lib.types.bool;
 147:       default = false;
@@ -5311,9 +5311,9 @@ _Thinking:_
 173:   };
 174: 
 175:   config = lib.mkIf cfg.enable {
-176:     stackpanel.infra.enable = lib.mkDefault true;
+176:     stack.infra.enable = lib.mkDefault true;
 177: 
-178:     stackpanel.infra.modules.aws-ec2 = {
+178:     stack.infra.modules.aws-ec2 = {
 179:       name = "AWS EC2";
 180:       description = "Provision EC2 instances";
 181:       path = ./index.ts;
@@ -5352,7 +5352,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix",
   "offset": 840,
   "limit": 100
 }
@@ -5360,7 +5360,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix</path>
 <type>file</type>
 <content>840:         description = "SSM parameter wiring for app environment.";
 841:       };
@@ -5374,7 +5374,7 @@ _Thinking:_
 849:   };
 850: in
 851: {
-852:   options.stackpanel.infra.aws-ec2-app = {
+852:   options.stack.infra.aws-ec2-app = {
 853:     enable = lib.mkOption {
 854:       type = lib.types.bool;
 855:       default = false;
@@ -5401,9 +5401,9 @@ _Thinking:_
 876:   };
 877: 
 878:   config = lib.mkIf cfg.enable {
-879:     stackpanel.infra.enable = lib.mkDefault true;
+879:     stack.infra.enable = lib.mkDefault true;
 880: 
-881:     stackpanel.infra.modules.aws-ec2-app = {
+881:     stack.infra.modules.aws-ec2-app = {
 882:       name = "AWS EC2 Apps";
 883:       description = "Provision EC2 instances for apps and emit machine inventory";
 884:       path = ./index.ts;
@@ -5450,7 +5450,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix",
   "offset": 220,
   "limit": 50
 }
@@ -5458,7 +5458,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix</path>
 <type>file</type>
 <content>220:       path = ./index.ts;
 221:       inputs = {
@@ -5483,8 +5483,8 @@ _Thinking:_
 240:       dependencies = {
 241:         "alchemy" = "catalog:";
 242:       }
-243:       // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
-244:         ${config.stackpanel.alchemy.package.name} = "workspace:*";
+243:       // lib.optionalAttrs (config.stack.alchemy.enable) {
+244:         ${config.stack.alchemy.package.name} = "workspace:*";
 245:       };
 246:       outputs = {
 247:         databaseUrl = {
@@ -5510,7 +5510,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix",
   "offset": 150,
   "limit": 60
 }
@@ -5518,12 +5518,12 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix</path>
 <type>file</type>
 <content>150:   # Config: register in infra module system
 151:   # ============================================================================
 152:   config = lib.mkIf (infraCfg.enable && cfg.enable) {
-153:     stackpanel.infra.modules.cache = {
+153:     stack.infra.modules.cache = {
 154:       name = "Cache";
 155:       description = "Redis/Valkey cache provisioning (Upstash / devenv / Docker)";
 156:       path = ./index.ts;
@@ -5549,8 +5549,8 @@ _Thinking:_
 176:       dependencies = {
 177:         "alchemy" = "catalog:";
 178:       }
-179:       // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
-180:         ${config.stackpanel.alchemy.package.name} = "workspace:*";
+179:       // lib.optionalAttrs (config.stack.alchemy.enable) {
+180:         ${config.stack.alchemy.package.name} = "workspace:*";
 181:       };
 182:       outputs = {
 183:         redisUrl = {
@@ -5588,7 +5588,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 770,
   "limit": 40
 }
@@ -5596,7 +5596,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>770:               };
 771: 
@@ -5609,9 +5609,9 @@ _Thinking:_
 778:             };
 779: 
 780:             config = lib.mkIf cfg.enable {
-781:               stackpanel.infra.enable = lib.mkDefault true;
+781:               stack.infra.enable = lib.mkDefault true;
 782: 
-783:               stackpanel.infra.modules.MODULE_ID = {
+783:               stack.infra.modules.MODULE_ID = {
 784:                 name = "MODULE_NAME";
 785:                 description = "MODULE_NAME infrastructure provisioning";
 786:                 path = ./index.ts;
@@ -5656,14 +5656,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix\n@@\n       dependencies = lib.optionalAttrs (cfg.source == \"aws-ec2\") {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix\n@@\n       dependencies = lib.optionalAttrs (cfg.source == \"aws-ec2\") {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/machines/module.nix
+M nix/stack/infra/modules/machines/module.nix
 ```
 
 ---
@@ -5675,14 +5675,14 @@ M nix/stackpanel/infra/modules/machines/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-security-groups/module.nix
+M nix/stack/infra/modules/aws-security-groups/module.nix
 ```
 
 ---
@@ -5694,14 +5694,14 @@ M nix/stackpanel/infra/modules/aws-security-groups/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-sts\" = \"catalog:\"; # AccountId from alchemy/aws\n-        \"@aws-sdk/client-iam\" = \"catalog:\"; # Role, GitHubOIDCProvider\n-        \"@aws-sdk/client-kms\" = \"catalog:\"; # KmsKey, KmsAlias\n-        \"@aws-sdk/client-ssm\" = \"catalog:\"; # SSM for group key storage\n+        \"@aws-sdk/client-sts\" = \"^3.953.0\"; # AccountId from alchemy/aws\n+        \"@aws-sdk/client-iam\" = \"^3.953.0\"; # Role, GitHubOIDCProvider\n+        \"@aws-sdk/client-kms\" = \"^3.953.0\"; # KmsKey, KmsAlias\n+        \"@aws-sdk/client-ssm\" = \"^3.953.0\"; # SSM for group key storage\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-sts\" = \"catalog:\"; # AccountId from alchemy/aws\n-        \"@aws-sdk/client-iam\" = \"catalog:\"; # Role, GitHubOIDCProvider\n-        \"@aws-sdk/client-kms\" = \"catalog:\"; # KmsKey, KmsAlias\n-        \"@aws-sdk/client-ssm\" = \"catalog:\"; # SSM for group key storage\n+        \"@aws-sdk/client-sts\" = \"^3.953.0\"; # AccountId from alchemy/aws\n+        \"@aws-sdk/client-iam\" = \"^3.953.0\"; # Role, GitHubOIDCProvider\n+        \"@aws-sdk/client-kms\" = \"^3.953.0\"; # KmsKey, KmsAlias\n+        \"@aws-sdk/client-ssm\" = \"^3.953.0\"; # SSM for group key storage\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-secrets/module.nix
+M nix/stack/infra/modules/aws-secrets/module.nix
 ```
 
 ---
@@ -5713,14 +5713,14 @@ M nix/stackpanel/infra/modules/aws-secrets/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-key-pairs/module.nix
+M nix/stack/infra/modules/aws-key-pairs/module.nix
 ```
 
 ---
@@ -5732,14 +5732,14 @@ M nix/stackpanel/infra/modules/aws-key-pairs/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-network/module.nix
+M nix/stack/infra/modules/aws-network/module.nix
 ```
 
 ---
@@ -5751,14 +5751,14 @@ M nix/stackpanel/infra/modules/aws-network/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-iam\" = \"catalog:\";\n+        \"@aws-sdk/client-iam\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-iam\" = \"catalog:\";\n+        \"@aws-sdk/client-iam\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-iam/module.nix
+M nix/stack/infra/modules/aws-iam/module.nix
 ```
 
 ---
@@ -5770,14 +5770,14 @@ M nix/stackpanel/infra/modules/aws-iam/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-ec2/module.nix
+M nix/stack/infra/modules/aws-ec2/module.nix
 ```
 
 ---
@@ -5789,14 +5789,14 @@ M nix/stackpanel/infra/modules/aws-ec2/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n-        \"@aws-sdk/client-iam\" = \"catalog:\";\n-        \"@aws-sdk/client-elastic-load-balancing-v2\" = \"catalog:\";\n-        \"@aws-sdk/client-ecr\" = \"catalog:\";\n-        \"@aws-sdk/client-ssm\" = \"catalog:\";\n-        \"@aws-sdk/client-sts\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n+        \"@aws-sdk/client-iam\" = \"^3.953.0\";\n+        \"@aws-sdk/client-elastic-load-balancing-v2\" = \"^3.953.0\";\n+        \"@aws-sdk/client-ecr\" = \"^3.953.0\";\n+        \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n+        \"@aws-sdk/client-sts\" = \"^3.953.0\";\n       };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix\n@@\n       dependencies = {\n-        \"@aws-sdk/client-ec2\" = \"catalog:\";\n-        \"@aws-sdk/client-iam\" = \"catalog:\";\n-        \"@aws-sdk/client-elastic-load-balancing-v2\" = \"catalog:\";\n-        \"@aws-sdk/client-ecr\" = \"catalog:\";\n-        \"@aws-sdk/client-ssm\" = \"catalog:\";\n-        \"@aws-sdk/client-sts\" = \"catalog:\";\n+        \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n+        \"@aws-sdk/client-iam\" = \"^3.953.0\";\n+        \"@aws-sdk/client-elastic-load-balancing-v2\" = \"^3.953.0\";\n+        \"@aws-sdk/client-ecr\" = \"^3.953.0\";\n+        \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n+        \"@aws-sdk/client-sts\" = \"^3.953.0\";\n       };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/aws-ec2-app/module.nix
+M nix/stack/infra/modules/aws-ec2-app/module.nix
 ```
 
 ---
@@ -5808,14 +5808,14 @@ M nix/stackpanel/infra/modules/aws-ec2-app/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/module.nix\n@@\n       dependencies = {\n-        \"alchemy\" = \"catalog:\";\n+        \"alchemy\" = config.stackpanel.alchemy.version;\n       }\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/module.nix\n@@\n       dependencies = {\n-        \"alchemy\" = \"catalog:\";\n+        \"alchemy\" = config.stack.alchemy.version;\n       }\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/database/module.nix
+M nix/stack/infra/modules/database/module.nix
 ```
 
 ---
@@ -5827,14 +5827,14 @@ M nix/stackpanel/infra/modules/database/module.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/cache/module.nix\n@@\n       dependencies = {\n-        \"alchemy\" = \"catalog:\";\n+        \"alchemy\" = config.stackpanel.alchemy.version;\n       }\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/modules/cache/module.nix\n@@\n       dependencies = {\n-        \"alchemy\" = \"catalog:\";\n+        \"alchemy\" = config.stack.alchemy.version;\n       }\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/modules/cache/module.nix
+M nix/stack/infra/modules/cache/module.nix
 ```
 
 ---
@@ -5850,14 +5850,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix\n@@\n-  # ============================================================================\n-  # Catalog versions for NPM packages used by infra modules via \"catalog:\".\n-  #\n-  # Defined once here so that:\n-  #   1. Module dependencies reference \"catalog:\" (workspace dedup)\n-  #   2. stackpanel.bun.catalog gets the real version (root package.json)\n-  #\n-  # When adding a new AWS SDK or other catalog dependency to an infra module,\n-  # add the version here too.\n-  # ============================================================================\n-  infraCatalogVersions = {\n-    \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n-    \"@aws-sdk/client-ecr\" = \"^3.953.0\";\n-    \"@aws-sdk/client-elastic-load-balancing-v2\" = \"^3.953.0\";\n-    \"@aws-sdk/client-iam\" = \"^3.953.0\";\n-    \"@aws-sdk/client-kms\" = \"^3.953.0\";\n-    \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n-    \"@aws-sdk/client-sts\" = \"^3.953.0\";\n-    \"@pulumi/aws\" = \"^7.15.0\";\n-    \"sst\" = \"^3.17.25\";\n-  };\n   sortedModuleIds = lib.sort (a: b: a < b) moduleIds;\n@@\n-  # Collect catalog versions for every \"catalog:\" dependency across all modules.\n-  # Only includes deps whose value is literally \"catalog:\" — direct version\n-  # strings are left alone (they don't need a catalog entry).\n-  allCatalogDeps = lib.filterAttrs (_: v: v == \"catalog:\") allDeps;\n-  catalogEntries = lib.mapAttrs (\n-    name: _:\n-    infraCatalogVersions.${name}\n-      or (builtins.throw \"infra module dependency '${name}' uses catalog: but has no version in infraCatalogVersions — add it to infra/codegen.nix\")\n-  ) allCatalogDeps;\n+  # Infra modules must declare concrete dependency versions/ranges.\n+  # Reject unresolved catalog placeholders to keep generated package.json explicit.\n+  catalogDepNames = builtins.attrNames (lib.filterAttrs (_: v: v == \"catalog:\") allDeps);\n+  validatedDeps =\n+    if catalogDepNames != [ ] then\n+      builtins.throw \"infra module dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep \", \" catalogDepNames})\"\n+    else\n+      allDeps;\n@@\n-    # ==========================================================================\n-    # Bun catalog — register actual versions for all \"catalog:\" references\n-    # ==========================================================================\n-    stackpanel.bun.catalog = catalogEntries;\n-\n-    # ==========================================================================\n     # Turbo workspace package (generates package.json + turbo.json tasks)\n     # ==========================================================================\n     stackpanel.turbo.packages.infra = {\n       name = cfg.package.name;\n       path = outputDir;\n-      dependencies = {\n-        alchemy = \"catalog:\";\n-      }\n-      // lib.optionalAttrs config.stackpanel.alchemy.enable {\n-        ${config.stackpanel.alchemy.package.name} = \"workspace:*\";\n-      }\n-      // allDeps\n-      // cfg.package.dependencies;\n+      dependencies =\n+        let\n+          packageDeps = {\n+            alchemy = config.stackpanel.alchemy.version;\n+          }\n+          // lib.optionalAttrs config.stackpanel.alchemy.enable {\n+            ${config.stackpanel.alchemy.package.name} = \"workspace:*\";\n+          }\n+          // validatedDeps\n+          // cfg.package.dependencies;\n+          invalidCatalogDeps = builtins.attrNames (lib.filterAttrs (_: v: v == \"catalog:\") packageDeps);\n+        in\n+        if invalidCatalogDeps != [ ] then\n+          builtins.throw \"infra package dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep \", \" invalidCatalogDeps})\"\n+        else\n+          packageDeps;\n@@\n                 # NPM packages required by the TypeScript implementation.\n                 dependencies = {\n-                  # \"@aws-sdk/client-s3\" = \"catalog:\";\n+                  # \"@aws-sdk/client-s3\" = \"^3.953.0\";\n                 };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix\n@@\n-  # ============================================================================\n-  # Catalog versions for NPM packages used by infra modules via \"catalog:\".\n-  #\n-  # Defined once here so that:\n-  #   1. Module dependencies reference \"catalog:\" (workspace dedup)\n-  #   2. stack.bun.catalog gets the real version (root package.json)\n-  #\n-  # When adding a new AWS SDK or other catalog dependency to an infra module,\n-  # add the version here too.\n-  # ============================================================================\n-  infraCatalogVersions = {\n-    \"@aws-sdk/client-ec2\" = \"^3.953.0\";\n-    \"@aws-sdk/client-ecr\" = \"^3.953.0\";\n-    \"@aws-sdk/client-elastic-load-balancing-v2\" = \"^3.953.0\";\n-    \"@aws-sdk/client-iam\" = \"^3.953.0\";\n-    \"@aws-sdk/client-kms\" = \"^3.953.0\";\n-    \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n-    \"@aws-sdk/client-sts\" = \"^3.953.0\";\n-    \"@pulumi/aws\" = \"^7.15.0\";\n-    \"sst\" = \"^3.17.25\";\n-  };\n   sortedModuleIds = lib.sort (a: b: a < b) moduleIds;\n@@\n-  # Collect catalog versions for every \"catalog:\" dependency across all modules.\n-  # Only includes deps whose value is literally \"catalog:\" — direct version\n-  # strings are left alone (they don't need a catalog entry).\n-  allCatalogDeps = lib.filterAttrs (_: v: v == \"catalog:\") allDeps;\n-  catalogEntries = lib.mapAttrs (\n-    name: _:\n-    infraCatalogVersions.${name}\n-      or (builtins.throw \"infra module dependency '${name}' uses catalog: but has no version in infraCatalogVersions — add it to infra/codegen.nix\")\n-  ) allCatalogDeps;\n+  # Infra modules must declare concrete dependency versions/ranges.\n+  # Reject unresolved catalog placeholders to keep generated package.json explicit.\n+  catalogDepNames = builtins.attrNames (lib.filterAttrs (_: v: v == \"catalog:\") allDeps);\n+  validatedDeps =\n+    if catalogDepNames != [ ] then\n+      builtins.throw \"infra module dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep \", \" catalogDepNames})\"\n+    else\n+      allDeps;\n@@\n-    # ==========================================================================\n-    # Bun catalog — register actual versions for all \"catalog:\" references\n-    # ==========================================================================\n-    stack.bun.catalog = catalogEntries;\n-\n-    # ==========================================================================\n     # Turbo workspace package (generates package.json + turbo.json tasks)\n     # ==========================================================================\n     stack.turbo.packages.infra = {\n       name = cfg.package.name;\n       path = outputDir;\n-      dependencies = {\n-        alchemy = \"catalog:\";\n-      }\n-      // lib.optionalAttrs config.stack.alchemy.enable {\n-        ${config.stack.alchemy.package.name} = \"workspace:*\";\n-      }\n-      // allDeps\n-      // cfg.package.dependencies;\n+      dependencies =\n+        let\n+          packageDeps = {\n+            alchemy = config.stack.alchemy.version;\n+          }\n+          // lib.optionalAttrs config.stack.alchemy.enable {\n+            ${config.stack.alchemy.package.name} = \"workspace:*\";\n+          }\n+          // validatedDeps\n+          // cfg.package.dependencies;\n+          invalidCatalogDeps = builtins.attrNames (lib.filterAttrs (_: v: v == \"catalog:\") packageDeps);\n+        in\n+        if invalidCatalogDeps != [ ] then\n+          builtins.throw \"infra package dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep \", \" invalidCatalogDeps})\"\n+        else\n+          packageDeps;\n@@\n                 # NPM packages required by the TypeScript implementation.\n                 dependencies = {\n-                  # \"@aws-sdk/client-s3\" = \"catalog:\";\n+                  # \"@aws-sdk/client-s3\" = \"^3.953.0\";\n                 };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/codegen.nix
+M nix/stack/infra/codegen.nix
 ```
 
 ---
@@ -5874,14 +5874,14 @@ _Thinking:_
 ```json
 {
   "pattern": "infraCatalogVersions|catalogEntries|allCatalogDeps|catalog:",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix"
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix"
 }
 ```
 
 **Output:**
 ```
 Found 4 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 353:   catalogDepNames = builtins.attrNames (lib.filterAttrs (_: v: v == "catalog:") allDeps);
   Line 356:       builtins.throw "infra module dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep ", " catalogDepNames})"
   Line 663:           invalidCatalogDeps = builtins.attrNames (lib.filterAttrs (_: v: v == "catalog:") packageDeps);
@@ -5901,13 +5901,13 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix\n@@\n   # ============================================================================\n   # Determine dependencies based on enabled helpers\n   # ============================================================================\n   baseDeps = {\n-    alchemy = \"catalog:\";\n+    alchemy = cfg.version;\n   };\n \n   helperDeps = lib.optionalAttrs cfg.helpers.ssm {\n-    \"@aws-sdk/client-ssm\" = \"catalog:\";\n+    \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n   };\n@@\n   config = lib.mkIf cfg.enable {\n-    # ==========================================================================\n-    # Bun catalog — register actual versions for \"catalog:\" references\n-    # ==========================================================================\n-    stackpanel.bun.catalog = {\n-      alchemy = cfg.version;\n-    } // lib.optionalAttrs cfg.helpers.ssm {\n-      \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n-    };\n-\n     # ==========================================================================\n     # File generation\n     # ==========================================================================\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix\n@@\n   # ============================================================================\n   # Determine dependencies based on enabled helpers\n   # ============================================================================\n   baseDeps = {\n-    alchemy = \"catalog:\";\n+    alchemy = cfg.version;\n   };\n \n   helperDeps = lib.optionalAttrs cfg.helpers.ssm {\n-    \"@aws-sdk/client-ssm\" = \"catalog:\";\n+    \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n   };\n@@\n   config = lib.mkIf cfg.enable {\n-    # ==========================================================================\n-    # Bun catalog — register actual versions for \"catalog:\" references\n-    # ==========================================================================\n-    stack.bun.catalog = {\n-      alchemy = cfg.version;\n-    } // lib.optionalAttrs cfg.helpers.ssm {\n-      \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n-    };\n-\n     # ==========================================================================\n     # File generation\n     # ==========================================================================\n*** End Patch"
 }
 ```
 
 **Error:**
 ```
-Error: apply_patch verification failed: Error: Failed to find expected lines in /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
+Error: apply_patch verification failed: Error: Failed to find expected lines in /Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
   # ============================================================================
   # Determine dependencies based on enabled helpers
   # ============================================================================
@@ -5933,7 +5933,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix",
   "offset": 270,
   "limit": 60
 }
@@ -5941,7 +5941,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix</path>
 <type>file</type>
 <content>270:       rootDir = ".";
 271:     };
@@ -5977,7 +5977,7 @@ _Thinking:_
 301:     # ==========================================================================
 302:     # Bun catalog — register actual versions for "catalog:" references
 303:     # ==========================================================================
-304:     stackpanel.bun.catalog = {
+304:     stack.bun.catalog = {
 305:       alchemy = cfg.version;
 306:     } // lib.optionalAttrs cfg.helpers.ssm {
 307:       "@aws-sdk/client-ssm" = "^3.953.0";
@@ -5986,7 +5986,7 @@ _Thinking:_
 310:     # ==========================================================================
 311:     # File generation
 312:     # ==========================================================================
-313:     stackpanel.files.entries = {
+313:     stack.files.entries = {
 314:       # Main entry: createApp factory + re-exports
 315:       "${outputDir}/src/index.ts" = {
 316:         text = indexTs;
@@ -6021,14 +6021,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix\n@@\n   # ============================================================================\n   # Determine dependencies based on enabled helpers\n   # ============================================================================\n   baseDeps = {\n-    alchemy = \"^0.87.0:\";\n+    alchemy = cfg.version;\n   };\n \n   helperDeps = lib.optionalAttrs cfg.helpers.ssm {\n-    \"@aws-sdk/client-ssm\" = \"^3.1000.0\";\n+    \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n   };\n@@\n in\n {\n   config = lib.mkIf cfg.enable {\n-    # ==========================================================================\n-    # Bun catalog — register actual versions for \"catalog:\" references\n-    # ==========================================================================\n-    stackpanel.bun.catalog = {\n-      alchemy = cfg.version;\n-    } // lib.optionalAttrs cfg.helpers.ssm {\n-      \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n-    };\n-\n     # ==========================================================================\n     # File generation\n     # ==========================================================================\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix\n@@\n   # ============================================================================\n   # Determine dependencies based on enabled helpers\n   # ============================================================================\n   baseDeps = {\n-    alchemy = \"^0.87.0:\";\n+    alchemy = cfg.version;\n   };\n \n   helperDeps = lib.optionalAttrs cfg.helpers.ssm {\n-    \"@aws-sdk/client-ssm\" = \"^3.1000.0\";\n+    \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n   };\n@@\n in\n {\n   config = lib.mkIf cfg.enable {\n-    # ==========================================================================\n-    # Bun catalog — register actual versions for \"catalog:\" references\n-    # ==========================================================================\n-    stack.bun.catalog = {\n-      alchemy = cfg.version;\n-    } // lib.optionalAttrs cfg.helpers.ssm {\n-      \"@aws-sdk/client-ssm\" = \"^3.953.0\";\n-    };\n-\n     # ==========================================================================\n     # File generation\n     # ==========================================================================\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/alchemy/codegen.nix
+M nix/stack/alchemy/codegen.nix
 ```
 
 ---
@@ -6044,14 +6044,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/sst/sst.nix\n@@\n   defaultPackageDeps = {\n-    sst = \"catalog:\";\n-    \"@pulumi/aws\" = \"catalog:\";\n+    sst = \"^3.17.25\";\n+    \"@pulumi/aws\" = \"^7.15.0\";\n   };\n@@\n     (lib.mkIf cfg.enable {\n-      # =========================================================================\n-      # Bun catalog — register actual versions for \"catalog:\" references\n-      # =========================================================================\n-      stackpanel.bun.catalog = {\n-        sst = \"^3.17.25\";\n-        \"@pulumi/aws\" = \"^7.15.0\";\n-      };\n-\n       # =========================================================================\n       # Extension Registration\n       # =========================================================================\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/sst/sst.nix\n@@\n   defaultPackageDeps = {\n-    sst = \"catalog:\";\n-    \"@pulumi/aws\" = \"catalog:\";\n+    sst = \"^3.17.25\";\n+    \"@pulumi/aws\" = \"^7.15.0\";\n   };\n@@\n     (lib.mkIf cfg.enable {\n-      # =========================================================================\n-      # Bun catalog — register actual versions for \"catalog:\" references\n-      # =========================================================================\n-      stack.bun.catalog = {\n-        sst = \"^3.17.25\";\n-        \"@pulumi/aws\" = \"^7.15.0\";\n-      };\n-\n       # =========================================================================\n       # Extension Registration\n       # =========================================================================\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/sst/sst.nix
+M nix/stack/sst/sst.nix
 ```
 
 ---
@@ -6067,14 +6067,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix\n@@\n # Usage:\n #   stackpanel.turbo.packages.infra = {\n #     name = \"@stackpanel/infra\";\n #     path = \"packages/infra\";\n-#     dependencies = { alchemy = \"catalog:\"; };\n+#     dependencies = { alchemy = \"^0.81.2\"; };\n #     scripts.deploy = {\n #       exec = \"alchemy deploy\";\n #       turbo = { enable = true; cache = false; };\n #     };\n@@\n         infra = {\n           name = \"@stackpanel/infra\";\n           path = \"packages/infra\";\n-          dependencies = { alchemy = \"catalog:\"; };\n+          dependencies = { alchemy = \"^0.81.2\"; };\n           scripts.deploy = {\n             exec = \"alchemy deploy\";\n             turbo = { enable = true; cache = false; };\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix\n@@\n # Usage:\n #   stack.turbo.packages.infra = {\n #     name = \"@stack/infra\";\n #     path = \"packages/infra\";\n-#     dependencies = { alchemy = \"catalog:\"; };\n+#     dependencies = { alchemy = \"^0.81.2\"; };\n #     scripts.deploy = {\n #       exec = \"alchemy deploy\";\n #       turbo = { enable = true; cache = false; };\n #     };\n@@\n         infra = {\n           name = \"@stack/infra\";\n           path = \"packages/infra\";\n-          dependencies = { alchemy = \"catalog:\"; };\n+          dependencies = { alchemy = \"^0.81.2\"; };\n           scripts.deploy = {\n             exec = \"alchemy deploy\";\n             turbo = { enable = true; cache = false; };\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/modules/turbo/packages.nix
+M nix/stack/modules/turbo/packages.nix
 ```
 
 ---
@@ -6091,7 +6091,7 @@ _Thinking:_
 ```json
 {
   "pattern": "=\\s*\"catalog:\";",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
@@ -6099,7 +6099,7 @@ _Thinking:_
 **Output:**
 ```
 Found 1 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix:
   Line 8: #   Modules declare dependencies as `"@aws-sdk/client-ecr" = "catalog:";` in
 ```
 
@@ -6124,7 +6124,7 @@ _Thinking:_
 
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -6132,33 +6132,33 @@ Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5
 error:
        … while evaluating the attribute 'packages'
          at /nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
          at /nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
-       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stack/devshell/scripts.nix':
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
-       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stack/files':
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
-       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stackpanel/modules/turbo/packages.nix':
+       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stack/modules/turbo/packages.nix':
 
-       … while evaluating the option `stackpanel.turbo.packages':
+       … while evaluating the option `stack.turbo.packages':
 
-       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/dfj4j49sly3mibrxv8cdb47k25vjvcjg-source/nix/stack/devshell/scripts.nix':
 
        (stack trace truncated; use '--show-trace' to show the full, detailed trace)
 
@@ -6179,8 +6179,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "pattern": "stackpanel\\.scripts\\.",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "pattern": "stack\\.scripts\\.",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "*.nix"
 }
 ```
@@ -6188,41 +6188,41 @@ _Thinking:_
 **Output:**
 ```
 Found 16 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix:
-  Line 775:     stackpanel.scripts."write-files" = {
-  Line 788:     stackpanel.scripts."check-files" = {
+/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix:
+  Line 775:     stack.scripts."write-files" = {
+  Line 788:     stack.scripts."check-files" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix:
-  Line 20: #   stackpanel.scripts.db-seed = {
-  Line 26: #   stackpanel.scripts.db-seed = {
-  Line 33: #   stackpanel.scripts."sst:deploy" = {
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix:
+  Line 20: #   stack.scripts.db-seed = {
+  Line 26: #   stack.scripts.db-seed = {
+  Line 33: #   stack.scripts."sst:deploy" = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/default.nix:
-  Line 191:   #     config = cfg: { stackpanel.scripts.my-cmd = { ... }; };
+/Users/cm/git/darkmatter/stack/nix/stack/lib/default.nix:
+  Line 191:   #     config = cfg: { stack.scripts.my-cmd = { ... }; };
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/generate-config-example.nix:
-  Line 150:   config.stackpanel.scripts.generate-config-example = lib.mkIf cfg.enable {
+/Users/cm/git/darkmatter/stack/.stack/modules/generate-config-example.nix:
+  Line 150:   config.stack.scripts.generate-config-example = lib.mkIf cfg.enable {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/mkModule.nix:
-  Line 26: #       stackpanel.scripts.my-command = { ... };
+/Users/cm/git/darkmatter/stack/nix/stack/lib/mkModule.nix:
+  Line 26: #       stack.scripts.my-command = { ... };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/db/schemas/tasks.proto.nix:
-  Line 10: # For ad-hoc utility scripts without dependencies, use stackpanel.scripts.
+/Users/cm/git/darkmatter/stack/nix/stack/db/schemas/tasks.proto.nix:
+  Line 10: # For ad-hoc utility scripts without dependencies, use stack.scripts.
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/healthchecks.nix:
-  Line 16: #   - scriptRef: Reference to a stackpanel.scripts.* entry
-  Line 38: #     scriptRef = "db-seed";  # Uses stackpanel.scripts.db-seed
-  Line 142:             Reference to a stackpanel.scripts.* entry.
-  Line 278:       # Reference to a stackpanel.scripts.* entry - use its derivation
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/healthchecks.nix:
+  Line 16: #   - scriptRef: Reference to a stack.scripts.* entry
+  Line 38: #     scriptRef = "db-seed";  # Uses stack.scripts.db-seed
+  Line 142:             Reference to a stack.scripts.* entry.
+  Line 278:       # Reference to a stack.scripts.* entry - use its derivation
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/extensions.nix:
-  Line 355:             - src/scripts/*.sh -> stackpanel.scripts.<extName>:<scriptName>
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/extensions.nix:
+  Line 355:             - src/scripts/*.sh -> stack.scripts.<extName>:<scriptName>
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/generate-docs.nix:
-  Line 75:   config.stackpanel.scripts.generate-docs = {
+/Users/cm/git/darkmatter/stack/.stack/modules/generate-docs.nix:
+  Line 75:   config.stack.scripts.generate-docs = {
 
-/Users/cm/git/darkmatter/stackpanel/.stackpanel/modules/prek-wrapper.nix:
-  Line 28:     stackpanel.scripts."stackpanel:prek" = {
+/Users/cm/git/darkmatter/stack/.stack/modules/prek-wrapper.nix:
+  Line 28:     stack.scripts."stack:prek" = {
 ```
 
 ---
@@ -6238,7 +6238,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix",
   "offset": 700,
   "limit": 160
 }
@@ -6246,14 +6246,14 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix</path>
 <type>file</type>
 <content>700:                   "block"
 701:                 ];
 702:                 default = "full";
 703:                 description = ''
 704:                   How the file is managed:
-705:                   - 'full': the entire file is owned by stackpanel (default). The file is
+705:                   - 'full': the entire file is owned by stack (default). The file is
 706:                     overwritten on write and deleted when stale.
 707:                   - 'block': only a marker-delimited block within the file is managed.
 708:                     Content outside the block is preserved. On uninstall, only the block
@@ -6264,7 +6264,7 @@ _Thinking:_
 713: 
 714:               blockLabel = lib.mkOption {
 715:                 type = lib.types.str;
-716:                 default = "stackpanel";
+716:                 default = "stack";
 717:                 description = ''
 718:                   Label used in the BEGIN/END markers for block-managed files.
 719:                   The markers will be: "# ── BEGIN <label> ──" / "# ── END <label> ──"
@@ -6309,34 +6309,34 @@ _Thinking:_
 758: 
 759:   config = lib.mkIf hasFiles {
 760:     # Make the executable available in PATH
-761:     stackpanel.devshell.packages = [
+761:     stack.devshell.packages = [
 762:       writerDrv
 763:       driftCheckScript
 764:     ];
 765: 
 766:     # Run write-files on shell entry (after core setup which sets STACKPANEL_ROOT)
-767:     stackpanel.devshell.hooks.main = [
+767:     stack.devshell.hooks.main = [
 768:       ''
 769:         ${util.log.debug "files: invoking write-files on shell entry"}
 770:         ${writerDrv}/bin/write-files
 771:       ''
 772:     ];
 773: 
-774:     # Also expose as stackpanel scripts
-775:     stackpanel.scripts."write-files" = {
+774:     # Also expose as stack scripts
+775:     stack.scripts."write-files" = {
 776:       exec = ''${writerDrv}/bin/write-files "$@"'';
 777:       description = "Write generated files to the project (with hash-check caching)";
 778:       turbo = {
 779:         enable = true;
 780:         cache = false;
 781:         inputs = [
-782:           ".stackpanel/**"
-783:           "nix/stackpanel/**"
+782:           ".stack/**"
+783:           "nix/stack/**"
 784:         ];
 785:       };
 786:     };
 787: 
-788:     stackpanel.scripts."check-files" = {
+788:     stack.scripts."check-files" = {
 789:       exec = ''${driftCheckScript}/bin/check-files-drift "$@"'';
 790:       description = "Check if generated files are up-to-date (drift detection)";
 791:       turbo = {
@@ -6344,8 +6344,8 @@ _Thinking:_
 793:         cache = false;
 794:         dependsOn = [ "write-files" ];
 795:         inputs = [
-796:           ".stackpanel/**"
-797:           "nix/stackpanel/**"
+796:           ".stack/**"
+797:           "nix/stack/**"
 798:         ];
 799:       };
 800:     };
@@ -6370,7 +6370,7 @@ _Thinking:_
 ```json
 {
   "pattern": "generateTurboPackage|scriptsConfig\\.generateTurboPackage|turboPackageId|turboPackageName|scriptsConfig",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
@@ -6378,21 +6378,21 @@ _Thinking:_
 **Output:**
 ```
 Found 12 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix:
-  Line 49:   scriptsCfg = config.stackpanel.scriptsConfig;
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix:
+  Line 49:   scriptsCfg = config.stack.scriptsConfig;
   Line 269:             When turbo.enable = true and scriptsConfig.generateTurboPackage is enabled,
-  Line 349:   options.stackpanel.scriptsConfig = {
+  Line 349:   options.stack.scriptsConfig = {
   Line 356:     generateTurboPackage = lib.mkOption {
   Line 361:         scriptsConfig.turboPackagePath (default: packages/gen/scripts).
   Line 369:     turboPackageId = lib.mkOption {
   Line 375:     turboPackageName = lib.mkOption {
-  Line 400:         Use to reference specific scripts: config.stackpanel.scriptsConfig.packages.my-script
+  Line 400:         Use to reference specific scripts: config.stack.scriptsConfig.packages.my-script
   Line 428:     (lib.mkIf scriptsCfg.generateTurboPackage {
-  Line 429:       stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
+  Line 429:       stack.turbo.packages.${scriptsCfg.turboPackageId} = {
   Line 430:         name = scriptsCfg.turboPackageName;
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/healthchecks.nix:
-  Line 281:         scriptPkgs = config.stackpanel.scriptsConfig.packages or { };
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/healthchecks.nix:
+  Line 281:         scriptPkgs = config.stack.scriptsConfig.packages or { };
 ```
 
 ---
@@ -6408,8 +6408,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "pattern": "scriptsConfig\\.generateTurboPackage|generateTurboPackage\\s*=\\s*true|turboPackageId\\s*=|stackpanel\\.scriptsConfig",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "pattern": "scriptsConfig\\.generateTurboPackage|generateTurboPackage\\s*=\\s*true|turboPackageId\\s*=|stack\\.scriptsConfig",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "*.nix"
 }
 ```
@@ -6417,15 +6417,15 @@ _Thinking:_
 **Output:**
 ```
 Found 6 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix:
-  Line 49:   scriptsCfg = config.stackpanel.scriptsConfig;
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix:
+  Line 49:   scriptsCfg = config.stack.scriptsConfig;
   Line 269:             When turbo.enable = true and scriptsConfig.generateTurboPackage is enabled,
-  Line 349:   options.stackpanel.scriptsConfig = {
+  Line 349:   options.stack.scriptsConfig = {
   Line 369:     turboPackageId = lib.mkOption {
-  Line 400:         Use to reference specific scripts: config.stackpanel.scriptsConfig.packages.my-script
+  Line 400:         Use to reference specific scripts: config.stack.scriptsConfig.packages.my-script
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/healthchecks.nix:
-  Line 281:         scriptPkgs = config.stackpanel.scriptsConfig.packages or { };
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/healthchecks.nix:
+  Line 281:         scriptPkgs = config.stack.scriptsConfig.packages or { };
 ```
 
 ---
@@ -6441,7 +6441,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 700,
   "limit": 120
 }
@@ -6449,7 +6449,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>700:         };
 701:       };
@@ -6458,7 +6458,7 @@ _Thinking:_
 704:     # ==========================================================================
 705:     # Shell scripts
 706:     # ==========================================================================
-707:     stackpanel.scripts = {
+707:     stack.scripts = {
 708:       "infra:new-module" = {
 709:         exec = ''
 710:           MODULE_ID="''${1:?Usage: infra:new-module <module-id>}"
@@ -6469,7 +6469,7 @@ _Thinking:_
 715:             exit 1
 716:           fi
 717: 
-718:           MODULE_DIR="nix/stackpanel/infra/modules/$MODULE_ID"
+718:           MODULE_DIR="nix/stack/infra/modules/$MODULE_ID"
 719:           if [ -d "$MODULE_DIR" ]; then
 720:             echo "Error: Module directory $MODULE_DIR already exists"
 721:             exit 1
@@ -6491,10 +6491,10 @@ _Thinking:_
 737:             ...
 738:           }:
 739:           let
-740:             cfg = config.stackpanel.infra.MODULE_ID;
+740:             cfg = config.stack.infra.MODULE_ID;
 741:           in
 742:           {
-743:             options.stackpanel.infra.MODULE_ID = {
+743:             options.stack.infra.MODULE_ID = {
 744:               enable = lib.mkOption {
 745:                 type = lib.types.bool;
 746:                 default = false;
@@ -6510,9 +6510,9 @@ _Thinking:_
 756:             };
 757: 
 758:             config = lib.mkIf cfg.enable {
-759:               stackpanel.infra.enable = lib.mkDefault true;
+759:               stack.infra.enable = lib.mkDefault true;
 760: 
-761:               stackpanel.infra.modules.MODULE_ID = {
+761:               stack.infra.modules.MODULE_ID = {
 762:                 name = "MODULE_NAME";
 763:                 description = "MODULE_NAME infrastructure provisioning";
 764:                 path = ./index.ts;
@@ -6557,7 +6557,7 @@ _Thinking:_
 803:           // The default export must be a Record<string, string> matching the output
 804:           // keys declared in module.nix.
 805:           // ==============================================================================
-806:           import Infra from "@stackpanel/infra";
+806:           import Infra from "@stack/infra";
 807: 
 808:           // Typed inputs — define an interface matching your module.nix inputs.
 809:           interface Inputs {
@@ -6589,7 +6589,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 680,
   "limit": 70
 }
@@ -6597,7 +6597,7 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix</path>
 <type>file</type>
 <content>680:       scripts = {
 681:         "alchemy:deploy" = {
@@ -6626,7 +6626,7 @@ _Thinking:_
 704:     # ==========================================================================
 705:     # Shell scripts
 706:     # ==========================================================================
-707:     stackpanel.scripts = {
+707:     stack.scripts = {
 708:       "infra:new-module" = {
 709:         exec = ''
 710:           MODULE_ID="''${1:?Usage: infra:new-module <module-id>}"
@@ -6637,7 +6637,7 @@ _Thinking:_
 715:             exit 1
 716:           fi
 717: 
-718:           MODULE_DIR="nix/stackpanel/infra/modules/$MODULE_ID"
+718:           MODULE_DIR="nix/stack/infra/modules/$MODULE_ID"
 719:           if [ -d "$MODULE_DIR" ]; then
 720:             echo "Error: Module directory $MODULE_DIR already exists"
 721:             exit 1
@@ -6659,10 +6659,10 @@ _Thinking:_
 737:             ...
 738:           }:
 739:           let
-740:             cfg = config.stackpanel.infra.MODULE_ID;
+740:             cfg = config.stack.infra.MODULE_ID;
 741:           in
 742:           {
-743:             options.stackpanel.infra.MODULE_ID = {
+743:             options.stack.infra.MODULE_ID = {
 744:               enable = lib.mkOption {
 745:                 type = lib.types.bool;
 746:                 default = false;
@@ -6688,14 +6688,14 @@ _Thinking:_
 ```json
 {
   "pattern": "package\\s*=|name = lib.mkOption|default =",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/options.nix"
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/alchemy/options.nix"
 }
 ```
 
 **Output:**
 ```
 Found 26 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/options.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/options.nix:
   Line 32:       default = false;
   Line 38:       default = "^0.81.2";
   Line 56:         default = "auto";
@@ -6738,14 +6738,14 @@ _Thinking:_
 ```json
 {
   "pattern": "hasFiles\\s*=|!= \\{ \\};|== \\{ \\};",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix"
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix"
 }
 ```
 
 **Output:**
 ```
 Found 1 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix:
   Line 87:   hasFiles = enabledFiles != { };
 ```
 
@@ -6762,7 +6762,7 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix",
   "offset": 60,
   "limit": 40
 }
@@ -6770,12 +6770,12 @@ _Thinking:_
 
 **Output:**
 ```
-<path>/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix</path>
+<path>/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix</path>
 <type>file</type>
-<content>60: #     # DO NOT EDIT between these markers — managed by stackpanel
+<content>60: #     # DO NOT EDIT between these markers — managed by stack
 61: #     .env
 62: #     node_modules
-63: #     # ── END stackpanel ──
+63: #     # ── END stack ──
 64: #
 65: #   User content outside the markers is never touched. On uninstall,
 66: #   only the managed block is removed (the file is kept if non-empty).
@@ -6788,10 +6788,10 @@ _Thinking:_
 73:   ...
 74: }:
 75: let
-76:   cfg = config.stackpanel.files;
+76:   cfg = config.stack.files;
 77: 
 78:   # Import util for debug logging
-79:   util = config.stackpanel.util;
+79:   util = config.stack.util;
 80: 
 81:   q = lib.escapeShellArg;
 82: 
@@ -6830,14 +6830,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix\n@@\n-  hasScripts = cfg != { };\n+  hasScripts = builtins.length (builtins.attrNames cfg) > 0;\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix\n@@\n-  hasScripts = cfg != { };\n+  hasScripts = builtins.length (builtins.attrNames cfg) > 0;\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/devshell/scripts.nix
+M nix/stack/devshell/scripts.nix
 ```
 
 ---
@@ -6849,14 +6849,14 @@ M nix/stackpanel/devshell/scripts.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix\n@@\n   cfg = config.stackpanel.turbo;\n   pkgsCfg = cfg.packages;\n-  hasPkgs = pkgsCfg != { };\n+  hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix\n@@\n   cfg = config.stack.turbo;\n   pkgsCfg = cfg.packages;\n-  hasPkgs = pkgsCfg != { };\n+  hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/modules/turbo/packages.nix
+M nix/stack/modules/turbo/packages.nix
 ```
 
 ---
@@ -6868,14 +6868,14 @@ M nix/stackpanel/modules/turbo/packages.nix
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix\n@@\n   # Filter to only enabled files\n   enabledFiles = cfg.entries;\n \n   # Check if there are any files to write (and global enable is true)\n-  hasFiles = enabledFiles != { };\n+  hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/files/default.nix\n@@\n   # Filter to only enabled files\n   enabledFiles = cfg.entries;\n \n   # Check if there are any files to write (and global enable is true)\n-  hasFiles = enabledFiles != { };\n+  hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/files/default.nix
+M nix/stack/files/default.nix
 ```
 
 ---
@@ -6892,7 +6892,7 @@ _Thinking:_
 ```json
 {
   "pattern": "!= \\{ \\}|== \\{ \\}",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
@@ -6900,59 +6900,59 @@ _Thinking:_
 **Output:**
 ```
 Found 52 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix:
   Line 181:     // lib.optionalAttrs (pkg.scripts != { }) {
   Line 184:     // lib.optionalAttrs (pkg.dependencies != { }) {
   Line 187:     // lib.optionalAttrs (pkg.devDependencies != { }) {
   Line 190:     // lib.optionalAttrs (pkg.exports != { }) {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
   Line 386:           ${lib.optionalString (mod.dependencies != { }) "Dependencies: ${depsStr}\n"}
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/catalog.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/catalog.nix:
   Line 52:   hasCatalog = catalogCfg != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/services/aws/vault/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/services/aws/vault/module.nix:
   Line 286:         else if cfg.awsProfiles != { } && cfg.generateConfigFile then
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/deployment/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/deployment/module.nix:
   Line 81:   hasDeployableApps = deployableApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/services/global-services.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/services/global-services.nix:
   Line 103:           (lib.optionalString (cfg.caddy.enable && cfg.caddy.sites != { }) ''
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/secrets/default.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/secrets/default.nix:
   Line 920:           ${lib.optionalString (keysByGroup != { }) ''
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/module.nix:
   Line 355:   hasTasks = tasksCfg != { };
-  Line 450:       stackpanel.motd.commands = lib.mkIf (taskScripts != { }) [
+  Line 450:       stack.motd.commands = lib.mkIf (taskScripts != { }) [
   Line 485:           (appCfg.turbo.enable or true) && (appCfg ? tasks) && (appCfg.tasks != null) && (appCfg.tasks != { })
   Line 488:         hasAppsWithTasks = appsWithTasks != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/module.nix:
   Line 251:       // lib.optionalAttrs ((svc.process-compose.availability or { }) != { }) {
   Line 254:       // lib.optionalAttrs ((svc.process-compose.depends_on or { }) != { }) {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/module.nix:
   Line 35:   hasOxlintApps = oxlintApps != { };
   Line 105:         hasOxlintAppsLocal = oxlintAppsLocal != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/module.nix:
   Line 404:         hasGoApps = goApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/module.nix:
   Line 249:         hasApps = appsWithEntrypoints != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/module.nix:
   Line 59:   hasBunApps = bunApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/module.nix:
   Line 361:           cmds != null && cmds != { }
   Line 386:           if checkCommands == { } then
   Line 409:         hasAppsWithCommands = appsWithCommands != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/codegen/env-package.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/lib/codegen/env-package.nix:
   Line 266:     if envVars == { } then
   Line 326:               lib.optional ((envCfg.env or { }) != { }) {
   Line 359:             envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs);
@@ -6962,58 +6962,58 @@ Found 52 matches
   Line 434:             lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs)
   Line 514:     apps != { } && lib.any (appCfg: (appCfg.environments or { }) != { }) (lib.attrValues apps);
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/module.nix:
   Line 372:   hasDeployableApps = deployableApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/lib/global-services.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/lib/global-services.nix:
   Line 185:         ++ lib.optional (cfg.caddy.enable && cfg.caddy.sites != { }) ''
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/containers/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/containers/module.nix:
   Line 464:       (lib.mkIf (appsWithContainers != { }) {
   Line 469:       (lib.mkIf (containersCfg.images != { } && containerLib.hasDockerTools) {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/apps/apps.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/apps/apps.nix:
   Line 132:   config = lib.mkIf (rawApps != { }) {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/ui.nix:
   Line 27:   hasFlyApps = flyApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/ui.nix:
   Line 27:   hasCloudflareApps = cloudflareApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/network/ports.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/network/ports.nix:
   Line 49:   hasApps = appsComputedCfg != { };
   Line 50:   hasServices = cfg.services != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/ui.nix:
   Line 15:   hasTasks = tasksCfg != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/oxlint/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/oxlint/ui.nix:
   Line 24:   hasOxlintApps = oxlintApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/go/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/go/ui.nix:
   Line 26:   hasGoApps = goApps != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/ui.nix:
   Line 24:   hasApps = appsWithEntrypoints != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/app-commands/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/app-commands/ui.nix:
   Line 21:     cmds != null && cmds != { }
   Line 24:   hasAppsWithCommands = appsWithCommands != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/bun/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/bun/ui.nix:
   Line 53:             status = if bunApps != { } then "ok" else "warning";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/codegen.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/lib/codegen.nix:
   Line 79:   hasFiles = files != { };
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/container.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/container.nix:
   Line 141:       flyEnv = lib.optionals (appCfg.deployment.fly.env or { } != { }) (
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/services.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/services.nix:
   Line 226:   config = lib.mkIf (enabledServices != { }) {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/containers/ui.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/containers/ui.nix:
   Line 27:   hasContainerApps = appsWithContainers != { };
 ```
 
@@ -7038,7 +7038,7 @@ _Thinking:_
 
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -7046,33 +7046,33 @@ Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5
 error:
        … while evaluating the attribute 'packages'
          at /nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
          at /nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
-       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stack/devshell/scripts.nix':
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
-       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stack/files':
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
-       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stackpanel/modules/turbo/packages.nix':
+       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stack/modules/turbo/packages.nix':
 
-       … while evaluating the option `stackpanel.turbo.packages':
+       … while evaluating the option `stack.turbo.packages':
 
-       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/r7rzxq279jyk2f1srg0rbnaqy88wg1ya-source/nix/stack/devshell/scripts.nix':
 
        (stack trace truncated; use '--show-trace' to show the full, detailed trace)
 
@@ -7101,7 +7101,7 @@ _Thinking:_
 
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -7109,14 +7109,14 @@ Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5
 error:
        … while evaluating the attribute 'packages'
          at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
          at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
@@ -7158,7 +7158,7 @@ error:
 
        … from call site
          at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/flake/default.nix:367:15:
-          366|   # Stackpanel outputs (packages from outputs option)
+          366|   # Stack outputs (packages from outputs option)
           367|   spOutputs = spConfig.outputs or { };
              |               ^
           368|   directPkgs = lib.filterAttrs (_: v: lib.isDerivation v) spOutputs;
@@ -7191,7 +7191,7 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
        … while evaluating the attribute 'mergedValue'
          at /nix/store/s0lqijj71x45qgyy7rin0b4fhkxdv761-source/lib/modules.nix:1192:5:
@@ -7263,7 +7263,7 @@ error:
              |           ^
          1163|             value:
 
-       … while evaluating definitions from `/nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/devshell/scripts.nix':
 
        … from call site
          at /nix/store/s0lqijj71x45qgyy7rin0b4fhkxdv761-source/lib/modules.nix:1171:80:
@@ -7315,39 +7315,39 @@ error:
          1472|   };
 
        … in the left operand of the AND (&&) operator
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/devshell/scripts.nix:407:33:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/devshell/scripts.nix:407:33:
           406|
           407|   config = lib.mkIf (hasScripts && scriptsCfg.enable) (
              |                                 ^
           408|     lib.mkMerge [
 
        … while calling the 'lessThan' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/devshell/scripts.nix:160:57:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/devshell/scripts.nix:160:57:
           159|
           160|   hasScripts = builtins.length (builtins.attrNames cfg) > 0;
              |                                                         ^
           161|
 
        … while calling the 'length' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/devshell/scripts.nix:160:16:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/devshell/scripts.nix:160:16:
           159|
           160|   hasScripts = builtins.length (builtins.attrNames cfg) > 0;
              |                ^
           161|
 
        … while calling the 'attrNames' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/devshell/scripts.nix:160:33:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/devshell/scripts.nix:160:33:
           159|
           160|   hasScripts = builtins.length (builtins.attrNames cfg) > 0;
              |                                 ^
           161|
 
        … from call site
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/devshell/scripts.nix:48:9:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/devshell/scripts.nix:48:9:
            47|
-           48|   cfg = config.stackpanel.scripts;
+           48|   cfg = config.stack.scripts;
              |         ^
-           49|   scriptsCfg = config.stackpanel.scriptsConfig;
+           49|   scriptsCfg = config.stack.scriptsConfig;
 
        … while calling anonymous lambda
          at /nix/store/s0lqijj71x45qgyy7rin0b4fhkxdv761-source/lib/attrsets.nix:1188:17:
@@ -7377,37 +7377,37 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
        (10 duplicate frames omitted)
 
-       … while evaluating definitions from `/nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/files':
 
        (7 duplicate frames omitted)
 
        … while calling the 'lessThan' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/files/default.nix:87:64:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/files/default.nix:87:64:
            86|   # Check if there are any files to write (and global enable is true)
            87|   hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;
              |                                                                ^
            88|
 
        … while calling the 'length' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/files/default.nix:87:14:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/files/default.nix:87:14:
            86|   # Check if there are any files to write (and global enable is true)
            87|   hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;
              |              ^
            88|
 
        … while calling the 'attrNames' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/files/default.nix:87:31:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/files/default.nix:87:31:
            86|   # Check if there are any files to write (and global enable is true)
            87|   hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;
              |                               ^
            88|
 
        … from call site
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/files/default.nix:84:18:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/files/default.nix:84:18:
            83|   # Filter to only enabled files
            84|   enabledFiles = cfg.entries;
              |                  ^
@@ -7441,38 +7441,38 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
        (10 duplicate frames omitted)
 
-       … while evaluating definitions from `/nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/modules/turbo/packages.nix':
+       … while evaluating definitions from `/nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/modules/turbo/packages.nix':
 
        (8 duplicate frames omitted)
 
        … while calling the 'lessThan' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/modules/turbo/packages.nix:30:58:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/modules/turbo/packages.nix:30:58:
            29|   pkgsCfg = cfg.packages;
            30|   hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;
              |                                                          ^
            31|
 
        … while calling the 'length' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/modules/turbo/packages.nix:30:13:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/modules/turbo/packages.nix:30:13:
            29|   pkgsCfg = cfg.packages;
            30|   hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;
              |             ^
            31|
 
        … while calling the 'attrNames' builtin
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/modules/turbo/packages.nix:30:30:
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/modules/turbo/packages.nix:30:30:
            29|   pkgsCfg = cfg.packages;
            30|   hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;
              |                              ^
            31|
 
        … from call site
-         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stackpanel/modules/turbo/packages.nix:29:13:
-           28|   cfg = config.stackpanel.turbo;
+         at /nix/store/225f97im3fmc037skf7jhlpx5iz98s81-source/nix/stack/modules/turbo/packages.nix:29:13:
+           28|   cfg = config.stack.turbo;
            29|   pkgsCfg = cfg.packages;
              |             ^
            30|   hasPkgs = builtins.length (builtins.attrNames pkgsCfg) > 0;
@@ -7505,7 +7505,7 @@ error:
              |       ^
          1119|       inherit (res.defsFinal') highestPrio;
 
-       … while evaluating the option `stackpanel.turbo.packages':
+       … while evaluating the option `stack.turbo.packages':
 
        (19 duplicate frames omitted)
 
@@ -7527,14 +7527,14 @@ _Thinking:_
 ```json
 {
   "pattern": "writerDrv|driftCheckScript|hasFiles|enabledFiles",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix"
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix"
 }
 ```
 
 **Output:**
 ```
 Found 19 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/files/default.nix:
   Line 84:   enabledFiles = cfg.entries;
   Line 87:   hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;
   Line 89:   fileCount = builtins.length (builtins.attrNames enabledFiles);
@@ -7570,7 +7570,7 @@ _Thinking:_
 ```json
 {
   "pattern": "generateTurboPackage|scriptsConfig",
-  "path": "/Users/cm/git/darkmatter/stackpanel/.stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack/.stack",
   "include": "*.nix"
 }
 ```
@@ -7593,8 +7593,8 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "pattern": "stackpanel\\.turbo\\.packages\\.",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "pattern": "stack\\.turbo\\.packages\\.",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
@@ -7602,17 +7602,17 @@ _Thinking:_
 **Output:**
 ```
 Found 4 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo/packages.nix:
-  Line 8: #   stackpanel.turbo.packages.infra = {
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo/packages.nix:
+  Line 8: #   stack.turbo.packages.infra = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/scripts.nix:
-  Line 432:         stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/scripts.nix:
+  Line 432:         stack.turbo.packages.${scriptsCfg.turboPackageId} = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/alchemy/codegen.nix:
-  Line 356:     stackpanel.turbo.packages.alchemy = {
+/Users/cm/git/darkmatter/stack/nix/stack/alchemy/codegen.nix:
+  Line 356:     stack.turbo.packages.alchemy = {
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix:
-  Line 650:     stackpanel.turbo.packages.infra = {
+/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix:
+  Line 650:     stack.turbo.packages.infra = {
 ```
 
 ---
@@ -7628,14 +7628,14 @@ _Thinking:_
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/files/default.nix\n@@\n-    # Also expose as stackpanel scripts\n-    stackpanel.scripts.\"write-files\" = {\n-      exec = ''${writerDrv}/bin/write-files \"$@\"'';\n-      description = \"Write generated files to the project (with hash-check caching)\";\n-      turbo = {\n-        enable = true;\n-        cache = false;\n-        inputs = [\n-          \".stackpanel/**\"\n-          \"nix/stackpanel/**\"\n-        ];\n-      };\n-    };\n-\n-    stackpanel.scripts.\"check-files\" = {\n-      exec = ''${driftCheckScript}/bin/check-files-drift \"$@\"'';\n-      description = \"Check if generated files are up-to-date (drift detection)\";\n-      turbo = {\n-        enable = true;\n-        cache = false;\n-        dependsOn = [ \"write-files\" ];\n-        inputs = [\n-          \".stackpanel/**\"\n-          \"nix/stackpanel/**\"\n-        ];\n-      };\n-    };\n   };\n }\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/files/default.nix\n@@\n-    # Also expose as stack scripts\n-    stack.scripts.\"write-files\" = {\n-      exec = ''${writerDrv}/bin/write-files \"$@\"'';\n-      description = \"Write generated files to the project (with hash-check caching)\";\n-      turbo = {\n-        enable = true;\n-        cache = false;\n-        inputs = [\n-          \".stack/**\"\n-          \"nix/stack/**\"\n-        ];\n-      };\n-    };\n-\n-    stack.scripts.\"check-files\" = {\n-      exec = ''${driftCheckScript}/bin/check-files-drift \"$@\"'';\n-      description = \"Check if generated files are up-to-date (drift detection)\";\n-      turbo = {\n-        enable = true;\n-        cache = false;\n-        dependsOn = [ \"write-files\" ];\n-        inputs = [\n-          \".stack/**\"\n-          \"nix/stack/**\"\n-        ];\n-      };\n-    };\n   };\n }\n*** End Patch"
 }
 ```
 
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/files/default.nix
+M nix/stack/files/default.nix
 ```
 
 ---
@@ -7659,7 +7659,7 @@ _Thinking:_
 
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -7672,10 +7672,10 @@ error:
              |            ^
            39|
 
-       … while evaluating derivation 'stackpanel-stackpanel'
+       … while evaluating derivation 'stack-stack'
          whose name attribute is located at /nix/store/2wh0cxf8bjdb3jb8ziyh4902qhj8i7dn-source/pkgs/stdenv/generic/make-derivation.nix:541:13
 
-       … while evaluating attribute 'STACKPANEL_SHELL_HOOK_PATH' of derivation 'stackpanel-stackpanel'
+       … while evaluating attribute 'STACKPANEL_SHELL_HOOK_PATH' of derivation 'stack-stack'
          at /nix/store/45lm5xpsjv2fnk9yi4hmvb1kyak6b4k3-source/nix/flake/default.nix:308:5:
           307|     # Export path to shellHook file for inspection/debugging
           308|     STACKPANEL_SHELL_HOOK_PATH = "${shellHookFile}/shellhook.sh";

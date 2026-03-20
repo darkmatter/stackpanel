@@ -1,6 +1,6 @@
 # Age Key Management Tools
 
-This directory contains derivation-based tools for managing AGE keys with SOPS in Stackpanel projects.
+This directory contains derivation-based tools for managing AGE keys with SOPS in Stack projects.
 
 ## Overview
 
@@ -36,7 +36,7 @@ Core derivation-based tools:
 Module interface for declarative configuration:
 
 ```nix
-stackpanel.secrets.age-key-cmd = {
+stack.secrets.age-key-cmd = {
   enable = true;
   keysDir = ".keys";
   onePassword = {
@@ -65,9 +65,9 @@ Enable in your `flake.nix` or module configuration:
 
 ```nix
 {
-  imports = [ ./nix/stackpanel/secrets/lib/age-key-cmd.nix ];
+  imports = [ ./nix/stack/secrets/lib/age-key-cmd.nix ];
 
-  stackpanel.secrets.age-key-cmd = {
+  stack.secrets.age-key-cmd = {
     enable = true;
     # Optional: customize keys directory
     # keysDir = ".secrets/keys";
@@ -87,7 +87,7 @@ If you need the tools without the module system:
 
 ```nix
 {
-  ageKeyTools = pkgs.callPackage ./nix/stackpanel/secrets/lib/age-key-tools.nix {
+  ageKeyTools = pkgs.callPackage ./nix/stack/secrets/lib/age-key-tools.nix {
     keysDir = ".keys";
     opAccount = "voytravel";
     opItem = "op://voy-508-shared/sops-dev";
@@ -272,14 +272,14 @@ If you're currently using `age-key-cmd.sh`:
 
 1. **Enable the module** in your configuration:
    ```nix
-   stackpanel.secrets.age-key-cmd.enable = true;
+   stack.secrets.age-key-cmd.enable = true;
    ```
 
 2. **Remove manual SOPS_AGE_KEY_CMD exports** from shell scripts
 
 3. **Update 1Password references** if needed:
    ```nix
-   stackpanel.secrets.age-key-cmd.onePassword = {
+   stack.secrets.age-key-cmd.onePassword = {
      account = "your-account";
      item = "op://your-vault/your-item";
    };
@@ -328,4 +328,4 @@ fetchFromVault = writeShellScriptBin "fetch-from-vault" ''
 - [SOPS Documentation](https://github.com/getsops/sops)
 - [age Encryption Tool](https://age-encryption.org/)
 - [1Password CLI](https://developer.1password.com/docs/cli/)
-- [Stackpanel Secrets Documentation](../README.md)
+- [Stack Secrets Documentation](../README.md)

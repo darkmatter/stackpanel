@@ -1,11 +1,11 @@
 # Proto Package
 
-Protocol Buffer schemas for Stackpanel, generated from Nix definitions.
+Protocol Buffer schemas for Stack, generated from Nix definitions.
 
 ## Architecture
 
 ```
-nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   packages/proto/gen/
+nix/stack/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   packages/proto/gen/
          (source of truth)                      (generated protos)              (generated code)
 ```
 
@@ -28,8 +28,8 @@ nix develop --impure -c ./packages/proto/generate.sh
 
 1. Copy the template:
    ```bash
-   cp ../../nix/stackpanel/db/schemas/_template.proto.nix \
-      ../../nix/stackpanel/db/schemas/myentity.proto.nix
+   cp ../../nix/stack/db/schemas/_template.proto.nix \
+      ../../nix/stack/db/schemas/myentity.proto.nix
    ```
 
 2. Edit the schema (see template for examples)
@@ -50,7 +50,7 @@ let
 in
 proto.mkProtoFile {
   name = "myentity.proto";
-  package = "stackpanel.db";
+  package = "stack.db";
 
   messages = {
     MyEntity = proto.mkMessage {
@@ -115,9 +115,9 @@ packages/proto/
 │   └── *.proto
 ├── gen/
 │   ├── go/          # Go code
-│   │   └── stackpanel/db/*.pb.go
+│   │   └── stack/db/*.pb.go
 │   └── ts/          # TypeScript code
-│       └── stackpanel/db/*.ts
+│       └── stack/db/*.ts
 └── ...
 ```
 

@@ -2,7 +2,7 @@
 
 ## Summary of Changes
 
-Stackpanel's deployment configuration has been refactored from a provider-centric structure to an **app-centric structure**. This makes it clearer which apps deploy where and reduces configuration duplication.
+Stack's deployment configuration has been refactored from a provider-centric structure to an **app-centric structure**. This makes it clearer which apps deploy where and reduces configuration duplication.
 
 ## Breaking Changes
 
@@ -10,12 +10,12 @@ Stackpanel's deployment configuration has been refactored from a provider-centri
 
 ```nix
 # ❌ OLD - No longer supported
-stackpanel.deployment.fly.apps.web = {
+stack.deployment.fly.apps.web = {
   region = "iad";
   vm-size = "shared-cpu-1x";
 };
 
-stackpanel.deployment.cloudflare.workers.api = {
+stack.deployment.cloudflare.workers.api = {
   app = "api";
   name = "myapp-api";
 };
@@ -25,7 +25,7 @@ stackpanel.deployment.cloudflare.workers.api = {
 
 ```nix
 # ✅ NEW - Current API
-stackpanel.apps.web = {
+stack.apps.web = {
   port = 0;
   root = "./apps/web";
   
@@ -42,7 +42,7 @@ stackpanel.apps.web = {
   };
 };
 
-stackpanel.apps.api = {
+stack.apps.api = {
   port = 1;
   root = "./apps/api";
   
@@ -64,7 +64,7 @@ stackpanel.apps.api = {
 
 **Before:**
 ```nix
-stackpanel.deployment.fly = {
+stack.deployment.fly = {
   enable = true;
   organization = "my-org";
   
@@ -82,7 +82,7 @@ stackpanel.deployment.fly = {
 **After:**
 ```nix
 # Global Fly settings (optional)
-stackpanel.deployment = {
+stack.deployment = {
   fly = {
     organization = "my-org";
     defaultRegion = "iad";
@@ -90,7 +90,7 @@ stackpanel.deployment = {
 };
 
 # Per-app configuration
-stackpanel.apps.api = {
+stack.apps.api = {
   port = 1;
   root = "./apps/api";
   
@@ -112,7 +112,7 @@ stackpanel.apps.api = {
 
 **Before:**
 ```nix
-stackpanel.deployment.cloudflare = {
+stack.deployment.cloudflare = {
   enable = true;
   account-id = "abc123";
   
@@ -134,7 +134,7 @@ stackpanel.deployment.cloudflare = {
 **After:**
 ```nix
 # Global Cloudflare settings (optional)
-stackpanel.deployment = {
+stack.deployment = {
   cloudflare = {
     accountId = "abc123";
     compatibilityDate = "2024-01-01";
@@ -142,7 +142,7 @@ stackpanel.deployment = {
 };
 
 # Per-app configuration
-stackpanel.apps.api = {
+stack.apps.api = {
   port = 1;
   root = "./apps/api";
   
@@ -160,7 +160,7 @@ stackpanel.apps.api = {
   };
 };
 
-stackpanel.apps.docs = {
+stack.apps.docs = {
   port = 2;
   root = "./apps/docs";
   
@@ -209,32 +209,32 @@ Several field names have changed to use camelCase instead of kebab-case:
 ## Removing Old Configuration
 
 1. **Remove global deployment enables:**
-   - Delete `stackpanel.deployment.fly.enable = true;`
-   - Delete `stackpanel.deployment.cloudflare.enable = true;`
+   - Delete `stack.deployment.fly.enable = true;`
+   - Delete `stack.deployment.cloudflare.enable = true;`
 
 2. **Remove provider-specific app sections:**
-   - Delete `stackpanel.deployment.fly.apps.*`
-   - Delete `stackpanel.deployment.cloudflare.workers.*`
-   - Delete `stackpanel.deployment.cloudflare.pages.*`
+   - Delete `stack.deployment.fly.apps.*`
+   - Delete `stack.deployment.cloudflare.workers.*`
+   - Delete `stack.deployment.cloudflare.pages.*`
 
 3. **Move configuration into app definitions:**
-   - Add `deployment` section to each app in `stackpanel.apps.*`
+   - Add `deployment` section to each app in `stack.apps.*`
    - Set `host` to the desired provider
    - Add provider-specific config under the provider name
 
 ## Common Issues
 
-### Error: "The option `stackpanel.deployment.fly.apps' does not exist"
+### Error: "The option `stack.deployment.fly.apps' does not exist"
 
 This error means you're using the old configuration structure. Follow the migration steps above to move your configuration to the new app-centric structure.
 
 **Quick fix:**
 ```nix
 # Find this in your config:
-stackpanel.deployment.fly.apps.myapp = { ... };
+stack.deployment.fly.apps.myapp = { ... };
 
 # Replace with:
-stackpanel.apps.myapp = {
+stack.apps.myapp = {
   # ... existing app config ...
   deployment = {
     enable = true;
@@ -274,7 +274,7 @@ nix build --impure .#packages.x86_64-linux.container-api
 
 ## Need Help?
 
-- Check the [deployment documentation](https://stackpanel.dev/docs/deployment)
-- Review the [Fly.io guide](https://stackpanel.dev/docs/deployment/fly)
-- Review the [Cloudflare guide](https://stackpanel.dev/docs/deployment/cloudflare)
+- Check the [deployment documentation](https://stack.dev/docs/deployment)
+- Review the [Fly.io guide](https://stack.dev/docs/deployment/fly)
+- Review the [Cloudflare guide](https://stack.dev/docs/deployment/cloudflare)
 - Open an issue if you find migration problems

@@ -1,6 +1,6 @@
 # Devshell Bin Package
 
-The `devshell-bin` package is a Nix derivation that creates a directory containing symlinks to all binaries from the stackpanel development shell. This allows you to access devshell tools without entering the shell.
+The `devshell-bin` package is a Nix derivation that creates a directory containing symlinks to all binaries from the stack development shell. This allows you to access devshell tools without entering the shell.
 
 ## Usage
 
@@ -50,7 +50,7 @@ The derivation:
 
 ## What's included
 
-The derivation includes all packages defined in your stackpanel configuration's `stackpanel.packages` list. In the stackpanel project itself, this includes:
+The derivation includes all packages defined in your stack configuration's `stack.packages` list. In the stack project itself, this includes:
 
 - Development tools (air, nixd, git, jq, go, prek)
 - AWS tools (aws cli, chamber, aws_signing_helper)
