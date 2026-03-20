@@ -1,10 +1,10 @@
 # Plugins
 
-Auto-discovered feature modules that extend Stackpanel.
+Auto-discovered feature modules that extend Stack.
 
 ## Overview
 
-Each subdirectory is automatically imported as a Stackpanel plugin. Plugins follow a standard structure with metadata, module logic, and optional UI panels.
+Each subdirectory is automatically imported as a Stack plugin. Plugins follow a standard structure with metadata, module logic, and optional UI panels.
 
 ## Plugin Structure
 

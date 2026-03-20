@@ -1,4 +1,4 @@
-# `internal/agent` — Stackpanel Agent
+# `internal/agent` — Stack Agent
 
 The agent is a local HTTP server that bridges the web UI to the user's Nix
 project on disk. It runs on `localhost:9876`, speaks JSON over REST (plus
@@ -62,8 +62,8 @@ Both the agent HTTP server and the CLI construct a `Store` the same way:
 
 ```go
 import (
-    executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
-    "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
+    executor "github.com/darkmatter/stack/stack-go/pkg/exec"
+    "github.com/darkmatter/stack/stack-go/pkg/nixdata"
 )
 
 exec, _ := executor.New(projectRoot, nil)
@@ -87,7 +87,7 @@ err := store.PatchConsolidatedData("deployment.fly.organization", "my-org")
 | File | Purpose |
 |------|---------|
 | `store.go` | `Store` struct and all read/write/patch methods. Accepts a `NixRunner` interface (satisfied by `*exec.Executor`). `ReadEntity`, `ReadEntityJSON`, `WriteEntity`, `WriteEntityJSON`, `SetKey`, `DeleteKey`, `ReadConsolidatedData`, `WriteConsolidatedData`, `PatchConsolidatedData`, `DeleteEntity`. |
-| `paths.go` | `Paths` struct for filesystem layout resolution. Handles legacy per-entity files (`.stackpanel/data/<entity>.nix`) vs consolidated (`.stackpanel/config.nix`). Also holds `ConfigNixHeader`, `SectionHeaders()`, and `ParseConfigPath()`. |
+| `paths.go` | `Paths` struct for filesystem layout resolution. Handles legacy per-entity files (`.stack/data/<entity>.nix`) vs consolidated (`.stack/config.nix`). Also holds `ConfigNixHeader`, `SectionHeaders()`, and `ParseConfigPath()`. |
 | `entities.go` | Pure functions: `ValidateEntityName`, `IsExternalEntity`, `IsMapEntity`, `IsEvaluatedEntity`, `MapFieldNames`. |
 | `transform.go` | JSON key transforms: `KebabToCamel`, `CamelToKebab`, `TransformKeysToCamel`, `TransformKeysToKebab`, `NixJSONToCamelCase`, `CamelCaseToNixJSON`. Map-field-aware — user-defined keys (variable IDs, app names, etc.) are preserved verbatim. |
 
@@ -111,13 +111,13 @@ a matching `RunNix` method works.
 
 | File | Purpose |
 |------|---------|
-| `config.go` | `Config` struct and `Load()`. All config comes from env vars (no config file). Key fields: `ProjectRoot`, `Port`, `BindAddress`, `DataDir` (`~/.stackpanel`). |
+| `config.go` | `Config` struct and `Load()`. All config comes from env vars (no config file). Key fields: `ProjectRoot`, `Port`, `BindAddress`, `DataDir` (`~/.stack`). |
 
 ## `internal/agent/project`
 
 | File | Purpose |
 |------|---------|
-| `project.go` | `Manager` for multi-project support: open, close, list, auto-detect. `ValidateProject*()` functions check that a directory is a real Stackpanel project (git repo, flake with stackpanel output, etc). |
+| `project.go` | `Manager` for multi-project support: open, close, list, auto-detect. `ValidateProject*()` functions check that a directory is a real Stack project (git repo, flake with stack output, etc). |
 
 ## `internal/agent/server`
 
@@ -165,8 +165,8 @@ UI component
       └─ no key   → store.WriteEntity()                   [pkg/nixdata]
                        → nixser.SerializeIndented()        [pkg/nix]
                          → os.WriteFile()
-                           → .stackpanel/data/<entity>.nix  (legacy)
-                           → .stackpanel/config.nix         (consolidated)
+                           → .stack/data/<entity>.nix  (legacy)
+                           → .stack/config.nix         (consolidated)
 ```
 
 #### Data Read Flow (evaluated entities)
@@ -261,8 +261,8 @@ withCORS → requireAuth → requireProject → handler
 
 ```go
 import (
-    executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
-    "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
+    executor "github.com/darkmatter/stack/stack-go/pkg/exec"
+    "github.com/darkmatter/stack/stack-go/pkg/nixdata"
 )
 
 func main() {

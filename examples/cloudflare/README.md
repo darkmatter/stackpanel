@@ -5,7 +5,7 @@ Edge-focused example with app-level Cloudflare deployment settings.
 ## Initialize
 
 ```bash
-nix flake init -t github:darkmatter/stackpanel#example-cloudflare
+nix flake init -t github:darkmatter/stack#example-cloudflare
 ```
 
 ## Enter shell

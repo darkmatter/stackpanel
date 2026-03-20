@@ -4,7 +4,7 @@ Documentation generation from Nix configuration.
 
 ## Overview
 
-Generates project documentation (README.md) from templates at Nix evaluation time. Reads template files and populates them with data from the Stackpanel configuration.
+Generates project documentation (README.md) from templates at Nix evaluation time. Reads template files and populates them with data from the Stack configuration.
 
 ## Files
 
@@ -16,7 +16,7 @@ Generates project documentation (README.md) from templates at Nix evaluation tim
 ## Usage
 
 ```nix
-stackpanel.docs.readme = {
+stack.docs.readme = {
   enable = true;
   template = ./README.tmpl.md;  # optional custom template
 };

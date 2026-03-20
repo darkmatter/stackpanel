@@ -16,9 +16,9 @@ Aggregates deployment providers (Fly.io, Cloudflare Workers) with per-app config
 ## Usage
 
 ```nix
-stackpanel.deployment.defaultProvider = "fly";
+stack.deployment.defaultProvider = "fly";
 
-stackpanel.apps.web.deployment = {
+stack.apps.web.deployment = {
   enable = true;
   provider = "fly";
   fly.appName = "my-web-app";
@@ -26,7 +26,7 @@ stackpanel.apps.web.deployment = {
   container = { type = "bun"; port = 3000; };
 };
 
-stackpanel.apps.api.deployment = {
+stack.apps.api.deployment = {
   enable = true;
   provider = "cloudflare";
   cloudflare = { workerName = "my-api"; type = "worker"; };

@@ -1,4 +1,4 @@
-# Stackpanel Example Templates
+# Stack Example Templates
 
 This directory contains review-friendly templates that are compatible with `nix flake init -t`.
 
@@ -19,7 +19,7 @@ nix flake init -t .#example-cloudflare
 Use from GitHub:
 
 ```bash
-nix flake init -t github:darkmatter/stackpanel#example-basic
-nix flake init -t github:darkmatter/stackpanel#example-multi-app
-nix flake init -t github:darkmatter/stackpanel#example-cloudflare
+nix flake init -t github:darkmatter/stack#example-basic
+nix flake init -t github:darkmatter/stack#example-multi-app
+nix flake init -t github:darkmatter/stack#example-cloudflare
 ```

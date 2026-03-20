@@ -1,6 +1,6 @@
-# Stackpanel DB Module
+# Stack DB Module
 
-This module defines **Nix-first protobuf schemas** for all data types in Stackpanel. Schemas are written in `.proto.nix` files using a Nix DSL that generates Protocol Buffer definitions.
+This module defines **Nix-first protobuf schemas** for all data types in Stack. Schemas are written in `.proto.nix` files using a Nix DSL that generates Protocol Buffer definitions.
 
 **Single source of truth** for:
 
@@ -75,7 +75,7 @@ packages/proto/
 
 ```bash
 # Full pipeline: Nix → Proto → Go/TypeScript
-nix develop --impure -c ./nix/stackpanel/core/generate-types.sh
+nix develop --impure -c ./nix/stack/core/generate-types.sh
 
 # Or use the proto package directly
 nix develop --impure -c ./packages/proto/generate.sh
@@ -84,14 +84,14 @@ nix develop --impure -c ./packages/proto/generate.sh
 ### List All Schemas
 
 ```bash
-nix eval --impure --json -f nix/stackpanel/db '.entityNames'
+nix eval --impure --json -f nix/stack/db '.entityNames'
 # ["apps","aws","commands","config","databases","dns","extensions",...]
 ```
 
 ### Render a Proto File
 
 ```bash
-nix eval --impure --raw -f nix/stackpanel/db '.render.users'
+nix eval --impure --raw -f nix/stack/db '.render.users'
 ```
 
 ## Writing Schemas
@@ -106,10 +106,10 @@ let
 in
 proto.mkProtoFile {
   name = "myentity.proto";
-  package = "stackpanel.db";
+  package = "stack.db";
 
   options = {
-    go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
+    go_package = "github.com/darkmatter/stack/packages/proto/gen/go";
   };
 
   messages = {
@@ -228,7 +228,7 @@ Use in option modules:
 # In core/options/aws.nix
 { lib, dbExtend, ... }:
 {
-  options.stackpanel.aws = {
+  options.stack.aws = {
     # Options derived from proto messages
     roles-anywhere = dbExtend.awsOptions;
   };
@@ -240,8 +240,8 @@ Use in option modules:
 1. **Create the schema file:**
 
 ```bash
-cp nix/stackpanel/db/schemas/_template.proto.nix \
-   nix/stackpanel/db/schemas/myentity.proto.nix
+cp nix/stack/db/schemas/_template.proto.nix \
+   nix/stack/db/schemas/myentity.proto.nix
 ```
 
 2. **Edit the schema** - define messages, enums, fields
@@ -263,14 +263,14 @@ dataSchemas = {
 4. **Regenerate types:**
 
 ```bash
-nix develop --impure -c ./nix/stackpanel/core/generate-types.sh
+nix develop --impure -c ./nix/stack/core/generate-types.sh
 ```
 
 5. **Use the generated types:**
 
 ```go
 // Go
-import pb "github.com/darkmatter/stackpanel/packages/proto/gen/go"
+import pb "github.com/darkmatter/stack/packages/proto/gen/go"
 
 entity := &pb.MyEntity{
     Name:    "example",
@@ -280,7 +280,7 @@ entity := &pb.MyEntity{
 
 ```typescript
 // TypeScript
-import { MyEntity } from '@stackpanel/proto/gen/ts/myentity';
+import { MyEntity } from '@stack/proto/gen/ts/myentity';
 
 const entity: MyEntity = {
     name: 'example',

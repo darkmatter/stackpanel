@@ -19,7 +19,7 @@ Tool: bash
 ```json
 {
   "command": "bunx alchemy deploy --adopt",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel/packages/infra",
+  "workdir": "/Users/cm/git/darkmatter/stack/packages/infra",
   "timeout": 120000,
   "description": "Retest adopt deployment after IAM role changes"
 }
@@ -27,7 +27,7 @@ Tool: bash
 **Output:**
 ```
 [96mAlchemy[0m (v0.77.5)
-App: stackpanel-infra
+App: stack-infra
 Phase: up
 Stage: cm
 [0m[1m150 |[0m     [0m[2m// same (peers do not fix this).[0m
@@ -38,8 +38,8 @@ Stage: cm
 [0m[1m155 |[0m       [0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m`Resource [0m${[0m[34mtype[0m}[0m[32m already exists`[0m)[0m[2m;[0m
                       [31m[1m^[0m
 [0m[31merror[0m[2m:[0m [1mResource iam::Role already exists[0m
-[0m      [2mat [0m[0m[1m[3mResource[0m[2m ([0m[0m[36m/Users/cm/git/darkmatter/stackpanel/node_modules/.bun/alchemy@0.77.5+f090c1b6923cb64f/node_modules/alchemy/src/resource.ts[0m[2m:[0m[33m155[0m[2m:[33m17[0m[2m)[0m
-[0m      [2mat [0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36msrc/resources/iam-role.ts[0m[2m:[0m[33m28[0m[2m:[33m24[0m
+[0m      [2mat [0m[0m[1m[3mResource[0m[2m ([0m[0m[36m/Users/cm/git/darkmatter/stack/node_modules/.bun/alchemy@0.77.5+f090c1b6923cb64f/node_modules/alchemy/src/resource.ts[0m[2m:[0m[33m155[0m[2m:[33m17[0m[2m)[0m
+[0m      [2mat [0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36msrc/resources/iam-role.ts[0m[2m:[0m[33m28[0m[2m:[33m24[0m
 [0m
 [2mBun v1.3.3 (macOS arm64)[0m
 
@@ -60,13 +60,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/templates/iam-role.ts\n@@\n export const IamRole = Resource(\n-  \"iam::Role\",\n+  \"stackpanel::IamRole\",\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/templates/iam-role.ts\n@@\n export const IamRole = Resource(\n-  \"iam::Role\",\n+  \"stack::IamRole\",\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/templates/iam-role.ts
+M nix/stack/infra/templates/iam-role.ts
 ```
 ```
 
@@ -80,7 +80,7 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/packages/infra/src/resources/iam-role.ts\n@@\n export const IamRole = Resource(\n-  \"iam::Role\",\n+  \"stackpanel::IamRole\",\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/packages/infra/src/resources/iam-role.ts\n@@\n export const IamRole = Resource(\n-  \"iam::Role\",\n+  \"stack::IamRole\",\n*** End Patch"
 }
 ```
 **Output:**
@@ -105,7 +105,7 @@ Tool: bash
 ```json
 {
   "command": "bunx alchemy deploy --adopt",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel/packages/infra",
+  "workdir": "/Users/cm/git/darkmatter/stack/packages/infra",
   "timeout": 120000,
   "description": "Validate deploy adopts existing IAM role"
 }
@@ -113,7 +113,7 @@ Tool: bash
 **Output:**
 ```
 [96mAlchemy[0m (v0.77.5)
-App: stackpanel-infra
+App: stack-infra
 Phase: up
 Stage: cm
 [35m[creating]  [0m[90maws-secrets-role[0m Creating Resource...
@@ -134,9 +134,9 @@ Stage: cm
 [0m[1m166 |[0m   [0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m`Unsupported host "[0m${app.host}[0m[32m"`[0m)[0m[2m;[0m
                   [31m[1m^[0m
 [0m[31merror[0m[2m:[0m [1mUnsupported host "fly"[0m
-[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m166[0m[2m:[33m13[0m[2m)[0m
-[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m94[0m[2m:[33m3[0m[2m)[0m
-[0m      [2mat [0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m175[0m[2m:[33m26[0m
+[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m166[0m[2m:[33m13[0m[2m)[0m
+[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m94[0m[2m:[33m3[0m[2m)[0m
+[0m      [2mat [0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m175[0m[2m:[33m26[0m
 [0m
 [2mBun v1.3.3 (macOS arm64)[0m
 
@@ -158,21 +158,21 @@ Tool: bash
 ```json
 {
   "command": "git status --short",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "description": "Show modified files after infra refactor"
 }
 ```
 **Output:**
 ```
 M  .gitignore
-MM .stackpanel/config.nix
-M  .stackpanel/gen/zed/settings.json
-M  .stackpanel/modules/default.nix
-A  .stackpanel/modules/generate-config-example.nix
-A  .stackpanel/secrets/README.md
-A  .stackpanel/secrets/keys/.sops.yaml
-A  .stackpanel/secrets/keys/secrets.nix
-M  .stackpanel/secrets/vars/dev.sops.yaml
+MM .stack/config.nix
+M  .stack/gen/zed/settings.json
+M  .stack/modules/default.nix
+A  .stack/modules/generate-config-example.nix
+A  .stack/secrets/README.md
+A  .stack/secrets/keys/.sops.yaml
+A  .stack/secrets/keys/secrets.nix
+M  .stack/secrets/vars/dev.sops.yaml
 M  .vscode/settings.json
 M  apps/docs/content/docs/deployment/cloudflare.mdx
 M  apps/docs/content/docs/deployment/containers.mdx
@@ -184,11 +184,11 @@ M  apps/docs/content/docs/internal/deployment/fly/module.mdx
  M apps/docs/content/docs/secrets/index.mdx
  M apps/docs/content/docs/secrets/master-keys.mdx
  M apps/docs/content/docs/secrets/variables.mdx
-A  apps/stackpanel-go/cmd/cli/config_generate_example.go
-M  apps/stackpanel-go/internal/agent/server/agenix.go
-M  apps/stackpanel-go/internal/agent/server/secrets_groups.go
-A  apps/web/.stackpanel/secrets/state/manifest.json
-M  apps/web/.stackpanel/secrets/vars/.sops.yaml
+A  apps/stack-go/cmd/cli/config_generate_example.go
+M  apps/stack-go/internal/agent/server/agenix.go
+M  apps/stack-go/internal/agent/server/secrets_groups.go
+A  apps/web/.stack/secrets/state/manifest.json
+M  apps/web/.stack/secrets/vars/.sops.yaml
 A  apps/web/.tasks/bin/container-build
 A  apps/web/.tasks/bin/container-push
  A apps/web/fly.toml
@@ -215,26 +215,26 @@ A  docs/DOCS_UPDATE_SUMMARY.md
 M  docs/deploy.md
 M  nix/flake/default.nix
 M  nix/internal/flake/default.nix
-M  nix/stackpanel/core/default.nix
- M nix/stackpanel/core/options/devshell.nix
-M  nix/stackpanel/core/options/variables.nix
- M nix/stackpanel/default.nix
-M  nix/stackpanel/deployment/fly/module.nix
-MM nix/stackpanel/devshell/core.nix
- M nix/stackpanel/devshell/files.nix
-A  nix/stackpanel/devshell/gc-roots.nix
-A  nix/stackpanel/devshell/profile.nix
- A nix/stackpanel/files/default.nix
- M nix/stackpanel/infra/codegen.nix
- D nix/stackpanel/infra/modules/aws-secrets/index.ts
- M nix/stackpanel/infra/modules/aws-secrets/module.nix
- M nix/stackpanel/infra/options.nix
- M nix/stackpanel/infra/templates/infra.tmpl.ts
- M nix/stackpanel/infra/templates/kms-key.ts
-M  nix/stackpanel/secrets/default.nix
-M  nix/stackpanel/secrets/lib.nix
-A  nix/stackpanel/secrets/lib/age-key-cmd.nix
-A  nix/stackpanel/secrets/lib/age-key-cmd.sh
+M  nix/stack/core/default.nix
+ M nix/stack/core/options/devshell.nix
+M  nix/stack/core/options/variables.nix
+ M nix/stack/default.nix
+M  nix/stack/deployment/fly/module.nix
+MM nix/stack/devshell/core.nix
+ M nix/stack/devshell/files.nix
+A  nix/stack/devshell/gc-roots.nix
+A  nix/stack/devshell/profile.nix
+ A nix/stack/files/default.nix
+ M nix/stack/infra/codegen.nix
+ D nix/stack/infra/modules/aws-secrets/index.ts
+ M nix/stack/infra/modules/aws-secrets/module.nix
+ M nix/stack/infra/options.nix
+ M nix/stack/infra/templates/infra.tmpl.ts
+ M nix/stack/infra/templates/kms-key.ts
+M  nix/stack/secrets/default.nix
+M  nix/stack/secrets/lib.nix
+A  nix/stack/secrets/lib/age-key-cmd.nix
+A  nix/stack/secrets/lib/age-key-cmd.sh
  M packages/gen/env/ARCHITECTURE.md
 M  packages/gen/env/README.md
 D  packages/gen/env/src/generated/docs/dev.ts
@@ -253,8 +253,8 @@ A  packages/infra/turbo.json
 M  process-compose.yaml
 A  session-ses_3633.md
 M  turbo.json
-?? nix/stackpanel/infra/modules/aws-secrets/module/
-?? nix/stackpanel/infra/templates/iam-role.ts
+?? nix/stack/infra/modules/aws-secrets/module/
+?? nix/stack/infra/templates/iam-role.ts
 ?? packages/infra/modules/aws-secrets/
 ?? packages/infra/src/resources/iam-role.ts
 
@@ -275,7 +275,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/packages/infra/modules/aws-secrets/index.ts"
+  "filePath": "/Users/cm/git/darkmatter/stack/packages/infra/modules/aws-secrets/index.ts"
 }
 ```
 **Output:**
@@ -283,10 +283,10 @@ Tool: read
 <file>
 00001| import { AccountId } from "alchemy/aws";
 00002| import { GitHubOIDCProvider } from "alchemy/aws/oidc";
-00003| import Infra from "@stackpanel/infra";
-00004| import { IamRole } from "@stackpanel/infra/resources/iam-role";
-00005| import { KmsAlias } from "@stackpanel/infra/resources/kms-alias";
-00006| import { KmsKey } from "@stackpanel/infra/resources/kms-key";
+00003| import Infra from "@stack/infra";
+00004| import { IamRole } from "@stack/infra/resources/iam-role";
+00005| import { KmsAlias } from "@stack/infra/resources/kms-alias";
+00006| import { KmsKey } from "@stack/infra/resources/kms-key";
 00007| import {
 00008|   buildAssumeRolePolicy,
 00009|   buildKmsKeyPolicy,
@@ -302,7 +302,7 @@ Tool: read
 00019| 
 00020| const roleTags = {
 00021|   Project: inputs.projectName,
-00022|   ManagedBy: "stackpanel-infra",
+00022|   ManagedBy: "stack-infra",
 00023| };
 00024| 
 00025| const rolePolicyName = `${inputs.iam.roleName}-kms-policy`;
@@ -387,7 +387,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-secrets/module/index.ts"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-secrets/module/index.ts"
 }
 ```
 **Output:**
@@ -395,10 +395,10 @@ Tool: read
 <file>
 00001| import { AccountId } from "alchemy/aws";
 00002| import { GitHubOIDCProvider } from "alchemy/aws/oidc";
-00003| import Infra from "@stackpanel/infra";
-00004| import { IamRole } from "@stackpanel/infra/resources/iam-role";
-00005| import { KmsAlias } from "@stackpanel/infra/resources/kms-alias";
-00006| import { KmsKey } from "@stackpanel/infra/resources/kms-key";
+00003| import Infra from "@stack/infra";
+00004| import { IamRole } from "@stack/infra/resources/iam-role";
+00005| import { KmsAlias } from "@stack/infra/resources/kms-alias";
+00006| import { KmsKey } from "@stack/infra/resources/kms-key";
 00007| import {
 00008|   buildAssumeRolePolicy,
 00009|   buildKmsKeyPolicy,
@@ -414,7 +414,7 @@ Tool: read
 00019| 
 00020| const roleTags = {
 00021|   Project: inputs.projectName,
-00022|   ManagedBy: "stackpanel-infra",
+00022|   ManagedBy: "stack-infra",
 00023| };
 00024| 
 00025| const rolePolicyName = `${inputs.iam.roleName}-kms-policy`;
@@ -500,7 +500,7 @@ Tool: bash
 ```json
 {
   "command": "bunx alchemy deploy --adopt true",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel/packages/infra",
+  "workdir": "/Users/cm/git/darkmatter/stack/packages/infra",
   "timeout": 120000,
   "description": "Retest deploy with explicit adopt true"
 }
@@ -508,7 +508,7 @@ Tool: bash
 **Output:**
 ```
 [96mAlchemy[0m (v0.77.5)
-App: stackpanel-infra
+App: stack-infra
 Phase: up
 Stage: cm
 [35m[updating]  [0m[90maws-secrets-role[0m Updating Resource...
@@ -526,9 +526,9 @@ Stage: cm
 [0m[1m166 |[0m   [0m[35mthrow[0m [0m[35mnew[0m [0m[1mError[0m([0m[32m`Unsupported host "[0m${app.host}[0m[32m"`[0m)[0m[2m;[0m
                   [31m[1m^[0m
 [0m[31merror[0m[2m:[0m [1mUnsupported host "fly"[0m
-[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m166[0m[2m:[33m13[0m[2m)[0m
-[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m94[0m[2m:[33m3[0m[2m)[0m
-[0m      [2mat [0m[0m[36m[2m/Users/cm/git/darkmatter/stackpanel/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m175[0m[2m:[33m26[0m
+[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m166[0m[2m:[33m13[0m[2m)[0m
+[0m      [2mat [0m[0m[1m[3mdeployApp[0m[2m ([0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m94[0m[2m:[33m3[0m[2m)[0m
+[0m      [2mat [0m[0m[36m[2m/Users/cm/git/darkmatter/stack/packages/infra/[0m[36mmodules/deployment.ts[0m[2m:[0m[33m175[0m[2m:[33m26[0m
 [0m
 [2mBun v1.3.3 (macOS arm64)[0m
 
@@ -550,14 +550,14 @@ Tool: bash
 ```json
 {
   "command": "bunx alchemy deploy --adopt --app aws-secrets",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel/packages/infra",
+  "workdir": "/Users/cm/git/darkmatter/stack/packages/infra",
   "timeout": 120000,
   "description": "Try deploying only aws-secrets app"
 }
 ```
 **Output:**
 ```
-found root dir: /Users/cm/git/darkmatter/stackpanel
+found root dir: /Users/cm/git/darkmatter/stack
 
 
 <bash_metadata>
@@ -580,16 +580,16 @@ Tool: bash
 **Input:**
 ```json
 {
-  "command": "git diff --name-only -- nix/stackpanel/infra/codegen.nix nix/stackpanel/infra/modules/aws-secrets/module.nix nix/stackpanel/infra/modules/aws-secrets/module/index.ts nix/stackpanel/infra/modules/aws-secrets/module/policies.ts nix/stackpanel/infra/templates/kms-key.ts nix/stackpanel/infra/templates/iam-role.ts packages/infra/modules/aws-secrets.ts packages/infra/modules/aws-secrets/index.ts packages/infra/modules/aws-secrets/policies.ts packages/infra/src/resources/kms-key.ts packages/infra/src/resources/iam-role.ts",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "command": "git diff --name-only -- nix/stack/infra/codegen.nix nix/stack/infra/modules/aws-secrets/module.nix nix/stack/infra/modules/aws-secrets/module/index.ts nix/stack/infra/modules/aws-secrets/module/policies.ts nix/stack/infra/templates/kms-key.ts nix/stack/infra/templates/iam-role.ts packages/infra/modules/aws-secrets.ts packages/infra/modules/aws-secrets/index.ts packages/infra/modules/aws-secrets/policies.ts packages/infra/src/resources/kms-key.ts packages/infra/src/resources/iam-role.ts",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "description": "List files changed for infra adopt fix"
 }
 ```
 **Output:**
 ```
-nix/stackpanel/infra/codegen.nix
-nix/stackpanel/infra/modules/aws-secrets/module.nix
-nix/stackpanel/infra/templates/kms-key.ts
+nix/stack/infra/codegen.nix
+nix/stack/infra/modules/aws-secrets/module.nix
+nix/stack/infra/templates/kms-key.ts
 packages/infra/modules/aws-secrets.ts
 packages/infra/src/resources/kms-key.ts
 
@@ -610,20 +610,20 @@ Tool: bash
 **Input:**
 ```json
 {
-  "command": "git status --short -- nix/stackpanel/infra/modules/aws-secrets nix/stackpanel/infra/templates packages/infra/modules/aws-secrets packages/infra/src/resources",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "command": "git status --short -- nix/stack/infra/modules/aws-secrets nix/stack/infra/templates packages/infra/modules/aws-secrets packages/infra/src/resources",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "description": "Show status for adopt-related files"
 }
 ```
 **Output:**
 ```
- D nix/stackpanel/infra/modules/aws-secrets/index.ts
- M nix/stackpanel/infra/modules/aws-secrets/module.nix
- M nix/stackpanel/infra/templates/infra.tmpl.ts
- M nix/stackpanel/infra/templates/kms-key.ts
+ D nix/stack/infra/modules/aws-secrets/index.ts
+ M nix/stack/infra/modules/aws-secrets/module.nix
+ M nix/stack/infra/templates/infra.tmpl.ts
+ M nix/stack/infra/templates/kms-key.ts
  M packages/infra/src/resources/kms-key.ts
-?? nix/stackpanel/infra/modules/aws-secrets/module/
-?? nix/stackpanel/infra/templates/iam-role.ts
+?? nix/stack/infra/modules/aws-secrets/module/
+?? nix/stack/infra/templates/iam-role.ts
 ?? packages/infra/modules/aws-secrets/
 ?? packages/infra/src/resources/iam-role.ts
 
@@ -644,7 +644,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 24,
   "limit": 45
 }
@@ -656,10 +656,10 @@ Tool: read
 00026|   ...
 00027| }:
 00028| let
-00029|   cfg = config.stackpanel.infra;
-00030|   projectName = config.stackpanel.name or "my-project";
+00029|   cfg = config.stack.infra;
+00030|   projectName = config.stack.name or "my-project";
 00031|   outputDir = cfg.output-dir;
-00032|   stateDir = config.stackpanel.dirs.state;
+00032|   stateDir = config.stack.dirs.state;
 00033|   moduleIds = builtins.attrNames cfg.modules;
 00034|   sortedModuleIds = lib.sort (a: b: a < b) moduleIds;
 00035| 
@@ -713,7 +713,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 236,
   "limit": 45
 }
@@ -724,7 +724,7 @@ Tool: read
 00237|       ) moduleIds;
 00238|     in
 00239|     ''
-00240|       // Generated by stackpanel — do not edit manually.
+00240|       // Generated by stack — do not edit manually.
 00241|       // TypeScript interfaces for infra module inputs.
 00242| 
 00243|       ${interfaces}
@@ -782,7 +782,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix",
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix",
   "offset": 430,
   "limit": 70
 }
@@ -850,7 +850,7 @@ Tool: read
 00488|     # ==========================================================================
 00489|     # File generation
 00490|     # ==========================================================================
-00491|     stackpanel.files.entries = {
+00491|     stack.files.entries = {
 00492|       # README
 00493|       "${outputDir}/README.md" = {
 00494|         text = readmeMd;
@@ -880,7 +880,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/packages/infra/src/resources/iam-role.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/packages/infra/src/resources/iam-role.ts",
   "offset": 1,
   "limit": 220
 }
@@ -915,7 +915,7 @@ Tool: read
 00026| }
 00027| 
 00028| export const IamRole = Resource(
-00029|   "stackpanel::IamRole",
+00029|   "stack::IamRole",
 00030|   async function (
 00031|     this: Context<IamRole>,
 00032|     _id: string,
@@ -1060,7 +1060,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/packages/infra/src/resources/kms-key.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/packages/infra/src/resources/kms-key.ts",
   "offset": 1,
   "limit": 220
 }
@@ -1068,7 +1068,7 @@ Tool: read
 **Output:**
 ```
 <file>
-00002| // Generated by stackpanel — static library code.
+00002| // Generated by stack — static library code.
 00003| import type { Context } from "alchemy";
 00004| import { Resource } from "alchemy";
 00005| 
@@ -1245,22 +1245,22 @@ Implemented. I fixed the adopt failure path and refactored the AWS secrets infra
 **What I changed**
 - Made AWS role creation adopt-safe by replacing direct `alchemy/aws Role(...)` usage with a custom idempotent resource that does `get-or-create` and then updates policy/tags/attachments:
   - `packages/infra/src/resources/iam-role.ts:28`
-  - template source: `nix/stackpanel/infra/templates/iam-role.ts:28`
+  - template source: `nix/stack/infra/templates/iam-role.ts:28`
 - Updated the AWS secrets module to use that resource (and kept logic cleaner by extracting policy builders):
   - `packages/infra/modules/aws-secrets/index.ts:1`
   - `packages/infra/modules/aws-secrets/policies.ts:1`
   - `packages/infra/modules/aws-secrets.ts:1` (thin re-export wrapper)
   - mirrored source-of-truth under Nix:
-    - `nix/stackpanel/infra/modules/aws-secrets/module/index.ts:1`
-    - `nix/stackpanel/infra/modules/aws-secrets/module/policies.ts:1`
+    - `nix/stack/infra/modules/aws-secrets/module/index.ts:1`
+    - `nix/stack/infra/modules/aws-secrets/module/policies.ts:1`
 - Made KMS key resource adopt-aware via alias lookup, so existing keys can be adopted instead of always created:
   - `packages/infra/src/resources/kms-key.ts:6`
-  - template source: `nix/stackpanel/infra/templates/kms-key.ts:6`
+  - template source: `nix/stack/infra/templates/kms-key.ts:6`
 - Simplified infra module composition by adding directory-based module generation support (so modules can be split into multiple files):
-  - `nix/stackpanel/infra/codegen.nix:36` (directory detection/import path)
-  - `nix/stackpanel/infra/codegen.nix:453` (copy all `*.ts` from module dirs)
+  - `nix/stack/infra/codegen.nix:36` (directory detection/import path)
+  - `nix/stack/infra/codegen.nix:453` (copy all `*.ts` from module dirs)
   - switched aws-secrets module path to a directory:
-    - `nix/stackpanel/infra/modules/aws-secrets/module.nix:226`
+    - `nix/stack/infra/modules/aws-secrets/module.nix:226`
 
 **Validation**
 - Reproduced before state: `--adopt` still failed on `Role with name ... already exists`.
@@ -1268,7 +1268,7 @@ Implemented. I fixed the adopt failure path and refactored the AWS secrets infra
 - Current deploy now fails later on an unrelated existing issue: `Unsupported host "fly"` from `packages/infra/modules/deployment.ts:166`.
 
 **Important note**
-- `infra:deploy` through devshell is still blocked in this workspace by an existing Nix option typo (`stackpanel.infra.storage-bakend`) unrelated to this fix. I validated directly via `bunx alchemy deploy ...` in `packages/infra`.
+- `infra:deploy` through devshell is still blocked in this workspace by an existing Nix option typo (`stack.infra.storage-bakend`) unrelated to this fix. I validated directly via `bunx alchemy deploy ...` in `packages/infra`.
 
 If you want, next I can tackle the `host: "fly"` branch in deployment so full deploy completes end-to-end.
 
@@ -1277,37 +1277,37 @@ If you want, next I can tackle the `host: "fly"` branch in deployment so full de
 ## User
 
 ❯❯ nix develop
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 error:
        … while evaluating the attribute 'packages'
-         at /Users/cm/git/darkmatter/stackpanel/flake.nix:91:9:
-           90|         # Merge stackpanel packages with outputs packages
+         at /Users/cm/git/darkmatter/stack/flake.nix:91:9:
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |         ^
            92|
 
        … in the right operand of the update (//) operator
-         at /Users/cm/git/darkmatter/stackpanel/flake.nix:91:29:
-           90|         # Merge stackpanel packages with outputs packages
+         at /Users/cm/git/darkmatter/stack/flake.nix:91:29:
+           90|         # Merge stack packages with outputs packages
            91|         packages = packages // (spOutputs.packages or { });
              |                             ^
            92|
 
-       … while evaluating the option `stackpanel.outputs':
+       … while evaluating the option `stack.outputs':
 
-       … while evaluating definitions from `/nix/store/fzwa0z2bmq58sxir22nmlgsqq1zdvbf5-source/nix/stackpanel/devshell/scripts.nix':
+       … while evaluating definitions from `/nix/store/fzwa0z2bmq58sxir22nmlgsqq1zdvbf5-source/nix/stack/devshell/scripts.nix':
 
-       … while evaluating the option `stackpanel.scripts':
+       … while evaluating the option `stack.scripts':
 
-       … while evaluating definitions from `/nix/store/fzwa0z2bmq58sxir22nmlgsqq1zdvbf5-source/nix/stackpanel/files':
+       … while evaluating definitions from `/nix/store/fzwa0z2bmq58sxir22nmlgsqq1zdvbf5-source/nix/stack/files':
 
-       … while evaluating the option `stackpanel.files.entries':
+       … while evaluating the option `stack.files.entries':
 
-       … while evaluating definitions from `/nix/store/fzwa0z2bmq58sxir22nmlgsqq1zdvbf5-source/nix/stackpanel/infra/codegen.nix':
+       … while evaluating definitions from `/nix/store/fzwa0z2bmq58sxir22nmlgsqq1zdvbf5-source/nix/stack/infra/codegen.nix':
 
        (stack trace truncated; use '--show-trace' to show the full, detailed trace)
 
-       error: cannot read directory "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/database/index.ts": Not a directory 
+       error: cannot read directory "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/database/index.ts": Not a directory 
 
 ---
 
@@ -1323,13 +1323,13 @@ Tool: apply_patch
 **Input:**
 ```json
 {
-  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix\n@@\n-  modulePathIsDirectory =\n-    id:\n-    let\n-      modPath = cfg.modules.${id}.path;\n-      dirTry = builtins.tryEval (builtins.readDir modPath);\n-    in\n-    dirTry.success;\n+  modulePathIsDirectory =\n+    id:\n+    let\n+      modPath = cfg.modules.${id}.path;\n+    in\n+    builtins.pathExists (modPath + \"/index.ts\");\n@@\n   moduleFileEntries = lib.foldlAttrs (\n     acc: id: mod:\n-    let\n-      dirTry = builtins.tryEval (builtins.readDir mod.path);\n-    in\n-    if dirTry.success then\n+    if modulePathIsDirectory id then\n       let\n-        entries = dirTry.value;\n+        entries = builtins.readDir mod.path;\n         tsFiles = lib.filterAttrs (name: kind: kind == \"regular\" && lib.hasSuffix \".ts\" name) entries;\n         copied = lib.mapAttrs' (\n           name: _kind:\n*** End Patch"
+  "patchText": "*** Begin Patch\n*** Update File: /Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix\n@@\n-  modulePathIsDirectory =\n-    id:\n-    let\n-      modPath = cfg.modules.${id}.path;\n-      dirTry = builtins.tryEval (builtins.readDir modPath);\n-    in\n-    dirTry.success;\n+  modulePathIsDirectory =\n+    id:\n+    let\n+      modPath = cfg.modules.${id}.path;\n+    in\n+    builtins.pathExists (modPath + \"/index.ts\");\n@@\n   moduleFileEntries = lib.foldlAttrs (\n     acc: id: mod:\n-    let\n-      dirTry = builtins.tryEval (builtins.readDir mod.path);\n-    in\n-    if dirTry.success then\n+    if modulePathIsDirectory id then\n       let\n-        entries = dirTry.value;\n+        entries = builtins.readDir mod.path;\n         tsFiles = lib.filterAttrs (name: kind: kind == \"regular\" && lib.hasSuffix \".ts\" name) entries;\n         copied = lib.mapAttrs' (\n           name: _kind:\n*** End Patch"
 }
 ```
 **Output:**
 ```
 Success. Updated the following files:
-M nix/stackpanel/infra/codegen.nix
+M nix/stack/infra/codegen.nix
 ```
 ```
 
@@ -1348,21 +1348,21 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure -c true",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 120000,
   "description": "Verify nix develop evaluates after codegen fix"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA= nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=' from ~/.local/share/nix/trusted-settings.json.
 building '/nix/store/vnwyz82g6c0mrphy9m6hmln99ydhbsw4-vendor-env.drv'...
 building '/nix/store/0lrxfbh14hw39l5zhp90bvqlm1xwa0ya-go-cache-env.drv'...
-building '/nix/store/bz73aihsnnh7grc2d6jj5wwl1x19nvnm-stackpanel-0.1.0.drv'...
+building '/nix/store/bz73aihsnnh7grc2d6jj5wwl1x19nvnm-stack-0.1.0.drv'...
 building '/nix/store/w17h7r8fk6qs4dw1pqanxjzqcjnwb72l-infra-pull-outputs.drv'...
 building '/nix/store/qnc53wy528580ri6jymimfc5z56b5p15-README.md.drv'...
 building '/nix/store/6fi2818krmwh4x0sifa8i6cpsf9ml2ml-alchemy.run.ts.drv'...
@@ -1374,20 +1374,20 @@ building '/nix/store/kvg1i78iyrvw0r4iaqjczypv5yyvh648-infra-inputs.json.drv'...
 building '/nix/store/f7sky8n2f7b91q9bjdk2rh55bs1k4smp-kms-key.ts.drv'...
 building '/nix/store/5slss52mm6rz643a41476km4qj4xr9q7-policies.ts.drv'...
 building '/nix/store/wf7v6zfna945d24gyd2432gzz4syzd56-types.ts.drv'...
-building '/nix/store/j6mh29c2s4k921r6ryh4xbi2hjch3s3r-stackpanel-config.json.drv'...
+building '/nix/store/j6mh29c2s4k921r6ryh4xbi2hjch3s3r-stack-config.json.drv'...
 building '/nix/store/3h0ifrx2wqnr6a3blmndk5mzdw8q3rk1-process-compose.yaml.drv'...
 building '/nix/store/y68gm6y5la3cp6z1iyf75mljw8iq4qkc-check-files-drift.drv'...
 building '/nix/store/ds7dd9b4n7zgxsbmw4asl0v099wmdvpc-write-files.drv'...
 building '/nix/store/yy2b24c6idk5hh48yjkfi7nc7bbrah2i-check-files.drv'...
 building '/nix/store/2rhvb943syd7c6qramacbs9kvr0i8cr4-write-files.drv'...
-building '/nix/store/ja2vn5kk8h6saja67f5x3gc5jhmkb2zp-stackpanel-scripts.drv'...
-building '/nix/store/m3lizyspxqhjzn9xbccfnpjqf86lqafh-stackpanel-profile.drv'...
-building '/nix/store/h3x5f1rwnb476r51chzj3cdhfx2zzj8f-stackpanel-generate-bin.drv'...
-building '/nix/store/n276vvsf76n08yjbg1zkgham3rnc5k5m-stackpanel-gc-update.drv'...
-building '/nix/store/v9991mrw2nnp2sas5wap8x2s521iapvd-stackpanel-shellhook.drv'...
-building '/nix/store/s1dawcvc4wwy11qfl7lcq0f1rhj0hcxp-stackpanel-stackpanel-env.drv'...
-Config validated for stackpanel
-✓ Stackpanel initialized
+building '/nix/store/ja2vn5kk8h6saja67f5x3gc5jhmkb2zp-stack-scripts.drv'...
+building '/nix/store/m3lizyspxqhjzn9xbccfnpjqf86lqafh-stack-profile.drv'...
+building '/nix/store/h3x5f1rwnb476r51chzj3cdhfx2zzj8f-stack-generate-bin.drv'...
+building '/nix/store/n276vvsf76n08yjbg1zkgham3rnc5k5m-stack-gc-update.drv'...
+building '/nix/store/v9991mrw2nnp2sas5wap8x2s521iapvd-stack-shellhook.drv'...
+building '/nix/store/s1dawcvc4wwy11qfl7lcq0f1rhj0hcxp-stack-stack-env.drv'...
+Config validated for stack
+✓ Stack initialized
 warning: unknown experimental feature 'build-time-fetch-tree'
 warning: unknown experimental feature 'parallel-eval'
 warning: unknown experimental feature 'external-builders'
@@ -1401,10 +1401,10 @@ Checking if device certificate exists... [0;32mOK[0m
 Checking if device certificate is valid... [0;32mOK[0m
 
 [0;32mAll checks passed![0m
-📜 stackpanel scripts loaded
+📜 stack scripts loaded
   remove packages/infra/modules/aws-secrets.ts (stale)
   write .gitignore (block, updated)
-  write .stackpanel/state/infra-inputs.json
+  write .stack/state/infra-inputs.json
   write packages/infra/README.md
   write packages/infra/alchemy.run.ts
   write packages/infra/modules/database.ts
@@ -1412,15 +1412,15 @@ Checking if device certificate is valid... [0;32mOK[0m
   write packages/infra/src/types.ts
   write process-compose.yaml -> /nix/store/hf4j1580xwlcsiabb7ncqmyilc0bg2lv-process-compose.yaml
 files: 8 written, 57 unchanged, 1 removed
-Stackpanel development environment
+Stack development environment
 
-📦 Stackpanel Ports (project: stackpanel)
+📦 Stack Ports (project: stack)
    Stable port: 6400
 
    Apps:
-     docs: 5738 -> https://docs.stackpanel.lan
-     stackpanel-go: 5797
-     web: 5775 -> https://stackpanel.stackpanel.lan
+     docs: 5738 -> https://docs.stack.lan
+     stack-go: 5797
+     web: 5775 -> https://stack.stack.lan
 
    Services:
      Minio: 6498
@@ -1430,11 +1430,11 @@ Stackpanel development environment
 
    Tip: Set STACKPANEL_QUIET=1 to hide this message
 
-  → .stackpanel/bin: 219 binaries
+  → .stack/bin: 219 binaries
 Caddy config directories created at /Users/cm/.config/caddy
 Caddy config directories created at /Users/cm/.config/caddy
-✅ Stackpanel Nix module system initialized
-stackpanel core initialized
+✅ Stack Nix module system initialized
+stack core initialized
 [1;94m            |                 |                                |[0m
 [1;95m       __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |[0m
 [1;95m     \__ \  |    (   |  (       <   |   |  (   |  |   |   __/  |[0m
@@ -1481,7 +1481,7 @@ stackpanel core initialized
 
 ═══════════════════════════════════════════════════════════════
 Shell hook completed at 2026-02-28 19:41:08
-Log saved to: /Users/cm/git/darkmatter/stackpanel/.stackpanel/state/shell.log
+Log saved to: /Users/cm/git/darkmatter/stack/.stack/state/shell.log
 ═══════════════════════════════════════════════════════════════
 
 ```
@@ -1499,8 +1499,8 @@ Nice catch — that error came from my directory detection logic in infra codege
 
 I fixed it by changing the detection from `readDir` probing to a safe `pathExists "<module-path>/index.ts"` check, so file-backed modules (like `.../database/index.ts`) are no longer treated as directories.
 
-- Fixed in `nix/stackpanel/infra/codegen.nix:36`
-- Also adjusted the copy logic to only `readDir` when the module is actually directory-backed in `nix/stackpanel/infra/codegen.nix:453`
+- Fixed in `nix/stack/infra/codegen.nix:36`
+- Also adjusted the copy logic to only `readDir` when the module is actually directory-backed in `nix/stack/infra/codegen.nix:453`
 
 I verified with:
 
@@ -1529,146 +1529,146 @@ Tool: grep
 ```json
 {
   "pattern": "performing worker daemon op: 7|daemon op: 7|nix develop hangs|nix develop",
-  "path": "/Users/cm/git/darkmatter/stackpanel",
+  "path": "/Users/cm/git/darkmatter/stack",
   "include": "*.md*"
 }
 ```
 **Output:**
 ```
 Found 62 matches
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/secrets/master-keys.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/secrets/master-keys.mdx:
   Line 36:   2. Re-enter the devshell: exit && nix develop --impure
   Line 55: nix develop --impure
   Line 152: 1. **Clone and enter devshell**: `nix develop --impure`
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/secrets/index.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/secrets/index.mdx:
   Line 19: nix develop --impure
   Line 55: nix develop --impure
   Line 152: 1. Clone the repo and enter the devshell (`nix develop --impure`) -- a local AGE key is auto-generated
 
-/Users/cm/git/darkmatter/stackpanel/docs/DEPLOYMENT_FIX_CHECKLIST.md:
+/Users/cm/git/darkmatter/stack/docs/DEPLOYMENT_FIX_CHECKLIST.md:
   Line 114: nix develop --impure
   Line 124: - [ ] `nix develop --impure` runs without errors
 
-/Users/cm/git/darkmatter/stackpanel/docs/DOCS_UPDATE_SUMMARY.md:
+/Users/cm/git/darkmatter/stack/docs/DOCS_UPDATE_SUMMARY.md:
   Line 143: 1. Test `nix develop` with fresh config to verify no errors
 
-/Users/cm/git/darkmatter/stackpanel/docs/DEPLOYMENT_MIGRATION.md:
+/Users/cm/git/darkmatter/stack/docs/DEPLOYMENT_MIGRATION.md:
   Line 265: 4. **Rebuild your devshell** with `nix develop --impure` or `direnv reload`
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/secrets/README.md:
+/Users/cm/git/darkmatter/stack/nix/stack/secrets/README.md:
   Line 10: nix develop --impure
   Line 36: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/.ruler/architecture.md:
+/Users/cm/git/darkmatter/stack/.ruler/architecture.md:
   Line 346: 7. **Devshell builds**: Enter `nix develop --impure` to verify the Nix evaluation still succeeds
 
-/Users/cm/git/darkmatter/stackpanel/AGENTS.md:
+/Users/cm/git/darkmatter/stack/AGENTS.md:
   Line 398: - To enter the devshell: `nix develop --impure`
   Line 400: - After you finish a task, ALWAYS try entering the devshell either by using the `devshell` script or `nix develop --impure`
   Line 613: nix develop --impure  # or: direnv allow (with .envrc)
   Line 661: - **Primary entrypoint**: `nix develop --impure` (or `direnv allow`)
 
-/Users/cm/git/darkmatter/stackpanel/CLAUDE.md:
+/Users/cm/git/darkmatter/stack/CLAUDE.md:
   Line 397: - To enter the devshell: `nix develop --impure`
   Line 399: - After you finish a task, ALWAYS try entering the devshell either by using the `devshell` script or `nix develop --impure`
   Line 612: nix develop --impure  # or: direnv allow (with .envrc)
   Line 660: - **Primary entrypoint**: `nix develop --impure` (or `direnv allow`)
 
-/Users/cm/git/darkmatter/stackpanel/WARP.md:
+/Users/cm/git/darkmatter/stack/WARP.md:
   Line 397: - To enter the devshell: `nix develop --impure`
   Line 399: - After you finish a task, ALWAYS try entering the devshell either by using the `devshell` script or `nix develop --impure`
   Line 612: nix develop --impure  # or: direnv allow (with .envrc)
   Line 660: - **Primary entrypoint**: `nix develop --impure` (or `direnv allow`)
 
-/Users/cm/git/darkmatter/stackpanel/.ruler/stackpanel.md:
+/Users/cm/git/darkmatter/stack/.ruler/stack.md:
   Line 117: nix develop --impure  # or: direnv allow (with .envrc)
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/ide/vscode.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/ide/vscode.mdx:
   Line 193: nix develop --impure
   Line 205: 1. Reload the devshell (`direnv reload` or re-enter `nix develop`)
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/dev-environment/direnv.mdx:
-  Line 10: Direnv automatically activates your Stackpanel dev environment when you `cd` into your project directory—and deactivates it when you leave. No manual `nix develop` required.
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/dev-environment/direnv.mdx:
+  Line 10: Direnv automatically activates your Stack dev environment when you `cd` into your project directory—and deactivates it when you leave. No manual `nix develop` required.
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/dev-environment/shell-hooks-files.mdx:
-  Line 11: Shell hooks run every time you enter the dev environment—whether through `direnv`, `nix develop`, or the Stackpanel agent reloading your shell. They're useful for one-time setup, printing status information, or ensuring local state is correct.
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/dev-environment/shell-hooks-files.mdx:
+  Line 11: Shell hooks run every time you enter the dev environment—whether through `direnv`, `nix develop`, or the Stack agent reloading your shell. They're useful for one-time setup, printing status information, or ensuring local state is correct.
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/dev-environment/environment-variables.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/dev-environment/environment-variables.mdx:
   Line 152: Shell entry (direnv or nix develop)
   Line 162: Variables set during Nix evaluation are **baked in at eval time**. If you change your config, you need to reload the shell (re-enter direnv or re-run `nix develop`) for the new values to take effect.
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/dev-environment/index.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/dev-environment/index.mdx:
   Line 56: Enter the shell with `nix develop --impure` (or let direnv do it automatically), and you'll have `node`, `bun`, `jq`, and `aws` on your PATH, a `dev` command that starts your servers, and `NODE_ENV` set to `"development"`.
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/cli/preflight.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/cli/preflight.mdx:
   Line 24: After running this, you can use 'nix develop' (without --impure) and direnv
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/packages.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/packages.mdx:
   Line 63: nix develop
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/reference/devshell.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/reference/devshell.mdx:
   Line 124: Use `nix develop --ignore-environment --impure` with `--keep` flags
 
-/Users/cm/git/darkmatter/stackpanel/nix/internal/flake/templates/minimal/README.md:
+/Users/cm/git/darkmatter/stack/nix/internal/flake/templates/minimal/README.md:
   Line 21: nix develop --impure
   Line 87: | `nix develop --impure` | Enter shell manually |
 
-/Users/cm/git/darkmatter/stackpanel/nix/internal/flake/templates/default/README.md:
+/Users/cm/git/darkmatter/stack/nix/internal/flake/templates/default/README.md:
   Line 19: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/internal/flake/templates/README.md:
+/Users/cm/git/darkmatter/stack/nix/internal/flake/templates/README.md:
   Line 27: direnv allow  # or: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/docs/DEVENV_REMOVAL_PLAN.md:
-  Line 94: | `nix/stackpanel/ide/devshell.sh` | 29,40,56,62,64,72,73 | `devenv.yaml`, `devenv enterShell` | Remove devenv mode, keep nix develop mode |
+/Users/cm/git/darkmatter/stack/docs/DEVENV_REMOVAL_PLAN.md:
+  Line 94: | `nix/stack/ide/devshell.sh` | 29,40,56,62,64,72,73 | `devenv.yaml`, `devenv enterShell` | Remove devenv mode, keep nix develop mode |
   Line 140: - **Key invariant**: After Phase 1, `nix develop --impure` must produce a shell with all packages, env vars, hooks, and starship working
 
-/Users/cm/git/darkmatter/stackpanel/nix/flake/templates/minimal/README.md:
+/Users/cm/git/darkmatter/stack/nix/flake/templates/minimal/README.md:
   Line 21: nix develop --impure
   Line 87: | `nix develop --impure` | Enter shell manually |
 
-/Users/cm/git/darkmatter/stackpanel/nix/flake/templates/default/README.md:
+/Users/cm/git/darkmatter/stack/nix/flake/templates/default/README.md:
   Line 19: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/flake/templates/README.md:
+/Users/cm/git/darkmatter/stack/nix/flake/templates/README.md:
   Line 27: direnv allow  # or: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/packages/docs-content/content/guides/devshell.mdx:
+/Users/cm/git/darkmatter/stack/packages/docs-content/content/guides/devshell.mdx:
   Line 17: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/packages/README.md:
+/Users/cm/git/darkmatter/stack/nix/stack/packages/README.md:
   Line 60: nix develop
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/_template/README.mdx:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/_template/README.mdx:
   Line 810:    nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/PLAN.md:
-  Line 306: 3. Next `nix develop` -> outputs available at `config.stackpanel.infra.outputs.*`
+/Users/cm/git/darkmatter/stack/nix/stack/infra/PLAN.md:
+  Line 306: 3. Next `nix develop` -> outputs available at `config.stack.infra.outputs.*`
 
-/Users/cm/git/darkmatter/stackpanel/nix/internal/README.md:
+/Users/cm/git/darkmatter/stack/nix/internal/README.md:
   Line 11: nix develop --impure
   Line 63: ### Standard Setup (`nix develop`)
 
-/Users/cm/git/darkmatter/stackpanel/nix/README.md:
+/Users/cm/git/darkmatter/stack/nix/README.md:
   Line 120: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/docs/MODULE_BOILERPLATE_INJECTION.md:
+/Users/cm/git/darkmatter/stack/docs/MODULE_BOILERPLATE_INJECTION.md:
   Line 180: **On next shell entry** (`nix develop --impure`):
 
-/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/quick-start.mdx:
+/Users/cm/git/darkmatter/stack/apps/docs/content/docs/quick-start.mdx:
   Line 62: For users who prefer `devenv shell` over `nix develop`.
   Line 145: nix develop --impure
   Line 337: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/README.md:
+/Users/cm/git/darkmatter/stack/README.md:
   Line 63: nix develop --impure
   Line 190: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/README.tmpl.md:
+/Users/cm/git/darkmatter/stack/README.tmpl.md:
   Line 63: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/.ruler/development.md:
+/Users/cm/git/darkmatter/stack/.ruler/development.md:
   Line 3: - To enter the devshell: `nix develop --impure`
   Line 5: - After you finish a task, ALWAYS try entering the devshell either by using the `devshell` script or `nix develop --impure`
 
@@ -1682,88 +1682,88 @@ Tool: grep
 **Input:**
 ```json
 {
-  "pattern": "stackpanel init|STACKPANEL_CONFIG_JSON|nix eval|nix develop --impure",
-  "path": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel",
+  "pattern": "stack init|STACKPANEL_CONFIG_JSON|nix eval|nix develop --impure",
+  "path": "/Users/cm/git/darkmatter/stack/nix/stack",
   "include": "*.nix"
 }
 ```
 **Output:**
 ```
 Found 37 matches
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/options.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/infra/options.nix:
   Line 274:             1. Enter devshell: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/module.nix:
   Line 175:       # Regenerate by entering the devshell: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/lib/evalconfig.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/lib/evalconfig.nix:
   Line 14: #   4. env fallbacks   - STACKPANEL_CONFIG_JSON / STACKPANEL_STATE_DIR / STACKPANEL_ROOT / PWD
   Line 18: #   nix eval --json -f evalconfig.nix --argstr root /path/to/project
   Line 21: #   nix eval --impure --json -f evalconfig.nix
   Line 69:   # Config JSON path: arg > STACKPANEL_CONFIG_JSON env
   Line 70:   envConfigJson = builtins.getEnv "STACKPANEL_CONFIG_JSON";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/db/default.nix:
-  Line 32: #   nix eval --json -f nix/stackpanel/db '.schemas' --apply builtins.attrNames
-  Line 35: #   nix eval --raw -f nix/stackpanel/db '.render.users'
-  Line 38: #   nix eval --json -f nix/stackpanel/db '.protoFiles'
+/Users/cm/git/darkmatter/stack/nix/stack/db/default.nix:
+  Line 32: #   nix eval --json -f nix/stack/db '.schemas' --apply builtins.attrNames
+  Line 35: #   nix eval --raw -f nix/stack/db '.render.users'
+  Line 38: #   nix eval --json -f nix/stack/db '.protoFiles'
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/services/aws.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/services/aws.nix:
   Line 36:   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/network/network.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/network/network.nix:
   Line 33:   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/turbo.test.nix:
-  Line 5: # Run with: nix eval -f nix/stackpanel/modules/turbo.test.nix
+/Users/cm/git/darkmatter/stack/nix/stack/modules/turbo.test.nix:
+  Line 5: # Run with: nix eval -f nix/stack/modules/turbo.test.nix
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/process-compose/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/process-compose/module.nix:
   Line 408:           echo "Run: nix develop --impure" >&2
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/modules/entrypoints/module.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/modules/entrypoints/module.nix:
   Line 65:       # Regenerate by entering the devshell: nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/lib/ide.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/lib/ide.nix:
   Line 208:           # Fall back to devshell script or nix develop --impure if no cache
   Line 216:                 echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2
   Line 227:               exec nix develop --impure
   Line 239:                 echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/docs/readme.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/docs/readme.nix:
   Line 115:       nix develop --impure
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/ide/ide.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/ide/ide.nix:
   Line 44:   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/direnv.nix:
-  Line 77:     # To regenerate: nix develop --impure -c stackpanel generate
-  Line 140:     #   nix develop --impure -c stackpanel generate
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/direnv.nix:
+  Line 77:     # To regenerate: nix develop --impure -c stack generate
+  Line 140:     #   nix develop --impure -c stack generate
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/devshell/clean.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/devshell/clean.nix:
   Line 81:       if cfg.impure then "nix develop --impure -c devshell-regen" else "nix develop -c devshell-regen"
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/schema.nix:
-  Line 15: #   nix eval --json -f nix/stackpanel/core/schema.nix jsonSchema
+/Users/cm/git/darkmatter/stack/nix/stack/core/schema.nix:
+  Line 15: #   nix eval --json -f nix/stack/core/schema.nix jsonSchema
   Line 18: #   nix eval --json -f ... jsonSchema | bun x quicktype -s schema -o types.ts --lang typescript -
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/state.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/state.nix:
   Line 37:   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/panels.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/panels.nix:
   Line 22: # The panels are exposed via nix eval for the agent/web UI to consume.
   Line 355:   # Computed/serializable panels for nix eval
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/options/extensions.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/options/extensions.nix:
   Line 39: # The extensions are exposed via nix eval for the agent/web UI to consume.
   Line 480:   # Expose computed/serializable extensions for nix eval
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/cli.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/cli.nix:
   Line 46:   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   Line 59:   # This avoids slow nix eval at runtime by pre-computing during shell entry
   Line 234:       # Path to the source Nix config file (for nix eval/import)
   Line 237:       STACKPANEL_CONFIG_JSON = "${configFile}";
 
-/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/core/lib/envvars.nix:
+/Users/cm/git/darkmatter/stack/nix/stack/core/lib/envvars.nix:
   Line 125:     STACKPANEL_CONFIG_JSON = mkEnvVar {
   Line 126:       name = "STACKPANEL_CONFIG_JSON";
 ```
@@ -1783,14 +1783,14 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/.stackpanel/state/shellhook.sh"
+  "filePath": "/Users/cm/git/darkmatter/stack/.stack/state/shellhook.sh"
 }
 ```
 **Output:**
 ```
 <file>
 00001| # ================================================================
-00002| # Stackpanel Shell Hook (wrapper)
+00002| # Stack Shell Hook (wrapper)
 00003| # Generated by: nix/flake/default.nix
 00004| # ================================================================
 00005| 
@@ -1799,7 +1799,7 @@ Tool: read
 00008|   export AWS_CONFIG_FILE=/nix/store/13yqr93hm27784x31l0vmf6aaa82vik1-aws-config
 00009| export AWS_REGION=us-west-2
 00010| export AWS_SHARED_CREDENTIALS_FILE=/dev/null
-00011| export CHAMBER_KMS_KEY_ALIAS=alias/stackpanel-secrets
+00011| export CHAMBER_KMS_KEY_ALIAS=alias/stack-secrets
 00012| export DATABASE_URL='postgresql://postgres@localhost:6404/postgres?host=$HOME/.local/share/devservices/postgres'
 00013| export GOROOT=/nix/store/rwzizip34lp556kmagcfw0fszch22x0k-go-1.25.6/share/go/
 00014| export GOTOOLCHAIN=local
@@ -1827,20 +1827,20 @@ Tool: read
 00036| export STACKPANEL_ALIAS_FUNC='# Internal helper shared by shortcuts
 00037| _stackpanel_commands_runner() {
 00038|   if [ $# -eq 0 ]; then
-00039|   stackpanel commands list
+00039|   stack commands list
 00040| else
-00041|   stackpanel commands "$@"
+00041|   stack commands "$@"
 00042| fi
 00043| 
 00044| }
 00045| 
-00046| # Stackpanel command shortcut: x
+00046| # Stack command shortcut: x
 00047| x() {
 00048|   _stackpanel_commands_runner "$@"
 00049| }
 00050| 
-00051| # Short alias for the stackpanel CLI
-00052| alias sp="stackpanel"
+00051| # Short alias for the stack CLI
+00052| alias sp="stack"
 00053| 
 00054| # Explicit commands runner shortcut
 00055| spx() {
@@ -1849,16 +1849,16 @@ Tool: read
 00058| '
 00059| export STACKPANEL_CLEAN_IMPURE=0
 00060| export STACKPANEL_CLEAN_MODE=0
-00061| export STACKPANEL_CONFIG_JSON=/nix/store/0spc4rfa1lm9vzclkww00qmbq69xkv73-stackpanel-config.json
-00062| export STACKPANEL_INFRA_INPUTS=.stackpanel/state/infra-inputs.json
-00063| export STACKPANEL_NIX_CONFIG='$STACKPANEL_ROOT/.stackpanel/config.nix'
+00061| export STACKPANEL_CONFIG_JSON=/nix/store/0spc4rfa1lm9vzclkww00qmbq69xkv73-stack-config.json
+00062| export STACKPANEL_INFRA_INPUTS=.stack/state/infra-inputs.json
+00063| export STACKPANEL_NIX_CONFIG='$STACKPANEL_ROOT/.stack/config.nix'
 00064| export STACKPANEL_REMOTE_BUILDER_HOST=100.102.113.26
-00065| export STACKPANEL_ROOT_DIR_NAME=.stackpanel
-00066| export STACKPANEL_ROOT_MARKER=.stackpanel-root
+00065| export STACKPANEL_ROOT_DIR_NAME=.stack
+00066| export STACKPANEL_ROOT_MARKER=.stack-root
 00067| export STACKPANEL_SERVICES_CONFIG='[{"key":"MINIO","name":"Minio","port":6498},{"key":"MINIO_CONSOLE","name":"Minio Console","port":6436},{"key":"POSTGRES","name":"PostgreSQL","port":6404},{"key":"REDIS","name":"Redis","port":6494}]'
 00068| export STACKPANEL_STABLE_PORT=6400
-00069| export URL_DOCS=https://docs.stackpanel.lan
-00070| export URL_WEB=https://stackpanel.stackpanel.lan
+00069| export URL_DOCS=https://docs.stack.lan
+00070| export URL_WEB=https://stack.stack.lan
 00071| export __STACKPANEL_CLEAN_ENV=''
 00072| 
 00073|   # Add language bin directories to PATH (replaces devenv's enterShell PATH modifications)
@@ -1870,7 +1870,7 @@ Tool: read
 00079|     export PATH="$CARGO_HOME/bin:$PATH"
 00080|   fi
 00081| 
-00082|   # Stackpanel hooks (all output automatically goes to stderr)
+00082|   # Stack hooks (all output automatically goes to stderr)
 00083|   # Clean up stale git hooks that reference garbage-collected nix store paths
 00084| _cleanup_stale_git_hooks() {
 00085|   local git_dir hooks_dir
@@ -1913,7 +1913,7 @@ Tool: read
 00122| export AWS_CONFIG_FILE=/nix/store/13yqr93hm27784x31l0vmf6aaa82vik1-aws-config
 00123| export AWS_REGION=us-west-2
 00124| export AWS_SHARED_CREDENTIALS_FILE=/dev/null
-00125| export CHAMBER_KMS_KEY_ALIAS=alias/stackpanel-secrets
+00125| export CHAMBER_KMS_KEY_ALIAS=alias/stack-secrets
 00126| export DATABASE_URL='postgresql://postgres@localhost:6404/postgres?host=$HOME/.local/share/devservices/postgres'
 00127| export GOROOT=/nix/store/rwzizip34lp556kmagcfw0fszch22x0k-go-1.25.6/share/go/
 00128| export GOTOOLCHAIN=local
@@ -1941,20 +1941,20 @@ Tool: read
 00150| export STACKPANEL_ALIAS_FUNC='# Internal helper shared by shortcuts
 00151| _stackpanel_commands_runner() {
 00152|   if [ $# -eq 0 ]; then
-00153|   stackpanel commands list
+00153|   stack commands list
 00154| else
-00155|   stackpanel commands "$@"
+00155|   stack commands "$@"
 00156| fi
 00157| 
 00158| }
 00159| 
-00160| # Stackpanel command shortcut: x
+00160| # Stack command shortcut: x
 00161| x() {
 00162|   _stackpanel_commands_runner "$@"
 00163| }
 00164| 
-00165| # Short alias for the stackpanel CLI
-00166| alias sp="stackpanel"
+00165| # Short alias for the stack CLI
+00166| alias sp="stack"
 00167| 
 00168| # Explicit commands runner shortcut
 00169| spx() {
@@ -1963,16 +1963,16 @@ Tool: read
 00172| '
 00173| export STACKPANEL_CLEAN_IMPURE=0
 00174| export STACKPANEL_CLEAN_MODE=0
-00175| export STACKPANEL_CONFIG_JSON=/nix/store/0spc4rfa1lm9vzclkww00qmbq69xkv73-stackpanel-config.json
-00176| export STACKPANEL_INFRA_INPUTS=.stackpanel/state/infra-inputs.json
-00177| export STACKPANEL_NIX_CONFIG='$STACKPANEL_ROOT/.stackpanel/config.nix'
+00175| export STACKPANEL_CONFIG_JSON=/nix/store/0spc4rfa1lm9vzclkww00qmbq69xkv73-stack-config.json
+00176| export STACKPANEL_INFRA_INPUTS=.stack/state/infra-inputs.json
+00177| export STACKPANEL_NIX_CONFIG='$STACKPANEL_ROOT/.stack/config.nix'
 00178| export STACKPANEL_REMOTE_BUILDER_HOST=100.102.113.26
-00179| export STACKPANEL_ROOT_DIR_NAME=.stackpanel
-00180| export STACKPANEL_ROOT_MARKER=.stackpanel-root
+00179| export STACKPANEL_ROOT_DIR_NAME=.stack
+00180| export STACKPANEL_ROOT_MARKER=.stack-root
 00181| export STACKPANEL_SERVICES_CONFIG='[{"key":"MINIO","name":"Minio","port":6498},{"key":"MINIO_CONSOLE","name":"Minio Console","port":6436},{"key":"POSTGRES","name":"PostgreSQL","port":6404},{"key":"REDIS","name":"Redis","port":6494}]'
 00182| export STACKPANEL_STABLE_PORT=6400
-00183| export URL_DOCS=https://docs.stackpanel.lan
-00184| export URL_WEB=https://stackpanel.stackpanel.lan
+00183| export URL_DOCS=https://docs.stack.lan
+00184| export URL_WEB=https://stack.stack.lan
 00185| export __STACKPANEL_CLEAN_ENV=''
 00186| 
 00187| # Unset conflicting aliases
@@ -1981,10 +1981,10 @@ Tool: read
 00190| 
 00191| set -euo pipefail
 00192| 
-00193| # Stackpanel path utilities
+00193| # Stack path utilities
 00194| stackpanel_find_root() {
 00195|   local dir="$PWD"
-00196|   local marker=".stackpanel-root"
+00196|   local marker=".stack-root"
 00197| 
 00198|   # First, try to find the marker file by walking up the directory tree
 00199|   while [[ "$dir" != "/" ]]; do
@@ -2022,7 +2022,7 @@ Tool: read
 00231|     dir="$(dirname "$dir")"
 00232|   done
 00233| 
-00234|   echo "Error: Could not find stackpanel root (no $marker, git repo, or flake.nix found)" >&2
+00234|   echo "Error: Could not find stack root (no $marker, git repo, or flake.nix found)" >&2
 00235|   return 1
 00236| }
 00237| 
@@ -2032,22 +2032,22 @@ Tool: read
 00241|     return 1
 00242|   fi
 00243|   if [[ ! -d "$root" ]]; then
-00244|     echo "Error: Resolved stackpanel root is not a directory: $root"
-00245|     echo "You may need to run on your stackpanel root dir:"
+00244|     echo "Error: Resolved stack root is not a directory: $root"
+00245|     echo "You may need to run on your stack root dir:"
 00246|     echo
-00247|     echo "    echo \"\$PWD\" > .stackpanel-root"
+00247|     echo "    echo \"\$PWD\" > .stack-root"
 00248|     echo
 00249|     return 1
 00250|   fi
 00251|   export STACKPANEL_ROOT="$root"
-00252|   export STACKPANEL_ROOT_DIR="$root/.stackpanel"
-00253|   export STACKPANEL_STATE_DIR="$root/.stackpanel/state"
-00254|   export STACKPANEL_GEN_DIR="$root/.stackpanel/gen"
+00252|   export STACKPANEL_ROOT_DIR="$root/.stack"
+00253|   export STACKPANEL_STATE_DIR="$root/.stack/state"
+00254|   export STACKPANEL_GEN_DIR="$root/.stack/gen"
 00255| }
 00256| 
 00257| 
 00258| 
-00259| # If stackpanel.root was provided, prefer it; otherwise resolve via marker walking
+00259| # If stack.root was provided, prefer it; otherwise resolve via marker walking
 00260| if [[ -n "${STACKPANEL_ROOT:-}" ]]; then
 00261|   stackpanel_resolve_paths "$STACKPANEL_ROOT"
 00262| else
@@ -2063,8 +2063,8 @@ Tool: read
 00272| # fi
 00273| 
 00274| # Ensure marker exists at repo root
-00275| if [[ ! -f "$STACKPANEL_ROOT/.stackpanel-root" ]]; then
-00276|   echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/.stackpanel-root"
+00275| if [[ ! -f "$STACKPANEL_ROOT/.stack-root" ]]; then
+00276|   echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/.stack-root"
 00277| fi
 00278| 
 00279| # Compute shell freshness hash from config files
@@ -2073,7 +2073,7 @@ Tool: read
 00282|   local files=(
 00283|     "$STACKPANEL_ROOT/flake.nix"
 00284|     "$STACKPANEL_ROOT/flake.lock"
-00285|     "$STACKPANEL_ROOT/.stackpanel/config.nix"
+00285|     "$STACKPANEL_ROOT/.stack/config.nix"
 00286|     "$STACKPANEL_ROOT/devenv.nix"
 00287|     "$STACKPANEL_ROOT/devenv.yaml"
 00288|   )
@@ -2097,11 +2097,11 @@ Tool: read
 00306|   echo "⚠️  STACKPANEL_CONFIG_OVERRIDE is set - config.local.nix is preferred for local development" >&2
 00307| fi
 00308| 
-00309| # Generate stackpanel files via CLI
+00309| # Generate stack files via CLI
 00310| # Read config from nix store, replace $STACKPANEL_ROOT with actual value
-00311| export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/stackpanel.json"
-00312| _sp_config=$(cat /nix/store/0spc4rfa1lm9vzclkww00qmbq69xkv73-stackpanel-config.json | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
-00313| echo "$_sp_config" | /nix/store/q3dl70gg26y206cyw1lw2z1dnfnm8pfx-stackpanel-0.1.0/bin/stackpanel hook 
+00311| export STACKPANEL_STATE_FILE="$STACKPANEL_STATE_DIR/stack.json"
+00312| _sp_config=$(cat /nix/store/0spc4rfa1lm9vzclkww00qmbq69xkv73-stack-config.json | sed "s|\\\$STACKPANEL_ROOT|$STACKPANEL_ROOT|g")
+00313| echo "$_sp_config" | /nix/store/q3dl70gg26y206cyw1lw2z1dnfnm8pfx-stack-0.1.0/bin/stack hook 
 00314| 
 00315| # Write the state file for Go agent/CLI consumption
 00316| mkdir -p "$STACKPANEL_STATE_DIR"
@@ -2115,12 +2115,12 @@ Tool: read
 00324| #
 00325| # Precedence (first non-empty wins):
 00326| #   1. Environment variable: STACKPANEL_<PATH_IN_UPPER_SNAKE>
-00327| #   2. CLI query: stackpanel config get <path>
+00327| #   2. CLI query: stack config get <path>
 00328| #   3. Default: passed as second argument
 00329| #
 00330| # Usage:
-00331| #   STATE_DIR=$(sp_get "paths.state" ".stackpanel/state")
-00332| #   KEYS_DIR=$(sp_get "paths.keys" ".stackpanel/state/keys")
+00331| #   STATE_DIR=$(sp_get "paths.state" ".stack/state")
+00332| #   KEYS_DIR=$(sp_get "paths.keys" ".stack/state/keys")
 00333| #
 00334| # ==========================================================================
 00335| sp_get() {
@@ -2140,14 +2140,14 @@ Tool: read
 00349|     return 0
 00350|   fi
 00351|   
-00352|   # Try CLI query (if stackpanel is available)
-00353|   # NOTE: Disabled until 'stackpanel config get' subcommand is implemented.
-00354|   # Currently 'stackpanel config' only has 'check' and 'sync', so
-00355|   # 'stackpanel config get <path>' returns Cobra help text (exit 0)
+00352|   # Try CLI query (if stack is available)
+00353|   # NOTE: Disabled until 'stack config get' subcommand is implemented.
+00354|   # Currently 'stack config' only has 'check' and 'sync', so
+00355|   # 'stack config get <path>' returns Cobra help text (exit 0)
 00356|   # which gets captured as the value, causing shell entry failures.
-00357|   # if command -v stackpanel &>/dev/null; then
+00357|   # if command -v stack &>/dev/null; then
 00358|   #   local cli_val
-00359|   #   if cli_val=$(stackpanel config get "$path" 2>/dev/null) && [[ -n "$cli_val" ]]; then
+00359|   #   if cli_val=$(stack config get "$path" 2>/dev/null) && [[ -n "$cli_val" ]]; then
 00360|   #     echo "$cli_val"
 00361|   #     return 0
 00362|   #   fi
@@ -2158,12 +2158,12 @@ Tool: read
 00367| }
 00368| 
 00369| 
-00370|     STATE_DIR=$(sp_get "paths.state" ".stackpanel/state")
-00371|     KEYS_DIR=$(sp_get "paths.keys" ".stackpanel/state/keys")
-00372|     LOCAL_KEY=$(sp_get "paths.local-key" ".stackpanel/state/keys/local.txt")
-00373|     LOCAL_PUB=$(sp_get "paths.local-pub" ".stackpanel/state/keys/local.pub")
-00374|     RECIPIENTS_DIR=$(sp_get "secrets.recipients-dir" ".stackpanel/secrets/recipients")
-00375|     ARCHIVE_DIR=$(sp_get "secrets.recipients-archive-dir" ".stackpanel/secrets/recipients/.archive")
+00370|     STATE_DIR=$(sp_get "paths.state" ".stack/state")
+00371|     KEYS_DIR=$(sp_get "paths.keys" ".stack/state/keys")
+00372|     LOCAL_KEY=$(sp_get "paths.local-key" ".stack/state/keys/local.txt")
+00373|     LOCAL_PUB=$(sp_get "paths.local-pub" ".stack/state/keys/local.pub")
+00374|     RECIPIENTS_DIR=$(sp_get "secrets.recipients-dir" ".stack/secrets/recipients")
+00375|     ARCHIVE_DIR=$(sp_get "secrets.recipients-archive-dir" ".stack/secrets/recipients/.archive")
 00376| 
 00377|     # ── Step 1: Generate local key if it doesn't exist (first time only) ──
 00378|     if [[ ! -f "$LOCAL_KEY" ]]; then
@@ -2266,7 +2266,7 @@ Tool: read
 00475|   cat > "$RECIPIENTS_SOPS_YAML" << SOPSEOF
 00476| # SOPS configuration for group encryption keys
 00477| #
-00478| # Auto-generated by stackpanel from .stackpanel/secrets/recipients/**/*.{age,ed25519}.pub
+00478| # Auto-generated by stack from .stack/secrets/recipients/**/*.{age,ed25519}.pub
 00479| # DO NOT EDIT - changes will be overwritten on devshell entry.
 00480| # To add recipients, add .age.pub or .ed25519.pub files to a recipient group
 00481| # directory (e.g., recipients/team/) and re-enter the devshell.
@@ -2315,12 +2315,12 @@ Tool: read
 00524| #
 00525| # Precedence (first non-empty wins):
 00526| #   1. Environment variable: STACKPANEL_<PATH_IN_UPPER_SNAKE>
-00527| #   2. CLI query: stackpanel config get <path>
+00527| #   2. CLI query: stack config get <path>
 00528| #   3. Default: passed as second argument
 00529| #
 00530| # Usage:
-00531| #   STATE_DIR=$(sp_get "paths.state" ".stackpanel/state")
-00532| #   KEYS_DIR=$(sp_get "paths.keys" ".stackpanel/state/keys")
+00531| #   STATE_DIR=$(sp_get "paths.state" ".stack/state")
+00532| #   KEYS_DIR=$(sp_get "paths.keys" ".stack/state/keys")
 00533| #
 00534| # ==========================================================================
 00535| sp_get() {
@@ -2340,14 +2340,14 @@ Tool: read
 00549|     return 0
 00550|   fi
 00551|   
-00552|   # Try CLI query (if stackpanel is available)
-00553|   # NOTE: Disabled until 'stackpanel config get' subcommand is implemented.
-00554|   # Currently 'stackpanel config' only has 'check' and 'sync', so
-00555|   # 'stackpanel config get <path>' returns Cobra help text (exit 0)
+00552|   # Try CLI query (if stack is available)
+00553|   # NOTE: Disabled until 'stack config get' subcommand is implemented.
+00554|   # Currently 'stack config' only has 'check' and 'sync', so
+00555|   # 'stack config get <path>' returns Cobra help text (exit 0)
 00556|   # which gets captured as the value, causing shell entry failures.
-00557|   # if command -v stackpanel &>/dev/null; then
+00557|   # if command -v stack &>/dev/null; then
 00558|   #   local cli_val
-00559|   #   if cli_val=$(stackpanel config get "$path" 2>/dev/null) && [[ -n "$cli_val" ]]; then
+00559|   #   if cli_val=$(stack config get "$path" 2>/dev/null) && [[ -n "$cli_val" ]]; then
 00560|   #     echo "$cli_val"
 00561|   #     return 0
 00562|   #   fi
@@ -2358,7 +2358,7 @@ Tool: read
 00567| }
 00568| 
 00569| 
-00570|     VARS_DIR=$(sp_get "secrets.vars-dir" ".stackpanel/secrets/vars")
+00570|     VARS_DIR=$(sp_get "secrets.vars-dir" ".stack/secrets/vars")
 00571|     GROUPS_JSON='{"dev":"age1783kahlc7yxv2md9vtpx4wq899csvqxty03fatcs5s7lqfh5334s6p7r0l","prod":"age1tvczw6y7g4v0ma7cn05adrnst9jnnsh9j8ge0t0flls8ucq5yg9qe37jhe"}'
 00572| 
 00573|     mkdir -p "$VARS_DIR"
@@ -2370,7 +2370,7 @@ Tool: read
 00579| 
 00580|     # Build expected content
 00581|     EXPECTED="# Auto-generated from config.nix — DO NOT EDIT.
-00582| # Group public keys are defined in stackpanel.secrets.groups.<name>.age-pub.
+00582| # Group public keys are defined in stack.secrets.groups.<name>.age-pub.
 00583| # To change a group key, update config.nix and re-enter the devshell.
 00584| #
 00585| # Values preceded by a '# safe' comment are stored in plaintext.
@@ -2423,7 +2423,7 @@ Tool: read
 00632| 
 00633| 
 00634| (
-00635| SECRETS_STATE_DIR=".stackpanel/secrets/state"
+00635| SECRETS_STATE_DIR=".stack/secrets/state"
 00636| mkdir -p "$SECRETS_STATE_DIR"
 00637| MANIFEST_FILE="$SECRETS_STATE_DIR/manifest.json"
 00638| MANIFEST_CONTENT='{"groups":{"common":{"initialized":false,"keyedTo":"all-group-keys"},"dev":{"initialized":true}},"keysByGroup":{"dev":["openrouter-api-key","test-api-key"]}}'
@@ -2523,7 +2523,7 @@ Tool: read
 00732| # syntax: bash
 00733| # Set the config path for starship
 00734| # Use STACKPANEL_STATE_DIR (native) or DEVENV_STATE (devenv)
-00735| _starship_state_dir="${STACKPANEL_STATE_DIR:-${DEVENV_STATE:-$PWD/.stackpanel/state}}"
+00735| _starship_state_dir="${STACKPANEL_STATE_DIR:-${DEVENV_STATE:-$PWD/.stack/state}}"
 00736| mkdir -p "$_starship_state_dir"
 00737| 
 00738| if [[ -n "/nix/store/v5jf98cyrj8jryvl24pvgw3xrjgyr45a-starship-config/starship.toml" ]]; then
@@ -2541,7 +2541,7 @@ Tool: read
 00750| 
 00751| 
 00752| # JavaScript toolchain: auto-install bun dependencies
-00753| source /nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stackpanel-bun-install
+00753| source /nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stack-bun-install
 00754| 
 00755| 
 00756| # JavaScript toolchain: add node_modules/.bin to PATH
@@ -2549,7 +2549,7 @@ Tool: read
 00758| 
 00759| 
 00760| # Go toolchain: set GOPATH and add $GOPATH/bin to PATH
-00761| export GOPATH="${STACKPANEL_STATE_DIR:-.stackpanel/state}/go"
+00761| export GOPATH="${STACKPANEL_STATE_DIR:-.stack/state}/go"
 00762| export PATH="$GOPATH/bin:$PATH"
 00763| 
 00764| 
@@ -2594,7 +2594,7 @@ Tool: read
 00803| 
 00804| 
 00805| 
-00806| echo "📜 stackpanel scripts loaded"
+00806| echo "📜 stack scripts loaded"
 00807| 
 00808| 
 00809| # ================================================================
@@ -2612,19 +2612,19 @@ Tool: read
 00821| /nix/store/sxlhyhff0wssy2ajniqki2nzwjvxqkw6-write-files/bin/write-files
 00822| 
 00823| 
-00824| echo "Stackpanel development environment"
+00824| echo "Stack development environment"
 00825| 
 00826| 
 00827| # Display port information
 00828| if [[ -z "${STACKPANEL_QUIET:-}" ]]; then
 00829|   echo "" >&2
-00830|   echo "📦 Stackpanel Ports (project: stackpanel)" >&2
+00830|   echo "📦 Stack Ports (project: stack)" >&2
 00831|   echo "   Stable port: 6400" >&2
 00832|   echo "" >&2
 00833| echo "   Apps:" >&2
-00834| echo "     docs: 5738 -> https://docs.stackpanel.lan" >&2
-00835| echo "     stackpanel-go: 5797" >&2
-00836| echo "     web: 5775 -> https://stackpanel.stackpanel.lan" >&2
+00834| echo "     docs: 5738 -> https://docs.stack.lan" >&2
+00835| echo "     stack-go: 5797" >&2
+00836| echo "     web: 5775 -> https://stack.stack.lan" >&2
 00837| 
 00838| 
 00839|   echo "" >&2
@@ -2642,46 +2642,46 @@ Tool: read
 00851| 
 00852| 
 00853| 
-00854| /nix/store/dq0aysv78iwa2yyh72nl6a0533m7aw4b-stackpanel-gc-update
+00854| /nix/store/dq0aysv78iwa2yyh72nl6a0533m7aw4b-stack-gc-update
 00855| 
 00856| 
 00857| if [[ -n "${STACKPANEL_STATE_DIR:-}" ]]; then
 00858|   
-00859|   ln -sfn "/nix/store/2rkgvs5b8g0d3sqgcca96bwz9f914yry-stackpanel-profile" "$STACKPANEL_STATE_DIR/profile"
+00859|   ln -sfn "/nix/store/2rkgvs5b8g0d3sqgcca96bwz9f914yry-stack-profile" "$STACKPANEL_STATE_DIR/profile"
 00860| fi
 00861| 
 00862| 
-00863| /nix/store/f9kqq7zhm3qqn0i6x818yqch84ky73kw-stackpanel-generate-bin
+00863| /nix/store/f9kqq7zhm3qqn0i6x818yqch84ky73kw-stack-generate-bin
 00864| 
 00865| # Register Caddy site for docs
-00866| # Generate Step CA certificate for docs.stackpanel.lan if needed
-00867| _step_cert="$HOME/.step/certs/docs.stackpanel.lan.crt"
-00868| _step_key="$HOME/.step/certs/docs.stackpanel.lan.key"
+00866| # Generate Step CA certificate for docs.stack.lan if needed
+00867| _step_cert="$HOME/.step/certs/docs.stack.lan.crt"
+00868| _step_key="$HOME/.step/certs/docs.stack.lan.key"
 00869| if [ ! -f "$_step_cert" ] || [ ! -f "$_step_key" ]; then
-00870|   step ca certificate "docs.stackpanel.lan" "$_step_cert" "$_step_key" \
+00870|   step ca certificate "docs.stack.lan" "$_step_cert" "$_step_key" \
 00871|     --ca-url "https://ca.internal:443" \
 00872|     --provisioner "Authentik" \
 00873|     --not-after 720h \
 00874|     --force 2>/dev/null || true
 00875| fi
 00876| 
-00877| /nix/store/jkccqyrsa8wjs7rcsxh3kfxc0djb4iwf-caddy-add-site/bin/caddy-add-site "docs.stackpanel.lan" "localhost:6400" --project "stackpanel" --tls-cert "$HOME/.step/certs/docs.stackpanel.lan.crt" --tls-key "$HOME/.step/certs/docs.stackpanel.lan.key" 2>/dev/null || true
+00877| /nix/store/jkccqyrsa8wjs7rcsxh3kfxc0djb4iwf-caddy-add-site/bin/caddy-add-site "docs.stack.lan" "localhost:6400" --project "stack" --tls-cert "$HOME/.step/certs/docs.stack.lan.crt" --tls-key "$HOME/.step/certs/docs.stack.lan.key" 2>/dev/null || true
 00878| # Register Caddy site for web
-00879| # Generate Step CA certificate for stackpanel.stackpanel.lan if needed
-00880| _step_cert="$HOME/.step/certs/stackpanel.stackpanel.lan.crt"
-00881| _step_key="$HOME/.step/certs/stackpanel.stackpanel.lan.key"
+00879| # Generate Step CA certificate for stack.stack.lan if needed
+00880| _step_cert="$HOME/.step/certs/stack.stack.lan.crt"
+00881| _step_key="$HOME/.step/certs/stack.stack.lan.key"
 00882| if [ ! -f "$_step_cert" ] || [ ! -f "$_step_key" ]; then
-00883|   step ca certificate "stackpanel.stackpanel.lan" "$_step_cert" "$_step_key" \
+00883|   step ca certificate "stack.stack.lan" "$_step_cert" "$_step_key" \
 00884|     --ca-url "https://ca.internal:443" \
 00885|     --provisioner "Authentik" \
 00886|     --not-after 720h \
 00887|     --force 2>/dev/null || true
 00888| fi
 00889| 
-00890| /nix/store/jkccqyrsa8wjs7rcsxh3kfxc0djb4iwf-caddy-add-site/bin/caddy-add-site "stackpanel.stackpanel.lan" "localhost:6402" --project "stackpanel" --tls-cert "$HOME/.step/certs/stackpanel.stackpanel.lan.crt" --tls-key "$HOME/.step/certs/stackpanel.stackpanel.lan.key" 2>/dev/null || true
+00890| /nix/store/jkccqyrsa8wjs7rcsxh3kfxc0djb4iwf-caddy-add-site/bin/caddy-add-site "stack.stack.lan" "localhost:6402" --project "stack" --tls-cert "$HOME/.step/certs/stack.stack.lan.crt" --tls-key "$HOME/.step/certs/stack.stack.lan.key" 2>/dev/null || true
 00891| 
 00892| 
-00893| echo "✅ Stackpanel Nix module system initialized"
+00893| echo "✅ Stack Nix module system initialized"
 00894| 
 00895| 
 00896| 
@@ -2699,10 +2699,10 @@ Tool: read
 00908| fi
 00909| 
 00910| 
-00911| echo "stackpanel core initialized"
+00911| echo "stack core initialized"
 00912| # Display MOTD if enabled
-00913| if command -v stackpanel &> /dev/null; then
-00914|   stackpanel motd
+00913| if command -v stack &> /dev/null; then
+00914|   stack motd
 00915| fi
 00916| 
 00917| # Log completion
@@ -2710,7 +2710,7 @@ Tool: read
 00919|   echo ""
 00920|   echo "═══════════════════════════════════════════════════════════════"
 00921|   echo "Shell hook completed at $(date '+%Y-%m-%d %H:%M:%S')"
-00922|   echo "Log saved to: ${STACKPANEL_STATE_DIR:-$PWD/.stackpanel/state}/shell.log"
+00922|   echo "Log saved to: ${STACKPANEL_STATE_DIR:-$PWD/.stack/state}/shell.log"
 00923|   echo "═══════════════════════════════════════════════════════════════"
 00924| fi
 00925| 
@@ -2718,19 +2718,19 @@ Tool: read
 00927| 
 00928| # Run the hook with all output to stderr (so direnv doesn't capture/evaluate it)
 00929| # Optionally tee to log file if state dir exists
-00930| if [[ -d "${STACKPANEL_STATE_DIR:-.stackpanel/state}" ]] 2>/dev/null; then
+00930| if [[ -d "${STACKPANEL_STATE_DIR:-.stack/state}" ]] 2>/dev/null; then
 00931|   CLICOLOR_FORCE=1 \
 00932|   FORCE_COLOR=3 \
 00933|   COLORTERM=truecolor \
 00934|   __stackpanel_shell_hook_main 2> \
-00935|       >(tee -a "${STACKPANEL_STATE_DIR:-.stackpanel/state}/shell.log" >&2) \
+00935|       >(tee -a "${STACKPANEL_STATE_DIR:-.stack/state}/shell.log" >&2) \
 00936|     || status=$?
 00937| else
 00938|   __stackpanel_shell_hook_main >&2 \
 00939|     || status=$?
 00940| fi
 00941| if [[ $status -ne 0 ]]; then
-00942|   echo "❌ Stackpanel shell hook exited with status $status" >&2
+00942|   echo "❌ Stack shell hook exited with status $status" >&2
 00943|   exit $status
 00944| fi
 00945| 
@@ -2755,7 +2755,7 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure -vvvv -c true",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 45000,
   "description": "Reproduce verbose nix develop hang"
 }
@@ -2765,11 +2765,11 @@ Tool: bash
 Nix (Determinate Nix 3.15.2) 2.33.1
 executor using 24 threads
 evaluating file '«nix-internal»/derivation-internal.nix'
-evaluating derivation 'git+file:///Users/cm/git/darkmatter/stackpanel#devShells.aarch64-darwin.default'...
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+evaluating derivation 'git+file:///Users/cm/git/darkmatter/stack#devShells.aarch64-darwin.default'...
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 using cache entry 'gitLastModified:{"rev":"0d9b21517fc69d2104da23018f5994fbec51f019"}' -> '{"lastModified":1772336252}'
-got tree '/Users/cm/git/darkmatter/stackpanel/' from 'git+file:///Users/cm/git/darkmatter/stackpanel'
-evaluating file '/Users/cm/git/darkmatter/stackpanel/flake.nix'
+got tree '/Users/cm/git/darkmatter/stack/' from 'git+file:///Users/cm/git/darkmatter/stack'
+evaluating file '/Users/cm/git/darkmatter/stack/flake.nix'
 evaluating file '/nix/store/481fmmyjvkm668fjs3j7q3b9fbgkqvi6-source/flake.nix'
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
@@ -3431,18 +3431,18 @@ old lock file: {
         "nix2container": "nix2container",
         "nixpkgs": "nixpkgs",
         "process-compose-flake": "process-compose-flake",
-        "stackpanel-root": "stackpanel-root",
+        "stack-root": "stack-root",
         "treefmt-nix": "treefmt-nix_4"
       }
     },
-    "stackpanel-root": {
+    "stack-root": {
       "flake": false,
       "locked": {
-        "path": "./.stackpanel-root",
+        "path": "./.stack-root",
         "type": "path"
       },
       "original": {
-        "path": "./.stackpanel-root",
+        "path": "./.stack-root",
         "type": "path"
       },
       "parent": []
@@ -3756,9 +3756,9 @@ computing lock file node 'nixpkgs'
 computing input 'process-compose-flake'
 keeping existing input 'process-compose-flake'
 computing lock file node 'process-compose-flake'
-computing input 'stackpanel-root'
-keeping existing input 'stackpanel-root'
-computing lock file node 'stackpanel-root'
+computing input 'stack-root'
+keeping existing input 'stack-root'
+computing lock file node 'stack-root'
 computing input 'treefmt-nix'
 keeping existing input 'treefmt-nix'
 computing lock file node 'treefmt-nix'
@@ -4416,18 +4416,18 @@ new lock file: {
         "nix2container": "nix2container",
         "nixpkgs": "nixpkgs",
         "process-compose-flake": "process-compose-flake",
-        "stackpanel-root": "stackpanel-root",
+        "stack-root": "stack-root",
         "treefmt-nix": "treefmt-nix_4"
       }
     },
-    "stackpanel-root": {
+    "stack-root": {
       "flake": false,
       "locked": {
-        "path": "./.stackpanel-root",
+        "path": "./.stack-root",
         "type": "path"
       },
       "original": {
-        "path": "./.stackpanel-root",
+        "path": "./.stack-root",
         "type": "path"
       },
       "parent": []
@@ -4537,13 +4537,13 @@ Tool: bash
 **Input:**
 ```json
 {
-  "command": "ls -la \"/nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stackpanel-bun-install\"",
+  "command": "ls -la \"/nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stack-bun-install\"",
   "description": "Inspect bun install script store path"
 }
 ```
 **Output:**
 ```
--r-xr-xr-x 1 root wheel 1082 Dec 31  1969 /nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stackpanel-bun-install
+-r-xr-xr-x 1 root wheel 1082 Dec 31  1969 /nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stack-bun-install
 
 ```
 ```
@@ -4558,7 +4558,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stackpanel-bun-install"
+  "filePath": "/nix/store/xhv8fg110hqb2g744jvq129gzv496gpm-stack-bun-install"
 }
 ```
 **Output:**
@@ -4655,13 +4655,13 @@ Tool: read
 00026| # Determine repo root
 00027| ROOT="${STACKPANEL_ROOT:-}"
 00028| if [[ -z "$ROOT" ]]; then
-00029|   echo "ERROR: STACKPANEL_ROOT is not set. (Stackpanel core should set it.)" >&2
+00029|   echo "ERROR: STACKPANEL_ROOT is not set. (Stack core should set it.)" >&2
 00030|   exit 1
 00031| fi
 00032| 
 00033| cd "$ROOT"
 00034| 
-00035| STATE_DIR="${STACKPANEL_STATE_DIR:-$ROOT/.stackpanel/state}"
+00035| STATE_DIR="${STACKPANEL_STATE_DIR:-$ROOT/.stack/state}"
 00036| MANIFEST_FILE="$STATE_DIR/.files-manifest"
 00037| 
 00038| # ── Manifest fast path ──────────────────────────────────────────────
@@ -4678,10 +4678,10 @@ Tool: read
 00049| OLD_MANIFEST="$STATE_DIR/files.json"
 00050| REMOVED_COUNT=0
 00051| if [[ -f "$OLD_MANIFEST" ]]; then
-00052|   CURRENT_PATHS='[".envrc.local",".gitignore",".stackpanel/gen/direnv-wrapper.sh",".stackpanel/gen/vscode/devshell-loader.sh",".stackpanel/gen/zed/devshell-loader.sh",".stackpanel/secrets/README.md",".stackpanel/state/infra-inputs.json",".tasks/bin/alchemy:ensure",".tasks/bin/build",".tasks/bin/clean",".tasks/bin/db:migrate",".tasks/bin/db:push",".tasks/bin/db:studio",".tasks/bin/dev",".tasks/bin/format",".tasks/bin/generate:proto",".tasks/bin/generate:types",".tasks/bin/lint",".tasks/bin/test",".tasks/bin/test:coverage",".tasks/bin/test:watch",".tasks/bin/typecheck",".vscode/settings.json",".zed/settings.json","apps/docs/.oxlintrc.json","apps/web/.oxlintrc.json","apps/web/.tasks/bin/container-build","apps/web/.tasks/bin/container-push","apps/web/.tasks/bin/deploy","apps/web/fly.toml","devshell","packages/gen/env/README.md","packages/gen/env/data/shared/vars.yaml","packages/gen/env/package.json","packages/gen/env/src/entrypoints/docs.ts","packages/gen/env/src/entrypoints/index.ts","packages/gen/env/src/entrypoints/stackpanel-go.ts","packages/gen/env/src/entrypoints/web.ts","packages/gen/env/src/generated/index.ts","packages/gen/env/src/generated/stackpanel-go/dev.ts","packages/gen/env/src/generated/stackpanel-go/index.ts","packages/gen/env/src/generated/web/dev.ts","packages/gen/env/src/generated/web/index.ts","packages/gen/env/src/index.ts","packages/gen/env/tsconfig.json","packages/infra/README.md","packages/infra/alchemy.run.ts","packages/infra/modules/aws-secrets/index.ts","packages/infra/modules/aws-secrets/policies.ts","packages/infra/modules/database.ts","packages/infra/modules/deployment.ts","packages/infra/package.json","packages/infra/src/index.ts","packages/infra/src/resources/iam-role.ts","packages/infra/src/resources/kms-alias.ts","packages/infra/src/resources/kms-key.ts","packages/infra/src/types.ts","packages/infra/sst.config.ts","packages/infra/tsconfig.json","packages/infra/turbo.json","packages/scripts/entrypoints/docs.sh","packages/scripts/entrypo...
+00052|   CURRENT_PATHS='[".envrc.local",".gitignore",".stack/gen/direnv-wrapper.sh",".stack/gen/vscode/devshell-loader.sh",".stack/gen/zed/devshell-loader.sh",".stack/secrets/README.md",".stack/state/infra-inputs.json",".tasks/bin/alchemy:ensure",".tasks/bin/build",".tasks/bin/clean",".tasks/bin/db:migrate",".tasks/bin/db:push",".tasks/bin/db:studio",".tasks/bin/dev",".tasks/bin/format",".tasks/bin/generate:proto",".tasks/bin/generate:types",".tasks/bin/lint",".tasks/bin/test",".tasks/bin/test:coverage",".tasks/bin/test:watch",".tasks/bin/typecheck",".vscode/settings.json",".zed/settings.json","apps/docs/.oxlintrc.json","apps/web/.oxlintrc.json","apps/web/.tasks/bin/container-build","apps/web/.tasks/bin/container-push","apps/web/.tasks/bin/deploy","apps/web/fly.toml","devshell","packages/gen/env/README.md","packages/gen/env/data/shared/vars.yaml","packages/gen/env/package.json","packages/gen/env/src/entrypoints/docs.ts","packages/gen/env/src/entrypoints/index.ts","packages/gen/env/src/entrypoints/stack-go.ts","packages/gen/env/src/entrypoints/web.ts","packages/gen/env/src/generated/index.ts","packages/gen/env/src/generated/stack-go/dev.ts","packages/gen/env/src/generated/stack-go/index.ts","packages/gen/env/src/generated/web/dev.ts","packages/gen/env/src/generated/web/index.ts","packages/gen/env/src/index.ts","packages/gen/env/tsconfig.json","packages/infra/README.md","packages/infra/alchemy.run.ts","packages/infra/modules/aws-secrets/index.ts","packages/infra/modules/aws-secrets/policies.ts","packages/infra/modules/database.ts","packages/infra/modules/deployment.ts","packages/infra/package.json","packages/infra/src/index.ts","packages/infra/src/resources/iam-role.ts","packages/infra/src/resources/kms-alias.ts","packages/infra/src/resources/kms-key.ts","packages/infra/src/types.ts","packages/infra/sst.config.ts","packages/infra/tsconfig.json","packages/infra/turbo.json","packages/scripts/entrypoints/docs.sh","packages/scripts/entrypo...
 00053| 
 00054|   # Extract old file entries from the manifest (path + managed mode + markers)
-00055|   OLD_ENTRIES=$(jq -r '.files[] | "\(.path)\t\(.managed // "full")\t\(.commentPrefix // "#")\t\(.blockLabel // "stackpanel")"' "$OLD_MANIFEST" 2>/dev/null) || OLD_ENTRIES=""
+00055|   OLD_ENTRIES=$(jq -r '.files[] | "\(.path)\t\(.managed // "full")\t\(.commentPrefix // "#")\t\(.blockLabel // "stack")"' "$OLD_MANIFEST" 2>/dev/null) || OLD_ENTRIES=""
 00056| 
 00057|   while IFS=$'\t' read -r old_path old_managed old_comment_prefix old_block_label; do
 00058|     [[ -z "$old_path" ]] && continue
@@ -4758,9 +4758,9 @@ Tool: read
 00129| # .gitignore (line-set, block-managed)
 00130| _src=/nix/store/3hchjcdcc1mrwdwa3r9fihhl27fc6r8c-gitignore
 00131| _dst=.gitignore
-00132| _begin_marker='# ── BEGIN stackpanel ──'
-00133| _end_marker='# ── END stackpanel ──'
-00134| _no_edit='# DO NOT EDIT between these markers — managed by stackpanel'
+00132| _begin_marker='# ── BEGIN stack ──'
+00133| _end_marker='# ── END stack ──'
+00134| _no_edit='# DO NOT EDIT between these markers — managed by stack'
 00135| 
 00136| # Build the full managed block (markers + content)
 00137| _block_content="$(printf '%s\n%s\n%s%s' "$_begin_marker" "$_no_edit" "$(cat "$_src")" "$_end_marker")"
@@ -4810,84 +4810,84 @@ Tool: read
 00181|   fi
 00182| fi
 00183| 
-00184| # .stackpanel/gen/direnv-wrapper.sh (text)
+00184| # .stack/gen/direnv-wrapper.sh (text)
 00185| _src=/nix/store/3h1dh5aj8agghlrs4acsrdkps5vb5cij-direnv-wrapper.sh
-00186| _dst=.stackpanel/gen/direnv-wrapper.sh
+00186| _dst=.stack/gen/direnv-wrapper.sh
 00187| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00188|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00189|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00190|     echo "  skip .stackpanel/gen/direnv-wrapper.sh (unchanged)"
+00190|     echo "  skip .stack/gen/direnv-wrapper.sh (unchanged)"
 00191|   fi
 00192| else
 00193|   mkdir -p "$(dirname "$_dst")"
 00194|   cat "$_src" > "$_dst"
 00195|   chmod 0755 "$_dst"
 00196|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00197|   echo "  write .stackpanel/gen/direnv-wrapper.sh"
+00197|   echo "  write .stack/gen/direnv-wrapper.sh"
 00198| fi
 00199| 
-00200| # .stackpanel/gen/vscode/devshell-loader.sh (derivation)
+00200| # .stack/gen/vscode/devshell-loader.sh (derivation)
 00201| _src=/nix/store/1jjiqm5f9q9vqkyxgmk95lh6xxqhrg0z-devshell-loader.sh
-00202| _dst=.stackpanel/gen/vscode/devshell-loader.sh
+00202| _dst=.stack/gen/vscode/devshell-loader.sh
 00203| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00204|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00205|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00206|     echo "  skip .stackpanel/gen/vscode/devshell-loader.sh (unchanged)"
+00206|     echo "  skip .stack/gen/vscode/devshell-loader.sh (unchanged)"
 00207|   fi
 00208| else
 00209|   mkdir -p "$(dirname "$_dst")"
 00210|   cat "$_src" > "$_dst"
 00211|   chmod 0755 "$_dst"
 00212|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00213|   echo "  write .stackpanel/gen/vscode/devshell-loader.sh"
+00213|   echo "  write .stack/gen/vscode/devshell-loader.sh"
 00214| fi
 00215| 
-00216| # .stackpanel/gen/zed/devshell-loader.sh (derivation)
+00216| # .stack/gen/zed/devshell-loader.sh (derivation)
 00217| _src=/nix/store/1jjiqm5f9q9vqkyxgmk95lh6xxqhrg0z-devshell-loader.sh
-00218| _dst=.stackpanel/gen/zed/devshell-loader.sh
+00218| _dst=.stack/gen/zed/devshell-loader.sh
 00219| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00220|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00221|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00222|     echo "  skip .stackpanel/gen/zed/devshell-loader.sh (unchanged)"
+00222|     echo "  skip .stack/gen/zed/devshell-loader.sh (unchanged)"
 00223|   fi
 00224| else
 00225|   mkdir -p "$(dirname "$_dst")"
 00226|   cat "$_src" > "$_dst"
 00227|   chmod 0755 "$_dst"
 00228|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00229|   echo "  write .stackpanel/gen/zed/devshell-loader.sh"
+00229|   echo "  write .stack/gen/zed/devshell-loader.sh"
 00230| fi
 00231| 
-00232| # .stackpanel/secrets/README.md (text)
+00232| # .stack/secrets/README.md (text)
 00233| _src=/nix/store/l2v5qk2pi9qkphaay3am4fsr70gl6q3h-README.md
-00234| _dst=.stackpanel/secrets/README.md
+00234| _dst=.stack/secrets/README.md
 00235| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00236|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00237|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00238|     echo "  skip .stackpanel/secrets/README.md (unchanged)"
+00238|     echo "  skip .stack/secrets/README.md (unchanged)"
 00239|   fi
 00240| else
 00241|   mkdir -p "$(dirname "$_dst")"
 00242|   cat "$_src" > "$_dst"
 00243|   
 00244|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00245|   echo "  write .stackpanel/secrets/README.md"
+00245|   echo "  write .stack/secrets/README.md"
 00246| fi
 00247| 
-00248| # .stackpanel/state/infra-inputs.json (text)
+00248| # .stack/state/infra-inputs.json (text)
 00249| _src=/nix/store/gclyknwaf9shg4w1hsrj2pwgvkksfsng-infra-inputs.json
-00250| _dst=.stackpanel/state/infra-inputs.json
+00250| _dst=.stack/state/infra-inputs.json
 00251| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00252|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00253|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00254|     echo "  skip .stackpanel/state/infra-inputs.json (unchanged)"
+00254|     echo "  skip .stack/state/infra-inputs.json (unchanged)"
 00255|   fi
 00256| else
 00257|   mkdir -p "$(dirname "$_dst")"
 00258|   cat "$_src" > "$_dst"
 00259|   chmod 0600 "$_dst"
 00260|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00261|   echo "  write .stackpanel/state/infra-inputs.json"
+00261|   echo "  write .stack/state/infra-inputs.json"
 00262| fi
 00263| 
 00264| # .tasks/bin/alchemy:ensure (symlink)
@@ -5318,20 +5318,20 @@ Tool: read
 00689|   echo "  write packages/gen/env/src/entrypoints/index.ts"
 00690| fi
 00691| 
-00692| # packages/gen/env/src/entrypoints/stackpanel-go.ts (text)
-00693| _src=/nix/store/vvax4gykxnk86j99p2q1bd0wxk8m15sn-stackpanel-go.ts
-00694| _dst=packages/gen/env/src/entrypoints/stackpanel-go.ts
+00692| # packages/gen/env/src/entrypoints/stack-go.ts (text)
+00693| _src=/nix/store/vvax4gykxnk86j99p2q1bd0wxk8m15sn-stack-go.ts
+00694| _dst=packages/gen/env/src/entrypoints/stack-go.ts
 00695| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00696|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00697|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00698|     echo "  skip packages/gen/env/src/entrypoints/stackpanel-go.ts (unchanged)"
+00698|     echo "  skip packages/gen/env/src/entrypoints/stack-go.ts (unchanged)"
 00699|   fi
 00700| else
 00701|   mkdir -p "$(dirname "$_dst")"
 00702|   cat "$_src" > "$_dst"
 00703|   
 00704|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00705|   echo "  write packages/gen/env/src/entrypoints/stackpanel-go.ts"
+00705|   echo "  write packages/gen/env/src/entrypoints/stack-go.ts"
 00706| fi
 00707| 
 00708| # packages/gen/env/src/entrypoints/web.ts (text)
@@ -5366,36 +5366,36 @@ Tool: read
 00737|   echo "  write packages/gen/env/src/generated/index.ts"
 00738| fi
 00739| 
-00740| # packages/gen/env/src/generated/stackpanel-go/dev.ts (text)
+00740| # packages/gen/env/src/generated/stack-go/dev.ts (text)
 00741| _src=/nix/store/blzicmf8f46klkr28mwjv6wkvin0qp09-dev.ts
-00742| _dst=packages/gen/env/src/generated/stackpanel-go/dev.ts
+00742| _dst=packages/gen/env/src/generated/stack-go/dev.ts
 00743| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00744|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00745|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00746|     echo "  skip packages/gen/env/src/generated/stackpanel-go/dev.ts (unchanged)"
+00746|     echo "  skip packages/gen/env/src/generated/stack-go/dev.ts (unchanged)"
 00747|   fi
 00748| else
 00749|   mkdir -p "$(dirname "$_dst")"
 00750|   cat "$_src" > "$_dst"
 00751|   
 00752|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00753|   echo "  write packages/gen/env/src/generated/stackpanel-go/dev.ts"
+00753|   echo "  write packages/gen/env/src/generated/stack-go/dev.ts"
 00754| fi
 00755| 
-00756| # packages/gen/env/src/generated/stackpanel-go/index.ts (text)
+00756| # packages/gen/env/src/generated/stack-go/index.ts (text)
 00757| _src=/nix/store/xnh2v6irga4pyap5pbgzvzkcgjkf3s2x-index.ts
-00758| _dst=packages/gen/env/src/generated/stackpanel-go/index.ts
+00758| _dst=packages/gen/env/src/generated/stack-go/index.ts
 00759| if [[ "$FORCE" == "0" ]] && [[ -f "$_dst" ]] && [[ "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_dst" | cut -d' ' -f1)" == "$(/nix/store/sqv8nbx301w2xg2iqzim7hraid6ki1la-coreutils-9.8/bin/sha256sum "$_src" | cut -d' ' -f1)" ]]; then
 00760|   UNCHANGED_COUNT=$((UNCHANGED_COUNT + 1))
 00761|   if [[ "${STACKPANEL_DEBUG:-}" == "1" ]] || [[ "$VERBOSE" == "1" ]]; then
-00762|     echo "  skip packages/gen/env/src/generated/stackpanel-go/index.ts (unchanged)"
+00762|     echo "  skip packages/gen/env/src/generated/stack-go/index.ts (unchanged)"
 00763|   fi
 00764| else
 00765|   mkdir -p "$(dirname "$_dst")"
 00766|   cat "$_src" > "$_dst"
 00767|   
 00768|   WRITTEN_COUNT=$((WRITTEN_COUNT + 1))
-00769|   echo "  write packages/gen/env/src/generated/stackpanel-go/index.ts"
+00769|   echo "  write packages/gen/env/src/generated/stack-go/index.ts"
 00770| fi
 00771| 
 00772| # packages/gen/env/src/generated/web/dev.ts (text)
@@ -5664,14 +5664,14 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 60000,
   "description": "Reproduce hanging nix develop invocation"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -5700,14 +5700,14 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure -c bash -lc 'echo OK'",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 120000,
   "description": "Test non-interactive nix develop execution"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -5736,14 +5736,14 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure -c true",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 60000,
   "description": "Retest quick non-interactive develop command"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -5860,7 +5860,7 @@ Tool: bash
 **Input:**
 ```json
 {
-  "command": "ps -axo pid,ppid,stat,etime,command | rg \"nix-daemon|nix develop|/tmp/nix-shell|stackpanel hook|write-files|step-cert-setup|nix-shell\"",
+  "command": "ps -axo pid,ppid,stat,etime,command | rg \"nix-daemon|nix develop|/tmp/nix-shell|stack hook|write-files|step-cert-setup|nix-shell\"",
   "description": "Inspect nix and shellhook related processes"
 }
 ```
@@ -5882,8 +5882,8 @@ Tool: bash
 87957 85724 Ss   01-15:54:17 /nix/var/nix/profiles/default/bin/nix-daemon --option json-log-path /var/run/determinate-nixd-logger.socket
 87958 85724 Ss   01-15:54:17 /nix/var/nix/profiles/default/bin/nix-daemon --option json-log-path /var/run/determinate-nixd-logger.socket
 90006 85629 Ss         04:56 nix-daemon __build-remote 6
-97997 32823 Ss         00:00 /bin/zsh -c ps -axo pid,ppid,stat,etime,command | rg "nix-daemon|nix develop|/tmp/nix-shell|stackpanel hook|write-files|step-cert-setup|nix-shell"
-97999 97997 U          00:00 rg nix-daemon|nix develop|/tmp/nix-shell|stackpanel hook|write-files|step-cert-setup|nix-shell
+97997 32823 Ss         00:00 /bin/zsh -c ps -axo pid,ppid,stat,etime,command | rg "nix-daemon|nix develop|/tmp/nix-shell|stack hook|write-files|step-cert-setup|nix-shell"
+97999 97997 U          00:00 rg nix-daemon|nix develop|/tmp/nix-shell|stack hook|write-files|step-cert-setup|nix-shell
 12984 72659 S    02-21:34:50 bash --rcfile /tmp/nix-shell.ifHEBl
 85568  5179 S+         07:40 nix develop --verbose --debug --log-format bar-with-logs -L
 22953 23851 S       10:03:16 bash --rcfile /tmp/nix-shell.RkSZvV
@@ -6016,14 +6016,14 @@ Tool: bash
 ```json
 {
   "command": "nix build --impure .#devShells.aarch64-darwin.default -L",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 30000,
   "description": "Check if devshell build itself stalls"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -6052,14 +6052,14 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure --option builders '' --option fallback true -c true",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 90000,
   "description": "Test develop without remote builder configuration"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
@@ -6227,24 +6227,24 @@ Tool: bash
 ```json
 {
   "command": "nix develop --impure -c true",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 60000,
   "description": "Retest develop after killing stuck process"
 }
 ```
 **Output:**
 ```
-warning: Git tree '/Users/cm/git/darkmatter/stackpanel' has uncommitted changes
+warning: Git tree '/Users/cm/git/darkmatter/stack' has uncommitted changes
 Using saved setting for 'allow-import-from-derivation = true' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-substituters = https://nix-community.cachix.org https://darkmatter.cachix.org https://nixpkgs-python.cachix.org' from ~/.local/share/nix/trusted-settings.json.
 Using saved setting for 'extra-trusted-public-keys = darkmatter.cachix.org-1:7R5qAiOVHxDpFy7yguECfC1JqVDgMdckGc+CDKk2pWA= nixpkgs-python.cachix.org-1:hxjI7pFxTyuTHn2NkvWCrAUcNZLNS3ZAvfYNuYifcEU= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=' from ~/.local/share/nix/trusted-settings.json.
-building '/nix/store/p67312d0vwhswgdzf38d8ffa12ky2pyf-stackpanel-0.1.0.drv'...
+building '/nix/store/p67312d0vwhswgdzf38d8ffa12ky2pyf-stack-0.1.0.drv'...
 building '/nix/store/26h81d1lqmd7w1qznqjmmd1n0ql7nzrh-check-files-drift.drv'...
 building '/nix/store/qrd6rbkpvy6dpf4hzz9pwpwayzqs4hkr-write-files.drv'...
 building '/nix/store/mq0vqf71y6cngd22sdqaqqrfz0prdv2k-check-files.drv'...
 building '/nix/store/1spcb854akafmycs84cqyvnjcix3a0vl-write-files.drv'...
-building '/nix/store/0hzvw2kw65bjj3mvc6xm22jagpj3l6kb-stackpanel-scripts.drv'...
+building '/nix/store/0hzvw2kw65bjj3mvc6xm22jagpj3l6kb-stack-scripts.drv'...
 error: interrupted by the user
 
 
@@ -6310,7 +6310,7 @@ Tool: task
 ```json
 {
   "description": "Explore deployment/machines UI and docs",
-  "prompt": "Search the codebase thoroughly for:\n\n1. How \"machines\" or deployment targets are configured in the studio UI (apps/web). Look for components related to deployment, machines, infra setup, infrastructure-step, etc.\n2. The deployment module in nix/stackpanel/infra/modules/deployment/ - understand what hosts/frameworks are supported and how apps get registered\n3. The current docs content for deployment/infra in apps/docs/content/docs/ - find all relevant deployment and infra docs\n4. How the infra panel works in the studio UI (apps/web/src/components/studio/panels/infra-panel.tsx, setup steps, etc.)\n5. The .stackpanel/config.nix to understand how deployment is currently configured\n\nReturn:\n- File paths and key line numbers for all deployment-related UI components\n- File paths for all deployment docs\n- The current deployment config from .stackpanel/config.nix (the deployment/infra section)\n- What hosts/frameworks the deployment module supports\n- How the studio UI handles infrastructure/deployment setup",
+  "prompt": "Search the codebase thoroughly for:\n\n1. How \"machines\" or deployment targets are configured in the studio UI (apps/web). Look for components related to deployment, machines, infra setup, infrastructure-step, etc.\n2. The deployment module in nix/stack/infra/modules/deployment/ - understand what hosts/frameworks are supported and how apps get registered\n3. The current docs content for deployment/infra in apps/docs/content/docs/ - find all relevant deployment and infra docs\n4. How the infra panel works in the studio UI (apps/web/src/components/studio/panels/infra-panel.tsx, setup steps, etc.)\n5. The .stack/config.nix to understand how deployment is currently configured\n\nReturn:\n- File paths and key line numbers for all deployment-related UI components\n- File paths for all deployment docs\n- The current deployment config from .stack/config.nix (the deployment/infra section)\n- What hosts/frameworks the deployment module supports\n- How the studio UI handles infrastructure/deployment setup",
   "subagent_type": "explore"
 }
 ```
@@ -6327,13 +6327,13 @@ I now have a thorough understanding of the entire deployment/infra system. Here 
 #### Route Files
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/deploy.tsx` | L1-11 | Route at `/studio/deploy`, renders `DeployPanel` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/routes/studio/infra.tsx` | L1-11 | Route at `/studio/infra`, renders `InfraPanel` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/deploy.tsx` | L1-11 | Route at `/studio/deploy`, renders `DeployPanel` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/routes/studio/infra.tsx` | L1-11 | Route at `/studio/infra`, renders `InfraPanel` |
 
 #### Deploy Panel (Colmena-based NixOS Deployment)
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx` | L1-547 | **Primary deploy panel**. Colmena-centric deployment management. Shows machine inventory cards, app-to-machine mapping, and deploy actions (eval/build/apply). Tabs: Machines, App Targets, Actions, Settings. |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx` | L1-547 | **Primary deploy panel**. Colmena-centric deployment management. Shows machine inventory cards, app-to-machine mapping, and deploy actions (eval/build/apply). Tabs: Machines, App Targets, Actions, Settings. |
 | ^^ | L48-65 | `MachineInfo` type: id, name, host, ssh, tags, roles, provider, arch, publicIp, privateIp, targetEnv, labels |
 | ^^ | L67-74 | `AppDeployMapping` type: enable, targets, resolvedTargets, role, nixosModules, system |
 | ^^ | L89-125 | `useColmenaData()` hook: reads `nixConfig.serializable.colmena` for machine inventory and iterates `apps` for deploy-enabled entries |
@@ -6343,7 +6343,7 @@ I now have a thorough understanding of the entire deployment/infra system. Here 
 #### Infra Panel (SST/AWS Infrastructure)
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra-panel.tsx` | L1-808 | **Infrastructure panel**. AWS infrastructure provisioning with SST. Tabs: Status, Deploy, Outputs, Resources, Configure |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra-panel.tsx` | L1-808 | **Infrastructure panel**. AWS infrastructure provisioning with SST. Tabs: Status, Deploy, Outputs, Resources, Configure |
 | ^^ | L50-248 | `InfraPanel` main component: status cards (Enabled/Deployed/KMS), tabbed layout |
 | ^^ | L257-363 | `StatusTabContent`: shows SST project name, region, OIDC provider, IAM role, KMS key, config path |
 | ^^ | L366-451 | `DeployTabContent`: stage selector (dev/staging/production), CommandRunner for `sst deploy` and `sst remove` |
@@ -6354,46 +6354,46 @@ I now have a thorough understanding of the entire deployment/infra system. Here 
 #### Infra Shared Components
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/index.ts` | L1-9 | Barrel export for infra module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/types.ts` | L1-54 | Type definitions: `SSTData`, `SSTStatus`, `SSTResource` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/constants.ts` | L1-73 | Constants: `OIDC_PROVIDERS`, `AWS_REGIONS`, `DEFAULT_SST_DATA`, `mergeWithDefaults()` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/components.tsx` | L1-114 | Shared UI: `StatusCard`, `ResourceRow`, `OutputRow` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts` | L1-327 | `useSSTConfig()` hook: manages SST form state, reads `useNixData("sst")`, calls agent for status/outputs/resources, handles deploy/remove via `agentClient.deploySSTInfra()` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/index.ts` | L1-9 | Barrel export for infra module |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/types.ts` | L1-54 | Type definitions: `SSTData`, `SSTStatus`, `SSTResource` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/constants.ts` | L1-73 | Constants: `OIDC_PROVIDERS`, `AWS_REGIONS`, `DEFAULT_SST_DATA`, `mergeWithDefaults()` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/components.tsx` | L1-114 | Shared UI: `StatusCard`, `ResourceRow`, `OutputRow` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts` | L1-327 | `useSSTConfig()` hook: manages SST form state, reads `useNixData("sst")`, calls agent for status/outputs/resources, handles deploy/remove via `agentClient.deploySSTInfra()` |
 
 #### Setup Wizard Infrastructure Step
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/setup/steps/infrastructure-step.tsx` | L1-340 | **Setup wizard step** for AWS infrastructure. Guided config for IAM Role, KMS Key, SST config. Toggle enable, AWS region/account, OIDC provider (GitHub Actions specific fields), KMS key alias. Links to infra panel for deployment. |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/setup/steps/infrastructure-step.tsx` | L1-340 | **Setup wizard step** for AWS infrastructure. Guided config for IAM Role, KMS Key, SST config. Toggle enable, AWS region/account, OIDC provider (GitHub Actions specific fields), KMS key alias. Links to infra panel for deployment. |
 
 #### Per-App Deployment Tab
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/apps/app-expanded-content.tsx` | L52 | Nav item `{ id: "deployment", label: "Deployment", icon: Rocket }` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/apps/app-expanded-content.tsx` | L52 | Nav item `{ id: "deployment", label: "Deployment", icon: Rocket }` |
 | ^^ | L85-86 | Props: `deploymentPanels?: AppModulePanel[]` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/apps-panel-alt.tsx` | L88-101 | Filters module panels: deployment panels are `module === "deployment-fly"` or `module === "deployment-cloudflare"`, routed to app Deployment tab |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/apps-panel-alt.tsx` | L88-101 | Filters module panels: deployment panels are `module === "deployment-fly"` or `module === "deployment-cloudflare"`, routed to app Deployment tab |
 
 #### Sidebar Navigation
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx` | L91-92 | Panel IDs include `"infra"` and `"deploy"` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx` | L91-92 | Panel IDs include `"infra"` and `"deploy"` |
 | ^^ | L122 | Main nav: `{ id: "deploy", label: "Deploy", icon: Rocket }` |
 | ^^ | L129 | Tools nav: `{ id: "infra", label: "Infrastructure", icon: Cloud }` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-header.tsx` | L44 | Label mapping: `infra: "Infrastructure"` |
-| `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/landing/infrastructure-section.tsx` | -- | Landing page infrastructure section |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-header.tsx` | L44 | Label mapping: `infra: "Infrastructure"` |
+| `/Users/cm/git/darkmatter/stack/apps/web/src/components/landing/infrastructure-section.tsx` | -- | Landing page infrastructure section |
 
 ---
 
-### 2. Deployment Module in Nix (nix/stackpanel/)
+### 2. Deployment Module in Nix (nix/stack/)
 
 #### Top-Level Deployment Module
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/default.nix` | L1-39 | **Aggregator** -- imports `./fly` and `./cloudflare` |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/default.nix` | L1-39 | **Aggregator** -- imports `./fly` and `./cloudflare` |
 
 #### Infra Modules Deployment (Alchemy-Based)
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/deployment/module.nix` | L1-157 | **Infra deployment module** -- reads `framework` x `deployment.host` from each app and creates Alchemy resources |
+| `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/deployment/module.nix` | L1-157 | **Infra deployment module** -- reads `framework` x `deployment.host` from each app and creates Alchemy resources |
 
 **Supported Framework x Host Matrix** (from lines 12-19):
 
@@ -6410,40 +6410,40 @@ I now have a thorough understanding of the entire deployment/infra system. Here 
 | `*` | `vercel` | (planned, checked on line 80) |
 | `*` | `aws` | (planned, checked on line 81) |
 
-**How apps get registered** (lines 64-69): `deployableApps` = apps where `deployment.enable == true` AND a framework is detected AND `deployment.host != null`. The module auto-enables `stackpanel.infra.enable` and registers itself as `stackpanel.infra.modules.deployment` with pure-data inputs per app (framework, host, path, bindings, secrets + framework-specific options).
+**How apps get registered** (lines 64-69): `deployableApps` = apps where `deployment.enable == true` AND a framework is detected AND `deployment.host != null`. The module auto-enables `stack.infra.enable` and registers itself as `stack.infra.modules.deployment` with pure-data inputs per app (framework, host, path, bindings, secrets + framework-specific options).
 
 #### Fly.io Deployment Module
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/module.nix` | L1-603 | **Full Fly.io deployment module**. Container-based deployment using nix2container. Generates fly.toml, deploy scripts, wrapped `fly-<app>` CLI commands, turbo tasks, health checks |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/module.nix` | L1-603 | **Full Fly.io deployment module**. Container-based deployment using nix2container. Generates fly.toml, deploy scripts, wrapped `fly-<app>` CLI commands, turbo tasks, health checks |
 | ^^ | L59-135 | Per-app options added via `deploymentAppModule`: fly.appName, fly.region, fly.memory, fly.cpus, fly.cpuKind (shared/performance), fly.autoStop (off/stop/suspend), fly.autoStart, fly.minMachines, fly.forceHttps, fly.env; container.type (bun/node/go/static/custom), container.port, container.entrypoint |
-| ^^ | L380-415 | **Global options**: `stackpanel.deployment.defaultHost` (enum: cloudflare/fly/vercel/aws), `stackpanel.deployment.fly.organization`, `stackpanel.deployment.fly.defaultRegion` |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/meta.nix` | L1-64 | Metadata: id=`deployment-fly`, category=`deployment` |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/schema.nix` | -- | SpField schema definitions for Fly options |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/container.nix` | -- | Container configuration |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/reference.nix` | -- | Reference docs |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/ui.nix` | -- | UI panel definitions |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/fly/lib/fly-oidc.nix` | -- | Fly.io OIDC integration |
+| ^^ | L380-415 | **Global options**: `stack.deployment.defaultHost` (enum: cloudflare/fly/vercel/aws), `stack.deployment.fly.organization`, `stack.deployment.fly.defaultRegion` |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/meta.nix` | L1-64 | Metadata: id=`deployment-fly`, category=`deployment` |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/schema.nix` | -- | SpField schema definitions for Fly options |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/container.nix` | -- | Container configuration |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/reference.nix` | -- | Reference docs |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/ui.nix` | -- | UI panel definitions |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/fly/lib/fly-oidc.nix` | -- | Fly.io OIDC integration |
 
 #### Cloudflare Deployment Module
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/module.nix` | L1-110 | **Cloudflare Workers per-app options**. Adds `deployment.cloudflare.*` to each app via appModules: workerName, route, compatibility (node/browser), kvNamespaces, d1Databases, r2Buckets. Global options: accountId, compatibilityDate, defaultRoute |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/meta.nix` | L1-43 | Metadata: id=`deployment-cloudflare`, category=`deployment` |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/schema.nix` | -- | SpField schema definitions |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/deployment/cloudflare/ui.nix` | -- | UI panel definitions |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/module.nix` | L1-110 | **Cloudflare Workers per-app options**. Adds `deployment.cloudflare.*` to each app via appModules: workerName, route, compatibility (node/browser), kvNamespaces, d1Databases, r2Buckets. Global options: accountId, compatibilityDate, defaultRoute |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/meta.nix` | L1-43 | Metadata: id=`deployment-cloudflare`, category=`deployment` |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/schema.nix` | -- | SpField schema definitions |
+| `/Users/cm/git/darkmatter/stack/nix/stack/deployment/cloudflare/ui.nix` | -- | UI panel definitions |
 
 #### Machine Inventory Module
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix` | L1-307 | **Machine inventory** for Colmena deployments. Sources: `static` or `aws-ec2`. Machine type: id, name, host, ssh config, tags, roles, provider, arch, publicIp, privateIp, labels, nixosProfile, nixosModules, targetEnv, env, metadata. AWS EC2 discovery via filters, tag-based role/tag/env resolution, host preference order |
+| `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix` | L1-307 | **Machine inventory** for Colmena deployments. Sources: `static` or `aws-ec2`. Machine type: id, name, host, ssh config, tags, roles, provider, arch, publicIp, privateIp, labels, nixosProfile, nixosModules, targetEnv, env, metadata. AWS EC2 discovery via filters, tag-based role/tag/env resolution, host preference order |
 
 #### Infrastructure Module System
 | File | Key Lines | Purpose |
 |---|---|---|
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/default.nix` | L1-38 | **Aggregator** -- imports options.nix, codegen.nix, and all 11 infra sub-modules |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/options.nix` | L1-335 | **Core options**: enable, framework (alchemy only), output-dir, key-format, storage-backend (chamber/sops/ssm/none), modules registry (infraModuleType), package config, outputs stub |
-| `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix` | L1-968 | **Code generation engine**: generates `src/index.ts` (Infra class), `src/types.ts`, custom alchemy resources (KMS, IAM, EC2, ALB, etc.), `alchemy.run.ts` orchestrator, `package.json`, `tsconfig.json`, `infra-inputs.json`. Registers scripts: `infra:deploy`, `infra:destroy`, `infra:dev`, `infra:pull-outputs`. Registers as module `infra` in category `infrastructure` |
+| `/Users/cm/git/darkmatter/stack/nix/stack/infra/default.nix` | L1-38 | **Aggregator** -- imports options.nix, codegen.nix, and all 11 infra sub-modules |
+| `/Users/cm/git/darkmatter/stack/nix/stack/infra/options.nix` | L1-335 | **Core options**: enable, framework (alchemy only), output-dir, key-format, storage-backend (chamber/sops/ssm/none), modules registry (infraModuleType), package config, outputs stub |
+| `/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix` | L1-968 | **Code generation engine**: generates `src/index.ts` (Infra class), `src/types.ts`, custom alchemy resources (KMS, IAM, EC2, ALB, etc.), `alchemy.run.ts` orchestrator, `package.json`, `tsconfig.json`, `infra-inputs.json`. Registers scripts: `infra:deploy`, `infra:destroy`, `infra:dev`, `infra:pull-outputs`. Registers as module `infra` in category `infrastructure` |
 
 All 11 infra sub-modules:
 - `aws-secrets` -- KMS + IAM roles
@@ -6465,40 +6465,40 @@ All 11 infra sub-modules:
 #### Public Docs
 | File | Topic |
 |---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/index.mdx` | Deployment overview |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/fly.mdx` | Fly.io deployment guide |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/cloudflare.mdx` | Cloudflare deployment guide |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/containers.mdx` | Container deployment guide |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/sst.mdx` | SST infrastructure guide |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/meta.json` | Section metadata |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/index.mdx` | Deployment overview |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/fly.mdx` | Fly.io deployment guide |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/cloudflare.mdx` | Cloudflare deployment guide |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/containers.mdx` | Container deployment guide |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/sst.mdx` | SST infrastructure guide |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/meta.json` | Section metadata |
 
 #### Internal/Reference Docs
 | File | Topic |
 |---|---|
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment.mdx` | Deployment module reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra.mdx` | Infra module system reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/options.mdx` | Infra options reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/codegen.mdx` | Infra codegen reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/templates.mdx` | Infra templates reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/modules/deployment/module.mdx` | Deployment infra module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/modules/aws-secrets/module.mdx` | AWS secrets module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/modules/database/module.mdx` | Database module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/modules/cache/module.mdx` | Cache module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/modules/machines/module.mdx` | Machines module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/infra/modules/aws-network/module.mdx` | AWS network module |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/fly/module.mdx` | Fly module reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/fly/container.mdx` | Fly container reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/fly/reference.mdx` | Fly reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/fly/schema.mdx` | Fly schema reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/fly/lib/fly-oidc.mdx` | Fly OIDC reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/cloudflare/module.mdx` | Cloudflare module reference |
-| `/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/internal/deployment/cloudflare/schema.mdx` | Cloudflare schema reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment.mdx` | Deployment module reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra.mdx` | Infra module system reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/options.mdx` | Infra options reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/codegen.mdx` | Infra codegen reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/templates.mdx` | Infra templates reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/modules/deployment/module.mdx` | Deployment infra module |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/modules/aws-secrets/module.mdx` | AWS secrets module |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/modules/database/module.mdx` | Database module |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/modules/cache/module.mdx` | Cache module |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/modules/machines/module.mdx` | Machines module |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/infra/modules/aws-network/module.mdx` | AWS network module |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/fly/module.mdx` | Fly module reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/fly/container.mdx` | Fly container reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/fly/reference.mdx` | Fly reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/fly/schema.mdx` | Fly schema reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/fly/lib/fly-oidc.mdx` | Fly OIDC reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/cloudflare/module.mdx` | Cloudflare module reference |
+| `/Users/cm/git/darkmatter/stack/apps/docs/content/docs/internal/deployment/cloudflare/schema.mdx` | Cloudflare schema reference |
 
 ---
 
-### 4. Current Deployment Config from .stackpanel/config.nix
+### 4. Current Deployment Config from .stack/config.nix
 
-From `/Users/cm/git/darkmatter/stackpanel/.stackpanel/config.nix`:
+From `/Users/cm/git/darkmatter/stack/.stack/config.nix`:
 
 **Deployment section** (lines 218-223):
 ```nix
@@ -6518,7 +6518,7 @@ web = {
     host = "fly";
     secrets = [ "DATABASE_URL" "BETTER_AUTH_SECRET" "POLAR_ACCESS_TOKEN" ];
     fly = {
-      appName = "stackpanel-web";
+      appName = "stack-web";
       region = "iad";
     };
   };
@@ -6558,15 +6558,15 @@ sst = {
   account-id = "950224716579";
   config-path = "packages/infra/sst.config.ts";
   enable = true;
-  iam = { role-name = "stackpanel-secrets-role"; };
-  kms = { alias = "stackpanel-secrets"; deletion-window-days = 30; enable = true; };
+  iam = { role-name = "stack-secrets-role"; };
+  kms = { alias = "stack-secrets"; deletion-window-days = 30; enable = true; };
   oidc = {
     flyio = { app-name = "*"; org-id = ""; };
-    github-actions = { branch = "*"; org = "darkmatter"; repo = "stackpanel"; };
+    github-actions = { branch = "*"; org = "darkmatter"; repo = "stack"; };
     provider = "github-actions";
     roles-anywhere = { trust-anchor-arn = ""; };
   };
-  project-name = "stackpanel";
+  project-name = "stack";
   region = "us-west-2";
 };
 ```
@@ -6598,7 +6598,7 @@ The studio UI has **two separate panels** for deployment, plus a setup wizard st
 - Guided step for initial AWS infrastructure config
 - Shows a table of what gets deployed (IAM Role, KMS Key, SST Config)
 - Form: enable toggle, AWS region/account, OIDC provider (GitHub Actions with org/repo), KMS key toggle + alias
-- Saves to `.stackpanel/data/sst.nix` via the agent
+- Saves to `.stack/data/sst.nix` via the agent
 
 **D. Per-App Deployment Tab** (within the Apps panel):
 - Each expanded app has a "Deployment" tab (nav item at line 52 of app-expanded-content.tsx)
@@ -6702,7 +6702,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/index.mdx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/index.mdx"
 }
 ```
 **Output:**
@@ -6717,17 +6717,17 @@ Tool: read
 00007| import { Cards, Card } from "fumadocs-ui/components/card";
 00008| import { Callout } from "fumadocs-ui/components/callout";
 00009| 
-00010| Stackpanel supports building containers and deploying to multiple platforms—all configured from the same Nix source of truth as your dev environment. Container definitions, deployment targets, and infrastructure provisioning are declared alongside your services and apps, so everything stays in sync.
+00010| Stack supports building containers and deploying to multiple platforms—all configured from the same Nix source of truth as your dev environment. Container definitions, deployment targets, and infrastructure provisioning are declared alongside your services and apps, so everything stays in sync.
 00011| 
 00012| ## The Deployment Story
 00013| 
-00014| Stackpanel's approach to deployment follows the same philosophy as everything else: **declare it once, generate the artifacts your tools expect.**
+00014| Stack's approach to deployment follows the same philosophy as everything else: **declare it once, generate the artifacts your tools expect.**
 00015| 
-00016| - Need a `Dockerfile`? Stackpanel generates one optimized for your stack.
+00016| - Need a `Dockerfile`? Stack generates one optimized for your stack.
 00017| - Need a Cloudflare Workers config? Declared in Nix, generated as standard config files.
 00018| - Need AWS infrastructure? The SST extension provisions it with IAM, KMS, and OIDC already wired up.
 00019| 
-00020| The generated files are standard—`Dockerfile`, `fly.toml`, `sst.config.ts`—committed to Git and usable without Nix. Your CI pipeline reads them as normal config. If you eject from Stackpanel, the files stay.
+00020| The generated files are standard—`Dockerfile`, `fly.toml`, `sst.config.ts`—committed to Git and usable without Nix. Your CI pipeline reads them as normal config. If you eject from Stack, the files stay.
 00021| 
 00022| ## What's Available
 00023| 
@@ -6753,21 +6753,21 @@ Tool: read
 00043| ```nix
 00044| {
 00045|   # Define your apps
-00046|   stackpanel.apps.api = {
+00046|   stack.apps.api = {
 00047|     port = 1;
 00048|     root = "./apps/api";
 00049|     build = "bun run build";
 00050|   };
 00051| 
 00052|   # Build a container for the API
-00053|   stackpanel.containers.api = {
+00053|   stack.containers.api = {
 00054|     enable = true;
 00055|     app = "api";
 00056|     registry = "ghcr.io/my-org/myapp-api";
 00057|   };
 00058| 
 00059|   # Deploy to Fly.io
-00060|   stackpanel.deployment.fly = {
+00060|   stack.deployment.fly = {
 00061|     enable = true;
 00062|     apps.api = {
 00063|       region = "iad";
@@ -6777,22 +6777,22 @@ Tool: read
 00067| }
 00068| ```
 00069| 
-00070| From this, Stackpanel generates a `Dockerfile` for the API, a `fly.toml` with the correct configuration, and optionally CI steps that build and deploy on merge to `main`.
+00070| From this, Stack generates a `Dockerfile` for the API, a `fly.toml` with the correct configuration, and optionally CI steps that build and deploy on merge to `main`.
 00071| 
 00072| ## How Deployment Connects to CI
 00073| 
 00074| Deployment configuration feeds into [CI generation](/docs/apps-ci/ci-generation). When you define a deployment target and enable the CI extension, the generated GitHub Actions workflow includes the appropriate deploy steps:
 00075| 
 00076| ```
-00077| stackpanel.apps.api.container
+00077| stack.apps.api.container
 00078|   → Generates container image
 00079|   → CI workflow gets docker build + push steps
 00080| 
-00081| stackpanel.apps.api.deployment.host = "fly"
+00081| stack.apps.api.deployment.host = "fly"
 00082|   → Generates fly.toml
 00083|   → CI workflow gets flyctl deploy step
 00084| 
-00085| stackpanel.apps.api.deployment.host = "cloudflare"
+00085| stack.apps.api.deployment.host = "cloudflare"
 00086|   → Generates wrangler config
 00087|   → CI workflow gets cloudflare deploy step
 00088| ```
@@ -6805,7 +6805,7 @@ Tool: read
 00095| 
 00096| ## Container Strategies
 00097| 
-00098| Stackpanel supports two approaches to building containers:
+00098| Stack supports two approaches to building containers:
 00099| 
 00100| | Strategy | How It Works | Best For |
 00101| |----------|-------------|----------|
@@ -6818,11 +6818,11 @@ Tool: read
 00108| 
 00109| ### Cloudflare
 00110| 
-00111| Cloudflare Workers and Pages deployments are lightweight—no containers involved. Stackpanel generates the `wrangler.toml` configuration and can produce the correct build output format for your framework (static export for Pages, Worker bundles for Workers).
+00111| Cloudflare Workers and Pages deployments are lightweight—no containers involved. Stack generates the `wrangler.toml` configuration and can produce the correct build output format for your framework (static export for Pages, Worker bundles for Workers).
 00112| 
 00113| ### Fly.io
 00114| 
-00115| Fly.io deployments use containers. Stackpanel generates both the `Dockerfile` and `fly.toml`, with the correct ports, health checks, and environment variables wired up from your Stackpanel config.
+00115| Fly.io deployments use containers. Stack generates both the `Dockerfile` and `fly.toml`, with the correct ports, health checks, and environment variables wired up from your Stack config.
 00116| 
 00117| ### SST (AWS)
 00118| 
@@ -6846,7 +6846,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/fly.mdx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/fly.mdx"
 }
 ```
 **Output:**
@@ -6860,20 +6860,20 @@ Tool: read
 00006| 
 00007| import { Callout } from "fumadocs-ui/components/callout";
 00008| 
-00009| Stackpanel can generate Fly.io deployment configuration from your project definition—`fly.toml` files, Dockerfiles, and OIDC-based authentication for passwordless deploys from CI. Instead of hand-maintaining Fly config that drifts from your actual app setup, the deployment extension derives everything from your Stackpanel config.
+00009| Stack can generate Fly.io deployment configuration from your project definition—`fly.toml` files, Dockerfiles, and OIDC-based authentication for passwordless deploys from CI. Instead of hand-maintaining Fly config that drifts from your actual app setup, the deployment extension derives everything from your Stack config.
 00010| 
 00011| ## Enable Deployment
 00012| 
 00013| Deployment configuration is per-app. You don't need a global "Fly extension" - just configure your apps with `deployment.host = "fly"`.
 00014| 
-00015| Stackpanel will automatically add the `flyctl` CLI to your devshell when you have apps configured for Fly.io deployment.
+00015| Stack will automatically add the `flyctl` CLI to your devshell when you have apps configured for Fly.io deployment.
 00016| 
 00017| ## Defining Fly Apps
 00018| 
 00019| Each app that should be deployed to Fly needs deployment configuration:
 00020| 
 00021| ```nix
-00022| stackpanel.apps = {
+00022| stack.apps = {
 00023|   api = {
 00024|     port = 1;
 00025|     root = "./apps/api";
@@ -6911,22 +6911,22 @@ Tool: read
 00057| };
 00058| ```
 00059| 
-00060| Stackpanel generates deployment configuration for each app, wiring up the correct ports, health checks, and resource settings.
+00060| Stack generates deployment configuration for each app, wiring up the correct ports, health checks, and resource settings.
 00061| 
 00062| ## Generated Files
 00063| 
-00064| When the Fly extension is enabled, Stackpanel generates:
+00064| When the Fly extension is enabled, Stack generates:
 00065| 
 00066| | File | Description |
 00067| |------|-------------|
 00068| | `apps/<app>/fly.toml` | Fly.io app configuration |
 00069| | `apps/<app>/Dockerfile` | Container image (if not already defined) |
 00070| 
-00071| These are standard Fly.io files—`flyctl` reads them directly. Like all Stackpanel-generated files, they're committed to Git so that deploys work without Nix.
+00071| These are standard Fly.io files—`flyctl` reads them directly. Like all Stack-generated files, they're committed to Git so that deploys work without Nix.
 00072| 
 00073| ```nix
 00074| # The extension generates fly.toml from your config
-00075| stackpanel.files.entries."apps/api/fly.toml" = {
+00075| stack.files.entries."apps/api/fly.toml" = {
 00076|   # ... generated automatically from deployment.fly settings
 00077| };
 00078| ```
@@ -6940,7 +6940,7 @@ Tool: read
 00086| Fly.io deploys container images. Configure containers alongside your app deployment:
 00087| 
 00088| ```nix
-00089| stackpanel.apps.api = {
+00089| stack.apps.api = {
 00090|   port = 1;
 00091|   root = "./apps/api";
 00092|   build = "bun run build";
@@ -6969,7 +6969,7 @@ Tool: read
 00115| For CI/CD deployments, configure OIDC authentication at the global deployment level:
 00116| 
 00117| ```nix
-00118| stackpanel.deployment = {
+00118| stack.deployment = {
 00119|   fly = {
 00120|     organization = "my-fly-org";
 00121|   };
@@ -7001,7 +7001,7 @@ Tool: read
 00147| Deploy to multiple Fly.io regions for lower latency:
 00148| 
 00149| ```nix
-00150| stackpanel.apps.api.deployment.fly = {
+00150| stack.apps.api.deployment.fly = {
 00151|   appName = "myapp-api";
 00152|   region = "iad";
 00153|   
@@ -7017,7 +7017,7 @@ Tool: read
 00163| Configure environment variables and secrets for your Fly.io deployments:
 00164| 
 00165| ```nix
-00166| stackpanel.apps.api.deployment.fly = {
+00166| stack.apps.api.deployment.fly = {
 00167|   appName = "myapp-api";
 00168| 
 00169|   # These get set as Fly secrets
@@ -7035,7 +7035,7 @@ Tool: read
 00181| };
 00182| ```
 00183| 
-00184| Environment variables are included in deployment configuration. Secrets are managed through Stackpanel's [secrets system](/docs/secrets/variables) and synced to Fly.io.
+00184| Environment variables are included in deployment configuration. Secrets are managed through Stack's [secrets system](/docs/secrets/variables) and synced to Fly.io.
 00185| 
 00186| ## Deployment Scripts
 00187| 
@@ -7055,7 +7055,7 @@ Tool: read
 00201| fly:dashboard
 00202| ```
 00203| 
-00204| These are standard Stackpanel [scripts](/docs/dev-environment/packages-scripts) that wrap `flyctl` with the correct app names and configuration.
+00204| These are standard Stack [scripts](/docs/dev-environment/packages-scripts) that wrap `flyctl` with the correct app names and configuration.
 00205| 
 00206| ## Databases on Fly
 00207| 
@@ -7072,7 +7072,7 @@ Tool: read
 00218| Then reference the database in your deployment config:
 00219| 
 00220| ```nix
-00221| stackpanel.apps.api.deployment.fly = {
+00221| stack.apps.api.deployment.fly = {
 00222|   appName = "myapp-api";
 00223|   
 00224|   secrets = [
@@ -7082,7 +7082,7 @@ Tool: read
 00228| ```
 00229| 
 00230| <Callout type="info">
-00231| For local development, use Stackpanel's built-in [PostgreSQL service](/docs/services/postgres) instead of Fly Postgres.
+00231| For local development, use Stack's built-in [PostgreSQL service](/docs/services/postgres) instead of Fly Postgres.
 00232| </Callout>
 00233| 
 00234| ## Combining with Other Deployment Targets
@@ -7090,7 +7090,7 @@ Tool: read
 00236| You can deploy different apps in your monorepo to different platforms:
 00237| 
 00238| ```nix
-00239| stackpanel.apps = {
+00239| stack.apps = {
 00240|   web = {
 00241|     port = 0;
 00242|     # Deploy the frontend to Cloudflare
@@ -7167,7 +7167,7 @@ Tool: read
 00313| flyctl secrets list --app myapp-api
 00314| ```
 00315| 
-00316| If a secret is missing, set it manually or re-run the deployment script that syncs Stackpanel variables to Fly secrets.
+00316| If a secret is missing, set it manually or re-run the deployment script that syncs Stack variables to Fly secrets.
 00317| 
 00318| ## Reference
 00319| 
@@ -7188,7 +7188,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/cloudflare.mdx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/cloudflare.mdx"
 }
 ```
 **Output:**
@@ -7202,13 +7202,13 @@ Tool: read
 00006| 
 00007| import { Callout } from "fumadocs-ui/components/callout";
 00008| 
-00009| Stackpanel includes a Cloudflare deployment module that generates the configuration needed to deploy your applications to [Cloudflare Workers](https://workers.cloudflare.com/) and [Cloudflare Pages](https://pages.cloudflare.com/). Like everything in Stackpanel, the deployment config is derived from your project's source of truth—no hand-maintained `wrangler.toml` files that drift out of sync.
+00009| Stack includes a Cloudflare deployment module that generates the configuration needed to deploy your applications to [Cloudflare Workers](https://workers.cloudflare.com/) and [Cloudflare Pages](https://pages.cloudflare.com/). Like everything in Stack, the deployment config is derived from your project's source of truth—no hand-maintained `wrangler.toml` files that drift out of sync.
 00010| 
 00011| ## Enable Cloudflare Deployment
 00012| 
 00013| Deployment configuration is per-app. You don't need a global "Cloudflare extension" - just configure your apps with `deployment.host = "cloudflare"`.
 00014| 
-00015| Stackpanel will automatically add the `wrangler` CLI to your devshell when you have apps configured for Cloudflare deployment.
+00015| Stack will automatically add the `wrangler` CLI to your devshell when you have apps configured for Cloudflare deployment.
 00016| 
 00017| ## Configuration
 00018| 
@@ -7217,7 +7217,7 @@ Tool: read
 00021| Set your Cloudflare account ID at the global deployment level:
 00022| 
 00023| ```nix
-00024| stackpanel.deployment = {
+00024| stack.deployment = {
 00025|   cloudflare = {
 00026|     accountId = "your-cloudflare-account-id";
 00027|     compatibilityDate = "2024-01-01";
@@ -7230,7 +7230,7 @@ Tool: read
 00034| Configure each app with Cloudflare-specific deployment settings:
 00035| 
 00036| ```nix
-00037| stackpanel.apps.web = {
+00037| stack.apps.web = {
 00038|   port = 0;
 00039|   framework = "tanstack-start";
 00040|   root = "./apps/web";
@@ -7257,7 +7257,7 @@ Tool: read
 00061| Pass environment variables to your Workers at deploy time:
 00062| 
 00063| ```nix
-00064| stackpanel.apps.api = {
+00064| stack.apps.api = {
 00065|   port = 1;
 00066|   root = "./apps/api";
 00067|   
@@ -7283,7 +7283,7 @@ Tool: read
 00087| ```
 00088| 
 00089| <Callout type="warn">
-00090| Never put sensitive values in `vars`—they're visible in your generated config and committed to Git. Use Wrangler secrets or Stackpanel's [secrets system](/docs/secrets) for anything confidential.
+00090| Never put sensitive values in `vars`—they're visible in your generated config and committed to Git. Use Wrangler secrets or Stack's [secrets system](/docs/secrets) for anything confidential.
 00091| </Callout>
 00092| 
 00093| ## Generated Files
@@ -7294,9 +7294,9 @@ Tool: read
 00098| wrangler.toml              # or per-app: apps/web/wrangler.toml
 00099| ```
 00100| 
-00101| These are normal Wrangler config files that the `wrangler` CLI reads directly. If you eject from Stackpanel, the files stay and work as-is.
+00101| These are normal Wrangler config files that the `wrangler` CLI reads directly. If you eject from Stack, the files stay and work as-is.
 00102| 
-00103| Like all Stackpanel-generated files, they're committed to Git so that team members and CI can deploy without Nix.
+00103| Like all Stack-generated files, they're committed to Git so that team members and CI can deploy without Nix.
 00104| 
 00105| ## Scripts
 00106| 
@@ -7329,13 +7329,13 @@ Tool: read
 00133| 
 00134| ```nix
 00135| {
-00136|   stackpanel.deployment = {
+00136|   stack.deployment = {
 00137|     cloudflare = {
 00138|       accountId = "your-account-id";
 00139|     };
 00140|   };
 00141| 
-00142|   stackpanel.apps.api = {
+00142|   stack.apps.api = {
 00143|     port = 1;
 00144|     deployment = {
 00145|       enable = true;
@@ -7344,7 +7344,7 @@ Tool: read
 00148|     };
 00149|   };
 00150| 
-00151|   stackpanel.ci = {
+00151|   stack.ci = {
 00152|     enable = true;
 00153|     secrets = {
 00154|       "CLOUDFLARE_API_TOKEN" = "CF_API_TOKEN";  # GitHub secret name
@@ -7364,7 +7364,7 @@ Tool: read
 00168| Cloudflare Workers support various bindings—KV namespaces, R2 buckets, D1 databases, Durable Objects, and more. Configure them through the module:
 00169| 
 00170| ```nix
-00171| stackpanel.apps.api = {
+00171| stack.apps.api = {
 00172|   port = 1;
 00173|   
 00174|   deployment = {
@@ -7392,7 +7392,7 @@ Tool: read
 00196| For static sites or frameworks with static export (like Next.js static export or Astro), use Cloudflare Pages:
 00197| 
 00198| ```nix
-00199| stackpanel.apps.docs = {
+00199| stack.apps.docs = {
 00200|   port = 2;
 00201|   
 00202|   deployment = {
@@ -7411,7 +7411,7 @@ Tool: read
 00215| 
 00216| ## Local Development with Wrangler
 00217| 
-00218| The Cloudflare module adds `wrangler` to your devshell, so you can use Wrangler's local development features alongside Stackpanel's dev environment:
+00218| The Cloudflare module adds `wrangler` to your devshell, so you can use Wrangler's local development features alongside Stack's dev environment:
 00219| 
 00220| ```bash
 00221| # Start Wrangler dev server (uses miniflare locally)
@@ -7421,7 +7421,7 @@ Tool: read
 00225| cloudflare:dev
 00226| ```
 00227| 
-00228| Wrangler's dev mode emulates the Workers runtime locally, including KV, R2, D1, and other bindings. This complements Stackpanel's [process-compose](/docs/services/process-compose) setup—you can run Wrangler alongside your other local services.
+00228| Wrangler's dev mode emulates the Workers runtime locally, including KV, R2, D1, and other bindings. This complements Stack's [process-compose](/docs/services/process-compose) setup—you can run Wrangler alongside your other local services.
 00229| 
 00230| ## Combining with Other Deployment Targets
 00231| 
@@ -7429,7 +7429,7 @@ Tool: read
 00233| 
 00234| ```nix
 00235| {
-00236|   stackpanel.apps = {
+00236|   stack.apps = {
 00237|     web = {
 00238|       port = 0;
 00239|       framework = "nextjs";
@@ -7491,11 +7491,11 @@ Tool: read
 00295| 
 00296| ### Generated `wrangler.toml` not updating
 00297| 
-00298| If your Stackpanel config changed but the generated file hasn't, trigger a rebuild:
+00298| If your Stack config changed but the generated file hasn't, trigger a rebuild:
 00299| 
 00300| ```bash
 00301| # The agent watches for changes, but you can force a rebuild
-00302| stackpanel status
+00302| stack status
 00303| ```
 00304| 
 00305| Or check the file status in [Studio](/docs/studio) to see if it's marked as stale.
@@ -7519,7 +7519,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/sst.mdx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/sst.mdx"
 }
 ```
 **Output:**
@@ -7533,12 +7533,12 @@ Tool: read
 00006| 
 00007| import { Callout } from "fumadocs-ui/components/callout";
 00008| 
-00009| [SST](https://sst.dev/) is an infrastructure-as-code framework for deploying to AWS. Stackpanel's SST extension generates configuration, manages IAM roles with OIDC authentication, and provisions KMS keys for secrets encryption—all from your Nix config.
+00009| [SST](https://sst.dev/) is an infrastructure-as-code framework for deploying to AWS. Stack's SST extension generates configuration, manages IAM roles with OIDC authentication, and provisions KMS keys for secrets encryption—all from your Nix config.
 00010| 
 00011| ## Enable SST
 00012| 
 00013| ```nix
-00014| stackpanel.sst = {
+00014| stack.sst = {
 00015|   enable = true;
 00016|   project-name = "myapp";
 00017|   region = "us-west-2";
@@ -7557,7 +7557,7 @@ Tool: read
 00030| ### Basic Setup
 00031| 
 00032| ```nix
-00033| stackpanel.sst = {
+00033| stack.sst = {
 00034|   enable = true;
 00035|   project-name = "myapp";
 00036|   region = "us-west-2";
@@ -7571,7 +7571,7 @@ Tool: read
 00044| SST can provision a KMS key for encrypting secrets at rest:
 00045| 
 00046| ```nix
-00047| stackpanel.sst = {
+00047| stack.sst = {
 00048|   enable = true;
 00049|   project-name = "myapp";
 00050|   region = "us-west-2";
@@ -7579,7 +7579,7 @@ Tool: read
 00052| };
 00053| ```
 00054| 
-00055| The KMS key integrates with Stackpanel's [secrets system](/docs/secrets)—secrets encrypted with this key can be decrypted in your deployed application using the IAM role's KMS permissions.
+00055| The KMS key integrates with Stack's [secrets system](/docs/secrets)—secrets encrypted with this key can be decrypted in your deployed application using the IAM role's KMS permissions.
 00056| 
 00057| ### OIDC Authentication
 00058| 
@@ -7588,7 +7588,7 @@ Tool: read
 00061| #### GitHub Actions OIDC
 00062| 
 00063| ```nix
-00064| stackpanel.sst = {
+00064| stack.sst = {
 00065|   enable = true;
 00066|   project-name = "myapp";
 00067|   region = "us-west-2";
@@ -7614,7 +7614,7 @@ Tool: read
 00087| #### Fly.io OIDC
 00088| 
 00089| ```nix
-00090| stackpanel.sst = {
+00090| stack.sst = {
 00091|   enable = true;
 00092|   project-name = "myapp";
 00093|   region = "us-west-2";
@@ -7633,7 +7633,7 @@ Tool: read
 00106| For environments that don't support OIDC natively, use [AWS Roles Anywhere](https://docs.aws.amazon.com/rolesanywhere/latest/userguide/introduction.html) with mTLS certificates from [Step CA](/docs/networking/certificates):
 00107| 
 00108| ```nix
-00109| stackpanel.sst = {
+00109| stack.sst = {
 00110|   enable = true;
 00111|   project-name = "myapp";
 00112|   region = "us-west-2";
@@ -7643,7 +7643,7 @@ Tool: read
 00116|   };
 00117| };
 00118| 
-00119| stackpanel.aws.roles-anywhere = {
+00119| stack.aws.roles-anywhere = {
 00120|   enable = true;
 00121|   region = "us-west-2";
 00122|   account-id = "123456789012";
@@ -7667,7 +7667,7 @@ Tool: read
 00140| |------|---------|
 00141| | `sst.config.ts` | SST project configuration with app name, region, and settings |
 00142| 
-00143| Like all Stackpanel-generated files, `sst.config.ts` is committed to Git and works without Nix. If you eject from Stackpanel, you have a standard SST project.
+00143| Like all Stack-generated files, `sst.config.ts` is committed to Git and works without Nix. If you eject from Stack, you have a standard SST project.
 00144| 
 00145| <Callout type="warn">
 00146| Don't edit `sst.config.ts` by hand—your changes will be overwritten on the next build. Add custom infrastructure in separate files that SST imports, or configure everything through the Nix options.
@@ -7695,7 +7695,7 @@ Tool: read
 00168| 
 00169| ```nix
 00170| {
-00171|   stackpanel.sst = {
+00171|   stack.sst = {
 00172|     enable = true;
 00173|     project-name = "myapp";
 00174|     region = "us-west-2";
@@ -7706,7 +7706,7 @@ Tool: read
 00179|     };
 00180|   };
 00181| 
-00182|   stackpanel.ci.enable = true;
+00182|   stack.ci.enable = true;
 00183| }
 00184| ```
 00185| 
@@ -7719,7 +7719,7 @@ Tool: read
 00192| ```nix
 00193| {
 00194|   # SST infrastructure
-00195|   stackpanel.sst = {
+00195|   stack.sst = {
 00196|     enable = true;
 00197|     project-name = "myapp";
 00198|     region = "us-west-2";
@@ -7738,7 +7738,7 @@ Tool: read
 00211|   };
 00212| 
 00213|   # Local AWS access via Roles Anywhere
-00214|   stackpanel.aws.roles-anywhere = {
+00214|   stack.aws.roles-anywhere = {
 00215|     enable = true;
 00216|     region = "us-west-2";
 00217|     account-id = "123456789012";
@@ -7748,14 +7748,14 @@ Tool: read
 00221|   };
 00222| 
 00223|   # Secrets encrypted with KMS
-00224|   stackpanel.variables."/prod/api-key" = {
+00224|   stack.variables."/prod/api-key" = {
 00225|     key = "API_KEY";
 00226|     type = "SECRET";
 00227|     master-keys = [ "prod" ];
 00228|   };
 00229| 
 00230|   # CI pipeline with SST deploy
-00231|   stackpanel.ci.enable = true;
+00231|   stack.ci.enable = true;
 00232| }
 00233| ```
 00234| 
@@ -7813,7 +7813,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/containers.mdx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/containers.mdx"
 }
 ```
 **Output:**
@@ -7827,7 +7827,7 @@ Tool: read
 00006| 
 00007| import { Callout } from "fumadocs-ui/components/callout";
 00008| 
-00009| Stackpanel can build OCI-compatible container images directly from your Nix configuration—no Dockerfile required. Images are built with [nix2container](https://github.com/nlewo/nix2container), producing minimal, reproducible containers with only the dependencies your application actually needs.
+00009| Stack can build OCI-compatible container images directly from your Nix configuration—no Dockerfile required. Images are built with [nix2container](https://github.com/nlewo/nix2container), producing minimal, reproducible containers with only the dependencies your application actually needs.
 00010| 
 00011| ## Why Nix-Built Containers?
 00012| 
@@ -7844,10 +7844,10 @@ Tool: read
 00023| 
 00024| ## Enable Containers
 00025| 
-00026| Container definitions live under `stackpanel.containers`:
+00026| Container definitions live under `stack.containers`:
 00027| 
 00028| ```nix
-00029| stackpanel.containers.api = {
+00029| stack.containers.api = {
 00030|   enable = true;
 00031|   name = "myapp-api";
 00032|   tag = "latest";
@@ -7893,13 +7893,13 @@ Tool: read
 00072| When you define [apps](/docs/apps-ci/defining-apps), you can attach container definitions directly:
 00073| 
 00074| ```nix
-00075| stackpanel.apps.api = {
+00075| stack.apps.api = {
 00076|   port = 1;
 00077|   root = "./apps/api";
 00078|   build = "bun run build";
 00079| };
 00080| 
-00081| stackpanel.containers.api = {
+00081| stack.containers.api = {
 00082|   enable = true;
 00083|   name = "ghcr.io/my-org/myapp-api";
 00084| 
@@ -7940,7 +7940,7 @@ Tool: read
 00119|   };
 00120| in
 00121| {
-00122|   stackpanel.containers.api = {
+00122|   stack.containers.api = {
 00123|     enable = true;
 00124|     name = "ghcr.io/my-org/myapp-api";
 00125| 
@@ -8011,7 +8011,7 @@ Tool: read
 00190| 
 00191| ## Comparing to Dockerfiles
 00192| 
-00193| If you're already using Dockerfiles, you can continue to do so. Stackpanel's container system is an alternative, not a replacement. Here's when each makes sense:
+00193| If you're already using Dockerfiles, you can continue to do so. Stack's container system is an alternative, not a replacement. Here's when each makes sense:
 00194| 
 00195| | Use Nix containers when... | Use Dockerfiles when... |
 00196| |---------------------------|------------------------|
@@ -8021,7 +8021,7 @@ Tool: read
 00200| | You want shared dependencies with your dev environment | You're deploying to a platform that expects Dockerfiles |
 00201| 
 00202| <Callout type="info">
-00203| Stackpanel can also generate Dockerfiles through the [Docker module](/docs/deployment/index), giving you a middle ground: Nix-generated Dockerfiles that are standard files on disk.
+00203| Stack can also generate Dockerfiles through the [Docker module](/docs/deployment/index), giving you a middle ground: Nix-generated Dockerfiles that are standard files on disk.
 00204| </Callout>
 00205| 
 00206| ## Troubleshooting
@@ -8072,7 +8072,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/meta.json"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/meta.json"
 }
 ```
 **Output:**
@@ -8206,7 +8206,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix"
+  "filePath": "/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix"
 }
 ```
 **Output:**
@@ -8219,7 +8219,7 @@ Tool: read
 00005| #
 00006| # Accepts a machine inventory definition in Nix and emits a JSON string
 00007| # output that can be stored via the infra output backend. Colmena consumes
-00008| # this inventory from stackpanel.infra.outputs.machines.
+00008| # this inventory from stack.infra.outputs.machines.
 00009| # ==============================================================================
 00010| {
 00011|   lib,
@@ -8227,7 +8227,7 @@ Tool: read
 00013|   ...
 00014| }:
 00015| let
-00016|   cfg = config.stackpanel.infra.machines;
+00016|   cfg = config.stack.infra.machines;
 00017| 
 00018|   sshConfigType = lib.types.submodule {
 00019|     options = {
@@ -8367,7 +8367,7 @@ Tool: read
 00153|   };
 00154| in
 00155| {
-00156|   options.stackpanel.infra.machines = {
+00156|   options.stack.infra.machines = {
 00157|     enable = lib.mkOption {
 00158|       type = lib.types.bool;
 00159|       default = false;
@@ -8386,7 +8386,7 @@ Tool: read
 00172|     aws = {
 00173|       region = lib.mkOption {
 00174|         type = lib.types.nullOr lib.types.str;
-00175|         default = config.stackpanel.aws.roles-anywhere.region or null;
+00175|         default = config.stack.aws.roles-anywhere.region or null;
 00176|         description = "AWS region for EC2 inventory (falls back to AWS env defaults).";
 00177|       };
 00178| 
@@ -8416,7 +8416,7 @@ Tool: read
 00202|       role-tag-keys = lib.mkOption {
 00203|         type = lib.types.listOf lib.types.str;
 00204|         default = [
-00205|           "stackpanel:role"
+00205|           "stack:role"
 00206|           "role"
 00207|         ];
 00208|         description = "Tag keys used to derive machine roles.";
@@ -8425,7 +8425,7 @@ Tool: read
 00211|       tag-keys = lib.mkOption {
 00212|         type = lib.types.listOf lib.types.str;
 00213|         default = [
-00214|           "stackpanel:tag"
+00214|           "stack:tag"
 00215|           "tag"
 00216|         ];
 00217|         description = "Tag keys used to derive machine tags.";
@@ -8434,7 +8434,7 @@ Tool: read
 00220|       env-tag-keys = lib.mkOption {
 00221|         type = lib.types.listOf lib.types.str;
 00222|         default = [
-00223|           "stackpanel:env"
+00223|           "stack:env"
 00224|           "env"
 00225|           "stage"
 00226|         ];
@@ -8476,9 +8476,9 @@ Tool: read
 00262|   };
 00263| 
 00264|   config = lib.mkIf cfg.enable {
-00265|     stackpanel.infra.enable = lib.mkDefault true;
+00265|     stack.infra.enable = lib.mkDefault true;
 00266| 
-00267|     stackpanel.infra.modules.machines = {
+00267|     stack.infra.modules.machines = {
 00268|       name = "Machine Inventory";
 00269|       description = "Machine inventory provider for Colmena deployments";
 00270|       path = ./index.ts;
@@ -8531,7 +8531,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx"
 }
 ```
 **Output:**
@@ -8819,7 +8819,7 @@ Tool: read
 00280| 						<div className="text-center">
 00281| 							<p className="font-medium text-foreground">Agent Not Connected</p>
 00282| 							<p className="text-muted-foreground text-sm">
-00283| 								Connect to the stackpanel agent to manage deployments.
+00283| 								Connect to the stack agent to manage deployments.
 00284| 							</p>
 00285| 						</div>
 00286| 					</CardContent>
@@ -9060,7 +9060,7 @@ Tool: read
 00521| 								<div className="rounded-lg border border-border bg-secondary/30 p-3">
 00522| 									<p className="text-muted-foreground text-xs">Hive Config</p>
 00523| 									<p className="font-medium text-foreground text-sm font-mono text-[11px]">
-00524| 										{colmenaConfig?.config ?? ".stackpanel/state/colmena/hive.nix"}
+00524| 										{colmenaConfig?.config ?? ".stack/state/colmena/hive.nix"}
 00525| 									</p>
 00526| 								</div>
 00527| 								<div className="rounded-lg border border-border bg-secondary/30 p-3">
@@ -9211,8 +9211,8 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/machines.mdx",
-  "content": "---\ntitle: Machines\ndescription: Define and discover your deployment target machines for NixOS deployments\nicon: server\n---\n\nimport { Callout } from \"fumadocs-ui/components/callout\";\nimport { Steps, Step } from \"fumadocs-ui/components/steps\";\n\nStackpanel's machine inventory system lets you define the servers your applications deploy to. Machines can be declared statically in Nix or discovered dynamically from AWS EC2. The inventory feeds into Colmena for NixOS deployments and is visible in the Studio UI's Deploy panel.\n\n## How It Works\n\nMachine inventory flows through three layers:\n\n1. **Nix config** -- You declare machines (static) or EC2 discovery rules in `.stackpanel/config.nix`\n2. **Infra module** -- The machines infra module resolves the inventory at deploy time (for EC2, it queries the AWS API)\n3. **Studio UI** -- The Deploy panel reads the resolved inventory and displays machine cards, app-to-machine mappings, and Colmena actions\n\n## Quick Start\n\n<Steps>\n<Step>\n\n### Enable the machines module\n\nAdd to your `.stackpanel/config.nix`:\n\n```nix\nstackpanel.infra.machines = {\n  enable = true;\n  source = \"static\";  # or \"aws-ec2\"\n\n  machines = {\n    web-1 = {\n      name = \"Web Server 1\";\n      host = \"10.0.1.10\";\n      roles = [ \"web\" ];\n      tags = [ \"production\" ];\n      arch = \"x86_64-linux\";\n      ssh.user = \"deploy\";\n    };\n  };\n};\n```\n\n</Step>\n<Step>\n\n### Deploy infrastructure\n\nRun `infra:deploy` to provision and register the machine inventory:\n\n```bash\ninfra:deploy\n```\n\n</Step>\n<Step>\n\n### Pull outputs and reload\n\nPull the resolved inventory into your local state and reload the devshell:\n\n```bash\ninfra:pull-outputs\nexit && nix develop --impure\n```\n\n</Step>\n<Step>\n\n### View in Studio\n\nOpen the Studio UI and navigate to **Deploy**. Your machines appear in the Machines tab with their status, roles, and connection info.\n\n</Step>\n</Steps>\n\n## Static Machines\n\nFor fixed infrastructure (bare metal, pre-provisioned VMs, Hetzner, etc.), declare machines directly:\n\n```nix\nstackpanel.infra.machines = {\n  enable = true;\n  source = \"static\";\n\n  machines = {\n    web-1 = {\n      name = \"Web Server 1\";\n      host = \"web1.example.com\";\n      roles = [ \"web\" \"app\" ];\n      tags = [ \"production\" \"us-east\" ];\n      provider = \"hetzner\";\n      arch = \"x86_64-linux\";\n      publicIp = \"203.0.113.10\";\n      privateIp = \"10.0.1.10\";\n      targetEnv = \"production\";\n\n      ssh = {\n        user = \"deploy\";\n        port = 22;\n        keyPath = \"~/.ssh/deploy_ed25519\";\n      };\n\n      labels = {\n        team = \"platform\";\n        cost-center = \"infra\";\n      };\n    };\n\n    db-1 = {\n      name = \"Database Primary\";\n      host = \"10.0.2.10\";\n      roles = [ \"database\" ];\n      tags = [ \"production\" ];\n      arch = \"x86_64-linux\";\n      targetEnv = \"production\";\n      ssh.user = \"root\";\n    };\n  };\n};\n```\n\n### Machine Properties\n\n| Property | Type | Description |\n|----------|------|-------------|\n| `name` | `string` | Human-friendly display name |\n| `host` | `string` | SSH hostname or IP address |\n| `ssh.user` | `string` | SSH user (default: `root`) |\n| `ssh.port` | `int` | SSH port (default: `22`) |\n| `ssh.keyPath` | `string?` | Path to SSH private key |\n| `roles` | `[string]` | Roles for app-to-machine targeting |\n| `tags` | `[string]` | Tags for grouping and filtering |\n| `provider` | `string?` | Infrastructure provider (aws, hetzner, etc.) |\n| `arch` | `string?` | System architecture (e.g., `x86_64-linux`) |\n| `publicIp` | `string?` | Public IP address |\n| `privateIp` | `string?` | Private IP address |\n| `targetEnv` | `string?` | Environment label (production, staging, etc.) |\n| `labels` | `{string: string}` | Arbitrary key-value metadata |\n| `nixosProfile` | `string?` | NixOS profile to deploy |\n| `nixosModules` | `[string]` | Extra NixOS modules for this machine |\n| `env` | `{string: string}` | Environment variables for this machine |\n| `metadata` | `{string: any}` | Extra metadata for downstream tooling |\n\n## AWS EC2 Discovery\n\nFor dynamic infrastructure, Stackpanel can discover machines from AWS EC2 at deploy time:\n\n```nix\nstackpanel.infra.machines = {\n  enable = true;\n  source = \"aws-ec2\";\n\n  aws = {\n    region = \"us-west-2\";\n\n    # EC2 filters (same syntax as AWS CLI --filters)\n    filters = [\n      { name = \"instance-state-name\"; values = [ \"running\" ]; }\n      { name = \"tag:Project\"; values = [ \"myapp\" ]; }\n    ];\n  };\n};\n```\n\nWhen `infra:deploy` runs, the machines module queries the EC2 API using the specified filters and builds an inventory from the results.\n\n### EC2 Tag Mapping\n\nEC2 instances are mapped to machine properties using configurable tag keys:\n\n| Machine Property | Default Tag Keys | Example Tag Value |\n|-----------------|-----------------|-------------------|\n| `name` | `Name` | `web-server-1` |\n| `roles` | `stackpanel:role`, `role` | `web,app` |\n| `tags` | `stackpanel:tag`, `tag` | `production,us-west` |\n| `targetEnv` | `stackpanel:env`, `env`, `stage` | `production` |\n\nCustomize the tag keys used for mapping:\n\n```nix\nstackpanel.infra.machines.aws = {\n  region = \"us-west-2\";\n\n  # Which EC2 tags map to machine roles\n  role-tag-keys = [ \"stackpanel:role\" \"Role\" ];\n\n  # Which EC2 tags map to machine tags\n  tag-keys = [ \"stackpanel:tag\" \"Environment\" ];\n\n  # Which EC2 tags map to target environment\n  env-tag-keys = [ \"stackpanel:env\" \"Stage\" ];\n\n  # Which EC2 tags provide the machine name\n  name-tag-keys = [ \"Name\" ];\n\n  filters = [\n    { name = \"instance-state-name\"; values = [ \"running\" ]; }\n  ];\n};\n```\n\n### Host Resolution\n\nWhen discovering EC2 instances, Stackpanel picks the SSH host using a preference order:\n\n```nix\nstackpanel.infra.machines.aws = {\n  # Try public DNS first, then public IP, then private IP\n  host-preference = [ \"publicDns\" \"publicIp\" \"privateIp\" ];\n};\n```\n\nFor VPN or private-network setups where you connect to private IPs:\n\n```nix\nstackpanel.infra.machines.aws = {\n  host-preference = [ \"privateIp\" ];\n};\n```\n\n### Default SSH Settings for EC2\n\nApply SSH defaults to all discovered EC2 machines:\n\n```nix\nstackpanel.infra.machines.aws = {\n  ssh = {\n    user = \"ec2-user\";\n    port = 22;\n    keyPath = \"~/.ssh/aws_deploy\";\n  };\n};\n```\n\n### Filtering by Instance IDs\n\nTarget specific instances instead of using filters:\n\n```nix\nstackpanel.infra.machines.aws = {\n  instance-ids = [\n    \"i-0abc123def456789a\"\n    \"i-0def456789abc1230\"\n  ];\n};\n```\n\n## Studio UI: Deploy Panel\n\nThe Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has four tabs:\n\n### Machines Tab\n\nDisplays a card grid of all machines in your inventory. Each card shows:\n\n- Machine name and hostname\n- SSH connection info (user, port)\n- Architecture and provider\n- Roles (colored badges) and tags\n- Reachability status (green check or amber warning)\n\nWhen the inventory is empty, it shows guidance:\n\n> Run `infra:deploy` and `infra:pull-outputs` to populate it, then reload the shell.\n\n### App Targets Tab\n\nShows which apps are configured for deployment and their target machines. Each row displays:\n\n- App name\n- Target machines (resolved from roles or explicit targets)\n- Role badge (if targeting by role)\n- Machine count\n\n### Actions Tab\n\nProvides buttons for Colmena deployment actions:\n\n- **colmena eval** -- Evaluate the NixOS configuration\n- **colmena build** -- Build the NixOS closures\n- **colmena apply** -- Deploy to target machines\n\n<Callout type=\"info\">\nThe Actions tab is disabled when no machines are in the inventory. Provision infrastructure first with `infra:deploy`.\n</Callout>\n\n### Settings Tab\n\nDisplays the current Colmena configuration: machine source, hive config path, whether hive generation is enabled, and total machine count.\n\n## Mapping Apps to Machines\n\nAfter machines are in your inventory, configure apps to deploy to them:\n\n```nix\nstackpanel.apps.api = {\n  port = 1;\n  root = \"./apps/api\";\n\n  # Deploy this app to machines with the \"web\" role\n  deploy = {\n    enable = true;\n    role = \"web\";\n  };\n};\n\nstackpanel.apps.worker = {\n  port = 2;\n  root = \"./apps/worker\";\n\n  # Deploy to specific machines by name\n  deploy = {\n    enable = true;\n    targets = [ \"worker-1\" \"worker-2\" ];\n  };\n};\n```\n\n## End-to-End Example\n\nHere is a complete setup with AWS EC2 discovery, app targeting, and infra provisioning:\n\n```nix\n{\n  # Infrastructure provisioning\n  stackpanel.infra = {\n    enable = true;\n    storage-backend = {\n      type = \"sops\";\n      sops.group = \"dev\";\n    };\n\n    # AWS secrets (IAM role, KMS key)\n    aws.secrets = {\n      enable = true;\n      oidc.provider = \"github-actions\";\n      oidc.github-actions = {\n        org = \"my-org\";\n        repo = \"my-repo\";\n      };\n    };\n\n    # Machine discovery\n    machines = {\n      enable = true;\n      source = \"aws-ec2\";\n      aws = {\n        region = \"us-west-2\";\n        filters = [\n          { name = \"instance-state-name\"; values = [ \"running\" ]; }\n          { name = \"tag:Project\"; values = [ \"myapp\" ]; }\n        ];\n        ssh.user = \"deploy\";\n      };\n    };\n  };\n\n  # Apps with deployment targets\n  stackpanel.apps = {\n    web = {\n      port = 0;\n      root = \"./apps/web\";\n      deploy = {\n        enable = true;\n        role = \"web\";\n      };\n    };\n\n    api = {\n      port = 1;\n      root = \"./apps/api\";\n      deploy = {\n        enable = true;\n        role = \"api\";\n      };\n    };\n  };\n}\n```\n\nThen deploy:\n\n```bash\n# Provision infrastructure and discover machines\ninfra:deploy\n\n# Pull machine inventory into local state\ninfra:pull-outputs\n\n# Reload shell to pick up new inventory\nexit && nix develop --impure\n\n# View machines in Studio\n# Navigate to /studio/deploy\n\n# Deploy with Colmena\ncolmena apply\n```\n\n## Troubleshooting\n\n### \"No Machines\" in the Deploy panel\n\nThe machine inventory is populated by `infra:deploy`. If you see no machines:\n\n1. Run `infra:deploy` to execute the machines infra module\n2. Run `infra:pull-outputs` to sync the inventory to local state\n3. Reload your devshell (`exit && nix develop --impure`)\n4. Refresh the Deploy panel in Studio\n\n### EC2 discovery returns no instances\n\nCheck your filters and region. Test directly with the AWS CLI:\n\n```bash\naws ec2 describe-instances \\\n  --region us-west-2 \\\n  --filters \"Name=instance-state-name,Values=running\" \"Name=tag:Project,Values=myapp\" \\\n  --query 'Reservations[].Instances[].{Id:InstanceId,Name:Tags[?Key==`Name`].Value|[0]}'\n```\n\n### SSH connection failures\n\nVerify SSH connectivity to the resolved host:\n\n```bash\nssh -o ConnectTimeout=5 deploy@<machine-host> 'echo ok'\n```\n\nCommon issues:\n- Security group doesn't allow SSH from your IP\n- SSH key path is incorrect\n- Using public DNS but instance only has a private IP (adjust `host-preference`)\n\n## Reference\n\n- [Deployment Overview](/docs/deployment) for all deployment options\n- [Infrastructure](/docs/deployment/infrastructure) for the infra module system\n- [Fly.io](/docs/deployment/fly) for container-based deployment\n- [Cloudflare](/docs/deployment/cloudflare) for edge deployment\n"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/machines.mdx",
+  "content": "---\ntitle: Machines\ndescription: Define and discover your deployment target machines for NixOS deployments\nicon: server\n---\n\nimport { Callout } from \"fumadocs-ui/components/callout\";\nimport { Steps, Step } from \"fumadocs-ui/components/steps\";\n\nStackpanel's machine inventory system lets you define the servers your applications deploy to. Machines can be declared statically in Nix or discovered dynamically from AWS EC2. The inventory feeds into Colmena for NixOS deployments and is visible in the Studio UI's Deploy panel.\n\n## How It Works\n\nMachine inventory flows through three layers:\n\n1. **Nix config** -- You declare machines (static) or EC2 discovery rules in `.stack/config.nix`\n2. **Infra module** -- The machines infra module resolves the inventory at deploy time (for EC2, it queries the AWS API)\n3. **Studio UI** -- The Deploy panel reads the resolved inventory and displays machine cards, app-to-machine mappings, and Colmena actions\n\n## Quick Start\n\n<Steps>\n<Step>\n\n### Enable the machines module\n\nAdd to your `.stack/config.nix`:\n\n```nix\nstackpanel.infra.machines = {\n  enable = true;\n  source = \"static\";  # or \"aws-ec2\"\n\n  machines = {\n    web-1 = {\n      name = \"Web Server 1\";\n      host = \"10.0.1.10\";\n      roles = [ \"web\" ];\n      tags = [ \"production\" ];\n      arch = \"x86_64-linux\";\n      ssh.user = \"deploy\";\n    };\n  };\n};\n```\n\n</Step>\n<Step>\n\n### Deploy infrastructure\n\nRun `infra:deploy` to provision and register the machine inventory:\n\n```bash\ninfra:deploy\n```\n\n</Step>\n<Step>\n\n### Pull outputs and reload\n\nPull the resolved inventory into your local state and reload the devshell:\n\n```bash\ninfra:pull-outputs\nexit && nix develop --impure\n```\n\n</Step>\n<Step>\n\n### View in Studio\n\nOpen the Studio UI and navigate to **Deploy**. Your machines appear in the Machines tab with their status, roles, and connection info.\n\n</Step>\n</Steps>\n\n## Static Machines\n\nFor fixed infrastructure (bare metal, pre-provisioned VMs, Hetzner, etc.), declare machines directly:\n\n```nix\nstackpanel.infra.machines = {\n  enable = true;\n  source = \"static\";\n\n  machines = {\n    web-1 = {\n      name = \"Web Server 1\";\n      host = \"web1.example.com\";\n      roles = [ \"web\" \"app\" ];\n      tags = [ \"production\" \"us-east\" ];\n      provider = \"hetzner\";\n      arch = \"x86_64-linux\";\n      publicIp = \"203.0.113.10\";\n      privateIp = \"10.0.1.10\";\n      targetEnv = \"production\";\n\n      ssh = {\n        user = \"deploy\";\n        port = 22;\n        keyPath = \"~/.ssh/deploy_ed25519\";\n      };\n\n      labels = {\n        team = \"platform\";\n        cost-center = \"infra\";\n      };\n    };\n\n    db-1 = {\n      name = \"Database Primary\";\n      host = \"10.0.2.10\";\n      roles = [ \"database\" ];\n      tags = [ \"production\" ];\n      arch = \"x86_64-linux\";\n      targetEnv = \"production\";\n      ssh.user = \"root\";\n    };\n  };\n};\n```\n\n### Machine Properties\n\n| Property | Type | Description |\n|----------|------|-------------|\n| `name` | `string` | Human-friendly display name |\n| `host` | `string` | SSH hostname or IP address |\n| `ssh.user` | `string` | SSH user (default: `root`) |\n| `ssh.port` | `int` | SSH port (default: `22`) |\n| `ssh.keyPath` | `string?` | Path to SSH private key |\n| `roles` | `[string]` | Roles for app-to-machine targeting |\n| `tags` | `[string]` | Tags for grouping and filtering |\n| `provider` | `string?` | Infrastructure provider (aws, hetzner, etc.) |\n| `arch` | `string?` | System architecture (e.g., `x86_64-linux`) |\n| `publicIp` | `string?` | Public IP address |\n| `privateIp` | `string?` | Private IP address |\n| `targetEnv` | `string?` | Environment label (production, staging, etc.) |\n| `labels` | `{string: string}` | Arbitrary key-value metadata |\n| `nixosProfile` | `string?` | NixOS profile to deploy |\n| `nixosModules` | `[string]` | Extra NixOS modules for this machine |\n| `env` | `{string: string}` | Environment variables for this machine |\n| `metadata` | `{string: any}` | Extra metadata for downstream tooling |\n\n## AWS EC2 Discovery\n\nFor dynamic infrastructure, Stack can discover machines from AWS EC2 at deploy time:\n\n```nix\nstackpanel.infra.machines = {\n  enable = true;\n  source = \"aws-ec2\";\n\n  aws = {\n    region = \"us-west-2\";\n\n    # EC2 filters (same syntax as AWS CLI --filters)\n    filters = [\n      { name = \"instance-state-name\"; values = [ \"running\" ]; }\n      { name = \"tag:Project\"; values = [ \"myapp\" ]; }\n    ];\n  };\n};\n```\n\nWhen `infra:deploy` runs, the machines module queries the EC2 API using the specified filters and builds an inventory from the results.\n\n### EC2 Tag Mapping\n\nEC2 instances are mapped to machine properties using configurable tag keys:\n\n| Machine Property | Default Tag Keys | Example Tag Value |\n|-----------------|-----------------|-------------------|\n| `name` | `Name` | `web-server-1` |\n| `roles` | `stack:role`, `role` | `web,app` |\n| `tags` | `stack:tag`, `tag` | `production,us-west` |\n| `targetEnv` | `stack:env`, `env`, `stage` | `production` |\n\nCustomize the tag keys used for mapping:\n\n```nix\nstackpanel.infra.machines.aws = {\n  region = \"us-west-2\";\n\n  # Which EC2 tags map to machine roles\n  role-tag-keys = [ \"stack:role\" \"Role\" ];\n\n  # Which EC2 tags map to machine tags\n  tag-keys = [ \"stack:tag\" \"Environment\" ];\n\n  # Which EC2 tags map to target environment\n  env-tag-keys = [ \"stack:env\" \"Stage\" ];\n\n  # Which EC2 tags provide the machine name\n  name-tag-keys = [ \"Name\" ];\n\n  filters = [\n    { name = \"instance-state-name\"; values = [ \"running\" ]; }\n  ];\n};\n```\n\n### Host Resolution\n\nWhen discovering EC2 instances, Stack picks the SSH host using a preference order:\n\n```nix\nstackpanel.infra.machines.aws = {\n  # Try public DNS first, then public IP, then private IP\n  host-preference = [ \"publicDns\" \"publicIp\" \"privateIp\" ];\n};\n```\n\nFor VPN or private-network setups where you connect to private IPs:\n\n```nix\nstackpanel.infra.machines.aws = {\n  host-preference = [ \"privateIp\" ];\n};\n```\n\n### Default SSH Settings for EC2\n\nApply SSH defaults to all discovered EC2 machines:\n\n```nix\nstackpanel.infra.machines.aws = {\n  ssh = {\n    user = \"ec2-user\";\n    port = 22;\n    keyPath = \"~/.ssh/aws_deploy\";\n  };\n};\n```\n\n### Filtering by Instance IDs\n\nTarget specific instances instead of using filters:\n\n```nix\nstackpanel.infra.machines.aws = {\n  instance-ids = [\n    \"i-0abc123def456789a\"\n    \"i-0def456789abc1230\"\n  ];\n};\n```\n\n## Studio UI: Deploy Panel\n\nThe Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has four tabs:\n\n### Machines Tab\n\nDisplays a card grid of all machines in your inventory. Each card shows:\n\n- Machine name and hostname\n- SSH connection info (user, port)\n- Architecture and provider\n- Roles (colored badges) and tags\n- Reachability status (green check or amber warning)\n\nWhen the inventory is empty, it shows guidance:\n\n> Run `infra:deploy` and `infra:pull-outputs` to populate it, then reload the shell.\n\n### App Targets Tab\n\nShows which apps are configured for deployment and their target machines. Each row displays:\n\n- App name\n- Target machines (resolved from roles or explicit targets)\n- Role badge (if targeting by role)\n- Machine count\n\n### Actions Tab\n\nProvides buttons for Colmena deployment actions:\n\n- **colmena eval** -- Evaluate the NixOS configuration\n- **colmena build** -- Build the NixOS closures\n- **colmena apply** -- Deploy to target machines\n\n<Callout type=\"info\">\nThe Actions tab is disabled when no machines are in the inventory. Provision infrastructure first with `infra:deploy`.\n</Callout>\n\n### Settings Tab\n\nDisplays the current Colmena configuration: machine source, hive config path, whether hive generation is enabled, and total machine count.\n\n## Mapping Apps to Machines\n\nAfter machines are in your inventory, configure apps to deploy to them:\n\n```nix\nstackpanel.apps.api = {\n  port = 1;\n  root = \"./apps/api\";\n\n  # Deploy this app to machines with the \"web\" role\n  deploy = {\n    enable = true;\n    role = \"web\";\n  };\n};\n\nstackpanel.apps.worker = {\n  port = 2;\n  root = \"./apps/worker\";\n\n  # Deploy to specific machines by name\n  deploy = {\n    enable = true;\n    targets = [ \"worker-1\" \"worker-2\" ];\n  };\n};\n```\n\n## End-to-End Example\n\nHere is a complete setup with AWS EC2 discovery, app targeting, and infra provisioning:\n\n```nix\n{\n  # Infrastructure provisioning\n  stack.infra = {\n    enable = true;\n    storage-backend = {\n      type = \"sops\";\n      sops.group = \"dev\";\n    };\n\n    # AWS secrets (IAM role, KMS key)\n    aws.secrets = {\n      enable = true;\n      oidc.provider = \"github-actions\";\n      oidc.github-actions = {\n        org = \"my-org\";\n        repo = \"my-repo\";\n      };\n    };\n\n    # Machine discovery\n    machines = {\n      enable = true;\n      source = \"aws-ec2\";\n      aws = {\n        region = \"us-west-2\";\n        filters = [\n          { name = \"instance-state-name\"; values = [ \"running\" ]; }\n          { name = \"tag:Project\"; values = [ \"myapp\" ]; }\n        ];\n        ssh.user = \"deploy\";\n      };\n    };\n  };\n\n  # Apps with deployment targets\n  stack.apps = {\n    web = {\n      port = 0;\n      root = \"./apps/web\";\n      deploy = {\n        enable = true;\n        role = \"web\";\n      };\n    };\n\n    api = {\n      port = 1;\n      root = \"./apps/api\";\n      deploy = {\n        enable = true;\n        role = \"api\";\n      };\n    };\n  };\n}\n```\n\nThen deploy:\n\n```bash\n# Provision infrastructure and discover machines\ninfra:deploy\n\n# Pull machine inventory into local state\ninfra:pull-outputs\n\n# Reload shell to pick up new inventory\nexit && nix develop --impure\n\n# View machines in Studio\n# Navigate to /studio/deploy\n\n# Deploy with Colmena\ncolmena apply\n```\n\n## Troubleshooting\n\n### \"No Machines\" in the Deploy panel\n\nThe machine inventory is populated by `infra:deploy`. If you see no machines:\n\n1. Run `infra:deploy` to execute the machines infra module\n2. Run `infra:pull-outputs` to sync the inventory to local state\n3. Reload your devshell (`exit && nix develop --impure`)\n4. Refresh the Deploy panel in Studio\n\n### EC2 discovery returns no instances\n\nCheck your filters and region. Test directly with the AWS CLI:\n\n```bash\naws ec2 describe-instances \\\n  --region us-west-2 \\\n  --filters \"Name=instance-state-name,Values=running\" \"Name=tag:Project,Values=myapp\" \\\n  --query 'Reservations[].Instances[].{Id:InstanceId,Name:Tags[?Key==`Name`].Value|[0]}'\n```\n\n### SSH connection failures\n\nVerify SSH connectivity to the resolved host:\n\n```bash\nssh -o ConnectTimeout=5 deploy@<machine-host> 'echo ok'\n```\n\nCommon issues:\n- Security group doesn't allow SSH from your IP\n- SSH key path is incorrect\n- Using public DNS but instance only has a private IP (adjust `host-preference`)\n\n## Reference\n\n- [Deployment Overview](/docs/deployment) for all deployment options\n- [Infrastructure](/docs/deployment/infrastructure) for the infra module system\n- [Fly.io](/docs/deployment/fly) for container-based deployment\n- [Cloudflare](/docs/deployment/cloudflare) for edge deployment\n"
 }
 ```
 **Output:**
@@ -9220,7 +9220,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -9230,7 +9230,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -9257,8 +9257,8 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/infrastructure.mdx",
-  "content": "---\ntitle: Infrastructure\ndescription: Provision cloud infrastructure with Alchemy and the infra module system\nicon: layers\n---\n\nimport { Callout } from \"fumadocs-ui/components/callout\";\nimport { Steps, Step } from \"fumadocs-ui/components/steps\";\n\nStackpanel includes a modular infrastructure provisioning system built on [Alchemy](https://alchemy.run). It provisions AWS resources (IAM roles, KMS keys, OIDC providers), databases (Neon), caches (Upstash), deployment targets (Cloudflare Workers), and machine inventories -- all declared in Nix and deployed with a single command.\n\n## How It Works\n\nThe infra system has three parts:\n\n1. **Nix modules** declare what infrastructure you need (`.stackpanel/config.nix`)\n2. **Code generation** produces TypeScript modules in `packages/infra/` with typed inputs\n3. **Alchemy runtime** provisions the actual cloud resources when you run `infra:deploy`\n\nInfrastructure outputs (ARNs, URLs, keys) are synced back to your storage backend (SOPS, SSM, or Chamber) so other parts of your stack can reference them.\n\n## Quick Start\n\n<Steps>\n<Step>\n\n### Enable infrastructure\n\nAdd to `.stackpanel/config.nix`:\n\n```nix\nstackpanel.infra = {\n  enable = true;\n\n  # Where to store provisioned outputs\n  storage-backend = {\n    type = \"sops\";\n    sops.group = \"dev\";\n  };\n};\n```\n\n</Step>\n<Step>\n\n### Enable modules\n\nTurn on the infrastructure modules you need:\n\n```nix\n# AWS IAM + KMS for secrets\nstackpanel.infra.aws.secrets = {\n  enable = true;\n  oidc.provider = \"github-actions\";\n  oidc.github-actions = {\n    org = \"my-org\";\n    repo = \"my-repo\";\n  };\n};\n\n# Database (Neon Postgres)\nstackpanel.infra.database = {\n  enable = true;\n  provider = \"neon\";\n  neon.region = \"aws-us-east-1\";\n};\n```\n\n</Step>\n<Step>\n\n### Reload and deploy\n\n```bash\n# Reload to pick up config changes\nexit && nix develop --impure\n\n# Deploy all infrastructure\ninfra:deploy\n```\n\n</Step>\n</Steps>\n\n## Available Modules\n\n| Module | What it provisions | Key options |\n|--------|-------------------|-------------|\n| **aws-secrets** | IAM role, OIDC provider, KMS key + alias | `oidc.provider`, `iam.role-name`, `kms.alias` |\n| **deployment** | Cloudflare Workers/Pages per app | Per-app `deployment.host = \"cloudflare\"` |\n| **database** | Neon Postgres or devenv/Docker Postgres | `provider` (neon/devenv/docker) |\n| **cache** | Upstash Redis or devenv/Docker Redis | `provider` (upstash/devenv/docker) |\n| **machines** | Machine inventory (static or AWS EC2) | `source` (static/aws-ec2) |\n\n## Deploying Infrastructure\n\n### Basic Deploy\n\n```bash\n# Deploy all modules\ninfra:deploy\n```\n\nThis runs `alchemy deploy` in the generated `packages/infra/` directory. Alchemy evaluates each module, creates or updates resources, and writes state to its `.alchemy/` directory.\n\n### Adopting Existing Resources\n\nIf your AWS resources already exist (e.g., you created an IAM role manually), use the `--adopt` flag to bring them under Alchemy management without recreating them:\n\n```bash\ninfra:deploy --adopt\n```\n\nThis tells Alchemy to adopt existing resources instead of failing with \"already exists\" errors. The infra modules' custom resources (IAM roles, KMS keys) are built to handle adoption gracefully -- they detect existing resources and update them in place.\n\n<Callout type=\"info\">\nThe `--adopt` flag is an Alchemy CLI option, not a per-resource setting. However, the Stackpanel infra modules are written to be adopt-safe by default -- IAM roles use get-or-create logic, and KMS keys look up existing aliases before creating new keys.\n</Callout>\n\n### Stage Selection\n\nDeploy to a specific stage (environment):\n\n```bash\ninfra:deploy --stage production\ninfra:deploy --stage staging\n```\n\nWithout `--stage`, Alchemy defaults to your username as the stage name. This lets each developer have isolated infrastructure for testing.\n\n### Destroying Infrastructure\n\n```bash\n# Remove all provisioned resources\ninfra:destroy\n\n# Remove a specific stage\ninfra:destroy --stage staging\n```\n\n<Callout type=\"warn\">\n`infra:destroy` removes cloud resources permanently. Adopted resources (IAM roles, KMS keys) are not deleted -- they're only unlinked from Alchemy state.\n</Callout>\n\n## Storage Backends\n\nInfrastructure outputs (ARNs, URLs, connection strings) need to be stored somewhere accessible to your apps and CI. Stackpanel supports three backends:\n\n### SOPS (Recommended for teams)\n\nOutputs are written to a SOPS-encrypted YAML file in your repo:\n\n```nix\nstackpanel.infra.storage-backend = {\n  type = \"sops\";\n  sops.group = \"dev\";  # writes to .stackpanel/secrets/vars/dev.sops.yaml\n};\n```\n\nAfter `infra:deploy`, outputs like `aws-secrets-roleArn` appear in the SOPS file. They're decrypted at runtime using your team's AGE keys.\n\n### AWS SSM Parameter Store\n\nOutputs are written to SSM parameters:\n\n```nix\nstackpanel.infra.storage-backend = {\n  type = \"ssm\";\n  ssm.prefix = \"/myapp/infra\";\n};\n```\n\n### Chamber\n\nOutputs are written via Chamber:\n\n```nix\nstackpanel.infra.storage-backend = {\n  type = \"chamber\";\n  chamber.service = \"myapp\";\n};\n```\n\n### None\n\nSkip output sync entirely (outputs are only in Alchemy state):\n\n```nix\nstackpanel.infra.storage-backend.type = \"none\";\n```\n\n## Studio UI: Infrastructure Panel\n\nThe Studio UI's **Infrastructure** panel (`/studio/infra`) provides a visual interface for managing your provisioned infrastructure. It has five tabs:\n\n### Status Tab\n\nShows an overview of your infrastructure configuration:\n- SST project name and region\n- OIDC provider type\n- IAM role name and ARN\n- KMS key status\n- Config file path\n\n### Deploy Tab\n\nDeploy or destroy infrastructure from the UI:\n- Stage selector (dev, staging, production)\n- Deploy button (runs `sst deploy --stage <stage>`)\n- Remove button (runs `sst remove --stage <stage>`)\n- Live command output\n\n### Outputs Tab\n\nDisplays all provisioned infrastructure outputs:\n- ARNs, URLs, and connection strings\n- Copy-to-clipboard for each value\n- Output source module\n\n### Resources Tab\n\nLists all deployed AWS resources by type and URN.\n\n### Configure Tab\n\nFull configuration form for SST/infrastructure settings:\n- Enable toggle\n- Project name, region, account ID\n- KMS key settings\n- OIDC provider selection (GitHub Actions, Fly.io, Roles Anywhere)\n- IAM role name\n\n## AWS Secrets Module\n\nThe `aws-secrets` module is the most commonly used infra module. It provisions:\n\n- **IAM Role** -- For CI/CD and local AWS access\n- **OIDC Provider** -- For passwordless authentication from GitHub Actions or Fly.io\n- **KMS Key + Alias** -- For encrypting secrets at rest\n- **KMS Access Policy** -- Grants the IAM role encrypt/decrypt permissions\n\n```nix\nstackpanel.infra.aws.secrets = {\n  enable = true;\n  region = \"us-west-2\";\n\n  iam = {\n    role-name = \"myapp-secrets-role\";\n    additional-policies = [\n      \"arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess\"\n    ];\n  };\n\n  kms = {\n    alias = \"myapp-secrets\";\n    deletion-window-days = 30;\n  };\n\n  oidc = {\n    provider = \"github-actions\";\n    github-actions = {\n      org = \"my-org\";\n      repo = \"my-repo\";\n      branch = \"*\";\n    };\n  };\n};\n```\n\n### OIDC Providers\n\n| Provider | Use case | Authentication flow |\n|----------|----------|-------------------|\n| `github-actions` | CI/CD from GitHub | GitHub OIDC token -> STS AssumeRoleWithWebIdentity |\n| `flyio` | Fly.io Machines | Fly OIDC token -> STS AssumeRoleWithWebIdentity |\n| `roles-anywhere` | Local dev with Step CA | mTLS certificate -> IAM Roles Anywhere |\n\n## Deployment Module\n\nThe deployment infra module provisions hosting resources for your apps. Currently supports Cloudflare Workers:\n\n```nix\nstackpanel.apps.web = {\n  port = 0;\n  framework.tanstack-start.enable = true;\n\n  deployment = {\n    enable = true;\n    host = \"cloudflare\";\n    bindings = [ \"DATABASE_URL\" \"BETTER_AUTH_SECRET\" ];\n    secrets = [ \"DATABASE_URL\" \"BETTER_AUTH_SECRET\" ];\n  };\n};\n```\n\nSupported framework/host combinations:\n\n| Framework | Cloudflare | Fly.io |\n|-----------|-----------|--------|\n| `tanstack-start` | TanStackStart Worker | Container |\n| `nextjs` | Nextjs Worker | Container |\n| `vite` | Vite Worker | Container |\n| `hono` | Worker (Node compat) | Container |\n| `astro` | Astro Worker | Container |\n| `remix` | Remix Worker | Container |\n| `nuxt` | Nuxt Worker | Container |\n\n## Generated Files\n\nThe infra system generates a complete TypeScript package at `packages/infra/`:\n\n```\npackages/infra/\n  alchemy.run.ts          # Orchestrator (imports all modules, syncs outputs)\n  package.json            # Dependencies from all active modules\n  tsconfig.json           # TypeScript config\n  src/\n    index.ts              # Infra class (input resolution, output sync)\n    types.ts              # Per-module input TypeScript interfaces\n    resources/\n      iam-role.ts         # Custom adopt-safe IAM Role resource\n      kms-key.ts          # Custom adopt-safe KMS Key resource\n      kms-alias.ts        # Custom KMS Alias resource\n  modules/\n    aws-secrets/\n      index.ts            # AWS secrets provisioning\n      policies.ts         # IAM policy builders\n    deployment.ts         # App deployment to Cloudflare\n    database.ts           # Database provisioning\n```\n\nThese files are regenerated on each devshell entry. The `alchemy.run.ts` orchestrator imports all active modules and runs `Infra.syncAll()` to write outputs to your storage backend.\n\n## Pulling Outputs\n\nAfter deploying, pull outputs from your storage backend into the local Nix state:\n\n```bash\ninfra:pull-outputs\n```\n\nThis reads outputs from Chamber/SSM and writes them to `.stackpanel/data/infra-outputs.nix`, making them available as `config.stackpanel.infra.outputs.*` in your Nix config.\n\n## CLI Reference\n\n| Command | Description |\n|---------|-------------|\n| `infra:deploy` | Deploy all infrastructure modules |\n| `infra:deploy --adopt` | Deploy, adopting existing resources |\n| `infra:deploy --stage <name>` | Deploy to a specific stage |\n| `infra:destroy` | Remove all provisioned resources |\n| `infra:dev` | Start infrastructure dev mode |\n| `infra:pull-outputs` | Pull outputs from storage backend |\n\nAll commands accept additional Alchemy CLI options. Run `infra:deploy --help` for the full list.\n\n## Troubleshooting\n\n### \"EntityAlreadyExists\" on first deploy\n\nYour AWS resources already exist from a previous provisioning tool. Use `--adopt`:\n\n```bash\ninfra:deploy --adopt\n```\n\n### \"Resource already exists\" Alchemy error\n\nThis is different from the AWS error above. It means the Alchemy resource type is registered twice. This can happen if you have conflicting Alchemy versions. Check `packages/infra/package.json` and ensure a single `alchemy` version.\n\n### Outputs not showing up after deploy\n\n1. Check that `storage-backend` is configured (not `\"none\"`)\n2. Run `infra:pull-outputs` to sync outputs to local state\n3. Reload the devshell to pick up new outputs\n\n### \"storage-bakend\" typo error\n\nIf you see `The option 'stackpanel.infra.storage-bakend' does not exist`, check your config for the typo. The correct option is `storage-backend` (with a `c`).\n\n## Reference\n\n- [Deployment Overview](/docs/deployment) for all deployment options\n- [Machines](/docs/deployment/machines) for machine inventory\n- [SST](/docs/deployment/sst) for the older SST-based infrastructure\n- [Secrets](/docs/secrets) for encrypted secrets management\n"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/infrastructure.mdx",
+  "content": "---\ntitle: Infrastructure\ndescription: Provision cloud infrastructure with Alchemy and the infra module system\nicon: layers\n---\n\nimport { Callout } from \"fumadocs-ui/components/callout\";\nimport { Steps, Step } from \"fumadocs-ui/components/steps\";\n\nStackpanel includes a modular infrastructure provisioning system built on [Alchemy](https://alchemy.run). It provisions AWS resources (IAM roles, KMS keys, OIDC providers), databases (Neon), caches (Upstash), deployment targets (Cloudflare Workers), and machine inventories -- all declared in Nix and deployed with a single command.\n\n## How It Works\n\nThe infra system has three parts:\n\n1. **Nix modules** declare what infrastructure you need (`.stack/config.nix`)\n2. **Code generation** produces TypeScript modules in `packages/infra/` with typed inputs\n3. **Alchemy runtime** provisions the actual cloud resources when you run `infra:deploy`\n\nInfrastructure outputs (ARNs, URLs, keys) are synced back to your storage backend (SOPS, SSM, or Chamber) so other parts of your stack can reference them.\n\n## Quick Start\n\n<Steps>\n<Step>\n\n### Enable infrastructure\n\nAdd to `.stack/config.nix`:\n\n```nix\nstackpanel.infra = {\n  enable = true;\n\n  # Where to store provisioned outputs\n  storage-backend = {\n    type = \"sops\";\n    sops.group = \"dev\";\n  };\n};\n```\n\n</Step>\n<Step>\n\n### Enable modules\n\nTurn on the infrastructure modules you need:\n\n```nix\n# AWS IAM + KMS for secrets\nstackpanel.infra.aws.secrets = {\n  enable = true;\n  oidc.provider = \"github-actions\";\n  oidc.github-actions = {\n    org = \"my-org\";\n    repo = \"my-repo\";\n  };\n};\n\n# Database (Neon Postgres)\nstackpanel.infra.database = {\n  enable = true;\n  provider = \"neon\";\n  neon.region = \"aws-us-east-1\";\n};\n```\n\n</Step>\n<Step>\n\n### Reload and deploy\n\n```bash\n# Reload to pick up config changes\nexit && nix develop --impure\n\n# Deploy all infrastructure\ninfra:deploy\n```\n\n</Step>\n</Steps>\n\n## Available Modules\n\n| Module | What it provisions | Key options |\n|--------|-------------------|-------------|\n| **aws-secrets** | IAM role, OIDC provider, KMS key + alias | `oidc.provider`, `iam.role-name`, `kms.alias` |\n| **deployment** | Cloudflare Workers/Pages per app | Per-app `deployment.host = \"cloudflare\"` |\n| **database** | Neon Postgres or devenv/Docker Postgres | `provider` (neon/devenv/docker) |\n| **cache** | Upstash Redis or devenv/Docker Redis | `provider` (upstash/devenv/docker) |\n| **machines** | Machine inventory (static or AWS EC2) | `source` (static/aws-ec2) |\n\n## Deploying Infrastructure\n\n### Basic Deploy\n\n```bash\n# Deploy all modules\ninfra:deploy\n```\n\nThis runs `alchemy deploy` in the generated `packages/infra/` directory. Alchemy evaluates each module, creates or updates resources, and writes state to its `.alchemy/` directory.\n\n### Adopting Existing Resources\n\nIf your AWS resources already exist (e.g., you created an IAM role manually), use the `--adopt` flag to bring them under Alchemy management without recreating them:\n\n```bash\ninfra:deploy --adopt\n```\n\nThis tells Alchemy to adopt existing resources instead of failing with \"already exists\" errors. The infra modules' custom resources (IAM roles, KMS keys) are built to handle adoption gracefully -- they detect existing resources and update them in place.\n\n<Callout type=\"info\">\nThe `--adopt` flag is an Alchemy CLI option, not a per-resource setting. However, the Stack infra modules are written to be adopt-safe by default -- IAM roles use get-or-create logic, and KMS keys look up existing aliases before creating new keys.\n</Callout>\n\n### Stage Selection\n\nDeploy to a specific stage (environment):\n\n```bash\ninfra:deploy --stage production\ninfra:deploy --stage staging\n```\n\nWithout `--stage`, Alchemy defaults to your username as the stage name. This lets each developer have isolated infrastructure for testing.\n\n### Destroying Infrastructure\n\n```bash\n# Remove all provisioned resources\ninfra:destroy\n\n# Remove a specific stage\ninfra:destroy --stage staging\n```\n\n<Callout type=\"warn\">\n`infra:destroy` removes cloud resources permanently. Adopted resources (IAM roles, KMS keys) are not deleted -- they're only unlinked from Alchemy state.\n</Callout>\n\n## Storage Backends\n\nInfrastructure outputs (ARNs, URLs, connection strings) need to be stored somewhere accessible to your apps and CI. Stack supports three backends:\n\n### SOPS (Recommended for teams)\n\nOutputs are written to a SOPS-encrypted YAML file in your repo:\n\n```nix\nstackpanel.infra.storage-backend = {\n  type = \"sops\";\n  sops.group = \"dev\";  # writes to .stack/secrets/vars/dev.sops.yaml\n};\n```\n\nAfter `infra:deploy`, outputs like `aws-secrets-roleArn` appear in the SOPS file. They're decrypted at runtime using your team's AGE keys.\n\n### AWS SSM Parameter Store\n\nOutputs are written to SSM parameters:\n\n```nix\nstackpanel.infra.storage-backend = {\n  type = \"ssm\";\n  ssm.prefix = \"/myapp/infra\";\n};\n```\n\n### Chamber\n\nOutputs are written via Chamber:\n\n```nix\nstackpanel.infra.storage-backend = {\n  type = \"chamber\";\n  chamber.service = \"myapp\";\n};\n```\n\n### None\n\nSkip output sync entirely (outputs are only in Alchemy state):\n\n```nix\nstackpanel.infra.storage-backend.type = \"none\";\n```\n\n## Studio UI: Infrastructure Panel\n\nThe Studio UI's **Infrastructure** panel (`/studio/infra`) provides a visual interface for managing your provisioned infrastructure. It has five tabs:\n\n### Status Tab\n\nShows an overview of your infrastructure configuration:\n- SST project name and region\n- OIDC provider type\n- IAM role name and ARN\n- KMS key status\n- Config file path\n\n### Deploy Tab\n\nDeploy or destroy infrastructure from the UI:\n- Stage selector (dev, staging, production)\n- Deploy button (runs `sst deploy --stage <stage>`)\n- Remove button (runs `sst remove --stage <stage>`)\n- Live command output\n\n### Outputs Tab\n\nDisplays all provisioned infrastructure outputs:\n- ARNs, URLs, and connection strings\n- Copy-to-clipboard for each value\n- Output source module\n\n### Resources Tab\n\nLists all deployed AWS resources by type and URN.\n\n### Configure Tab\n\nFull configuration form for SST/infrastructure settings:\n- Enable toggle\n- Project name, region, account ID\n- KMS key settings\n- OIDC provider selection (GitHub Actions, Fly.io, Roles Anywhere)\n- IAM role name\n\n## AWS Secrets Module\n\nThe `aws-secrets` module is the most commonly used infra module. It provisions:\n\n- **IAM Role** -- For CI/CD and local AWS access\n- **OIDC Provider** -- For passwordless authentication from GitHub Actions or Fly.io\n- **KMS Key + Alias** -- For encrypting secrets at rest\n- **KMS Access Policy** -- Grants the IAM role encrypt/decrypt permissions\n\n```nix\nstackpanel.infra.aws.secrets = {\n  enable = true;\n  region = \"us-west-2\";\n\n  iam = {\n    role-name = \"myapp-secrets-role\";\n    additional-policies = [\n      \"arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess\"\n    ];\n  };\n\n  kms = {\n    alias = \"myapp-secrets\";\n    deletion-window-days = 30;\n  };\n\n  oidc = {\n    provider = \"github-actions\";\n    github-actions = {\n      org = \"my-org\";\n      repo = \"my-repo\";\n      branch = \"*\";\n    };\n  };\n};\n```\n\n### OIDC Providers\n\n| Provider | Use case | Authentication flow |\n|----------|----------|-------------------|\n| `github-actions` | CI/CD from GitHub | GitHub OIDC token -> STS AssumeRoleWithWebIdentity |\n| `flyio` | Fly.io Machines | Fly OIDC token -> STS AssumeRoleWithWebIdentity |\n| `roles-anywhere` | Local dev with Step CA | mTLS certificate -> IAM Roles Anywhere |\n\n## Deployment Module\n\nThe deployment infra module provisions hosting resources for your apps. Currently supports Cloudflare Workers:\n\n```nix\nstackpanel.apps.web = {\n  port = 0;\n  framework.tanstack-start.enable = true;\n\n  deployment = {\n    enable = true;\n    host = \"cloudflare\";\n    bindings = [ \"DATABASE_URL\" \"BETTER_AUTH_SECRET\" ];\n    secrets = [ \"DATABASE_URL\" \"BETTER_AUTH_SECRET\" ];\n  };\n};\n```\n\nSupported framework/host combinations:\n\n| Framework | Cloudflare | Fly.io |\n|-----------|-----------|--------|\n| `tanstack-start` | TanStackStart Worker | Container |\n| `nextjs` | Nextjs Worker | Container |\n| `vite` | Vite Worker | Container |\n| `hono` | Worker (Node compat) | Container |\n| `astro` | Astro Worker | Container |\n| `remix` | Remix Worker | Container |\n| `nuxt` | Nuxt Worker | Container |\n\n## Generated Files\n\nThe infra system generates a complete TypeScript package at `packages/infra/`:\n\n```\npackages/infra/\n  alchemy.run.ts          # Orchestrator (imports all modules, syncs outputs)\n  package.json            # Dependencies from all active modules\n  tsconfig.json           # TypeScript config\n  src/\n    index.ts              # Infra class (input resolution, output sync)\n    types.ts              # Per-module input TypeScript interfaces\n    resources/\n      iam-role.ts         # Custom adopt-safe IAM Role resource\n      kms-key.ts          # Custom adopt-safe KMS Key resource\n      kms-alias.ts        # Custom KMS Alias resource\n  modules/\n    aws-secrets/\n      index.ts            # AWS secrets provisioning\n      policies.ts         # IAM policy builders\n    deployment.ts         # App deployment to Cloudflare\n    database.ts           # Database provisioning\n```\n\nThese files are regenerated on each devshell entry. The `alchemy.run.ts` orchestrator imports all active modules and runs `Infra.syncAll()` to write outputs to your storage backend.\n\n## Pulling Outputs\n\nAfter deploying, pull outputs from your storage backend into the local Nix state:\n\n```bash\ninfra:pull-outputs\n```\n\nThis reads outputs from Chamber/SSM and writes them to `.stack/data/infra-outputs.nix`, making them available as `config.stack.infra.outputs.*` in your Nix config.\n\n## CLI Reference\n\n| Command | Description |\n|---------|-------------|\n| `infra:deploy` | Deploy all infrastructure modules |\n| `infra:deploy --adopt` | Deploy, adopting existing resources |\n| `infra:deploy --stage <name>` | Deploy to a specific stage |\n| `infra:destroy` | Remove all provisioned resources |\n| `infra:dev` | Start infrastructure dev mode |\n| `infra:pull-outputs` | Pull outputs from storage backend |\n\nAll commands accept additional Alchemy CLI options. Run `infra:deploy --help` for the full list.\n\n## Troubleshooting\n\n### \"EntityAlreadyExists\" on first deploy\n\nYour AWS resources already exist from a previous provisioning tool. Use `--adopt`:\n\n```bash\ninfra:deploy --adopt\n```\n\n### \"Resource already exists\" Alchemy error\n\nThis is different from the AWS error above. It means the Alchemy resource type is registered twice. This can happen if you have conflicting Alchemy versions. Check `packages/infra/package.json` and ensure a single `alchemy` version.\n\n### Outputs not showing up after deploy\n\n1. Check that `storage-backend` is configured (not `\"none\"`)\n2. Run `infra:pull-outputs` to sync outputs to local state\n3. Reload the devshell to pick up new outputs\n\n### \"storage-bakend\" typo error\n\nIf you see `The option 'stack.infra.storage-bakend' does not exist`, check your config for the typo. The correct option is `storage-backend` (with a `c`).\n\n## Reference\n\n- [Deployment Overview](/docs/deployment) for all deployment options\n- [Machines](/docs/deployment/machines) for machine inventory\n- [SST](/docs/deployment/sst) for the older SST-based infrastructure\n- [Secrets](/docs/secrets) for encrypted secrets management\n"
 }
 ```
 **Output:**
@@ -9266,7 +9266,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -9276,7 +9276,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -9410,7 +9410,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/index.mdx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/index.mdx",
   "oldString": "<Cards>\n  <Card title=\"Containers\" href=\"./containers\">\n    Build OCI-compatible container images using Nix or Dockerfile generation\n  </Card>\n  <Card title=\"Cloudflare\" href=\"./cloudflare\">\n    Deploy to Cloudflare Workers and Pages\n  </Card>\n  <Card title=\"Fly.io\" href=\"./fly\">\n    Deploy to Fly.io with generated fly.toml and Dockerfile\n  </Card>\n  <Card title=\"SST\" href=\"./sst\">\n    AWS infrastructure provisioning with KMS, IAM, and OIDC authentication\n  </Card>\n</Cards>",
   "newString": "<Cards>\n  <Card title=\"Infrastructure\" href=\"./infrastructure\">\n    Provision cloud resources with the Alchemy-based infra module system\n  </Card>\n  <Card title=\"Machines\" href=\"./machines\">\n    Define and discover deployment target machines (static or AWS EC2)\n  </Card>\n  <Card title=\"Cloudflare\" href=\"./cloudflare\">\n    Deploy to Cloudflare Workers and Pages\n  </Card>\n  <Card title=\"Fly.io\" href=\"./fly\">\n    Deploy to Fly.io with generated fly.toml and Dockerfile\n  </Card>\n  <Card title=\"Containers\" href=\"./containers\">\n    Build OCI-compatible container images using Nix or Dockerfile generation\n  </Card>\n  <Card title=\"SST\" href=\"./sst\">\n    AWS infrastructure provisioning with KMS, IAM, and OIDC authentication\n  </Card>\n</Cards>"
 }
@@ -9431,7 +9431,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/index.mdx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/index.mdx",
   "oldString": "- Need AWS infrastructure? The SST extension provisions it with IAM, KMS, and OIDC already wired up.",
   "newString": "- Need AWS infrastructure? The [infra module system](./infrastructure) provisions it with IAM, KMS, and OIDC already wired up.\n- Need to manage deployment targets? The [machines module](./machines) discovers EC2 instances or accepts static definitions."
 }
@@ -9452,9 +9452,9 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/index.mdx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/index.mdx",
   "oldString": "### SST (AWS)\n\nSST is the most comprehensive—it provisions cloud infrastructure (KMS keys, IAM roles, S3 buckets) alongside your deployment. The SST extension handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials.",
-  "newString": "### Infrastructure (Alchemy)\n\nThe [infra module system](./infrastructure) is the most comprehensive approach -- it provisions cloud infrastructure (KMS keys, IAM roles, databases, caches) alongside your deployment using Alchemy. It handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials. Use `infra:deploy --adopt` to bring existing resources under management.\n\n### Machines\n\nThe [machines module](./machines) maintains an inventory of your deployment targets. Machines can be declared statically or discovered from AWS EC2 at deploy time. The inventory feeds into the Studio UI's Deploy panel and Colmena for NixOS deployments.\n\n### SST (Legacy)\n\n[SST](./sst) is an alternative infrastructure approach using the SST framework directly. For new projects, the [infra module system](./infrastructure) is recommended as it provides more flexibility and integrates with the broader Stackpanel infra pipeline."
+  "newString": "### Infrastructure (Alchemy)\n\nThe [infra module system](./infrastructure) is the most comprehensive approach -- it provisions cloud infrastructure (KMS keys, IAM roles, databases, caches) alongside your deployment using Alchemy. It handles OIDC authentication for CI, so your GitHub Actions workflow can deploy to AWS without long-lived credentials. Use `infra:deploy --adopt` to bring existing resources under management.\n\n### Machines\n\nThe [machines module](./machines) maintains an inventory of your deployment targets. Machines can be declared statically or discovered from AWS EC2 at deploy time. The inventory feeds into the Studio UI's Deploy panel and Colmena for NixOS deployments.\n\n### SST (Legacy)\n\n[SST](./sst) is an alternative infrastructure approach using the SST framework directly. For new projects, the [infra module system](./infrastructure) is recommended as it provides more flexibility and integrates with the broader Stack infra pipeline."
 }
 ```
 **Output:**
@@ -9473,7 +9473,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/meta.json",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/meta.json",
   "oldString": "{\n  \"title\": \"Containers & Deployment\",\n  \"description\": \"Build containers and deploy to production\",\n  \"icon\": \"cloud-upload\",\n  \"pages\": [\"index\", \"containers\", \"cloudflare\", \"fly\", \"sst\"]\n}",
   "newString": "{\n  \"title\": \"Containers & Deployment\",\n  \"description\": \"Build containers and deploy to production\",\n  \"icon\": \"cloud-upload\",\n  \"pages\": [\"index\", \"infrastructure\", \"machines\", \"cloudflare\", \"fly\", \"containers\", \"sst\"]\n}"
 }
@@ -9599,7 +9599,7 @@ Here's a summary of what was done:
 
 The **Deploy** panel in Studio (`/studio/deploy`) shows your machine inventory. To populate it:
 
-1. Enable the machines module in `.stackpanel/config.nix` with either `source = "static"` (declare machines in Nix) or `source = "aws-ec2"` (discover from EC2 at deploy time)
+1. Enable the machines module in `.stack/config.nix` with either `source = "static"` (declare machines in Nix) or `source = "aws-ec2"` (discover from EC2 at deploy time)
 2. Run `infra:deploy` to provision/discover machines
 3. Run `infra:pull-outputs` to sync inventory to local state
 4. Reload devshell and open Studio -- machines appear in the Deploy panel's Machines tab
@@ -9660,7 +9660,7 @@ Now I have a complete picture. Here is the comprehensive analysis:
 There are **two generations** of hooks and **three write mechanisms**:
 
 #### A. Legacy Generic Hook: `useNixData<T>` (HTTP REST)
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-agent.ts`, lines 1153-1200
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-agent.ts`, lines 1153-1200
 
 ```typescript
 function useNixData<T>(
@@ -9678,7 +9678,7 @@ function useNixData<T>(
 - **Write (mutate):** `POST /api/nix/data` with `{ entity, data: snakeToKebab(data) }` -- transforms keys from snake_case to kebab-case
 
 #### B. Legacy Map Hook: `useNixMapData<V>` (HTTP REST)
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-agent.ts`, lines 1210-1267
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-agent.ts`, lines 1210-1267
 
 ```typescript
 function useNixMapData<V>(
@@ -9698,7 +9698,7 @@ function useNixMapData<V>(
 - **remove** -> `POST /api/nix/data { entity, key, delete: true }`
 
 #### C. Modern Typed Hooks: Connect-RPC (e.g., `useApps`, `useSetApps`)
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-agent.ts`, lines 336-540
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-agent.ts`, lines 336-540
 
 ```typescript
 function useApps(): UseQueryResult<Record<string, App>>;
@@ -9718,7 +9718,7 @@ function useSetAws(): UseMutationResult;       // calls client.setAws(aws)
 These use `createClient(AgentService, transport)` to call the proto-defined RPCs.
 
 #### D. Patch Hook: `usePatchNixData` (Connect-RPC)
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-agent.ts`, lines 1718-1750
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-agent.ts`, lines 1718-1750
 
 ```typescript
 function usePatchNixData(): UseMutationResult<PatchNixDataResponse, PatchNixDataParams>;
@@ -9738,7 +9738,7 @@ This is the surgical editor -- changes a single field without replacing the whol
 
 ### 2. Agent HTTP Client Methods for Writing Data
 
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/agent.ts`
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/lib/agent.ts`
 
 #### Generic REST methods (lines 607-675):
 ```typescript
@@ -9780,7 +9780,7 @@ class MapEntityClient<V> {
 ### 3. Concrete Examples of How Panels Save Config Changes
 
 #### Example 1: SST Infra Panel -- Configuration Tab
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts`
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts`
 
 **Pattern:** `useNixData` (whole-entity replacement)
 
@@ -9790,10 +9790,10 @@ class MapEntityClient<V> {
 4. **Field updaters** (lines 157-192): `updateField()`, `updateNestedField()`, `updateOidcProviderField()` set local state and mark `hasChanges = true`
 5. **Save** (lines 195-208): `handleSave()` calls `await setSstData(formData)` -- this triggers:
    - `useNixData.mutation.mutationFn` -> `client.post("/api/nix/data", { entity: "sst", data: snakeToKebab(formData) })`
-   - Go agent `handleNixDataWrite` -> `s.store.WriteEntity("sst", data)` -> serializes to Nix, writes `.stackpanel/config.nix`
+   - Go agent `handleNixDataWrite` -> `s.store.WriteEntity("sst", data)` -> serializes to Nix, writes `.stack/config.nix`
 
 #### Example 2: Configuration Panel -- AWS/Step CA/Theme/IDE
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts`
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts`
 
 **Pattern:** Multiple independent `useNixData` hooks with per-section save callbacks
 
@@ -9819,7 +9819,7 @@ class MapEntityClient<V> {
    Each `setXxx()` call replaces the entire entity in its data file.
 
 #### Example 3: Add Variable Dialog -- Key-Level Map Write
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/variables/add-variable-dialog.tsx`
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/variables/add-variable-dialog.tsx`
 
 **Pattern:** Direct `MapEntityClient` for key-level writes (not whole entity)
 
@@ -9836,7 +9836,7 @@ class MapEntityClient<V> {
 4. The `variablesClient.set(key, value)` call -> `POST /api/nix/data { entity: "variables", key: fullId, data: snakeToKebabValues({...}) }` -> Go agent `handleKeyLevelWrite` -> `s.store.SetKey("variables", key, value)` -- reads existing map, inserts key, serializes entire map back to Nix.
 
 #### Example 4: Add App Dialog -- Key-Level Map Write
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/apps/add-app-dialog.tsx`
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/apps/add-app-dialog.tsx`
 
 Same pattern as variables (lines 76-100):
 ```typescript
@@ -9848,7 +9848,7 @@ await appsClient.set(values.id, newApp);
 ```
 
 #### Example 5: Packages Panel -- Whole-Entity Array Write
-**File:** `/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/packages/use-packages.ts`
+**File:** `/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/packages/use-packages.ts`
 
 ```typescript
 const { data: userPackages, mutate: setUserPackages } = useNixData<string[]>("packages", { initialData: [] });
@@ -9892,7 +9892,7 @@ const handleAddPackage = async (pkg) => {
           │  HTTP or Connect-RPC to localhost:9876
           ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  Go Agent (apps/stackpanel-go/internal/agent/server/)                   │
+│  Go Agent (apps/stack-go/internal/agent/server/)                   │
 │                                                                         │
 │  Path A/B: handleNixData (nix_data.go:42)                              │
 │    ├── POST: handleNixDataWrite (line 191)                              │
@@ -9904,7 +9904,7 @@ const handleAddPackage = async (pkg) => {
 │                                                                         │
 │  Path C: PatchNixData (connect_patch.go:25)                            │
 │    ├── Builds full path: entity + "." + key + "." + path               │
-│    ├── Prepends "stackpanel." -> strips it -> gets config-internal path │
+│    ├── Prepends "stack." -> strips it -> gets config-internal path │
 │    └── store.PatchConsolidatedData(configPath, parsedValue)             │
 │        Walks dot-separated path, creates intermediate maps, sets value  │
 │                                                                         │
@@ -9915,15 +9915,15 @@ const handleAddPackage = async (pkg) => {
           │
           ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  Store Layer (apps/stackpanel-go/pkg/nixdata/store.go)                  │
+│  Store Layer (apps/stack-go/pkg/nixdata/store.go)                  │
 │                                                                         │
 │  WriteEntity(entity, data) (line 177):                                  │
 │    ├── If consolidated config: Read config.nix -> update entity key     │
 │    │   -> WriteConsolidatedData (line 427)                              │
-│    │   -> nixser.SerializeWithSections(data) -> write .stackpanel/      │
+│    │   -> nixser.SerializeWithSections(data) -> write .stack/      │
 │    │      config.nix                                                    │
 │    └── If legacy per-file: nixser.SerializeIndented(data)               │
-│        -> write .stackpanel/data/<entity>.nix                           │
+│        -> write .stack/data/<entity>.nix                           │
 │                                                                         │
 │  SetKey(entity, key, value) (line 267):                                │
 │    readExistingMap -> set key in map -> writeMap                         │
@@ -9938,10 +9938,10 @@ const handleAddPackage = async (pkg) => {
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Nix File on Disk                                                       │
 │                                                                         │
-│  .stackpanel/config.nix  (consolidated, primary target)                 │
+│  .stack/config.nix  (consolidated, primary target)                 │
 │    Contains: { apps = {...}; variables = {...}; sst = {...}; ... }      │
 │                                                                         │
-│  .stackpanel/data/<entity>.nix  (legacy per-entity files)               │
+│  .stack/data/<entity>.nix  (legacy per-entity files)               │
 │    Contains: { key1 = {...}; key2 = {...}; }                            │
 │                                                                         │
 │  Serialization: Go nixser package converts Go map[string]any -> Nix     │
@@ -9956,8 +9956,8 @@ The system maintains two naming conventions:
 - **Nix side:** `kebab-case` (matching Nix conventions)
 
 Transformation happens in two places:
-1. **TypeScript:** `snakeToKebab()` / `kebabToSnake()` in `/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/nix-data/index.ts` (lines 48-84). Map keys (user-defined IDs like app names, variable names) are explicitly preserved using the `MAP_FIELD_NAMES` set (lines 20-42).
-2. **Go:** `CamelCaseToNixJSON()` / `NixJSONToCamelCase()` in `/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go/pkg/nixdata/transform.go` for the Connect-RPC path. Same map-field-names exemption list.
+1. **TypeScript:** `snakeToKebab()` / `kebabToSnake()` in `/Users/cm/git/darkmatter/stack/apps/web/src/lib/nix-data/index.ts` (lines 48-84). Map keys (user-defined IDs like app names, variable names) are explicitly preserved using the `MAP_FIELD_NAMES` set (lines 20-42).
+2. **Go:** `CamelCaseToNixJSON()` / `NixJSONToCamelCase()` in `/Users/cm/git/darkmatter/stack/apps/stack-go/pkg/nixdata/transform.go` for the Connect-RPC path. Same map-field-names exemption list.
 
 ### SSE Feedback Loop
 
@@ -10098,7 +10098,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/apps/add-app-dialog.tsx"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/apps/add-app-dialog.tsx"
 }
 ```
 **Output:**
@@ -10268,7 +10268,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/use-agent.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/lib/use-agent.ts",
   "offset": 1150,
   "limit": 130
 }
@@ -10424,7 +10424,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/lib/agent-provider.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/lib/agent-provider.tsx",
   "offset": 1,
   "limit": 50
 }
@@ -10447,7 +10447,7 @@ Tool: read
 00014| import { useAgent, useAgentHealth } from "@/lib/use-agent";
 00015| import { useAgentSSEOptional } from "@/lib/agent-sse-provider";
 00016| 
-00017| const STORAGE_KEY = "stackpanel.agent.token";
+00017| const STORAGE_KEY = "stack.agent.token";
 00018| 
 00019| /**
 00020|  * Get the initial token from localStorage (runs synchronously during useState init).
@@ -10499,7 +10499,7 @@ Tool: glob
 ```
 **Output:**
 ```
-/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx
+/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx
 ```
 ```
 
@@ -10521,8 +10521,8 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts",
-  "content": "\"use client\";\n\nimport { useMemo } from \"react\";\nimport { useNixData } from \"@/lib/use-agent\";\nimport { useAgentClient } from \"@/lib/agent-provider\";\n\n// =============================================================================\n// Types — match the Nix module schema (nix/stackpanel/infra/modules/machines)\n// =============================================================================\n\nexport interface MachineSSH {\n\tuser: string;\n\tport: number;\n\tkey_path: string | null;\n}\n\nexport interface MachineConfig {\n\tid?: string | null;\n\tname: string | null;\n\thost: string | null;\n\tssh: MachineSSH;\n\ttags: string[];\n\troles: string[];\n\tprovider: string | null;\n\tarch: string | null;\n\tpublic_ip: string | null;\n\tprivate_ip: string | null;\n\ttarget_env: string | null;\n\tlabels: Record<string, string>;\n\tnixos_profile: string | null;\n\tnixos_modules: string[];\n\tenv: Record<string, string>;\n\tmetadata: Record<string, unknown>;\n}\n\nexport interface AwsFilter {\n\tname: string;\n\tvalues: string[];\n}\n\nexport interface AwsMachinesConfig {\n\tregion: string | null;\n\tinstance_ids: string[];\n\tfilters: AwsFilter[];\n\tname_tag_keys: string[];\n\trole_tag_keys: string[];\n\ttag_keys: string[];\n\tenv_tag_keys: string[];\n\thost_preference: string[];\n\tssh: MachineSSH;\n}\n\nexport interface MachinesModuleConfig {\n\tenable: boolean;\n\tsource: \"static\" | \"aws-ec2\";\n\taws: AwsMachinesConfig;\n\tmachines: Record<string, MachineConfig>;\n}\n\n// =============================================================================\n// Defaults\n// =============================================================================\n\nexport const DEFAULT_SSH: MachineSSH = {\n\tuser: \"root\",\n\tport: 22,\n\tkey_path: null,\n};\n\nexport const DEFAULT_MACHINE: MachineConfig = {\n\tid: null,\n\tname: null,\n\thost: null,\n\tssh: { ...DEFAULT_SSH },\n\ttags: [],\n\troles: [],\n\tprovider: null,\n\tarch: null,\n\tpublic_ip: null,\n\tprivate_ip: null,\n\ttarget_env: null,\n\tlabels: {},\n\tnixos_profile: null,\n\tnixos_modules: [],\n\tenv: {},\n\tmetadata: {},\n};\n\nconst DEFAULT_AWS_CONFIG: AwsMachinesConfig = {\n\tregion: null,\n\tinstance_ids: [],\n\tfilters: [{ name: \"instance-state-name\", values: [\"running\"] }],\n\tname_tag_keys: [\"Name\"],\n\trole_tag_keys: [\"stackpanel:role\", \"role\"],\n\ttag_keys: [\"stackpanel:tag\", \"tag\"],\n\tenv_tag_keys: [\"stackpanel:env\", \"env\", \"stage\"],\n\thost_preference: [\"publicDns\", \"publicIp\", \"privateIp\"],\n\tssh: { ...DEFAULT_SSH },\n};\n\nconst DEFAULT_CONFIG: MachinesModuleConfig = {\n\tenable: false,\n\tsource: \"static\",\n\taws: DEFAULT_AWS_CONFIG,\n\tmachines: {},\n};\n\n// =============================================================================\n// Hook\n// =============================================================================\n\nexport function useMachinesConfig() {\n\tconst client = useAgentClient();\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");\n\n\tconst config = useMemo<MachinesModuleConfig>(() => {\n\t\tif (!rawInfra) return DEFAULT_CONFIG;\n\t\tconst machines = (rawInfra as Record<string, unknown>).machines as Partial<MachinesModuleConfig> | undefined;\n\t\tif (!machines) return DEFAULT_CONFIG;\n\t\treturn {\n\t\t\tenable: machines.enable ?? false,\n\t\t\tsource: machines.source ?? \"static\",\n\t\t\taws: {\n\t\t\t\t...DEFAULT_AWS_CONFIG,\n\t\t\t\t...(machines.aws ?? {}),\n\t\t\t},\n\t\t\tmachines: (machines.machines ?? {}) as Record<string, MachineConfig>,\n\t\t};\n\t}, [rawInfra]);\n\n\tconst saveConfig = async (newConfig: MachinesModuleConfig) => {\n\t\tconst currentInfra = (rawInfra ?? {}) as Record<string, unknown>;\n\t\tawait setInfra({\n\t\t\t...currentInfra,\n\t\t\tmachines: newConfig,\n\t\t} as any);\n\t};\n\n\tconst addMachine = async (key: string, machine: MachineConfig) => {\n\t\tconst updated = { ...config };\n\t\tupdated.machines = { ...updated.machines, [key]: machine };\n\t\tif (!updated.enable) updated.enable = true;\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst updateMachine = async (key: string, machine: MachineConfig) => {\n\t\tconst updated = { ...config };\n\t\tupdated.machines = { ...updated.machines, [key]: machine };\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst removeMachine = async (key: string) => {\n\t\tconst updated = { ...config };\n\t\tconst { [key]: _, ...rest } = updated.machines;\n\t\tupdated.machines = rest;\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst updateSettings = async (settings: Partial<MachinesModuleConfig>) => {\n\t\tawait saveConfig({ ...config, ...settings });\n\t};\n\n\treturn {\n\t\tconfig,\n\t\taddMachine,\n\t\tupdateMachine,\n\t\tremoveMachine,\n\t\tupdateSettings,\n\t\trefetch,\n\t};\n}\n"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts",
+  "content": "\"use client\";\n\nimport { useMemo } from \"react\";\nimport { useNixData } from \"@/lib/use-agent\";\nimport { useAgentClient } from \"@/lib/agent-provider\";\n\n// =============================================================================\n// Types — match the Nix module schema (nix/stack/infra/modules/machines)\n// =============================================================================\n\nexport interface MachineSSH {\n\tuser: string;\n\tport: number;\n\tkey_path: string | null;\n}\n\nexport interface MachineConfig {\n\tid?: string | null;\n\tname: string | null;\n\thost: string | null;\n\tssh: MachineSSH;\n\ttags: string[];\n\troles: string[];\n\tprovider: string | null;\n\tarch: string | null;\n\tpublic_ip: string | null;\n\tprivate_ip: string | null;\n\ttarget_env: string | null;\n\tlabels: Record<string, string>;\n\tnixos_profile: string | null;\n\tnixos_modules: string[];\n\tenv: Record<string, string>;\n\tmetadata: Record<string, unknown>;\n}\n\nexport interface AwsFilter {\n\tname: string;\n\tvalues: string[];\n}\n\nexport interface AwsMachinesConfig {\n\tregion: string | null;\n\tinstance_ids: string[];\n\tfilters: AwsFilter[];\n\tname_tag_keys: string[];\n\trole_tag_keys: string[];\n\ttag_keys: string[];\n\tenv_tag_keys: string[];\n\thost_preference: string[];\n\tssh: MachineSSH;\n}\n\nexport interface MachinesModuleConfig {\n\tenable: boolean;\n\tsource: \"static\" | \"aws-ec2\";\n\taws: AwsMachinesConfig;\n\tmachines: Record<string, MachineConfig>;\n}\n\n// =============================================================================\n// Defaults\n// =============================================================================\n\nexport const DEFAULT_SSH: MachineSSH = {\n\tuser: \"root\",\n\tport: 22,\n\tkey_path: null,\n};\n\nexport const DEFAULT_MACHINE: MachineConfig = {\n\tid: null,\n\tname: null,\n\thost: null,\n\tssh: { ...DEFAULT_SSH },\n\ttags: [],\n\troles: [],\n\tprovider: null,\n\tarch: null,\n\tpublic_ip: null,\n\tprivate_ip: null,\n\ttarget_env: null,\n\tlabels: {},\n\tnixos_profile: null,\n\tnixos_modules: [],\n\tenv: {},\n\tmetadata: {},\n};\n\nconst DEFAULT_AWS_CONFIG: AwsMachinesConfig = {\n\tregion: null,\n\tinstance_ids: [],\n\tfilters: [{ name: \"instance-state-name\", values: [\"running\"] }],\n\tname_tag_keys: [\"Name\"],\n\trole_tag_keys: [\"stack:role\", \"role\"],\n\ttag_keys: [\"stack:tag\", \"tag\"],\n\tenv_tag_keys: [\"stack:env\", \"env\", \"stage\"],\n\thost_preference: [\"publicDns\", \"publicIp\", \"privateIp\"],\n\tssh: { ...DEFAULT_SSH },\n};\n\nconst DEFAULT_CONFIG: MachinesModuleConfig = {\n\tenable: false,\n\tsource: \"static\",\n\taws: DEFAULT_AWS_CONFIG,\n\tmachines: {},\n};\n\n// =============================================================================\n// Hook\n// =============================================================================\n\nexport function useMachinesConfig() {\n\tconst client = useAgentClient();\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");\n\n\tconst config = useMemo<MachinesModuleConfig>(() => {\n\t\tif (!rawInfra) return DEFAULT_CONFIG;\n\t\tconst machines = (rawInfra as Record<string, unknown>).machines as Partial<MachinesModuleConfig> | undefined;\n\t\tif (!machines) return DEFAULT_CONFIG;\n\t\treturn {\n\t\t\tenable: machines.enable ?? false,\n\t\t\tsource: machines.source ?? \"static\",\n\t\t\taws: {\n\t\t\t\t...DEFAULT_AWS_CONFIG,\n\t\t\t\t...(machines.aws ?? {}),\n\t\t\t},\n\t\t\tmachines: (machines.machines ?? {}) as Record<string, MachineConfig>,\n\t\t};\n\t}, [rawInfra]);\n\n\tconst saveConfig = async (newConfig: MachinesModuleConfig) => {\n\t\tconst currentInfra = (rawInfra ?? {}) as Record<string, unknown>;\n\t\tawait setInfra({\n\t\t\t...currentInfra,\n\t\t\tmachines: newConfig,\n\t\t} as any);\n\t};\n\n\tconst addMachine = async (key: string, machine: MachineConfig) => {\n\t\tconst updated = { ...config };\n\t\tupdated.machines = { ...updated.machines, [key]: machine };\n\t\tif (!updated.enable) updated.enable = true;\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst updateMachine = async (key: string, machine: MachineConfig) => {\n\t\tconst updated = { ...config };\n\t\tupdated.machines = { ...updated.machines, [key]: machine };\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst removeMachine = async (key: string) => {\n\t\tconst updated = { ...config };\n\t\tconst { [key]: _, ...rest } = updated.machines;\n\t\tupdated.machines = rest;\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst updateSettings = async (settings: Partial<MachinesModuleConfig>) => {\n\t\tawait saveConfig({ ...config, ...settings });\n\t};\n\n\treturn {\n\t\tconfig,\n\t\taddMachine,\n\t\tupdateMachine,\n\t\tremoveMachine,\n\t\tupdateSettings,\n\t\trefetch,\n\t};\n}\n"
 }
 ```
 **Output:**
@@ -10530,7 +10530,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -10540,7 +10540,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -10556,7 +10556,7 @@ help: Add a "key" prop to the element in the iterator (https://react.dev/learn/r
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
 ERROR [236:33] React Hook useEffect has a complex expression in the dependency array.
 help: Extract the expression to a separate variable so it can be statically checked.
 ERROR [236:6] React Hook useEffect has a missing dependency: 'usersSettingsData'
@@ -10576,7 +10576,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts">
 ERROR [113:8] Variable 'client' is declared but never used. Unused variables should start with a '_'.
 help: Consider removing this declaration.
 </diagnostics>
@@ -10593,7 +10593,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts",
   "oldString": "export function useMachinesConfig() {\n\tconst client = useAgentClient();\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");",
   "newString": "export function useMachinesConfig() {\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");"
 }
@@ -10603,7 +10603,7 @@ Tool: edit
 Edit applied successfully.
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts">
 ERROR [5:10] Identifier 'useAgentClient' is imported but never used.
 help: Consider removing this import.
 </diagnostics>
@@ -10620,7 +10620,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts",
   "oldString": "import { useNixData } from \"@/lib/use-agent\";\nimport { useAgentClient } from \"@/lib/agent-provider\";",
   "newString": "import { useNixData } from \"@/lib/use-agent\";"
 }
@@ -10641,7 +10641,7 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/machine-form-fields.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/machine-form-fields.tsx",
   "content": "\"use client\";\n\nimport { Input } from \"@ui/input\";\nimport { Label } from \"@ui/label\";\nimport {\n\tSelect,\n\tSelectContent,\n\tSelectItem,\n\tSelectTrigger,\n\tSelectValue,\n} from \"@ui/select\";\nimport type { MachineConfig } from \"./use-machines\";\n\ninterface MachineFormFieldsProps {\n\tvalues: MachineConfig;\n\tonChange: (values: MachineConfig) => void;\n\tshowIdField?: boolean;\n\tmachineId?: string;\n\tonIdChange?: (id: string) => void;\n}\n\nconst ARCH_OPTIONS = [\n\t{ value: \"x86_64-linux\", label: \"x86_64-linux\" },\n\t{ value: \"aarch64-linux\", label: \"aarch64-linux\" },\n];\n\nconst PROVIDER_OPTIONS = [\n\t{ value: \"aws\", label: \"AWS\" },\n\t{ value: \"hetzner\", label: \"Hetzner\" },\n\t{ value: \"gcp\", label: \"GCP\" },\n\t{ value: \"azure\", label: \"Azure\" },\n\t{ value: \"digitalocean\", label: \"DigitalOcean\" },\n\t{ value: \"bare-metal\", label: \"Bare Metal\" },\n];\n\nconst ENV_OPTIONS = [\n\t{ value: \"production\", label: \"Production\" },\n\t{ value: \"staging\", label: \"Staging\" },\n\t{ value: \"development\", label: \"Development\" },\n];\n\nfunction updateField<K extends keyof MachineConfig>(\n\tvalues: MachineConfig,\n\tonChange: (v: MachineConfig) => void,\n\tkey: K,\n\tvalue: MachineConfig[K],\n) {\n\tonChange({ ...values, [key]: value });\n}\n\nexport function MachineFormFields({\n\tvalues,\n\tonChange,\n\tshowIdField,\n\tmachineId,\n\tonIdChange,\n}: MachineFormFieldsProps) {\n\treturn (\n\t\t<div className=\"space-y-4\">\n\t\t\t{/* Identity */}\n\t\t\t{showIdField && (\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-id\">Machine ID</Label>\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid=\"machine-id\"\n\t\t\t\t\t\tplaceholder=\"web-1\"\n\t\t\t\t\t\tvalue={machineId ?? \"\"}\n\t\t\t\t\t\tonChange={(e) => onIdChange?.(e.target.value)}\n\t\t\t\t\t/>\n\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\tUnique identifier used as the Nix attribute name. Use lowercase with hyphens.\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t)}\n\n\t\t\t<div className=\"space-y-2\">\n\t\t\t\t<Label htmlFor=\"machine-name\">Display Name</Label>\n\t\t\t\t<Input\n\t\t\t\t\tid=\"machine-name\"\n\t\t\t\t\tplaceholder=\"Web Server 1\"\n\t\t\t\t\tvalue={values.name ?? \"\"}\n\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\tupdateField(values, onChange, \"name\", e.target.value || null)\n\t\t\t\t\t}\n\t\t\t\t/>\n\t\t\t</div>\n\n\t\t\t{/* Connection */}\n\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Connection</legend>\n\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-host\">Host</Label>\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid=\"machine-host\"\n\t\t\t\t\t\tplaceholder=\"10.0.1.10 or web1.example.com\"\n\t\t\t\t\t\tvalue={values.host ?? \"\"}\n\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\tupdateField(values, onChange, \"host\", e.target.value || null)\n\t\t\t\t\t\t}\n\t\t\t\t\t/>\n\t\t\t\t</div>\n\n\t\t\t\t<div className=\"grid grid-cols-3 gap-3\">\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label htmlFor=\"ssh-user\">SSH User</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tid=\"ssh-user\"\n\t\t\t\t\t\t\tplaceholder=\"root\"\n\t\t\t\t\t\t\tvalue={values.ssh.user}\n\t\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\t\tupdateField(values, onChange, \"ssh\", {\n\t\t\t\t\t\t\t\t\t...values.ssh,\n\t\t\t\t\t\t\t\t\tuser: e.target.value || \"root\",\n\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label htmlFor=\"ssh-port\">SSH Port</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tid=\"ssh-port\"\n\t\t\t\t\t\t\ttype=\"number\"\n\t\t\t\t\t\t\tplaceholder=\"22\"\n\t\t\t\t\t\t\tvalue={values.ssh.port}\n\t\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\t\tupdateField(values, onChange, \"ssh\", {\n\t\t\t\t\t\t\t\t\t...values.ssh,\n\t\t\t\t\t\t\t\t\tport: Number.parseInt(e.target.value, 10) || 22,\n\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label htmlFor=\"ssh-key\">SSH Key Path</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tid=\"ssh-key\"\n\t\t\t\t\t\t\tplaceholder=\"~/.ssh/id_ed25519\"\n\t\t\t\t\t\t\tvalue={values.ssh.key_path ?? \"\"}\n\t\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\t\tupdateField(values, onChange, \"ssh\", {\n\t\t\t\t\t\t\t\t\t...values.ssh,\n\t\t\t\t\t\t\t\t\tkey_path: e.target.value || null,\n\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</fieldset>\n\n\t\t\t{/* Networking */}\n\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"public-ip\">Public IP</Label>\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid=\"public-ip\"\n\t\t\t\t\t\tplaceholder=\"203.0.113.10\"\n\t\t\t\t\t\tvalue={values.public_ip ?? \"\"}\n\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\tupdateField(values, onChange, \"public_ip\", e.target.value || null)\n\t\t\t\t\t\t}\n\t\t\t\t\t/>\n\t\t\t\t</div>\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"private-ip\">Private IP</Label>\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid=\"private-ip\"\n\t\t\t\t\t\tplaceholder=\"10.0.1.10\"\n\t\t\t\t\t\tvalue={values.private_ip ?? \"\"}\n\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\tupdateField(\n\t\t\t\t\t\t\t\tvalues,\n\t\t\t\t\t\t\t\tonChange,\n\t\t\t\t\t\t\t\t\"private_ip\",\n\t\t\t\t\t\t\t\te.target.value || null,\n\t\t\t\t\t\t\t)\n\t\t\t\t\t\t}\n\t\t\t\t\t/>\n\t\t\t\t</div>\n\t\t\t</div>\n\n\t\t\t{/* Classification */}\n\t\t\t<div className=\"grid grid-cols-3 gap-3\">\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-arch\">Architecture</Label>\n\t\t\t\t\t<Select\n\t\t\t\t\t\tvalue={values.arch ?? \"\"}\n\t\t\t\t\t\tonValueChange={(v) =>\n\t\t\t\t\t\t\tupdateField(values, onChange, \"arch\", v || null)\n\t\t\t\t\t\t}\n\t\t\t\t\t>\n\t\t\t\t\t\t<SelectTrigger id=\"machine-arch\">\n\t\t\t\t\t\t\t<SelectValue placeholder=\"Select...\" />\n\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t{ARCH_OPTIONS.map((opt) => (\n\t\t\t\t\t\t\t\t<SelectItem key={opt.value} value={opt.value}>\n\t\t\t\t\t\t\t\t\t{opt.label}\n\t\t\t\t\t\t\t\t</SelectItem>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t</Select>\n\t\t\t\t</div>\n\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-provider\">Provider</Label>\n\t\t\t\t\t<Select\n\t\t\t\t\t\tvalue={values.provider ?? \"\"}\n\t\t\t\t\t\tonValueChange={(v) =>\n\t\t\t\t\t\t\tupdateField(values, onChange, \"provider\", v || null)\n\t\t\t\t\t\t}\n\t\t\t\t\t>\n\t\t\t\t\t\t<SelectTrigger id=\"machine-provider\">\n\t\t\t\t\t\t\t<SelectValue placeholder=\"Select...\" />\n\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t{PROVIDER_OPTIONS.map((opt) => (\n\t\t\t\t\t\t\t\t<SelectItem key={opt.value} value={opt.value}>\n\t\t\t\t\t\t\t\t\t{opt.label}\n\t\t\t\t\t\t\t\t</SelectItem>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t</Select>\n\t\t\t\t</div>\n\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-env\">Environment</Label>\n\t\t\t\t\t<Select\n\t\t\t\t\t\tvalue={values.target_env ?? \"\"}\n\t\t\t\t\t\tonValueChange={(v) =>\n\t\t\t\t\t\t\tupdateField(values, onChange, \"target_env\", v || null)\n\t\t\t\t\t\t}\n\t\t\t\t\t>\n\t\t\t\t\t\t<SelectTrigger id=\"machine-env\">\n\t\t\t\t\t\t\t<SelectValue placeholder=\"Select...\" />\n\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t{ENV_OPTIONS.map((opt) => (\n\t\t\t\t\t\t\t\t<SelectItem key={opt.value} value={opt.value}>\n\t\t\t\t\t\t\t\t\t{opt.label}\n\t\t\t\t\t\t\t\t</SelectItem>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t</Select>\n\t\t\t\t</div>\n\t\t\t</div>\n\n\t\t\t{/* Roles and Tags */}\n\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-roles\">Roles</Label>\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid=\"machine-roles\"\n\t\t\t\t\t\tplaceholder=\"web, app (comma-separated)\"\n\t\t\t\t\t\tvalue={values.roles.join(\", \")}\n\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\tupdateField(\n\t\t\t\t\t\t\t\tvalues,\n\t\t\t\t\t\t\t\tonChange,\n\t\t\t\t\t\t\t\t\"roles\",\n\t\t\t\t\t\t\t\te.target.value\n\t\t\t\t\t\t\t\t\t.split(\",\")\n\t\t\t\t\t\t\t\t\t.map((s) => s.trim())\n\t\t\t\t\t\t\t\t\t.filter(Boolean),\n\t\t\t\t\t\t\t)\n\t\t\t\t\t\t}\n\t\t\t\t\t/>\n\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\tUsed for app-to-machine targeting\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t<Label htmlFor=\"machine-tags\">Tags</Label>\n\t\t\t\t\t<Input\n\t\t\t\t\t\tid=\"machine-tags\"\n\t\t\t\t\t\tplaceholder=\"production, us-east (comma-separated)\"\n\t\t\t\t\t\tvalue={values.tags.join(\", \")}\n\t\t\t\t\t\tonChange={(e) =>\n\t\t\t\t\t\t\tupdateField(\n\t\t\t\t\t\t\t\tvalues,\n\t\t\t\t\t\t\t\tonChange,\n\t\t\t\t\t\t\t\t\"tags\",\n\t\t\t\t\t\t\t\te.target.value\n\t\t\t\t\t\t\t\t\t.split(\",\")\n\t\t\t\t\t\t\t\t\t.map((s) => s.trim())\n\t\t\t\t\t\t\t\t\t.filter(Boolean),\n\t\t\t\t\t\t\t)\n\t\t\t\t\t\t}\n\t\t\t\t\t/>\n\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\tUsed for grouping and filtering\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n"
 }
 ```
@@ -10650,7 +10650,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -10660,7 +10660,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -10676,7 +10676,7 @@ help: Add a "key" prop to the element in the iterator (https://react.dev/learn/r
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
 ERROR [236:33] React Hook useEffect has a complex expression in the dependency array.
 help: Extract the expression to a separate variable so it can be statically checked.
 ERROR [236:6] React Hook useEffect has a missing dependency: 'usersSettingsData'
@@ -10707,7 +10707,7 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/add-machine-dialog.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/add-machine-dialog.tsx",
   "content": "\"use client\";\n\nimport { Button } from \"@ui/button\";\nimport {\n\tDialog,\n\tDialogContent,\n\tDialogDescription,\n\tDialogFooter,\n\tDialogHeader,\n\tDialogTitle,\n} from \"@ui/dialog\";\nimport { Loader2, Plus } from \"lucide-react\";\nimport { useState } from \"react\";\nimport { toast } from \"sonner\";\nimport { MachineFormFields } from \"./machine-form-fields\";\nimport {\n\ttype MachineConfig,\n\tDEFAULT_MACHINE,\n\ttype useMachinesConfig,\n} from \"./use-machines\";\n\ninterface AddMachineDialogProps {\n\tmachines: ReturnType<typeof useMachinesConfig>;\n}\n\nexport function AddMachineDialog({ machines }: AddMachineDialogProps) {\n\tconst [open, setOpen] = useState(false);\n\tconst [saving, setSaving] = useState(false);\n\tconst [machineId, setMachineId] = useState(\"\");\n\tconst [values, setValues] = useState<MachineConfig>({ ...DEFAULT_MACHINE });\n\n\tconst handleOpenChange = (isOpen: boolean) => {\n\t\tsetOpen(isOpen);\n\t\tif (!isOpen) {\n\t\t\tsetMachineId(\"\");\n\t\t\tsetValues({ ...DEFAULT_MACHINE });\n\t\t}\n\t};\n\n\tconst isValid = machineId.trim().length > 0 && /^[a-z0-9-]+$/.test(machineId.trim());\n\n\tconst handleSubmit = async () => {\n\t\tconst id = machineId.trim();\n\t\tif (!id) {\n\t\t\ttoast.error(\"Machine ID is required\");\n\t\t\treturn;\n\t\t}\n\t\tif (machines.config.machines[id]) {\n\t\t\ttoast.error(`Machine \"${id}\" already exists`);\n\t\t\treturn;\n\t\t}\n\n\t\tsetSaving(true);\n\t\ttry {\n\t\t\tawait machines.addMachine(id, values);\n\t\t\ttoast.success(`Machine \"${id}\" added`);\n\t\t\thandleOpenChange(false);\n\t\t} catch (err) {\n\t\t\ttoast.error(err instanceof Error ? err.message : \"Failed to add machine\");\n\t\t} finally {\n\t\t\tsetSaving(false);\n\t\t}\n\t};\n\n\treturn (\n\t\t<Dialog open={open} onOpenChange={handleOpenChange}>\n\t\t\t<Button className=\"gap-2\" size=\"sm\" onClick={() => setOpen(true)}>\n\t\t\t\t<Plus className=\"h-4 w-4\" />\n\t\t\t\tAdd Machine\n\t\t\t</Button>\n\t\t\t<DialogContent className=\"max-h-[90vh] overflow-y-auto sm:max-w-lg\">\n\t\t\t\t<DialogHeader>\n\t\t\t\t\t<DialogTitle>Add Machine</DialogTitle>\n\t\t\t\t\t<DialogDescription>\n\t\t\t\t\t\tAdd a new machine to your deployment inventory.\n\t\t\t\t\t</DialogDescription>\n\t\t\t\t</DialogHeader>\n\t\t\t\t<div className=\"py-4\">\n\t\t\t\t\t<MachineFormFields\n\t\t\t\t\t\tvalues={values}\n\t\t\t\t\t\tonChange={setValues}\n\t\t\t\t\t\tshowIdField\n\t\t\t\t\t\tmachineId={machineId}\n\t\t\t\t\t\tonIdChange={setMachineId}\n\t\t\t\t\t/>\n\t\t\t\t</div>\n\t\t\t\t<DialogFooter>\n\t\t\t\t\t<Button variant=\"outline\" onClick={() => handleOpenChange(false)}>\n\t\t\t\t\t\tCancel\n\t\t\t\t\t</Button>\n\t\t\t\t\t<Button onClick={handleSubmit} disabled={!isValid || saving}>\n\t\t\t\t\t\t{saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\t\tAdd Machine\n\t\t\t\t\t</Button>\n\t\t\t\t</DialogFooter>\n\t\t\t</DialogContent>\n\t\t</Dialog>\n\t);\n}\n"
 }
 ```
@@ -10716,7 +10716,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -10726,7 +10726,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -10742,7 +10742,7 @@ help: Add a "key" prop to the element in the iterator (https://react.dev/learn/r
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
 ERROR [236:33] React Hook useEffect has a complex expression in the dependency array.
 help: Extract the expression to a separate variable so it can be statically checked.
 ERROR [236:6] React Hook useEffect has a missing dependency: 'usersSettingsData'
@@ -10773,7 +10773,7 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/edit-machine-dialog.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/edit-machine-dialog.tsx",
   "content": "\"use client\";\n\nimport { Button } from \"@ui/button\";\nimport {\n\tDialog,\n\tDialogContent,\n\tDialogDescription,\n\tDialogFooter,\n\tDialogHeader,\n\tDialogTitle,\n} from \"@ui/dialog\";\nimport { Loader2 } from \"lucide-react\";\nimport { useEffect, useState } from \"react\";\nimport { toast } from \"sonner\";\nimport { MachineFormFields } from \"./machine-form-fields\";\nimport type { MachineConfig, useMachinesConfig } from \"./use-machines\";\n\ninterface EditMachineDialogProps {\n\tmachineId: string;\n\tmachine: MachineConfig;\n\tmachines: ReturnType<typeof useMachinesConfig>;\n\topen: boolean;\n\tonOpenChange: (open: boolean) => void;\n}\n\nexport function EditMachineDialog({\n\tmachineId,\n\tmachine,\n\tmachines,\n\topen,\n\tonOpenChange,\n}: EditMachineDialogProps) {\n\tconst [saving, setSaving] = useState(false);\n\tconst [deleting, setDeleting] = useState(false);\n\tconst [values, setValues] = useState<MachineConfig>({ ...machine });\n\n\tuseEffect(() => {\n\t\tif (open) {\n\t\t\tsetValues({ ...machine });\n\t\t}\n\t}, [open, machine]);\n\n\tconst handleSave = async () => {\n\t\tsetSaving(true);\n\t\ttry {\n\t\t\tawait machines.updateMachine(machineId, values);\n\t\t\ttoast.success(`Machine \"${machineId}\" updated`);\n\t\t\tonOpenChange(false);\n\t\t} catch (err) {\n\t\t\ttoast.error(\n\t\t\t\terr instanceof Error ? err.message : \"Failed to update machine\",\n\t\t\t);\n\t\t} finally {\n\t\t\tsetSaving(false);\n\t\t}\n\t};\n\n\tconst handleDelete = async () => {\n\t\tsetDeleting(true);\n\t\ttry {\n\t\t\tawait machines.removeMachine(machineId);\n\t\t\ttoast.success(`Machine \"${machineId}\" removed`);\n\t\t\tonOpenChange(false);\n\t\t} catch (err) {\n\t\t\ttoast.error(\n\t\t\t\terr instanceof Error ? err.message : \"Failed to remove machine\",\n\t\t\t);\n\t\t} finally {\n\t\t\tsetDeleting(false);\n\t\t}\n\t};\n\n\treturn (\n\t\t<Dialog open={open} onOpenChange={onOpenChange}>\n\t\t\t<DialogContent className=\"max-h-[90vh] overflow-y-auto sm:max-w-lg\">\n\t\t\t\t<DialogHeader>\n\t\t\t\t\t<DialogTitle>Edit Machine: {machineId}</DialogTitle>\n\t\t\t\t\t<DialogDescription>\n\t\t\t\t\t\tUpdate machine configuration. Changes are written to your Nix config.\n\t\t\t\t\t</DialogDescription>\n\t\t\t\t</DialogHeader>\n\t\t\t\t<div className=\"py-4\">\n\t\t\t\t\t<MachineFormFields values={values} onChange={setValues} />\n\t\t\t\t</div>\n\t\t\t\t<DialogFooter className=\"flex justify-between sm:justify-between\">\n\t\t\t\t\t<Button\n\t\t\t\t\t\tvariant=\"destructive\"\n\t\t\t\t\t\tsize=\"sm\"\n\t\t\t\t\t\tonClick={handleDelete}\n\t\t\t\t\t\tdisabled={deleting || saving}\n\t\t\t\t\t>\n\t\t\t\t\t\t{deleting && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\t\tDelete\n\t\t\t\t\t</Button>\n\t\t\t\t\t<div className=\"flex gap-2\">\n\t\t\t\t\t\t<Button variant=\"outline\" onClick={() => onOpenChange(false)}>\n\t\t\t\t\t\t\tCancel\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t<Button onClick={handleSave} disabled={saving || deleting}>\n\t\t\t\t\t\t\t{saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\t\t\tSave\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t</div>\n\t\t\t\t</DialogFooter>\n\t\t\t</DialogContent>\n\t\t</Dialog>\n\t);\n}\n"
 }
 ```
@@ -10782,7 +10782,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -10792,7 +10792,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -10808,7 +10808,7 @@ help: Add a "key" prop to the element in the iterator (https://react.dev/learn/r
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
 ERROR [236:33] React Hook useEffect has a complex expression in the dependency array.
 help: Extract the expression to a separate variable so it can be statically checked.
 ERROR [236:6] React Hook useEffect has a missing dependency: 'usersSettingsData'
@@ -10841,8 +10841,8 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
-  "content": "\"use client\";\n\n/**\n * Deploy Panel - Colmena-centric deployment management.\n *\n * Shows machine inventory, app-to-machine mapping, and deploy actions\n * (eval/build/apply). Supports full machine CRUD (add/edit/delete) and\n * AWS EC2 discovery configuration.\n */\n\nimport { useState, useMemo } from \"react\";\nimport { Badge } from \"@ui/badge\";\nimport { Button } from \"@ui/button\";\nimport {\n\tCard,\n\tCardContent,\n\tCardDescription,\n\tCardHeader,\n\tCardTitle,\n} from \"@ui/card\";\nimport { Input } from \"@ui/input\";\nimport { Label } from \"@ui/label\";\nimport {\n\tSelect,\n\tSelectContent,\n\tSelectItem,\n\tSelectTrigger,\n\tSelectValue,\n} from \"@ui/select\";\nimport { Switch } from \"@ui/switch\";\nimport { Tabs, TabsContent, TabsList, TabsTrigger } from \"@ui/tabs\";\nimport {\n\tActivity,\n\tAlertCircle,\n\tCheckCircle,\n\tCloudOff,\n\tCpu,\n\tHardDrive,\n\tLoader2,\n\tNetwork,\n\tPencil,\n\tPlay,\n\tRefreshCw,\n\tRocket,\n\tServer,\n\tSettings,\n\tShield,\n\tXCircle,\n} from \"lucide-react\";\nimport { toast } from \"sonner\";\nimport { useAgentContext } from \"@/lib/agent-provider\";\nimport { useNixConfig } from \"@/lib/use-agent\";\nimport { PanelHeader } from \"../shared/panel-header\";\nimport { cn } from \"@/lib/utils\";\nimport { AddMachineDialog } from \"./add-machine-dialog\";\nimport { EditMachineDialog } from \"./edit-machine-dialog\";\nimport { useMachinesConfig, type MachineConfig } from \"./use-machines\";\n\n// =============================================================================\n// Types\n// =============================================================================\n\ninterface MachineInfo {\n\tid: string;\n\tname: string;\n\thost: string | null;\n\tssh: {\n\t\tuser: string;\n\t\tport: number;\n\t\tkeyPath: string | null;\n\t};\n\ttags: string[];\n\troles: string[];\n\tprovider: string | null;\n\tarch: string | null;\n\tpublicIp: string | null;\n\tprivateIp: string | null;\n\ttargetEnv: string | null;\n\tlabels: Record<string, string>;\n}\n\ninterface AppDeployMapping {\n\tenable: boolean;\n\ttargets: string[];\n\tresolvedTargets: string[];\n\trole: string | null;\n\tnixosModules: string[];\n\tsystem: string | null;\n}\n\ninterface ColmenaConfig {\n\tenable: boolean;\n\tmachineSource: string;\n\tgenerateHive: boolean;\n\tconfig: string;\n\tmachineCount: number;\n\tmachineIds: string[];\n}\n\n// =============================================================================\n// Hooks\n// =============================================================================\n\nfunction useColmenaData() {\n\tconst { data: nixConfig, isLoading, refetch } = useNixConfig();\n\n\tconst result = useMemo(() => {\n\t\tconst cfg = nixConfig as Record<string, unknown> | null | undefined;\n\t\tif (!cfg) return { machines: {}, appDeploy: {}, colmenaConfig: null };\n\n\t\tconst serializable = cfg.serializable as Record<string, unknown> | undefined;\n\t\tconst colmenaConfig = (serializable?.colmena ?? null) as ColmenaConfig | null;\n\n\t\tconst colmenaData = cfg.colmena as Record<string, unknown> | undefined;\n\t\tconst machinesComputed = (colmenaData?.machinesComputed ?? {}) as Record<string, MachineInfo>;\n\n\t\tconst rawApps = (cfg.apps ?? cfg.appsComputed ?? {}) as Record<string, Record<string, unknown>>;\n\t\tconst appDeploy: Record<string, AppDeployMapping> = {};\n\n\t\tfor (const [appName, appCfg] of Object.entries(rawApps)) {\n\t\t\tconst deploy = appCfg.deploy as Record<string, unknown> | undefined;\n\t\t\tif (deploy?.enable) {\n\t\t\t\tappDeploy[appName] = {\n\t\t\t\t\tenable: true,\n\t\t\t\t\ttargets: (deploy.targets as string[]) ?? [],\n\t\t\t\t\tresolvedTargets: (deploy.resolvedTargets as string[]) ?? [],\n\t\t\t\t\trole: (deploy.role as string | null) ?? null,\n\t\t\t\t\tnixosModules: (deploy.nixosModules as string[]) ?? [],\n\t\t\t\t\tsystem: (deploy.system as string | null) ?? null,\n\t\t\t\t};\n\t\t\t}\n\t\t}\n\n\t\treturn { machines: machinesComputed, appDeploy, colmenaConfig };\n\t}, [nixConfig]);\n\n\treturn { ...result, isLoading, refetch };\n}\n\n// =============================================================================\n// Sub-components\n// =============================================================================\n\nfunction MachineCard({\n\tmachine,\n\tonEdit,\n}: {\n\tmachine: MachineInfo;\n\tonEdit?: () => void;\n}) {\n\tconst isReachable = machine.host !== null;\n\n\treturn (\n\t\t<Card\n\t\t\tclassName={cn(\n\t\t\t\t\"transition-colors cursor-pointer hover:border-primary/40\",\n\t\t\t\tisReachable ? \"border-border\" : \"border-amber-500/30\",\n\t\t\t)}\n\t\t\tonClick={onEdit}\n\t\t>\n\t\t\t<CardContent className=\"p-4\">\n\t\t\t\t<div className=\"flex items-start justify-between mb-3\">\n\t\t\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t\t\t<Server className=\"h-4 w-4 text-muted-foreground\" />\n\t\t\t\t\t\t<span className=\"font-medium text-sm\">{machine.name || machine.id}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t{onEdit && (\n\t\t\t\t\t\t\t<Button variant=\"ghost\" size=\"icon\" className=\"h-6 w-6\" onClick={(e) => { e.stopPropagation(); onEdit(); }}>\n\t\t\t\t\t\t\t\t<Pencil className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t)}\n\t\t\t\t\t\t{isReachable ? (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"text-[10px] gap-1\">\n\t\t\t\t\t\t\t\t<CheckCircle className=\"h-3 w-3 text-green-500\" />\n\t\t\t\t\t\t\t\t{machine.host}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t) : (\n\t\t\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px] gap-1 text-amber-500 border-amber-500/30\">\n\t\t\t\t\t\t\t\t<XCircle className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t\tno host\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\n\t\t\t\t<div className=\"grid grid-cols-2 gap-2 text-xs text-muted-foreground\">\n\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t<Shield className=\"h-3 w-3\" />\n\t\t\t\t\t\t<span>{machine.ssh.user}@{machine.ssh.port}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t{machine.arch && (\n\t\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t\t<Cpu className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t<span>{machine.arch}</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t\t{machine.provider && (\n\t\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t\t<HardDrive className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t<span>{machine.provider}</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t\t{machine.targetEnv && (\n\t\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t\t<Activity className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t<span>{machine.targetEnv}</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</div>\n\n\t\t\t\t{(machine.tags.length > 0 || machine.roles.length > 0) && (\n\t\t\t\t\t<div className=\"mt-2 flex flex-wrap gap-1\">\n\t\t\t\t\t\t{machine.roles.map((role) => (\n\t\t\t\t\t\t\t<Badge key={`role-${role}`} variant=\"default\" className=\"text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{role}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t))}\n\t\t\t\t\t\t{machine.tags.map((tag) => (\n\t\t\t\t\t\t\t<Badge key={`tag-${tag}`} variant=\"secondary\" className=\"text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{tag}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t))}\n\t\t\t\t\t</div>\n\t\t\t\t)}\n\t\t\t</CardContent>\n\t\t</Card>\n\t);\n}\n\nfunction AppTargetRow({\n\tappName,\n\tdeploy,\n\tmachines,\n}: {\n\tappName: string;\n\tdeploy: AppDeployMapping;\n\tmachines: Record<string, MachineInfo>;\n}) {\n\tconst resolvedNames = deploy.resolvedTargets.map(\n\t\t(id) => machines[id]?.name ?? id,\n\t);\n\n\treturn (\n\t\t<div className=\"flex items-center justify-between rounded-lg border border-border bg-card p-3\">\n\t\t\t<div className=\"flex items-center gap-3\">\n\t\t\t\t<div className=\"flex h-8 w-8 items-center justify-center rounded-md bg-primary/10\">\n\t\t\t\t\t<Rocket className=\"h-4 w-4 text-primary\" />\n\t\t\t\t</div>\n\t\t\t\t<div>\n\t\t\t\t\t<p className=\"font-medium text-sm\">{appName}</p>\n\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t{deploy.targets.length > 0\n\t\t\t\t\t\t\t? `Targets: ${deploy.targets.join(\", \")}`\n\t\t\t\t\t\t\t: deploy.role\n\t\t\t\t\t\t\t\t? `Role: ${deploy.role}`\n\t\t\t\t\t\t\t\t: \"No targets defined\"}\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t{deploy.role && (\n\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px]\">\n\t\t\t\t\t\t{deploy.role}\n\t\t\t\t\t</Badge>\n\t\t\t\t)}\n\t\t\t\t<Badge variant=\"secondary\" className=\"text-[10px]\">\n\t\t\t\t\t{resolvedNames.length} machine{resolvedNames.length !== 1 ? \"s\" : \"\"}\n\t\t\t\t</Badge>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n\n// =============================================================================\n// Settings: AWS EC2 Discovery Configuration\n// =============================================================================\n\nfunction AwsEc2Settings({ machines }: { machines: ReturnType<typeof useMachinesConfig> }) {\n\tconst cfg = machines.config.aws;\n\tconst [saving, setSaving] = useState(false);\n\tconst [region, setRegion] = useState(cfg.region ?? \"\");\n\tconst [sshUser, setSshUser] = useState(cfg.ssh.user);\n\tconst [sshPort, setSshPort] = useState(cfg.ssh.port);\n\tconst [sshKeyPath, setSshKeyPath] = useState(cfg.ssh.key_path ?? \"\");\n\tconst [hostPref, setHostPref] = useState(cfg.host_preference.join(\", \"));\n\n\tconst handleSave = async () => {\n\t\tsetSaving(true);\n\t\ttry {\n\t\t\tawait machines.updateSettings({\n\t\t\t\tsource: \"aws-ec2\",\n\t\t\t\tenable: true,\n\t\t\t\taws: {\n\t\t\t\t\t...cfg,\n\t\t\t\t\tregion: region || null,\n\t\t\t\t\tssh: {\n\t\t\t\t\t\tuser: sshUser || \"root\",\n\t\t\t\t\t\tport: sshPort || 22,\n\t\t\t\t\t\tkey_path: sshKeyPath || null,\n\t\t\t\t\t},\n\t\t\t\t\thost_preference: hostPref.split(\",\").map((s) => s.trim()).filter(Boolean),\n\t\t\t\t},\n\t\t\t});\n\t\t\ttoast.success(\"AWS EC2 settings saved\");\n\t\t} catch (err) {\n\t\t\ttoast.error(err instanceof Error ? err.message : \"Failed to save\");\n\t\t} finally {\n\t\t\tsetSaving(false);\n\t\t}\n\t};\n\n\treturn (\n\t\t<Card>\n\t\t\t<CardHeader>\n\t\t\t\t<CardTitle className=\"text-base\">AWS EC2 Discovery</CardTitle>\n\t\t\t\t<CardDescription>\n\t\t\t\t\tAuto-discover machines from running EC2 instances\n\t\t\t\t</CardDescription>\n\t\t\t</CardHeader>\n\t\t\t<CardContent className=\"space-y-4\">\n\t\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>Region</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"us-west-2\"\n\t\t\t\t\t\t\tvalue={region}\n\t\t\t\t\t\t\tonChange={(e) => setRegion(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>Host Preference</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"publicDns, publicIp, privateIp\"\n\t\t\t\t\t\t\tvalue={hostPref}\n\t\t\t\t\t\t\tonChange={(e) => setHostPref(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\n\t\t\t\t<fieldset className=\"rounded-lg border border-border p-3 space-y-3\">\n\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Default SSH</legend>\n\t\t\t\t\t<div className=\"grid grid-cols-3 gap-3\">\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>User</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\tplaceholder=\"ec2-user\"\n\t\t\t\t\t\t\t\tvalue={sshUser}\n\t\t\t\t\t\t\t\tonChange={(e) => setSshUser(e.target.value)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Port</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\ttype=\"number\"\n\t\t\t\t\t\t\t\tvalue={sshPort}\n\t\t\t\t\t\t\t\tonChange={(e) => setSshPort(Number.parseInt(e.target.value, 10) || 22)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Key Path</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\tplaceholder=\"~/.ssh/aws\"\n\t\t\t\t\t\t\t\tvalue={sshKeyPath}\n\t\t\t\t\t\t\t\tonChange={(e) => setSshKeyPath(e.target.value)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</fieldset>\n\n\t\t\t\t<Button onClick={handleSave} disabled={saving} size=\"sm\">\n\t\t\t\t\t{saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\tSave Settings\n\t\t\t\t</Button>\n\t\t\t</CardContent>\n\t\t</Card>\n\t);\n}\n\n// =============================================================================\n// Main Component\n// =============================================================================\n\nexport function DeployPanel() {\n\tconst { isConnected } = useAgentContext();\n\tconst { machines: computedMachines, appDeploy, colmenaConfig, isLoading, refetch } = useColmenaData();\n\tconst machinesConfig = useMachinesConfig();\n\tconst [isRefreshing, setIsRefreshing] = useState(false);\n\tconst [editingMachine, setEditingMachine] = useState<{ id: string; config: MachineConfig } | null>(null);\n\n\t// Merge computed machines (from colmena/infra) with static config machines\n\tconst configMachines = machinesConfig.config.machines;\n\tconst computedList = Object.values(computedMachines);\n\tconst configList = Object.entries(configMachines);\n\n\t// Build combined machine list: computed takes precedence, config fills gaps\n\tconst allMachineEntries = useMemo(() => {\n\t\tconst seen = new Set<string>();\n\t\tconst entries: Array<{ id: string; info: MachineInfo; configurable: boolean }> = [];\n\n\t\t// Add computed machines\n\t\tfor (const m of computedList) {\n\t\t\tseen.add(m.id);\n\t\t\tentries.push({ id: m.id, info: m, configurable: !!configMachines[m.id] });\n\t\t}\n\n\t\t// Add config-only machines not in computed\n\t\tfor (const [key, cfg] of configList) {\n\t\t\tif (!seen.has(key)) {\n\t\t\t\tentries.push({\n\t\t\t\t\tid: key,\n\t\t\t\t\tinfo: {\n\t\t\t\t\t\tid: key,\n\t\t\t\t\t\tname: cfg.name ?? key,\n\t\t\t\t\t\thost: cfg.host,\n\t\t\t\t\t\tssh: { user: cfg.ssh.user, port: cfg.ssh.port, keyPath: cfg.ssh.key_path },\n\t\t\t\t\t\ttags: cfg.tags,\n\t\t\t\t\t\troles: cfg.roles,\n\t\t\t\t\t\tprovider: cfg.provider,\n\t\t\t\t\t\tarch: cfg.arch,\n\t\t\t\t\t\tpublicIp: cfg.public_ip,\n\t\t\t\t\t\tprivateIp: cfg.private_ip,\n\t\t\t\t\t\ttargetEnv: cfg.target_env,\n\t\t\t\t\t\tlabels: cfg.labels,\n\t\t\t\t\t},\n\t\t\t\t\tconfigurable: true,\n\t\t\t\t});\n\t\t\t}\n\t\t}\n\n\t\treturn entries;\n\t}, [computedList, configList, configMachines]);\n\n\tconst machineCount = allMachineEntries.length;\n\tconst appDeployEntries = Object.entries(appDeploy);\n\tconst healthyCount = allMachineEntries.filter((m) => m.info.host !== null).length;\n\tconst unhealthyCount = machineCount - healthyCount;\n\n\tconst handleRefresh = async () => {\n\t\tsetIsRefreshing(true);\n\t\ttry {\n\t\t\tawait Promise.all([refetch(), machinesConfig.refetch()]);\n\t\t} finally {\n\t\t\tsetIsRefreshing(false);\n\t\t}\n\t};\n\n\tif (!isConnected) {\n\t\treturn (\n\t\t\t<div className=\"space-y-6\">\n\t\t\t\t<PanelHeader\n\t\t\t\t\ttitle=\"Deploy\"\n\t\t\t\t\tdescription=\"Machine inventory and deployment management\"\n\t\t\t\t/>\n\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t<CloudOff className=\"h-12 w-12 text-muted-foreground\" />\n\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">Agent Not Connected</p>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm\">\n\t\t\t\t\t\t\t\tConnect to the stackpanel agent to manage deployments.\n\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t</div>\n\t\t);\n\t}\n\n\tif (isLoading) {\n\t\treturn (\n\t\t\t<div className=\"flex min-h-[400px] items-center justify-center\">\n\t\t\t\t<Loader2 className=\"h-8 w-8 animate-spin text-muted-foreground\" />\n\t\t\t</div>\n\t\t);\n\t}\n\n\treturn (\n\t\t<div className=\"space-y-6\">\n\t\t\t<PanelHeader\n\t\t\t\ttitle=\"Deploy\"\n\t\t\t\tdescription=\"Machine inventory and deployment management\"\n\t\t\t\tactions={\n\t\t\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t\t\t<AddMachineDialog machines={machinesConfig} />\n\t\t\t\t\t\t<Button\n\t\t\t\t\t\t\tvariant=\"outline\"\n\t\t\t\t\t\t\tsize=\"sm\"\n\t\t\t\t\t\t\tonClick={handleRefresh}\n\t\t\t\t\t\t\tdisabled={isRefreshing}\n\t\t\t\t\t\t>\n\t\t\t\t\t\t\t<RefreshCw\n\t\t\t\t\t\t\t\tclassName={cn(\"mr-2 h-4 w-4\", isRefreshing && \"animate-spin\")}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t{isRefreshing ? \"Refreshing...\" : \"Refresh\"}\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t</div>\n\t\t\t\t}\n\t\t\t/>\n\n\t\t\t{/* Status overview */}\n\t\t\t<div className=\"grid gap-4 sm:grid-cols-4\">\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className=\"flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10\">\n\t\t\t\t\t\t\t<Server className=\"h-5 w-5 text-primary\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Machines</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{machineCount}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className={cn(\n\t\t\t\t\t\t\t\"flex h-10 w-10 items-center justify-center rounded-lg\",\n\t\t\t\t\t\t\thealthyCount > 0 ? \"bg-green-500/10\" : \"bg-secondary\",\n\t\t\t\t\t\t)}>\n\t\t\t\t\t\t\t<CheckCircle className={cn(\n\t\t\t\t\t\t\t\t\"h-5 w-5\",\n\t\t\t\t\t\t\t\thealthyCount > 0 ? \"text-green-500\" : \"text-muted-foreground\",\n\t\t\t\t\t\t\t)} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Reachable</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{healthyCount}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className={cn(\n\t\t\t\t\t\t\t\"flex h-10 w-10 items-center justify-center rounded-lg\",\n\t\t\t\t\t\t\tunhealthyCount > 0 ? \"bg-amber-500/10\" : \"bg-secondary\",\n\t\t\t\t\t\t)}>\n\t\t\t\t\t\t\t<AlertCircle className={cn(\n\t\t\t\t\t\t\t\t\"h-5 w-5\",\n\t\t\t\t\t\t\t\tunhealthyCount > 0 ? \"text-amber-500\" : \"text-muted-foreground\",\n\t\t\t\t\t\t\t)} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Unreachable</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{unhealthyCount}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className={cn(\n\t\t\t\t\t\t\t\"flex h-10 w-10 items-center justify-center rounded-lg\",\n\t\t\t\t\t\t\tappDeployEntries.length > 0 ? \"bg-blue-500/10\" : \"bg-secondary\",\n\t\t\t\t\t\t)}>\n\t\t\t\t\t\t\t<Rocket className={cn(\n\t\t\t\t\t\t\t\t\"h-5 w-5\",\n\t\t\t\t\t\t\t\tappDeployEntries.length > 0 ? \"text-blue-500\" : \"text-muted-foreground\",\n\t\t\t\t\t\t\t)} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Deploy-enabled apps</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{appDeployEntries.length}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t</div>\n\n\t\t\t<Tabs defaultValue=\"machines\">\n\t\t\t\t<TabsList>\n\t\t\t\t\t<TabsTrigger value=\"machines\">\n\t\t\t\t\t\tMachines\n\t\t\t\t\t\t{machineCount > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{machineCount}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"targets\">\n\t\t\t\t\t\tApp Targets\n\t\t\t\t\t\t{appDeployEntries.length > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{appDeployEntries.length}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"actions\">Actions</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"settings\">Settings</TabsTrigger>\n\t\t\t\t</TabsList>\n\n\t\t\t\t{/* Machines Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"machines\">\n\t\t\t\t\t{machineCount === 0 ? (\n\t\t\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t\t\t<Server className=\"h-12 w-12 text-muted-foreground/50\" />\n\t\t\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">No Machines</p>\n\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm max-w-md\">\n\t\t\t\t\t\t\t\t\t\tAdd machines manually using the <strong>Add Machine</strong> button above,\n\t\t\t\t\t\t\t\t\t\tor configure AWS EC2 discovery in Settings and run{\" \"}\n\t\t\t\t\t\t\t\t\t\t<code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">infra:deploy</code>.\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t\t</Card>\n\t\t\t\t\t) : (\n\t\t\t\t\t\t<div className=\"grid gap-4 sm:grid-cols-2 lg:grid-cols-3\">\n\t\t\t\t\t\t\t{allMachineEntries.map((entry) => (\n\t\t\t\t\t\t\t\t<MachineCard\n\t\t\t\t\t\t\t\t\tkey={entry.id}\n\t\t\t\t\t\t\t\t\tmachine={entry.info}\n\t\t\t\t\t\t\t\t\tonEdit={\n\t\t\t\t\t\t\t\t\t\tentry.configurable\n\t\t\t\t\t\t\t\t\t\t\t? () => {\n\t\t\t\t\t\t\t\t\t\t\t\t\tconst cfg = configMachines[entry.id];\n\t\t\t\t\t\t\t\t\t\t\t\t\tif (cfg) setEditingMachine({ id: entry.id, config: cfg });\n\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t: undefined\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* App Targets Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"targets\">\n\t\t\t\t\t{appDeployEntries.length === 0 ? (\n\t\t\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t\t\t<Network className=\"h-12 w-12 text-muted-foreground/50\" />\n\t\t\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">No App Targets</p>\n\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm max-w-md\">\n\t\t\t\t\t\t\t\t\t\tNo apps have deployment enabled. Add <code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">deploy.enable = true</code> and <code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">deploy.targets</code> to your app config.\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t\t</Card>\n\t\t\t\t\t) : (\n\t\t\t\t\t\t<div className=\"space-y-3\">\n\t\t\t\t\t\t\t{appDeployEntries.map(([appName, deploy]) => (\n\t\t\t\t\t\t\t\t<AppTargetRow\n\t\t\t\t\t\t\t\t\tkey={appName}\n\t\t\t\t\t\t\t\t\tappName={appName}\n\t\t\t\t\t\t\t\t\tdeploy={deploy}\n\t\t\t\t\t\t\t\t\tmachines={computedMachines}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* Actions Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"actions\">\n\t\t\t\t\t<Card>\n\t\t\t\t\t\t<CardHeader>\n\t\t\t\t\t\t\t<CardTitle className=\"text-base\">Colmena Actions</CardTitle>\n\t\t\t\t\t\t\t<CardDescription>\n\t\t\t\t\t\t\t\tRun Colmena commands against your fleet\n\t\t\t\t\t\t\t</CardDescription>\n\t\t\t\t\t\t</CardHeader>\n\t\t\t\t\t\t<CardContent className=\"space-y-4\">\n\t\t\t\t\t\t\t{machineCount === 0 ? (\n\t\t\t\t\t\t\t\t<div className=\"rounded-lg border border-amber-500/50 bg-amber-500/10 p-4\">\n\t\t\t\t\t\t\t\t\t<div className=\"flex items-center gap-3\">\n\t\t\t\t\t\t\t\t\t\t<AlertCircle className=\"h-5 w-5 text-amber-500\" />\n\t\t\t\t\t\t\t\t\t\t<p className=\"text-amber-700 dark:text-amber-300 text-sm\">\n\t\t\t\t\t\t\t\t\t\t\tNo machines in inventory. Add machines or configure EC2 discovery first.\n\t\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t) : (\n\t\t\t\t\t\t\t\t<>\n\t\t\t\t\t\t\t\t\t<div className=\"flex flex-wrap gap-3\">\n\t\t\t\t\t\t\t\t\t\t<Button variant=\"outline\" className=\"gap-2\">\n\t\t\t\t\t\t\t\t\t\t\t<Settings className=\"h-4 w-4\" />\n\t\t\t\t\t\t\t\t\t\t\tcolmena eval\n\t\t\t\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t\t\t\t\t<Button variant=\"outline\" className=\"gap-2\">\n\t\t\t\t\t\t\t\t\t\t\t<HardDrive className=\"h-4 w-4\" />\n\t\t\t\t\t\t\t\t\t\t\tcolmena build\n\t\t\t\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t\t\t\t\t<Button className=\"gap-2\">\n\t\t\t\t\t\t\t\t\t\t\t<Play className=\"h-4 w-4\" />\n\t\t\t\t\t\t\t\t\t\t\tcolmena apply\n\t\t\t\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\t\t\t\tActions run the generated wrapper scripts with your configured defaults.\n\t\t\t\t\t\t\t\t\t\tUse the CLI for advanced options: <code className=\"bg-secondary px-1 py-0.5 rounded\">colmena-apply --on tag:prod</code>\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</>\n\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t</Card>\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* Settings Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"settings\">\n\t\t\t\t\t{/* Module enable + source selection */}\n\t\t\t\t\t<Card>\n\t\t\t\t\t\t<CardHeader>\n\t\t\t\t\t\t\t<CardTitle className=\"text-base\">Machines Module</CardTitle>\n\t\t\t\t\t\t\t<CardDescription>\n\t\t\t\t\t\t\t\tConfigure how machines are sourced for deployment\n\t\t\t\t\t\t\t</CardDescription>\n\t\t\t\t\t\t</CardHeader>\n\t\t\t\t\t\t<CardContent className=\"space-y-4\">\n\t\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t\t<Label>Enable</Label>\n\t\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\t\t\t\tEnable the machines infra module\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t<Switch\n\t\t\t\t\t\t\t\t\tchecked={machinesConfig.config.enable}\n\t\t\t\t\t\t\t\t\tonCheckedChange={(checked) =>\n\t\t\t\t\t\t\t\t\t\tmachinesConfig.updateSettings({ enable: checked })\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Machine Source</Label>\n\t\t\t\t\t\t\t\t<Select\n\t\t\t\t\t\t\t\t\tvalue={machinesConfig.config.source}\n\t\t\t\t\t\t\t\t\tonValueChange={(v) =>\n\t\t\t\t\t\t\t\t\t\tmachinesConfig.updateSettings({\n\t\t\t\t\t\t\t\t\t\t\tsource: v as \"static\" | \"aws-ec2\",\n\t\t\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t>\n\t\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t\t<SelectValue />\n\t\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t\t<SelectItem value=\"static\">Static (defined in config)</SelectItem>\n\t\t\t\t\t\t\t\t\t\t<SelectItem value=\"aws-ec2\">AWS EC2 (auto-discover)</SelectItem>\n\t\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t\t{colmenaConfig && (\n\t\t\t\t\t\t\t\t<div className=\"grid gap-3 sm:grid-cols-2 mt-4\">\n\t\t\t\t\t\t\t\t\t<div className=\"rounded-lg border border-border bg-secondary/30 p-3\">\n\t\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Hive Config</p>\n\t\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground text-sm font-mono text-[11px]\">\n\t\t\t\t\t\t\t\t\t\t\t{colmenaConfig.config ?? \".stackpanel/state/colmena/hive.nix\"}\n\t\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t<div className=\"rounded-lg border border-border bg-secondary/30 p-3\">\n\t\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Generate Hive</p>\n\t\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground text-sm\">\n\t\t\t\t\t\t\t\t\t\t\t{colmenaConfig.generateHive ? \"Yes\" : \"No\"}\n\t\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t</Card>\n\n\t\t\t\t\t{/* AWS EC2 settings (shown when source is aws-ec2) */}\n\t\t\t\t\t{machinesConfig.config.source === \"aws-ec2\" && (\n\t\t\t\t\t\t<AwsEc2Settings machines={machinesConfig} />\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\t\t\t</Tabs>\n\n\t\t\t{/* Edit dialog */}\n\t\t\t{editingMachine && (\n\t\t\t\t<EditMachineDialog\n\t\t\t\t\tmachineId={editingMachine.id}\n\t\t\t\t\tmachine={editingMachine.config}\n\t\t\t\t\tmachines={machinesConfig}\n\t\t\t\t\topen={!!editingMachine}\n\t\t\t\t\tonOpenChange={(open) => {\n\t\t\t\t\t\tif (!open) setEditingMachine(null);\n\t\t\t\t\t}}\n\t\t\t\t/>\n\t\t\t)}\n\t\t</div>\n\t);\n}\n"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "content": "\"use client\";\n\n/**\n * Deploy Panel - Colmena-centric deployment management.\n *\n * Shows machine inventory, app-to-machine mapping, and deploy actions\n * (eval/build/apply). Supports full machine CRUD (add/edit/delete) and\n * AWS EC2 discovery configuration.\n */\n\nimport { useState, useMemo } from \"react\";\nimport { Badge } from \"@ui/badge\";\nimport { Button } from \"@ui/button\";\nimport {\n\tCard,\n\tCardContent,\n\tCardDescription,\n\tCardHeader,\n\tCardTitle,\n} from \"@ui/card\";\nimport { Input } from \"@ui/input\";\nimport { Label } from \"@ui/label\";\nimport {\n\tSelect,\n\tSelectContent,\n\tSelectItem,\n\tSelectTrigger,\n\tSelectValue,\n} from \"@ui/select\";\nimport { Switch } from \"@ui/switch\";\nimport { Tabs, TabsContent, TabsList, TabsTrigger } from \"@ui/tabs\";\nimport {\n\tActivity,\n\tAlertCircle,\n\tCheckCircle,\n\tCloudOff,\n\tCpu,\n\tHardDrive,\n\tLoader2,\n\tNetwork,\n\tPencil,\n\tPlay,\n\tRefreshCw,\n\tRocket,\n\tServer,\n\tSettings,\n\tShield,\n\tXCircle,\n} from \"lucide-react\";\nimport { toast } from \"sonner\";\nimport { useAgentContext } from \"@/lib/agent-provider\";\nimport { useNixConfig } from \"@/lib/use-agent\";\nimport { PanelHeader } from \"../shared/panel-header\";\nimport { cn } from \"@/lib/utils\";\nimport { AddMachineDialog } from \"./add-machine-dialog\";\nimport { EditMachineDialog } from \"./edit-machine-dialog\";\nimport { useMachinesConfig, type MachineConfig } from \"./use-machines\";\n\n// =============================================================================\n// Types\n// =============================================================================\n\ninterface MachineInfo {\n\tid: string;\n\tname: string;\n\thost: string | null;\n\tssh: {\n\t\tuser: string;\n\t\tport: number;\n\t\tkeyPath: string | null;\n\t};\n\ttags: string[];\n\troles: string[];\n\tprovider: string | null;\n\tarch: string | null;\n\tpublicIp: string | null;\n\tprivateIp: string | null;\n\ttargetEnv: string | null;\n\tlabels: Record<string, string>;\n}\n\ninterface AppDeployMapping {\n\tenable: boolean;\n\ttargets: string[];\n\tresolvedTargets: string[];\n\trole: string | null;\n\tnixosModules: string[];\n\tsystem: string | null;\n}\n\ninterface ColmenaConfig {\n\tenable: boolean;\n\tmachineSource: string;\n\tgenerateHive: boolean;\n\tconfig: string;\n\tmachineCount: number;\n\tmachineIds: string[];\n}\n\n// =============================================================================\n// Hooks\n// =============================================================================\n\nfunction useColmenaData() {\n\tconst { data: nixConfig, isLoading, refetch } = useNixConfig();\n\n\tconst result = useMemo(() => {\n\t\tconst cfg = nixConfig as Record<string, unknown> | null | undefined;\n\t\tif (!cfg) return { machines: {}, appDeploy: {}, colmenaConfig: null };\n\n\t\tconst serializable = cfg.serializable as Record<string, unknown> | undefined;\n\t\tconst colmenaConfig = (serializable?.colmena ?? null) as ColmenaConfig | null;\n\n\t\tconst colmenaData = cfg.colmena as Record<string, unknown> | undefined;\n\t\tconst machinesComputed = (colmenaData?.machinesComputed ?? {}) as Record<string, MachineInfo>;\n\n\t\tconst rawApps = (cfg.apps ?? cfg.appsComputed ?? {}) as Record<string, Record<string, unknown>>;\n\t\tconst appDeploy: Record<string, AppDeployMapping> = {};\n\n\t\tfor (const [appName, appCfg] of Object.entries(rawApps)) {\n\t\t\tconst deploy = appCfg.deploy as Record<string, unknown> | undefined;\n\t\t\tif (deploy?.enable) {\n\t\t\t\tappDeploy[appName] = {\n\t\t\t\t\tenable: true,\n\t\t\t\t\ttargets: (deploy.targets as string[]) ?? [],\n\t\t\t\t\tresolvedTargets: (deploy.resolvedTargets as string[]) ?? [],\n\t\t\t\t\trole: (deploy.role as string | null) ?? null,\n\t\t\t\t\tnixosModules: (deploy.nixosModules as string[]) ?? [],\n\t\t\t\t\tsystem: (deploy.system as string | null) ?? null,\n\t\t\t\t};\n\t\t\t}\n\t\t}\n\n\t\treturn { machines: machinesComputed, appDeploy, colmenaConfig };\n\t}, [nixConfig]);\n\n\treturn { ...result, isLoading, refetch };\n}\n\n// =============================================================================\n// Sub-components\n// =============================================================================\n\nfunction MachineCard({\n\tmachine,\n\tonEdit,\n}: {\n\tmachine: MachineInfo;\n\tonEdit?: () => void;\n}) {\n\tconst isReachable = machine.host !== null;\n\n\treturn (\n\t\t<Card\n\t\t\tclassName={cn(\n\t\t\t\t\"transition-colors cursor-pointer hover:border-primary/40\",\n\t\t\t\tisReachable ? \"border-border\" : \"border-amber-500/30\",\n\t\t\t)}\n\t\t\tonClick={onEdit}\n\t\t>\n\t\t\t<CardContent className=\"p-4\">\n\t\t\t\t<div className=\"flex items-start justify-between mb-3\">\n\t\t\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t\t\t<Server className=\"h-4 w-4 text-muted-foreground\" />\n\t\t\t\t\t\t<span className=\"font-medium text-sm\">{machine.name || machine.id}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t{onEdit && (\n\t\t\t\t\t\t\t<Button variant=\"ghost\" size=\"icon\" className=\"h-6 w-6\" onClick={(e) => { e.stopPropagation(); onEdit(); }}>\n\t\t\t\t\t\t\t\t<Pencil className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t)}\n\t\t\t\t\t\t{isReachable ? (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"text-[10px] gap-1\">\n\t\t\t\t\t\t\t\t<CheckCircle className=\"h-3 w-3 text-green-500\" />\n\t\t\t\t\t\t\t\t{machine.host}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t) : (\n\t\t\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px] gap-1 text-amber-500 border-amber-500/30\">\n\t\t\t\t\t\t\t\t<XCircle className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t\tno host\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\n\t\t\t\t<div className=\"grid grid-cols-2 gap-2 text-xs text-muted-foreground\">\n\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t<Shield className=\"h-3 w-3\" />\n\t\t\t\t\t\t<span>{machine.ssh.user}@{machine.ssh.port}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t{machine.arch && (\n\t\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t\t<Cpu className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t<span>{machine.arch}</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t\t{machine.provider && (\n\t\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t\t<HardDrive className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t<span>{machine.provider}</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t\t{machine.targetEnv && (\n\t\t\t\t\t\t<div className=\"flex items-center gap-1.5\">\n\t\t\t\t\t\t\t<Activity className=\"h-3 w-3\" />\n\t\t\t\t\t\t\t<span>{machine.targetEnv}</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</div>\n\n\t\t\t\t{(machine.tags.length > 0 || machine.roles.length > 0) && (\n\t\t\t\t\t<div className=\"mt-2 flex flex-wrap gap-1\">\n\t\t\t\t\t\t{machine.roles.map((role) => (\n\t\t\t\t\t\t\t<Badge key={`role-${role}`} variant=\"default\" className=\"text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{role}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t))}\n\t\t\t\t\t\t{machine.tags.map((tag) => (\n\t\t\t\t\t\t\t<Badge key={`tag-${tag}`} variant=\"secondary\" className=\"text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{tag}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t))}\n\t\t\t\t\t</div>\n\t\t\t\t)}\n\t\t\t</CardContent>\n\t\t</Card>\n\t);\n}\n\nfunction AppTargetRow({\n\tappName,\n\tdeploy,\n\tmachines,\n}: {\n\tappName: string;\n\tdeploy: AppDeployMapping;\n\tmachines: Record<string, MachineInfo>;\n}) {\n\tconst resolvedNames = deploy.resolvedTargets.map(\n\t\t(id) => machines[id]?.name ?? id,\n\t);\n\n\treturn (\n\t\t<div className=\"flex items-center justify-between rounded-lg border border-border bg-card p-3\">\n\t\t\t<div className=\"flex items-center gap-3\">\n\t\t\t\t<div className=\"flex h-8 w-8 items-center justify-center rounded-md bg-primary/10\">\n\t\t\t\t\t<Rocket className=\"h-4 w-4 text-primary\" />\n\t\t\t\t</div>\n\t\t\t\t<div>\n\t\t\t\t\t<p className=\"font-medium text-sm\">{appName}</p>\n\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t{deploy.targets.length > 0\n\t\t\t\t\t\t\t? `Targets: ${deploy.targets.join(\", \")}`\n\t\t\t\t\t\t\t: deploy.role\n\t\t\t\t\t\t\t\t? `Role: ${deploy.role}`\n\t\t\t\t\t\t\t\t: \"No targets defined\"}\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t{deploy.role && (\n\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px]\">\n\t\t\t\t\t\t{deploy.role}\n\t\t\t\t\t</Badge>\n\t\t\t\t)}\n\t\t\t\t<Badge variant=\"secondary\" className=\"text-[10px]\">\n\t\t\t\t\t{resolvedNames.length} machine{resolvedNames.length !== 1 ? \"s\" : \"\"}\n\t\t\t\t</Badge>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n\n// =============================================================================\n// Settings: AWS EC2 Discovery Configuration\n// =============================================================================\n\nfunction AwsEc2Settings({ machines }: { machines: ReturnType<typeof useMachinesConfig> }) {\n\tconst cfg = machines.config.aws;\n\tconst [saving, setSaving] = useState(false);\n\tconst [region, setRegion] = useState(cfg.region ?? \"\");\n\tconst [sshUser, setSshUser] = useState(cfg.ssh.user);\n\tconst [sshPort, setSshPort] = useState(cfg.ssh.port);\n\tconst [sshKeyPath, setSshKeyPath] = useState(cfg.ssh.key_path ?? \"\");\n\tconst [hostPref, setHostPref] = useState(cfg.host_preference.join(\", \"));\n\n\tconst handleSave = async () => {\n\t\tsetSaving(true);\n\t\ttry {\n\t\t\tawait machines.updateSettings({\n\t\t\t\tsource: \"aws-ec2\",\n\t\t\t\tenable: true,\n\t\t\t\taws: {\n\t\t\t\t\t...cfg,\n\t\t\t\t\tregion: region || null,\n\t\t\t\t\tssh: {\n\t\t\t\t\t\tuser: sshUser || \"root\",\n\t\t\t\t\t\tport: sshPort || 22,\n\t\t\t\t\t\tkey_path: sshKeyPath || null,\n\t\t\t\t\t},\n\t\t\t\t\thost_preference: hostPref.split(\",\").map((s) => s.trim()).filter(Boolean),\n\t\t\t\t},\n\t\t\t});\n\t\t\ttoast.success(\"AWS EC2 settings saved\");\n\t\t} catch (err) {\n\t\t\ttoast.error(err instanceof Error ? err.message : \"Failed to save\");\n\t\t} finally {\n\t\t\tsetSaving(false);\n\t\t}\n\t};\n\n\treturn (\n\t\t<Card>\n\t\t\t<CardHeader>\n\t\t\t\t<CardTitle className=\"text-base\">AWS EC2 Discovery</CardTitle>\n\t\t\t\t<CardDescription>\n\t\t\t\t\tAuto-discover machines from running EC2 instances\n\t\t\t\t</CardDescription>\n\t\t\t</CardHeader>\n\t\t\t<CardContent className=\"space-y-4\">\n\t\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>Region</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"us-west-2\"\n\t\t\t\t\t\t\tvalue={region}\n\t\t\t\t\t\t\tonChange={(e) => setRegion(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>Host Preference</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"publicDns, publicIp, privateIp\"\n\t\t\t\t\t\t\tvalue={hostPref}\n\t\t\t\t\t\t\tonChange={(e) => setHostPref(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\n\t\t\t\t<fieldset className=\"rounded-lg border border-border p-3 space-y-3\">\n\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Default SSH</legend>\n\t\t\t\t\t<div className=\"grid grid-cols-3 gap-3\">\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>User</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\tplaceholder=\"ec2-user\"\n\t\t\t\t\t\t\t\tvalue={sshUser}\n\t\t\t\t\t\t\t\tonChange={(e) => setSshUser(e.target.value)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Port</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\ttype=\"number\"\n\t\t\t\t\t\t\t\tvalue={sshPort}\n\t\t\t\t\t\t\t\tonChange={(e) => setSshPort(Number.parseInt(e.target.value, 10) || 22)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Key Path</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\tplaceholder=\"~/.ssh/aws\"\n\t\t\t\t\t\t\t\tvalue={sshKeyPath}\n\t\t\t\t\t\t\t\tonChange={(e) => setSshKeyPath(e.target.value)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</fieldset>\n\n\t\t\t\t<Button onClick={handleSave} disabled={saving} size=\"sm\">\n\t\t\t\t\t{saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\tSave Settings\n\t\t\t\t</Button>\n\t\t\t</CardContent>\n\t\t</Card>\n\t);\n}\n\n// =============================================================================\n// Main Component\n// =============================================================================\n\nexport function DeployPanel() {\n\tconst { isConnected } = useAgentContext();\n\tconst { machines: computedMachines, appDeploy, colmenaConfig, isLoading, refetch } = useColmenaData();\n\tconst machinesConfig = useMachinesConfig();\n\tconst [isRefreshing, setIsRefreshing] = useState(false);\n\tconst [editingMachine, setEditingMachine] = useState<{ id: string; config: MachineConfig } | null>(null);\n\n\t// Merge computed machines (from colmena/infra) with static config machines\n\tconst configMachines = machinesConfig.config.machines;\n\tconst computedList = Object.values(computedMachines);\n\tconst configList = Object.entries(configMachines);\n\n\t// Build combined machine list: computed takes precedence, config fills gaps\n\tconst allMachineEntries = useMemo(() => {\n\t\tconst seen = new Set<string>();\n\t\tconst entries: Array<{ id: string; info: MachineInfo; configurable: boolean }> = [];\n\n\t\t// Add computed machines\n\t\tfor (const m of computedList) {\n\t\t\tseen.add(m.id);\n\t\t\tentries.push({ id: m.id, info: m, configurable: !!configMachines[m.id] });\n\t\t}\n\n\t\t// Add config-only machines not in computed\n\t\tfor (const [key, cfg] of configList) {\n\t\t\tif (!seen.has(key)) {\n\t\t\t\tentries.push({\n\t\t\t\t\tid: key,\n\t\t\t\t\tinfo: {\n\t\t\t\t\t\tid: key,\n\t\t\t\t\t\tname: cfg.name ?? key,\n\t\t\t\t\t\thost: cfg.host,\n\t\t\t\t\t\tssh: { user: cfg.ssh.user, port: cfg.ssh.port, keyPath: cfg.ssh.key_path },\n\t\t\t\t\t\ttags: cfg.tags,\n\t\t\t\t\t\troles: cfg.roles,\n\t\t\t\t\t\tprovider: cfg.provider,\n\t\t\t\t\t\tarch: cfg.arch,\n\t\t\t\t\t\tpublicIp: cfg.public_ip,\n\t\t\t\t\t\tprivateIp: cfg.private_ip,\n\t\t\t\t\t\ttargetEnv: cfg.target_env,\n\t\t\t\t\t\tlabels: cfg.labels,\n\t\t\t\t\t},\n\t\t\t\t\tconfigurable: true,\n\t\t\t\t});\n\t\t\t}\n\t\t}\n\n\t\treturn entries;\n\t}, [computedList, configList, configMachines]);\n\n\tconst machineCount = allMachineEntries.length;\n\tconst appDeployEntries = Object.entries(appDeploy);\n\tconst healthyCount = allMachineEntries.filter((m) => m.info.host !== null).length;\n\tconst unhealthyCount = machineCount - healthyCount;\n\n\tconst handleRefresh = async () => {\n\t\tsetIsRefreshing(true);\n\t\ttry {\n\t\t\tawait Promise.all([refetch(), machinesConfig.refetch()]);\n\t\t} finally {\n\t\t\tsetIsRefreshing(false);\n\t\t}\n\t};\n\n\tif (!isConnected) {\n\t\treturn (\n\t\t\t<div className=\"space-y-6\">\n\t\t\t\t<PanelHeader\n\t\t\t\t\ttitle=\"Deploy\"\n\t\t\t\t\tdescription=\"Machine inventory and deployment management\"\n\t\t\t\t/>\n\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t<CloudOff className=\"h-12 w-12 text-muted-foreground\" />\n\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">Agent Not Connected</p>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm\">\n\t\t\t\t\t\t\t\tConnect to the stack agent to manage deployments.\n\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t</div>\n\t\t);\n\t}\n\n\tif (isLoading) {\n\t\treturn (\n\t\t\t<div className=\"flex min-h-[400px] items-center justify-center\">\n\t\t\t\t<Loader2 className=\"h-8 w-8 animate-spin text-muted-foreground\" />\n\t\t\t</div>\n\t\t);\n\t}\n\n\treturn (\n\t\t<div className=\"space-y-6\">\n\t\t\t<PanelHeader\n\t\t\t\ttitle=\"Deploy\"\n\t\t\t\tdescription=\"Machine inventory and deployment management\"\n\t\t\t\tactions={\n\t\t\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t\t\t<AddMachineDialog machines={machinesConfig} />\n\t\t\t\t\t\t<Button\n\t\t\t\t\t\t\tvariant=\"outline\"\n\t\t\t\t\t\t\tsize=\"sm\"\n\t\t\t\t\t\t\tonClick={handleRefresh}\n\t\t\t\t\t\t\tdisabled={isRefreshing}\n\t\t\t\t\t\t>\n\t\t\t\t\t\t\t<RefreshCw\n\t\t\t\t\t\t\t\tclassName={cn(\"mr-2 h-4 w-4\", isRefreshing && \"animate-spin\")}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t{isRefreshing ? \"Refreshing...\" : \"Refresh\"}\n\t\t\t\t\t\t</Button>\n\t\t\t\t\t</div>\n\t\t\t\t}\n\t\t\t/>\n\n\t\t\t{/* Status overview */}\n\t\t\t<div className=\"grid gap-4 sm:grid-cols-4\">\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className=\"flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10\">\n\t\t\t\t\t\t\t<Server className=\"h-5 w-5 text-primary\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Machines</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{machineCount}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className={cn(\n\t\t\t\t\t\t\t\"flex h-10 w-10 items-center justify-center rounded-lg\",\n\t\t\t\t\t\t\thealthyCount > 0 ? \"bg-green-500/10\" : \"bg-secondary\",\n\t\t\t\t\t\t)}>\n\t\t\t\t\t\t\t<CheckCircle className={cn(\n\t\t\t\t\t\t\t\t\"h-5 w-5\",\n\t\t\t\t\t\t\t\thealthyCount > 0 ? \"text-green-500\" : \"text-muted-foreground\",\n\t\t\t\t\t\t\t)} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Reachable</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{healthyCount}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className={cn(\n\t\t\t\t\t\t\t\"flex h-10 w-10 items-center justify-center rounded-lg\",\n\t\t\t\t\t\t\tunhealthyCount > 0 ? \"bg-amber-500/10\" : \"bg-secondary\",\n\t\t\t\t\t\t)}>\n\t\t\t\t\t\t\t<AlertCircle className={cn(\n\t\t\t\t\t\t\t\t\"h-5 w-5\",\n\t\t\t\t\t\t\t\tunhealthyCount > 0 ? \"text-amber-500\" : \"text-muted-foreground\",\n\t\t\t\t\t\t\t)} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Unreachable</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{unhealthyCount}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t\t<Card>\n\t\t\t\t\t<CardContent className=\"flex items-center gap-3 p-4\">\n\t\t\t\t\t\t<div className={cn(\n\t\t\t\t\t\t\t\"flex h-10 w-10 items-center justify-center rounded-lg\",\n\t\t\t\t\t\t\tappDeployEntries.length > 0 ? \"bg-blue-500/10\" : \"bg-secondary\",\n\t\t\t\t\t\t)}>\n\t\t\t\t\t\t\t<Rocket className={cn(\n\t\t\t\t\t\t\t\t\"h-5 w-5\",\n\t\t\t\t\t\t\t\tappDeployEntries.length > 0 ? \"text-blue-500\" : \"text-muted-foreground\",\n\t\t\t\t\t\t\t)} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Deploy-enabled apps</p>\n\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">{appDeployEntries.length}</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</CardContent>\n\t\t\t\t</Card>\n\t\t\t</div>\n\n\t\t\t<Tabs defaultValue=\"machines\">\n\t\t\t\t<TabsList>\n\t\t\t\t\t<TabsTrigger value=\"machines\">\n\t\t\t\t\t\tMachines\n\t\t\t\t\t\t{machineCount > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{machineCount}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"targets\">\n\t\t\t\t\t\tApp Targets\n\t\t\t\t\t\t{appDeployEntries.length > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{appDeployEntries.length}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"actions\">Actions</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"settings\">Settings</TabsTrigger>\n\t\t\t\t</TabsList>\n\n\t\t\t\t{/* Machines Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"machines\">\n\t\t\t\t\t{machineCount === 0 ? (\n\t\t\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t\t\t<Server className=\"h-12 w-12 text-muted-foreground/50\" />\n\t\t\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">No Machines</p>\n\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm max-w-md\">\n\t\t\t\t\t\t\t\t\t\tAdd machines manually using the <strong>Add Machine</strong> button above,\n\t\t\t\t\t\t\t\t\t\tor configure AWS EC2 discovery in Settings and run{\" \"}\n\t\t\t\t\t\t\t\t\t\t<code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">infra:deploy</code>.\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t\t</Card>\n\t\t\t\t\t) : (\n\t\t\t\t\t\t<div className=\"grid gap-4 sm:grid-cols-2 lg:grid-cols-3\">\n\t\t\t\t\t\t\t{allMachineEntries.map((entry) => (\n\t\t\t\t\t\t\t\t<MachineCard\n\t\t\t\t\t\t\t\t\tkey={entry.id}\n\t\t\t\t\t\t\t\t\tmachine={entry.info}\n\t\t\t\t\t\t\t\t\tonEdit={\n\t\t\t\t\t\t\t\t\t\tentry.configurable\n\t\t\t\t\t\t\t\t\t\t\t? () => {\n\t\t\t\t\t\t\t\t\t\t\t\t\tconst cfg = configMachines[entry.id];\n\t\t\t\t\t\t\t\t\t\t\t\t\tif (cfg) setEditingMachine({ id: entry.id, config: cfg });\n\t\t\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t\t: undefined\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* App Targets Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"targets\">\n\t\t\t\t\t{appDeployEntries.length === 0 ? (\n\t\t\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t\t\t<Network className=\"h-12 w-12 text-muted-foreground/50\" />\n\t\t\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">No App Targets</p>\n\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm max-w-md\">\n\t\t\t\t\t\t\t\t\t\tNo apps have deployment enabled. Add <code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">deploy.enable = true</code> and <code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">deploy.targets</code> to your app config.\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t\t</Card>\n\t\t\t\t\t) : (\n\t\t\t\t\t\t<div className=\"space-y-3\">\n\t\t\t\t\t\t\t{appDeployEntries.map(([appName, deploy]) => (\n\t\t\t\t\t\t\t\t<AppTargetRow\n\t\t\t\t\t\t\t\t\tkey={appName}\n\t\t\t\t\t\t\t\t\tappName={appName}\n\t\t\t\t\t\t\t\t\tdeploy={deploy}\n\t\t\t\t\t\t\t\t\tmachines={computedMachines}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* Actions Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"actions\">\n\t\t\t\t\t<Card>\n\t\t\t\t\t\t<CardHeader>\n\t\t\t\t\t\t\t<CardTitle className=\"text-base\">Colmena Actions</CardTitle>\n\t\t\t\t\t\t\t<CardDescription>\n\t\t\t\t\t\t\t\tRun Colmena commands against your fleet\n\t\t\t\t\t\t\t</CardDescription>\n\t\t\t\t\t\t</CardHeader>\n\t\t\t\t\t\t<CardContent className=\"space-y-4\">\n\t\t\t\t\t\t\t{machineCount === 0 ? (\n\t\t\t\t\t\t\t\t<div className=\"rounded-lg border border-amber-500/50 bg-amber-500/10 p-4\">\n\t\t\t\t\t\t\t\t\t<div className=\"flex items-center gap-3\">\n\t\t\t\t\t\t\t\t\t\t<AlertCircle className=\"h-5 w-5 text-amber-500\" />\n\t\t\t\t\t\t\t\t\t\t<p className=\"text-amber-700 dark:text-amber-300 text-sm\">\n\t\t\t\t\t\t\t\t\t\t\tNo machines in inventory. Add machines or configure EC2 discovery first.\n\t\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t) : (\n\t\t\t\t\t\t\t\t<>\n\t\t\t\t\t\t\t\t\t<div className=\"flex flex-wrap gap-3\">\n\t\t\t\t\t\t\t\t\t\t<Button variant=\"outline\" className=\"gap-2\">\n\t\t\t\t\t\t\t\t\t\t\t<Settings className=\"h-4 w-4\" />\n\t\t\t\t\t\t\t\t\t\t\tcolmena eval\n\t\t\t\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t\t\t\t\t<Button variant=\"outline\" className=\"gap-2\">\n\t\t\t\t\t\t\t\t\t\t\t<HardDrive className=\"h-4 w-4\" />\n\t\t\t\t\t\t\t\t\t\t\tcolmena build\n\t\t\t\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t\t\t\t\t<Button className=\"gap-2\">\n\t\t\t\t\t\t\t\t\t\t\t<Play className=\"h-4 w-4\" />\n\t\t\t\t\t\t\t\t\t\t\tcolmena apply\n\t\t\t\t\t\t\t\t\t\t</Button>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\t\t\t\tActions run the generated wrapper scripts with your configured defaults.\n\t\t\t\t\t\t\t\t\t\tUse the CLI for advanced options: <code className=\"bg-secondary px-1 py-0.5 rounded\">colmena-apply --on tag:prod</code>\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</>\n\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t</Card>\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* Settings Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"settings\">\n\t\t\t\t\t{/* Module enable + source selection */}\n\t\t\t\t\t<Card>\n\t\t\t\t\t\t<CardHeader>\n\t\t\t\t\t\t\t<CardTitle className=\"text-base\">Machines Module</CardTitle>\n\t\t\t\t\t\t\t<CardDescription>\n\t\t\t\t\t\t\t\tConfigure how machines are sourced for deployment\n\t\t\t\t\t\t\t</CardDescription>\n\t\t\t\t\t\t</CardHeader>\n\t\t\t\t\t\t<CardContent className=\"space-y-4\">\n\t\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t\t<Label>Enable</Label>\n\t\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\t\t\t\tEnable the machines infra module\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t<Switch\n\t\t\t\t\t\t\t\t\tchecked={machinesConfig.config.enable}\n\t\t\t\t\t\t\t\t\tonCheckedChange={(checked) =>\n\t\t\t\t\t\t\t\t\t\tmachinesConfig.updateSettings({ enable: checked })\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Machine Source</Label>\n\t\t\t\t\t\t\t\t<Select\n\t\t\t\t\t\t\t\t\tvalue={machinesConfig.config.source}\n\t\t\t\t\t\t\t\t\tonValueChange={(v) =>\n\t\t\t\t\t\t\t\t\t\tmachinesConfig.updateSettings({\n\t\t\t\t\t\t\t\t\t\t\tsource: v as \"static\" | \"aws-ec2\",\n\t\t\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t>\n\t\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t\t<SelectValue />\n\t\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t\t<SelectItem value=\"static\">Static (defined in config)</SelectItem>\n\t\t\t\t\t\t\t\t\t\t<SelectItem value=\"aws-ec2\">AWS EC2 (auto-discover)</SelectItem>\n\t\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t\t{colmenaConfig && (\n\t\t\t\t\t\t\t\t<div className=\"grid gap-3 sm:grid-cols-2 mt-4\">\n\t\t\t\t\t\t\t\t\t<div className=\"rounded-lg border border-border bg-secondary/30 p-3\">\n\t\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Hive Config</p>\n\t\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground text-sm font-mono text-[11px]\">\n\t\t\t\t\t\t\t\t\t\t\t{colmenaConfig.config ?? \".stack/state/colmena/hive.nix\"}\n\t\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t<div className=\"rounded-lg border border-border bg-secondary/30 p-3\">\n\t\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-xs\">Generate Hive</p>\n\t\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground text-sm\">\n\t\t\t\t\t\t\t\t\t\t\t{colmenaConfig.generateHive ? \"Yes\" : \"No\"}\n\t\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t)}\n\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t</Card>\n\n\t\t\t\t\t{/* AWS EC2 settings (shown when source is aws-ec2) */}\n\t\t\t\t\t{machinesConfig.config.source === \"aws-ec2\" && (\n\t\t\t\t\t\t<AwsEc2Settings machines={machinesConfig} />\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\t\t\t</Tabs>\n\n\t\t\t{/* Edit dialog */}\n\t\t\t{editingMachine && (\n\t\t\t\t<EditMachineDialog\n\t\t\t\t\tmachineId={editingMachine.id}\n\t\t\t\t\tmachine={editingMachine.config}\n\t\t\t\t\tmachines={machinesConfig}\n\t\t\t\t\topen={!!editingMachine}\n\t\t\t\t\tonOpenChange={(open) => {\n\t\t\t\t\t\tif (!open) setEditingMachine(null);\n\t\t\t\t\t}}\n\t\t\t\t/>\n\t\t\t)}\n\t\t</div>\n\t);\n}\n"
 }
 ```
 **Output:**
@@ -10850,7 +10850,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -10860,7 +10860,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -10876,7 +10876,7 @@ help: Add a "key" prop to the element in the iterator (https://react.dev/learn/r
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
 ERROR [236:33] React Hook useEffect has a complex expression in the dependency array.
 help: Extract the expression to a separate variable so it can be statically checked.
 ERROR [236:6] React Hook useEffect has a missing dependency: 'usersSettingsData'
@@ -11058,7 +11058,7 @@ Here's what was built:
 
 ## Data Flow
 
-UI form -> `useMachinesConfig()` hook -> `useNixData("infra").mutate()` -> `POST /api/nix/data { entity: "infra", data }` -> Go agent writes `.stackpanel/config.nix` -> SSE `config.changed` event -> UI auto-refreshes
+UI form -> `useMachinesConfig()` hook -> `useNixData("infra").mutate()` -> `POST /api/nix/data { entity: "infra", data }` -> Go agent writes `.stack/config.nix` -> SSE `config.changed` event -> UI auto-refreshes
 
 ---
 
@@ -11083,7 +11083,7 @@ Tool: task
 ```json
 {
   "description": "Explore EC2 provisioning infra modules",
-  "prompt": "Search thoroughly for everything related to EC2 instance provisioning (creating instances, not just discovering them):\n\n1. Read nix/stackpanel/infra/modules/aws-ec2/module.nix - understand how EC2 instances are provisioned\n2. Read nix/stackpanel/infra/modules/aws-ec2/index.ts - the Alchemy module that creates EC2 instances\n3. Read nix/stackpanel/infra/modules/aws-ec2-app/module.nix - per-app EC2 resources\n4. Read nix/stackpanel/infra/modules/aws-network/module.nix - VPC/subnet provisioning\n5. Read nix/stackpanel/infra/modules/aws-security-groups/module.nix - security groups\n6. Read nix/stackpanel/infra/modules/aws-key-pairs/module.nix - SSH key pairs\n7. Read nix/stackpanel/infra/modules/aws-iam/module.nix - IAM for EC2\n8. Check what custom Alchemy resources exist for EC2 in nix/stackpanel/infra/templates/ (ec2-instance.ts, etc.)\n9. Check .stackpanel/config.nix for any existing aws-ec2/aws-network config sections\n\nReturn for each module:\n- Whether it exists and what it provisions\n- The Nix options it defines (option names, types, defaults)\n- How it relates to other modules (dependencies)\n- The current config values in .stackpanel/config.nix if any\n- Key line numbers for important sections",
+  "prompt": "Search thoroughly for everything related to EC2 instance provisioning (creating instances, not just discovering them):\n\n1. Read nix/stack/infra/modules/aws-ec2/module.nix - understand how EC2 instances are provisioned\n2. Read nix/stack/infra/modules/aws-ec2/index.ts - the Alchemy module that creates EC2 instances\n3. Read nix/stack/infra/modules/aws-ec2-app/module.nix - per-app EC2 resources\n4. Read nix/stack/infra/modules/aws-network/module.nix - VPC/subnet provisioning\n5. Read nix/stack/infra/modules/aws-security-groups/module.nix - security groups\n6. Read nix/stack/infra/modules/aws-key-pairs/module.nix - SSH key pairs\n7. Read nix/stack/infra/modules/aws-iam/module.nix - IAM for EC2\n8. Check what custom Alchemy resources exist for EC2 in nix/stack/infra/templates/ (ec2-instance.ts, etc.)\n9. Check .stack/config.nix for any existing aws-ec2/aws-network config sections\n\nReturn for each module:\n- Whether it exists and what it provisions\n- The Nix options it defines (option names, types, defaults)\n- How it relates to other modules (dependencies)\n- The current config values in .stack/config.nix if any\n- Key line numbers for important sections",
   "subagent_type": "explore"
 }
 ```
@@ -11103,11 +11103,11 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 ## 1. aws-ec2 (Low-Level EC2 Provisioning)
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/module.nix`
 **Exists: YES (207 lines)**
 **What it provisions:** Raw EC2 instances from explicit definitions. No automatic VPC/subnet/AMI resolution.
 
-**Nix Options** (under `options.stackpanel.infra.aws-ec2`):
+**Nix Options** (under `options.stack.infra.aws-ec2`):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
@@ -11135,11 +11135,11 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 **machineMetaType** (lines 36-68): `tags` (listOf str), `roles` (listOf str), `target-env` (nullOr str), `arch` (nullOr str), `ssh` (submodule: `user`=root, `port`=22, `key-path`=null)
 
-**Dependencies:** Registers into `stackpanel.infra.modules.aws-ec2` (line 178). Requires `@aws-sdk/client-ec2`. Auto-enables `stackpanel.infra.enable` (line 176).
+**Dependencies:** Registers into `stack.infra.modules.aws-ec2` (line 178). Requires `@aws-sdk/client-ec2`. Auto-enables `stack.infra.enable` (line 176).
 
 **Outputs:** `instanceIds`, `publicIps`, `publicDns`, `privateIps`, `machines` -- all JSON strings.
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2/index.ts`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2/index.ts`
 **119 lines.** Simple loop: merges `defaults` into each `instance`, calls `Ec2Instance()` Alchemy resource, collects outputs. Emits machine inventory with `provider: "aws-ec2"`.
 
 **Key lines:** Instance creation at line 67-79. Machine inventory build at 88-109. Export at 112-118.
@@ -11148,11 +11148,11 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 ## 2. aws-ec2-app (High-Level App-Centric EC2)
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/module.nix`
 **Exists: YES (918 lines)**
 **What it provisions:** Per-app EC2 infrastructure including: security groups, key pairs, IAM roles + instance profiles, ALBs + target groups + listeners + host-based routing, ECR repos + GitHub OIDC roles, SSM parameters, and EC2 instances with automatic AMI resolution (Ubuntu 24.04 or NixOS).
 
-**Top-level options** (under `options.stackpanel.infra.aws-ec2-app`, lines 852-876):
+**Top-level options** (under `options.stack.infra.aws-ec2-app`, lines 852-876):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
@@ -11207,7 +11207,7 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 **Outputs:** `instanceIds`, `publicIps`, `publicDns`, `privateIps`, `machines`, `albOutputs`, `ecrOutputs`, `ssmOutputs` (lines 906-914).
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-ec2-app/index.ts`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-ec2-app/index.ts`
 **962 lines.** The most complex module. Key logic:
 
 - **Default VPC resolution** (lines 233-255): Auto-discovers default VPC and subnets via DescribeVpcs/DescribeSubnets
@@ -11226,16 +11226,16 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 ## 3. aws-network (VPC/Subnet Discovery)
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/module.nix`
 **Exists: YES (103 lines)**
 **What it provisions:** Nothing -- it *discovers* the default VPC and subnets. This is a read-only module.
 
-**Nix Options** (under `options.stackpanel.infra.aws-network`):
+**Nix Options** (under `options.stack.infra.aws-network`):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
 | `enable` | `bool` | `false` | 19-23 |
-| `region` | `nullOr str` | `config.stackpanel.aws.roles-anywhere.region or null` | 25-29 |
+| `region` | `nullOr str` | `config.stack.aws.roles-anywhere.region or null` | 25-29 |
 | `vpc.id` | `nullOr str` | `null` | 32-36 |
 | `vpc.use-default` | `bool` | `true` | 38-42 |
 | `subnets.ids` | `listOf str` | `[]` | 46-49 |
@@ -11248,18 +11248,18 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 **Relationship:** Standalone network discovery. Not required by `aws-ec2-app` which has its own built-in VPC discovery (lines 233-255 of index.ts), but useful for `aws-security-groups` and `aws-ec2` which require explicit VPC/subnet IDs.
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-network/index.ts`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-network/index.ts`
 **66 lines.** Simple: discovers default VPC, then subnets in that VPC. Falls back to explicit inputs.
 
 ---
 
 ## 4. aws-security-groups
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/module.nix`
 **Exists: YES (145 lines)**
 **What it provisions:** Standalone security groups in a given VPC.
 
-**Nix Options** (under `options.stackpanel.infra.aws-security-groups`):
+**Nix Options** (under `options.stack.infra.aws-security-groups`):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
@@ -11276,18 +11276,18 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 **Relationship:** Independent module. Output group IDs can be manually referenced in `aws-ec2.instances[].security-group-ids`. Not automatically wired to aws-ec2 or aws-ec2-app. The `aws-ec2-app` module has its own inline security group creation.
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-security-groups/index.ts`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-security-groups/index.ts`
 **69 lines.** Loops over groups, creates each via `SecurityGroup()` resource.
 
 ---
 
 ## 5. aws-key-pairs
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/module.nix`
 **Exists: YES (84 lines)**
 **What it provisions:** EC2 SSH key pairs (imports public keys).
 
-**Nix Options** (under `options.stackpanel.infra.aws-key-pairs`):
+**Nix Options** (under `options.stack.infra.aws-key-pairs`):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
@@ -11303,18 +11303,18 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 **Relationship:** Independent. Output key names can be referenced in `aws-ec2.instances[].key-name`. The `aws-ec2-app` module has its own inline key pair creation.
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-key-pairs/index.ts`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-key-pairs/index.ts`
 **42 lines.** Loops over keys, imports each via `KeyPair()` resource.
 
 ---
 
 ## 6. aws-iam (EC2-Oriented IAM)
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/module.nix`
 **Exists: YES (128 lines)**
 **What it provisions:** A single IAM role with EC2 trust policy + instance profile.
 
-**Nix Options** (under `options.stackpanel.infra.aws-iam`):
+**Nix Options** (under `options.stack.infra.aws-iam`):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
@@ -11334,18 +11334,18 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 **Relationship:** Independent standalone module. Output `instanceProfileName` can be referenced in `aws-ec2.instances[].iam-instance-profile`. The `aws-ec2-app` module has its own inline IAM creation.
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/aws-iam/index.ts`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/aws-iam/index.ts`
 **71 lines.** Creates role with EC2 trust policy (line 38), attaches managed policies, creates instance profile.
 
 ---
 
 ## 7. machines (Machine Inventory Discovery)
 
-### File: `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/modules/machines/module.nix`
+### File: `/Users/cm/git/darkmatter/stack/nix/stack/infra/modules/machines/module.nix`
 **Exists: YES (307 lines)**
 **What it provisions:** Nothing -- it *discovers* existing EC2 instances and emits a machine inventory JSON for Colmena.
 
-**Nix Options** (under `options.stackpanel.infra.machines`):
+**Nix Options** (under `options.stack.infra.machines`):
 
 | Option | Type | Default | Line |
 |--------|------|---------|------|
@@ -11355,9 +11355,9 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 | `aws.instance-ids` | `listOf str` | `[]` | 179-183 |
 | `aws.filters` | `listOf awsFilterType` | `[{name="instance-state-name"; values=["running"]}]` | 185-194 |
 | `aws.name-tag-keys` | `listOf str` | `["Name"]` | 196-200 |
-| `aws.role-tag-keys` | `listOf str` | `["stackpanel:role" "role"]` | 202-209 |
-| `aws.tag-keys` | `listOf str` | `["stackpanel:tag" "tag"]` | 211-218 |
-| `aws.env-tag-keys` | `listOf str` | `["stackpanel:env" "env" "stage"]` | 220-228 |
+| `aws.role-tag-keys` | `listOf str` | `["stack:role" "role"]` | 202-209 |
+| `aws.tag-keys` | `listOf str` | `["stack:tag" "tag"]` | 211-218 |
+| `aws.env-tag-keys` | `listOf str` | `["stack:env" "env" "stage"]` | 220-228 |
 | `aws.host-preference` | `listOf enum` | `["publicDns" "publicIp" "privateIp"]` | 230-242 |
 | `aws.ssh` | `sshConfigType` | `{user="root"; port=22; keyPath=null}` | 244-248 |
 | `machines` | `attrsOf machineType` | `{}` | 251-255 |
@@ -11372,21 +11372,21 @@ The EC2 provisioning system is a layered architecture with **7 Nix modules**, **
 
 ## 8. Custom Alchemy Resources (Templates)
 
-All in `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/templates/`:
+All in `/Users/cm/git/darkmatter/stack/nix/stack/infra/templates/`:
 
 | File | Resource Type | Lines | What it does |
 |------|-------------|-------|-------------|
-| `ec2-instance.ts` | `stackpanel::Ec2Instance` | 145 | `RunInstancesCommand` to create, `TerminateInstancesCommand` to delete. gp3 volumes. Base64 user data encoding. |
-| `security-group.ts` | `stackpanel::SecurityGroup` | 182 | Creates SG, authorizes ingress/egress rules. Adopts existing SGs by name+VPC. |
-| `key-pair.ts` | `stackpanel::KeyPair` | 101 | Imports public key via `ImportKeyPairCommand`. Adopts existing by name. |
-| `iam-role.ts` | `stackpanel::IamRole` | 153 | Creates/adopts role, updates trust policy, attaches managed + inline policies. |
-| `iam-instance-profile.ts` | `stackpanel::IamInstanceProfile` | 137 | Creates/adopts profile, adds role. Full lifecycle (remove role + delete on destroy). |
-| `application-load-balancer.ts` | `stackpanel::ApplicationLoadBalancer` | 121 | Creates ALB, returns ARN + DNS + zone ID. |
-| `target-group.ts` | `stackpanel::TargetGroup` | 136 | Creates target group with health checks. |
-| `listener.ts` | `stackpanel::Listener` | 108 | Creates HTTP/HTTPS listener with SSL policy. |
-| `listener-rule.ts` | `stackpanel::ListenerRule` | 105 | Creates host-header routing rules. |
-| `target-group-attachment.ts` | `stackpanel::TargetGroupAttachment` | 63 | Registers/deregisters instance to target group. |
-| `ecr-repository.ts` | `stackpanel::EcrRepository` | 127 | Creates ECR repo with lifecycle policy. |
+| `ec2-instance.ts` | `stack::Ec2Instance` | 145 | `RunInstancesCommand` to create, `TerminateInstancesCommand` to delete. gp3 volumes. Base64 user data encoding. |
+| `security-group.ts` | `stack::SecurityGroup` | 182 | Creates SG, authorizes ingress/egress rules. Adopts existing SGs by name+VPC. |
+| `key-pair.ts` | `stack::KeyPair` | 101 | Imports public key via `ImportKeyPairCommand`. Adopts existing by name. |
+| `iam-role.ts` | `stack::IamRole` | 153 | Creates/adopts role, updates trust policy, attaches managed + inline policies. |
+| `iam-instance-profile.ts` | `stack::IamInstanceProfile` | 137 | Creates/adopts profile, adds role. Full lifecycle (remove role + delete on destroy). |
+| `application-load-balancer.ts` | `stack::ApplicationLoadBalancer` | 121 | Creates ALB, returns ARN + DNS + zone ID. |
+| `target-group.ts` | `stack::TargetGroup` | 136 | Creates target group with health checks. |
+| `listener.ts` | `stack::Listener` | 108 | Creates HTTP/HTTPS listener with SSL policy. |
+| `listener-rule.ts` | `stack::ListenerRule` | 105 | Creates host-header routing rules. |
+| `target-group-attachment.ts` | `stack::TargetGroupAttachment` | 63 | Registers/deregisters instance to target group. |
+| `ecr-repository.ts` | `stack::EcrRepository` | 127 | Creates ECR repo with lifecycle policy. |
 
 All resources follow the Alchemy `Resource()` pattern with create-or-adopt semantics and `this.phase === "delete"` handling. They are **read at Nix eval time** and written to `packages/infra/src/resources/` by the codegen engine (`codegen.nix`, lines 561-602).
 
@@ -11394,7 +11394,7 @@ All resources follow the Alchemy `Resource()` pattern with create-or-adopt seman
 
 ## 9. Current config.nix Values
 
-### File: `/Users/cm/git/darkmatter/stackpanel/.stackpanel/config.nix`
+### File: `/Users/cm/git/darkmatter/stack/.stack/config.nix`
 
 **Lines 447-475** -- the `infra` section:
 
@@ -11470,20 +11470,20 @@ infra = {
 1. **Composable (low-level):** `aws-network` -> `aws-security-groups` -> `aws-key-pairs` -> `aws-iam` -> `aws-ec2` (each module independent, manually wire outputs)
 2. **All-in-one (high-level):** `aws-ec2-app` (creates SG, key pairs, IAM, ALB, ECR, SSM, and EC2 instances all in one module)
 
-**Consumer:** The Colmena module (`nix/stackpanel/modules/colmena/module.nix`, lines 577-580) reads machine inventory from `infra.outputs."aws-ec2".machines` OR `infra.outputs."aws-ec2-app".machines` OR `infra.outputs.machines.machines` (the discovery module).
+**Consumer:** The Colmena module (`nix/stack/modules/colmena/module.nix`, lines 577-580) reads machine inventory from `infra.outputs."aws-ec2".machines` OR `infra.outputs."aws-ec2-app".machines` OR `infra.outputs.machines.machines` (the discovery module).
 
 ---
 
 ## 11. Codegen Wiring
 
-The codegen engine (`/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/codegen.nix`):
+The codegen engine (`/Users/cm/git/darkmatter/stack/nix/stack/infra/codegen.nix`):
 - **Line 225**: Reads `ec2-instance.ts` template
 - **Lines 561-566**: Writes it to `${outputDir}/src/resources/ec2-instance.ts`
 - **Lines 462-489**: Copies each module's `index.ts` to `${outputDir}/modules/<id>.ts`
 - **Lines 261-340**: Generates `alchemy.run.ts` orchestrator that imports all enabled modules
 - **Lines 345-348**: Merges all module dependencies into the package.json
 
-The infra module system entry point is `/Users/cm/git/darkmatter/stackpanel/nix/stackpanel/infra/default.nix` (line 34-35) which imports both `aws-ec2/module.nix` and `aws-ec2-app/module.nix`.
+The infra module system entry point is `/Users/cm/git/darkmatter/stack/nix/stack/infra/default.nix` (line 34-35) which imports both `aws-ec2/module.nix` and `aws-ec2-app/module.nix`.
 
 <task_metadata>
 session_id: ses_3565ab3f8ffehVv05KuQ9ZqSdj
@@ -11591,7 +11591,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts"
 }
 ```
 **Output:**
@@ -11603,7 +11603,7 @@ Tool: read
 00004| import { useNixData } from "@/lib/use-agent";
 00005| 
 00006| // =============================================================================
-00007| // Types — match the Nix module schema (nix/stackpanel/infra/modules/machines)
+00007| // Types — match the Nix module schema (nix/stack/infra/modules/machines)
 00008| // =============================================================================
 00009| 
 00010| export interface MachineSSH {
@@ -11689,9 +11689,9 @@ Tool: read
 00090| 	instance_ids: [],
 00091| 	filters: [{ name: "instance-state-name", values: ["running"] }],
 00092| 	name_tag_keys: ["Name"],
-00093| 	role_tag_keys: ["stackpanel:role", "role"],
-00094| 	tag_keys: ["stackpanel:tag", "tag"],
-00095| 	env_tag_keys: ["stackpanel:env", "env", "stage"],
+00093| 	role_tag_keys: ["stack:role", "role"],
+00094| 	tag_keys: ["stack:tag", "tag"],
+00095| 	env_tag_keys: ["stack:env", "env", "stage"],
 00096| 	host_preference: ["publicDns", "publicIp", "privateIp"],
 00097| 	ssh: { ...DEFAULT_SSH },
 00098| };
@@ -11783,7 +11783,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts",
   "oldString": "// =============================================================================\n// Hook\n// =============================================================================\n\nexport function useMachinesConfig() {\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");",
   "newString": "// =============================================================================\n// EC2 Provisioning Types — match aws-ec2-app Nix module\n// =============================================================================\n\nexport interface Ec2MachineMeta {\n\ttags: string[];\n\troles: string[];\n\ttarget_env: string | null;\n\tarch: string | null;\n\tssh: MachineSSH;\n}\n\nexport interface Ec2SecurityGroupRule {\n\tfrom_port: number;\n\tto_port: number;\n\tprotocol: string;\n\tcidr_blocks: string[];\n\tdescription: string;\n}\n\nexport interface Ec2SecurityGroup {\n\tcreate: boolean;\n\tname: string | null;\n\tdescription: string | null;\n\tingress: Ec2SecurityGroupRule[];\n\tegress: Ec2SecurityGroupRule[];\n}\n\nexport interface Ec2KeyPair {\n\tcreate: boolean;\n\tname: string | null;\n\tpublic_key: string | null;\n}\n\nexport interface Ec2IamConfig {\n\tenable: boolean;\n\trole_name: string | null;\n}\n\nexport interface Ec2AppInstance {\n\tname: string;\n\tami: string | null;\n\tos_type: \"ubuntu\" | \"nixos\";\n\tinstance_type: string | null;\n\tsubnet_id: string | null;\n\troot_volume_size: number | null;\n\tassociate_public_ip: boolean;\n\ttags: Record<string, string>;\n\tmachine: Ec2MachineMeta;\n}\n\nexport interface Ec2AppConfig {\n\tinstance_count: number;\n\tinstances: Ec2AppInstance[];\n\tami: string | null;\n\tos_type: \"ubuntu\" | \"nixos\";\n\tinstance_type: string | null;\n\tvpc_id: string | null;\n\tsubnet_ids: string[];\n\tsecurity_group_ids: string[];\n\tsecurity_group: Ec2SecurityGroup;\n\tkey_name: string | null;\n\tkey_pair: Ec2KeyPair;\n\tiam: Ec2IamConfig;\n\tuser_data: string | null;\n\troot_volume_size: number | null;\n\tassociate_public_ip: boolean;\n\ttags: Record<string, string>;\n\tmachine: Ec2MachineMeta;\n}\n\nexport interface Ec2AppModuleConfig {\n\tenable: boolean;\n\tdefaults: Partial<Ec2AppConfig>;\n\tapps: Record<string, Ec2AppConfig>;\n}\n\nexport const DEFAULT_EC2_MACHINE_META: Ec2MachineMeta = {\n\ttags: [],\n\troles: [],\n\ttarget_env: null,\n\tarch: null,\n\tssh: { ...DEFAULT_SSH },\n};\n\nexport const DEFAULT_EC2_APP: Ec2AppConfig = {\n\tinstance_count: 1,\n\tinstances: [],\n\tami: null,\n\tos_type: \"ubuntu\",\n\tinstance_type: \"t3.micro\",\n\tvpc_id: null,\n\tsubnet_ids: [],\n\tsecurity_group_ids: [],\n\tsecurity_group: {\n\t\tcreate: true,\n\t\tname: null,\n\t\tdescription: null,\n\t\tingress: [\n\t\t\t{ from_port: 22, to_port: 22, protocol: \"tcp\", cidr_blocks: [\"0.0.0.0/0\"], description: \"SSH\" },\n\t\t\t{ from_port: 80, to_port: 80, protocol: \"tcp\", cidr_blocks: [\"0.0.0.0/0\"], description: \"HTTP\" },\n\t\t\t{ from_port: 443, to_port: 443, protocol: \"tcp\", cidr_blocks: [\"0.0.0.0/0\"], description: \"HTTPS\" },\n\t\t],\n\t\tegress: [\n\t\t\t{ from_port: 0, to_port: 0, protocol: \"-1\", cidr_blocks: [\"0.0.0.0/0\"], description: \"All outbound\" },\n\t\t],\n\t},\n\tkey_name: null,\n\tkey_pair: { create: false, name: null, public_key: null },\n\tiam: { enable: true, role_name: null },\n\tuser_data: null,\n\troot_volume_size: null,\n\tassociate_public_ip: true,\n\ttags: {},\n\tmachine: { ...DEFAULT_EC2_MACHINE_META },\n};\n\nconst DEFAULT_EC2_MODULE: Ec2AppModuleConfig = {\n\tenable: false,\n\tdefaults: {},\n\tapps: {},\n};\n\n// =============================================================================\n// Hooks\n// =============================================================================\n\nexport function useMachinesConfig() {\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");"
 }
@@ -11793,7 +11793,7 @@ Tool: edit
 Edit applied successfully.
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts">
 ERROR [224:7] Variable 'DEFAULT_EC2_MODULE' is declared but never used. Unused variables should start with a '_'.
 help: Consider removing this declaration.
 </diagnostics>
@@ -11812,7 +11812,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/use-machines.ts",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/use-machines.ts",
   "oldString": "\treturn {\n\t\tconfig,\n\t\taddMachine,\n\t\tupdateMachine,\n\t\tremoveMachine,\n\t\tupdateSettings,\n\t\trefetch,\n\t};\n}",
   "newString": "\treturn {\n\t\tconfig,\n\t\trawInfra,\n\t\tsetInfra,\n\t\taddMachine,\n\t\tupdateMachine,\n\t\tremoveMachine,\n\t\tupdateSettings,\n\t\trefetch,\n\t};\n}\n\nexport function useEc2Provisioning() {\n\tconst { data: rawInfra, mutate: setInfra, refetch } = useNixData<Record<string, unknown>>(\"infra\");\n\n\tconst config = useMemo<Ec2AppModuleConfig>(() => {\n\t\tif (!rawInfra) return DEFAULT_EC2_MODULE;\n\t\tconst ec2App = (rawInfra as Record<string, unknown>)[\"aws_ec2_app\"] as Partial<Ec2AppModuleConfig> | undefined;\n\t\tif (!ec2App) return DEFAULT_EC2_MODULE;\n\t\treturn {\n\t\t\tenable: ec2App.enable ?? false,\n\t\t\tdefaults: ec2App.defaults ?? {},\n\t\t\tapps: (ec2App.apps ?? {}) as Record<string, Ec2AppConfig>,\n\t\t};\n\t}, [rawInfra]);\n\n\tconst saveConfig = async (newConfig: Ec2AppModuleConfig) => {\n\t\tconst currentInfra = (rawInfra ?? {}) as Record<string, unknown>;\n\t\tawait setInfra({\n\t\t\t...currentInfra,\n\t\t\t\"aws_ec2_app\": newConfig,\n\t\t} as any);\n\t};\n\n\tconst addApp = async (key: string, app: Ec2AppConfig) => {\n\t\tconst updated = { ...config };\n\t\tupdated.apps = { ...updated.apps, [key]: app };\n\t\tif (!updated.enable) updated.enable = true;\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst updateApp = async (key: string, app: Ec2AppConfig) => {\n\t\tconst updated = { ...config };\n\t\tupdated.apps = { ...updated.apps, [key]: app };\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst removeApp = async (key: string) => {\n\t\tconst updated = { ...config };\n\t\tconst { [key]: _, ...rest } = updated.apps;\n\t\tupdated.apps = rest;\n\t\tawait saveConfig(updated);\n\t};\n\n\tconst setEnabled = async (enabled: boolean) => {\n\t\tawait saveConfig({ ...config, enable: enabled });\n\t};\n\n\treturn {\n\t\tconfig,\n\t\taddApp,\n\t\tupdateApp,\n\t\tremoveApp,\n\t\tsetEnabled,\n\t\trefetch,\n\t};\n}"
 }
@@ -11835,8 +11835,8 @@ Tool: write
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/provision-instance-dialog.tsx",
-  "content": "\"use client\";\n\nimport { Button } from \"@ui/button\";\nimport {\n\tDialog,\n\tDialogContent,\n\tDialogDescription,\n\tDialogFooter,\n\tDialogHeader,\n\tDialogTitle,\n} from \"@ui/dialog\";\nimport { Input } from \"@ui/input\";\nimport { Label } from \"@ui/label\";\nimport {\n\tSelect,\n\tSelectContent,\n\tSelectItem,\n\tSelectTrigger,\n\tSelectValue,\n} from \"@ui/select\";\nimport { Switch } from \"@ui/switch\";\nimport { Loader2, Plus } from \"lucide-react\";\nimport { useState } from \"react\";\nimport { toast } from \"sonner\";\nimport {\n\ttype Ec2AppConfig,\n\tDEFAULT_EC2_APP,\n\tDEFAULT_EC2_MACHINE_META,\n\ttype useEc2Provisioning,\n} from \"./use-machines\";\n\ninterface ProvisionInstanceDialogProps {\n\tec2: ReturnType<typeof useEc2Provisioning>;\n}\n\nconst INSTANCE_TYPES = [\n\t\"t3.micro\",\n\t\"t3.small\",\n\t\"t3.medium\",\n\t\"t3.large\",\n\t\"t3.xlarge\",\n\t\"t3.2xlarge\",\n\t\"m6i.large\",\n\t\"m6i.xlarge\",\n\t\"m6i.2xlarge\",\n\t\"c6i.large\",\n\t\"c6i.xlarge\",\n\t\"c6i.2xlarge\",\n\t\"r6i.large\",\n\t\"r6i.xlarge\",\n];\n\nconst AWS_REGIONS = [\n\t\"us-east-1\",\n\t\"us-east-2\",\n\t\"us-west-1\",\n\t\"us-west-2\",\n\t\"eu-west-1\",\n\t\"eu-central-1\",\n\t\"ap-southeast-1\",\n\t\"ap-northeast-1\",\n];\n\nexport function ProvisionInstanceDialog({ ec2 }: ProvisionInstanceDialogProps) {\n\tconst [open, setOpen] = useState(false);\n\tconst [saving, setSaving] = useState(false);\n\n\t// Form state\n\tconst [appId, setAppId] = useState(\"\");\n\tconst [instanceCount, setInstanceCount] = useState(1);\n\tconst [instanceType, setInstanceType] = useState(\"t3.micro\");\n\tconst [osType, setOsType] = useState<\"ubuntu\" | \"nixos\">(\"ubuntu\");\n\tconst [vpcId, setVpcId] = useState(\"\");\n\tconst [subnetIds, setSubnetIds] = useState(\"\");\n\tconst [rootVolumeSize, setRootVolumeSize] = useState(\"\");\n\tconst [associatePublicIp, setAssociatePublicIp] = useState(true);\n\tconst [createSg, setCreateSg] = useState(true);\n\tconst [createKeyPair, setCreateKeyPair] = useState(false);\n\tconst [publicKey, setPublicKey] = useState(\"\");\n\tconst [enableIam, setEnableIam] = useState(true);\n\tconst [roles, setRoles] = useState(\"\");\n\tconst [tags, setTags] = useState(\"\");\n\tconst [targetEnv, setTargetEnv] = useState(\"\");\n\n\tconst handleOpenChange = (isOpen: boolean) => {\n\t\tsetOpen(isOpen);\n\t\tif (!isOpen) {\n\t\t\tsetAppId(\"\");\n\t\t\tsetInstanceCount(1);\n\t\t\tsetInstanceType(\"t3.micro\");\n\t\t\tsetOsType(\"ubuntu\");\n\t\t\tsetVpcId(\"\");\n\t\t\tsetSubnetIds(\"\");\n\t\t\tsetRootVolumeSize(\"\");\n\t\t\tsetAssociatePublicIp(true);\n\t\t\tsetCreateSg(true);\n\t\t\tsetCreateKeyPair(false);\n\t\t\tsetPublicKey(\"\");\n\t\t\tsetEnableIam(true);\n\t\t\tsetRoles(\"\");\n\t\t\tsetTags(\"\");\n\t\t\tsetTargetEnv(\"\");\n\t\t}\n\t};\n\n\tconst isValid = appId.trim().length > 0 && /^[a-z0-9-]+$/.test(appId.trim());\n\n\tconst handleSubmit = async () => {\n\t\tconst id = appId.trim();\n\t\tif (!id) {\n\t\t\ttoast.error(\"App ID is required\");\n\t\t\treturn;\n\t\t}\n\t\tif (ec2.config.apps[id]) {\n\t\t\ttoast.error(`EC2 app \"${id}\" already exists`);\n\t\t\treturn;\n\t\t}\n\n\t\tsetSaving(true);\n\t\ttry {\n\t\t\tconst appConfig: Ec2AppConfig = {\n\t\t\t\t...DEFAULT_EC2_APP,\n\t\t\t\tinstance_count: instanceCount,\n\t\t\t\tinstance_type: instanceType,\n\t\t\t\tos_type: osType,\n\t\t\t\tvpc_id: vpcId || null,\n\t\t\t\tsubnet_ids: subnetIds\n\t\t\t\t\t? subnetIds.split(\",\").map((s) => s.trim()).filter(Boolean)\n\t\t\t\t\t: [],\n\t\t\t\troot_volume_size: rootVolumeSize ? Number.parseInt(rootVolumeSize, 10) : null,\n\t\t\t\tassociate_public_ip: associatePublicIp,\n\t\t\t\tsecurity_group: {\n\t\t\t\t\t...DEFAULT_EC2_APP.security_group,\n\t\t\t\t\tcreate: createSg,\n\t\t\t\t},\n\t\t\t\tkey_pair: {\n\t\t\t\t\tcreate: createKeyPair,\n\t\t\t\t\tname: createKeyPair ? `${id}-key` : null,\n\t\t\t\t\tpublic_key: createKeyPair ? publicKey || null : null,\n\t\t\t\t},\n\t\t\t\tiam: {\n\t\t\t\t\tenable: enableIam,\n\t\t\t\t\trole_name: enableIam ? `${id}-ec2-role` : null,\n\t\t\t\t},\n\t\t\t\ttags: {\n\t\t\t\t\tName: id,\n\t\t\t\t\tManagedBy: \"stackpanel-infra\",\n\t\t\t\t},\n\t\t\t\tmachine: {\n\t\t\t\t\t...DEFAULT_EC2_MACHINE_META,\n\t\t\t\t\troles: roles ? roles.split(\",\").map((s) => s.trim()).filter(Boolean) : [],\n\t\t\t\t\ttags: tags ? tags.split(\",\").map((s) => s.trim()).filter(Boolean) : [],\n\t\t\t\t\ttarget_env: targetEnv || null,\n\t\t\t\t},\n\t\t\t};\n\n\t\t\tawait ec2.addApp(id, appConfig);\n\t\t\ttoast.success(`EC2 app \"${id}\" configured with ${instanceCount} instance(s). Run infra:deploy to provision.`);\n\t\t\thandleOpenChange(false);\n\t\t} catch (err) {\n\t\t\ttoast.error(err instanceof Error ? err.message : \"Failed to add EC2 app\");\n\t\t} finally {\n\t\t\tsetSaving(false);\n\t\t}\n\t};\n\n\treturn (\n\t\t<Dialog open={open} onOpenChange={handleOpenChange}>\n\t\t\t<Button className=\"gap-2\" size=\"sm\" variant=\"outline\" onClick={() => setOpen(true)}>\n\t\t\t\t<Plus className=\"h-4 w-4\" />\n\t\t\t\tProvision EC2\n\t\t\t</Button>\n\t\t\t<DialogContent className=\"max-h-[90vh] overflow-y-auto sm:max-w-lg\">\n\t\t\t\t<DialogHeader>\n\t\t\t\t\t<DialogTitle>Provision EC2 Instances</DialogTitle>\n\t\t\t\t\t<DialogDescription>\n\t\t\t\t\t\tDefine EC2 instances to provision. Run <code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">infra:deploy</code> after to create them.\n\t\t\t\t\t</DialogDescription>\n\t\t\t\t</DialogHeader>\n\n\t\t\t\t<div className=\"space-y-4 py-4\">\n\t\t\t\t\t{/* Identity */}\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>App ID</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"web-server\"\n\t\t\t\t\t\t\tvalue={appId}\n\t\t\t\t\t\t\tonChange={(e) => setAppId(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\tUnique identifier for this group of instances\n\t\t\t\t\t\t</p>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* Instance sizing */}\n\t\t\t\t\t<div className=\"grid grid-cols-3 gap-3\">\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Count</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\ttype=\"number\"\n\t\t\t\t\t\t\t\tmin={1}\n\t\t\t\t\t\t\t\tmax={20}\n\t\t\t\t\t\t\t\tvalue={instanceCount}\n\t\t\t\t\t\t\t\tonChange={(e) => setInstanceCount(Number.parseInt(e.target.value, 10) || 1)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Instance Type</Label>\n\t\t\t\t\t\t\t<Select value={instanceType} onValueChange={setInstanceType}>\n\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectValue />\n\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t{INSTANCE_TYPES.map((t) => (\n\t\t\t\t\t\t\t\t\t\t<SelectItem key={t} value={t}>{t}</SelectItem>\n\t\t\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>OS</Label>\n\t\t\t\t\t\t\t<Select value={osType} onValueChange={(v) => setOsType(v as \"ubuntu\" | \"nixos\")}>\n\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectValue />\n\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"ubuntu\">Ubuntu 24.04</SelectItem>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"nixos\">NixOS</SelectItem>\n\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* Networking */}\n\t\t\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Networking</legend>\n\n\t\t\t\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>VPC ID</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"Leave blank for default VPC\"\n\t\t\t\t\t\t\t\t\tvalue={vpcId}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setVpcId(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Subnet IDs</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"Leave blank for auto\"\n\t\t\t\t\t\t\t\t\tvalue={subnetIds}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setSubnetIds(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t<Label>Public IP</Label>\n\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Associate a public IPv4 address</p>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<Switch checked={associatePublicIp} onCheckedChange={setAssociatePublicIp} />\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t<Label>Security Group</Label>\n\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Auto-create with SSH, HTTP, HTTPS ingress</p>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<Switch checked={createSg} onCheckedChange={setCreateSg} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</fieldset>\n\n\t\t\t\t\t{/* Storage */}\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>Root Volume Size (GB)</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"Default (8 GB)\"\n\t\t\t\t\t\t\tvalue={rootVolumeSize}\n\t\t\t\t\t\t\tonChange={(e) => setRootVolumeSize(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* SSH Key */}\n\t\t\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">SSH Key Pair</legend>\n\n\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t<Label>Create Key Pair</Label>\n\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Import your public key to AWS</p>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<Switch checked={createKeyPair} onCheckedChange={setCreateKeyPair} />\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t{createKeyPair && (\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Public Key</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"ssh-ed25519 AAAA...\"\n\t\t\t\t\t\t\t\t\tvalue={publicKey}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setPublicKey(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</fieldset>\n\n\t\t\t\t\t{/* IAM */}\n\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<Label>IAM Instance Profile</Label>\n\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Create role with SSM + ECR access</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<Switch checked={enableIam} onCheckedChange={setEnableIam} />\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* Machine metadata */}\n\t\t\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Machine Metadata</legend>\n\n\t\t\t\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Roles</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"web, app (comma-separated)\"\n\t\t\t\t\t\t\t\t\tvalue={roles}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setRoles(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Tags</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"production, us-west\"\n\t\t\t\t\t\t\t\t\tvalue={tags}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setTags(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Environment</Label>\n\t\t\t\t\t\t\t<Select value={targetEnv} onValueChange={setTargetEnv}>\n\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectValue placeholder=\"Select...\" />\n\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"production\">Production</SelectItem>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"staging\">Staging</SelectItem>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"development\">Development</SelectItem>\n\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</fieldset>\n\t\t\t\t</div>\n\n\t\t\t\t<DialogFooter>\n\t\t\t\t\t<Button variant=\"outline\" onClick={() => handleOpenChange(false)}>Cancel</Button>\n\t\t\t\t\t<Button onClick={handleSubmit} disabled={!isValid || saving}>\n\t\t\t\t\t\t{saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\t\tAdd to Config\n\t\t\t\t\t</Button>\n\t\t\t\t</DialogFooter>\n\t\t\t</DialogContent>\n\t\t</Dialog>\n\t);\n}\n"
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/provision-instance-dialog.tsx",
+  "content": "\"use client\";\n\nimport { Button } from \"@ui/button\";\nimport {\n\tDialog,\n\tDialogContent,\n\tDialogDescription,\n\tDialogFooter,\n\tDialogHeader,\n\tDialogTitle,\n} from \"@ui/dialog\";\nimport { Input } from \"@ui/input\";\nimport { Label } from \"@ui/label\";\nimport {\n\tSelect,\n\tSelectContent,\n\tSelectItem,\n\tSelectTrigger,\n\tSelectValue,\n} from \"@ui/select\";\nimport { Switch } from \"@ui/switch\";\nimport { Loader2, Plus } from \"lucide-react\";\nimport { useState } from \"react\";\nimport { toast } from \"sonner\";\nimport {\n\ttype Ec2AppConfig,\n\tDEFAULT_EC2_APP,\n\tDEFAULT_EC2_MACHINE_META,\n\ttype useEc2Provisioning,\n} from \"./use-machines\";\n\ninterface ProvisionInstanceDialogProps {\n\tec2: ReturnType<typeof useEc2Provisioning>;\n}\n\nconst INSTANCE_TYPES = [\n\t\"t3.micro\",\n\t\"t3.small\",\n\t\"t3.medium\",\n\t\"t3.large\",\n\t\"t3.xlarge\",\n\t\"t3.2xlarge\",\n\t\"m6i.large\",\n\t\"m6i.xlarge\",\n\t\"m6i.2xlarge\",\n\t\"c6i.large\",\n\t\"c6i.xlarge\",\n\t\"c6i.2xlarge\",\n\t\"r6i.large\",\n\t\"r6i.xlarge\",\n];\n\nconst AWS_REGIONS = [\n\t\"us-east-1\",\n\t\"us-east-2\",\n\t\"us-west-1\",\n\t\"us-west-2\",\n\t\"eu-west-1\",\n\t\"eu-central-1\",\n\t\"ap-southeast-1\",\n\t\"ap-northeast-1\",\n];\n\nexport function ProvisionInstanceDialog({ ec2 }: ProvisionInstanceDialogProps) {\n\tconst [open, setOpen] = useState(false);\n\tconst [saving, setSaving] = useState(false);\n\n\t// Form state\n\tconst [appId, setAppId] = useState(\"\");\n\tconst [instanceCount, setInstanceCount] = useState(1);\n\tconst [instanceType, setInstanceType] = useState(\"t3.micro\");\n\tconst [osType, setOsType] = useState<\"ubuntu\" | \"nixos\">(\"ubuntu\");\n\tconst [vpcId, setVpcId] = useState(\"\");\n\tconst [subnetIds, setSubnetIds] = useState(\"\");\n\tconst [rootVolumeSize, setRootVolumeSize] = useState(\"\");\n\tconst [associatePublicIp, setAssociatePublicIp] = useState(true);\n\tconst [createSg, setCreateSg] = useState(true);\n\tconst [createKeyPair, setCreateKeyPair] = useState(false);\n\tconst [publicKey, setPublicKey] = useState(\"\");\n\tconst [enableIam, setEnableIam] = useState(true);\n\tconst [roles, setRoles] = useState(\"\");\n\tconst [tags, setTags] = useState(\"\");\n\tconst [targetEnv, setTargetEnv] = useState(\"\");\n\n\tconst handleOpenChange = (isOpen: boolean) => {\n\t\tsetOpen(isOpen);\n\t\tif (!isOpen) {\n\t\t\tsetAppId(\"\");\n\t\t\tsetInstanceCount(1);\n\t\t\tsetInstanceType(\"t3.micro\");\n\t\t\tsetOsType(\"ubuntu\");\n\t\t\tsetVpcId(\"\");\n\t\t\tsetSubnetIds(\"\");\n\t\t\tsetRootVolumeSize(\"\");\n\t\t\tsetAssociatePublicIp(true);\n\t\t\tsetCreateSg(true);\n\t\t\tsetCreateKeyPair(false);\n\t\t\tsetPublicKey(\"\");\n\t\t\tsetEnableIam(true);\n\t\t\tsetRoles(\"\");\n\t\t\tsetTags(\"\");\n\t\t\tsetTargetEnv(\"\");\n\t\t}\n\t};\n\n\tconst isValid = appId.trim().length > 0 && /^[a-z0-9-]+$/.test(appId.trim());\n\n\tconst handleSubmit = async () => {\n\t\tconst id = appId.trim();\n\t\tif (!id) {\n\t\t\ttoast.error(\"App ID is required\");\n\t\t\treturn;\n\t\t}\n\t\tif (ec2.config.apps[id]) {\n\t\t\ttoast.error(`EC2 app \"${id}\" already exists`);\n\t\t\treturn;\n\t\t}\n\n\t\tsetSaving(true);\n\t\ttry {\n\t\t\tconst appConfig: Ec2AppConfig = {\n\t\t\t\t...DEFAULT_EC2_APP,\n\t\t\t\tinstance_count: instanceCount,\n\t\t\t\tinstance_type: instanceType,\n\t\t\t\tos_type: osType,\n\t\t\t\tvpc_id: vpcId || null,\n\t\t\t\tsubnet_ids: subnetIds\n\t\t\t\t\t? subnetIds.split(\",\").map((s) => s.trim()).filter(Boolean)\n\t\t\t\t\t: [],\n\t\t\t\troot_volume_size: rootVolumeSize ? Number.parseInt(rootVolumeSize, 10) : null,\n\t\t\t\tassociate_public_ip: associatePublicIp,\n\t\t\t\tsecurity_group: {\n\t\t\t\t\t...DEFAULT_EC2_APP.security_group,\n\t\t\t\t\tcreate: createSg,\n\t\t\t\t},\n\t\t\t\tkey_pair: {\n\t\t\t\t\tcreate: createKeyPair,\n\t\t\t\t\tname: createKeyPair ? `${id}-key` : null,\n\t\t\t\t\tpublic_key: createKeyPair ? publicKey || null : null,\n\t\t\t\t},\n\t\t\t\tiam: {\n\t\t\t\t\tenable: enableIam,\n\t\t\t\t\trole_name: enableIam ? `${id}-ec2-role` : null,\n\t\t\t\t},\n\t\t\t\ttags: {\n\t\t\t\t\tName: id,\n\t\t\t\t\tManagedBy: \"stack-infra\",\n\t\t\t\t},\n\t\t\t\tmachine: {\n\t\t\t\t\t...DEFAULT_EC2_MACHINE_META,\n\t\t\t\t\troles: roles ? roles.split(\",\").map((s) => s.trim()).filter(Boolean) : [],\n\t\t\t\t\ttags: tags ? tags.split(\",\").map((s) => s.trim()).filter(Boolean) : [],\n\t\t\t\t\ttarget_env: targetEnv || null,\n\t\t\t\t},\n\t\t\t};\n\n\t\t\tawait ec2.addApp(id, appConfig);\n\t\t\ttoast.success(`EC2 app \"${id}\" configured with ${instanceCount} instance(s). Run infra:deploy to provision.`);\n\t\t\thandleOpenChange(false);\n\t\t} catch (err) {\n\t\t\ttoast.error(err instanceof Error ? err.message : \"Failed to add EC2 app\");\n\t\t} finally {\n\t\t\tsetSaving(false);\n\t\t}\n\t};\n\n\treturn (\n\t\t<Dialog open={open} onOpenChange={handleOpenChange}>\n\t\t\t<Button className=\"gap-2\" size=\"sm\" variant=\"outline\" onClick={() => setOpen(true)}>\n\t\t\t\t<Plus className=\"h-4 w-4\" />\n\t\t\t\tProvision EC2\n\t\t\t</Button>\n\t\t\t<DialogContent className=\"max-h-[90vh] overflow-y-auto sm:max-w-lg\">\n\t\t\t\t<DialogHeader>\n\t\t\t\t\t<DialogTitle>Provision EC2 Instances</DialogTitle>\n\t\t\t\t\t<DialogDescription>\n\t\t\t\t\t\tDefine EC2 instances to provision. Run <code className=\"text-xs bg-secondary px-1 py-0.5 rounded\">infra:deploy</code> after to create them.\n\t\t\t\t\t</DialogDescription>\n\t\t\t\t</DialogHeader>\n\n\t\t\t\t<div className=\"space-y-4 py-4\">\n\t\t\t\t\t{/* Identity */}\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>App ID</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"web-server\"\n\t\t\t\t\t\t\tvalue={appId}\n\t\t\t\t\t\t\tonChange={(e) => setAppId(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\tUnique identifier for this group of instances\n\t\t\t\t\t\t</p>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* Instance sizing */}\n\t\t\t\t\t<div className=\"grid grid-cols-3 gap-3\">\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Count</Label>\n\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\ttype=\"number\"\n\t\t\t\t\t\t\t\tmin={1}\n\t\t\t\t\t\t\t\tmax={20}\n\t\t\t\t\t\t\t\tvalue={instanceCount}\n\t\t\t\t\t\t\t\tonChange={(e) => setInstanceCount(Number.parseInt(e.target.value, 10) || 1)}\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Instance Type</Label>\n\t\t\t\t\t\t\t<Select value={instanceType} onValueChange={setInstanceType}>\n\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectValue />\n\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t{INSTANCE_TYPES.map((t) => (\n\t\t\t\t\t\t\t\t\t\t<SelectItem key={t} value={t}>{t}</SelectItem>\n\t\t\t\t\t\t\t\t\t))}\n\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>OS</Label>\n\t\t\t\t\t\t\t<Select value={osType} onValueChange={(v) => setOsType(v as \"ubuntu\" | \"nixos\")}>\n\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectValue />\n\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"ubuntu\">Ubuntu 24.04</SelectItem>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"nixos\">NixOS</SelectItem>\n\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* Networking */}\n\t\t\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Networking</legend>\n\n\t\t\t\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>VPC ID</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"Leave blank for default VPC\"\n\t\t\t\t\t\t\t\t\tvalue={vpcId}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setVpcId(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Subnet IDs</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"Leave blank for auto\"\n\t\t\t\t\t\t\t\t\tvalue={subnetIds}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setSubnetIds(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t<Label>Public IP</Label>\n\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Associate a public IPv4 address</p>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<Switch checked={associatePublicIp} onCheckedChange={setAssociatePublicIp} />\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t<Label>Security Group</Label>\n\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Auto-create with SSH, HTTP, HTTPS ingress</p>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<Switch checked={createSg} onCheckedChange={setCreateSg} />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</fieldset>\n\n\t\t\t\t\t{/* Storage */}\n\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t<Label>Root Volume Size (GB)</Label>\n\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\tplaceholder=\"Default (8 GB)\"\n\t\t\t\t\t\t\tvalue={rootVolumeSize}\n\t\t\t\t\t\t\tonChange={(e) => setRootVolumeSize(e.target.value)}\n\t\t\t\t\t\t/>\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* SSH Key */}\n\t\t\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">SSH Key Pair</legend>\n\n\t\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t\t<Label>Create Key Pair</Label>\n\t\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Import your public key to AWS</p>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<Switch checked={createKeyPair} onCheckedChange={setCreateKeyPair} />\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t{createKeyPair && (\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Public Key</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"ssh-ed25519 AAAA...\"\n\t\t\t\t\t\t\t\t\tvalue={publicKey}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setPublicKey(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</fieldset>\n\n\t\t\t\t\t{/* IAM */}\n\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<Label>IAM Instance Profile</Label>\n\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">Create role with SSM + ECR access</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<Switch checked={enableIam} onCheckedChange={setEnableIam} />\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{/* Machine metadata */}\n\t\t\t\t\t<fieldset className=\"rounded-lg border border-border p-4 space-y-3\">\n\t\t\t\t\t\t<legend className=\"px-2 text-sm font-medium\">Machine Metadata</legend>\n\n\t\t\t\t\t\t<div className=\"grid grid-cols-2 gap-3\">\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Roles</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"web, app (comma-separated)\"\n\t\t\t\t\t\t\t\t\tvalue={roles}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setRoles(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t\t<Label>Tags</Label>\n\t\t\t\t\t\t\t\t<Input\n\t\t\t\t\t\t\t\t\tplaceholder=\"production, us-west\"\n\t\t\t\t\t\t\t\t\tvalue={tags}\n\t\t\t\t\t\t\t\t\tonChange={(e) => setTags(e.target.value)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\n\t\t\t\t\t\t<div className=\"space-y-2\">\n\t\t\t\t\t\t\t<Label>Environment</Label>\n\t\t\t\t\t\t\t<Select value={targetEnv} onValueChange={setTargetEnv}>\n\t\t\t\t\t\t\t\t<SelectTrigger>\n\t\t\t\t\t\t\t\t\t<SelectValue placeholder=\"Select...\" />\n\t\t\t\t\t\t\t\t</SelectTrigger>\n\t\t\t\t\t\t\t\t<SelectContent>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"production\">Production</SelectItem>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"staging\">Staging</SelectItem>\n\t\t\t\t\t\t\t\t\t<SelectItem value=\"development\">Development</SelectItem>\n\t\t\t\t\t\t\t\t</SelectContent>\n\t\t\t\t\t\t\t</Select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</fieldset>\n\t\t\t\t</div>\n\n\t\t\t\t<DialogFooter>\n\t\t\t\t\t<Button variant=\"outline\" onClick={() => handleOpenChange(false)}>Cancel</Button>\n\t\t\t\t\t<Button onClick={handleSubmit} disabled={!isValid || saving}>\n\t\t\t\t\t\t{saving && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n\t\t\t\t\t\tAdd to Config\n\t\t\t\t\t</Button>\n\t\t\t\t</DialogFooter>\n\t\t\t</DialogContent>\n\t\t</Dialog>\n\t);\n}\n"
 }
 ```
 **Output:**
@@ -11844,7 +11844,7 @@ Tool: write
 Wrote file successfully.
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/infra/use-sst-config.ts">
 ERROR [237:5] React Hook useCallback has a missing dependency: 'agentClient'
 help: Either include it or remove the dependency array.
 ERROR [264:5] React Hook useCallback has a missing dependency: 'agentClient'
@@ -11854,7 +11854,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/dashboard-sidebar.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/dashboard-sidebar.tsx">
 ERROR [38:3] Identifier 'Cog' is imported but never used.
 help: Consider removing this import.
 ERROR [73:15] Type 'Module' is imported but never used.
@@ -11870,7 +11870,7 @@ help: Add a "key" prop to the element in the iterator (https://react.dev/learn/r
 </diagnostics>
 
 LSP errors detected in other files:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/configuration/use-configuration.ts">
 ERROR [236:33] React Hook useEffect has a complex expression in the dependency array.
 help: Extract the expression to a separate variable so it can be statically checked.
 ERROR [236:6] React Hook useEffect has a missing dependency: 'usersSettingsData'
@@ -11890,7 +11890,7 @@ help: Either include it or remove the dependency array.
 </diagnostics>
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/provision-instance-dialog.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/provision-instance-dialog.tsx">
 ERROR [53:7] Variable 'AWS_REGIONS' is declared but never used. Unused variables should start with a '_'.
 help: Consider removing this declaration.
 </diagnostics>
@@ -11907,7 +11907,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/provision-instance-dialog.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/provision-instance-dialog.tsx",
   "oldString": "const AWS_REGIONS = [\n\t\"us-east-1\",\n\t\"us-east-2\",\n\t\"us-west-1\",\n\t\"us-west-2\",\n\t\"eu-west-1\",\n\t\"eu-central-1\",\n\t\"ap-southeast-1\",\n\t\"ap-northeast-1\",\n];\n\nexport function ProvisionInstanceDialog",
   "newString": "export function ProvisionInstanceDialog"
 }
@@ -11930,7 +11930,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "offset": 1,
   "limit": 15
 }
@@ -11969,7 +11969,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "oldString": "import { AddMachineDialog } from \"./add-machine-dialog\";\nimport { EditMachineDialog } from \"./edit-machine-dialog\";\nimport { useMachinesConfig, type MachineConfig } from \"./use-machines\";",
   "newString": "import { AddMachineDialog } from \"./add-machine-dialog\";\nimport { EditMachineDialog } from \"./edit-machine-dialog\";\nimport { ProvisionInstanceDialog } from \"./provision-instance-dialog\";\nimport {\n\tuseMachinesConfig,\n\tuseEc2Provisioning,\n\ttype MachineConfig,\n\ttype Ec2AppConfig,\n} from \"./use-machines\";"
 }
@@ -11979,7 +11979,7 @@ Tool: edit
 Edit applied successfully.
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
 ERROR [57:10] Identifier 'ProvisionInstanceDialog' is imported but never used.
 help: Consider removing this import.
 ERROR [60:2] Identifier 'useEc2Provisioning' is imported but never used.
@@ -12002,7 +12002,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "offset": 280,
   "limit": 30
 }
@@ -12056,7 +12056,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "offset": 356,
   "limit": 30
 }
@@ -12112,7 +12112,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "oldString": "// =============================================================================\n// Main Component\n// =============================================================================",
   "newString": "// =============================================================================\n// Provisioning: EC2 Instance List\n// =============================================================================\n\nfunction Ec2AppRow({\n\tappId,\n\tapp,\n\tonRemove,\n}: {\n\tappId: string;\n\tapp: Ec2AppConfig;\n\tonRemove: () => void;\n}) {\n\tconst [removing, setRemoving] = useState(false);\n\n\treturn (\n\t\t<div className=\"flex items-center justify-between rounded-lg border border-border bg-card p-3\">\n\t\t\t<div className=\"flex items-center gap-3\">\n\t\t\t\t<div className=\"flex h-8 w-8 items-center justify-center rounded-md bg-orange-500/10\">\n\t\t\t\t\t<Server className=\"h-4 w-4 text-orange-500\" />\n\t\t\t\t</div>\n\t\t\t\t<div>\n\t\t\t\t\t<p className=\"font-medium text-sm\">{appId}</p>\n\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t{app.instance_count} x {app.instance_type ?? \"t3.micro\"} &middot; {app.os_type}\n\t\t\t\t\t\t{app.machine.roles.length > 0 && ` · roles: ${app.machine.roles.join(\", \")}`}\n\t\t\t\t\t</p>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t<div className=\"flex items-center gap-2\">\n\t\t\t\t{app.security_group.create && (\n\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px]\">SG</Badge>\n\t\t\t\t)}\n\t\t\t\t{app.iam.enable && (\n\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px]\">IAM</Badge>\n\t\t\t\t)}\n\t\t\t\t{app.key_pair.create && (\n\t\t\t\t\t<Badge variant=\"outline\" className=\"text-[10px]\">Key</Badge>\n\t\t\t\t)}\n\t\t\t\t<Badge variant=\"secondary\" className=\"text-[10px]\">\n\t\t\t\t\t{app.associate_public_ip ? \"public\" : \"private\"}\n\t\t\t\t</Badge>\n\t\t\t\t<Button\n\t\t\t\t\tvariant=\"ghost\"\n\t\t\t\t\tsize=\"icon\"\n\t\t\t\t\tclassName=\"h-7 w-7 text-destructive hover:text-destructive\"\n\t\t\t\t\tonClick={async () => {\n\t\t\t\t\t\tsetRemoving(true);\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tawait onRemove();\n\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\tsetRemoving(false);\n\t\t\t\t\t\t}\n\t\t\t\t\t}}\n\t\t\t\t\tdisabled={removing}\n\t\t\t\t>\n\t\t\t\t\t{removing ? (\n\t\t\t\t\t\t<Loader2 className=\"h-3 w-3 animate-spin\" />\n\t\t\t\t\t) : (\n\t\t\t\t\t\t<XCircle className=\"h-4 w-4\" />\n\t\t\t\t\t)}\n\t\t\t\t</Button>\n\t\t\t</div>\n\t\t</div>\n\t);\n}\n\n// =============================================================================\n// Main Component\n// ============================================================================="
 }
@@ -12122,7 +12122,7 @@ Tool: edit
 Edit applied successfully.
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
 ERROR [57:10] Identifier 'ProvisionInstanceDialog' is imported but never used.
 help: Consider removing this import.
 ERROR [60:2] Identifier 'useEc2Provisioning' is imported but never used.
@@ -12145,7 +12145,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "oldString": "\tconst machinesConfig = useMachinesConfig();\n\tconst [isRefreshing, setIsRefreshing] = useState(false);",
   "newString": "\tconst machinesConfig = useMachinesConfig();\n\tconst ec2Provisioning = useEc2Provisioning();\n\tconst [isRefreshing, setIsRefreshing] = useState(false);"
 }
@@ -12155,7 +12155,7 @@ Tool: edit
 Edit applied successfully.
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
 ERROR [57:10] Identifier 'ProvisionInstanceDialog' is imported but never used.
 help: Consider removing this import.
 ERROR [390:10] Function 'Ec2AppRow' is declared but never used.
@@ -12178,7 +12178,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "oldString": "\t\t\t\t<TabsList>\n\t\t\t\t\t<TabsTrigger value=\"machines\">\n\t\t\t\t\t\tMachines\n\t\t\t\t\t\t{machineCount > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{machineCount}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"targets\">\n\t\t\t\t\t\tApp Targets\n\t\t\t\t\t\t{appDeployEntries.length > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{appDeployEntries.length}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"actions\">Actions</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"settings\">Settings</TabsTrigger>\n\t\t\t\t</TabsList>",
   "newString": "\t\t\t\t<TabsList>\n\t\t\t\t\t<TabsTrigger value=\"machines\">\n\t\t\t\t\t\tMachines\n\t\t\t\t\t\t{machineCount > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{machineCount}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"provision\">\n\t\t\t\t\t\tProvision\n\t\t\t\t\t\t{Object.keys(ec2Provisioning.config.apps).length > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{Object.keys(ec2Provisioning.config.apps).length}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"targets\">\n\t\t\t\t\t\tApp Targets\n\t\t\t\t\t\t{appDeployEntries.length > 0 && (\n\t\t\t\t\t\t\t<Badge variant=\"secondary\" className=\"ml-1.5 text-[10px] px-1.5 py-0\">\n\t\t\t\t\t\t\t\t{appDeployEntries.length}\n\t\t\t\t\t\t\t</Badge>\n\t\t\t\t\t\t)}\n\t\t\t\t\t</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"actions\">Actions</TabsTrigger>\n\t\t\t\t\t<TabsTrigger value=\"settings\">Settings</TabsTrigger>\n\t\t\t\t</TabsList>"
 }
@@ -12188,7 +12188,7 @@ Tool: edit
 Edit applied successfully.
 
 LSP errors detected in this file, please fix:
-<diagnostics file="/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
+<diagnostics file="/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx">
 ERROR [57:10] Identifier 'ProvisionInstanceDialog' is imported but never used.
 help: Consider removing this import.
 ERROR [390:10] Function 'Ec2AppRow' is declared but never used.
@@ -12209,7 +12209,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/web/src/components/studio/panels/deploy/deploy-panel.tsx",
   "oldString": "\t\t\t\t{/* App Targets Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"targets\">",
   "newString": "\t\t\t\t{/* Provision Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"provision\">\n\t\t\t\t\t<div className=\"flex items-center justify-between\">\n\t\t\t\t\t\t<div>\n\t\t\t\t\t\t\t<h3 className=\"font-medium text-sm\">EC2 Instances to Provision</h3>\n\t\t\t\t\t\t\t<p className=\"text-xs text-muted-foreground\">\n\t\t\t\t\t\t\t\tDefine instance groups here, then run <code className=\"bg-secondary px-1 py-0.5 rounded\">infra:deploy</code> to create them.\n\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<ProvisionInstanceDialog ec2={ec2Provisioning} />\n\t\t\t\t\t</div>\n\n\t\t\t\t\t{Object.keys(ec2Provisioning.config.apps).length === 0 ? (\n\t\t\t\t\t\t<Card className=\"border-dashed border-muted-foreground/40 bg-secondary/20\">\n\t\t\t\t\t\t\t<CardContent className=\"flex flex-col items-center justify-center gap-4 p-8\">\n\t\t\t\t\t\t\t\t<Server className=\"h-12 w-12 text-muted-foreground/50\" />\n\t\t\t\t\t\t\t\t<div className=\"text-center\">\n\t\t\t\t\t\t\t\t\t<p className=\"font-medium text-foreground\">No Instances Configured</p>\n\t\t\t\t\t\t\t\t\t<p className=\"text-muted-foreground text-sm max-w-md\">\n\t\t\t\t\t\t\t\t\t\tClick <strong>Provision EC2</strong> to define instance groups.\n\t\t\t\t\t\t\t\t\t\tEach group gets its own security group, IAM role, and optional key pair.\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t\t</Card>\n\t\t\t\t\t) : (\n\t\t\t\t\t\t<div className=\"space-y-3\">\n\t\t\t\t\t\t\t{Object.entries(ec2Provisioning.config.apps).map(([id, app]) => (\n\t\t\t\t\t\t\t\t<Ec2AppRow\n\t\t\t\t\t\t\t\t\tkey={id}\n\t\t\t\t\t\t\t\t\tappId={id}\n\t\t\t\t\t\t\t\t\tapp={app}\n\t\t\t\t\t\t\t\t\tonRemove={() => ec2Provisioning.removeApp(id)}\n\t\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t\t))}\n\n\t\t\t\t\t\t\t<Card className=\"border-blue-500/20 bg-blue-500/5\">\n\t\t\t\t\t\t\t\t<CardContent className=\"p-4\">\n\t\t\t\t\t\t\t\t\t<p className=\"text-sm text-blue-700 dark:text-blue-300\">\n\t\t\t\t\t\t\t\t\t\tRun <code className=\"bg-secondary px-1.5 py-0.5 rounded text-xs\">infra:deploy</code> to\n\t\t\t\t\t\t\t\t\t\tprovision these instances. After provisioning, run{\" \"}\n\t\t\t\t\t\t\t\t\t\t<code className=\"bg-secondary px-1.5 py-0.5 rounded text-xs\">infra:pull-outputs</code> and\n\t\t\t\t\t\t\t\t\t\treload the shell to see them in the Machines tab.\n\t\t\t\t\t\t\t\t\t</p>\n\t\t\t\t\t\t\t\t</CardContent>\n\t\t\t\t\t\t\t</Card>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t)}\n\t\t\t\t</TabsContent>\n\n\t\t\t\t{/* App Targets Tab */}\n\t\t\t\t<TabsContent className=\"mt-6 space-y-4\" value=\"targets\">"
 }
@@ -12233,7 +12233,7 @@ Tool: bash
 ```json
 {
   "command": "cd apps/web && npx tsc --noEmit --pretty 2>&1 | rg \"deploy/\" | head -20",
-  "workdir": "/Users/cm/git/darkmatter/stackpanel",
+  "workdir": "/Users/cm/git/darkmatter/stack",
   "timeout": 60000,
   "description": "Typecheck deploy panel components"
 }
@@ -12252,7 +12252,7 @@ Tool: read
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/machines.mdx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/machines.mdx",
   "offset": 230,
   "limit": 30
 }
@@ -12273,7 +12273,7 @@ Tool: read
 00241| Target specific instances instead of using filters:
 00242| 
 00243| ```nix
-00244| stackpanel.infra.machines.aws = {
+00244| stack.infra.machines.aws = {
 00245|   instance-ids = [
 00246|     "i-0abc123def456789a"
 00247|     "i-0def456789abc1230"
@@ -12306,9 +12306,9 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/machines.mdx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/machines.mdx",
   "oldString": "## Studio UI: Deploy Panel\n\nThe Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has four tabs:\n\n### Machines Tab\n\nDisplays a card grid of all machines in your inventory. Each card shows:",
-  "newString": "## Provisioning EC2 Instances\n\nBeyond discovering existing machines, Stackpanel can **provision new EC2 instances** via the `aws-ec2-app` infra module. This creates instances with auto-resolved AMIs (Ubuntu 24.04 or NixOS), security groups, IAM roles, and key pairs.\n\n### From the Studio UI\n\n1. Open the **Deploy** panel and go to the **Provision** tab\n2. Click **Provision EC2** to open the configuration dialog\n3. Fill in the instance group: app ID, count, instance type, OS, networking, SSH key, IAM\n4. Click **Add to Config** -- this writes to your Nix config\n5. Run `infra:deploy` from the terminal to create the instances\n6. Run `infra:pull-outputs` and reload the shell to see them in the Machines tab\n\n### From Nix Config\n\n```nix\nstackpanel.infra.aws-ec2-app = {\n  enable = true;\n\n  apps = {\n    web-server = {\n      instance-count = 2;\n      instance-type = \"t3.small\";\n      os-type = \"ubuntu\";              # or \"nixos\"\n      associate-public-ip = true;\n\n      # Auto-creates a security group with SSH + HTTP + HTTPS\n      security-group.create = true;\n\n      # Auto-creates IAM role with SSM + ECR access\n      iam.enable = true;\n\n      # Import your SSH public key\n      key-pair = {\n        create = true;\n        public-key = \"ssh-ed25519 AAAA...\";\n      };\n\n      # Machine metadata for Colmena targeting\n      machine = {\n        roles = [ \"web\" ];\n        tags = [ \"production\" ];\n        target-env = \"production\";\n      };\n    };\n  };\n};\n```\n\nThen deploy:\n\n```bash\ninfra:deploy\ninfra:pull-outputs\nexit && nix develop --impure\n```\n\nThe provisioned instances automatically appear in your machine inventory with their public IPs, and can be targeted by Colmena for NixOS deployments.\n\n### What Gets Created\n\nFor each app group, `aws-ec2-app` provisions:\n\n| Resource | Created when |\n|----------|-------------|\n| Security Group | `security-group.create = true` (default) |\n| SSH Key Pair | `key-pair.create = true` |\n| IAM Role + Instance Profile | `iam.enable = true` (default) |\n| EC2 Instances | Always (count from `instance-count`) |\n| ALB + Target Group | `alb.enable = true` |\n| ECR Repository | `ecr.enable = true` |\n| SSM Parameters | `ssm.enable = true` |\n\nVPC and subnets are auto-discovered from your default VPC unless you specify `vpc-id` and `subnet-ids` explicitly.\n\n<Callout type=\"info\">\nThe `aws-ec2-app` module auto-resolves AMIs. For Ubuntu, it finds the latest Ubuntu 24.04 LTS from Canonical. For NixOS, it finds the latest Determinate Systems NixOS image. You can override with an explicit `ami` value.\n</Callout>\n\n## Studio UI: Deploy Panel\n\nThe Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has five tabs:\n\n### Machines Tab\n\nDisplays a card grid of all machines in your inventory. Each card shows:"
+  "newString": "## Provisioning EC2 Instances\n\nBeyond discovering existing machines, Stack can **provision new EC2 instances** via the `aws-ec2-app` infra module. This creates instances with auto-resolved AMIs (Ubuntu 24.04 or NixOS), security groups, IAM roles, and key pairs.\n\n### From the Studio UI\n\n1. Open the **Deploy** panel and go to the **Provision** tab\n2. Click **Provision EC2** to open the configuration dialog\n3. Fill in the instance group: app ID, count, instance type, OS, networking, SSH key, IAM\n4. Click **Add to Config** -- this writes to your Nix config\n5. Run `infra:deploy` from the terminal to create the instances\n6. Run `infra:pull-outputs` and reload the shell to see them in the Machines tab\n\n### From Nix Config\n\n```nix\nstackpanel.infra.aws-ec2-app = {\n  enable = true;\n\n  apps = {\n    web-server = {\n      instance-count = 2;\n      instance-type = \"t3.small\";\n      os-type = \"ubuntu\";              # or \"nixos\"\n      associate-public-ip = true;\n\n      # Auto-creates a security group with SSH + HTTP + HTTPS\n      security-group.create = true;\n\n      # Auto-creates IAM role with SSM + ECR access\n      iam.enable = true;\n\n      # Import your SSH public key\n      key-pair = {\n        create = true;\n        public-key = \"ssh-ed25519 AAAA...\";\n      };\n\n      # Machine metadata for Colmena targeting\n      machine = {\n        roles = [ \"web\" ];\n        tags = [ \"production\" ];\n        target-env = \"production\";\n      };\n    };\n  };\n};\n```\n\nThen deploy:\n\n```bash\ninfra:deploy\ninfra:pull-outputs\nexit && nix develop --impure\n```\n\nThe provisioned instances automatically appear in your machine inventory with their public IPs, and can be targeted by Colmena for NixOS deployments.\n\n### What Gets Created\n\nFor each app group, `aws-ec2-app` provisions:\n\n| Resource | Created when |\n|----------|-------------|\n| Security Group | `security-group.create = true` (default) |\n| SSH Key Pair | `key-pair.create = true` |\n| IAM Role + Instance Profile | `iam.enable = true` (default) |\n| EC2 Instances | Always (count from `instance-count`) |\n| ALB + Target Group | `alb.enable = true` |\n| ECR Repository | `ecr.enable = true` |\n| SSM Parameters | `ssm.enable = true` |\n\nVPC and subnets are auto-discovered from your default VPC unless you specify `vpc-id` and `subnet-ids` explicitly.\n\n<Callout type=\"info\">\nThe `aws-ec2-app` module auto-resolves AMIs. For Ubuntu, it finds the latest Ubuntu 24.04 LTS from Canonical. For NixOS, it finds the latest Determinate Systems NixOS image. You can override with an explicit `ami` value.\n</Callout>\n\n## Studio UI: Deploy Panel\n\nThe Studio UI's **Deploy** panel (`/studio/deploy`) provides a visual interface for your machine inventory. It has five tabs:\n\n### Machines Tab\n\nDisplays a card grid of all machines in your inventory. Each card shows:"
 }
 ```
 **Output:**
@@ -12329,7 +12329,7 @@ Tool: edit
 **Input:**
 ```json
 {
-  "filePath": "/Users/cm/git/darkmatter/stackpanel/apps/docs/content/docs/deployment/machines.mdx",
+  "filePath": "/Users/cm/git/darkmatter/stack/apps/docs/content/docs/deployment/machines.mdx",
   "oldString": "When the inventory is empty, it shows guidance:\n\n> Run `infra:deploy` and `infra:pull-outputs` to populate it, then reload the shell.\n\n### App Targets Tab",
   "newString": "Click a machine card to edit its configuration. Use the **Add Machine** button in the header to add static machines.\n\nWhen the inventory is empty, it shows guidance to add machines or configure EC2 discovery.\n\n### Provision Tab\n\nConfigure EC2 instances to create. Each row shows the instance group with its count, type, OS, and what resources will be created (SG, IAM, Key). Click **Provision EC2** to define a new group. After configuring, run `infra:deploy` to create the actual instances.\n\n### App Targets Tab"
 }
@@ -12440,7 +12440,7 @@ The Deploy panel now has a **Provision** tab (between Machines and App Targets).
    - IAM: auto-create role with SSM + ECR access
    - Machine metadata: roles, tags, environment (for Colmena targeting)
 
-2. **"Add to Config"** writes to `.stackpanel/config.nix` under `stackpanel.infra.aws-ec2-app`
+2. **"Add to Config"** writes to `.stack/config.nix` under `stack.infra.aws-ec2-app`
 
 3. **`infra:deploy`** in terminal provisions the actual EC2 instances (with SG, IAM, key pair)
 
@@ -12480,7 +12480,7 @@ Tool: task
 ```json
 {
   "description": "Explore app config shapes for presets",
-  "prompt": "I need to understand what app data is available in the Studio UI to generate EC2 provisioning presets. Search for:\n\n1. The MachineInfo type and AppDeployMapping type in deploy-panel.tsx - what fields are available\n2. How apps are loaded in the deploy panel - look at useColmenaData and useNixConfig\n3. The app type definitions - what fields does an app have (framework, deployment.host, container config, etc.)\n4. Look at .stackpanel/config.nix apps section to see real app examples with their frameworks, deployment hosts, container types\n5. What app data is available via useNixConfig() - specifically the apps/appsComputed shape\n\nReturn:\n- The full app type shape available from nixConfig (framework, deployment, container fields)\n- The real app configs from .stackpanel/config.nix\n- How to access the app list from within the deploy panel",
+  "prompt": "I need to understand what app data is available in the Studio UI to generate EC2 provisioning presets. Search for:\n\n1. The MachineInfo type and AppDeployMapping type in deploy-panel.tsx - what fields are available\n2. How apps are loaded in the deploy panel - look at useColmenaData and useNixConfig\n3. The app type definitions - what fields does an app have (framework, deployment.host, container config, etc.)\n4. Look at .stack/config.nix apps section to see real app examples with their frameworks, deployment hosts, container types\n5. What app data is available via useNixConfig() - specifically the apps/appsComputed shape\n\nReturn:\n- The full app type shape available from nixConfig (framework, deployment, container fields)\n- The real app configs from .stack/config.nix\n- How to access the app list from within the deploy panel",
   "subagent_type": "explore"
 }
 ```

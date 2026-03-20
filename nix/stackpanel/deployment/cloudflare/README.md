@@ -14,7 +14,7 @@ Deploy apps as [Cloudflare Workers](https://developers.cloudflare.com/workers/) 
 ## Usage
 
 ```nix
-stackpanel.apps.web.deployment = {
+stack.apps.web.deployment = {
   enable = true;
   provider = "cloudflare";
   cloudflare = {

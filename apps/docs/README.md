@@ -17,7 +17,7 @@ We have an internal documentation generator that automatically generates documen
 
 1. **Nix Options Parsing**
 
-We use `nix eval` to generate `nix-options.json` - this is built into nix and gives us the schema of all the options. We then pass this to `stackpanel docgen` which parses this and generates docs using the descriptions for each option. This allows docs and source code to co-exist.
+We use `nix eval` to generate `nix-options.json` - this is built into nix and gives us the schema of all the options. We then pass this to `stack docgen` which parses this and generates docs using the descriptions for each option. This allows docs and source code to co-exist.
 
 2. **README Parsing**
 

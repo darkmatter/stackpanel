@@ -14,7 +14,7 @@ Examples:
 - `web.myproject.localhost` (default TLD)
 - `api.myproject.lan` (custom TLD)
 
-The TLD is configured via `stackpanel.caddy.tld` (default: `"localhost"`).
+The TLD is configured via `stack.caddy.tld` (default: `"localhost"`).
 
 ## Files
 
@@ -34,7 +34,7 @@ Ports are computed from a base port (derived from project name):
 
 ```nix
 # devenv.nix
-stackpanel.apps = {
+stack.apps = {
   web = {};                          # Just port (basePort + 0)
   server = { offset = 1; };          # Port with explicit offset
   docs = { domain = "docs"; };       # Port + docs.<project>.localhost vhost
@@ -45,7 +45,7 @@ stackpanel.apps = {
 };
 
 # To use a custom TLD (e.g., .lan):
-stackpanel.caddy.tld = "lan";
+stack.caddy.tld = "lan";
 ```
 
 ## Environment Variables
@@ -60,7 +60,7 @@ Apps automatically generate environment variables:
 Generate GitHub Actions workflows declaratively:
 
 ```nix
-stackpanel.ci.github = {
+stack.ci.github = {
   enable = true;
   checks = {
     enable = true;

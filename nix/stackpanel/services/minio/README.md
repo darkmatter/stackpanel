@@ -4,7 +4,7 @@ Project-local S3-compatible object storage.
 
 ## Overview
 
-Provides a `mkService` factory that creates a MinIO instance with data stored under `.stackpanel/state/services/minio/`. Includes both the S3 API endpoint and the web console.
+Provides a `mkService` factory that creates a MinIO instance with data stored under `.stack/state/services/minio/`. Includes both the S3 API endpoint and the web console.
 
 ## Environment Variables
 
@@ -18,5 +18,5 @@ Provides a `mkService` factory that creates a MinIO instance with data stored un
 ## Usage
 
 ```nix
-stackpanel.globalServices.minio.enable = true;
+stack.globalServices.minio.enable = true;
 ```
