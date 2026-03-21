@@ -1,4 +1,4 @@
-/packages/proto/gen
+packages/proto/gen
 # Dependencies
 node_modules
 .pnp

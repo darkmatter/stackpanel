@@ -2,6 +2,9 @@ version: v2
 managed:
   enabled: false
 plugins:
+  # JSON
+  - remote: buf.build/bufbuild/protoschema-jsonschema:v0.5.2
+    out: gen/json
   # Go
   - remote: buf.build/protocolbuffers/go
     out: gen/gopb

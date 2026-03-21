@@ -166,6 +166,13 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
    * @generated from field: map<string, string> env = 3;
    */
   env: { [key: string]: string };
+
+  /**
+   * Inherit these environments - useful for sharing environment variables between environments.
+   *
+   * @generated from field: repeated string extends = 4;
+   */
+  extends: string[];
 };
 
 /**

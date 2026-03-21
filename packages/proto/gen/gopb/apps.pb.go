@@ -217,6 +217,7 @@ type AppEnvironment struct {
 	// Key: Environment variable name (e.g., DATABASE_URL)
 	// Value: Literal string or vals reference (e.g., ref+sops://...)
 	Env           map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Extends       []string          `protobuf:"bytes,4,rep,name=extends,proto3" json:"extends,omitempty"` // Inherit these environments - useful for sharing environment variables between environments.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -268,6 +269,13 @@ func (x *AppEnvironment) GetDescription() string {
 func (x *AppEnvironment) GetEnv() map[string]string {
 	if x != nil {
 		return x.Env
+	}
+	return nil
+}
+
+func (x *AppEnvironment) GetExtends() []string {
+	if x != nil {
+		return x.Extends
 	}
 	return nil
 }
@@ -347,11 +355,12 @@ const file_apps_proto_rawDesc = "" +
 	"\x06system\x18\x05 \x01(\tH\x01R\x06system\x88\x01\x01\x12\x18\n" +
 	"\asecrets\x18\x06 \x03(\tR\asecretsB\a\n" +
 	"\x05_roleB\t\n" +
-	"\a_system\"\xcd\x01\n" +
+	"\a_system\"\xe7\x01\n" +
 	"\x0eAppEnvironment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x128\n" +
-	"\x03env\x18\x03 \x03(\v2&.stackpanel.db.AppEnvironment.EnvEntryR\x03env\x1a6\n" +
+	"\x03env\x18\x03 \x03(\v2&.stackpanel.db.AppEnvironment.EnvEntryR\x03env\x12\x18\n" +
+	"\aextends\x18\x04 \x03(\tR\aextends\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +

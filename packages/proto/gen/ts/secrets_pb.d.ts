@@ -187,8 +187,7 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
 
   /**
    *
-   * Environment-specific secrets configuration (SOPS sources + recipients).
-   * Keyed by environment identifier (e.g., dev, staging, prod).
+   * Legacy environment-specific secrets configuration.
    *
    *
    * @generated from field: map<string, stackpanel.db.Environment> environments = 6;
@@ -207,9 +206,7 @@ export declare type Secrets = Message<"stackpanel.db.Secrets"> & {
 
   /**
    *
-   * Secrets groups organize SOPS files such as vars/dev.sops.yaml.
-   * Files are encrypted directly to recipient public keys resolved from
-   * Nix configuration. Default groups: dev, prod.
+   * Deprecated legacy groups metadata.
    *
    *
    * @generated from field: map<string, stackpanel.db.SecretsGroup> groups = 8;
@@ -225,9 +222,7 @@ export declare const SecretsSchema: GenMessage<Secrets>;
 
 /**
  *
- * A secrets group organizes SOPS files like vars/dev.sops.yaml.
- * Stackpanel encrypts those files directly to recipient public keys
- * resolved from Nix configuration.
+ * Deprecated legacy secrets group metadata.
  *
  *
  * @generated from message stackpanel.db.SecretsGroup

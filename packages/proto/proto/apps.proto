@@ -40,6 +40,7 @@ message AppEnvironment {
    * 
    */
   map<string, string> env = 3;
+  repeated string extends = 4; // Inherit these environments - useful for sharing environment variables between environments.
 }
 
 // Map of app identifier to app configuration
