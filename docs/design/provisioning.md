@@ -34,12 +34,12 @@ There are two paths:
 
 | Path | Flag | When to use |
 |---|---|---|
-| **No reformatting** | `--no-reformat` | Cloud VM already has a partition layout (Hetzner, Vultr, etc.) |
-| **Disko layout** | (implicit, via NixOS config) | Bare metal or VMs where you control partitioning |
+| **No reformatting** | (default) | Cloud VM already has a partition layout (Hetzner, Vultr, etc.) |
+| **Disko layout** | `--format` | Bare metal or VMs where you control partitioning |
 
-**Recommendation for v1**: Default to `--no-reformat`. This covers the most common case (cloud VPS providers where you SSH into the rescue system or an existing Linux install). Add an optional `diskLayout` option to `deployment.machines` for users who need explicit disk control.
+**Recommendation for v1**: Default to no reformatting. This covers the most common case (cloud VPS providers where you SSH into the rescue system or an existing Linux install). Opt into disk formatting with `--format`, which requires a `diskLayout` in the machine config.
 
-The CLI output should be explicit: if no `diskLayout` is configured, a note should say "Using --no-reformat. For bare-metal provisioning, add a `diskLayout` to the machine config."
+The CLI output should be explicit: if `--format` is passed but no `diskLayout` is configured, fail early with a clear message: "Pass `diskLayout` in the machine config or provide a disko file via --disk-layout."
 
 ---
 
@@ -112,6 +112,7 @@ Next steps:
 stackpanel provision                         List machines with provisioning status
 stackpanel provision <machine>               Provision a machine defined in config
 stackpanel provision <machine> --install-target <ip>   Override install-time IP
+stackpanel provision <machine> --format                Format disk using machine's diskLayout (default: no reformatting)
 stackpanel provision <machine> --no-hardware-config    Skip hardware config generation
 stackpanel provision <machine> --dry-run     Print nixos-anywhere command, do not run
 stackpanel provision <machine> --reprovision Allow re-provisioning an already-provisioned machine
@@ -262,7 +263,7 @@ Steps 2–5 are currently manual. This could be partially automated post-provisi
 - [ ] `stackpanel provision` as a top-level command (in `provision.go`, not `deploy.go`)
 - [ ] Read machine config from `deployment.machines` (host, user, system)
 - [ ] `--install-target` override
-- [ ] `--no-reformat` as default; `diskLayout` wires disko into nixosConfigurations
+- [ ] No reformatting by default; `--format` opts into disko; `diskLayout` wires disko into nixosConfigurations
 - [ ] Hardware config generation to `.stackpanel/hardware/<machine>/`
 - [ ] Post-provision output: next-steps instructions
 - [ ] `.stackpanel/state/machines.json` state tracking
