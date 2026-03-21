@@ -2,6 +2,9 @@
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide"
   },
+  "go.alternateTools": {
+    "gopls": "/nix/store/9kig164yjxdpz3prvfkpvxvnx10cz397-gopls-0.20.0/bin/gopls"
+  },
   "nix.enableLanguageServer": true,
   "nix.formatterPath": "alejandra",
   "nix.serverPath": "nixd",
