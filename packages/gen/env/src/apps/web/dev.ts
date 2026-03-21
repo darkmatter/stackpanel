@@ -5,6 +5,7 @@ export interface Env {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   CORS_ORIGIN: string;
+  DATABASE_URL: string;
   POLAR_ACCESS_TOKEN: string;
   POLAR_SUCCESS_URL: string;
   POSTGRES_URL: string;

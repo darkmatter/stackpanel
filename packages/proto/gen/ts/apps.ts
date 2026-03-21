@@ -112,6 +112,10 @@ export interface AppEnvironment {
     env: {
         [key: string]: string;
     };
+    /**
+     * @generated from protobuf field: repeated string extends = 4
+     */
+    extends: string[]; // Inherit these environments - useful for sharing environment variables between environments.
 }
 /**
  * Map of app identifier to app configuration
@@ -335,13 +339,15 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         super("stackpanel.db.AppEnvironment", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
+            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
+            { no: 4, name: "extends", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<AppEnvironment>): AppEnvironment {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
         message.env = {};
+        message.extends = [];
         if (value !== undefined)
             reflectionMergePartial<AppEnvironment>(this, message, value);
         return message;
@@ -359,6 +365,9 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
                     break;
                 case /* map<string, string> env */ 3:
                     this.binaryReadMap3(message.env, reader, options);
+                    break;
+                case /* repeated string extends */ 4:
+                    message.extends.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -397,6 +406,9 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         /* map<string, string> env = 3; */
         for (let k of globalThis.Object.keys(message.env))
             writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.env[k]).join();
+        /* repeated string extends = 4; */
+        for (let i = 0; i < message.extends.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.extends[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
