@@ -314,11 +314,13 @@ func deployColmena(ctx context.Context, cfg *DeployStackpanelConfig, appName str
 		targetList += t
 	}
 
+	// --impure allows colmena to evaluate the flake with a dirty git tree.
+	// Without it, Nix rejects the unlocked git+file:// reference in pure mode.
 	var args []string
 	if dryRun {
-		args = []string{"build", "--on", targetList}
+		args = []string{"--impure", "build", "--on", targetList}
 	} else {
-		args = []string{"apply", "--on", targetList}
+		args = []string{"--impure", "apply", "--on", targetList}
 	}
 
 	return runExternalCommand(ctx, "colmena", args, dryRun)
