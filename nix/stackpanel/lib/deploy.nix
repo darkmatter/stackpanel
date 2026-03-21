@@ -38,10 +38,12 @@ let
     ) (config.apps or { });
 
   # Collect the NixOS modules for a machine:
-  #   - Base module: mkDefault values satisfying NixOS assertions (no hardware needed)
+  #   - Always-present defaults (system.stateVersion)
   #   - SSH authorized keys module (when authorizedKeys is non-empty)
   #   - NixOS modules for apps targeting this machine (from self.nixosModules)
-  #   - Hardware configuration module (if provided) — overrides base module defaults
+  #   - Disk layout modules (disko + diskLayout path, when diskLayout is set)
+  #   - Hardware configuration module — either explicit (hardwareConfig option) or
+  #     auto-discovered from .stackpanel/hardware/<machineName> when present
   #   - Extra user-provided modules
   modulesForMachine =
     config: inputs: machineName: machineCfg:
@@ -55,8 +57,27 @@ let
         lib.filterAttrs (appName: _: inputs.self.nixosModules ? ${appName}) apps
       );
 
-      # Hardware configuration: pass the path directly — NixOS accepts paths as modules
-      hardwareMods = lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig;
+      # Auto-discovered hardware config: written by `stackpanel provision` (nixos-infect
+      # method) and git-staged so Nix includes it in the flake's store copy even before
+      # committing.  Eliminates the need to set hardwareConfig = ...; manually.
+      autoHardwareMod =
+        let path = inputs.self.outPath + "/.stackpanel/hardware/${machineName}";
+        in lib.optional (builtins.pathExists path) path;
+
+      # Hardware configuration: explicit option takes precedence; auto-discovered
+      # path is appended (both can coexist — NixOS merges module attrsets).
+      hardwareMods =
+        lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig
+        ++ autoHardwareMod;
+
+      # Disk layout: when diskLayout is set, auto-include the disko NixOS module
+      # so the user doesn't have to wire it in manually via `modules`.
+      # disko provides fileSystems declarations and (for EF02/BIOS partitions)
+      # sets boot.loader.grub.devices automatically — no explicit grub.device needed.
+      diskMods = lib.optionals (machineCfg.diskLayout or null != null) [
+        inputs.disko.nixosModules.disko
+        machineCfg.diskLayout
+      ];
 
       extraMods = machineCfg.modules or [ ];
 
@@ -66,23 +87,29 @@ let
         users.users.${sshUser}.openssh.authorizedKeys.keys = keys;
       };
 
-      # Minimal defaults that satisfy NixOS assertions so `nix flake check` passes
-      # for machines that don't yet have a hardwareConfig (e.g. pre-provisioning).
-      # Only injected when hardwareConfig is absent — once a real hardware config is
-      # provided it takes full responsibility for boot/filesystem declarations and
-      # any omission there should surface as an error, not be silently papered over.
-      baseMods = lib.optionals (hardwareMods == [ ]) [
+      # Always-present defaults (lowest priority, overridden by any real config).
+      alwaysMods = [ { system.stateVersion = lib.mkDefault "24.11"; } ];
+
+      # Pre-provisioning stub: injected only when neither a diskLayout nor a
+      # hardwareConfig has been provided.  Satisfies NixOS assertions so
+      # `nix flake check` passes for un-provisioned machines without producing
+      # conflicting values that would break actual provisioning:
+      #   - tmpfs root satisfies the "fileSystems must have /" assertion
+      #   - grub.enable = false avoids the "must set grub.devices" assertion
+      # Both are mkDefault (lowest user priority) so disko overrides them the
+      # moment a diskLayout is added.  Note: baseMods is NOT applied once
+      # diskLayout is set because diskMods != [] at that point.
+      baseMods = lib.optionals (hardwareMods == [ ] && diskMods == [ ]) [
         {
-          boot.loader.grub.device = lib.mkDefault "/dev/sda";
           fileSystems."/" = lib.mkDefault {
-            device = "/dev/disk/by-label/nixos";
-            fsType = "ext4";
+            device = "none";
+            fsType = "tmpfs";
           };
-          system.stateVersion = lib.mkDefault "24.11";
+          boot.loader.grub.enable = lib.mkDefault false;
         }
       ];
     in
-    baseMods ++ keysMod ++ appModules ++ hardwareMods ++ extraMods;
+    alwaysMods ++ baseMods ++ keysMod ++ appModules ++ diskMods ++ hardwareMods ++ extraMods;
 in
 {
   # ============================================================================
