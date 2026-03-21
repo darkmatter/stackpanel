@@ -5,7 +5,8 @@ node_modules
 .pnp.js
 .stack/keys/local.txt
 .stack/secrets/state/manifest.json
-
+local.txt
+manifest.json
 # Build outputs
 dist
 build

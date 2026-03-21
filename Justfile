@@ -56,3 +56,32 @@ clean-cache:
 # Show available packages in shell
 show-packages:
     nix shell .#devShells.aarch64-darwin.default --impure --command bash -c 'echo $PATH | tr ":" "\n" | grep /nix/store'
+
+# ------ Deployment -------
+
+rootdir := `git rev-parse --show-toplevel`
+secrets := rootdir / ".stack/secrets/vars/dev.sops.yaml"
+aws_vault := "aws-vault exec sso-prod --"
+
+# Deploy web app to EC2
+deploy app='web' region='us-west-2':
+    @if [ "{{app}}" != "web" ]; then echo "Only 'web' is supported for EC2 deploy"; exit 1; fi
+    {{aws_vault}} bash "{{rootdir}}/scripts/deploy/deploy-web.sh" "{{region}}"
+
+# Check deploy status
+deploy-status app='web' region='us-west-2':
+    @if [ "{{app}}" != "web" ]; then echo "Only 'web' is supported"; exit 1; fi
+    {{aws_vault}} bun "{{rootdir}}/scripts/deploy/status.ts" "{{region}}"
+
+# View deploy logs
+deploy-logs app='web' region='us-west-2' lines='120':
+    @if [ "{{app}}" != "web" ]; then echo "Only 'web' is supported"; exit 1; fi
+    {{aws_vault}} bun "{{rootdir}}/scripts/deploy/logs.ts" "{{region}}" "{{lines}}"
+
+# Build web artifact only (no deploy)
+deploy-build-artifact region='us-west-2':
+    bash "{{rootdir}}/scripts/deploy/build-artifact.sh" "{{region}}"
+
+# Publish web artifact to S3 only (no deploy)
+deploy-publish-artifact region='us-west-2':
+    {{aws_vault}} bash "{{rootdir}}/scripts/deploy/publish-artifact.sh" "{{region}}"

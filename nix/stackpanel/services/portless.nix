@@ -36,9 +36,11 @@
   lib,
   config,
   ...
-}: let
+}:
+let
   cfg = config.stackpanel.portless;
-  stepCfg = config.stackpanel.step-ca or {enable = false;};
+  stepCfg = config.stackpanel.step-ca or { enable = false; };
+  repoRoot = ../../..;
 
   # Import util for debug logging
   util = config.stackpanel.util;
@@ -54,6 +56,11 @@
   stepCertPath = "${dirs.state}/step/device-root.chain.crt";
   stepKeyPath = "${dirs.state}/step/device.key";
 
+  # Port computation — used to generate portless-prefixed dev scripts
+  portsLib = import ../lib/ports.nix { inherit lib; };
+  repoKey = (config.stackpanel.apps or { }).github or "darkmatter/stackpanel";
+  portsCfg = config.stackpanel.ports or { project-name = "default"; };
+
   # ---------------------------------------------------------------------------
   # TLS & proxy flag computation
   #
@@ -67,43 +74,43 @@
 
   # Flags shared across all TLS scenarios (tld, port)
   commonFlags = {
-    tld =
-      if cfg.tld != "localhost"
-      then cfg.tld
-      else null;
+    tld = if cfg.tld != "localhost" then cfg.tld else null;
     port = cfg.proxy-port;
   };
 
   # Primary flags — used when the preferred TLS source is available
-  proxyFlags = lib.cli.toCommandLineShellGNU {} (commonFlags
+  proxyFlags = lib.cli.toCommandLineShellGNU { } (
+    commonFlags
     // {
       cert =
-        if hasExplicitCerts
-        then cfg.tls-cert
-        else if useStepCa
-        then stepCertPath
-        else null;
+        if hasExplicitCerts then
+          cfg.tls-cert
+        else if useStepCa then
+          stepCertPath
+        else
+          null;
       key =
-        if hasExplicitCerts
-        then cfg.tls-key
-        else if useStepCa
-        then stepKeyPath
-        else null;
+        if hasExplicitCerts then
+          cfg.tls-key
+        else if useStepCa then
+          stepKeyPath
+        else
+          null;
       https = !hasExplicitCerts && !useStepCa && cfg.use-https;
-    });
+    }
+  );
 
   # Fallback flags — used when Step CA certs don't exist on disk yet
-  fallbackFlags = lib.cli.toCommandLineShellGNU {} (commonFlags
+  fallbackFlags = lib.cli.toCommandLineShellGNU { } (
+    commonFlags
     // {
       https = cfg.use-https;
-    });
+    }
+  );
 
   # Whether the TLD requires sudo (non-localhost TLDs need /etc/hosts management)
   needsSudo = cfg.tld != "localhost";
-  sudoPrefix =
-    if needsSudo
-    then "sudo "
-    else "";
+  sudoPrefix = if needsSudo then "sudo " else "";
 
   # ---------------------------------------------------------------------------
   # Shell scripts
@@ -115,27 +122,26 @@
     ${util.log.debug "portless: starting proxy"}
 
     ${
-      if useStepCa
-      then ''
-        # Step CA certs may not be provisioned yet — check at runtime
-        if [ -f "${stepCertPath}" ] && [ -f "${stepKeyPath}" ]; then
-          ${util.log.debug "portless: using Step CA certs"}
+      if useStepCa then
+        ''
+          # Step CA certs may not be provisioned yet — check at runtime
+          if [ -f "${stepCertPath}" ] && [ -f "${stepKeyPath}" ]; then
+            ${util.log.debug "portless: using Step CA certs"}
+            ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
+            ${sudoPrefix}portless proxy start ${proxyFlags} 2>/dev/null || true
+          else
+            ${util.log.info "portless: Step CA certs not found, falling back to ${
+              if cfg.use-https then "self-signed HTTPS" else "plain HTTP"
+            }"}
+            ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
+            ${sudoPrefix}portless proxy start ${fallbackFlags} 2>/dev/null || true
+          fi
+        ''
+      else
+        ''
           ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
           ${sudoPrefix}portless proxy start ${proxyFlags} 2>/dev/null || true
-        else
-          ${util.log.info "portless: Step CA certs not found, falling back to ${
-          if cfg.use-https
-          then "self-signed HTTPS"
-          else "plain HTTP"
-        }"}
-          ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
-          ${sudoPrefix}portless proxy start ${fallbackFlags} 2>/dev/null || true
-        fi
-      ''
-      else ''
-        ${lib.optionalString needsSudo ''echo "Portless needs sudo to manage /etc/hosts for the .${cfg.tld} TLD"''}
-        ${sudoPrefix}portless proxy start ${proxyFlags} 2>/dev/null || true
-      ''
+        ''
     }
 
     ${util.log.debug "portless: proxy start complete"}
@@ -154,24 +160,89 @@
   '';
 
   # ---------------------------------------------------------------------------
-  # Panel helpers
+  # Panel helpers & package.json injection
   # ---------------------------------------------------------------------------
 
   appsWithDomains = lib.filterAttrs (_: app: (app.domain or null) != null) (
-    config.stackpanel.apps or {}
+    config.stackpanel.apps or { }
   );
+
+  # For each app with a domain, compute the portless-prefixed dev script and
+  # the app's path so we can inject it into package.json via files.entries.
+  portlessDevScripts = lib.mapAttrs (
+    appName: app:
+    let
+      appPort = portsLib.stablePort {
+        repo = repoKey;
+        service = appName;
+      };
+      portlessName = "${app.domain}.${cfg.project-name or portsCfg.project-name}";
+      portlessPrefix = "portless ${portlessName} --app-port ${toString appPort} ";
+      packageJsonPath =
+        if (app.path or null) != null then repoRoot + "/${app.path}/package.json" else null;
+      existingPackageJson =
+        if packageJsonPath != null && builtins.pathExists packageJsonPath then
+          builtins.fromJSON (builtins.readFile packageJsonPath)
+        else
+          { };
+      existingDevScript = lib.attrByPath [ "scripts" "dev" ] null existingPackageJson;
+      baseDevScript =
+        if existingDevScript == null then
+          "bun run dev"
+        else if lib.hasPrefix portlessPrefix existingDevScript then
+          builtins.substring (builtins.stringLength portlessPrefix) (
+            builtins.stringLength existingDevScript - builtins.stringLength portlessPrefix
+          ) existingDevScript
+        else
+          existingDevScript;
+    in
+    {
+      path = app.path or null;
+      packageJson = existingPackageJson;
+      devScript = "${portlessPrefix}${baseDevScript}";
+    }
+  ) appsWithDomains;
   domainCount = lib.length (lib.attrNames appsWithDomains);
 
   tlsStatusLabel =
-    if hasExplicitCerts
-    then "Enabled (Custom Certs)"
-    else if useStepCa
-    then "Enabled (Step CA)"
-    else if cfg.use-https
-    then "Enabled (Self-Signed)"
-    else "Disabled";
-in {
+    if hasExplicitCerts then
+      "Enabled (Custom Certs)"
+    else if useStepCa then
+      "Enabled (Step CA)"
+    else if cfg.use-https then
+      "Enabled (Self-Signed)"
+    else
+      "Disabled";
+in
+{
   config = lib.mkIf cfg.enable {
+    # -------------------------------------------------------------------------
+    # package.json dev script injection
+    #
+    # For each app with a domain, deep-merge a package.json fragment that
+    # prefixes the dev script with `portless <name> --app-port <port>`.
+    # This ensures `turbo run dev` (and direct `bun run dev`) routes through
+    # the proxy and gets a stable URL.
+    #
+    # Uses the files system's JSON deep-merge (type = "json") so the fragment
+    # is merged with any existing or Nix-generated package.json content.
+    # -------------------------------------------------------------------------
+    stackpanel.files.entries = lib.mkMerge (
+      lib.mapAttrsToList (
+        appName: portlessApp:
+        lib.optionalAttrs (portlessApp.path != null) {
+          "${portlessApp.path}/package.json" = {
+            type = "json";
+            source = "portless";
+            description = "Portless dev script prefix for ${appName}";
+            jsonValue = lib.recursiveUpdate portlessApp.packageJson {
+              scripts.dev = portlessApp.devScript;
+            };
+          };
+        }
+      ) portlessDevScripts
+    );
+
     # -------------------------------------------------------------------------
     # Devshell packages
     # -------------------------------------------------------------------------
@@ -229,10 +300,7 @@ in {
             {
               label = "TLS";
               value = tlsStatusLabel;
-              status =
-                if tlsEnabled
-                then "ok"
-                else "warning";
+              status = if tlsEnabled then "ok" else "warning";
             }
             {
               label = "Virtual Hosts";
@@ -260,19 +328,14 @@ in {
           ];
         }
       ];
-      apps =
-        lib.mapAttrs (_name: app: {
-          enabled = true;
-          config = {
-            domain = app.domain or "";
-            url = app.url or "";
-            tls =
-              if tlsEnabled
-              then "true"
-              else "false";
-          };
-        })
-        appsWithDomains;
+      apps = lib.mapAttrs (_name: app: {
+        enabled = true;
+        config = {
+          domain = app.domain or "";
+          url = app.url or "";
+          tls = if tlsEnabled then "true" else "false";
+        };
+      }) appsWithDomains;
     };
   };
 }
