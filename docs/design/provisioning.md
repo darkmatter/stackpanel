@@ -288,19 +288,57 @@ Steps 2–5 are currently manual. This could be partially automated post-provisi
 
 **Q1: Should `--new` auto-edit `config.nix`?**
 
-Programmatically editing `config.nix` is already precedented (the project says "Machine writes will sort keys alphabetically and format with nixfmt"). But editing Nix source requires either a Nix formatter round-trip or a heuristic insertion. The risk is malformed output. A safer alternative: print the config snippet and ask the user to add it manually, then re-run. Convenient automation vs. safe predictability.
+The infrastructure exists and is already proven: `internal/agent/server/agenix.go:updateVariableEntry` uses exactly this pattern today for `variables.nix` — `nix eval --json -f <file>` to read, Go map modification, then `pkg/nix/serialize.go:SerializeWithSections` (which calls `nixfmt`) to write back. `config.nix` is the same shape (a plain attrset), so the same approach applies directly.
+
+The one gap is Nix path literals: `nix eval --json` resolves `./hardware/prod.nix` to an absolute string, which serializes back as a quoted string rather than a path literal. This can be solved with a **tagged object convention** throughout the JSON round-trip:
+
+- **Nix side** — a `wrapPaths` helper used when evaluating for editing (not for regular config reads):
+  ```nix
+  wrapPaths = v:
+    if      builtins.isPath  v then { __nixPath = v; }
+    else if builtins.isAttrs v then builtins.mapAttrs (_: wrapPaths) v
+    else if builtins.isList  v then map wrapPaths v
+    else v;
+  ```
+  `builtins.isPath` distinguishes path literals from strings. After `--json`, this produces `{"__nixPath": "/abs/path/to/hardware/prod.nix"}`.
+
+- **Go side** — a `NixPath` type in `pkg/nix` with custom marshaling:
+  ```go
+  type NixPath string
+
+  func (p NixPath) MarshalJSON() ([]byte, error) {
+      return json.Marshal(map[string]string{"__nixPath": string(p)})
+  }
+  func (p *NixPath) UnmarshalJSON(data []byte) error {
+      var m map[string]string
+      if err := json.Unmarshal(data, &m); err != nil { return err }
+      *p = NixPath(m["__nixPath"])
+      return nil
+  }
+  ```
+  When reading, the absolute path is converted to a project-relative path (`./hardware/prod.nix`). When serializing back to Nix, `serialize.go` emits it as an unquoted path literal.
+
+The round-trip then preserves path types end-to-end:
+
+```
+./hardware/prod.nix  →  {"__nixPath": "/abs/.../prod.nix"}  →  NixPath("./hardware/prod.nix")  →  ./hardware/prod.nix
+```
+
+The `__nixPath` convention follows Nix's own `__toString` pattern for meta-attributes and is naturally extensible — e.g. `{"__nixLiteral": "lib.mkDefault 42"}` for raw Nix expressions if ever needed.
+
+With this in place, both the machine creation step and the `hardwareConfig` update step can be fully automated via the same JSON round-trip.
 
 **Q2: Should `hardwareConfig` be auto-committed?**
 
-After generation, should the CLI run `git add` and prompt for a commit? Or leave it to the operator? Hardware configs should be reviewed (they contain disk UUIDs, kernel modules, hardware quirks) — auto-committing without review is risky. Lean toward: write the file, print instructions, leave the commit to the user.
+No. The CLI writes the file and updates `config.nix`; the user reviews and commits. Hardware configs contain disk UUIDs, kernel modules, and hardware quirks that warrant inspection before being committed to the repo.
 
 **Q3: Where should `diskLayout` files live?**
 
-A natural convention: `.stackpanel/hardware/<machine>/disk-config.nix` alongside `hardware-configuration.nix`. Or at the repo root under `hardware/`. The `.stackpanel/hardware/` convention keeps all machine-specific files together.
+`.stackpanel/hardware/<machine>/disk-config.nix`, alongside `hardware-configuration.nix`. Keeps all machine-specific generated files together under `.stackpanel/hardware/`.
 
 **Q4: Should `stackpanel provision` (no args) be the status listing?**
 
-Pattern used by other commands: no-args lists. `stackpanel deploy` → lists deployments. `stackpanel provision` → lists machines with provisioning status. Consistent, but potentially surprising for a destructive command. Alternative: require `stackpanel provision status` explicitly. The listing behavior is the right ergonomic choice; confusion is mitigated by the listing output being clearly read-only.
+Yes. Consistent with the no-args listing pattern used by `stackpanel deploy`. The output is clearly read-only, so there is no risk of confusion with the destructive provisioning operation.
 
 **Q5: Multi-architecture**
 
