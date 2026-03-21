@@ -235,15 +235,12 @@ type Secrets struct {
 	// System-level AGE public keys (CI, deploy servers, etc.).
 	// These keys can decrypt all secrets regardless of environment restrictions.
 	SystemKeys []string `protobuf:"bytes,5,rep,name=system_keys,json=systemKeys,proto3" json:"system_keys,omitempty"`
-	// Environment-specific secrets configuration (SOPS sources + recipients).
-	// Keyed by environment identifier (e.g., dev, staging, prod).
+	// Legacy environment-specific secrets configuration.
 	Environments map[string]*Environment `protobuf:"bytes,6,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Code generation targets keyed by name (e.g., typescript, go, python).
 	// Used to drive language-specific env/secret helpers.
 	Codegen map[string]*CodegenTarget `protobuf:"bytes,7,rep,name=codegen,proto3" json:"codegen,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Secrets groups organize SOPS files such as vars/dev.sops.yaml.
-	// Files are encrypted directly to recipient public keys resolved from
-	// Nix configuration. Default groups: dev, prod.
+	// Deprecated legacy groups metadata.
 	Groups        map[string]*SecretsGroup `protobuf:"bytes,8,rep,name=groups,proto3" json:"groups,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -335,9 +332,7 @@ func (x *Secrets) GetGroups() map[string]*SecretsGroup {
 	return nil
 }
 
-// A secrets group organizes SOPS files like vars/dev.sops.yaml.
-// Stackpanel encrypts those files directly to recipient public keys
-// resolved from Nix configuration.
+// Deprecated legacy secrets group metadata.
 type SecretsGroup struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Deprecated. Group-level public keys are no longer used.

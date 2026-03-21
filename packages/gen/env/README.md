@@ -35,7 +35,7 @@ import { docs } from "@gen/env";
 const env = docs.dev.getEnv();
 ```
 
-### stack-go
+### stackpanel-go
 
 Environments: `dev`
 Variables: `STACKPANEL_TEST_PAIRING_TOKEN`
@@ -48,7 +48,7 @@ const env = stackpanelGo.dev.getEnv();
 ### web
 
 Environments: `dev`, `prod`, `staging`
-Variables: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `POLAR_ACCESS_TOKEN`, `POLAR_SUCCESS_URL`, `POSTGRES_URL`
+Variables: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `DATABASE_URL`, `POLAR_ACCESS_TOKEN`, `POLAR_SUCCESS_URL`, `POSTGRES_URL`
 
 ```typescript
 import { web } from "@gen/env";
