@@ -94,6 +94,7 @@ let
     let
       fw = getFramework appCfg;
       fwCfg = appCfg.framework.${fw};
+      cfCfg = appCfg.deployment.cloudflare or { };
     in
     {
       framework = fw;
@@ -101,6 +102,13 @@ let
       path = appCfg.path or "apps/${appName}";
       bindings = appCfg.deployment.bindings;
       secrets = appCfg.deployment.secrets;
+    }
+    // lib.optionalAttrs ((getHost appCfg) == "cloudflare") {
+      cloudflare = {
+        workerName = cfCfg.workerName or appName;
+        route = cfCfg.route or null;
+        compatibility = cfCfg.compatibility or "node";
+      };
     }
     # Include framework-specific options as extra keys
     // lib.optionalAttrs (fw == "vite") {
@@ -151,9 +159,13 @@ in
     stackpanel.infra.modules.deployment = {
       name = "App Deployment";
       description = "Deploys apps to their configured hosts (${lib.concatStringsSep ", " hosts})";
-      path = ./index.ts;
+      path = ./module;
       inputs = {
         apps = appInputs;
+        cloudflare = {
+          compatibilityDate = cfg.deployment.cloudflare.compatibilityDate or null;
+          defaultRoute = cfg.deployment.cloudflare.defaultRoute or null;
+        };
       };
       dependencies = allDeps;
       outputs = appOutputs;

@@ -89,7 +89,7 @@ lib.mkIf hasCloudflareApps {
         name = "compatibilityDate";
         type = "FIELD_TYPE_STRING";
         label = "Compatibility Date";
-        value = deployCfg.cloudflare.compatibilityDate or "2024-01-01";
+        value = deployCfg.cloudflare.compatibilityDate or "2025-04-01";
       }
       {
         name = "appCount";
@@ -129,7 +129,7 @@ lib.mkIf hasCloudflareApps {
         type = "FIELD_TYPE_STRING";
         label = "Compatibility Date";
         description = "Workers API compatibility date";
-        value = deployCfg.cloudflare.compatibilityDate or "2024-01-01";
+        value = deployCfg.cloudflare.compatibilityDate or "2025-04-01";
         configPath = "stackpanel.deployment.cloudflare.compatibilityDate";
       }
       {

@@ -476,6 +476,19 @@ export interface DatabaseInputs {
 };
 }
 
+export interface DeploymentInputs {
+  apps: {
+  docs: {
+  bindings: string[];
+  framework: string;
+  host: string;
+  output: string;
+  path: string;
+  secrets: string[];
+};
+};
+}
+
 export interface MachinesInputs {
   aws: {
   envTagKeys: string[];
