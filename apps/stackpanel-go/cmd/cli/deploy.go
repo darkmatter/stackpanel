@@ -111,31 +111,6 @@ Examples:
 	},
 }
 
-var deployProvisionCmd = &cobra.Command{
-	Use:   "provision <machine>",
-	Short: "Provision a new machine with nixos-anywhere",
-	Long: `Provision a new bare-metal or VM with NixOS using nixos-anywhere.
-
-This bootstraps a machine that has no NixOS installation yet.
-Requires the machine to be accessible via SSH (e.g., booted from NixOS ISO).
-
-Examples:
-  stackpanel deploy provision prod-server --ip 192.168.1.10
-  stackpanel deploy provision prod-server --ip 192.168.1.10 --flake .#prod-server`,
-	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		machineName := args[0]
-		ip, _ := cmd.Flags().GetString("ip")
-		flakeRef, _ := cmd.Flags().GetString("flake")
-		dryRun, _ := cmd.Flags().GetBool("dry-run")
-
-		if err := runProvision(machineName, ip, flakeRef, dryRun); err != nil {
-			output.Error(fmt.Sprintf("Provision failed: %v", err))
-			os.Exit(1)
-		}
-	},
-}
-
 var deployStatusCmd = &cobra.Command{
 	Use:   "status [app]",
 	Short: "Show deployment status",
@@ -159,15 +134,9 @@ Status is read from .stackpanel/state/deployments.json`,
 }
 
 func init() {
-	deployCmd.AddCommand(deployProvisionCmd)
 	deployCmd.AddCommand(deployStatusCmd)
 
 	deployCmd.Flags().Bool("dry-run", false, "Print the command that would be run without executing it")
-
-	deployProvisionCmd.Flags().String("ip", "", "IP address or hostname of the target machine (required)")
-	deployProvisionCmd.Flags().String("flake", ".", "Flake reference for the NixOS configuration")
-	deployProvisionCmd.Flags().Bool("dry-run", false, "Print the command that would be run without executing it")
-	_ = deployProvisionCmd.MarkFlagRequired("ip")
 }
 
 // ---------------------------------------------------------------------------
@@ -195,6 +164,39 @@ func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
 // ---------------------------------------------------------------------------
 
 func listDeployments(cfg *DeployStackpanelConfig) {
+	// Machines section
+	if len(cfg.Deployment.Machines) > 0 {
+		machineState, _ := readMachineState()
+		if machineState == nil {
+			machineState = make(MachinesState)
+		}
+
+		machineNames := make([]string, 0, len(cfg.Deployment.Machines))
+		for name := range cfg.Deployment.Machines {
+			machineNames = append(machineNames, name)
+		}
+		sort.Strings(machineNames)
+
+		fmt.Println("Machines:")
+		for _, name := range machineNames {
+			machine := cfg.Deployment.Machines[name]
+			rec, provisioned := machineState[name]
+
+			hwIndicator := "✗"
+			provisionedStr := "not provisioned"
+			if provisioned {
+				provisionedStr = "provisioned " + rec.ProvisionedAt[:10]
+				if rec.HardwareConfigGenerated {
+					hwIndicator = "✓"
+				}
+			}
+			fmt.Printf("  %-20s  %-20s  %-32s  hw-config %s\n",
+				output.Purple.Sprint(name), machine.Host, provisionedStr, hwIndicator)
+		}
+		fmt.Println()
+	}
+
+	// Deployments section
 	deployableApps := []string{}
 	for name, app := range cfg.Apps {
 		if app.Deployment.Enable {
@@ -209,7 +211,7 @@ func listDeployments(cfg *DeployStackpanelConfig) {
 	}
 
 	sort.Strings(deployableApps)
-	fmt.Println("Configured deployments:")
+	fmt.Println("Deployments:")
 	for _, name := range deployableApps {
 		app := cfg.Apps[name]
 		backend := resolveBackend(app.Deployment)
@@ -405,28 +407,6 @@ func runExternalCommand(ctx context.Context, name string, args []string, dryRun 
 
 	output.Info(fmt.Sprintf("Running: %s %v", name, args))
 	return cmd.Run()
-}
-
-// ---------------------------------------------------------------------------
-// Provision operation
-// ---------------------------------------------------------------------------
-
-func runProvision(machineName, ip, flakeRef string, dryRun bool) error {
-	if flakeRef == "." {
-		flakeRef = fmt.Sprintf(".#%s", machineName)
-	}
-
-	// nixos-anywhere --flake <flakeRef> root@<ip>
-	args := []string{
-		"--flake", flakeRef,
-		fmt.Sprintf("root@%s", ip),
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer cancel()
-
-	output.Info(fmt.Sprintf("Provisioning %s at %s using nixos-anywhere", machineName, ip))
-	return runExternalCommand(ctx, "nixos-anywhere", args, dryRun)
 }
 
 // ---------------------------------------------------------------------------

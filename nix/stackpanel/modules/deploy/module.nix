@@ -157,6 +157,19 @@ in
               '';
             };
 
+            diskLayout = lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              description = ''
+                Path to a disko Nix file declaring the disk partition layout.
+                Required for bare-metal provisioning where you control partitioning.
+                If null, nixos-anywhere runs with --no-reformat (assumes an existing
+                partition layout, e.g. a cloud VPS rescue environment).
+                See: https://github.com/nix-community/disko
+              '';
+              example = lib.literalExpression "./hardware/prod-server/disk-config.nix";
+            };
+
             modules = lib.mkOption {
               type = lib.types.listOf lib.types.deferredModule;
               default = [ ];
