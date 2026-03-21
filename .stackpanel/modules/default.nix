@@ -40,5 +40,12 @@ in
   config = lib.mkIf config.stackpanel.enable {
     # PostgreSQL package - requires pkgs, so lives here instead of config.nix
     stackpanel.globalServices.postgres.package = pkgs.postgresql_17;
+
+    # nixos-anywhere is needed by `stackpanel provision`.
+    # Declaring it as a runtimeInput has two effects:
+    #   1. nix build .#stackpanel-go → binary is wrapped so it finds nixos-anywhere
+    #      at its Nix store path, no PATH setup required.
+    #   2. devshell → nixos-anywhere is in PATH for `go run .` and interactive use.
+    stackpanel.apps."stackpanel-go".go.runtimeInputs = [ pkgs.nixos-anywhere ];
   };
 }
