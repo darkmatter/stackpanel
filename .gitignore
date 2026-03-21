@@ -1,7 +1,10 @@
+/packages/proto/gen
 # Dependencies
 node_modules
 .pnp
 .pnp.js
+.stack/keys/local.txt
+.stack/secrets/state/manifest.json
 
 # Build outputs
 dist
