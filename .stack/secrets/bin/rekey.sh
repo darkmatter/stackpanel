@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT=/Users/cm/git/darkmatter/stackpanel
+PROJECT_ROOT=/Users/cm/.cursor/worktrees/stackpanel/bcr
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -d "$PROJECT_ROOT/.stack/secrets/vars" ]]; then
   SECRETS_DIR="$PROJECT_ROOT/.stack/secrets"
@@ -13,7 +13,7 @@ SOPS_CONFIG="$SECRETS_DIR/.sops.yaml"
 FILTER="${1:-}"
 REKEY_COUNT=0
 
-export SOPS_AGE_KEY_CMD="${SOPS_AGE_KEY_CMD:-/nix/store/jdcjjcx8svidlafzn272w0n0qxxr588g-sops-age-keys/bin/sops-age-keys}"
+export SOPS_AGE_KEY_CMD="${SOPS_AGE_KEY_CMD:-/nix/store/jndh9v483yn1j3282rjf7gijs3h3gnbm-sops-age-keys/bin/sops-age-keys}"
 
 if [[ ! -d "$VARS_DIR" ]]; then
   echo "No vars directory found at $VARS_DIR"
