@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
@@ -14,20 +16,28 @@ import (
 
 var provisionCmd = &cobra.Command{
 	Use:   "provision [machine]",
-	Short: "Provision machines with nixos-anywhere",
-	Long: `Provision bare-metal or VM machines with NixOS using nixos-anywhere.
+	Short: "Provision machines with NixOS",
+	Long: `Provision bare-metal or VM machines with NixOS.
 
 Without arguments, lists configured machines and their provisioning status.
-With a machine name, provisions that machine using nixos-anywhere.
+With a machine name, provisions that machine.
 
-Provisioning is a one-time, destructive operation that installs NixOS from
-scratch. For subsequent, non-destructive updates use 'stackpanel deploy'.
+Methods:
+  nixos-infect    (default) Auto-detects disk layout — no disk config needed.
+                  SSHes into the running Linux system, generates hardware config
+                  from the live partition table, then installs NixOS via kexec.
+                  Best for cloud VMs (Hetzner, DigitalOcean, etc.).
+
+  nixos-anywhere  Full disk formatting via disko.  Requires diskLayout to be
+                  set in the machine config.  Best for bare metal or when you
+                  need to repartition the disk.
 
 Examples:
-  stackpanel provision                          List machines and status
-  stackpanel provision prod-server              Provision prod-server
-  stackpanel provision prod-server --dry-run    Print command without running
-  stackpanel provision prod-server --install-target 10.0.0.5`,
+  stackpanel provision                             List machines and status
+  stackpanel provision prod-server                 Provision (nixos-infect)
+  stackpanel provision prod-server --dry-run       Print commands without running
+  stackpanel provision prod-server --reprovision   Re-provision an existing machine
+  stackpanel provision prod-server --method nixos-anywhere --format`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 		defer cancel()
@@ -45,12 +55,13 @@ Examples:
 
 		machineName := args[0]
 		installTarget, _ := cmd.Flags().GetString("install-target")
+		method, _ := cmd.Flags().GetString("method")
 		format, _ := cmd.Flags().GetBool("format")
 		noHardwareConfig, _ := cmd.Flags().GetBool("no-hardware-config")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		reprovision, _ := cmd.Flags().GetBool("reprovision")
 
-		if err := runProvisionMachine(cfg, machineName, installTarget, format, noHardwareConfig, dryRun, reprovision); err != nil {
+		if err := runProvisionMachine(cfg, machineName, installTarget, method, format, noHardwareConfig, dryRun, reprovision); err != nil {
 			output.Error(fmt.Sprintf("Provision failed: %v", err))
 			os.Exit(1)
 		}
@@ -59,9 +70,10 @@ Examples:
 
 func init() {
 	provisionCmd.Flags().String("install-target", "", "IP/host for provisioning (default: machine's host in config)")
-	provisionCmd.Flags().Bool("format", false, "Format disk via machine's diskLayout (default: --no-reformat)")
+	provisionCmd.Flags().String("method", "nixos-infect", "Provisioning method: nixos-infect (default) or nixos-anywhere")
+	provisionCmd.Flags().Bool("format", false, "Format disk with disko (nixos-anywhere method only)")
 	provisionCmd.Flags().Bool("no-hardware-config", false, "Skip hardware config generation")
-	provisionCmd.Flags().Bool("dry-run", false, "Print nixos-anywhere command without running")
+	provisionCmd.Flags().Bool("dry-run", false, "Print commands without running")
 	provisionCmd.Flags().Bool("reprovision", false, "Allow re-provisioning an already-provisioned machine")
 }
 
@@ -104,29 +116,27 @@ func listMachines(cfg *DeployStackpanelConfig) {
 	}
 }
 
-// runProvisionMachine provisions a single machine using nixos-anywhere.
-func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget string, format, noHardwareConfig, dryRun, reprovision bool) error {
+// runProvisionMachine provisions a single machine.
+func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget, method string, format, noHardwareConfig, dryRun, reprovision bool) error {
 	machine, ok := cfg.Deployment.Machines[machineName]
 	if !ok {
 		return fmt.Errorf("machine %q not found in deployment.machines config", machineName)
 	}
 
-	// Resolve install target: flag overrides config
 	target := machine.Host
 	if installTarget != "" {
 		target = installTarget
 	}
 	if target == "" {
-		return fmt.Errorf("machine %q has no host configured; use --install-target to specify an IP", machineName)
+		return fmt.Errorf("machine %q has no host configured; use --install-target", machineName)
 	}
 
-	// Re-provision guard
 	if !reprovision {
 		state, stateErr := readMachineState()
 		if stateErr == nil {
 			if rec, exists := state[machineName]; exists {
 				output.Error(fmt.Sprintf("%s was already provisioned on %s.", machineName, rec.ProvisionedAt))
-				output.Dimmed("  Re-provisioning will format the disk and erase all data.")
+				output.Dimmed("  Re-provisioning will erase the existing NixOS installation.")
 				output.Dimmed("  Pass --reprovision to proceed, or use `stackpanel deploy` for a non-destructive update.")
 				return fmt.Errorf("machine already provisioned (pass --reprovision to override)")
 			}
@@ -135,48 +145,22 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 
 	hardwareDir := filepath.Join(".stackpanel", "hardware", machineName)
 
-	// Build nixos-anywhere args
-	user := machine.User
-	if user == "" {
-		user = "root"
-	}
-	installHost := fmt.Sprintf("%s@%s", user, target)
+	var hwConfigGenerated bool
+	var provisionErr error
 
-	var args []string
-	args = append(args, "--flake", fmt.Sprintf(".#%s", machineName))
-	if !format {
-		args = append(args, "--no-reformat")
-	}
-	if !noHardwareConfig {
-		args = append(args, "--generate-hardware-config", "nixos-generate-config", hardwareDir)
-	}
-	// Trailing positional: user@host
-	args = append(args, installHost)
-
-	if dryRun {
-		output.Info(fmt.Sprintf("dry-run: nixos-anywhere %v", args))
-		return nil
+	switch method {
+	case "nixos-infect", "":
+		hwConfigGenerated, provisionErr = runNixosInfect(machineName, target, hardwareDir, noHardwareConfig, dryRun)
+	case "nixos-anywhere":
+		hwConfigGenerated, provisionErr = runNixosAnywhere(machineName, target, hardwareDir, format, noHardwareConfig, dryRun)
+	default:
+		return fmt.Errorf("unknown method %q; use nixos-infect or nixos-anywhere", method)
 	}
 
-	// Run with 30-minute timeout
-	provCtx, provCancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	defer provCancel()
-
-	output.Info(fmt.Sprintf("Provisioning %s at %s using nixos-anywhere", machineName, target))
-	if err := runExternalCommand(provCtx, "nixos-anywhere", args, false); err != nil {
-		return fmt.Errorf("nixos-anywhere failed: %w", err)
+	if provisionErr != nil {
+		return provisionErr
 	}
 
-	// Check if hardware config was written
-	hwConfigPath := filepath.Join(hardwareDir, "hardware-configuration.nix")
-	hwConfigGenerated := false
-	if !noHardwareConfig {
-		if _, err := os.Stat(hwConfigPath); err == nil {
-			hwConfigGenerated = true
-		}
-	}
-
-	// Record provision state
 	rec := MachineRecord{
 		ProvisionedAt:           time.Now().UTC().Format(time.RFC3339),
 		InstallTarget:           target,
@@ -184,28 +168,374 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 		NixRevision:             gitRevision(),
 	}
 	if hwConfigGenerated {
-		rec.HardwareConfigPath = hwConfigPath
+		rec.HardwareConfigPath = hardwareDir
 	}
 	if err := recordMachineProvision(machineName, rec); err != nil {
 		output.Warning(fmt.Sprintf("Failed to record provision state: %v", err))
 	}
 
-	// Print success and next steps
 	output.Success(fmt.Sprintf("Provisioned %s", machineName))
 	fmt.Println()
 	if hwConfigGenerated {
-		fmt.Println("Generated hardware config:")
-		fmt.Printf("  %s\n", hwConfigPath)
-		fmt.Println()
-		fmt.Println("Next steps:")
-		fmt.Println("  1. Review the generated hardware config")
-		fmt.Println("  2. Add it to config.nix:")
-		fmt.Printf("       hardwareConfig = ./%s;\n", hwConfigPath)
-		fmt.Println("  3. Commit and run: stackpanel deploy <app>")
-	} else {
-		fmt.Println("Next steps:")
-		fmt.Println("  1. Commit your config and run: stackpanel deploy <app>")
+		fmt.Printf("Hardware config: %s\n", hardwareDir)
+		fmt.Println("Auto-included in future deploys. Commit to make it permanent:")
+		fmt.Printf("  git commit -m 'Add hardware config for %s'\n", machineName)
 	}
 
 	return nil
+}
+
+// ===========================================================================
+// nixos-infect method (default)
+//
+// Converts a running Linux VM to NixOS without reformatting the disk:
+//
+//   Step 1  SSH to the running system (Debian/Ubuntu/etc.)
+//           Detect disk layout via shell commands → generate hardware-configuration.nix
+//           git-stage it so the Nix flake eval can include it.
+//
+//   Step 2  nixos-anywhere --phases kexec
+//           Reboots the target into a NixOS RAM installer.
+//           Hardware config is now in the flake (git-staged → included in
+//           dirty-flake store copy).
+//
+//   Step 3  SSH to the NixOS installer
+//           Mount the root filesystem at /mnt
+//           (installer boots with all disks visible but unmounted)
+//
+//   Step 4  nixos-anywhere --phases install,reboot
+//           Builds NixOS from the flake, copies it to /mnt, installs
+//           the bootloader, and reboots into the new NixOS system.
+//
+// No disk partitioning or pre-existing disk config required.
+// ===========================================================================
+
+func runNixosInfect(machineName, target, hardwareDir string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+	installHost := "root@" + target
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	var hwInfo *hardwareInfo
+
+	if !noHardwareConfig {
+		output.Info("[1/3] Detecting hardware configuration...")
+		if !dryRun {
+			hwInfo, err = detectHardwareInfo(ctx, installHost)
+			if err != nil {
+				return false, fmt.Errorf("hardware detection: %w", err)
+			}
+			if hwInfo.InInstaller {
+				output.Dimmed("  Target is in NixOS installer — detecting from block devices")
+			}
+
+			nixConfig := hwInfo.toNixConfig()
+			if err := os.MkdirAll(filepath.Dir(hardwareDir), 0o755); err != nil {
+				return false, fmt.Errorf("creating hardware dir: %w", err)
+			}
+			if err := os.WriteFile(hardwareDir, []byte(nixConfig), 0o644); err != nil {
+				return false, fmt.Errorf("writing hardware config: %w", err)
+			}
+			output.Success(fmt.Sprintf("Hardware config written to %s", hardwareDir))
+			output.Dimmed(fmt.Sprintf("  Root: %s (%s), Disk: %s, UEFI: %v",
+				hwInfo.RootDevice, hwInfo.RootFSType, hwInfo.RootDisk, hwInfo.IsUEFI))
+
+			if err := exec.Command("git", "add", hardwareDir).Run(); err != nil {
+				output.Dimmed("Note: could not git-add hardware config")
+			} else {
+				output.Dimmed("Hardware config staged for flake inclusion")
+			}
+			hwConfigGenerated = true
+		} else {
+			output.Dimmed("dry-run: would SSH to detect hardware and generate hardware-configuration.nix")
+		}
+	}
+
+	// kexec into NixOS installer — skip if the target is already in the installer.
+	alreadyInInstaller := !dryRun && hwInfo != nil && hwInfo.InInstaller
+	if alreadyInInstaller {
+		output.Info("[2/3] Target already in NixOS installer (skipping kexec)")
+	} else {
+		output.Info("[2/3] Booting into NixOS installer (kexec)...")
+		kexecArgs := []string{"--flake", ".#" + machineName, "--phases", "kexec", installHost}
+		if err := runExternalCommand(ctx, "nixos-anywhere", kexecArgs, dryRun); err != nil {
+			return hwConfigGenerated, fmt.Errorf("kexec: %w", err)
+		}
+		if !dryRun {
+			output.Dimmed("Waiting for installer SSH to stabilize...")
+			time.Sleep(20 * time.Second)
+		}
+	}
+
+	if !dryRun && hwInfo != nil {
+		// Mount the root filesystem at /mnt in the installer environment.
+		// nixos-anywhere's install phase expects /mnt to be set up when disko is skipped.
+		output.Dimmed("Mounting target filesystem at /mnt...")
+		mountScript := hwInfo.mountScript()
+		if _, err := runSSHCapture(ctx, installHost, mountScript); err != nil {
+			return hwConfigGenerated, fmt.Errorf("mounting filesystem at /mnt: %w\nScript: %s", err, mountScript)
+		}
+	} else if dryRun {
+		output.Dimmed("dry-run: would mount root filesystem at /mnt in installer")
+	}
+
+	// Install NixOS.
+	// --phases install,reboot: skip kexec (done) and disko (reusing existing layout).
+	// nixos-anywhere builds the flake, copies the closure, runs nixos-install, reboots.
+	output.Info("[3/3] Installing NixOS...")
+	installArgs := []string{"--flake", ".#" + machineName, "--phases", "install,reboot", installHost}
+	if err := runExternalCommand(ctx, "nixos-anywhere", installArgs, dryRun); err != nil {
+		return hwConfigGenerated, fmt.Errorf("install: %w", err)
+	}
+
+	return hwConfigGenerated, nil
+}
+
+// ===========================================================================
+// nixos-anywhere method
+//
+// Uses nixos-anywhere with optional disko disk formatting.
+// Requires diskLayout to be configured in the machine config when --format is used.
+// ===========================================================================
+
+func runNixosAnywhere(machineName, target, hardwareDir string, format, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+	installHost := "root@" + target
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	var args []string
+	args = append(args, "--flake", ".#"+machineName)
+	if !format {
+		args = append(args, "--phases", "kexec,install,reboot")
+	}
+	if !noHardwareConfig {
+		args = append(args, "--generate-hardware-config", "nixos-generate-config", hardwareDir)
+	}
+	args = append(args, installHost)
+
+	output.Info(fmt.Sprintf("Provisioning %s via nixos-anywhere", machineName))
+	if err := runExternalCommand(ctx, "nixos-anywhere", args, dryRun); err != nil {
+		return false, fmt.Errorf("nixos-anywhere: %w", err)
+	}
+
+	if !noHardwareConfig && !dryRun {
+		if _, err := os.Stat(hardwareDir); err == nil {
+			hwConfigGenerated = true
+			exec.Command("git", "add", hardwareDir).Run()
+		}
+	}
+
+	return hwConfigGenerated, nil
+}
+
+// ===========================================================================
+// Hardware detection helpers
+// ===========================================================================
+
+// hardwareInfo holds hardware facts detected from a running Linux system.
+type hardwareInfo struct {
+	RootDevice  string // e.g. /dev/sda1, /dev/vda1
+	RootFSType  string // e.g. ext4, btrfs
+	RootUUID    string // filesystem UUID (preferred for stable fileSystems config)
+	RootDisk    string // parent disk: /dev/sda, /dev/vda
+	IsUEFI      bool   // true = UEFI (systemd-boot), false = BIOS (GRUB)
+	IsVM        bool   // true = KVM/QEMU → include qemu-guest.nix profile
+	InInstaller bool   // true = already running the NixOS kexec installer (tmpfs root)
+}
+
+// hwDetectScript gathers hardware facts from the target.
+// Works in two modes:
+//   - Running OS (Debian/Ubuntu/etc.): reads from mounted filesystems
+//   - NixOS kexec installer (tmpfs root): reads from unmounted block devices via lsblk
+const hwDetectScript = `
+set -e
+# Detect if we're in the kexec installer (root is a tmpfs)
+ROOT_FS=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "unknown")
+if [ "$ROOT_FS" = "tmpfs" ]; then
+    IN_INSTALLER=true
+    # Find the first real disk (sda, vda, nvme0n1, etc.)
+    for DISK_PATH in /dev/sda /dev/vda /dev/nvme0n1 /dev/hda; do
+        [ -b "$DISK_PATH" ] && ROOT_DISK="$DISK_PATH" && break
+    done
+    [ -z "$ROOT_DISK" ] && ROOT_DISK="/dev/sda"
+    # Find root partition: prefer ext4/xfs/btrfs, fall back to first partition
+    ROOT_DEVICE=$(lsblk -rno NAME,FSTYPE "$ROOT_DISK" 2>/dev/null \
+        | awk '$2 ~ /^(ext4|xfs|btrfs)$/ {print "/dev/" $1; exit}')
+    [ -z "$ROOT_DEVICE" ] && ROOT_DEVICE="${ROOT_DISK}1"
+    ROOT_FSTYPE=$(lsblk -no FSTYPE "$ROOT_DEVICE" 2>/dev/null | head -1)
+    [ -z "$ROOT_FSTYPE" ] && ROOT_FSTYPE="ext4"
+    ROOT_UUID=$(lsblk -no UUID "$ROOT_DEVICE" 2>/dev/null | head -1 || echo "")
+else
+    IN_INSTALLER=false
+    ROOT_DEVICE=$(findmnt -n -o SOURCE / 2>/dev/null || echo "/dev/sda1")
+    ROOT_FSTYPE=$(findmnt -n -o FSTYPE / 2>/dev/null || echo "ext4")
+    ROOT_UUID=$(findmnt -n -o UUID / 2>/dev/null \
+        || blkid -s UUID -o value "$ROOT_DEVICE" 2>/dev/null || echo "")
+    if command -v lsblk >/dev/null 2>&1; then
+        PKNAME=$(lsblk -no PKNAME "$ROOT_DEVICE" 2>/dev/null | head -1)
+        [ -n "$PKNAME" ] && ROOT_DISK="/dev/$PKNAME"
+    fi
+    [ -z "$ROOT_DISK" ] && ROOT_DISK=$(echo "$ROOT_DEVICE" | sed 's/p\?[0-9]\+$//')
+fi
+
+IS_UEFI=$([ -d /sys/firmware/efi ] && echo "true" || echo "false")
+VIRT=$(systemd-detect-virt 2>/dev/null || echo "none")
+printf 'ROOT_DEVICE=%s\nROOT_FSTYPE=%s\nROOT_UUID=%s\nIS_UEFI=%s\nROOT_DISK=%s\nVIRT=%s\nIN_INSTALLER=%s\n' \
+    "$ROOT_DEVICE" "$ROOT_FSTYPE" "$ROOT_UUID" "$IS_UEFI" "$ROOT_DISK" "$VIRT" "$IN_INSTALLER"
+`
+
+// detectHardwareInfo SSHes to host and collects hardware facts.
+func detectHardwareInfo(ctx context.Context, host string) (*hardwareInfo, error) {
+	raw, err := runSSHCapture(ctx, host, hwDetectScript)
+	if err != nil {
+		return nil, err
+	}
+	info := &hardwareInfo{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		v = strings.TrimSpace(v)
+		switch k {
+		case "ROOT_DEVICE":
+			info.RootDevice = v
+		case "ROOT_FSTYPE":
+			info.RootFSType = v
+		case "ROOT_UUID":
+			info.RootUUID = v
+		case "IS_UEFI":
+			info.IsUEFI = v == "true"
+		case "ROOT_DISK":
+			info.RootDisk = v
+		case "VIRT":
+			info.IsVM = v == "kvm" || v == "qemu" || v == "vmware" || v == "virtualbox"
+		case "IN_INSTALLER":
+			info.InInstaller = v == "true"
+		}
+	}
+	// Fallbacks for minimal/unusual environments
+	if info.RootDevice == "" {
+		info.RootDevice = "/dev/sda1"
+	}
+	if info.RootFSType == "" {
+		info.RootFSType = "ext4"
+	}
+	if info.RootDisk == "" {
+		info.RootDisk = strings.TrimRight(info.RootDevice, "0123456789")
+	}
+	return info, nil
+}
+
+// toNixConfig generates a hardware-configuration.nix from the detected info.
+// The generated config is intentionally minimal and covers the common VPS case.
+// For complex setups (LVM, ZFS, multiple disks), review and adjust manually.
+func (info *hardwareInfo) toNixConfig() string {
+	// Prefer UUID-based device reference for partition stability across reboots
+	rootRef := info.RootDevice
+	if info.RootUUID != "" {
+		rootRef = "/dev/disk/by-uuid/" + info.RootUUID
+	}
+
+	importsBlock := ""
+	if info.IsVM {
+		importsBlock = "\n  imports = [ (modulesPath + \"/profiles/qemu-guest.nix\") ];\n"
+	}
+
+	var bootBlock string
+	if info.IsUEFI {
+		bootBlock = `
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;`
+	} else {
+		bootBlock = fmt.Sprintf(`
+  boot.loader.grub = {
+    enable = true;
+    device = %q;
+  };`, info.RootDisk)
+	}
+
+	return fmt.Sprintf(`# Generated by stackpanel provision (nixos-infect method).
+# Review and commit — auto-included in the NixOS config via deploy.nix.
+# For complex setups (LVM, ZFS, multiple disks) adjust as needed.
+{ config, lib, pkgs, modulesPath, ... }:
+{%s
+  boot.initrd.availableKernelModules = [ "ahci" "xhci_pci" "virtio_pci" "virtio_scsi" "sd_mod" "sr_mod" ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ ];
+  boot.extraModulePackages = [ ];
+%s
+
+  fileSystems."/" = {
+    device = %q;
+    fsType = %q;
+  };
+
+  swapDevices = [ ];
+
+  networking.useDHCP = lib.mkDefault true;
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+}
+`, importsBlock, bootBlock, rootRef, info.RootFSType)
+}
+
+// mountScript returns a shell script to prepare and mount the root filesystem
+// at /mnt in the NixOS installer environment (after kexec).
+//
+// The partition is reformatted with mkfs before mounting to ensure a clean
+// slate — installing NixOS on top of an existing OS (Debian, Ubuntu, etc.)
+// leaves conflicting /etc files that break NixOS boot. The original UUID is
+// preserved so the generated hardware-configuration.nix stays valid.
+func (info *hardwareInfo) mountScript() string {
+	fstype := info.RootFSType
+	if fstype == "" {
+		fstype = "ext4"
+	}
+	// Use UUID flag to preserve the filesystem UUID so hardware config stays valid.
+	uuidFlag := ""
+	if info.RootUUID != "" {
+		uuidFlag = fmt.Sprintf(" -U %s", info.RootUUID)
+	}
+
+	rootRef := info.RootDevice
+	if info.RootUUID != "" {
+		rootRef = "/dev/disk/by-uuid/" + info.RootUUID
+	}
+
+	script := fmt.Sprintf(
+		"modprobe %[1]s 2>/dev/null || true\n"+
+			"umount /mnt 2>/dev/null || true\n"+
+			"mkfs.%[1]s%[2]s -F %[3]s\n"+ // wipe + preserve UUID
+			"mount -t %[1]s %[4]q /mnt",
+		fstype, uuidFlag, info.RootDevice, rootRef,
+	)
+	if info.IsUEFI {
+		script += "\nmkdir -p /mnt/boot/efi"
+	}
+	return script
+}
+
+// ===========================================================================
+// SSH helpers
+// ===========================================================================
+
+// runSSHCapture runs a command on a remote host via SSH and returns stdout.
+// Uses accept-new host key policy — suitable for newly installed systems.
+func runSSHCapture(ctx context.Context, host, command string) ([]byte, error) {
+	args := []string{
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "ConnectTimeout=60",
+		"-o", "ServerAliveInterval=15",
+		"-o", "ServerAliveCountMax=8",
+		host,
+		command,
+	}
+	cmd := exec.CommandContext(ctx, "ssh", args...)
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("ssh failed: %w\nstderr: %s", err, string(exitErr.Stderr))
+		}
+		return nil, err
+	}
+	return out, nil
 }
