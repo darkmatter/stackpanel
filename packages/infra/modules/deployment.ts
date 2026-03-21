@@ -26,6 +26,7 @@ interface AppInput {
   path: string;
   bindings: string[];
   secrets: string[];
+  // Framework-specific (optional)
   ssr?: boolean;
   assetsDir?: string;
   entrypoint?: string;
@@ -41,23 +42,34 @@ const inputs = infra.inputs<DeploymentInputs>(
   process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES,
 );
 
+// ---------------------------------------------------------------------------
+// Stage detection
+// ---------------------------------------------------------------------------
 const STAGE = process.env.STAGE ?? "dev";
 
+// ---------------------------------------------------------------------------
+// Stage-aware URL defaults: derive per-stage URLs when env vars are not
+// explicitly set, so staging deployments don't use production origins.
+// ---------------------------------------------------------------------------
 const STAGE_URL_DEFAULTS: Record<string, (stage: string) => string> = {
   CORS_ORIGIN: (stage) =>
     stage === "prod"
       ? "https://stackpanel.com"
-      : `http://${stage}.stackpanel.com`,
+      : `https://${stage}.stackpanel.com`,
   BETTER_AUTH_URL: (stage) =>
     stage === "prod"
       ? "https://stackpanel.com"
-      : `http://${stage}.stackpanel.com`,
+      : `https://${stage}.stackpanel.com`,
   POLAR_SUCCESS_URL: (stage) =>
     stage === "prod"
       ? "https://stackpanel.com"
-      : `http://${stage}.stackpanel.com`,
+      : `https://${stage}.stackpanel.com`,
 };
 
+// ---------------------------------------------------------------------------
+// Resolve bindings from process.env, wrapping secrets with alchemy.secret().
+// Falls back to stage-aware URL defaults when env vars are not set.
+// ---------------------------------------------------------------------------
 function resolveBindings(
   bindingNames: string[],
   secretNames: string[],
@@ -75,45 +87,13 @@ function resolveBindings(
   return resolved;
 }
 
+// ---------------------------------------------------------------------------
+// Create the appropriate alchemy resource for a framework × host pair
+// ---------------------------------------------------------------------------
 async function deployApp(
   name: string,
   app: AppInput,
 ): Promise<{ url: string }> {
-  if (app.host === "aws") {
-    const { Ec2Server } = await import("../../../packages/infra/deploy/ec2-server");
-    const region = process.env.AWS_REGION ?? "us-west-2";
-    const artifactBucket = process.env.EC2_ARTIFACT_BUCKET;
-    const artifactKey = process.env.EC2_ARTIFACT_KEY;
-    if (!artifactBucket || !artifactKey) {
-      throw new Error("EC2_ARTIFACT_BUCKET and EC2_ARTIFACT_KEY are required for AWS deploys");
-    }
-
-    const secretSet = new Set(app.secrets);
-    const environment: Record<string, any> = {};
-    for (const key of app.bindings) {
-      const envValue = process.env[key];
-      const defaultFn = STAGE_URL_DEFAULTS[key];
-      const value = envValue ?? (defaultFn ? defaultFn(STAGE) : undefined);
-      environment[key] = secretSet.has(key) ? alchemy.secret(value ?? "") : (value ?? "");
-    }
-
-    return Ec2Server(name, {
-      region,
-      availabilityZone: process.env.EC2_AVAILABILITY_ZONE ?? `${region}a`,
-      imageId: process.env.EC2_IMAGE_ID,
-      instanceType: process.env.EC2_INSTANCE_TYPE ?? "t3.small",
-      keyName: process.env.EC2_KEY_NAME,
-      artifactBucket,
-      artifactKey,
-      artifactVersion: process.env.EC2_ARTIFACT_VERSION,
-      parameterPath: process.env.EC2_PARAMETER_PATH ?? `/stackpanel/${STAGE}/web-runtime`,
-      httpCidrBlocks: ["0.0.0.0/0"],
-      sshCidrBlocks: process.env.EC2_SSH_CIDRS?.split(",").map(s => s.trim()).filter(Boolean) ?? [],
-      environment,
-      tags: { App: "stackpanel", Stage: STAGE },
-    });
-  }
-
   const bindings = resolveBindings(app.bindings, app.secrets);
 
   if (app.host === "cloudflare") {
@@ -182,11 +162,16 @@ async function deployApp(
     }
   }
 
+  // This module currently manages Cloudflare resources only.
+  // Fly deploys are handled by the Fly deployment module.
   throw new Error(
-    `Unsupported host "${app.host}" in infra deployment module (expected: cloudflare or aws)`,
+    `Unsupported host "${app.host}" in infra deployment module (expected: cloudflare)`,
   );
 }
 
+// ---------------------------------------------------------------------------
+// Deploy all apps and collect outputs
+// ---------------------------------------------------------------------------
 const outputs: Record<string, string> = {};
 
 for (const [appName, app] of Object.entries(inputs.apps)) {

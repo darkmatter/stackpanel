@@ -1,22 +1,4 @@
 {
-  "name": "web",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "ALCHEMY=1 vite build",
-    "build:container": "bun --bun vite build",
-    "build:fly": "vite build",
-    "container:build": "./.tasks/bin/container-build",
-    "container:push": "./.tasks/bin/container-push",
-    "deploy": "./.tasks/bin/deploy",
-    "dev": "vite dev --host",
-    "serve": "vite preview",
-    "test": "vitest run --exclude 'src/test/integration/**'",
-    "test:watch": "vitest --exclude 'src/test/integration/**'",
-    "test:coverage": "vitest run --coverage --exclude 'src/test/integration/**'",
-    "test:integration": "vitest run --include 'src/test/integration/**' --testTimeout=120000",
-    "test:all": "vitest run --testTimeout=120000"
-  },
   "dependencies": {
     "@ai-sdk/react": "^3.0.3",
     "@base-ui/react": "^1.1.0",
@@ -64,6 +46,7 @@
     "@stackpanel/agent-client": "workspace:*",
     "@stackpanel/api": "workspace:*",
     "@stackpanel/auth": "workspace:*",
+    "@stackpanel/db": "workspace:*",
     "@stackpanel/docs-content": "workspace:*",
     "@stackpanel/proto": "workspace:*",
     "@stackpanel/ui-core": "workspace:*",
@@ -88,6 +71,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "catalog:",
+    "drizzle-orm": "^0.44.6",
     "embla-carousel-react": "^8.6.0",
     "idb": "^8.0.2",
     "immer": "^10.0.0",
@@ -125,10 +109,10 @@
     "@testing-library/react": "^16.2.0",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "babel-plugin-react-compiler": "^19.0.0-beta-26f2496093-20240514",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.0.16",
     "alchemy": "^0.81.2",
+    "babel-plugin-react-compiler": "^19.0.0-beta-26f2496093-20240514",
     "happy-dom": "^20.1.0",
     "jsdom": "^26.0.0",
     "postcss": "^8.5.6",
@@ -136,5 +120,24 @@
     "vite": "^7.0.2",
     "vitest": "^4.0.16",
     "web-vitals": "^5.0.3"
-  }
+  },
+  "name": "web",
+  "private": true,
+  "scripts": {
+    "build": "ALCHEMY=1 vite build",
+    "build:container": "bun --bun vite build",
+    "build:ec2": "vite build",
+    "build:fly": "vite build",
+    "container:build": "./.tasks/bin/container-build",
+    "container:push": "./.tasks/bin/container-push",
+    "deploy": "./.tasks/bin/deploy",
+    "dev": "portless stackpanel.stackpanel --app-port 5775 vite dev --host",
+    "serve": "vite preview",
+    "test": "vitest run --exclude 'src/test/integration/**'",
+    "test:all": "vitest run --testTimeout=120000",
+    "test:coverage": "vitest run --coverage --exclude 'src/test/integration/**'",
+    "test:integration": "vitest run --include 'src/test/integration/**' --testTimeout=120000",
+    "test:watch": "vitest --exclude 'src/test/integration/**'"
+  },
+  "type": "module"
 }
