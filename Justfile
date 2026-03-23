@@ -61,12 +61,17 @@ show-packages:
 
 rootdir := `git rev-parse --show-toplevel`
 secrets := rootdir / ".stack/secrets/vars/dev.sops.yaml"
-aws_vault := "aws-vault exec sso-prod --"
+is_aws_active := `aws sts get-caller-identity --query Arn --output text | grep -q 'aws' && echo true || echo false`
+aws_vault := if is_aws_active == "true" {""} else { "aws-vault exec sso-prod --" }
 
 # Deploy web app to EC2
 deploy app='web' region='us-west-2':
     @if [ "{{app}}" != "web" ]; then echo "Only 'web' is supported for EC2 deploy"; exit 1; fi
     {{aws_vault}} bash "{{rootdir}}/scripts/deploy/deploy-web.sh" "{{region}}"
+
+# Deploy via NixOS: nix build -> cachix push -> alchemy infra -> colmena apply
+deploy-nixos app='web':
+    bash "{{rootdir}}/scripts/deploy/deploy-nixos.sh" "{{app}}"
 
 # Check deploy status
 deploy-status app='web' region='us-west-2':
