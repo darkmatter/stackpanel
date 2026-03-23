@@ -21,6 +21,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
@@ -47,7 +48,10 @@ in
     #      at their Nix store paths, no PATH setup required.
     #   2. devshell → tools are in PATH for `go run .` and interactive use.
     stackpanel.apps."stackpanel-go".go.runtimeInputs = [
-      pkgs.colmena
+      # Use the colmena from the flake input so the binary version matches
+      # colmena.lib.makeHive (which is also from inputs.colmena). Using
+      # pkgs.colmena (nixpkgs) would cause a schema version mismatch.
+      inputs.colmena.packages.${pkgs.stdenv.hostPlatform.system}.colmena
       pkgs.nixos-anywhere
     ];
 
