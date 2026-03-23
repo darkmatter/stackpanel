@@ -142,12 +142,27 @@
     };
   };
 
+  flattenJsonSetOps =
+    prefix: value:
+    if builtins.isAttrs value then
+      lib.flatten (lib.mapAttrsToList (key: nested: flattenJsonSetOps (prefix ++ [ key ]) nested) value)
+    else
+      [
+        {
+          op = "set";
+          path = prefix;
+          inherit value;
+        }
+      ];
+
   # Create file entries for materialization (uses stackpanel.files system)
-  # package.json uses type="json" for deep-merge support from other modules
+  # package.json uses source-aware json-ops so tracked files can be patched
+  # safely during preflight without replacing unrelated user content.
   mkGeneratedFileEntries = name: app: {
     "${app.path}/package.json" = {
-      type = "json";
-      jsonValue = generatePackageJson name app;
+      type = "json-ops";
+      adopt = "backup";
+      ops = flattenJsonSetOps [ ] (generatePackageJson name app);
       source = "bun";
       description = "Bun app package.json (scripts, dependencies, bun2nix postinstall)";
     };
@@ -207,6 +222,8 @@ in {
       stackpanel.bun.packages = {
         apps = lib.mapAttrs mkBunPackage bunApps;
       };
+
+      stackpanel.outputs = lib.mapAttrs (_: pkg: pkg) (lib.mapAttrs mkBunPackage bunApps);
 
       # -----------------------------------------------------------------------
       # Devshell - Add bun2nix CLI to shell environment
@@ -302,7 +319,7 @@ in {
               version=$(bun --version 2>/dev/null)
               major=$(echo "$version" | cut -d. -f1)
               minor=$(echo "$version" | cut -d. -f2)
-              [ "$major" -gt 1 ] || ([ "$major" -eq 1 ] && [ "$minor" -ge 2 ])
+              [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 2 ]; }
             '';
             severity = "warning";
             timeout = 5;

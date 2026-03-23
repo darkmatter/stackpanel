@@ -547,14 +547,12 @@ in
     machinesComputed = lib.mkOption {
       type = lib.types.attrsOf machineType;
       default = { };
-      readOnly = true;
       description = "Resolved machine inventory for Colmena (computed).";
     };
 
     computed = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf lib.types.str);
       default = { };
-      readOnly = true;
       description = "Computed Colmena flag sets for each generated command.";
     };
   };
@@ -720,8 +718,11 @@ in
 
         hive-config = {
           description = "Configured Colmena hive file exists";
-          script = ''
-            if [ -n "${if cfg.flake != null then cfg.flake else ""}" ]; then
+          script = let
+            flakeValue = if cfg.flake != null then cfg.flake else "";
+          in ''
+            FLAKE_REF="${flakeValue}"
+            if [ -n "$FLAKE_REF" ]; then
               exit 0
             fi
 

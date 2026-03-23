@@ -119,5 +119,38 @@
         devenvModules
         templates
         ;
+
+      nixosConfigurations = let
+        system = "x86_64-linux";
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+        spOutputs = import ./nix/flake/default.nix {
+          inherit pkgs inputs self system projectRoot;
+          stackpanelImports =
+            if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
+            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+            else [];
+        };
+        webPkg = spOutputs.packages.web or null;
+      in {
+        web-staging = nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            self.nixosModules.web-service
+            ({ ... }: {
+              stackpanel.web = {
+                enable = true;
+                package = webPkg;
+                port = 80;
+                ssmParameterPath = "/stackpanel/staging/web-runtime";
+                ssmRegion = "us-west-2";
+              };
+
+              system.stateVersion = "24.11";
+            })
+          ];
+        };
+      };
     };
 }

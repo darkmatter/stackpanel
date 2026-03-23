@@ -109,6 +109,12 @@
       type = "go";
     };
     web = {
+      bun = {
+        enable = true;
+        buildPhase = "vite build";
+        startScript = "node .output/server/index.mjs";
+        generateFiles = false;
+      };
       commands = {
         dev = {
           command = "bun run -F web dev";
@@ -119,6 +125,10 @@
         type = "bun";
       };
       deployment = {
+        aws = {
+          region = "us-west-2";
+          os-type = "nixos";
+        };
         bindings = [
           "DATABASE_URL"
           "CORS_ORIGIN"
@@ -132,7 +142,7 @@
           appName = "stackpanel-web";
           region = "iad";
         };
-        host = "fly";
+        host = "aws";
         secrets = [
           "DATABASE_URL"
           "BETTER_AUTH_SECRET"
@@ -260,9 +270,18 @@
   binary-cache = {
     cachix = {
       cache = "darkmatter";
-      enable = false;
+      enable = true;
     };
     enable = true;
+  };
+
+  # ---------------------------------------------------------------------------
+  # Colmena
+  # ---------------------------------------------------------------------------
+  colmena = {
+    enable = true;
+    substituteOnDestination = true;
+    flake = ".";
   };
 
   # ---------------------------------------------------------------------------
@@ -319,6 +338,10 @@
   # Deployment
   # ---------------------------------------------------------------------------
   deployment = {
+    aws = {
+      instance-type = "t3.small";
+      region = "us-west-2";
+    };
     fly = {
       organization = "darkmatter";
     };
@@ -544,8 +567,8 @@
             enable = true;
             role-name = "stackpanel-staging-ec2-role";
           };
-          instance-count = 2;
-          instance-type = "t3.micro";
+          instance-count = 1;
+          instance-type = "t2.micro";
           instances = [ ];
           key-name = null;
           key-pair = {
@@ -607,7 +630,7 @@
             name = null;
           };
           security-group-ids = [ ];
-          subnet-ids = [ ];
+          subnet-ids = [ "subnet-0a79923f197e60d02" ];
           tags = {
             ManagedBy = "stackpanel-infra";
             Name = "stackpanel-staging";
@@ -625,7 +648,7 @@
         api-key-ssm-path = "/common/neon-api-key";
         region = "aws-us-east-1";
       };
-      provider = "neon";
+      provider = "auto";
     };
     enable = true;
     machines = {

@@ -259,6 +259,7 @@ in
     theme = ../stackpanel/lib/theme.nix;
     caddy = ../stackpanel/services/caddy.nix;
     ci = ../stackpanel/apps/ci.nix;
+    web-service = ../stackpanel/nixos/web-service.nix;
   };
 
   # ===========================================================================
