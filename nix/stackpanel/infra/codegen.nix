@@ -221,6 +221,7 @@ let
   securityGroupTs = builtins.readFile ./templates/security-group.tpl.ts;
   keyPairTs = builtins.readFile ./templates/key-pair.tpl.ts;
   iamInstanceProfileTs = builtins.readFile ./templates/iam-instance-profile.tpl.ts;
+  ec2LifecycleTs = builtins.readFile ./templates/ec2-lifecycle.tpl.ts;
   ec2InstanceTs = builtins.readFile ./templates/ec2-instance.tpl.ts;
 
   # ============================================================================
@@ -556,6 +557,12 @@ in
         text = iamInstanceProfileTs;
         mode = "0644";
         description = "Custom IAM Instance Profile alchemy resource";
+        source = "infra";
+      };
+      "${outputDir}/src/resources/ec2-lifecycle.ts" = {
+        text = ec2LifecycleTs;
+        mode = "0644";
+        description = "EC2 lifecycle helpers (normalization, replacement, migration)";
         source = "infra";
       };
       "${outputDir}/src/resources/ec2-instance.ts" = {
