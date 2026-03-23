@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/fileops"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -98,12 +100,70 @@ func runPreflightRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	fileSummary, err := runPreflightFileOps(projectRoot)
+	if err != nil {
+		return err
+	}
+
 	if !preflightQuiet {
 		printCodegenSummary(summary, verbose)
+		printFileOpsSummary(projectRoot, fileSummary)
 		output.Success(fmt.Sprintf("Preflight completed with %d codegen module(s)", len(summary.Results)))
 	}
 
 	return nil
+}
+
+func runPreflightFileOps(projectRoot string) (*fileops.Summary, error) {
+	manifestPath := os.Getenv("STACKPANEL_FILES_PREFLIGHT_MANIFEST")
+	if manifestPath == "" {
+		return &fileops.Summary{}, nil
+	}
+
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read preflight files manifest: %w", err)
+	}
+
+	var manifest fileops.Manifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse preflight files manifest: %w", err)
+	}
+
+	stateDir := os.Getenv("STACKPANEL_STATE_DIR")
+	if stateDir == "" {
+		stateDir = filepath.Join(projectRoot, ".stack", "profile")
+	}
+
+	summary, err := fileops.ApplyManifest(projectRoot, stateDir, manifest)
+	if err != nil {
+		return nil, err
+	}
+	return &summary, nil
+}
+
+func printFileOpsSummary(projectRoot string, summary *fileops.Summary) {
+	if summary == nil {
+		return
+	}
+
+	for _, backup := range summary.Backups {
+		rel := relativeDisplayPath(projectRoot, backup)
+		output.Warning(fmt.Sprintf("Backed up %s", rel))
+	}
+	for _, path := range summary.Writes {
+		output.Dimmed(fmt.Sprintf("  wrote %s", relativeDisplayPath(projectRoot, path)))
+	}
+	for _, path := range summary.Restored {
+		if strings.Contains(path, ":") {
+			output.Dimmed(fmt.Sprintf("  restored %s", path))
+			continue
+		}
+		output.Dimmed(fmt.Sprintf("  restored %s", relativeDisplayPath(projectRoot, path)))
+	}
+	for _, path := range summary.Removed {
+		output.Dimmed(fmt.Sprintf("  removed %s", relativeDisplayPath(projectRoot, path)))
+	}
 }
 
 func runPreflightImportEnv(cmd *cobra.Command, args []string) error {

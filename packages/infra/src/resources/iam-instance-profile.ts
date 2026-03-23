@@ -17,6 +17,61 @@ export interface IamInstanceProfile {
   adopted?: boolean;
 }
 
+function isNoSuchEntityError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const name = "name" in err ? String((err as { name?: unknown }).name) : "";
+  return name === "NoSuchEntity" || name === "NoSuchEntityException";
+}
+
+async function getInstanceProfileWithRetry(
+  client: InstanceType<(typeof import("@aws-sdk/client-iam"))["IAMClient"]>,
+  name: string,
+  attempts = 10,
+): Promise<import("@aws-sdk/client-iam").GetInstanceProfileCommandOutput> {
+  const { GetInstanceProfileCommand } = await import("@aws-sdk/client-iam");
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await client.send(
+        new GetInstanceProfileCommand({ InstanceProfileName: name }),
+      );
+    } catch (err) {
+      if (!isNoSuchEntityError(err) || attempt === attempts - 1) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+
+  throw new Error(`Unable to resolve instance profile ${name}`);
+}
+
+async function addRoleToInstanceProfileWithRetry(
+  client: InstanceType<(typeof import("@aws-sdk/client-iam"))["IAMClient"]>,
+  profileName: string,
+  roleName: string,
+  attempts = 10,
+): Promise<void> {
+  const { AddRoleToInstanceProfileCommand } = await import("@aws-sdk/client-iam");
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await client.send(
+        new AddRoleToInstanceProfileCommand({
+          InstanceProfileName: profileName,
+          RoleName: roleName,
+        }),
+      );
+      return;
+    } catch (err) {
+      if (!isNoSuchEntityError(err) || attempt === attempts - 1) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 export const IamInstanceProfile = Resource(
   "stackpanel::IamInstanceProfile",
   async function (
@@ -57,13 +112,28 @@ export const IamInstanceProfile = Resource(
           new DeleteInstanceProfileCommand({ InstanceProfileName: props.name }),
         );
       } catch (err: any) {
-        if (err.name !== "NoSuchEntity") throw err;
+        if (!isNoSuchEntityError(err)) throw err;
       }
       return this.destroy();
     }
 
     let adopted = this.output?.adopted ?? false;
     let profile = this.output;
+
+    if (profile) {
+      try {
+        const existing = await getInstanceProfileWithRetry(client, props.name, 1);
+        profile = {
+          name: props.name,
+          arn: existing.InstanceProfile?.Arn ?? profile.arn,
+          roleName: props.roleName,
+        };
+      } catch (err) {
+        if (!isNoSuchEntityError(err)) throw err;
+        profile = undefined;
+        adopted = false;
+      }
+    }
 
     if (!profile) {
       try {
@@ -79,7 +149,7 @@ export const IamInstanceProfile = Resource(
           };
         }
       } catch (err: any) {
-        if (err.name !== "NoSuchEntity") throw err;
+        if (!isNoSuchEntityError(err)) throw err;
       }
     }
 
@@ -111,19 +181,12 @@ export const IamInstanceProfile = Resource(
       );
     }
 
-    const current = await client.send(
-      new GetInstanceProfileCommand({ InstanceProfileName: props.name }),
-    );
+    const current = await getInstanceProfileWithRetry(client, props.name);
     const existingRoles = new Set(
       (current.InstanceProfile?.Roles ?? []).map((role) => role.RoleName),
     );
     if (!existingRoles.has(props.roleName)) {
-      await client.send(
-        new AddRoleToInstanceProfileCommand({
-          InstanceProfileName: props.name,
-          RoleName: props.roleName,
-        }),
-      );
+      await addRoleToInstanceProfileWithRetry(client, props.name, props.roleName);
     }
 
     return {

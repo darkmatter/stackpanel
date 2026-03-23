@@ -14,10 +14,12 @@ when added to your stackpanel configuration, will generate an identical file.
 Supported types:
   line-set   Treats each non-empty line as an entry in a deduplicated, sorted
              set (ideal for .gitignore, .dockerignore, etc.)
+  json-ops   Emits path-based JSON mutations (ideal for package.json)
 
 Examples:
   stackpanel nixify .gitignore                       # auto-detects line-set
   stackpanel nixify .gitignore --type line-set       # explicit type
+  stackpanel nixify apps/web/package.json            # emits json-ops
   stackpanel nixify path/to/.dockerignore            # works for any path
 
 ## Usage
@@ -31,7 +33,29 @@ stackpanel nixify <path>
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--type, -t` | `string` | _none_ | Content type (line-set). Auto-detected when omitted. |
+| `--type, -t` | `string` | _none_ | Content type (`line-set`, `json-ops`). Auto-detected when omitted. |
+## Backup-on-Adopt
+
+When Stackpanel first starts managing a tracked file through preflight-era
+mutations, it can back up the existing file to `<path>.backup` before applying
+its managed changes.
+
+This is especially useful for `package.json`, where Stackpanel now prefers
+path-based JSON mutations over replacing the entire file.
+
+Typical flow:
+
+```bash
+# generate a Nix snippet for the existing file
+stackpanel nixify apps/web/package.json
+
+# add the emitted stackpanel.files.entries snippet to your Nix config
+# then re-enter the shell or run:
+stackpanel preflight run
+```
+
+If Stackpanel adopts the file, it will preserve the original as
+`apps/web/package.json.backup`.
 
 
 ## Global Flags

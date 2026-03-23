@@ -478,6 +478,19 @@ let
     scripts = defaultPackageScripts // cfg.package.scripts;
     dependencies = defaultPackageDeps // cfg.package.dependencies;
   };
+
+  flattenJsonSetOps =
+    prefix: value:
+    if builtins.isAttrs value then
+      lib.flatten (lib.mapAttrsToList (key: nested: flattenJsonSetOps (prefix ++ [ key ]) nested) value)
+    else
+      [
+        {
+          op = "set";
+          path = prefix;
+          inherit value;
+        }
+      ];
 in
 {
   options.stackpanel.sst = {
@@ -751,8 +764,9 @@ in
       }
       // lib.optionalAttrs cfg.package.enable {
         "${packageDir}/package.json" = {
-          type = "json";
-          jsonValue = packageJsonValue;
+          type = "json-ops";
+          adopt = "backup";
+          ops = flattenJsonSetOps [ ] packageJsonValue;
           mode = "0644";
           source = lib.mkDefault "sst";
           description = lib.mkDefault "SST infrastructure package";
