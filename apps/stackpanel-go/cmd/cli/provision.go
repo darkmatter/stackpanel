@@ -161,6 +161,15 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 		return provisionErr
 	}
 
+	// Update known_hosts with the new host key so subsequent deploys can SSH in
+	// without a "host key has changed" error. The machine is rebooting at this
+	// point so we retry until it comes back up (up to 3 minutes).
+	output.Info("Waiting for machine to come back up and updating known_hosts...")
+	if err := updateKnownHosts(target, dryRun); err != nil {
+		output.Warning(fmt.Sprintf("Could not update known_hosts: %v", err))
+		output.Dimmed("  Run manually: ssh-keygen -R " + target + " && ssh-keyscan " + target + " >> ~/.ssh/known_hosts")
+	}
+
 	rec := MachineRecord{
 		ProvisionedAt:           time.Now().UTC().Format(time.RFC3339),
 		InstallTarget:           target,
@@ -517,6 +526,56 @@ func (info *hardwareInfo) mountScript() string {
 // ===========================================================================
 // SSH helpers
 // ===========================================================================
+
+// updateKnownHosts removes any stale known_hosts entry for host and waits for
+// the machine to come back up (it reboots at the end of provisioning), then
+// scans the new host key and appends it. This prevents "host key has changed"
+// errors on the first colmena deploy after provisioning.
+func updateKnownHosts(host string, dryRun bool) error {
+	// Strip user@ prefix — known_hosts uses bare host/IP.
+	target := host
+	if idx := strings.LastIndex(host, "@"); idx >= 0 {
+		target = host[idx+1:]
+	}
+
+	if dryRun {
+		output.Dimmed("dry-run: would run ssh-keygen -R " + target + " && ssh-keyscan -H " + target)
+		return nil
+	}
+
+	// Remove old entry (ignore errors — entry may not exist).
+	exec.Command("ssh-keygen", "-R", target).Run()
+
+	knownHostsPath := filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts")
+
+	// Retry until the machine comes back up (max 3 minutes).
+	deadline := time.Now().Add(3 * time.Minute)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		out, err := exec.CommandContext(ctx, "ssh-keyscan", "-T", "8", "-H", target).Output()
+		cancel()
+		if err == nil && len(strings.TrimSpace(string(out))) > 0 {
+			if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0o700); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+			if err != nil {
+				return err
+			}
+			_, writeErr := f.WriteString(string(out))
+			f.Close()
+			if writeErr != nil {
+				return writeErr
+			}
+			output.Success("known_hosts updated for " + target)
+			return nil
+		}
+		lastErr = err
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("timed out waiting for SSH on %s: %w", target, lastErr)
+}
 
 // runSSHCapture runs a command on a remote host via SSH and returns stdout.
 // Uses accept-new host key policy — suitable for newly installed systems.
