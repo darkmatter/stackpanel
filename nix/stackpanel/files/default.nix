@@ -15,6 +15,11 @@
 # For type="json" files, provide a Nix attrset via jsonValue. Multiple
 # modules can contribute to the same file and values are deep-merged.
 #
+# For type="json-ops" files, provide path-based JSON mutations via ops. These
+# are evaluated in Nix but applied later by `stackpanel preflight run` so that
+# existing tracked files can be patched safely without invalidating pure-eval
+# caches.
+#
 # Usage (inline text):
 #   stackpanel.files.entries.".github/workflows/ci.yml" = {
 #     type = "text";
@@ -42,6 +47,16 @@
 #       name = "my-app";
 #       scripts.dev = "bun dev";
 #     };
+#   };
+#
+# Usage (JSON path ops - applied by preflight):
+#   stackpanel.files.entries."apps/web/package.json" = {
+#     type = "json-ops";
+#     adopt = "backup";
+#     ops = [
+#       { op = "set"; path = [ "scripts" "dev" ]; value = "bun run dev"; }
+#       { op = "appendUnique"; path = [ "keywords" ]; value = "stackpanel"; }
+#     ];
 #   };
 #
 # Usage (block-managed - preserves user content):
@@ -83,10 +98,22 @@ let
   # Filter to only enabled files
   enabledFiles = cfg.entries;
 
+  isSourceAwareFile =
+    _path: fileConfig:
+    let
+      fileType = fileConfig.type or "text";
+      managed = fileConfig.managed or "full";
+      adopt = fileConfig.adopt or "none";
+    in
+    fileType == "json-ops" || managed == "block" || adopt != "none";
+
+  pureFiles = lib.filterAttrs (path: fileConfig: !(isSourceAwareFile path fileConfig)) enabledFiles;
+  sourceAwareFiles = lib.filterAttrs isSourceAwareFile enabledFiles;
+
   # Check if there are any files to write (and global enable is true)
   hasFiles = builtins.length (builtins.attrNames enabledFiles) > 0;
 
-  fileCount = builtins.length (builtins.attrNames enabledFiles);
+  fileCount = builtins.length (builtins.attrNames pureFiles);
 
   # ── Resolve content ──────────────────────────────────────────────────────
   # Resolve text content from either text, path, or jsonValue
@@ -140,6 +167,8 @@ let
       pkgs.runCommand baseName { nativeBuildInputs = [ pkgs.jq ]; } ''
         ${pkgs.jq}/bin/jq '.' ${rawJson} > $out
       ''
+    else if fileType == "json-ops" then
+      null
     else if fileType == "derivation" then
       fileConfig.drv
     else
@@ -191,12 +220,53 @@ let
       contentSource = contentSource;
       storePath = if storePath != null then builtins.toString storePath else null;
     }
-  ) enabledFiles;
+  ) pureFiles;
 
   manifestJson = builtins.toJSON {
     version = 2;
     files = manifestEntries;
   };
+
+  preflightManifestEntries = lib.mapAttrsToList (
+    path: fileConfig:
+    let
+      fileType = fileConfig.type or "text";
+      managed = fileConfig.managed or "full";
+      storePath = storePathsByFile.${path};
+    in
+    if fileType == "json-ops" then
+      {
+        inherit path;
+        type = "json-ops";
+        adopt = fileConfig.adopt or "none";
+        mode = fileConfig.mode or null;
+        ops = fileConfig.ops or [ ];
+      }
+    else if managed == "block" then
+      {
+        inherit path;
+        type = "block";
+        mode = fileConfig.mode or null;
+        blockLabel = fileConfig.blockLabel or "stackpanel";
+        commentPrefix = fileConfig.commentPrefix or "#";
+        storePath = if storePath != null then builtins.toString storePath else null;
+      }
+    else
+      {
+        inherit path;
+        type = "full-copy";
+        adopt = fileConfig.adopt or "none";
+        mode = fileConfig.mode or null;
+        storePath = if storePath != null then builtins.toString storePath else null;
+      }
+  ) sourceAwareFiles;
+
+  preflightManifestJson = builtins.toJSON {
+    version = 1;
+    files = preflightManifestEntries;
+  };
+
+  preflightManifestDrv = pkgs.writeText "stackpanel-files-preflight.json" preflightManifestJson;
 
   # ── Manifest hash (fast path) ───────────────────────────────────────────
   # Compute a single hash from all (path, storePath) pairs. When this hash
@@ -338,7 +408,7 @@ let
       if [[ ! -e ${q path} ]]; then
         MISSING_CURRENT_FILES=1
       fi
-    '') enabledFiles
+    '') pureFiles
   );
 
   # ── Writer script ────────────────────────────────────────────────────────
@@ -459,7 +529,7 @@ let
       WRITTEN_COUNT=0
       UNCHANGED_COUNT=0
 
-      ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet enabledFiles)}
+      ${lib.concatLines (lib.mapAttrsToList mkWriteSnippet pureFiles)}
 
       # ── Write manifest ──────────────────────────────────────────────────
       mkdir -p "$STATE_DIR"
@@ -496,11 +566,12 @@ let
   driftCheckScript =
     let
       # Only check files that have a store path (skip symlinks)
-      checkableFiles = lib.filterAttrs (_: v: v != null) storePathsByFile;
+      pureStorePathsByFile = lib.filterAttrs (path: _: builtins.hasAttr path pureFiles) storePathsByFile;
+      checkableFiles = lib.filterAttrs (_: v: v != null) pureStorePathsByFile;
 
       # Full-managed files: compare entire file hash
       fullManagedFiles = lib.filterAttrs (
-        path: _: (enabledFiles.${path}.managed or "full") == "full"
+        path: _: (pureFiles.${path}.managed or "full") == "full"
       ) checkableFiles;
       fullCheckSnippets = lib.mapAttrsToList (path: storePath: ''
         _dst="$ROOT/${path}"
@@ -517,45 +588,8 @@ let
         fi
       '') fullManagedFiles;
 
-      # Block-managed files: extract the block and compare against expected content
-      blockManagedFiles = lib.filterAttrs (
-        path: _: (enabledFiles.${path}.managed or "full") == "block"
-      ) checkableFiles;
-      blockCheckSnippets = lib.mapAttrsToList (
-        path: storePath:
-        let
-          fc = enabledFiles.${path};
-          beginMarker = "${fc.commentPrefix} ── BEGIN ${fc.blockLabel} ──";
-          endMarker = "${fc.commentPrefix} ── END ${fc.blockLabel} ──";
-          noEditNotice = "${fc.commentPrefix} DO NOT EDIT between these markers — managed by stackpanel";
-        in
-        ''
-          _dst="$ROOT/${path}"
-          if [[ ! -f "$_dst" ]]; then
-            echo "DRIFT: ${path} is missing (expected block-managed file)"
-            DRIFT=1
-          elif ! grep -qF ${q beginMarker} "$_dst"; then
-            echo "DRIFT: ${path} is missing managed block (expected ${q beginMarker})"
-            DRIFT=1
-          else
-            # Extract the content between markers (excluding markers and notice line)
-            _block_content=$(${pkgs.gawk}/bin/awk -v begin=${q beginMarker} -v end=${q endMarker} -v notice=${q noEditNotice} '
-              $0 == begin { found=1; next }
-              found && $0 == notice { next }
-              found && $0 == end { found=0; next }
-              found { print }
-            ' "$_dst")
-            _expected=$(cat ${storePath})
-            if [[ "$_block_content" != "$_expected" ]]; then
-              echo "DRIFT: ${path} managed block does not match expected content"
-              DRIFT=1
-            fi
-          fi
-        ''
-      ) blockManagedFiles;
-
       # Also check symlinks
-      symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") enabledFiles;
+      symlinkFiles = lib.filterAttrs (_: fc: (fc.type or "text") == "symlink") pureFiles;
       symlinkSnippets = lib.mapAttrsToList (path: fileConfig: ''
         _dst="$ROOT/${path}"
         if [[ ! -L "$_dst" ]]; then
@@ -587,7 +621,6 @@ let
         DRIFT=0
 
         ${lib.concatLines fullCheckSnippets}
-        ${lib.concatLines blockCheckSnippets}
         ${lib.concatLines symlinkSnippets}
 
         if [[ "$DRIFT" == "1" ]]; then
@@ -634,6 +667,7 @@ in
                   "derivation"
                   "symlink"
                   "json"
+                "json-ops"
                   "line-set"
                   "line-map"
                 ];
@@ -644,6 +678,7 @@ in
                   - 'derivation': copy from a derivation
                   - 'symlink': create a symbolic link
                   - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
+                  - 'json-ops': path-based JSON mutations applied by `stackpanel preflight run`
                   - 'line-set': list of strings joined by newlines (with optional dedupe/sort)
                   - 'line-map': attrset where each key with a truthy value becomes a line (allows override/disable across modules)
                 '';
@@ -662,6 +697,43 @@ in
                 type = lib.types.attrsOf lib.types.anything;
                 default = { };
                 description = "Nix attrset to serialize as formatted JSON (when type = 'json'). Deep-merged across modules.";
+              };
+
+              ops = lib.mkOption {
+                type = lib.types.listOf (
+                  lib.types.submodule {
+                    options = {
+                      op = lib.mkOption {
+                        type = lib.types.enum [
+                          "set"
+                          "merge"
+                          "remove"
+                          "append"
+                          "appendUnique"
+                        ];
+                        description = "JSON mutation operation to apply at the given path.";
+                      };
+
+                      path = lib.mkOption {
+                        type = lib.types.listOf lib.types.str;
+                        default = [ ];
+                        description = "JSON path segments to mutate. Use segment lists instead of dotted strings.";
+                      };
+
+                      value = lib.mkOption {
+                        type = lib.types.anything;
+                        default = null;
+                        description = "Value used by set/merge/append/appendUnique operations.";
+                      };
+                    };
+                  }
+                );
+                default = [ ];
+                description = ''
+                  JSON path operations applied by `stackpanel preflight run` when type = "json-ops".
+                  Use this for structured tracked files like package.json where stackpanel should
+                  patch specific keys without replacing unrelated content.
+                '';
               };
 
               lines = lib.mkOption {
@@ -720,6 +792,20 @@ in
                     Content outside the block is preserved. On uninstall, only the block
                     is removed (the file itself is kept unless empty). This is useful for
                     files like .gitignore where user content must coexist with managed content.
+                '';
+              };
+
+              adopt = lib.mkOption {
+                type = lib.types.enum [
+                  "none"
+                  "backup"
+                ];
+                default = "none";
+                description = ''
+                  How stackpanel should adopt an existing unmanaged file when this entry first starts
+                  managing it. "backup" moves the existing file to `<path>.backup` before writing or
+                  mutating the managed version. Adopted files are handled during preflight, not by the
+                  pure write-files fast path.
                 '';
               };
 
@@ -783,6 +869,10 @@ in
       writerDrv
       driftCheckScript
     ];
+
+    stackpanel.devshell.env = lib.optionalAttrs (builtins.length preflightManifestEntries > 0) {
+      STACKPANEL_FILES_PREFLIGHT_MANIFEST = "${preflightManifestDrv}";
+    };
 
     # Run write-files on shell entry (after core setup which sets STACKPANEL_ROOT)
     stackpanel.devshell.hooks.main = [

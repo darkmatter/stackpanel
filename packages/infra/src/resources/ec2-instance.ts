@@ -18,6 +18,19 @@ export interface Ec2InstanceProps {
   destroyOnDelete?: boolean;
 }
 
+export interface NormalizedEc2InstanceProps {
+  ami: string;
+  instanceType: string;
+  subnetId: string;
+  securityGroupIds: string[];
+  keyName: string | null;
+  iamInstanceProfile: string | null;
+  userData: string | null;
+  rootVolumeSize: number | null;
+  associatePublicIp: boolean;
+  tags: Record<string, string>;
+}
+
 export interface Ec2Instance {
   instanceId: string;
   publicIp?: string | null;
@@ -25,6 +38,295 @@ export interface Ec2Instance {
   publicDns?: string | null;
   state?: string | null;
   name: string;
+  propsSnapshot: NormalizedEc2InstanceProps;
+}
+
+function formatIamInstanceProfile(
+  iamInstanceProfile: string | null | undefined,
+): { Arn: string } | { Name: string } | undefined {
+  if (!iamInstanceProfile) {
+    return undefined;
+  }
+
+  return iamInstanceProfile.startsWith("arn:")
+    ? { Arn: iamInstanceProfile }
+    : { Name: iamInstanceProfile };
+}
+
+function isRetryableIamInstanceProfileError(err: unknown): boolean {
+  if (!err || typeof err !== "object") {
+    return false;
+  }
+
+  const name = "name" in err ? String((err as { name?: unknown }).name) : "";
+  const message =
+    "message" in err ? String((err as { message?: unknown }).message) : "";
+
+  return (
+    name === "InvalidParameterValue" &&
+    /iamInstanceProfile\.(arn|name)/i.test(message) &&
+    /Invalid IAM Instance Profile/i.test(message)
+  );
+}
+
+async function runInstancesWithRetry(
+  client: InstanceType<(typeof import("@aws-sdk/client-ec2"))["EC2Client"]>,
+  command: import("@aws-sdk/client-ec2").RunInstancesCommand,
+  attempts = 10,
+): Promise<import("@aws-sdk/client-ec2").RunInstancesCommandOutput> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await client.send(command);
+    } catch (err) {
+      if (!isRetryableIamInstanceProfileError(err) || attempt === attempts - 1) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
+
+  throw new Error("Unable to create EC2 instance");
+}
+
+export function isEc2InstanceReady(
+  instance: {
+    State?: { Name?: string | null } | null;
+    PublicIpAddress?: string | null;
+    PublicDnsName?: string | null;
+  } | null | undefined,
+  requirePublicEndpoint: boolean,
+): boolean {
+  if (instance?.State?.Name !== "running") {
+    return false;
+  }
+
+  if (!requirePublicEndpoint) {
+    return true;
+  }
+
+  return Boolean(instance.PublicIpAddress || instance.PublicDnsName);
+}
+
+function sortRecord(value: Record<string, string> | undefined): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(value ?? {}).sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+export function normalizeEc2InstanceProps(
+  props: Ec2InstanceProps,
+): NormalizedEc2InstanceProps {
+  return {
+    ami: props.ami,
+    instanceType: props.instanceType,
+    subnetId: props.subnetId,
+    securityGroupIds: [...props.securityGroupIds].sort(),
+    keyName: props.keyName ?? null,
+    iamInstanceProfile: props.iamInstanceProfile ?? null,
+    userData: props.userData ?? null,
+    rootVolumeSize: props.rootVolumeSize ?? null,
+    associatePublicIp: props.associatePublicIp ?? true,
+    tags: sortRecord(props.tags),
+  };
+}
+
+export function requiresEc2InstanceReplacement(
+  previous: NormalizedEc2InstanceProps,
+  next: NormalizedEc2InstanceProps,
+): boolean {
+  return (
+    previous.ami !== next.ami ||
+    previous.instanceType !== next.instanceType ||
+    previous.subnetId !== next.subnetId ||
+    JSON.stringify(previous.securityGroupIds) !== JSON.stringify(next.securityGroupIds) ||
+    previous.keyName !== next.keyName ||
+    previous.iamInstanceProfile !== next.iamInstanceProfile ||
+    previous.userData !== next.userData ||
+    previous.rootVolumeSize !== next.rootVolumeSize ||
+    previous.associatePublicIp !== next.associatePublicIp
+  );
+}
+
+function tagsToRecord(
+  value: unknown,
+): Record<string, string> {
+  if (!Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    value
+      .flatMap((tag) => {
+        if (!tag || typeof tag !== "object") {
+          return [];
+        }
+
+        const record = tag as { Key?: unknown; Value?: unknown };
+        if (typeof record.Key !== "string" || typeof record.Value !== "string") {
+          return [];
+        }
+
+        return [[record.Key, record.Value] as const];
+      })
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+export function coerceEc2InstanceState(output: unknown): Partial<Ec2Instance> {
+  if (!output || typeof output !== "object") {
+    return {};
+  }
+
+  const record = output as Record<string, any>;
+  const desiredState =
+    record.desiredState && typeof record.desiredState === "object"
+      ? (record.desiredState as Record<string, any>)
+      : {};
+  const networkInterface =
+    desiredState.NetworkInterfaces?.[0] ??
+    record.NetworkInterfaces?.[0] ??
+    {};
+  const securityGroupIds =
+    desiredState.SecurityGroupIds ??
+    networkInterface.GroupSet ??
+    record.SecurityGroupIds ??
+    [];
+  const subnetId =
+    desiredState.SubnetId ??
+    networkInterface.SubnetId ??
+    record.SubnetId;
+  const ami = desiredState.ImageId ?? record.ImageId;
+  const instanceType = desiredState.InstanceType ?? record.InstanceType;
+
+  let propsSnapshot: NormalizedEc2InstanceProps | undefined;
+  if (
+    typeof ami === "string" &&
+    typeof instanceType === "string" &&
+    typeof subnetId === "string" &&
+    Array.isArray(securityGroupIds)
+  ) {
+    const desiredMappings =
+      desiredState.BlockDeviceMappings ??
+      record.BlockDeviceMappings ??
+      [];
+    const rootVolumeSize =
+      desiredMappings?.[0]?.Ebs?.VolumeSize;
+
+    propsSnapshot = normalizeEc2InstanceProps({
+      name: String(record.name ?? "legacy"),
+      ami,
+      instanceType,
+      subnetId,
+      securityGroupIds: securityGroupIds.filter(
+        (value: unknown): value is string => typeof value === "string",
+      ),
+      keyName:
+        typeof (desiredState.KeyName ?? record.KeyName) === "string"
+          ? (desiredState.KeyName ?? record.KeyName)
+          : null,
+      iamInstanceProfile:
+        typeof (desiredState.IamInstanceProfile ?? record.IamInstanceProfile) ===
+        "string"
+          ? (desiredState.IamInstanceProfile ?? record.IamInstanceProfile)
+          : null,
+      userData:
+        typeof (desiredState.UserData ?? record.UserData) === "string"
+          ? (desiredState.UserData ?? record.UserData)
+          : null,
+      rootVolumeSize: typeof rootVolumeSize === "number" ? rootVolumeSize : null,
+      associatePublicIp:
+        typeof networkInterface.AssociatePublicIpAddress === "boolean"
+          ? networkInterface.AssociatePublicIpAddress
+          : true,
+      tags: tagsToRecord(desiredState.Tags ?? record.Tags),
+    });
+  }
+
+  return {
+    instanceId:
+      (typeof record.instanceId === "string" ? record.instanceId : null) ??
+      (typeof record.InstanceId === "string" ? record.InstanceId : null) ??
+      (typeof record.id === "string" ? record.id : null) ??
+      undefined,
+    publicIp:
+      (typeof record.publicIp === "string" ? record.publicIp : null) ??
+      (typeof record.PublicIp === "string" ? record.PublicIp : null) ??
+      null,
+    privateIp:
+      (typeof record.privateIp === "string" ? record.privateIp : null) ??
+      (typeof record.PrivateIp === "string" ? record.PrivateIp : null) ??
+      (typeof record.PrivateIpAddress === "string" ? record.PrivateIpAddress : null) ??
+      null,
+    publicDns:
+      (typeof record.publicDns === "string" ? record.publicDns : null) ??
+      (typeof record.PublicDnsName === "string" ? record.PublicDnsName : null) ??
+      null,
+    state:
+      (typeof record.state === "string" ? record.state : null) ??
+      (typeof record.State?.Name === "string" ? record.State.Name : null) ??
+      null,
+    name: typeof record.name === "string" ? record.name : "legacy",
+    propsSnapshot,
+  };
+}
+
+export function shouldReuseEc2InstanceState(
+  phase: string,
+  output: Partial<Ec2Instance> | null | undefined,
+): boolean {
+  return phase === "update" && Boolean(output?.instanceId);
+}
+
+async function waitForEc2InstanceDetails(
+  client: InstanceType<(typeof import("@aws-sdk/client-ec2"))["EC2Client"]>,
+  instanceId: string,
+  requirePublicEndpoint: boolean,
+  attempts = 40,
+) {
+  const { DescribeInstancesCommand } = await import("@aws-sdk/client-ec2");
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const described = await client.send(
+      new DescribeInstancesCommand({ InstanceIds: [instanceId] }),
+    );
+    const instance = described.Reservations?.[0]?.Instances?.[0];
+
+    if (isEc2InstanceReady(instance, requirePublicEndpoint)) {
+      return instance;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+
+  throw new Error(`Timed out waiting for EC2 instance ${instanceId} to become ready`);
+}
+
+async function syncInstanceTags(
+  client: InstanceType<(typeof import("@aws-sdk/client-ec2"))["EC2Client"]>,
+  instanceId: string,
+  previous: Record<string, string>,
+  next: Record<string, string>,
+) {
+  const { CreateTagsCommand, DeleteTagsCommand } = await import("@aws-sdk/client-ec2");
+
+  const removedKeys = Object.keys(previous).filter((key) => !(key in next));
+  if (removedKeys.length > 0) {
+    await client.send(
+      new DeleteTagsCommand({
+        Resources: [instanceId],
+        Tags: removedKeys.map((Key) => ({ Key })),
+      }),
+    );
+  }
+
+  if (Object.keys(next).length > 0) {
+    await client.send(
+      new CreateTagsCommand({
+        Resources: [instanceId],
+        Tags: Object.entries(next).map(([Key, Value]) => ({ Key, Value })),
+      }),
+    );
+  }
 }
 
 export const Ec2Instance = Resource(
@@ -37,12 +339,15 @@ export const Ec2Instance = Resource(
     const {
       EC2Client,
       RunInstancesCommand,
-      DescribeInstancesCommand,
       TerminateInstancesCommand,
-      CreateTagsCommand,
     } = await import("@aws-sdk/client-ec2");
 
     const client = new EC2Client({});
+    const propsSnapshot = normalizeEc2InstanceProps(props);
+    const migratedState = coerceEc2InstanceState(this.output);
+    const reusableState = shouldReuseEc2InstanceState(this.phase, migratedState)
+      ? migratedState
+      : {};
 
     if (this.phase === "delete") {
       if (props.destroyOnDelete === false) {
@@ -58,19 +363,29 @@ export const Ec2Instance = Resource(
       return this.destroy();
     }
 
-    let instanceId = this.output?.instanceId;
+    const previousSnapshot = this.output?.propsSnapshot ?? reusableState.propsSnapshot;
+    if (
+      this.phase === "update" &&
+      previousSnapshot &&
+      requiresEc2InstanceReplacement(previousSnapshot, propsSnapshot)
+    ) {
+      return this.replace();
+    }
+
+    let instanceId = shouldReuseEc2InstanceState(this.phase, this.output)
+      ? this.output?.instanceId
+      : reusableState.instanceId;
 
     if (!instanceId) {
-      const run = await client.send(
+      const run = await runInstancesWithRetry(
+        client,
         new RunInstancesCommand({
           ImageId: props.ami,
           InstanceType: props.instanceType,
           SubnetId: props.subnetId,
           SecurityGroupIds: props.securityGroupIds,
           KeyName: props.keyName ?? undefined,
-          IamInstanceProfile: props.iamInstanceProfile
-            ? { Name: props.iamInstanceProfile }
-            : undefined,
+          IamInstanceProfile: formatIamInstanceProfile(props.iamInstanceProfile),
           UserData: props.userData
             ? Buffer.from(props.userData).toString("base64")
             : undefined,
@@ -118,19 +433,22 @@ export const Ec2Instance = Resource(
       throw new Error(`Unable to create EC2 instance ${props.name}`);
     }
 
-    if (props.tags && Object.keys(props.tags).length > 0) {
-      await client.send(
-        new CreateTagsCommand({
-          Resources: [instanceId],
-          Tags: Object.entries(props.tags).map(([Key, Value]) => ({ Key, Value })),
-        }),
+    if (this.phase === "update") {
+      await syncInstanceTags(
+        client,
+        instanceId,
+        previousSnapshot?.tags ?? {},
+        propsSnapshot.tags,
       );
+    } else if (Object.keys(propsSnapshot.tags).length > 0) {
+      await syncInstanceTags(client, instanceId, {}, propsSnapshot.tags);
     }
 
-    const described = await client.send(
-      new DescribeInstancesCommand({ InstanceIds: [instanceId] }),
+    const instance = await waitForEc2InstanceDetails(
+      client,
+      instanceId,
+      propsSnapshot.associatePublicIp,
     );
-    const instance = described.Reservations?.[0]?.Instances?.[0];
 
     return {
       instanceId,
@@ -139,6 +457,7 @@ export const Ec2Instance = Resource(
       publicDns: instance?.PublicDnsName ?? null,
       state: instance?.State?.Name ?? null,
       name: props.name,
+      propsSnapshot,
     };
   },
 );
