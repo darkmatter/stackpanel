@@ -88,7 +88,13 @@ let
       };
 
       # Always-present defaults (lowest priority, overridden by any real config).
-      alwaysMods = [ { system.stateVersion = lib.mkDefault "24.11"; } ];
+      alwaysMods = [
+        {
+          system.stateVersion = lib.mkDefault "24.11";
+          # SSH must always be enabled so colmena can reach the machine.
+          services.openssh.enable = lib.mkDefault true;
+        }
+      ];
 
       # Pre-provisioning stub: injected only when neither a diskLayout nor a
       # hardwareConfig has been provided.  Satisfies NixOS assertions so
