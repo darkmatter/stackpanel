@@ -57,11 +57,11 @@ let
         lib.filterAttrs (appName: _: inputs.self.nixosModules ? ${appName}) apps
       );
 
-      # Auto-discovered hardware config: written by `stackpanel provision` (nixos-infect
-      # method) and git-staged so Nix includes it in the flake's store copy even before
-      # committing.  Eliminates the need to set hardwareConfig = ...; manually.
+      # Auto-discovered hardware config: written by `stackpanel provision` and
+      # git-staged so Nix includes it in the flake's store copy before committing.
+      # Eliminates the need to set hardwareConfig = ...; manually.
       autoHardwareMod =
-        let path = inputs.self.outPath + "/.stackpanel/hardware/${machineName}";
+        let path = inputs.self.outPath + "/.stackpanel/machines/${machineName}/hardware-configuration.nix";
         in lib.optional (builtins.pathExists path) path;
 
       # Hardware configuration: explicit option takes precedence; auto-discovered
@@ -70,14 +70,24 @@ let
         lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig
         ++ autoHardwareMod;
 
-      # Disk layout: when diskLayout is set, auto-include the disko NixOS module
-      # so the user doesn't have to wire it in manually via `modules`.
+      # Auto-discovered disk layout: if .stackpanel/machines/<name>/disks.nix exists,
+      # auto-include it alongside the disko NixOS module.  Only used when no explicit
+      # diskLayout option is set (explicit takes precedence).
+      autoDiskMod =
+        let path = inputs.self.outPath + "/.stackpanel/machines/${machineName}/disks.nix";
+        in lib.optionals (machineCfg.diskLayout or null == null && builtins.pathExists path) [
+          inputs.disko.nixosModules.disko
+          path
+        ];
+
+      # Disk layout: explicit diskLayout option takes precedence over auto-discovery.
       # disko provides fileSystems declarations and (for EF02/BIOS partitions)
       # sets boot.loader.grub.devices automatically — no explicit grub.device needed.
-      diskMods = lib.optionals (machineCfg.diskLayout or null != null) [
-        inputs.disko.nixosModules.disko
-        machineCfg.diskLayout
-      ];
+      diskMods =
+        if machineCfg.diskLayout or null != null then [
+          inputs.disko.nixosModules.disko
+          machineCfg.diskLayout
+        ] else autoDiskMod;
 
       extraMods = machineCfg.modules or [ ];
 

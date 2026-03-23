@@ -189,7 +189,7 @@ in
                 partition layout, e.g. a cloud VPS rescue environment).
                 See: https://github.com/nix-community/disko
               '';
-              example = lib.literalExpression "./hardware/prod-server/disk-config.nix";
+              example = lib.literalExpression "./.stackpanel/machines/prod-server/disks.nix";
             };
 
             modules = lib.mkOption {
