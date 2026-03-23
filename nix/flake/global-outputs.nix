@@ -94,6 +94,12 @@ in
     if enabled && hasNixpkgs then deployLib.mkNixosConfigurations deployArgs else { };
 
   # Colmena hive for multi-machine deployment (colmena apply).
+  # Must be wrapped with colmena.lib.makeHive so colmena can process it directly.
   colmenaHive =
-    if enabled && hasNixpkgs then deployLib.mkHive deployArgs else { };
+    if enabled && hasNixpkgs && inputs ? colmena then
+      inputs.colmena.lib.makeHive (deployLib.mkHive deployArgs)
+    else if enabled && hasNixpkgs then
+      deployLib.mkHive deployArgs
+    else
+      { };
 }
