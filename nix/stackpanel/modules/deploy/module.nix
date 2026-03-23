@@ -116,6 +116,28 @@ in
               Go apps derive the command from their built package automatically.
             '';
           };
+
+          modules = lib.mkOption {
+            type = lib.types.listOf lib.types.deferredModule;
+            default = [ ];
+            description = ''
+              Additional NixOS modules included alongside this app's generated
+              service module on every target machine.
+
+              Use for app-specific NixOS config: firewall ports, nginx reverse
+              proxy, database permissions, etc.
+            '';
+            example = lib.literalExpression ''
+              [
+                {
+                  networking.firewall.allowedTCPPorts = [ 3000 ];
+                  services.nginx.virtualHosts."example.com" = {
+                    locations."/" = { proxyPass = "http://127.0.0.1:3000"; };
+                  };
+                }
+              ]
+            '';
+          };
         };
       }
     )
@@ -224,9 +246,14 @@ in
   # ===========================================================================
   config.stackpanel.nixosModules = lib.mapAttrs (
     name: app:
-    if app.deployment.nixosModule != null then
-      import app.deployment.nixosModule
-    else
-      import ./nixos-service.nix { inherit name app lib; }
+    let
+      serviceModule =
+        if app.deployment.nixosModule != null then
+          import app.deployment.nixosModule
+        else
+          import ./nixos-service.nix { inherit name app lib; };
+      extraModules = app.deployment.modules;
+    in
+    { imports = [ serviceModule ] ++ extraModules; }
   ) nixosApps;
 }
