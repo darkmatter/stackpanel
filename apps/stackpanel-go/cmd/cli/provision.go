@@ -141,15 +141,15 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 		}
 	}
 
-	hardwareDir := filepath.Join(".stackpanel", "hardware", machineName)
+	hwConfigPath := filepath.Join(".stackpanel", "machines", machineName, "hardware-configuration.nix")
 
 	var hwConfigGenerated bool
 	var provisionErr error
 
 	if format {
-		hwConfigGenerated, provisionErr = runDiskoInstall(machineName, target, hardwareDir, noHardwareConfig, dryRun)
+		hwConfigGenerated, provisionErr = runDiskoInstall(machineName, target, hwConfigPath, noHardwareConfig, dryRun)
 	} else {
-		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, hardwareDir, noHardwareConfig, dryRun)
+		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, hwConfigPath, noHardwareConfig, dryRun)
 	}
 
 	if provisionErr != nil {
@@ -172,7 +172,7 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 		NixRevision:             gitRevision(),
 	}
 	if hwConfigGenerated {
-		rec.HardwareConfigPath = hardwareDir
+		rec.HardwareConfigPath = hwConfigPath
 	}
 	if err := recordMachineProvision(machineName, rec); err != nil {
 		output.Warning(fmt.Sprintf("Failed to record provision state: %v", err))
@@ -181,7 +181,7 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 	output.Success(fmt.Sprintf("Provisioned %s", machineName))
 	fmt.Println()
 	if hwConfigGenerated {
-		fmt.Printf("Hardware config: %s\n", hardwareDir)
+		fmt.Printf("Hardware config: %s\n", hwConfigPath)
 		fmt.Println("Auto-included in future deploys. Commit to make it permanent:")
 		fmt.Printf("  git commit -m 'Add hardware config for %s'\n", machineName)
 	}
@@ -213,7 +213,7 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 // No disk partitioning or pre-existing disk config required.
 // ===========================================================================
 
-func runKexecInstall(machineName, target, hardwareDir string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
 	installHost := "root@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
@@ -232,17 +232,17 @@ func runKexecInstall(machineName, target, hardwareDir string, noHardwareConfig, 
 			}
 
 			nixConfig := hwInfo.toNixConfig()
-			if err := os.MkdirAll(filepath.Dir(hardwareDir), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(hwConfigPath), 0o755); err != nil {
 				return false, fmt.Errorf("creating hardware dir: %w", err)
 			}
-			if err := os.WriteFile(hardwareDir, []byte(nixConfig), 0o644); err != nil {
+			if err := os.WriteFile(hwConfigPath, []byte(nixConfig), 0o644); err != nil {
 				return false, fmt.Errorf("writing hardware config: %w", err)
 			}
-			output.Success(fmt.Sprintf("Hardware config written to %s", hardwareDir))
+			output.Success(fmt.Sprintf("Hardware config written to %s", hwConfigPath))
 			output.Dimmed(fmt.Sprintf("  Root: %s (%s), Disk: %s, UEFI: %v",
 				hwInfo.RootDevice, hwInfo.RootFSType, hwInfo.RootDisk, hwInfo.IsUEFI))
 
-			if err := exec.Command("git", "add", hardwareDir).Run(); err != nil {
+			if err := exec.Command("git", "add", hwConfigPath).Run(); err != nil {
 				output.Dimmed("Note: could not git-add hardware config")
 			} else {
 				output.Dimmed("Hardware config staged for flake inclusion")
@@ -301,7 +301,7 @@ func runKexecInstall(machineName, target, hardwareDir string, noHardwareConfig, 
 // Best for bare metal or when a custom partition layout is needed.
 // ===========================================================================
 
-func runDiskoInstall(machineName, target, hardwareDir string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+func runDiskoInstall(machineName, target, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
 	installHost := "root@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
@@ -310,19 +310,24 @@ func runDiskoInstall(machineName, target, hardwareDir string, noHardwareConfig, 
 	args = append(args, "--flake", ".#"+machineName)
 	// No --phases: run the full nixos-anywhere flow including disko.
 	if !noHardwareConfig {
-		args = append(args, "--generate-hardware-config", "nixos-generate-config", hardwareDir)
+		args = append(args, "--generate-hardware-config", "nixos-generate-config", hwConfigPath)
 	}
 	args = append(args, installHost)
 
+	if !noHardwareConfig && !dryRun {
+		if err := os.MkdirAll(filepath.Dir(hwConfigPath), 0o755); err != nil {
+			return false, fmt.Errorf("creating machine dir: %w", err)
+		}
+	}
 	output.Info(fmt.Sprintf("Provisioning %s via nixos-anywhere", machineName))
 	if err := runExternalCommand(ctx, "nixos-anywhere", args, dryRun); err != nil {
 		return false, fmt.Errorf("nixos-anywhere: %w", err)
 	}
 
 	if !noHardwareConfig && !dryRun {
-		if _, err := os.Stat(hardwareDir); err == nil {
+		if _, err := os.Stat(hwConfigPath); err == nil {
 			hwConfigGenerated = true
-			exec.Command("git", "add", hardwareDir).Run()
+			exec.Command("git", "add", hwConfigPath).Run()
 		}
 	}
 
