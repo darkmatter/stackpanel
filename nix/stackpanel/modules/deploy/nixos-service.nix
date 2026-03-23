@@ -21,9 +21,17 @@
 { name, app, lib }:
 let
   isGoApp = app.go.enable or false;
+  isBunApp = app.bun.enable or false;
   hasSecrets = (app.deployment.secrets or [ ]) != [ ];
   defaultEnv = app.deployment.defaultEnv or "prod";
-  binaryName = if isGoApp then app.go.binaryName or name else name;
+  # binaryName: optional fields in stackpanel schemas evaluate to null when
+  # unset (not missing), so `or name` won't help — check for null explicitly.
+  binaryName =
+    if isGoApp then
+      let bn = app.go.binaryName or null; in if bn != null then bn else name
+    else if isBunApp then
+      let bn = app.bun.binaryName or null; in if bn != null then bn else name
+    else name;
 in
 # Return a NixOS module function
 {
@@ -34,12 +42,15 @@ in
 }:
 let
   execStart =
-    if isGoApp then
+    if isGoApp || isBunApp then
+      # Both Go and Bun apps produce a wrapped executable in the Nix store.
+      # Go:  gomod2nix → $out/bin/<binaryName>
+      # Bun: writeBunApplication → $out/bin/<binaryName> (with bun + deps in PATH)
       "${inputs.self.packages.${pkgs.system}.${name}}/bin/${binaryName}"
     else if app.deployment.command or null != null then
       app.deployment.command
     else
-      throw "stackpanel: deployment.command must be set for non-Go app '${name}' (backend: ${app.deployment.backend or "colmena"})";
+      throw "stackpanel: deployment.command must be set for non-Go/non-Bun app '${name}' (backend: ${app.deployment.backend or "colmena"})";
 in
 {
   systemd.services.${name} = {
