@@ -12,13 +12,31 @@ STAGE="$(deploy_stage)"
 VERSION="$(artifact_version "$ROOTDIR")"
 BUCKET="$(artifact_bucket "$REGION")"
 KEY="$(artifact_key "$STAGE" "$VERSION")"
-SECRETS_FILE="${ROOTDIR}/.stack/secrets/vars/dev.sops.yaml"
-ALCHEMY_ENTRY="${ROOTDIR}/packages/infra/deploy-web.run.ts"
+DEFAULT_SECRETS_FILE="${ROOTDIR}/.stack/secrets/vars/dev.sops.yaml"
+STAGE_SECRETS_FILE="${ROOTDIR}/.stack/secrets/vars/${STAGE}.sops.yaml"
+SECRETS_FILE="${STACKPANEL_DEPLOY_SECRETS_FILE:-}"
+ALCHEMY_ENTRY="${ROOTDIR}/packages/infra/alchemy.run.ts"
+LOCAL_AGE_KEY_FILE="${ROOTDIR}/.stack/keys/local.txt"
+
+if [ -z "$SECRETS_FILE" ]; then
+  if [ -f "$STAGE_SECRETS_FILE" ]; then
+    SECRETS_FILE="$STAGE_SECRETS_FILE"
+  else
+    SECRETS_FILE="$DEFAULT_SECRETS_FILE"
+  fi
+fi
+
+if [ -z "${SOPS_AGE_KEY_FILE:-}" ] && [ -z "${SOPS_AGE_KEY:-}" ] && [ -z "${SOPS_AGE_KEY_CMD:-}" ] && [ -f "$LOCAL_AGE_KEY_FILE" ]; then
+  export SOPS_AGE_KEY_FILE="$LOCAL_AGE_KEY_FILE"
+fi
+
+SOPS_BIN="$(direnv exec "$ROOTDIR" bash -lc 'command -v sops')"
 
 echo "==> Deploying web"
 echo "    Region:  ${REGION}"
 echo "    Stage:   ${STAGE}"
 echo "    Version: ${VERSION}"
+echo "    Secrets: ${SECRETS_FILE}"
 
 EC2_ARTIFACT_VERSION="$VERSION" \
 EC2_ARTIFACT_BUCKET="$BUCKET" \
@@ -33,14 +51,16 @@ bash "${SCRIPT_DIR}/publish-artifact.sh" "$REGION"
 echo "==> Running alchemy deploy"
 
 if [ -z "${ALCHEMY_PASSWORD:-}" ]; then
-  ALCHEMY_PASSWORD="$(sops -d --extract '["alchemy-password"]' "$SECRETS_FILE" 2>/dev/null || echo "stackpanel-deploy-$(id -un)")"
+  ALCHEMY_PASSWORD="$("$SOPS_BIN" -d --extract '["alchemy-password"]' "$SECRETS_FILE" 2>/dev/null || echo "stackpanel-deploy-$(id -un)")"
 fi
 
-sops exec-env "$SECRETS_FILE" \
+"$SOPS_BIN" exec-env "$SECRETS_FILE" \
   "env \
     ALCHEMY_CI_STATE_STORE_CHECK=false \
     ALCHEMY_PASSWORD=$(printf '%q' "$ALCHEMY_PASSWORD") \
     AWS_REGION=$(printf '%q' "$REGION") \
+    STACKPANEL_INFRA_INPUTS=$(printf '%q' "$ROOTDIR/.stack/profile/infra-inputs.json") \
+    STACKPANEL_DEPLOYMENT_APP=web \
     STAGE=$(printf '%q' "$STAGE") \
     EC2_ARTIFACT_BUCKET=$(printf '%q' "$BUCKET") \
     EC2_ARTIFACT_KEY=$(printf '%q' "$KEY") \
