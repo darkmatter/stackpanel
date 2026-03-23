@@ -87,7 +87,7 @@ Examples:
   stackpanel deploy my-api              # Deploy my-api to all targets
   stackpanel deploy my-api --dry-run    # Print command without executing`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		cfg, err := loadDeployConfig(ctx)
