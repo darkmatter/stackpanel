@@ -174,23 +174,36 @@ let
   mkPackageJsonValue =
     _pkgId: pkg:
     {
-      name = lib.mkDefault pkg.name;
-      private = lib.mkDefault pkg.private;
-      type = lib.mkDefault pkg.type;
+      name = pkg.name;
+      private = pkg.private;
+      type = pkg.type;
     }
     // lib.optionalAttrs (pkg.scripts != { }) {
-      scripts = lib.mapAttrs (_: s: lib.mkDefault s.exec) pkg.scripts;
+      scripts = lib.mapAttrs (_: s: s.exec) pkg.scripts;
     }
     // lib.optionalAttrs (pkg.dependencies != { }) {
-      dependencies = lib.mapAttrs (_: lib.mkDefault) pkg.dependencies;
+      dependencies = pkg.dependencies;
     }
     // lib.optionalAttrs (pkg.devDependencies != { }) {
-      devDependencies = lib.mapAttrs (_: lib.mkDefault) pkg.devDependencies;
+      devDependencies = pkg.devDependencies;
     }
     // lib.optionalAttrs (pkg.exports != { }) {
-      exports = lib.mapAttrs (_: lib.mkDefault) pkg.exports;
+      exports = pkg.exports;
     }
     // pkg.extraFields;
+
+  flattenJsonSetOps =
+    prefix: value:
+    if builtins.isAttrs value then
+      lib.flatten (lib.mapAttrsToList (key: nested: flattenJsonSetOps (prefix ++ [ key ]) nested) value)
+    else
+      [
+        {
+          op = "set";
+          path = prefix;
+          inherit value;
+        }
+      ];
 
   # ============================================================================
   # Collect turbo-enabled scripts as stackpanel.tasks entries
@@ -275,8 +288,9 @@ in
     stackpanel.files.entries = lib.mapAttrs' (
       pkgId: pkg:
       lib.nameValuePair "${pkg.path}/package.json" {
-        type = "json";
-        jsonValue = mkPackageJsonValue pkgId pkg;
+        type = "json-ops";
+        adopt = "backup";
+        ops = flattenJsonSetOps [ ] (mkPackageJsonValue pkgId pkg);
         source = "turbo";
         description = "Package manifest for ${pkg.name}";
       }

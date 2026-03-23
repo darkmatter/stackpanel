@@ -2,6 +2,14 @@
 import alchemy from "alchemy";
 import { CloudflareStateStore } from "alchemy/state";
 import Infra from "./src/index.ts";
+// Register legacy custom-resource providers so pending deletions from
+// earlier generated stacks can still be finalized after migrations.
+import "./src/resources/ec2-instance.ts";
+import "./src/resources/iam-instance-profile.ts";
+import "./src/resources/iam-role.ts";
+import "./src/resources/key-pair.ts";
+import "./src/resources/security-group.ts";
+
 
 const app = await alchemy("stackpanel-infra", {
   stateStore: process.env.CLOUDFLARE_API_TOKEN
@@ -19,6 +27,8 @@ const aws_secretsOutputs = (await import("./modules/aws-secrets/index.ts")).defa
 
 const databaseOutputs = (await import("./modules/database.ts")).default;
 
+const deploymentOutputs = (await import("./modules/deployment/index.ts")).default;
+
 const machinesOutputs = (await import("./modules/machines.ts")).default;
 
 
@@ -35,6 +45,10 @@ await Infra.syncAll({
 "database": {
   outputs: databaseOutputs,
   syncKeys: ["databaseUrl","provider"],
+},
+"deployment": {
+  outputs: deploymentOutputs,
+  syncKeys: ["docsUrl","webUrl"],
 },
 "machines": {
   outputs: machinesOutputs,

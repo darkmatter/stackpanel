@@ -220,8 +220,22 @@ let
       cp -r ${generatedFiles}/${app.path}/* $out/${app.path}/
     '';
 
+  flattenJsonSetOps =
+    prefix: value:
+    if builtins.isAttrs value then
+      lib.flatten (lib.mapAttrsToList (key: nested: flattenJsonSetOps (prefix ++ [ key ]) nested) value)
+    else
+      [
+        {
+          op = "set";
+          path = prefix;
+          inherit value;
+        }
+      ];
+
   # Create file entries for materialization (uses stackpanel.files system)
-  # package.json uses type="json" for deep-merge support from other modules
+  # package.json uses source-aware json-ops so tracked files can be patched
+  # safely during preflight without replacing unrelated user content.
   mkGeneratedFileEntries =
     name: app:
     let
@@ -232,8 +246,9 @@ let
     in
     {
       "${app.path}/package.json" = {
-        type = "json";
-        jsonValue = generatePackageJson name app;
+        type = "json-ops";
+        adopt = "backup";
+        ops = flattenJsonSetOps [ ] (generatePackageJson name app);
         source = "go";
         description = "Go app package.json (scripts, dependencies)";
       };

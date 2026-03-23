@@ -1,4 +1,5 @@
 packages/proto/gen
+release.tar.gz
 # Dependencies
 node_modules
 .pnp
@@ -79,7 +80,6 @@ tmp
 .stack/secrets/vars/.sops.yaml
 .stack/state/
 .tasks
-.turbo
 /.devenv*
 /.devenv-root
 /.stack/state

@@ -23,6 +23,23 @@ Automated tests to prevent regressions in both devenv and native nix shell confi
 
 ## Test Suite
 
+### File Mutation Regression Coverage
+
+Source-aware file mutations are covered by targeted Go tests in
+`apps/stackpanel-go/internal/fileops/apply_test.go` and
+`apps/stackpanel-go/cmd/cli/nixify_test.go`.
+
+Deployment regressions around preflight-managed app manifests are covered by
+`tests/deploy-build-artifact-smoke.sh`.
+
+These cover:
+
+1. Backup-on-adopt for tracked files like `package.json`
+2. JSON path operations (`set`, `merge`, `remove`, `append`, `appendUnique`)
+3. Stale-path restoration when Stackpanel stops managing a JSON key
+4. Block-managed file insertion and cleanup
+5. `stackpanel nixify` generation for `json-ops`
+
 ### Smoke Tests (`smoke-test.sh`)
 
 Tests that verify basic shell functionality:

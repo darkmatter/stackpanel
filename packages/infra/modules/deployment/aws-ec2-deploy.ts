@@ -3,7 +3,6 @@ import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import {
   InternetGateway,
   InternetGatewayAttachment,
-  Role,
   Route,
   RouteTable,
   RouteTableAssociation,
@@ -13,7 +12,9 @@ import {
   Subnet,
   Vpc,
 } from "alchemy/aws";
-import AWS from "alchemy/aws/control";
+import { Ec2Instance } from "@stackpanel/infra/resources/ec2-instance";
+import { IamInstanceProfile } from "@stackpanel/infra/resources/iam-instance-profile";
+import { IamRole } from "@stackpanel/infra/resources/iam-role";
 
 const DEFAULT_IMAGE_ID =
   "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}";
@@ -21,22 +22,25 @@ const DEFAULT_IMAGE_ID =
 type EnvironmentValue = string | Secret<string>;
 
 export interface Ec2ServerProps {
+  appName: string;
   parameterPath: string;
   artifactBucket: string;
   artifactKey: string;
   artifactVersion?: string;
   environment: Record<string, EnvironmentValue>;
   region?: string;
-  availabilityZone: string;
-  imageId?: string;
-  instanceType?: string;
-  keyName?: string;
-  port?: number;
+  availabilityZone?: string | null;
+  imageId?: string | null;
+  instanceType?: string | null;
+  keyName?: string | null;
+  port?: number | null;
   httpCidrBlocks?: string[];
   sshCidrBlocks?: string[];
-  vpcCidrBlock?: string;
-  subnetCidrBlock?: string;
+  vpcCidrBlock?: string | null;
+  subnetCidrBlock?: string | null;
+  rootVolumeSize?: number | null;
   tags?: Record<string, string>;
+  osType?: "amazon-linux" | "nixos";
 }
 
 export interface Ec2Server extends Ec2ServerProps {
@@ -51,27 +55,57 @@ export interface Ec2Server extends Ec2ServerProps {
   instanceProfileArn: string;
 }
 
+export interface RuntimeLayout {
+  slug: string;
+  serviceName: string;
+  appRoot: string;
+  releaseRoot: string;
+  envFile: string;
+  archivePath: string;
+}
+
+export function deriveRuntimeLayout(appName: string): RuntimeLayout {
+  const slug = sanitizeName(appName);
+  const baseName = `stackpanel-${slug}`;
+
+  return {
+    slug,
+    serviceName: `${baseName}.service`,
+    appRoot: `/opt/${baseName}`,
+    releaseRoot: `/opt/${baseName}/release`,
+    envFile: `/etc/${baseName}.env`,
+    archivePath: `/tmp/${baseName}-release.tar.gz`,
+  };
+}
+
 export async function Ec2Server(
   id: string,
   props: Ec2ServerProps,
 ): Promise<Ec2Server> {
   const region = props.region ?? "us-west-2";
-  const imageId = await resolveImageId(props.imageId ?? DEFAULT_IMAGE_ID, region);
+  const availabilityZone = props.availabilityZone ?? `${region}a`;
+  const defaultImageId =
+    props.osType === "nixos"
+      ? await resolveNixosAmi(region)
+      : DEFAULT_IMAGE_ID;
+  const imageId = await resolveImageId(props.imageId ?? defaultImageId, region);
   const instanceType = props.instanceType ?? "t3.small";
   const port = props.port ?? 80;
   const httpCidrBlocks = props.httpCidrBlocks ?? ["0.0.0.0/0"];
   const sshCidrBlocks = props.sshCidrBlocks ?? [];
   const vpcCidrBlock = props.vpcCidrBlock ?? "10.42.0.0/16";
   const subnetCidrBlock = props.subnetCidrBlock ?? "10.42.1.0/24";
+  const rootVolumeSize = props.rootVolumeSize ?? 20;
   const namePrefix = props.tags?.Stage ? `${id}-${props.tags.Stage}` : id;
+  const layout = deriveRuntimeLayout(props.appName);
   const tags = {
     Name: id,
     ManagedBy: "alchemy",
-    Service: "web",
+    Service: props.appName,
     ...props.tags,
   };
 
-  const role = await Role(`${id}-instance-role`, {
+  const role = await IamRole(`${id}-instance-role`, {
     roleName: `${namePrefix}-instance-role`,
     assumeRolePolicy: {
       Version: "2012-10-17",
@@ -85,7 +119,7 @@ export async function Ec2Server(
         },
       ],
     },
-    description: "Allows the EC2 instance to read boot-time config and artifacts.",
+    description: `Allows the EC2 instance for ${props.appName} to read boot-time config and artifacts.`,
     managedPolicyArns: [
       "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     ],
@@ -137,13 +171,11 @@ export async function Ec2Server(
   });
 
   const instanceProfileName = `${namePrefix}-instance-profile`;
-  const instanceProfile = await AWS.IAM.InstanceProfile(
-    `${id}-instance-profile`,
-    {
-      InstanceProfileName: instanceProfileName,
-      Roles: [role.roleName],
-    },
-  );
+  const instanceProfile = await IamInstanceProfile(`${id}-instance-profile`, {
+    name: instanceProfileName,
+    roleName: role.roleName,
+    tags,
+  });
 
   await Promise.all(
     Object.entries(props.environment).map(([key, value]) => {
@@ -152,7 +184,7 @@ export async function Ec2Server(
       if (isSecret(value)) {
         return SSMParameter(`${id}-env-${key.toLowerCase()}`, {
           name,
-          description: `Runtime configuration for ${id}: ${key}`,
+          description: `Runtime configuration for ${props.appName}: ${key}`,
           type: "SecureString",
           value,
           tags,
@@ -161,7 +193,7 @@ export async function Ec2Server(
 
       return SSMParameter(`${id}-env-${key.toLowerCase()}`, {
         name,
-        description: `Runtime configuration for ${id}: ${key}`,
+        description: `Runtime configuration for ${props.appName}: ${key}`,
         value,
         tags,
       });
@@ -206,7 +238,7 @@ export async function Ec2Server(
     vpc,
     region,
     cidrBlock: subnetCidrBlock,
-    availabilityZone: props.availabilityZone,
+    availabilityZone,
     mapPublicIpOnLaunch: true,
     tags,
   });
@@ -219,7 +251,7 @@ export async function Ec2Server(
   const securityGroup = await SecurityGroup(`${id}-sg`, {
     vpc,
     region,
-    description: `Ingress rules for ${id}`,
+    description: `Ingress rules for ${props.appName}`,
     tags,
   });
 
@@ -253,48 +285,47 @@ export async function Ec2Server(
     );
   }
 
-  const instance = await AWS.EC2.Instance(id, {
-    AvailabilityZone: props.availabilityZone,
-    IamInstanceProfile: instanceProfileName,
-    ImageId: imageId,
-    InstanceType: instanceType,
-    KeyName: props.keyName,
-    MetadataOptions: {
-      HttpEndpoint: "enabled",
-      HttpTokens: "required",
-    },
-    PropagateTagsToVolumeOnCreation: true,
-    SecurityGroupIds: [securityGroup.groupId],
-    SubnetId: subnet.subnetId,
-    Tags: toAwsTags(tags),
-    UserData: buildUserData({
-      artifactBucket: props.artifactBucket,
-      artifactKey: props.artifactKey,
-      artifactVersion: props.artifactVersion,
-      parameterPath: props.parameterPath,
-      port,
-      region,
-    }),
-    BlockDeviceMappings: [
-      {
-        DeviceName: "/dev/xvda",
-        Ebs: {
-          DeleteOnTermination: true,
-          VolumeSize: 20,
-          VolumeType: "gp3",
-        },
-      },
-    ],
+  const userData =
+    props.osType === "nixos"
+      ? buildNixosUserData({ region, parameterPath: props.parameterPath })
+      : buildUserData({
+          appName: props.appName,
+          artifactBucket: props.artifactBucket,
+          artifactKey: props.artifactKey,
+          artifactVersion: props.artifactVersion,
+          layout,
+          parameterPath: props.parameterPath,
+          port,
+          region,
+        });
+
+  const instance = await Ec2Instance(id, {
+    name: id,
+    ami: imageId,
+    instanceType,
+    subnetId: subnet.subnetId,
+    securityGroupIds: [securityGroup.groupId],
+    keyName: props.keyName ?? undefined,
+    iamInstanceProfile: instanceProfileName,
+    userData,
+    rootVolumeSize,
+    associatePublicIp: true,
+    tags,
   });
 
-  const host = instance.PublicDnsName || instance.PublicIp;
+  const host = instance.publicDns || instance.publicIp;
   const url = `http://${host}${port === 80 ? "" : `:${port}`}`;
 
   return {
     ...props,
-    instanceId: instance.InstanceId,
-    publicIp: instance.PublicIp,
-    publicDnsName: instance.PublicDnsName,
+    availabilityZone,
+    imageId,
+    instanceType,
+    port,
+    rootVolumeSize,
+    publicIp: instance.publicIp ?? "",
+    instanceId: instance.instanceId,
+    publicDnsName: instance.publicDns ?? "",
     url,
     vpcId: vpc.vpcId,
     subnetId: subnet.subnetId,
@@ -302,6 +333,108 @@ export async function Ec2Server(
     roleArn: role.arn,
     instanceProfileArn: instanceProfile.Arn,
   };
+}
+
+export function buildUserData({
+  appName,
+  artifactBucket,
+  artifactKey,
+  artifactVersion,
+  layout = deriveRuntimeLayout(appName),
+  parameterPath,
+  port,
+  region,
+}: {
+  appName: string;
+  artifactBucket: string;
+  artifactKey: string;
+  artifactVersion?: string;
+  layout?: RuntimeLayout;
+  parameterPath: string;
+  port: number;
+  region: string;
+  rootVolumeSize?: number | null;
+}) {
+  return `#!/bin/bash
+set -euxo pipefail
+
+export HOME=/root
+export PATH=/usr/local/bin:/usr/bin:/bin
+
+dnf update -y
+dnf install -y jq unzip nodejs
+
+curl -fsSL https://bun.sh/install | bash
+export BUN_INSTALL=/root/.bun
+export PATH=$BUN_INSTALL/bin:$PATH
+
+cat >/usr/local/bin/${layout.slug}-bootstrap <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+export HOME=/root
+export PATH=/root/.bun/bin:/usr/local/bin:/usr/bin:/bin
+export AWS_REGION=${shellString(region)}
+
+ARTIFACT_BUCKET=${shellString(artifactBucket)}
+ARTIFACT_KEY=${shellString(artifactKey)}
+ARTIFACT_VERSION=${shellString(artifactVersion ?? "unknown")}
+PARAMETER_PATH=${shellString(trimTrailingSlash(parameterPath))}
+APP_ROOT=${shellString(layout.appRoot)}
+RELEASE_ROOT=${shellString(layout.releaseRoot)}
+ENV_FILE=${shellString(layout.envFile)}
+ARCHIVE_PATH=${shellString(layout.archivePath)}
+
+rm -rf "$RELEASE_ROOT"
+mkdir -p "$RELEASE_ROOT"
+
+aws s3 cp "s3://$ARTIFACT_BUCKET/$ARTIFACT_KEY" "$ARCHIVE_PATH" --region "$AWS_REGION"
+tar -xzf "$ARCHIVE_PATH" -C "$RELEASE_ROOT"
+
+cat >"$ENV_FILE" <<ENVEOF
+NODE_ENV=production
+HOST=0.0.0.0
+PORT=${port}
+ARTIFACT_BUCKET=$ARTIFACT_BUCKET
+ARTIFACT_KEY=$ARTIFACT_KEY
+ARTIFACT_VERSION=$ARTIFACT_VERSION
+ENVEOF
+
+aws ssm get-parameters-by-path \\
+  --path "$PARAMETER_PATH" \\
+  --recursive \\
+  --with-decryption \\
+  --output json \\
+  --region "$AWS_REGION" \\
+| jq -r '.Parameters[] | "\\(.Name | split("/")[-1])=\\(.Value)"' >>"$ENV_FILE"
+EOF
+
+chmod +x /usr/local/bin/${layout.slug}-bootstrap
+/usr/local/bin/${layout.slug}-bootstrap
+
+cat >/etc/systemd/system/${layout.serviceName} <<'EOF'
+[Unit]
+Description=stackpanel ${appName}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${layout.releaseRoot}
+Environment=PATH=/root/.bun/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=${layout.envFile}
+ExecStart=/usr/bin/node ${layout.releaseRoot}/.output/server/index.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now ${layout.serviceName}
+`;
 }
 
 async function resolveImageId(imageId: string, region: string) {
@@ -347,101 +480,52 @@ function shellString(value: string) {
   return JSON.stringify(value);
 }
 
-function buildUserData({
-  artifactBucket,
-  artifactKey,
-  artifactVersion,
-  parameterPath,
-  port,
+function sanitizeName(value: string) {
+  const sanitized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return sanitized || "app";
+}
+
+function buildNixosUserData({
   region,
+  parameterPath,
 }: {
-  artifactBucket: string;
-  artifactKey: string;
-  artifactVersion?: string;
-  parameterPath: string;
-  port: number;
   region: string;
+  parameterPath: string;
 }) {
-  const script = `#!/bin/bash
-set -euxo pipefail
-
-export HOME=/root
-export PATH=/usr/local/bin:/usr/bin:/bin
-
-dnf update -y
-dnf install -y jq unzip nodejs
-
-curl -fsSL https://bun.sh/install | bash
-export BUN_INSTALL=/root/.bun
-export PATH=$BUN_INSTALL/bin:$PATH
-
-cat >/usr/local/bin/stackpanel-web-bootstrap <<'EOF'
-#!/bin/bash
+  return `#!/usr/bin/env bash
 set -euo pipefail
+exec >> /var/log/user-data.log 2>&1
 
-export HOME=/root
-export PATH=/root/.bun/bin:/usr/local/bin:/usr/bin:/bin
-export AWS_REGION=${shellString(region)}
-
-ARTIFACT_BUCKET=${shellString(artifactBucket)}
-ARTIFACT_KEY=${shellString(artifactKey)}
-ARTIFACT_VERSION=${shellString(artifactVersion ?? "unknown")}
-PARAMETER_PATH=${shellString(trimTrailingSlash(parameterPath))}
-APP_ROOT=/opt/stackpanel-web
-RELEASE_ROOT=$APP_ROOT/release
-ENV_FILE=/etc/stackpanel-web.env
-ARCHIVE_PATH=/tmp/stackpanel-web-release.tar.gz
-
-rm -rf "$RELEASE_ROOT"
-mkdir -p "$RELEASE_ROOT"
-
-aws s3 cp "s3://$ARTIFACT_BUCKET/$ARTIFACT_KEY" "$ARCHIVE_PATH" --region "$AWS_REGION"
-tar -xzf "$ARCHIVE_PATH" -C "$RELEASE_ROOT"
-
-cat >"$ENV_FILE" <<ENVEOF
-NODE_ENV=production
-HOST=0.0.0.0
-PORT=${port}
-ARTIFACT_BUCKET=$ARTIFACT_BUCKET
-ARTIFACT_KEY=$ARTIFACT_KEY
-ARTIFACT_VERSION=$ARTIFACT_VERSION
-ENVEOF
-
-aws ssm get-parameters-by-path \\
-  --path "$PARAMETER_PATH" \\
-  --recursive \\
-  --with-decryption \\
-  --output json \\
-  --region "$AWS_REGION" \\
-| jq -r '.Parameters[] | "\\(.Name | split("/")[-1])=\\(.Value)"' >>"$ENV_FILE"
-EOF
-
-chmod +x /usr/local/bin/stackpanel-web-bootstrap
-/usr/local/bin/stackpanel-web-bootstrap
-
-cat >/etc/systemd/system/stackpanel-web.service <<'EOF'
-[Unit]
-Description=stackpanel web
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/stackpanel-web/release
-Environment=PATH=/root/.bun/bin:/usr/local/bin:/usr/bin:/bin
-EnvironmentFile=/etc/stackpanel-web.env
-ExecStart=/usr/bin/node /opt/stackpanel-web/release/.output/server/index.mjs
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable --now stackpanel-web.service
+echo "[+] NixOS instance booted"
+echo "[+] SSM parameter path: ${shellString(trimTrailingSlash(parameterPath))}"
+echo "[+] Region: ${shellString(region)}"
+echo "[+] Instance ready for Colmena deployment"
 `;
+}
 
-  return Buffer.from(script, "utf8").toString("base64");
+async function resolveNixosAmi(region: string): Promise<string> {
+  const { EC2Client, DescribeImagesCommand } = await import(
+    "@aws-sdk/client-ec2"
+  );
+  const client = new EC2Client({ region });
+  const images = await client.send(
+    new DescribeImagesCommand({
+      Owners: ["535002876703"],
+      Filters: [
+        { Name: "name", Values: ["determinate/nixos/epoch-1/*"] },
+        { Name: "architecture", Values: ["x86_64"] },
+        { Name: "state", Values: ["available"] },
+      ],
+    }),
+  );
+  const sorted = (images.Images ?? []).sort((a, b) =>
+    (b.CreationDate ?? "").localeCompare(a.CreationDate ?? ""),
+  );
+  const imageId = sorted[0]?.ImageId;
+  if (!imageId) throw new Error("No Determinate NixOS AMI found in " + region);
+  return imageId;
 }

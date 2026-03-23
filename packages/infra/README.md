@@ -5,7 +5,7 @@
 
 Infrastructure-as-code package for **stackpanel**, powered by [Alchemy](https://github.com/sam-goodwin/alchemy).
 
-## Modules (4)
+## Modules (5)
 
 ### AWS EC2 Apps (`aws-ec2-app`)
 
@@ -47,6 +47,16 @@ Dependencies: `alchemy`
   - `databaseUrl` — PostgreSQL connection URL *(synced)*
   - `provider` — Active database provider (neon, devenv, docker) *(synced)*
 
+### App Deployment (`deployment`)
+
+Deploys apps to their configured hosts (cloudflare, aws)
+
+Dependencies: `@aws-sdk/client-ssm`
+
+**Outputs:**
+  - `docsUrl` — Deployed URL for docs *(synced)*
+  - `webUrl` — Deployed URL for web *(synced)*
+
 ### Machine Inventory (`machines`)
 
 Machine inventory provider for Colmena deployments
@@ -85,5 +95,6 @@ packages/infra/
     ├── aws-ec2-app.ts
     ├── aws-secrets.ts
     ├── database.ts
+    ├── deployment.ts
     ├── machines.ts
 ```

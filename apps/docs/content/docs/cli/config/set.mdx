@@ -17,6 +17,11 @@ Values default to auto-detection:
 
 Use --type to force the interpretation when needed.
 
+This command is also a useful mental model for Stackpanel's file-management
+JSON ops: instead of replacing an entire `package.json`, Stackpanel can now
+apply preflight-time mutations to specific paths like `scripts.dev` or
+`dependencies."@gen/env"`.
+
 Examples:
   stackpanel config set apps.docs.name docs-site
   stackpanel config set ports.base 6400

@@ -111,6 +111,14 @@ let
   # Whether the TLD requires sudo (non-localhost TLDs need /etc/hosts management)
   needsSudo = cfg.tld != "localhost";
   sudoPrefix = if needsSudo then "sudo " else "";
+  proxyPort = if cfg.proxy-port != null then toString cfg.proxy-port else "1355";
+  proxyRunningCheck = ''
+    portless_proxy_running() {
+      ${pkgs.curl}/bin/curl --silent --show-error --head --max-time 1 "http://127.0.0.1:${proxyPort}/" 2>/dev/null \
+        | ${pkgs.coreutils}/bin/tr -d '\r' \
+        | ${pkgs.gnugrep}/bin/grep -qi '^x-portless:[[:space:]]*1$'
+    }
+  '';
 
   # ---------------------------------------------------------------------------
   # Shell scripts
@@ -120,6 +128,12 @@ let
     set -euo pipefail
 
     ${util.log.debug "portless: starting proxy"}
+    ${proxyRunningCheck}
+
+    if portless_proxy_running; then
+      ${util.log.debug "portless: proxy already running"}
+      exit 0
+    fi
 
     ${
       if useStepCa then
@@ -219,25 +233,30 @@ in
     # -------------------------------------------------------------------------
     # package.json dev script injection
     #
-    # For each app with a domain, deep-merge a package.json fragment that
-    # prefixes the dev script with `portless <name> --app-port <port>`.
-    # This ensures `turbo run dev` (and direct `bun run dev`) routes through
-    # the proxy and gets a stable URL.
-    #
-    # Uses the files system's JSON deep-merge (type = "json") so the fragment
-    # is merged with any existing or Nix-generated package.json content.
+    # For each app with a domain, patch package.json at preflight time so the
+    # dev script is routed through `portless <name> --app-port <port>`.
+    # This preserves unrelated package.json content while still giving the app
+    # a stable local URL.
     # -------------------------------------------------------------------------
     stackpanel.files.entries = lib.mkMerge (
       lib.mapAttrsToList (
         appName: portlessApp:
         lib.optionalAttrs (portlessApp.path != null) {
           "${portlessApp.path}/package.json" = {
-            type = "json";
+            type = "json-ops";
+            adopt = "backup";
             source = "portless";
             description = "Portless dev script prefix for ${appName}";
-            jsonValue = lib.recursiveUpdate portlessApp.packageJson {
-              scripts.dev = portlessApp.devScript;
-            };
+            ops = [
+              {
+                op = "set";
+                path = [
+                  "scripts"
+                  "dev"
+                ];
+                value = portlessApp.devScript;
+              }
+            ];
           };
         }
       ) portlessDevScripts
@@ -262,7 +281,8 @@ in
     stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start [
       ''
         # Start Portless proxy if not already running
-        if ! portless proxy status >/dev/null 2>&1; then
+        ${proxyRunningCheck}
+        if ! portless_proxy_running; then
           ${util.log.debug "portless: not running, starting..."}
           ${portless-proxy-start}/bin/portless-proxy-start
           ${util.log.debug "portless: started"}

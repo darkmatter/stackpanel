@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
@@ -22,10 +24,12 @@ when added to your stackpanel configuration, will generate an identical file.
 Supported types:
   line-set   Treats each non-empty line as an entry in a deduplicated, sorted
              set (ideal for .gitignore, .dockerignore, etc.)
+  json-ops   Emits path-based JSON set operations (ideal for package.json)
 
 Examples:
   stackpanel nixify .gitignore                       # auto-detects line-set
   stackpanel nixify .gitignore --type line-set       # explicit type
+  stackpanel nixify apps/web/package.json            # emits json-ops
   stackpanel nixify path/to/.dockerignore            # works for any path`,
 	Args: cobra.ExactArgs(1),
 	RunE: runNixify,
@@ -80,8 +84,10 @@ func runNixify(cmd *cobra.Command, args []string) error {
 	switch fileType {
 	case "line-set":
 		return nixifyLineSet(absPath, entryKey)
+	case "json-ops":
+		return nixifyJSONOps(absPath, entryKey)
 	default:
-		return fmt.Errorf("unsupported type: %q (supported: line-set)", fileType)
+		return fmt.Errorf("unsupported type: %q (supported: line-set, json-ops)", fileType)
 	}
 }
 
@@ -89,6 +95,8 @@ func runNixify(cmd *cobra.Command, args []string) error {
 func detectFileType(path string) string {
 	base := filepath.Base(path)
 	switch base {
+	case "package.json":
+		return "json-ops"
 	case ".gitignore", ".dockerignore", ".prettierignore", ".eslintignore", ".vercelignore":
 		return "line-set"
 	}
@@ -142,6 +150,66 @@ func nixifyLineSet(absPath string, entryKey string) error {
 
 	output.Success(fmt.Sprintf("Generated line-set entry for %q (%d lines)", entryKey, len(lines)))
 	return nil
+}
+
+func nixifyJSONOps(absPath string, entryKey string) error {
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var decoded any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return fmt.Errorf("failed to parse json: %w", err)
+	}
+
+	ops := flattenJSONSetOps(nil, decoded)
+	if len(ops) == 0 {
+		output.Warning(fmt.Sprintf("No JSON fields found in %s", entryKey))
+		return nil
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("stackpanel.files.entries.%s = {\n", nixAttrKey(entryKey)))
+	b.WriteString("  type = \"json-ops\";\n")
+	b.WriteString("  adopt = \"backup\";\n")
+	b.WriteString("  ops = [\n")
+	for _, op := range ops {
+		b.WriteString(fmt.Sprintf("    { op = \"set\"; path = %s; value = %s; }\n", nixPathLiteral(op.path), nixValueLiteral(op.value)))
+	}
+	b.WriteString("  ];\n")
+	b.WriteString("};\n")
+
+	fmt.Print(b.String())
+	output.Success(fmt.Sprintf("Generated json-ops entry for %q (%d paths)", entryKey, len(ops)))
+	return nil
+}
+
+type nixifySetOp struct {
+	path  []string
+	value any
+}
+
+func flattenJSONSetOps(prefix []string, value any) []nixifySetOp {
+	switch typed := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		var ops []nixifySetOp
+		for _, key := range keys {
+			ops = append(ops, flattenJSONSetOps(append(prefix, key), typed[key])...)
+		}
+		return ops
+	default:
+		return []nixifySetOp{{
+			path:  append([]string(nil), prefix...),
+			value: value,
+		}}
+	}
 }
 
 // nixStringLiteral produces a properly-escaped Nix string literal.
@@ -204,4 +272,49 @@ func nixAttrKey(s string) string {
 		return nixStringLiteral(s)
 	}
 	return s
+}
+
+func nixPathLiteral(path []string) string {
+	parts := make([]string, 0, len(path))
+	for _, segment := range path {
+		parts = append(parts, nixStringLiteral(segment))
+	}
+	return fmt.Sprintf("[ %s ]", strings.Join(parts, " "))
+}
+
+func nixValueLiteral(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		return "null"
+	case string:
+		return nixStringLiteral(typed)
+	case bool:
+		if typed {
+			return "true"
+		}
+		return "false"
+	case float64:
+		return strings.TrimSuffix(strings.TrimSuffix(fmt.Sprintf("%f", typed), "000000"), ".")
+	case []any:
+		parts := make([]string, 0, len(typed))
+		for _, item := range typed {
+			parts = append(parts, nixValueLiteral(item))
+		}
+		return fmt.Sprintf("[ %s ]", strings.Join(parts, " "))
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		var b strings.Builder
+		b.WriteString("{ ")
+		for _, key := range keys {
+			b.WriteString(fmt.Sprintf("%s = %s; ", nixAttrKey(key), nixValueLiteral(typed[key])))
+		}
+		b.WriteString("}")
+		return b.String()
+	default:
+		return fmt.Sprintf("%v", typed)
+	}
 }

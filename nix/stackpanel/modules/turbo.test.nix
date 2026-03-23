@@ -44,6 +44,10 @@ let
               type = lib.types.attrsOf lib.types.attrs;
               default = { };
             };
+            gitignore.entries = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+            };
             devshell.packages = lib.mkOption {
               type = lib.types.listOf lib.types.package;
               default = [ ];
@@ -51,6 +55,14 @@ let
             motd.commands = lib.mkOption {
               type = lib.types.listOf lib.types.attrs;
               default = [ ];
+            };
+            modules = lib.mkOption {
+              type = lib.types.attrsOf lib.types.attrs;
+              default = { };
+            };
+            panels = lib.mkOption {
+              type = lib.types.attrsOf lib.types.attrs;
+              default = { };
             };
           };
         }
@@ -66,7 +78,7 @@ let
   testBasicConfig =
     let
       result = evalModules [
-        ./turbo.nix
+        ./turbo
         {
           config.stackpanel.tasks = {
             build = {
@@ -118,7 +130,7 @@ let
   testReverseDeps =
     let
       result = evalModules [
-        ./turbo.nix
+        ./turbo
         {
           config.stackpanel.tasks = {
             deps = {
@@ -156,7 +168,7 @@ let
   testScriptGeneration =
     let
       result = evalModules [
-        ./turbo.nix
+        ./turbo
         {
           config.stackpanel.tasks = {
             build = {
@@ -188,7 +200,7 @@ let
   testFileEntries =
     let
       result = evalModules [
-        ./turbo.nix
+        ./turbo
         {
           config.stackpanel.tasks = {
             build = {
@@ -217,7 +229,7 @@ let
   testPackageJsonScripts =
     let
       result = evalModules [
-        ./turbo.nix
+        ./turbo
         {
           config.stackpanel.tasks = {
             build = {
@@ -255,7 +267,7 @@ let
   testCombinedDeps =
     let
       result = evalModules [
-        ./turbo.nix
+        ./turbo
         {
           config.stackpanel.tasks = {
             deps = {
@@ -290,6 +302,39 @@ let
     };
 
   # ---------------------------------------------------------------------------
+  # Test: Package manifest ops should not expose mkDefault internals
+  # ---------------------------------------------------------------------------
+  testPackageJsonOpsArePlainPaths =
+    let
+      result = evalModules [
+        ./turbo
+        {
+          config.stackpanel.turbo.packages.infra = {
+            name = "@stackpanel/infra";
+            path = "packages/infra";
+            dependencies = {
+              alchemy = "^0.81.2";
+            };
+            scripts.deploy = {
+              exec = "alchemy deploy";
+            };
+          };
+        }
+      ];
+      entry = result.config.stackpanel.files.entries."packages/infra/package.json";
+      ops = entry.ops or [ ];
+      renderedPaths = map (op: op.path) ops;
+    in
+    {
+      name = "package-json-ops-plain-paths";
+      passed =
+        entry.type == "json-ops"
+        && lib.any (path: path == [ "name" ]) renderedPaths
+        && !(lib.any (path: lib.elem "_type" path || lib.elem "content" path || lib.elem "priority" path) renderedPaths);
+      inherit renderedPaths;
+    };
+
+  # ---------------------------------------------------------------------------
   # Run all tests
   # ---------------------------------------------------------------------------
   allTests = [
@@ -299,6 +344,7 @@ let
     testFileEntries
     testPackageJsonScripts
     testCombinedDeps
+    testPackageJsonOpsArePlainPaths
   ];
 
   passedTests = lib.filter (t: t.passed) allTests;

@@ -476,6 +476,62 @@ export interface DatabaseInputs {
 };
 }
 
+export interface DeploymentInputs {
+  apps: {
+  docs: {
+  bindings: string[];
+  cloudflare: {
+  compatibility: string;
+  route: any;
+  workerName: string;
+};
+  framework: string;
+  host: string;
+  output: string;
+  path: string;
+  secrets: string[];
+};
+  web: {
+  aws: {
+  availabilityZone: any;
+  httpCidrBlocks: string[];
+  imageId: any;
+  instanceType: any;
+  keyName: any;
+  osType: string;
+  parameterPath: any;
+  port: any;
+  region: string;
+  rootVolumeSize: any;
+  sshCidrBlocks: string[];
+  subnetCidrBlock: any;
+  tags: {
+
+};
+  vpcCidrBlock: any;
+};
+  bindings: string[];
+  framework: string;
+  host: string;
+  path: string;
+  secrets: string[];
+};
+};
+  aws: {
+  artifact: {
+  bucket: any;
+  keyPrefix: string;
+};
+  instanceType: string;
+  port: number;
+  region: string;
+};
+  cloudflare: {
+  compatibilityDate: string;
+  defaultRoute: any;
+};
+}
+
 export interface MachinesInputs {
   aws: {
   envTagKeys: string[];

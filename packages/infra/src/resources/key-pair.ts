@@ -16,6 +16,10 @@ export interface KeyPair {
   adopted?: boolean;
 }
 
+function hasTags(tags: Record<string, string> | undefined): tags is Record<string, string> {
+  return Boolean(tags && Object.keys(tags).length > 0);
+}
+
 export const KeyPair = Resource(
   "stackpanel::KeyPair",
   async function (
@@ -68,7 +72,7 @@ export const KeyPair = Resource(
         new ImportKeyPairCommand({
           KeyName: props.keyName,
           PublicKeyMaterial: Buffer.from(props.publicKey),
-          TagSpecifications: props.tags
+          TagSpecifications: hasTags(props.tags)
             ? [
                 {
                   ResourceType: "key-pair",
@@ -82,7 +86,7 @@ export const KeyPair = Resource(
         }),
       );
       keyPairId = imported.KeyPairId;
-    } else if (props.tags && Object.keys(props.tags).length > 0) {
+    } else if (hasTags(props.tags)) {
       await client.send(
         new CreateTagsCommand({
           Resources: [keyPairId],
