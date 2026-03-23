@@ -2,8 +2,8 @@
 // AWS IAM Role + Instance Profile Module
 // ==============================================================================
 import Infra from "@stackpanel/infra";
-import { IamRole } from "@stackpanel/infra/resources/iam-role";
 import { IamInstanceProfile } from "@stackpanel/infra/resources/iam-instance-profile";
+import { IamRole } from "@stackpanel/infra/resources/iam-role";
 
 interface InlinePolicy {
   name: string;
@@ -58,7 +58,7 @@ const profileName =
 
 const instanceProfile = await IamInstanceProfile(infra.id("instance-profile"), {
   name: profileName,
-  roleName: inputs.role.name,
+  roleName: role.roleName,
   tags: inputs.instanceProfile?.tags,
 });
 

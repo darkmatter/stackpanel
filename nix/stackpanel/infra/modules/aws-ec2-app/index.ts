@@ -10,18 +10,13 @@
 //   - SSM parameter wiring (env file generation)
 //   - Machine inventory for Colmena
 // ==============================================================================
+import AWS from "alchemy/aws/control";
 import Infra from "@stackpanel/infra";
 import { Ec2Instance } from "@stackpanel/infra/resources/ec2-instance";
-import { SecurityGroup } from "@stackpanel/infra/resources/security-group";
-import { KeyPair } from "@stackpanel/infra/resources/key-pair";
-import { IamRole } from "@stackpanel/infra/resources/iam-role";
 import { IamInstanceProfile } from "@stackpanel/infra/resources/iam-instance-profile";
-import { ApplicationLoadBalancer } from "@stackpanel/infra/resources/application-load-balancer";
-import { TargetGroup } from "@stackpanel/infra/resources/target-group";
-import { Listener } from "@stackpanel/infra/resources/listener";
-import { ListenerRule } from "@stackpanel/infra/resources/listener-rule";
-import { TargetGroupAttachment } from "@stackpanel/infra/resources/target-group-attachment";
-import { EcrRepository } from "@stackpanel/infra/resources/ecr-repository";
+import { IamRole } from "@stackpanel/infra/resources/iam-role";
+import { KeyPair } from "@stackpanel/infra/resources/key-pair";
+import { SecurityGroup } from "@stackpanel/infra/resources/security-group";
 
 // =============================================================================
 // Types
@@ -294,6 +289,92 @@ function mergeMachineMeta(...sources: Array<MachineMeta | undefined>): MachineMe
   return result;
 }
 
+function toAwsTags(tags?: Record<string, string>) {
+  if (!tags || Object.keys(tags).length === 0) {
+    return undefined;
+  }
+
+  return Object.entries(tags).map(([Key, Value]) => ({
+    Key,
+    Value,
+  }));
+}
+
+function sanitizeAwsName(name: string, maxLength = 32) {
+  return name.replace(/[^a-zA-Z0-9-]/g, "-").slice(0, maxLength);
+}
+
+function buildAlbTargets(instanceIds: string[], port?: number) {
+  return instanceIds.map((Id) => ({
+    Id,
+    ...(port === undefined ? {} : { Port: port }),
+  }));
+}
+
+function buildSecurityGroupIngressResources(
+  groupId: string,
+  rules: RuleConfig[],
+) {
+  return rules.flatMap((rule) => [
+    ...(rule.cidrBlocks ?? []).map((cidr) => ({
+      GroupId: groupId,
+      IpProtocol: rule.protocol ?? "tcp",
+      FromPort: rule.fromPort,
+      ToPort: rule.toPort,
+      Description: rule.description ?? undefined,
+      CidrIp: cidr,
+    })),
+    ...(rule.ipv6CidrBlocks ?? []).map((cidr) => ({
+      GroupId: groupId,
+      IpProtocol: rule.protocol ?? "tcp",
+      FromPort: rule.fromPort,
+      ToPort: rule.toPort,
+      Description: rule.description ?? undefined,
+      CidrIpv6: cidr,
+    })),
+    ...(rule.securityGroupIds ?? []).map((securityGroupId) => ({
+      GroupId: groupId,
+      IpProtocol: rule.protocol ?? "tcp",
+      FromPort: rule.fromPort,
+      ToPort: rule.toPort,
+      Description: rule.description ?? undefined,
+      SourceSecurityGroupId: securityGroupId,
+    })),
+  ]);
+}
+
+function buildSecurityGroupEgressResources(
+  groupId: string,
+  rules: RuleConfig[],
+) {
+  return rules.flatMap((rule) => [
+    ...(rule.cidrBlocks ?? []).map((cidr) => ({
+      GroupId: groupId,
+      IpProtocol: rule.protocol ?? "tcp",
+      FromPort: rule.fromPort,
+      ToPort: rule.toPort,
+      Description: rule.description ?? undefined,
+      CidrIp: cidr,
+    })),
+    ...(rule.ipv6CidrBlocks ?? []).map((cidr) => ({
+      GroupId: groupId,
+      IpProtocol: rule.protocol ?? "tcp",
+      FromPort: rule.fromPort,
+      ToPort: rule.toPort,
+      Description: rule.description ?? undefined,
+      CidrIpv6: cidr,
+    })),
+    ...(rule.securityGroupIds ?? []).map((securityGroupId) => ({
+      GroupId: groupId,
+      IpProtocol: rule.protocol ?? "tcp",
+      FromPort: rule.fromPort,
+      ToPort: rule.toPort,
+      Description: rule.description ?? undefined,
+      DestinationSecurityGroupId: securityGroupId,
+    })),
+  ]);
+}
+
 async function resolveAmi(
   explicitAmi: string | null | undefined,
   osType: "ubuntu" | "nixos",
@@ -406,29 +487,29 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
   // Security group
   // ---------------------------------------------------------------------------
   let securityGroupIds = pickList(appConfig.securityGroupIds, defaults.securityGroupIds);
-  let appSgGroupId: string | undefined;
   if (appSecurityGroup?.create) {
     const sgName = appSecurityGroup.name ?? `${appName}-sg`;
+    const ingressRules = appSecurityGroup.ingress ?? [];
+    const egressRules =
+      (appSecurityGroup.egress ?? []).length > 0
+        ? appSecurityGroup.egress
+        : [
+            {
+              fromPort: 0,
+              toPort: 0,
+              protocol: "-1",
+              cidrBlocks: ["0.0.0.0/0"],
+              ipv6CidrBlocks: ["::/0"],
+            },
+          ];
     const sg = await SecurityGroup(infra.id(`${appName}-sg`), {
       name: sgName,
       description: appSecurityGroup.description ?? sgName,
       vpcId,
-      ingress: appSecurityGroup.ingress ?? [],
-      egress:
-        (appSecurityGroup.egress ?? []).length > 0
-          ? appSecurityGroup.egress
-          : [
-              {
-                fromPort: 0,
-                toPort: 0,
-                protocol: "-1",
-                cidrBlocks: ["0.0.0.0/0"],
-                ipv6CidrBlocks: ["::/0"],
-              },
-            ],
+      ingress: ingressRules,
+      egress: egressRules ?? [],
       tags: mergeTags(defaults.tags, appConfig.tags, appSecurityGroup.tags),
     });
-    appSgGroupId = sg.groupId;
     securityGroupIds = [sg.groupId];
   }
 
@@ -444,7 +525,6 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
       keyName: appKeyPair.name,
       publicKey: appKeyPair.publicKey,
       tags: appKeyPair.tags,
-      destroyOnDelete: appKeyPair.destroyOnDelete,
     });
     keyName = keyPair.keyName;
   }
@@ -453,7 +533,6 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
   // IAM role + instance profile
   // ---------------------------------------------------------------------------
   let iamInstanceProfile = appConfig.iamInstanceProfile ?? defaults.iamInstanceProfile ?? null;
-  let iamRoleArn: string | undefined;
   if (appIam?.enable) {
     const roleName = appIam.roleName ?? `${appName}-role`;
     const role = await IamRole(infra.id(`${appName}-role`), {
@@ -476,26 +555,19 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
         policyDocument: policy.document,
       })),
     });
-    iamRoleArn = role.arn;
-
     const profileName = appIam.instanceProfileName ?? `${roleName}-profile`;
-    const profile = await IamInstanceProfile(infra.id(`${appName}-profile`), {
+    await IamInstanceProfile(infra.id(`${appName}-profile`), {
       name: profileName,
       roleName: role.roleName,
-      tags: appIam.instanceProfileTags,
+      tags: appIam.tags,
     });
-    iamInstanceProfile = profile.name;
+    iamInstanceProfile = profileName;
   }
 
   // ---------------------------------------------------------------------------
   // SSM parameters
   // ---------------------------------------------------------------------------
   if (appSsm?.enable) {
-    const { SSMClient, PutParameterCommand } = await import("@aws-sdk/client-ssm");
-    const ssmClient = new SSMClient(
-      appSsm.region ? { region: appSsm.region } : awsRegion ? { region: awsRegion } : {},
-    );
-
     const prefix = appSsm.pathPrefix ?? `/${appName}`;
     const allParams = {
       ...(appSsm.parameters ?? {}),
@@ -505,14 +577,12 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
 
     for (const [key, value] of Object.entries(allParams)) {
       const paramName = `${prefix}/${key}`;
-      await ssmClient.send(
-        new PutParameterCommand({
-          Name: paramName,
-          Value: value,
-          Type: secureKeys.has(key) ? "SecureString" : "String",
-          Overwrite: true,
-        }),
-      );
+      await AWS.SSM.Parameter(infra.id(`${appName}-ssm-${key.toLowerCase()}`), {
+        Name: paramName,
+        Value: value,
+        Type: secureKeys.has(key) ? "SecureString" : "String",
+        adopt: true,
+      });
     }
 
     ssmOutputs[appName] = {
@@ -525,7 +595,6 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
   // ---------------------------------------------------------------------------
   // ECR repository
   // ---------------------------------------------------------------------------
-  let ecrRepoUrl: string | undefined;
   if (appEcr?.enable) {
     const repoName = appEcr.repoName ?? appName;
     if (appEcr.create !== false) {
@@ -543,19 +612,23 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
           },
         ],
       });
-      const repo = await EcrRepository(infra.id(`${appName}-ecr`), {
-        name: repoName,
-        imageTagMutability: appEcr.imageTagMutability,
-        scanOnPush: appEcr.scanOnPush,
-        lifecyclePolicy: appEcr.lifecyclePolicy ?? defaultLifecyclePolicy,
-        tags: mergeTags(defaults.tags, appConfig.tags),
+      const repo = await AWS.ECR.Repository(infra.id(`${appName}-ecr`), {
+        RepositoryName: repoName,
+        ImageTagMutability: appEcr.imageTagMutability,
+        ImageScanningConfiguration: {
+          ScanOnPush: appEcr.scanOnPush ?? true,
+        },
+        LifecyclePolicy: {
+          LifecyclePolicyText: appEcr.lifecyclePolicy ?? defaultLifecyclePolicy,
+        },
+        EmptyOnDelete: true,
+        Tags: toAwsTags(mergeTags(defaults.tags, appConfig.tags)),
+        adopt: true,
       });
-      ecrRepoUrl = repo.repositoryUrl;
-
       ecrOutputs[appName] = {
-        repositoryUrl: repo.repositoryUrl,
-        repositoryArn: repo.arn,
-        repositoryName: repo.name,
+        repositoryUrl: repo.RepositoryUri,
+        repositoryArn: repo.Arn,
+        repositoryName: repo.RepositoryName ?? repoName,
       };
     }
 
@@ -727,6 +800,11 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
       appConfig.userData ??
       defaults.userData ??
       (osType === "nixos" ? buildNixosUserData(nixosConfig) : null);
+    const associatePublicIp =
+      instance.associatePublicIp ??
+      appConfig.associatePublicIp ??
+      defaults.associatePublicIp ??
+      true;
 
     const instanceTags = mergeTags(defaults.tags, appConfig.tags, instance.tags, {
       Name: instanceName,
@@ -747,16 +825,15 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
         instance.instanceType ?? appConfig.instanceType ?? defaults.instanceType ?? "t3.micro",
       subnetId,
       securityGroupIds: securityGroups,
-      keyName: instance.keyName ?? appConfig.keyName ?? keyName ?? null,
-      iamInstanceProfile: instance.iamInstanceProfile ?? iamInstanceProfile ?? null,
-      userData,
+      keyName: instance.keyName ?? appConfig.keyName ?? keyName ?? undefined,
+      iamInstanceProfile: instance.iamInstanceProfile ?? iamInstanceProfile ?? undefined,
+      userData: userData ?? undefined,
       rootVolumeSize:
-        instance.rootVolumeSize ?? appConfig.rootVolumeSize ?? defaults.rootVolumeSize ?? null,
-      associatePublicIp:
-        instance.associatePublicIp ??
-        appConfig.associatePublicIp ??
-        defaults.associatePublicIp ??
-        true,
+        instance.rootVolumeSize ??
+        appConfig.rootVolumeSize ??
+        defaults.rootVolumeSize ??
+        undefined,
+      associatePublicIp,
       tags: instanceTags,
     });
 
@@ -783,8 +860,8 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
       targetEnv: machineMeta.targetEnv ?? null,
       arch: machineMeta.arch ?? null,
       provider: "aws-ec2",
-      publicIp: resource.publicIp ?? null,
-      privateIp: resource.privateIp ?? null,
+      publicIp: resource.PublicIp ?? null,
+      privateIp: resource.PrivateIp ?? null,
       labels: instanceTags,
       metadata: {
         subnetId,
@@ -804,34 +881,25 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
     const tgProtocol = appAlb.targetGroup?.protocol ?? "HTTP";
     const tgHealthCheck = appAlb.targetGroup?.healthCheck ?? {};
 
-    const tgName = `${appName}-tg`.substring(0, 32).replace(/[^a-zA-Z0-9-]/g, "-");
-    const tg = await TargetGroup(infra.id(`${appName}-tg`), {
-      name: tgName,
-      port: tgPort,
-      protocol: tgProtocol,
-      vpcId,
-      healthCheck: {
-        enabled: tgHealthCheck.enabled ?? true,
-        protocol: tgHealthCheck.protocol ?? "HTTP",
-        port: tgHealthCheck.port ?? undefined,
-        path: tgHealthCheck.path ?? "/",
-        interval: tgHealthCheck.interval ?? 30,
-        timeout: tgHealthCheck.timeout ?? 10,
-        healthyThreshold: tgHealthCheck.healthyThreshold ?? 2,
-        unhealthyThreshold: tgHealthCheck.unhealthyThreshold ?? 3,
-        matcher: tgHealthCheck.matcher ?? "200-399",
-      },
-      tags: mergeTags(defaults.tags, appConfig.tags),
+    const tgName = sanitizeAwsName(`${appName}-tg`);
+    const tg = await AWS.ElasticLoadBalancingV2.TargetGroup(infra.id(`${appName}-tg`), {
+      Name: tgName,
+      Port: tgPort,
+      Protocol: tgProtocol,
+      VpcId: vpcId,
+      HealthCheckEnabled: tgHealthCheck.enabled ?? true,
+      HealthCheckProtocol: tgHealthCheck.protocol ?? "HTTP",
+      HealthCheckPort: tgHealthCheck.port ?? undefined,
+      HealthCheckPath: tgHealthCheck.path ?? "/",
+      HealthCheckIntervalSeconds: tgHealthCheck.interval ?? 30,
+      HealthCheckTimeoutSeconds: tgHealthCheck.timeout ?? 10,
+      HealthyThresholdCount: tgHealthCheck.healthyThreshold ?? 2,
+      UnhealthyThresholdCount: tgHealthCheck.unhealthyThreshold ?? 3,
+      Matcher: tgHealthCheck.matcher ? { HttpCode: tgHealthCheck.matcher } : undefined,
+      Targets: buildAlbTargets(appInstanceIds, tgPort),
+      Tags: toAwsTags(mergeTags(defaults.tags, appConfig.tags)),
+      adopt: true,
     });
-
-    // Register instances
-    for (const instanceId of appInstanceIds) {
-      await TargetGroupAttachment(infra.id(`${appName}-tga-${instanceId}`), {
-        targetGroupArn: tg.arn,
-        targetId: instanceId,
-        port: tgPort,
-      });
-    }
 
     let httpListenerArn: string | undefined;
     let httpsListenerArn: string | undefined;
@@ -841,78 +909,89 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
       const albSgName = appAlb.name
         ? `${appAlb.name}-alb-sg`
         : `${appName}-alb-sg`;
+      const albIngressRules: RuleConfig[] = [
+        {
+          fromPort: 80,
+          toPort: 80,
+          protocol: "tcp",
+          cidrBlocks: ["0.0.0.0/0"],
+          ipv6CidrBlocks: ["::/0"],
+          description: "HTTP",
+        },
+        {
+          fromPort: 443,
+          toPort: 443,
+          protocol: "tcp",
+          cidrBlocks: ["0.0.0.0/0"],
+          ipv6CidrBlocks: ["::/0"],
+          description: "HTTPS",
+        },
+      ];
+      const albEgressRules: RuleConfig[] = [
+        {
+          fromPort: 0,
+          toPort: 0,
+          protocol: "-1",
+          cidrBlocks: ["0.0.0.0/0"],
+          ipv6CidrBlocks: ["::/0"],
+        },
+      ];
       const albSg = await SecurityGroup(infra.id(`${appName}-alb-sg`), {
         name: albSgName,
         description: `ALB security group for ${appName}`,
         vpcId,
-        ingress: [
-          {
-            fromPort: 80,
-            toPort: 80,
-            protocol: "tcp",
-            cidrBlocks: ["0.0.0.0/0"],
-            ipv6CidrBlocks: ["::/0"],
-            description: "HTTP",
-          },
-          {
-            fromPort: 443,
-            toPort: 443,
-            protocol: "tcp",
-            cidrBlocks: ["0.0.0.0/0"],
-            ipv6CidrBlocks: ["::/0"],
-            description: "HTTPS",
-          },
-        ],
-        egress: [
-          {
-            fromPort: 0,
-            toPort: 0,
-            protocol: "-1",
-            cidrBlocks: ["0.0.0.0/0"],
-            ipv6CidrBlocks: ["::/0"],
-          },
-        ],
+        ingress: albIngressRules,
+        egress: albEgressRules,
         tags: mergeTags(defaults.tags, appConfig.tags, { Name: albSgName }),
       });
 
-      const albName =
-        (appAlb.name ?? `${appName}-alb`).substring(0, 32).replace(/[^a-zA-Z0-9-]/g, "-");
-      const alb = await ApplicationLoadBalancer(infra.id(`${appName}-alb`), {
-        name: albName,
-        subnets: pickList(appAlb.subnetIds, subnetIds),
-        securityGroupIds: pickList(appAlb.securityGroupIds, [albSg.groupId]),
-        scheme: appAlb.scheme ?? "internet-facing",
-        ipAddressType: appAlb.ipAddressType ?? "ipv4",
-        tags: mergeTags(defaults.tags, appConfig.tags),
+      const albName = sanitizeAwsName(appAlb.name ?? `${appName}-alb`);
+      const alb = await AWS.ElasticLoadBalancingV2.LoadBalancer(infra.id(`${appName}-alb`), {
+        Name: albName,
+        Subnets: pickList(appAlb.subnetIds, subnetIds),
+        SecurityGroups: pickList(appAlb.securityGroupIds, [albSg.groupId]),
+        Scheme: appAlb.scheme ?? "internet-facing",
+        IpAddressType: appAlb.ipAddressType ?? "ipv4",
+        Type: "application",
+        Tags: toAwsTags(mergeTags(defaults.tags, appConfig.tags)),
+        adopt: true,
       });
 
       if (appAlb.http !== false) {
-        const httpListener = await Listener(infra.id(`${appName}-http`), {
-          loadBalancerArn: alb.arn,
-          port: 80,
-          protocol: "HTTP",
-          defaultTargetGroupArn: tg.arn,
-        });
-        httpListenerArn = httpListener.arn;
+        const httpListener = await AWS.ElasticLoadBalancingV2.Listener(
+          infra.id(`${appName}-http`),
+          {
+            LoadBalancerArn: alb.LoadBalancerArn,
+            Port: 80,
+            Protocol: "HTTP",
+            DefaultActions: [{ Type: "forward", TargetGroupArn: tg.TargetGroupArn }],
+            adopt: true,
+          },
+        );
+        httpListenerArn = httpListener.ListenerArn;
       }
 
       if (appAlb.https && appAlb.certificateArn) {
-        const httpsListener = await Listener(infra.id(`${appName}-https`), {
-          loadBalancerArn: alb.arn,
-          port: 443,
-          protocol: "HTTPS",
-          sslPolicy: appAlb.sslPolicy ?? "ELBSecurityPolicy-TLS13-1-2-2021-06",
-          certificateArn: appAlb.certificateArn,
-          defaultTargetGroupArn: tg.arn,
-        });
-        httpsListenerArn = httpsListener.arn;
+        const httpsListener = await AWS.ElasticLoadBalancingV2.Listener(
+          infra.id(`${appName}-https`),
+          {
+            LoadBalancerArn: alb.LoadBalancerArn,
+            Port: 443,
+            Protocol: "HTTPS",
+            SslPolicy: appAlb.sslPolicy ?? "ELBSecurityPolicy-TLS13-1-2-2021-06",
+            Certificates: [{ CertificateArn: appAlb.certificateArn }],
+            DefaultActions: [{ Type: "forward", TargetGroupArn: tg.TargetGroupArn }],
+            adopt: true,
+          },
+        );
+        httpsListenerArn = httpsListener.ListenerArn;
       }
 
       albOutputs[appName] = {
-        albArn: alb.arn,
-        albDnsName: alb.dnsName,
-        albZoneId: alb.zoneId,
-        targetGroupArn: tg.arn,
+        albArn: alb.LoadBalancerArn,
+        albDnsName: alb.DNSName,
+        albZoneId: alb.CanonicalHostedZoneID,
+        targetGroupArn: tg.TargetGroupArn,
         httpListenerArn: httpListenerArn ?? null,
         httpsListenerArn: httpsListenerArn ?? null,
       };
@@ -922,7 +1001,7 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
       httpsListenerArn = appAlb.existingListenerHttpsArn ?? undefined;
 
       albOutputs[appName] = {
-        targetGroupArn: tg.arn,
+        targetGroupArn: tg.TargetGroupArn,
         httpListenerArn: httpListenerArn ?? null,
         httpsListenerArn: httpsListenerArn ?? null,
       };
@@ -934,12 +1013,23 @@ for (const [appName, appConfig] of Object.entries(inputs.apps ?? {})) {
       const listenerArn = httpsListenerArn ?? httpListenerArn;
       if (listenerArn) {
         const priority = appAlb.hostRulePriority ?? 100;
-        await ListenerRule(infra.id(`${appName}-host-rule`), {
-          listenerArn,
-          priority,
-          hostnames,
-          targetGroupArn: tg.arn,
-        });
+        await AWS.ElasticLoadBalancingV2.ListenerRule(
+          infra.id(`${appName}-host-rule`),
+          {
+            ListenerArn: listenerArn,
+            Priority: priority,
+            Conditions: [
+              {
+                Field: "host-header",
+                HostHeaderConfig: {
+                  Values: hostnames,
+                },
+              },
+            ],
+            Actions: [{ Type: "forward", TargetGroupArn: tg.TargetGroupArn }],
+            adopt: true,
+          },
+        );
       }
     }
   }
