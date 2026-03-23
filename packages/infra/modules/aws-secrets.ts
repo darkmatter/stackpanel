@@ -11,11 +11,10 @@
 // for input resolution and output collection.
 // ==============================================================================
 import { Role } from "alchemy/aws";
+import AWS from "alchemy/aws/control";
 import { GitHubOIDCProvider } from "alchemy/aws/oidc";
 import { AccountId } from "alchemy/aws";
 import Infra from "@stackpanel/infra";
-import { KmsKey } from "@stackpanel/infra/resources/kms-key";
-import { KmsAlias } from "@stackpanel/infra/resources/kms-alias";
 
 const infra = new Infra("aws-secrets");
 const inputs = infra.inputs(process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES);
@@ -176,21 +175,23 @@ const kmsKeyPolicy = JSON.stringify({
 	],
 });
 
-const kmsKey = await KmsKey(infra.id("kms-key"), {
-	description: `KMS key for encrypting ${inputs.projectName} secrets`,
-	enableKeyRotation: true,
-	deletionWindowInDays: inputs.kms.deletionWindowDays,
-	policy: kmsKeyPolicy,
-	tags: {
+const kmsKey = await AWS.KMS.Key(infra.id("kms-key"), {
+	Description: `KMS key for encrypting ${inputs.projectName} secrets`,
+	EnableKeyRotation: true,
+	PendingWindowInDays: inputs.kms.deletionWindowDays,
+	KeyPolicy: JSON.parse(kmsKeyPolicy),
+	Tags: Object.entries({
 		Name: inputs.kms.alias,
 		Project: inputs.projectName,
 		ManagedBy: "stackpanel-infra",
-	},
+	}).map(([Key, Value]) => ({ Key, Value })),
+	adopt: true,
 });
 
-const kmsAlias = await KmsAlias(infra.id("kms-alias"), {
-	aliasName: `alias/${inputs.kms.alias}`,
-	targetKeyId: kmsKey.keyId,
+const kmsAlias = await AWS.KMS.Alias(infra.id("kms-alias"), {
+	AliasName: `alias/${inputs.kms.alias}`,
+	TargetKeyId: kmsKey.KeyId,
+	adopt: true,
 });
 
 // Grant the role KMS permissions via inline policy
@@ -217,7 +218,7 @@ await Role(infra.id("role"), {
 							"kms:GenerateDataKey*",
 							"kms:DescribeKey",
 						],
-						Resource: kmsKey.arn,
+						Resource: kmsKey.Arn,
 					},
 					{
 						Effect: "Allow",
@@ -241,8 +242,8 @@ await Role(infra.id("role"), {
 export default {
 	roleArn: role.arn,
 	roleName: role.roleName,
-	kmsKeyArn: kmsKey.arn,
-	kmsKeyId: kmsKey.keyId,
-	kmsAliasName: kmsAlias.aliasName,
+	kmsKeyArn: kmsKey.Arn,
+	kmsKeyId: kmsKey.KeyId,
+	kmsAliasName: kmsAlias.AliasName,
 	oidcProviderArn: resolvedOidcProviderArn,
 };

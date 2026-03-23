@@ -64,18 +64,23 @@ for (const instance of resolvedInstances) {
     },
   };
 
+  const associatePublicIp = resolved.associatePublicIp ?? true;
+  if (!resolved.subnetId) {
+    throw new Error(`EC2 instance "${resolved.name}" is missing required subnetId`);
+  }
+
   const resource = await Ec2Instance(infra.id(resolved.name), {
     name: resolved.name,
     ami: resolved.ami,
     instanceType: resolved.instanceType ?? "t3.micro",
-    subnetId: resolved.subnetId ?? "",
+    subnetId: resolved.subnetId,
     securityGroupIds: resolved.securityGroupIds ?? [],
-    keyName: resolved.keyName ?? null,
-    iamInstanceProfile: resolved.iamInstanceProfile ?? null,
-    userData: resolved.userData ?? null,
-    rootVolumeSize: resolved.rootVolumeSize ?? null,
-    associatePublicIp: resolved.associatePublicIp ?? true,
-    tags: resolved.tags,
+    keyName: resolved.keyName ?? undefined,
+    iamInstanceProfile: resolved.iamInstanceProfile ?? undefined,
+    userData: resolved.userData ?? undefined,
+    rootVolumeSize: resolved.rootVolumeSize ?? undefined,
+    associatePublicIp,
+    tags: resolved.tags ?? {},
   });
 
   instanceIds.push(resource.instanceId);
