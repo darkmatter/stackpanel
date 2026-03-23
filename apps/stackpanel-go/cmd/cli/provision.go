@@ -22,22 +22,22 @@ var provisionCmd = &cobra.Command{
 Without arguments, lists configured machines and their provisioning status.
 With a machine name, provisions that machine.
 
-Methods:
-  nixos-infect    (default) Auto-detects disk layout — no disk config needed.
-                  SSHes into the running Linux system, generates hardware config
-                  from the live partition table, then installs NixOS via kexec.
-                  Best for cloud VMs (Hetzner, DigitalOcean, etc.).
+Default (no --format):
+  SSHes into the running Linux system, detects hardware, generates
+  hardware-configuration.nix, then installs NixOS via kexec without
+  reformatting the disk.  Best for cloud VMs (Hetzner, DigitalOcean, etc.).
 
-  nixos-anywhere  Full disk formatting via disko.  Requires diskLayout to be
-                  set in the machine config.  Best for bare metal or when you
-                  need to repartition the disk.
+With --format:
+  Partitions and formats the disk using disko before installing NixOS.
+  Requires diskLayout to be set in the machine config.
+  Best for bare metal or when you need a custom partition layout.
 
 Examples:
-  stackpanel provision                             List machines and status
-  stackpanel provision prod-server                 Provision (nixos-infect)
-  stackpanel provision prod-server --dry-run       Print commands without running
-  stackpanel provision prod-server --reprovision   Re-provision an existing machine
-  stackpanel provision prod-server --method nixos-anywhere --format`,
+  stackpanel provision                           List machines and status
+  stackpanel provision prod-server               Provision (kexec, no reformat)
+  stackpanel provision prod-server --dry-run     Print commands without running
+  stackpanel provision prod-server --reprovision Re-provision an existing machine
+  stackpanel provision prod-server --format      Provision with disko disk format`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 		defer cancel()
@@ -55,13 +55,12 @@ Examples:
 
 		machineName := args[0]
 		installTarget, _ := cmd.Flags().GetString("install-target")
-		method, _ := cmd.Flags().GetString("method")
 		format, _ := cmd.Flags().GetBool("format")
 		noHardwareConfig, _ := cmd.Flags().GetBool("no-hardware-config")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		reprovision, _ := cmd.Flags().GetBool("reprovision")
 
-		if err := runProvisionMachine(cfg, machineName, installTarget, method, format, noHardwareConfig, dryRun, reprovision); err != nil {
+		if err := runProvisionMachine(cfg, machineName, installTarget, format, noHardwareConfig, dryRun, reprovision); err != nil {
 			output.Error(fmt.Sprintf("Provision failed: %v", err))
 			os.Exit(1)
 		}
@@ -70,8 +69,7 @@ Examples:
 
 func init() {
 	provisionCmd.Flags().String("install-target", "", "IP/host for provisioning (default: machine's host in config)")
-	provisionCmd.Flags().String("method", "nixos-infect", "Provisioning method: nixos-infect (default) or nixos-anywhere")
-	provisionCmd.Flags().Bool("format", false, "Format disk with disko (nixos-anywhere method only)")
+	provisionCmd.Flags().Bool("format", false, "Partition and format disk with disko before installing (requires diskLayout in machine config)")
 	provisionCmd.Flags().Bool("no-hardware-config", false, "Skip hardware config generation")
 	provisionCmd.Flags().Bool("dry-run", false, "Print commands without running")
 	provisionCmd.Flags().Bool("reprovision", false, "Allow re-provisioning an already-provisioned machine")
@@ -117,7 +115,7 @@ func listMachines(cfg *DeployStackpanelConfig) {
 }
 
 // runProvisionMachine provisions a single machine.
-func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget, method string, format, noHardwareConfig, dryRun, reprovision bool) error {
+func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget string, format, noHardwareConfig, dryRun, reprovision bool) error {
 	machine, ok := cfg.Deployment.Machines[machineName]
 	if !ok {
 		return fmt.Errorf("machine %q not found in deployment.machines config", machineName)
@@ -148,13 +146,10 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 	var hwConfigGenerated bool
 	var provisionErr error
 
-	switch method {
-	case "nixos-infect", "":
-		hwConfigGenerated, provisionErr = runNixosInfect(machineName, target, hardwareDir, noHardwareConfig, dryRun)
-	case "nixos-anywhere":
-		hwConfigGenerated, provisionErr = runNixosAnywhere(machineName, target, hardwareDir, format, noHardwareConfig, dryRun)
-	default:
-		return fmt.Errorf("unknown method %q; use nixos-infect or nixos-anywhere", method)
+	if format {
+		hwConfigGenerated, provisionErr = runDiskoInstall(machineName, target, hardwareDir, noHardwareConfig, dryRun)
+	} else {
+		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, hardwareDir, noHardwareConfig, dryRun)
 	}
 
 	if provisionErr != nil {
@@ -195,9 +190,9 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 }
 
 // ===========================================================================
-// nixos-infect method (default)
+// runKexecInstall — default provisioning path (no --format)
 //
-// Converts a running Linux VM to NixOS without reformatting the disk:
+// Installs NixOS onto a running Linux VM without reformatting the disk:
 //
 //   Step 1  SSH to the running system (Debian/Ubuntu/etc.)
 //           Detect disk layout via shell commands → generate hardware-configuration.nix
@@ -208,9 +203,8 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 //           Hardware config is now in the flake (git-staged → included in
 //           dirty-flake store copy).
 //
-//   Step 3  SSH to the NixOS installer
-//           Mount the root filesystem at /mnt
-//           (installer boots with all disks visible but unmounted)
+//   Step 3  SSH to the NixOS installer → mkfs (wipe) + mount /mnt
+//           Fresh filesystem eliminates conflicts with the old OS files.
 //
 //   Step 4  nixos-anywhere --phases install,reboot
 //           Builds NixOS from the flake, copies it to /mnt, installs
@@ -219,7 +213,7 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 // No disk partitioning or pre-existing disk config required.
 // ===========================================================================
 
-func runNixosInfect(machineName, target, hardwareDir string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+func runKexecInstall(machineName, target, hardwareDir string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
 	installHost := "root@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
@@ -300,22 +294,21 @@ func runNixosInfect(machineName, target, hardwareDir string, noHardwareConfig, d
 }
 
 // ===========================================================================
-// nixos-anywhere method
+// runDiskoInstall — --format path
 //
-// Uses nixos-anywhere with optional disko disk formatting.
-// Requires diskLayout to be configured in the machine config when --format is used.
+// Uses nixos-anywhere with disko to partition and format the disk before
+// installing NixOS. Requires diskLayout to be set in the machine config.
+// Best for bare metal or when a custom partition layout is needed.
 // ===========================================================================
 
-func runNixosAnywhere(machineName, target, hardwareDir string, format, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+func runDiskoInstall(machineName, target, hardwareDir string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
 	installHost := "root@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	var args []string
 	args = append(args, "--flake", ".#"+machineName)
-	if !format {
-		args = append(args, "--phases", "kexec,install,reboot")
-	}
+	// No --phases: run the full nixos-anywhere flow including disko.
 	if !noHardwareConfig {
 		args = append(args, "--generate-hardware-config", "nixos-generate-config", hardwareDir)
 	}
