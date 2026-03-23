@@ -8,7 +8,7 @@ process.chdir(
 
 const app = await alchemy("stackpanel-deployment-scope-check");
 
-const outputs = (await import("./modules/deployment/index.ts")).default;
+const outputs = (await import("./modules/deployment.ts")).default;
 
 console.log(outputs);
 
