@@ -179,6 +179,9 @@ in
         nodeNixpkgs = lib.mapAttrs (
           _: machineCfg: import nixpkgs { system = machineCfg.system or "x86_64-linux"; }
         ) machines;
+        # Pass inputs as a specialArg so NixOS modules in node configs can
+        # reference inputs.self.packages.${system}.${app} etc.
+        specialArgs = { inherit inputs; };
       };
     }
     // lib.mapAttrs (
