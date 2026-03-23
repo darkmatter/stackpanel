@@ -26,6 +26,37 @@ function ROOT(): string {
   return _root;
 }
 
+const PRESERVED_MAP_KEYS = new Set([
+  "apps",
+  "parameters",
+  "secureParameters",
+  "tags",
+]);
+
+function toCamelCaseKey(key: string): string {
+  return key.replace(/-([a-zA-Z0-9])/g, (_match, char: string) =>
+    char.toUpperCase(),
+  );
+}
+
+function normalizeInputKeys<T>(value: T, parentKey?: string): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeInputKeys(item)) as T;
+  }
+
+  if (value !== null && typeof value === "object") {
+    const preserveChildKeys = parentKey ? PRESERVED_MAP_KEYS.has(parentKey) : false;
+    const result: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      const normalizedKey = preserveChildKeys ? key : toCamelCaseKey(key);
+      result[normalizedKey] = normalizeInputKeys(entry, normalizedKey);
+    }
+    return result as T;
+  }
+
+  return value;
+}
+
 /**
  * Read and parse the infra inputs JSON file.
  * Resolution order:
@@ -40,7 +71,10 @@ function loadAllInputs(): Record<string, any> {
 
   try {
     const raw = fs.readFileSync(inputsPath, "utf-8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).map(([key, value]) => [key, normalizeInputKeys(value)]),
+    );
   } catch {
     console.warn(
       `[infra] Could not read inputs from ${inputsPath}, using empty inputs`,

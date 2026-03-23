@@ -18,7 +18,6 @@ export interface AppInput {
     vpcCidrBlock?: string | null;
     subnetCidrBlock?: string | null;
     tags?: Record<string, string>;
-    osType?: "amazon-linux" | "nixos";
   };
   cloudflare?: {
     workerName?: string;

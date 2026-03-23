@@ -4,7 +4,7 @@
 // Deploys app resources using app-scoped Alchemy apps so `alchemy deploy --app`
 // follows Alchemy's documented monorepo workflow.
 // ==============================================================================
-import alchemy from "alchemy";
+import alchemy, { type Secret } from "alchemy";
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -17,6 +17,7 @@ import {
   type AppInput,
   type DeploymentInputs,
 } from "./plan";
+import { Ec2Server } from "./aws-ec2-deploy";
 
 type CreateApp = (name?: string) => Promise<{ finalize(): Promise<void> }>;
 
@@ -43,6 +44,7 @@ const inputs = infra.inputs<DeploymentInputs>(
 );
 
 const STAGE = process.env.STAGE ?? "dev";
+const DEPLOYMENT_APP_FILTER = process.env.STACKPANEL_DEPLOYMENT_APP ?? null;
 
 const STAGE_URL_DEFAULTS: Record<string, (stage: string) => string> = {
   CORS_ORIGIN: (stage) =>
@@ -74,6 +76,67 @@ function resolveBindings(
   }
 
   return resolved;
+}
+
+function resolveAwsEnvironment(
+  bindingNames: string[],
+  secretNames: string[],
+): Record<string, string | Secret<string>> {
+  const secretSet = new Set(secretNames);
+  const resolved: Record<string, string | Secret<string>> = {};
+
+  for (const key of bindingNames) {
+    const envValue = process.env[key];
+    const defaultFn = STAGE_URL_DEFAULTS[key];
+    const value = envValue ?? (defaultFn ? defaultFn(STAGE) : "");
+    if (secretSet.has(key)) {
+      if (!value && STAGE === "prod") {
+        throw new Error(`Missing required secret binding "${key}" for AWS deployment`);
+      }
+      resolved[key] = alchemy.secret(value || "PLACEHOLDER");
+      continue;
+    }
+    resolved[key] = value;
+  }
+
+  return resolved;
+}
+
+function requireEnv(name: string) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} environment variable is required`);
+  }
+  return value;
+}
+
+function resolveArtifactLocation() {
+  const artifactVersion = process.env.EC2_ARTIFACT_VERSION;
+  const artifactBucket = process.env.EC2_ARTIFACT_BUCKET ?? inputs.aws?.artifact?.bucket;
+  const artifactKey = process.env.EC2_ARTIFACT_KEY
+    ?? (
+      artifactVersion
+        ? `${inputs.aws?.artifact?.keyPrefix ?? "web"}/${STAGE}/${artifactVersion}/release.tar.gz`
+        : undefined
+    );
+
+  if (!artifactBucket) {
+    throw new Error(
+      "EC2_ARTIFACT_BUCKET is required unless stackpanel.deployment.aws.artifact.bucket is configured",
+    );
+  }
+
+  if (!artifactKey) {
+    throw new Error(
+      "EC2_ARTIFACT_KEY is required unless EC2_ARTIFACT_VERSION and stackpanel.deployment.aws.artifact.keyPrefix are available",
+    );
+  }
+
+  return {
+    artifactBucket,
+    artifactKey,
+    artifactVersion,
+  };
 }
 
 function cloudflareProps(name: string, app: AppInput) {
@@ -307,16 +370,79 @@ async function deployCloudflareApp(
   });
 }
 
-const outputs: Record<string, string> = {};
+async function deployAwsApp(
+  appName: string,
+  app: AppInput,
+): Promise<{ url: string }> {
+  const environment = resolveAwsEnvironment(app.bindings, app.secrets);
+  const plan = buildDeploymentPlan(appName, app);
 
-for (const [appName, app] of Object.entries(inputs.apps)) {
-  if (app.host !== "cloudflare") {
+  if (plan.kind !== "aws-ec2-app") {
     throw new Error(
-      `Unsupported host "${app.host}" in infra deployment module (expected: cloudflare)`,
+      `Unsupported AWS deployment plan "${plan.kind}" for ${appName}`,
     );
   }
 
-  const resource = await deployCloudflareApp(appName, app);
+  const { artifactBucket, artifactKey, artifactVersion } = resolveArtifactLocation();
+  const region = app.aws?.region ?? inputs.aws?.region ?? "us-west-2";
+
+  const osType = (app.aws?.osType as "amazon-linux" | "nixos") ?? "amazon-linux";
+
+  return withAppScope(plan.appScopeName, async () =>
+    Ec2Server(plan.resourceName, {
+      appName,
+      artifactBucket,
+      artifactKey,
+      artifactVersion,
+      environment,
+      region,
+      availabilityZone: app.aws?.availabilityZone ?? undefined,
+      imageId: app.aws?.imageId ?? undefined,
+      instanceType: app.aws?.instanceType ?? inputs.aws?.instanceType ?? undefined,
+      keyName: app.aws?.keyName ?? undefined,
+      parameterPath:
+        app.aws?.parameterPath ?? `/stackpanel/${STAGE}/${appName}-runtime`,
+      port: app.aws?.port ?? inputs.aws?.port ?? 80,
+      httpCidrBlocks:
+        app.aws?.httpCidrBlocks?.length ? app.aws.httpCidrBlocks : undefined,
+      sshCidrBlocks:
+        app.aws?.sshCidrBlocks?.length ? app.aws.sshCidrBlocks : undefined,
+      rootVolumeSize: app.aws?.rootVolumeSize ?? undefined,
+      vpcCidrBlock: app.aws?.vpcCidrBlock ?? undefined,
+      subnetCidrBlock: app.aws?.subnetCidrBlock ?? undefined,
+      osType,
+      tags: {
+        App: "stackpanel",
+        Stage: STAGE,
+        ...(app.aws?.tags ?? {}),
+      },
+    }),
+  );
+}
+
+const outputs: Record<string, string> = {};
+const deployableApps = Object.entries(inputs.apps ?? {}).filter(
+  ([appName]) => DEPLOYMENT_APP_FILTER === null || appName === DEPLOYMENT_APP_FILTER,
+);
+
+for (const [appName, app] of deployableApps) {
+  let resource: { url: string };
+
+  switch (app.host) {
+    case "cloudflare":
+      resource = await deployCloudflareApp(appName, app);
+      break;
+
+    case "aws":
+      resource = await deployAwsApp(appName, app);
+      break;
+
+    default:
+      throw new Error(
+        `Unsupported host "${app.host}" in infra deployment module`,
+      );
+  }
+
   outputs[`${appName}Url`] = resource.url;
   console.log(`[${STAGE}] ${appName} -> ${resource.url}`);
 }
