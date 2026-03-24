@@ -177,7 +177,7 @@ let
   mkContainerDerivation =
     appName: containerCfg:
     let
-      projectRoot = cfg.root or (builtins.getEnv "PWD");
+      projectRoot = if cfg.root != null then cfg.root else builtins.getEnv "PWD";
       backend = settingsCfg.backend;
       # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
       # The appName (attrset key, e.g., web) is only used for fallback paths

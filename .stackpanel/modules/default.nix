@@ -21,6 +21,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
@@ -40,5 +41,19 @@ in
   config = lib.mkIf config.stackpanel.enable {
     # PostgreSQL package - requires pkgs, so lives here instead of config.nix
     stackpanel.globalServices.postgres.package = pkgs.postgresql_17;
+
+    # Runtime dependencies of `stackpanel` CLI.
+    # Declaring them as runtimeInputs has two effects:
+    #   1. nix build .#stackpanel-go → binary is wrapped so it finds these tools
+    #      at their Nix store paths, no PATH setup required.
+    #   2. devshell → tools are in PATH for `go run .` and interactive use.
+    stackpanel.apps."stackpanel-go".go.runtimeInputs = [
+      # Use the colmena from the flake input so the binary version matches
+      # colmena.lib.makeHive (which is also from inputs.colmena). Using
+      # pkgs.colmena (nixpkgs) would cause a schema version mismatch.
+      inputs.colmena.packages.${pkgs.stdenv.hostPlatform.system}.colmena
+      pkgs.nixos-anywhere
+    ];
+
   };
 }
