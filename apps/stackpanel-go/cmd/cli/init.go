@@ -78,6 +78,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 		flakeRef = os.Getenv("STACKPANEL_FLAKE")
 	}
 	if flakeRef == "" {
+		if root := os.Getenv("STACKPANEL_ROOT"); root != "" {
+			flakeRef = "path:" + root
+		}
+	}
+	if flakeRef == "" {
 		flakeRef = defaultStackpanelFlake
 	}
 
