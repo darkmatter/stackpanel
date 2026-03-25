@@ -402,7 +402,10 @@ in {
       # bun2nix CLI: run `bun2nix` after `bun install` to regenerate bun.nix
       # whenever bun.lock changes.  The postinstall script in the generated
       # package.json invokes this automatically.
-      stackpanel.devshell.packages = [pkgs.bun2nix];
+      stackpanel.devshell.packages = [
+        pkgs.bun # Bun runtime
+        pkgs.bun2nix # Native bun2nix CLI (converts bun.lock -> bun.nix)
+      ];
 
       # -----------------------------------------------------------------------
       # File Generation — package.json
