@@ -19,7 +19,7 @@ import (
 
 // defaultStackpanelFlake is the remote flake used to fetch init templates.
 // Override with --flake or STACKPANEL_FLAKE for local development.
-const defaultStackpanelFlake = "github:darkmatter/stackpanel"
+const defaultStackpanelFlake = "git+ssh://git@github.com/darkmatter/stackpanel"
 
 var initCmd = &cobra.Command{
 	Use:   "init",
