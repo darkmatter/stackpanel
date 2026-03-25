@@ -92,9 +92,12 @@ in
       "${generateBinScript}"
     ];
 
-    # Optionally add .stack/bin to PATH
+    # Keep .stackpanel/bin out of git (it's regenerated on shell entry)
+    stackpanel.files.gitignore.extraEntries = [ ".stackpanel/bin/" ];
+
+    # Optionally add .stackpanel/bin to PATH
     stackpanel.devshell.path.prepend = lib.mkIf cfg.addToPath [
-      "$STACKPANEL_ROOT/.stack/bin"
+      "$STACKPANEL_ROOT/.stackpanel/bin"
     ];
   };
 }
