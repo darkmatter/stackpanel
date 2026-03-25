@@ -329,39 +329,6 @@ let
           }
       '';
 
-  # ============================================================================
-  #
-  #   INTERNAL: Scaffolding / init file generation
-  #
-  #   Generates the .stack/ directory structure for new projects.
-  #   config.nix is the single source of truth (both user and agent editable).
-  #
-  # ============================================================================
-  initFiles =
-    let
-      configBoilerplate = schemas.config.boilerplate or null;
-      configFile = {
-        ".stack/config.nix" =
-          if configBoilerplate != null then
-            configBoilerplate
-          else
-            ''
-              # Stackpanel project configuration
-              # See: https://stackpanel.dev/docs/config
-              {
-                enable = true;
-                name = "my-project";
-                github = "owner/repo";
-              }
-            '';
-      };
-
-      gitignoreBoilerplate = schemas.config.gitignoreBoilerplate or null;
-      gitignoreFile =
-        if gitignoreBoilerplate != null then { ".stack/.gitignore" = gitignoreBoilerplate; } else { };
-
-    in
-    configFile // gitignoreFile;
 in
 {
   # ============================================================================
@@ -379,9 +346,6 @@ in
 
   # Entity name lists
   inherit entityNames dataEntityNames externalEntityNames;
-
-  # Scaffolding
-  inherit initFiles;
 
   # Proto rendering
   inherit render protoFiles protoFileMap;

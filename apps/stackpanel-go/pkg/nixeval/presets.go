@@ -80,16 +80,6 @@ in
 	// This is the canonical path for user projects that consume stackpanel as a flake input.
 	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
 
-	// InitFilesPreset evaluates the db module to get boilerplate files for project scaffolding
-	// Returns a map of relative paths to file contents
-	InitFilesPreset = `
-let
-  root = builtins.getEnv "STACKPANEL_ROOT";
-  dbModule = import (root + "/nix/stackpanel/db") { };
-in
-  dbModule.initFiles
-`
-
 	// DbSchemasPreset evaluates all schemas from the db module for codegen
 	// Returns a map of entity names to JSON Schema
 	DbSchemasPreset = `
@@ -273,23 +263,6 @@ func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 	}
 
 	return config, nil
-}
-
-// GetInitFiles evaluates the db module and returns the map of paths to content
-// for scaffolding a new project.
-// DEPRECATED: Use GetInitFilesFromFlake instead for portable scaffolding.
-func GetInitFiles(ctx context.Context) (map[string]string, error) {
-	result, err := EvalExpr(ctx, InitFilesPreset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate initFiles: %w", err)
-	}
-
-	var files map[string]string
-	if err := result.Unmarshal(&files); err != nil {
-		return nil, fmt.Errorf("failed to parse initFiles: %w", err)
-	}
-
-	return files, nil
 }
 
 // GetInitFilesFromFlake evaluates initFiles from a stackpanel flake reference.
