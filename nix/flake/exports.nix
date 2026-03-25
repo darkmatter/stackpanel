@@ -245,7 +245,7 @@ in
     #   { ".stack/config.nix" = "..."; ... }
     #
     # Usage from CLI:
-    #   nix eval github:darkmatter/stackpanel#lib.initFiles --json
+    #   nix eval git+ssh://git@github.com/darkmatter/stackpanel#lib.initFiles --json
     #
     # Usage from Nix:
     #   inputs.stackpanel.lib.initFiles

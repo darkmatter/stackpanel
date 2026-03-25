@@ -229,7 +229,7 @@ export function AgentConnect({ onConnected }: AgentConnectProps) {
 								</span>
 							</div>
 							<code className="block rounded bg-background p-2 font-mono text-muted-foreground text-xs">
-								nix profile install github:darkmatter/stackpanel
+								nix profile install git+ssh://git@github.com/darkmatter/stackpanel
 							</code>
 						</div>
 						<div className="rounded-lg border border-border bg-secondary/50 p-3 space-y-2">

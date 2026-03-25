@@ -4,7 +4,7 @@
 # Starter flake template for projects using stackpanel.
 #
 # Getting started:
-#   1. Run: nix flake init -t github:darkmatter/stackpanel
+#   1. Run: nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 #   2. Run: direnv allow
 #   3. Configure stackpanel in ./.stack/config.nix
 #
@@ -23,11 +23,17 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    stackpanel.url = "github:darkmatter/stackpanel";
+    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
   outputs =
-    { self, nixpkgs, flake-utils, stackpanel, ... }@inputs:
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      stackpanel,
+      ...
+    }@inputs:
     # Use stackpanel.lib.mkFlake for full stackpanel integration
     stackpanel.lib.mkFlake { inherit inputs self; }
     # Merge with additional custom outputs

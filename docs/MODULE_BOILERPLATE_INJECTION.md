@@ -2,16 +2,16 @@
 
 ## Overview
 
-When users install a stack module (via CLI or web UI), the module's configuration boilerplate is automatically injected into their config files. This provides a smooth onboarding experience with commented examples ready to customize.
+When users install a stackpanel module (via CLI or web UI), the module's configuration boilerplate is automatically injected into their config files. This provides a smooth onboarding experience with commented examples ready to customize.
 
 ## Architecture
 
 ### 1. Automatic Detection on Shell Entry
 
 Modules can be installed via:
-- **Flake inputs**: `inputs.stack-oxlint.url = "github:...";`
-- **Built-in modules**: Already in `nix/stack/modules/`
-- **Local modules**: In `.stack/modules/`
+- **Flake inputs**: `inputs.stackpanel-oxlint.url = "github:...";`
+- **Built-in modules**: Already in `nix/stackpanel/modules/`
+- **Local modules**: In `.stackpanel/modules/`
 
 The injection system automatically detects changes and updates config files on every shell entry.
 
@@ -24,7 +24,7 @@ Each module defines a `configBoilerplate` field in its `meta.nix`:
   id = "oxlint";
   name = "OxLint";
   description = "Blazing fast JavaScript/TypeScript linter";
-  
+
   # Boilerplate to inject into user's config
   configBoilerplate = ''
     # OxLint - Blazing fast JavaScript/TypeScript linter
@@ -39,7 +39,7 @@ Each module defines a `configBoilerplate` field in its `meta.nix`:
 
 ### 3. Nix-Generated Manifest
 
-During Nix evaluation, stack generates a modules manifest at `.stack/gen/modules-manifest.json`:
+During Nix evaluation, stackpanel generates a modules manifest at `.stackpanel/gen/modules-manifest.json`:
 
 ```json
 {
@@ -63,24 +63,24 @@ During Nix evaluation, stack generates a modules manifest at `.stack/gen/modules
 
 This manifest is generated from:
 - All available modules (built-in + flake inputs + local)
-- Their current enabled/disabled state from `stack.modules.*`
+- Their current enabled/disabled state from `stackpanel.modules.*`
 - Their boilerplate text from `meta.nix`
 
 ### 4. Injection Markers
 
 Configuration files use special marker comments to define injection zones:
 
-**In `.stack/config.nix`:**
+**In `.stackpanel/config.nix`:**
 ```nix
 {
   # ... user config ...
 
   # 5. Injection Algorithm (Automatic on Shell Entry)
 
-On every shell entry, `stack init` runs:
+On every shell entry, `stackpanel init` runs:
 
-1. **Read** the generated manifest at `.stack/gen/modules-manifest.json`
-2. **Compare** with previous injection state (stored in `.stack/state/modules-injected.json`)
+1. **Read** the generated manifest at `.stackpanel/gen/modules-manifest.json`
+2. **Compare** with previous injection state (stored in `.stackpanel/state/modules-injected.json`)
 3. **If changed**:
    - Parse config files to find injection markers
    - Rebuild injection zones with current modules (alphabetically sorted)
@@ -91,7 +91,7 @@ On every shell entry, `stack init` runs:
 **Nix side** (in shell hook or file generation):
 ```nix
 # Generate modules manifest
-stack.files.entries."gen/modules-manifest.json" = {
+stackpanel.files.entries."gen/modules-manifest.json" = {
   type = "text";
   text = builtins.toJSON {
     version = 1;
@@ -100,7 +100,7 @@ stack.files.entries."gen/modules-manifest.json" = {
       name = mod.name or id;
       enabled = mod.enable or false;
       configBoilerplate = mod.meta.configBoilerplate or "";
-    }) stack.modulesComputed;
+    }) stackpanel.modulesComputed;
   };
 };
 ```
@@ -125,23 +125,23 @@ func SyncModuleBoilerplates(manifestPath, configPath, statePath string) error {
     if err != nil {
         return err
     }
-    
+
     // 2. Read previous state
     prevState, _ := readState(statePath) // ignore error if first run
-    
+
     // 3. Check if changed
     if manifestsEqual(manifest, prevState) {
         return nil // Fast path: no changes
     }
-    
+
     // 4. Get enabled modules only
     enabled := filterEnabled(manifest.Modules)
-    
+
     // 5. Inject into config files
     if err := injectToFile(configPath, enabled); err != nil {
         return err
     }
-    
+
     // 6. Save new state
     return saveState(statePath, manifest)
 }
@@ -149,7 +149,7 @@ func SyncModuleBoilerplates(manifestPath, configPath, statePath string) error {
 func injectToFile(path string, modules []ModuleMetadata) error {
     content, _ := os.ReadFile(path)
     before, _, after := parseInjectionZone(string(content))
-    
+
     // Build injection content
     6. User Workflow
 
@@ -159,11 +159,11 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    stack.url = "github:darkmatter/stack";
-    stack-oxlint.url = "github:stack-modules/oxlint";  # ← Add module
+    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    stackpanel-oxlint.url = "github:stackpanel-modules/oxlint";  # ← Add module
   };
-  
-  outputs = { stack, stack-oxlint, ... }: {
+
+  outputs = { stackpanel, stackpanel-oxlint, ... }: {
     # Module is automatically available
   };
 }
@@ -171,7 +171,7 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 
 **Or enabling a built-in module:**
 ```nix
-# .stack/config.nix or .stack/data/modules.nix
+# .stackpanel/config.nix or .stackpanel/data/modules.nix
 {
   oxlint.enable = true;  # ← Enable built-in module
 }
@@ -180,14 +180,14 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 **On next shell entry** (`nix develop --impure`):
 1. Nix re-evaluates and detects new module
 2. Generates updated manifest with oxlint
-3. Shell hook runs `stack init`
+3. Shell hook runs `stackpanel init`
 4. CLI detects manifest change
 5. Injects boilerplate automatically }
-    
+
     injected.WriteString("  # ---------------------------------------------------------------------------\n")
     injected.WriteString("  # STACKPANEL_MODULES_END\n")
     injected.WriteString("  # ---------------------------------------------------------------------------")
-    
+
     newContent := before + injected.String() + after
     return os.WriteFile(p
     ID          string
@@ -200,22 +200,22 @@ func InjectModuleConfig(configPath string, module ModuleBoilerplate) error {
     if err != nil {
         return err
     }
-    
+
     // 2. Parse sections
     before, injected, after := parseInjectionZone(string(content))
-    
+
     // 3. Parse existing modules in injection zone
     modules := parseModules(injected)
-    
+
     // 4. Add/update module
     modules[module.ID] = module.Boilerplate
-    
+
     // 5. Sort by ID
     sorted := sortModules(modules)
-    
+
     // 6. Rebuild injection zone
     newInjected := buildInjectionZone(sorted)
-    
+
     // 7. Write back
     newContent := before + newInjected + after
     return os.WriteFile(configPath, []byte(newContent), 0644)
@@ -237,11 +237,11 @@ User edits **outside** the injection zone are preserved.
 
 **Installing a module:**
 ```bash
-stack module install oxlint
+stackpanel module install oxlint
 # or via web UI
 ```
 
-**Result in `.stack/data/modules.nix`:**
+**Result in `.stackpanel/data/modules.nix`:**
 ```nix
 {
   # ... manual configs ...
@@ -249,7 +249,7 @@ stack module install oxlint
   # ---------------------------------------------------------------------------
   # STACKPANEL_MODULES_BEGIN
   # Auto-generated module configurations (do not edit this section manually)
-  # Modules are sorted alphabetically and injected by the stack CLI
+  # Modules are sorted alphabetically and injected by the stackpanel CLI
   # ---------------------------------------------------------------------------
 
   # OxLint - Blazing fast JavaScript/TypeScript linter
@@ -287,10 +287,10 @@ Modules can define boilerplate for multiple targets:
 {
   # Main config.nix injection
   configBoilerplate = ''...'';
-  
+
   # Optional: data/modules.nix injection (if different)
   dataBoilerplate = ''...'';
-  
+
   # Optional: per-app config injection
   appBoilerplate = ''...'';
 }
@@ -322,12 +322,12 @@ Sort order:
 3. **Provide sensible defaults**: Make the config work with minimal edits
 4. **Use clear comments**: Explain what each option does
 5. **Follow Nix conventions**: Proper indentation, naming
-Add modules manifest generation to Nix (stack.files.entries)
+Add modules manifest generation to Nix (stackpanel.files.entries)
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go manifest reader and differ
 - [ ] Implement Go injector (sync on shell entry)
-- [ ] Add to `stack init` command
-- [ ] Add state tracking (.stack/state/modules-injected.json)
+- [ ] Add to `stackpanel init` command
+- [ ] Add state tracking (.stackpanel/state/modules-injected.json)
 - [ ] Test with real modules
 - [ ] Add validation (ensure configs parse correctly)
 - [ ] Add conflict detection (duplicate IDs)
@@ -336,13 +336,13 @@ Add modules manifest generation to Nix (stack.files.entries)
 The injection runs as part of the shell entry process:
 
 ```nix
-# nix/stack/devshell/hooks.nix
-stack.devshell.hooks.main = ''
+# nix/stackpanel/devshell/hooks.nix
+stackpanel.devshell.hooks.main = ''
   # ... existing hooks ...
-  
+
   # Sync module boilerplates if manifest changed
-  if [[ -f .stack/gen/modules-manifest.json ]]; then
-    stack init --sync-modules
+  if [[ -f .stackpanel/gen/modules-manifest.json ]]; then
+    stackpanel init --sync-modules
   fi
 '';
 ```
@@ -351,12 +351,12 @@ Or alternatively, the manifest generation itself triggers the sync:
 
 ```nix
 # Generate manifest and trigger sync in one step
-stack.files.entries."gen/modules-manifest.json" = {
+stackpanel.files.entries."gen/modules-manifest.json" = {
   type = "text";
   text = builtins.toJSON manifestData;
   # Post-write hook: sync boilerplates after manifest changes
   onChange = ''
-    ${pkgs.stack-cli}/bin/stack init --sync-modules
+    ${pkgs.stackpanel-cli}/bin/stackpanel init --sync-modules
   '';
 };
 ```
@@ -370,7 +370,7 @@ stack.files.entries."gen/modules-manifest.json" = {
 5. **Diff preview**: Show what will be injected on shell entry (verbose mode)
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go injector/remover
-- [ ] Add CLI commands: `stack module install/uninstall`
+- [ ] Add CLI commands: `stackpanel module install/uninstall`
 - [ ] Add web UI for module installation
 - [ ] Add module registry API
 - [ ] Test with real modules
