@@ -122,7 +122,7 @@ export default function HomePage() {
             <pre className="overflow-x-auto p-4 font-mono text-sm">
               <code>{`inputs:
   stackpanel:
-    url: github:darkmatter/stackpanel
+    url: git+ssh://git@github.com/darkmatter/stackpanel
 
 imports:
   - stackpanel`}</code>
