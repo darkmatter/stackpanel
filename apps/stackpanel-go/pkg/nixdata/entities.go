@@ -8,9 +8,8 @@ package nixdata
 import "errors"
 
 // ValidateEntityName checks that a Nix data entity name is well-formed.
-// Entity names must start with a letter or underscore, contain only
-// alphanumeric characters, hyphens, and underscores, and be at most 64
-// characters long.
+// These constraints mirror Nix attribute name rules (plus hyphens), and the
+// 64-char limit prevents filesystem issues with generated paths.
 func ValidateEntityName(name string) error {
 	if name == "" {
 		return errors.New("entity name cannot be empty")
@@ -34,7 +33,8 @@ func ValidateEntityName(name string) error {
 
 // IsExternalEntity returns true if the entity is provided by an external
 // source (e.g. "external-github-collaborators"). External entities are
-// read-only and live under data/.
+// read-only — they're synced from external systems and must not be modified
+// by the UI or CLI.
 func IsExternalEntity(name string) bool {
 	return len(name) > 9 && name[:9] == "external-"
 }
@@ -53,9 +53,9 @@ func IsMapEntity(entity string) bool {
 }
 
 // IsEvaluatedEntity returns true if the entity should be read from the
-// fully-evaluated flake config rather than from the raw data file. This is
-// necessary for entities like "variables" where the final value includes
-// both user-defined data and values contributed by Nix modules.
+// fully-evaluated flake config rather than from the raw data file. Evaluated
+// entities include values contributed by Nix modules that don't exist in the
+// raw data file (e.g. "variables" merges user-defined and module-generated vars).
 func IsEvaluatedEntity(entity string) bool {
 	switch entity {
 	case "variables":
@@ -66,8 +66,9 @@ func IsEvaluatedEntity(entity string) bool {
 }
 
 // PrefersConsolidatedConfig returns true for entities that should always be read
-// and written through .stack/config.nix, even if a legacy .stack/data/<entity>.nix
-// file still exists on disk.
+// and written through .stack/config.nix, bypassing any legacy per-entity files.
+// This drives the migration from individual .stack/data/<entity>.nix files to
+// the single config.nix source of truth.
 func PrefersConsolidatedConfig(entity string) bool {
 	switch entity {
 	case "variables", "users", "secrets":
@@ -78,13 +79,12 @@ func PrefersConsolidatedConfig(entity string) bool {
 }
 
 // MapFieldNames returns the set of JSON/Nix attribute names whose children
-// are user-defined map keys that must NOT be case-transformed. For example,
-// within "variables" the keys are variable IDs like "/apps/web/port" and
-// must be preserved verbatim when converting between kebab-case and
-// camelCase.
+// are user-defined map keys that must NOT be case-transformed. Without this,
+// a variable key like "/apps/web/port" would be mangled to "/apps/web/port"
+// during camelCase<->kebab-case conversion.
 //
-// This set must stay in sync with the TypeScript MAP_FIELD_NAMES in
-// apps/web/src/lib/nix-data/index.ts and with any future consumers.
+// SYNC: Must stay in sync with MAP_FIELD_NAMES in
+// apps/web/src/lib/nix-data/index.ts.
 func MapFieldNames() map[string]struct{} {
 	return map[string]struct{}{
 		"aliases":       {},

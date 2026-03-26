@@ -11,15 +11,16 @@ import (
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
-// ServiceStartState represents the state of a service being started
+// ServiceStartState tracks each service through its lifecycle during batch start.
+// The progression is: Waiting → Starting → Running/Failed/Skipped.
 type ServiceStartState int
 
 const (
-	StateWaiting ServiceStartState = iota
-	StateStarting
-	StateRunning
-	StateFailed
-	StateSkipped
+	StateWaiting  ServiceStartState = iota // Queued, not yet attempted
+	StateStarting                          // Currently being started
+	StateRunning                           // Successfully started (or was already running)
+	StateFailed                            // Start attempt failed
+	StateSkipped                           // Intentionally skipped
 )
 
 // ServiceStartInfo holds information about a service being started
@@ -32,7 +33,10 @@ type ServiceStartInfo struct {
 	Error       error
 }
 
-// StartServicesModel is the Bubble Tea model for starting services
+// StartServicesModel is a Bubble Tea model that starts services sequentially
+// with animated progress. Services are started one at a time to avoid port
+// conflicts and allow dependency ordering. This is the legacy standalone version;
+// see views/services.go for the navigation-integrated version.
 type StartServicesModel struct {
 	services   []ServiceStartInfo
 	currentIdx int
@@ -99,6 +103,8 @@ func (m StartServicesModel) Init() tea.Cmd {
 	)
 }
 
+// startServiceCmd returns a Bubble Tea command that starts a service in a goroutine.
+// It handles the already-running case gracefully to support idempotent "start all".
 func startServiceCmd(name string, idx int) tea.Cmd {
 	return func() tea.Msg {
 		svc := svc.Get(name)
@@ -280,13 +286,14 @@ func (m StartServicesModel) View() string {
 	return RenderFrame(b.String())
 }
 
-// RunStartServices launches the interactive service start TUI
+// RunStartServices launches the interactive service start TUI.
+// If serviceNames is empty, all registered services are started.
 func RunStartServices(serviceNames []string) error {
 	if len(serviceNames) == 0 {
 		serviceNames = svc.Names()
 	}
 
-	// Mark first service as starting
+	// Mark first service as starting so the spinner shows immediately
 	model := NewStartServicesModel(serviceNames)
 	model.services[0].State = StateStarting
 

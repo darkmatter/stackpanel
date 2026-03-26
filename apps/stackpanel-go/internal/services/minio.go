@@ -8,7 +8,8 @@ import (
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
-// MinioService manages the Minio S3-compatible service
+// MinioService manages a local MinIO instance for S3-compatible object storage.
+// It exposes both the API port and a separate web console port.
 type MinioService struct {
 	svc.BaseService
 	consolePort int
@@ -41,7 +42,8 @@ func (m *MinioService) Start() error {
 		return nil
 	}
 
-	// Set default credentials if not set
+	// Default credentials for local dev only. Production MinIO uses different
+	// auth; these are the well-known defaults from the MinIO quickstart guide.
 	if os.Getenv("MINIO_ROOT_USER") == "" {
 		os.Setenv("MINIO_ROOT_USER", "minioadmin")
 	}

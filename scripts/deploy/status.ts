@@ -5,11 +5,11 @@ import {
   runSsmCommands,
 } from "./lib";
 
-const [, , region = "us-west-2"] = process.argv;
+const [, , app = "web", region = "us-west-2"] = process.argv;
 
 const instance = getLatestWebInstance(region);
 if (!instance) {
-  console.log("No web instance found.");
+  console.log(`No ${app} instance found in region ${region}.`);
   process.exit(0);
 }
 
@@ -17,7 +17,7 @@ const host = instance.publicDnsName || instance.publicIpAddress;
 const health = probeHealth(host);
 const ssm = getSsmInstanceInfo(instance.instanceId, region);
 
-console.log(`App:          web`);
+console.log(`App:          ${app}`);
 console.log(`Region:       ${region}`);
 if (instance.stage) {
   console.log(`Stage:        ${instance.stage}`);

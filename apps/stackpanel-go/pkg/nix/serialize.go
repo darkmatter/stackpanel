@@ -1,4 +1,10 @@
-// Package nix provides utilities for serializing Go values to Nix expressions.
+// Package nix provides Go-to-Nix serialization. It converts Go values (structs,
+// maps, slices, primitives) into syntactically valid Nix expressions, handling
+// Nix-specific concerns like identifier quoting, string interpolation escaping,
+// multiline string syntax (”), and attribute set formatting.
+//
+// The serializer is used by the CLI to write .nix data files (users, packages,
+// config) that are then consumed by the Nix module system.
 package nix
 
 import (
@@ -36,9 +42,10 @@ func SerializeIndented(v any, indent string) (string, error) {
 	return formatNix(s, indent), nil
 }
 
-// SerializeWithSections converts a Go map to a formatted Nix attrset with section comments.
-// The sectionHeaders map provides human-readable headers for top-level keys.
-// Keys not in sectionHeaders will not have comments.
+// SerializeWithSections converts a Go map to a formatted Nix attrset, inserting
+// banner-style comments before top-level keys that have entries in sectionHeaders.
+// This produces human-friendly .nix files with visual separation between logical
+// sections (e.g. "# Apps", "# Services").
 func SerializeWithSections(v any, indent string, sectionHeaders map[string]string) (string, error) {
 	// Get the underlying map
 	rv := reflect.ValueOf(v)
@@ -104,12 +111,14 @@ func SerializeWithSections(v any, indent string, sectionHeaders map[string]strin
 	return formatNix(b.String(), indent), nil
 }
 
-// FormatSource formats raw Nix source using nixfmt when available, with a
-// simple formatter fallback.
+// FormatSource formats raw Nix source code. Tries nixfmt first for
+// RFC-style formatting; falls back to a basic brace-matching indenter.
 func FormatSource(source string, indent string) string {
 	return formatNix(source, indent)
 }
 
+// serializeValue recursively converts a reflect.Value to a Nix expression string.
+// depth tracks nesting for potential future indentation (currently unused).
 func serializeValue(v reflect.Value, depth int) (string, error) {
 	// Handle invalid (nil interface)
 	if !v.IsValid() {
@@ -139,12 +148,11 @@ func serializeValue(v reflect.Value, depth int) (string, error) {
 
 	case reflect.Float32, reflect.Float64:
 		f := v.Float()
-		// Check if this float is actually a whole number (common when JSON decodes integers as float64)
+		// JSON's number type is float64, so integers round-trip as 1.0 rather than 1.
+		// Nix treats 1 and 1.0 as different types, so we emit the integer form when safe.
 		if f == float64(int64(f)) {
-			// It's a whole number, serialize as integer to avoid "1.0" in Nix
 			return strconv.FormatInt(int64(f), 10), nil
 		}
-		// Nix requires floats to have a decimal point
 		s := strconv.FormatFloat(f, 'f', -1, 64)
 		if !strings.Contains(s, ".") {
 			s += ".0"
@@ -168,8 +176,8 @@ func serializeValue(v reflect.Value, depth int) (string, error) {
 	}
 }
 
-// serializeString properly escapes a string for Nix.
-// Uses double quotes for simple strings, or ” for multiline.
+// serializeString picks the appropriate Nix string syntax: double-quoted for
+// single-line strings, or ” (indented string) for multiline.
 func serializeString(s string) string {
 	// Check if multiline
 	if strings.Contains(s, "\n") {
@@ -205,7 +213,9 @@ func serializeSimpleString(s string) string {
 	return b.String()
 }
 
-// serializeMultilineString uses Nix's ” syntax for multiline strings.
+// serializeMultilineString uses Nix's ” (two single quotes) indented string
+// syntax. Inside this form, ${ must be escaped as ”$ and a literal ” must
+// be written as ”'.
 func serializeMultilineString(s string) string {
 	var b strings.Builder
 	b.WriteString("''")
@@ -270,6 +280,9 @@ func serializeMap(v reflect.Value, depth int) (string, error) {
 	return "{ " + strings.Join(parts, " ") + " }", nil
 }
 
+// serializeStruct maps Go structs to Nix attrsets. Field names come from json
+// tags (matching the JSON<->Nix convention used throughout the codebase).
+// The omitempty tag is respected: zero-valued fields are omitted from output.
 func serializeStruct(v reflect.Value, depth int) (string, error) {
 	t := v.Type()
 	var parts []string
@@ -278,12 +291,10 @@ func serializeStruct(v reflect.Value, depth int) (string, error) {
 		field := t.Field(i)
 		fieldVal := v.Field(i)
 
-		// Skip unexported fields
 		if !field.IsExported() {
 			continue
 		}
 
-		// Get field name from json tag, or use field name
 		name := field.Name
 		if tag := field.Tag.Get("json"); tag != "" {
 			tagParts := strings.Split(tag, ",")
@@ -315,8 +326,9 @@ func serializeStruct(v reflect.Value, depth int) (string, error) {
 	return "{ " + strings.Join(parts, " ") + " }", nil
 }
 
-// serializeAttrName quotes an attribute name if needed.
-// Nix attr names can be unquoted if they match [a-zA-Z_][a-zA-Z0-9_'-]*
+// serializeAttrName returns name unquoted if it's a valid Nix identifier,
+// otherwise wraps it in double quotes. Nix identifiers allow hyphens and
+// single quotes (e.g. "my-package" and "foo'bar" are valid unquoted).
 func serializeAttrName(name string) string {
 	if isValidIdentifier(name) {
 		return name
@@ -360,14 +372,14 @@ func isZero(v reflect.Value) bool {
 	}
 }
 
-// formatNix formats a Nix expression using nixfmt-rfc-style if available,
-// otherwise falls back to a simple indentation-based formatter.
+// formatNix formats a Nix expression. When indent is empty, the expression is
+// returned as-is (compact). Otherwise, nixfmt is tried first for canonical
+// formatting; if unavailable, a simple brace-depth indenter is used as fallback.
 func formatNix(s string, indent string) string {
 	if indent == "" {
 		return s
 	}
 
-	// Try to use nixfmt-rfc-style for proper formatting
 	if formatted, err := formatWithNixfmt(s); err == nil {
 		return formatted
 	}
@@ -376,9 +388,10 @@ func formatNix(s string, indent string) string {
 	return formatNixSimple(s, indent)
 }
 
-// formatWithNixfmt uses the external nixfmt-rfc-style command to format Nix code.
+// formatWithNixfmt pipes source through the nixfmt binary on PATH.
+// The loop is structured to support multiple formatter names, though currently
+// only "nixfmt" (which is nixfmt-rfc-style as of Nix 2.19+) is tried.
 func formatWithNixfmt(s string) (string, error) {
-	// Try nixfmt-rfc-style first (newer name), then nixfmt
 	for _, cmd := range []string{"nixfmt"} {
 		formatted, err := runFormatter(cmd, s)
 		if err == nil {
@@ -404,8 +417,10 @@ func runFormatter(cmdName string, input string) (string, error) {
 	return stdout.String(), nil
 }
 
-// formatNixSimple is a simple fallback formatter that indents based on braces.
-// It's less accurate than nixfmt but doesn't require external tools.
+// formatNixSimple is a best-effort formatter that tracks brace/bracket depth
+// for indentation. It handles string literals (both "" and ”) to avoid
+// reformatting content inside strings. Not as accurate as nixfmt (e.g. it
+// won't break long lines or align let-in blocks) but works without external tools.
 func formatNixSimple(s string, indent string) string {
 	var b strings.Builder
 	depth := 0

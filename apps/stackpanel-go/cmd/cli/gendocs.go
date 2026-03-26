@@ -8,6 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// gendocs.go generates MDX documentation from three sources:
+//
+//  1. Nix options JSON (from nixosOptionsDoc) -> options reference pages
+//  2. Module README.md files -> module documentation pages
+//  3. Cobra command definitions (rootCmd) -> CLI reference pages
+//
+// The root command is passed to docgen so it can traverse the full command
+// tree at runtime, ensuring CLI docs stay in sync with the actual binary.
 var gendocsCmd = &cobra.Command{
 	Use:   "gendocs <options.json> <output-dir> [modules-dir]",
 	Short: "Generate MDX documentation from Nix options JSON and CLI commands",
@@ -39,8 +47,5 @@ func runGenDocs(cmd *cobra.Command, args []string) error {
 		nixModulesDir = args[2]
 	}
 
-	// Pass the root command to generate CLI documentation
-	// This allows docgen to traverse the command tree and extract
-	// descriptions, flags, and examples from cobra definitions
 	return docgen.RunWithCLI(optionsPath, docsDir, nixModulesDir, rootCmd)
 }

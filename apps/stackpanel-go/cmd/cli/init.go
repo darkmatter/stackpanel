@@ -1,3 +1,7 @@
+// init.go implements `stackpanel init`, which scaffolds a new project by
+// evaluating the stackpanel flake's initFiles output and writing templates
+// into a .stack/ directory.
+
 package cmd
 
 import (
@@ -13,8 +17,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Default flake reference for stackpanel
-// Users can override with --flake flag or STACKPANEL_FLAKE env var
+// defaultStackpanelFlake is the remote flake used to fetch init templates.
+// Override with --flake or STACKPANEL_FLAKE for local development.
 const defaultStackpanelFlake = "github:darkmatter/stackpanel"
 
 var initCmd = &cobra.Command{
@@ -180,7 +184,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// registerInitProject adds the initialized project to the user config.
+// registerInitProject adds the initialized project to the user-global config
+// (~/.config/stackpanel/stackpanel.yaml). This lets the agent discover and
+// serve this project without requiring the user to be in its directory.
 func registerInitProject(projectRoot string) error {
 	ucm, err := userconfig.NewManager()
 	if err != nil {
@@ -205,8 +211,9 @@ func registerInitProject(projectRoot string) error {
 //   - "git+file:///local/path/to/stackpanel" (faster local, uses git filtering)
 //   - Any valid Nix flake reference
 //
-// Note: "path:" references are automatically converted to "git+file://" for better
-// performance (uses git to filter files instead of copying everything).
+// Gotcha: "path:" references copy the entire directory tree into the Nix store,
+// which is very slow for large repos. "git+file://" uses git's index to filter
+// to tracked files only, making it dramatically faster for local development.
 func getInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
 	// Convert path: to git+file:// for better performance
 	// path: copies the entire directory, git+file:// uses git to filter
@@ -218,8 +225,9 @@ func getInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]str
 	return nixeval.GetInitFilesFromFlake(ctx, flakeRef)
 }
 
-// findProjectRoot walks up the directory tree to find a project root
-// (directory containing flake.nix or .stack)
+// findProjectRoot walks up the directory tree to find the nearest project root.
+// A directory counts as a project root if it contains either flake.nix or
+// .stack/ — this covers both flake-based and standalone configurations.
 func findProjectRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {

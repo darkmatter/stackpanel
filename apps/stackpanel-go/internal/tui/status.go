@@ -26,7 +26,9 @@ type ServiceInfo struct {
 	Details     string
 }
 
-// StatusModel is the Bubble Tea model for the status dashboard
+// StatusModel is the Bubble Tea model for the standalone status dashboard.
+// Deprecated: Use views.StatusView instead, which integrates with the navigation system.
+// This remains for the `stack status` command when run without the TUI navigator.
 type StatusModel struct {
 	services     []ServiceInfo
 	caddyInfo    ServiceInfo
@@ -51,10 +53,10 @@ type (
 	refreshDoneMsg     struct{}
 )
 
-// Configuration
+// Configuration paths. ServicesBaseDir is deprecated — use svc.BaseDir instead.
+// These are evaluated at init time from $HOME, so tests that override HOME
+// must be careful about ordering.
 var (
-	// ServicesBaseDir is now dynamic - use svc.BaseDir instead
-	// This variable is kept for backward compatibility but should be avoided
 	ServicesBaseDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "devservices")
 	CaddyConfigDir  = filepath.Join(os.Getenv("HOME"), ".config", "caddy")
 )
@@ -110,6 +112,7 @@ func NewStatusModel() StatusModel {
 	}
 }
 
+// Init kicks off concurrent status checks and starts the 2-second auto-refresh ticker.
 func (m StatusModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
@@ -377,7 +380,9 @@ func (m StatusModel) View() string {
 	return RenderFrame(b.String())
 }
 
-// Helper functions for Caddy and Certs (services use the services package now)
+// Caddy and certificate helpers. Service status checking has moved to the
+// pkg/services package; these remain for caddy/step-ca which aren't managed
+// services (they run as system-level processes, not per-project ones).
 
 func readCaddyPid(path string) int {
 	data, err := os.ReadFile(path)
@@ -403,6 +408,10 @@ func countCaddySites() string {
 	return ""
 }
 
+// findStepStateDir walks up from cwd looking for a .stack directory, then
+// returns the Step CA state path within it. This handles both the legacy
+// "profile/step" layout and the current "state/step" layout.
+// BUG: stackDir and stackpanelDir are identical — the second check is redundant.
 func findStepStateDir() string {
 	cwd, _ := os.Getwd()
 	dir := cwd

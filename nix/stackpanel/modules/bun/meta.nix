@@ -23,7 +23,7 @@
   icon = "zap";
 
   # Documentation link
-  homepage = "https://nix-community.github.io/bun2nix/building-packages/writeBunApplication.html";
+  homepage = "https://nix-community.github.io/bun2nix/building-packages/hook.html";
 
   # Author
   author = "Stackpanel";

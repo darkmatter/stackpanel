@@ -1,3 +1,15 @@
+// preflight.go runs preparation tasks before (or during) devshell entry.
+//
+// Two subcommands serve different purposes:
+//
+//   - `preflight run`: Idempotent host-side work (codegen, file ops) that the
+//     shell hook calls on every entry. Safe to run repeatedly.
+//
+//   - `preflight import-env`: Materialises ambient environment variables into
+//     .stack/config.local.nix so that `nix develop` can run in pure mode
+//     (without --impure). This is opt-in and typically run once per machine.
+//     AWS credentials are intentionally excluded for security — only
+//     infrastructure config (ARNs, regions, Step CA URLs) is captured.
 package cmd
 
 import (
@@ -217,6 +229,9 @@ func resolvePreflightProjectRoot(flagValue string) (string, error) {
 	return findProjectRoot()
 }
 
+// writeProjectRootMarker drops a .stackpanel-root sentinel file so that
+// findProjectRoot() can locate the project from nested directories without
+// walking all the way up to a flake.nix or .stack/ directory.
 func writeProjectRootMarker(projectRoot string) error {
 	markerPath := filepath.Join(projectRoot, ".stackpanel-root")
 	if err := os.WriteFile(markerPath, []byte(projectRoot+"\n"), 0644); err != nil {
@@ -341,6 +356,8 @@ func generateNixConfig(cfg envConfig) string {
 	return sb.String()
 }
 
+// nixString escapes a Go string for embedding in a Nix expression.
+// Must handle backslashes, double quotes, and Nix's ${} interpolation syntax.
 func nixString(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "\"", "\\\"")

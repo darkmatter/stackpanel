@@ -1,3 +1,9 @@
+// services.go implements project-local development service management
+// (postgres, redis, minio, etc.). Services are registered via init() in
+// internal/services and discovered through the svc.Registry pattern.
+// Data is stored in .stack/state/services/ so different projects can
+// use different versions and configs simultaneously.
+
 package cmd
 
 import (
@@ -23,7 +29,8 @@ This allows different projects to use different versions and configurations.
 
 Note: Caddy is a global service (shared across projects) to avoid port 443 conflicts.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// Initialize services for this project
+		// InitForProject discovers the project root and sets up per-project
+		// data directories. Passing "" triggers auto-detection from cwd.
 		svc.InitForProject("")
 	},
 }
@@ -43,7 +50,7 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		noTui, _ := cmd.Flags().GetBool("no-tui")
 
-		// Get service names to start
+		// Resolve aliases (e.g. "pg" -> "postgres") via svc.Normalize.
 		var svcNames []string
 		if len(args) == 0 {
 			svcNames = svc.Names()
@@ -54,15 +61,15 @@ Examples:
 		}
 
 		if noTui {
-			// Non-interactive mode
 			for _, name := range svcNames {
 				startService(name)
 			}
 		} else {
-			// Interactive TUI mode
+			// TUI mode with automatic fallback: if the terminal doesn't
+			// support Bubble Tea (e.g. CI, piped output), fall through
+			// to the plain-text path so scripts still work.
 			if err := tui.RunStartServices(svcNames); err != nil {
 				output.Error(fmt.Sprintf("TUI error: %v", err))
-				// Fallback to non-interactive
 				for _, name := range svcNames {
 					startService(name)
 				}
@@ -84,7 +91,9 @@ var servicesStopCmd = &cobra.Command{
 			}
 		}
 
-		// Stop in reverse order
+		// Reverse order mirrors dependency topology: stop dependents (apps)
+		// before their backends (databases) to avoid connection errors during
+		// shutdown.
 		for i := len(svcNames) - 1; i >= 0; i-- {
 			stopService(svcNames[i])
 		}
@@ -161,6 +170,8 @@ var servicesListCmd = &cobra.Command{
 	},
 }
 
+// servicesComputePortCmd is an unlisted helper for scripting and debugging
+// the deterministic port algorithm (project-name hash → stable port).
 var servicesComputePortCmd = &cobra.Command{
 	Use:   "port [service-name]",
 	Short: "Compute stable port for a service based on project name",
@@ -262,6 +273,9 @@ func showServiceStatus(name string) {
 	}
 }
 
+// showServiceLogs shells out to `tail` rather than reading the log file
+// in-process. This is intentional: tail handles --follow (-f) with proper
+// signal propagation and avoids buffering issues with long-lived streams.
 func showServiceLogs(name string, follow bool, lines int) {
 	svc := svc.Get(name)
 	if svc == nil {
@@ -287,7 +301,7 @@ func showServiceLogs(name string, follow bool, lines int) {
 	cmd.Run()
 }
 
-// GetServiceStatus returns the status of a service (used by TUI)
+// GetServiceStatus returns the status of a service (exported for TUI layer).
 func GetServiceStatus(name string) (bool, int) {
 	svc := svc.Get(name)
 	if svc == nil {
@@ -297,7 +311,7 @@ func GetServiceStatus(name string) (bool, int) {
 	return status.Running, status.PID
 }
 
-// StartServiceByName starts a service by name (used by TUI)
+// StartServiceByName starts a service by name (exported for TUI layer).
 func StartServiceByName(name string) error {
 	svc := svc.Get(name)
 	if svc == nil {

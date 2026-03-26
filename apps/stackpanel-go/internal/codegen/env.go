@@ -17,12 +17,17 @@ const envModuleName = "env"
 
 type envModule struct{}
 
+// envManifest is the Nix-generated input that drives env codegen. Nix evaluates
+// secret schemas from .stack/secrets/apps/ and writes this to
+// .stack/gen/codegen/env-manifest.json on each devshell entry.
 type envManifest struct {
 	SchemaVersion int             `json:"schemaVersion"`
 	DataRoot      string          `json:"dataRoot"`
 	Targets       []envTargetSpec `json:"targets"`
 }
 
+// envTargetSpec defines one (app, environment) pair to generate. Each target
+// produces a SOPS-encrypted JSON payload and a TS module that embeds it.
 type envTargetSpec struct {
 	App         string                    `json:"app"`
 	Environment string                    `json:"environment"`
@@ -31,6 +36,9 @@ type envTargetSpec struct {
 	Vars        map[string]envVarResolver `json:"vars"`
 }
 
+// envVarResolver describes how to resolve a single env var's value.
+// Kind "literal" uses Value directly; "group"/"sopsRef" decrypt a SOPS file
+// and extract Key from the decrypted JSON.
 type envVarResolver struct {
 	Kind       string `json:"kind"`
 	Value      string `json:"value,omitempty"`
@@ -40,6 +48,9 @@ type envVarResolver struct {
 	Key        string `json:"key,omitempty"`
 }
 
+// envWarning captures a non-fatal issue (e.g., a referenced key missing from
+// a SOPS file). Warnings are collected per-target and written to a JSON file
+// so the studio UI and CLI can surface them.
 type envWarning struct {
 	App         string `json:"app"`
 	Environment string `json:"environment"`
@@ -56,6 +67,10 @@ type envWarningsFile struct {
 }
 
 const envWarningsPath = ".stack/gen/codegen/env-warnings.json"
+
+// generatedPayloadsRoot is where TS modules containing embedded encrypted
+// payloads are written. These are checked into git so the @gen/env package
+// works in CI and IDEs without requiring SOPS or an active devshell.
 const generatedPayloadsRoot = "packages/gen/env/src/generated-payloads"
 
 // NewEnvModule returns the generated env payload builder.
@@ -71,6 +86,13 @@ func (envModule) Description() string {
 	return "Build encrypted runtime env payloads from the generated env manifest"
 }
 
+// Build produces SOPS-encrypted env payloads and TS wrapper modules for each
+// (app, environment) target in the manifest. For each target it:
+//  1. Resolves all vars (literals directly, SOPS refs via sops --decrypt)
+//  2. Encrypts the flat key=value JSON with the target's AGE recipients
+//  3. Generates a TS module that embeds the encrypted payload as a string
+//  4. Generates a registry.ts with lazy loaders for all payloads
+//  5. Cleans up stale artifacts from removed apps/environments
 func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, error) {
 	manifestPath := filepath.Join(req.ProjectRoot, ".stack", "gen", "codegen", "env-manifest.json")
 	manifest, err := loadEnvManifest(manifestPath)
@@ -81,6 +103,8 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 		return nil, err
 	}
 
+	// decryptCache avoids decrypting the same SOPS file multiple times when
+	// several env vars reference different keys within the same source file.
 	decryptCache := make(map[string]map[string]any)
 	desiredOutputs := make(map[string]struct{}, len(manifest.Targets))
 	artifacts := make([]Artifact, 0, len(manifest.Targets))
@@ -187,6 +211,9 @@ func loadEnvManifest(path string) (*envManifest, error) {
 	return &manifest, nil
 }
 
+// buildFlatEnvPayload resolves all vars for a target into a flat map[string]string
+// suitable for JSON serialization. Keys are sorted for deterministic output.
+// Missing SOPS keys produce warnings rather than errors, allowing partial builds.
 func buildFlatEnvPayload(
 	ctx context.Context,
 	projectRoot string,
@@ -235,6 +262,9 @@ func buildFlatEnvPayload(
 	return result, warnings, nil
 }
 
+// decryptSourceFile shells out to `sops --decrypt` and caches the result.
+// The cache key includes the file type because SOPS needs --input-type to
+// correctly parse the same file path as different formats (yaml vs dotenv).
 func decryptSourceFile(
 	ctx context.Context,
 	projectRoot string,
@@ -273,6 +303,9 @@ func decryptSourceFile(
 	return parsed, nil
 }
 
+// encryptSopsJSON encrypts a JSON plaintext payload using SOPS with AGE
+// recipients. It writes to a temp file because SOPS requires a file path
+// (it doesn't support stdin for encryption with --age).
 func encryptSopsJSON(ctx context.Context, projectRoot string, plaintext []byte, outputPath string, recipients []string) ([]byte, error) {
 	if len(recipients) == 0 {
 		return nil, fmt.Errorf("no recipients configured for %s", outputPath)
@@ -315,6 +348,9 @@ func encryptSopsJSON(ctx context.Context, projectRoot string, plaintext []byte, 
 	return output, nil
 }
 
+// findStaleEnvArtifacts walks the data root and generated payloads directory,
+// returning paths for files that exist on disk but aren't in the desired set.
+// This handles cleanup when apps or environments are removed from the manifest.
 func findStaleEnvArtifacts(projectRoot, dataRoot string, desired map[string]struct{}) ([]string, error) {
 	roots := []struct {
 		path   string
@@ -369,6 +405,9 @@ func generatedPayloadModulePath(projectRoot string, target envTargetSpec) string
 	return filepath.Join(projectRoot, generatedPayloadsRoot, target.App, target.Environment+".ts")
 }
 
+// renderGeneratedPayloadModule produces a TS module that exports the encrypted
+// SOPS payload as a string constant. At runtime, the app's entrypoint decrypts
+// this using the local AGE identity.
 func renderGeneratedPayloadModule(encrypted []byte) []byte {
 	quoted := strconv.Quote(string(encrypted))
 	content := "// Auto-generated by Stackpanel — do not edit manually.\n" +
@@ -377,6 +416,9 @@ func renderGeneratedPayloadModule(encrypted []byte) []byte {
 	return []byte(content)
 }
 
+// renderGeneratedPayloadRegistry generates registry.ts with lazy dynamic imports
+// for all payload modules, keyed by app and environment. This enables the runtime
+// loader to fetch only the payload it needs without bundling all environments.
 func renderGeneratedPayloadRegistry(targets []envTargetSpec) []byte {
 	byApp := make(map[string][]string)
 	for _, target := range targets {
@@ -425,6 +467,8 @@ func resolveProjectPath(projectRoot, path string) string {
 	return filepath.Join(projectRoot, path)
 }
 
+// stringifyEnvValue coerces arbitrary JSON values to strings for env payloads.
+// SOPS decryption returns typed JSON (booleans, numbers) but env vars are always strings.
 func stringifyEnvValue(value any) string {
 	switch v := value.(type) {
 	case nil:
@@ -447,6 +491,8 @@ func stringifyEnvValue(value any) string {
 	}
 }
 
+// sopsInputType maps our file type names to SOPS --input-type values.
+// SOPS uses "dotenv" while we use "env" in the manifest schema.
 func sopsInputType(fileType string) string {
 	if fileType == "env" {
 		return "dotenv"

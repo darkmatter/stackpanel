@@ -1,21 +1,16 @@
 # ==============================================================================
 # .stack/nix/default.nix
 #
-# Project Nix modules that hook into the stackpanel module system.
+# Project-specific Nix modules that extend the stackpanel module system.
+# Use this for config that needs pkgs, inputs, or conditionals -- things
+# that cannot be expressed in the plain-attrset config.nix.
 #
-# This file and all imports have access to:
-#   - config: The current stackpanel configuration
+# Available arguments:
+#   - config:  The current stackpanel configuration
 #   - options: All stackpanel option definitions
-#   - lib: Nixpkgs lib (mkIf, mkOption, types, etc.)
-#   - pkgs: Nixpkgs package set
-#
-# Use this for:
-#   - Complex configuration that needs conditionals (lib.mkIf)
-#   - Custom scripts with dependencies (stackpanel.scripts)
-#   - Generated files (stackpanel.files.entries)
-#   - Anything that needs access to evaluated config values
-#
-# For simple config values, use config.nix instead.
+#   - lib:     Nixpkgs lib (mkIf, mkOption, types, etc.)
+#   - pkgs:    Nixpkgs package set
+#   - inputs:  Flake inputs (available but not used here currently)
 # ==============================================================================
 {
   config,
@@ -41,5 +36,19 @@ in
   config = lib.mkIf config.stackpanel.enable {
     # PostgreSQL package - requires pkgs, so lives here instead of config.nix
     stackpanel.globalServices.postgres.package = pkgs.postgresql_17;
+
+    # Runtime dependencies of `stackpanel` CLI.
+    # Declaring them as runtimeInputs has two effects:
+    #   1. nix build .#stackpanel-go → binary is wrapped so it finds these tools
+    #      at their Nix store paths, no PATH setup required.
+    #   2. devshell → tools are in PATH for `go run .` and interactive use.
+    #
+    # Use pkgs.colmena (from nixpkgs, binary-cached) for the CLI tool.
+    # The flake input's colmena.lib.makeHive is only needed at eval time
+    # in global-outputs.nix and doesn't require the binary package.
+    stackpanel.apps."stackpanel-go".go.runtimeInputs = [
+      pkgs.colmena
+      pkgs.nixos-anywhere
+    ];
   };
 }

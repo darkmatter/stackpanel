@@ -1,3 +1,9 @@
+// healthcheck.go runs project health checks defined in the Nix config.
+//
+// Results are cached to disk so that passing checks aren't re-run on every
+// invocation — only failed, errored, or never-run checks are re-executed by
+// default. This keeps the MOTD fast (it also reads the cache) while still
+// surfacing regressions promptly. Use --force to bypass the cache.
 package cmd
 
 import (

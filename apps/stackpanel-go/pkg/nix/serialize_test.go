@@ -261,6 +261,42 @@ func TestSerialize_JSONDecodedEnums(t *testing.T) {
 	assert.NotContains(t, result, "type = 2.0")
 }
 
+// Nix path literals (./foo.nix, ../bar.nix) must be serialized as quoted
+// strings by the generic serializer. Preserving unquoted path literals
+// through a JSON round-trip was previously handled by a NixPath sentinel
+// type, but that approach was replaced by tree-sitter direct edits
+// (flakeedit.PatchNixPath). This test ensures the serializer treats path-
+// like strings the same as any other string — no special-casing.
+func TestSerialize_PathLikeStringsAreQuoted(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"relative path", "./hardware/prod.nix", `"./hardware/prod.nix"`},
+		{"parent path", "../other/config.nix", `"../other/config.nix"`},
+		{"absolute path", "/etc/nixos/hardware-configuration.nix", `"/etc/nixos/hardware-configuration.nix"`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Serialize(tt.input)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestSerialize_PathLikeStringInMap(t *testing.T) {
+	m := map[string]any{
+		"hardwareConfig": "./hardware/prod.nix",
+	}
+	result, err := Serialize(m)
+	require.NoError(t, err)
+	assert.Contains(t, result, `hardwareConfig = "./hardware/prod.nix"`)
+	assert.NotContains(t, result, `hardwareConfig = ./hardware/prod.nix;`)
+}
+
 func TestSerialize_StackpanelTypes(t *testing.T) {
 	type App struct {
 		Port   int     `json:"port"`

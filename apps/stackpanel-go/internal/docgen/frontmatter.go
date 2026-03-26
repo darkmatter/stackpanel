@@ -6,8 +6,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// parseFrontmatter parses YAML frontmatter from documentation content.
-// Returns the parsed Frontmatter and the remaining content (without frontmatter).
+// parseFrontmatter extracts YAML frontmatter delimited by "---" lines from
+// markdown content. This is the standard frontmatter format used in README.md
+// files. Returns zero-value Frontmatter if no valid frontmatter block is found.
+//
+// For Nix file headers, use parseNixDocDirectives instead — Nix uses
+// @docgen.* directives embedded in comment blocks rather than YAML.
 func parseFrontmatter(content string) (Frontmatter, string) {
 	fm := Frontmatter{}
 	lines := strings.Split(content, "\n")
@@ -54,13 +58,14 @@ func parseFrontmatter(content string) (Frontmatter, string) {
 	return fm, strings.TrimSpace(remaining)
 }
 
-// parseNixDocDirectives extracts @docgen.* directives from nix comment content.
-// Supported directives:
-//   - @docgen.skip - Skip generating docs for this file
-//   - @docgen.icon IconName - Set the icon for this doc
-//   - @docgen.output /path/to/file.mdx - Set custom output path
+// parseNixDocDirectives extracts @docgen.* directives from Nix comment content.
+// This is the Nix equivalent of YAML frontmatter for README.md files. Directives
+// are stripped from the returned content so they don't appear in the rendered docs.
 //
-// Returns the Frontmatter with extracted values and content with directives removed.
+// Supported directives:
+//   - @docgen.skip          — exclude this file from doc generation
+//   - @docgen.icon IconName — set the Lucide icon for the page
+//   - @docgen.output path   — override the default output path (relative to docs dir)
 func parseNixDocDirectives(content string) (Frontmatter, string) {
 	fm := Frontmatter{}
 	lines := strings.Split(content, "\n")

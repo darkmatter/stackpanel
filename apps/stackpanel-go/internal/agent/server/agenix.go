@@ -1,3 +1,17 @@
+// agenix.go implements the secrets management HTTP API for the Stackpanel agent.
+//
+// Despite the "agenix" name (historical), this file handles the unified secrets
+// system which uses SOPS-encrypted YAML files grouped by environment (dev, staging,
+// prod). It also manages AGE identity configuration, KMS integration, and the
+// SOPS age key discovery/validation pipeline.
+//
+// Secret storage layout:
+//
+//	.stack/secrets/vars/dev.sops.yaml      -- per-environment SOPS files
+//	.stack/secrets/.sops.yaml              -- generated SOPS config (creation rules)
+//	.stack/state/age-identity              -- pointer to AGE private key
+//	.stack/state/kms-config.json           -- optional AWS KMS config
+//	.stack/data/variables.nix              -- secret metadata registry
 package server
 
 import (
@@ -58,8 +72,9 @@ type AgenixDecryptResponse struct {
 	Value string `json:"value"`
 }
 
-// groupFromID returns the path prefix used as the SOPS file group.
-// "/dev/postgres-url" → "dev", "/prod/api-key" → "prod", "/secret/foo" → "secret"
+// groupFromID extracts the environment/group prefix from a variable ID path.
+// "/dev/postgres-url" → "dev", "/prod/api-key" → "prod"
+// Falls back to "dev" if the ID has no path structure.
 func groupFromID(id string) string {
 	trimmed := strings.Trim(strings.TrimSpace(id), "/")
 	parts := strings.SplitN(trimmed, "/", 2)
@@ -69,11 +84,15 @@ func groupFromID(id string) string {
 	return "dev"
 }
 
+// isFlatSecretVariableID returns true if the ID represents an actual secret
+// (not a plain variable or computed value). "var" and "computed" groups are
+// non-encrypted and handled separately.
 func isFlatSecretVariableID(id string) bool {
 	group := groupFromID(id)
 	return group != "" && group != "var" && group != "computed"
 }
 
+// variableNameFromID returns the last path segment: "/dev/postgres-url" → "postgres-url"
 func variableNameFromID(id string) string {
 	trimmed := strings.Trim(strings.TrimSpace(id), "/")
 	if trimmed == "" {
@@ -83,6 +102,7 @@ func variableNameFromID(id string) string {
 	return parts[len(parts)-1]
 }
 
+// secretFileStemFromID converts a variable name into a safe filename stem.
 func secretFileStemFromID(id string) string {
 	name := variableNameFromID(id)
 	name = strings.ReplaceAll(name, "/", "-")
@@ -91,6 +111,7 @@ func secretFileStemFromID(id string) string {
 	return name
 }
 
+// secretYAMLKeyFromID converts a variable name to a YAML-safe key using underscores.
 func secretYAMLKeyFromID(id string) string {
 	name := variableNameFromID(id)
 	name = strings.ReplaceAll(name, "-", "_")
@@ -101,6 +122,9 @@ func secretYAMLKeyFromID(id string) string {
 	return name
 }
 
+// getFlatSecretFilePath resolves the SOPS file path and YAML key for a variable ID.
+// Nix-computed metadata takes precedence (allowing overrides), falling back to
+// convention-based grouping: /dev/postgres-url → vars/dev.sops.yaml, key: postgres_url
 func (s *Server) getFlatSecretFilePath(id string) (string, string, error) {
 	// Check Nix-computed metadata first (allows overrides)
 	meta, ok, err := s.getVariableSecretMeta(id)
@@ -113,6 +137,7 @@ func (s *Server) getFlatSecretFilePath(id string) (string, string, error) {
 	return filepath.Join(s.config.ProjectRoot, ".stack", "secrets", "vars", group+".sops.yaml"), yamlKey, nil
 }
 
+// readFlatSecret decrypts a single secret value from its group SOPS file.
 func (s *Server) readFlatSecret(id string) (string, error) {
 	secretPath, yamlKey, err := s.getFlatSecretFilePath(id)
 	if err != nil {
@@ -139,6 +164,9 @@ func (s *Server) readFlatSecret(id string) (string, error) {
 	return fmt.Sprintf("%v", value), nil
 }
 
+// writeFlatSecret upserts a secret value into the group SOPS file.
+// It decrypts the existing file, merges the new key, and re-encrypts in-place.
+// On encryption failure the plaintext file is removed to avoid leaking secrets.
 func (s *Server) writeFlatSecret(id string, value string) (string, error) {
 	secretPath, yamlKey, err := s.getFlatSecretFilePath(id)
 	if err != nil {
@@ -535,7 +563,12 @@ func (s *Server) handleAgenixSecretsList(w http.ResponseWriter, r *http.Request)
 	s.handleListAllGroups(w, r)
 }
 
-// getAgenixRecipients returns the list of age/SSH public keys for encryption
+// getAgenixRecipients collects AGE/SSH public keys from Nix user definitions,
+// filtered by environment access. Users are loaded from two sources in priority order:
+//  1. .stack/data/external/users.nix (auto-synced from GitHub collaborators)
+//  2. .stack/data/users.nix (manual definitions)
+//
+// System keys from secrets config are always appended.
 func (s *Server) getAgenixRecipients(environments []string) ([]string, error) {
 	// Try multiple user sources in order of priority:
 	// 1. .stack/data/external/users.nix (auto-synced from GitHub)
@@ -693,7 +726,9 @@ func (s *Server) writeAgeSecret(path string, value string, recipients []string) 
 	return nil
 }
 
-// updateVariableEntry updates the variables.nix file with secret metadata
+// updateVariableEntry writes secret metadata to variables.nix so the Nix module
+// system knows about the secret (its key, type, environments) even though the
+// actual encrypted value lives in the SOPS file.
 func (s *Server) updateVariableEntry(id, key, description string, environments []string) error {
 	dataPath := filepath.Join(s.config.ProjectRoot, ".stack", "data", "variables.nix")
 
@@ -1121,6 +1156,9 @@ func (s *Server) validateSingleSopsAgeKeySource(req SopsAgeKeySourceRequest) Sop
 	return resp
 }
 
+// readKeysFromSource retrieves AGE private keys from various backends:
+// file paths, SSH keys (via ssh-to-age), macOS Keychain, 1Password, AWS SSM,
+// vals expressions, or arbitrary shell scripts.
 func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, error) {
 	value := strings.TrimSpace(req.Value)
 	account := strings.TrimSpace(req.Account)
@@ -1231,6 +1269,10 @@ func (s *Server) readKeysFromSource(req SopsAgeKeySourceRequest) ([]string, erro
 	return keys, nil
 }
 
+// resolveSopsAgeKeysStatus discovers all available AGE private keys, derives their
+// public keys, and cross-references them against configured recipients to determine
+// which secret groups the current user can decrypt. This powers the "key status"
+// panel in the studio UI.
 func (s *Server) resolveSopsAgeKeysStatus(overrideSourceLines string) SopsAgeKeysStatusResponse {
 
 	resp := SopsAgeKeysStatusResponse{
@@ -1435,6 +1477,8 @@ func (s *Server) resolveSopsAgeKeysStatus(overrideSourceLines string) SopsAgeKey
 	return resp
 }
 
+// deriveAgePublicKeys converts AGE secret keys to their corresponding public keys
+// by writing each to a temp file and invoking `age-keygen -y`. Duplicates are removed.
 func (s *Server) deriveAgePublicKeys(secretKeys []string) []string {
 	publicKeys := []string{}
 	seen := map[string]struct{}{}
@@ -1490,6 +1534,9 @@ func (s *Server) sshPublicKeyToAge(sshPubKey string) string {
 	return pub
 }
 
+// defaultKeychainService builds a macOS Keychain service name unique to this
+// project by incorporating the git remote host/owner/repo. This prevents key
+// collisions when a developer works on multiple stackpanel projects.
 func (s *Server) defaultKeychainService() string {
 	base := "stackpanel.sops-age-key"
 	res, err := s.exec.RunWithOptions("git", s.config.ProjectRoot, nil, "remote", "get-url", "origin")
@@ -1511,6 +1558,7 @@ func (s *Server) defaultKeychainService() string {
 	return strings.Join(parts, ".")
 }
 
+// sanitizeServiceSegment normalizes a string for use in a dot-separated Keychain service name.
 func sanitizeServiceSegment(value string) string {
 	value = strings.TrimSpace(strings.TrimSuffix(value, ".git"))
 	value = strings.ReplaceAll(value, "/", ".")
@@ -1537,6 +1585,8 @@ func sanitizeServiceSegment(value string) string {
 	return strings.Trim(string(filtered), ".-")
 }
 
+// parseGitRemote extracts host, owner, and repo from git remote URLs.
+// Supports git@host:owner/repo, https://host/owner/repo, and ssh:// variants.
 func parseGitRemote(remote string) (host string, owner string, repo string) {
 	remote = strings.TrimSpace(remote)
 	if strings.HasPrefix(remote, "git@") {
@@ -1684,6 +1734,9 @@ func normalizePublicKeyForSops(pub string, sshToAgeFn func(string) string) strin
 	return pub
 }
 
+// renderSecretsSopsConfig generates the .sops.yaml creation rules file from
+// the Nix-computed secrets config. Each secret group gets its own path_regex
+// rule, and a catch-all rule covers any remaining encrypted files.
 func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig, kmsCfg KMSConfigResponse) string {
 	if serializable == nil {
 		serializable = &SerializableSecretsConfig{}
@@ -1753,6 +1806,7 @@ func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig
 	return sb.String()
 }
 
+// renderSecretsSopsRule generates a single SOPS creation_rule YAML block.
 func (s *Server) renderSecretsSopsRule(pathRegex string, serializable *SerializableSecretsConfig, recipients []string, kmsCfg KMSConfigResponse, kmsEnabled bool, normFn func(string) string) string {
 	if len(recipients) == 0 && !kmsEnabled {
 		return ""
@@ -1797,6 +1851,8 @@ func (s *Server) renderSecretsSopsRule(pathRegex string, serializable *Serializa
 	return sb.String()
 }
 
+// regenerateSecretsSopsConfig re-renders and writes the .sops.yaml file.
+// Called after any change to recipients, groups, or KMS config.
 func (s *Server) regenerateSecretsSopsConfig(kmsCfg KMSConfigResponse) error {
 	serializable, err := s.getSerializableSecretsConfig()
 	if err != nil {
