@@ -108,7 +108,8 @@ function isFullDocument(html) {
 }
 
 function wrapInFrame(content) {
-  return frameTemplate.replace('<!-- CONTENT -->', content);
+  const parts = frameTemplate.split('<!-- CONTENT -->');
+  return parts.join(content);
 }
 
 function getNewestScreen() {

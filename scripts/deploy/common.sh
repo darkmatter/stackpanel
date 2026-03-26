@@ -43,7 +43,10 @@ artifact_version() {
     || [ -n "$(git -C "$rootdir" ls-files --others --exclude-standard)" ]; then
     local fingerprint
     fingerprint="$(
-      git -C "$rootdir" diff HEAD -- 2>/dev/null | shasum -a 256 | awk '{print substr($1, 1, 12)}'
+      {
+        git -C "$rootdir" diff HEAD -- 2>/dev/null
+        git -C "$rootdir" ls-files --others --exclude-standard -z | sort -z | xargs -0 -I{} cat "$rootdir/{}" 2>/dev/null
+      } | shasum -a 256 | awk '{print substr($1, 1, 12)}'
     )"
     version="${version}-dirty-${fingerprint}"
   fi
