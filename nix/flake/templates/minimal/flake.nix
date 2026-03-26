@@ -16,10 +16,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     stackpanel.url = "github:darkmatter/stackpanel";
-
-    # For pure flake evaluation (nix flake check)
-    stackpanel-root.url = "file+file:///dev/null";
-    stackpanel-root.flake = false;
   };
 
   outputs =
