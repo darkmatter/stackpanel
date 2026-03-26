@@ -21,8 +21,12 @@ LOCAL_AGE_KEY_FILE="${ROOTDIR}/.stack/keys/local.txt"
 if [ -z "$SECRETS_FILE" ]; then
   if [ -f "$STAGE_SECRETS_FILE" ]; then
     SECRETS_FILE="$STAGE_SECRETS_FILE"
-  else
+  elif [ "$STAGE" = "dev" ]; then
     SECRETS_FILE="$DEFAULT_SECRETS_FILE"
+  else
+    echo "ERROR: Stage-specific secrets file not found: ${STAGE_SECRETS_FILE}" >&2
+    echo "For non-dev stages, either create the secrets file or set STACKPANEL_DEPLOY_SECRETS_FILE." >&2
+    exit 1
   fi
 fi
 
