@@ -1,3 +1,7 @@
+// sops.go implements a legacy SOPS secrets API that operates on per-environment
+// YAML files (e.g., .stack/secrets/dev.yaml). This predates the group-based
+// system in secrets_groups.go and is kept for backwards compatibility.
+// New code should prefer the group-based endpoints.
 package server
 
 import (
@@ -240,7 +244,8 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getAgeRecipients gets recipient public keys from the Nix-configured secrets state.
+// getAgeRecipients collects recipient public keys, trying the Nix user-based
+// system first and falling back to the serializable secrets config. Deduplicates keys.
 func (s *Server) getAgeRecipients() []string {
 	recipients, err := s.getAgenixRecipients(nil)
 	if err != nil || len(recipients) == 0 {

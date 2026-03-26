@@ -16,9 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// -----------------------------
-// Small helpers
-// -----------------------------
+// --- HTTP response helpers ---
 
 func (s *Server) writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -34,9 +32,11 @@ func (s *Server) writeAPIError(w http.ResponseWriter, status int, message string
 	s.writeJSON(w, status, apiResponse{Success: false, Error: message})
 }
 
+// readJSON decodes a JSON request body with a 2 MiB size limit. Unknown fields
+// are rejected to catch typos in API requests early.
 func (s *Server) readJSON(body io.ReadCloser, v any) error {
 	defer body.Close()
-	dec := json.NewDecoder(io.LimitReader(body, 2<<20)) // 2 MiB
+	dec := json.NewDecoder(io.LimitReader(body, 2<<20))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
 		return fmt.Errorf("invalid json: %w", err)
@@ -44,6 +44,7 @@ func (s *Server) readJSON(body io.ReadCloser, v any) error {
 	return nil
 }
 
+// generateToken returns a URL-safe base64 token of n random bytes.
 func generateToken(n int) string {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err == nil {
@@ -54,6 +55,8 @@ func generateToken(n int) string {
 	return base64.RawURLEncoding.EncodeToString(fallback)
 }
 
+// safeJoin resolves rel within root, rejecting absolute paths and directory
+// traversals (..) to prevent path escape attacks on file operations.
 func safeJoin(root string, rel string) (string, error) {
 	rel = strings.TrimSpace(rel)
 	if rel == "" {
@@ -80,13 +83,14 @@ func safeJoin(root string, rel string) (string, error) {
 	return full, nil
 }
 
+// buildNixEvalArgs constructs `nix eval` arguments from user input, using
+// heuristics to distinguish between:
+//   - Raw Nix expressions (contains whitespace, starts with { or ()  → --expr
+//   - Full flake references (contains #)                              → as-is
+//   - Bare attribute paths                                            → prepends .#
+//
+// Always uses --impure because Nix config often reads env vars and local files.
 func buildNixEvalArgs(expression string) []string {
-	// Heuristic:
-	// - If expression already includes a flake ref (#), use it as-is.
-	// - Otherwise treat it as an attr path on the current flake.
-	// - If it looks like a raw nix expression, use --expr.
-	//
-	// Always use --impure to allow reading files and environment variables.
 	expr := strings.TrimSpace(expression)
 
 	if looksLikeNixExpr(expr) {
@@ -100,14 +104,16 @@ func buildNixEvalArgs(expression string) []string {
 	return []string{"eval", "--impure", "--json", ".#" + expr}
 }
 
+// looksLikeNixExpr uses a rough heuristic to detect raw Nix expressions vs attr paths.
 func looksLikeNixExpr(s string) bool {
-	// Very small heuristic: whitespace or obvious expression tokens.
 	if strings.ContainsAny(s, " \t\n") {
 		return true
 	}
 	return strings.HasPrefix(s, "{") || strings.HasPrefix(s, "(") || strings.HasPrefix(s, "let")
 }
 
+// normalizeEnv maps environment name aliases to their canonical forms.
+// Accepts: "dev"/"development", "staging", "prod"/"production".
 func normalizeEnv(env string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(env)) {
 	case "dev", "development":
@@ -124,6 +130,10 @@ func normalizeEnv(env string) (string, error) {
 // secretsUser was used for the legacy users.yaml format - now deprecated.
 // Users are read from .stack/data/users.nix via Nix evaluation.
 
+// setSopsSecret encrypts a key-value pair into the environment's SOPS YAML file
+// (.stack/secrets/{env}.yaml). It decrypts the existing file, merges the new value,
+// then re-encrypts with all configured AGE recipients. Returns the relative path
+// of the written secrets file.
 func (s *Server) setSopsSecret(env string, key string, value string) (string, error) {
 	// Get recipients from Nix config.
 	recipients, err := s.getAgenixRecipients(nil)
@@ -176,7 +186,8 @@ func (s *Server) setSopsSecret(env string, key string, value string) (string, er
 		return "", err
 	}
 
-	// Encrypt with SOPS using explicit recipients (so we don't rely on .sops.yaml).
+	// Encrypt with explicit --age recipients instead of relying on .sops.yaml,
+	// which may not exist or be configured for this project.
 	args := []string{"--encrypt", "--input-type", "yaml", "--output-type", "yaml", "--age", strings.Join(recipients, ",")}
 	args = append(args, tmpPath)
 

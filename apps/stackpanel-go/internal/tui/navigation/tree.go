@@ -4,14 +4,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// CommandNode represents a node in the command tree
+// CommandNode represents a node in the command tree. Each node maps 1:1 to a
+// Cobra command. Leaf nodes are executable; non-leaf nodes are navigable
+// containers. Parent pointers enable breadcrumb rendering and back-navigation.
 type CommandNode struct {
 	Name        string
 	Description string
-	IsLeaf      bool
+	IsLeaf      bool // True when the command has no visible subcommands
 	Children    []*CommandNode
 	Parent      *CommandNode
-	CobraCmd    *cobra.Command
+	CobraCmd    *cobra.Command // Reference back to the underlying Cobra command
 }
 
 // CommandTree holds the root of the command tree
@@ -19,7 +21,8 @@ type CommandTree struct {
 	Root *CommandNode
 }
 
-// BuildTree builds a command tree from a cobra command hierarchy
+// BuildTree converts a Cobra command hierarchy into a CommandTree for TUI navigation.
+// Hidden commands, "help", and "completion" are filtered out.
 func BuildTree(rootCmd *cobra.Command) *CommandTree {
 	root := buildNode(rootCmd, nil)
 	return &CommandTree{Root: root}
@@ -45,7 +48,8 @@ func buildNode(cmd *cobra.Command, parent *CommandNode) *CommandNode {
 	return node
 }
 
-// getVisibleSubcommands returns commands that should be visible in the menu
+// getVisibleSubcommands filters out hidden, help, and completion commands
+// that shouldn't appear in the interactive menu.
 func getVisibleSubcommands(cmd *cobra.Command) []*cobra.Command {
 	var visible []*cobra.Command
 	for _, sub := range cmd.Commands() {
@@ -58,7 +62,9 @@ func getVisibleSubcommands(cmd *cobra.Command) []*cobra.Command {
 	return visible
 }
 
-// GetPath returns the path from root to this node as a slice of names
+// GetPath returns the path from root to this node as a slice of names.
+// The returned slice always starts with the root command name.
+// Used for breadcrumb rendering and reconstructing Cobra args.
 func (n *CommandNode) GetPath() []string {
 	var path []string
 	current := n
@@ -114,14 +120,14 @@ func (n *CommandNode) CanExecute() bool {
 	return n.CobraCmd.Run != nil || n.CobraCmd.RunE != nil
 }
 
-// HasRequiredArgs returns true if the command requires arguments
+// HasRequiredArgs returns true if the command requires arguments.
+// Uses a heuristic: looks for <angle-bracket> patterns in the Use string.
+// This avoids reflection on Cobra's Args field, which uses function values
+// that can't be introspected (ExactArgs, MinimumNArgs, etc.).
 func (n *CommandNode) HasRequiredArgs() bool {
 	if n.CobraCmd == nil {
 		return false
 	}
-	// Check if Args is set and requires arguments
-	// This is a heuristic - cobra.ExactArgs(n) with n > 0 means required
-	// For simplicity, we check the Use string for <arg> patterns
 	return containsRequiredArg(n.CobraCmd.Use)
 }
 

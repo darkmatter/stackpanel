@@ -1,3 +1,9 @@
+// nix_files.go exposes metadata about Nix-generated files (stackpanel.files.entries)
+// and tracks whether on-disk copies are stale relative to the Nix config.
+//
+// The evaluation uses git+file:// to avoid copying untracked files (node_modules, etc.)
+// and tries multiple flake attribute paths for compatibility with both user projects
+// and the stackpanel repo itself.
 package server
 
 import (

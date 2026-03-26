@@ -9,7 +9,9 @@ import (
 	tree_sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
-// findReadmeFiles recursively finds README.md files in subdirectories
+// findReadmeFiles recursively finds README.md files in subdirectories of dir.
+// Each directory containing a README becomes a documentation source. This is
+// the first pass of the two-pass discovery strategy (README > Nix headers).
 func findReadmeFiles(dir string, baseDir string) ([]DocSource, error) {
 	var results []DocSource
 
@@ -52,7 +54,11 @@ func findReadmeFiles(dir string, baseDir string) ([]DocSource, error) {
 	return results, nil
 }
 
-// findNixDocHeaders finds .nix files with documentation headers (multi-line comments at the start)
+// findNixDocHeaders finds .nix files with documentation header comments.
+// This is the second pass of discovery: directories that already have a README.md
+// are skipped (README takes precedence). For directories without a README, we
+// check default.nix for a header comment block. Standalone .nix files (not
+// default.nix) are also checked.
 func findNixDocHeaders(dir string, baseDir string) ([]DocSource, error) {
 	var results []DocSource
 
@@ -69,7 +75,7 @@ func findNixDocHeaders(dir string, baseDir string) ([]DocSource, error) {
 		fullPath := filepath.Join(dir, entry.Name())
 
 		if entry.IsDir() {
-			// Skip directories that have a README.md (those are handled separately)
+			// Skip directories that have a README.md — those are handled by findReadmeFiles
 			readmePath := filepath.Join(fullPath, "README.md")
 			if _, err := os.Stat(readmePath); err == nil {
 				continue
@@ -117,8 +123,9 @@ func findNixDocHeaders(dir string, baseDir string) ([]DocSource, error) {
 	return results, nil
 }
 
-// isSeparatorLine checks if a line consists entirely of repeated separator characters
-// (e.g., "======", "------", "******", or similar decorative lines)
+// isSeparatorLine checks if a line is a decorative separator (e.g., "======",
+// "------"). These are common in Nix file headers and should be stripped from
+// extracted documentation content.
 func isSeparatorLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
 	if len(trimmed) < 3 {
@@ -133,9 +140,14 @@ func isSeparatorLine(line string) bool {
 	return false
 }
 
-// extractNixDocHeader extracts the documentation header from a .nix file
-// using tree-sitter-nix to parse comment nodes at the start of the file.
-// Returns the content if the file starts with a multi-line comment block (5+ lines).
+// extractNixDocHeader extracts documentation from a .nix file's leading comment
+// block using tree-sitter for accurate parsing. Returns the cleaned content if
+// the file starts with a substantial comment block (5+ lines after stripping
+// separators). The 5-line threshold filters out short copyright/license headers
+// that aren't meaningful documentation.
+//
+// Tree-sitter is used instead of regex because Nix comments can be tricky to
+// parse correctly (# prefix, nested expressions in comments, etc.).
 func extractNixDocHeader(path string) string {
 	source, err := os.ReadFile(path)
 	if err != nil {
@@ -157,8 +169,9 @@ func extractNixDocHeader(path string) string {
 
 	root := tree.RootNode()
 
-	// Walk root's children, collecting consecutive comment nodes from the beginning.
-	// Stop at the first non-comment child node.
+	// Collect consecutive comment nodes from the file's beginning.
+	// We stop at the first non-comment node — the doc header must be at the
+	// very top of the file with no intervening code.
 	var docLines []string
 	childCount := root.ChildCount()
 	for i := uint(0); i < childCount; i++ {

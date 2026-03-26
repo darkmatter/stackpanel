@@ -1,3 +1,11 @@
+// secrets_recipients.go manages the AGE public key recipients who can decrypt secrets.
+//
+// Recipients come from two sources:
+//   - stackpanel.users (auto-derived from user definitions, not directly editable here)
+//   - stackpanel.secrets.recipients (explicitly configured, fully managed via this API)
+//
+// The Source field distinguishes these: "users" vs "secrets". Only "secrets" recipients
+// can be deleted via the API; user-derived recipients must be removed from the user config.
 package server
 
 import (
@@ -88,6 +96,8 @@ func normalizeRecipientPublicKey(req RecipientRequest) (string, error) {
 	return "", fmt.Errorf("public key must start with 'age1' or 'ssh-'")
 }
 
+// explicitSecretsRecipients reads only the recipients explicitly declared in
+// stackpanel.secrets.recipients (not those auto-derived from users).
 func (s *Server) explicitSecretsRecipients() (map[string]map[string]any, error) {
 	data, err := s.readConsolidatedData()
 	if err != nil {
@@ -123,6 +133,9 @@ func (s *Server) explicitSecretsRecipients() (map[string]map[string]any, error) 
 	return result, nil
 }
 
+// mutableSecretsRecipientsConfig returns (fullData, secretsSection, recipientsMap, err),
+// initializing missing sections as needed. Callers modify recipientsMap in-place
+// and then write fullData back via writeConsolidatedData.
 func (s *Server) mutableSecretsRecipientsConfig() (map[string]any, map[string]any, map[string]any, error) {
 	data, err := s.readConsolidatedData()
 	if err != nil {
@@ -144,6 +157,8 @@ func (s *Server) mutableSecretsRecipientsConfig() (map[string]any, map[string]an
 	return data, secrets, recipients, nil
 }
 
+// notifyRecipientConfigChange invalidates the flake watcher cache and broadcasts
+// an SSE event so the web UI picks up the change immediately.
 func (s *Server) notifyRecipientConfigChange(path string, action string) {
 	if s.flakeWatcher != nil {
 		s.flakeWatcher.InvalidateConfig()
@@ -340,7 +355,8 @@ func (s *Server) handleRekeyWorkflowStatus(w http.ResponseWriter, r *http.Reques
 	s.writeAPI(w, http.StatusOK, RekeyWorkflowStatus{Exists: exists})
 }
 
-// handleSecretsVerify does an encrypt/decrypt round-trip to verify secrets work.
+// handleSecretsVerify performs an encrypt→decrypt round-trip with test data to
+// confirm the current user's AGE key can work with a group's recipients.
 func (s *Server) handleSecretsVerify(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

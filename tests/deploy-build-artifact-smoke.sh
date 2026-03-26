@@ -52,10 +52,27 @@ echo "unexpected nix invocation: \$*" >&2
 exit 1
 EOF
 
+cat > "$FAKE_ROOT/bin/write-files" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "\${STACKPANEL_ROOT:-}" != "$FAKE_ROOT" ]; then
+  echo "missing STACKPANEL_ROOT for write-files" >&2
+  exit 1
+fi
+mkdir -p "$FAKE_ROOT/packages/gen/config/src"
+printf '{\"name\":\"@gen/config\"}\n' > "$FAKE_ROOT/packages/gen/config/package.json"
+printf 'export const PROJECT_CONFIG = {} as const;\n' > "$FAKE_ROOT/packages/gen/config/src/config.ts"
+touch "$FAKE_ROOT/.write-files-called"
+EOF
+
 cat > "$FAKE_ROOT/bin/bun" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 if [ "\${1:-}" = "install" ]; then
+  if [ ! -f "$FAKE_ROOT/packages/gen/config/package.json" ]; then
+    echo "@gen/config package was not generated before bun install" >&2
+    exit 1
+  fi
   exit 0
 fi
 if [ "\${1:-}" = "run" ] && [ "\${2:-}" = "build:ec2" ]; then
@@ -80,7 +97,7 @@ echo "unexpected bun invocation: \$*" >&2
 exit 1
 EOF
 
-chmod +x "$FAKE_ROOT/bin/git" "$FAKE_ROOT/bin/stackpanel" "$FAKE_ROOT/bin/go" "$FAKE_ROOT/bin/nix" "$FAKE_ROOT/bin/bun"
+chmod +x "$FAKE_ROOT/bin/git" "$FAKE_ROOT/bin/stackpanel" "$FAKE_ROOT/bin/go" "$FAKE_ROOT/bin/nix" "$FAKE_ROOT/bin/write-files" "$FAKE_ROOT/bin/bun"
 
 PATH="$FAKE_ROOT/bin:$PATH" \
 EC2_ARTIFACT_VERSION="test-version" \
@@ -89,6 +106,11 @@ bash "$REPO_ROOT/scripts/deploy/build-artifact.sh" "us-west-2"
 
 if [ ! -f "$FAKE_ROOT/.preflight-called" ]; then
   echo "expected preflight marker to be created" >&2
+  exit 1
+fi
+
+if [ ! -f "$FAKE_ROOT/.write-files-called" ]; then
+  echo "expected write-files to be called" >&2
   exit 1
 fi
 

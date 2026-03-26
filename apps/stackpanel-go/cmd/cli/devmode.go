@@ -1,3 +1,12 @@
+// devmode.go lets developers run the stackpanel CLI from source via `go run`.
+//
+// When debug/dev mode is enabled, `stackpanel debug <args>` replaces the current
+// process (via syscall.Exec) with `go run . <args>` in the stackpanel-go source
+// directory. This gives an instant feedback loop during CLI development without
+// needing to rebuild and reinstall the Nix package.
+//
+// Repo path resolution tries three sources in order: STACKPANEL_DEV_REPO env var,
+// user config file, then auto-detection by walking up from cwd.
 package cmd
 
 import (
@@ -40,9 +49,9 @@ Examples:
 	RunE:               runDebug,
 }
 
-// runDebug handles `stackpanel debug [args...]`.
-// If the first arg is a known subcommand (enable/disable/status), it delegates.
-// Otherwise it resolves the repo path and execs `go run . <args...>`.
+// runDebug handles subcommand dispatch manually because DisableFlagParsing is
+// set — we need raw args to forward to `go run` without Cobra consuming flags
+// meant for the target command.
 func runDebug(cmd *cobra.Command, args []string) error {
 	// Check if the first arg is a known subcommand or help flag
 	if len(args) > 0 {

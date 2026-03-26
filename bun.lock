@@ -17,6 +17,7 @@
         "@aws-sdk/client-s3": "^3.953.0",
         "@aws-sdk/client-ssm": "^3.953.0",
         "@cloudflare/workers-types": "^4.20250822.0",
+        "@gen/config": "workspace:*",
         "@gen/env": "workspace:*",
         "@mdx-js/rollup": "^3.1.1",
         "@pulumi/pulumi": "^3.213.0",
@@ -301,6 +302,9 @@
       "peerDependencies": {
         "typescript": "^5",
       },
+    },
+    "packages/gen/config": {
+      "name": "@gen/config",
     },
     "packages/gen/env": {
       "name": "@gen/env",
@@ -953,6 +957,8 @@
     "@formatjs/intl-localematcher": ["@formatjs/intl-localematcher@0.6.2", "", { "dependencies": { "tslib": "^2.8.0" } }, "sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA=="],
 
     "@gar/promise-retry": ["@gar/promise-retry@1.0.2", "", { "dependencies": { "retry": "^0.13.1" } }, "sha512-Lm/ZLhDZcBECta3TmCQSngiQykFdfw+QtI1/GYMsZd4l3nG+P8WLB16XuS7WaBGLQ+9E+cOcWQsth9cayuGt8g=="],
+
+    "@gen/config": ["@gen/config@workspace:packages/gen/config"],
 
     "@gen/env": ["@gen/env@workspace:packages/gen/env"],
 

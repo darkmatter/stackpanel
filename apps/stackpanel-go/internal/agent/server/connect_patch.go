@@ -1,3 +1,11 @@
+// connect_patch.go implements fine-grained Nix config editing via the PatchNixData RPC.
+// Instead of replacing entire config entities, patches update a single nested value
+// in .stack/config.nix. The web UI uses this for inline field editing in panels.
+//
+// Path convention: The UI sends camelCase paths (matching SpField/panel editPath)
+// which get converted to kebab-case for the Nix attribute namespace. All writes
+// target config.nix as the single source of truth.
+
 package server
 
 import (
@@ -146,7 +154,12 @@ func (s *AgentServiceServer) patchConsolidatedConfig(
 }
 
 // parseValueJSON parses a JSON-encoded value string with an optional type hint.
-// Returns the Go value suitable for Nix serialization.
+// Returns a Go value suitable for Nix serialization via the nixdata package.
+//
+// Special types:
+//   - "nix_expr": wraps value as a raw Nix expression (not quoted)
+//   - "delete": returns a sentinel that removes the key from config.nix
+//   - "": auto-detects type from JSON parsing, falls back to raw string
 func parseValueJSON(value string, valueType string) (any, error) {
 	if value == "" && valueType != "string" && valueType != "delete" {
 		return nil, fmt.Errorf("value is required")

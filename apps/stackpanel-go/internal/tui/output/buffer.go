@@ -1,3 +1,4 @@
+// Package output provides stdout/stderr capture and paged viewing for TUI command execution.
 package output
 
 import (
@@ -8,8 +9,8 @@ import (
 )
 
 // Buffer captures stdout and stderr from command execution.
-// It's safe for concurrent use and can be used to capture output
-// from goroutines or subprocesses.
+// All methods are goroutine-safe. The combined buffer preserves interleaved
+// ordering so callers see output in the same order it was written.
 type Buffer struct {
 	mu     sync.RWMutex
 	stdout bytes.Buffer
@@ -136,8 +137,11 @@ func (w *stderrWriter) Write(p []byte) (n int, err error) {
 	return w.b.WriteStderr(p)
 }
 
-// Capture captures stdout and stderr during the execution of fn.
-// It returns the buffer containing captured output.
+// Capture redirects os.Stdout and os.Stderr to pipes for the duration of fn,
+// collecting all output into a Buffer. This is inherently process-global — it
+// temporarily replaces the file descriptors, so concurrent Capture calls will
+// interfere with each other. Used by the navigation model to capture Cobra
+// command output for display in the output viewer.
 func Capture(fn func()) *Buffer {
 	buf := NewBuffer()
 
@@ -193,7 +197,8 @@ func CaptureWithWriters() (stdout io.Writer, stderr io.Writer, getBuffer func() 
 	return buf.StdoutWriter(), buf.StderrWriter(), func() *Buffer { return buf }
 }
 
-// TeeBuffer wraps a Buffer and also writes to additional writers (like os.Stdout)
+// TeeBuffer wraps a Buffer and also writes to additional writers (like os.Stdout).
+// Useful for capturing output while still showing it in real-time (e.g., RunModeDirect).
 type TeeBuffer struct {
 	*Buffer
 	stdoutTee io.Writer

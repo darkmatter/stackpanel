@@ -1,3 +1,9 @@
+// security_status.go reports the status of external security credentials:
+// AWS Roles Anywhere sessions and Step CA device certificates.
+//
+// These checks shell out to `aws sts get-caller-identity` and `step certificate inspect`
+// respectively, using the devshell environment so env vars like AWS_CERT_PATH are available
+// even when the agent runs outside `nix develop`.
 package server
 
 import (
@@ -269,7 +275,11 @@ func (s *Server) checkCertificateStatus() CertificateStatus {
 	return status
 }
 
-// findCertificatePath finds the device certificate path
+// findCertificatePath searches for the device certificate in order:
+//  1. AWS_CERT_PATH env var
+//  2. .stack/state/step/<hostname>.crt (project-local)
+//  3. ~/.step/certs/<hostname>.crt
+//  4. ~/.stack/certs/<hostname>.crt
 func (s *Server) findCertificatePath() string {
 	// Check environment variable override first
 	// Use s.exec.GetEnv to read from cached devshell env when running outside nix develop

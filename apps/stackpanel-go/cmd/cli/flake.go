@@ -1,3 +1,10 @@
+// flake.go provides programmatic editing of flake.nix using tree-sitter.
+//
+// Editing Nix files with regex is fragile — tree-sitter gives us a real syntax
+// tree, so we can insert input declarations and module imports at the correct
+// positions while preserving all comments, formatting, and whitespace. A backup
+// is written before modification and restored if `nix flake lock` fails,
+// preventing half-applied edits.
 package cmd
 
 import (

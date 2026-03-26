@@ -19,7 +19,10 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
 )
 
-// MOTDFullData contains all data needed to render the improved MOTD
+// MOTDFullData aggregates all status information shown in the shell MOTD.
+// Each field is populated by a dedicated Check* or Get* function, and the
+// whole struct is assembled by CollectMOTDData. Fields are intentionally
+// public so the Go agent can also serialize this for the web UI.
 type MOTDFullData struct {
 	// Project info
 	ProjectName string
@@ -136,7 +139,9 @@ type Issue struct {
 	FixCommand string
 }
 
-// ShellFreshness represents the freshness status of the current shell
+// ShellFreshness detects whether the Nix config has changed since the shell was entered.
+// The Nix shell hook sets STACKPANEL_SHELL_HASH at entry time; we recompute the hash
+// from the same config files and compare. A stale shell means the user should reload.
 type ShellFreshness struct {
 	Checked     bool          // Whether we were able to check freshness
 	Fresh       bool          // True if shell matches current config
@@ -159,7 +164,8 @@ const DefaultDocsURL = "https://stackpanel.dev/docs"
 // DefaultAgentPort is the default agent port
 const DefaultAgentPort = 9876
 
-// CheckAgentStatus checks if the stackpanel agent is running
+// CheckAgentStatus probes the agent's /health endpoint with a 2-second timeout.
+// Returns Running=true only if the agent responds 200 OK.
 func CheckAgentStatus(port int) AgentStatus {
 	if port == 0 {
 		port = DefaultAgentPort
@@ -206,7 +212,8 @@ func CheckAgentStatus(port int) AgentStatus {
 	return status
 }
 
-// CheckAWSStatus checks if AWS credentials are valid
+// CheckAWSStatus checks if AWS credentials are valid by calling `aws sts get-caller-identity`.
+// Has a 5-second timeout to avoid blocking shell entry on slow networks.
 func CheckAWSStatus() AWSStatus {
 	status := AWSStatus{
 		Enabled:    false,
@@ -258,7 +265,8 @@ func CheckAWSStatus() AWSStatus {
 	return status
 }
 
-// CheckFilesStatus checks the status of generated files
+// CheckFilesStatus queries the agent API for generated file staleness.
+// Returns an empty (Enabled=false) status if the agent isn't running.
 func CheckFilesStatus(projectRoot string) FilesStatus {
 	status := FilesStatus{
 		Enabled:    false,
@@ -315,7 +323,8 @@ func CheckFilesStatus(projectRoot string) FilesStatus {
 	return status
 }
 
-// GetEnvironmentInfo detects enabled languages and tools
+// GetEnvironmentInfo detects languages and tools by running version commands.
+// Each command has a 2-second timeout; missing tools are silently skipped.
 func GetEnvironmentInfo() EnvironmentInfo {
 	info := EnvironmentInfo{
 		Languages: []LanguageInfo{},
@@ -466,8 +475,10 @@ func extractDockerVersion(output string) string {
 	return ""
 }
 
-// GetUserCommands retrieves user-defined commands from nix config
-// Returns the top N commands and the total count
+// GetUserCommands retrieves user-defined devshell commands from the agent API.
+// Commands are sorted: described before undescribed, ungrouped before grouped
+// (colon-separated names like "secrets:set"), then alphabetically.
+// Returns the top maxCommands entries and the total count.
 func GetUserCommands(maxCommands int) ([]MOTDCommand, int) {
 	if maxCommands == 0 {
 		maxCommands = 5
@@ -552,7 +563,8 @@ func GetUserCommands(maxCommands int) ([]MOTDCommand, int) {
 	return result, len(entries)
 }
 
-// GetHealthSummary retrieves health check summary from the agent
+// GetHealthSummary retrieves cached health check results from the agent API.
+// The ?cached=true parameter avoids triggering a fresh check run.
 func GetHealthSummary() HealthSummary {
 	summary := HealthSummary{
 		Enabled: false,
@@ -594,7 +606,9 @@ func GetHealthSummary() HealthSummary {
 	return summary
 }
 
-// CheckForUpdates checks if a newer version of stackpanel is available
+// CheckForUpdates checks if a newer version of stackpanel is available by
+// querying the GitHub releases API. Uses naive string comparison for versions —
+// this works for semver but could be fooled by pre-release tags.
 func CheckForUpdates(currentVersion string) *UpdateInfo {
 	// Skip if no version or development version
 	if currentVersion == "" || currentVersion == "dev" || strings.HasPrefix(currentVersion, "0.0.0") {
@@ -642,7 +656,8 @@ func CheckForUpdates(currentVersion string) *UpdateInfo {
 	return nil
 }
 
-// GetStudioURL returns the studio URL for the current project
+// GetStudioURL returns the local studio URL, using the project directory
+// basename as the project query param for multi-project disambiguation.
 func GetStudioURL(projectRoot string, port int) string {
 	if port == 0 {
 		port = 3000 // Default studio port
@@ -708,8 +723,9 @@ func CheckShellFreshness(projectRoot string) ShellFreshness {
 	return status
 }
 
-// computeConfigHash computes an MD5 hash of the config files
-// This must match the logic in nix/stackpanel/core/default.nix
+// computeConfigHash computes an MD5 hash of the config files that affect the
+// devshell. This MUST match the logic in nix/stackpanel/core/default.nix —
+// if the file list diverges, shell freshness detection will give false positives.
 func computeConfigHash(projectRoot string) string {
 	configFiles := []string{
 		filepath.Join(projectRoot, "flake.nix"),
@@ -736,7 +752,9 @@ func computeConfigHash(projectRoot string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// CollectIssues aggregates issues from various status checks
+// CollectIssues aggregates issues from all status checks into a flat list
+// for the MOTD's "Action Required" section. Issues include fix commands
+// so users can resolve them without looking up documentation.
 func CollectIssues(data *MOTDFullData) []Issue {
 	var issues []Issue
 
@@ -827,7 +845,10 @@ type CollectMOTDDataOpts struct {
 	StateDir string
 }
 
-// CollectMOTDData gathers all data needed for the MOTD
+// CollectMOTDData gathers all data needed for the MOTD by probing the agent API,
+// checking AWS credentials, detecting languages/tools, and loading cached healthchecks.
+// Designed to be called synchronously during shell entry — individual checks have
+// short timeouts (2-5s) to avoid blocking the shell for too long.
 func CollectMOTDData(projectName, projectRoot, version string, agentPort int, opts *CollectMOTDDataOpts) *MOTDFullData {
 	if agentPort == 0 {
 		agentPort = DefaultAgentPort

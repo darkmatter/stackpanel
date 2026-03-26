@@ -5,12 +5,16 @@ import (
 	"sort"
 )
 
-// Registry stores the known codegen modules.
+// Registry stores the known codegen modules, keyed by name. Module names must
+// be unique; attempting to register a duplicate panics (via NewRegistry) or
+// returns an error (via Register).
 type Registry struct {
 	modules map[string]Module
 }
 
-// NewRegistry creates a registry with the provided modules.
+// NewRegistry creates a registry with the provided modules. Panics on
+// duplicate names — this is intentional since duplicate registration is a
+// programming error, not a runtime condition.
 func NewRegistry(modules ...Module) *Registry {
 	r := &Registry{modules: make(map[string]Module, len(modules))}
 	for _, module := range modules {
@@ -21,7 +25,7 @@ func NewRegistry(modules ...Module) *Registry {
 	return r
 }
 
-// DefaultRegistry returns the built-in codegen modules.
+// DefaultRegistry returns the built-in codegen modules (manifest + env).
 func DefaultRegistry() *Registry {
 	return NewRegistry(
 		NewManifestModule(),
@@ -53,7 +57,8 @@ func (r *Registry) Lookup(name string) (Module, bool) {
 	return module, ok
 }
 
-// Modules returns all registered modules sorted by name.
+// Modules returns all registered modules sorted by name for deterministic
+// build ordering.
 func (r *Registry) Modules() []Module {
 	names := make([]string, 0, len(r.modules))
 	for name := range r.modules {

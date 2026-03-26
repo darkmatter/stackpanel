@@ -13,24 +13,27 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// FlakeWatcher watches for changes to Nix files and re-evaluates flake outputs
+// FlakeWatcher monitors .nix files for changes and re-evaluates flake outputs
+// (.#stackpanelConfig and .#stackpanelPackages) in the background. Results are
+// cached and served to API handlers; changes trigger SSE events so the web UI
+// can refresh without polling.
+//
+// This is the "expensive" watcher — it runs `nix eval` which can take seconds.
+// Compare with watchConfigFiles() which just broadcasts file-change notifications.
 type FlakeWatcher struct {
 	projectRoot string
 	watcher     *fsnotify.Watcher
 	server      *Server
 
-	// Evaluators for different flake outputs
 	configEvaluator   *nixeval.Evaluator
 	packagesEvaluator *nixeval.Evaluator
 
-	// Cached values
 	mu             sync.RWMutex
 	cachedConfig   map[string]any
 	cachedPackages []nixeval.InstalledPackage
 	configUpdated  time.Time
 	pkgsUpdated    time.Time
 
-	// Control
 	stopCh chan struct{}
 }
 
@@ -47,14 +50,16 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 		return nil, err
 	}
 
-	// Create evaluator for stackpanelConfig
-	// Try devshell passthru first (for user projects), then flake outputs (for stackpanel repo)
+	// Config evaluator tries multiple flake attr paths in order:
+	// 1. devShell passthru (how user projects expose config via devenv)
+	// 2. Direct flake output (how the stackpanel repo itself exposes config)
+	// stackpanelFullConfig is intentionally excluded — it contains functions and
+	// other non-serializable Nix values that break JSON output.
 	configEval, err := nixeval.New(cfg.ProjectRoot,
 		nixeval.WithFlakeAttrFallbacks([]string{
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
 			".#stackpanelConfig",
-			// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values
 		}),
 		nixeval.WithTimeout(30*time.Second),
 		nixeval.WithCacheTTL(10*time.Second),
@@ -64,8 +69,7 @@ func NewFlakeWatcher(cfg FlakeWatcherConfig) (*FlakeWatcher, error) {
 		return nil, err
 	}
 
-	// Create evaluator for stackpanelPackages
-	// Try devshell passthru first (for user projects), then flake outputs (for stackpanel repo)
+	// Packages evaluator uses the same fallback pattern as config.
 	packagesEval, err := nixeval.New(cfg.ProjectRoot,
 		nixeval.WithFlakeAttrFallbacks([]string{
 			".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelPackages",
@@ -153,9 +157,9 @@ func (fw *FlakeWatcher) GetPackages(ctx context.Context) ([]nixeval.InstalledPac
 	return fw.evaluatePackages(ctx)
 }
 
-// initialEvaluation performs the initial evaluation of both config and packages
+// initialEvaluation runs on startup in a goroutine. The generous 5-minute timeout
+// accounts for cold Nix caches that may need to download substitutes.
 func (fw *FlakeWatcher) initialEvaluation() {
-	// 5 minutes allows time for Nix to download packages from caches
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -228,9 +232,10 @@ func (fw *FlakeWatcher) addWatchRecursive(path string) error {
 	})
 }
 
-// watchLoop handles file system events and triggers re-evaluation
+// watchLoop handles file system events and triggers re-evaluation.
+// Uses a 500ms debounce (longer than watchConfigFiles' 100ms) because nix eval
+// is expensive and we want to coalesce rapid edits into a single evaluation.
 func (fw *FlakeWatcher) watchLoop() {
-	// Debounce settings
 	var debounceTimer *time.Timer
 	debounceDuration := 500 * time.Millisecond
 
@@ -252,7 +257,7 @@ func (fw *FlakeWatcher) watchLoop() {
 				continue
 			}
 
-			// Only care about relevant file types
+			// Only .nix, .json, and .lock files can affect flake evaluation
 			ext := filepath.Ext(event.Name)
 			if ext != ".nix" && ext != ".json" && ext != ".lock" {
 				continue
@@ -281,7 +286,9 @@ func (fw *FlakeWatcher) watchLoop() {
 	}
 }
 
-// handleFileChange handles a file change event after debouncing
+// handleFileChange handles a file change event after debouncing. It selectively
+// re-evaluates config and/or packages based on which file changed, then only
+// broadcasts SSE events if the evaluated output actually differs from the cache.
 func (fw *FlakeWatcher) handleFileChange(changedFile string) {
 	log.Info().Str("file", changedFile).Msg("Re-evaluating flake outputs due to file change")
 
@@ -410,7 +417,8 @@ func (fw *FlakeWatcher) InvalidateConfig() {
 	}
 }
 
-// configEqual compares two config maps for equality
+// configEqual compares two config maps by JSON-serializing both sides.
+// This is simple but not cheap — acceptable here since it only runs after nix eval.
 func configEqual(a, b map[string]any) bool {
 	if a == nil && b == nil {
 		return true

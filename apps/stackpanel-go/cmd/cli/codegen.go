@@ -1,3 +1,8 @@
+// codegen.go implements host-side code generation commands.
+//
+// Codegen runs outside of Nix evaluation/derivation builds because some
+// generators need access to the host filesystem, git state, or ambient
+// environment that isn't available inside the Nix sandbox.
 package cmd
 
 import (
@@ -79,6 +84,10 @@ func runCodegenBuild(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// runCodegenExportFilesEntries bridges host-side codegen with the Nix file
+// writer system. It plans (but doesn't execute) codegen modules, then
+// serialises their output as stackpanel.files.entries JSON — allowing Nix
+// modules or other tooling to consume host-generated artifacts declaratively.
 func runCodegenExportFilesEntries(cmd *cobra.Command, args []string) error {
 	projectRoot, err := resolveCodegenProjectRoot()
 	if err != nil {
@@ -170,6 +179,8 @@ func printCodegenSummary(summary *codegen.BuildSummary, verbose bool) {
 	}
 }
 
+// relativeDisplayPath converts an absolute path to a project-relative one
+// for cleaner CLI output. Falls back to the absolute path on error.
 func relativeDisplayPath(projectRoot, path string) string {
 	rel, err := filepath.Rel(projectRoot, path)
 	if err != nil {

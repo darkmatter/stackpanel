@@ -10,25 +10,31 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-// convertReadmeToMdx converts README.md content to MDX with frontmatter
+// convertReadmeToMdx converts a README.md file's content into an MDX page
+// with Fumadocs frontmatter. The H1 heading becomes the title and the first
+// paragraph becomes the description (unless overridden by YAML frontmatter).
 func convertReadmeToMdx(readmeContent string, moduleName string) string {
 	return convertDocToMdx(readmeContent, moduleName, false)
 }
 
-// convertNixHeaderToMdx converts a .nix doc header to MDX with frontmatter
+// convertNixHeaderToMdx converts a .nix doc header (extracted comment block)
+// into an MDX page. Uses different title extraction logic than README conversion:
+// the first non-separator line becomes the title instead of an H1 heading.
 func convertNixHeaderToMdx(docHeader string, moduleName string) string {
 	return convertDocToMdx(docHeader, moduleName, true)
 }
 
 // mdParse parses markdown source into a goldmark AST.
+// Used throughout this file to extract structure from markdown without regex.
 func mdParse(source []byte) ast.Node {
 	md := goldmark.New()
 	reader := text.NewReader(source)
 	return md.Parser().Parse(reader)
 }
 
-// mdNodeText extracts the plain-text content of an AST node (concatenating
-// all inline text / code-span children). This replaces manual tag stripping.
+// mdNodeText extracts the plain-text content of an AST node by recursing
+// through all inline children (text, code spans, emphasis, links, etc.).
+// This is used instead of regex-based tag stripping for robustness.
 func mdNodeText(n ast.Node, source []byte) string {
 	var buf bytes.Buffer
 	for c := n.FirstChild(); c != nil; c = c.NextSibling() {
@@ -53,9 +59,11 @@ func mdNodeText(n ast.Node, source []byte) string {
 	return buf.String()
 }
 
-// mdExtractTitle walks the AST looking for the first H1 heading and returns
-// its text content plus the byte offset where the heading ends so the caller
-// can slice the remaining content.  Returns ("", -1) when no H1 is found.
+// mdExtractTitle finds the first H1 heading in the AST and returns its text
+// plus the byte offset where the heading ends. The offset lets callers slice
+// the heading out of the source to avoid duplicating it in the MDX body
+// (since the title goes into frontmatter instead).
+// Returns ("", -1) when no H1 is found.
 func mdExtractTitle(doc ast.Node, source []byte) (title string, endByte int) {
 	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
 		h, ok := n.(*ast.Heading)
@@ -73,8 +81,9 @@ func mdExtractTitle(doc ast.Node, source []byte) (title string, endByte int) {
 	return "", -1
 }
 
-// mdExtractFirstParagraph walks the AST looking for the first Paragraph node
-// that appears after startByte in the source. Returns its text content.
+// mdExtractFirstParagraph finds the first paragraph after startByte in the
+// source. Used to auto-generate a description from the first paragraph when
+// frontmatter doesn't provide one.
 func mdExtractFirstParagraph(doc ast.Node, source []byte, startByte int) string {
 	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
 		p, ok := n.(*ast.Paragraph)
@@ -93,9 +102,9 @@ func mdExtractFirstParagraph(doc ast.Node, source []byte, startByte int) string 
 	return ""
 }
 
-// mdStripLeadingH1 removes the first H1 heading (and any preceding blank
-// lines) from markdown source, returning the remainder. If no H1 is found
-// the source is returned unchanged.
+// mdStripLeadingH1 removes the first H1 heading and any preceding blank lines
+// from markdown source. Used when merging multiple docs into one page so only
+// the frontmatter title survives.
 func mdStripLeadingH1(source []byte) []byte {
 	doc := mdParse(source)
 	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
@@ -113,14 +122,14 @@ func mdStripLeadingH1(source []byte) []byte {
 	return source
 }
 
-// convertDocToMdx converts documentation content to MDX with frontmatter.
+// convertDocToMdx is the shared implementation for README and Nix header conversion.
 //
-// For README.md files the title is taken from YAML frontmatter if present,
-// otherwise from the first H1 heading. For Nix doc headers the first non-
-// empty, non-separator line is the title.
+// Title/description resolution priority:
+//  1. YAML frontmatter (README only)
+//  2. First H1 heading (README) or first content line (Nix headers)
+//  3. Capitalized module name as fallback
 //
-// The description is taken from frontmatter if present, otherwise from the
-// first paragraph after the title heading.
+// The H1 heading is stripped from the body since it's promoted to frontmatter.
 func convertDocToMdx(content string, moduleName string, isNixHeader bool) string {
 	defaultTitle := strings.ToUpper(moduleName[:1]) + moduleName[1:]
 	title := defaultTitle
@@ -216,9 +225,9 @@ func convertDocToMdx(content string, moduleName string, isNixHeader bool) string
 	return result
 }
 
-// convertDocToMdxWithFrontmatter converts content to MDX using pre-parsed frontmatter.
-// The first H1 heading is extracted with goldmark to avoid duplicating it in
-// the body (the title lives in the MDX frontmatter instead).
+// convertDocToMdxWithFrontmatter converts content to MDX using pre-parsed
+// frontmatter. This avoids double-parsing when the caller has already
+// extracted frontmatter (e.g. during module doc generation).
 func convertDocToMdxWithFrontmatter(fm Frontmatter, content string, moduleName string) string {
 	title := fm.Title
 	if title == "" {
@@ -250,9 +259,10 @@ func convertDocToMdxWithFrontmatter(fm Frontmatter, content string, moduleName s
 	return result
 }
 
-// concatenateDocsToMdx merges multiple docs targeting the same output path.
-// Leading H1 headings are stripped with goldmark so the combined page can use
-// a single title from frontmatter.
+// concatenateDocsToMdx merges multiple docs targeting the same output path
+// into a single MDX page. This happens when multiple source files specify the
+// same @docgen.output directive. Each doc's H1 is stripped and sections are
+// joined with horizontal rules.
 func concatenateDocsToMdx(docs []ParsedDoc) string {
 	var title, description, icon string
 	for _, doc := range docs {
@@ -303,10 +313,10 @@ func escapeYAMLString(s string) string {
 	return s
 }
 
-// formatDescription cleans an option description that may contain docbook/XML
-// remnants.  Instead of manual < > scanning, the text is parsed as markdown
-// and the plain text content is extracted via the goldmark AST, which
-// transparently drops any inline HTML tags.
+// formatDescription sanitizes an option description that may contain docbook/XML
+// remnants from nixosOptionsDoc. Parses as markdown via goldmark and extracts
+// clean text, which transparently drops any inline HTML tags while preserving
+// code blocks and list structure.
 func formatDescription(desc string) string {
 	if desc == "" {
 		return "_No description provided._"
@@ -348,9 +358,9 @@ func formatDescription(desc string) string {
 	return strings.TrimSpace(result)
 }
 
-// formatNixDocContent formats nix doc header content, converting indented
-// blocks to fenced code blocks. This handles the structured comment format
-// used in Nix module headers (e.g. "Usage:" sections with indented examples).
+// formatNixDocContent converts Nix doc header content into markdown. The main
+// transformation is detecting indented blocks (common in Nix comment conventions
+// like "Usage:" sections) and wrapping them in fenced code blocks.
 func formatNixDocContent(lines []string) string {
 	var result strings.Builder
 	var inCodeBlock bool
@@ -406,7 +416,9 @@ func formatNixDocContent(lines []string) string {
 	return strings.TrimSpace(result.String())
 }
 
-// formatCodeBlock formats lines as a fenced markdown code block.
+// formatCodeBlock wraps lines in a fenced code block with language auto-detection.
+// Defaults to "nix" but switches to "bash" for shell-like content (has $ but
+// no = or {, which are more common in Nix expressions).
 func formatCodeBlock(lines []string, sectionHeader string) string {
 	lang := "nix"
 	content := strings.Join(lines, "\n")
