@@ -25,14 +25,18 @@ let
   repoRoot = ../../../..;
 
   # Source path - the unified stackpanel-go app
-  srcPath = "${repoRoot}/apps/stackpanel-go";
+  srcPath = repoRoot + "/apps/stackpanel-go";
 in
 pkgs.buildGoApplication {
   pname = "stackpanel";
   version = "0.1.0";
 
-  src = srcPath;
+  # Use repo root as src so local replace directives (../../packages/proto/gen/gopb)
+  # are available in the source tree. pwd points to the app's go.mod location.
+  # modRoot tells the build hook to cd into the app dir within the source.
+  src = repoRoot;
   pwd = srcPath;
+  modRoot = "apps/stackpanel-go";
   modules = srcPath + "/gomod2nix.toml";
   subPackages = [ "." ];
 

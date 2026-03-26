@@ -126,7 +126,6 @@ func getCategoryIcon(category string) string {
 		"network":        "Globe",
 		"ports":          "Plug",
 		"root":           "Home",
-		"root-marker":    "Bookmark",
 		"secrets":        "Lock",
 	}
 

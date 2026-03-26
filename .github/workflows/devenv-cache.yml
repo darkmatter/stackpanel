@@ -51,9 +51,6 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: devenv
 
-      - name: Create stackpanel root marker
-        run: echo "${{ github.workspace }}" > .stackpanel-root
-
       - name: Build devshell
         run: nix build --impure '.#devShells.${{ matrix.system }}.default' --no-link
 

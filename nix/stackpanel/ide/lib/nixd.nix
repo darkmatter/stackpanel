@@ -20,7 +20,7 @@
       repo = if repoFromProject != "" then repoFromProject else repoFromGithub;
       isStackpanelRepo = repo == "stackpanel";
 
-      # Get a valid local path reference (requires .stackpanel-root with real absolute path)
+      # Get a valid local path reference (requires root to be a real absolute path)
       hasValidLocalRoot = root != null && !lib.hasPrefix "/nix/store/" root;
       localRef = "\"git+file://${root}\"";
 
