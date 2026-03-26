@@ -12,8 +12,6 @@
     flake-utils.url = "github:numtide/flake-utils";
     # Override in CI with: --override-input stackpanel path:/path/to/stackpanel
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
-    stackpanel-root.url = "file+file:///dev/null";
-    stackpanel-root.flake = false;
 
     # External module to test - override this with your module
     # nix flake lock --override-input test-module path:/path/to/module

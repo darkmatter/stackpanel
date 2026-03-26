@@ -400,6 +400,18 @@ let
             deployTargets
             ;
           inherit (appCfg) tls offset;
+
+          # Build metadata (serializable for UI)
+          # An app is buildable if build.enable is set or a language module provides a package
+          build = let
+            goPackages = config.stackpanel.go.packages.apps or {};
+            bunPackages = config.stackpanel.bun.packages.apps or {};
+            hasLangPackage = goPackages ? ${name} || bunPackages ? ${name};
+            buildEnabled = appCfg.build.enable or false || hasLangPackage;
+          in lib.optionalAttrs buildEnabled {
+            enabled = true;
+            hasPackage = hasLangPackage || appCfg.package or null != null;
+          };
         };
       }
     ) appNames

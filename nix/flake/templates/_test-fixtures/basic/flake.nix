@@ -12,9 +12,6 @@
 
     # Override in CI with: --override-input stackpanel path:/path/to/stackpanel
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
-
-    stackpanel-root.url = "file+file:///dev/null";
-    stackpanel-root.flake = false;
   };
 
   outputs = {

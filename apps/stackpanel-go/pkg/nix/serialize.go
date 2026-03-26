@@ -133,6 +133,18 @@ func serializeValue(v reflect.Value, depth int) (string, error) {
 		v = v.Elem()
 	}
 
+	// Emit NixPath as an unquoted Nix path literal.
+	// Must come before the Kind switch because NixPath has Kind == String.
+	if v.Type() == reflect.TypeOf(NixPath("")) {
+		path := v.String()
+		if !strings.HasPrefix(path, "/") &&
+			!strings.HasPrefix(path, "./") &&
+			!strings.HasPrefix(path, "../") {
+			path = "./" + path
+		}
+		return path, nil
+	}
+
 	switch v.Kind() {
 	case reflect.Bool:
 		if v.Bool() {
