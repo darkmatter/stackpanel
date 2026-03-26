@@ -1,3 +1,13 @@
+// nix_config.go manages evaluation and caching of the Stackpanel Nix config.
+//
+// Config is resolved through a waterfall of strategies:
+//  1. FlakeWatcher (preferred — watches files and caches intelligently)
+//  2. Direct `nix eval` on the flake output (slow but fresh)
+//  3. STACKPANEL_CONFIG_JSON env var (pre-computed JSON from devshell)
+//  4. .stack/gen/config.json on disk (last resort)
+//
+// The in-memory globalConfigCache provides a fast fallback when FlakeWatcher
+// is unavailable. A refresh can be forced via POST /api/nix/config.
 package server
 
 import (
@@ -190,7 +200,9 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 	return nil, err
 }
 
-// evaluateConfigFromFlake evaluates the config by running nix eval on the flake
+// evaluateConfigFromFlake tries multiple flake attribute paths in priority order.
+// stackpanelFullConfig is intentionally avoided — it contains non-serializable
+// Nix values (functions, modules) that would break JSON serialization.
 func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	// Try paths in priority order:
 	// 1. devshell passthru (for user projects consuming stackpanel)

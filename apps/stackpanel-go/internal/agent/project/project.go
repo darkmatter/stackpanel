@@ -1,4 +1,11 @@
-// Package project manages Stackpanel project selection, validation, and persistence.
+// Package project manages Stackpanel project discovery, validation, and lifecycle.
+// A valid project requires a .git directory and either .stack/config.nix or a
+// flake.nix that references stackpanel. Projects are persisted in the user config
+// (~/.config/stackpanel/stackpanel.yaml) so they survive agent restarts.
+//
+// Validation uses a multi-strategy approach: it first tries Nix evaluation
+// (most accurate), then flake metadata inspection, and finally falls back to
+// text matching in flake.nix for environments where Nix isn't available.
 package project
 
 import (
@@ -30,15 +37,17 @@ var (
 	ErrFlakeNotStackpanel = errors.New("flake.nix exists but doesn't appear to be a Stackpanel project")
 )
 
-// ValidationLevel controls how strict project validation is
+// ValidationLevel controls how strict project validation is.
+// Higher levels are used for user-initiated actions (opening a project),
+// lower levels for background operations (restoring saved projects).
 type ValidationLevel int
 
 const (
-	// ValidationStrict requires .stack/config.nix with valid content
+	// ValidationStrict requires .stack/config.nix with valid content (enable + name fields)
 	ValidationStrict ValidationLevel = iota
 	// ValidationNormal accepts .stack/config.nix or flake.nix with stackpanel references
 	ValidationNormal
-	// ValidationLenient accepts any flake.nix (for potential stackpanel projects)
+	// ValidationLenient accepts any directory with flake.nix + .git (for onboarding)
 	ValidationLenient
 )
 
@@ -95,7 +104,8 @@ type Project struct {
 }
 
 // Manager handles project selection, validation, and persistence.
-// Projects list is stored in user config (~/.config/stackpanel/stackpanel.yaml).
+// It wraps userconfig.Manager (which owns the YAML file) and adds validation,
+// mutex protection, and project-specific business logic on top.
 type Manager struct {
 	userConfig *userconfig.Manager
 	mu         sync.RWMutex
@@ -349,7 +359,9 @@ func ValidateProjectWithOptions(projectPath string, opts ValidationOptions) *Val
 	return result
 }
 
-// isSuspiciousPath checks if a path looks like a system or temporary directory
+// isSuspiciousPath rejects system directories, /nix/store, and the user's home
+// directory itself. This prevents accidentally treating the OS or Nix store as
+// a project, which would cause the agent to watch thousands of irrelevant files.
 func isSuspiciousPath(path string) bool {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -400,7 +412,9 @@ func isSuspiciousPath(path string) bool {
 	return false
 }
 
-// validateStackpanelConfig checks if a config.nix file has valid content
+// validateStackpanelConfig performs a lightweight scan of config.nix content.
+// It checks for the presence of "enable" and "name" fields in the first 50 lines
+// without actually parsing Nix — full evaluation is too slow for validation.
 func validateStackpanelConfig(configPath string) error {
 	file, err := os.Open(configPath)
 	if err != nil {
@@ -459,11 +473,11 @@ func validateStackpanelConfig(configPath string) error {
 	return nil
 }
 
-// checkFlakeForStackpanel checks if a flake has stackpanel as an input or output
-// It tries multiple detection methods in order of accuracy:
-// 1. Check for .#stackpanelConfig output (most reliable)
-// 2. Check flake metadata for stackpanel input
-// 3. Fall back to text matching in flake.nix
+// checkFlakeForStackpanel checks if a flake has stackpanel as an input or output.
+// Detection methods (in order of accuracy, each more expensive):
+//  1. `nix eval .#stackpanelConfig.name` — most reliable, proves the output exists
+//  2. `nix flake metadata --json` — checks flake.lock for stackpanel input nodes
+//  3. Text grep in flake.nix — fast fallback when Nix isn't installed or flake unlocked
 func checkFlakeForStackpanel(flakePath string) (bool, []string) {
 	return checkFlakeForStackpanelWithOptions(flakePath, DefaultValidationOptions())
 }
@@ -506,11 +520,14 @@ func checkFlakeForStackpanelOutput(projectDir string) (bool, []string) {
 	return checkFlakeForStackpanelOutputWithTimeout(projectDir, 5*time.Second)
 }
 
-// checkFlakeForStackpanelOutputWithTimeout checks for stackpanelConfig output with custom timeout
-// It tries multiple paths where stackpanelConfig might be exposed:
-// 1. .#stackpanelConfig (stackpanel repo itself, or user projects that expose it at top level)
-// 2. .#devShells.<system>.default.passthru.stackpanelConfig (user projects via devenv/devshell)
-// 3. .#legacyPackages.<system>.stackpanelConfig (user projects via legacyPackages)
+// checkFlakeForStackpanelOutputWithTimeout probes multiple flake output paths where
+// stackpanelConfig might be exposed. The paths differ based on how the project
+// integrates stackpanel:
+//   - .#stackpanelConfig — stackpanel's own repo or projects that expose it at top level
+//   - .#devShells.<system>.default.passthru.stackpanelConfig — via devenv/devshell passthru
+//   - .#legacyPackages.<system>.stackpanelConfig — via legacyPackages
+//
+// We check `.name` (not the whole config) to minimize evaluation time.
 func checkFlakeForStackpanelOutputWithTimeout(projectDir string, timeout time.Duration) (bool, []string) {
 	var warnings []string
 
@@ -572,9 +589,11 @@ func checkFlakeForStackpanelOutputWithTimeout(projectDir string, timeout time.Du
 	return false, warnings
 }
 
-// detectNixSystem returns the current nix system identifier (e.g., "x86_64-linux", "aarch64-darwin")
+// detectNixSystem returns the Nix system identifier (e.g., "aarch64-darwin").
+// Tries `nix eval builtins.currentSystem` first for accuracy, then falls back
+// to Go's runtime.GOARCH/GOOS mapping. The fallback is needed when the agent
+// runs outside a Nix environment (e.g., during initial project discovery).
 func detectNixSystem() string {
-	// Try to get system from nix
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -802,8 +821,10 @@ func GetValidationWarnings(projectPath string) []string {
 	return result.Warnings
 }
 
-// DetectProject looks for a Stackpanel project in the current directory
-// or parent directories.
+// DetectProject walks up from the current directory looking for a Stackpanel project.
+// It stops at the first directory containing .stack/config.nix or (flake.nix + .git).
+// Returns empty string (not error) if no project is found — this is a normal case
+// when the agent starts outside any project.
 func DetectProject() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -842,8 +863,9 @@ func DetectProject() (string, error) {
 	return "", nil
 }
 
-// AutoRegister detects the current project and registers it with the manager.
-// Returns the project if found and registered, or nil if no project detected.
+// AutoRegister detects a project from the cwd and opens it in one step.
+// Called during agent startup to automatically pick up the project when
+// launched from within a project directory (e.g., `stack agent`).
 func (m *Manager) AutoRegister() (*Project, error) {
 	projectPath, err := DetectProject()
 	if err != nil {

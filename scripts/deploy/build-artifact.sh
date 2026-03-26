@@ -18,6 +18,19 @@ echo "    Version: ${VERSION}"
 
 cd "$ROOTDIR"
 
+ensure_generated_files() {
+  # Pure generated files (e.g. packages/gen/config) are written by write-files.
+  # The deploy script is invoked from within a devshell (via nix develop or
+  # direnv), so write-files is already in PATH with the current evaluation.
+  # --force bypasses the manifest hash cache in case files were deleted.
+  if command -v write-files >/dev/null 2>&1; then
+    STACKPANEL_ROOT="$ROOTDIR" write-files --force
+  else
+    echo "ERROR: write-files not in PATH. Run from within a devshell." >&2
+    exit 1
+  fi
+}
+
 ensure_preflight_manifest() {
   if [ -n "${STACKPANEL_FILES_PREFLIGHT_MANIFEST:-}" ]; then
     return
@@ -33,6 +46,9 @@ ensure_preflight_manifest() {
 
   export STACKPANEL_FILES_PREFLIGHT_MANIFEST="$manifest_path"
 }
+
+echo "==> Materializing generated files"
+ensure_generated_files
 
 echo "==> Running preflight"
 ensure_preflight_manifest

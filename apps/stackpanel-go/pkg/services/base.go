@@ -1,5 +1,10 @@
-// Package services provides a pluggable service management system.
-// Each service implements the Service interface and registers itself.
+// Package services provides a pluggable service management system for local dev
+// infrastructure (PostgreSQL, Redis, Minio, Caddy, etc.). Services self-register
+// into a global Registry, get deterministic ports derived from the project's GitHub
+// slug, and store runtime state (PIDs, logs, data) under .stack/state/services/.
+//
+// Port assignment mirrors the Nix-side algorithm in nix/stack/lib/ports.nix so that
+// Go-managed and Nix-managed services agree on ports without coordination.
 package services
 
 import (
@@ -17,10 +22,12 @@ import (
 	nixeval "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 )
 
+// Port range constants mirror the Nix port computation defaults.
+// See nix/stack/lib/ports.nix for the canonical implementation.
 const (
 	PortMin = 3000
 	PortMax = 10000
-	PortMod = 100
+	PortMod = 100 // Ports are rounded to this modulus for clean, memorable numbers
 )
 
 // BaseDir is the root directory for all service data.
@@ -28,7 +35,8 @@ const (
 // Call InitForProject() to set this based on project root.
 var BaseDir string
 
-// GlobalBaseDir is the directory for global services (like Caddy)
+// GlobalBaseDir is the directory for services shared across projects (like Caddy).
+// Unlike BaseDir, this isn't scoped to a project since Caddy serves all projects.
 var GlobalBaseDir = filepath.Join(os.Getenv("HOME"), ".local", "share", "devservices")
 
 // projectRoot stores the detected project root directory
@@ -95,26 +103,29 @@ func detectProjectRoot() string {
 	return cwd
 }
 
-// Service defines the interface all services must implement
+// Service defines the interface all managed dev services must implement.
+// Implementations handle their own process lifecycle (start/stop) and health
+// checking. See Registry for how services are discovered by name or alias.
 type Service interface {
 	// Identity
-	Name() string        // Internal name (e.g., "postgres")
-	DisplayName() string // Human-readable name (e.g., "PostgreSQL")
-	Aliases() []string   // Alternative names (e.g., ["pg", "postgresql"])
+	Name() string        // Internal name used as registry key (e.g., "postgres")
+	DisplayName() string // Human-readable name for CLI output (e.g., "PostgreSQL")
+	Aliases() []string   // Alternative lookup names (e.g., ["pg", "postgresql"])
 
-	// Configuration
+	// Configuration — all paths are under BaseDir/<name>/
 	Port() int
 	DataDir() string
 	PidFile() string
 	LogFile() string
 
-	// Lifecycle
+	// Lifecycle — implementations must be idempotent (starting a running service is a no-op)
 	Start() error
 	Stop() error
 	Status() ServiceStatus
 
-	// Optional extended info
-	StatusInfo() map[string]string // Additional status details
+	// StatusInfo returns service-specific details (e.g., connection string, version).
+	// May return nil if no extra info is available.
+	StatusInfo() map[string]string
 }
 
 // ServiceStatus represents the current state of a service
@@ -125,7 +136,8 @@ type ServiceStatus struct {
 	Info    map[string]string // Service-specific info
 }
 
-// BaseService provides common functionality for all services
+// BaseService provides common functionality (PID management, directory layout,
+// port computation) that concrete service implementations embed.
 type BaseService struct {
 	name        string
 	displayName string
@@ -136,6 +148,13 @@ type BaseService struct {
 	logFile     string
 }
 
+// NewBaseService creates a BaseService with conventional directory layout:
+//
+//	BaseDir/<name>/data/     — service data (e.g., postgres data directory)
+//	BaseDir/<name>/<name>.pid — PID file for process tracking
+//	BaseDir/<name>/<name>.log — log file for service output
+//
+// The port parameter is stored but typically overridden by StablePort() at runtime.
 func NewBaseService(name, displayName string, port int, aliases ...string) BaseService {
 	serviceDir := filepath.Join(BaseDir, name)
 	return BaseService{
@@ -162,9 +181,11 @@ func (b BaseService) EnsureDir() error {
 	return os.MkdirAll(b.dataDir, 0755)
 }
 
+// StablePort computes a deterministic port by evaluating the project's Nix config
+// to get the GitHub slug, then hashing it. This ensures all team members get the
+// same port without any configuration. Returns an error if Nix eval fails.
 func (b BaseService) StablePort() (int, error) {
 	ctx := context.Background()
-	// Get the github org/repo using nix evaloz
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
 		Expression:  nixeval.ActiveConfigPreset,
 		ProjectRoot: GetProjectRoot(),
@@ -193,6 +214,8 @@ func (b BaseService) StablePort() (int, error) {
 	return port, nil
 }
 
+// Port returns the stable port, silently falling back to 0 on error.
+// Callers needing error handling should use StablePort() directly.
 func (b BaseService) Port() int {
 	p, _ := b.StablePort()
 	return p
@@ -218,7 +241,9 @@ func (b BaseService) RemovePID() {
 	os.Remove(b.pidFile)
 }
 
-// IsProcessRunning checks if a process is running
+// IsProcessRunning checks if a process with the given PID exists.
+// Uses the Unix signal(0) trick: sending signal 0 checks permissions
+// without actually delivering a signal, returning nil only if the process exists.
 func IsProcessRunning(pid int) bool {
 	if pid <= 0 {
 		return false
@@ -231,14 +256,17 @@ func IsProcessRunning(pid int) bool {
 	return err == nil
 }
 
-// IsPortInUse checks if a port is in use
+// IsPortInUse checks if a port is in use by shelling out to lsof.
+// Note: requires lsof on PATH (available on macOS by default, may need
+// installing on Linux). Returns false on any error, including missing lsof.
 func IsPortInUse(port int) bool {
 	cmd := exec.Command("lsof", "-ti", fmt.Sprintf(":%d", port))
 	output, _ := cmd.Output()
 	return len(strings.TrimSpace(string(output))) > 0
 }
 
-// GetPIDOnPort returns the PID of the process using a port
+// GetPIDOnPort returns the PID of the process listening on a port.
+// When multiple processes share a port, returns only the first one.
 func GetPIDOnPort(port int) int {
 	cmd := exec.Command("lsof", "-ti", fmt.Sprintf(":%d", port))
 	output, err := cmd.Output()
@@ -262,6 +290,9 @@ func KillProcess(pid int, sig syscall.Signal) error {
 	return process.Signal(sig)
 }
 
+// computeOverRange maps a string key to a deterministic integer in [min, max),
+// rounded down to the nearest multiple of mod. Uses MD5 for distribution (not
+// security). This is the Go equivalent of the Nix port computation algorithm.
 func computeOverRange(
 	key string,
 	min int,
@@ -269,7 +300,6 @@ func computeOverRange(
 	mod int,
 ) int {
 	h := md5.Sum([]byte(key))
-	// get the numeric value of the first 4 hex chars
 	hexStr := fmt.Sprintf("%x", h)[:4]
 	n, _ := strconv.ParseInt(hexStr, 16, 64)
 	rawOffset := n % int64(max-min)
@@ -278,6 +308,11 @@ func computeOverRange(
 	return min + int(roundedOffset)
 }
 
+// StablePort computes a deterministic port for a service within a project's
+// port range. The two-level hashing gives each project a 100-port block, then
+// assigns individual services within that block.
+//
+//	StablePort("darkmatter/stackpanel", "postgres") // e.g., 6410
 func StablePort(
 	reposlug string, // e.g., "darkmatter/stackpanel"
 	service string, // e.g., "postgres"
@@ -291,8 +326,10 @@ func StablePort(
 	)
 }
 
-// ComputePort computes a stable port for a service.
-// If reposlug is empty, it will attempt to detect it from the project root.
+// ComputePort computes a stable port for a service, auto-detecting the
+// project's GitHub slug via Nix eval if reposlug is empty. Falls back to
+// "default/project" if detection fails, which still gives deterministic ports
+// but they won't match what the Nix side computes.
 func ComputePort(serviceName string, reposlug string) int {
 	if reposlug == "" {
 		// Try to get from nix eval

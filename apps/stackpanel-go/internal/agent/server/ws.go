@@ -1,3 +1,9 @@
+// ws.go implements a legacy multiplexed WebSocket API that predates the REST endpoints.
+//
+// Clients send JSON frames with a type field (e.g., "exec", "nix.eval", "secrets.write")
+// and receive JSON responses with matching IDs. Each message type maps to the same
+// logic as the corresponding REST handler. This is kept for backwards compatibility
+// with older studio UI versions; new features should use REST/Connect-RPC instead.
 package server
 
 import (
@@ -13,10 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// -----------------------------
-// WebSocket handler
-// -----------------------------
-
+// wsUpgrader is shared across WebSocket endpoints (legacy WS + process-compose log streaming).
 var wsUpgrader = websocket.Upgrader{
 	ReadBufferSize:  32 * 1024,
 	WriteBufferSize: 32 * 1024,

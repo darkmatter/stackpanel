@@ -1,9 +1,24 @@
+// =============================================================================
+// plan.ts — Deployment plan types and builder
+//
+// Translates the Nix-provided per-app config (framework + host) into a
+// concrete DeploymentPlan that the orchestrator (index.ts) dispatches on.
+//
+// The plan is a discriminated union on `kind` so the orchestrator gets
+// type-safe access to host-specific fields.
+// =============================================================================
+
+/** Per-app config as serialized from Nix via infra-inputs.json. */
 export interface AppInput {
   framework: string;
   host: string;
   path: string;
+  /** Environment variable names to bind (both plaintext and secrets). */
   bindings: string[];
+  /** Subset of bindings that should be stored as SecureString in SSM. */
   secrets: string[];
+
+  /** AWS-specific config (only present when host === "aws"). */
   aws?: {
     region?: string | null;
     availabilityZone?: string | null;
@@ -18,19 +33,25 @@ export interface AppInput {
     vpcCidrBlock?: string | null;
     subnetCidrBlock?: string | null;
     tags?: Record<string, string>;
+    /** "amazon-linux" uses tarball + UserData bootstrap; "nixos" uses static boot + Colmena. */
     osType?: "amazon-linux" | "nixos";
   };
+
+  /** Cloudflare-specific config (only present when host === "cloudflare"). */
   cloudflare?: {
     workerName?: string;
     route?: string | null;
     compatibility?: "node" | "browser";
   };
+
+  /** Framework-specific overrides (present regardless of host). */
   ssr?: boolean;
   assetsDir?: string;
   entrypoint?: string;
   output?: string;
 }
 
+/** Global deployment config from stackpanel.deployment.* in Nix. */
 export interface DeploymentInputs {
   apps: Record<string, AppInput>;
   aws?: {
@@ -48,6 +69,10 @@ export interface DeploymentInputs {
   };
 }
 
+/**
+ * Discriminated union describing how to deploy a single app.
+ * The orchestrator switches on `kind` to call the right deploy function.
+ */
 export type DeploymentPlan =
   | {
       kind: "cloudflare-nextjs-app";
@@ -69,6 +94,7 @@ export type DeploymentPlan =
       resourceName: string;
     };
 
+/** Map (framework, host) -> DeploymentPlan for a single app. */
 export function buildDeploymentPlan(
   appName: string,
   app: AppInput,

@@ -1,3 +1,8 @@
+// secrets.go implements `stackpanel secrets`, which provides CLI access to
+// SOPS-encrypted secrets management. All operations delegate to the agent's
+// REST API — the CLI itself never touches encryption keys or SOPS files
+// directly, keeping the crypto logic centralized in one place.
+
 package cmd
 
 import (
@@ -193,7 +198,15 @@ func secretsRecipientsPlain() error {
 	return nil
 }
 
-// fetchAgentJSON makes a GET request to the agent API and returns parsed JSON.
+// fetchAgentJSON makes a GET request to the local agent API and returns parsed JSON.
+// The agent must be running for any secrets command to work; if not, the error
+// message guides the user to start it.
+//
+// Default agent URL is localhost:21234, overridable via STACKPANEL_AGENT_URL
+// for remote-agent or non-standard port setups.
+//
+// The agent wraps responses in a { success, data } envelope — this function
+// automatically unwraps it so callers get the inner payload directly.
 func fetchAgentJSON(path string) (map[string]interface{}, error) {
 	agentURL := os.Getenv("STACKPANEL_AGENT_URL")
 	if agentURL == "" {

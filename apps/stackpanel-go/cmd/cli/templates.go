@@ -1,3 +1,6 @@
+// templates.go provides embedded Go templates for generating MDX documentation
+// pages. Templates are compiled once at init time via go:embed, so the binary
+// is self-contained — no external template files needed at runtime.
 package cmd
 
 import (
@@ -7,7 +10,8 @@ import (
 	"text/template"
 )
 
-// escapeYAMLString escapes a string for use in a YAML value
+// escapeYAMLString escapes a string for use in a YAML frontmatter value.
+// MDX documentation pages use YAML frontmatter for title/description metadata.
 func escapeYAMLString(s string) string {
 	s = strings.ReplaceAll(s, "\\", "\\\\")
 	s = strings.ReplaceAll(s, "\"", "\\\"")

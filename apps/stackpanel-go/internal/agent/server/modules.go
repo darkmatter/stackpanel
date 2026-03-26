@@ -1,3 +1,13 @@
+// modules.go implements the module browser API: listing, inspecting, configuring,
+// and enabling/disabling Stackpanel modules.
+//
+// Module definitions come from the evaluated Nix config (ui.modulesList or ui.modules).
+// Per-module configuration is stored as YAML in .stack/data/modules/<name>.yaml and
+// takes effect on the next devshell re-entry.
+//
+// Module "outputs" (files, scripts, healthchecks, packages) are resolved from the
+// Nix config, with some heuristic matching by naming convention for scripts that
+// don't yet have explicit source tracking.
 package server
 
 import (
@@ -682,7 +692,9 @@ func (s *Server) getModuleHealthchecks(moduleID string) ([]*gopb.ModuleOutputHea
 	return checks, nil
 }
 
-// getModuleScripts returns scripts provided by a module (uses naming convention)
+// getModuleScripts returns scripts provided by a module. Scripts with an explicit
+// "module" field are matched directly. For modules without explicit tracking,
+// a naming-convention heuristic is used (e.g., oxlint → "lint*", postgres → "db-*").
 func (s *Server) getModuleScripts(moduleID string) ([]*gopb.ModuleOutputScript, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

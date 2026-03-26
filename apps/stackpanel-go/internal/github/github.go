@@ -1,5 +1,9 @@
-// Package github provides utilities for interacting with GitHub API
-// using the gh CLI tool.
+// Package github syncs repository collaborator lists and their SSH public keys
+// from GitHub. This feeds the secrets management system: collaborator SSH keys
+// become AGE recipients for SOPS-encrypted secrets, allowing team members to
+// decrypt secrets without sharing a master key.
+//
+// Requires the `gh` CLI to be installed and authenticated.
 package github
 
 import (
@@ -31,7 +35,7 @@ type Permissions struct {
 	Pull     bool `json:"pull"`
 }
 
-// User represents a processed user with their public keys
+// User is the enriched collaborator model written to .stack/data/users.nix.
 type User struct {
 	Login      string   `json:"login"`
 	ID         int      `json:"id"`
@@ -40,7 +44,8 @@ type User struct {
 	PublicKeys []string `json:"public_keys"`
 }
 
-// GetCollaborators fetches repository collaborators using gh CLI
+// GetCollaborators fetches repository collaborators using gh CLI.
+// Uses --paginate to handle repos with many collaborators.
 func GetCollaborators(owner, repo string) ([]Collaborator, error) {
 	endpoint := fmt.Sprintf("repos/%s/%s/collaborators", owner, repo)
 
@@ -61,7 +66,8 @@ func GetCollaborators(owner, repo string) ([]Collaborator, error) {
 	return collaborators, nil
 }
 
-// FetchPublicKeys fetches public SSH keys for a GitHub user
+// FetchPublicKeys fetches public SSH keys from github.com/<user>.keys.
+// This is a public, unauthenticated endpoint - no gh CLI needed.
 func FetchPublicKeys(username string) ([]string, error) {
 	url := fmt.Sprintf("https://github.com/%s.keys", username)
 
@@ -93,7 +99,9 @@ func FetchPublicKeys(username string) ([]string, error) {
 	return keys, nil
 }
 
-// SyncCollaborators fetches collaborators and their public keys
+// SyncCollaborators fetches collaborators and optionally enriches them with SSH
+// public keys. Bot accounts (Type != "User") are filtered out. Key fetch failures
+// are non-fatal - the user is included without keys.
 func SyncCollaborators(owner, repo string, fetchKeys bool) ([]User, error) {
 	collaborators, err := GetCollaborators(owner, repo)
 	if err != nil {
@@ -130,7 +138,8 @@ func SyncCollaborators(owner, repo string, fetchKeys bool) ([]User, error) {
 	return users, nil
 }
 
-// GetCurrentRepo returns the current repository in owner/repo format
+// GetCurrentRepo detects the repository from the current working directory
+// using gh CLI. Requires being inside a git repo with a GitHub remote.
 func GetCurrentRepo() (owner, repo string, err error) {
 	cmd := exec.Command("gh", "repo", "view", "--json", "owner,name")
 	output, err := cmd.Output()

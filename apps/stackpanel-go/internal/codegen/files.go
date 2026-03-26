@@ -8,6 +8,10 @@ import (
 	"path/filepath"
 )
 
+// writeArtifact writes an artifact to disk, returning true if a write occurred.
+// Without force, it compares content byte-for-byte and skips unchanged files.
+// This avoids unnecessary writes that would invalidate file watchers and
+// trigger rebuilds in tools like Vite/Turbo that track mtime.
 func writeArtifact(artifact Artifact, force bool) (bool, error) {
 	if artifact.Path == "" {
 		return false, fmt.Errorf("codegen: artifact path cannot be empty")
@@ -54,7 +58,8 @@ func removeFileIfExists(path string) (bool, error) {
 	return true, nil
 }
 
-// ArtifactsToFilesEntries adapts artifacts into stackpanel.files.entries-compatible text entries.
+// ArtifactsToFilesEntries adapts artifacts into stackpanel.files.entries format,
+// keyed by absolute path. This bridges the codegen output to the Nix file manager.
 func ArtifactsToFilesEntries(artifacts []Artifact) (map[string]FilesEntry, error) {
 	entries := make(map[string]FilesEntry, len(artifacts))
 	for _, artifact := range artifacts {
@@ -67,7 +72,9 @@ func ArtifactsToFilesEntries(artifacts []Artifact) (map[string]FilesEntry, error
 	return entries, nil
 }
 
-// PlanToFilesEntries flattens a build plan into stackpanel.files.entries-compatible data.
+// PlanToFilesEntries flattens a build plan into stackpanel.files.entries format,
+// using project-relative paths as keys (unlike ArtifactsToFilesEntries which
+// uses absolute paths). This is the primary adapter for Nix integration.
 func PlanToFilesEntries(plan *BuildPlan) (map[string]FilesEntry, error) {
 	if plan == nil {
 		return map[string]FilesEntry{}, nil
@@ -96,6 +103,9 @@ func PlanToFilesEntries(plan *BuildPlan) (map[string]FilesEntry, error) {
 	return entries, nil
 }
 
+// artifactToFilesEntry converts an Artifact to a FilesEntry. JSON artifacts
+// are round-tripped through marshal/unmarshal to produce canonical formatting,
+// ensuring consistent output regardless of how the content was originally built.
 func artifactToFilesEntry(artifact Artifact) (FilesEntry, error) {
 	entry := FilesEntry{Type: "text"}
 	if artifact.Mode != 0 {

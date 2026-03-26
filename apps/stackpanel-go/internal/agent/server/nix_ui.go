@@ -1,3 +1,9 @@
+// nix_ui.go serves the JSON-safe runtime snapshot used by the studio web UI.
+//
+// This is separate from the main config pipeline (nix_config.go) because
+// STACKPANEL_CONFIG_JSON is pre-serialized by Nix (no derivations/functions)
+// and is much faster to evaluate. It's the primary source for runtime state
+// like ports, URLs, and UI extensions.
 package server
 
 import (
@@ -23,6 +29,11 @@ var globalUIRuntimeCache uiRuntimeCache
 
 const uiRuntimeCacheTTL = 2 * time.Second
 
+// getUIRuntimeSnapshot returns the cached runtime config, refreshing via
+// nix eval if the cache is older than uiRuntimeCacheTTL. We use nix eval
+// rather than reading the env var directly because the agent process may
+// not have STACKPANEL_CONFIG_JSON in its environment, while the nix
+// executor's devshell env does.
 func (s *Server) getUIRuntimeSnapshot() (any, int, error) {
 	// Fast path: cached
 	globalUIRuntimeCache.mu.RLock()

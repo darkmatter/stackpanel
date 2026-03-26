@@ -7,13 +7,17 @@ import (
 )
 
 // Paths resolves filesystem locations for Nix data files relative to a
-// project root directory. Prefers .stack with .stackpanel fallback for
-// backward compatibility.
+// project root directory. Handles the .stackpanel -> .stack rename
+// transparently: probes for .stack first and falls back to .stackpanel
+// so existing projects continue to work without migration.
 type Paths struct {
 	ProjectRoot string
 }
 
-// configDir returns the config directory name: ".stack" if it exists, else ".stackpanel".
+// configDir probes the filesystem to determine which config directory name
+// to use. Prefers .stack (current convention), falls back to .stackpanel
+// (legacy). This probe runs on every call — it's cheap (single stat) and
+// means a project can be migrated by simply renaming the directory.
 func (p *Paths) configDir() string {
 	stackDir := filepath.Join(p.ProjectRoot, ".stack")
 	if info, err := os.Stat(stackDir); err == nil && info.IsDir() {
@@ -27,44 +31,49 @@ func NewPaths(projectRoot string) *Paths {
 	return &Paths{ProjectRoot: projectRoot}
 }
 
-// Dir returns the config directory (.stack or .stackpanel) inside the project root.
+// Dir returns the absolute path to the config directory (.stack or
+// .stackpanel) inside the project root.
 func (p *Paths) Dir() string {
 	return filepath.Join(p.ProjectRoot, p.configDir())
 }
 
-// ConfigDirName returns the config directory name (".stack" or ".stackpanel") for the given project root.
+// ConfigDirName returns just the directory name (".stack" or ".stackpanel")
+// without the full path. Useful for display and gitignore patterns.
 func ConfigDirName(projectRoot string) string {
 	return (&Paths{ProjectRoot: projectRoot}).configDir()
 }
 
-// ConfigFilePath returns the path to the single consolidated config.nix
-// file. This is the preferred single source of truth for all Stackpanel
-// project configuration.
+// ConfigFilePath returns the path to the consolidated config.nix file.
+// This is the single source of truth for project configuration — new
+// entities are always written here rather than to individual data files.
 func (p *Paths) ConfigFilePath() string {
 	return filepath.Join(p.Dir(), "config.nix")
 }
 
 // LegacyDataDir returns the path to the legacy data/ directory where
 // individual per-entity .nix files were stored before the migration to
-// consolidated config.nix.
+// consolidated config.nix. Still checked for backward compatibility.
 func (p *Paths) LegacyDataDir() string {
 	return filepath.Join(p.Dir(), "data")
 }
 
-// ExternalDataDir returns the path to the data/ directory where
-// external/collaborator data is stored (e.g. github-collaborators.nix).
-// Merged from legacy external/ into data/.
+// ExternalDataDir returns the path to the data/ directory for external
+// (read-only) entity files like github-collaborators.nix. Note: this
+// returns the same path as LegacyDataDir — external files were merged
+// into data/ during the directory consolidation.
 func (p *Paths) ExternalDataDir() string {
 	return filepath.Join(p.Dir(), "data")
 }
 
 // EntityPath returns the filesystem path for a given entity name.
 //
-// If a legacy per-entity file exists at .stack/data/<entity>.nix it
-// is returned for backwards compatibility. Otherwise the consolidated
-// config.nix path is returned (the entity is expected to be a top-level
-// key within that file).
+// Resolution order (first match wins):
+//  1. Entities that prefer consolidated config → config.nix (always)
+//  2. Legacy .stack/data/<entity>.nix exists on disk → that file
+//  3. Otherwise → config.nix (entity is a top-level key within it)
 //
+// This means newly created entities go into config.nix, while old
+// per-file entities keep working until explicitly migrated.
 // For external entities (names starting with "external-"), use
 // ExternalEntityPath instead.
 func (p *Paths) EntityPath(entity string) string {
@@ -79,7 +88,7 @@ func (p *Paths) EntityPath(entity string) string {
 }
 
 // ExternalEntityPath returns the path for a read-only external entity.
-// The "external-" prefix is stripped. All external data now lives in data/:
+// The "external-" prefix is stripped to form the filename:
 //
 //	"external-github-collaborators" → .stack/data/github-collaborators.nix
 func (p *Paths) ExternalEntityPath(entity string) string {
@@ -88,7 +97,8 @@ func (p *Paths) ExternalEntityPath(entity string) string {
 }
 
 // IsUsingConsolidatedConfig returns true if the given entity is stored in
-// the consolidated config.nix rather than a legacy individual file.
+// the consolidated config.nix rather than a legacy individual file. True
+// when the entity either prefers consolidated config or has no legacy file.
 func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
 	if PrefersConsolidatedConfig(entity) {
 		return true
@@ -98,8 +108,8 @@ func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
 	return os.IsNotExist(err)
 }
 
-// EnsureDir creates the .stack directory (and parents) if it does not
-// already exist.
+// EnsureDir creates the .stack (or .stackpanel) directory and any parent
+// directories if they do not already exist.
 func (p *Paths) EnsureDir() error {
 	return os.MkdirAll(p.Dir(), 0o755)
 }
@@ -122,9 +132,9 @@ const ConfigNixHeader = `# =====================================================
 # ==============================================================================
 `
 
-// SectionHeaders returns display names for top-level config.nix keys. These
-// are used by SerializeWithSections (in pkg/nix) to insert readable comment
-// banners when writing the consolidated config file.
+// SectionHeaders returns display names for top-level config.nix keys.
+// These are rendered as comment banners (e.g. "# --- Apps ---") by
+// SerializeWithSections to make the file human-scannable.
 func SectionHeaders() map[string]string {
 	return map[string]string{
 		"apps":           "Apps",
@@ -156,7 +166,8 @@ func SectionHeaders() map[string]string {
 }
 
 // ParseConfigPath strips a leading "stackpanel." prefix from a dotted
-// config path so it can be used to navigate within config.nix.
+// config path. The UI sometimes sends fully-qualified paths; this
+// normalizes them for use within config.nix where the prefix is implicit.
 //
 //	"stackpanel.deployment.fly.organization" → "deployment.fly.organization"
 //	"deployment.fly.organization"            → "deployment.fly.organization"
@@ -164,16 +175,24 @@ func ParseConfigPath(configPath string) string {
 	return strings.TrimPrefix(configPath, "stackpanel.")
 }
 
-// EscapeConfigPathSegment escapes a single dotted-path segment so it can be
-// embedded in a config patch path without splitting on literal dots.
+// EscapeConfigPathSegment escapes a single path segment so literal dots
+// and backslashes aren't interpreted as separators by SplitConfigPath.
+// Essential for user-defined keys that contain dots (e.g. "app.port"):
+//
+//	EscapeConfigPathSegment("app.port") → "app\.port"
 func EscapeConfigPathSegment(segment string) string {
 	segment = strings.ReplaceAll(segment, "\\", "\\\\")
 	segment = strings.ReplaceAll(segment, ".", "\\.")
 	return segment
 }
 
-// SplitConfigPath splits a dotted config path on unescaped dots and unescapes
-// any literal dots or backslashes within each segment.
+// SplitConfigPath splits a dotted config path on unescaped dots and
+// unescapes each segment. The escape convention uses backslash:
+//
+//	"apps.my\.app.port" → ["apps", "my.app", "port"]
+//
+// Empty segments are silently dropped. A trailing backslash is kept
+// literally (no error) to be lenient with user input.
 func SplitConfigPath(path string) []string {
 	if path == "" {
 		return nil

@@ -1,5 +1,7 @@
-// Module management handlers for enabling, disabling, and configuring modules.
-// These handlers use the same underlying logic as the REST API in modules.go.
+// connect_modules.go provides Connect-RPC handlers for enabling, disabling, and
+// configuring stackpanel modules. Module changes are persisted to disk but only
+// take effect after re-entering the devshell (Nix needs to re-evaluate).
+// SSE events are broadcast on changes so connected UIs can update immediately.
 
 package server
 
@@ -164,7 +166,9 @@ func (s *AgentServiceServer) UpdateModuleSettings(
 	}), nil
 }
 
-// moduleToProto converts internal Module to proto Module
+// moduleToProto converts an internal Module (from Nix evaluation) to the proto
+// representation. This mapping is verbose because the proto schema mirrors the
+// Nix module type system (meta, source, features, panels, per-app config).
 func moduleToProto(m Module) *gopb.Module {
 	pm := &gopb.Module{
 		Id:     m.ID,
@@ -270,6 +274,9 @@ func moduleToProto(m Module) *gopb.Module {
 	return pm
 }
 
+// stringMapFromAny flattens a map[string]any to map[string]string for proto.
+// Non-string values are JSON-marshaled, which is lossy but sufficient for
+// the UI which just displays config values as text.
 func stringMapFromAny(m map[string]any) map[string]string {
 	result := make(map[string]string)
 	for k, v := range m {

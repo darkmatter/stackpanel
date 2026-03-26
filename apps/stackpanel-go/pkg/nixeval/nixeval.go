@@ -1,8 +1,13 @@
-// Package nixeval provides utilities for evaluating Nix expressions
-// and getting the stackpanel configuration without relying on state files.
+// Package nixeval bridges the Go agent/CLI with the Nix module system by
+// shelling out to `nix eval`. It provides two main paths for reading config:
 //
-// This eliminates state drift by always getting live configuration
-// directly from Nix evaluation.
+//   - One-shot evaluation ([GetConfigWithEval], [EvalExpr]) for CLI commands
+//     that need the config once and exit.
+//   - Cached evaluation with file watching ([Evaluator]) for the long-running
+//     agent, which re-evaluates only when Nix source files change on disk.
+//
+// Both paths prefer live Nix evaluation over state files to eliminate drift,
+// but fall back gracefully when Nix is unavailable.
 package nixeval
 
 import (
@@ -19,7 +24,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// Config represents the stackpanel configuration from Nix
+// Config is the JSON shape returned by eval.nix (and the state file fallback).
+// It mirrors the Nix module's output schema -- changes here must stay in sync
+// with nix/stack/core/state.nix.
 type Config struct {
 	Version            int                `json:"version"`
 	ProjectName        string             `json:"projectName"`
@@ -72,14 +79,21 @@ type StepConfig struct {
 	CAUrl  *string `json:"caUrl,omitempty"`
 }
 
-// Evaluator provides cached Nix evaluation with file watching
+// Evaluator provides cached Nix evaluation with file watching. It is the core
+// mechanism the agent uses to keep its in-memory config in sync with the Nix
+// source tree. Callers use [Evaluator.Eval] to get the latest result; the
+// evaluator returns a cached copy unless the cache TTL has expired or a
+// watched file has been modified.
+//
+// The locking strategy uses a double-checked read pattern: a fast RLock path
+// for cache hits and a full Lock only when re-evaluation is needed.
 type Evaluator struct {
 	projectRoot string
-	nixFile     string            // Path to nix eval file - unused if expression is set
-	nixExpr     string            // Nix expression to evaluate
-	flakeAttr   string            // Flake attribute to evaluate (e.g., ".#stackpanelConfig")
-	flakeAttrs  []string          // Multiple flake attributes to try in order (fallbacks)
-	nixArgs     map[string]string // Additional Nix arguments
+	nixFile     string            // Path to .nix file; ignored when nixExpr or flakeAttr is set
+	nixExpr     string            // Inline Nix expression (--expr)
+	flakeAttr   string            // Flake installable (e.g. ".#stackpanelConfig")
+	flakeAttrs  []string          // Ordered fallback installables; first success wins
+	nixArgs     map[string]string // Passed as --argstr pairs
 	timeout     time.Duration
 
 	mu       sync.RWMutex
@@ -89,7 +103,7 @@ type Evaluator struct {
 
 	watcher     *fsnotify.Watcher
 	watchPaths  []string
-	invalidated bool
+	invalidated bool // set by file watcher; cleared after successful re-eval
 }
 
 // Option configures an Evaluator
@@ -116,18 +130,21 @@ func WithWatchPaths(paths []string) Option {
 	}
 }
 
+// WithNixFile sets the path to a .nix file to evaluate with `nix eval -f`.
 func WithNixFile(nixFile string) Option {
 	return func(e *Evaluator) {
 		e.nixFile = nixFile
 	}
 }
 
+// WithArgs passes additional --argstr pairs to nix eval.
 func WithArgs(args map[string]string) Option {
 	return func(e *Evaluator) {
 		e.nixArgs = args
 	}
 }
 
+// WithExpression sets an inline Nix expression to evaluate with --expr.
 func WithExpression(expr string) Option {
 	return func(e *Evaluator) {
 		e.nixExpr = expr
@@ -205,10 +222,10 @@ func NewWatchConfig(projectRoot string, opts ...Option) (*Evaluator, error) {
 	return New(projectRoot, opts...)
 }
 
-// Eval lets you subscribe to a nix evaluation. It's essentially a wrapper around
-// `nix eval` that caches results and watches for file changes. It will re-evaluate
-// the expression when the files change and provide the updated result in
-// realtime. It is the core function of the agent.
+// Eval returns the latest nix eval result, using the cache when valid.
+// This is the primary method the agent calls on every API request. It uses a
+// double-checked locking pattern: the fast path (RLock) serves cached data,
+// and only acquires a write lock when re-evaluation is actually needed.
 func (e *Evaluator) Eval(ctx context.Context) ([]byte, error) {
 	e.mu.RLock()
 	if e.cached != nil && !e.invalidated && time.Since(e.cachedAt) < e.cacheTTL {
@@ -217,11 +234,10 @@ func (e *Evaluator) Eval(ctx context.Context) ([]byte, error) {
 	}
 	e.mu.RUnlock()
 
-	// Need to re-evaluate
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	// Double-check after acquiring write lock
+	// Re-check after lock promotion -- another goroutine may have refreshed.
 	if e.cached != nil && !e.invalidated && time.Since(e.cachedAt) < e.cacheTTL {
 		return e.cached, nil
 	}
@@ -238,7 +254,7 @@ func (e *Evaluator) Eval(ctx context.Context) ([]byte, error) {
 	return result, nil
 }
 
-// evalNix runs the actual nix eval command
+// evalNixConfig runs nix eval and unmarshals the result into a Config.
 func (e *Evaluator) evalNixConfig(ctx context.Context) (*Config, error) {
 	result, err := e.evalNix(ctx)
 	if err != nil {
@@ -263,19 +279,18 @@ func (e *Evaluator) evalNixConfig(ctx context.Context) (*Config, error) {
 	return &config, nil
 }
 
-// evalNix runs the actual nix eval command
+// evalNix shells out to `nix eval` and returns raw JSON bytes.
+// Expression source priority: flakeAttrs (fallback list) > flakeAttr > nixExpr > nixFile.
 func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
-	// If we have fallback attributes, try each one in order
 	if len(e.flakeAttrs) > 0 {
 		return e.evalNixWithFallbacks(ctx, e.flakeAttrs)
 	}
 
 	args := []string{"eval", "--impure", "--json"}
 
-	// Priority: flakeAttr > nixExpr > nixFile
 	if e.flakeAttr != "" {
 		// Flake attribute (e.g., ".#stackpanelConfig") - append directly
 		args = append(args, e.flakeAttr)
@@ -306,7 +321,11 @@ func (e *Evaluator) evalNix(ctx context.Context) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
-// evalNixWithFallbacks tries multiple flake attributes in order, returning the first success
+// evalNixWithFallbacks tries multiple flake attributes in order, returning the
+// first success. This supports both user projects (which expose config via
+// devshell passthru) and the stackpanel repo itself (which uses a top-level
+// flake output). If the context deadline fires, it aborts immediately rather
+// than trying the remaining fallbacks.
 func (e *Evaluator) evalNixWithFallbacks(ctx context.Context, attrs []string) ([]byte, error) {
 	var lastErr error
 
@@ -365,7 +384,9 @@ func (e *Evaluator) StartWatching() error {
 	return nil
 }
 
-// addWatchRecursive adds a path and all subdirectories to the watcher
+// addWatchRecursive adds a path and all its subdirectories to the fsnotify
+// watcher. Errors on individual paths are silently skipped -- missing or
+// inaccessible paths are expected (e.g. .stack/ may not exist yet).
 func (e *Evaluator) addWatchRecursive(path string) error {
 	return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -380,7 +401,9 @@ func (e *Evaluator) addWatchRecursive(path string) error {
 	})
 }
 
-// watchLoop handles file system events
+// watchLoop processes fsnotify events. Only .nix, .yaml, and .json file
+// changes trigger cache invalidation -- this avoids spurious re-evaluations
+// from editor swap files, .git operations, etc.
 func (e *Evaluator) watchLoop() {
 	for {
 		select {
@@ -425,7 +448,7 @@ func (e *Evaluator) Invalidate() {
 	e.invalidated = true
 }
 
-// GetAppPort returns the port for an app
+// GetAppPort returns the port for an app, or 0 if the app is not configured.
 func (c *Config) GetAppPort(name string) int {
 	if app, ok := c.Apps[name]; ok {
 		return app.Port
@@ -433,7 +456,7 @@ func (c *Config) GetAppPort(name string) int {
 	return 0
 }
 
-// GetServicePort returns the port for a service
+// GetServicePort returns the port for a service, or 0 if the service is not configured.
 func (c *Config) GetServicePort(name string) int {
 	if svc, ok := c.Services[name]; ok {
 		return svc.Port

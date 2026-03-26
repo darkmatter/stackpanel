@@ -1,3 +1,10 @@
+// config_generate_example.go produces an annotated config.nix.example from
+// the Nix options JSON exported by nixosOptionsDoc.
+//
+// The generated file serves as a self-documenting template: each option gets
+// inline comments from its Nix description, and values are populated from
+// examples or defaults. Internal and read-only options are filtered out since
+// they can't be set by users.
 package cmd
 
 import (
@@ -260,8 +267,10 @@ func getExampleValue(opt OptionInfo) string {
 	return placeholderForType(string(opt.Type))
 }
 
-// extractNixValue extracts the actual Nix value from the JSON representation.
-// nixosOptionsDoc wraps literal expressions in {"_type": "literalExpression", "text": "..."}
+// extractNixValue unwraps the nixosOptionsDoc JSON encoding. Nix literal
+// expressions are wrapped as {"_type": "literalExpression", "text": "..."}
+// — we extract the text so the example file contains valid Nix syntax,
+// not JSON artefacts.
 func extractNixValue(raw json.RawMessage) string {
 	// Try to parse as literalExpression wrapper
 	var literal struct {

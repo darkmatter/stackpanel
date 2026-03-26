@@ -1,5 +1,10 @@
 package nixdata
 
+// Nix uses kebab-case for attribute names, but Go/TypeScript/protobuf use
+// camelCase. This file handles bidirectional conversion, with special care
+// to preserve user-defined map keys (variable IDs, app names, etc.) that
+// must pass through untouched.
+
 import (
 	"encoding/json"
 	"strings"
@@ -53,10 +58,14 @@ func CamelToKebab(s string) string {
 	return result.String()
 }
 
-// TransformKeysToCamel recursively converts all JSON object keys in data
-// from kebab-case to camelCase. Keys that are children of a known map field
-// (see MapFieldNames) are preserved verbatim because they are user-defined
-// identifiers, not schema field names.
+// TransformKeysToCamel recursively converts all JSON object keys from
+// kebab-case to camelCase. The mapFields set controls which parent keys
+// should have their children's keys left untouched — this is critical
+// because user-defined map keys (app names, variable IDs) are not schema
+// names and must not be case-transformed.
+//
+// parentKey tracks the converted key of the current node's parent so we
+// can check whether we're inside a map field.
 func TransformKeysToCamel(data any, mapFields map[string]struct{}, parentKey string) any {
 	switch v := data.(type) {
 	case map[string]any:

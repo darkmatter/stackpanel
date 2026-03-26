@@ -1,3 +1,9 @@
+// config.go implements `stackpanel config {get,set}` for inspecting and
+// modifying the Nix-evaluated project configuration. `get` evaluates a
+// single attribute via `nix eval` (lazy — only the requested path is
+// computed, not the full config tree). `set` patches .stack/config.nix
+// through the nixdata.Store abstraction.
+
 package cmd
 
 import (
@@ -249,6 +255,10 @@ func setConfigValue(projectRoot string, configPath string, value any) (string, e
 	return nixdata.NewPaths(projectRoot).ConfigFilePath(), nil
 }
 
+// parseConfigSetValue interprets the user's raw string input as a typed value.
+// "auto" mode tries JSON parsing first; if that fails the value is treated as
+// a plain string. This lets `stackpanel config set ports.base 6400` work
+// without requiring --type number, while still allowing JSON objects/arrays.
 func parseConfigSetValue(raw string, valueType string) (any, string, error) {
 	normalizedType := normalizeConfigValueType(valueType)
 
@@ -337,8 +347,9 @@ func detectJSONValueType(value any) string {
 }
 
 // printJSON pipes raw JSON through jq for colorized, indented output.
-// Falls back to plain json.MarshalIndent when jq is not available.
-// jq automatically disables colors when stdout is not a TTY.
+// jq automatically disables colors when stdout is not a TTY, which is
+// the right behavior for piped/scripted usage. Falls back to stdlib
+// json.MarshalIndent when jq is not on PATH.
 func printJSON(raw []byte) {
 	jqPath, err := exec.LookPath("jq")
 	if err == nil {
@@ -367,9 +378,9 @@ func printJSON(raw []byte) {
 	fmt.Println(string(data))
 }
 
-// printRaw outputs the value with minimal formatting — strings have no
-// quotes, numbers and booleans are printed as-is, and structured types
-// are compacted onto one line.
+// printRaw outputs the value with minimal formatting — designed for
+// shell scripting where you want `$(stackpanel config get project.name)`
+// to produce a bare string without quotes or trailing newlines for objects.
 func printRaw(value any) {
 	switch v := value.(type) {
 	case string:

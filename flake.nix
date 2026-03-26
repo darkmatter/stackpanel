@@ -37,11 +37,15 @@
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    disko.url = "github:nix-community/disko";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
+    colmena.url = "github:zhaofengli/colmena";
+    colmena.inputs.nixpkgs.follows = "nixpkgs";
     # stackpanel-root contains the absolute path to the project root
     # Created by .envrc: echo "$PWD" > .stackpanel-root
     # This enables pure evaluation (nix flake check, nix flake show)
-    stackpanel-root.url = "path:./.stackpanel-root";
-    stackpanel-root.flake = false;
+    # stackpanel-root.url = "path:./.stackpanel-root";
+    # stackpanel-root.flake = false;
 		#inputs.sops-nix.url = "github:Mic92/sops-nix";
 		#inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -60,8 +64,16 @@
       # Overlays for nixpkgs
       overlays = exports.lib.requiredOverlays;
 
-      # Read project root from stackpanel-root input
-      projectRoot = exports.lib.readStackpanelRoot { inherit inputs; };
+      # Global outputs (nixosModules, nixosConfigurations, colmenaHive).
+      # Evaluated once using lib only -- no per-system pkgs instantiation.
+      globalOutputs = import ./nix/flake/global-outputs.nix {
+        inherit inputs self;
+        stackpanelImports =
+          if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
+          else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+          else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
+          else [ ];
+      };
     in
     # Per-system outputs
     flake-utils.lib.eachSystem exports.supportedSystems (
@@ -75,13 +87,12 @@
         packages = import ./nix/flake/packages.nix { inherit pkgs inputs; };
 
         # Stackpanel outputs (devShells, checks, apps, legacyPackages)
-        spOutputs = import ./nix/flake/default.nix {
+        spOutputs = import ./nix/flake/per-system-outputs.nix {
           inherit
             pkgs
             inputs
             self
             system
-            projectRoot
             ;
           stackpanelImports =
             if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
@@ -115,42 +126,17 @@
     // {
       inherit (exports)
         lib
-        nixosModules
         devenvModules
         templates
         ;
 
-      nixosConfigurations = let
-        system = "x86_64-linux";
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-        spOutputs = import ./nix/flake/default.nix {
-          inherit pkgs inputs self system projectRoot;
-          stackpanelImports =
-            if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
-            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
-            else [];
-        };
-        webPkg = spOutputs.packages.web or null;
-      in {
-        web-staging = nixpkgs.lib.nixosSystem {
-          inherit system;
-          modules = [
-            self.nixosModules.web-service
-            ({ ... }: {
-              stackpanel.web = {
-                enable = true;
-                package = webPkg;
-                port = 80;
-                ssmParameterPath = "/stackpanel/staging/web-runtime";
-                ssmRegion = "us-west-2";
-              };
+      # nixosModules merges framework modules from exports with
+      # per-app generated service modules from globalOutputs
+      nixosModules = exports.nixosModules // globalOutputs.nixosModules;
 
-              system.stateVersion = "24.11";
-            })
-          ];
-        };
-      };
+      inherit (globalOutputs)
+        nixosConfigurations
+        colmenaHive
+        ;
     };
 }

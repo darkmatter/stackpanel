@@ -1,3 +1,8 @@
+// commands_tui.go implements an interactive Bubble Tea TUI for browsing and
+// running devshell commands. Shown automatically when `stackpanel commands`
+// is invoked in an interactive terminal with no arguments. The TUI captures
+// command output and displays it in a scrollable viewer rather than mixing
+// it with the TUI rendering.
 package cmd
 
 import (
@@ -12,6 +17,8 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui/output"
 )
 
+// commandsViewState tracks what the TUI is currently showing. Transitions:
+// List -> Running -> Output (on completion), List -> Help/Detail (on keypress).
 type commandsViewState int
 
 const (
@@ -344,6 +351,9 @@ func (m commandsModel) showDetail() commandsModel {
 	return m
 }
 
+// runSelected executes the selected command in a goroutine and returns
+// the result as a tea.Msg. The command runs captured (not attached to the
+// terminal) because Bubble Tea owns stdout/stderr during TUI mode.
 func (m commandsModel) runSelected() tea.Cmd {
 	if len(m.commands) == 0 {
 		return nil

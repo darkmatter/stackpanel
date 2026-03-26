@@ -13,10 +13,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// RawExpr is a raw Nix expression that should be written without quoting.
+// RawExpr is a Nix expression that should be written verbatim (no string quoting).
+// Use this for computed values like "config.services.postgres.port" that must
+// remain as live Nix references rather than being serialized as string literals.
 type RawExpr string
 
-// DeleteValue removes the target binding when patching config.nix.
+// DeleteValue is a sentinel type: pass it as the value to PatchConsolidatedData
+// or SetKey to remove the target binding from config.nix.
 type DeleteValue struct{}
 
 // NixRunner is the interface required by Store to evaluate Nix expressions.
@@ -63,9 +66,12 @@ func (s *Store) Paths() *Paths {
 // ---------------------------------------------------------------------------
 
 // ReadEntity evaluates the Nix file for entity and returns the parsed Go
-// value (typically map[string]any or []any). For external entities the
-// external data path is used; for consolidated configs only the entity's
-// attribute is extracted.
+// value (typically map[string]any or []any). Returns nil (not an error) if
+// the entity file doesn't exist yet — callers should treat nil as "empty".
+//
+// For external entities the external data path is used; for consolidated
+// configs only the entity's attribute is extracted via a Nix expression
+// that plucks the key from the full config.nix attrset.
 func (s *Store) ReadEntity(entity string) (any, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return nil, err
@@ -108,7 +114,10 @@ func (s *Store) ReadEntity(entity string) (any, error) {
 // ReadEntityJSON reads entity and returns its JSON representation with
 // keys converted to camelCase (suitable for protojson / Connect-RPC
 // handlers). Map entities are wrapped in an envelope keyed by entity name
-// to match the proto message shape.
+// to match the proto message shape, e.g. {"apps": {...}} for the "apps" entity.
+//
+// Returns "{}" (not null) when the entity file is missing, so callers
+// can always unmarshal without nil checks.
 func (s *Store) ReadEntityJSON(entity string) ([]byte, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return nil, err
@@ -156,9 +165,12 @@ func (s *Store) ReadEntityJSON(entity string) ([]byte, error) {
 	return NixJSONToCamelCase(raw, MapFieldNames())
 }
 
-// ReadRawNixFile evaluates a Nix data file using a round-trip through
-// builtins.toJSON/builtins.fromJSON. This is used for key-level updates
-// where the raw file value (not the merged flake output) is needed.
+// ReadRawNixFile evaluates a Nix data file via builtins.toJSON/fromJSON
+// round-trip. Unlike ReadEntity (which may use the evaluated flake output),
+// this always returns the literal file contents. This distinction matters for
+// key-level updates: we must read-modify-write without picking up values
+// injected by Nix modules (e.g. module-generated variables that shouldn't
+// be persisted back into the data file).
 func (s *Store) ReadRawNixFile(entity string) (any, error) {
 	dataPath := s.paths.EntityPath(entity)
 	expr := "builtins.fromJSON (builtins.toJSON (" + s.importExpr(dataPath) + "))"
@@ -186,8 +198,12 @@ func (s *Store) ReadRawNixFile(entity string) (any, error) {
 // ---------------------------------------------------------------------------
 
 // WriteEntity serialises data as a Nix expression and writes it to the
-// entity's data file. The data value should already have kebab-case keys
-// if it came from the HTTP layer; no key transformation is performed here.
+// entity's data file. Expects keys to already be in kebab-case if the data
+// came from the HTTP layer — no key transformation is performed here.
+//
+// For consolidated config, this does a full read-modify-write of config.nix
+// (updating only this entity's key). For legacy per-entity files it writes
+// the file directly. Returns the path of the written file.
 func (s *Store) WriteEntity(entity string, data any) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return "", err
@@ -239,8 +255,9 @@ func (s *Store) WriteEntity(entity string, data any) (string, error) {
 }
 
 // WriteEntityJSON accepts camelCase JSON bytes (e.g. from protojson),
-// transforms keys to kebab-case, unwraps map entity envelopes, serialises
-// to Nix, and writes the result.
+// transforms keys to kebab-case, unwraps map entity envelopes (removing the
+// outer {"apps": ...} wrapper), and writes the result. This is the primary
+// entry point for the agent HTTP handlers.
 func (s *Store) WriteEntityJSON(entity string, data []byte) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return "", err
@@ -276,8 +293,11 @@ func (s *Store) WriteEntityJSON(entity string, data []byte) (string, error) {
 // ---------------------------------------------------------------------------
 
 // SetKey performs a key-level upsert on a map entity. For consolidated
-// config.nix entities it uses source-preserving path patching; for legacy
-// per-entity files it falls back to read/modify/write.
+// config.nix, this uses source-preserving AST patching (via flakeedit) so
+// that comments and formatting in the user's file are kept intact. For legacy
+// per-entity files it falls back to read/modify/write which reformats the file.
+//
+// Pass a DeleteValue{} as value to remove the key instead.
 func (s *Store) SetKey(entity, key string, value any) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return "", err
@@ -306,10 +326,9 @@ func (s *Store) SetKey(entity, key string, value any) (string, error) {
 	return s.writeMap(entity, existing)
 }
 
-// DeleteKey removes a single key from a map entity. For consolidated
-// config.nix entities it uses source-preserving path patching; for legacy
-// per-entity files it falls back to read/modify/write. It is a no-op if the
-// key does not exist.
+// DeleteKey removes a single key from a map entity. It is a no-op (returns
+// the config path, nil error) if the key does not exist — this avoids forcing
+// callers to check existence before deletion.
 func (s *Store) DeleteKey(entity, key string) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return "", err
@@ -428,7 +447,9 @@ func (s *Store) writeMap(entity string, data map[string]any) (string, error) {
 // ---------------------------------------------------------------------------
 
 // ReadConsolidatedData reads the entire .stack/config.nix file and
-// returns its top-level attributes as a map.
+// returns its top-level attributes as a map. config.nix may be either
+// a plain attrset or a function ({pkgs, lib, ...}: { ... }); the Nix
+// expression handles both forms by calling it with null arguments.
 func (s *Store) ReadConsolidatedData() (map[string]any, error) {
 	dataPath := s.paths.ConfigFilePath()
 
@@ -452,8 +473,11 @@ func (s *Store) ReadConsolidatedData() (map[string]any, error) {
 	return data, nil
 }
 
-// WriteConsolidatedData writes an entire data map to config.nix with the
-// standard file header and section comments.
+// WriteConsolidatedData writes an entire data map to config.nix with
+// the standard file header and section comments. If the file already exists,
+// it attempts to preserve any content outside the editable region (e.g. a
+// function wrapper) using flakeedit.ReplaceNixEditableAttrset. Falls back
+// to a full rewrite if the existing file can't be parsed.
 func (s *Store) WriteConsolidatedData(data map[string]any) error {
 	nixExpr, err := nixser.SerializeWithSections(data, "  ", SectionHeaders())
 	if err != nil {
@@ -484,11 +508,16 @@ func (s *Store) WriteConsolidatedData(data map[string]any) error {
 }
 
 // PatchConsolidatedData sets a single value at a dot-separated path within
-// config.nix. Path segments are converted from camelCase to kebab-case so
-// that UI panel editPaths (e.g. "deployment.fly.organization") map
-// correctly to Nix attribute names.
+// config.nix using source-preserving AST patching. This is the preferred
+// mutation path because it keeps user comments and formatting intact.
 //
-// Intermediate maps are created automatically if they do not exist.
+// Path segments are converted from camelCase to kebab-case so that UI panel
+// editPaths (e.g. "deployment.fly.organization") map correctly to Nix
+// attribute names. Segments immediately after map field names (e.g. the app
+// name after "apps.") are preserved verbatim since they're user-defined keys.
+//
+// Pass a DeleteValue{} to remove the binding at the given path.
+// Intermediate attribute sets are created automatically if they do not exist.
 func (s *Store) PatchConsolidatedData(path string, value any) error {
 	dataPath := s.paths.ConfigFilePath()
 	if err := s.paths.EnsureDir(); err != nil {
@@ -532,6 +561,10 @@ func (s *Store) PatchConsolidatedData(path string, value any) error {
 	return nil
 }
 
+// importExpr builds a Nix expression that imports a data file. config.nix may
+// be either a plain attrset or a function ({pkgs, lib, ...}: { ... }), so we
+// call it with null arguments when it's a function. Passing nulls avoids a
+// full flake evaluation — we only need the raw data, not computed values.
 func (s *Store) importExpr(dataPath string) string {
 	quotedPath := fmt.Sprintf("%q", dataPath)
 	return fmt.Sprintf(`
@@ -554,6 +587,9 @@ func (s *Store) configEvalExpr() string {
 	return s.importExpr(s.paths.ConfigFilePath())
 }
 
+// configEntityEvalExpr builds a Nix expression that extracts a single entity
+// from config.nix with a safe default. Map entities default to {} so callers
+// can always iterate; non-map entities default to null.
 func (s *Store) configEntityEvalExpr(entity string) string {
 	defaultExpr := "null"
 	if IsMapEntity(entity) {
@@ -569,6 +605,10 @@ in
 `, s.configEvalExpr(), entity, entity, defaultExpr)
 }
 
+// serializePatchedValue converts a Go value to a Nix expression string for
+// source-level patching. The returned shouldDelete flag signals that the
+// caller should remove the binding entirely (for DeleteValue sentinels)
+// rather than writing an expression.
 func serializePatchedValue(value any) (string, bool, error) {
 	switch v := value.(type) {
 	case DeleteValue:
@@ -584,8 +624,11 @@ func serializePatchedValue(value any) (string, bool, error) {
 	}
 }
 
-// ReadAppVariableLinks returns app/env/envKey -> variable ID mappings parsed
-// from raw config.nix source.
+// ReadAppVariableLinks parses raw config.nix source (not evaluated output) to
+// extract app/env/envKey -> variable ID mappings. These links are Nix
+// expressions like `config.variables.myVar.value` that connect app environment
+// variables to centrally-defined variables. They must be extracted from source
+// because evaluation resolves the references, losing the link information.
 func (s *Store) ReadAppVariableLinks() (map[string]map[string]map[string]string, error) {
 	dataPath := s.paths.ConfigFilePath()
 	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
@@ -599,8 +642,10 @@ func (s *Store) ReadAppVariableLinks() (map[string]map[string]map[string]string,
 }
 
 // NormalizeConfigPathParts converts a dotted UI/config path into Nix attribute
-// segments while preserving user-defined keys under map fields like apps,
-// environments, env, and variables.
+// segments with proper casing. Non-map segments are converted from camelCase
+// to kebab-case to match Nix conventions. Segments immediately following a
+// map field name (e.g. the app name after "apps.") are preserved verbatim
+// since they are user-defined keys that must not be transformed.
 func NormalizeConfigPathParts(path string) []string {
 	parts := SplitConfigPath(path)
 	if len(parts) == 0 {
@@ -627,9 +672,10 @@ func NormalizeConfigPathParts(path string) []string {
 	return normalized
 }
 
-// DeleteEntity removes the data file for entity. For consolidated configs
-// this is a no-op (the entity key must be removed via PatchConsolidatedData
-// instead). Returns the path that was deleted, or "" if nothing was removed.
+// DeleteEntity removes the legacy per-entity data file for entity. For
+// consolidated configs this is a no-op — use PatchConsolidatedData with
+// DeleteValue{} instead. Returns the path that was deleted, or "" if
+// nothing was removed.
 func (s *Store) DeleteEntity(entity string) (string, error) {
 	if err := ValidateEntityName(entity); err != nil {
 		return "", err

@@ -304,6 +304,8 @@ let
       # CGO with tree-sitter needs the macOS SDK for libresolv + frameworks
       nativeBuildInputs = lib.optionals pkgs.stdenv.isDarwin [
         pkgs.apple-sdk_15
+      ] ++ lib.optionals (goCfg.runtimeInputs != [ ]) [
+        pkgs.makeWrapper
       ];
 
       doCheck = false; # Tests run separately via checks
@@ -314,15 +316,21 @@ let
       ]
       ++ goCfg.ldflags;
 
-      # Rename binary if needed
-      postInstall = lib.optionalString (goCfg.binaryName != null) ''
-        # For per-app layout, binary name is the directory name
-        # For workspace layout, binary name is the last path component
-        oldName=${
-          if hasPerAppGoMod then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
-        }
-        mv $out/bin/$oldName $out/bin/${goCfg.binaryName} 2>/dev/null || true
-      '';
+      finalBinaryName = if goCfg.binaryName != null then goCfg.binaryName else name;
+
+      postInstall =
+        # Rename binary if binaryName differs from the default output name
+        lib.optionalString (goCfg.binaryName != null) ''
+          oldName=${
+            if hasPerAppGoMod then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
+          }
+          mv $out/bin/$oldName $out/bin/${goCfg.binaryName} 2>/dev/null || true
+        ''
+        # Wrap binary to prepend runtimeInputs bin/ dirs to PATH
+        + lib.optionalString (goCfg.runtimeInputs != [ ]) ''
+          wrapProgram $out/bin/${if goCfg.binaryName != null then goCfg.binaryName else name} \
+            --prefix PATH : ${lib.makeBinPath goCfg.runtimeInputs}
+        '';
 
       meta = with lib; {
         description = goCfg.description or "${name} application";
@@ -401,7 +409,24 @@ in
           {
             options.go = lib.mkOption {
               type = lib.types.submodule {
-                options = lib.mapAttrs (_: sp.asOption) goSchema.fields;
+                options = lib.mapAttrs (_: sp.asOption) goSchema.fields // {
+                  runtimeInputs = lib.mkOption {
+                    type = lib.types.listOf lib.types.package;
+                    default = [ ];
+                    description = ''
+                      Runtime packages whose bin/ directories are prepended to PATH
+                      when this app's binary runs. Two effects:
+
+                        1. Nix build: makeWrapper wraps the binary so the installed
+                           binary finds the tools without a devshell.
+                        2. DevShell: the packages are added to the shell so
+                           go run . also finds them.
+
+                      Example (in .stack/nix/):
+                        stackpanel.apps.my-cli.go.runtimeInputs = [ pkgs.colmena ];
+                    '';
+                  };
+                };
               };
               default = { };
               description = "Go-specific configuration for this app";
@@ -427,6 +452,12 @@ in
           devEnvs = lib.mapAttrs mkGoDevEnv goApps;
           generatedFiles = lib.mapAttrs mkGeneratedFiles goApps;
         };
+
+        # Add runtimeInputs from all Go apps to the devshell so that
+        # `go run .` finds the same tools that the installed binary has wrapped in.
+        stackpanel.devshell.packages = lib.flatten (
+          lib.mapAttrsToList (_: app: app.go.runtimeInputs) goApps
+        );
 
         # Materialize generated files using stackpanel.files system
         stackpanel.files.entries = lib.mkMerge (

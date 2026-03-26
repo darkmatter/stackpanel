@@ -1,5 +1,8 @@
-// Package server provides additional Connect-RPC handlers for the stackpanel agent.
-// These handlers wrap existing HTTP handler logic to provide type-safe RPC access.
+// connect_handlers.go contains Connect-RPC handlers for SST infrastructure management,
+// nixpkgs package search, process-compose process listing, healthchecks, and
+// full Nix config evaluation/refresh. These are higher-level composite operations
+// that often shell out to external tools (sst, nix search, process-compose HTTP API).
+
 package server
 
 import (
@@ -20,7 +23,8 @@ import (
 // SST Infrastructure Handlers
 // =============================================================================
 
-// GetSSTStatus returns the current SST deployment status.
+// GetSSTStatus probes whether SST is configured, the config file exists, and
+// whether a deployment has been made (by checking if `sst outputs` returns data).
 func (s *AgentServiceServer) GetSSTStatus(
 	ctx context.Context,
 	req *connect.Request[gopb.GetSSTStatusRequest],
@@ -267,7 +271,8 @@ func (s *AgentServiceServer) GetSSTOutputs(
 	return connect.NewResponse(&gopb.SSTOutputsResponse{Outputs: outputs}), nil
 }
 
-// GetSSTResources returns the deployed SST resources.
+// GetSSTResources returns deployed SST resources by reading Pulumi state files
+// from the .sst/ directory. This avoids calling `sst` CLI which would be slower.
 func (s *AgentServiceServer) GetSSTResources(
 	ctx context.Context,
 	req *connect.Request[gopb.GetSSTResourcesRequest],
@@ -335,7 +340,9 @@ func (s *AgentServiceServer) GetSSTResources(
 // Nixpkgs Package Management Handlers
 // =============================================================================
 
-// SearchNixpkgs searches for packages in nixpkgs.
+// SearchNixpkgs runs `nix search nixpkgs <query> --json` and cross-references
+// results against currently installed packages to set the Installed flag.
+// The attr path is shortened from "legacyPackages.x86_64-linux.foo" to just "foo".
 func (s *AgentServiceServer) SearchNixpkgs(
 	ctx context.Context,
 	req *connect.Request[gopb.SearchNixpkgsRequest],
@@ -411,7 +418,9 @@ func (s *AgentServiceServer) SearchNixpkgs(
 	return connect.NewResponse(&gopb.SearchNixpkgsResponse{Packages: packages}), nil
 }
 
-// GetInstalledPackages returns the list of installed packages from devenv/stackpanel config.
+// GetInstalledPackages returns packages from the FlakeWatcher cache, which tracks
+// the evaluated devshell packages and invalidates on flake.nix changes.
+// Falls back to an empty list rather than erroring — the UI handles this gracefully.
 func (s *AgentServiceServer) GetInstalledPackages(
 	ctx context.Context,
 	req *connect.Request[gopb.GetInstalledPackagesRequest],
@@ -451,7 +460,9 @@ func (s *AgentServiceServer) GetInstalledPackages(
 // Process-Compose Handlers
 // =============================================================================
 
-// GetProcesses returns the list of processes from process-compose via HTTP API.
+// GetProcesses returns all process-compose processes (all namespaces, not just "services").
+// Unlike GetServicesStatus which filters to the "services" namespace, this returns
+// everything for the process management UI panel.
 func (s *AgentServiceServer) GetProcesses(
 	ctx context.Context,
 	req *connect.Request[gopb.GetProcessesRequest],
@@ -595,7 +606,10 @@ func (s *AgentServiceServer) GetHealthchecks(
 // Full Nix Config Handlers
 // =============================================================================
 
-// GetNixConfig returns the full Nix configuration.
+// GetNixConfig returns the full evaluated Nix configuration as JSON.
+// Prefers the FlakeWatcher cache (invalidated by fsnotify on .nix file changes)
+// and falls back to a fresh `nix eval` if unavailable. The "source" field in the
+// response lets the UI indicate whether data is cached or freshly evaluated.
 func (s *AgentServiceServer) GetNixConfig(
 	ctx context.Context,
 	req *connect.Request[gopb.GetNixConfigRequest],
@@ -649,7 +663,10 @@ func (s *AgentServiceServer) GetNixConfig(
 	}), nil
 }
 
-// RefreshNixConfig forces a config refresh by re-evaluating the flake.
+// RefreshNixConfig forces a full re-evaluation of the Nix flake configuration.
+// The 5-minute timeout is intentionally long — Nix may need to download
+// substitutions from binary caches on first eval or after flake.lock changes.
+// Broadcasts a "config.refreshed" SSE event so other connected clients update.
 func (s *AgentServiceServer) RefreshNixConfig(
 	ctx context.Context,
 	req *connect.Request[gopb.RefreshNixConfigRequest],

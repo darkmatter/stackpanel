@@ -1,8 +1,17 @@
 // ==============================================================================
-// Deployment Infra Module
+// Deployment Infra Module — Orchestrator
 //
-// Deploys app resources using app-scoped Alchemy apps so `alchemy deploy --app`
+// Top-level entry point for `just deploy`. Reads the Nix-generated
+// infra-inputs.json, builds a deployment plan for each app, and dispatches
+// to the appropriate host handler (Cloudflare or AWS EC2).
+//
+// Each app gets its own Alchemy app scope so `alchemy deploy --app <name>`
 // follows Alchemy's documented monorepo workflow.
+//
+// Flow:
+//   infra-inputs.json -> plan.ts (build plan) -> deploy{Cloudflare,Aws}App
+//     -> Cloudflare: TanStackStart / Worker / Vite / etc.
+//     -> AWS:        aws-ec2-deploy.ts (VPC + IAM + EC2 + SSM)
 // ==============================================================================
 import alchemy, { type Secret } from "alchemy";
 import { execFileSync } from "node:child_process";
@@ -18,6 +27,8 @@ import {
   type DeploymentInputs,
 } from "./plan";
 import { Ec2Server } from "./aws-ec2-deploy";
+
+// ---- Alchemy app factory (uses generated config if available) ----------------
 
 type CreateApp = (name?: string) => Promise<{ finalize(): Promise<void> }>;
 
@@ -38,6 +49,8 @@ try {
     });
 }
 
+// ---- Load inputs from Nix ---------------------------------------------------
+
 const infra = new Infra("deployment");
 const inputs = infra.inputs<DeploymentInputs>(
   process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES,
@@ -45,6 +58,8 @@ const inputs = infra.inputs<DeploymentInputs>(
 
 const STAGE = process.env.STAGE ?? "dev";
 const DEPLOYMENT_APP_FILTER = process.env.STACKPANEL_DEPLOYMENT_APP ?? null;
+
+// ---- Binding resolution (env vars + secrets) --------------------------------
 
 const STAGE_URL_DEFAULTS: Record<string, (stage: string) => string> = {
   CORS_ORIGIN: (stage) =>
@@ -138,6 +153,8 @@ function resolveArtifactLocation() {
     artifactVersion,
   };
 }
+
+// ---- Cloudflare helpers -----------------------------------------------------
 
 function cloudflareProps(name: string, app: AppInput) {
   const route = app.cloudflare?.route ?? inputs.cloudflare?.defaultRoute ?? null;
@@ -279,6 +296,8 @@ async function withAppScope<T>(
   }
 }
 
+// ---- Host-specific deploy functions -----------------------------------------
+
 async function deployCloudflareApp(
   appName: string,
   app: AppInput,
@@ -419,6 +438,8 @@ async function deployAwsApp(
     }),
   );
 }
+
+// ---- Main dispatch loop -----------------------------------------------------
 
 const outputs: Record<string, string> = {};
 const deployableApps = Object.entries(inputs.apps ?? {}).filter(

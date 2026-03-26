@@ -1,3 +1,8 @@
+// agent.go implements the `stackpanel agent` command, which starts the
+// localhost HTTP server that bridges the Studio web UI to the local Nix
+// environment. The agent provides REST + Connect-RPC APIs, SSE events,
+// file watching, and process management.
+
 package cmd
 
 import (
@@ -71,7 +76,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	bindAddr, _ := cmd.Flags().GetString("bind")
 	allowedHosts, _ := cmd.Flags().GetStringArray("host")
 
-	// Setup logging
+	// Use unix timestamps for structured log output; switch to human-readable
+	// console output only in debug mode.
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	if debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -80,7 +86,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	// Set project root env var if specified
+	// Propagate project root to the environment so config.Load can find it
+	// without requiring the caller to be in the project directory.
 	if projectRoot != "" {
 		os.Setenv("STACKPANEL_PROJECT_ROOT", projectRoot)
 	}
@@ -91,12 +98,17 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Override port if specified
+	// Only override when the user explicitly passed --port; both the flag
+	// default and config.Load default to 9876, so we can't distinguish
+	// "user typed --port 9876" from "user omitted --port". This means
+	// config-file port is respected unless --port is explicitly different.
 	if port != 9876 {
 		cfg.Port = port
 	}
 
-	// Handle remote access mode
+	// Remote mode binds to all interfaces and adds Tailscale-related origins
+	// to the CORS allowlist. This is opt-in because exposing the agent
+	// beyond localhost has security implications (JWT pairing still required).
 	if remote {
 		cfg.RemoteAccess = true
 		if bindAddr == "" {
@@ -130,7 +142,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create server: %w", err)
 	}
 
-	// Handle shutdown gracefully
+	// Block on SIGINT/SIGTERM for graceful shutdown. The server runs in a
+	// goroutine; the main goroutine parks here until the OS signal arrives,
+	// then calls srv.Stop() to drain connections and release resources.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -147,6 +161,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// runAgentTestToken generates a deterministic JWT for E2E tests.
+// The token is derived from a shared secret, so the same secret+origin
+// always yields the same token — useful for CI pipelines.
 func runAgentTestToken(cmd *cobra.Command, args []string) error {
 	origin, _ := cmd.Flags().GetString("origin")
 	jsonOutput, _ := cmd.Flags().GetBool("json")

@@ -8,7 +8,8 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
-// Styles
+// Styles specific to the secrets view. These extend the base tui styles with
+// additional semantics (key names, decrypted values, setup badges).
 var (
 	sectionTitle = lipgloss.NewStyle().
 			Bold(true).
@@ -77,6 +78,8 @@ var (
 			Foreground(lipgloss.Color("#ffffff"))
 )
 
+// View dispatches to the appropriate sub-view based on the current navigation state.
+// The drill-down flow is: dashboard → group → secret, with help/recipients as side views.
 func (m Model) View() string {
 	switch m.state {
 	case viewDashboard:

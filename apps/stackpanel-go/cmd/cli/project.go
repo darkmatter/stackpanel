@@ -1,3 +1,11 @@
+// project.go manages the global project registry stored in
+// ~/.config/stackpanel/stackpanel.yaml.
+//
+// The agent serves multiple projects and needs a way to route API requests.
+// Each project gets a deterministic ID (hash of its path) that clients pass
+// via the X-Stackpanel-Project header. The "default" project is used when
+// no header is provided, avoiding the need to specify a project for
+// single-project setups.
 package cmd
 
 import (

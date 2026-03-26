@@ -1,3 +1,9 @@
+// motd.go renders the "message of the day" shown after devshell entry.
+//
+// The MOTD summarises project health at a glance: agent status, service status,
+// missing flake inputs, and healthcheck results. Output goes to stderr so it
+// doesn't interfere with pipelines. Three rendering modes are supported:
+// improved (default), legacy (backward-compat), and minimal (one-liner).
 package cmd
 
 import (
@@ -199,7 +205,9 @@ func renderLegacyMOTD(cfg *nixconfig.Config) error {
 	return nil
 }
 
-// checkDockerServiceStatus checks if a docker compose service is running
+// checkDockerServiceStatus is a best-effort probe — returns false on any error
+// (docker not installed, compose not configured, etc.) rather than failing the
+// entire MOTD render.
 func checkDockerServiceStatus(service string) bool {
 	cmd := exec.Command("docker", "compose", "ps", "--format", "{{.State}}", "--filter", fmt.Sprintf("name=%s", service))
 	output, err := cmd.Output()

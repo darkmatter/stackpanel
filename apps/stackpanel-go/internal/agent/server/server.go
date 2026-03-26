@@ -1,4 +1,11 @@
-// Package server provides the HTTP/SSE server for the stackpanel agent.
+// Package server implements the localhost HTTP agent that bridges the web UI
+// to the local Nix development environment. It provides REST + Connect-RPC APIs,
+// SSE for real-time config change notifications, JWT auth via a browser popup
+// pairing flow, and file watching for automatic Nix re-evaluation.
+//
+// The web UI (React/TanStack Start) connects here over HTTP. Auth works via a
+// pairing popup: user opens /pair in their browser, approves, and the UI stores
+// the returned JWT in localStorage.
 package server
 
 import (
@@ -16,38 +23,44 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Server is the main agent server.
+// Server is the main agent server that runs on localhost (default :9876).
+// It manages a single active project at a time but supports switching between
+// multiple registered projects. Most endpoints require JWT auth and an open project.
 type Server struct {
 	config     *config.Config
 	httpServer *http.Server
 	exec       *sharedexec.Executor
 
 	// store provides transport-agnostic Nix data read/write/patch operations.
-	// Shared with the CLI via pkg/nixdata.
+	// Shared with the CLI via pkg/nixdata so both can read/modify .stack/data/*.nix files.
 	store *nixdata.Store
 
-	// Project manager for handling project selection and validation
 	projectMgr *project.Manager
 
-	// jwtManager handles JWT token generation and validation
 	jwtManager   *JWTManager
-	pairTemplate *template.Template
+	pairTemplate *template.Template // HTML page served at /pair for the browser popup auth flow
 
-	// SSE subscribers for config change notifications
+	// sseSubscribers tracks all active SSE connections. Each subscriber gets a
+	// buffered channel; slow consumers are dropped (non-blocking send).
 	sseSubscribers   map[chan SSEEvent]struct{}
 	sseSubscribersMu sync.RWMutex
 
-	// File watcher for config changes
+	// watcher monitors .stack/state, .stack/gen, and .stack/data for filesystem
+	// changes, broadcasting "config.changed" SSE events to trigger UI refreshes.
 	watcher *fsnotify.Watcher
 
-	// FlakeWatcher for monitoring .#stackpanelConfig and .#stackpanelPackages
+	// flakeWatcher runs `nix eval` on .nix file changes to keep the cached
+	// stackpanelConfig and stackpanelPackages up to date without a full rebuild.
 	flakeWatcher *FlakeWatcher
 
-	// ShellManager for tracking devshell state and rebuilds
+	// shellManager tracks whether the devshell is stale (nix files changed
+	// since last build) and handles rebuild orchestration.
 	shellManager *ShellManager
 }
 
-// New creates a new server instance.
+// New creates a new server instance, wiring up project detection, JWT auth,
+// file watchers, and all HTTP routes. The server can start without a project
+// (headless mode) and have one opened later via /api/project/open.
 func New(cfg *config.Config) (*Server, error) {
 	// Initialize project manager
 	projectMgr, err := project.NewManager(cfg.DataDir)
@@ -55,8 +68,8 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create project manager: %w", err)
 	}
 
-	// Try to auto-detect and register current project if none is set
-	// This happens when running `stackpanel agent` from within a project directory
+	// Project resolution order: env var > auto-detect from cwd > saved state.
+	// This allows `stackpanel agent` to "just work" from a project directory.
 	if cfg.ProjectRoot == "" {
 		if proj, err := projectMgr.AutoRegister(); err != nil {
 			log.Warn().Err(err).Msg("Failed to auto-register project")
@@ -158,10 +171,15 @@ func New(cfg *config.Config) (*Server, error) {
 
 	mux := http.NewServeMux()
 
-	// Public endpoints (still CORS-enabled so the web UI can health-check from a different origin)
+	// Route registration: endpoints are layered with middleware:
+	//   withCORS -> requireAuth -> requireProject -> handler
+	// Public endpoints skip auth/project. Project management endpoints skip requireProject
+	// since they're used to select which project to work with.
+
+	// Public: no auth needed. CORS enabled so the web UI can health-check before pairing.
 	mux.HandleFunc("/health", s.withCORS(s.handleHealth))
 	mux.HandleFunc("/status", s.withCORS(s.handleStatus))
-	mux.HandleFunc("/pair", s.handlePair)
+	mux.HandleFunc("/pair", s.handlePair) // No CORS — served as a standalone page in a popup
 
 	// Token validation endpoint (requires auth but no project)
 	mux.HandleFunc("/api/auth/validate", s.withCORS(s.requireAuth(s.handleValidateToken)))
@@ -264,8 +282,8 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("/api/registry", s.withCORS(s.requireAuth(s.handleRegistry)))
 	mux.HandleFunc("/api/registry/", s.withCORS(s.requireAuth(s.handleRegistry)))
 
-	// Connect-RPC service (type-safe gRPC-Web compatible API)
-	// This provides fully typed endpoints generated from proto definitions
+	// Connect-RPC: proto-generated typed API that runs alongside the REST endpoints.
+	// The web UI uses this via @connectrpc/connect-web for type-safe RPC calls.
 	agentService := NewAgentServiceServer(s)
 	path, handler := gopbconnect.NewAgentServiceHandler(agentService)
 	mux.Handle(path, s.withCORS(s.requireAuth(handler.ServeHTTP)))
@@ -273,7 +291,7 @@ func New(cfg *config.Config) (*Server, error) {
 	// SSE endpoint for real-time config updates
 	mux.HandleFunc("/api/events", s.withCORS(s.requireAuth(s.handleSSE)))
 
-	// WebSocket API (legacy, prefer HTTP API + SSE)
+	// WebSocket API (legacy — prefer HTTP API + SSE for new features)
 	mux.HandleFunc("/ws", s.withCORS(s.requireAuth(s.requireProject(s.handleWS))))
 
 	s.httpServer = &http.Server{
@@ -337,6 +355,8 @@ func (s *Server) Stop() {
 }
 
 // requireProject is middleware that ensures a project is open before handling the request.
+// Returns 428 Precondition Required so the web UI can detect "no project" state
+// and show the project picker instead of a generic error.
 func (s *Server) requireProject(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if s.config.ProjectRoot == "" {
@@ -350,8 +370,8 @@ func (s *Server) requireProject(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// reinitializeExecutor creates a new executor for the current project root.
-// Called after changing projects.
+// reinitializeExecutor tears down and recreates the executor, store, shell manager,
+// and all file watchers for the current project root. Called when switching projects.
 func (s *Server) reinitializeExecutor() error {
 	if s.config.ProjectRoot == "" {
 		s.exec = nil

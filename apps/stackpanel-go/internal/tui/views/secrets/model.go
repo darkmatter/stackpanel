@@ -14,6 +14,10 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
+// Package secrets provides the TUI view for browsing and inspecting SOPS-encrypted
+// secrets. It communicates with the stackpanel agent API to list groups, recipients,
+// and decrypt individual secret values on demand.
+
 // --- Messages ---
 
 type dataLoadedMsg struct {
@@ -76,6 +80,9 @@ const (
 
 // --- Model ---
 
+// Model is the Bubble Tea model for the secrets dashboard. It supports
+// drill-down navigation: dashboard → group detail → secret detail, with
+// esc/backspace to go back. Secret values are decrypted lazily on demand.
 type Model struct {
 	// Data
 	groups     map[string]groupData
@@ -116,6 +123,9 @@ func WithReturnMsg(msg tea.Msg) Option {
 	}
 }
 
+// New creates a secrets Model. The agent URL defaults to localhost:21234 (the
+// standard agent port for secrets), not the main agent port 9876. The agent
+// token is read from STACKPANEL_AGENT_TOKEN for authenticated requests.
 func New(opts ...Option) Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -420,6 +430,8 @@ func (m Model) loadSecretValue(group, key string) tea.Cmd {
 	}
 }
 
+// fetchAPI makes a GET request to the agent and unwraps the {"data": ...} envelope.
+// Returns the inner data map, or the raw response if no "data" key exists.
 func (m Model) fetchAPI(path string) (map[string]interface{}, error) {
 	url := strings.TrimRight(m.agentURL, "/") + path
 	req, err := http.NewRequest("GET", url, nil)
@@ -480,12 +492,13 @@ func (m Model) fetchAPIPost(path string, body interface{}) (map[string]interface
 
 // --- Helpers ---
 
+// sortedGroupNames returns group names in alphabetical order for stable rendering.
+// Uses bubble sort since group count is always small (typically 1-5).
 func (m Model) sortedGroupNames() []string {
 	names := make([]string, 0, len(m.groups))
 	for name := range m.groups {
 		names = append(names, name)
 	}
-	// Simple sort
 	for i := 0; i < len(names); i++ {
 		for j := i + 1; j < len(names); j++ {
 			if names[i] > names[j] {

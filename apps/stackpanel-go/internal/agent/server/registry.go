@@ -1,3 +1,12 @@
+// registry.go implements the module registry: browsing, searching, and installing
+// external Stackpanel modules from a remote JSON registry.
+//
+// Installation uses tree-sitter (via flakeedit) to parse and modify flake.nix,
+// adding the required flake input and stackpanelImports entry. If auto-editing
+// fails, a fallback returns code snippets for manual installation.
+//
+// When the registry is unreachable, sample/builtin modules are returned so the
+// UI always has something to display.
 package server
 
 import (
@@ -195,9 +204,9 @@ func (s *Server) handleRegistryModules(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleRegistryInstall handles installing a module from the registry.
-// It uses tree-sitter to parse and modify flake.nix directly, adding the
-// required flake input and stackpanelImports entry.
+// handleRegistryInstall installs a module by editing flake.nix with tree-sitter.
+// On success it also runs `nix flake lock --update-input` to fetch the new input.
+// If any step fails, the original flake.nix is restored from a backup.
 func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

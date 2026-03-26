@@ -1,3 +1,9 @@
+// vars.go implements CRUD for workspace variables stored in Nix data files.
+//
+// Variables are defined in .stack/data/variables.nix and evaluated through the
+// Nix module system. Reads go through nix eval (for computed values like
+// encryption and environment references), but writes go directly to the data
+// file via nixdata.Store to avoid a full Nix evaluation round-trip.
 package cmd
 
 import (
@@ -18,7 +24,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Variable represents a stackpanel variable from the Nix config
+// Variable represents a stackpanel variable from the Nix config.
+// Type determines how the value is resolved at runtime:
+//   - LITERAL: used as-is
+//   - SECRET: decrypted via AGE master keys
+//   - VALS: resolved by vals (ref+sops://, ref+awsssm://, etc.)
+//   - EXEC: evaluated as a shell command
 type Variable struct {
 	ID          string   `json:"id"`
 	Key         string   `json:"key"`
@@ -312,6 +323,8 @@ func normalizeVarID(id string) string {
 
 // openNixDataStore creates a nixdata.Store for the current project by
 // locating the project root and initialising a Nix executor.
+// The store reads/writes .nix data files directly, bypassing full Nix
+// evaluation — this keeps set/delete operations fast and atomic.
 func openNixDataStore() (*nixdata.Store, error) {
 	projectRoot, err := findProjectRoot()
 	if err != nil {
@@ -326,6 +339,10 @@ func openNixDataStore() (*nixdata.Store, error) {
 	return nixdata.NewStore(projectRoot, exec), nil
 }
 
+// loadVariables evaluates the full Nix config to get computed variable
+// metadata (encryption status, env refs, master keys). This is intentionally
+// slower than direct file reads because it needs Nix evaluation for the
+// computed fields.
 func loadVariables(ctx context.Context) (map[string]Variable, error) {
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
 		Expression: nixeval.StackpanelSerializablePreset,

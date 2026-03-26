@@ -1,3 +1,9 @@
+// apply.go implements the manifest application engine. The core loop is:
+// 1. Load previous state
+// 2. Revert entries that were removed or changed type since last run
+// 3. Apply each current entry (creating/patching files)
+// 4. Persist state for next run
+
 package fileops
 
 import (
@@ -16,6 +22,9 @@ import (
 
 const stateFilename = "files-preflight-state.json"
 
+// ApplyManifest reconciles the project directory with the manifest. Files that
+// were previously managed but are absent from the new manifest are reverted.
+// Writes are idempotent: unchanged files are skipped to avoid spurious mtime updates.
 func ApplyManifest(projectRoot, stateDir string, manifest Manifest) (Summary, error) {
 	if projectRoot == "" {
 		return Summary{}, fmt.Errorf("fileops: project root is required")
@@ -42,6 +51,8 @@ func ApplyManifest(projectRoot, stateDir string, manifest Manifest) (Summary, er
 
 	var summary Summary
 
+	// Phase 1: revert entries that were removed or changed type (e.g. json-ops -> block).
+	// Type changes require revert-then-reapply because the cleanup logic differs per type.
 	for path, prev := range st.Files {
 		current, ok := currentByPath[path]
 		if ok && current.Type == prev.Type {
@@ -53,6 +64,7 @@ func ApplyManifest(projectRoot, stateDir string, manifest Manifest) (Summary, er
 		delete(st.Files, path)
 	}
 
+	// Phase 2: apply each entry in manifest order.
 	for _, entry := range manifest.Files {
 		prev, hasPrev := st.Files[entry.Path]
 		next, err := applyEntry(absRoot, entry, prev, hasPrev, &summary)
@@ -82,6 +94,10 @@ func applyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, 
 	}
 }
 
+// applyJSONOpsEntry handles surgical JSON edits. It maintains a "baseline" snapshot
+// of the file before our edits so we can restore user-owned keys when our managed
+// paths change between runs. The adopt="backup" mode additionally creates a .backup
+// file so users can recover their original content.
 func applyJSONOpsEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, summary *Summary) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
 	currentDoc, existed, err := loadJSONObject(targetPath)
@@ -164,6 +180,9 @@ func applyJSONOpsEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev
 	}, nil
 }
 
+// determineJSONBaseline picks the "original" document to diff against. On first
+// run with adopt="backup", it prefers the .backup file if it exists (handles the
+// case where we previously wrote managed-only content and the original was lost).
 func determineJSONBaseline(targetPath string, currentDoc map[string]any, existed bool, adopt string) (map[string]any, error) {
 	if existed {
 		return cloneMap(currentDoc), nil
@@ -184,6 +203,9 @@ func determineJSONBaseline(targetPath string, currentDoc map[string]any, existed
 	return cloneMap(currentDoc), nil
 }
 
+// repairManagedOnlyJSON detects a corrupted state where the on-disk file contains
+// only our managed keys (the user's content was lost). This can happen if the state
+// file was deleted. It tries to recover from the .backup file or git HEAD.
 func repairManagedOnlyJSON(targetPath, projectRoot, entryPath string, currentDoc map[string]any, normalizedOps []JSONOp, adopt string, prev stateEntry) (map[string]any, map[string]any, bool, error) {
 	if adopt != "backup" || len(currentDoc) == 0 {
 		return nil, nil, false, nil
@@ -222,6 +244,8 @@ func repairManagedOnlyJSON(targetPath, projectRoot, entryPath string, currentDoc
 	return nil, nil, false, nil
 }
 
+// loadJSONObjectFromGit reads a JSON file from the HEAD commit as a recovery source.
+// Returns false if the file doesn't exist in git (not an error).
 func loadJSONObjectFromGit(projectRoot, relPath string) (map[string]any, bool, error) {
 	cmd := exec.Command("git", "-C", projectRoot, "show", "HEAD:"+filepath.ToSlash(relPath))
 	data, err := cmd.Output()
@@ -243,6 +267,8 @@ func loadJSONObjectFromGit(projectRoot, relPath string) (map[string]any, bool, e
 	return doc, true, nil
 }
 
+// applyBlockEntry manages a delimited text block within a file (e.g. .gitignore).
+// Content between BEGIN/END markers is replaced; the rest of the file is preserved.
 func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
 	managedContent, err := os.ReadFile(entry.StorePath)
@@ -284,6 +310,8 @@ func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEn
 	}, nil
 }
 
+// applyFullCopyEntry overwrites the target with content from a Nix store path.
+// If adopt="backup" and this is the first run, the existing file is backed up.
 func applyFullCopyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, summary *Summary) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
 	if !hasPrev && entry.Adopt == "backup" {
@@ -320,6 +348,9 @@ func applyFullCopyEntry(projectRoot string, entry Entry, prev stateEntry, hasPre
 	}, nil
 }
 
+// revertStateEntry undoes a previously applied entry. For json-ops, it restores
+// each managed path to its baseline value. For blocks, it strips the managed
+// section (and deletes the file if nothing remains). For full-copy, it deletes the file.
 func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summary) error {
 	switch prev.Type {
 	case "json-ops":
@@ -390,6 +421,8 @@ func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summar
 	}
 }
 
+// normalizeJSONOps deduplicates ops by path (last write wins) and validates
+// that no managed path is a prefix of another (which would cause ambiguous ownership).
 func normalizeJSONOps(ops []JSONOp) ([]JSONOp, [][]string, error) {
 	indexByPath := map[string]int{}
 	normalized := make([]JSONOp, 0, len(ops))
@@ -494,6 +527,8 @@ func writeCanonicalJSON(path string, doc map[string]any, mode string) (bool, err
 	return writeBytes(path, data, mode)
 }
 
+// writeBytes writes content to path, returning false if the file already has
+// identical content (avoids unnecessary mtime changes that trigger file watchers).
 func writeBytes(path string, content []byte, mode string) (bool, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return false, fmt.Errorf("fileops: create directory for %s: %w", path, err)
@@ -536,6 +571,8 @@ func writeString(path string, content string, mode string) (bool, error) {
 	return writeBytes(path, []byte(content), mode)
 }
 
+// backupFile copies path to path.backup. If the backup already exists, it is
+// left untouched (returns false). This is a one-time operation per file.
 func backupFile(path string) (string, bool, error) {
 	backupPath := path + ".backup"
 	if _, err := os.Stat(backupPath); err == nil {
@@ -590,6 +627,8 @@ func saveState(stateDir string, st stateFile) error {
 	return nil
 }
 
+// diffManagedPaths returns paths that were managed in the previous run but are
+// absent from the current manifest. These need to be restored to baseline values.
 func diffManagedPaths(previous [][]string, current [][]string) [][]string {
 	currentSet := make(map[string]struct{}, len(current))
 	for _, path := range current {
@@ -634,6 +673,8 @@ func getJSONValue(current any, path []string) (any, bool) {
 	}
 }
 
+// setJSONValue creates intermediate containers as needed. It infers whether to
+// create a map or slice based on whether the next path segment parses as an integer.
 func setJSONValue(root map[string]any, path []string, value any) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty JSON path")
@@ -765,6 +806,8 @@ func appendJSONValue(root map[string]any, path []string, value any, unique bool)
 	return setJSONValue(root, path, array)
 }
 
+// deepMergeJSON recursively merges incoming into existing. Non-map values are
+// overwritten; maps are merged key-by-key. Arrays are NOT merged - incoming wins.
 func deepMergeJSON(existing any, incoming any) (any, error) {
 	existingMap, existingOK := existing.(map[string]any)
 	incomingMap, incomingOK := incoming.(map[string]any)
@@ -940,6 +983,8 @@ func cloneJSONOp(op JSONOp) JSONOp {
 	}
 }
 
+// pathKey produces a map key from a JSON path. Uses null byte separator so
+// path segments containing dots don't collide.
 func pathKey(path []string) string {
 	return strings.Join(path, "\x00")
 }
@@ -960,6 +1005,8 @@ func isPrefixPath(prefix []string, path []string) bool {
 	return true
 }
 
+// jsonEqual compares values by marshaling to JSON. This handles type mismatches
+// (e.g. float64 vs int) that reflect.DeepEqual would consider unequal.
 func jsonEqual(left any, right any) bool {
 	leftJSON, _ := json.Marshal(left)
 	rightJSON, _ := json.Marshal(right)

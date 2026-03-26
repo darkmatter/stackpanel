@@ -1,3 +1,14 @@
+// healthchecks.go implements the healthcheck system: defining, running, caching,
+// and reporting health status for Stackpanel modules.
+//
+// Healthchecks are defined in Nix config and can be of four types:
+//   - Script: runs a shell script/command, exit code 0 = healthy
+//   - HTTP: checks an endpoint, expects a specific status code
+//   - TCP: dials a host:port to verify connectivity
+//   - Nix: evaluates a Nix expression that returns true/false
+//
+// Results are cached globally. GET returns cached state (never auto-runs),
+// POST runs failed/unknown checks and streams results via SSE for incremental UI updates.
 package server
 
 import (
@@ -401,7 +412,8 @@ func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (b
 	return true, outputStr, nil
 }
 
-// ensureScriptPath ensures the scriptPath exists by attempting to build the derivation if needed.
+// ensureScriptPath ensures the scriptPath exists in the Nix store by building
+// its derivation if needed. Uses ^* suffix to build all outputs of the .drv path.
 func (s *Server) ensureScriptPath(scriptPath string, scriptDrvPath *string) error {
 	if _, err := os.Stat(scriptPath); err == nil {
 		return nil

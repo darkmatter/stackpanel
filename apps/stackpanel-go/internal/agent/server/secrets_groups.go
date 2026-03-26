@@ -1,3 +1,13 @@
+// secrets_groups.go implements group-based SOPS secret management.
+//
+// Secrets are organized into groups (typically matching environments: dev, staging, prod).
+// Each group maps to a single SOPS-encrypted YAML file at:
+//
+//	.stack/secrets/vars/<group>.sops.yaml
+//
+// Groups have configured recipients (AGE public keys) from the Nix secrets config,
+// which determine who can decrypt secrets in that group.
+// Key names follow chamber-style conventions: lowercase alphanumeric + hyphens.
 package server
 
 import (
@@ -105,6 +115,9 @@ type SerializableSecretsConfig struct {
 	} `json:"groups,omitempty"`
 }
 
+// getSerializableSecretsConfig evaluates the Nix flake to get the full secrets
+// configuration including recipients, groups, variables, and creation rules.
+// This is the source of truth for who can encrypt/decrypt which groups.
 func (s *Server) getSerializableSecretsConfig() (*SerializableSecretsConfig, error) {
 	args := []string{
 		"eval", "--impure", "--json",
@@ -150,6 +163,8 @@ func (s *Server) getSerializableSecretsConfig() (*SerializableSecretsConfig, err
 	return &serializable, nil
 }
 
+// getVariableSecretMeta looks up Nix-computed metadata for a variable,
+// returning file path and YAML key overrides if configured.
 func (s *Server) getVariableSecretMeta(variableID string) (struct {
 	File       string
 	YamlKey    string
@@ -310,6 +325,7 @@ func (s *Server) readGroupSecrets(group string) (map[string]interface{}, error) 
 }
 
 // sopsConfigPath returns the absolute path to the generated .sops.yaml if it exists.
+// Checks .stack/secrets/.sops.yaml first (Nix-generated), then project root.
 func (s *Server) sopsConfigPath() string {
 	candidates := []string{
 		filepath.Join(s.config.ProjectRoot, ".stack", "secrets", ".sops.yaml"),
@@ -345,7 +361,10 @@ func (s *Server) sopsDecryptArgs(targetFile string) []string {
 	return args
 }
 
-// writeGroupSecrets encrypts and writes secrets to a group's SOPS file
+// writeGroupSecrets writes plaintext YAML to the group file path, then encrypts
+// in-place using `sops --encrypt`. Writing to the final path first ensures SOPS
+// can match the correct .sops.yaml creation rule by file path. On failure, the
+// plaintext file is removed to prevent leaking secrets.
 func (s *Server) writeGroupSecrets(group string, secrets map[string]interface{}, recipients []string) error {
 	groupPath, err := s.getGroupFilePath(group)
 	if err != nil {

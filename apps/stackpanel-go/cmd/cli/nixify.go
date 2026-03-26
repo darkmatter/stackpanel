@@ -1,3 +1,9 @@
+// nixify.go converts existing files into stackpanel.files.entries Nix expressions.
+//
+// This is the reverse of codegen: instead of generating files from Nix config,
+// it reads an existing file and produces the Nix snippet that would reproduce it.
+// Useful when onboarding existing projects — run `nixify .gitignore` and paste
+// the output into your config to bring that file under declarative management.
 package cmd
 
 import (
@@ -213,7 +219,8 @@ func flattenJSONSetOps(prefix []string, value any) []nixifySetOp {
 }
 
 // nixStringLiteral produces a properly-escaped Nix string literal.
-// Nix strings use double quotes and escape \, ", \n, \r, \t, and ${.
+// Nix strings use double quotes and require escaping: \, ", \n, \r, \t, and
+// the interpolation sequence ${ (which Nix would otherwise evaluate).
 func nixStringLiteral(s string) string {
 	var b strings.Builder
 	b.WriteByte('"')
@@ -247,6 +254,8 @@ func nixStringLiteral(s string) string {
 
 // nixAttrKey returns a Nix attribute key, quoting it if it contains
 // characters that aren't valid in a bare identifier.
+// Nix bare identifiers: [a-zA-Z_][a-zA-Z0-9_'-]*. File paths with dots or
+// slashes (like ".gitignore") must be quoted.
 func nixAttrKey(s string) string {
 	// Nix bare identifiers: [a-zA-Z_][a-zA-Z0-9_'-]*
 	// Anything else (dots, slashes, leading dot) needs quoting.
@@ -282,6 +291,9 @@ func nixPathLiteral(path []string) string {
 	return fmt.Sprintf("[ %s ]", strings.Join(parts, " "))
 }
 
+// nixValueLiteral converts a Go value (from json.Unmarshal) to its Nix syntax
+// equivalent. Note: json.Unmarshal decodes all numbers as float64, so the
+// TrimSuffix chain strips trailing zeros to produce clean integer output.
 func nixValueLiteral(value any) string {
 	switch typed := value.(type) {
 	case nil:

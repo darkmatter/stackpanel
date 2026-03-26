@@ -26,23 +26,21 @@
   sopsAgeRecipientsInit,
   rekeyScriptText,
   legacySecretsCleanupScript,
-}:
-let
-  groupByFile = lib.mapAttrs' (
-    variableId: meta:
-    let
-      groupName = lib.removeSuffix ".sops.yaml" (builtins.baseNameOf meta.file);
-    in
-    {
-      name = groupName;
-      value = {
-        tags = lib.unique meta.tags;
-        recipients = lib.unique meta.recipients;
-      };
-    }
-  ) secretFilesMeta;
-in
-{
+}: let
+  groupByFile =
+    lib.mapAttrs' (
+      variableId: meta: let
+        groupName = lib.removeSuffix ".sops.yaml" (builtins.baseNameOf meta.file);
+      in {
+        name = groupName;
+        value = {
+          tags = lib.unique meta.tags;
+          recipients = lib.unique meta.recipients;
+        };
+      }
+    )
+    secretFilesMeta;
+in {
   config = lib.mkIf cfg.enable {
     stackpanel.devshell.packages = lib.mkBefore (
       [
@@ -183,12 +181,12 @@ in
           ${lib.concatStringsSep "\n" (
             lib.mapAttrsToList (
               groupName: groupCfg: "echo \"  ${groupName}: ${builtins.toString groupCfg.recipients}\""
-            ) groupByFile
+            )
+            groupByFile
           )}
         '';
         description = "Show configured recipients and groups";
       };
-
     };
 
     stackpanel.devshell.hooks.main = [
@@ -206,6 +204,7 @@ in
           lines = [
             "${cfg.secrets-dir}/state/"
             "${cfg.secrets-dir}/vars/.sops.yaml"
+            "${cfg.secrets-dir}/bin/"
           ];
         };
 
@@ -256,23 +255,26 @@ in
       secretsDir = cfg.secrets-dir;
       sopsConfigFile = "${cfg.secrets-dir}/.sops.yaml";
 
-      recipients = lib.mapAttrs (_: recipient: {
-        publicKey = recipient.public-key;
-        tags = recipient.tags or [ ];
-      }) recipientsConfig;
+      recipients =
+        lib.mapAttrs (_: recipient: {
+          publicKey = recipient.public-key;
+          tags = recipient.tags or [];
+        })
+        recipientsConfig;
 
       variables = secretFilesMeta;
 
       groups = groupByFile;
     };
 
-    stackpanel.serializable.variables = {
-      backend = variablesBackend;
-    }
-    // lib.optionalAttrs isChamber {
-      chamber = {
-        servicePrefix = chamberCfg.service-prefix;
+    stackpanel.serializable.variables =
+      {
+        backend = variablesBackend;
+      }
+      // lib.optionalAttrs isChamber {
+        chamber = {
+          servicePrefix = chamberCfg.service-prefix;
+        };
       };
-    };
   };
 }

@@ -1,3 +1,8 @@
+// hook.go implements the `stackpanel hook` command — a validation checkpoint
+// called by Nix during devshell entry. File generation is handled by Nix's
+// write-files script; this command validates the config JSON and registers
+// the project in ~/.config/stackpanel so the agent can discover it later.
+
 package cmd
 
 import (
@@ -13,8 +18,9 @@ import (
 )
 
 // hookConfig is a minimal config structure for validation.
-// This is intentionally simple - the full evaluated config from Nix
-// contains many more fields, but we only validate the essentials.
+// The full Nix-evaluated config has dozens more fields, but the hook only
+// needs to confirm identity and location — everything else is validated
+// by Nix module evaluation before we get here.
 type hookConfig struct {
 	Version     int    `json:"version"`
 	ProjectName string `json:"projectName"`
@@ -111,6 +117,9 @@ func registerHookProject(projectRoot, projectName string) error {
 }
 
 // loadHookConfig loads configuration from the available sources.
+// Priority matches how Nix shell hooks typically invoke the command:
+// --config-file for large configs (avoids ARG_MAX), --config for inline
+// JSON in shell hooks, and stdin for piped workflows.
 func loadHookConfig(cmd *cobra.Command) (*hookConfig, error) {
 	// Priority: --config-file > --config > stdin
 
@@ -126,6 +135,8 @@ func loadHookConfig(cmd *cobra.Command) (*hookConfig, error) {
 
 	// Check if stdin has data
 	stat, _ := os.Stdin.Stat()
+	// Bit-check for ModeCharDevice: if cleared, stdin is a pipe or redirect
+	// rather than an interactive terminal.
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		// Stdin has data
 		data, err := io.ReadAll(os.Stdin)

@@ -1,3 +1,12 @@
+// nix_data.go provides CRUD operations for Nix data files in .stack/.
+//
+// Data entities are either standalone files (.stack/<entity>.nix or .stack/data/<entity>.nix)
+// or keys within the consolidated .stack/config.nix. Some entities like "variables"
+// are "evaluated" — their final value merges user data with Nix module contributions,
+// so reads go through the flake evaluation pipeline rather than just the raw file.
+//
+// External entities (.stack/data/external/*.nix) are read-only since they're
+// auto-synced from external sources like GitHub collaborators.
 package server
 
 import (

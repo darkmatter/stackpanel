@@ -1,3 +1,11 @@
+// caddy.go manages the global Caddy reverse proxy.
+//
+// Unlike other services which are project-local (data in .stack/state/services/),
+// Caddy runs as a shared singleton because only one process can bind ports
+// 80/443. Individual projects contribute site configs as Caddyfile snippets
+// in ~/.config/caddy/sites.d/, and symlinks in .stack/caddy/ track which
+// sites belong to each project (so they can be version-controlled).
+
 package cmd
 
 import (
@@ -13,6 +21,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Caddy config lives under ~/.config/caddy/ (not per-project) because Caddy
+// is a global service — only one process can bind to ports 80/443.
+// Individual projects contribute site configs via symlinks in .stack/caddy/.
 var (
 	caddyConfigDir = filepath.Join(os.Getenv("HOME"), ".config", "caddy")
 	caddySitesDir  = filepath.Join(caddyConfigDir, "sites.d")
@@ -119,6 +130,9 @@ func ensureCaddyDirs() {
 	os.MkdirAll(caddySitesDir, 0755)
 }
 
+// generateCaddyfile writes a root Caddyfile that glob-imports all per-site
+// configs from sites.d/. This pattern lets multiple projects register
+// sites independently without coordination — adding/removing a file is enough.
 func generateCaddyfile() error {
 	ensureCaddyDirs()
 
@@ -138,6 +152,9 @@ import %s/*.caddy
 	return os.WriteFile(caddyfile, []byte(content), 0644)
 }
 
+// startCaddy is idempotent: if Caddy is already running it reloads the config
+// instead of starting a second instance. This makes it safe to call from
+// shell hooks on every devshell entry without accumulating zombie processes.
 func startCaddy() {
 	fmt.Printf("\n%s Caddy\n", output.Purple.Sprint("==>"))
 
@@ -206,10 +223,18 @@ func showCaddyStatus() {
 	listCaddySites()
 }
 
+// addCaddySite writes a per-site Caddyfile snippet and creates a symlink
+// from .stack/caddy/ in the project to the global sites.d/ directory.
+//
+// TLS resolution priority (first match wins):
+//  1. Explicit cert/key files (e.g. from step ca certificate)
+//  2. Step CA ACME directory (automatic cert provisioning)
+//  3. Caddy's built-in self-signed TLS ("tls internal")
 func addCaddySite(domain, upstream string, useTls bool, tlsCert, tlsKey, stepCaUrl, stepCaRoot string) {
 	ensureCaddyDirs()
 
-	// Sanitize domain for filename
+	// Sanitize domain for filename — dots and colons aren't safe in all
+	// filesystems (especially Windows if someone syncs configs).
 	filename := strings.ReplaceAll(domain, ".", "_")
 	filename = strings.ReplaceAll(filename, ":", "_")
 	siteFile := filepath.Join(caddySitesDir, filename+".caddy")
@@ -314,7 +339,8 @@ func listCaddySites() {
 	fmt.Println()
 }
 
-// readCaddyPidFile reads the PID from a file
+// readCaddyPidFile reads a PID from the given file path. Returns 0 if the
+// file doesn't exist or contains garbage — callers should treat 0 as "not running".
 func readCaddyPidFile(path string) int {
 	data, err := os.ReadFile(path)
 	if err != nil {

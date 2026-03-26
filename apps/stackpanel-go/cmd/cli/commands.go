@@ -1,3 +1,8 @@
+// commands.go lists and runs user-defined devshell commands (scripts).
+//
+// Commands are defined in the Nix config under `stackpanel.scripts` (new) or
+// `devshell._commandsSerializable` (legacy). They're evaluated via nix eval
+// and executed as bash scripts with the devshell environment merged in.
 package cmd
 
 import (
@@ -191,6 +196,9 @@ type commandsData struct {
 	devshellEnv map[string]string
 }
 
+// loadCommands fetches scripts from the Nix config, preferring the new
+// `scripts` location and falling back to the legacy `devshell._commandsSerializable`
+// for backward compatibility with older stackpanel configs.
 func loadCommands(ctx context.Context) (*commandsData, error) {
 	config, err := getStackpanelConfig(ctx)
 	if err != nil {
@@ -383,7 +391,9 @@ func runCommandCaptured(cmdDef SerializableCommand, args []string, devshellEnv m
 	return string(output), err
 }
 
-// shellescape escapes a string for safe use in a shell command
+// shellescape prevents shell injection when appending user-provided arguments
+// to script bodies. Single-quote wrapping is the safest approach — the only
+// character that needs escaping inside single quotes is the single quote itself.
 func shellescape(s string) string {
 	// If the string is simple (alphanumeric, dash, underscore, dot, slash), return as-is
 	safe := true

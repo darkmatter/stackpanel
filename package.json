@@ -72,6 +72,7 @@
     "@mdx-js/rollup": "^3.1.1",
     "@pulumi/pulumi": "^3.213.0",
     "@stackpanel/infra": "workspace:*",
+    "@gen/config": "workspace:*",
     "@gen/env": "workspace:*",
     "@types/node": "^22.13.11",
     "alchemy": "^0.77.0",

@@ -1,3 +1,8 @@
+// Package cmd implements the Cobra command tree for the stackpanel CLI.
+//
+// The root command launches an interactive TUI by default. All subcommands
+// (services, caddy, agent, deploy, etc.) are registered via init() functions
+// in their respective files.
 package cmd
 
 import (
@@ -8,14 +13,15 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
-	_ "github.com/darkmatter/stackpanel/stackpanel-go/internal/services" // register built-in dev services
+	_ "github.com/darkmatter/stackpanel/stackpanel-go/internal/services" // register built-in dev services via init()
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui/navigation"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
 )
 
 var (
-	// Version info (set at build time)
+	// Version and BuildDate are set at build time via -ldflags.
+	// The "dev" default lets you identify local/untagged builds.
 	Version   = "dev"
 	BuildDate = "unknown"
 )
@@ -74,6 +80,8 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(usersCmd)
+	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(provisionCmd)
 	// rootCmd.AddCommand(secretsCmd)
 
 	// Handle --no-color flag and optional auto-register
@@ -133,8 +141,9 @@ func autoRegisterCurrentProject() {
 	}
 }
 
-// detectStackpanelProject looks for a stackpanel project in the current
-// directory or parent directories.
+// detectStackpanelProject walks up from cwd looking for a project root.
+// It checks two markers: .stack/config.nix (stackpanel-native) and
+// flake.nix + .git (Nix flake project). Returns "" if no project is found.
 func detectStackpanelProject() string {
 	cwd, err := os.Getwd()
 	if err != nil {

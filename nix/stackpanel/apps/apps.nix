@@ -76,7 +76,10 @@ let
         offset = if appCfg.offset != null then appCfg.offset else idx;
         port = projectBasePort + appsBaseOffset + offset;
         # Domain format: <app>.<project>.<tld> (e.g., web.myproject.localhost)
-        domain = if appCfg.domain != null then "${appCfg.domain}.${projectName}.${tld}" else null;
+        domain = if appCfg.domain != null
+          then "${appCfg.domain}.${projectName}.${tld}"
+          else if appCfg.domain == "@" then "${projectName}.${tld}"
+          else null;
         protocol = if appCfg.tls then "https" else "http";
         url = if domain != null then "${protocol}://${domain}" else null;
       in

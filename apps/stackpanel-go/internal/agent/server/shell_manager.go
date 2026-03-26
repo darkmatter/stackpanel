@@ -1,4 +1,3 @@
-// Package server provides shell management functionality for devshell rebuilds.
 package server
 
 import (
@@ -13,17 +12,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ShellManager tracks devshell state and handles rebuilds.
+// ShellManager tracks whether the Nix devshell is stale (nix files changed since
+// the last build) and orchestrates rebuilds. The web UI uses this to show a
+// "shell needs rebuild" banner and stream rebuild output in real-time.
+//
+// Staleness is tracked by comparing lastNixChange vs lastBuilt timestamps.
+// The FlakeWatcher calls MarkNixFileChanged when .nix files are modified.
 type ShellManager struct {
 	projectRoot string
 	server      *Server
 
 	mu            sync.RWMutex
-	lastBuilt     time.Time // When the shell was last rebuilt
-	lastNixChange time.Time // When nix files last changed
-	changedFiles  []string  // Files changed since last build (max 20)
-	isRebuilding  bool      // Whether a rebuild is in progress
-	rebuildCancel context.CancelFunc
+	lastBuilt     time.Time          // When the shell was last rebuilt
+	lastNixChange time.Time          // When nix files last changed
+	changedFiles  []string           // Files changed since last build (capped at 20)
+	isRebuilding  bool               // Prevents concurrent rebuilds
+	rebuildCancel context.CancelFunc // Allows cancelling an in-progress rebuild
 }
 
 // NewShellManager creates a new ShellManager for the given project.
@@ -40,11 +44,11 @@ func NewShellManager(projectRoot string, server *Server) *ShellManager {
 	return sm
 }
 
-// detectInitialState tries to determine when the shell was last built.
+// detectInitialState checks env vars to determine if we're inside a devshell.
+// If so, we assume the shell is fresh. This covers the case where the agent
+// is started from within `nix develop` or a direnv-managed shell.
 func (sm *ShellManager) detectInitialState() {
-	// Check if we're currently in a devshell
 	if os.Getenv("IN_NIX_SHELL") != "" || os.Getenv("DEVENV_ROOT") != "" {
-		// We're in a shell, mark it as built now
 		sm.lastBuilt = time.Now()
 		log.Debug().Msg("ShellManager: detected active devshell")
 	}
@@ -132,17 +136,20 @@ type ShellStatus struct {
 	ChangedFiles  []string
 }
 
-// RebuildEvent represents a streaming event during shell rebuild.
+// RebuildEvent represents a streaming event during shell rebuild, sent to SSE subscribers.
 type RebuildEvent struct {
 	Type      string // "started", "output", "completed", "error"
-	Output    string
-	ExitCode  int
-	Error     string
+	Output    string // Line of stdout/stderr (for Type="output")
+	ExitCode  int    // Set on Type="completed"
+	Error     string // Set on Type="error"
 	Timestamp time.Time
 }
 
-// Rebuild starts a shell rebuild and streams output.
-// The method parameter can be "devshell" or "nix".
+// Rebuild starts a shell rebuild and streams output events to the caller.
+// Only one rebuild can run at a time (returns RebuildInProgressError otherwise).
+// The method parameter selects the rebuild command:
+//   - "devshell": runs the project's ./devshell script (falls back to nix develop)
+//   - "nix": always runs `nix develop --impure`
 func (sm *ShellManager) Rebuild(ctx context.Context, method string, events chan<- RebuildEvent) error {
 	sm.mu.Lock()
 	if sm.isRebuilding {

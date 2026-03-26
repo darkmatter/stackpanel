@@ -11,7 +11,9 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
-// AgentView provides a split-screen view with streaming logs and command menu
+// AgentView provides a split-screen view with streaming logs (left panel) and
+// a command menu (right panel). Tab switches focus between panels. The logs
+// panel auto-scrolls by default and caps history at 1000 lines.
 type AgentView struct {
 	// Layout
 	width      int
@@ -72,7 +74,8 @@ func WithAgentReturnMsg(msg tea.Msg) AgentViewOption {
 	}
 }
 
-// WithSplitRatio sets the split ratio (0.0-1.0 for logs panel width)
+// WithSplitRatio sets the split ratio (0.0-1.0 for logs panel width).
+// Clamped to [0.2, 0.8] to keep both panels usable.
 func WithSplitRatio(ratio float64) AgentViewOption {
 	return func(v *AgentView) {
 		if ratio < 0.2 {

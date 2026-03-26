@@ -1,4 +1,7 @@
-// Package server provides process-compose integration handlers.
+// process_compose.go proxies the process-compose HTTP API (localhost:{PC_PORT_NUM})
+// through the agent's authenticated API surface. This lets the studio UI manage
+// dev processes (start/stop/restart, logs, ports) without direct access to the
+// process-compose port. WebSocket log streaming is also proxied.
 package server
 
 import (
@@ -70,7 +73,7 @@ type LogMessage struct {
 }
 
 // getProcessComposePort returns the port for the process-compose API.
-// Reads from PC_PORT_NUM environment variable, defaults to 8080.
+// Tries PC_PORT_NUM env var first, then the Nix state file, and falls back to 8080.
 func getProcessComposePort() string {
 	port := os.Getenv("PC_PORT_NUM")
 	if port == "" {
@@ -82,6 +85,8 @@ func getProcessComposePort() string {
 	return port
 }
 
+// getProcessComposePortFromState reads the process-compose port from the Nix
+// config evaluation. Used as a fallback when PC_PORT_NUM is not set.
 func getProcessComposePortFromState() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -653,8 +658,9 @@ func (s *Server) handleProcessComposeRestart(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// handleProcessComposeLogsWS streams process logs via WebSocket.
-// Note: Uses the shared wsUpgrader from ws.go
+// handleProcessComposeLogsWS bridges a client WebSocket to the process-compose
+// log WebSocket, relaying messages bidirectionally. The client sends control
+// messages (e.g., follow/unfollow) and receives LogMessage JSON frames.
 // WS /api/process-compose/logs/ws?name=processName&offset=0&follow=true
 func (s *Server) handleProcessComposeLogsWS(w http.ResponseWriter, r *http.Request) {
 	processName := r.URL.Query().Get("name")

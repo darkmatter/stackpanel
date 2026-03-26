@@ -131,7 +131,7 @@
     "container:build": "./.tasks/bin/container-build",
     "container:push": "./.tasks/bin/container-push",
     "deploy": "./.tasks/bin/deploy",
-    "dev": "portless stackpanel.stackpanel --app-port 5775 bun run dev",
+    "dev": "portless @.stackpanel --app-port 5775 portless stackpanel.stackpanel --app-port 5775 bun run dev",
     "serve": "vite preview",
     "test": "vitest run --exclude 'src/test/integration/**'",
     "test:all": "vitest run --testTimeout=120000",

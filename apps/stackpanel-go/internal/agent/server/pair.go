@@ -11,17 +11,20 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// -----------------------------
-// Pairing UI
-// -----------------------------
+// Pairing flow: the web UI opens /pair?origin=<ui-origin> in a popup window.
+// The page shows the project info and a "Pair" button. On click, it posts a
+// JWT token back to the opener via window.postMessage, scoped to the origin.
+// The UI stores this token in localStorage for subsequent API calls.
 
-// pairTemplateData holds the data for the pair.html template.
+// pairTemplateData is injected into the pair.html popup template.
 type pairTemplateData struct {
 	ProjectRoot  string
-	TargetOrigin template.JS
-	Token        template.JS
+	TargetOrigin template.JS // JS-safe quoted origin for postMessage targetOrigin
+	Token        template.JS // JS-safe quoted JWT for postMessage payload
 }
 
+// handlePair serves the pairing popup page. It validates the requesting origin,
+// generates a fresh JWT, and renders an HTML page that posts the token back.
 func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	origin := s.getPairOrigin(r)
 	if origin == "" || !s.isOriginAllowed(origin) {
@@ -57,6 +60,8 @@ func (s *Server) handlePair(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf.Bytes())
 }
 
+// getPairOrigin extracts the origin for the pairing request, checking the
+// ?origin query param first (explicit), then falling back to the Referer header.
 func (s *Server) getPairOrigin(r *http.Request) string {
 	if q := strings.TrimSpace(r.URL.Query().Get("origin")); q != "" {
 		origin, ok := normalizeOrigin(q)
@@ -77,6 +82,7 @@ func (s *Server) getPairOrigin(r *http.Request) string {
 	return u.Scheme + "://" + u.Host
 }
 
+// normalizeOrigin strips path/query from a URL and returns just scheme://host.
 func normalizeOrigin(raw string) (string, bool) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme == "" || u.Host == "" {

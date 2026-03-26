@@ -1,3 +1,12 @@
+// Healthcheck runner: executes healthcheck definitions from Nix config locally.
+//
+// Healthchecks are defined in .stack/config.nix and evaluated into JSON by the
+// Nix module system. The runner supports script, HTTP, and TCP check types.
+// Nix-eval checks are deliberately skipped in CLI context (too slow).
+//
+// Results are cached to .stack/state/healthchecks.json with a 5-minute TTL.
+// The MOTD reads this cache to display health status without re-running checks.
+
 package tui
 
 import (
@@ -33,7 +42,9 @@ type HealthcheckCache struct {
 	Results   []HealthcheckResult `json:"results"`
 }
 
-// ModuleHealthResult is an aggregated view of healthcheck results per module.
+// ModuleHealthResult groups check results by module for MOTD display.
+// Severity tracks the worst failure in the module so the MOTD can choose
+// the right color (red for critical, yellow for warning).
 type ModuleHealthResult struct {
 	Module       string
 	DisplayName  string
@@ -41,7 +52,7 @@ type ModuleHealthResult struct {
 	PassingCount int
 	FailingCount int
 	SkippedCount int
-	Severity     string // worst severity among failures: "critical" > "warning" > "info"
+	Severity     string // worst severity among failures, using proto enum strings
 }
 
 const (
@@ -69,9 +80,9 @@ func LoadHealthcheckResults(stateDir string) *HealthcheckCache {
 	return &cache
 }
 
-// RunFailedHealthchecks re-runs only checks whose cached status is "fail" or
-// "error" (or that have never been run). Checks that already have a "pass"
-// result are kept as-is. The merged result set is persisted back to disk.
+// RunFailedHealthchecks re-runs only failing/unknown checks while keeping
+// passing results from cache. This avoids re-running expensive passing checks
+// when the user just wants to fix failures. The merged result set is persisted.
 func RunFailedHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []HealthcheckResult {
 	if len(checks) == 0 {
 		return nil
@@ -114,9 +125,9 @@ func RunFailedHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []He
 	return allResults
 }
 
-// RunHealthchecks executes all healthcheck definitions and returns results.
-// Script-type checks are run in parallel with a per-check timeout.
-// Non-script checks (HTTP, TCP) are also run. Nix checks are skipped in CLI context.
+// RunHealthchecks executes all healthcheck definitions concurrently and returns results.
+// Each check runs in its own goroutine with an individual timeout. The results slice
+// is pre-allocated and indexed by position, so order is deterministic despite parallelism.
 func RunHealthchecks(checks []nixconfig.Healthcheck) []HealthcheckResult {
 	if len(checks) == 0 {
 		return nil
@@ -332,8 +343,9 @@ func SaveHealthcheckCache(stateDir string, results []HealthcheckResult) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
-// RunOrLoadHealthchecks runs checks if cache is stale, otherwise returns cached results.
-// Results are always persisted to disk after running.
+// RunOrLoadHealthchecks returns cached results if within TTL, otherwise runs all
+// checks fresh. This is the main entry point for non-MOTD healthcheck consumers
+// (e.g., the `sp healthcheck` command). Results are persisted after running.
 func RunOrLoadHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []HealthcheckResult {
 	if len(checks) == 0 {
 		return nil
@@ -354,6 +366,8 @@ func RunOrLoadHealthchecks(stateDir string, checks []nixconfig.Healthcheck) []He
 }
 
 // AggregateByModule groups results by module and computes per-module summaries.
+// Insertion order is preserved so modules appear in the same order as the checks.
+// Skipped checks don't count toward TotalChecks (only pass/fail do).
 func AggregateByModule(results []HealthcheckResult) []ModuleHealthResult {
 	if len(results) == 0 {
 		return nil
@@ -401,6 +415,7 @@ func AggregateByModule(results []HealthcheckResult) []ModuleHealthResult {
 	return out
 }
 
+// severityRank maps proto enum strings to comparable integers for max() comparison.
 func severityRank(s string) int {
 	switch s {
 	case "HEALTHCHECK_SEVERITY_CRITICAL":

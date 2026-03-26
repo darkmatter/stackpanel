@@ -1,3 +1,7 @@
+// Package navigation provides the hierarchical menu system for the stackpanel TUI.
+// It converts a Cobra command tree into a navigable, interactive menu with
+// breadcrumbs, command execution, and output viewing. This is the default
+// view when running `stackpanel` (or `sp`) with no arguments.
 package navigation
 
 import (
@@ -26,33 +30,23 @@ const (
 	ViewCustom
 )
 
-// NavigationModel is the main Bubble Tea model for TUI navigation
+// NavigationModel is the main Bubble Tea model for TUI navigation.
+// It manages a command tree, a selection stack for back-navigation,
+// and delegates to sub-views (output viewer, custom views) when needed.
 type NavigationModel struct {
-	// Tree structure of commands
-	tree *CommandTree
-	// Current node in the tree
-	currentNode *CommandNode
-	// Menu for current node's children
-	menu *Menu
-	// Stack of previous menu selections (for back navigation)
-	selectionStack []int
-	// Current view state
-	viewState ViewState
-	// Terminal dimensions
-	width  int
-	height int
-	// Whether we're quitting
-	quitting bool
-	// Output viewer for command output
-	outputViewer output.ViewerModel
-	hasOutput    bool
-	// Custom view model (for views like status dashboard)
-	customView tea.Model
-	// Help text to display
-	helpText string
-	// Spinner for command execution
-	spinner spinner.Model
-	// Currently running command label
+	tree           *CommandTree
+	currentNode    *CommandNode
+	menu           *Menu
+	selectionStack []int // Cursor positions for each depth level, enabling back-navigation
+	viewState      ViewState
+	width          int
+	height         int
+	quitting       bool
+	outputViewer   output.ViewerModel
+	hasOutput      bool
+	customView     tea.Model // Pluggable sub-view (status dashboard, agent monitor, etc.)
+	helpText       string
+	spinner        spinner.Model
 	runningCommand string
 }
 
@@ -396,6 +390,11 @@ func (m NavigationModel) showCommandArgsRequired(node *CommandNode) (tea.Model, 
 	return m, nil
 }
 
+// executeCommand runs a Cobra command by reconstructing its args from the tree path.
+// The --no-tui flag is appended to prevent recursive TUI launches when the
+// command would normally open its own interactive view.
+// NOTE: root.SetArgs is reset to empty after execution to avoid polluting
+// subsequent invocations of the same root command.
 func (m NavigationModel) executeCommand(node *CommandNode) tea.Cmd {
 	return func() tea.Msg {
 		root := m.tree.Root.CobraCmd
@@ -437,7 +436,9 @@ func (m *NavigationModel) updateOutputViewerSize(msg tea.WindowSizeMsg) {
 	}
 }
 
-// SetCustomView sets a custom view to display (like status dashboard)
+// SetCustomView replaces the menu with a custom sub-view (e.g., status dashboard).
+// The navigation model handles esc/q to return to the menu; all other keys
+// are forwarded to the custom view.
 func (m *NavigationModel) SetCustomView(view tea.Model) {
 	m.customView = view
 	m.viewState = ViewCustom

@@ -30,7 +30,7 @@ if [ -z "${SOPS_AGE_KEY_FILE:-}" ] && [ -z "${SOPS_AGE_KEY:-}" ] && [ -z "${SOPS
   export SOPS_AGE_KEY_FILE="$LOCAL_AGE_KEY_FILE"
 fi
 
-SOPS_BIN="$(direnv exec "$ROOTDIR" bash -lc 'command -v sops')"
+SOPS_BIN="$(command -v sops 2>/dev/null || direnv exec "$ROOTDIR" bash -lc 'command -v sops')"
 
 echo "==> Deploying web"
 echo "    Region:  ${REGION}"

@@ -1,3 +1,9 @@
+// users.go syncs GitHub collaborators into Nix data files for user management.
+//
+// Two files are generated:
+//   - github-collaborators.nix: auto-generated raw collaborator data (overwritten on each sync)
+//   - users.nix: one-time scaffold that imports collaborators and maps to stackpanel.users format
+//     (only created if missing, so manual customisations are preserved)
 package cmd
 
 import (
@@ -121,6 +127,9 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	// The data directory defaults to .stack/data but respects the configured
+	// data path. We always write into an "external" subdirectory to keep
+	// auto-generated files separate from user-authored data files.
 	if !strings.HasSuffix(dataDir, "external") {
 		dataDir = filepath.Join(dataDir, "external")
 	}

@@ -27,8 +27,9 @@ type ServiceInfo struct {
 	Details     string
 }
 
-// StatusView is the Bubble Tea model for the status dashboard
-// Refactored to integrate with the navigation system
+// StatusView is the Bubble Tea model for the status dashboard.
+// Unlike tui.StatusModel, this version integrates with the navigation system
+// by supporting a returnMsg for back-navigation via esc.
 type StatusView struct {
 	services    []ServiceInfo
 	caddyInfo   ServiceInfo
@@ -410,7 +411,9 @@ func (m StatusView) View() string {
 	return tui.RenderFrame(b.String())
 }
 
-// Helper functions
+// Helper functions — duplicated from tui/status.go because the views package
+// can't import tui without creating a cycle. Consider extracting to a shared
+// internal/pidfile or internal/caddy package if this grows.
 
 func readPidFile(path string) int {
 	data, err := os.ReadFile(path)
@@ -436,6 +439,9 @@ func countSites() string {
 	return ""
 }
 
+// findStateDir walks up from cwd looking for a .stack directory.
+// BUG: stackDir and stackpanelDir are identical — the second check is redundant.
+// See the same bug in tui/status.go's findStepStateDir.
 func findStateDir() string {
 	cwd, _ := os.Getwd()
 	dir := cwd

@@ -52,18 +52,19 @@ func moduleFromDeclaration(declPath string) string {
 
 // groupOptions groups options by the module that declared them.
 //
-// Primary strategy: inspect the first declaration path for each option and
-// derive the owning module via moduleFromDeclaration. This means options from
-// different source files (e.g. modules/deploy/module.nix vs
-// core/options/apps.nix) end up on separate pages even when their config keys
-// share the same prefix (e.g. apps.<name>.deploy vs apps.<name>.framework).
+// Primary strategy: inspect the first declaration file path for each option and
+// derive the owning module via moduleFromDeclaration. This groups by source file
+// location rather than config key prefix, so options defined in different modules
+// (e.g. modules/deploy/ vs core/options/apps.nix) land on separate pages even
+// when their config keys share a prefix like "apps.<name>".
 //
-// Fallback: when no usable declaration is found, the first segment of the
-// option's config key is used as before, preserving backward-compatibility for
-// options that originate outside the known directory layout.
+// Fallback: when no declaration maps to a known module directory, the first
+// segment of the option's dotted config key is used as the category name.
 func groupOptions(options OptionsJSON) map[string]OptionsJSON {
 	groups := make(map[string]OptionsJSON)
-	// Match devenv shell prefix: perSystem.<system>.devenv.shells.<name>.
+	// devenv wraps options under a system-specific prefix that we strip to get
+	// the canonical option path. Example:
+	//   "perSystem.aarch64-darwin.devenv.shells.default.stackpanel.apps" -> "apps"
 	regexDevenv := regexp.MustCompile(`^perSystem\.[^.]+\.devenv\.shells\.[^.]+\.`)
 
 	for path, opt := range options {
@@ -102,9 +103,8 @@ func groupOptions(options OptionsJSON) map[string]OptionsJSON {
 	return groups
 }
 
-// getCategoryIcon returns an appropriate icon for a given category name.
-// Icons are from the Lucide icon set used by Fumadocs.
-// See: https://lucide.dev/icons
+// getCategoryIcon maps category names to Lucide icon names for Fumadocs.
+// Returns "Settings" as the default for unrecognized categories.
 func getCategoryIcon(category string) string {
 	iconMap := map[string]string{
 		"apps":           "AppWindow",
@@ -136,7 +136,9 @@ func getCategoryIcon(category string) string {
 	return "Settings" // Default icon
 }
 
-// formatValueInline formats a Nix value for display in a table cell
+// formatValueInline formats a Nix value for display in a markdown table cell.
+// Short values get inline code formatting; long/multi-line values show a
+// placeholder since tables can't contain code blocks.
 func formatValueInline(val *NixValue) string {
 	if val == nil {
 		return "_none_"
@@ -150,7 +152,9 @@ func formatValueInline(val *NixValue) string {
 	return "_see below_"
 }
 
-// formatValueBlock formats a Nix value as a code block
+// formatValueBlock formats a Nix value as a fenced code block for display
+// below the options table. Returns empty string for short values that already
+// fit inline.
 func formatValueBlock(val *NixValue) string {
 	if val == nil {
 		return ""
@@ -163,7 +167,9 @@ func formatValueBlock(val *NixValue) string {
 	return ""
 }
 
-// generateCategoryMdx generates MDX for a single category
+// generateCategoryMdx generates a complete MDX page for one option category.
+// Each option gets an H2 section with a property table, optional code blocks
+// for long defaults/examples, and a horizontal rule separator.
 func generateCategoryMdx(category string, options OptionsJSON) string {
 	title := strings.ToUpper(category[:1]) + category[1:]
 	icon := getCategoryIcon(category)
@@ -219,7 +225,8 @@ func generateCategoryMdx(category string, options OptionsJSON) string {
 	return sb.String()
 }
 
-// generateIndexMdx generates the index page for the options reference
+// generateIndexMdx generates the options reference landing page with links
+// to all category pages.
 func generateIndexMdx(categories []string) string {
 	var categoryLinks strings.Builder
 	for _, cat := range categories {

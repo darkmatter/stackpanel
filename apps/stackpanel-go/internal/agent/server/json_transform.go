@@ -1,8 +1,10 @@
-// Package server provides JSON transformation utilities for Nix data.
+// json_transform.go provides package-level aliases for the JSON key transformation
+// functions in pkg/nixdata/transform.go.
 //
-// These are thin wrappers over pkg/nixdata/transform.go so that existing
-// callers within the server package continue to compile. New code should
-// use the nixdata package directly.
+// Nix uses kebab-case for attribute names while protojson (and the web UI) uses
+// camelCase. These wrappers exist so existing callers in the server package
+// (connect_entities_gen.go, connect_patch.go, etc.) compile without changes.
+// New code should use nixdata.* directly.
 package server
 
 import "github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
