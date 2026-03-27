@@ -1,6 +1,7 @@
 mod config;
 mod pty_manager;
 mod reloader;
+mod status_line;
 mod terminal;
 mod watcher;
 
