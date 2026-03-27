@@ -196,6 +196,7 @@ pub async fn run_session(config: &Config) -> Result<u32> {
 
     // ── Task: reloader (file watcher + background builds) ────────────────────
     let (reloader, mut ready_rx) = Reloader::new_with_ready(config.clone());
+    let build_state = reloader.state.clone();
     let reloader_task = tokio::spawn(async move {
         reloader.run().await;
     });
@@ -208,6 +209,9 @@ pub async fn run_session(config: &Config) -> Result<u32> {
             }
         }
     });
+
+    // ── Status line (only when attached to a real TTY) ──────────────────────────
+    let _status = crate::status_line::StatusLineHandle::start(build_state);
 
     // ── Main event loop ───────────────────────────────────────────────────────
     let mut exit_code = 0u32;
