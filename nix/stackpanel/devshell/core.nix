@@ -20,5 +20,6 @@
     ./profile.nix
     ./gc-roots.nix
     ./setup-tasks.nix
+    ./reload.nix
   ];
 }
