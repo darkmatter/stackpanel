@@ -1,3 +1,8 @@
+// env.go provides inspection and validation of STACKPANEL_* environment variables.
+//
+// These variables are set by the Nix devshell (hook phases) and the Go agent.
+// This command doesn't modify variables — it reads from the process environment
+// and the envvars registry to provide debugging visibility.
 package cmd
 
 import (
@@ -330,6 +335,9 @@ func groupByCategory(vars []envvars.EnvVar) map[envvars.Category][]envvars.EnvVa
 	return result
 }
 
+// sortedCategories returns categories in a fixed display order (core first,
+// then paths, agent, etc.), appending any unknown categories alphabetically
+// at the end. This ensures the most important variables appear first.
 func sortedCategories(grouped map[envvars.Category][]envvars.EnvVar) []envvars.Category {
 	// Define the order we want categories to appear
 	order := []envvars.Category{
@@ -376,6 +384,9 @@ func sortedCategories(grouped map[envvars.Category][]envvars.EnvVar) []envvars.C
 	return result
 }
 
+// maskSensitive redacts values that look like credentials based on the
+// variable name. Keeps the first and last 4 chars visible for debugging
+// (enough to identify which credential is set, not enough to leak it).
 func maskSensitive(name, value string) string {
 	nameLower := strings.ToLower(name)
 	if strings.Contains(nameLower, "secret") ||

@@ -1,0 +1,21 @@
+---
+title: Colmena Module Entry Point
+description: NixOS fleet deployment orchestration via Colmena.
+---
+
+NixOS fleet deployment orchestration via Colmena.
+
+## Components
+
+- meta.nix: Static metadata for discovery
+- module.nix: Options, scripts, health checks, module registration
+- ui.nix: UI panel definitions (status + config form)
+
+## Usage
+
+```nix
+stackpanel.colmena = {
+  enable = true;
+  flake = ".#colmena";
+};
+```

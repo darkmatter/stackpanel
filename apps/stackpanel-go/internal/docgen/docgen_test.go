@@ -10,6 +10,74 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func TestModuleFromDeclaration(t *testing.T) {
+	tests := []struct {
+		name     string
+		declPath string
+		want     string
+	}{
+		{
+			name:     "module file – direct path",
+			declPath: "/home/user/stackpanel/nix/stackpanel/modules/deploy/module.nix",
+			want:     "deploy",
+		},
+		{
+			name:     "module file – nix store path",
+			declPath: "/nix/store/abc123-source/nix/stackpanel/modules/framework/module.nix",
+			want:     "framework",
+		},
+		{
+			name:     "module file – nested file inside module dir",
+			declPath: "/nix/stackpanel/modules/bun/options.nix",
+			want:     "bun",
+		},
+		{
+			name:     "core options file",
+			declPath: "/home/user/stackpanel/nix/stackpanel/core/options/apps.nix",
+			want:     "apps",
+		},
+		{
+			name:     "core options file – nix store path",
+			declPath: "/nix/store/xyz-source/nix/stackpanel/core/options/secrets.nix",
+			want:     "secrets",
+		},
+		{
+			name:     "core options file – default.nix treated as its own group",
+			declPath: "/nix/stackpanel/core/options/default.nix",
+			want:     "default",
+		},
+		{
+			name:     "private module (underscore prefix) is ignored",
+			declPath: "/nix/stackpanel/modules/_template/module.nix",
+			want:     "",
+		},
+		{
+			name:     "unrecognised path returns empty string",
+			declPath: "/some/random/path/options.nix",
+			want:     "",
+		},
+		{
+			name:     "empty string returns empty string",
+			declPath: "",
+			want:     "",
+		},
+		{
+			name:     "core options sub-path (contains slash after stem) is ignored",
+			declPath: "/nix/stackpanel/core/options/subdir/apps.nix",
+			want:     "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := moduleFromDeclaration(tc.declPath)
+			if got != tc.want {
+				t.Errorf("moduleFromDeclaration(%q) = %q, want %q", tc.declPath, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestGroupOptions(t *testing.T) {
 	options := OptionsJSON{
 		"stackpanel.enable":                  NixOption{Type: "boolean"},
@@ -39,6 +107,93 @@ func TestGroupOptions(t *testing.T) {
 	}
 	if _, ok := groups["globalServices"]; !ok {
 		t.Error("expected 'globalServices' group")
+	}
+}
+
+// TestGroupOptions_DeclarationProvenance verifies that options sharing the same
+// key prefix (e.g. apps.<name>.*) are split onto separate pages when they come
+// from different source files.
+func TestGroupOptions_DeclarationProvenance(t *testing.T) {
+	deployDecl := "/nix/stackpanel/modules/deploy/module.nix"
+	frameworkDecl := "/nix/stackpanel/modules/framework/module.nix"
+	coreAppsDecl := "/nix/stackpanel/core/options/apps.nix"
+
+	options := OptionsJSON{
+		// Both keys start with "apps" but come from different modules.
+		"stackpanel.apps.<name>.deploy.enable": NixOption{
+			Type:         "boolean",
+			Declarations: Declarations{{Name: deployDecl}},
+		},
+		"stackpanel.apps.<name>.deploy.host": NixOption{
+			Type:         "string",
+			Declarations: Declarations{{Name: deployDecl}},
+		},
+		"stackpanel.apps.<name>.framework.enable": NixOption{
+			Type:         "boolean",
+			Declarations: Declarations{{Name: frameworkDecl}},
+		},
+		// A core apps option with no module declaration falls back to "apps".
+		"stackpanel.apps.<name>.port": NixOption{
+			Type:         "int",
+			Declarations: Declarations{{Name: coreAppsDecl}},
+		},
+	}
+
+	groups := groupOptions(options)
+
+	// deploy and framework must be separate groups.
+	if _, ok := groups["deploy"]; !ok {
+		t.Error("expected 'deploy' group derived from declaration path")
+	}
+	if _, ok := groups["framework"]; !ok {
+		t.Error("expected 'framework' group derived from declaration path")
+	}
+	if len(groups["deploy"]) != 2 {
+		t.Errorf("expected 2 options in 'deploy' group, got %d", len(groups["deploy"]))
+	}
+	if len(groups["framework"]) != 1 {
+		t.Errorf("expected 1 option in 'framework' group, got %d", len(groups["framework"]))
+	}
+
+	// The core apps option should land in the "apps" group.
+	if _, ok := groups["apps"]; !ok {
+		t.Error("expected 'apps' group for core/options/apps.nix declaration")
+	}
+
+	// deploy and framework must NOT bleed into each other.
+	for k := range groups["deploy"] {
+		if strings.Contains(k, "framework") {
+			t.Errorf("'deploy' group unexpectedly contains framework key %q", k)
+		}
+	}
+	for k := range groups["framework"] {
+		if strings.Contains(k, "deploy") {
+			t.Errorf("'framework' group unexpectedly contains deploy key %q", k)
+		}
+	}
+}
+
+// TestGroupOptions_FallbackToKeyPrefix ensures that options without a
+// recognisable declaration path still group correctly by key prefix.
+func TestGroupOptions_FallbackToKeyPrefix(t *testing.T) {
+	options := OptionsJSON{
+		"stackpanel.secrets.enable": NixOption{
+			Type:         "boolean",
+			Declarations: Declarations{{Name: "/some/unknown/path/secrets.nix"}},
+		},
+		"stackpanel.secrets.backend": NixOption{
+			Type: "string",
+			// No declarations at all – pure fallback.
+		},
+	}
+
+	groups := groupOptions(options)
+
+	if _, ok := groups["secrets"]; !ok {
+		t.Error("expected fallback 'secrets' group from key prefix")
+	}
+	if len(groups["secrets"]) != 2 {
+		t.Errorf("expected 2 options in fallback 'secrets' group, got %d", len(groups["secrets"]))
 	}
 }
 
@@ -180,6 +335,7 @@ func TestGenerateCategoryMdx(t *testing.T) {
 		"stackpanel.ports.projectName": NixOption{
 			Type:        "string",
 			Description: "Project name for port calculation",
+			ReadOnly:    true,
 		},
 	}
 
@@ -199,6 +355,9 @@ func TestGenerateCategoryMdx(t *testing.T) {
 	}
 	if !strings.Contains(result, "## `stackpanel.ports.projectName`") {
 		t.Error("expected ports.projectName option")
+	}
+	if !strings.Contains(result, "| **Read Only** | `true` |") {
+		t.Error("expected read-only property row for read-only option")
 	}
 
 	// Check table structure
@@ -325,7 +484,7 @@ func TestConvertReadmeToMdx(t *testing.T) {
 			content:       "Some content without title.\n\n## Section",
 			moduleName:    "noheader",
 			expectTitle:   "title: Noheader",
-			expectDesc:    "description: Documentation for the noheader module",
+			expectDesc:    "description: Some content without title.",
 			expectContent: "Some content",
 		},
 	}
@@ -576,6 +735,211 @@ func TestExtractFlags(t *testing.T) {
 	}
 	if configFlag.FlagSyntax != "--config, -c" {
 		t.Errorf("expected flag syntax '--config, -c', got %s", configFlag.FlagSyntax)
+	}
+}
+
+func TestEscapeMDX(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "angle brackets outside code are escaped",
+			input:    "Use <token> in your request",
+			expected: "Use \\<token\\> in your request",
+		},
+		{
+			name:     "angle brackets inside fenced code block are preserved",
+			input:    "```bash\ncurl -H \"X-Token: <token>\" http://localhost\n```",
+			expected: "```bash\ncurl -H \"X-Token: <token>\" http://localhost\n```",
+		},
+		{
+			name:     "angle brackets inside inline code are preserved",
+			input:    "Use `<token>` in the header",
+			expected: "Use `<token>` in the header",
+		},
+		{
+			name:     "curly braces outside code are escaped",
+			input:    "Object {key: value}",
+			expected: "Object \\{key: value\\}",
+		},
+		{
+			name:     "curly braces inside fenced code block are preserved",
+			input:    "```js\nconst x = {a: 1}\n```",
+			expected: "```js\nconst x = {a: 1}\n```",
+		},
+		{
+			name:     "curly braces inside inline code are preserved",
+			input:    "Returns `{ok: true}` on success",
+			expected: "Returns `{ok: true}` on success",
+		},
+		{
+			name:     "mixed content with code blocks and plain text",
+			input:    "Send <data> here\n\n```bash\ncurl <url>\n```\n\nThen check <result>",
+			expected: "Send \\<data\\> here\n\n```bash\ncurl <url>\n```\n\nThen check \\<result\\>",
+		},
+		{
+			name:     "multiple inline code spans on one line",
+			input:    "Use `<a>` and `<b>` but not <c>",
+			expected: "Use `<a>` and `<b>` but not \\<c\\>",
+		},
+		{
+			name:     "already escaped angle brackets are not double-escaped",
+			input:    `Use \<token\> in the header`,
+			expected: `Use \<token\> in the header`,
+		},
+		{
+			name:     "already escaped braces are not double-escaped",
+			input:    `Object \{key: value\}`,
+			expected: `Object \{key: value\}`,
+		},
+		{
+			name:     "no special characters passes through unchanged",
+			input:    "This is plain text with no special chars.",
+			expected: "This is plain text with no special chars.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := escapeMDX(tt.input)
+			if result != tt.expected {
+				t.Errorf("escapeMDX(%q)\n  got:  %q\n  want: %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGenerateCLIDocsEscapesAngleBrackets(t *testing.T) {
+	outputDir := t.TempDir()
+
+	rootCmd := &cobra.Command{
+		Use:   "testcli",
+		Short: "Test CLI",
+	}
+
+	tokenCmd := &cobra.Command{
+		Use:   "test-token",
+		Short: "Generate a test token",
+		Long: `Generate a test pairing token.
+
+Example:
+  curl -H "X-Token: <token>" http://localhost:9876/api/...`,
+	}
+	rootCmd.AddCommand(tokenCmd)
+
+	err := GenerateCLIDocs(rootCmd, outputDir)
+	if err != nil {
+		t.Fatalf("GenerateCLIDocs failed: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(outputDir, "test-token.mdx"))
+	if err != nil {
+		t.Fatalf("failed to read test-token.mdx: %v", err)
+	}
+
+	s := string(content)
+
+	// The <token> in the long description (outside code block) must be escaped
+	if strings.Contains(s, "X-Token: <token>") {
+		t.Error("expected <token> outside code block to be escaped, but it was not")
+	}
+	if !strings.Contains(s, `X-Token: \<token\>`) {
+		t.Error("expected <token> to be escaped as \\<token\\> in description text")
+	}
+}
+
+func TestIsSeparatorLine(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"==============================================================================", true},
+		{"===", true},
+		{"---", true},
+		{"***", true},
+		{"~~~", true},
+		{"###", true},
+		{"== ", false},  // trailing space means not purely separator chars
+		{" === ", true}, // with surrounding space (trimmed)
+		{"==", false},   // too short (< 3)
+		{"=", false},
+		{"", false},
+		{"hello", false},
+		{"module.nix - My Module", false},
+		{"=-=", false}, // mixed characters
+		{"a===", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := isSeparatorLine(tt.input)
+			if result != tt.expected {
+				t.Errorf("isSeparatorLine(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestExtractNixDocHeader_SkipsSeparators(t *testing.T) {
+	tmpDir := t.TempDir()
+	nixFile := filepath.Join(tmpDir, "module.nix")
+
+	content := `# ==============================================================================
+# module.nix - Bun Module Implementation
+#
+# Provides Bun/TypeScript application support.
+#
+# Features:
+#   - Automatic bun2nix CLI in devshell
+#   - Generated package.json with postinstall script
+# ==============================================================================
+{
+  config = {};
+}
+`
+	os.WriteFile(nixFile, []byte(content), 0644)
+
+	header := extractNixDocHeader(nixFile)
+
+	// Should not contain separator lines
+	if strings.Contains(header, "====") {
+		t.Errorf("expected separator lines to be stripped, got:\n%s", header)
+	}
+
+	// Should contain the actual title line
+	if !strings.Contains(header, "module.nix - Bun Module Implementation") {
+		t.Errorf("expected title line preserved, got:\n%s", header)
+	}
+}
+
+func TestConvertNixHeaderToMdx_SanitizedTitle(t *testing.T) {
+	// Simulate what extractNixDocHeader produces after separator stripping
+	header := "module.nix - Bun Module Implementation\n\nProvides Bun/TypeScript application support.\n\nFeatures:\n  - Automatic bun2nix CLI in devshell\n  - Generated package.json"
+
+	result := convertNixHeaderToMdx(header, "bun")
+
+	// Title should NOT be "======" and should strip "module.nix - " prefix
+	if strings.Contains(result, `title: "=="`) {
+		t.Errorf("title should not be separator line, got:\n%s", result)
+	}
+	if strings.Contains(result, "module.nix") {
+		t.Errorf("title should strip filename prefix, got:\n%s", result)
+	}
+	if !strings.Contains(result, "Bun Module Implementation") {
+		t.Errorf("expected clean title 'Bun Module Implementation', got:\n%s", result)
+	}
+}
+
+func TestConvertNixHeaderToMdx_PlainTitle(t *testing.T) {
+	// Some headers don't have the "filename.nix - " prefix
+	header := "Deployment Module\n\nAggregates all deployment provider modules.\n\nSupported hosts:\n  - cloudflare\n  - fly"
+
+	result := convertNixHeaderToMdx(header, "deployment")
+
+	if !strings.Contains(result, "title: Deployment Module") {
+		t.Errorf("expected plain title 'Deployment Module', got:\n%s", result)
 	}
 }
 

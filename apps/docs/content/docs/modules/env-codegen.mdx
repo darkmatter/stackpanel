@@ -1,0 +1,41 @@
+---
+title: Env Codegen Module
+description: Generates type-safe environment variable packages from app configuration.
+---
+
+Generates the `packages/gen/env` structure from `stackpanel.apps` configuration. Automatically enabled when any app defines environments with env vars.
+
+## Components
+
+- **meta.nix**: Static metadata for discovery
+- **module.nix**: Options, codegen logic, healthchecks
+
+## Generated Files
+
+```
+packages/gen/env/
+  src/<app>/                   — TypeScript znv modules by app/env
+  src/embedded-data.ts         — Embedded plaintext vars + encrypted SOPS payloads
+  src/entrypoints/             — App entrypoint loaders
+  src/loader.ts                — Runtime resolver/decrypter
+```
+
+## Options
+
+| Option | Default | Description |
+|---|---|---|
+| `stackpanel.env.output-dir` | `"packages/gen/env"` | Output directory for generated env package |
+| `stackpanel.env.package-name` | `"@{project.owner}/env"` | NPM package name for the generated package |
+
+## Usage
+
+```nix
+# The module is automatically enabled when apps have environments
+stackpanel.apps.web.environments.dev.env = {
+  DATABASE_URL = "ref+sops://...";
+};
+
+# Optional: customize output location
+stackpanel.env.output-dir = "packages/custom-env";
+stackpanel.env.package-name = "@myorg/env";
+```

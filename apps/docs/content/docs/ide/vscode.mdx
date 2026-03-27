@@ -1,0 +1,229 @@
+---
+title: VS Code
+description: Auto-generated workspace settings, extensions, and devshell integration
+icon: code
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can generate VS Code workspace configuration—settings, extension recommendations, and devshell integration—so that every developer on your team gets a consistent editor experience without manual setup.
+
+## Enable VS Code Integration
+
+```nix
+stackpanel.ide = {
+  enable = true;
+  vscode.enable = true;
+};
+```
+
+When enabled, Stackpanel generates VS Code configuration files into `.vscode/` and `.stack/gen/ide/vscode/`. These are standard VS Code files—no custom extension required.
+
+## What Gets Generated
+
+| File | Purpose |
+|------|---------|
+| `.vscode/settings.json` | Workspace settings (formatters, linters, Nix LSP, etc.) |
+| `.vscode/extensions.json` | Recommended extensions for your stack |
+| `.stack/gen/ide/vscode/` | Devshell loader and workspace configuration |
+
+Like all Stackpanel-generated files, these are committed to Git so that new team members get the right configuration immediately after cloning.
+
+## Generated Settings
+
+The IDE module inspects your Stackpanel configuration and produces settings that match your development environment:
+
+```nix
+stackpanel.ide = {
+  enable = true;
+  vscode = {
+    enable = true;
+
+    settings = {
+      # These merge with auto-generated settings
+      "editor.formatOnSave" = true;
+      "editor.defaultFormatter" = "esbenp.prettier-vscode";
+      "typescript.tsdk" = "node_modules/typescript/lib";
+    };
+  };
+};
+```
+
+Stackpanel's auto-generated settings include:
+
+- **Nix language server** configuration (nil or nixd) if Nix files are present
+- **Formatter settings** based on enabled extensions (oxlint, prettier, biome)
+- **Search exclusions** for generated files and `node_modules`
+- **File associations** for your project's file types
+
+Your custom settings in `stackpanel.ide.vscode.settings` are deep-merged with the auto-generated ones, so you can override any value.
+
+## Extension Recommendations
+
+When VS Code integration is enabled, Stackpanel generates an `extensions.json` with recommendations based on your stack:
+
+```json
+{
+  "recommendations": [
+    "jnoortheen.nix-ide",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss"
+  ]
+}
+```
+
+The recommendations are derived from what's actually in your devshell—if you have Tailwind configured, the Tailwind IntelliSense extension is recommended. If you're using oxlint, the oxlint extension is recommended.
+
+You can add your own recommendations:
+
+```nix
+stackpanel.ide.vscode.extensions = [
+  "github.copilot"
+  "eamodio.gitlens"
+  "usernamehw.errorlens"
+];
+```
+
+These are merged with the auto-generated list.
+
+## Devshell Integration
+
+One of the trickiest parts of using Nix with VS Code is making sure the editor sees the same environment as your terminal. Stackpanel generates a devshell loader that configures VS Code to use your Nix environment for:
+
+- **Language servers** — TypeScript, Go, Python, and other LSPs find the correct binaries
+- **Formatters and linters** — Tools run from the Nix store, not from global installs
+- **Environment variables** — The same env vars available in your terminal are available to extensions
+
+This is handled through a generated VS Code workspace file in `.stack/gen/ide/vscode/` that sets up the correct `PATH` and environment.
+
+<Callout type="info">
+For the devshell integration to work, you should open VS Code from within your Nix devshell (e.g., run `code .` from the terminal after entering the shell) or use the [direnv VS Code extension](https://marketplace.visualstudio.com/items?itemName=mkhl.direnv) to automatically load the environment.
+</Callout>
+
+## Per-Extension Settings
+
+Stackpanel extensions can contribute their own VS Code settings. When you enable an extension, its IDE configuration is merged into the generated settings automatically.
+
+For example, the oxlint extension adds:
+
+```json
+{
+  "oxc.enable": true,
+  "oxc.configPath": "oxlint.json"
+}
+```
+
+And the Nix IDE extension adds:
+
+```json
+{
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nil",
+  "nix.serverSettings": {
+    "nil": {
+      "formatting": {
+        "command": ["nixfmt"]
+      }
+    }
+  }
+}
+```
+
+You don't need to configure any of this—it happens because those extensions are enabled in your Stackpanel config.
+
+## Multiple Contributors
+
+Because settings are generated through the [module system](/docs/concepts/module-system), multiple modules can contribute to the same `.vscode/settings.json` without conflicts:
+
+```nix
+# The Nix IDE module contributes:
+stackpanel.files.entries.".vscode/settings.json" = {
+  type = "json";
+  content = { "nix.enableLanguageServer" = true; };
+};
+
+# The TypeScript module contributes:
+stackpanel.files.entries.".vscode/settings.json" = {
+  type = "json";
+  content = { "typescript.tsdk" = "node_modules/typescript/lib"; };
+};
+
+# Your config contributes:
+stackpanel.files.entries.".vscode/settings.json" = {
+  type = "json";
+  content = { "editor.formatOnSave" = true; };
+};
+```
+
+All three are deep-merged into a single `settings.json`. This is the same [file generation](/docs/concepts/file-generation) pattern used for `.gitignore`, `tsconfig.json`, and other generated files.
+
+## Hiding Generated Files
+
+If you prefer not to see generated files in the VS Code file explorer, add exclusions to your settings:
+
+```nix
+stackpanel.ide.vscode.settings = {
+  "files.exclude" = {
+    ".stack/state" = true;
+    ".stack/gen" = true;
+    "process-compose.yaml" = true;
+  };
+};
+```
+
+This keeps your file tree focused on source code while generated files remain accessible through the terminal and Git.
+
+## Workspace Trust
+
+VS Code's Workspace Trust feature may block some devshell functionality in untrusted workspaces. If you're opening a Stackpanel project for the first time, VS Code will ask you to trust the workspace. Trust is required for:
+
+- Running formatters and linters from the Nix store
+- Executing shell tasks defined in the workspace
+- Loading the devshell environment
+
+## Troubleshooting
+
+### Language server not finding packages
+
+Make sure you opened VS Code from within the devshell:
+
+```bash
+# Enter the devshell first
+nix develop --impure
+
+# Then open VS Code
+code .
+```
+
+Or install the [direnv VS Code extension](https://marketplace.visualstudio.com/items?itemName=mkhl.direnv) to load the environment automatically.
+
+### Generated settings not updating
+
+If you changed your Stackpanel config but `.vscode/settings.json` hasn't updated:
+
+1. Reload the devshell (`direnv reload` or re-enter `nix develop`)
+2. Check if the file is marked as stale in [Studio](/docs/studio)
+3. Force a regeneration through the CLI
+
+### Extension recommendations not showing
+
+VS Code only prompts for recommended extensions when you first open a workspace. To see recommendations later, open the Extensions panel and filter by `@recommended`.
+
+### Conflicts with existing `.vscode/settings.json`
+
+If you already have a `.vscode/settings.json` that you maintain by hand, you have two options:
+
+1. **Let Stackpanel manage it** — Move your settings into `stackpanel.ide.vscode.settings` and let the module system merge everything.
+2. **Keep manual control** — Set `stackpanel.ide.vscode.enable = false` and manage the file yourself.
+
+<Callout type="warn">
+If Stackpanel is managing `.vscode/settings.json`, don't edit it by hand—your changes will be overwritten on the next build. Put custom settings in `stackpanel.ide.vscode.settings` instead.
+</Callout>
+
+## Reference
+
+- [Options Reference → IDE](/docs/reference/ide) for all IDE configuration options
+- [Zed](/docs/ide/zed) for Zed editor integration
+- [Core Concepts → File Generation](/docs/concepts/file-generation) for how generated settings files work
+- [Dev Environment → Direnv](/docs/dev-environment/direnv) for automatic environment loading

@@ -51,7 +51,9 @@ type MenuItem struct {
 	Node        *CommandNode
 }
 
-// Menu represents a navigable menu of command items
+// Menu represents a navigable, single-select list of command items.
+// It's a stateless renderer — navigation state (SelectedIdx) is mutated
+// externally by the NavigationModel's key handler.
 type Menu struct {
 	Items       []MenuItem
 	SelectedIdx int
@@ -210,8 +212,9 @@ func (m *Menu) Render() string {
 	return m.Style.ContainerStyle.Render(strings.Join(lines, "\n"))
 }
 
-// RenderWithMaxHeight renders the menu with a maximum number of visible items
-// This enables scrolling behavior for long menus
+// RenderWithMaxHeight renders the menu with a scrolling window. When there
+// are more items than maxVisible, "..." indicators appear at the edges to
+// signal more content. The selected item is always kept within the window.
 func (m *Menu) RenderWithMaxHeight(maxVisible int) string {
 	if m.IsEmpty() {
 		return m.Style.DescriptionStyle.Render("No commands available")

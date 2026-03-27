@@ -24,7 +24,7 @@
 #
 # Usage (path to file):
 #   stackpanel.scripts.db-seed = {
-#     path = ./.stackpanel/src/scripts/db-seed.sh;
+#     path = ./.stack/src/scripts/db-seed.sh;
 #     description = "Seed the database with test data";
 #     runtimeInputs = [ pkgs.nodejs ];
 #   };
@@ -51,12 +51,12 @@ let
   # Timeout presets for common script types
   # These provide sensible defaults for different use cases
   timeouts = {
-    quick = 30;        # 30 seconds - quick checks, simple commands
-    default = 300;     # 5 minutes - most scripts (network calls, builds)
-    build = 900;       # 15 minutes - complex builds, compilations
-    deploy = 1800;     # 30 minutes - deployments, migrations
-    long = 3600;       # 1 hour - long-running data processing
-    none = 0;          # No timeout - use with caution
+    quick = 30; # 30 seconds - quick checks, simple commands
+    default = 300; # 5 minutes - most scripts (network calls, builds)
+    build = 900; # 15 minutes - complex builds, compilations
+    deploy = 1800; # 30 minutes - deployments, migrations
+    long = 3600; # 1 hour - long-running data processing
+    none = 0; # No timeout - use with caution
   };
 
   # Resolve script content from either exec or path
@@ -93,14 +93,24 @@ let
       # Wrap script with timeout if configured
       # The timeout command from coreutils will SIGTERM after the specified duration
       # and SIGKILL after an additional 10 seconds if the process doesn't terminate
-      wrappedContent = if hasTimeout then ''
-        # Script timeout: ${toString timeoutSeconds} seconds (${toString (timeoutSeconds / 60.0)} minutes)
-        # This prevents the script from hanging indefinitely on network issues, waiting for input, etc.
-        timeout ${toString timeoutSeconds} bash -s "$@" <<'SCRIPT_TIMEOUT_EOF'
-        set -euo pipefail
-        ${scriptContent}
-        SCRIPT_TIMEOUT_EOF
-      '' else scriptContent;
+      wrappedContent =
+        if hasTimeout then
+          ''
+            # Script timeout: ${toString timeoutSeconds} seconds (${toString (timeoutSeconds / 60.0)} minutes)
+            # This prevents the script from hanging indefinitely on network issues, waiting for input, etc.
+            # Note: We use a temp file instead of a heredoc (bash -s <<EOF) because heredocs
+            # consume stdin, which causes commands like `nix build` to receive EOF on stdin
+            # and exit with "error: interrupted by user".
+            _sp_script_tmp=$(mktemp)
+            trap 'rm -f "$_sp_script_tmp"' EXIT
+            cat > "$_sp_script_tmp" <<'SCRIPT_TIMEOUT_EOF'
+            set -euo pipefail
+            ${scriptContent}
+            SCRIPT_TIMEOUT_EOF
+            timeout ${toString timeoutSeconds} bash "$_sp_script_tmp" "$@"
+          ''
+        else
+          scriptContent;
     in
     pkgs.writeShellApplication {
       inherit name;
@@ -147,7 +157,37 @@ let
     }
   ) cfg;
 
-  hasScripts = cfg != { };
+  hasScripts = builtins.length (builtins.attrNames cfg) > 0;
+
+  # Generate package.json scripts map for optional Turbo workspace package
+  generatedPackageScripts = lib.mapAttrs (_name: _scriptCfg: _name) cfg;
+
+  # Collect scripts that declare turbo metadata
+  turboEnabledScripts = lib.filterAttrs (_name: script: (script.turbo.enable or false)) cfg;
+
+  # Build stackpanel.tasks entries from per-script turbo metadata
+  generatedTurboTasks = lib.mapAttrs (
+    scriptName: scriptCfg:
+    { }
+    // lib.optionalAttrs ((scriptCfg.turbo.dependsOn or [ ]) != [ ]) {
+      dependsOn = scriptCfg.turbo.dependsOn;
+    }
+    // lib.optionalAttrs ((scriptCfg.turbo.outputs or [ ]) != [ ]) {
+      outputs = scriptCfg.turbo.outputs;
+    }
+    // lib.optionalAttrs ((scriptCfg.turbo.inputs or [ ]) != [ ]) {
+      inputs = scriptCfg.turbo.inputs;
+    }
+    // lib.optionalAttrs ((scriptCfg.turbo.cache or null) != null) {
+      cache = scriptCfg.turbo.cache;
+    }
+    // lib.optionalAttrs ((scriptCfg.turbo.persistent or null) != null) {
+      persistent = scriptCfg.turbo.persistent;
+    }
+    // lib.optionalAttrs ((scriptCfg.turbo.interactive or null) != null) {
+      interactive = scriptCfg.turbo.interactive;
+    }
+  ) turboEnabledScripts;
 
   # Nix-only script options (not serializable to proto - contains packages/paths)
   nixScriptOptionsModule =
@@ -162,10 +202,8 @@ let
             Path to script file. Content is read and used as the script body.
             Mutually exclusive with `exec` - use one or the other.
           '';
-          example = lib.literalExpression "./.stackpanel/src/scripts/my-script.sh";
+          example = lib.literalExpression "./.stack/src/scripts/my-script.sh";
         };
-
-
 
         runtimeInputs = lib.mkOption {
           type = lib.types.listOf lib.types.package;
@@ -176,6 +214,63 @@ let
             These are pinned to specific Nix store paths, ensuring reproducible execution.
           '';
           example = lib.literalExpression "[ pkgs.nodejs pkgs.jq ]";
+        };
+
+        turbo = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              enable = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Whether to register this script as a Turborepo task.";
+              };
+
+              dependsOn = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = ''
+                  Turborepo task dependencies for this script.
+                  Example: [ "^build" "lint" ].
+                '';
+              };
+
+              outputs = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = "Turborepo outputs globs for caching.";
+              };
+
+              inputs = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = "Turborepo inputs globs for cache keys.";
+              };
+
+              cache = lib.mkOption {
+                type = lib.types.nullOr lib.types.bool;
+                default = null;
+                description = "Override Turborepo cache setting (null = turbo default).";
+              };
+
+              persistent = lib.mkOption {
+                type = lib.types.nullOr lib.types.bool;
+                default = null;
+                description = "Mark task as persistent (long-running process).";
+              };
+
+              interactive = lib.mkOption {
+                type = lib.types.nullOr lib.types.bool;
+                default = null;
+                description = "Mark task as interactive (accepts stdin).";
+              };
+            };
+          };
+          default = { };
+          description = ''
+            Optional Turborepo metadata for this script.
+            When turbo.enable = true and scriptsConfig.generateTurboPackage is enabled,
+            script metadata is exported to stackpanel.tasks and included in turbo.json.
+          '';
         };
       };
     };
@@ -238,7 +333,7 @@ in
 
         # Path to script file
         deploy = {
-          path = ./.stackpanel/src/scripts/deploy.sh;
+          path = ./.stack/src/scripts/deploy.sh;
           description = "Deploy the application";
           runtimeInputs = [ pkgs.awscli2 ];
         };
@@ -260,6 +355,37 @@ in
       description = "Whether to add the scripts package to the devshell.";
     };
 
+    generateTurboPackage = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Whether to generate a Turbo-managed workspace package for scripts at
+        scriptsConfig.turboPackagePath (default: packages/gen/scripts).
+
+        When enabled, this creates/merges package.json scripts via stackpanel.turbo.packages
+        and registers script-level turbo metadata (when script.turbo.enable = true)
+        into stackpanel.tasks for turbo.json generation.
+      '';
+    };
+
+    turboPackageId = lib.mkOption {
+      type = lib.types.str;
+      default = "scripts";
+      description = "Identifier key under stackpanel.turbo.packages for the generated scripts package.";
+    };
+
+    turboPackageName = lib.mkOption {
+      type = lib.types.str;
+      default = "@gen/scripts";
+      description = "NPM package name for the generated scripts workspace package.";
+    };
+
+    turboPackagePath = lib.mkOption {
+      type = lib.types.str;
+      default = "packages/gen/scripts";
+      description = "Workspace-relative path where the generated scripts package.json is managed.";
+    };
+
     package = lib.mkOption {
       type = lib.types.package;
       readOnly = true;
@@ -278,25 +404,39 @@ in
     };
   };
 
-  config = lib.mkIf (hasScripts && scriptsCfg.enable) {
-    # Add the scripts package to devshell
-    stackpanel.devshell.packages = [ scriptsPackage ];
+  config = lib.mkIf (hasScripts && scriptsCfg.enable) (
+    lib.mkMerge [
+      {
+        # Add the scripts package to devshell
+        stackpanel.devshell.packages = [ scriptsPackage ];
 
-    # Store serializable definitions for CLI/TUI access
-    stackpanel.devshell._commandsSerializable = serializableScripts;
+        # Store serializable definitions for CLI/TUI access
+        stackpanel.devshell._commandsSerializable = serializableScripts;
 
-    # Expose individual script packages as flake outputs
-    # Available via: nix run .#scripts.<script-name>
-    stackpanel.outputs.scripts = scriptPackages;
+        # Expose individual script packages as flake outputs
+        # Available via: nix run .#scripts.<script-name>
+        stackpanel.outputs.scripts = scriptPackages;
 
-    # Also expose the combined package
-    stackpanel.outputs.stackpanel-scripts = scriptsPackage;
+        # Also expose the combined package
+        stackpanel.outputs.stackpanel-scripts = scriptsPackage;
 
-    # Print available scripts on shell entry
-    stackpanel.devshell.hooks.main = [
-      ''
-        echo "📜 stackpanel scripts loaded"
-      ''
-    ];
-  };
+        # Print available scripts on shell entry
+        stackpanel.devshell.hooks.main = [
+          ''
+            echo "📜 stackpanel scripts loaded"
+          ''
+        ];
+      }
+
+      (lib.mkIf scriptsCfg.generateTurboPackage {
+        stackpanel.turbo.packages.${scriptsCfg.turboPackageId} = {
+          name = scriptsCfg.turboPackageName;
+          path = scriptsCfg.turboPackagePath;
+          scripts = lib.mapAttrs (_scriptName: command: { exec = command; }) generatedPackageScripts;
+        };
+
+        stackpanel.tasks = generatedTurboTasks;
+      })
+    ]
+  );
 }

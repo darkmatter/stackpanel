@@ -1,0 +1,58 @@
+---
+title: stackpanel debug
+description: Run stackpanel from source via 'go run'
+icon: Terminal
+---
+
+# stackpanel debug
+
+Run the stackpanel CLI from source using 'go run'.
+
+Without subcommands (enable/disable/status), this is equivalent to:
+  cd \<repo-path\>/apps/stackpanel-go && go run . [args...]
+
+The repo path is resolved in order:
+  1. STACKPANEL_DEV_REPO environment variable
+  2. dev_mode.repo_path from ~/.config/stackpanel/stackpanel.yaml
+  3. Auto-detected from the current working directory
+
+Any arguments after 'debug' are forwarded to the 'go run' invocation.
+
+Examples:
+  stackpanel debug                           # Run 'go run .' (shows help)
+  stackpanel debug nixify .gitignore         # Run 'go run . nixify .gitignore'
+  stackpanel debug status                    # Show current debug mode settings
+  stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
+  stackpanel debug disable                   # Disable debug mode
+
+## Usage
+
+```bash
+stackpanel debug [args...]
+```
+
+**Aliases:** `dev`
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`disable`](./disable) | Disable debug mode |
+| [`enable`](./enable) | Enable debug mode with a local repository path |
+| [`status`](./status) | Show current debug mode settings |
+

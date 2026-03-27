@@ -1,0 +1,12 @@
+{
+  "title": "Core Concepts",
+  "icon": "lightbulb",
+  "pages": [
+    "index",
+    "what-stackpanel-adds",
+    "building-source",
+    "deterministic-ports",
+    "module-system",
+    "file-generation"
+  ]
+}

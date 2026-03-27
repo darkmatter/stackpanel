@@ -71,15 +71,15 @@ Implementation is provided by adapter modules that translate options to the targ
 Complex options use `lib.types.submodule` for nested configuration:
 
 ```nix
-options.stackpanel.apps = lib.mkOption \{
-  type = lib.types.attrsOf (lib.types.submodule \{
-    options = \{
-      offset = lib.mkOption \{ ... \};
-      domain = lib.mkOption \{ ... \};
-      tls = lib.mkOption \{ ... \};
-    \};
-  \});
-\};
+options.stackpanel.apps = lib.mkOption {
+  type = lib.types.attrsOf (lib.types.submodule {
+    options = {
+      offset = lib.mkOption { ... };
+      domain = lib.mkOption { ... };
+      tls = lib.mkOption { ... };
+    };
+  });
+};
 ```
 
 ### Computed Values
@@ -87,18 +87,18 @@ options.stackpanel.apps = lib.mkOption \{
 Read-only options expose computed values:
 
 ```nix
-options.stackpanel.ports.base-port = lib.mkOption \{
+options.stackpanel.ports.base-port = lib.mkOption {
   type = lib.types.port;
   readOnly = true;
   default = basePort;  # Computed from project-name
-\};
+};
 ```
 
 ## Adding New Options
 
-1. Create a new file following the naming convention: `<feature\>nix`
+1. Create a new file following the naming convention: `<feature>.nix`
 2. Use the standard header format (see existing files)
-3. Define options under `options.stackpanel\<feature>`
+3. Define options under `options.stackpanel.<feature>`
 4. Import the file in `default.nix`
 5. Implement the feature in the appropriate core module
 
@@ -112,16 +112,16 @@ Example template:
 #
 # Detailed explanation of options, usage examples, etc.
 # ==============================================================================
-\{ lib, ... \}: \{
-  options.stackpanel.myfeature = \{
+{ lib, ... }: {
+  options.stackpanel.myfeature = {
     enable = lib.mkEnableOption "My feature description";
 
-    setting = lib.mkOption \{
+    setting = lib.mkOption {
       type = lib.types.str;
       default = "default-value";
       description = "What this setting controls";
       example = "example-value";
-    \};
-  \};
-\}
+    };
+  };
+}
 ```

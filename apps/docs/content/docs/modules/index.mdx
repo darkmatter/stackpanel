@@ -1,0 +1,73 @@
+---
+title: Modules
+description: Builtin Stackpanel modules and their internals
+icon: blocks
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+
+Stackpanel ships with a set of builtin modules that provide integrated tooling for common development workflows. Each module is a directory under `nix/stackpanel/modules/` with a standard structure:
+
+- **`meta.nix`** — Pure data: name, description, icon, category, tags, feature flags, flake inputs
+- **`module.nix`** — Options and configuration logic
+- **`ui.nix`** — Studio panel definitions
+- **`default.nix`** — Entry point that imports the above
+
+Modules are auto-discovered — drop a new directory into `nix/stackpanel/modules/` and it's available immediately.
+
+For fast metadata access without full Nix evaluation:
+
+```nix
+config.stackpanel._moduleMetas.<module-id>
+```
+
+## Builtin Modules
+
+<Cards>
+  <Card title="Process Compose" href="./process-compose">
+    Process orchestration with auto-generated app processes
+  </Card>
+  <Card title="Turbo" href="./turbo">
+    Turborepo task configuration and caching
+  </Card>
+  <Card title="Go" href="./go">
+    Go language tooling, build helpers, and air hot-reload
+  </Card>
+  <Card title="Bun" href="./bun">
+    Bun package manager integration and workspace support
+  </Card>
+  <Card title="OxLint" href="./oxlint">
+    Fast JavaScript/TypeScript linting with per-app configuration
+  </Card>
+  <Card title="Git Hooks" href="./git-hooks">
+    Pre-commit hooks with auto-discovered linters and formatters
+  </Card>
+  <Card title="App Commands" href="./app-commands">
+    Per-app shell commands generated from app configuration
+  </Card>
+  <Card title="Entrypoints" href="./entrypoints">
+    Application entrypoint script generation
+  </Card>
+  <Card title="CI Formatters" href="./ci-formatters">
+    CI-friendly formatting checks
+  </Card>
+  <Card title="Env Codegen" href="./env-codegen">
+    Type-safe environment variable code generation
+  </Card>
+  <Card title="Feature Flags" href="./feature-flags">
+    Shared feature-flag definitions and Studio runtime helpers
+  </Card>
+  <Card title="Colmena" href="./colmena">
+    NixOS deployment with Colmena
+  </Card>
+</Cards>
+
+## Writing a New Module
+
+Use the `_template/` directory as a starting point:
+
+```bash
+cp -r nix/stackpanel/modules/_template nix/stackpanel/modules/my-module
+```
+
+See [Writing Extensions](/docs/extensions/writing-extensions) for the full guide, and the [Module Template](./_template) for the annotated starter files.

@@ -1,0 +1,170 @@
+---
+title: Environment Variables
+description: Define, generate, and manage environment variables across your project
+icon: variable
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel gives you several ways to define environment variables—from simple static values to generated variables that stay in sync with your Nix configuration. All of them end up in the same place: your shell environment, available to every process in the devshell.
+
+## Static Variables
+
+The simplest approach. Set key-value pairs directly in your config:
+
+```nix
+stackpanel.devshell.env = {
+  NODE_ENV = "development";
+  LOG_LEVEL = "debug";
+  APP_NAME = "myapp";
+};
+```
+
+These are set during shell entry and available to everything that runs inside the devshell—your app, your scripts, your tools.
+
+## Computed Variables
+
+Because your config is Nix, variables can reference other parts of your configuration:
+
+```nix
+{ config, ... }:
+let
+  cfg = config.stackpanel;
+in
+{
+  stackpanel.devshell.env = {
+    DATABASE_URL = "postgresql://localhost:${toString cfg.ports.computed.postgres}/myapp";
+    API_URL = "http://localhost:${toString cfg.ports.computed.api}";
+  };
+}
+```
+
+This is one of the big advantages of having configuration in a real language: your database URL always matches your actual PostgreSQL port, and both are derived from the same source of truth.
+
+## Port Variables
+
+Stackpanel automatically exports a port environment variable for every service and app. These follow the pattern:
+
+```
+STACKPANEL_<KEY>_PORT
+```
+
+For example:
+
+| Variable | Source |
+|----------|--------|
+| `STACKPANEL_WEB_PORT` | Your web app's assigned port |
+| `STACKPANEL_API_PORT` | Your API server's assigned port |
+| `STACKPANEL_POSTGRES_PORT` | PostgreSQL's assigned port |
+| `STACKPANEL_REDIS_PORT` | Redis's assigned port |
+
+You don't need to define these—they're computed automatically from the [deterministic port system](/docs/concepts/deterministic-ports) and injected into your environment.
+
+## Env Codegen
+
+The `env-codegen` module can generate type-safe environment variable files for your application code. Instead of reading `process.env.DATABASE_URL` and hoping it exists, you get a generated file that declares exactly which variables are available.
+
+```nix
+stackpanel.modules.env-codegen = {
+  enable = true;
+  outputs = {
+    "apps/web/src/env.ts" = {
+      format = "typescript";
+      variables = [
+        "DATABASE_URL"
+        "STACKPANEL_WEB_PORT"
+        "STACKPANEL_API_PORT"
+      ];
+    };
+  };
+};
+```
+
+This generates a TypeScript file that your app can import directly—with types, validation, and no runtime surprises.
+
+<Callout type="info">
+Generated env files follow the same pattern as all Stackpanel generated files: they're real files on disk, meant to be committed to Git, so CI works without Nix.
+</Callout>
+
+## Variables System
+
+For more structured variable management—especially when mixing plain values with secrets and external references—use the `stackpanel.variables` system:
+
+```nix
+stackpanel.variables = {
+  "/dev/postgres-url" = {
+    key = "POSTGRES_URL";
+    type = "LITERAL";
+    value = "postgresql://localhost:5432/dev";
+  };
+
+  "/dev/api-key" = {
+    key = "API_KEY";
+    type = "SECRET";
+    master-keys = [ "dev" ];
+  };
+
+  "/dev/git-commit" = {
+    key = "GIT_COMMIT";
+    type = "EXEC";
+    value = "git rev-parse --short HEAD";
+  };
+};
+```
+
+Variables support four types:
+
+| Type | Description | Resolved At |
+|------|-------------|-------------|
+| `LITERAL` | Plain text value | Nix eval time |
+| `SECRET` | Encrypted with master keys | Runtime |
+| `VALS` | External secret store reference (`ref+awsssm://...`) | Runtime |
+| `EXEC` | Shell command that produces the value | Runtime |
+
+See [Secrets](/docs/secrets) for more on encrypted variables and master keys.
+
+## Per-User Overrides
+
+Sometimes team members need different values—a local database path, a personal API token, a debug flag. Use `config.local.nix` (which is gitignored) for per-user overrides:
+
+```nix
+# .stack/config.local.nix
+{
+  stackpanel.devshell.env = {
+    DATABASE_URL = "postgresql://localhost:5432/myapp_local";
+    DEBUG = "true";
+  };
+}
+```
+
+These values merge with (and override) the shared config, so each team member can customize their environment without affecting anyone else.
+
+## How Variables Flow
+
+Understanding the lifecycle helps when debugging:
+
+```
+Nix evaluation
+  → stackpanel.devshell.env values are set
+  → Port variables (STACKPANEL_*_PORT) are computed
+  → Shell hook script is generated
+
+Shell entry (direnv or nix develop)
+  → Static and computed variables are exported
+  → EXEC variables run their commands
+  → SECRET/VALS variables are resolved via the agent
+
+Your application
+  → Reads process.env / os.environ as usual
+```
+
+<Callout type="warn">
+Variables set during Nix evaluation are **baked in at eval time**. If you change your config, you need to reload the shell (re-enter direnv or re-run `nix develop`) for the new values to take effect.
+</Callout>
+
+## Reference
+
+- [Options Reference → Variables](/docs/reference/variables) for the full `stackpanel.variables` schema
+- [Options Reference → Devshell](/docs/reference/devshell) for `stackpanel.devshell.env` options
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how port variables are computed
+- [Secrets → Variables](/docs/secrets/variables) for managing secret-backed variables

@@ -1,0 +1,17 @@
+---
+title: "feature-flags/module.nix"
+description: Generates packages/gen/featureflags from shared defaults (or overrides
+---
+
+Generates packages/gen/featureflags from shared defaults (or overrides
+provided via stackpanel.feature-flags.definitions) and writes files through
+stackpanel.files.entries.
+
+Generated files:
+```nix
+packages/gen/featureflags/package.json
+packages/gen/featureflags/src/feature-flags.tsx
+packages/gen/featureflags/src/index.ts
+packages/gen/featureflags/tsconfig.json
+packages/gen/featureflags/README.md
+```

@@ -118,25 +118,26 @@ export interface SetupContextValue {
 	sstSaving: boolean;
 	hasAwsKms: boolean;
 
-	// Identity/Keys
-	identityInfo: { type: string; publicKey?: string } | null;
-	identityInput: string;
-	setIdentityInput: (value: string) => void;
-	handleSaveIdentity: () => Promise<void>;
-	isSaving: boolean;
+	// Groups
+	groupsInitialized: Record<string, boolean>;
+	setGroupsInitialized: React.Dispatch<
+		React.SetStateAction<Record<string, boolean>>
+	>;
+	groupsVerified: Record<string, boolean>;
+	setGroupsVerified: React.Dispatch<
+		React.SetStateAction<Record<string, boolean>>
+	>;
 
-	// Users/Team
-	usersConfigured: boolean;
+	// Recipients/Team
+	recipientsCount: number;
 
 	// KMS
 	kmsConfig: { enable?: boolean } | null;
 
-	// SOPS
-	sopsConfigGenerated: boolean;
-	handleGenerateSopsConfig: () => Promise<void>;
-	isGeneratingSops: boolean;
+	// Config verification
+	configVerified: boolean;
+	setConfigVerified: React.Dispatch<React.SetStateAction<boolean>>;
 
-	// Secrets backend
-	secretsBackend: "vals" | "chamber";
+	// Secrets backend (chamber = AWS SSM, detected from Nix config)
 	isChamber: boolean;
 }

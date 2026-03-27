@@ -7,7 +7,7 @@
 #   - GitHub Actions / Fly.io / Roles Anywhere OIDC provider
 #   - IAM role with OIDC trust policy
 #   - KMS key + alias for secrets encryption
-#   - SSM Parameter Store policies for secrets group key storage
+#   - Optional SSM Parameter Store policies for chamber-style secrets access
 #
 # This is the direct replacement for the SST-based stackpanel.sst module.
 #
@@ -41,15 +41,11 @@ let
   defaultGithubOrg = projectCfg.owner;
   defaultGithubRepo = if projectCfg.repo != "" then projectCfg.repo else "*";
 
-  # Secrets groups config (for SSM key paths)
-  secretsGroups = config.stackpanel.secrets.groups or {};
   chamberPrefix = config.stackpanel.secrets.chamber.service-prefix or projectName;
 
-  # Collect all SSM paths from groups
-  groupSsmPaths = lib.mapAttrsToList (_: g: g.ssm-path) secretsGroups;
+  groupSsmPaths = [ ];
 
-  # Compute the SSM path prefix for wildcard IAM policy
-  # All group keys live under /{prefix}/keys/*
+  # Compute the SSM path prefix for wildcard IAM policy.
   ssmKeyPrefix = "/${chamberPrefix}/keys";
 
 in
@@ -165,15 +161,13 @@ in
       };
     };
 
-    # SSM configuration for secrets group keys
+    # SSM configuration for chamber-style secret access
     ssm = {
       enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = ''
-          Enable SSM Parameter Store IAM policies for secrets group key storage.
-          When enabled, the IAM role gets ssm:GetParameter and ssm:PutParameter
-          permissions for the group key paths.
+          Enable SSM Parameter Store IAM policies for direct secret access.
         '';
       };
 
@@ -181,7 +175,7 @@ in
         type = lib.types.str;
         default = ssmKeyPrefix;
         description = ''
-          SSM path prefix for group AGE keys.
+          SSM path prefix for direct secret access.
           Default: /{chamber.service-prefix}/keys
           The IAM policy grants access to {key-prefix}/*
         '';
@@ -189,10 +183,9 @@ in
 
       additional-paths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = ''
           Additional SSM parameter paths to grant access to.
-          These are added alongside the group key paths.
           Supports wildcards (e.g., "/my-app/secrets/*").
         '';
       };
@@ -223,7 +216,7 @@ in
     stackpanel.infra.modules.aws-secrets = {
       name = "AWS Secrets Infrastructure";
       description = "OIDC provider, IAM role, and KMS key for secrets management";
-      path = ./index.ts;
+      path = ./module;
       inputs = {
         region = cfg.region;
         accountId = cfg.account-id;
@@ -259,10 +252,10 @@ in
         };
       };
       dependencies = {
-        "@aws-sdk/client-sts" = "catalog:"; # AccountId from alchemy/aws
-        "@aws-sdk/client-iam" = "catalog:"; # Role, GitHubOIDCProvider
-        "@aws-sdk/client-kms" = "catalog:"; # KmsKey, KmsAlias
-        "@aws-sdk/client-ssm" = "catalog:"; # SSM for group key storage
+        "@aws-sdk/client-sts" = "^3.953.0"; # AccountId from alchemy/aws
+        "@aws-sdk/client-iam" = "^3.953.0"; # Role, GitHubOIDCProvider
+        "@aws-sdk/client-kms" = "^3.953.0"; # KmsKey, KmsAlias
+        "@aws-sdk/client-ssm" = "^3.953.0"; # SSM for direct secret access
       };
       outputs =
         let

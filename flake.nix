@@ -34,13 +34,20 @@
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
     gomod2nix.inputs.flake-utils.follows = "flake-utils";
-    bun2nix.url = "github:poly2it/bun2nix/module-populator";
+    bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs";
     colmena.url = "github:zhaofengli/colmena";
     colmena.inputs.nixpkgs.follows = "nixpkgs";
+    # stackpanel-root contains the absolute path to the project root
+    # Created by .envrc: echo "$PWD" > .stackpanel-root
+    # This enables pure evaluation (nix flake check, nix flake show)
+    # stackpanel-root.url = "path:./.stackpanel-root";
+    # stackpanel-root.flake = false;
+		#inputs.sops-nix.url = "github:Mic92/sops-nix";
+		#inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -58,11 +65,14 @@
       overlays = exports.lib.requiredOverlays;
 
       # Global outputs (nixosModules, nixosConfigurations, colmenaHive).
-      # Evaluated once using lib only — no per-system pkgs instantiation.
-      # Machine-specific nixpkgs is derived from each machine's declared system.
+      # Evaluated once using lib only -- no per-system pkgs instantiation.
       globalOutputs = import ./nix/flake/global-outputs.nix {
         inherit inputs self;
-        stackpanelImports = [ ./.stackpanel/modules ];
+        stackpanelImports =
+          if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
+          else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+          else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
+          else [ ];
       };
     in
     # Per-system outputs
@@ -84,12 +94,16 @@
             self
             system
             ;
-          stackpanelImports = [ ./.stackpanel/modules ];
+          stackpanelImports =
+            if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
+            else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
+            else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
+            else [ ];
         };
       in
       {
         # Merge stackpanel packages with outputs packages
-        packages = packages // spOutputs.packages;
+        packages = packages // (spOutputs.packages or { });
 
         # DevShells from stackpanel
         devShells = spOutputs.devShells;
@@ -116,9 +130,8 @@
         templates
         ;
 
-      # nixosModules merges:
-      #   - framework modules from exports (aws, network, caddy, …)
-      #   - per-app generated service modules from globalOutputs
+      # nixosModules merges framework modules from exports with
+      # per-app generated service modules from globalOutputs
       nixosModules = exports.nixosModules // globalOutputs.nixosModules;
 
       inherit (globalOutputs)

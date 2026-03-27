@@ -1,13 +1,13 @@
-# Stackpanel Infrastructure Module System — Implementation Plan
+# Stack Infrastructure Module System — Implementation Plan
 
 ## Overview
 
-Build a generic infrastructure module system for stackpanel that replaces SST. The system provides:
+Build a generic infrastructure module system for stack that replaces SST. The system provides:
 
 - **A module registry** where developers contribute infra modules (AWS, Fly, Cloudflare, etc.)
-- **A generated library** (`@stackpanel/infra`) with an `Infra` class that handles input resolution (including AGE decryption), resource ID scoping, and output collection
+- **A generated library** (`@stack/infra`) with an `Infra` class that handles input resolution (including AGE decryption), resource ID scoping, and output collection
 - **Pluggable output storage** (SOPS, Chamber, SSM) for persisting deployment outputs
-- **An outputs stub** enabling cross-resource references via `.stackpanel/data/infra-outputs.nix`
+- **An outputs stub** enabling cross-resource references via `.stack/data/infra-outputs.nix`
 
 The framework does **not** dictate what resources a module creates. Module developers write normal alchemy TypeScript. The framework provides the plumbing: inputs in, outputs out.
 
@@ -17,13 +17,13 @@ The framework does **not** dictate what resources a module creates. Module devel
 ┌──────────────────────────────────────────────────────────────┐
 │                      Nix Configuration                        │
 │                                                              │
-│  stackpanel.infra.enable = true;                             │
-│  stackpanel.infra.storage-backend.type = "chamber";          │
-│  stackpanel.infra.aws.secrets.enable = true;                 │
+│  stack.infra.enable = true;                             │
+│  stack.infra.storage-backend.type = "chamber";          │
+│  stack.infra.aws.secrets.enable = true;                 │
 │                                                              │
 │  Each infra module:                                          │
-│    1. Defines options (stackpanel.infra.<provider>.*)         │
-│    2. Registers in stackpanel.infra.modules with:            │
+│    1. Defines options (stack.infra.<provider>.*)         │
+│    2. Registers in stack.infra.modules with:            │
 │       - path: ./index.ts (real TypeScript file)              │
 │       - inputs: { region, kms, iam, ... } (from options)     │
 │       - outputs: { role-arn: { sync: true }, ... }           │
@@ -46,8 +46,8 @@ The framework does **not** dictate what resources a module creates. Module devel
 └──────────────────────────────────────────────────────────────┘
 
 State files (gitignored):
-  .stackpanel/state/infra-inputs.json   ← serialized module inputs
-  .stackpanel/data/infra-outputs.nix    ← outputs from last deploy
+  .stack/state/infra-inputs.json   ← serialized module inputs
+  .stack/data/infra-outputs.nix    ← outputs from last deploy
 ```
 
 ## Developer Experience
@@ -55,11 +55,11 @@ State files (gitignored):
 ### Module developer writes a normal TypeScript file:
 
 ```typescript
-// nix/stackpanel/infra/modules/aws-secrets/index.ts
+// nix/stack/infra/modules/aws-secrets/index.ts
 import { Role } from "alchemy/aws";
-import Infra from "@stackpanel/infra";
-import { KmsKey } from "@stackpanel/infra/resources/kms-key";
-import { KmsAlias } from "@stackpanel/infra/resources/kms-alias";
+import Infra from "@stack/infra";
+import { KmsKey } from "@stack/infra/resources/kms-key";
+import { KmsAlias } from "@stack/infra/resources/kms-alias";
 
 const infra = new Infra("aws-secrets");
 const inputs = infra.inputs(process.env.STACKPANEL_INFRA_INPUTS_OVERRIDES);
@@ -100,13 +100,13 @@ export default {
 ### Module developer writes a Nix module alongside:
 
 ```nix
-# nix/stackpanel/infra/modules/aws-secrets/module.nix
+# nix/stack/infra/modules/aws-secrets/module.nix
 { lib, config, ... }:
 let
-  cfg = config.stackpanel.infra.aws.secrets;
-  projectName = config.stackpanel.name or "my-project";
+  cfg = config.stack.infra.aws.secrets;
+  projectName = config.stack.name or "my-project";
 in {
-  options.stackpanel.infra.aws.secrets = {
+  options.stack.infra.aws.secrets = {
     enable = lib.mkOption { type = lib.types.bool; default = false; };
     region = lib.mkOption { type = lib.types.str; default = "us-west-2"; };
     account-id = lib.mkOption { type = lib.types.str; default = ""; };
@@ -120,7 +120,7 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    stackpanel.infra.modules.aws-secrets = {
+    stack.infra.modules.aws-secrets = {
       name = "AWS Secrets Infrastructure";
       path = ./index.ts;
       inputs = {
@@ -162,7 +162,7 @@ export default class Infra {
    * Resolution order (highest priority first):
    *   1. overrides parameter (JSON string or object)
    *   2. STACKPANEL_INFRA_INPUTS env var (path to JSON file)
-   *   3. .stackpanel/state/infra-inputs.json
+   *   3. .stack/state/infra-inputs.json
    *
    * If any value matches the AGE-encrypted pattern (ENC[age,...]),
    * it is decrypted using the STACKPANEL_AGE_KEY env var.
@@ -193,27 +193,27 @@ export default class Infra {
 
 ### Input resolution with AGE decryption
 
-The inputs JSON written to `.stackpanel/state/infra-inputs.json` can include AGE-encrypted
+The inputs JSON written to `.stack/state/infra-inputs.json` can include AGE-encrypted
 values for sensitive config:
 
 ```json
 {
   "__config__": {
-    "storageBackend": { "type": "chamber", "service": "stackpanel-infra" },
+    "storageBackend": { "type": "chamber", "service": "stack-infra" },
     "keyFormat": "$module-$key",
-    "projectName": "stackpanel"
+    "projectName": "stack"
   },
   "aws-secrets": {
     "region": "us-west-2",
     "accountId": "ENC[age,YWdlLWVuY3J5cHRpb24...]",
-    "kms": { "alias": "stackpanel-secrets", "deletionWindowDays": 30 }
+    "kms": { "alias": "stack-secrets", "deletionWindowDays": 30 }
   }
 }
 ```
 
 The `inputs()` method walks the parsed object and decrypts any `ENC[age,...]` values using
 the AGE key from `STACKPANEL_AGE_KEY` env var (already available in the devshell from
-`.stackpanel/state/keys/`).
+`.stack/state/keys/`).
 
 ### Output sync backends
 
@@ -230,7 +230,7 @@ Key formatting uses the `keyFormat` template: `"$module-$key"` -> `"aws-secrets-
 
 ## Nix Options Schema
 
-### Core (`options.stackpanel.infra.*`)
+### Core (`options.stack.infra.*`)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -240,14 +240,14 @@ Key formatting uses the `keyFormat` template: `"$module-$key"` -> `"aws-secrets-
 | `key-format` | `str` | `"$module-$key"` | Template for output storage keys |
 | `storage-backend.type` | `enum` | `"none"` | `"chamber"`, `"sops"`, `"ssm"`, `"none"` |
 | `storage-backend.chamber.service` | `str` | `""` | Chamber service name |
-| `storage-backend.sops.file-path` | `str` | `".stackpanel/secrets/infra.yaml"` | SOPS output file |
+| `storage-backend.sops.file-path` | `str` | `".stack/secrets/vars/infra.sops.yaml"` | SOPS output file |
 | `storage-backend.ssm.prefix` | `str` | `""` | SSM path prefix |
 | `modules` | `attrsOf submodule` | `{}` | Internal module registry (see below) |
 | `package.name` | `str` | `"@${projectName}/infra"` | Package name |
 | `package.dependencies` | `attrsOf str` | `{}` | Extra dependencies |
 | `outputs` | `attrsOf (attrsOf str)` | `{}` | Outputs from last deploy (read from data file) |
 
-### Module registry entry (`stackpanel.infra.modules.<id>`)
+### Module registry entry (`stack.infra.modules.<id>`)
 
 | Option | Type | Description |
 |--------|------|-------------|
@@ -258,9 +258,9 @@ Key formatting uses the `keyFormat` template: `"$module-$key"` -> `"aws-secrets-
 | `dependencies` | `attrsOf str` | NPM dependencies |
 | `outputs` | `attrsOf submodule` | Output declarations (description, sensitive, sync) |
 
-### AWS Secrets module (`options.stackpanel.infra.aws.secrets`)
+### AWS Secrets module (`options.stack.infra.aws.secrets`)
 
-Mirrors the existing `stackpanel.sst` options for easy migration:
+Mirrors the existing `stack.sst` options for easy migration:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -283,31 +283,31 @@ Cross-resource references work via a data file:
 
 ```nix
 # In options.nix — the stub
-options.stackpanel.infra.outputs = lib.mkOption {
+options.stack.infra.outputs = lib.mkOption {
   type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
   default = {};
   description = ''
     Infrastructure outputs from the last deployment.
     Keyed by module ID, then by output key.
     Populated by `infra:pull-outputs`. Example:
-      config.stackpanel.infra.outputs.aws-secrets.roleArn
+      config.stack.infra.outputs.aws-secrets.roleArn
   '';
 };
 
 # In config — auto-load from data file
-config.stackpanel.infra.outputs = let
-  outputsFile = config.stackpanel.root + "/.stackpanel/data/infra-outputs.nix";
+config.stack.infra.outputs = let
+  outputsFile = config.stack.root + "/.stack/data/infra-outputs.nix";
 in lib.optionalAttrs (builtins.pathExists outputsFile) (import outputsFile);
 ```
 
 Lifecycle:
 1. `infra:deploy` -> alchemy provisions resources, syncs outputs to storage backend
-2. `infra:pull-outputs` -> reads from storage backend, writes `.stackpanel/data/infra-outputs.nix`
-3. Next `nix develop` -> outputs available at `config.stackpanel.infra.outputs.*`
+2. `infra:pull-outputs` -> reads from storage backend, writes `.stack/data/infra-outputs.nix`
+3. Next `nix develop` -> outputs available at `config.stack.infra.outputs.*`
 
 Other modules can then reference them:
 ```nix
-cloudflare.workers.website.env.AWS_ROLE_ARN = config.stackpanel.infra.outputs.aws-secrets.roleArn;
+cloudflare.workers.website.env.AWS_ROLE_ARN = config.stack.infra.outputs.aws-secrets.roleArn;
 ```
 
 ## File Structure
@@ -315,7 +315,7 @@ cloudflare.workers.website.env.AWS_ROLE_ARN = config.stackpanel.infra.outputs.aw
 ### New files
 
 ```
-nix/stackpanel/infra/
+nix/stack/infra/
 ├── default.nix                          # Module aggregator
 ├── options.nix                          # Core options schema + outputs stub
 ├── codegen.nix                          # Code generation engine
@@ -329,9 +329,9 @@ nix/stackpanel/infra/
 
 | File | Change |
 |------|--------|
-| `nix/stackpanel/default.nix` | Add `./infra` to imports list |
+| `nix/stack/default.nix` | Add `./infra` to imports list |
 
-### Generated files (via `stackpanel.files.entries`)
+### Generated files (via `stack.files.entries`)
 
 All output to `packages/infra/`:
 
@@ -350,13 +350,13 @@ All output to `packages/infra/`:
 
 | File | Description |
 |------|-------------|
-| `.stackpanel/state/infra-inputs.json` | Serialized module inputs (may include AGE-encrypted values) |
-| `.stackpanel/data/infra-outputs.nix` | Outputs from last deploy (loaded at Nix eval time) |
+| `.stack/state/infra-inputs.json` | Serialized module inputs (may include AGE-encrypted values) |
+| `.stack/data/infra-outputs.nix` | Outputs from last deploy (loaded at Nix eval time) |
 
 ## Generated `alchemy.run.ts`
 
 ```typescript
-// Generated by stackpanel — do not edit manually
+// Generated by stack — do not edit manually
 import alchemy from "alchemy";
 import Infra from "./src/index.ts";
 
@@ -381,10 +381,10 @@ await app.finalize();
 
 ## Integration
 
-### Stackpanel module registration
+### Stack module registration
 
 ```nix
-stackpanel.modules.infra = {
+stack.modules.infra = {
   enable = true;
   meta = {
     name = "Infrastructure";
@@ -405,12 +405,12 @@ stackpanel.modules.infra = {
 | `infra:deploy` | `cd ${output-dir} && bunx alchemy deploy` |
 | `infra:destroy` | `cd ${output-dir} && bunx alchemy destroy` |
 | `infra:dev` | `cd ${output-dir} && bunx alchemy dev` |
-| `infra:pull-outputs` | Read from storage backend, write `.stackpanel/data/infra-outputs.nix` |
+| `infra:pull-outputs` | Read from storage backend, write `.stack/data/infra-outputs.nix` |
 
 ### Devshell environment
 
 ```nix
-stackpanel.devshell.env = {
+stack.devshell.env = {
   STACKPANEL_INFRA_INPUTS = "${stateDir}/infra-inputs.json";
   # AGE key already set by secrets subsystem
 };
@@ -419,7 +419,7 @@ stackpanel.devshell.env = {
 ### Agent serialization
 
 ```nix
-stackpanel.serializable.infra = {
+stack.serializable.infra = {
   inherit (cfg) enable framework output-dir key-format;
   storage-backend = { inherit (cfg.storage-backend) type; };
   modules = mapAttrs (id: mod: {
@@ -431,26 +431,26 @@ stackpanel.serializable.infra = {
 
 ## Migration from SST
 
-The `aws-secrets` infra module replaces `stackpanel.sst` for OIDC/IAM/KMS provisioning:
+The `aws-secrets` infra module replaces `stack.sst` for OIDC/IAM/KMS provisioning:
 
 | SST option | Infra equivalent |
 |------------|------------------|
-| `stackpanel.sst.enable` | `stackpanel.infra.aws.secrets.enable` |
-| `stackpanel.sst.region` | `stackpanel.infra.aws.secrets.region` |
-| `stackpanel.sst.account-id` | `stackpanel.infra.aws.secrets.account-id` |
-| `stackpanel.sst.kms.*` | `stackpanel.infra.aws.secrets.kms.*` |
-| `stackpanel.sst.iam.*` | `stackpanel.infra.aws.secrets.iam.*` |
-| `stackpanel.sst.oidc.*` | `stackpanel.infra.aws.secrets.oidc.*` |
+| `stack.sst.enable` | `stack.infra.aws.secrets.enable` |
+| `stack.sst.region` | `stack.infra.aws.secrets.region` |
+| `stack.sst.account-id` | `stack.infra.aws.secrets.account-id` |
+| `stack.sst.kms.*` | `stack.infra.aws.secrets.kms.*` |
+| `stack.sst.iam.*` | `stack.infra.aws.secrets.iam.*` |
+| `stack.sst.oidc.*` | `stack.infra.aws.secrets.oidc.*` |
 
-The SST module (`nix/stackpanel/sst/`) remains untouched for backward compatibility.
+The SST module (`nix/stack/sst/`) remains untouched for backward compatibility.
 
 ## Implementation Order
 
-1. `nix/stackpanel/infra/default.nix` — module aggregator
-2. `nix/stackpanel/infra/options.nix` — core options + outputs stub
-3. `nix/stackpanel/infra/codegen.nix` — code generation (Infra class, orchestrator, static libs, package.json)
-4. `nix/stackpanel/infra/modules/aws-secrets/module.nix` — Nix options + registration
-5. `nix/stackpanel/infra/modules/aws-secrets/index.ts` — alchemy implementation
-6. `nix/stackpanel/default.nix` — add `./infra` to imports
+1. `nix/stack/infra/default.nix` — module aggregator
+2. `nix/stack/infra/options.nix` — core options + outputs stub
+3. `nix/stack/infra/codegen.nix` — code generation (Infra class, orchestrator, static libs, package.json)
+4. `nix/stack/infra/modules/aws-secrets/module.nix` — Nix options + registration
+5. `nix/stack/infra/modules/aws-secrets/index.ts` — alchemy implementation
+6. `nix/stack/default.nix` — add `./infra` to imports
 7. Integration — scripts, module registration, serialization, MOTD
 8. Test — Nix evaluation with sample config

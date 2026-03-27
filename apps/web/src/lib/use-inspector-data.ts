@@ -4,8 +4,8 @@
  * Aggregates data from multiple sources:
  * - Generated files from stackpanel.files.entries
  * - Nix config (evaluated)
- * - Data entities from .stackpanel/data/
- * - State files from .stackpanel/state/
+ * - Data entities from .stack/data/
+ * - State files from .stack/state/
  * - Scripts/commands from devshell config
  */
 
@@ -58,14 +58,14 @@ export interface InspectorIntegration {
   };
 }
 
-/** A data entity file in .stackpanel/data/ */
+/** A data entity file in .stack/data/ */
 export interface InspectorDataFile {
   name: string;
   path: string;
   data: unknown;
 }
 
-/** A state file in .stackpanel/state/ */
+/** A state file in .stack/state/ */
 export interface InspectorStateFile {
   name: string;
   path: string;
@@ -438,7 +438,7 @@ async function fetchDataEntities(
         if (entityData.success && entityData.data?.exists) {
           entities.push({
             name: entityName,
-            path: `.stackpanel/data/${entityName}.nix`,
+            path: `.stack/data/${entityName}.nix`,
             data: entityData.data.data,
           });
         }
@@ -459,10 +459,10 @@ async function fetchStateFiles(
   debugLog("Fetching state files...");
   const stateFiles: InspectorStateFile[] = [];
 
-  // List all files in .stackpanel/state/
+  // List all files in .stack/state/
   try {
     const listRes = await fetch(
-      `${baseUrl}/api/files/list?path=${encodeURIComponent(".stackpanel/state")}`,
+      `${baseUrl}/api/files/list?path=${encodeURIComponent(".stack/state")}`,
       {
         headers: getHeaders(token),
       },
@@ -486,7 +486,7 @@ async function fetchStateFiles(
     for (const file of files) {
       try {
         const res = await fetch(
-          `${baseUrl}/api/files?path=${encodeURIComponent(`.stackpanel/state/${file.name}`)}`,
+          `${baseUrl}/api/files?path=${encodeURIComponent(`.stack/state/${file.name}`)}`,
           {
             headers: getHeaders(token),
           },
@@ -495,7 +495,7 @@ async function fetchStateFiles(
         if (data.success && data.data?.exists) {
           stateFiles.push({
             name: file.name,
-            path: `.stackpanel/state/${file.name}`,
+            path: `.stack/state/${file.name}`,
             content: data.data.content ?? "",
             exists: true,
           });

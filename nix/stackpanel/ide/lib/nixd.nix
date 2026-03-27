@@ -39,9 +39,11 @@
       # Expression to get stackpanel options from the flake
       flakeOptionsExpr = "(builtins.getFlake ${ref}).legacyPackages.\${builtins.currentSystem}.stackpanelOptions";
 
-      # NOTE: nixd evaluates option expressions in *pure* mode, so `builtins.getFlake`
-      # on an unlocked reference (like git+file:// or FlakeHub "*") will fail unless
-      # nixd is run with --impure. For stackpanel development, use a pure local eval.
+      # NOTE: nixd evaluates option expressions using the Nix evaluator's settings.
+      # If `pure-eval = true` (the default in flake mode), expressions that use
+      # `import <nixpkgs>`, absolute paths, or unlocked `builtins.getFlake` will fail.
+      # The nixd wrapper script (generated alongside these settings) disables pure-eval
+      # so these expressions work correctly.
       localEvalBaseExpr =
         "let pkgs = import <nixpkgs> { }; lib = pkgs.lib; eval = lib.evalModules { modules = [ "
         + "${root}/nix/stackpanel/core/options "

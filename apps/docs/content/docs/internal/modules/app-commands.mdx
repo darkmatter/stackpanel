@@ -1,0 +1,24 @@
+---
+title: App Commands Module Entry Point
+description: "Nix-native app commands for build, dev, test, lint, format operations."
+---
+
+Nix-native app commands for build, dev, test, lint, format operations.
+
+## Components
+
+- meta.nix: Static metadata for discovery
+- module.nix: Options, derivation builders, flake outputs
+- ui.nix: UI panel definitions
+
+## Usage
+
+```nix
+stackpanel.apps.web = {
+  path = "apps/web";
+  commands = {
+    dev = { command = "bun run dev"; };
+    build = { command = "bun run build"; };
+  };
+};
+```

@@ -24,17 +24,17 @@
 
 ## Overview
 
-Refactor the stackpanel CLI to use an interactive TUI as the default interface. The TUI provides hierarchical navigation through commands, with proper handling of execution output and return-to-menu flows.
+Refactor the stack CLI to use an interactive TUI as the default interface. The TUI provides hierarchical navigation through commands, with proper handling of execution output and return-to-menu flows.
 
 ## Design Principles
 
-1. **TUI by default**: Running `stackpanel` without args launches the interactive TUI
+1. **TUI by default**: Running `stack` without args launches the interactive TUI
 2. **Hierarchical navigation**: Commands with subcommands show a menu; leaf commands execute
 3. **Smart execution**: Leaf commands execute directly if all required args are provided
 4. **Navigation controls**:
    - `q` - Quit the application
    - `esc` - Go up one level
-   - Breadcrumbs show current location (e.g., `stackpanel > services > start`)
+   - Breadcrumbs show current location (e.g., `stack > services > start`)
 5. **Post-execution flow**: After running a command, show output (using glamour for markdown), then return to the same menu
 6. **Daemon mode**: `-d` flag runs without TUI renderer for background processes
 
@@ -95,7 +95,7 @@ apps/cli/internal/tui/
   - `RunNavigation(rootCmd)` entry point to launch TUI
 
 - [x] **Implement breadcrumbs** (`navigation/breadcrumbs.go`)
-  - Render path to current node (e.g., `stackpanel > services > start`)
+  - Render path to current node (e.g., `stack > services > start`)
   - Customizable styling with `BreadcrumbsStyle`
   - Uses existing TUI theme colors
 
@@ -276,12 +276,12 @@ type NavigationModel struct {
 ## Migration Notes
 
 ### Breaking Changes
-- `stackpanel` now shows TUI instead of help (use `--help` for help)
+- `stack` now shows TUI instead of help (use `--help` for help)
 - Must use `--no-tui` flag to force non-interactive mode
 
 ### Backward Compatibility
 - All existing commands still work with direct args
-- Scripts using `stackpanel <cmd> <args>` are unaffected
+- Scripts using `stack <cmd> <args>` are unaffected
 - Only affects interactive usage
 
 ### Configuration
@@ -314,7 +314,7 @@ type NavigationModel struct {
 
 ## Success Criteria
 
-- [x] `stackpanel` launches TUI by default when no args provided
+- [x] `stack` launches TUI by default when no args provided
 - [x] Can navigate all command levels with esc/q
 - [x] Breadcrumbs accurately show current location
 - [x] Command output is displayed and user can return to menu

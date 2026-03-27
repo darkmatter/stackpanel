@@ -1,0 +1,332 @@
+{
+  lib,
+}:
+let
+  # ============================================================================
+  # Type Definitions (matching extensions.proto.nix)
+  # ============================================================================
+
+  # Extension source type
+  sourceTypeEnum = lib.types.enum [
+    "EXTENSION_SOURCE_TYPE_UNSPECIFIED"
+    "EXTENSION_SOURCE_TYPE_BUILTIN"
+    "EXTENSION_SOURCE_TYPE_LOCAL"
+    "EXTENSION_SOURCE_TYPE_GITHUB"
+    "EXTENSION_SOURCE_TYPE_NPM"
+    "EXTENSION_SOURCE_TYPE_URL"
+  ];
+
+  # Extension category for UI grouping
+  categoryEnum = lib.types.enum [
+    "EXTENSION_CATEGORY_UNSPECIFIED"
+    "EXTENSION_CATEGORY_INFRASTRUCTURE"
+    "EXTENSION_CATEGORY_CI_CD"
+    "EXTENSION_CATEGORY_DATABASE"
+    "EXTENSION_CATEGORY_SECRETS"
+    "EXTENSION_CATEGORY_DEPLOYMENT"
+    "EXTENSION_CATEGORY_DEVELOPMENT"
+    "EXTENSION_CATEGORY_MONITORING"
+    "EXTENSION_CATEGORY_INTEGRATION"
+  ];
+
+  # Panel types for UI rendering
+  panelTypeEnum = lib.types.enum [
+    "PANEL_TYPE_UNSPECIFIED"
+    "PANEL_TYPE_STATUS"
+    "PANEL_TYPE_APPS_GRID"
+    "PANEL_TYPE_FORM"
+    "PANEL_TYPE_TABLE"
+    "PANEL_TYPE_CUSTOM"
+  ];
+
+  # Field types for panel configuration
+  fieldTypeEnum = lib.types.enum [
+    "FIELD_TYPE_UNSPECIFIED"
+    "FIELD_TYPE_STRING"
+    "FIELD_TYPE_NUMBER"
+    "FIELD_TYPE_BOOLEAN"
+    "FIELD_TYPE_SELECT"
+    "FIELD_TYPE_MULTISELECT"
+    "FIELD_TYPE_APP_FILTER"
+    "FIELD_TYPE_COLUMNS"
+    "FIELD_TYPE_JSON"
+  ];
+
+  # Extension source configuration
+  extensionSourceType = lib.types.submodule {
+    options = {
+      type = lib.mkOption {
+        type = sourceTypeEnum;
+        default = "EXTENSION_SOURCE_TYPE_BUILTIN";
+        description = "Source type for the extension";
+      };
+      repo = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "GitHub repository (owner/repo) for github source type";
+      };
+      package = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "NPM package name for npm source type";
+      };
+      path = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Local path for local source type";
+      };
+      url = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "URL for url source type";
+      };
+      ref = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Git ref (branch, tag, commit) for github source type";
+      };
+      module-path = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Path to the Nix module within the source";
+      };
+    };
+  };
+
+  # Extension features - which core stackpanel features this extension uses
+  extensionFeaturesType = lib.types.submodule {
+    options = {
+      files = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension generates files via stackpanel.files";
+      };
+      scripts = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension provides shell scripts/commands";
+      };
+      tasks = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension defines tasks";
+      };
+      secrets = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension manages secrets/variables";
+      };
+      shell-hooks = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension adds shell hooks";
+      };
+      packages = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension adds devshell packages";
+      };
+      services = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension configures services/processes";
+      };
+      checks = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Extension defines checks/validations";
+      };
+    };
+  };
+
+  # Panel field type
+  panelFieldType = lib.types.submodule {
+    options = {
+      name = lib.mkOption {
+        type = lib.types.str;
+        description = "Field name (maps to component prop)";
+      };
+      type = lib.mkOption {
+        type = fieldTypeEnum;
+        default = "FIELD_TYPE_STRING";
+        description = "Field type";
+      };
+      value = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Field value (JSON-encoded for complex types)";
+      };
+      options = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Options for select fields";
+      };
+    };
+  };
+
+  # Extension panel type
+  extensionPanelType = lib.types.submodule {
+    options = {
+      id = lib.mkOption {
+        type = lib.types.str;
+        description = "Unique panel identifier";
+      };
+      title = lib.mkOption {
+        type = lib.types.str;
+        description = "Display title";
+      };
+      description = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Panel description";
+      };
+      type = lib.mkOption {
+        type = panelTypeEnum;
+        default = "PANEL_TYPE_STATUS";
+        description = "Panel type (determines which component to render)";
+      };
+      order = lib.mkOption {
+        type = lib.types.int;
+        default = 100;
+        description = "Display order (lower = first)";
+      };
+      fields = lib.mkOption {
+        type = lib.types.listOf panelFieldType;
+        default = [ ];
+        description = "Panel configuration fields";
+      };
+    };
+  };
+
+  # Per-app extension data type
+  extensionAppDataType = lib.types.submodule {
+    options = {
+      enabled = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether extension is enabled for this app";
+      };
+      config = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Extension config for this app (string key-value pairs)";
+      };
+    };
+  };
+
+  # Main extension type
+  extensionType = lib.types.submodule {
+    options = {
+      # Identity
+      name = lib.mkOption {
+        type = lib.types.str;
+        description = "Display name of the extension";
+      };
+      description = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Human-readable description of what the extension does";
+      };
+
+      # Status
+      enabled = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether this extension is enabled";
+      };
+      builtin = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether this is a built-in extension shipped with stackpanel";
+      };
+
+      # Source information
+      source = lib.mkOption {
+        type = extensionSourceType;
+        default = { };
+        description = "Extension source configuration";
+      };
+      version = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Version constraint (e.g., '^1.0.0', '~2.3', 'latest')";
+      };
+
+      # Organization
+      category = lib.mkOption {
+        type = categoryEnum;
+        default = "EXTENSION_CATEGORY_UNSPECIFIED";
+        description = "Category for grouping in UI";
+      };
+      priority = lib.mkOption {
+        type = lib.types.int;
+        default = 100;
+        description = "Load order priority (lower = earlier)";
+      };
+      tags = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Tags for categorizing/filtering extensions";
+      };
+      dependencies = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Other extensions this depends on";
+      };
+
+      # Core feature flags
+      features = lib.mkOption {
+        type = extensionFeaturesType;
+        default = { };
+        description = "Which core stackpanel features this extension configures";
+      };
+
+      # UI configuration
+      panels = lib.mkOption {
+        type = lib.types.listOf extensionPanelType;
+        default = [ ];
+        description = "UI panels provided by this extension";
+      };
+      apps = lib.mkOption {
+        type = lib.types.attrsOf extensionAppDataType;
+        default = { };
+        description = "Per-app extension data (app name -> extension data)";
+      };
+
+      # Source directory for file-based resources
+      srcDir = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = ''
+          Path to extension's src/ directory for scripts, checks, and files.
+
+          When specified, the extension system will auto-discover resources:
+            - src/scripts/*.sh -> stackpanel.scripts.<extName>:<scriptName>
+            - src/checks/*.sh -> stackpanel.healthchecks.<extName>:<checkName>
+            - src/files/* -> available for stackpanel.files.entries
+
+          Resources are automatically namespaced with the extension name.
+          Explicit Nix definitions take priority over auto-discovered resources.
+
+          Example:
+            srcDir = ./src;  # Relative to extension module
+        '';
+        example = "./src";
+      };
+    };
+  };
+in
+{
+  inherit
+    sourceTypeEnum
+    categoryEnum
+    panelTypeEnum
+    fieldTypeEnum
+    extensionSourceType
+    extensionFeaturesType
+    panelFieldType
+    extensionPanelType
+    extensionAppDataType
+    extensionType
+    ;
+}

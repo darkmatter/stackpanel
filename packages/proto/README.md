@@ -1,11 +1,11 @@
 # Proto Package
 
-Protocol Buffer schemas for Stackpanel, generated from Nix definitions.
+Protocol Buffer schemas for Stack, generated from Nix definitions.
 
 ## Architecture
 
 ```
-nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   packages/proto/gen/
+nix/stack/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →   packages/proto/gen/
          (source of truth)                      (generated protos)              (generated code)
 ```
 
@@ -14,10 +14,11 @@ nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →
 ## Quick Start
 
 ```bash
-# Generate everything (protos from Nix + code from buf)
-./generate.sh
+# From repo root (recommended; runs in devshell)
+nix develop --impure -c ./packages/proto/generate.sh
 
-# Or step by step:
+# Or, inside the devshell:
+./generate.sh
 ./generate.sh proto   # Generate .proto files from Nix
 ./generate.sh buf     # Run buf generate
 ./generate.sh clean   # Remove all generated files
@@ -27,15 +28,15 @@ nix/stackpanel/db/schemas/*.proto.nix   →   packages/proto/proto/*.proto   →
 
 1. Copy the template:
    ```bash
-   cp ../../nix/stackpanel/db/schemas/_template.proto.nix \
-      ../../nix/stackpanel/db/schemas/myentity.proto.nix
+   cp ../../nix/stack/db/schemas/_template.proto.nix \
+      ../../nix/stack/db/schemas/myentity.proto.nix
    ```
 
 2. Edit the schema (see template for examples)
 
 3. Generate:
    ```bash
-   ./generate.sh
+   nix develop --impure -c ./packages/proto/generate.sh
    ```
 
 ## Schema Syntax
@@ -49,7 +50,7 @@ let
 in
 proto.mkProtoFile {
   name = "myentity.proto";
-  package = "stackpanel.db";
+  package = "stack.db";
 
   messages = {
     MyEntity = proto.mkMessage {
@@ -106,7 +107,7 @@ Rules:
 
 ## Generated Output
 
-After running `./generate.sh`:
+After running `./packages/proto/generate.sh` (in devshell):
 
 ```
 packages/proto/
@@ -114,9 +115,9 @@ packages/proto/
 │   └── *.proto
 ├── gen/
 │   ├── go/          # Go code
-│   │   └── stackpanel/db/*.pb.go
+│   │   └── stack/db/*.pb.go
 │   └── ts/          # TypeScript code
-│       └── stackpanel/db/*.ts
+│       └── stack/db/*.ts
 └── ...
 ```
 

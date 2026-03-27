@@ -3,7 +3,7 @@
 #
 # State file generation for stackpanel (legacy mode).
 #
-# Generates a JSON state file in .stackpanel/state/stackpanel.json that is
+# Generates a JSON state file in .stack/state/stackpanel.json that is
 # used by the Go CLI and agent to understand the current devenv configuration
 # without needing to evaluate Nix.
 #
@@ -37,9 +37,11 @@ let
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =
     cfg.dirs or {
-      home = ".stackpanel";
-      state = ".stackpanel/state";
-      gen = ".stackpanel/gen";
+      home = ".stack";
+      state = ".stack/profile";
+      profile = ".stack/profile";
+      keys = ".stack/keys";
+      gen = ".stack/gen";
       config = ./.;
     };
 
@@ -57,7 +59,7 @@ let
     # Directories
     paths = {
       root = dirs.home;
-      state = dirs.state;
+      state = dirs.profile;
       gen = dirs.gen;
       config = toString dirs.config;
     };
@@ -95,10 +97,6 @@ let
   stateJson = builtins.toJSON stateData;
 in
 {
-  imports = [
-    ./options
-  ];
-
   config = lib.mkIf cfg.enable {
     # Write state file on shell entry
     # NOTE: This is disabled when stackpanel.cli.enable = true (CLI handles generation)

@@ -15,9 +15,9 @@
 # Usage:
 #   let ideLib = import ./ide.nix { inherit pkgs lib; };
 #   in ideLib.mkDevshellLoader { shellMode = "devenv"; }
-#   in ideLib.mkVscodeSettings { loaderPath = "${workspaceFolder}/.stackpanel/..."; }
+#   in ideLib.mkVscodeSettings { loaderPath = "${workspaceFolder}/.stack/..."; }
 #   in ideLib.mkWorkspaceContent { settings = {...}; extensions = []; }
-#   in ideLib.mkZedSettings { loaderPath = ".stackpanel/gen/zed/devshell-loader.sh"; }
+#   in ideLib.mkZedSettings { loaderPath = ".stack/gen/zed/devshell-loader.sh"; }
 #   in ideLib.mkZedTasksContent { tasks = [...]; }
 # ==============================================================================
 {
@@ -67,7 +67,7 @@
       extraFolders ? [ ],
       # Recommended extension IDs
       extensions ? [ ],
-      # Relative path from workspace file to project root (default for .stackpanel/gen/ide/vscode/)
+      # Relative path from workspace file to project root (default for .stack/gen/ide/vscode/)
       rootPath ? "../../../..",
     }:
     {
@@ -91,18 +91,7 @@
     }:
     {
       # Configure terminal to use the devshell loader
-      terminal = {
-        shell = {
-          with_arguments = {
-            program = "/bin/bash";
-            args = [
-              "-c"
-              loaderPath
-            ];
-            title_override = "devshell";
-          };
-        };
-      };
+      load_direnv = "shell_hook";
     };
 
   # Generate Zed tasks.json content as an attrset
@@ -168,7 +157,7 @@
           local files=(
             "$ROOT/flake.nix"
             "$ROOT/flake.lock"
-            "$ROOT/.stackpanel/config.nix"
+            "$ROOT/.stack/config.nix"
             "$ROOT/devenv.nix"
             "$ROOT/devenv.yaml"
           )
@@ -210,7 +199,7 @@
             ${shellHashFunc}
             ${cacheCheckFunc}
 
-            _sp_cached_env="$ROOT/.stackpanel/gen/nix-print-dev-env.sh"
+            _sp_cached_env="$ROOT/.stack/gen/nix-print-dev-env.sh"
             if [[ -f "$_sp_cached_env" ]]; then
               if ! _sp_cache_is_fresh "$_sp_cached_env"; then
                 echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2
@@ -233,7 +222,7 @@
             ${shellHashFunc}
             ${cacheCheckFunc}
 
-            _sp_cached_env="$ROOT/.stackpanel/gen/nix-print-dev-env.sh"
+            _sp_cached_env="$ROOT/.stack/gen/nix-print-dev-env.sh"
             if [[ -f "$_sp_cached_env" ]]; then
               if ! _sp_cache_is_fresh "$_sp_cached_env"; then
                 echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2

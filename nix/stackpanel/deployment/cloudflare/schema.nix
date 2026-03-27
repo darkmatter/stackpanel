@@ -38,36 +38,6 @@ let
       };
     };
 
-    # Deployment type
-    type = sp.string {
-      index = 2;
-      description = "Cloudflare deployment type determines how your app is built and deployed.";
-      default = "tanstack-start";
-      ui = {
-        label = "Type";
-        type = sp.uiType.select;
-        options = [
-          {
-            value = "tanstack-start";
-            label = "TanStack Start (full-stack SSR)";
-          }
-          {
-            value = "vite";
-            label = "Vite (SPA)";
-          }
-          {
-            value = "worker";
-            label = "Worker (plain)";
-          }
-          {
-            value = "pages";
-            label = "Pages (static + functions)";
-          }
-        ];
-        description = "TanStack Start for full-stack SSR apps, Vite for SPAs, Worker for APIs, Pages for static sites.";
-      };
-    };
-
     # Custom domain route
     route = sp.string {
       index = 3;

@@ -1,0 +1,241 @@
+---
+title: Containers
+description: Build OCI containers from your Nix configuration
+icon: box
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can build OCI-compatible container images directly from your Nix configuration—no Dockerfile required. Images are built with [nix2container](https://github.com/nlewo/nix2container), producing minimal, reproducible containers with only the dependencies your application actually needs.
+
+## Why Nix-Built Containers?
+
+Traditional Dockerfiles are imperative scripts that install packages, copy files, and run commands. The result depends on the base image version, network availability during build, and the order of operations. Two builds of the same Dockerfile can produce different images.
+
+Nix-built containers are **declarative and reproducible**. You describe what goes in the image, and Nix computes the exact result. The same input always produces the same image, byte-for-byte.
+
+Additional benefits:
+
+- **Minimal images** — Only your application and its runtime dependencies. No package manager, no shell, no leftover build tools.
+- **Layer caching** — Nix automatically splits your image into layers based on the dependency graph. Dependencies that don't change produce identical layers, giving you efficient caching without manual multi-stage builds.
+- **No base image** — Images are built from scratch. No inherited vulnerabilities from a base image you don't control.
+- **Shared with your devshell** — The same Nix packages used in your dev environment end up in your container. No "works locally but not in Docker" surprises.
+
+## Enable Containers
+
+Container definitions live under `stackpanel.containers`:
+
+```nix
+stackpanel.containers.api = {
+  enable = true;
+  name = "myapp-api";
+  tag = "latest";
+
+  # What goes in the image
+  config = {
+    entrypoint = [ "${pkgs.nodejs}/bin/node" "dist/index.js" ];
+    env = {
+      NODE_ENV = "production";
+    };
+    exposedPorts = {
+      "4201/tcp" = {};
+    };
+  };
+
+  # Files to include
+  copyToRoot = [
+    ./apps/api/dist
+    ./apps/api/package.json
+  ];
+};
+```
+
+## Building Images
+
+Build a container image from the command line:
+
+```bash
+# Build a specific container
+nix build --impure .#packages.x86_64-linux.container-api
+
+# Load it into Docker
+docker load < result
+
+# Or build and load in one step
+nix build --impure .#packages.x86_64-linux.container-api && docker load < result
+```
+
+The output is a standard OCI image that works with Docker, Podman, containerd, or any OCI-compatible runtime.
+
+## Per-App Containers
+
+When you define [apps](/docs/apps-ci/defining-apps), you can attach container definitions directly:
+
+```nix
+stackpanel.apps.api = {
+  port = 1;
+  root = "./apps/api";
+  build = "bun run build";
+};
+
+stackpanel.containers.api = {
+  enable = true;
+  name = "ghcr.io/my-org/myapp-api";
+
+  config = {
+    entrypoint = [ "${pkgs.bun}/bin/bun" "run" "dist/index.js" ];
+    env = {
+      NODE_ENV = "production";
+      PORT = "4201";
+    };
+    exposedPorts = {
+      "4201/tcp" = {};
+    };
+  };
+};
+```
+
+## Multi-Stage Patterns
+
+Nix replaces the need for multi-stage Docker builds. Instead of copying between build and runtime stages, you define separate derivations:
+
+```nix
+{ pkgs, ... }:
+let
+  # Build stage — produces the compiled output
+  apiBundle = pkgs.stdenv.mkDerivation {
+    name = "api-bundle";
+    src = ./apps/api;
+    buildInputs = [ pkgs.bun ];
+    buildPhase = ''
+      bun install --frozen-lockfile
+      bun run build
+    '';
+    installPhase = ''
+      mkdir -p $out
+      cp -r dist $out/
+      cp package.json $out/
+    '';
+  };
+in
+{
+  stackpanel.containers.api = {
+    enable = true;
+    name = "ghcr.io/my-org/myapp-api";
+
+    # Only the built output and runtime go in the image
+    # Build tools (bun, node headers, etc.) are NOT included
+    copyToRoot = [ apiBundle ];
+
+    config = {
+      entrypoint = [ "${pkgs.nodejs}/bin/node" "dist/index.js" ];
+      workingDir = "/";
+      env.NODE_ENV = "production";
+    };
+  };
+}
+```
+
+The resulting image contains only Node.js and your compiled code—no build tools, no source files, no `node_modules` with devDependencies.
+
+## Image Layers
+
+nix2container automatically creates efficient image layers based on the Nix store dependency graph. Each Nix store path becomes a potential layer boundary, so:
+
+- **Runtime dependencies** (Node.js, system libraries) rarely change → cached layers
+- **Application code** changes frequently → small top layer
+- **No manual layer optimization** — Nix computes the optimal layer split
+
+This gives you Docker-like layer caching without writing `COPY package.json` tricks or managing multi-stage builds.
+
+## Registry Push
+
+Push built images to a container registry:
+
+```bash
+# Build the container
+nix build --impure .#packages.x86_64-linux.container-api
+docker load < result
+
+# Push to registry
+docker tag myapp-api:latest ghcr.io/my-org/myapp-api:latest
+docker push ghcr.io/my-org/myapp-api:latest
+
+# Or use skopeo for direct copy
+nix run nixpkgs#skopeo -- copy \
+  docker-archive:./result \
+  docker://ghcr.io/my-org/myapp-api:latest
+```
+
+For CI, the [CI generation](/docs/apps-ci/ci-generation) system can produce Docker build and push steps in your GitHub Actions workflow automatically.
+
+## Configuration Reference
+
+Each container supports these options:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `enable` | `bool` | Whether to build this container |
+| `name` | `string` | Image name (including registry prefix) |
+| `tag` | `string` | Image tag (default: `"latest"`) |
+| `config.entrypoint` | `list` | Container entrypoint command |
+| `config.cmd` | `list` | Default command arguments |
+| `config.env` | `attrset` | Environment variables baked into the image |
+| `config.exposedPorts` | `attrset` | Ports to expose |
+| `config.workingDir` | `string` | Working directory inside the container |
+| `config.user` | `string` | User to run as |
+| `copyToRoot` | `list` | Files and derivations to include in the image |
+| `layers` | `list` | Explicit layer definitions (advanced) |
+| `maxLayers` | `int` | Maximum number of layers (default: 127) |
+
+## Comparing to Dockerfiles
+
+If you're already using Dockerfiles, you can continue to do so. Stackpanel's container system is an alternative, not a replacement. Here's when each makes sense:
+
+| Use Nix containers when... | Use Dockerfiles when... |
+|---------------------------|------------------------|
+| You want reproducible builds | You need specific base images (e.g., CUDA) |
+| You want minimal image size | Your team is more comfortable with Docker |
+| You're already using Nix for your devshell | You need Docker-specific features (BuildKit secrets, etc.) |
+| You want shared dependencies with your dev environment | You're deploying to a platform that expects Dockerfiles |
+
+<Callout type="info">
+Stackpanel can also generate Dockerfiles through the [Docker module](/docs/deployment/index), giving you a middle ground: Nix-generated Dockerfiles that are standard files on disk.
+</Callout>
+
+## Troubleshooting
+
+### Image is larger than expected
+
+Check what's being pulled in as dependencies:
+
+```bash
+nix path-info -rsSh .#packages.x86_64-linux.container-api
+```
+
+This shows every store path in the image closure and its size. Look for unexpected dependencies—a common issue is accidentally including build-time tools in the runtime closure.
+
+### "No such file or directory" at runtime
+
+The container's filesystem only contains what you explicitly include via `copyToRoot` and what Nix determines as runtime dependencies. If a file is missing, add it to `copyToRoot` or ensure the derivation that produces it is in the dependency graph.
+
+### Can't run shell commands in the container
+
+By default, Nix-built containers don't include a shell (`bash`, `sh`). If you need one for debugging:
+
+```nix
+copyToRoot = [
+  apiBundle
+  pkgs.bashInteractive  # Adds bash for debugging
+  pkgs.coreutils        # Adds ls, cat, etc.
+];
+```
+
+Remove these before deploying to production to keep the image minimal.
+
+## Reference
+
+- [Deployment Overview](/docs/deployment) for other deployment options
+- [Apps → Defining Apps](/docs/apps-ci/defining-apps) for the app definitions containers can reference
+- [CI Generation](/docs/apps-ci/ci-generation) for automated container builds in CI
+- [nix2container](https://github.com/nlewo/nix2container) for the underlying container builder

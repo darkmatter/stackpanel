@@ -1,3 +1,13 @@
+// modules.go implements the module browser API: listing, inspecting, configuring,
+// and enabling/disabling Stackpanel modules.
+//
+// Module definitions come from the evaluated Nix config (ui.modulesList or ui.modules).
+// Per-module configuration is stored as YAML in .stack/data/modules/<name>.yaml and
+// takes effect on the next devshell re-entry.
+//
+// Module "outputs" (files, scripts, healthchecks, packages) are resolved from the
+// Nix config, with some heuristic matching by naming convention for scripts that
+// don't yet have explicit source tracking.
 package server
 
 import (
@@ -498,8 +508,8 @@ func (s *Server) saveModuleConfig(name string, config ModuleConfig) error {
 
 // moduleConfigPath returns the path to a module's config file
 func (s *Server) moduleConfigPath(name string) string {
-	// Config stored in .stackpanel/data/modules/{name}.yaml
-	return filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "modules", name+".yaml")
+	// Config stored in .stack/data/modules/{name}.yaml
+	return filepath.Join(s.config.ProjectRoot, ".stack", "data", "modules", name+".yaml")
 }
 
 // getPendingModuleEnables returns a set of module IDs that have been enabled via UI
@@ -508,7 +518,7 @@ func (s *Server) getPendingModuleEnables() map[string]bool {
 	pendingEnables := make(map[string]bool)
 
 	// Scan the modules data directory for config files
-	modulesDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data", "modules")
+	modulesDir := filepath.Join(s.config.ProjectRoot, ".stack", "data", "modules")
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// Directory doesn't exist or can't be read - no pending enables
@@ -682,7 +692,9 @@ func (s *Server) getModuleHealthchecks(moduleID string) ([]*gopb.ModuleOutputHea
 	return checks, nil
 }
 
-// getModuleScripts returns scripts provided by a module (uses naming convention)
+// getModuleScripts returns scripts provided by a module. Scripts with an explicit
+// "module" field are matched directly. For modules without explicit tracking,
+// a naming-convention heuristic is used (e.g., oxlint → "lint*", postgres → "db-*").
 func (s *Server) getModuleScripts(moduleID string) ([]*gopb.ModuleOutputScript, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

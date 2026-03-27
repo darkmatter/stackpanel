@@ -5,15 +5,18 @@ import (
 	"sync"
 )
 
-// Registry holds all registered services
+// Registry is a thread-safe container for services, supporting lookup by
+// canonical name or alias. Services are returned in registration order for
+// deterministic CLI output (e.g., `stack services status`).
 type Registry struct {
 	mu       sync.RWMutex
 	services map[string]Service
-	aliases  map[string]string // alias -> canonical name
+	aliases  map[string]string // alias -> canonical name (all lowercase)
 	order    []string          // insertion order for consistent iteration
 }
 
-// DefaultRegistry is the global service registry
+// DefaultRegistry is the process-wide service registry. Service implementations
+// typically call Register() in their init() functions to self-register.
 var DefaultRegistry = NewRegistry()
 
 // NewRegistry creates a new service registry
@@ -25,7 +28,10 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Register adds a service to the registry
+// Register adds a service to the registry. The canonical name and all aliases
+// become valid lookup keys (case-insensitive). Registering the same name twice
+// overwrites the previous service but appends a duplicate to the order slice —
+// callers should avoid double-registration.
 func (r *Registry) Register(svc Service) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -34,7 +40,7 @@ func (r *Registry) Register(svc Service) {
 	r.services[name] = svc
 	r.order = append(r.order, name)
 
-	// Register aliases
+	// Register the canonical name as its own alias so all lookups go through one map
 	r.aliases[name] = name
 	for _, alias := range svc.Aliases() {
 		r.aliases[strings.ToLower(alias)] = name
@@ -53,7 +59,8 @@ func (r *Registry) Get(nameOrAlias string) Service {
 	return r.services[canonical]
 }
 
-// Normalize converts an alias to canonical name
+// Normalize resolves an alias to its canonical name, or returns the input
+// unchanged if not found. Useful for normalizing user input before display.
 func (r *Registry) Normalize(nameOrAlias string) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -95,9 +102,10 @@ func (r *Registry) Has(nameOrAlias string) bool {
 	return ok
 }
 
-// Global convenience functions using DefaultRegistry
+// Global convenience functions delegate to DefaultRegistry so callers
+// can write services.Get("postgres") instead of services.DefaultRegistry.Get("postgres").
 
-// Register adds a service to the default registry
+// Register adds a service to the default registry.
 func Register(svc Service) {
 	DefaultRegistry.Register(svc)
 }

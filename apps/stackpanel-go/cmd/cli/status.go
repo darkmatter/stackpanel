@@ -1,3 +1,8 @@
+// status.go implements `stackpanel status`, which shows a unified view of
+// all development resources. Prefers an interactive Bubble Tea dashboard;
+// falls back to static output when the terminal doesn't support TUI or
+// --static/--no-tui is specified.
+
 package cmd
 
 import (
@@ -45,6 +50,7 @@ func init() {
 	statusCmd.Flags().Bool("static", false, "Show static status (non-interactive)")
 }
 
+// Banner is the ASCII art header shown in static status output.
 const Banner = `
        |                 |                                |
   __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |
@@ -53,6 +59,10 @@ ____/ \__| \__,_| \___| _|\_\  .__/  \__,_| _|  _| \___| _|
                               _|
 `
 
+// showFullStatus renders a non-interactive status view combining Nix config
+// (apps, services, ports) with live process state (PIDs, Caddy).
+// When Nix config is unavailable (e.g. outside a devshell), it falls back
+// to the hardcoded service list so the command still works.
 func showFullStatus() {
 	fmt.Println()
 	output.Purple.Print(Banner)
@@ -82,6 +92,8 @@ func showFullStatus() {
 	}
 
 	// Services (from config if available, fallback to hardcoded)
+	// Config-driven path uses computed ports from Nix; hardcoded path uses
+	// the default service registry which computes ports from the project name.
 	fmt.Printf("\n%s Development Services\n", output.Yellow.Sprint("■"))
 	if cfgErr == nil && cfg != nil && len(cfg.Services) > 0 {
 		// Show services from config

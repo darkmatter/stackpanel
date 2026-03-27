@@ -1,0 +1,237 @@
+{
+  lib,
+  pkgs,
+  config,
+  db,
+  defaultLocalKey,
+  masterKeyModule,
+  recipientModule,
+  recipientGroupModule,
+  creationRuleModule,
+  sopsAgeKeySourceModule,
+}:
+{
+  options.stackpanel.secrets =
+    (lib.filterAttrs (n: _: n != "master-keys" && n != "groups") (db.asOptions db.extend.secrets))
+    // {
+      master-keys = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.submodule masterKeyModule);
+        default = {
+          local = defaultLocalKey;
+        };
+        description = ''
+          Master keys for encrypting and decrypting individual `.age` secret files.
+
+          These are separate from the SOPS recipient list used for `vars/*.sops.yaml`.
+          A default local key is always configured so local development works out of the box.
+        '';
+        example = lib.literalExpression ''
+          {
+            local = {
+              age-pub = "age1...";
+              ref = "ref+file://.stack/keys/local.txt";
+            };
+            ci = {
+              age-pub = "age1...";
+              ref = "ref+awsssm://stackpanel/keys/ci";
+            };
+          }
+        '';
+      };
+
+      groups = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+        description = ''
+          Deprecated legacy groups option.
+        '';
+      };
+
+      recipients = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.submodule recipientModule);
+        default = { };
+        description = ''
+          SOPS recipients declared in Nix.
+
+          These entries are rendered into `.stack/secrets/.sops.yaml`.
+          If left empty, Stackpanel falls back to recipients derived from
+          `stackpanel.users.*.public-keys` and `secrets-allowed-environments`.
+        '';
+        example = lib.literalExpression ''
+          {
+            cooper = {
+              public-key = "age1psa52j93p0t7rej4lyzeww6hzg9hh4ylxu6v30tcgag44apw8als2xg3ef";
+              tags = [ "dev" "prod" "shared" ];
+            };
+            coop_mac_studio = {
+              public-key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFauRe+VXvSmsca73hmxrylRPiueX/aHbXUu1jz7kGB8";
+              tags = [ "dev" ];
+            };
+          }
+        '';
+      };
+
+      recipient-groups = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.submodule recipientGroupModule);
+        default = { };
+        description = ''
+          Reusable recipient sets that can be referenced by SOPS creation rules.
+        '';
+        example = lib.literalExpression ''
+          {
+            dev-team.recipients = [ "alice" "bob" ];
+            ci.recipients = [ "buildkite" ];
+          }
+        '';
+      };
+
+      creation-rules = lib.mkOption {
+        type = lib.types.listOf (lib.types.submodule creationRuleModule);
+        default = [ ];
+        description = ''
+          SOPS creation rules rendered into `.stack/secrets/.sops.yaml`.
+
+          These rules mirror SOPS directly and can reference both direct
+          recipients and reusable recipient groups.
+        '';
+        example = lib.literalExpression ''
+          [
+            {
+              path-regex = "^dev/web\\.sops\\.yaml$";
+              recipient-groups = [ "dev-team" ];
+            }
+            ]
+        '';
+      };
+
+      sops-age-keys = {
+        sources = lib.mkOption {
+          type = lib.types.listOf (lib.types.submodule sopsAgeKeySourceModule);
+          default = [
+            {
+              type = "user-key-path";
+              value =
+                if pkgs.stdenv.isDarwin then
+                  "$HOME/Library/Application Support/sops/age/keys.txt"
+                else
+                  "$XDG_CONFIG_HOME/sops/age/keys.txt";
+              name = "User key path";
+            }
+            {
+              type = "repo-key-path";
+              value = ".stack/keys/local.txt";
+              name = "Repo key path";
+            }
+          ];
+          description = ''
+            Ordered key sources tried by `sops-age-keys`.
+
+            This is the preferred configuration model for the UI. File-like
+            sources are tried in order until one yields an AGE private key.
+          '';
+        };
+
+        user-key-path = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default =
+            if pkgs.stdenv.isDarwin then
+              "$HOME/Library/Application Support/sops/age/keys.txt"
+            else
+              "$XDG_CONFIG_HOME/sops/age/keys.txt";
+          description = ''
+            Primary user-level AGE key path for SOPS.
+
+            This should point to a user-managed key file outside the repo.
+            Stackpanel checks this before any additional custom paths.
+          '';
+          example = ''"$HOME/Library/Application Support/sops/age/keys.txt"'';
+        };
+
+        repo-key-path = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = ".stack/keys/local.txt";
+          description = ''
+            Repo-local fallback AGE key path generated by Stackpanel for development.
+
+            This is convenient for bootstrapping, but a user-level or external key
+            source is preferred for long-term use.
+          '';
+          example = ''".stack/keys/local.txt"'';
+        };
+
+        paths = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = ''
+            Additional private key file paths searched by `sops-age-keys` after
+            `user-key-path` and `repo-key-path`.
+
+            Paths are tested with `[[ -f ]]` as provided, so they can be absolute
+            or relative to your current working directory.
+          '';
+          example = lib.literalExpression ''
+            [
+              "/tmp/team-keys/sops.age"
+              "/run/secrets/ci.age"
+            ]
+          '';
+        };
+
+        op-refs = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = ''
+            Optional `op://` references queried with `op read`.
+
+            If configured, `sops-age-keys` attempts these references after
+            configured file paths.
+          '';
+          example = lib.literalExpression ''
+            [
+              "op://travel/age-keys/local/private"
+              "op://travel/age-keys/shared/private"
+            ]
+          '';
+        };
+      };
+
+      kms = {
+        key-arn = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            AWS KMS key ARN to add as a SOPS recipient in `.stack/secrets/.sops.yaml`.
+
+            When set, every creation rule will encrypt to this KMS key in addition to
+            the configured AGE recipients.
+          '';
+          example = "arn:aws:kms:us-east-1:123456789012:key/mrk-abc123";
+        };
+
+        aws-profile = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Optional AWS profile name to pass alongside the KMS ARN in `.sops.yaml`.
+          '';
+          example = "production";
+        };
+
+        aws-role-arn = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Optional AWS IAM role ARN for assume-role. Added to the SOPS KMS entry as
+            `role_arn` when set.
+          '';
+          example = "arn:aws:iam::123456789012:role/sops-decryptor";
+        };
+      };
+
+      all-public-keys = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        readOnly = true;
+        description = "All configured SOPS recipient public keys after applying Nix-based fallbacks.";
+      };
+    };
+}

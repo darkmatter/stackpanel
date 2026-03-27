@@ -78,11 +78,10 @@ packages/proto/
 
 ```bash
 # Full pipeline: Nix → Proto → Go/TypeScript
-./nix/stackpanel/core/generate-types.sh
+nix develop --impure -c ./nix/stackpanel/core/generate-types.sh
 
 # Or use the proto package directly
-cd packages/proto
-./generate.sh
+nix develop --impure -c ./packages/proto/generate.sh
 ```
 
 ### List All Schemas
@@ -104,30 +103,30 @@ nix eval --impure --raw -f nix/stackpanel/db '.render.users'
 
 ```nix
 # schemas/myentity.proto.nix
-\{ lib \}:
+{ lib }:
 let
-  proto = import ../lib/proto.nix \{ inherit lib; \};
+  proto = import ../lib/proto.nix { inherit lib; };
 in
-proto.mkProtoFile \{
+proto.mkProtoFile {
   name = "myentity.proto";
   package = "stackpanel.db";
 
-  options = \{
+  options = {
     go_package = "github.com/darkmatter/stackpanel/packages/proto/gen/go";
-  \};
+  };
 
-  messages = \{
-    MyEntity = proto.mkMessage \{
+  messages = {
+    MyEntity = proto.mkMessage {
       name = "MyEntity";
       description = "Description of my entity";
-      fields = \{
+      fields = {
         name = proto.string 1 "Display name";
         enabled = proto.bool 2 "Whether enabled";
         tags = proto.repeated (proto.string 3 "List of tags");
-      \};
-    \};
-  \};
-\}
+      };
+    };
+  };
+}
 ```
 
 ### Field Types
@@ -156,8 +155,8 @@ proto.mkProtoFile \{
 ### Enums
 
 ```nix
-enums = \{
-  Environment = proto.mkEnum \{
+enums = {
+  Environment = proto.mkEnum {
     name = "Environment";
     description = "Deployment environments";
     # First value MUST be 0 (proto3 requirement)
@@ -167,8 +166,8 @@ enums = \{
       "ENVIRONMENT_STAGING"      # = 2
       "ENVIRONMENT_PRODUCTION"   # = 3
     ];
-  \};
-\};
+  };
+};
 ```
 
 ### Field Numbering Rules
@@ -205,7 +204,7 @@ enums = \{
 | `double`, `float` | `number` |
 | `optional T` | `T \| undefined` |
 | `repeated T` | `T[]` |
-| `map<K, V>` | `\{ [key: K]: V \}` |
+| `map<K, V>` | `{ [key: K]: V }` |
 | `message Foo` | `Foo` |
 
 ## Integration with Core Options
@@ -214,29 +213,29 @@ The db module exports utilities for deriving Nix options from proto schemas:
 
 ```nix
 # In core/options/default.nix
-\{ lib, ... \}:
+{ lib, ... }:
 let
-  db = import ../../db \{ inherit lib; \};
+  db = import ../../db { inherit lib; };
 in
-\{
-  _module.args = \{
+{
+  _module.args = {
     dbSchema = db;
     dbExtend = db.extend;  # Pre-built option sets from proto messages
-  \};
-\}
+  };
+}
 ```
 
 Use in option modules:
 
 ```nix
 # In core/options/aws.nix
-\{ lib, dbExtend, ... \}:
-\{
-  options.stackpanel.aws = \{
+{ lib, dbExtend, ... }:
+{
+  options.stackpanel.aws = {
     # Options derived from proto messages
     roles-anywhere = dbExtend.awsOptions;
-  \};
-\}
+  };
+}
 ```
 
 ## Adding a New Schema
@@ -253,21 +252,21 @@ cp nix/stackpanel/db/schemas/_template.proto.nix \
 3. **Add to db/default.nix:**
 
 ```nix
-schemas = \{
+schemas = {
   # ...existing schemas
-  myEntity = import ./schemas/myentity.proto.nix \{ inherit lib; \};
-\};
+  myEntity = import ./schemas/myentity.proto.nix { inherit lib; };
+};
 
-dataSchemas = \{
+dataSchemas = {
   # ...existing schemas
   inherit (schemas) myEntity;
-\};
+};
 ```
 
 4. **Regenerate types:**
 
 ```bash
-./nix/stackpanel/core/generate-types.sh
+nix develop --impure -c ./nix/stackpanel/core/generate-types.sh
 ```
 
 5. **Use the generated types:**
@@ -276,20 +275,20 @@ dataSchemas = \{
 // Go
 import pb "github.com/darkmatter/stackpanel/packages/proto/gen/go"
 
-entity := &pb.MyEntity\{
+entity := &pb.MyEntity{
     Name:    "example",
     Enabled: true,
-\}
+}
 ```
 
 ```typescript
 // TypeScript
-import \{ MyEntity \} from '@stackpanel/proto/gen/ts/myentity';
+import { MyEntity } from '@stackpanel/proto/gen/ts/myentity';
 
-const entity: MyEntity = \{
+const entity: MyEntity = {
     name: 'example',
     enabled: true,
-\};
+};
 ```
 
 ## Migration from JSON Schema

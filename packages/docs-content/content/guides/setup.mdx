@@ -27,15 +27,15 @@ Stackpanel uses four key locations:
 
 | Location | Purpose | Shared? |
 |----------|---------|---------|
-| `.stackpanel/config.nix` | User-editable configuration | ✅ Git |
-| `.stackpanel/data/` | Managed data tables (apps, variables) | ✅ Git |
-| `.stackpanel/state/` | Local-only state (keys, settings) | ❌ Gitignored |
-| `.stackpanel/gen/` | Generated files (the value proposition!) | ✅ Git |
+| `.stack/config.nix` | User-editable configuration | ✅ Git |
+| `.stack/data/` | Managed data tables (apps, variables) | ✅ Git |
+| `.stack/state/` | Local-only state (keys, settings) | ❌ Gitignored |
+| `.stack/gen/` | Generated files (the value proposition!) | ✅ Git |
 | `~/.config/stackpanel/` | Global settings across projects | ❌ Not in project |
 
 ### The Value of Generated Files
 
-Files in `.stackpanel/gen/` replace manually-maintained config:
+Files in `.stack/gen/` replace manually-maintained config:
 - IDE workspace settings
 - `turbo.json` task configuration
 - `package.json` script entries

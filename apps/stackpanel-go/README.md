@@ -1,11 +1,11 @@
-# Stackpanel Go
+# Stack Go
 
-Unified Go application containing the Stackpanel CLI and local agent.
+Unified Go application containing the Stack CLI and local agent.
 
 ## Overview
 
 This package combines:
-- **CLI** - Command-line interface for managing Stackpanel projects
+- **CLI** - Command-line interface for managing Stack projects
 - **Agent** - Local HTTP server for web UI integration
 - **Shared packages** - Common utilities (envvars, exec, nix, etc.)
 
@@ -13,10 +13,10 @@ This package combines:
 
 ```bash
 # Build from source
-go build -o stackpanel .
+go build -o stack .
 
 # Or install directly
-go install github.com/darkmatter/stackpanel@latest
+go install github.com/darkmatter/stack@latest
 ```
 
 ## Usage
@@ -25,48 +25,48 @@ go install github.com/darkmatter/stackpanel@latest
 
 ```bash
 # Launch the interactive TUI
-stackpanel
+stack
 ```
 
 ### Agent Server
 
 ```bash
 # Start the agent (auto-detects project from current directory)
-stackpanel agent
+stack agent
 
 # With debug logging
-stackpanel agent --debug
+stack agent --debug
 
 # On a specific port
-stackpanel agent --port 9877
+stack agent --port 9877
 
 # With explicit project root
-stackpanel agent --project-root /path/to/project
+stack agent --project-root /path/to/project
 ```
 
 ### Other Commands
 
 ```bash
 # Show services status
-stackpanel status
+stack status
 
 # Manage services
-stackpanel services list
-stackpanel services start <name>
-stackpanel services stop <name>
+stack services list
+stack services start <name>
+stack services stop <name>
 
 # Manage users
-stackpanel users list
-stackpanel users add <github-username>
+stack users list
+stack users add <github-username>
 
 # Show environment variables
-stackpanel env
+stack env
 ```
 
 ## Project Structure
 
 ```
-apps/stackpanel-go/
+apps/stack-go/
 ├── main.go              # Entry point
 ├── cmd/cli/             # CLI commands (cobra)
 │   ├── root.go          # Root command with TUI
@@ -144,9 +144,9 @@ bun run fmt
 
 ## Project Detection
 
-The agent automatically detects Stackpanel projects by looking for:
+The agent automatically detects Stack projects by looking for:
 
 1. `STACKPANEL_PROJECT_ROOT` environment variable
-2. `.stackpanel/config.nix` in current directory
-3. `.stackpanel/config.nix` in parent directories
-4. Previously saved project from `~/.stackpanel/agent-state.json`
+2. `.stack/config.nix` in current directory
+3. `.stack/config.nix` in parent directories
+4. Previously saved project from `~/.stack/agent-state.json`

@@ -1,0 +1,399 @@
+---
+title: panels
+description: Configuration options for stackpanel.panels
+icon: Settings
+---
+
+# Panels Options
+
+## `panelModules`
+
+List of module names that have registered panels
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panels`
+
+UI panels for core Stackpanel modules.
+
+Panels are UI components that display information about a module's state, configuration, or managed resources. Unlike extension panels, these belong to built-in modules like Go, Caddy, Healthchecks, etc.
+
+Example: stackpanel.panels.go-status = \{ module = "go"; title = "Go Environment"; type = "PANEL_TYPE_STATUS"; order = 10; fields = [ \{ name = "metrics"; type = "FIELD_TYPE_STRING"; value = "..."; \} ]; \};
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  go-status = {
+    module = "go";
+    title = "Go Environment";
+    type = "PANEL_TYPE_STATUS";
+    order = 10;
+    fields = [
+      {
+        name = "metrics";
+        type = "FIELD_TYPE_STRING";
+        value = builtins.toJSON [
+          { label = "Go Version"; value = "1.22"; status = "ok"; }
+          { label = "Apps"; value = "3"; status = "ok"; }
+        ];
+      }
+    ];
+  };
+  caddy-status = {
+    module = "caddy";
+    title = "Reverse Proxy";
+    type = "PANEL_TYPE_STATUS";
+    order = 20;
+    fields = [ ... ];
+  };
+}
+```
+
+
+---
+
+## `panels.<name>.apps`
+
+Per-app data for apps grid panels
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `panels.<name>.apps.<name>.config`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `panels.<name>.apps.<name>.enabled`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `panels.<name>.columns`
+
+Column definitions for table panels
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.columns.*.key`
+
+Column key (matches row data)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.columns.*.label`
+
+Column header label
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.description`
+
+Optional description shown below the title
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.enabled`
+
+Whether this panel is enabled and should be shown
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `panels.<name>.fields`
+
+Panel configuration fields passed to the component
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.fields.*.configPath`
+
+Nix config path for saving field value (e.g., 'stackpanel.deployment.fly.organization')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.description`
+
+Help text shown below the field
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.editPath`
+
+Dot-separated path within the app's config for writes. E.g., "go.mainPackage" tells the agent to patch apps..go.mainPackage in the data file.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.editable`
+
+Whether the field can be modified from the UI
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `panels.<name>.fields.*.example`
+
+Example value shown as help text
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.label`
+
+Human-readable label for the field (defaults to name if null)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.name`
+
+Field name (maps to component prop)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.fields.*.options`
+
+Options for select fields (strings or \{value, label\} objects)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (string or (submodule))` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.fields.*.placeholder`
+
+Placeholder text for input fields
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.fields.*.type`
+
+Field type
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "FIELD_TYPE_UNSPECIFIED", "FIELD_TYPE_STRING", "FIELD_TYPE_NUMBER", "FIELD_TYPE_BOOLEAN", "FIELD_TYPE_SELECT", "FIELD_TYPE_MULTISELECT", "FIELD_TYPE_APP_FILTER", "FIELD_TYPE_COLUMNS", "FIELD_TYPE_JSON", "FIELD_TYPE_CODE"` |
+| **Default** | `"FIELD_TYPE_STRING"` |
+
+---
+
+## `panels.<name>.fields.*.value`
+
+Field value (JSON-encoded for complex types, null if unset)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `""` |
+
+---
+
+## `panels.<name>.icon`
+
+Icon name from lucide-react (e.g., 'server', 'database')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.module`
+
+The core module this panel belongs to (e.g., "go", "caddy", "healthchecks"). Used for grouping panels in the UI.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.order`
+
+Display order within the module (lower = first)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `100` |
+
+---
+
+## `panels.<name>.readme`
+
+Module documentation in markdown format. Rendered in the UI panel to help users understand the module's configuration.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `panels.<name>.rows`
+
+Row data for table panels
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of attribute set of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `panels.<name>.title`
+
+Display title for the panel
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `panels.<name>.type`
+
+Panel type (determines which component to render)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM", "PANEL_TYPE_APP_CONFIG"` |
+| **Default** | `"PANEL_TYPE_STATUS"` |
+
+---
+
+## `panelsByModule`
+
+Panels grouped by their parent module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panelsComputed`
+
+Serializable panels for UI consumption
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `panelsList`
+
+List of all panels sorted by order
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of unspecified value` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+

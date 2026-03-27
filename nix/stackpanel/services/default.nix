@@ -1,36 +1,19 @@
 # ==============================================================================
 # services/default.nix
 #
-# Development services module aggregator.
+# Development services — options and implementations co-located.
 #
-# This module imports all service-related devenv modules. Service implementations
-# live in subdirectories (postgres/, redis/, minio/, caddy/) and are used by
-# the modules imported here.
-#
-# Structure:
-#   services/
-#   ├── default.nix           # This file - imports all modules
-#   ├── global-services.nix   # Maps globalServices to stackpanel.services
-#   ├── postgres/default.nix  # PostgreSQL implementation
-#   ├── redis/default.nix     # Redis implementation
-#   ├── minio/default.nix     # MinIO implementation
-#   ├── caddy/default.nix     # Caddy scripts library
-#   ├── caddy.nix             # Caddy devenv module
-#   ├── aws.nix               # AWS Roles Anywhere
-#   ├── binary-cache.nix      # Nix binary cache
-#   └── security-healthchecks.nix
-#
-# Usage:
-#   # In devenv or flake module:
-#   imports = [ ./services ];
+# Imports both option definitions (*-options.nix) and implementation modules
+# for AWS, Caddy, binary cache, global services, healthchecks, and the
+# canonical service type system.
 # ==============================================================================
-{ ... }:
-{
+{...}: {
   imports = [
-    ./aws.nix
+    ./aws
     ./binary-cache.nix
     ./caddy.nix
     ./global-services.nix
+    ./portless.nix
     ./security-healthchecks.nix
   ];
 }

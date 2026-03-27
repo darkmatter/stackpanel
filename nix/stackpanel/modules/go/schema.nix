@@ -163,4 +163,6 @@ proto.mkProtoFile {
     };
   };
 }
-// { inherit fields; }
+// {
+  inherit fields;
+}

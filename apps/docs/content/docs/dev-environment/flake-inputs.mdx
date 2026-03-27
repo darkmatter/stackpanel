@@ -1,0 +1,129 @@
+---
+title: Managing Flake Inputs
+description: Add and manage flake inputs from the command line
+icon: git-branch
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+The `stackpanel flake` command group lets you manage your `flake.nix` inputs without editing the file by hand. It uses tree-sitter to parse Nix syntax, so comments, formatting, and whitespace are preserved.
+
+## Adding an Input
+
+The most common operation is adding a new flake input. Pass the input name and URL:
+
+```bash
+stackpanel flake add-input sops-nix github:Mic92/sops-nix
+```
+
+This finds the `inputs = { ... }` block in your `flake.nix`, inserts the new input before the closing brace, and runs `nix flake lock` to fetch it. Your file goes from:
+
+```nix
+inputs = {
+  nixpkgs.url = "...";
+};
+```
+
+to:
+
+```nix
+inputs = {
+  nixpkgs.url = "...";
+  sops-nix.url = "github:Mic92/sops-nix";
+  sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+
+By default, a `nixpkgs.follows` line is added so the new input shares your nixpkgs instead of pulling its own copy.
+
+### Skipping nixpkgs.follows
+
+Some inputs don't have a nixpkgs dependency, or you want them to use their own. Pass `--no-follows`:
+
+```bash
+stackpanel flake add-input process-compose-flake \
+  github:Platonic-Systems/process-compose-flake --no-follows
+```
+
+### Adding an Import at the Same Time
+
+If the input provides a Stackpanel module, you probably also need to add it to `stackpanelImports` in your flake outputs. Use `--module-path` to do both in one command:
+
+```bash
+stackpanel flake add-input my-module github:author/my-module \
+  --module-path stackpanelModules.default
+```
+
+This inserts the input **and** adds `inputs.my-module.stackpanelModules.default` to your `stackpanelImports` list. The command detects whether `stackpanelImports` is defined anywhere in your flake (inside `mkFlake`, in the outputs function, etc.) and inserts into the right place.
+
+## Previewing Changes
+
+To see what would change without actually writing the file, use `--dry-run`:
+
+```bash
+stackpanel flake add-input my-input github:someone/repo --dry-run
+```
+
+The modified `flake.nix` is printed to stdout. Nothing is written to disk and `nix flake lock` is not run.
+
+## Skipping the Lock Step
+
+If you're adding several inputs at once and want to lock them all in one go afterward, pass `--no-lock`:
+
+```bash
+stackpanel flake add-input input-a github:a/a --no-lock
+stackpanel flake add-input input-b github:b/b --no-lock
+nix flake lock --update-input input-a --update-input input-b
+```
+
+## Idempotent by Default
+
+If the input already exists in your `flake.nix`, the command prints a warning and does nothing:
+
+```
+  Input 'sops-nix' already exists in flake.nix
+```
+
+If the input exists but you also passed `--module-path` and that import is missing, the import is still added. This makes the command safe to run repeatedly.
+
+## Safety
+
+Before writing changes, the command:
+
+1. Creates a `flake.nix.bak` backup
+2. Writes the modified file
+3. Runs `nix flake lock --update-input <name>`
+4. If the lock fails, restores the backup automatically
+5. If everything succeeds, deletes the backup
+
+If you interrupt the process or something goes wrong, your original `flake.nix` is either untouched or recoverable from the `.bak` file.
+
+## Fixing Missing Module Inputs
+
+When you enable an [extension](/docs/extensions) that requires a flake input you don't have, the MOTD warns you on shell entry:
+
+```
+  Module "process-compose" requires flake input "process-compose-flake"
+  Fix: stackpanel flake add-input process-compose-flake github:Platonic-Systems/process-compose-flake
+```
+
+Copy-paste the fix command and re-enter your shell. See [Flake Inputs](/docs/extensions/flake-inputs) for more on how extensions declare their input requirements.
+
+## Flags Reference
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--follows` | `bool` | `true` | Add `inputs.<name>.inputs.nixpkgs.follows = "nixpkgs"` |
+| `--module-path` | `string` | _none_ | Also add a `stackpanelImports` entry (e.g., `stackpanelModules.default`) |
+| `--no-lock` | `bool` | `false` | Skip running `nix flake lock` after adding the input |
+| `--dry-run` | `bool` | `false` | Print the modified file without writing or locking |
+
+<Callout type="info">
+Under the hood, `stackpanel flake add-input` uses tree-sitter-nix to parse your `flake.nix` into a concrete syntax tree and performs byte-offset insertions. This means it works regardless of how your file is formatted — comments, multi-line expressions, and unusual indentation are all preserved.
+</Callout>
+
+## Next Steps
+
+- [Extension Flake Inputs](/docs/extensions/flake-inputs) for how extensions declare required inputs and the detection pipeline
+- [Packages & Scripts](/docs/dev-environment/packages-scripts) for adding tools and commands to your shell
+- [Shell Hooks & Files](/docs/dev-environment/shell-hooks-files) for running code on shell entry

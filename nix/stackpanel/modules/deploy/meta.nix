@@ -23,7 +23,7 @@
   requires = [ ];
   conflicts = [ ];
   features = {
-    appModule = true; # Adds per-app deployment.backend/targets/defaultEnv/command options
+    appModule = true;
     packages = false;
     files = false;
     scripts = false;

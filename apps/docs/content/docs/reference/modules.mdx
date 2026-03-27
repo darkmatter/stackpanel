@@ -1,0 +1,712 @@
+---
+title: modules
+description: Configuration options for stackpanel.modules
+icon: Settings
+---
+
+# Modules Options
+
+## `_moduleMetas`
+
+Fast module metadata for discovery without full module evaluation. Each key is a module ID, value is the contents of that module's meta.nix. This is set automatically by the module auto-discovery in modules/default.nix.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | `{ }` |
+
+---
+
+## `modules`
+
+Stackpanel modules that provide features and UI panels.
+
+Modules are the unified way to extend stackpanel functionality:
+
+Each module can define:
+
+Modules can be:
+
+| Property | Value |
+|----------|-------|
+| **Type** | `open submodule of attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  postgres = {
+    enable = true;
+    meta = {
+      name = "PostgreSQL";
+      description = "PostgreSQL database server";
+      icon = "database";
+      category = "database";
+    };
+    source.type = "builtin";
+    features = {
+      services = true;
+      healthchecks = true;
+      packages = true;
+    };
+    healthcheckModule = "postgres";
+    panels = [{
+      id = "postgres-status";
+      title = "PostgreSQL Status";
+      type = "PANEL_TYPE_STATUS";
+      fields = [{
+        name = "metrics";
+        type = "FIELD_TYPE_JSON";
+        value = "[{\"label\":\"Status\",\"value\":\"Running\",\"status\":\"ok\"}]";
+      }];
+    }];
+  };
+
+  my-custom-module = {
+    enable = true;
+    meta = {
+      name = "My Custom Module";
+      description = "Does something useful";
+      category = "development";
+    };
+    source = {
+      type = "flake-input";
+      flakeInput = "my-module";
+    };
+  };
+}
+```
+
+
+---
+
+## `modules.<name>.apps`
+
+Per-app module data (app name -\> module data)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `modules.<name>.apps.<name>.config`
+
+Module config for this app (string key-value pairs)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `modules.<name>.apps.<name>.enabled`
+
+Whether module is enabled for this app
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `modules.<name>.configSchema`
+
+JSON Schema string for generating configuration forms in the UI. The schema should describe the module's configurable options.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+**Example:**
+
+```nix
+''
+  {
+    "type": "object",
+    "properties": {
+      "port": { "type": "integer", "default": 5432 },
+      "version": { "type": "string", "enum": ["15", "16"], "default": "16" }
+    }
+  }
+''
+```
+
+
+---
+
+## `modules.<name>.conflicts`
+
+Other modules that conflict with this module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.enable`
+
+Whether to enable the ‹name› module.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `modules.<name>.features`
+
+Which stackpanel features this module uses
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `modules.<name>.features.appModule`
+
+Module extends per-app configuration via appModules
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.files`
+
+Module generates files via stackpanel.files
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.healthchecks`
+
+Module defines health checks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.packages`
+
+Module adds devshell packages
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.scripts`
+
+Module provides shell scripts/commands
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.secrets`
+
+Module manages secrets/variables
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.services`
+
+Module configures background services/processes
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.features.tasks`
+
+Module defines turborepo tasks
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+---
+
+## `modules.<name>.flakeInputs`
+
+Flake inputs required by this module. Used for auto-installation from the registry.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.flakeInputs.*.followsNixpkgs`
+
+Whether to add inputs.nixpkgs.follows = "nixpkgs"
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `modules.<name>.flakeInputs.*.name`
+
+Input name in flake.nix (e.g., "my-module")
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.flakeInputs.*.url`
+
+Flake URL (e.g., "github:author/my-module")
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.healthcheckModule`
+
+Name of the healthcheck module that provides health checks for this module. This links to stackpanel.healthchecks.modules..
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.meta`
+
+Module metadata for display in the UI
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+{
+  name = "‹name›";
+}
+```
+
+
+---
+
+## `modules.<name>.meta.author`
+
+Author or maintainer of the module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.meta.category`
+
+Category for grouping in the UI
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "unspecified", "infrastructure", "ci-cd", "database", "secrets", "deployment", "development", "monitoring", "integration", "language", "service"` |
+| **Default** | `"unspecified"` |
+
+---
+
+## `modules.<name>.meta.description`
+
+Human-readable description of what the module does
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.meta.homepage`
+
+URL to module documentation or repository
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.meta.icon`
+
+Lucide icon name for the module (e.g., 'database', 'box', 'cloud')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.meta.name`
+
+Display name of the module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.meta.version`
+
+Module version
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.panels`
+
+UI panels provided by this module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.panels.*.description`
+
+Panel description
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.panels.*.fields`
+
+Panel configuration fields
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (submodule)` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.panels.*.fields.*.name`
+
+Field name (maps to component prop)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.panels.*.fields.*.options`
+
+Options for select fields
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.panels.*.fields.*.type`
+
+Field type
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "FIELD_TYPE_UNSPECIFIED", "FIELD_TYPE_STRING", "FIELD_TYPE_NUMBER", "FIELD_TYPE_BOOLEAN", "FIELD_TYPE_SELECT", "FIELD_TYPE_MULTISELECT", "FIELD_TYPE_APP_FILTER", "FIELD_TYPE_COLUMNS", "FIELD_TYPE_JSON"` |
+| **Default** | `"FIELD_TYPE_STRING"` |
+
+---
+
+## `modules.<name>.panels.*.fields.*.value`
+
+Field value (JSON-encoded for complex types)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `modules.<name>.panels.*.id`
+
+Unique panel identifier
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.panels.*.order`
+
+Display order (lower = first)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `100` |
+
+---
+
+## `modules.<name>.panels.*.title`
+
+Display title
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `modules.<name>.panels.*.type`
+
+Panel type (determines which component to render)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "PANEL_TYPE_UNSPECIFIED", "PANEL_TYPE_STATUS", "PANEL_TYPE_APPS_GRID", "PANEL_TYPE_FORM", "PANEL_TYPE_TABLE", "PANEL_TYPE_CUSTOM"` |
+| **Default** | `"PANEL_TYPE_STATUS"` |
+
+---
+
+## `modules.<name>.priority`
+
+Load order priority (lower = earlier)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `signed integer` |
+| **Default** | `100` |
+
+---
+
+## `modules.<name>.requires`
+
+Other modules that must be enabled for this module to work
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `modules.<name>.source`
+
+Module source configuration
+
+| Property | Value |
+|----------|-------|
+| **Type** | `submodule` |
+| **Default** | `{ }` |
+
+---
+
+## `modules.<name>.source.flakeInput`
+
+Name of the flake input (for flake-input source type)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.source.path`
+
+Local path to the module (for local source type)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.source.ref`
+
+Git ref (branch, tag, commit) for remote modules
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.source.registryId`
+
+Registry identifier (for registry source type, e.g., 'stackpanel/docker')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `modules.<name>.source.type`
+
+Source type for the module
+
+| Property | Value |
+|----------|-------|
+| **Type** | `one of "builtin", "local", "flake-input", "registry"` |
+| **Default** | `"builtin"` |
+
+---
+
+## `modules.<name>.tags`
+
+Tags for categorizing/filtering modules
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+---
+
+## `modulesBuiltin`
+
+Builtin modules shipped with stackpanel
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
+
+## `modulesComputed`
+
+Computed module configurations (only enabled modules, serializable)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
+
+## `modulesComputedAll`
+
+Computed module configurations (all modules including disabled, serializable)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
+
+## `modulesExternal`
+
+External modules (local, flake-input, or registry)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of unspecified value` |
+| **Default** | `{ }` |
+| **Read Only** | `true` |
+
+---
+
+## `modulesList`
+
+Flat list of enabled modules (for API consumption)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of unspecified value` |
+| **Default** | `[ ]` |
+| **Read Only** | `true` |
+
+---
+
+## `modulesListAll`
+
+Flat list of all modules including disabled (for API consumption)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of unspecified value` |
+| **Default** | `[ ]` |
+| **Read Only** | `true` |
+
+---
+

@@ -1,13 +1,13 @@
 # ==============================================================================
 # user-packages.nix
 #
-# User-installed packages module - reads packages from .stackpanel/data/packages.nix
+# User-installed packages module - reads packages from .stack/data/packages.nix
 #
 # This module allows users to add packages via the Stackpanel UI. Packages are
-# stored in .stackpanel/data/packages.nix as a list of attribute paths, and
+# stored in .stack/data/packages.nix as a list of attribute paths, and
 # this module resolves them to actual packages from nixpkgs.
 #
-# Data file format (.stackpanel/data/packages.nix):
+# Data file format (.stack/data/packages.nix):
 #   [
 #     "ripgrep"
 #     "jq"
@@ -89,7 +89,7 @@ let
 in
 {
   options.stackpanel.userPackages = {
-    enable = lib.mkEnableOption "user-installed packages from .stackpanel/data/packages.nix" // {
+    enable = lib.mkEnableOption "user-installed packages from .stack/data/packages.nix" // {
       default = true;
     };
 

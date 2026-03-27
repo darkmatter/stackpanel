@@ -1,3 +1,7 @@
+// stackpanel-go is the CLI and localhost agent for managing Nix-based dev environments.
+// It operates in two modes: as an interactive CLI (Cobra + Bubble Tea TUI) for direct
+// service management, and as an HTTP agent server that bridges the Studio web UI to
+// the local Nix environment.
 package main
 
 import (

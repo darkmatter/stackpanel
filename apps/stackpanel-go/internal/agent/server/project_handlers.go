@@ -1,3 +1,7 @@
+// project_handlers.go contains REST API handlers for project lifecycle management:
+// listing, opening, closing, validating, and setting default projects.
+// Project state is persisted in ~/.config/stackpanel/stackpanel.yaml.
+
 package server
 
 import (
@@ -113,8 +117,10 @@ func (s *Server) handleProjectList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleProjectOpen opens/selects a project.
-// POST /api/project/open
+// handleProjectOpen validates a project path, sets it as active, and reinitializes
+// the command executor with the new project's devshell environment. The executor
+// reinitialization may fail (e.g., no devshell env available) — we still report
+// success because the project itself is valid, and the executor will recover.
 func (s *Server) handleProjectOpen(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -224,8 +230,9 @@ func (s *Server) handleProjectClose(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleProjectValidate validates a project path without opening it.
-// POST /api/project/validate
+// handleProjectValidate performs detailed validation (git repo, .stack/config.nix,
+// flake.nix stackpanel references) without side effects. Used by the "add project"
+// dialog to show validation status before the user commits to opening it.
 func (s *Server) handleProjectValidate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -259,7 +266,7 @@ func (s *Server) handleProjectValidate(w http.ResponseWriter, r *http.Request) {
 			message = "Directory is not a git repository (no .git folder found)"
 		case project.ErrNotStackpanel:
 			errorCode = "not_stackpanel"
-			message = "Directory is not a valid Stackpanel project (no .stackpanel/config.nix found)"
+			message = "Directory is not a valid Stackpanel project (no .stack/config.nix found)"
 		case project.ErrProjectNotFound:
 			errorCode = "not_found"
 			message = "Directory does not exist"
@@ -415,8 +422,9 @@ func (s *Server) handleProjectDefault(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleProjectResolve resolves a project identifier to a project.
-// GET /api/project/resolve?project=<id|name|path>
+// handleProjectResolve looks up a project by any identifier (ID, name, or path).
+// This is the same resolution logic used by the X-Stackpanel-Project header,
+// exposed as an endpoint so the UI can preview which project an identifier maps to.
 func (s *Server) handleProjectResolve(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

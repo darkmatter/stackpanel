@@ -17,7 +17,7 @@ Services are long-running processes that your apps depend on, like databases, ca
 
 ## Configuration
 
-Services are configured in `.stackpanel/config.nix`:
+Services are configured in `.stack/config.nix`:
 
 ```nix
 {
@@ -51,5 +51,5 @@ DATABASE_URL=postgresql://localhost:6410/myapp
 ## Tips
 
 - Services start automatically when entering the devshell
-- Data persists in `.stackpanel/data/` between sessions
+- Data persists in `.stack/data/` between sessions
 - Use `initialDatabases` to auto-create databases

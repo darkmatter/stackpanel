@@ -35,14 +35,14 @@ lib/
 
 ```nix
 let
-  stackpanelLib = import ./lib \{ inherit pkgs lib; \};
-in \{
+  stackpanelLib = import ./lib { inherit pkgs lib; };
+in {
   # Create a development shell
   devShell = stackpanelLib.mkDevShell projectConfig;
 
   # Compute deterministic port from project name
-  port = stackpanelLib.ports.computeBasePort \{ name = "myproject"; \};
-\}
+  port = stackpanelLib.ports.computeBasePort { name = "myproject"; };
+}
 ```
 
 ### Pure Functions (No pkgs Required)
@@ -51,14 +51,14 @@ Some utilities work without `pkgs`:
 
 ```nix
 let
-  stackpanelLib = import ./lib \{ inherit lib; \};  # pkgs is optional
-in \{
+  stackpanelLib = import ./lib { inherit lib; };  # pkgs is optional
+in {
   # Path utilities
-  paths = stackpanelLib.paths.mkPaths \{ rootDir = ".stackpanel"; \};
+  paths = stackpanelLib.paths.mkPaths { rootDir = ".stackpanel"; };
 
   # Port computation
   ports = stackpanelLib.ports;
-\}
+}
 ```
 
 ### Service Configuration
@@ -67,16 +67,16 @@ Service modules provide packages and environment variables. Lifecycle management
 
 ```nix
 let
-  stackpanelLib = import ./lib \{ inherit pkgs lib; \};
-  pgService = stackpanelLib.services.postgres.mkService \{
+  stackpanelLib = import ./lib { inherit pkgs lib; };
+  pgService = stackpanelLib.services.postgres.mkService {
     projectName = "myapp";
     port = 5432;
     databases = [ "app" "test" ];
-  \};
-in \{
+  };
+in {
   packages = pgService.allPackages;
   shellHook = pgService.shellHook;
-\}
+}
 ```
 
 ### IDE Integration
@@ -85,17 +85,17 @@ Generate VS Code workspace files and terminal configurations:
 
 ```nix
 let
-  stackpanelLib = import ./lib \{ inherit pkgs lib; \};
+  stackpanelLib = import ./lib { inherit pkgs lib; };
   ideLib = stackpanelLib.integrations.ide;
-in \{
+in {
   # Generate VS Code settings for devshell terminal
-  settings = ideLib.mkVscodeSettings \{
-    loaderPath = "\$\{workspaceFolder\}/.stackpanel/gen/ide/vscode/devshell-loader.sh";
-  \};
+  settings = ideLib.mkVscodeSettings {
+    loaderPath = "\${workspaceFolder}/.stackpanel/gen/ide/vscode/devshell-loader.sh";
+  };
 
   # Create devshell loader script
-  loader = ideLib.mkDevshellLoader \{ shellMode = "devenv"; \};
-\}
+  loader = ideLib.mkDevshellLoader { shellMode = "devenv"; };
+}
 ```
 
 ## Architecture

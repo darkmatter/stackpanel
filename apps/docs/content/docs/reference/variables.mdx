@@ -1,0 +1,165 @@
+---
+title: variables
+description: Configuration options for stackpanel.variables
+icon: Settings
+---
+
+# Variables Options
+
+## `variables`
+
+Workspace variables keyed by their full variable ID.
+
+Prefixes determine storage: /var/*      - Shared config (plaintext, NOT encrypted) /secret/*   - Flat secrets (one SOPS file per variable) /computed/* - Nix-computed values (read-only)
+
+Secret variable values are empty strings; the SOPS file is the source of truth. Plaintext variables store their value directly.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  # Shared config (plaintext, NOT encrypted)
+   "/var/LOG_LEVEL" = { value = "info"; };
+   "/var/API_VERSION" = { value = "v1"; };
+
+  # Secret (value lives in vars/postgres-url.sops.yaml)
+   "/secret/postgres-url" = { value = ""; };
+ }
+```
+
+
+---
+
+## `variables.<name>.id`
+
+Variable identifier. Format: //
+
+This defaults to the attribute key, so it normally does not need to be written in config files.
+
+Secret variables use a flat namespace: /secret/postgres-url -\> .stack/secrets/vars/postgres-url.sops.yaml
+
+Computed variables use /computed//: /computed/apps/web/port /computed/services/postgres/port
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"‹name›"` |
+
+---
+
+## `variables.<name>.isComputed`
+
+Whether this is a computed (read-only) variable
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.isPlaintext`
+
+Whether this is a plaintext config variable (/var/*)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.isSecret`
+
+Whether this is a SOPS-encrypted secret
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.isValsRef`
+
+Whether the value is a vals reference
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.keyGroup`
+
+Key group extracted from ID (e.g., 'secret', 'var', 'computed')
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.secretYamlKey`
+
+Deterministic YAML key used inside the per-variable SOPS file
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.sopsFile`
+
+Path to the SOPS file for this keygroup (null for /var/* and /computed/*)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+
+## `variables.<name>.value`
+
+The value of this variable.
+
+For plaintext variables (/var/): the literal value. For secrets (/secret/): empty string (SOPS file is source of truth). For computed (/computed/*): the computed value from Nix.
+
+Legacy: ref+sops:// values are still supported during migration.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `""` |
+
+---
+
+## `variables.<name>.varName`
+
+Variable name extracted from ID (last path component)
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+| **Read Only** | `true` |
+
+---
+

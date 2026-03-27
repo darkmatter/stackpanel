@@ -7,7 +7,7 @@
 # This module handles TOOLCHAIN setup (compiler, env, PATH).
 # App-level config (building, packaging, air, gomod2nix) is in modules/go/.
 #
-# Usage in .stackpanel/config.nix:
+# Usage in .stack/config.nix:
 #   languages.go.enable = true;
 #
 # Or auto-enabled when any app has go.enable = true.
@@ -20,7 +20,8 @@
 }:
 let
   cfg = config.stackpanel.languages.go;
-  stateDir = config.stackpanel.dirs.state or ".stackpanel/state";
+  stateDir = config.stackpanel.dirs.state or ".stack/profile";
+  ideCfg = config.stackpanel.ide;
 in
 {
   options.stackpanel.languages.go = {
@@ -67,7 +68,12 @@ in
     ]
     ++ lib.optional cfg.tools.delve pkgs.delve
     ++ lib.optional cfg.tools.gotools pkgs.gotools
-    ++ lib.optional cfg.lsp.enable cfg.lsp.package;
+    ++ lib.optional cfg.lsp.enable cfg.lsp.package
+    # CGO on macOS needs system frameworks + libresolv for the net package.
+    # Required when any Go dependency uses CGO (e.g., tree-sitter bindings).
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      pkgs.apple-sdk_15
+    ];
 
     # GOROOT is a static nix store path so it can go in env.
     # GOPATH references $STACKPANEL_STATE_DIR which is set by an earlier hook,
@@ -75,7 +81,30 @@ in
     stackpanel.devshell.env = {
       GOROOT = "${cfg.package}/share/go/";
       GOTOOLCHAIN = "local";
+    }
+    # CGO on macOS: the Nix clang wrapper reads NIX_LDFLAGS, but intermediary
+    # tools (turbo, bun, air) may strip it. Explicitly set CGO_LDFLAGS with
+    # the concrete store path to libresolv so `go build` with CGO works
+    # everywhere: interactive shell, process-compose, turbo pipelines, CI.
+    // lib.optionalAttrs pkgs.stdenv.isDarwin {
+      CGO_LDFLAGS = "-L${pkgs.darwin.libresolv}/lib";
     };
+
+    # IDE Integration
+    stackpanel.ide.zed.settings-modules = [
+      {
+        config = {
+          lsp.gopls.binary.path = lib.mkIf ideCfg.zed.enable "${pkgs.gopls}/bin/gopls";
+        };
+      }
+    ];
+    stackpanel.ide.vscode.settings-modules = [
+      {
+        config = {
+          "go.alternateTools".gopls = lib.mkIf ideCfg.vscode.enable "${pkgs.gopls}/bin/gopls";
+        };
+      }
+    ];
 
     stackpanel.devshell.hooks.main = [
       ''

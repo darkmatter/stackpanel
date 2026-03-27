@@ -1,0 +1,208 @@
+---
+title: Using Extensions
+description: Install, enable, and configure extensions to add capabilities to your project
+icon: puzzle
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Extensions are the primary way to add new capabilities to a Stackpanel project. Each extension is a Nix module that bundles together packages, scripts, generated files, services, and UI panels into a single, toggleable unit.
+
+## What Extensions Provide
+
+When you enable an extension, it can contribute any combination of:
+
+| Feature | Description |
+|---------|-------------|
+| **Packages** | CLI tools and runtimes added to your `PATH` |
+| **Scripts** | Named commands available in the devshell |
+| **Files** | Generated config files written to your project |
+| **Services** | Background processes managed by process-compose |
+| **Shell hooks** | Code that runs on shell entry |
+| **Variables** | Environment variables and secrets |
+| **Tasks** | Runnable task definitions |
+| **Panels** | UI panels visible in [Studio](/docs/studio) |
+
+Everything composes through the [module system](/docs/concepts/module-system). Enabling an extension merges its contributions with the rest of your configuration—no conflicts, no manual wiring.
+
+## Builtin Extensions
+
+Stackpanel ships with several builtin extensions that cover common use cases:
+
+| Extension | What it does |
+|-----------|-------------|
+| **SST** | AWS infrastructure provisioning with SST |
+| **CI** | GitHub Actions workflow generation |
+| **Docker** | Dockerfile and docker-compose generation |
+| **Git Hooks** | Pre-commit and other Git hooks via Nix |
+| **Bun** | Bun package manager integration |
+| **Turbo** | Turborepo configuration and caching |
+| **OxLint** | Fast JavaScript/TypeScript linting |
+| **Process Compose** | Process orchestration for dev services |
+| **Env Codegen** | Type-safe environment variable generation |
+
+Builtin extensions are always available—you just need to enable them in your config.
+
+## Enabling an Extension
+
+Most extensions follow the same pattern: set `enable = true` under their namespace.
+
+```nix
+# .stack/config.nix
+{
+  stackpanel.modules.turbo.enable = true;
+  stackpanel.modules.bun.enable = true;
+  stackpanel.modules.git-hooks.enable = true;
+
+  stackpanel.sst = {
+    enable = true;
+    project-name = "myapp";
+    region = "us-west-2";
+  };
+}
+```
+
+When you enter your dev shell after enabling an extension, the module system evaluates it and merges its contributions into your environment. Disable it by setting `enable = false`, and everything it contributed is cleanly removed.
+
+<Callout type="info">
+You can also enable and configure extensions through [Studio](/docs/studio), which provides a visual interface for browsing the extension registry and toggling extensions on and off.
+</Callout>
+
+## Configuring Extensions
+
+Each extension declares its own set of options. These are documented in the extension's config schema and visible in Studio. A typical extension might look like:
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+
+  kms.enable = true;
+
+  oidc = {
+    provider = "github-actions";
+    github-actions = {
+      org = "my-org";
+      repo = "my-repo";
+    };
+  };
+};
+```
+
+Extensions that generate files or register scripts will do so automatically based on the options you set. You don't need to wire anything together manually.
+
+## Discovering Available Extensions
+
+### In Studio
+
+The [Studio](/docs/studio) web UI includes an extension registry where you can browse all available extensions—builtin and external—with descriptions, categories, and one-click enable/disable.
+
+### In the CLI
+
+```bash
+# List all configured extensions
+stackpanel commands
+```
+
+### In Nix
+
+All registered extensions are available on the config object:
+
+```nix
+config.stackpanel.extensions          # All extensions
+config.stackpanel.extensionsComputed  # Only enabled extensions
+config.stackpanel.extensionsBuiltin   # Only builtin extensions
+config.stackpanel.extensionsExternal  # Only external/local extensions
+```
+
+## Extension Categories
+
+Extensions are organized into categories for easier discovery:
+
+| Category | Examples |
+|----------|---------|
+| **Infrastructure** | AWS, SST, cloud resources |
+| **CI/CD** | GitHub Actions, deployment pipelines |
+| **Database** | Database management, migrations |
+| **Secrets** | Secret and variable management |
+| **Deployment** | Docker, Cloudflare, Fly.io |
+| **Development** | Linters, formatters, dev tools |
+| **Monitoring** | Logging, metrics |
+| **Integration** | Third-party service integrations |
+
+## External Extensions
+
+Extensions don't have to be builtin. You can install extensions from GitHub or other sources by adding them as flake inputs:
+
+```nix
+# flake.nix
+{
+  inputs = {
+    stackpanel.url = "github:darkmatter/stackpanel";
+    stackpanel-stripe.url = "github:someone/stackpanel-stripe";
+  };
+
+  outputs = inputs @ { flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.stackpanel.flakeModules.default
+        inputs.stackpanel-stripe.flakeModules.default
+      ];
+    };
+}
+```
+
+Once imported, the extension's options are available under `stackpanel.<extension-name>` just like builtin extensions.
+
+## Local Extensions
+
+For project-specific extensions that don't need to be shared, define them directly in your Nix configuration:
+
+```nix
+stackpanel.extensions.my-feature = {
+  name = "My Feature";
+  enabled = true;
+  source.type = "EXTENSION_SOURCE_TYPE_LOCAL";
+  source.path = "./nix/extensions/my-feature.nix";
+};
+```
+
+Local extensions are useful for encapsulating project-specific logic—things that don't make sense as a general-purpose extension but still benefit from the extension system's structure (UI panels, feature flags, clean enable/disable).
+
+## Extension Dependencies
+
+Extensions can declare dependencies on other extensions. When you enable an extension that depends on another, the dependency is checked and an error is raised if it's missing:
+
+```nix
+stackpanel.extensions.my-deploy = {
+  name = "My Deploy";
+  enabled = true;
+  dependencies = [ "sst" "docker" ];
+};
+```
+
+This prevents configuration errors from incomplete setups—you'll know immediately if a required extension isn't enabled.
+
+## What Happens When You Disable an Extension
+
+Disabling an extension (`enable = false`) removes everything it contributed:
+
+- Its packages are removed from `PATH`
+- Its scripts are no longer available
+- Its generated files stop being produced
+- Its services are removed from process-compose
+- Its shell hooks stop running
+- Its UI panels disappear from Studio
+
+Because of how the [module system](/docs/concepts/module-system) works (specifically `lib.mkIf`), disabled extensions have zero impact on your environment. They're not just hidden—they're not evaluated at all.
+
+<Callout type="info">
+Generated files that an extension previously created will still exist on disk after disabling it. Run a rebuild to clean up stale generated files, or delete them manually.
+</Callout>
+
+## Next Steps
+
+- [Writing Extensions](./writing-extensions) to create your own extensions
+- [Extension Registry](./registry) for the Studio extension browser
+- [The Module System](/docs/concepts/module-system) to understand how extensions compose

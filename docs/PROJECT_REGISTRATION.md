@@ -1,6 +1,6 @@
 # Project Registration Points
 
-This document describes all the points at which Stackpanel projects are automatically registered in the user configuration file at `~/.config/stackpanel/stackpanel.yaml`.
+This document describes all the points at which Stack projects are automatically registered in the user configuration file at `~/.config/stack/stack.yaml`.
 
 ## Overview
 
@@ -11,7 +11,7 @@ When a project is "registered", it's added to the `projects` list in the user co
 
 ## Registration Points
 
-### 1. Running `stackpanel agent` from a Project Directory
+### 1. Running `stack agent` from a Project Directory
 
 **Trigger:** Starting the agent without a `-p` flag from within a project directory.
 
@@ -19,46 +19,46 @@ When a project is "registered", it's added to the `projects` list in the user co
 
 ```bash
 cd ~/projects/my-app
-stackpanel agent
+stack agent
 # → Project auto-detected and registered
 ```
 
-### 2. Running `stackpanel agent -p <path>`
+### 2. Running `stack agent -p <path>`
 
 **Trigger:** Starting the agent with an explicit project path.
 
 **Location:** `internal/agent/server/server.go` → `OpenProject()`
 
 ```bash
-stackpanel agent -p ~/projects/my-app
+stack agent -p ~/projects/my-app
 # → Project registered from the provided path
 ```
 
-### 3. CLI Command: `stackpanel project add`
+### 3. CLI Command: `stack project add`
 
 **Trigger:** Explicitly adding a project via CLI (with confirmation prompt).
 
 **Location:** `cmd/cli/project.go` → `projectAddCmd`
 
 ```bash
-stackpanel project add ~/projects/my-app
+stack project add ~/projects/my-app
 # → Shows project details and prompts: "Add this project? [y/N]"
 
 # Skip confirmation with -y flag:
-stackpanel project add -y ~/projects/my-app
+stack project add -y ~/projects/my-app
 
 # Add current directory:
-stackpanel project add
+stack project add
 ```
 
-### 4. CLI Command: `stackpanel project default`
+### 4. CLI Command: `stack project default`
 
 **Trigger:** Setting a default project (adds if not already registered).
 
 **Location:** `cmd/cli/project.go` → `projectDefaultCmd`
 
 ```bash
-stackpanel project default ~/projects/my-app
+stack project default ~/projects/my-app
 # → Adds project if not already in list, then sets as default
 ```
 
@@ -69,14 +69,14 @@ stackpanel project default ~/projects/my-app
 **Location:** `internal/agent/server/project_handlers.go` → `handleProjectOpen()`
 
 ```bash
-curl -X POST -H "X-Stackpanel-Token: $TOKEN" \
+curl -X POST -H "X-Stack-Token: $TOKEN" \
   -d '{"path": "/path/to/project"}' \
   http://localhost:9876/api/project/open
 ```
 
-### 6. CLI Command: `stackpanel init`
+### 6. CLI Command: `stack init`
 
-**Trigger:** Nix calls `stackpanel init` during shell entry.
+**Trigger:** Nix calls `stack init` during shell entry.
 
 **Location:** `cmd/cli/init.go` → `runInit()`
 
@@ -84,11 +84,11 @@ This is typically called automatically by the Nix devshell:
 ```nix
 # In flake.nix or devenv.nix
 shellHook = ''
-  stackpanel init --config '${builtins.toJSON config}'
+  stack init --config '${builtins.toJSON config}'
 '';
 ```
 
-### 7. CLI Command: `stackpanel scaffold`
+### 7. CLI Command: `stack scaffold`
 
 **Trigger:** Scaffolding a new project.
 
@@ -96,8 +96,8 @@ shellHook = ''
 
 ```bash
 cd ~/projects/new-app
-stackpanel scaffold
-# → Creates .stackpanel/ structure AND registers project
+stack scaffold
+# → Creates .stack/ structure AND registers project
 ```
 
 ### 8. Any CLI Command from Project Directory (Auto-Detection) - OPT-IN
@@ -111,7 +111,7 @@ stackpanel scaffold
 export STACKPANEL_AUTO_REGISTER=1
 
 cd ~/projects/my-app
-stackpanel status
+stack status
 # → Project auto-detected and registered (if not already known)
 ```
 
@@ -126,9 +126,9 @@ stackpanel status
 
 ## Project Detection Logic
 
-A directory is considered a Stackpanel project if it contains:
+A directory is considered a Stack project if it contains:
 
-1. `.stackpanel/config.nix` - Primary indicator
+1. `.stack/config.nix` - Primary indicator
 2. `flake.nix` + `.git/` - Secondary indicator (git repo with Nix flake)
 
 Detection walks up the directory tree from the current working directory until it finds a project root or reaches the filesystem root.
@@ -136,7 +136,7 @@ Detection walks up the directory tree from the current working directory until i
 ## Config File Structure
 
 ```yaml
-# ~/.config/stackpanel/stackpanel.yaml
+# ~/.config/stack/stack.yaml
 current_project: /Users/you/projects/my-app
 default_project: /Users/you/projects/my-app
 projects:
@@ -156,26 +156,26 @@ version: 1
 Each project gets a unique 8-character ID derived from the SHA256 hash of its absolute path. This ID is:
 - Stable (same path always produces same ID)
 - Short enough to type/remember
-- Usable in API requests via `X-Stackpanel-Project` header
+- Usable in API requests via `X-Stack-Project` header
 
 ## Viewing Registered Projects
 
 ```bash
 # List all registered projects
-stackpanel project list
+stack project list
 
 # Show details for a specific project
-stackpanel project info my-app
+stack project info my-app
 
 # Show the config file location
-cat ~/.config/stackpanel/stackpanel.yaml
+cat ~/.config/stack/stack.yaml
 ```
 
 ## Removing Projects
 
 ```bash
 # Remove by ID, name, or path
-stackpanel project remove my-app
+stack project remove my-app
 
 # This only removes from the config, doesn't delete any files
 ```
@@ -185,11 +185,11 @@ stackpanel project remove my-app
 | Variable | Description |
 |----------|-------------|
 | `STACKPANEL_AUTO_REGISTER=1` | Enable automatic project registration when running CLI commands from a project directory |
-| `STACKPANEL_USER_CONFIG` | Override the config file location (default: `~/.config/stackpanel/stackpanel.yaml`) |
+| `STACKPANEL_USER_CONFIG` | Override the config file location (default: `~/.config/stack/stack.yaml`) |
 
 ## Confirmation Prompts
 
-The `stackpanel project add` command shows a confirmation prompt before adding a project:
+The `stack project add` command shows a confirmation prompt before adding a project:
 
 ```
 Project to add:
@@ -204,12 +204,12 @@ Add this project? [y/N]
 Use `-y` or `--yes` to skip the confirmation:
 
 ```bash
-stackpanel project add -y ~/projects/my-app
+stack project add -y ~/projects/my-app
 ```
 
 ## Project Validation
 
-When adding a project, Stackpanel performs validation to ensure it's a legitimate project. This prevents accidentally registering system directories or non-project paths.
+When adding a project, Stack performs validation to ensure it's a legitimate project. This prevents accidentally registering system directories or non-project paths.
 
 ### What Gets Validated
 
@@ -218,18 +218,18 @@ When adding a project, Stackpanel performs validation to ensure it's a legitimat
 | **Path Safety** | Rejects system directories (`/tmp`, `/etc`, `/nix/store`, etc.) and the home directory itself |
 | **Directory Exists** | Path must exist and be a directory |
 | **Git Repository** | Must have a `.git` directory |
-| **Stackpanel Markers** | Must have `.stackpanel/config.nix` OR a flake with stackpanel (see below) |
-| **Config Content** | If `.stackpanel/config.nix` exists, checks for `enable` and `name` fields |
+| **Stack Markers** | Must have `.stack/config.nix` OR a flake with stack (see below) |
+| **Config Content** | If `.stack/config.nix` exists, checks for `enable` and `name` fields |
 
 ### Flake Detection (Nix-based)
 
-For projects with `flake.nix` but no `.stackpanel/config.nix`, validation uses multiple detection methods in order of accuracy:
+For projects with `flake.nix` but no `.stack/config.nix`, validation uses multiple detection methods in order of accuracy:
 
 | Method | Description | Speed |
 |--------|-------------|-------|
 | **1. stackpanelConfig output** | Checks multiple flake output paths (see below) | ~2-5s |
-| **2. Flake metadata** | Runs `nix flake metadata --json` and checks if any input contains "stackpanel" | ~1-3s |
-| **3. Text search** | Falls back to searching `flake.nix` for "stackpanel" string patterns | Instant |
+| **2. Flake metadata** | Runs `nix flake metadata --json` and checks if any input contains "stack" | ~1-3s |
+| **3. Text search** | Falls back to searching `flake.nix` for "stack" string patterns | Instant |
 
 The nix-based checks can be skipped for faster validation using `ValidateProjectFast()` or `--skip-nix-eval` (when available).
 
@@ -237,8 +237,8 @@ The nix-based checks can be skipped for faster validation using `ValidateProject
 
 | Level | Description |
 |-------|-------------|
-| **Strict** | Requires `.stackpanel/config.nix` with valid content |
-| **Normal** | Accepts `.stackpanel/config.nix` OR flake with stackpanel (uses nix eval) |
+| **Strict** | Requires `.stack/config.nix` with valid content |
+| **Normal** | Accepts `.stack/config.nix` OR flake with stack (uses nix eval) |
 | **Lenient** | Accepts any `flake.nix` (used for detection, not registration) |
 
 ### Validation Options
@@ -254,9 +254,9 @@ After validation, projects are categorized:
 
 | Type | Description | Detection Method |
 |------|-------------|------------------|
-| `stackpanel-config` | Has `.stackpanel/config.nix` (recommended) | File exists |
-| `stackpanel-flake` | Has `flake.nix` with stackpanel | Nix eval or metadata |
-| `flake-only` | Has `flake.nix` but no stackpanel (lenient only) | Text search fallback |
+| `stack-config` | Has `.stack/config.nix` (recommended) | File exists |
+| `stack-flake` | Has `flake.nix` with stack | Nix eval or metadata |
+| `flake-only` | Has `flake.nix` but no stack (lenient only) | Text search fallback |
 
 ### Suspicious Paths
 
@@ -275,10 +275,10 @@ The following paths are automatically rejected:
 |-------|---------|
 | `not_found` | Directory doesn't exist |
 | `not_git_repo` | No `.git` directory found |
-| `not_stackpanel` | No `.stackpanel/config.nix` or `flake.nix` |
+| `not_stackpanel` | No `.stack/config.nix` or `flake.nix` |
 | `suspicious_path` | Path appears to be a system directory |
-| `flake_not_stackpanel` | Has `flake.nix` but no stackpanel input/output detected |
-| `invalid_config` | `.stackpanel/config.nix` is empty or malformed |
+| `flake_not_stackpanel` | Has `flake.nix` but no stack input/output detected |
+| `invalid_config` | `.stack/config.nix` is empty or malformed |
 
 ### How Flake Detection Works
 
@@ -286,7 +286,7 @@ The following paths are automatically rejected:
    
    The following paths are checked in order (using the detected system, e.g., `aarch64-darwin`):
    ```bash
-   # Top-level (stackpanel repo itself)
+   # Top-level (stack repo itself)
    nix eval .#stackpanelConfig.name --json --no-eval-cache
    
    # devShells passthru (user projects via devenv/devshell)
@@ -295,22 +295,22 @@ The following paths are automatically rejected:
    # legacyPackages (alternative exposure method)
    nix eval .#legacyPackages.<system>.stackpanelConfig.name --json --no-eval-cache
    ```
-   If any of these succeeds, the flake definitely uses stackpanel.
+   If any of these succeeds, the flake definitely uses stack.
 
 2. **Check flake inputs via metadata:**
    ```bash
    nix flake metadata --json .
    ```
-   Parses the JSON and looks for any input node with "stackpanel" in the name or repo.
+   Parses the JSON and looks for any input node with "stack" in the name or repo.
 
 3. **Text search fallback:**
-   Scans `flake.nix` for patterns like `stackpanel`, `stackpanelConfig`, `stackpanelModules`.
+   Scans `flake.nix` for patterns like `stack`, `stackpanelConfig`, `stackpanelModules`.
 
 ### Flake Output Locations
 
 | Location | Used By |
 |----------|---------|
-| `.#stackpanelConfig` | Stackpanel repo itself |
+| `.#stackpanelConfig` | Stack repo itself |
 | `.#devShells.<system>.default.passthru.stackpanelConfig` | User projects using devenv/devshell |
 | `.#legacyPackages.<system>.stackpanelConfig` | User projects exposing via legacyPackages |
 
@@ -319,25 +319,25 @@ The system is auto-detected (e.g., `x86_64-linux`, `aarch64-darwin`) using `buil
 ### Example Validation Output
 
 ```bash
-$ stackpanel project add /tmp
+$ stack project add /tmp
 ✗ Invalid project: path appears to be a system or temporary directory
 
 ⚠ Validation details:
   • Path appears to be a system or temporary directory
 
-$ stackpanel project add ~/random-repo
-✗ Invalid project: flake.nix exists but doesn't appear to be a Stackpanel project
+$ stack project add ~/random-repo
+✗ Invalid project: flake.nix exists but doesn't appear to be a Stack project
 
 ⚠ Validation details:
-  • flake.nix exists but doesn't appear to be a Stackpanel project
+  • flake.nix exists but doesn't appear to be a Stack project
 
-$ stackpanel project add ~/my-stackpanel-project
+$ stack project add ~/my-stack-project
 Project to add:
 
-  Name: my-stackpanel-project
+  Name: my-stack-project
   ID:   a1b2c3d4
-  Path: /Users/you/my-stackpanel-project
-  Type: stackpanel-config
+  Path: /Users/you/my-stack-project
+  Type: stack-config
 
 Add this project? [y/N]
 ```

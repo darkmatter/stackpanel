@@ -1,3 +1,8 @@
+// ports.go exposes the deterministic port computation as a standalone command.
+//
+// Useful for shell scripts, CI, and external tooling that need to discover
+// a service's port without entering the Nix devshell. The algorithm is
+// intentionally simple (MD5-based) so it can be reimplemented in any language.
 package cmd
 
 import (
@@ -11,7 +16,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// portsConfig is a minimal struct for the fields we need from the evaluated config
+// portsConfig is a minimal struct for the fields we need from the evaluated config.
+// We only need projectRoot and projectName — the port computation is done locally
+// via svc.StablePort, not by Nix.
 type portsConfig struct {
 	ProjectRoot string `json:"projectRoot"`
 	ProjectName string `json:"projectName"`
@@ -66,6 +73,8 @@ service name or add a prefix to it.
 			fmt.Fprintf(os.Stderr, "failed to unmarshal config: %v\n", err)
 			return
 		}
+		// --repo and --service flags allow computing ports for a different
+		// project/service without being inside that project's devshell.
 		rk := config.ProjectRoot
 		if repo != "" {
 			rk = repo

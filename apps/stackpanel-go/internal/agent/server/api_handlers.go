@@ -1,3 +1,8 @@
+// api_handlers.go contains REST API endpoint handlers for the agent's HTTP server.
+// These are the "legacy" REST endpoints used alongside the newer Connect-RPC handlers.
+// Both interfaces coexist: REST is simpler for health/status/files, Connect-RPC
+// provides type-safe proto-generated handlers for more complex operations.
+
 package server
 
 import (
@@ -9,9 +14,9 @@ import (
 	"strings"
 )
 
-// handleValidateToken checks if the provided token is valid.
-// GET /api/auth/validate
-// This endpoint requires auth, so if it succeeds, the token is valid.
+// handleValidateToken is a no-op handler that relies on the requireAuth middleware.
+// If the request reaches this handler, the JWT is valid. The web UI calls this
+// endpoint on startup to verify its stored token is still accepted.
 func (s *Server) handleValidateToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -24,16 +29,17 @@ func (s *Server) handleValidateToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// -----------------------------
-// HTTP endpoints
-// -----------------------------
-
+// apiResponse is the standard envelope for all REST API responses.
+// Connect-RPC handlers use proto messages instead.
 type apiResponse struct {
 	Success bool `json:"success"`
 	Data    any  `json:"data,omitempty"`
 	Error   any  `json:"error,omitempty"`
 }
 
+// execRequest is the payload for POST /api/exec.
+// Command must be a single binary name (no spaces) — arguments go in Args.
+// Cwd is resolved relative to ProjectRoot via safeJoin to prevent path traversal.
 type execRequest struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args,omitempty"`
@@ -51,6 +57,8 @@ type fileWriteRequest struct {
 	Content string `json:"content"`
 }
 
+// secretSetRequest is the payload for POST /api/secrets/set.
+// Env is normalized to one of: dev, staging, prod, common.
 type secretSetRequest struct {
 	Env   string `json:"env"`
 	Key   string `json:"key"`
@@ -104,6 +112,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, resp)
 }
 
+// handleExec runs an arbitrary command within the project context.
+// The command field must be a bare binary name — rejecting spaces prevents
+// shell injection via "bash -c ..." style payloads.
 func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -121,6 +132,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		s.writeAPIError(w, http.StatusBadRequest, "command is required")
 		return
 	}
+	// Reject spaces/tabs to prevent shell injection — callers must use Args for arguments
 	if strings.Contains(req.Command, " ") || strings.Contains(req.Command, "\t") {
 		s.writeAPIError(w, http.StatusBadRequest, "command must not contain spaces")
 		return
@@ -146,6 +158,8 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	s.writeAPI(w, http.StatusOK, res)
 }
 
+// handleNixEval evaluates an arbitrary Nix expression and returns the JSON result.
+// The expression is passed to `nix eval --impure --json --expr <expr>`.
 func (s *Server) handleNixEval(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -185,6 +199,8 @@ func (s *Server) handleNixEval(w http.ResponseWriter, r *http.Request) {
 	s.writeAPI(w, http.StatusOK, v)
 }
 
+// handleNixGenerate triggers `nix run .#generate` which regenerates IDE configs,
+// JSON schemas, and other derived files in .stack/gen/.
 func (s *Server) handleNixGenerate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -213,6 +229,10 @@ func (s *Server) handleNixGenerate(w http.ResponseWriter, r *http.Request) {
 	s.writeAPI(w, http.StatusOK, payload)
 }
 
+// handleFiles provides read/write access to project files via GET and POST.
+// All paths are resolved relative to ProjectRoot via safeJoin (prevents traversal).
+// GET returns {exists: false} for missing files rather than an error, so the UI
+// can distinguish "file doesn't exist yet" from "something broke".
 func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -283,7 +303,7 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleFilesList lists files in a directory
-// GET /api/files/list?path=.stackpanel/state
+// GET /api/files/list?path=.stack/state
 func (s *Server) handleFilesList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -351,7 +371,8 @@ func (s *Server) handleScriptSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use 'which' to find the script path
+	// Use 'which' to resolve the script from the devshell PATH.
+	// Scripts defined in Nix end up as wrapper scripts in /nix/store.
 	result, err := s.exec.Run("which", name)
 	if err != nil || result.ExitCode != 0 {
 		s.writeAPI(w, http.StatusOK, map[string]any{
@@ -372,7 +393,9 @@ func (s *Server) handleScriptSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if it's a binary or script by reading the first bytes
+	// Heuristic: check for null bytes in the first 512 bytes to distinguish
+	// compiled binaries from shell scripts. Files starting with #! or // are
+	// assumed to be text even if they contain unusual characters later.
 	content, err := os.ReadFile(scriptPath)
 	if err != nil {
 		s.writeAPIError(w, http.StatusInternalServerError, "failed to read script: "+err.Error())

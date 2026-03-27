@@ -56,6 +56,12 @@
     appModule = false; # Adds per-app configuration options
   };
 
+  # Flake inputs required by this module (for auto-installation from registry)
+  # Each entry: { name = "input-name"; url = "github:..."; followsNixpkgs = true; }
+  # When this module is installed via the registry, these inputs are automatically
+  # added to the consumer's flake.nix using tree-sitter.
+  flakeInputs = [ ];
+
   # Priority for ordering (lower = higher priority)
   priority = 100;
 

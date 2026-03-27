@@ -1,0 +1,27 @@
+---
+title: "env-codegen/module.nix"
+description: Generates the packages/gen/env structure from stackpanel.apps configuration.
+---
+
+Generates the packages/gen/env structure from stackpanel.apps configuration.
+
+This module integrates env-package.nix codegen into the files system,
+ensuring all generated files are created on devshell entry.
+
+Generated files:
+```nix
+packages/gen/env/src/<app>/               - TypeScript znv modules
+packages/gen/env/src/embedded-data.ts     - Embedded plaintext + encrypted payloads
+packages/gen/env/src/entrypoints/         - App entrypoint loaders
+packages/gen/env/src/loader.ts            - Runtime resolver/decrypter
+```
+
+
+## Usage
+
+```nix
+# The module is automatically enabled when apps have environments
+stackpanel.apps.web.environments.dev.env = {
+  DATABASE_URL = "ref+sops://...";
+};
+```

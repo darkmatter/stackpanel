@@ -10,7 +10,8 @@ import (
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
-// RedisService manages the Redis service
+// RedisService manages a project-local Redis instance with Unix socket support.
+// Project-specific configuration can be dropped into config.d/ for include.
 type RedisService struct {
 	svc.BaseService
 }
@@ -34,6 +35,8 @@ func (r *RedisService) SocketFile() string {
 	return filepath.Join(r.ServiceDir(), "redis.sock")
 }
 
+// ConfigDir holds project-specific .conf files that are included via the
+// generated redis.conf's "include" directive.
 func (r *RedisService) ConfigDir() string {
 	return filepath.Join(r.ServiceDir(), "config.d")
 }
@@ -84,7 +87,8 @@ func (r *RedisService) Stop() error {
 		return nil
 	}
 
-	// Try graceful shutdown first
+	// Prefer redis-cli SHUTDOWN for a clean RDB save; fall back to SIGKILL
+	// if the server doesn't respond (e.g. hung on AOF rewrite).
 	cmd := exec.Command("redis-cli", "-p", fmt.Sprintf("%d", r.Port()), "shutdown")
 	if err := cmd.Run(); err != nil {
 		// Force kill

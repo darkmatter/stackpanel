@@ -1,0 +1,198 @@
+---
+title: Zed
+description: Auto-generated Zed editor configuration from your Stackpanel config
+icon: code
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can generate [Zed](https://zed.dev/) editor configuration from your project's Nix config—language server settings, formatter preferences, and workspace configuration that stay in sync with your dev environment.
+
+## Enable Zed Integration
+
+```nix
+stackpanel.ide = {
+  enable = true;
+  zed.enable = true;
+};
+```
+
+When enabled, Stackpanel generates Zed configuration files in your project that configure the editor to match your devshell—correct language servers, formatters, and project settings.
+
+## Generated Files
+
+The Zed integration generates settings in the `.zed/` directory at your project root:
+
+| File | Purpose |
+|------|---------|
+| `.zed/settings.json` | Workspace-level Zed settings |
+
+These are standard Zed configuration files. Zed reads them automatically when you open the project—no manual setup required.
+
+<Callout type="info">
+Generated Zed settings are workspace-scoped. They don't affect your global Zed configuration or other projects.
+</Callout>
+
+## What Gets Configured
+
+The generated settings are derived from your Stackpanel configuration:
+
+### Language Servers
+
+When you have language tools in your devshell, Zed is configured to use them:
+
+```nix
+{
+  stackpanel.devshell.packages = with pkgs; [
+    nil           # Nix language server
+    nodePackages.typescript-language-server
+    gopls         # Go language server
+  ];
+
+  stackpanel.ide.zed.enable = true;
+}
+```
+
+Stackpanel configures Zed to use the Nix-provided language server binaries from your devshell rather than Zed's bundled versions. This ensures your editor uses the same tool versions as the rest of your environment.
+
+### Formatters
+
+When formatters are available in your devshell, the Zed config is updated to use them:
+
+```nix
+{
+  stackpanel.devshell.packages = with pkgs; [
+    nixfmt-rfc-style  # Nix formatter
+    biome              # JS/TS formatter and linter
+    alejandra          # Alternative Nix formatter
+  ];
+
+  stackpanel.ide.zed.enable = true;
+}
+```
+
+### Nix Environment Integration
+
+Zed can be configured to use your devshell's environment for running tasks and language servers. The generated settings ensure Zed picks up the correct `PATH` and environment variables from your Nix shell.
+
+## Configuration Options
+
+### Custom Settings
+
+You can extend the generated Zed settings with additional configuration:
+
+```nix
+stackpanel.ide.zed = {
+  enable = true;
+
+  settings = {
+    # Additional settings merged into .zed/settings.json
+    tab_size = 2;
+    format_on_save = "on";
+    soft_wrap = "editor_width";
+  };
+};
+```
+
+Custom settings are deep-merged with the auto-generated settings, so you can override specific values without losing the generated configuration.
+
+### Disabling Specific Generators
+
+If you want Zed integration but prefer to manage certain settings yourself:
+
+```nix
+stackpanel.ide.zed = {
+  enable = true;
+
+  # Control which parts are auto-generated
+  lsp.enable = true;       # Generate language server config
+  formatters.enable = true; # Generate formatter config
+};
+```
+
+## Launching Zed with the Devshell
+
+For Zed to use the language servers and tools from your devshell, it needs to be launched from within the Nix environment. There are a few ways to do this:
+
+### From the Terminal
+
+The simplest approach—open Zed from a terminal that's already in the devshell:
+
+```bash
+# Enter the devshell (or let direnv do it)
+cd /path/to/your/project
+
+# Open Zed from within the devshell
+zed .
+```
+
+### With Direnv Integration
+
+If you use [direnv](/docs/dev-environment/direnv), Zed can pick up the environment automatically when opening the project directory—provided Zed's direnv integration is enabled in your global settings.
+
+<Callout type="info">
+Zed has built-in direnv support. Enable it in your global Zed settings to automatically load the devshell environment when opening Stackpanel projects.
+</Callout>
+
+## Combining with VS Code
+
+You can enable both VS Code and Zed integration simultaneously. Each generates its own configuration files independently:
+
+```nix
+stackpanel.ide = {
+  enable = true;
+  vscode.enable = true;
+  zed.enable = true;
+};
+```
+
+This is useful for teams where some members use VS Code and others use Zed—everyone gets editor configuration that matches the project's toolchain.
+
+## Generated File Management
+
+Like all Stackpanel-generated files, the Zed configuration:
+
+- Is committed to Git so team members get consistent settings
+- Is rebuilt when your Stackpanel config changes
+- Can be inspected directly (it's a standard `.zed/settings.json`)
+- Shouldn't be edited by hand—changes will be overwritten on the next build
+
+If you need to add personal settings that shouldn't be shared with the team, use Zed's global settings file instead of the workspace-level one.
+
+<Callout type="warn">
+Don't edit `.zed/settings.json` by hand—your changes will be overwritten. Use Zed's global user settings for personal preferences, and configure shared project settings through `stackpanel.ide.zed.settings`.
+</Callout>
+
+## Troubleshooting
+
+### Language server not found
+
+If Zed can't find a language server, make sure you launched Zed from within the devshell (or have direnv integration working). The language server binaries live in the Nix store and are only on `PATH` inside the devshell.
+
+```bash
+# Verify the language server is available
+which nil
+which typescript-language-server
+```
+
+### Settings not updating
+
+If you changed your Stackpanel config but Zed settings haven't updated, trigger a rebuild and restart Zed:
+
+```bash
+# Check file status
+stackpanel status
+
+# Zed may need to be restarted to pick up new settings
+```
+
+### Conflicts with global Zed settings
+
+Workspace settings in `.zed/settings.json` override global settings for the project. If you see unexpected behavior, check whether a global setting is being overridden by the generated workspace config.
+
+## Reference
+
+- [VS Code](/docs/ide/vscode) for VS Code integration
+- [IDE Overview](/docs/ide) for general IDE integration concepts
+- [Options Reference → IDE](/docs/reference/ide) for all IDE configuration options
+- [Dev Environment → Packages & Scripts](/docs/dev-environment/packages-scripts) for adding language tools to your devshell

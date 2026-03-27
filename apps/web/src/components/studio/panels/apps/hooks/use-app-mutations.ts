@@ -1,13 +1,16 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { useAgentClient } from "@/lib/agent-provider";
 import type { App } from "@/lib/types";
+import { usePatchNixData } from "@/lib/use-agent";
 import {
-	type AppVariableMapping,
-	buildEnvironmentsMap,
 	flattenEnvironmentVariables,
 	getEnvironmentNames,
 } from "../utils";
+import {
+	buildVariableConfigExpression,
+	isVariableLinkReference,
+	parseVariableLinkReference,
+} from "../../variables/constants";
 
 interface UseAppMutationsOptions {
 	token: string | null;
@@ -20,11 +23,59 @@ export function useAppMutations({
 	resolvedApps,
 	refetch,
 }: UseAppMutationsOptions) {
-	// Get the client at the top level (following Rules of Hooks)
-	const client = useAgentClient();
+	const patchNixData = usePatchNixData();
 
-	// Handler for adding a new variable mapping to an app
-	// With simplified schema: envKey maps to value (literal or vals reference)
+	const toPatchPayload = useCallback((value: string) => {
+		if (isVariableLinkReference(value)) {
+			const variableId = parseVariableLinkReference(value);
+			if (variableId) {
+				const nextValue = buildVariableConfigExpression(variableId);
+				return {
+					value: nextValue,
+					valueType: nextValue.startsWith("var://") ? "string" : "nix_expr",
+				} as const;
+			}
+		}
+		return {
+			value: JSON.stringify(value),
+			valueType: "string",
+		} as const;
+	}, []);
+
+	const patchAppPath = useCallback(
+		async (appId: string, path: string, value: string, valueType: string) => {
+			await patchNixData.mutateAsync({
+				entity: "apps",
+				key: appId,
+				path,
+				value,
+				valueType,
+			});
+		},
+		[patchNixData],
+	);
+
+	const deleteAppPath = useCallback(
+		async (appId: string, path: string) => {
+			await patchAppPath(appId, path, "", "delete");
+		},
+		[patchAppPath],
+	);
+
+	const ensureEnvironment = useCallback(
+		async (appId: string, envName: string) => {
+			const existingEnv = resolvedApps?.[appId]?.environments?.[envName];
+			if (existingEnv) return;
+			await patchAppPath(
+				appId,
+				`environments.${envName}`,
+				JSON.stringify({ name: envName, env: {} }),
+				"object",
+			);
+		},
+		[patchAppPath, resolvedApps],
+	);
+
 	const handleAddVariableToApp = useCallback(
 		async (
 			appId: string,
@@ -38,54 +89,17 @@ export function useAppMutations({
 			}
 
 			try {
-				if (token) client.setToken(token);
-				const appsClient = client.nix.mapEntity<App>("apps");
-
-				// Get existing app to preserve existing environments
-				const existingApp = resolvedApps?.[appId];
-				const existingEnvironments = existingApp?.environments ?? {};
-
-				// Get existing variable mappings and add the new one
-				const existingMappings =
-					flattenEnvironmentVariables(existingEnvironments);
-				const newMapping: AppVariableMapping = {
-					envKey,
-					value,
-					environments,
-				};
-
-				// Merge with existing (replace if same envKey)
-				const updatedMappings = [
-					...existingMappings.filter((m) => m.envKey !== envKey),
-					newMapping,
-				];
-
-				// Get all environment names (existing + new)
-				const allEnvNames = Array.from(
-					new Set([
-						...getEnvironmentNames(existingEnvironments),
-						...environments,
-					]),
-				);
-
-				// Build the new environments structure
-				const newEnvironments = buildEnvironmentsMap(
-					allEnvNames,
-					updatedMappings,
-				);
-
-				await appsClient.update(appId, {
-					environments: newEnvironments,
-				});
+				const patchPayload = toPatchPayload(value);
+				for (const environment of environments) {
+					await ensureEnvironment(appId, environment);
+					await patchAppPath(
+						appId,
+						`environments.${environment}.env.${envKey}`,
+						patchPayload.value,
+						patchPayload.valueType,
+					);
+				}
 				toast.success(`Added ${envKey} to app`);
-
-				// Regenerate secrets package in background (works when agent is in devshell)
-				client.regenerateSecrets().then((result) => {
-					if (result && result.exit_code === 0) {
-						toast.success("Secrets package regenerated", { duration: 2000 });
-					}
-				});
-
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -93,11 +107,9 @@ export function useAppMutations({
 				);
 			}
 		},
-		[client, token, resolvedApps, refetch],
+		[ensureEnvironment, patchAppPath, refetch, toPatchPayload, token],
 	);
 
-	// Handler for updating an existing variable mapping
-	// With simplified schema: envKey maps to value (literal or vals reference)
 	const handleUpdateVariableInApp = useCallback(
 		async (
 			appId: string,
@@ -112,54 +124,31 @@ export function useAppMutations({
 			}
 
 			try {
-				if (token) client.setToken(token);
-				const appsClient = client.nix.mapEntity<App>("apps");
-
-				// Get existing app to preserve existing environments
 				const existingApp = resolvedApps?.[appId];
 				const existingEnvironments = existingApp?.environments ?? {};
+				const existingMappings = flattenEnvironmentVariables(existingEnvironments);
+				const existingMapping = existingMappings.find((m) => m.envKey === oldEnvKey);
+				const currentEnvironments = new Set(existingMapping?.environments ?? []);
+				const nextEnvironments = new Set(environments);
+				const patchPayload = toPatchPayload(value);
 
-				// Get existing variable mappings, remove the old one, add the updated one
-				const existingMappings =
-					flattenEnvironmentVariables(existingEnvironments);
-				const updatedMapping: AppVariableMapping = {
-					envKey: newEnvKey,
-					value,
-					environments,
-				};
-
-				// Remove old mapping and add updated one
-				const updatedMappings = [
-					...existingMappings.filter((m) => m.envKey !== oldEnvKey),
-					updatedMapping,
-				];
-
-				// Get all environment names (existing + new)
-				const allEnvNames = Array.from(
-					new Set([
-						...getEnvironmentNames(existingEnvironments),
-						...environments,
-					]),
-				);
-
-				// Build the new environments structure
-				const newEnvironments = buildEnvironmentsMap(
-					allEnvNames,
-					updatedMappings,
-				);
-
-				await appsClient.update(appId, {
-					environments: newEnvironments,
-				});
-				toast.success(`Updated ${newEnvKey}`);
-
-				// Regenerate secrets package in background (works when agent is in devshell)
-				client.regenerateSecrets().then((result) => {
-					if (result && result.exit_code === 0) {
-						toast.success("Secrets package regenerated", { duration: 2000 });
+				for (const environment of currentEnvironments) {
+					if (oldEnvKey !== newEnvKey || !nextEnvironments.has(environment)) {
+						await deleteAppPath(appId, `environments.${environment}.env.${oldEnvKey}`);
 					}
-				});
+				}
 
+				for (const environment of nextEnvironments) {
+					await ensureEnvironment(appId, environment);
+					await patchAppPath(
+						appId,
+						`environments.${environment}.env.${newEnvKey}`,
+						patchPayload.value,
+						patchPayload.valueType,
+					);
+				}
+
+				toast.success(`Updated ${newEnvKey}`);
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -167,10 +156,17 @@ export function useAppMutations({
 				);
 			}
 		},
-		[client, token, resolvedApps, refetch],
+		[
+			deleteAppPath,
+			ensureEnvironment,
+			patchAppPath,
+			refetch,
+			resolvedApps,
+			toPatchPayload,
+			token,
+		],
 	);
 
-	// Handler for updating the environments list for an app
 	const handleUpdateEnvironmentsForApp = useCallback(
 		async (appId: string, newEnvNames: string[]) => {
 			if (!token) {
@@ -179,39 +175,36 @@ export function useAppMutations({
 			}
 
 			try {
-				if (token) client.setToken(token);
-				const appsClient = client.nix.mapEntity<App>("apps");
-
-				// Get existing app to preserve existing variables
 				const existingApp = resolvedApps?.[appId];
 				const existingEnvironments = existingApp?.environments ?? {};
+				const existingEnvNames = new Set(getEnvironmentNames(existingEnvironments));
+				const nextEnvNames = new Set(newEnvNames);
 
-				// Get existing variable mappings
-				const existingMappings =
-					flattenEnvironmentVariables(existingEnvironments);
+				for (const envName of newEnvNames) {
+					if (!existingEnvNames.has(envName)) {
+						await ensureEnvironment(appId, envName);
+					}
+				}
 
-				// Build the new environments structure with the new env names
-				// This preserves variables in environments that still exist
-				const newEnvironments = buildEnvironmentsMap(
-					newEnvNames,
-					existingMappings,
-				);
+				for (const envName of existingEnvNames) {
+					if (!nextEnvNames.has(envName)) {
+						await deleteAppPath(appId, `environments.${envName}`);
+					}
+				}
 
-				await appsClient.update(appId, {
-					environments: newEnvironments,
-				});
 				toast.success("Updated environments");
 				refetch();
 			} catch (err) {
 				toast.error(
-					err instanceof Error ? err.message : "Failed to update environments",
+					err instanceof Error
+						? err.message
+						: "Failed to update environments",
 				);
 			}
 		},
-		[client, token, resolvedApps, refetch],
+		[deleteAppPath, ensureEnvironment, refetch, resolvedApps, token],
 	);
 
-	// Handler for deleting a variable mapping from an app
 	const handleDeleteVariableFromApp = useCallback(
 		async (appId: string, envKey: string) => {
 			if (!token) {
@@ -220,41 +213,16 @@ export function useAppMutations({
 			}
 
 			try {
-				if (token) client.setToken(token);
-				const appsClient = client.nix.mapEntity<App>("apps");
-
-				// Get existing app to preserve existing environments
 				const existingApp = resolvedApps?.[appId];
 				const existingEnvironments = existingApp?.environments ?? {};
+				const existingMappings = flattenEnvironmentVariables(existingEnvironments);
+				const existingMapping = existingMappings.find((m) => m.envKey === envKey);
 
-				// Get existing variable mappings and remove the specified one
-				const existingMappings =
-					flattenEnvironmentVariables(existingEnvironments);
-				const updatedMappings = existingMappings.filter(
-					(m) => m.envKey !== envKey,
-				);
+				for (const environment of existingMapping?.environments ?? []) {
+					await deleteAppPath(appId, `environments.${environment}.env.${envKey}`);
+				}
 
-				// Get all environment names from existing
-				const allEnvNames = getEnvironmentNames(existingEnvironments);
-
-				// Build the new environments structure
-				const newEnvironments = buildEnvironmentsMap(
-					allEnvNames,
-					updatedMappings,
-				);
-
-				await appsClient.update(appId, {
-					environments: newEnvironments,
-				});
 				toast.success(`Removed ${envKey}`);
-
-				// Regenerate secrets package in background (works when agent is in devshell)
-				client.regenerateSecrets().then((result) => {
-					if (result && result.exit_code === 0) {
-						toast.success("Secrets package regenerated", { duration: 2000 });
-					}
-				});
-
 				refetch();
 			} catch (err) {
 				toast.error(
@@ -262,34 +230,34 @@ export function useAppMutations({
 				);
 			}
 		},
-		[client, token, resolvedApps, refetch],
+		[deleteAppPath, refetch, resolvedApps, token],
 	);
 
-	// Handler for setting the active framework (go/bun) for an app.
-	// Enables the chosen framework and disables the other.
 	const handleUpdateFramework = useCallback(
-		async (
-			appId: string,
-			framework: "go" | "bun" | null,
-		) => {
+		async (appId: string, framework: "go" | "bun" | null) => {
 			if (!token) {
 				toast.error("Not connected to agent");
 				return;
 			}
 
 			try {
-				if (token) client.setToken(token);
-				const appsClient = client.nix.mapEntity<App>("apps");
-
-				// Set the selected framework to enabled, disable the other,
-				// and update the type field to match
-				const updates: Record<string, unknown> = {
-					type: framework,
-					go: { enable: framework === "go" },
-					bun: { enable: framework === "bun" },
-				};
-
-				await appsClient.update(appId, updates as unknown as Partial<App>);
+				if (framework == null) {
+					await deleteAppPath(appId, "type");
+				} else {
+					await patchAppPath(appId, "type", JSON.stringify(framework), "string");
+				}
+				await patchAppPath(
+					appId,
+					"go.enable",
+					JSON.stringify(framework === "go"),
+					"bool",
+				);
+				await patchAppPath(
+					appId,
+					"bun.enable",
+					JSON.stringify(framework === "bun"),
+					"bool",
+				);
 
 				const label =
 					framework === "go"
@@ -307,10 +275,9 @@ export function useAppMutations({
 				);
 			}
 		},
-		[client, token, refetch],
+		[deleteAppPath, patchAppPath, refetch, token],
 	);
 
-	// Handler for deleting an app
 	const handleDeleteApp = useCallback(
 		async (appId: string) => {
 			if (!token) {
@@ -323,10 +290,13 @@ export function useAppMutations({
 			}
 
 			try {
-				if (token) client.setToken(token);
-				const appsClient = client.nix.mapEntity<App>("apps");
-
-				await appsClient.remove(appId);
+				await patchNixData.mutateAsync({
+					entity: "apps",
+					key: "_root",
+					path: appId,
+					value: "",
+					valueType: "delete",
+				});
 				toast.success(`Deleted app "${appId}"`);
 				refetch();
 			} catch (err) {
@@ -335,7 +305,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[client, token, refetch],
+		[patchNixData, refetch, token],
 	);
 
 	return {

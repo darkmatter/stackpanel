@@ -1,3 +1,9 @@
+// machine_state.go persists provisioning metadata for NixOS machines.
+//
+// This state is shared between `provision` and `deploy` commands: provision
+// writes it after a successful install, deploy reads it to show machine status
+// and guard against re-provisioning without --reprovision. Stored in
+// .stack/state/machines.json (gitignored, local to each developer's machine).
 package cmd
 
 import (
@@ -8,7 +14,9 @@ import (
 	"time"
 )
 
-// MachineRecord captures the outcome of a single provision operation.
+// MachineRecord tracks when and how a machine was provisioned. The hardware
+// config path is stored so `deploy` can verify the file still exists before
+// building a NixOS closure that references it.
 type MachineRecord struct {
 	ProvisionedAt           string `json:"provisionedAt"`
 	InstallTarget           string `json:"installTarget"`
@@ -17,7 +25,6 @@ type MachineRecord struct {
 	NixRevision             string `json:"nixRevision,omitempty"`
 }
 
-// MachinesState is the full state file: map[machineName]MachineRecord
 type MachinesState map[string]MachineRecord
 
 func machineStateFile() string {
@@ -28,7 +35,7 @@ func machineStateFile() string {
 	if root == "" {
 		root = "."
 	}
-	return filepath.Join(root, ".stackpanel", "state", "machines.json")
+	return filepath.Join(root, ".stack", "state", "machines.json")
 }
 
 func readMachineState() (MachinesState, error) {

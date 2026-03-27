@@ -31,7 +31,7 @@ let
   cfg = config.stackpanel.step-ca;
   util = config.stackpanel.util;
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
-  dirs = config.stackpanel.dirs or { state = ".stackpanel/state"; };
+  dirs = config.stackpanel.dirs or { state = ".stack/profile"; profile = ".stack/profile"; };
   stateDir = "${dirs.state}/step";
   skipFile = "${stateDir}/.skip-setup-prompt";
 

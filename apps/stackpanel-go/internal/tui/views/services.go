@@ -34,7 +34,9 @@ type ServiceStartInfo struct {
 	Error       error
 }
 
-// ServicesView is the Bubble Tea model for starting/managing services
+// ServicesView is the Bubble Tea model for starting/stopping/restarting services.
+// Services are processed sequentially (one at a time) to respect dependency
+// ordering and avoid port conflicts during startup.
 type ServicesView struct {
 	services   []ServiceStartInfo
 	currentIdx int
@@ -336,7 +338,9 @@ func (m ServicesView) handleServiceStarted(msg serviceStartedMsg) (tea.Model, te
 func (m ServicesView) handleServiceStopped(msg serviceStoppedMsg) (tea.Model, tea.Cmd) {
 	if msg.idx < len(m.services) {
 		if msg.success {
-			m.services[msg.idx].State = StateRunning // Use running to indicate "done" for stop
+			// Reuses StateRunning to mean "completed successfully" — the view renders
+			// a checkmark regardless of whether this was a start or stop operation.
+			m.services[msg.idx].State = StateRunning
 			m.services[msg.idx].Message = msg.message
 		} else {
 			m.services[msg.idx].State = StateFailed
