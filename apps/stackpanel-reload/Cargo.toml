@@ -19,6 +19,9 @@ crossterm = "0.28"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
+# File watching
+notify = "6"
+
 # Error handling
 anyhow = "1"
 thiserror = "2"
