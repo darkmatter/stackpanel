@@ -21,7 +21,8 @@ pub struct PtySession {
     /// Wrapped in Option so it can be extracted via `take_writer()`.
     writer: Option<Box<dyn Write + Send>>,
     /// Read from this to get output from the child.
-    pub reader: Box<dyn Read + Send>,
+    /// Wrapped in Option so it can be extracted via `take_reader()`.
+    reader: Option<Box<dyn Read + Send>>,
     /// The child process handle (used to wait for exit).
     child: Box<dyn portable_pty::Child + Send>,
     /// The master side of the PTY (kept alive to avoid SIGHUP).
@@ -62,7 +63,7 @@ impl PtySession {
 
         Ok(Self {
             writer: Some(writer),
-            reader,
+            reader: Some(reader),
             child,
             _master: pair.master,
         })
@@ -72,6 +73,11 @@ impl PtySession {
     /// Panics if called more than once.
     pub fn take_writer(&mut self) -> Box<dyn Write + Send> {
         self.writer.take().expect("writer already taken from PtySession")
+    }
+
+    /// Take ownership of the PTY reader. Panics if called more than once.
+    pub fn take_reader(&mut self) -> Box<dyn Read + Send> {
+        self.reader.take().expect("reader already taken from PtySession")
     }
 
     /// Resize the PTY to new dimensions.
@@ -114,92 +120,221 @@ fn build_command(config: &Config) -> Result<CommandBuilder> {
     Ok(cmd)
 }
 
+/// Events flowing through the main session event loop.
+#[derive(Debug)]
+enum SessionEvent {
+    /// Bytes from the PTY (tagged with generation so stale events are ignored).
+    PtyOutput { gen: u64, bytes: Vec<u8> },
+    /// The active PTY's output stream closed (child exited).
+    PtyEof { gen: u64 },
+    /// Bytes typed by the user.
+    Stdin(Vec<u8>),
+    /// Background rebuild succeeded; time to spawn a new interactive PTY.
+    SwapReady,
+}
+
 /// Run the PTY session: forward stdin↔PTY and PTY→stdout until the child exits.
 ///
-/// Integrates the file watcher: when watched files change, spawns a background
-/// rebuild. On success, the PTY swap is triggered (Phase 3+).
+/// Integrates the file watcher and hot-swap:
+/// - Reloader watches config files; on success, triggers a PTY swap.
+/// - Swap: clear screen, spawn fresh `nix develop` PTY, redirect I/O.
 ///
 /// Returns the shell exit code.
 pub async fn run_session(config: &Config) -> Result<u32> {
     use crate::reloader::Reloader;
     use crate::terminal::{is_tty, terminal_size, RawModeGuard};
-    use std::io::stdout;
+    use std::io::{stdout, Write as _};
+    use tokio::sync::mpsc;
     use tokio::task;
 
-    // Non-TTY (CI): just exec the command directly — don't engage PTY machinery.
+    // Non-TTY (CI): exec directly — no PTY machinery needed.
     if !is_tty() {
         return exec_direct(config).await;
     }
 
     let (cols, rows) = terminal_size();
+
+    // ── Set up channels ───────────────────────────────────────────────────────
+    let (event_tx, mut event_rx) = mpsc::channel::<SessionEvent>(128);
+
+    // ── Spawn initial session ─────────────────────────────────────────────────
+    let mut current_gen = 0u64;
     let mut session = PtySession::spawn(config, cols, rows)?;
+    let writer: Arc<Mutex<Box<dyn Write + Send>>> =
+        Arc::new(Mutex::new(session.take_writer()));
+    start_pty_forwarder(session.take_reader(), current_gen, event_tx.clone());
+    // Hold the session so dropping it (on swap) closes the master → EOF.
+    let mut active_session = Some(session);
 
-    // Extract the writer BEFORE moving session into the output task.
-    let raw_writer = session.take_writer();
-    let writer: Arc<Mutex<Box<dyn Write + Send>>> = Arc::new(Mutex::new(raw_writer));
-
-    // Enable raw mode so all keystrokes (including Ctrl+C) go to the PTY.
+    // Enable raw mode.
     let _raw = RawModeGuard::enter()?;
 
-    // Shared done flag: set when the child's output stream closes (child exited).
-    let done = Arc::new(Mutex::new(false));
-
-    // ── Task 1: PTY output → stdout ─────────────────────────────────────────
-    let done_out = done.clone();
-    let output_task = task::spawn_blocking(move || {
-        let mut buf = [0u8; 4096];
-        let mut out = stdout();
+    // ── Task: stdin → active PTY writer ──────────────────────────────────────
+    let writer_for_stdin = writer.clone();
+    let stdin_tx = event_tx.clone();
+    task::spawn_blocking(move || {
+        use std::io::{stdin, Read as _};
+        let mut buf = [0u8; 256];
+        let mut inp = stdin();
         loop {
-            match session.reader.read(&mut buf) {
-                Ok(0) => break, // EOF: child closed stdout
+            match inp.read(&mut buf) {
+                Ok(0) | Err(_) => break,
                 Ok(n) => {
-                    if out.write_all(&buf[..n]).is_err() {
+                    // Also forward as event so we could intercept keybindings later.
+                    let bytes = buf[..n].to_vec();
+                    {
+                        let mut w = writer_for_stdin.lock().unwrap();
+                        let _ = w.write_all(&bytes);
+                        let _ = w.flush();
+                    }
+                    // Non-blocking send — drop if buffer full (best effort).
+                    let _ = stdin_tx.try_send(SessionEvent::Stdin(bytes));
+                }
+            }
+        }
+    });
+
+    // ── Task: reloader (file watcher + background builds) ────────────────────
+    let (reloader, mut ready_rx) = Reloader::new_with_ready(config.clone());
+    let reloader_task = tokio::spawn(async move {
+        reloader.run().await;
+    });
+    // Forward ready signal into main event channel.
+    let swap_tx = event_tx.clone();
+    tokio::spawn(async move {
+        while ready_rx.recv().await.is_some() {
+            if swap_tx.send(SessionEvent::SwapReady).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // ── Main event loop ───────────────────────────────────────────────────────
+    let mut exit_code = 0u32;
+    loop {
+        match event_rx.recv().await {
+            None => break, // all senders dropped
+
+            Some(SessionEvent::PtyOutput { gen, bytes }) => {
+                if gen != current_gen {
+                    continue; // stale event from old generation
+                }
+                let mut out = stdout();
+                let _ = out.write_all(&bytes);
+                let _ = out.flush();
+            }
+
+            Some(SessionEvent::PtyEof { gen }) => {
+                if gen != current_gen {
+                    continue;
+                }
+                // Active PTY exited. Wait for exit code and quit.
+                if let Some(mut s) = active_session.take() {
+                    exit_code = s.wait().unwrap_or(0);
+                }
+                break;
+            }
+
+            Some(SessionEvent::Stdin(_)) => {
+                // Already forwarded to PTY writer in the stdin task above.
+                // Reserved for Phase 6 keybinding interception.
+            }
+
+            Some(SessionEvent::SwapReady) => {
+                perform_swap(
+                    config,
+                    &mut active_session,
+                    &writer,
+                    &mut current_gen,
+                    cols,
+                    rows,
+                    &event_tx,
+                )
+                .await;
+            }
+        }
+    }
+
+    reloader_task.abort();
+    Ok(exit_code)
+}
+
+/// Spawn a dedicated thread that reads from `reader` and sends bytes to `tx`.
+/// Tagged with `gen` so the main loop can ignore bytes from old sessions.
+fn start_pty_forwarder(
+    reader: Box<dyn Read + Send>,
+    gen: u64,
+    tx: tokio::sync::mpsc::Sender<SessionEvent>,
+) {
+    tokio::task::spawn_blocking(move || {
+        let mut buf = [0u8; 4096];
+        let mut reader = reader;
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let bytes = buf[..n].to_vec();
+                    if tx.blocking_send(SessionEvent::PtyOutput { gen, bytes }).is_err() {
                         break;
                     }
-                    let _ = out.flush();
                 }
                 Err(_) => break,
             }
         }
-        *done_out.lock().unwrap() = true;
-        session // return so we can call wait()
+        let _ = tx.blocking_send(SessionEvent::PtyEof { gen });
     });
+}
 
-    // ── Task 2: stdin → PTY writer ──────────────────────────────────────────
-    let writer_in = writer.clone();
-    let done_in = done.clone();
-    let stdin_task = task::spawn_blocking(move || {
-        use std::io::stdin;
-        let mut buf = [0u8; 256];
-        let mut inp = stdin();
-        loop {
-            if *done_in.lock().unwrap() {
-                break;
-            }
-            match inp.read(&mut buf) {
-                Ok(0) | Err(_) => break,
-                Ok(n) => {
-                    let mut w = writer_in.lock().unwrap();
-                    let _ = w.write_all(&buf[..n]);
-                    let _ = w.flush();
-                }
-            }
+/// Perform the PTY hot-swap:
+/// 1. Clear screen and show swap notification.
+/// 2. Spawn a new `nix develop` interactive session.
+/// 3. Replace the active writer and start a new forwarder.
+/// 4. Drop the old session (SIGHUP → old shell exits → old forwarder gets EOF).
+async fn perform_swap(
+    config: &Config,
+    active_session: &mut Option<PtySession>,
+    writer: &Arc<Mutex<Box<dyn Write + Send>>>,
+    current_gen: &mut u64,
+    cols: u16,
+    rows: u16,
+    event_tx: &tokio::sync::mpsc::Sender<SessionEvent>,
+) {
+    use std::io::{stdout, Write as _};
+
+    tracing::info!("performing PTY hot-swap");
+
+    // Notify the terminal.
+    {
+        let mut out = stdout();
+        // Move to a new line, clear to end of screen, show message.
+        let msg = "\r\n\x1b[2K\x1b[32m\u{21bb} stackpanel: shell reloaded \u{2014} new environment active\x1b[0m\r\n";
+        let _ = out.write_all(msg.as_bytes());
+        let _ = out.flush();
+    }
+
+    // Spawn new interactive session.
+    match PtySession::spawn(config, cols, rows) {
+        Ok(mut new_session) => {
+            *current_gen += 1;
+            let gen = *current_gen;
+
+            // Replace the shared writer.
+            *writer.lock().unwrap() = new_session.take_writer();
+
+            // Start new output forwarder.
+            start_pty_forwarder(new_session.take_reader(), gen, event_tx.clone());
+
+            // Drop old session → closes old master → SIGHUP to old shell.
+            let _old = active_session.replace(new_session);
+            // _old drops here
         }
-    });
-
-    // ── Task 3: file watcher + background reloader ──────────────────────────
-    let reloader = Reloader::new(config.clone());
-    let reloader_task = tokio::spawn(async move {
-        reloader.run().await;
-    });
-
-    // Wait for the shell to exit (output EOF).
-    let mut session = output_task.await?;
-    reloader_task.abort();
-    let _ = stdin_task.await;
-
-    let exit_code = session.wait()?;
-    Ok(exit_code)
+        Err(e) => {
+            let mut out = stdout();
+            let msg = format!("\r\n\x1b[31m\u{2717} swap failed: {e}\x1b[0m\r\n");
+            let _ = out.write_all(msg.as_bytes());
+            let _ = out.flush();
+        }
+    }
 }
 
 /// Non-TTY fallback: just exec the command directly (no PTY).
