@@ -8,7 +8,7 @@
 # install command on shell entry, but only when the lockfile has changed since
 # the last install. This avoids redundant installs on every shell entry.
 #
-# Usage in .stackpanel/config.nix:
+# Usage in .stack/config.nix:
 #   languages.javascript = {
 #     enable = true;
 #     bun.enable = true;

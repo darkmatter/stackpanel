@@ -240,7 +240,7 @@ func TestCollectIssues(t *testing.T) {
 }
 
 func TestCollectMOTDData(t *testing.T) {
-	data := CollectMOTDData("TestProject", "/path/to/project", "1.0.0", 9876)
+	data := CollectMOTDData("TestProject", "/path/to/project", "1.0.0", 9876, nil)
 
 	if data.ProjectName != "TestProject" {
 		t.Errorf("Expected ProjectName 'TestProject', got %q", data.ProjectName)

@@ -2,7 +2,7 @@
  * Type definitions for SST infrastructure configuration.
  */
 
-/** SST Data stored in .stackpanel/data/sst.nix */
+/** SST Data stored in .stack/data/sst.nix */
 export type SSTData = {
 	enable?: boolean;
 	"project-name"?: string;

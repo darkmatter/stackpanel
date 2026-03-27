@@ -1,0 +1,57 @@
+---
+title: stackpanel preflight
+description: Run shell-entry preparation tasks and explicit env imports
+icon: Terminal
+---
+
+# stackpanel preflight
+
+Run shell-entry preparation tasks and explicit environment imports.
+
+`stackpanel preflight run` is the safe entrypoint for tasks that should happen on
+shell entry, such as host-side code generation.
+
+`stackpanel preflight import-env` explicitly generates `.stack/config.local.nix`
+from environment variables for pure mode.
+
+Use `import-env` when you want to materialize relevant environment variables into
+Nix configuration. This is intentionally explicit because it changes local config
+and makes the current shell stale.
+
+In pure mode, all environment variables are cleaned except those in `devshell.clean.keep`
+
+After running `stackpanel preflight import-env`, you can use `nix develop`
+(without `--impure`) and `direnv allow` in pure mode.
+
+## Usage
+
+```bash
+stackpanel preflight run
+stackpanel preflight import-env
+```
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `stackpanel preflight run [module...]` | Run safe shell-entry tasks, including host-side codegen |
+| `stackpanel preflight import-env` | Generate `.stack/config.local.nix` from environment variables |
+
+
+## Flags
+
+The root `preflight` command has no direct flags; use a subcommand.
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+

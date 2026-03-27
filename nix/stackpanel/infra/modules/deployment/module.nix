@@ -59,13 +59,27 @@ let
     if enabled == [ ] then null else lib.head enabled;
 
   # ---------------------------------------------------------------------------
-  # Collect deployable apps (enabled + framework + host set)
+  # Resolve host for an app (per-app host overrides global defaultHost)
   # ---------------------------------------------------------------------------
+  getHost = appCfg: appCfg.deployment.host or cfg.deployment.defaultHost;
+
+  # ---------------------------------------------------------------------------
+  # Collect deployable apps for infra module.
+  #
+  # IMPORTANT: Fly deploys are handled by the Fly deployment module
+  # (flyctl + fly.toml). This infra module currently provisions Cloudflare and
+  # AWS EC2 deployments.
+  # ---------------------------------------------------------------------------
+  supportedHosts = [
+    "cloudflare"
+    "aws"
+  ];
+
   deployableApps = lib.filterAttrs (
     _: appCfg:
     (appCfg.deployment.enable or false)
     && (getFramework appCfg) != null
-    && appCfg.deployment.host != null
+    && lib.elem (getHost appCfg) supportedHosts
   ) (cfg.apps or { });
 
   hasDeployableApps = deployableApps != { };
@@ -73,13 +87,10 @@ let
   # ---------------------------------------------------------------------------
   # Determine which hosts are in use (for npm dependencies)
   # ---------------------------------------------------------------------------
-  hosts = lib.unique (lib.mapAttrsToList (_: appCfg: appCfg.deployment.host) deployableApps);
+  hosts = lib.unique (lib.mapAttrsToList (_: appCfg: getHost appCfg) deployableApps);
 
   hasCloudflare = lib.elem "cloudflare" hosts;
-  hasFly = lib.elem "fly" hosts;
-  hasVercel = lib.elem "vercel" hosts;
   hasAws = lib.elem "aws" hosts;
-
   # ---------------------------------------------------------------------------
   # Build pure-data inputs for the TS module
   # ---------------------------------------------------------------------------
@@ -88,18 +99,46 @@ let
     let
       fw = getFramework appCfg;
       fwCfg = appCfg.framework.${fw};
+      cfCfg = appCfg.deployment.cloudflare or { };
+      awsCfg = appCfg.deployment.aws or { };
+      globalAwsCfg = cfg.deployment.aws or { };
     in
     {
       framework = fw;
-      host = appCfg.deployment.host;
+      host = getHost appCfg;
       path = appCfg.path or "apps/${appName}";
       bindings = appCfg.deployment.bindings;
       secrets = appCfg.deployment.secrets;
     }
+    // lib.optionalAttrs ((getHost appCfg) == "cloudflare") {
+      cloudflare = {
+        workerName = cfCfg.workerName or appName;
+        route = cfCfg.route or null;
+        compatibility = cfCfg.compatibility or "node";
+      };
+    }
+    // lib.optionalAttrs ((getHost appCfg) == "aws") {
+      aws = {
+        region = awsCfg.region or globalAwsCfg.region;
+        availabilityZone = awsCfg."availability-zone" or null;
+        imageId = awsCfg."image-id" or null;
+        instanceType = awsCfg."instance-type" or globalAwsCfg."instance-type";
+        keyName = awsCfg."key-name" or null;
+        port = awsCfg.port or globalAwsCfg.port;
+        parameterPath = awsCfg."parameter-path" or null;
+        httpCidrBlocks = awsCfg."http-cidr-blocks" or [ ];
+        sshCidrBlocks = awsCfg."ssh-cidr-blocks" or [ ];
+        rootVolumeSize = awsCfg."root-volume-size" or null;
+        vpcCidrBlock = awsCfg."vpc-cidr-block" or null;
+        subnetCidrBlock = awsCfg."subnet-cidr-block" or null;
+        tags = awsCfg.tags or { };
+        osType = awsCfg."os-type" or "amazon-linux";
+      };
+    }
     # Include framework-specific options as extra keys
     // lib.optionalAttrs (fw == "vite") {
       ssr = fwCfg.ssr or false;
-      assetsDir = fwCfg.assets-dir or "dist";
+      assetsDir = fwCfg."assets-dir" or "dist";
     }
     // lib.optionalAttrs (fw == "hono") {
       entrypoint = fwCfg.entrypoint or "src/index.ts";
@@ -120,8 +159,12 @@ let
     # alchemy/cloudflare is part of the alchemy package
   };
 
-  # Future: flyDeps, vercelDeps, awsDeps
-  allDeps = baseDeps // cloudflareDeps;
+  awsDeps = lib.optionalAttrs hasAws {
+    "@aws-sdk/client-ssm" = "^3.953.0";
+  };
+
+  # Future: flyDeps, vercelDeps
+  allDeps = baseDeps // cloudflareDeps // awsDeps;
 
   # ---------------------------------------------------------------------------
   # Declare outputs (one URL per deployed app)
@@ -135,7 +178,7 @@ let
     }
   ) deployableApps;
 
-in 
+in
 {
   config = lib.mkIf hasDeployableApps {
     # Auto-enable the infra system
@@ -145,9 +188,22 @@ in
     stackpanel.infra.modules.deployment = {
       name = "App Deployment";
       description = "Deploys apps to their configured hosts (${lib.concatStringsSep ", " hosts})";
-      path = ./index.ts;
+      path = ./module;
       inputs = {
         apps = appInputs;
+        cloudflare = {
+          compatibilityDate = cfg.deployment.cloudflare.compatibilityDate or null;
+          defaultRoute = cfg.deployment.cloudflare.defaultRoute or null;
+        };
+        aws = {
+          region = cfg.deployment.aws.region or null;
+          instanceType = cfg.deployment.aws."instance-type" or null;
+          port = cfg.deployment.aws.port or null;
+          artifact = {
+            bucket = cfg.deployment.aws.artifact.bucket or null;
+            keyPrefix = cfg.deployment.aws.artifact."key-prefix" or null;
+          };
+        };
       };
       dependencies = allDeps;
       outputs = appOutputs;

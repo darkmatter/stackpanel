@@ -35,6 +35,40 @@ let
   toYaml = attrs: builtins.readFile (yaml.generate "workflow.yml" attrs);
 in
 {
+  # ── Options (colocated from core/options/ci.nix) ─────────────────────────────
+  options.stackpanel.ci = {
+    enable = lib.mkEnableOption "CI/CD generation";
+
+    github = {
+      enable = lib.mkEnableOption "GitHub Actions";
+
+      # Escape hatch: raw workflow definitions
+      workflows = lib.mkOption {
+        type = lib.types.attrsOf lib.types.attrs;
+        default = { };
+        description = "Workflow name -> workflow definition (raw)";
+      };
+
+      # Higher-level: common patterns
+      checks = {
+        enable = lib.mkEnableOption "standard CI checks workflow";
+        branches = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ "main" ];
+        };
+        commands = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          example = [
+            "nix flake check"
+            "nix build"
+          ];
+        };
+      };
+    };
+  };
+
+  # ── Config ───────────────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable (
     {
       # Build workflows from high-level options

@@ -1,3 +1,0 @@
-# docs dev environment secrets
-# Auto-generated boilerplate - edit values, then encrypt with: sops docs/dev.yaml
-PORT: PLACEHOLDER_PORT

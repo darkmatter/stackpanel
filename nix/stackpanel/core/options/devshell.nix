@@ -1,7 +1,7 @@
 # ==============================================================================
 # devshell.nix
 #
-# Devshell configuration options - packages, hooks, and files.
+# Devshell configuration options - packages, hooks, env, and PATH.
 #
 # Central configuration for the development shell environment. These options
 # are translated to devenv/nix-shell configuration by adapter modules.
@@ -14,10 +14,7 @@
 #   - hooks.before/main/after: Shell initialization hooks (ordered)
 #
 # Scripts are defined via stackpanel.scripts (see devshell/scripts.nix).
-#
-# Files options (stackpanel.files):
-#   - enable: Enable file generation
-#   - entries: Attrset of files to generate
+# Files options are defined by the top-level files module in nix/stackpanel/files/default.nix.
 #
 # This module is adapter-agnostic; the actual shell creation happens in
 # the devenv or flake adapter modules.
@@ -296,192 +293,6 @@ in
       );
       default = { };
       internal = true;
-    };
-  };
-
-  # ----------------------------------------------------------------------------
-  # Files - pure Nix options (no proto schema)
-  # ----------------------------------------------------------------------------
-  options.stackpanel.files = db.mkOpt db.extend.none {
-    enable = lib.mkEnableOption "file generation" // {
-      default = true;
-    };
-
-    gitignore = {
-      enable = lib.mkEnableOption "auto-manage .gitignore section" // {
-        default = true;
-      };
-      extraEntries = lib.mkOption {
-        type = types.listOf types.str;
-        default = [ ];
-        description = "Additional entries to include in the managed section.";
-      };
-    };
-
-    entries = lib.mkOption {
-      description = ''
-        Files to generate into the repo. Keys are file paths relative to repo root.
-
-        For type="text" files, content can be provided via:
-          - text: Inline text content
-          - path: Path to file (content read at eval time)
-
-        These are mutually exclusive - use one or the other.
-
-        For type="json" files, provide a Nix attrset via jsonValue. Multiple
-        modules can contribute to the same file path and their values will be
-        deep-merged by the Nix module system.
-
-        Example:
-          # Inline text
-          stackpanel.files.entries.".github/workflows/ci.yml" = {
-            type = "text";
-            text = "name: CI\n...";
-          };
-
-          # Path to file
-          stackpanel.files.entries.".github/workflows/deploy.yml" = {
-            type = "text";
-            path = ./.stackpanel/src/files/.github/workflows/deploy.yml;
-            description = "Deployment workflow";
-          };
-
-          # Derivation
-          stackpanel.files.entries."scripts/deploy.sh" = {
-            type = "derivation";
-            drv = pkgs.writeScript "deploy" "#!/bin/bash\n...";
-            mode = "0755";
-          };
-
-          # JSON (deep-mergeable from multiple modules)
-          stackpanel.files.entries."apps/web/package.json" = {
-            type = "json";
-            jsonValue = {
-              name = "web";
-              private = true;
-              scripts.dev = "vite dev";
-              dependencies.react = "^19.0.0";
-            };
-          };
-      '';
-      type = types.attrsOf (
-        types.submodule (
-          { name, ... }:
-          {
-            options = {
-              enable = lib.mkEnableOption "Generate this file" // {
-                default = true;
-              };
-
-              type = lib.mkOption {
-                type = types.enum [
-                  "text"
-                  "derivation"
-                  "symlink"
-                  "json"
-                ];
-                default = "text";
-                description = ''
-                  Type of file content:
-                  - 'text': inline text content
-                  - 'derivation': copy from a derivation
-                  - 'symlink': create a symbolic link
-                  - 'json': Nix value serialized to formatted JSON (supports deep merge from multiple modules)
-                '';
-              };
-
-              text = lib.mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = ''
-                  Text content for the file (when type = 'text').
-                  Mutually exclusive with `path` - use one or the other.
-                '';
-              };
-
-              jsonValue = lib.mkOption {
-                type = types.attrsOf types.anything;
-                default = { };
-                description = ''
-                  Nix attrset to serialize as formatted JSON (when type = 'json').
-
-                  Multiple modules can contribute to the same file path and their
-                  values will be deep-merged by the Nix module system. This is
-                  ideal for shared files like package.json where different modules
-                  need to add scripts, dependencies, etc.
-
-                  Example:
-                    # Module A
-                    stackpanel.files.entries."package.json" = {
-                      type = "json";
-                      jsonValue = {
-                        name = "my-app";
-                        scripts.dev = "bun run dev";
-                      };
-                    };
-
-                    # Module B (merges with A)
-                    stackpanel.files.entries."package.json" = {
-                      type = "json";
-                      jsonValue = {
-                        scripts.test = "bun test";
-                        dependencies.zod = "^3.0.0";
-                      };
-                    };
-
-                    # Result: { name = "my-app"; scripts = { dev = "bun run dev"; test = "bun test"; }; dependencies = { zod = "^3.0.0"; }; }
-                '';
-              };
-
-              path = lib.mkOption {
-                type = types.nullOr types.path;
-                default = null;
-                description = ''
-                  Path to file content (when type = 'text').
-                  Content is read from this file at eval time.
-                  Mutually exclusive with `text` - use one or the other.
-                '';
-                example = lib.literalExpression "./.stackpanel/src/files/.github/workflows/ci.yml";
-              };
-
-              drv = lib.mkOption {
-                type = types.nullOr types.package;
-                default = null;
-                description = "Derivation whose outPath contains the file content (when type = 'derivation').";
-              };
-
-              target = lib.mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = "Symlink target path (when type = 'symlink'). Can be absolute (Nix store) or relative.";
-                example = "/nix/store/abc123-task/bin/task";
-              };
-
-              mode = lib.mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = "Optional chmod mode (e.g. '0644', '0755').";
-                example = "0755";
-              };
-
-              source = lib.mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = "Module or component that generated this file (for UI display).";
-                example = "ide.nix";
-              };
-
-              description = lib.mkOption {
-                type = types.nullOr types.str;
-                default = null;
-                description = "Human-readable description of the file's purpose.";
-                example = "VS Code workspace configuration";
-              };
-            };
-          }
-        )
-      );
-      default = { };
     };
   };
 

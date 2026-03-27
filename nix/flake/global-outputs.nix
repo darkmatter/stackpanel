@@ -32,18 +32,8 @@ let
   # ===================================================================
   # Auto-load stackpanel config from .stackpanel/
   # ===================================================================
-  configPath = import ./load-config.nix { inherit self; };
+  configLoader = import ./load-config.nix { inherit self; };
 
-  loadConfig =
-    path:
-    let
-      raw = import path;
-    in
-    # Function-style configs that take pkgs are called with null here;
-    # the deploy module never uses pkgs so this is safe.
-    if builtins.isFunction raw then raw { inherit lib; pkgs = null; } else raw;
-
-  loadedConfig = if configPath != null then loadConfig configPath else { };
 
   # ===================================================================
   # Evaluate stackpanel modules — lib only, no pkgs instantiation
@@ -61,15 +51,16 @@ let
   stackpanelEval = lib.evalModules {
     modules = [
       ../stackpanel
-      { stackpanel = loadedConfig; }
-    ]
-    ++ stackpanelImports;
+      (configLoader.mkStackpanelModule {
+        inherit lib;
+        pkgs = stubPkgs;
+      })
+    ] ++ stackpanelImports;
     specialArgs = {
       inherit lib inputs self;
       pkgs = stubPkgs;
     };
   };
-
   spConfig = stackpanelEval.config.stackpanel;
   enabled = spConfig.enable or false;
   hasNixpkgs = inputs ? nixpkgs;

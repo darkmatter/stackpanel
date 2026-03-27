@@ -16,6 +16,17 @@ message App {
    * 
    */
   map<string, AppEnvironment> environments = 7;
+  AppDeploy deploy = 8; // Colmena deployment mapping for this app
+}
+
+// Deployment mapping for Colmena (targets, roles, and modules)
+message AppDeploy {
+  bool enable = 1; // Enable deployment mapping for this app
+  repeated string targets = 2; // Target machine ids or tag selectors
+  optional string role = 3; // Deployment role label for this app
+  repeated string nixos_modules = 4; // Extra NixOS modules to import for this app
+  optional string system = 5; // Target system/architecture (e.g., x86_64-linux)
+  repeated string secrets = 6; // Secret references required by this app during deploy
 }
 
 // Environment configuration (e.g., dev, staging, production)
@@ -29,6 +40,7 @@ message AppEnvironment {
    * 
    */
   map<string, string> env = 3;
+  repeated string extends = 4; // Inherit these environments - useful for sharing environment variables between environments.
 }
 
 // Map of app identifier to app configuration

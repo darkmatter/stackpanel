@@ -1,0 +1,91 @@
+---
+title: Fly.io
+description: Container-based Fly.io deployment with generated fly.toml and wrapped flyctl commands
+icon: plane
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Fly deployment is handled by the Fly module, not the infra deployment module.
+
+## How Fly Deployment Works
+
+- Mark apps deployable with `deployment.enable = true`
+- Set `deployment.host = "fly"` (or use `stackpanel.deployment.defaultHost = "fly"`)
+- Configure `deployment.fly.*` and `deployment.container.*`
+- Use generated Fly scripts/commands to build, push, and deploy
+
+The module generates `apps/<app>/fly.toml`, per-app deploy task scripts, and wrapped commands like `fly-web`.
+
+## Configuration
+
+```nix
+{
+  stackpanel.deployment.fly = {
+    organization = "my-fly-org";
+    defaultRegion = "iad";
+  };
+
+  stackpanel.apps.api = {
+    path = "apps/server";
+    framework.hono.enable = true;
+
+    deployment = {
+      enable = true;
+      host = "fly";
+
+      fly = {
+        appName = "stackpanel-api";
+        region = "iad";
+        memory = "512mb";
+        cpus = 1;
+        autoStop = "suspend";
+        autoStart = true;
+        minMachines = 0;
+        forceHttps = true;
+      };
+
+      container = {
+        type = "bun";
+        port = 3000;
+        # optional: entrypoint = "node /app/dist/index.js";
+      };
+    };
+  };
+}
+```
+
+## Generated Artifacts
+
+- `apps/<app>/fly.toml`
+- `apps/<app>/.tasks/bin/deploy`
+- `packages/infra/turbo.json`
+- `packages/infra/package.json` scripts for each app:
+  - `container:build:<app>`
+  - `container:push:<app>`
+  - `deploy:<app>`
+  - `ship:<app>`
+
+## Common Commands
+
+```bash
+# Wrapped flyctl commands generated per deployable app
+fly-api status
+fly-api logs
+fly-api deploy
+
+# Infra package scripts generated for Fly apps
+bun --cwd packages/infra run container:build:api
+bun --cwd packages/infra run container:push:api
+bun --cwd packages/infra run deploy:api
+```
+
+<Callout type="info">
+Fly uses container deployment (`flyctl` + image push). Cloudflare-style `infra:deploy` hosting resources are not used for Fly apps.
+</Callout>
+
+## Related Docs
+
+- [Deployment Overview](./)
+- [Cloudflare](./cloudflare)
+- [Containers](./containers)

@@ -1,6 +1,13 @@
+// vars.go implements CRUD for workspace variables stored in Nix data files.
+//
+// Variables are defined in .stack/data/variables.nix and evaluated through the
+// Nix module system. Reads go through nix eval (for computed values like
+// encryption and environment references), but writes go directly to the data
+// file via nixdata.Store to avoid a full Nix evaluation round-trip.
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,12 +17,19 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	executor "github.com/darkmatter/stackpanel/stackpanel-go/pkg/exec"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
-// Variable represents a stackpanel variable from the Nix config
+// Variable represents a stackpanel variable from the Nix config.
+// Type determines how the value is resolved at runtime:
+//   - LITERAL: used as-is
+//   - SECRET: decrypted via AGE master keys
+//   - VALS: resolved by vals (ref+sops://, ref+awsssm://, etc.)
+//   - EXEC: evaluated as a shell command
 type Variable struct {
 	ID          string   `json:"id"`
 	Key         string   `json:"key"`
@@ -47,9 +61,11 @@ Variables can be:
   - EXEC: Shell command outputs
 
 Examples:
-  stackpanel vars list              # List all variables
-  stackpanel vars list --type SECRET  # List only secrets
-  stackpanel vars get /apps/web/port  # Get a specific variable`,
+  stackpanel vars list                         # List all variables
+  stackpanel vars list --type SECRET           # List only secrets
+  stackpanel vars get /apps/web/port           # Get a specific variable
+  stackpanel vars set /my/api-host api.example.com  # Set a literal variable
+  stackpanel vars delete /my/api-host          # Remove a variable`,
 }
 
 var varsListCmd = &cobra.Command{
@@ -120,16 +136,213 @@ Examples:
 	},
 }
 
+var varsSetCmd = &cobra.Command{
+	Use:   "set <variable-id> <value>",
+	Short: "Set a variable",
+	Long: `Create or update a workspace variable.
+
+The variable ID should be a path-based identifier (e.g., /my/VAR_NAME).
+A leading "/" is added automatically if omitted.
+
+The value can be:
+  - A literal string (stored as-is)
+  - A vals reference (ref+sops://..., ref+awsssm://..., etc.)
+
+Examples:
+  stackpanel vars set /my/api-host api.example.com
+  stackpanel vars set my/db-port 5432
+  stackpanel vars set /prod/api-url "ref+awsssm://prod/api-url"`,
+	Args: cobra.ExactArgs(2),
+	Run:  runVarsSet,
+}
+
+var varsDeleteCmd = &cobra.Command{
+	Use:     "delete <variable-id>",
+	Aliases: []string{"rm", "remove"},
+	Short:   "Delete a variable",
+	Long: `Remove a variable from the workspace.
+
+Examples:
+  stackpanel vars delete /my/api-host
+  stackpanel vars rm my/db-port`,
+	Args: cobra.ExactArgs(1),
+	Run:  runVarsDelete,
+}
+
 func init() {
 	rootCmd.AddCommand(varsCmd)
 	varsCmd.AddCommand(varsListCmd)
 	varsCmd.AddCommand(varsGetCmd)
+	varsCmd.AddCommand(varsSetCmd)
+	varsCmd.AddCommand(varsDeleteCmd)
 
 	varsListCmd.Flags().StringP("type", "t", "", "Filter by type (LITERAL, SECRET, VALS, EXEC)")
 	varsListCmd.Flags().Bool("json", false, "Output as JSON")
 	varsGetCmd.Flags().Bool("json", false, "Output as JSON")
+
+	varsSetCmd.Flags().Bool("json", false, "Output as JSON")
+	varsSetCmd.Flags().BoolP("force", "f", false, "Overwrite an existing variable without prompting")
+
+	varsDeleteCmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompt")
+	varsDeleteCmd.Flags().Bool("json", false, "Output as JSON")
 }
 
+func runVarsSet(cmd *cobra.Command, args []string) {
+	varID := normalizeVarID(args[0])
+	varValue := args[1]
+	jsonOutput, _ := cmd.Flags().GetBool("json")
+	force, _ := cmd.Flags().GetBool("force")
+
+	store, err := openNixDataStore()
+	if err != nil {
+		output.Error(fmt.Sprintf("Failed to open project: %v", err))
+		os.Exit(1)
+	}
+
+	// Check if the variable already exists (read raw data file, not evaluated config)
+	if !force {
+		existing, err := store.ReadRawNixFile("variables")
+		if err == nil && existing != nil {
+			if m, ok := existing.(map[string]any); ok {
+				if _, exists := m[varID]; exists {
+					fmt.Fprintf(os.Stderr, "Variable %s already exists. Overwrite? [y/N] ", color.CyanString(varID))
+					reader := bufio.NewReader(os.Stdin)
+					response, readErr := reader.ReadString('\n')
+					if readErr != nil {
+						output.Error("Failed to read input")
+						os.Exit(1)
+					}
+					response = strings.TrimSpace(strings.ToLower(response))
+					if response != "y" && response != "yes" {
+						output.Info("Cancelled")
+						return
+					}
+				}
+			}
+		}
+	}
+
+	entry := map[string]any{
+		"id":    varID,
+		"value": varValue,
+	}
+
+	dataPath, err := store.SetKey("variables", varID, entry)
+	if err != nil {
+		output.Error(fmt.Sprintf("Failed to set variable: %v", err))
+		os.Exit(1)
+	}
+
+	if jsonOutput {
+		data, _ := json.MarshalIndent(map[string]any{
+			"id":    varID,
+			"value": varValue,
+			"path":  dataPath,
+		}, "", "  ")
+		fmt.Println(string(data))
+		return
+	}
+
+	output.Success(fmt.Sprintf("Set %s", color.CyanString(varID)))
+	fmt.Fprintf(os.Stderr, "  %s %s\n", color.New(color.Faint).Sprint("Value:"), color.GreenString("%s", varValue))
+	fmt.Fprintf(os.Stderr, "  %s %s\n", color.New(color.Faint).Sprint("File:"), dataPath)
+}
+
+func runVarsDelete(cmd *cobra.Command, args []string) {
+	varID := normalizeVarID(args[0])
+	jsonOutput, _ := cmd.Flags().GetBool("json")
+	skipConfirm, _ := cmd.Flags().GetBool("yes")
+
+	store, err := openNixDataStore()
+	if err != nil {
+		output.Error(fmt.Sprintf("Failed to open project: %v", err))
+		os.Exit(1)
+	}
+
+	// Verify the variable exists before deleting
+	existing, err := store.ReadRawNixFile("variables")
+	if err != nil {
+		output.Error(fmt.Sprintf("Failed to read variables: %v", err))
+		os.Exit(1)
+	}
+	if existing == nil {
+		output.Error(fmt.Sprintf("Variable not found: %s", varID))
+		os.Exit(1)
+	}
+	m, ok := existing.(map[string]any)
+	if !ok {
+		output.Error("Variables data is not a map")
+		os.Exit(1)
+	}
+	if _, exists := m[varID]; !exists {
+		output.Error(fmt.Sprintf("Variable not found: %s", varID))
+		os.Exit(1)
+	}
+
+	if !skipConfirm {
+		fmt.Fprintf(os.Stderr, "Delete variable %s? [y/N] ", color.CyanString(varID))
+		reader := bufio.NewReader(os.Stdin)
+		response, readErr := reader.ReadString('\n')
+		if readErr != nil {
+			output.Error("Failed to read input")
+			os.Exit(1)
+		}
+		response = strings.TrimSpace(strings.ToLower(response))
+		if response != "y" && response != "yes" {
+			output.Info("Cancelled")
+			return
+		}
+	}
+
+	dataPath, err := store.DeleteKey("variables", varID)
+	if err != nil {
+		output.Error(fmt.Sprintf("Failed to delete variable: %v", err))
+		os.Exit(1)
+	}
+
+	if jsonOutput {
+		data, _ := json.MarshalIndent(map[string]any{
+			"id":      varID,
+			"deleted": true,
+			"path":    dataPath,
+		}, "", "  ")
+		fmt.Println(string(data))
+		return
+	}
+
+	output.Success(fmt.Sprintf("Deleted %s", color.CyanString(varID)))
+}
+
+// normalizeVarID ensures the variable ID has a leading slash.
+func normalizeVarID(id string) string {
+	if !strings.HasPrefix(id, "/") {
+		return "/" + id
+	}
+	return id
+}
+
+// openNixDataStore creates a nixdata.Store for the current project by
+// locating the project root and initialising a Nix executor.
+// The store reads/writes .nix data files directly, bypassing full Nix
+// evaluation — this keeps set/delete operations fast and atomic.
+func openNixDataStore() (*nixdata.Store, error) {
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	exec, err := executor.New(projectRoot, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create executor: %w", err)
+	}
+
+	return nixdata.NewStore(projectRoot, exec), nil
+}
+
+// loadVariables evaluates the full Nix config to get computed variable
+// metadata (encryption status, env refs, master keys). This is intentionally
+// slower than direct file reads because it needs Nix evaluation for the
+// computed fields.
 func loadVariables(ctx context.Context) (map[string]Variable, error) {
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
 		Expression: nixeval.StackpanelSerializablePreset,
@@ -184,6 +397,22 @@ func listVariables(variables map[string]Variable, typeFilter string) {
 		ungrouped = append(ungrouped, id)
 	}
 
+	// Compute max widths for aligned columns
+	maxIDLen := 0
+	maxKeyLen := 0
+	for _, id := range ids {
+		v := variables[id]
+		if typeFilter != "" && !strings.EqualFold(v.Type, typeFilter) {
+			continue
+		}
+		if len(id) > maxIDLen {
+			maxIDLen = len(id)
+		}
+		if len(v.Key) > maxKeyLen {
+			maxKeyLen = len(v.Key)
+		}
+	}
+
 	keyColor := color.New(color.FgCyan)
 	typeColor := color.New(color.FgYellow)
 	descColor := color.New(color.Faint)
@@ -205,14 +434,16 @@ func listVariables(variables map[string]Variable, typeFilter string) {
 			valueStr = valueColor.Sprint(v.Value)
 		}
 
-		fmt.Printf("  %s  %s  %s=%s\n",
-			keyColor.Sprint(id),
+		paddedID := fmt.Sprintf("%-*s", maxIDLen, id)
+		paddedKey := fmt.Sprintf("%-*s", maxKeyLen, v.Key)
+		fmt.Printf("  %s  %s  %s = %s\n",
+			keyColor.Sprint(paddedID),
 			typeStr,
-			v.Key,
+			paddedKey,
 			valueStr,
 		)
 		if v.Description != nil && *v.Description != "" {
-			fmt.Printf("      %s\n", descColor.Sprint(*v.Description))
+			fmt.Printf("  %s  %s\n", strings.Repeat(" ", maxIDLen), descColor.Sprint(*v.Description))
 		}
 	}
 

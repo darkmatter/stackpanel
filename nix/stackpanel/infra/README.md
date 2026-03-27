@@ -1,0 +1,30 @@
+# Infra Module
+
+Alchemy-based infrastructure-as-code with pluggable output storage.
+
+## Overview
+
+Provides a module system for defining infrastructure resources using [Alchemy](https://alchemy.run). Supports multiple storage backends for IaC outputs (chamber, SOPS, SSM, none) and includes a built-in AWS secrets module for KMS and IAM configuration.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `default.nix` | Module entry point |
+| `options.nix` | Infra options and module registry schema |
+| `codegen.nix` | TypeScript codegen for Alchemy resources |
+| `modules/aws-secrets/` | Built-in AWS secrets infrastructure module |
+| `templates/` | Alchemy project templates |
+
+## Usage
+
+```nix
+stack.infra = {
+  enable = true;
+  storage-backend = {
+    type = "chamber";
+    chamber.service = "my-project";
+  };
+  aws.secrets.enable = true;
+};
+```

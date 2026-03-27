@@ -55,6 +55,31 @@ let
     evaluated.options.stackpanel;
 
   # =========================================================================
+  # Read stackpanel root from file input
+  # =========================================================================
+  # Helper to read project root from stackpanel-root input
+  # Used for pure evaluation support
+  readStackpanelRoot =
+    { inputs, ... }:
+    let
+      lib = nixpkgs.lib;
+      hasInput = inputs ? stackpanel-root;
+      rawContent = if hasInput then builtins.readFile inputs.stackpanel-root.outPath else "";
+      rootContent = lib.strings.trim rawContent;
+      # The input's outPath points to the file itself, so get its directory
+      # which is the flake source root
+      flakeSourceDir = if hasInput then builtins.dirOf inputs.stackpanel-root.outPath else "";
+    in
+    # If content is "." use the flake source directory
+    # Otherwise use the absolute path from the file
+    if rootContent == "." then
+      flakeSourceDir
+    else if rootContent != "" then
+      rootContent
+    else
+      null;
+
+  # =========================================================================
   # mkOutputs - Generate outputs for a single system
   # =========================================================================
   mkOutputs =
@@ -66,7 +91,7 @@ let
       projectRoot ? null,
       stackpanelImports ? [ ],
     }@args:
-    import ./per-system-outputs.nix args;
+    import ./default.nix args;
 
 in
 {
@@ -120,6 +145,8 @@ in
         stackpanelImports ? [ ],
       }:
       let
+        # Read project root from stackpanel-root input if available
+        projectRoot = readStackpanelRoot { inherit inputs; };
         # Combine stackpanel's required overlays with user's overlays
         allOverlays = stackpanelOverlays ++ overlays;
 
@@ -152,6 +179,11 @@ in
       perSystem // globalOutputs;
 
     # =========================================================================
+    # Utility: Read stackpanel root
+    # =========================================================================
+    inherit readStackpanelRoot;
+
+    # =========================================================================
     # Required overlays for stackpanel
     # =========================================================================
     # When using mkOutputs with custom pkgs, you must include these overlays.
@@ -161,7 +193,7 @@ in
     # =========================================================================
     # AWS credential helpers
     # =========================================================================
-    mkAwsCredScripts = import ../stackpanel/lib/services/aws.nix;
+    mkAwsCredScripts = import ../stackpanel/services/aws/lib.nix;
 
     # =========================================================================
     # Step CA certificate helpers
@@ -210,7 +242,7 @@ in
 
     # Init files for scaffolding new projects
     # Returns a map of relative paths to file contents:
-    #   { ".stackpanel/config.nix" = "..."; ".stackpanel/_internal.nix" = "..."; ... }
+    #   { ".stack/config.nix" = "..."; ... }
     #
     # Usage from CLI:
     #   nix eval github:darkmatter/stackpanel#lib.initFiles --json
@@ -229,12 +261,13 @@ in
   # ===========================================================================
   nixosModules = {
     default = ./modules/devenv.nix;
-    aws = ../stackpanel/services/aws.nix;
+    aws = ../stackpanel/services/aws;
     network = ../stackpanel/network/network.nix;
     secrets = ../stackpanel/secrets/default.nix;
     theme = ../stackpanel/lib/theme.nix;
     caddy = ../stackpanel/services/caddy.nix;
     ci = ../stackpanel/apps/ci.nix;
+    web-service = ../stackpanel/nixos/web-service.nix;
   };
 
   # ===========================================================================
@@ -259,6 +292,21 @@ in
     minimal = {
       path = ./templates/minimal;
       description = "Stackpanel minimal setup";
+    };
+    # =========================================================================
+    # Examples (review-friendly template variants)
+    # =========================================================================
+    example-basic = {
+      path = ../../examples/basic;
+      description = "Example: single app starter";
+    };
+    example-multi-app = {
+      path = ../../examples/multi-app;
+      description = "Example: monorepo with multiple apps and services";
+    };
+    example-cloudflare = {
+      path = ../../examples/cloudflare;
+      description = "Example: edge deployment config for Cloudflare";
     };
     # =========================================================================
     # Test Fixtures (for module authors and CI testing)

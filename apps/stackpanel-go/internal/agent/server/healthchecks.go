@@ -1,3 +1,14 @@
+// healthchecks.go implements the healthcheck system: defining, running, caching,
+// and reporting health status for Stackpanel modules.
+//
+// Healthchecks are defined in Nix config and can be of four types:
+//   - Script: runs a shell script/command, exit code 0 = healthy
+//   - HTTP: checks an endpoint, expects a specific status code
+//   - TCP: dials a host:port to verify connectivity
+//   - Nix: evaluates a Nix expression that returns true/false
+//
+// Results are cached globally. GET returns cached state (never auto-runs),
+// POST runs failed/unknown checks and streams results via SSE for incremental UI updates.
 package server
 
 import (
@@ -125,11 +136,13 @@ func (s *Server) handleHealthchecks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleGetHealthchecks returns the current health status
+// handleGetHealthchecks returns the current health status from cache.
+// This endpoint never auto-runs checks — it only returns previously cached
+// results. Checks that have never been run are reported as UNKNOWN.
+// Use POST /api/healthchecks to explicitly run (or re-run) checks.
 func (s *Server) handleGetHealthchecks(w http.ResponseWriter, r *http.Request) {
 	module := r.URL.Query().Get("module")
 	checkID := r.URL.Query().Get("check")
-	cached := r.URL.Query().Get("cached") != "false"
 
 	// Get healthcheck definitions from config
 	healthchecks, err := s.getHealthcheckDefinitions()
@@ -142,14 +155,20 @@ func (s *Server) handleGetHealthchecks(w http.ResponseWriter, r *http.Request) {
 	if checkID != "" {
 		for _, check := range healthchecks {
 			if check.ID == checkID {
-				var result *HealthcheckResult
-				if cached {
-					result = s.getCachedResult(checkID)
-				}
+				result := s.getCachedResult(checkID)
 				if result == nil {
-					result = s.runHealthcheck(r.Context(), check)
-					s.cacheResult(result)
+					// No cached result — return UNKNOWN instead of running
+					msg := "Check has not been run yet"
+					result = &HealthcheckResult{
+						CheckID:   check.ID,
+						Status:    HealthStatusUnknown,
+						Message:   &msg,
+						Timestamp: time.Now().Format(time.RFC3339),
+					}
 				}
+				// Attach the check definition for UI display
+				checkCopy := check
+				result.Check = &checkCopy
 				s.writeAPI(w, http.StatusOK, result)
 				return
 			}
@@ -158,15 +177,21 @@ func (s *Server) handleGetHealthchecks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build health summary
-	summary := s.buildHealthSummary(r.Context(), healthchecks, module, cached)
+	// Build health summary (cache-only, never auto-runs checks)
+	summary := s.buildHealthSummary(healthchecks, module)
 	s.writeAPI(w, http.StatusOK, summary)
 }
 
-// handleRunHealthchecks runs healthchecks and returns results
+// handleRunHealthchecks runs healthchecks and returns results.
+// Only checks that are failed, unhealthy, or have never been run are executed.
+// Checks with a cached healthy result are kept as-is to avoid redundant work.
+// Individual check results are streamed via SSE ("healthcheck.result") as each
+// completes, so the UI can update incrementally. A final "healthchecks.updated"
+// event is broadcast with the full summary once everything is done.
 func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 	module := r.URL.Query().Get("module")
 	checkID := r.URL.Query().Get("check")
+	force := r.URL.Query().Get("force") == "true"
 
 	// Get healthcheck definitions from config
 	healthchecks, err := s.getHealthcheckDefinitions()
@@ -176,6 +201,7 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var checksToRun []Healthcheck
+	var keptResults []HealthcheckResult
 	for _, check := range healthchecks {
 		if !check.Enabled {
 			continue
@@ -186,26 +212,56 @@ func (s *Server) handleRunHealthchecks(w http.ResponseWriter, r *http.Request) {
 		if module != "" && check.Module != module {
 			continue
 		}
+		// Unless forced, skip checks that already have a healthy cached result.
+		if !force {
+			if cached := s.getCachedResult(check.ID); cached != nil && cached.Status == HealthStatusHealthy {
+				checkCopy := check
+				cached.Check = &checkCopy
+				keptResults = append(keptResults, *cached)
+				continue
+			}
+		}
 		checksToRun = append(checksToRun, check)
 	}
 
-	if len(checksToRun) == 0 {
+	if len(checksToRun) == 0 && len(keptResults) == 0 {
 		s.writeAPIError(w, http.StatusNotFound, "no healthchecks found matching criteria")
 		return
 	}
 
-	// Run healthchecks in parallel
-	results := s.runHealthchecksParallel(r.Context(), checksToRun)
+	var freshResults []HealthcheckResult
 
-	// Cache results
-	for _, result := range results {
-		s.cacheResult(&result)
+	if len(checksToRun) > 0 {
+		// Broadcast a "healthchecks.running" event so the UI knows which checks
+		// are about to be evaluated and can show pending/spinner states.
+		checkIDs := make([]string, len(checksToRun))
+		for i, c := range checksToRun {
+			checkIDs[i] = c.ID
+		}
+		s.broadcastSSE(SSEEvent{
+			Event: "healthchecks.running",
+			Data: map[string]any{
+				"checkIds": checkIDs,
+				"module":   module,
+			},
+		})
+
+		// Run only failed/unknown healthchecks in parallel, broadcasting each result.
+		freshResults = s.runHealthchecksParallelStreaming(r.Context(), checksToRun, healthchecks)
+
+		// Cache fresh results
+		for _, result := range freshResults {
+			s.cacheResult(&result)
+		}
 	}
 
-	// Build summary
-	summary := s.buildHealthSummaryFromResults(healthchecks, results, module)
+	// Merge kept (already-healthy) results with freshly-run results
+	allResults := append(keptResults, freshResults...)
 
-	// Broadcast SSE event
+	// Build summary
+	summary := s.buildHealthSummaryFromResults(healthchecks, allResults, module)
+
+	// Broadcast final summary SSE event
 	s.broadcastSSE(SSEEvent{
 		Event: "healthchecks.updated",
 		Data:  summary,
@@ -336,6 +392,12 @@ func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (b
 
 	cmd.Dir = s.config.ProjectRoot
 
+	// Apply devshell environment so scripts see STACKPANEL_STATE_DIR,
+	// AWS_CERT_PATH, etc. even when the agent started outside nix develop.
+	if s.exec != nil {
+		cmd.Env = s.exec.BuildEnv(nil)
+	}
+
 	output, err := cmd.CombinedOutput()
 	outputStr := strings.TrimSpace(string(output))
 
@@ -350,7 +412,8 @@ func (s *Server) runScriptHealthcheck(ctx context.Context, check Healthcheck) (b
 	return true, outputStr, nil
 }
 
-// ensureScriptPath ensures the scriptPath exists by attempting to build the derivation if needed.
+// ensureScriptPath ensures the scriptPath exists in the Nix store by building
+// its derivation if needed. Uses ^* suffix to build all outputs of the .drv path.
 func (s *Server) ensureScriptPath(scriptPath string, scriptDrvPath *string) error {
 	if _, err := os.Stat(scriptPath); err == nil {
 		return nil
@@ -478,8 +541,47 @@ func (s *Server) runHealthchecksParallel(ctx context.Context, checks []Healthche
 	return results
 }
 
-// buildHealthSummary builds a health summary from the config
-func (s *Server) buildHealthSummary(ctx context.Context, healthchecks []Healthcheck, moduleFilter string, useCached bool) *HealthSummary {
+// runHealthchecksParallelStreaming runs checks in parallel and broadcasts each
+// result via SSE as soon as it completes. This lets the UI update incrementally
+// instead of waiting for every check to finish.
+func (s *Server) runHealthchecksParallelStreaming(ctx context.Context, checks []Healthcheck, allChecks []Healthcheck) []HealthcheckResult {
+	results := make([]HealthcheckResult, len(checks))
+	var wg sync.WaitGroup
+
+	// Build a map of all checks by ID so we can attach definitions to results
+	checkMap := make(map[string]Healthcheck, len(allChecks))
+	for _, c := range allChecks {
+		checkMap[c.ID] = c
+	}
+
+	for i, check := range checks {
+		wg.Add(1)
+		go func(idx int, c Healthcheck) {
+			defer wg.Done()
+			result := s.runHealthcheck(ctx, c)
+
+			// Attach the check definition for UI display
+			checkCopy := c
+			result.Check = &checkCopy
+
+			results[idx] = *result
+
+			// Broadcast individual result immediately
+			s.broadcastSSE(SSEEvent{
+				Event: "healthcheck.result",
+				Data:  result,
+			})
+		}(i, check)
+	}
+
+	wg.Wait()
+	return results
+}
+
+// buildHealthSummary builds a health summary from cached results only.
+// Checks that have never been run are reported as HEALTH_STATUS_UNKNOWN.
+// This method never executes checks — use handleRunHealthchecks (POST) for that.
+func (s *Server) buildHealthSummary(healthchecks []Healthcheck, moduleFilter string) *HealthSummary {
 	summary := &HealthSummary{
 		OverallStatus: HealthStatusHealthy,
 		Modules:       make(map[string]*ModuleHealth),
@@ -498,7 +600,7 @@ func (s *Server) buildHealthSummary(ctx context.Context, healthchecks []Healthch
 		moduleChecks[check.Module] = append(moduleChecks[check.Module], check)
 	}
 
-	// Run/get results for each module
+	// Build results for each module using cache only
 	for moduleName, checks := range moduleChecks {
 		moduleHealth := &ModuleHealth{
 			Module:      moduleName,
@@ -510,13 +612,16 @@ func (s *Server) buildHealthSummary(ctx context.Context, healthchecks []Healthch
 		}
 
 		for _, check := range checks {
-			var result *HealthcheckResult
-			if useCached {
-				result = s.getCachedResult(check.ID)
-			}
+			result := s.getCachedResult(check.ID)
 			if result == nil {
-				result = s.runHealthcheck(ctx, check)
-				s.cacheResult(result)
+				// No cached result — report as UNKNOWN instead of running
+				msg := "Check has not been run yet"
+				result = &HealthcheckResult{
+					CheckID:   check.ID,
+					Status:    HealthStatusUnknown,
+					Message:   &msg,
+					Timestamp: time.Now().Format(time.RFC3339),
+				}
 			}
 
 			// Attach the check definition for UI display
@@ -535,9 +640,22 @@ func (s *Server) buildHealthSummary(ctx context.Context, healthchecks []Healthch
 			if result.Status != HealthStatusHealthy {
 				severity := check.Severity
 				if severity == HealthcheckSeverityCritical {
-					moduleHealth.Status = HealthStatusUnhealthy
+					if result.Status == HealthStatusUnknown {
+						// Unknown is not as severe as unhealthy
+						if moduleHealth.Status == HealthStatusHealthy {
+							moduleHealth.Status = HealthStatusUnknown
+						}
+					} else {
+						moduleHealth.Status = HealthStatusUnhealthy
+					}
 				} else if severity == HealthcheckSeverityWarning && moduleHealth.Status != HealthStatusUnhealthy {
-					moduleHealth.Status = HealthStatusDegraded
+					if result.Status == HealthStatusUnknown {
+						if moduleHealth.Status == HealthStatusHealthy {
+							moduleHealth.Status = HealthStatusUnknown
+						}
+					} else {
+						moduleHealth.Status = HealthStatusDegraded
+					}
 				}
 			}
 		}
@@ -549,6 +667,8 @@ func (s *Server) buildHealthSummary(ctx context.Context, healthchecks []Healthch
 			summary.OverallStatus = HealthStatusUnhealthy
 		} else if moduleHealth.Status == HealthStatusDegraded && summary.OverallStatus != HealthStatusUnhealthy {
 			summary.OverallStatus = HealthStatusDegraded
+		} else if moduleHealth.Status == HealthStatusUnknown && summary.OverallStatus == HealthStatusHealthy {
+			summary.OverallStatus = HealthStatusUnknown
 		}
 	}
 

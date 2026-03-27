@@ -1,8 +1,8 @@
-# Stackpanel Development Mode
+# Stack Development Mode
 
-When developing Stackpanel while also using it in other projects, you need the `stackpanel` CLI to point to your local development version. This document explains how to set that up.
+When developing Stack while also using it in other projects, you need the `stack` CLI to point to your local development version. This document explains how to set that up.
 
-> The `stackpanel dev ...` commands have been renamed to `stackpanel debug ...`. The old `dev` alias still works for compatibility.
+> The `stack dev ...` commands have been renamed to `stack debug ...`. The old `dev` alias still works for compatibility.
 
 ## Quick Start
 
@@ -10,11 +10,11 @@ The fastest way to enable dev mode:
 
 ```bash
 # Option 1: Environment variable (add to your shell profile)
-export STACKPANEL_DEV_REPO=~/path/to/stackpanel
+export STACKPANEL_DEV_REPO=~/path/to/stack
 
 # Option 2: CLI config (persistent)
-stackpanel debug enable ~/path/to/stackpanel
-# (Legacy alias: stackpanel dev enable ...)
+stack debug enable ~/path/to/stack
+# (Legacy alias: stack dev enable ...)
 ```
 
 ## How It Works
@@ -22,14 +22,14 @@ stackpanel debug enable ~/path/to/stackpanel
 When dev mode is enabled, the CLI runs commands via `go run` from your local repository instead of using the installed binary:
 
 ```
-stackpanel status
-# Actually runs: go run ~/path/to/stackpanel/apps/stackpanel-go status
+stack status
+# Actually runs: go run ~/path/to/stack/apps/stack-go status
 ```
 
 This means:
 - Changes to Go code are picked up immediately (after the first compile)
 - No need to rebuild or reinstall the binary
-- You can develop Stackpanel while using it in real projects
+- You can develop Stack while using it in real projects
 
 ## Setup Methods
 
@@ -39,7 +39,7 @@ Set `STACKPANEL_DEV_REPO` in your shell:
 
 ```bash
 # In ~/.bashrc, ~/.zshrc, or equivalent
-export STACKPANEL_DEV_REPO="$HOME/projects/stackpanel"
+export STACKPANEL_DEV_REPO="$HOME/projects/stack"
 ```
 
 The environment variable takes precedence over config file settings.
@@ -50,24 +50,24 @@ Use the built-in `debug` subcommand (alias: `dev`):
 
 ```bash
 # Enable dev mode
-stackpanel debug enable ~/projects/stackpanel
+stack debug enable ~/projects/stack
 # Legacy alias:
-# stackpanel dev enable ~/projects/stackpanel
+# stack dev enable ~/projects/stack
 
 # Check status
-stackpanel debug status
+stack debug status
 
 # Disable dev mode
-stackpanel debug disable
-# Legacy alias: stackpanel dev disable
+stack debug disable
+# Legacy alias: stack dev disable
 ```
 
-This stores the setting in `~/.config/stackpanel/stackpanel.yaml`:
+This stores the setting in `~/.config/stack/stack.yaml`:
 
 ```yaml
 dev_mode:
   enabled: true
-  repo_path: /Users/you/projects/stackpanel
+  repo_path: /Users/you/projects/stack
 ```
 
 ### Method 3: Wrapper Script (Most Flexible)
@@ -75,18 +75,18 @@ dev_mode:
 For advanced use cases, install the wrapper script:
 
 ```bash
-# Copy the wrapper to your PATH (before any installed stackpanel)
-cp scripts/stackpanel-wrapper.sh ~/.local/bin/stackpanel
-chmod +x ~/.local/bin/stackpanel
+# Copy the wrapper to your PATH (before any installed stack)
+cp scripts/stack-wrapper.sh ~/.local/bin/stack
+chmod +x ~/.local/bin/stack
 
 # Rename the original binary if needed
-mv /usr/local/bin/stackpanel /usr/local/bin/stackpanel-bin
+mv /usr/local/bin/stack /usr/local/bin/stack-bin
 ```
 
 The wrapper script:
 1. Checks `STACKPANEL_DEV_REPO` environment variable
 2. Falls back to config file debug mode settings
-3. Falls back to the installed binary (`stackpanel-bin`)
+3. Falls back to the installed binary (`stack-bin`)
 
 ### Method 4: Shell Alias (Simplest)
 
@@ -94,7 +94,7 @@ Add an alias to your shell profile:
 
 ```bash
 # In ~/.bashrc or ~/.zshrc
-alias stackpanel='go run ~/projects/stackpanel/apps/stackpanel-go'
+alias stack='go run ~/projects/stack/apps/stack-go'
 ```
 
 Simple but doesn't support easy toggling.
@@ -105,7 +105,7 @@ Use direnv to enable dev mode only in certain directories:
 
 ```bash
 # In a project's .envrc
-export STACKPANEL_DEV_REPO="$HOME/projects/stackpanel"
+export STACKPANEL_DEV_REPO="$HOME/projects/stack"
 ```
 
 ## Debugging
@@ -113,8 +113,8 @@ export STACKPANEL_DEV_REPO="$HOME/projects/stackpanel"
 Enable debug output to see which binary is being used:
 
 ```bash
-STACKPANEL_DEBUG=1 stackpanel status
-# Output: [debug-mode] Running: go run /path/to/stackpanel/apps/stackpanel-go status
+STACKPANEL_DEBUG=1 stack status
+# Output: [debug-mode] Running: go run /path/to/stack/apps/stack-go status
 ```
 
 ## Performance Considerations
@@ -124,38 +124,38 @@ Running via `go run` is slower than a compiled binary because:
 2. Subsequent runs use cached compilation but still have overhead
 
 For quick commands, the difference is negligible (~500ms extra on first run).
-For long-running commands like `stackpanel agent`, the startup cost is amortized.
+For long-running commands like `stack agent`, the startup cost is amortized.
 
 ## Switching Between Dev and Production
 
 ```bash
 # Quick toggle via env var
-export STACKPANEL_DEV_REPO=~/projects/stackpanel  # Debug mode
+export STACKPANEL_DEV_REPO=~/projects/stack  # Debug mode
 unset STACKPANEL_DEV_REPO                          # Production mode
 
 # Or use the CLI
-stackpanel debug enable ~/projects/stackpanel       # Debug mode
-stackpanel debug disable                             # Production mode
-# Legacy alias: stackpanel dev enable/disable
+stack debug enable ~/projects/stack       # Debug mode
+stack debug disable                             # Production mode
+# Legacy alias: stack dev enable/disable
 
 # Check current mode
-stackpanel debug status
-# Legacy alias: stackpanel dev status
+stack debug status
+# Legacy alias: stack dev status
 ```
 
 ## Troubleshooting
 
-### "Could not find stackpanel binary"
+### "Could not find stack binary"
 
 Make sure:
 1. The Go toolchain is installed and in your PATH
-2. The repo path is correct: `ls ~/projects/stackpanel/apps/stackpanel-go/main.go`
+2. The repo path is correct: `ls ~/projects/stack/apps/stack-go/main.go`
 
-### "Invalid stackpanel repository"
+### "Invalid stack repository"
 
 The dev enable command validates the path. Make sure:
-- The path points to the root of the stackpanel repository
-- The path contains `apps/stackpanel-go/main.go`
+- The path points to the root of the stack repository
+- The path contains `apps/stack-go/main.go`
 
 ### Changes Not Being Picked Up
 
@@ -166,7 +166,7 @@ Go caches compiled packages. If your changes aren't being picked up:
 go clean -cache
 
 # Or force recompilation
-go build -a ./apps/stackpanel-go/...
+go build -a ./apps/stack-go/...
 ```
 
 ### Slow First Run

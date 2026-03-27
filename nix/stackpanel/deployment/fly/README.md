@@ -1,0 +1,30 @@
+# Fly.io Deployment Provider
+
+Container-based deployment to [Fly.io](https://fly.io) with generated `fly.toml`.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `default.nix` | Entry point |
+| `module.nix` | Per-app deployment options and config generation |
+| `schema.nix` | Proto-derived Fly.io config schema |
+| `container.nix` | Container build integration |
+| `ui.nix` | Web studio panel |
+| `lib/fly-oidc.nix` | Fly.io OIDC authentication helpers |
+
+## Usage
+
+```nix
+stack.apps.web.deployment = {
+  enable = true;
+  provider = "fly";
+  fly = {
+    appName = "my-web-app";
+    region = "iad";
+    memory = 256;
+    minMachines = 1;
+  };
+  container = { type = "bun"; port = 3000; };
+};
+```

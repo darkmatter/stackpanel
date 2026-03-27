@@ -1,0 +1,47 @@
+---
+title: stackpanel project add
+description: Add a project to the known projects list
+icon: Terminal
+---
+
+# stackpanel project add
+
+Add a Stackpanel project to the known projects list.
+
+Without arguments, adds the current directory.
+With a path argument, adds that directory.
+
+The project must be a valid Stackpanel project (has .stack/config.nix or flake.nix).
+
+Examples:
+  stackpanel project add              # Add current directory (with confirmation)
+  stackpanel project add ~/myproject  # Add specific path (with confirmation)
+  stackpanel project add -y           # Add without confirmation
+
+## Usage
+
+```bash
+stackpanel project add [path]
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--yes, -y` | `bool` | `false` | Skip confirmation prompt |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

@@ -1,3 +1,9 @@
+// users.go syncs GitHub collaborators into Nix data files for user management.
+//
+// Two files are generated:
+//   - github-collaborators.nix: auto-generated raw collaborator data (overwritten on each sync)
+//   - users.nix: one-time scaffold that imports collaborators and maps to stackpanel.users format
+//     (only created if missing, so manual customisations are preserved)
 package cmd
 
 import (
@@ -31,9 +37,9 @@ var usersSyncCmd = &cobra.Command{
 
 This command:
 1. Fetches collaborators from the GitHub repository using gh CLI
-2. Fetches public SSH keys for each collaborator from github.com/\<user\>.keys
-3. Generates .stackpanel/data/github-collaborators.nix with raw collaborator data
-4. Creates .stackpanel/data/users.nix that transforms data to stackpanel.users format
+2. Fetches public SSH keys for each collaborator from github.com/<user>.keys
+3. Generates .stack/data/github-collaborators.nix with raw collaborator data
+4. Creates .stack/data/users.nix that transforms data to stackpanel.users format
 
 The github-collaborators.nix file is auto-generated and should not be edited.
 Edit users.nix to customize permissions or add non-GitHub users.
@@ -57,7 +63,7 @@ func init() {
 	usersSyncCmd.Flags().StringVar(&syncOwner, "owner", "", "GitHub repository owner (default: current repo)")
 	usersSyncCmd.Flags().StringVar(&syncRepo, "repo", "", "GitHub repository name (default: current repo)")
 	usersSyncCmd.Flags().BoolVar(&syncNoKeys, "no-keys", false, "Skip fetching public keys")
-	usersSyncCmd.Flags().StringVar(&syncDataDir, "data-dir", "", "Data directory path (default: .stackpanel/data)")
+	usersSyncCmd.Flags().StringVar(&syncDataDir, "data-dir", "", "Data directory path (default: .stack/data)")
 }
 
 func runUsersSync(cmd *cobra.Command, args []string) {
@@ -116,11 +122,14 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 				dataDir = filepath.Join(cfg.Paths.Data, "data")
 			} else {
 				// Default
-				dataDir = ".stackpanel/data"
+				dataDir = ".stack/data"
 			}
 		}
 	}
 
+	// The data directory defaults to .stack/data but respects the configured
+	// data path. We always write into an "external" subdirectory to keep
+	// auto-generated files separate from user-authored data files.
 	if !strings.HasSuffix(dataDir, "external") {
 		dataDir = filepath.Join(dataDir, "external")
 	}
@@ -171,5 +180,5 @@ func runUsersSync(cmd *cobra.Command, args []string) {
 
 	fmt.Println()
 	output.Dimmed("To use these users in your stackpanel config:")
-	output.Dimmed("  stackpanel.users = import ./.stackpanel/data/users.nix;")
+	output.Dimmed("  stackpanel.users = import ./.stack/data/users.nix;")
 }

@@ -12,13 +12,6 @@ import {
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import { Textarea } from "@ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import {
   AlertTriangle,
@@ -28,14 +21,12 @@ import {
   Loader2,
   Plus,
   Settings,
-  Shield,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
-import type { Variable } from "@/lib/types";
-import { getVariableName, SECRET_GROUPS } from "./constants";
+import { formatSecretKeyError, getVariableName, resolveGroup } from "./constants";
 
 type VariableMode = "plaintext" | "secret";
 
@@ -67,8 +58,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
   const [varId, setVarId] = useState("");
   const [varValue, setVarValue] = useState("");
   const [varDescription, setVarDescription] = useState("");
-  const [group, setGroup] = useState<string>("dev");
-
+  const [secretGroup, setSecretGroup] = useState("shared");
   // Validation state for vals references
   const [valsError, setValsError] = useState<string | null>(null);
 
@@ -78,12 +68,11 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
       setMode("plaintext");
       setVarId("");
       setVarValue("");
-      setVarDescription("");
-      setShowValue(false);
-      setValsError(null);
-      setGroup("dev");
-    }
-  };
+        setVarDescription("");
+        setShowValue(false);
+        setValsError(null);
+      }
+    };
 
   /**
    * Validate a vals reference by running `vals eval` via the agent exec API.
@@ -149,43 +138,53 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
         }
       }
 
+      const { idPrefix } = resolveGroup(secretGroup, mode);
+      const envKey = getVariableName(normalizedId);
+
+      // Validate key follows Chamber naming rules
+      const keyError = formatSecretKeyError(envKey);
+      if (keyError) {
+        toast.error(keyError);
+        setIsSaving(false);
+        return;
+      }
+
+      // Build the full variable ID with the group prefix
+      const fullId = `${idPrefix}${envKey}`;
+
       if (mode === "secret") {
-        // Write secret to group-based SOPS file
-        const envKey = getVariableName(normalizedId);
-        const result = await client.writeGroupSecret({
+        await client.writeAgenixSecret({
+          id: fullId,
           key: envKey,
           value: trimmedValue,
-          group: group,
           description: varDescription.trim() || undefined,
         });
 
-        // Create a variable entry with the vals reference
-        const variablesClient = client.nix.mapEntity<Variable>("variables");
-        const newVariable: Variable = {
-          id: normalizedId,
-          value: result.valsRef, // Use the source project vals reference
+        // Create a variable entry with empty value -- the SOPS file is the source of truth
+        const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
+        const newVariable = {
+          value: "",
         };
-        await variablesClient.set(normalizedId, newVariable);
+        await variablesClient.set(fullId, newVariable);
 
-        toast.success(`Created secret "${normalizedId}" in ${group} group`);
+        toast.success(`Created secret "${fullId}"`);
       } else {
-        // Plaintext variable
-        const variablesClient = client.nix.mapEntity<Variable>("variables");
+        // Plaintext variable (either "shared" → /var/ or a group like /dev/)
+        const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
-        const existing = await variablesClient.get(normalizedId);
+        const existing = await variablesClient.get(fullId);
         if (existing) {
-          toast.error(`Variable "${normalizedId}" already exists`);
+          toast.error(`Variable "${fullId}" already exists`);
           setIsSaving(false);
           return;
         }
 
-        const newVariable: Variable = {
-          id: normalizedId,
+        const newVariable = {
           value: trimmedValue,
         };
 
-        await variablesClient.set(normalizedId, newVariable);
-        toast.success(`Created variable "${normalizedId}"`);
+        await variablesClient.set(fullId, newVariable);
+        toast.success(`Created variable "${fullId}"`);
       }
 
       handleOpenChange(false);
@@ -219,32 +218,6 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          {/* Group selector (for secrets only) */}
-          {mode === "secret" && !isChamber && (
-            <div className="space-y-2">
-              <Label htmlFor="group">Access Control Group *</Label>
-              <Select value={group} onValueChange={setGroup}>
-                <SelectTrigger id="group">
-                  <SelectValue placeholder="Select a group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SECRET_GROUPS.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-3.5 w-3.5" />
-                        {g}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Determines who can decrypt this secret. Only users with access
-                to the {group} group can read this value.
-              </p>
-            </div>
-          )}
-
           {/* Mode toggle */}
           <div className="space-y-2">
             <Label>Type</Label>
@@ -283,9 +256,42 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
               {mode === "secret" &&
                 (isChamber
                   ? "Stored in AWS SSM Parameter Store. Encryption is handled by AWS KMS."
-                  : "Encrypted with AGE and stored as a .age file. Only team members with access can decrypt.")}
+                  : `Encrypted and stored in .stack/secrets/vars/${secretGroup}.sops.yaml.`)}
             </p>
           </div>
+
+          {/* Secret group selector */}
+          {mode === "secret" && !isChamber && (
+            <div className="space-y-2">
+              <Label>Group</Label>
+              <div className="flex gap-1.5 flex-wrap">
+                {["shared", "dev", "staging", "prod"].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setSecretGroup(g)}
+                    className={`px-3 py-1 rounded-md text-xs font-mono font-medium border transition-colors ${
+                      secretGroup === g
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-input bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+                <input
+                  type="text"
+                  value={["shared","dev","staging","prod"].includes(secretGroup) ? "" : secretGroup}
+                  onChange={(e) => e.target.value && setSecretGroup(e.target.value)}
+                  placeholder="custom…"
+                  className="px-3 py-1 rounded-md text-xs font-mono border border-input bg-background w-24 focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Determines the SOPS file: <code className="font-mono">vars/{secretGroup}.sops.yaml</code>
+              </p>
+            </div>
+          )}
 
           {/* Variable name */}
           <div className="space-y-2">

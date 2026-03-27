@@ -1,3 +1,14 @@
+// Package executor wraps os/exec with Nix devshell awareness.
+//
+// The core problem: when the agent starts outside a Nix devshell (e.g. as a
+// systemd service or launched from the web UI), commands like "nix", "caddy",
+// or project-specific tools aren't on PATH. This package solves that by
+// running `nix print-dev-env` once, caching the resulting environment, and
+// injecting it into all spawned commands.
+//
+// If the agent is already inside a devshell (detected via STACKPANEL_ROOT,
+// IN_NIX_SHELL, or DEVENV_ROOT env vars), the cached env is skipped and
+// the process's own environment is used directly.
 package executor
 
 import (
@@ -12,14 +23,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Executor runs commands in the project context
+// Executor runs commands in the project context. It optionally maintains a
+// cached copy of the Nix devshell environment so commands spawned outside
+// a devshell still have access to Nix-provided packages and env vars.
+//
+// Thread-safe for reads; callers should not call SetProjectRoot or
+// LoadDevshellEnv concurrently with command execution.
 type Executor struct {
 	projectRoot     string
-	allowedCommands map[string]bool
+	allowedCommands map[string]bool // empty map means allow all
 
-	// Devshell environment support
-	devshellEnv []string // Cached devshell environment variables
-	inDevshell  bool     // Whether the agent was started inside a devshell
+	devshellEnv []string // cached `nix print-dev-env` output, nil if not loaded
+	inDevshell  bool     // true if the current process is already in a devshell
 }
 
 // Result of command execution
@@ -29,7 +44,11 @@ type Result struct {
 	Stderr   string `json:"stderr"`
 }
 
-// New creates a new executor
+// New creates a new executor. If not already in a devshell, it eagerly loads
+// the devshell environment via `nix print-dev-env` (which may take several
+// minutes on first run while Nix downloads packages). Failure to load is
+// non-fatal — the executor falls back to the process environment, but
+// commands requiring Nix-provided tools will likely fail.
 func New(projectRoot string, allowedCommands []string) (*Executor, error) {
 	allowed := make(map[string]bool)
 	for _, cmd := range allowedCommands {
@@ -56,8 +75,9 @@ func New(projectRoot string, allowedCommands []string) (*Executor, error) {
 	return e, nil
 }
 
-// NewWithoutDevshell creates a new executor without attempting to load the devshell environment.
-// Useful for testing or when you know you don't need devshell support.
+// NewWithoutDevshell creates an executor that skips the expensive
+// `nix print-dev-env` call. Use this in tests or when you know the process
+// is already in a devshell (where os.Environ() has everything needed).
 func NewWithoutDevshell(projectRoot string, allowedCommands []string) (*Executor, error) {
 	allowed := make(map[string]bool)
 	for _, cmd := range allowedCommands {
@@ -72,6 +92,8 @@ func NewWithoutDevshell(projectRoot string, allowedCommands []string) (*Executor
 }
 
 // isInDevshell checks if the current process is running inside a Nix devshell
+// by probing well-known environment variables. Checked once at construction
+// time — the result won't change during the process lifetime.
 func isInDevshell() bool {
 	// STACKPANEL_ROOT is set by stackpanel devshell (most reliable indicator)
 	if os.Getenv("STACKPANEL_ROOT") != "" {
@@ -93,14 +115,17 @@ func (e *Executor) InDevshell() bool {
 	return e.inDevshell
 }
 
-// HasDevshellEnv returns whether devshell environment variables are loaded
+// HasDevshellEnv returns whether devshell environment variables are available,
+// either because we're inside a devshell (inherited) or because we loaded
+// them via nix print-dev-env (cached).
 func (e *Executor) HasDevshellEnv() bool {
 	return e.inDevshell || len(e.devshellEnv) > 0
 }
 
-// LoadDevshellEnv loads the devshell environment for the project using `nix print-dev-env`.
-// This is called automatically by New() if not already in a devshell.
-// Can be called manually to refresh the cached environment.
+// LoadDevshellEnv loads the devshell environment via `nix print-dev-env`.
+// Called automatically by New() if not already in a devshell. Can be called
+// manually to refresh after flake.nix changes. The 5-minute timeout allows
+// for Nix binary cache downloads on first run.
 func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 	if e.projectRoot == "" {
 		return fmt.Errorf("no project root set")
@@ -153,15 +178,10 @@ func (e *Executor) LoadDevshellEnv(ctx context.Context) error {
 	return nil
 }
 
-// parseDevEnvOutput parses the output of `nix print-dev-env` and extracts
-// environment variable assignments.
-//
-// The output format is a bash script with export statements like:
-//
-//	export PATH="/nix/store/xxx:$PATH"
-//	export FOO="bar"
-//
-// We extract these and return them as KEY=value strings.
+// parseDevEnvOutput parses the bash script output of `nix print-dev-env`
+// and extracts KEY=value pairs from export and declare statements.
+// Both `export FOO="bar"` and `declare -x FOO="bar"` forms are supported
+// because different Nix versions emit different formats.
 func parseDevEnvOutput(output string) []string {
 	var envVars []string
 
@@ -169,47 +189,49 @@ func parseDevEnvOutput(output string) []string {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Skip empty lines and comments
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		// Look for export statements
-		if strings.HasPrefix(line, "export ") {
-			// Remove "export " prefix
-			assignment := strings.TrimPrefix(line, "export ")
-
-			// Find the = sign
-			eqIdx := strings.Index(assignment, "=")
-			if eqIdx == -1 {
-				continue
-			}
-
-			key := assignment[:eqIdx]
-			value := assignment[eqIdx+1:]
-
-			// Remove surrounding quotes if present
-			if len(value) >= 2 {
-				if (value[0] == '"' && value[len(value)-1] == '"') ||
-					(value[0] == '\'' && value[len(value)-1] == '\'') {
-					value = value[1 : len(value)-1]
-				}
-			}
-
-			// Skip certain variables that shouldn't be overridden
-			if shouldSkipEnvVar(key) {
-				continue
-			}
-
-			envVars = append(envVars, key+"="+value)
+		var assignment string
+		switch {
+		case strings.HasPrefix(line, "export "):
+			assignment = strings.TrimPrefix(line, "export ")
+		case strings.HasPrefix(line, "declare -x "):
+			assignment = strings.TrimPrefix(line, "declare -x ")
+		default:
+			continue
 		}
+
+		eqIdx := strings.Index(assignment, "=")
+		if eqIdx == -1 {
+			continue
+		}
+
+		key := assignment[:eqIdx]
+		value := assignment[eqIdx+1:]
+
+		if len(value) >= 2 {
+			if (value[0] == '"' && value[len(value)-1] == '"') ||
+				(value[0] == '\'' && value[len(value)-1] == '\'') {
+				value = value[1 : len(value)-1]
+			}
+		}
+
+		if shouldSkipEnvVar(key) {
+			continue
+		}
+
+		envVars = append(envVars, key+"="+value)
 	}
 
 	return envVars
 }
 
 // shouldSkipEnvVar returns true for environment variables that shouldn't be
-// inherited from the devshell (e.g., they're process-specific)
+// inherited from the devshell output. These are process-local (PWD, SHLVL),
+// user-session-specific (HOME, TMPDIR with /run/user/ paths), or terminal-
+// specific (TERM, SHELL) and would cause subtle bugs if propagated.
 func shouldSkipEnvVar(key string) bool {
 	skip := map[string]bool{
 		"PWD":             true, // Will be set by the command's working directory
@@ -227,20 +249,23 @@ func shouldSkipEnvVar(key string) bool {
 	return skip[key]
 }
 
-// Run executes a command and returns the result
+// Run executes a command in the project root directory with the full
+// environment stack. This is the most common entry point — use
+// RunWithOptions when you need a different working directory or extra env vars.
 func (e *Executor) Run(command string, args ...string) (*Result, error) {
 	return e.RunWithOptions(command, e.projectRoot, nil, args...)
 }
 
-// RunNix runs a nix command
+// RunNix is a convenience wrapper for running nix subcommands.
+// Satisfies the nixdata.NixRunner interface.
 func (e *Executor) RunNix(args ...string) (*Result, error) {
 	return e.Run("nix", args...)
 }
 
-// RunWithOptions executes a command in a specific directory and optional environment overrides.
-//
-// - cwd: if empty, uses the project root.
-// - env: list of "KEY=value" strings appended to the environment.
+// RunWithOptions executes a command with full control over working directory
+// and environment. Non-zero exit codes are returned in Result.ExitCode
+// (not as an error) so callers can inspect stdout/stderr. Only true exec
+// failures (binary not found, permission denied) return an error.
 //
 // Environment precedence (later overrides earlier):
 //  1. Current process environment (os.Environ())
@@ -303,6 +328,9 @@ func (e *Executor) RunWithOptions(
 
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
+			// Non-zero exit: return the result with exit code so callers can
+			// inspect stdout/stderr. Only return an error for exec failures
+			// (binary not found, permission denied, etc.).
 			result.ExitCode = exitErr.ExitCode()
 		} else {
 			return nil, fmt.Errorf("failed to execute command: %w", err)
@@ -318,9 +346,10 @@ func (e *Executor) RunWithOptions(
 	return result, nil
 }
 
-// mergeEnv merges two environment variable slices.
-// Variables in `overrides` take precedence over `base`.
-// Both slices should contain strings in "KEY=value" format.
+// mergeEnv merges two environment variable slices. Variables in overrides
+// take precedence over base. Note: the returned slice order is
+// non-deterministic (map iteration) — this is fine since exec.Cmd.Env
+// doesn't depend on ordering.
 func mergeEnv(base, overrides []string) []string {
 	// Build a map from base
 	envMap := make(map[string]string)
@@ -352,9 +381,24 @@ func (e *Executor) ClearDevshellEnv() {
 	e.devshellEnv = nil
 }
 
-// GetEnv retrieves an environment variable value from the devshell environment.
-// It first checks the cached devshell env, then falls back to os.Getenv.
-// Returns empty string if the variable is not found.
+// BuildEnv returns a merged environment suitable for passing to exec.Cmd.Env
+// directly. Uses the same precedence as RunWithOptions: process env → devshell
+// env → extra overrides. Useful when callers need to construct their own
+// exec.Cmd (e.g. for process-compose with custom stdio).
+func (e *Executor) BuildEnv(extra []string) []string {
+	env := os.Environ()
+	if !e.inDevshell && len(e.devshellEnv) > 0 {
+		env = mergeEnv(env, e.devshellEnv)
+	}
+	if len(extra) > 0 {
+		env = mergeEnv(env, extra)
+	}
+	return env
+}
+
+// GetEnv retrieves an environment variable, checking the cached devshell
+// env first and falling back to os.Getenv. This means devshell values take
+// precedence over the process environment, matching RunWithOptions behavior.
 func (e *Executor) GetEnv(key string) string {
 	// Check devshell env first
 	prefix := key + "="
@@ -367,7 +411,9 @@ func (e *Executor) GetEnv(key string) string {
 	return os.Getenv(key)
 }
 
-// SetProjectRoot updates the project root and optionally reloads the devshell environment.
+// SetProjectRoot updates the project root and optionally reloads the devshell
+// environment. Clears the cached devshell env even if reloadDevshell is false,
+// since the old env was for a different project.
 func (e *Executor) SetProjectRoot(projectRoot string, reloadDevshell bool) error {
 	e.projectRoot = projectRoot
 	e.devshellEnv = nil

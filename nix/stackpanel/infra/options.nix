@@ -81,7 +81,7 @@ let
         default = { };
         description = ''
           Configuration values passed to the module at runtime.
-          Serialized to JSON in .stackpanel/state/infra-inputs.json.
+          Serialized to JSON in .stack/state/infra-inputs.json.
           Values matching ENC[age,...] are decrypted at runtime.
         '';
       };
@@ -145,7 +145,12 @@ in
     framework = lib.mkOption {
       type = lib.types.enum [ "alchemy" ];
       default = "alchemy";
-      description = "IaC framework to use for infrastructure provisioning";
+      description = ''
+        IaC framework to use for infrastructure provisioning.
+        Currently only "alchemy" is supported. The alchemy module at
+        config.stackpanel.alchemy provides the shared SDK configuration
+        (version, state store, helpers) that this module consumes.
+      '';
     };
 
     output-dir = lib.mkOption {
@@ -193,8 +198,23 @@ in
       sops = {
         file-path = lib.mkOption {
           type = lib.types.str;
-          default = ".stackpanel/secrets/infra.yaml";
-          description = "Path to SOPS-encrypted YAML file for infra outputs";
+          default = ".stack/secrets/infra/dev.sops.yaml";
+          description = ''
+            Path to SOPS-encrypted YAML file for infra outputs.
+            Defaults to a dedicated infra file. Uses `sops set` for non-destructive
+            per-key updates, preserving existing secrets in the file.
+          '';
+        };
+
+        group = lib.mkOption {
+          type = lib.types.str;
+          default = "dev";
+          description = ''
+            Secrets group to write outputs to (e.g., "dev", "prod", "common").
+            Used to resolve the SOPS file path from the secrets directory:
+              <secrets-dir>/vars/<group>.sops.yaml
+            When set, overrides file-path.
+          '';
         };
       };
 
@@ -265,7 +285,7 @@ in
     # Outputs stub (cross-resource references)
     # ==========================================================================
     outputs = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+      type = lib.types.attrsOf (lib.types.attrsOf lib.types.anything);
       default = { };
       description = ''
         Infrastructure outputs from the last deployment.
@@ -273,7 +293,24 @@ in
 
         Populated by running `infra:pull-outputs` after deployment,
         which reads from the storage backend and writes to
-        .stackpanel/data/infra-outputs.nix.
+        .stack/data/infra-outputs.nix.
+
+        Outputs are typically strings, but may include structured values
+        (e.g., machine inventories) when modules emit complex outputs.
+
+        Machine inventories are expected at:
+          config.stackpanel.infra.outputs.machines.machines
+
+        Suggested shape:
+          machines = {
+            web-1 = {
+              host = "web-1.example.com";
+              ssh = { user = "root"; port = 22; };
+              roles = [ "web" ];
+              tags = [ "prod" ];
+              arch = "x86_64-linux";
+            };
+          };
 
         Example usage in other Nix modules:
           config.stackpanel.infra.outputs.aws-secrets.roleArn
@@ -290,7 +327,7 @@ in
     stackpanel.infra.outputs =
       let
         root = if config.stackpanel.root != null then config.stackpanel.root else ./.;
-        outputsFile = root + "/.stackpanel/data/infra-outputs.nix";
+        outputsFile = root + "/.stack/data/infra-outputs.nix";
       in
       lib.mkDefault (lib.optionalAttrs (builtins.pathExists outputsFile) (import outputsFile));
   };

@@ -1,0 +1,80 @@
+---
+title: Building Source
+description: Why configuration files should be build output, not hand-written artifacts
+icon: hammer
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+A core concept of Stackpanel is that **much of what we consider "source code" should actually be built**.
+
+Every tool you add to your codebase causes you to inherit some kind of constraint—a file that must exist at a specific path, in a specific format, with specific contents. These constraints reduce how versatile, flexible, and portable your code is. Stackpanel solves this by treating configuration as build output: you write Nix, and the build step generates the files your tools expect.
+
+## The Problem
+
+Think about `.gitignore`. It's a flat file—essentially a table in a database—containing a list of paths that Git should ignore. Now imagine you install an npm module that stores state in a `.state` directory. The module's docs tell you to add `.state` to your `.gitignore`.
+
+Later, you decide to remove the module. You delete it, then remember to go clean up `.gitignore` too.
+
+Both of these steps—adding and removing the ignore rule—are concerns that **belong with that module**, not with you. If the module could declare "I need `.state` ignored" as part of its own configuration, the entry would appear when the module is installed and disappear when it's removed. No manual bookkeeping.
+
+## How Stackpanel Handles It
+
+With Stackpanel, any module can contribute to any generated file. Here's how a module would add entries to `.gitignore`:
+
+```nix
+{...}: {
+  stackpanel.files.entries.".gitignore" = {
+    type = "line-set";
+    content = [
+      ".state"
+      "node_modules"
+    ];
+  };
+}
+```
+
+The Nix module system merges the output of all modules, so multiple extensions can each declare their own ignored paths. The final `.gitignore` contains all of them—without any module knowing about the others.
+
+## Why This Matters
+
+This pattern applies far beyond `.gitignore`:
+
+- **`tsconfig.json`** — A TypeScript extension can set compiler options, path aliases, and include/exclude patterns based on your project structure.
+- **`.github/workflows/*.yml`** — A CI extension can generate GitHub Actions workflows that match the services and build steps you've actually configured.
+- **`Dockerfile`** — A container extension can produce a Dockerfile optimized for your specific language, package manager, and dependency tree.
+- **`.vscode/settings.json`** — An IDE extension can configure formatters, linters, and debug configurations based on what's in your devshell.
+
+In every case, the generated file is **exactly what you would have written by hand**. It lives at the path the tool expects, in the format the tool expects. The difference is that you didn't have to write it, and you don't have to maintain it.
+
+## The Mental Model
+
+Think of it like `dist/` or `build/`. You don't edit compiled JavaScript—you edit the TypeScript source and let the compiler produce the output. Stackpanel applies the same idea to configuration:
+
+```
+Your Nix config (source of truth)
+    ↓  stackpanel build
+Generated files (tsconfig.json, .gitignore, Dockerfile, ...)
+    ↓
+Tools read them as normal
+```
+
+If you eject from Stackpanel tomorrow, the generated files stay. They're standard files in standard locations. No migration, no lock-in.
+
+<Callout type="info">
+You can configure your editor to dim or hide generated files, just like you would with `node_modules/` or `dist/`. The files are git-tracked by default so that CI works without Nix.
+</Callout>
+
+## File Strategies
+
+Stackpanel supports several strategies for merging contributions from multiple modules into a single file:
+
+| Strategy | Use Case | Example |
+|----------|----------|---------|
+| `line-set` | One entry per line, deduplicated | `.gitignore`, `.prettierignore` |
+| `json` | Deep-merged JSON | `tsconfig.json`, `package.json` |
+| `yaml` | Deep-merged YAML | GitHub Actions workflows |
+| `toml` | Deep-merged TOML | `starship.toml` |
+| `text` | Raw text template | `Dockerfile`, shell scripts |
+
+Each module contributes its piece, and Stackpanel handles the merge. Conflicts are resolved by the module system's standard priority mechanism—the same way NixOS resolves conflicting option values.

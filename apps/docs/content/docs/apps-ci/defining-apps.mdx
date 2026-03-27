@@ -1,0 +1,230 @@
+---
+title: Defining Apps
+description: Register applications in your project with ports, URLs, and metadata
+icon: app-window
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Apps are the main units of work in your project—your web frontend, your API server, your background worker. Defining them in Stackpanel gives each app a [deterministic port](/docs/concepts/deterministic-ports), environment variables, and integration with the rest of the system (CI generation, Caddy routing, Studio dashboard).
+
+## Basic App Definition
+
+Apps are defined under `stackpanel.apps`, keyed by name:
+
+```nix
+stackpanel.apps = {
+  web = {
+    port = 0;  # First sequential port from the computed base
+    description = "Next.js frontend";
+  };
+
+  api = {
+    port = 1;  # Second sequential port
+    description = "Hono API server";
+  };
+};
+```
+
+The `port` value is an **offset** from the project's computed base port, not an absolute number. If your project hashes to a base of `4200`, the web app gets `4200` and the API gets `4201`. Every team member gets these same ports automatically.
+
+<Callout type="info">
+You don't need to define apps to use Stackpanel. Apps are useful when you want deterministic ports, Caddy routing, CI generation, or Studio visibility for specific parts of your project.
+</Callout>
+
+## App Options
+
+Each app supports the following options:
+
+```nix
+stackpanel.apps.web = {
+  # Port offset from the deterministic base (required)
+  port = 0;
+
+  # Human-readable description
+  description = "Next.js frontend application";
+
+  # Working directory relative to the project root
+  root = "./apps/web";
+
+  # Framework hint (used by CI generation and Studio)
+  framework = "nextjs";
+
+  # Dev command (used by process-compose and Studio)
+  dev = "bun run dev";
+
+  # Build command (used by CI generation)
+  build = "bun run build";
+
+  # Whether this app is a web-facing application (vs. a background service)
+  web = true;
+};
+```
+
+## Computed App Properties
+
+When you define apps, Stackpanel computes additional properties and exposes them on `config.stackpanel.appsComputed`:
+
+| Property | Description | Example |
+|----------|-------------|---------|
+| `port` | The absolute port number | `4200` |
+| `url` | Full URL with protocol and port | `http://localhost:4200` |
+
+These computed values are available in your Nix config for wiring things together:
+
+```nix
+{ config, ... }:
+let
+  apps = config.stackpanel.appsComputed;
+in
+{
+  stackpanel.devshell.env = {
+    WEB_URL = apps.web.url;
+    API_URL = apps.api.url;
+    NEXT_PUBLIC_API_URL = apps.api.url;
+  };
+}
+```
+
+This guarantees your environment variables always match the actual ports—no hardcoded URLs that drift out of sync.
+
+## Environment Variables
+
+Each app automatically gets environment variables exported into the devshell:
+
+```
+STACKPANEL_<APP_NAME>_PORT=4200
+STACKPANEL_<APP_NAME>_URL=http://localhost:4200
+```
+
+For example, an app named `web` exports `STACKPANEL_WEB_PORT` and `STACKPANEL_WEB_URL`. Your application code can read these directly:
+
+```typescript
+const port = process.env.STACKPANEL_WEB_PORT ?? "3000";
+const apiUrl = process.env.STACKPANEL_API_URL ?? "http://localhost:3001";
+```
+
+## Running Apps as Services
+
+Apps can be started as background services through [process-compose](/docs/services/process-compose). Define a `dev` command and register the app as a service:
+
+```nix
+stackpanel.apps.web = {
+  port = 0;
+  root = "./apps/web";
+  dev = "bun run dev";
+};
+
+stackpanel.apps.api = {
+  port = 1;
+  root = "./apps/api";
+  dev = "bun run dev";
+};
+```
+
+When apps define a `dev` command, they can be started alongside your infrastructure services:
+
+```bash
+stackpanel services start
+```
+
+This starts PostgreSQL, Redis, your web app, and your API server all together—with dependency ordering and health checks.
+
+## Monorepo Patterns
+
+In a monorepo with multiple apps, each app gets its own port offset and working directory:
+
+```nix
+stackpanel.apps = {
+  web = {
+    port = 0;
+    root = "./apps/web";
+    framework = "nextjs";
+    dev = "bun run --cwd apps/web dev";
+    build = "bun run --cwd apps/web build";
+  };
+
+  api = {
+    port = 1;
+    root = "./apps/api";
+    framework = "hono";
+    dev = "bun run --cwd apps/api dev";
+    build = "bun run --cwd apps/api build";
+  };
+
+  docs = {
+    port = 2;
+    root = "./apps/docs";
+    framework = "nextjs";
+    dev = "bun run --cwd apps/docs dev";
+    build = "bun run --cwd apps/docs build";
+  };
+
+  native = {
+    port = 3;
+    root = "./apps/native";
+    framework = "expo";
+    web = false;  # Not a web-facing app
+  };
+};
+```
+
+The Studio dashboard displays all defined apps in a grid view, showing their status, port, and framework. See [Studio](/docs/studio) for more on the visual interface.
+
+## Caddy Integration
+
+When you define apps and enable [Caddy](/docs/networking/caddy), you can route clean local hostnames to each app:
+
+```nix
+{ config, ... }:
+let
+  apps = config.stackpanel.appsComputed;
+in
+{
+  stackpanel.caddy = {
+    enable = true;
+    routes = {
+      web = {
+        from = "myapp.local";
+        to = "localhost:${toString apps.web.port}";
+      };
+      api = {
+        from = "api.myapp.local";
+        to = "localhost:${toString apps.api.port}";
+      };
+    };
+  };
+}
+```
+
+With [DNS](/docs/networking/dns) configured, `https://myapp.local` routes to your web app and `https://api.myapp.local` routes to your API—with valid TLS certificates if [Step CA](/docs/networking/certificates) is enabled.
+
+## CI Integration
+
+App definitions feed directly into [CI generation](/docs/apps-ci/ci-generation). When you define apps with `build` commands, the CI extension can generate GitHub Actions workflows that build and deploy each app:
+
+```nix
+{
+  stackpanel.apps.web = {
+    port = 0;
+    build = "bun run build";
+    framework = "nextjs";
+  };
+
+  # The CI extension uses app definitions to generate workflows
+  stackpanel.ci = {
+    enable = true;
+    provider = "github-actions";
+  };
+}
+```
+
+This generates a `.github/workflows/ci.yml` that includes build steps for each defined app. See [CI Generation](./ci-generation) for details.
+
+## Reference
+
+- [Options Reference → Apps](/docs/reference/apps) for all app configuration options
+- [Options Reference → AppsComputed](/docs/reference/appsComputed) for computed app properties
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how port assignment works
+- [CI Generation](./ci-generation) for generating CI pipelines from app definitions
+- [Caddy](/docs/networking/caddy) for reverse-proxying to your apps

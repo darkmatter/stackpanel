@@ -1,8 +1,8 @@
-# Stackpanel Project Rules
+# Stack Project Rules
 
-Stackpanel is a Nix-based development environment framework that provides:
+Stack is a Nix-based development environment framework that provides:
 
-- **Consistent dev environments** via devenv/Nix with reproducible shells
+- **Consistent dev environments** via Nix flakes with reproducible shells
 - **Multi-app monorepo support** with automatic port assignment and Caddy reverse proxy
 - **Secrets management** with SOPS/vals integration and per-app codegen
 - **IDE integration** with VS Code workspace generation
@@ -12,9 +12,13 @@ Stackpanel is a Nix-based development environment framework that provides:
 
 ```
 .
-├── .stackpanel/                    # Stackpanel configuration (checked in)
+├── .stack/                    # Stack configuration (checked in)
 │   ├── .gitignore                  # Ignores state/ only
-│   ├── gen/                        # Generated files (checked in, regenerated on devenv)
+│   ├── config.nix                  # User-facing Nix config
+│   ├── _internal.nix               # Internal Nix config (generated)
+│   ├── modules/                    # Project-local Nix modules
+│   ├── data/                       # Data files for Nix evaluation
+│   ├── gen/                        # Generated files (checked in, regenerated on shell entry)
 │   │   ├── ide/vscode/             # VS Code workspace and devshell loader
 │   │   └── schemas/secrets/        # JSON schemas for YAML intellisense
 │   ├── secrets/                    # Secrets configuration
@@ -23,182 +27,88 @@ Stackpanel is a Nix-based development environment framework that provides:
 │   │   └── apps/{appName}/         # Per-app secret schemas
 │   │       ├── config.yaml         # Codegen settings (language, path)
 │   │       ├── common.yaml         # Shared schema across environments
-│   │       ├── dev.yaml            # Dev-specific schema + access
-│   │       ├── staging.yaml        # Staging-specific schema + access
-│   │       └── prod.yaml           # Production-specific schema + access
+│   │       └── {env}.yaml          # Per-environment schema + access
 │   └── state/                      # Runtime state (gitignored)
-│       └── stackpanel.json         # State file for CLI/agent
+│       └── stack.json         # State file for CLI/agent
 │
 ├── apps/                           # Application packages
-│   ├── web/                        # React frontend (TanStack Router)
-│   ├── server/                     # Hono backend (Cloudflare Workers)
-│   ├── fumadocs/                   # Documentation site
-│   ├── cli/                        # Go CLI for service management
-│   └── agent/                      # Go agent for remote operations
+│   ├── web/                        # Studio UI (React + TanStack Start + Vite + Cloudflare Workers)
+│   ├── stack-go/              # Go CLI + agent (Cobra commands, agent server)
+│   ├── docs/                       # Documentation site (Next.js + Fumadocs)
+│   └── tui/                        # Terminal UI (TypeScript/Bun)
 │
 ├── packages/                       # Shared packages
 │   ├── api/                        # tRPC routers and types
 │   ├── auth/                       # Better-Auth logic
 │   ├── db/                         # Drizzle schema and utilities
-│   ├── ui/                         # Shared UI components
-│   └── config/                     # Shared TypeScript config
+│   ├── proto/                      # Protobuf definitions + codegen (buf-based)
+│   ├── gen/                        # Generated code (e.g. @gen/env)
+│   ├── ui/                         # Shared UI component re-export layer
+│   ├── ui-core/                    # Cross-platform UI primitives
+│   ├── ui-web/                     # Web-specific UI components (shadcn/ui)
+│   ├── ui-native/                  # Native/mobile UI components
+│   ├── ui-primitives/              # Low-level UI primitives
+│   ├── config/                     # Shared TypeScript config
+│   ├── scripts/                    # Shared scripts and entrypoints
+│   ├── secrets/                    # Secrets management
+│   ├── infra/                      # Infrastructure-as-code package
+│   ├── agent-client/               # Client library for the Go agent
+│   ├── znv/                        # Environment variable validation (Zod)
+│   └── docs-content/               # Shared documentation content
 │
 ├── nix/                            # Nix modules and libraries
-│   ├── modules/                    # Stackpanel modules (options + config)
-│   │   ├── stackpanel.nix          # Core module (dirs, motd, direnv)
-│   │   ├── apps.nix                # App definitions and port assignment
-│   │   ├── ports.nix               # Deterministic port allocation
-│   │   ├── ide.nix                 # VS Code integration
-│   │   ├── secrets/                # SOPS/vals secrets module
-│   │   │   ├── secrets.nix         # Main secrets module
-│   │   │   ├── codegen.nix         # TypeScript/Python/Go env codegen
-│   │   │   ├── schemas.nix         # JSON schema generation
-│   │   │   └── ...
-│   │   └── ...
-│   ├── lib/                        # Pure library functions
-│   │   ├── services/               # Service helpers (postgres, redis, minio)
-│   │   └── integrations/           # IDE integration utilities
-│   └── templates/                  # Project templates
+│   ├── stack/                 # Core framework
+│   │   ├── core/                   # Core options, schema, state, CLI, aliases
+│   │   ├── lib/                    # Utility functions, port management, codegen
+│   │   ├── modules/                # Pluggable feature modules (bun, go, turbo, etc.)
+│   │   ├── services/               # Service modules (postgres, redis, caddy, minio, etc.)
+│   │   ├── devshell/               # Dev shell config (bin, scripts, direnv, files)
+│   │   ├── db/                     # Database schemas (.proto.nix files)
+│   │   ├── secrets/                # Secrets module
+│   │   ├── network/                # Network (ports, caddy, Step CA)
+│   │   ├── ide/                    # IDE integration (VS Code, Zed, nixd)
+│   │   ├── alchemy/                # Alchemy IaC integration + templates
+│   │   ├── infra/                  # Infrastructure codegen + templates
+│   │   ├── tui/                    # TUI Nix config and theming
+│   │   └── docs/                   # Docs module
+│   └── flake/                      # Flake-level config and project templates
 │
-├── tooling/                        # Build tooling
-│   ├── alchemy/                    # Alchemy IaC scripts
-│   └── devenv/                     # Additional devenv config
-│
-├── devenv.nix                      # Main devenv configuration
-├── devenv.yaml                     # Devenv inputs
-└── flake.nix                       # Nix flake for flake-parts integration
+├── docs/                           # Internal developer documentation
+├── infra/                          # Cloud infrastructure (Alchemy/SST scripts)
+├── scripts/                        # Shell scripts (setup, wrappers)
+├── tests/                          # Smoke tests and template tests
+└── flake.nix                       # Nix flake (primary entrypoint)
 ```
 
 ## Key Concepts
 
-### Ports
+### State File
 
-Stackpanel assigns deterministic ports based on a hash of the project name, ensuring each project gets a unique, predictable port range that won't conflict with other stackpanel projects.
+The state file (`.stack/state/stack.json`) is generated on each devshell entry and provides the Go CLI and agent with access to the current configuration without evaluating Nix.
 
-**Computation Algorithm** (in `nix/modules/ports.nix`):
+**Location**: `.stack/state/stack.json` (gitignored)
 
-1. Hash the project name using MD5
-2. Convert first 8 hex chars to decimal
-3. Constrain to range: `minPort + (hash % portRange)`
-4. Round down to nearest `modulus` (default 100) for clean port numbers
-
-**Default Parameters**:
-- `minPort`: 3000 (minimum base port)
-- `maxPort`: 65000 (maximum base port)
-- `modulus`: 100 (ports round to nearest 100)
-
-**Port Layout**:
-- **Apps** get ports at `basePort + 0-9` (sequential by definition order)
-- **Services** get ports at `basePort + 10-99` (sequential by registration order)
-
-**Example** for project `stackpanel`:
-```
-Base port: 6400
-
-Apps:
-  fumadocs  → 6400
-  server    → 6401
-  web       → 6402
-
-Services:
-  postgres  → 6410
-  redis     → 6411
-  minio     → 6412
+**Go Usage** (with fallback):
+```go
+// Load tries nix eval first, falls back to state file
+st, err := state.Load("")
 ```
 
 **Environment Variables**:
-Each service port is exposed as `STACKPANEL_<KEY>_PORT`:
-```bash
-STACKPANEL_POSTGRES_PORT=6410
-STACKPANEL_REDIS_PORT=6411
-STACKPANEL_MINIO_PORT=6412
-```
-
-**Benefits**:
-- Same ports across all team members (deterministic from project name)
-- No manual port configuration needed
-- Projects don't conflict when running simultaneously
-- Clean, memorable port numbers (rounded to modulus)
-
-### Secrets
-
-Secrets use a per-app architecture with environment inheritance:
-1. `common.yaml` defines schema shared across all environments
-2. `{env}.yaml` extends/overrides common schema and defines access control
-3. Codegen generates type-safe env access for TypeScript/Python/Go
-
-### Generated Files
-
-Files in `.stackpanel/gen/` are regenerated on each `devenv` run:
-- Should be checked into git for IDE functionality without devenv
-- JSON schemas enable YAML intellisense in VS Code
-- Workspace file configures terminal integration
-
-
-### State File
-
-The state file (`.stackpanel/state/stackpanel.json`) is generated on each devenv shell entry and provides the Go CLI and agent with access to the current devenv configuration without evaluating Nix.
-
-**Location**: `.stackpanel/state/stackpanel.json` (gitignored)
-
-**Contents**:
-```json
-{
-  "version": 1,
-  "projectName": "stackpanel",
-  "basePort": 6400,
-  "paths": {
-    "state": ".stackpanel/state",
-    "gen": ".stackpanel/gen",
-    "data": ".stackpanel"
-  },
-  "apps": {
-    "web": { "port": 6402, "domain": "stackpanel.localhost", "url": "http://stackpanel.localhost", "tls": false },
-    "server": { "port": 6401, "domain": null, "url": null, "tls": false }
-  },
-  "services": {
-    "postgres": { "key": "POSTGRES", "name": "PostgreSQL", "port": 6410, "envVar": "STACKPANEL_POSTGRES_PORT" },
-    "redis": { "key": "REDIS", "name": "Redis", "port": 6411, "envVar": "STACKPANEL_REDIS_PORT" }
-  },
-  "network": {
-    "step": { "enable": true, "caUrl": "https://ca.internal:443" }
-  }
-}
-```
+- `STACKPANEL_STATE_FILE`: Full path to state file
+- `STACKPANEL_STATE_DIR`: Directory containing state file
 
 ### Live Nix Evaluation
 
 For tools that need always-fresh config without state file drift, use `nix eval`:
 
 ```bash
-# Within devenv shell (uses STACKPANEL_CONFIG_JSON env var for pre-computed JSON)
+# Within devshell (uses STACKPANEL_CONFIG_JSON env var for pre-computed JSON)
 nix eval --impure --json --expr 'builtins.fromJSON (builtins.readFile (builtins.getEnv "STACKPANEL_CONFIG_JSON"))'
 
 # Or import the source Nix config directly (uses STACKPANEL_NIX_CONFIG)
 nix eval --impure --json --expr 'import (builtins.getEnv "STACKPANEL_NIX_CONFIG")'
-
-# Returns same structure as state.json but directly from Nix
 ```
-
-**Go Usage** (with fallback):
-```go
-import "github.com/darkmatter/stackpanel/cli/state"
-
-// Load tries nix eval first, falls back to state file
-st, err := state.Load("")
-if err == nil {
-    fmt.Println("Project:", st.ProjectName)
-    fmt.Println("Postgres port:", st.GetServicePort("postgres"))
-}
-
-// Force state file only (skip nix eval)
-st, err := state.Load("", state.WithNixEval(false))
-}
-```
-
-**Environment Variables**:
-- `STACKPANEL_STATE_FILE`: Full path to state file
-- `STACKPANEL_STATE_DIR`: Directory containing state file
 
 ## Development Workflow
 
@@ -212,35 +122,29 @@ dev                    # Uses process-compose
 # Individual commands
 bun install            # Install dependencies
 bun run dev            # Start dev servers
-stackpanel status      # Check service status
-stackpanel services start  # Start PostgreSQL, Redis, etc.
+stack status      # Check service status
+stack services start  # Start PostgreSQL, Redis, etc.
 ```
 
 ## Nix Module Guidelines
 
-When creating or modifying Nix modules:
+When creating or modifying Nix modules in `nix/stack/`:
 
-1. **Options go in `options.stackpanel.*`** - Follow the existing pattern
+1. **Options go in `options.stack.*`** - Follow the existing pattern
 2. **Use `lib.mkOption` with descriptions** - Document all options
 3. **Config uses `lib.mkIf cfg.enable`** - Guard config blocks
-4. **File generation via CLI** - Add data to `cli-generate.nix` config, not `devenv.files`
-5. **Library functions go in `nix/lib/`** - Keep modules focused on options/config
-
-### CLI-Based Generation
-
-When adding new generated files:
-
-1. Add the data to `fullConfig` in `nix/modules/cli-generate.nix`
-2. Add generation logic in `apps/cli/generator/generator.go`
-3. The CLI handles writing real files (avoiding symlink issues)
+4. **File generation via `stack.files.entries`** - See nix-templating.md for patterns
+5. **Library functions go in `nix/stack/lib/`** - Keep modules focused on options/config
+6. **Follow the module convention** - Each module gets `default.nix`, `module.nix`, `ui.nix`, `meta.nix` (see `nix/stack/modules/_template/`)
+7. **Wire `flakeInputs` in module registration** - Every `module.nix` that registers via `stack.modules.${meta.id}` must include `flakeInputs = meta.flakeInputs or [];`. This enables the missing flake inputs detection pipeline (see architecture.md). If the module requires a flake input, declare it in `meta.nix` under `flakeInputs`.
 
 ## YAML Configuration
 
 All user-editable config files use YAML with JSON Schema validation:
-- Schemas are generated from Nix in `.stackpanel/gen/schemas/`
+- Schemas are generated from Nix in `.stack/gen/schemas/`
 - VS Code workspace maps schemas to file patterns
 - Install the Red Hat YAML extension for intellisense
 
 ## Docs
 
-The docs for stackpanel are in apps/docs/content - ALWAYS give the docs a quick scan so that you understand stackpanel.
+The public-facing docs are in `apps/docs/content/`. Internal developer docs are in `docs/`. Always check the docs to understand current behavior before making changes.

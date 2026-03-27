@@ -1,0 +1,121 @@
+---
+title: Services
+description: Manage local development services like PostgreSQL, Redis, and Minio
+icon: database
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can run background services for your local development environment—databases, caches, object stores, and anything else your app depends on. Services get [deterministic ports](/docs/concepts/deterministic-ports), start and stop together, and are configured from the same Nix source of truth as the rest of your environment.
+
+## Global Services
+
+The fastest way to add a service is through `stackpanel.globalServices`. These are preconfigured, opinionated setups for common infrastructure:
+
+```nix
+stackpanel.globalServices = {
+  enable = true;
+  project-name = "myapp";
+
+  postgres.enable = true;
+  redis.enable = true;
+  minio.enable = true;
+};
+```
+
+That's it. Enabling a global service gives you:
+
+- The service binary on your `PATH` (e.g., `psql`, `redis-cli`, `mc`)
+- A deterministic port computed from your project name
+- An environment variable with the assigned port (`STACKPANEL_POSTGRES_PORT`, etc.)
+- A managed process via [process-compose](/docs/services/process-compose)
+- CLI commands to start, stop, restart, and check status
+
+<Callout type="info">
+Global services store their data under `.stack/state/` so that each project has its own isolated database, cache, etc. No conflicts between projects.
+</Callout>
+
+## Managing Services
+
+Once services are configured, you can manage them through the CLI:
+
+```bash
+# Start all services
+stackpanel services start
+
+# Stop all services
+stackpanel services stop
+
+# Check status
+stackpanel services status
+
+# Restart a specific service
+stackpanel services restart postgres
+
+# View logs
+stackpanel logs postgres
+```
+
+Or through [Studio](/docs/studio), which provides a visual dashboard for all running services.
+
+## The Service Type System
+
+Under the hood, global services are built on `stackpanel.services`—a canonical type system for describing any background process. Each service has:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Human-readable name |
+| `enable` | Whether the service is active |
+| `port` | Assigned port number |
+| `command` | Shell command to start the service |
+| `readiness` | Health check to determine when the service is ready |
+| `depends_on` | Other services that must start first |
+
+You can use this lower-level API to define custom services that don't fit the global service presets. See [Custom Services](./custom-services) for details.
+
+## Available Services
+
+<Cards>
+  <Card title="PostgreSQL" href="./postgres">
+    Relational database with deterministic port and isolated data directory
+  </Card>
+  <Card title="Redis" href="./redis">
+    In-memory data store for caching, queues, and pub/sub
+  </Card>
+  <Card title="Minio" href="./minio">
+    S3-compatible object storage for local development
+  </Card>
+  <Card title="Process Compose" href="./process-compose">
+    Process orchestration for managing service lifecycles
+  </Card>
+  <Card title="Custom Services" href="./custom-services">
+    Define your own services using the service type system
+  </Card>
+</Cards>
+
+## How Services Run
+
+Services are orchestrated by [process-compose](https://github.com/F1bonacc1/process-compose), a lightweight process manager. When you run `stackpanel services start`, process-compose launches all enabled services, respects dependency ordering, runs health checks, and streams logs.
+
+The Stackpanel [Agent](/docs/agent) wraps process-compose and provides:
+
+- A REST API for starting, stopping, and querying services
+- SSE events for real-time status updates in Studio
+- File watching to restart services when configuration changes
+- Log aggregation and streaming
+
+```
+stackpanel services start
+  → Agent starts process-compose
+    → PostgreSQL starts on port 4237
+    → Redis starts on port 4252
+    → Health checks pass
+    → Services reported as ready
+```
+
+## Reference
+
+- [Options Reference → GlobalServices](/docs/reference/globalServices) for all global service options
+- [Options Reference → Services](/docs/reference/services) for the lower-level service type system
+- [CLI → Services](/docs/cli/services) for CLI commands

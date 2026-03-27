@@ -98,11 +98,11 @@ in
   #
   #   imports = [
   #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
   #
   # Or for multiple local config paths:
   #   ] ++ stackpanelLib.optionalLocalConfigs [
-  #     ./.stackpanel/config.local.nix
+  #     ./.stack/config.local.nix
   #     ./stackpanel.local.nix
   #   ];
   #
@@ -128,7 +128,7 @@ in
   # AWS cert-auth utilities
   aws =
     if pkgs != null then
-      import ./services/aws.nix { inherit pkgs lib; }
+      import ../services/aws/lib.nix { inherit pkgs lib; }
     else
       throw "stackpanel.lib.aws requires pkgs to be passed";
 
@@ -196,6 +196,24 @@ in
   #   }
   #
   inherit (import ./mkModule.nix { inherit lib; }) mkModule mkSimpleModule;
+
+  # Helper for creating infrastructure (Alchemy) modules with less boilerplate.
+  # Eliminates the repeated enable/sync-outputs/mkOutput/guard/registration pattern.
+  #
+  # Usage:
+  #   { lib, config, ... }:
+  #   lib.stackpanel.mkInfraModule {
+  #     id = "my-s3-buckets";
+  #     name = "S3 Buckets";
+  #     path = ./index.ts;
+  #     inherit config;
+  #     options = { buckets = lib.mkOption { ... }; };
+  #     inputs = cfg: { buckets = cfg.buckets; };
+  #     dependencies = { "@aws-sdk/client-s3" = "catalog:"; };
+  #     outputs = { bucketArns = "Bucket ARNs (JSON)"; };
+  #   }
+  #
+  inherit (import ./mkInfraModule.nix { inherit lib; }) mkInfraModule;
 
   # ============================================================================
   # ADVANCED: Direct access to core modules

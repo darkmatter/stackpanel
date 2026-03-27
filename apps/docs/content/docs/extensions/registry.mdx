@@ -1,0 +1,178 @@
+---
+title: Extension Registry
+description: Discover and install extensions through Studio's registry
+icon: package
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+The Extension Registry is a catalog of available extensions that you can browse and install through [Studio](/docs/studio). It provides a visual interface for discovering capabilities, reading documentation, and enabling extensions with a single click—no Nix knowledge required.
+
+## Browsing the Registry
+
+Open Studio and navigate to the Extensions panel. The registry shows all available extensions organized by category:
+
+| Category | What It Covers |
+|----------|---------------|
+| **Infrastructure** | AWS, cloud resources, IAM roles |
+| **CI/CD** | GitHub Actions, deployment pipelines |
+| **Database** | Database management and migrations |
+| **Secrets** | Secret and variable management |
+| **Deployment** | Deployment tools (Cloudflare, Fly, SST) |
+| **Development** | Dev tools, linters, formatters |
+| **Monitoring** | Logging, metrics, observability |
+| **Integration** | Third-party service integrations |
+
+Each extension card shows its name, description, category, and whether it's currently enabled. Click an extension to see its full documentation, configuration options, and what it adds to your environment (packages, scripts, files, services).
+
+## Installing an Extension
+
+### From Studio
+
+1. Open the Extensions panel in Studio
+2. Find the extension you want
+3. Click **Enable**
+4. Configure any required options in the form that appears
+5. Studio writes the configuration to your `.stack/config.nix`
+
+That's it. The next time your shell reloads, the extension is active—its packages are on your `PATH`, its scripts are available, and its generated files are written to disk.
+
+### From Nix Config
+
+You can also enable extensions directly in your configuration:
+
+```nix
+# .stack/config.nix
+{
+  stackpanel.extensions.sst = {
+    enabled = true;
+  };
+
+  # Extension-specific options (if any)
+  stackpanel.sst = {
+    project-name = "myapp";
+    region = "us-west-2";
+  };
+}
+```
+
+Both approaches produce the same result. Studio is a convenience layer over the same Nix config you'd write by hand.
+
+## Extension Sources
+
+Extensions can come from three places:
+
+### Builtin Extensions
+
+Shipped with Stackpanel. These are always available in the registry and don't require any additional setup.
+
+Examples: `sst`, `ci`, `docker`, `bun`, `turbo`, `oxlint`, `git-hooks`, `process-compose`, `env-codegen`.
+
+### Local Extensions
+
+Defined in your project's Nix configuration. These are project-specific and not shared through the registry:
+
+```nix
+stackpanel.extensions.my-feature = {
+  name = "My Feature";
+  enabled = true;
+  source.type = "EXTENSION_SOURCE_TYPE_LOCAL";
+  source.path = "./nix/extensions/my-feature.nix";
+};
+```
+
+### External Extensions
+
+Installed from GitHub or other remote sources. These can be shared across projects and teams:
+
+```nix
+# In your flake.nix inputs
+inputs.stackpanel-stripe.url = "github:someone/stackpanel-stripe";
+
+# In your flake.nix imports
+imports = [
+  inputs.stackpanel.flakeModules.default
+  inputs.stackpanel-stripe.flakeModules.default
+];
+```
+
+External extensions appear in the registry alongside builtin ones once they're added to your flake inputs.
+
+## What an Extension Provides
+
+Each extension in the registry declares which core features it uses. This is visible in the extension detail view:
+
+| Feature | What It Means |
+|---------|---------------|
+| **Files** | The extension generates configuration files |
+| **Scripts** | The extension adds CLI commands to your shell |
+| **Packages** | The extension adds tools to your `PATH` |
+| **Tasks** | The extension defines runnable tasks |
+| **Services** | The extension manages background processes |
+| **Shell Hooks** | The extension runs code on shell entry |
+| **Secrets** | The extension uses the secrets/variables system |
+| **Checks** | The extension provides health checks |
+
+This helps you understand what enabling an extension will do before you install it.
+
+## Extension Panels
+
+Many extensions register **panels**—UI components that appear in Studio. Panels provide visibility into extension state without needing the terminal:
+
+| Panel Type | Description |
+|------------|-------------|
+| **Status** | Key-value status display (e.g., "Region: us-west-2", "Status: healthy") |
+| **Apps Grid** | Visual grid of applications |
+| **Form** | Configuration form for extension options |
+| **Table** | Tabular data display |
+| **Custom** | Extension-specific React component |
+
+Panels update in real time through the [Agent's](/docs/agent) SSE event stream, so status changes appear immediately.
+
+## Dependencies Between Extensions
+
+Extensions can declare dependencies on other extensions. The registry shows these relationships, and Stackpanel ensures dependencies are enabled before the extension that requires them:
+
+```nix
+stackpanel.extensions.my-deploy = {
+  name = "My Deploy Extension";
+  dependencies = [ "sst" "docker" ];
+};
+```
+
+If you try to enable `my-deploy` without `sst` and `docker`, Studio will prompt you to enable the dependencies first.
+
+## Filtering and Search
+
+The registry supports filtering by:
+
+- **Category** — Show only infrastructure extensions, only CI/CD extensions, etc.
+- **Status** — Show only enabled extensions, only disabled, or all
+- **Tags** — Extensions can be tagged with keywords like `aws`, `typescript`, `deployment`
+- **Source** — Filter by builtin, local, or external
+
+Use the search bar to find extensions by name or description.
+
+<Callout type="info">
+The registry is served locally by the Stackpanel [Agent](/docs/agent). No internet connection is required to browse builtin extensions. External extensions need network access only during initial installation (adding the flake input).
+</Callout>
+
+## Publishing Extensions
+
+If you've built an extension that others might find useful, you can publish it as a flake. See [Writing Extensions](/docs/extensions/writing-extensions) for the full guide on creating extensions, and the extension schema reference for the metadata fields that make your extension discoverable in the registry.
+
+A well-published extension includes:
+
+- A descriptive `name` and `description`
+- An appropriate `category` for registry grouping
+- Relevant `tags` for search discoverability
+- Feature flags indicating which core features it uses
+- At least one panel for Studio visibility
+
+## Reference
+
+- [Writing Extensions](/docs/extensions/writing-extensions) for creating your own extensions
+- [Flake Inputs](./flake-inputs) for how extensions declare and auto-install required flake inputs
+- [Using Extensions](./using-extensions) for day-to-day extension management
+- [Studio](/docs/studio) for the web interface that hosts the registry
+- [Options Reference → Extensions](/docs/reference/extensions) for all extension configuration options

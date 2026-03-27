@@ -1,0 +1,137 @@
+# Core Services Library
+
+Pure library functions for stack service configuration.
+
+## Overview
+
+This directory contains the **core library functions** for service configuration. These are pure functions that work with any Nix module system (flake-parts, devenv, NixOS, etc.).
+
+Service **implementations** live in `nix/stack/services/{postgres,redis,minio,caddy}/`.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `default.nix` | Library entry point - exports ports, globalServices, services |
+| `services.nix` | Service registry and factory (`mkService`, `mkGlobalPostgres`, etc.) |
+| `global-services.nix` | `mkGlobalServices` - unified service configuration builder |
+
+## Architecture
+
+```
+User Config (stack.globalServices)
+    ↓
+services/global-services.nix (devenv module)
+    ↓
+core/services/global-services.nix (mkGlobalServices library)
+    ↓
+core/services/services.nix (service registry/factory)
+    ↓
+services/{postgres,redis,minio}/default.nix (implementations)
+```
+
+## Usage
+
+### Service Registry
+
+```nix
+let 
+  servicesLib = import ./services.nix { inherit pkgs lib; };
+in 
+servicesLib.mkService "postgres" {
+  projectName = "myapp";
+  port = 5432;
+  databases = ["myapp" "myapp_test"];
+}
+```
+
+### Global Services Builder
+
+```nix
+let 
+  globalServices = import ./global-services.nix { inherit pkgs lib; };
+in 
+globalServices.mkGlobalServices {
+  projectName = "myapp";
+  postgres = {
+    enable = true;
+    databases = ["myapp"];
+  };
+  redis.enable = true;
+  minio.enable = true;
+}
+```
+
+Returns:
+- `packages` - List of packages to add to shell
+- `shellHook` - Initialization script
+- `env` - Environment variables (DATABASE_URL, REDIS_URL, etc.)
+- `services` - Individual service objects for advanced use
+
+### Library Entry Point
+
+```nix
+let 
+  core = import ./default.nix { inherit lib pkgs; };
+in {
+  # Port computation (pure, no pkgs needed)
+  basePort = core.ports.computeBasePort { name = "myproject"; };
+  
+  # Global services (requires pkgs)
+  gs = core.globalServices.mkGlobalServices { ... };
+  
+  # Service factory (requires pkgs)
+  pg = core.services.mkGlobalPostgres { ... };
+}
+```
+
+## Available Services
+
+| Service | Default Port | Description |
+|---------|--------------|-------------|
+| postgres | 5432 | PostgreSQL database |
+| redis | 6379 | Redis key-value store |
+| minio | 9000 | S3-compatible object storage |
+| minio-console | 9001 | MinIO web console |
+
+## Service Data Location
+
+Services store data in project-local directories:
+
+```
+<projectRoot>/.stack/state/services/
+├── postgres/
+│   └── data/
+├── redis/
+└── minio/
+    ├── data/
+    └── config/
+```
+
+## Adding a New Service
+
+1. Create implementation in `nix/stack/services/<service>/default.nix`
+2. Register in `core/services/services.nix`:
+
+```nix
+# Import the module
+myserviceModule = import ../../services/myservice { inherit pkgs lib baseDir; };
+
+# Add to registry
+serviceModules = {
+  postgres = postgresModule;
+  redis = redisModule;
+  minio = minioModule;
+  myservice = myserviceModule;  # Add this
+};
+
+# Add default port
+defaultPorts = {
+  postgres = 5432;
+  redis = 6379;
+  minio = 9000;
+  myservice = 1234;  # Add this
+};
+```
+
+See `nix/stack/services/README.md` for implementation patterns.

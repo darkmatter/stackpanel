@@ -8,8 +8,8 @@
 # All codegen is kicked off as a result of this invocation.
 #
 # Generated files (by CLI):
-#   - .stackpanel/state/stackpanel.json (runtime state)
-#   - .stackpanel/gen/ide/vscode/* (VS Code workspace, loader script)
+#   - .stack/state/stackpanel.json (runtime state)
+#   - .stack/gen/ide/vscode/* (VS Code workspace, loader script)
 #
 # The configuration is serialized to JSON and passed to the CLI, which handles
 # the actual file generation. This keeps Nix pure while delegating imperative
@@ -21,6 +21,7 @@
   lib,
   config,
   pkgs,
+  inputs ? { },
   ...
 }:
 let
@@ -46,9 +47,11 @@ let
   # Use fallback for standalone evaluation (docs generation, nix eval, etc.)
   dirs =
     cfg.dirs or {
-      home = ".stackpanel";
-      state = ".stackpanel/state";
-      gen = ".stackpanel/gen";
+      home = ".stack";
+      state = ".stack/profile";
+      profile = ".stack/profile";
+      keys = ".stack/keys";
+      gen = ".stack/gen";
       config = ./.;
     };
 
@@ -61,7 +64,7 @@ let
   commandPkgs = cfg.devshell._commandPkgs or [ ];
   allPackages = devshellPackages ++ commandPkgs;
 
-  # User-installed packages from .stackpanel/data/packages.nix
+  # User-installed packages from .stack/data/packages.nix
   userPackagesCfg =
     cfg.userPackages or {
       enable = false;
@@ -98,6 +101,21 @@ let
   # Combine devshell packages with user packages (user packages already have source = "user")
   serializedPackages = serializedDevshellPackages ++ userPackagesSerialized;
 
+  # =========================================================================
+  # Missing flake inputs detection
+  # =========================================================================
+  # For each enabled module, check if its declared flakeInputs are present
+  # in the flake's inputs. Produces a flat list for the CLI/MOTD to warn about.
+  enabledModules = lib.filterAttrs (_: mod: mod.enable) (cfg.modules or { });
+
+  allRequiredFlakeInputs = lib.concatLists (
+    lib.mapAttrsToList (
+      modName: mod: map (fi: fi // { requiredBy = modName; }) (mod.flakeInputs or [ ])
+    ) enabledModules
+  );
+
+  missingFlakeInputs = builtins.filter (fi: !(inputs ? ${fi.name})) allRequiredFlakeInputs;
+
   # The schema expected by the CLI should not be coupled to the actual Nix
   # options structure. We build a separate config object here.
   fullConfig = {
@@ -107,13 +125,12 @@ let
     basePort = portsCfg.base-port;
     processComposePort = if pcCfg.port != null then pcCfg.port else portsCfg.base-port + 90;
 
-    # Note: these must match the Go Paths struct fields (state, gen, data)
-    # dirs.config is intentionally excluded - it's a Nix-time path that becomes
-    # a store path, and the CLI doesn't need it at runtime.
+    # Note: these must match the Go Paths struct fields (state/profile, keys, gen, data)
     paths = {
-      state = dirs.state;
+      state = dirs.profile;
+      keys = dirs.keys;
       gen = dirs.gen;
-      data = dirs.home; # "data" in Go corresponds to dirs.home (.stackpanel)
+      data = dirs.home;
     };
 
     # Apps with computed ports and domains
@@ -170,6 +187,40 @@ let
     # Serialized for agent/UI to show missing variables
     moduleRequirements = cfg.moduleRequirements;
 
+    # Missing flake inputs that enabled modules require but aren't in the flake
+    # Each entry: { name, url, followsNixpkgs, requiredBy }
+    missingFlakeInputs = map (fi: {
+      inherit (fi)
+        name
+        url
+        followsNixpkgs
+        requiredBy
+        ;
+    }) missingFlakeInputs;
+
+    # Healthcheck definitions for the CLI to run locally (cached)
+    # Only includes fields needed to execute checks — no Nix store derivation paths
+    # since those are only valid within the devshell that generated this config.
+    healthchecks = map (check: {
+      inherit (check)
+        id
+        name
+        description
+        module
+        tags
+        enabled
+        ;
+      type = check.type;
+      severity = check.severity;
+      scriptPath = check.scriptPath;
+      httpUrl = check.httpUrl or null;
+      httpMethod = check.httpMethod or "GET";
+      httpExpectedStatus = check.httpExpectedStatus or 200;
+      tcpHost = check.tcpHost or null;
+      tcpPort = check.tcpPort or null;
+      timeout = check.timeout or 10;
+    }) (cfg.healthchecksList or [ ]);
+
     # UI configuration for the web interface
     ui = {
       # Extensions registered by modules (e.g., SST, CI, etc.)
@@ -198,10 +249,6 @@ let
   configFile = pkgs.writeText "stackpanel-config.json" configJson;
 in
 {
-  imports = [
-    ./options
-  ];
-
   config = lib.mkIf cfg.enable {
     # Add the CLI to packages
     stackpanel.devshell.packages = [ stackpanel-cli ];
@@ -226,6 +273,12 @@ in
         # Write the state file for Go agent/CLI consumption
         mkdir -p "$STACKPANEL_STATE_DIR"
         echo "$_sp_config" > "$STACKPANEL_STATE_FILE"
+      ''
+    ];
+
+    stackpanel.devshell.hooks.after = [
+      ''
+        ${stackpanel-cli}/bin/stackpanel preflight run ${lib.optionalString cfg.cli.quiet "--quiet"}
       ''
     ];
 

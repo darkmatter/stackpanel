@@ -1,0 +1,6 @@
+{
+  "title": "Studio",
+  "description": "The Stackpanel web interface",
+  "icon": "layout-dashboard",
+  "pages": ["index"]
+}

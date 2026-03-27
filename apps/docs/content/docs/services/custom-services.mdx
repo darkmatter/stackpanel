@@ -1,0 +1,286 @@
+---
+title: Custom Services
+description: Define your own background services for local development
+icon: plus-circle
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Beyond the built-in services like PostgreSQL, Redis, and Minio, you can define your own background services that are managed by Stackpanel's process orchestration layer (process-compose).
+
+## Defining a Service
+
+Services are defined under `stackpanel.services`, keyed by name:
+
+```nix
+stackpanel.services.my-worker = {
+  enable = true;
+  description = "Background job worker";
+  command = "bun run worker:start";
+  depends_on = [ "postgres" "redis" ];
+};
+```
+
+When you start services with `stackpanel services start`, your custom service starts alongside the built-in ones—with dependency ordering respected.
+
+## Service Options
+
+Each service accepts the following options:
+
+```nix
+stackpanel.services.my-service = {
+  # Whether this service is active
+  enable = true;
+
+  # Human-readable description (shown in status output and Studio)
+  description = "What this service does";
+
+  # The command to run
+  command = "node server.js";
+
+  # Services that must be running before this one starts
+  depends_on = [ "postgres" ];
+
+  # Working directory (relative to project root)
+  working_dir = "./apps/api";
+
+  # Environment variables specific to this service
+  environment = {
+    PORT = "4201";
+    NODE_ENV = "development";
+  };
+
+  # Readiness check — how to know the service is actually ready
+  readiness_probe = {
+    exec.command = "curl -sf http://localhost:4201/health";
+    initial_delay_seconds = 2;
+    period_seconds = 5;
+  };
+
+  # Restart policy: "always", "on-failure", "no"
+  restart = "on-failure";
+
+  # Number of restart attempts before giving up
+  max_restarts = 5;
+};
+```
+
+## Using Nix Values in Services
+
+Because service definitions are Nix expressions, you can reference computed values—like deterministic ports—directly:
+
+```nix
+{ config, pkgs, ... }:
+let
+  cfg = config.stackpanel;
+in
+{
+  stackpanel.services.api = {
+    enable = true;
+    description = "API server";
+    command = "${pkgs.bun}/bin/bun run apps/api/src/index.ts";
+    depends_on = [ "postgres" "redis" ];
+    environment = {
+      PORT = toString cfg.ports.computed.api;
+      DATABASE_URL = "postgresql://localhost:${toString cfg.ports.computed.postgres}/myapp";
+      REDIS_URL = "redis://localhost:${toString cfg.ports.computed.redis}";
+    };
+  };
+}
+```
+
+This guarantees your service always uses the correct ports, no matter what the deterministic port system assigns.
+
+## Dependency Ordering
+
+The `depends_on` field controls startup order. A service won't start until all of its dependencies are running (and have passed their readiness probes, if configured).
+
+```nix
+stackpanel.services = {
+  # Starts first — no dependencies
+  postgres = { ... };
+
+  # Waits for postgres
+  api = {
+    depends_on = [ "postgres" ];
+    command = "bun run api:dev";
+  };
+
+  # Waits for api
+  web = {
+    depends_on = [ "api" ];
+    command = "bun run web:dev";
+  };
+
+  # Waits for both postgres and redis
+  worker = {
+    depends_on = [ "postgres" "redis" ];
+    command = "bun run worker:start";
+  };
+};
+```
+
+<Callout type="info">
+Built-in global services like `postgres` and `redis` are available as dependency targets when enabled via `stackpanel.globalServices`. You can depend on them by name.
+</Callout>
+
+## Readiness Probes
+
+A readiness probe tells Stackpanel how to determine whether a service is actually ready to accept connections—not just whether the process has started.
+
+### HTTP Probe
+
+```nix
+readiness_probe = {
+  http_get = {
+    path = "/health";
+    port = 4201;
+  };
+  initial_delay_seconds = 3;
+  period_seconds = 5;
+  failure_threshold = 3;
+};
+```
+
+### Exec Probe
+
+Run an arbitrary command. Exit code 0 means ready.
+
+```nix
+readiness_probe = {
+  exec.command = "pg_isready -h localhost -p 5432";
+  initial_delay_seconds = 1;
+  period_seconds = 2;
+};
+```
+
+### TCP Probe
+
+Check that a port is accepting connections:
+
+```nix
+readiness_probe = {
+  tcp_socket.port = 4201;
+  initial_delay_seconds = 2;
+  period_seconds = 3;
+};
+```
+
+## Log Management
+
+Service logs are captured by process-compose and accessible through the CLI:
+
+```bash
+# View logs for a specific service
+stackpanel logs my-worker
+
+# Follow logs in real-time
+stackpanel logs my-worker -f
+
+# View logs for all services
+stackpanel logs
+```
+
+Logs are also visible in [Studio](/docs/studio) through the service detail view.
+
+## Practical Examples
+
+### Next.js Dev Server
+
+```nix
+stackpanel.services.web = {
+  enable = true;
+  description = "Next.js development server";
+  command = "bun run --cwd apps/web dev";
+  environment = {
+    PORT = toString config.stackpanel.ports.computed.web;
+    NEXT_TELEMETRY_DISABLED = "1";
+  };
+  readiness_probe = {
+    http_get = {
+      path = "/";
+      port = config.stackpanel.ports.computed.web;
+    };
+    initial_delay_seconds = 5;
+    period_seconds = 3;
+  };
+};
+```
+
+### Background Worker with Retries
+
+```nix
+stackpanel.services.queue-worker = {
+  enable = true;
+  description = "Job queue processor";
+  command = "bun run worker:process";
+  depends_on = [ "postgres" "redis" ];
+  restart = "on-failure";
+  max_restarts = 10;
+  environment = {
+    QUEUE_CONCURRENCY = "4";
+    LOG_LEVEL = "info";
+  };
+};
+```
+
+### Stripe Webhook Listener
+
+```nix
+stackpanel.services.stripe-webhooks = {
+  enable = true;
+  description = "Stripe CLI webhook forwarding";
+  command = "stripe listen --forward-to localhost:${toString config.stackpanel.ports.computed.api}/api/webhooks/stripe";
+  depends_on = [ "api" ];
+};
+```
+
+## Service Lifecycle
+
+Services follow a straightforward lifecycle managed by process-compose:
+
+```
+Defined in Nix config
+    → process-compose.yaml generated
+    → stackpanel services start
+    → Dependencies resolved and started in order
+    → Readiness probes checked
+    → Service marked as "running"
+    → stackpanel services stop (or Ctrl+C)
+    → Graceful shutdown (SIGTERM → wait → SIGKILL)
+```
+
+You can manage the lifecycle through the CLI:
+
+```bash
+stackpanel services start              # Start all services
+stackpanel services start api worker   # Start specific services
+stackpanel services stop               # Stop all services
+stackpanel services restart api        # Restart a specific service
+stackpanel services status             # Show status of all services
+```
+
+## Services from Extensions
+
+Extensions can define services as part of their configuration. For example, an SST extension might define a dev server:
+
+```nix
+# Inside an extension module
+config = lib.mkIf cfg.enable {
+  stackpanel.services."sst-dev" = {
+    enable = true;
+    description = "SST development server";
+    command = "sst dev";
+    depends_on = [ "postgres" ];
+  };
+};
+```
+
+When the extension is enabled, its services appear alongside your custom services and built-in services. See [Writing Extensions](/docs/extensions/writing-extensions) for more on building extensions that include services.
+
+## Reference
+
+- [Options Reference → Services](/docs/reference/services) for the full service option schema
+- [Options Reference → GlobalServices](/docs/reference/globalServices) for built-in service configuration
+- [Process Compose](/docs/services/process-compose) for the underlying orchestration layer
+- [CLI → Services](/docs/cli/services) for service management commands

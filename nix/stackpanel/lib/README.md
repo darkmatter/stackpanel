@@ -1,6 +1,6 @@
-# Stackpanel Nix Library
+# Stack Nix Library
 
-Pure library functions used throughout Stackpanel for creating development shells, managing services, and generating configuration files.
+Pure library functions used throughout Stack for creating development shells, managing services, and generating configuration files.
 
 ## Overview
 
@@ -51,7 +51,7 @@ let
   stackpanelLib = import ./lib { inherit lib; };  # pkgs is optional
 in {
   # Path utilities
-  paths = stackpanelLib.paths.mkPaths { rootDir = ".stackpanel"; };
+  paths = stackpanelLib.paths.mkPaths { rootDir = ".stack"; };
 
   # Port computation
   ports = stackpanelLib.ports;
@@ -60,7 +60,7 @@ in {
 
 ### Service Configuration
 
-Service modules provide packages and environment variables. Lifecycle management is handled by the stackpanel CLI.
+Service modules provide packages and environment variables. Lifecycle management is handled by the stack CLI.
 
 ```nix
 let
@@ -87,7 +87,7 @@ let
 in {
   # Generate VS Code settings for devshell terminal
   settings = ideLib.mkVscodeSettings {
-    loaderPath = "\${workspaceFolder}/.stackpanel/gen/ide/vscode/devshell-loader.sh";
+    loaderPath = "\${workspaceFolder}/.stack/gen/ide/vscode/devshell-loader.sh";
   };
 
   # Create devshell loader script
@@ -116,7 +116,7 @@ All service modules in `services/` require `pkgs` and provide:
 - `mkService`: Factory function for project-specific configuration
 - `shellHook`: Environment variable setup for shell integration
 
-Service lifecycle (start/stop/status) is managed externally by the stackpanel CLI, not by these Nix modules.
+Service lifecycle (start/stop/status) is managed externally by the stack CLI, not by these Nix modules.
 
 ## Design Principles
 

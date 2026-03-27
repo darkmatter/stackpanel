@@ -1,3 +1,7 @@
+// sops.go implements a legacy SOPS secrets API that operates on per-environment
+// YAML files (e.g., .stack/secrets/dev.yaml). This predates the group-based
+// system in secrets_groups.go and is kept for backwards compatibility.
+// New code should prefer the group-based endpoints.
 package server
 
 import (
@@ -37,7 +41,7 @@ func (s *Server) handleSecretsRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Construct path to secrets file
-	secretsPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", fmt.Sprintf("%s.yaml", env))
+	secretsPath := filepath.Join(s.config.ProjectRoot, ".stack", "secrets", fmt.Sprintf("%s.yaml", env))
 
 	// Check if file exists
 	if _, err := os.Stat(secretsPath); os.IsNotExist(err) {
@@ -129,7 +133,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Construct path to secrets file
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets")
+	secretsDir := filepath.Join(s.config.ProjectRoot, ".stack", "secrets")
 	secretsPath := filepath.Join(secretsDir, fmt.Sprintf("%s.yaml", req.Environment))
 
 	// Ensure directory exists
@@ -194,7 +198,7 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 		if len(recipients) == 0 {
 			s.writeJSON(w, http.StatusOK, apiResponse{
 				Success: false,
-				Error:   "No age recipients found. Ensure .stackpanel/data/users.nix has public-keys defined, or configure .sops.yaml",
+				Error:   "No age recipients found. Ensure .stack/data/users.nix has public-keys defined, or configure .sops.yaml",
 			})
 			return
 		}
@@ -240,18 +244,27 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// getAgeRecipients gets age public keys from the Nix config (all-public-keys).
+// getAgeRecipients collects recipient public keys, trying the Nix user-based
+// system first and falling back to the serializable secrets config. Deduplicates keys.
 func (s *Server) getAgeRecipients() []string {
 	recipients, err := s.getAgenixRecipients(nil)
 	if err != nil || len(recipients) == 0 {
-		// Fall back to all-public-keys from master keys
-		args := []string{"eval", "--impure", "--json", ".#stackpanelFullConfig.secrets.all-public-keys"}
-		res, err := s.exec.RunNix(args...)
-		if err == nil && res.ExitCode == 0 {
-			var keys []string
-			if err := json.Unmarshal([]byte(res.Stdout), &keys); err == nil {
-				return keys
+		serializable, err := s.getSerializableSecretsConfig()
+		if err == nil {
+			keys := make([]string, 0, len(serializable.Recipients))
+			seen := make(map[string]struct{}, len(serializable.Recipients))
+			for _, recipient := range serializable.Recipients {
+				key := strings.TrimSpace(recipient.PublicKey)
+				if key == "" {
+					continue
+				}
+				if _, exists := seen[key]; exists {
+					continue
+				}
+				seen[key] = struct{}{}
+				keys = append(keys, key)
 			}
+			return keys
 		}
 		return nil
 	}
@@ -277,7 +290,7 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets", fmt.Sprintf("%s.yaml", env))
+	secretsPath := filepath.Join(s.config.ProjectRoot, ".stack", "secrets", fmt.Sprintf("%s.yaml", env))
 
 	// Decrypt existing secrets
 	result, err := s.exec.Run("sops", "-d", "--output-type", "json", secretsPath)
@@ -340,7 +353,7 @@ func (s *Server) handleSecretsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "secrets")
+	secretsDir := filepath.Join(s.config.ProjectRoot, ".stack", "secrets")
 
 	// List all .yaml files in the secrets directory
 	entries, err := os.ReadDir(secretsDir)

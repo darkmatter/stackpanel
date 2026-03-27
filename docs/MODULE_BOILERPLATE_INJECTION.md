@@ -2,16 +2,16 @@
 
 ## Overview
 
-When users install a stackpanel module (via CLI or web UI), the module's configuration boilerplate is automatically injected into their config files. This provides a smooth onboarding experience with commented examples ready to customize.
+When users install a stack module (via CLI or web UI), the module's configuration boilerplate is automatically injected into their config files. This provides a smooth onboarding experience with commented examples ready to customize.
 
 ## Architecture
 
 ### 1. Automatic Detection on Shell Entry
 
 Modules can be installed via:
-- **Flake inputs**: `inputs.stackpanel-oxlint.url = "github:...";`
-- **Built-in modules**: Already in `nix/stackpanel/modules/`
-- **Local modules**: In `.stackpanel/modules/`
+- **Flake inputs**: `inputs.stack-oxlint.url = "github:...";`
+- **Built-in modules**: Already in `nix/stack/modules/`
+- **Local modules**: In `.stack/modules/`
 
 The injection system automatically detects changes and updates config files on every shell entry.
 
@@ -39,7 +39,7 @@ Each module defines a `configBoilerplate` field in its `meta.nix`:
 
 ### 3. Nix-Generated Manifest
 
-During Nix evaluation, stackpanel generates a modules manifest at `.stackpanel/gen/modules-manifest.json`:
+During Nix evaluation, stack generates a modules manifest at `.stack/gen/modules-manifest.json`:
 
 ```json
 {
@@ -63,24 +63,24 @@ During Nix evaluation, stackpanel generates a modules manifest at `.stackpanel/g
 
 This manifest is generated from:
 - All available modules (built-in + flake inputs + local)
-- Their current enabled/disabled state from `stackpanel.modules.*`
+- Their current enabled/disabled state from `stack.modules.*`
 - Their boilerplate text from `meta.nix`
 
 ### 4. Injection Markers
 
 Configuration files use special marker comments to define injection zones:
 
-**In `.stackpanel/config.nix`:**
+**In `.stack/config.nix`:**
 ```nix
 {
   # ... user config ...
 
   # 5. Injection Algorithm (Automatic on Shell Entry)
 
-On every shell entry, `stackpanel init` runs:
+On every shell entry, `stack init` runs:
 
-1. **Read** the generated manifest at `.stackpanel/gen/modules-manifest.json`
-2. **Compare** with previous injection state (stored in `.stackpanel/state/modules-injected.json`)
+1. **Read** the generated manifest at `.stack/gen/modules-manifest.json`
+2. **Compare** with previous injection state (stored in `.stack/state/modules-injected.json`)
 3. **If changed**:
    - Parse config files to find injection markers
    - Rebuild injection zones with current modules (alphabetically sorted)
@@ -91,7 +91,7 @@ On every shell entry, `stackpanel init` runs:
 **Nix side** (in shell hook or file generation):
 ```nix
 # Generate modules manifest
-stackpanel.files.entries."gen/modules-manifest.json" = {
+stack.files.entries."gen/modules-manifest.json" = {
   type = "text";
   text = builtins.toJSON {
     version = 1;
@@ -100,7 +100,7 @@ stackpanel.files.entries."gen/modules-manifest.json" = {
       name = mod.name or id;
       enabled = mod.enable or false;
       configBoilerplate = mod.meta.configBoilerplate or "";
-    }) stackpanel.modulesComputed;
+    }) stack.modulesComputed;
   };
 };
 ```
@@ -159,11 +159,11 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    stackpanel.url = "github:darkmatter/stackpanel";
-    stackpanel-oxlint.url = "github:stackpanel-modules/oxlint";  # ← Add module
+    stack.url = "github:darkmatter/stack";
+    stack-oxlint.url = "github:stack-modules/oxlint";  # ← Add module
   };
   
-  outputs = { stackpanel, stackpanel-oxlint, ... }: {
+  outputs = { stack, stack-oxlint, ... }: {
     # Module is automatically available
   };
 }
@@ -171,7 +171,7 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 
 **Or enabling a built-in module:**
 ```nix
-# .stackpanel/config.nix or .stackpanel/data/modules.nix
+# .stack/config.nix or .stack/data/modules.nix
 {
   oxlint.enable = true;  # ← Enable built-in module
 }
@@ -180,7 +180,7 @@ func injectToFile(path string, modules []ModuleMetadata) error {
 **On next shell entry** (`nix develop --impure`):
 1. Nix re-evaluates and detects new module
 2. Generates updated manifest with oxlint
-3. Shell hook runs `stackpanel init`
+3. Shell hook runs `stack init`
 4. CLI detects manifest change
 5. Injects boilerplate automatically }
     
@@ -237,11 +237,11 @@ User edits **outside** the injection zone are preserved.
 
 **Installing a module:**
 ```bash
-stackpanel module install oxlint
+stack module install oxlint
 # or via web UI
 ```
 
-**Result in `.stackpanel/data/modules.nix`:**
+**Result in `.stack/data/modules.nix`:**
 ```nix
 {
   # ... manual configs ...
@@ -249,7 +249,7 @@ stackpanel module install oxlint
   # ---------------------------------------------------------------------------
   # STACKPANEL_MODULES_BEGIN
   # Auto-generated module configurations (do not edit this section manually)
-  # Modules are sorted alphabetically and injected by the stackpanel CLI
+  # Modules are sorted alphabetically and injected by the stack CLI
   # ---------------------------------------------------------------------------
 
   # OxLint - Blazing fast JavaScript/TypeScript linter
@@ -322,12 +322,12 @@ Sort order:
 3. **Provide sensible defaults**: Make the config work with minimal edits
 4. **Use clear comments**: Explain what each option does
 5. **Follow Nix conventions**: Proper indentation, naming
-Add modules manifest generation to Nix (stackpanel.files.entries)
+Add modules manifest generation to Nix (stack.files.entries)
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go manifest reader and differ
 - [ ] Implement Go injector (sync on shell entry)
-- [ ] Add to `stackpanel init` command
-- [ ] Add state tracking (.stackpanel/state/modules-injected.json)
+- [ ] Add to `stack init` command
+- [ ] Add state tracking (.stack/state/modules-injected.json)
 - [ ] Test with real modules
 - [ ] Add validation (ensure configs parse correctly)
 - [ ] Add conflict detection (duplicate IDs)
@@ -336,13 +336,13 @@ Add modules manifest generation to Nix (stackpanel.files.entries)
 The injection runs as part of the shell entry process:
 
 ```nix
-# nix/stackpanel/devshell/hooks.nix
-stackpanel.devshell.hooks.main = ''
+# nix/stack/devshell/hooks.nix
+stack.devshell.hooks.main = ''
   # ... existing hooks ...
   
   # Sync module boilerplates if manifest changed
-  if [[ -f .stackpanel/gen/modules-manifest.json ]]; then
-    stackpanel init --sync-modules
+  if [[ -f .stack/gen/modules-manifest.json ]]; then
+    stack init --sync-modules
   fi
 '';
 ```
@@ -351,12 +351,12 @@ Or alternatively, the manifest generation itself triggers the sync:
 
 ```nix
 # Generate manifest and trigger sync in one step
-stackpanel.files.entries."gen/modules-manifest.json" = {
+stack.files.entries."gen/modules-manifest.json" = {
   type = "text";
   text = builtins.toJSON manifestData;
   # Post-write hook: sync boilerplates after manifest changes
   onChange = ''
-    ${pkgs.stackpanel-cli}/bin/stackpanel init --sync-modules
+    ${pkgs.stack-cli}/bin/stack init --sync-modules
   '';
 };
 ```
@@ -370,7 +370,7 @@ stackpanel.files.entries."gen/modules-manifest.json" = {
 5. **Diff preview**: Show what will be injected on shell entry (verbose mode)
 - [ ] Implement Go parser for injection zones
 - [ ] Implement Go injector/remover
-- [ ] Add CLI commands: `stackpanel module install/uninstall`
+- [ ] Add CLI commands: `stack module install/uninstall`
 - [ ] Add web UI for module installation
 - [ ] Add module registry API
 - [ ] Test with real modules

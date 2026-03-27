@@ -2,8 +2,8 @@
  * Type definitions for secret editing components.
  *
  * Supports group-based SOPS secrets for access control.
- * Secrets are stored in SOPS files per group, and the variable value
- * becomes a vals reference: ref+sops://.stackpanel/secrets/groups/<group>.yaml#/<key>
+ * Secrets are stored in SOPS files per group. The variable value is empty;
+ * the SOPS file is the source of truth for secret values.
  */
 import type { AgeIdentityResponse, KMSConfigResponse } from "@/lib/agent";
 
@@ -20,11 +20,8 @@ export interface EditSecretDialogProps {
   open: boolean;
   /** Callback when dialog open state changes */
   onOpenChange: (open: boolean) => void;
-  /**
-   * Callback when secret is saved successfully.
-   * @param valsRef - The vals reference to use in app configs (for group-based secrets)
-   */
-  onSuccess: (valsRef?: string) => void;
+  /** Callback when secret is saved successfully. */
+  onSuccess: () => void;
 }
 
 export interface EditSecretDialogState {

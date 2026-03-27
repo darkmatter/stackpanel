@@ -50,6 +50,41 @@ export interface App {
     environments: {
         [key: string]: AppEnvironment;
     };
+    /**
+     * @generated from protobuf field: stackpanel.db.AppDeploy deploy = 8
+     */
+    deploy?: AppDeploy; // Colmena deployment mapping for this app
+}
+/**
+ * Deployment mapping for Colmena (targets, roles, and modules)
+ *
+ * @generated from protobuf message stackpanel.db.AppDeploy
+ */
+export interface AppDeploy {
+    /**
+     * @generated from protobuf field: bool enable = 1
+     */
+    enable: boolean; // Enable deployment mapping for this app
+    /**
+     * @generated from protobuf field: repeated string targets = 2
+     */
+    targets: string[]; // Target machine ids or tag selectors
+    /**
+     * @generated from protobuf field: optional string role = 3
+     */
+    role?: string; // Deployment role label for this app
+    /**
+     * @generated from protobuf field: repeated string nixos_modules = 4
+     */
+    nixos_modules: string[]; // Extra NixOS modules to import for this app
+    /**
+     * @generated from protobuf field: optional string system = 5
+     */
+    system?: string; // Target system/architecture (e.g., x86_64-linux)
+    /**
+     * @generated from protobuf field: repeated string secrets = 6
+     */
+    secrets: string[]; // Secret references required by this app during deploy
 }
 /**
  * Environment configuration (e.g., dev, staging, production)
@@ -77,6 +112,10 @@ export interface AppEnvironment {
     env: {
         [key: string]: string;
     };
+    /**
+     * @generated from protobuf field: repeated string extends = 4
+     */
+    extends: string[]; // Inherit these environments - useful for sharing environment variables between environments.
 }
 /**
  * Map of app identifier to app configuration
@@ -101,7 +140,8 @@ class App$Type extends MessageType<App> {
             { no: 4, name: "type", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "port", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
             { no: 6, name: "domain", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 7, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppEnvironment } }
+            { no: 7, name: "environments", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "message", T: () => AppEnvironment } },
+            { no: 8, name: "deploy", kind: "message", T: () => AppDeploy }
         ]);
     }
     create(value?: PartialMessage<App>): App {
@@ -138,6 +178,9 @@ class App$Type extends MessageType<App> {
                     break;
                 case /* map<string, stackpanel.db.AppEnvironment> environments */ 7:
                     this.binaryReadMap7(message.environments, reader, options);
+                    break;
+                case /* stackpanel.db.AppDeploy deploy */ 8:
+                    message.deploy = AppDeploy.internalBinaryRead(reader, reader.uint32(), options, message.deploy);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -192,6 +235,9 @@ class App$Type extends MessageType<App> {
             AppEnvironment.internalBinaryWrite(message.environments[k], writer, options);
             writer.join().join();
         }
+        /* stackpanel.db.AppDeploy deploy = 8; */
+        if (message.deploy)
+            AppDeploy.internalBinaryWrite(message.deploy, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -203,18 +249,105 @@ class App$Type extends MessageType<App> {
  */
 export const App = new App$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class AppDeploy$Type extends MessageType<AppDeploy> {
+    constructor() {
+        super("stackpanel.db.AppDeploy", [
+            { no: 1, name: "enable", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
+            { no: 2, name: "targets", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "role", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "nixos_modules", kind: "scalar", localName: "nixos_modules", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "system", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "secrets", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<AppDeploy>): AppDeploy {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.enable = false;
+        message.targets = [];
+        message.nixos_modules = [];
+        message.secrets = [];
+        if (value !== undefined)
+            reflectionMergePartial<AppDeploy>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AppDeploy): AppDeploy {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* bool enable */ 1:
+                    message.enable = reader.bool();
+                    break;
+                case /* repeated string targets */ 2:
+                    message.targets.push(reader.string());
+                    break;
+                case /* optional string role */ 3:
+                    message.role = reader.string();
+                    break;
+                case /* repeated string nixos_modules */ 4:
+                    message.nixos_modules.push(reader.string());
+                    break;
+                case /* optional string system */ 5:
+                    message.system = reader.string();
+                    break;
+                case /* repeated string secrets */ 6:
+                    message.secrets.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AppDeploy, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* bool enable = 1; */
+        if (message.enable !== false)
+            writer.tag(1, WireType.Varint).bool(message.enable);
+        /* repeated string targets = 2; */
+        for (let i = 0; i < message.targets.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.targets[i]);
+        /* optional string role = 3; */
+        if (message.role !== undefined)
+            writer.tag(3, WireType.LengthDelimited).string(message.role);
+        /* repeated string nixos_modules = 4; */
+        for (let i = 0; i < message.nixos_modules.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.nixos_modules[i]);
+        /* optional string system = 5; */
+        if (message.system !== undefined)
+            writer.tag(5, WireType.LengthDelimited).string(message.system);
+        /* repeated string secrets = 6; */
+        for (let i = 0; i < message.secrets.length; i++)
+            writer.tag(6, WireType.LengthDelimited).string(message.secrets[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message stackpanel.db.AppDeploy
+ */
+export const AppDeploy = new AppDeploy$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class AppEnvironment$Type extends MessageType<AppEnvironment> {
     constructor() {
         super("stackpanel.db.AppEnvironment", [
             { no: 1, name: "name", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } }
+            { no: 3, name: "env", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 9 /*ScalarType.STRING*/ } },
+            { no: 4, name: "extends", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<AppEnvironment>): AppEnvironment {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.name = "";
         message.env = {};
+        message.extends = [];
         if (value !== undefined)
             reflectionMergePartial<AppEnvironment>(this, message, value);
         return message;
@@ -232,6 +365,9 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
                     break;
                 case /* map<string, string> env */ 3:
                     this.binaryReadMap3(message.env, reader, options);
+                    break;
+                case /* repeated string extends */ 4:
+                    message.extends.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -270,6 +406,9 @@ class AppEnvironment$Type extends MessageType<AppEnvironment> {
         /* map<string, string> env = 3; */
         for (let k of globalThis.Object.keys(message.env))
             writer.tag(3, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).string(message.env[k]).join();
+        /* repeated string extends = 4; */
+        for (let i = 0; i < message.extends.length; i++)
+            writer.tag(4, WireType.LengthDelimited).string(message.extends[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

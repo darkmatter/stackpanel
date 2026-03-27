@@ -1,0 +1,320 @@
+---
+title: CI Generation
+description: Automatically generate CI pipelines from your Stackpanel configuration
+icon: git-branch
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel can generate CI pipeline configuration—currently GitHub Actions workflows—directly from your project configuration. Instead of hand-maintaining YAML files that drift out of sync with your actual build steps, the CI extension produces workflows that reflect exactly what your project needs.
+
+## Enable CI Generation
+
+```nix
+stackpanel.ci = {
+  enable = true;
+};
+```
+
+When enabled, Stackpanel generates `.github/workflows/*.yml` files based on your configured apps, services, and extensions. The generated workflows are standard GitHub Actions YAML—no vendor lock-in, no custom runners, no proprietary syntax.
+
+<Callout type="info">
+Generated CI files are committed to Git like all Stackpanel-generated files. This means CI works without Nix installed on the runner—GitHub Actions reads standard YAML and runs standard commands.
+</Callout>
+
+## What Gets Generated
+
+The CI extension inspects your Stackpanel configuration and produces workflows that match your actual project setup:
+
+| If you have... | The generated workflow includes... |
+|----------------|-----------------------------------|
+| Apps defined in `stackpanel.apps` | Build and test steps for each app |
+| PostgreSQL enabled | A Postgres service container for tests |
+| Redis enabled | A Redis service container for tests |
+| Docker/container config | Docker build and push steps |
+| SST extension enabled | SST deploy steps |
+| Turbo module enabled | Turborepo caching configuration |
+| Environment variables | Proper env var injection for CI |
+
+Because the CI config is derived from the same source of truth as your dev environment, it stays in sync automatically. Add a new service locally and the CI pipeline picks it up on the next build.
+
+## Configuration
+
+### Basic Setup
+
+```nix
+stackpanel.ci = {
+  enable = true;
+};
+```
+
+This generates a default CI workflow with lint, type-check, test, and build steps inferred from your project structure.
+
+### Custom Workflow Options
+
+```nix
+stackpanel.ci = {
+  enable = true;
+
+  # Trigger configuration
+  triggers = {
+    push.branches = [ "main" "develop" ];
+    pull_request.branches = [ "main" ];
+  };
+
+  # Node/Bun version
+  node-version = "20";
+
+  # Additional steps
+  steps = {
+    lint = {
+      enable = true;
+      command = "bun run lint";
+    };
+    test = {
+      enable = true;
+      command = "bun run test";
+    };
+    build = {
+      enable = true;
+      command = "bun run build";
+    };
+  };
+};
+```
+
+### Per-App CI Configuration
+
+Apps defined in `stackpanel.apps` can include CI-specific settings:
+
+```nix
+stackpanel.apps = {
+  web = {
+    port = 0;
+    ci = {
+      build = true;
+      test = true;
+      deploy = {
+        enable = true;
+        environment = "production";
+      };
+    };
+  };
+
+  api = {
+    port = 1;
+    ci = {
+      build = true;
+      test = true;
+      test-command = "bun run test:api";
+    };
+  };
+};
+```
+
+## Service Containers
+
+When you have services enabled in `stackpanel.globalServices`, the CI extension automatically adds matching service containers to your test jobs:
+
+```nix
+# Your local config
+stackpanel.globalServices = {
+  postgres.enable = true;
+  redis.enable = true;
+};
+```
+
+This produces a GitHub Actions workflow with:
+
+```yaml
+# Generated .github/workflows/ci.yml (simplified)
+jobs:
+  test:
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: myapp
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+```
+
+The service container configuration mirrors your local setup as closely as possible. Ports in CI use standard defaults (5432 for Postgres, 6379 for Redis) since there's no need for deterministic port computation in ephemeral CI environments.
+
+<Callout type="info">
+The generated workflow sets `DATABASE_URL`, `REDIS_URL`, and other connection environment variables to match the CI service containers, so your test code doesn't need separate CI-specific configuration.
+</Callout>
+
+## Integration with Extensions
+
+Extensions can contribute their own CI steps. When an extension is enabled, its CI contributions are merged into the generated workflow:
+
+### SST Extension
+
+When SST is enabled, the CI workflow gets deploy steps:
+
+```nix
+stackpanel.sst = {
+  enable = true;
+  project-name = "myapp";
+  region = "us-west-2";
+  oidc.provider = "github-actions";
+  oidc.github-actions = {
+    org = "my-org";
+    repo = "my-repo";
+  };
+};
+```
+
+This adds AWS OIDC authentication and `sst deploy` steps to the workflow, with proper IAM role assumption.
+
+### Docker Extension
+
+When Docker is configured, CI gets build and push steps:
+
+```nix
+stackpanel.docker = {
+  enable = true;
+  registry = "ghcr.io/my-org";
+};
+```
+
+This adds Docker build, tag, and push steps with layer caching for fast rebuilds.
+
+## How Generation Works
+
+The CI extension follows the same [file generation](/docs/concepts/file-generation) pattern as everything else in Stackpanel:
+
+```
+Nix evaluation
+  → CI extension reads your config (apps, services, extensions)
+  → Generates GitHub Actions workflow YAML
+  → Writes to .github/workflows/ci.yml
+  → File is committed to Git
+
+GitHub Actions
+  → Reads .github/workflows/ci.yml (standard YAML)
+  → Runs the workflow (no Nix required)
+```
+
+Multiple extensions can contribute to the same workflow. The [module system](/docs/concepts/module-system) merges all contributions—SST adds deploy steps, Docker adds build steps, your config adds test steps—into a single coherent pipeline.
+
+## Environment Variables in CI
+
+The CI extension handles environment variable injection for the CI environment:
+
+- **Public variables** (LITERAL type) are set directly in the workflow
+- **Secrets** are referenced via `${{ secrets.* }}` GitHub Actions syntax
+- **Computed variables** (ports, URLs) are set to CI-appropriate values
+
+```nix
+stackpanel.ci = {
+  enable = true;
+
+  # Map Stackpanel variables to GitHub Actions secrets
+  secrets = {
+    "API_KEY" = "PROD_API_KEY";           # GitHub secret name
+    "DATABASE_URL" = "PROD_DATABASE_URL";
+  };
+};
+```
+
+This generates the proper `${{ secrets.PROD_API_KEY }}` references in the workflow file.
+
+## Customizing the Generated Workflow
+
+### Adding Extra Steps
+
+```nix
+stackpanel.ci = {
+  enable = true;
+
+  extra-steps.pre-build = {
+    name = "Cache dependencies";
+    uses = "actions/cache@v4";
+    "with" = {
+      path = "~/.bun/install/cache";
+      key = "bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}";
+    };
+  };
+
+  extra-steps.post-test = {
+    name = "Upload coverage";
+    uses = "codecov/codecov-action@v4";
+    "with" = {
+      token = "\${{ secrets.CODECOV_TOKEN }}";
+    };
+  };
+};
+```
+
+### Multiple Workflows
+
+For complex projects that need separate workflows (e.g., separate deploy pipelines for staging and production):
+
+```nix
+stackpanel.ci = {
+  enable = true;
+
+  workflows = {
+    ci = {
+      triggers.pull_request = {};
+      steps = [ "lint" "test" "build" ];
+    };
+
+    deploy-staging = {
+      triggers.push.branches = [ "develop" ];
+      steps = [ "build" "deploy-staging" ];
+    };
+
+    deploy-production = {
+      triggers.push.branches = [ "main" ];
+      steps = [ "build" "deploy-production" ];
+    };
+  };
+};
+```
+
+## Viewing the Generated Output
+
+Since the CI files are standard YAML committed to your repository, you can inspect them directly:
+
+```bash
+cat .github/workflows/ci.yml
+```
+
+Or view them in [Studio](/docs/studio), which shows generated files alongside their staleness status.
+
+<Callout type="warn">
+Don't edit the generated workflow files by hand—your changes will be overwritten on the next build. Instead, configure the CI extension through your Stackpanel Nix config. If you need something the CI extension doesn't support, use `extra-steps` or raw YAML injection.
+</Callout>
+
+## No Nix Required in CI
+
+A key design decision: **the generated CI workflows don't require Nix on the runner.** They use standard GitHub Actions steps—`actions/setup-node`, `docker/build-push-action`, etc.—that any CI environment can run.
+
+This means:
+
+- No Nix installation step in CI (saves 1-2 minutes per run)
+- No flake evaluation during CI (saves even more time)
+- CI works even if your team decides to stop using Stackpanel
+- Standard GitHub Actions caching works out of the box
+
+The generated files are the bridge between your Nix-based local environment and the standard CI world.
+
+## Reference
+
+- [Apps → Defining Apps](/docs/apps-ci/defining-apps) for configuring apps that feed into CI
+- [Options Reference → CI](/docs/reference/ci) for all CI configuration options
+- [Core Concepts → File Generation](/docs/concepts/file-generation) for how generated files work
+- [Core Concepts → Building Source](/docs/concepts/building-source) for why config files are build output

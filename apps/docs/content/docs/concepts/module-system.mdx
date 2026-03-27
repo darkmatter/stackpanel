@@ -1,0 +1,199 @@
+---
+title: The Module System
+description: How independent pieces of configuration compose into a unified result
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel borrows the **NixOS module system**—the same system that powers NixOS server configuration—and applies it to your development environment. If you've never touched NixOS, that's fine. The core idea is simple.
+
+## Options and Config
+
+Every module in Stackpanel does two things:
+
+1. **Declares options** — "here's a knob that exists"
+2. **Sets values** — "here's what I want that knob set to"
+
+For example, the PostgreSQL service module declares an option called `stackpanel.globalServices.postgres.enable`. Your project config sets it to `true`. The module system connects the two.
+
+```nix
+# What the postgres module declares (you don't write this)
+options.stackpanel.globalServices.postgres.enable = lib.mkOption {
+  type = lib.types.bool;
+  default = false;
+  description = "Enable PostgreSQL for local development";
+};
+
+# What you write in your config
+stackpanel.globalServices.postgres.enable = true;
+```
+
+This separation means the people who _implement_ features and the people who _use_ them don't need to know about each other.
+
+## Merging, Not Overwriting
+
+The key insight: **multiple modules can set values for the same option, and the module system merges them.**
+
+Consider `.gitignore`. Without a module system, you'd have one file and one owner. With Stackpanel, any module can contribute entries:
+
+```nix
+# The Node/Bun module contributes:
+stackpanel.files.entries.".gitignore".content = [
+  "node_modules"
+  ".turbo"
+];
+
+# The SST extension contributes:
+stackpanel.files.entries.".gitignore".content = [
+  ".sst"
+  ".open-next"
+];
+
+# Your project config contributes:
+stackpanel.files.entries.".gitignore".content = [
+  ".env.local"
+  "dist"
+];
+```
+
+The module system merges all three lists. The generated `.gitignore` contains every entry. No module needs to know the others exist.
+
+This works for lists (append), attribute sets (merge), and booleans (`mkForce`, `mkDefault` for priority). The merge strategy depends on the option's type.
+
+## The `stackpanel.*` Namespace
+
+All Stackpanel options live under `stackpanel.*`:
+
+| Namespace | What it controls |
+|-----------|-----------------|
+| `stackpanel.enable` | Whether Stackpanel is active |
+| `stackpanel.name` | Project identity |
+| `stackpanel.devshell.*` | Shell packages, hooks, env vars |
+| `stackpanel.scripts.*` | CLI commands available in your shell |
+| `stackpanel.files.*` | Generated file definitions |
+| `stackpanel.services.*` | Background service definitions |
+| `stackpanel.globalServices.*` | Convenience services (postgres, redis, minio) |
+| `stackpanel.secrets.*` | Encrypted secrets and master keys |
+| `stackpanel.extensions.*` | Extension registration and config |
+| `stackpanel.ports.*` | Port computation settings |
+| `stackpanel.ide.*` | IDE integration (VS Code, Zed) |
+| `stackpanel.apps.*` | Application definitions |
+| `stackpanel.tasks.*` | Runnable tasks |
+
+See the [Options Reference](/docs/reference) for the complete list.
+
+## How Modules Compose
+
+When you enter your dev shell, Stackpanel evaluates all modules together. Here's the order of operations:
+
+```
+Your flake.nix
+  → imports Stackpanel's flake module
+    → loads .stack/config.nix (your config)
+    → loads .stack/config.local.nix (per-user overrides, gitignored)
+    → loads all builtin modules (services, IDE, secrets, etc.)
+    → loads all enabled extensions
+    → the module system merges everything
+    → outputs: devshell, generated files, scripts, services
+```
+
+Each layer can set any option. If two modules set the same option, the merge strategy for that option's type determines the result. Lists get concatenated. Attribute sets get recursively merged. Scalars use priority (`mkDefault` loses to a direct set, which loses to `mkForce`).
+
+## Priority with `mkDefault` and `mkForce`
+
+When two modules set the same scalar value, you need a way to say which one wins:
+
+```nix
+# A builtin module sets a sensible default
+stackpanel.ports.basePort = lib.mkDefault 3000;
+
+# Your config overrides it (no qualifier = higher priority than mkDefault)
+stackpanel.ports.basePort = 4000;
+```
+
+Priority levels, from lowest to highest:
+
+| Mechanism | When to use |
+|-----------|-------------|
+| `lib.mkDefault` | "Here's a sensible default, feel free to override" |
+| _(plain value)_ | "This is what I want" |
+| `lib.mkForce` | "I don't care what anyone else says, use this" |
+
+In practice, extension authors use `mkDefault` for their defaults, and you set plain values in your config. You almost never need `mkForce`.
+
+## Conditional Configuration with `mkIf`
+
+Modules often need to do things only when a feature is enabled:
+
+```nix
+config = lib.mkIf cfg.enable {
+  # Everything in here only takes effect when cfg.enable is true
+  stackpanel.devshell.packages = [ pkgs.postgresql ];
+  stackpanel.scripts."db:start" = {
+    exec = "pg_ctl start";
+    description = "Start PostgreSQL";
+  };
+};
+```
+
+This is how extensions avoid polluting your environment when they're disabled. The PostgreSQL module only adds `psql` to your PATH, generates config, and registers scripts when `stackpanel.globalServices.postgres.enable = true`.
+
+## Writing Your Own Module
+
+You don't need to write modules to use Stackpanel—your `config.nix` is already a module. But if you want to encapsulate reusable logic, the pattern looks like this:
+
+```nix
+# .stack/modules/my-tool.nix
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.stackpanel.my-tool;
+in
+{
+  options.stackpanel.my-tool = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Enable my-tool integration";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    stackpanel.devshell.packages = [ pkgs.my-tool ];
+
+    stackpanel.scripts."my-tool:run" = {
+      exec = "my-tool start --config ${cfg.configPath}";
+      description = "Run my-tool";
+    };
+
+    stackpanel.files.entries.".gitignore".content = [
+      ".my-tool-cache"
+    ];
+  };
+}
+```
+
+Then import it in your config:
+
+```nix
+# .stack/config.nix
+{
+  imports = [ ./modules/my-tool.nix ];
+
+  stackpanel.my-tool.enable = true;
+}
+```
+
+<Callout type="info">
+For reusable modules that others can install, see [Writing Extensions](/docs/extensions/writing-extensions). Extensions are just modules with additional metadata for the registry and Studio UI.
+</Callout>
+
+## Why This Matters
+
+The module system is what makes everything else in Stackpanel possible:
+
+- **Extensions** are modules that register themselves and contribute to your devshell, scripts, and generated files.
+- **Services** are modules that conditionally add packages, environment variables, and process definitions.
+- **File generation** works because multiple modules can contribute to the same file without conflicts.
+- **Your config** is just another module in the same system—no special syntax, no separate API.
+
+If you understand "declare options, set values, everything merges," you understand the module system.

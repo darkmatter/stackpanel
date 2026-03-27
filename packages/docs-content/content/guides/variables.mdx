@@ -11,8 +11,8 @@ Variables are shared configuration values that can be referenced across your app
 
 | Type | Description | Storage |
 |------|-------------|---------|
-| **Config** | Plain text values | `.stackpanel/data/variables.nix` |
-| **Secret** | Encrypted values | `.stackpanel/secrets/vars/*.age` |
+| **Config** | Plain text values | `.stack/data/variables.nix` |
+| **Secret** | Encrypted values | `.stack/secrets/vars/*.age` |
 | **Computed** | Generated at build time | Nix expressions |
 
 ## Adding Variables
@@ -27,7 +27,7 @@ Variables are shared configuration values that can be referenced across your app
 ### Via Configuration
 
 ```nix
-# .stackpanel/data/variables.nix
+# .stack/data/variables.nix
 {
   API_URL = {
     key = "API_URL";

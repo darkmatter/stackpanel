@@ -1,13 +1,19 @@
+packages/proto/gen
+release.tar.gz
 # Dependencies
 node_modules
 .pnp
 .pnp.js
-
+.stack/keys/local.txt
+.stack/secrets/state/manifest.json
+local.txt
+manifest.json
 # Build outputs
 dist
 build
 *.tsbuildinfo
-.stackpanel/.token
+.stack/.token
+.sst
 
 # Environment variables
 .env
@@ -47,124 +53,43 @@ coverage
 *.tgz
 .cache
 tmp
-temp
-
-
-# We deliberately ignore files that are usually checked in because we generate them
-/.claude
-/.alchemy
-/.cache
-/.tasks
-# These files will be ignored once we finish the modules for them
-# /.github
-# /.ruler
-# /.vscode
-
-# START Ruler Generated Files
-/.codex/config.json
-/.codex/config.json.bak
-/.codex/config.toml
-/.codex/config.toml.bak
-/.cursor/mcp.json
-/.cursor/mcp.json.bak
-/.mcp.json
-/.mcp.json.bak
-/.vscode/mcp.json
-/.vscode/mcp.json.bak
-/.zed/settings.json
-/.zed/settings.json.bak
-/AGENTS.md
-/AGENTS.md.bak
-/CLAUDE.md
-/CLAUDE.md.bak
-/WARP.md
-/WARP.md.bak
-# END Ruler Generated Files
-
-# Devenv
+.alchemy
+.turbo
+# ── BEGIN stackpanel ──
+# DO NOT EDIT between these markers — managed by stackpanel
+*.log
+*.swo
+*.swp
+*.tgz
+*.tsbuildinfo
+*~
+.DS_Store
+.cache
 .devenv
 .devenv.flake.nix
-devenv.local.nix
-devenv.local.yaml
-
-# direnv
 .direnv
-
-# pre-commit
-.pre-commit-config.yaml
-/.stackpanel/state
+.env
+.env*.local
+.idea
+.stack/.token
+.stack/bin
+.stack/config.local.nix
+.stack/keys/
+.stack/profile/
+.stack/secrets/state/
+.stack/secrets/vars/.sops.yaml
+.stack/state/
+.tasks
+.turbo
 /.devenv*
 /.devenv-root
-/bts.jsonc
-
+/.stack/state
 /result
-
-# Stackpanel generated files (cache)
-.stackpanel/state/
-.stackpanel/bin/
-.sst
-.tmp
-.envrc.local
-
-
-# START Stackpanel Generated Files
-# DO NOT EDIT - managed by stackpanel. Changes will be overwritten.
-/.envrc.local
-/.stackpanel/gen/direnv-wrapper.sh
-/.stackpanel/gen/vscode/devshell-loader.sh
-/.stackpanel/gen/zed/devshell-loader.sh
-/.stackpanel/gen/zed/settings.json
-/.stackpanel/state/infra-inputs.json
-/.tasks/bin/build
-/.tasks/bin/clean
-/.tasks/bin/db:migrate
-/.tasks/bin/db:push
-/.tasks/bin/db:studio
-/.tasks/bin/dev
-/.tasks/bin/format
-/.tasks/bin/generate:proto
-/.tasks/bin/generate:types
-/.tasks/bin/lint
-/.tasks/bin/test
-/.tasks/bin/test:coverage
-/.tasks/bin/test:watch
-/.tasks/bin/typecheck
-/.vscode/settings.json
-/apps/docs/.oxlintrc.json
-/apps/web/.oxlintrc.json
-/devshell
-/packages/gen/env/README.md
-/packages/gen/env/data/shared/vars.yaml
-/packages/gen/env/package.json
-/packages/gen/env/src/entrypoints/docs.ts
-/packages/gen/env/src/entrypoints/index.ts
-/packages/gen/env/src/entrypoints/stackpanel-go.ts
-/packages/gen/env/src/entrypoints/web.ts
-/packages/gen/env/src/generated/docs/dev.ts
-/packages/gen/env/src/generated/docs/index.ts
-/packages/gen/env/src/generated/index.ts
-/packages/gen/env/src/generated/stackpanel-go/dev.ts
-/packages/gen/env/src/generated/stackpanel-go/index.ts
-/packages/gen/env/src/generated/web/dev.ts
-/packages/gen/env/src/generated/web/index.ts
-/packages/gen/env/src/generated/web/prod.ts
-/packages/gen/env/src/index.ts
-/packages/gen/env/tsconfig.json
-/packages/infra/README.md
-/packages/infra/alchemy.run.ts
-/packages/infra/modules/aws-secrets.ts
-/packages/infra/modules/deployment.ts
-/packages/infra/package.json
-/packages/infra/src/index.ts
-/packages/infra/src/resources/kms-alias.ts
-/packages/infra/src/resources/kms-key.ts
-/packages/infra/src/types.ts
-/packages/infra/sst.config.ts
-/packages/infra/tsconfig.json
-/packages/scripts/entrypoints/docs.sh
-/packages/scripts/entrypoints/stackpanel-go.sh
-/packages/scripts/entrypoints/web.sh
-/process-compose.yaml
-/turbo.json
-/.stackpanel/secrets/keys/.sops.yaml
-# END Stackpanel Generated Files
+build
+devenv.local.nix
+devenv.local.yaml
+dist
+logs
+node_modules
+temp
+tmp# ── END stackpanel ──

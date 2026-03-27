@@ -1,0 +1,51 @@
+---
+title: stackpanel config
+description: Inspect the stackpanel configuration
+icon: Terminal
+---
+
+# stackpanel config
+
+Inspect and query the stackpanel configuration.
+
+The configuration is evaluated from the flake output (.#stackpanelConfig)
+and includes all computed values from Nix modules.
+
+Examples:
+  stackpanel config get                     # Print entire config
+  stackpanel config get project.name        # Get the project name
+  stackpanel config get apps.web.port       # Get a nested value
+  stackpanel config get devshell.env        # Get an object as JSON
+  stackpanel config get --json apps.web     # Force JSON output
+  stackpanel config set apps.web.name ui    # Set a string value
+  stackpanel config set ports.base 6400     # Auto-detects as number
+
+## Usage
+
+```bash
+stackpanel config
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
+## Subcommands
+
+| Command | Description |
+|---------|-------------|
+| [`generate-example`](./generate-example) | Generate annotated config.nix.example with option descriptions |
+| [`get`](./get) | Get a configuration value by dot-path |
+| [`set`](./set) | Set a configuration value by dot-path |
+

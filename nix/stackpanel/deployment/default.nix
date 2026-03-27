@@ -34,5 +34,6 @@
   imports = [
     ./fly # Fly.io (container-based)
     ./cloudflare # Cloudflare Workers (edge)
+    ./aws # AWS EC2 deployments
   ];
 }

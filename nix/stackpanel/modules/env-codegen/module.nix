@@ -7,11 +7,16 @@
 # ensuring all generated files are created on devshell entry.
 #
 # Generated files:
-#   packages/gen/env/data/.sops.yaml         - SOPS creation rules
-#   packages/gen/env/data/shared/vars.yaml   - Shared plaintext config
-#   packages/gen/env/data/<app>/<env>.yaml   - Per-app secrets (boilerplate)
-#   packages/gen/env/src/generated/          - TypeScript znv modules
-#   packages/gen/env/src/entrypoints/        - App entrypoint loaders
+#   packages/gen/env/                    — generated package shell
+#     package.json, tsconfig.json, README.md
+#     src/                               — 100% generated (do not edit)
+#       <app>/<env>.ts, <app>/index.ts, index.ts
+#       <app>.ts                         — app-level env export (@gen/env/web)
+#       embedded-data.ts                 — runtime metadata manifest
+#       entrypoints/<app>.ts, entrypoints/index.ts
+#       loader.ts, docker-entrypoint.ts
+#     data/
+#       <env>/<app>.sops.json            — encrypted runtime payloads (built by `stackpanel codegen build`)
 #
 # Usage:
 #   # The module is automatically enabled when apps have environments
@@ -30,7 +35,7 @@ let
   envOutputDir = config.stackpanel.env.output-dir;
 
   # Import the codegen library
-  envPackage = import ../../lib/codegen/env-package.nix { inherit lib config; };
+  envPackage = import ../../lib/codegen/env-package.nix { inherit lib config pkgs; };
 
   # Check if we should generate files
   hasAppsWithEnvs = envPackage.enabled;
@@ -73,6 +78,23 @@ in
       '';
       example = "@gen/env";
     };
+
+    references = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.attrsOf (lib.types.attrsOf lib.types.str));
+      default = { };
+      description = ''
+        Explicit variable reference metadata for generated env payloads.
+
+        Structure: env.references.<app>.<environment>.<ENV_KEY> = "/group/variable-id";
+
+        Use this when an environment variable aliases a grouped variable through
+        an expression such as `config.variables."/secret/foo".value` and the
+        generated manifest should preserve the original variable reference.
+      '';
+      example = {
+        docs.dev.HELLO = "/secret/cool-secre";
+      };
+    };
   };
 
   # ===========================================================================
@@ -97,6 +119,7 @@ in
         files = true;
         secrets = true;
       };
+      flakeInputs = meta.flakeInputs or [ ];
       tags = [
         "codegen"
         "secrets"
@@ -110,18 +133,18 @@ in
       enable = true;
       displayName = meta.name;
       checks = {
-        sops-yaml-exists = {
-          name = "SOPS Config Generated";
-          description = "Check if ${envOutputDir}/data/.sops.yaml exists";
+        runtime-manifest-exists = {
+          name = "Env Runtime Manifest Generated";
+          description = "Check if the generated env runtime manifests exist";
           type = "script";
           script = ''
-            [ -f "${envOutputDir}/data/.sops.yaml" ]
+            [ -f "${envOutputDir}/src/embedded-data.ts" ] && [ -f ".stack/gen/codegen/env-manifest.json" ]
           '';
           severity = "warning";
           timeout = 5;
           tags = [
             "codegen"
-            "sops"
+            "env"
           ];
         };
         generated-ts-exists = {
@@ -129,7 +152,7 @@ in
           description = "Check if generated TypeScript modules exist";
           type = "script";
           script = ''
-            [ -d "${envOutputDir}/src/generated" ] && [ -f "${envOutputDir}/src/generated/index.ts" ]
+            [ -d "${envOutputDir}/src" ] && [ -f "${envOutputDir}/src/index.ts" ]
           '';
           severity = "warning";
           timeout = 5;

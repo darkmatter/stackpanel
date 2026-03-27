@@ -113,7 +113,7 @@ in
       eval = {
         description = "${meta.name} module evaluates correctly";
         required = true;
-        derivation = pkgs.runCommand "${meta.id}-eval-check" {} ''
+        derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
           echo "✓ Module ${meta.name} evaluates successfully"
           touch $out
         '';
@@ -123,13 +123,16 @@ in
       packages = {
         description = "${meta.name} packages are available";
         required = true;
-        derivation = pkgs.runCommand "${meta.id}-packages-check" {
-          # nativeBuildInputs = [ pkgs.my-package ];
-        } ''
-          # my-package --version
-          echo "✓ All required packages available"
-          touch $out
-        '';
+        derivation =
+          pkgs.runCommand "${meta.id}-packages-check"
+            {
+              # nativeBuildInputs = [ pkgs.my-package ];
+            }
+            ''
+              # my-package --version
+              echo "✓ All required packages available"
+              touch $out
+            '';
       };
 
       # RECOMMENDED: Verify config generation works
@@ -196,6 +199,7 @@ in
       inherit meta;
       source.type = "builtin";
       features = meta.features;
+      flakeInputs = meta.flakeInputs or [ ];
       tags = meta.tags;
       priority = meta.priority;
       healthcheckModule = meta.id;

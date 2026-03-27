@@ -1,7 +1,0 @@
-# web dev environment secrets
-# Auto-generated boilerplate - edit values, then encrypt with: sops web/dev.yaml
-APP_HOST: PLACEHOLDER_APP_HOST
-MEMO_MEMOAS_AD: foobar
-OPENAI_API_KEY: PLACEHOLDER_OPENAI_API_KEY
-PORT: PLACEHOLDER_PORT
-POSTGRES_URL: PLACEHOLDER_POSTGRES_URL

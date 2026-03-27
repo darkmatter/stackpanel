@@ -1,0 +1,116 @@
+---
+title: Apps & CI
+description: Define your applications and generate CI pipelines automatically
+icon: rocket
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel lets you declare the applications in your monorepo as structured data—names, ports, URLs, build commands—and then uses those declarations to generate CI pipelines, environment variables, and service configurations automatically.
+
+## Why Declare Apps?
+
+In a typical monorepo, knowledge about your applications is scattered: port numbers in `.env` files, build commands in `package.json` scripts, deployment targets in CI YAML, health check URLs in Docker configs. Change one and you have to update all the others by hand.
+
+Stackpanel centralizes this. You declare each app once, and everything else—ports, URLs, CI steps, process-compose entries—is derived from that single definition.
+
+## Quick Example
+
+```nix
+stackpanel.apps = {
+  web = {
+    port = 0;  # First deterministic port (e.g., 4200)
+    framework = "next";
+    directory = "apps/web";
+    devCommand = "bun run dev";
+    buildCommand = "bun run build";
+  };
+
+  api = {
+    port = 1;  # Next sequential port (e.g., 4201)
+    framework = "hono";
+    directory = "apps/api";
+    devCommand = "bun run dev";
+    buildCommand = "bun run build";
+  };
+};
+```
+
+From this, Stackpanel:
+
+- Assigns [deterministic ports](/docs/concepts/deterministic-ports) for each app
+- Exports `STACKPANEL_WEB_PORT` and `STACKPANEL_API_PORT` environment variables
+- Computes URLs (`http://localhost:4200`, `http://localhost:4201`)
+- Can generate [Caddy](/docs/networking/caddy) reverse proxy routes for local HTTPS
+- Can generate CI workflows with the correct build steps for each app
+
+## What You Get
+
+| Feature | How It Works |
+|---------|-------------|
+| **Deterministic ports** | Each app gets a stable port from your project name hash |
+| **Environment variables** | `STACKPANEL_<APP>_PORT` and `STACKPANEL_<APP>_URL` exported automatically |
+| **Process management** | Dev commands registered with [process-compose](/docs/services/process-compose) |
+| **CI generation** | GitHub Actions workflows produced from your app definitions |
+| **Reverse proxy routes** | [Caddy](/docs/networking/caddy) routes generated for each app |
+| **Studio visibility** | Apps appear in [Studio](/docs/studio) with status indicators |
+
+## Sections
+
+<Cards>
+  <Card title="Defining Apps" href="./defining-apps">
+    Declare applications with ports, commands, and framework metadata
+  </Card>
+  <Card title="CI Generation" href="./ci-generation">
+    Automatically generate GitHub Actions workflows from your app definitions
+  </Card>
+</Cards>
+
+## How Apps and CI Connect
+
+The CI generation system reads your app definitions to produce workflows that match your actual project structure. If you add a new app, the CI pipeline updates automatically. If you change a build command, the workflow reflects it.
+
+```
+stackpanel.apps.web
+  → port computed → STACKPANEL_WEB_PORT
+  → devCommand   → process-compose entry
+  → buildCommand → CI workflow build step
+  → directory    → CI workflow working directory
+  → framework    → CI workflow deploy step (framework-specific)
+
+stackpanel.ci
+  → reads all apps
+  → generates .github/workflows/ci.yml
+  → includes build, test, and deploy steps for each app
+  → respects dependency ordering
+```
+
+This means your CI pipeline is always in sync with your development environment. No more "works locally but fails in CI" because the build command in your workflow doesn't match the one you actually use.
+
+<Callout type="info">
+Like all Stackpanel-generated files, the CI workflow is a standard GitHub Actions YAML file committed to Git. It works without Nix installed in CI—no special runner configuration needed.
+</Callout>
+
+## Computed App Data
+
+Beyond what you define, Stackpanel computes additional data for each app:
+
+```nix
+# Available on the config object after evaluation
+config.stackpanel.appsComputed.web = {
+  port = 4200;                           # Resolved absolute port
+  url = "http://localhost:4200";         # Computed URL
+  # ... plus all fields you defined
+};
+```
+
+Extensions and other modules can read `appsComputed` to make decisions based on your app topology—for example, a reverse proxy extension can generate routes for every defined app without any additional configuration.
+
+## Reference
+
+- [Options Reference → Apps](/docs/reference/apps) for all app definition options
+- [Options Reference → AppsComputed](/docs/reference/appsComputed) for computed app data
+- [Options Reference → CI](/docs/reference/ci) for CI generation options
+- [Deterministic Ports](/docs/concepts/deterministic-ports) for how app ports are assigned
+- [Services → Process Compose](/docs/services/process-compose) for how dev commands are orchestrated

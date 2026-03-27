@@ -220,8 +220,22 @@ let
       cp -r ${generatedFiles}/${app.path}/* $out/${app.path}/
     '';
 
+  flattenJsonSetOps =
+    prefix: value:
+    if builtins.isAttrs value then
+      lib.flatten (lib.mapAttrsToList (key: nested: flattenJsonSetOps (prefix ++ [ key ]) nested) value)
+    else
+      [
+        {
+          op = "set";
+          path = prefix;
+          inherit value;
+        }
+      ];
+
   # Create file entries for materialization (uses stackpanel.files system)
-  # package.json uses type="json" for deep-merge support from other modules
+  # package.json uses source-aware json-ops so tracked files can be patched
+  # safely during preflight without replacing unrelated user content.
   mkGeneratedFileEntries =
     name: app:
     let
@@ -232,8 +246,9 @@ let
     in
     {
       "${app.path}/package.json" = {
-        type = "json";
-        jsonValue = generatePackageJson name app;
+        type = "json-ops";
+        adopt = "backup";
+        ops = flattenJsonSetOps [ ] (generatePackageJson name app);
         source = "go";
         description = "Go app package.json (scripts, dependencies)";
       };
@@ -249,75 +264,49 @@ let
 
   # Build a Go app package
   # Supports both Go workspace (root go.mod) and per-app go.mod layouts
-  # Consults app.build.* fields first, falling back to auto-detection
   mkGoPackage =
     name: app:
     let
       goCfg = app.go;
-      buildCfg = app.build or {};
       repoRoot = ../../../..;
       appPath = app.path;
 
-      # Layout: explicit build.srcLayout > auto-detect from go.mod presence
+      # Check if app has its own go.mod (per-app layout)
       hasPerAppGoMod = builtins.pathExists (repoRoot + "/${appPath}/go.mod");
-      layout =
-        if buildCfg.srcLayout or null != null
-        then buildCfg.srcLayout
-        else if hasPerAppGoMod
-        then "standalone"
-        else "workspace";
-
-      isStandalone = layout == "standalone";
-
-      # pwd: where go.mod lives (needed for resolving replace directives)
-      # For standalone layout, pwd must point to the app dir within the repo
-      # so that relative replace paths (e.g., ../../packages/proto) resolve.
-      pwd = repoRoot + "/${appPath}";
-
-      # Source: explicit build.srcRoot > repo root (for replace directives) > app dir
-      # For standalone layout with replace directives, we must use the repo root
-      # so that paths like ../../packages/proto/gen/gopb are available in the source tree.
-      src =
-        if buildCfg.srcRoot or null != null
-        then repoRoot + "/${buildCfg.srcRoot}"
-        else if goCfg.generateFiles && !isStandalone
-        then mkGoSourceWithGenerated name app
-        else repoRoot;
-
-      # Lockfile: explicit build.depsLockfile > inferred from layout
       hasPerAppGomod2nix = builtins.pathExists (repoRoot + "/${appPath}/gomod2nix.toml");
+
+      # For per-app layout, use the app directory as source
+      # For workspace layout, use repo root with subPackages
+      src =
+        if hasPerAppGoMod then
+          repoRoot + "/${appPath}"
+        else if goCfg.generateFiles then
+          mkGoSourceWithGenerated name app
+        else
+          repoRoot;
+
+      # gomod2nix.toml location depends on layout
       gomod2nixPath =
-        if buildCfg.depsLockfile or null != null
-        then repoRoot + "/${buildCfg.depsLockfile}"
-        else if isStandalone && hasPerAppGomod2nix
-        then repoRoot + "/${appPath}/gomod2nix.toml"
-        else repoRoot + "/gomod2nix.toml";
-
-      # Output name: explicit build.outputName > go.binaryName > app name
-      pname =
-        if (buildCfg.outputName or null) != null then buildCfg.outputName
-        else if goCfg.binaryName != null then goCfg.binaryName
-        else name;
-      version =
-        if (buildCfg.outputVersion or null) != null then buildCfg.outputVersion
-        else goCfg.version;
-
-      # Binary rename target (if binaryName is set and differs from pname)
-      effectiveBinaryName = goCfg.binaryName;
-
-      # Final name the binary has after postInstall (used for wrapProgram)
-      finalBinaryName = if effectiveBinaryName != null then effectiveBinaryName else pname;
-
-      hasRuntimeInputs = goCfg.runtimeInputs != [ ];
+        if hasPerAppGomod2nix then
+          repoRoot + "/${appPath}/gomod2nix.toml"
+        else
+          repoRoot + "/gomod2nix.toml";
     in
     pkgs.buildGoApplication {
-      inherit pname version src pwd;
+      pname = name;
+      version = goCfg.version;
+      inherit src;
 
       modules = gomod2nixPath;
-      # For standalone layout, modRoot tells the build hook to cd into the app dir
-      # within the repo root source. subPackages = ["."] then builds from there.
-      modRoot = if isStandalone then appPath else "";
-      subPackages = if isStandalone then [ "." ] else [ appPath ];
+      # For per-app layout, build from current dir; for workspace, specify subpackage
+      subPackages = if hasPerAppGoMod then [ "." ] else [ appPath ];
+
+      # CGO with tree-sitter needs the macOS SDK for libresolv + frameworks
+      nativeBuildInputs = lib.optionals pkgs.stdenv.isDarwin [
+        pkgs.apple-sdk_15
+      ] ++ lib.optionals (goCfg.runtimeInputs != [ ]) [
+        pkgs.makeWrapper
+      ];
 
       doCheck = false; # Tests run separately via checks
 
@@ -327,21 +316,19 @@ let
       ]
       ++ goCfg.ldflags;
 
-      nativeBuildInputs = lib.optionals hasRuntimeInputs [ pkgs.makeWrapper ];
+      finalBinaryName = if goCfg.binaryName != null then goCfg.binaryName else name;
 
       postInstall =
         # Rename binary if binaryName differs from the default output name
-        lib.optionalString (effectiveBinaryName != null) ''
-          # For standalone layout, binary name is the directory name
-          # For workspace layout, binary name is the last path component
+        lib.optionalString (goCfg.binaryName != null) ''
           oldName=${
-            if isStandalone then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
+            if hasPerAppGoMod then "$(basename ${appPath})" else lib.last (lib.splitString "/" appPath)
           }
-          mv $out/bin/$oldName $out/bin/${effectiveBinaryName} 2>/dev/null || true
+          mv $out/bin/$oldName $out/bin/${goCfg.binaryName} 2>/dev/null || true
         ''
         # Wrap binary to prepend runtimeInputs bin/ dirs to PATH
-        + lib.optionalString hasRuntimeInputs ''
-          wrapProgram $out/bin/${finalBinaryName} \
+        + lib.optionalString (goCfg.runtimeInputs != [ ]) ''
+          wrapProgram $out/bin/${if goCfg.binaryName != null then goCfg.binaryName else name} \
             --prefix PATH : ${lib.makeBinPath goCfg.runtimeInputs}
         '';
 
@@ -423,7 +410,6 @@ in
             options.go = lib.mkOption {
               type = lib.types.submodule {
                 options = lib.mapAttrs (_: sp.asOption) goSchema.fields // {
-                  # Not in proto schema (packages are not serializable to JSON)
                   runtimeInputs = lib.mkOption {
                     type = lib.types.listOf lib.types.package;
                     default = [ ];
@@ -434,9 +420,9 @@ in
                         1. Nix build: makeWrapper wraps the binary so the installed
                            binary finds the tools without a devshell.
                         2. DevShell: the packages are added to the shell so
-                           `go run .` also finds them.
+                           go run . also finds them.
 
-                      Example (in .stackpanel/modules/):
+                      Example (in .stack/nix/):
                         stackpanel.apps.my-cli.go.runtimeInputs = [ pkgs.colmena ];
                     '';
                   };
@@ -465,7 +451,6 @@ in
           apps = lib.mapAttrs mkGoPackage goApps;
           devEnvs = lib.mapAttrs mkGoDevEnv goApps;
           generatedFiles = lib.mapAttrs mkGeneratedFiles goApps;
-          tests = lib.mapAttrs mkGoTests goApps;
         };
 
         # Add runtimeInputs from all Go apps to the devshell so that
@@ -536,7 +521,7 @@ in
                 version=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
                 major=$(echo "$version" | cut -d. -f1)
                 minor=$(echo "$version" | cut -d. -f2)
-                [ "$major" -gt 1 ] || ([ "$major" -eq 1 ] && [ "$minor" -ge 21 ])
+                [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 21 ]; }
               '';
               severity = "warning";
               timeout = 5;
@@ -574,6 +559,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
           healthcheckModule = meta.id;

@@ -1,0 +1,202 @@
+---
+title: Direnv
+description: Automatic shell activation with direnv
+icon: refresh-cw
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+Direnv automatically activates your Stackpanel dev environment when you `cd` into your project directory—and deactivates it when you leave. No manual `nix develop` required.
+
+## Setup
+
+### 1. Install direnv
+
+If you entered your Stackpanel devshell at least once, direnv is already available. Otherwise, install it for your system:
+
+<Tabs items={["Nix", "macOS", "Linux"]}>
+
+<Tab value="Nix">
+```bash
+nix profile install nixpkgs#direnv
+```
+</Tab>
+
+<Tab value="macOS">
+```bash
+brew install direnv
+```
+</Tab>
+
+<Tab value="Linux">
+```bash
+# Debian/Ubuntu
+sudo apt install direnv
+
+# Arch
+sudo pacman -S direnv
+```
+</Tab>
+
+</Tabs>
+
+### 2. Hook into your shell
+
+Add the appropriate hook to your shell configuration:
+
+<Tabs items={["Bash", "Zsh", "Fish"]}>
+
+<Tab value="Bash">
+```bash
+# ~/.bashrc
+eval "$(direnv hook bash)"
+```
+</Tab>
+
+<Tab value="Zsh">
+```bash
+# ~/.zshrc
+eval "$(direnv hook zsh)"
+```
+</Tab>
+
+<Tab value="Fish">
+```fish
+# ~/.config/fish/config.fish
+direnv hook fish | source
+```
+</Tab>
+
+</Tabs>
+
+### 3. Create `.envrc`
+
+In your project root, create a `.envrc` file:
+
+```bash
+use flake . --impure
+```
+
+Then allow it:
+
+```bash
+direnv allow
+```
+
+From now on, entering the project directory activates the dev environment automatically.
+
+## Why `--impure`?
+
+Stackpanel needs `--impure` evaluation because it reads the current working directory at eval time to determine project paths, locate `.stack/` config files, and compute state. Pure evaluation doesn't allow this, so `--impure` is required.
+
+<Callout type="warn">
+If you omit `--impure`, you'll get errors like _"devenv was not able to determine the current directory"_ or missing attribute errors during `nix flake check`.
+</Callout>
+
+## The `.stackpanel-root` Workaround
+
+Some CI environments and Nix commands (like `nix flake check`) run in pure mode where the current directory isn't available. The `.stackpanel-root` file provides a workaround:
+
+```bash
+# Add this to your .envrc, before the use flake line
+echo "$PWD" > .stackpanel-root
+use flake . --impure
+```
+
+Then add the `readStackpanelRoot` module to your flake:
+
+```nix
+# flake.nix
+imports = [
+  inputs.stackpanel.flakeModules.readStackpanelRoot
+  inputs.stackpanel.flakeModules.default
+];
+```
+
+This writes the absolute project path to a file that Stackpanel can read during pure evaluation, unblocking CI and `nix flake check`.
+
+<Callout type="info">
+The `.stackpanel-root` file is gitignored by default since it contains a machine-specific absolute path.
+</Callout>
+
+## Nix Configuration Options
+
+Stackpanel exposes direnv-related options under `stackpanel.direnv`:
+
+```nix
+stackpanel.direnv = {
+  # Stackpanel manages direnv integration by default.
+  # Set to false if you want full manual control of your .envrc.
+  enable = true;
+};
+```
+
+When enabled, Stackpanel ensures that direnv-related files (`.envrc`, `.stackpanel-root`) are managed correctly and that the generated `.gitignore` includes any machine-specific files.
+
+## Speeding Up Direnv Reloads
+
+Nix evaluation can take a few seconds, which means direnv reloads can feel slow. A few ways to improve this:
+
+### Use nix-direnv
+
+[nix-direnv](https://github.com/nix-community/nix-direnv) caches your dev environment so that reloads only re-evaluate when inputs actually change:
+
+```bash
+# .envrc
+if ! has nix_direnv_version || ! nix_direnv_version 3.0.6; then
+  source_url "https://raw.githubusercontent.com/nix-community/nix-direnv/3.0.6/direnvrc" \
+    "sha256-RYcUJaRMf8oF5LznDrlCXbkOQrywm0HDv1VjYGaJGdM="
+fi
+use flake . --impure
+```
+
+This is the **recommended** setup. After the first load, subsequent `cd` operations into the project are nearly instant.
+
+### Binary cache
+
+If your team uses a shared Nix binary cache, dev environment builds are faster for everyone. See the [binary cache options reference](/docs/reference/binary-cache) for configuration.
+
+## Troubleshooting
+
+### Direnv not activating
+
+1. Confirm direnv is installed: `direnv version`
+2. Confirm the shell hook is loaded: `echo $DIRENV_DIR` (should be empty outside a project)
+3. Run `direnv allow` in the project directory
+4. Check `.envrc` exists and contains `use flake . --impure`
+
+### "direnv: error .envrc is blocked"
+
+Run `direnv allow` to trust the `.envrc` file. Direnv blocks `.envrc` files by default as a security measure—you must explicitly allow each one.
+
+### Environment not updating after config changes
+
+Direnv watches `flake.nix` and `flake.lock` for changes, but it doesn't automatically detect changes to files imported by your flake (like `.stack/config.nix`). To force a reload:
+
+```bash
+# Touch the flake to trigger direnv
+touch flake.nix
+
+# Or reload manually
+direnv reload
+```
+
+With `nix-direnv`, you can also add watched files:
+
+```bash
+# .envrc
+watch_file .stack/config.nix
+watch_file .stack/_internal.nix
+use flake . --impure
+```
+
+### Slow reloads
+
+See the [nix-direnv](#use-nix-direnv) section above. Without caching, every reload triggers a full Nix evaluation.
+
+## Reference
+
+- [Direnv options reference](/docs/reference/direnv)
+- [nix-direnv](https://github.com/nix-community/nix-direnv) — cached Nix environments for direnv
+- [direnv wiki](https://github.com/direnv/direnv/wiki) — official direnv documentation

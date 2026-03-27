@@ -24,13 +24,13 @@ The theme module configures [Starship](https://starship.rs/) prompt for consiste
 - Current directory with truncation
 - Language version indicators (Node, Python, Rust, etc.)
 - Command duration for long-running tasks
-- Custom stackpanel styling
+- Custom stack styling
 
 ### Usage
 
 ```nix
 # devenv.nix
-stackpanel.theme = {
+stack.theme = {
   enable = true;
   # Optional: use custom config
   config-file = ./my-starship.toml;
@@ -52,7 +52,7 @@ To use a custom Starship configuration:
 2. Reference it in the config:
 
 ```nix
-stackpanel.theme.config-file = ./config/starship.toml;
+stack.theme.config-file = ./config/starship.toml;
 ```
 
 ## Future Features

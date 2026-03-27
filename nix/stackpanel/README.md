@@ -1,10 +1,10 @@
-# Stackpanel Nix Module System
+# Stack Nix Module System
 
-This directory contains the main Stackpanel Nix module system - a comprehensive framework for managing development environments with Nix.
+This directory contains the main Stack Nix module system - a comprehensive framework for managing development environments with Nix.
 
 ## Overview
 
-Stackpanel provides:
+Stack provides:
 - **Reproducible dev environments** via devenv/Nix
 - **Multi-app monorepo support** with automatic port assignment
 - **Secrets management** with SOPS/vals integration
@@ -14,34 +14,41 @@ Stackpanel provides:
 
 ## Directory Structure
 
+Options are co-located with their feature implementations. Each directory owns its options, logic, and helpers.
+
 ```
-stackpanel/
-├── default.nix      # Main entry point - imports core module
-├── core/            # Core module system (options + config)
-│   ├── options/     # All NixOS module option definitions
-│   ├── services/    # Service registry and factory functions
-│   └── lib/         # Configuration evaluation for CLI/agent
-├── lib/             # Pure library functions
-│   └── services/    # Service-specific utilities (postgres, redis, etc.)
-├── apps/            # Application configuration and CI generation
-├── devshell/        # Development shell configuration
-├── ide/             # IDE integration (VS Code)
-├── network/         # Step CA and network configuration
-├── packages/        # Nix package definitions
-├── secrets/         # SOPS secrets management module
-├── services/        # Service orchestration
-└── tui/             # TUI application module
+stack/
+├── default.nix      # Main entry point - imports all feature modules
+├── core/            # Core options + boot logic (enable, dirs, root, CLI)
+├── apps/            # App configuration, ports, and CI generation
+├── network/         # Ports, DNS, Step CA certificates
+├── services/        # Service orchestration (postgres, redis, minio, caddy, AWS)
+├── secrets/         # Master key-based secrets management
+├── variables/       # Workspace variables with keygroup organization
+├── ide/             # IDE integration (VS Code, Zed)
+├── tui/             # Terminal theming (Starship prompt)
+├── deployment/      # Deployment providers (Fly.io, Cloudflare)
+├── containers/      # OCI container image building
+├── docker/          # Container tooling (skopeo)
+├── infra/           # Alchemy-based infrastructure modules
+├── sst/             # SST AWS infrastructure provisioning
+├── docs/            # Documentation generation
+├── devshell/        # Shell configuration (packages, hooks, scripts, files)
+├── plugins/         # Auto-discovered feature plugins (bun, go, turbo, etc.)
+├── db/              # Proto-derived schema system
+├── lib/             # Shared pure library functions
+└── packages/        # Nix package definitions (stack-cli)
 ```
 
 ## Key Concepts
 
-### Options System (`core/options/`)
+### Options System
 
-All configuration is defined through NixOS module options under `stackpanel.*`:
+All configuration is defined through NixOS module options under `stack.*`:
 
 ```nix
 {
-  stackpanel = {
+  stack = {
     name = "my-project";
     apps = {
       web = { port = 3000; };
@@ -50,20 +57,6 @@ All configuration is defined through NixOS module options under `stackpanel.*`:
     services.postgres.enable = true;
     services.redis.enable = true;
   };
-}
-```
-
-### Library Functions (`lib/`)
-
-Pure functions for file generation, path resolution, and service configuration:
-
-```nix
-let
-  spLib = import ./lib { inherit lib pkgs; };
-in
-spLib.files.generate {
-  path = ".env";
-  content = "DATABASE_URL=...";
 }
 ```
 
@@ -77,11 +70,11 @@ Configures development services (PostgreSQL, Redis, MinIO, Caddy):
 
 ### Secrets Management (`secrets/`)
 
-SOPS-based secrets with per-app configuration:
+Master key-based secrets with keygroup organization:
 
-- Per-environment schemas (dev, staging, prod)
-- Automatic codegen for TypeScript/Python/Go
-- JSON Schema generation for IDE intellisense
+- Per-environment encryption (dev, staging, prod)
+- Local key auto-generation for immediate use
+- External key storage via AWS SSM, Vault, etc.
 
 ## Usage
 
@@ -90,23 +83,35 @@ Import this module in your devenv.nix:
 ```nix
 { inputs, ... }: {
   imports = [
-    inputs.stackpanel.devenvModules.default
+    inputs.stack.devenvModules.default
   ];
 
-  stackpanel.name = "my-project";
+  stack.name = "my-project";
 }
 ```
 
 Or use the flake template:
 
 ```bash
-nix flake init -t github:coopermaruyama/stackpanel
+nix flake init -t github:coopermaruyama/stack
 ```
 
-## Related Documentation
+## Module Documentation
 
-- [Core Module](core/README.md) - Options and services
-- [Library Functions](lib/README.md) - Pure utilities
-- [Secrets Module](secrets/README.md) - SOPS integration
-- [Services](services/README.md) - PostgreSQL, Redis, etc.
-- [IDE Integration](ide/README.md) - VS Code support
+Each directory has its own README with detailed documentation:
+
+| Module | Description |
+|--------|-------------|
+| [core/](core/README.md) | Core options and boot logic |
+| [apps/](apps/README.md) | App configuration |
+| [network/](network/README.md) | Ports, DNS, Step CA |
+| [services/](services/README.md) | Service orchestration |
+| [secrets/](secrets/README.md) | Secrets management |
+| [variables/](variables/README.md) | Workspace variables |
+| [ide/](ide/README.md) | IDE integration |
+| [tui/](tui/README.md) | Terminal theming |
+| [deployment/](deployment/README.md) | Deployment providers |
+| [containers/](containers/README.md) | Container building |
+| [plugins/](plugins/README.md) | Auto-discovered plugins |
+| [lib/](lib/README.md) | Library functions |
+| [db/](db/README.md) | Schema system |

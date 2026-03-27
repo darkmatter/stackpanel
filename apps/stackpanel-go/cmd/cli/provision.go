@@ -1,3 +1,14 @@
+// provision.go implements NixOS machine provisioning via two strategies:
+//
+//   - kexec (default): Boots the running Linux system into a NixOS RAM installer
+//     via kexec, then installs NixOS without requiring disko or disk layout config.
+//     Best for cloud VMs where the provider's default partitioning is acceptable.
+//
+//   - disko (--format): Partitions and formats the disk before installing NixOS.
+//     Requires diskLayout in the machine config. Best for bare metal.
+//
+// Both paths generate hardware-configuration.nix and git-stage it so the Nix
+// flake eval can include it during the install phase.
 package cmd
 
 import (
@@ -114,7 +125,19 @@ func listMachines(cfg *DeployStackpanelConfig) {
 	}
 }
 
-// runProvisionMachine provisions a single machine.
+// @todo dont hard-code the path to the hardware-configuration.nix file
+func machineHardwareConfigPaths(projectRoot, machineName string) (string, string, error) {
+	if projectRoot == "" {
+		return "", "", fmt.Errorf("could not find stackpanel project root")
+	}
+
+	relPath := filepath.Join(".stack", "machines", machineName, "hardware-configuration.nix")
+	return filepath.Join(projectRoot, relPath), relPath, nil
+}
+
+// runProvisionMachine provisions a single machine. The --reprovision guard exists
+// because re-provisioning is destructive (wipes the root filesystem), and users
+// who just want to update an existing NixOS machine should use `stackpanel deploy`.
 func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget string, format, noHardwareConfig, dryRun, reprovision bool) error {
 	machine, ok := cfg.Deployment.Machines[machineName]
 	if !ok {
@@ -141,15 +164,19 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 		}
 	}
 
-	hwConfigPath := filepath.Join(".stackpanel", "machines", machineName, "hardware-configuration.nix")
+	projectRoot := detectStackpanelProject()
+	hwConfigPath, hwConfigRelPath, err := machineHardwareConfigPaths(projectRoot, machineName)
+	if err != nil {
+		return fmt.Errorf("%w; try running from the repo root or set STACKPANEL_ROOT", err)
+	}
 
 	var hwConfigGenerated bool
 	var provisionErr error
 
 	if format {
-		hwConfigGenerated, provisionErr = runDiskoInstall(machineName, target, hwConfigPath, noHardwareConfig, dryRun)
+		hwConfigGenerated, provisionErr = runDiskoInstall(machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
 	} else {
-		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, hwConfigPath, noHardwareConfig, dryRun)
+		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
 	}
 
 	if provisionErr != nil {
@@ -172,7 +199,7 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 		NixRevision:             gitRevision(),
 	}
 	if hwConfigGenerated {
-		rec.HardwareConfigPath = hwConfigPath
+		rec.HardwareConfigPath = hwConfigRelPath
 	}
 	if err := recordMachineProvision(machineName, rec); err != nil {
 		output.Warning(fmt.Sprintf("Failed to record provision state: %v", err))
@@ -181,7 +208,7 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 	output.Success(fmt.Sprintf("Provisioned %s", machineName))
 	fmt.Println()
 	if hwConfigGenerated {
-		fmt.Printf("Hardware config: %s\n", hwConfigPath)
+		fmt.Printf("Hardware config: %s\n", hwConfigRelPath)
 		fmt.Println("Auto-included in future deploys. Commit to make it permanent:")
 		fmt.Printf("  git commit -m 'Add hardware config for %s'\n", machineName)
 	}
@@ -213,8 +240,21 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 // No disk partitioning or pre-existing disk config required.
 // ===========================================================================
 
-func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
-	installHost := "root@" + target
+// sshArgs builds extra SSH flags for nixos-anywhere when proxyJump or a
+// non-standard port is configured.
+func sshArgs(machine DeployMachineConfig) []string {
+	var args []string
+	if machine.ProxyJump != "" {
+		args = append(args, "--ssh-option", "ProxyJump="+machine.ProxyJump)
+	}
+	if machine.SSHPort != 0 && machine.SSHPort != 22 {
+		args = append(args, "--ssh-option", fmt.Sprintf("Port=%d", machine.SSHPort))
+	}
+	return args
+}
+
+func runKexecInstall(machineName, target string, machine DeployMachineConfig, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+	installHost := machine.User + "@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
@@ -223,7 +263,7 @@ func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig,
 	if !noHardwareConfig {
 		output.Info("[1/3] Detecting hardware configuration...")
 		if !dryRun {
-			hwInfo, err = detectHardwareInfo(ctx, installHost)
+			hwInfo, err = detectHardwareInfo(ctx, installHost, machine)
 			if err != nil {
 				return false, fmt.Errorf("hardware detection: %w", err)
 			}
@@ -259,7 +299,8 @@ func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig,
 		output.Info("[2/3] Target already in NixOS installer (skipping kexec)")
 	} else {
 		output.Info("[2/3] Booting into NixOS installer (kexec)...")
-		kexecArgs := []string{"--flake", ".#" + machineName, "--phases", "kexec", installHost}
+		kexecArgs := append([]string{"--flake", ".#" + machineName, "--phases", "kexec"}, sshArgs(machine)...)
+		kexecArgs = append(kexecArgs, installHost)
 		if err := runExternalCommand(ctx, "nixos-anywhere", kexecArgs, dryRun); err != nil {
 			return hwConfigGenerated, fmt.Errorf("kexec: %w", err)
 		}
@@ -274,7 +315,7 @@ func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig,
 		// nixos-anywhere's install phase expects /mnt to be set up when disko is skipped.
 		output.Dimmed("Mounting target filesystem at /mnt...")
 		mountScript := hwInfo.mountScript()
-		if _, err := runSSHCapture(ctx, installHost, mountScript); err != nil {
+		if _, err := runSSHCapture(ctx, installHost, mountScript, machine); err != nil {
 			return hwConfigGenerated, fmt.Errorf("mounting filesystem at /mnt: %w\nScript: %s", err, mountScript)
 		}
 	} else if dryRun {
@@ -285,7 +326,8 @@ func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig,
 	// --phases install,reboot: skip kexec (done) and disko (reusing existing layout).
 	// nixos-anywhere builds the flake, copies the closure, runs nixos-install, reboots.
 	output.Info("[3/3] Installing NixOS...")
-	installArgs := []string{"--flake", ".#" + machineName, "--phases", "install,reboot", installHost}
+	installArgs := append([]string{"--flake", ".#" + machineName, "--phases", "install,reboot"}, sshArgs(machine)...)
+	installArgs = append(installArgs, installHost)
 	if err := runExternalCommand(ctx, "nixos-anywhere", installArgs, dryRun); err != nil {
 		return hwConfigGenerated, fmt.Errorf("install: %w", err)
 	}
@@ -301,17 +343,17 @@ func runKexecInstall(machineName, target, hwConfigPath string, noHardwareConfig,
 // Best for bare metal or when a custom partition layout is needed.
 // ===========================================================================
 
-func runDiskoInstall(machineName, target, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
-	installHost := "root@" + target
+func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+	installHost := machine.User + "@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	var args []string
 	args = append(args, "--flake", ".#"+machineName)
-	// No --phases: run the full nixos-anywhere flow including disko.
 	if !noHardwareConfig {
 		args = append(args, "--generate-hardware-config", "nixos-generate-config", hwConfigPath)
 	}
+	args = append(args, sshArgs(machine)...)
 	args = append(args, installHost)
 
 	if !noHardwareConfig && !dryRun {
@@ -391,8 +433,8 @@ printf 'ROOT_DEVICE=%s\nROOT_FSTYPE=%s\nROOT_UUID=%s\nIS_UEFI=%s\nROOT_DISK=%s\n
 `
 
 // detectHardwareInfo SSHes to host and collects hardware facts.
-func detectHardwareInfo(ctx context.Context, host string) (*hardwareInfo, error) {
-	raw, err := runSSHCapture(ctx, host, hwDetectScript)
+func detectHardwareInfo(ctx context.Context, host string, machine DeployMachineConfig) (*hardwareInfo, error) {
+	raw, err := runSSHCapture(ctx, host, hwDetectScript, machine)
 	if err != nil {
 		return nil, err
 	}
@@ -576,16 +618,22 @@ func updateKnownHosts(host string, dryRun bool) error {
 }
 
 // runSSHCapture runs a command on a remote host via SSH and returns stdout.
-// Uses accept-new host key policy — suitable for newly installed systems.
-func runSSHCapture(ctx context.Context, host, command string) ([]byte, error) {
+// Uses StrictHostKeyChecking=accept-new because provisioned machines always have
+// new host keys, and we update known_hosts immediately after provisioning anyway.
+func runSSHCapture(ctx context.Context, host, command string, machine DeployMachineConfig) ([]byte, error) {
 	args := []string{
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "ConnectTimeout=60",
 		"-o", "ServerAliveInterval=15",
 		"-o", "ServerAliveCountMax=8",
-		host,
-		command,
 	}
+	if machine.ProxyJump != "" {
+		args = append(args, "-J", machine.ProxyJump)
+	}
+	if machine.SSHPort != 0 && machine.SSHPort != 22 {
+		args = append(args, "-p", fmt.Sprintf("%d", machine.SSHPort))
+	}
+	args = append(args, host, command)
 	cmd := exec.CommandContext(ctx, "ssh", args...)
 	out, err := cmd.Output()
 	if err != nil {

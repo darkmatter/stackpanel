@@ -33,6 +33,9 @@ in
     # Core devshell schema (packages, hooks, commands, files)
     ./devshell/core.nix
 
+    # Generated files materialization (stackpanel.files.*)
+    ./files
+
     # Core configuration and options
     ./core
 
@@ -44,6 +47,7 @@ in
     ./services # aws, caddy, global-services
     ./secrets # SOPS helper
     ./sst # SST infrastructure provisioning
+    ./alchemy # Alchemy IaC shared configuration (@gen/alchemy)
     ./infra # Alchemy-based infrastructure module system
     ./docker # Dockerfile fallback (skopeo, OCI images)
     ./containers # nix2container via devenv (primary container building)
@@ -52,10 +56,14 @@ in
     ./tui # TUI components
     ./ide # IDE integration (VS Code)
     ./docs # Documentation generation (README, etc.)
+    ./variables # Workspace variables and backend configuration
 
-    # Feature modules - auto-discovered from ./modules/
+    # Codegen: @gen/config — evaluated config as importable TS constant
+    ./lib/codegen/config-package.nix
+
+    # Feature plugins - auto-discovered from ./plugins/
     # Supports both single files (module.nix) and directories (module/default.nix)
-    # See modules/default.nix for the discovery logic
+    # See plugins/default.nix for the discovery logic
     ./modules
 
     # NOTE: Devenv integration modules (devenv-services.nix, devenv-languages.nix,

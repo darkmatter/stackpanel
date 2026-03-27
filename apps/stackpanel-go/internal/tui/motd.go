@@ -18,7 +18,8 @@ const motdBanner = `
  ____/ \__| \__,_| \___| _|\_\  .__/  \__,_| _|  _| \___| _|
                                _|`
 
-// MOTD color palette
+// MOTD color palette — separate from the main TUI theme to allow the MOTD
+// to have its own visual identity. These are used only in MOTD rendering.
 var (
 	// Accent colors
 	colorPink   = lipgloss.Color("#ff87d7")
@@ -37,7 +38,9 @@ var (
 	colorBorder  = lipgloss.Color("#454545")
 )
 
-// MOTDData contains the data needed to render the MOTD (legacy struct for backward compatibility)
+// MOTDData is the legacy data struct for RenderMOTD. New code should use
+// MOTDFullData + RenderImprovedMOTD instead, which supports healthchecks,
+// environment info, shell freshness, and issue detection.
 type MOTDData struct {
 	ProjectName string
 	Commands    []MOTDCommand
@@ -58,6 +61,8 @@ type ServiceStatus struct {
 	Running bool
 }
 
+// motdWidth is the fixed character width of the MOTD box. Chosen to fit
+// comfortably in an 80-column terminal with room for the border + padding.
 const motdWidth = 72
 
 // MOTD styles
@@ -256,7 +261,8 @@ func interpolateColor(color1, color2 string, t float64) lipgloss.Color {
 	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", r, g, b))
 }
 
-// gradientColor returns a color at position t (0.0-1.0) along a multi-stop gradient
+// gradientColor returns a color at position t (0.0-1.0) along a multi-stop gradient.
+// Stops are evenly spaced; t is clamped to [0, 1].
 func gradientColor(stops []string, t float64) lipgloss.Color {
 	if t <= 0 {
 		return lipgloss.Color(stops[0])
@@ -321,7 +327,8 @@ func renderBanner() string {
 	return strings.Join(styledLines, "\n")
 }
 
-// renderHealthBar renders a visual health bar
+// renderHealthBar renders a block-character health bar (e.g. "████░░░░░░ 7/10").
+// Color shifts from green (≥80%) to yellow (≥50%) to red (<50%).
 func renderHealthBar(passing, total int) string {
 	if total == 0 {
 		return ""
@@ -349,7 +356,9 @@ func renderHealthBar(passing, total int) string {
 	return barStyle.Render(bar) + motdLabelStyle.Render(fmt.Sprintf(" %d/%d", passing, total))
 }
 
-// RenderImprovedMOTD renders the improved MOTD with all status sections
+// RenderImprovedMOTD renders the full MOTD displayed on shell entry.
+// Layout: banner → status (agent, services, AWS, health, files, shell) →
+// environment → quick start + shortcuts → user commands → issues → resources.
 func RenderImprovedMOTD(data *MOTDFullData) string {
 	var result strings.Builder
 	var content strings.Builder
@@ -426,12 +435,69 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 		content.WriteString("\n")
 	}
 
-	// Health status row
-	if data.Health.Enabled && data.Health.TotalChecks > 0 {
-		content.WriteString("  ")
-		content.WriteString(motdLabelStyle.Render("Health    "))
-		content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
-		content.WriteString("\n")
+	// Health status row — display cached results with elapsed time, never auto-run.
+	// If results exist, show a summary + how long ago they were collected.
+	// If no results exist, show "never run" with the command to run them.
+	if data.HealthchecksRunCommand != "" {
+		if len(data.HealthModules) > 0 {
+			content.WriteString("  ")
+			content.WriteString(motdLabelStyle.Render("Health    "))
+			content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
+			if data.HealthchecksAge > 0 {
+				content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  (%s ago)", formatDuration(data.HealthchecksAge))))
+			}
+			content.WriteString("\n")
+
+			// Per-module detail lines
+			for _, m := range data.HealthModules {
+				content.WriteString("    ")
+				if m.FailingCount == 0 {
+					content.WriteString(motdStatusRunning.Render("●"))
+				} else if m.Severity == "HEALTHCHECK_SEVERITY_CRITICAL" {
+					content.WriteString(motdStatusStopped.Render("●"))
+				} else {
+					content.WriteString(motdStatusWarning.Render("●"))
+				}
+				content.WriteString(" ")
+				label := m.Module
+				if m.DisplayName != "" && m.DisplayName != m.Module {
+					label = m.DisplayName
+				}
+				content.WriteString(motdEnvStyle.Render(label))
+				content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  %d/%d", m.PassingCount, m.TotalChecks)))
+				content.WriteString("\n")
+			}
+
+			// Show re-run hint
+			content.WriteString("    ")
+			content.WriteString(motdLabelStyle.Render("run "))
+			content.WriteString(motdCommandStyle.Render(data.HealthchecksRunCommand))
+			content.WriteString(motdLabelStyle.Render(" to refresh"))
+			content.WriteString("\n")
+		} else if data.Health.Enabled && data.Health.TotalChecks > 0 {
+			content.WriteString("  ")
+			content.WriteString(motdLabelStyle.Render("Health    "))
+			content.WriteString(renderHealthBar(data.Health.PassingCount, data.Health.TotalChecks))
+			if data.HealthchecksAge > 0 {
+				content.WriteString(motdLabelStyle.Render(fmt.Sprintf("  (%s ago)", formatDuration(data.HealthchecksAge))))
+			}
+			content.WriteString("\n")
+			content.WriteString("    ")
+			content.WriteString(motdLabelStyle.Render("run "))
+			content.WriteString(motdCommandStyle.Render(data.HealthchecksRunCommand))
+			content.WriteString(motdLabelStyle.Render(" to refresh"))
+			content.WriteString("\n")
+		} else {
+			// Healthchecks configured but never run
+			content.WriteString("  ")
+			content.WriteString(motdLabelStyle.Render("Health    "))
+			content.WriteString(motdStatusWarning.Render("○"))
+			content.WriteString(" ")
+			content.WriteString(motdLabelStyle.Render("never run"))
+			content.WriteString(motdLabelStyle.Render(" → "))
+			content.WriteString(motdCommandStyle.Render(data.HealthchecksRunCommand))
+			content.WriteString("\n")
+		}
 	}
 
 	// Files status row
@@ -627,7 +693,9 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 	return result.String()
 }
 
-// stripAnsi removes ANSI escape codes from a string (for width calculation)
+// stripAnsi removes ANSI escape codes from a string for width calculation.
+// This is a simple state machine parser — it handles CSI sequences but not
+// OSC or other escape types. Sufficient for lipgloss output.
 func stripAnsi(s string) string {
 	var result strings.Builder
 	inEscape := false
@@ -749,7 +817,8 @@ func RenderMOTD(data MOTDData) string {
 	return result.String()
 }
 
-// RenderMOTDWithServices renders MOTD and auto-detects docker service status
+// RenderMOTDWithServices renders MOTD and auto-detects docker compose service status.
+// If data.Services is already populated, serviceNames is ignored.
 func RenderMOTDWithServices(data MOTDData, serviceNames []string) string {
 	// Auto-detect service status if services are provided
 	if len(serviceNames) > 0 && len(data.Services) == 0 {
@@ -763,7 +832,8 @@ func RenderMOTDWithServices(data MOTDData, serviceNames []string) string {
 	return RenderMOTD(data)
 }
 
-// RenderMinimalMOTD renders a minimal one-line MOTD
+// RenderMinimalMOTD renders a minimal one-line MOTD for non-interactive terminals
+// or when the user has opted for a compact shell greeting.
 func RenderMinimalMOTD(projectName string) string {
 	title := "Dev Shell"
 	if projectName != "" {

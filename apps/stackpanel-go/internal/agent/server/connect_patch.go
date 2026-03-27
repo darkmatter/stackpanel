@@ -1,3 +1,11 @@
+// connect_patch.go implements fine-grained Nix config editing via the PatchNixData RPC.
+// Instead of replacing entire config entities, patches update a single nested value
+// in .stack/config.nix. The web UI uses this for inline field editing in panels.
+//
+// Path convention: The UI sends camelCase paths (matching SpField/panel editPath)
+// which get converted to kebab-case for the Nix attribute namespace. All writes
+// target config.nix as the single source of truth.
+
 package server
 
 import (
@@ -8,6 +16,7 @@ import (
 
 	"connectrpc.com/connect"
 	gopb "github.com/darkmatter/stackpanel/packages/proto/gen/gopb"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixdata"
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,10 +27,10 @@ import (
 // convention). Path segments are converted to kebab-case when navigating the
 // Nix data structure.
 //
-// All patches now go to .stackpanel/config.nix (the single source of truth).
+// All patches now go to .stack/config.nix (the single source of truth).
 //
 // Example: PatchNixData(entity="config", path="stackpanel.deployment.fly.organization", value="\"my-org\"")
-// This writes to .stackpanel/config.nix at deployment.fly.organization
+// This writes to .stack/config.nix at deployment.fly.organization
 func (s *AgentServiceServer) PatchNixData(
 	ctx context.Context,
 	req *connect.Request[gopb.PatchNixDataRequest],
@@ -49,7 +58,8 @@ func (s *AgentServiceServer) PatchNixData(
 
 	// Validate path
 	path := strings.TrimSpace(msg.Path)
-	if path == "" {
+	key := strings.TrimSpace(msg.Key)
+	if path == "" && key == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("path is required"))
 	}
 
@@ -71,8 +81,11 @@ func (s *AgentServiceServer) PatchNixData(
 	// For entity-based patches (e.g., entity="apps", key="web", path="container.enable")
 	// Construct the full path: apps.web.container.enable
 	var fullPath string
-	if msg.Key != "" && msg.Key != "_root" && msg.Key != "_global" {
-		fullPath = entity + "." + msg.Key + "." + path
+	if key != "" && key != "_root" && key != "_global" {
+		fullPath = entity + "." + nixdata.EscapeConfigPathSegment(key)
+		if path != "" {
+			fullPath += "." + path
+		}
 	} else {
 		fullPath = entity + "." + path
 	}
@@ -141,9 +154,14 @@ func (s *AgentServiceServer) patchConsolidatedConfig(
 }
 
 // parseValueJSON parses a JSON-encoded value string with an optional type hint.
-// Returns the Go value suitable for Nix serialization.
+// Returns a Go value suitable for Nix serialization via the nixdata package.
+//
+// Special types:
+//   - "nix_expr": wraps value as a raw Nix expression (not quoted)
+//   - "delete": returns a sentinel that removes the key from config.nix
+//   - "": auto-detects type from JSON parsing, falls back to raw string
 func parseValueJSON(value string, valueType string) (any, error) {
-	if value == "" && valueType != "string" {
+	if value == "" && valueType != "string" && valueType != "delete" {
 		return nil, fmt.Errorf("value is required")
 	}
 
@@ -194,6 +212,12 @@ func parseValueJSON(value string, valueType string) (any, error) {
 
 	case "null":
 		return nil, nil
+
+	case "nix_expr":
+		return nixdata.RawExpr(value), nil
+
+	case "delete":
+		return nixdata.DeleteValue{}, nil
 
 	default:
 		// Auto-detect type from JSON
