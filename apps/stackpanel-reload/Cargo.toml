@@ -1,0 +1,39 @@
+[package]
+name = "stackpanel-reload"
+version = "0.1.0"
+edition = "2021"
+description = "Background shell rebuild with PTY hot-swap for stackpanel"
+license = "MIT"
+
+[[bin]]
+name = "stackpanel-reload"
+path = "src/main.rs"
+
+[dependencies]
+# PTY management
+portable-pty = "0.8"
+
+# Terminal I/O and raw mode
+crossterm = "0.28"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = []
+# Gate PTY integration tests (require a real terminal)
+test-pty = []
