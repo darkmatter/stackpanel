@@ -1,5 +1,6 @@
 packages/proto/gen
 release.tar.gz
+.worktrees/
 # Dependencies
 node_modules
 .pnp
