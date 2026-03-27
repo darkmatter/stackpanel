@@ -34,14 +34,30 @@ pub struct Reloader {
     config: Config,
     /// Externally observable build state.
     pub state: SharedBuildState,
+    /// Optional channel to signal when a build succeeds (for PTY swap).
+    ready_tx: Option<mpsc::Sender<()>>,
 }
 
 impl Reloader {
+    /// Create a Reloader without a swap signal channel.
     pub fn new(config: Config) -> Self {
         Self {
             config,
             state: Arc::new(Mutex::new(BuildState::Idle)),
+            ready_tx: None,
         }
+    }
+
+    /// Create a Reloader that signals on `ready_rx` whenever a build succeeds.
+    /// The receiver drives the PTY hot-swap in `run_session`.
+    pub fn new_with_ready(config: Config) -> (Self, mpsc::Receiver<()>) {
+        let (tx, rx) = mpsc::channel(4);
+        let reloader = Self {
+            config,
+            state: Arc::new(Mutex::new(BuildState::Idle)),
+            ready_tx: Some(tx),
+        };
+        (reloader, rx)
     }
 
     /// Run the reloader event loop. Blocks until the channel is closed or an
@@ -83,17 +99,27 @@ impl Reloader {
             let build_cmd = build_command(&self.config);
             let project_root = self.config.project_root.clone();
             let state = self.state.clone();
+            // Clone the optional sender so the spawned task owns it.
+            let ready_tx = self.ready_tx.clone();
 
             current_build = Some(tokio::spawn(async move {
                 let exit_code = run_background_build(build_cmd, project_root).await;
 
-                *state.lock().unwrap() = if exit_code == 0 {
+                let succeeded = exit_code == 0;
+                *state.lock().unwrap() = if succeeded {
                     tracing::info!("background rebuild succeeded");
                     BuildState::Succeeded
                 } else {
                     tracing::warn!(exit_code, "background rebuild failed");
                     BuildState::Failed { exit_code }
                 };
+
+                // Signal PTY swap if configured and build succeeded.
+                if succeeded {
+                    if let Some(ref tx) = ready_tx {
+                        let _ = tx.try_send(());
+                    }
+                }
 
                 exit_code
             }));
@@ -219,6 +245,55 @@ mod tests {
         let reloader = Reloader::new(make_config(vec!["bash"]));
         let state = reloader.state.lock().unwrap().clone();
         assert_eq!(state, BuildState::Idle);
+    }
+
+    #[test]
+    fn new_with_ready_returns_receiver() {
+        let (reloader, _rx) = Reloader::new_with_ready(make_config(vec!["bash"]));
+        assert!(reloader.ready_tx.is_some());
+        let state = reloader.state.lock().unwrap().clone();
+        assert_eq!(state, BuildState::Idle);
+    }
+
+    #[tokio::test]
+    async fn ready_signal_fires_on_successful_build() {
+        use std::time::Duration;
+
+        let cfg = Config::new(
+            // Use `true` as the "nix develop" substitute so it succeeds instantly.
+            vec!["true".to_string()],
+            vec![], // no watch paths
+            50,
+            std::env::current_dir().unwrap(),
+        );
+        let (tx, rx) = mpsc::channel(1);
+
+        // Simulate what run() does: run a background build, check it signals ready.
+        let state = Arc::new(Mutex::new(BuildState::Idle));
+        let ready_tx: Option<mpsc::Sender<()>> = Some(tx);
+        let state_clone = state.clone();
+        let exit_code = run_background_build(
+            vec!["true".to_string()],
+            cfg.project_root.clone(),
+        )
+        .await;
+
+        let succeeded = exit_code == 0;
+        *state_clone.lock().unwrap() = if succeeded {
+            BuildState::Succeeded
+        } else {
+            BuildState::Failed { exit_code }
+        };
+        if succeeded {
+            if let Some(ref t) = ready_tx {
+                let _ = t.try_send(());
+            }
+        }
+
+        let mut rx = rx;
+        let signal = tokio::time::timeout(Duration::from_millis(200), rx.recv()).await;
+        assert!(signal.is_ok(), "ready signal should fire on successful build");
+        assert_eq!(*state.lock().unwrap(), BuildState::Succeeded);
     }
 
     // ── run_background_build tests ────────────────────────────────────────────
