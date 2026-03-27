@@ -1,19 +1,14 @@
-// Package docgen provides documentation generation utilities for stackpanel.
+// Package docgen generates MDX documentation for the Fumadocs/Next.js docs site
+// from three sources: Nix module options (via nixosOptionsDoc JSON), module README
+// files and .nix header comments, and Cobra CLI command metadata.
 //
-// This package generates MDX documentation from multiple sources:
-//   - Nix options JSON (reference documentation)
-//   - Module README files (internal documentation)
-//   - Cobra CLI commands (CLI reference)
+// The generated output lands in three subdirectories under the docs content root:
+//   - reference/ — one MDX page per option category (apps, services, ports, etc.)
+//   - internal/  — module prose docs from README.md files and .nix header comments
+//   - cli/       — one MDX page per CLI command with flag tables and usage examples
 //
-// The implementation is split across multiple files:
-//   - docgen.go (this file): Main entry points and orchestration
-//   - types.go: Type definitions
-//   - frontmatter.go: Frontmatter and directive parsing
-//   - options.go: Options reference generation
-//   - discovery.go: Module discovery (README.md and .nix files)
-//   - convert.go: MDX conversion utilities
-//   - modules.go: Module documentation generation
-//   - cli.go: CLI documentation generation
+// All generated MDX is escaped for JSX compatibility (curly braces, angle brackets)
+// and uses Fumadocs frontmatter conventions (title, description, icon).
 package docgen
 
 import (
@@ -27,16 +22,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Topic represents a documentation section that maps to an output directory.
 type Topic string
 
-// Directory names for generated documentation
+// Output directory names for each documentation section.
+// These correspond to Fumadocs content directories under the docs root.
 const (
-	// Docs generated from evaluating Nix options => /core/reference
-	DirnameReference Topic = "reference"
-	// Docs generated from READMEs => /internal
-	DirnameModules Topic = "internal"
-	// Docs gnerate from CLI readme => cli
-	DirnameCLI Topic = "cli"
+	DirnameReference Topic = "reference" // Nix option reference pages
+	DirnameModules   Topic = "internal"  // Module prose documentation
+	DirnameCLI       Topic = "cli"       // CLI command reference
 )
 
 func mkpath(topic Topic, basedir string) string {
@@ -44,14 +38,14 @@ func mkpath(topic Topic, basedir string) string {
 }
 
 // Run generates documentation without CLI command docs.
-// This is the legacy entry point for backward compatibility.
-// Use RunWithCLI to also generate CLI documentation.
+// Deprecated: Use RunWithCLI to also generate CLI documentation.
 func Run(optionsPath string, docsDir string, nixModulesDir string) error {
 	return RunWithCLI(optionsPath, docsDir, nixModulesDir, nil)
 }
 
-// RunWithCLI generates all documentation including CLI command docs.
-// If rootCmd is nil, CLI docs generation is skipped.
+// RunWithCLI is the main entry point. It generates all documentation sections
+// in sequence: options reference, module docs, and CLI reference.
+// Pass nil for rootCmd to skip CLI doc generation.
 func RunWithCLI(optionsPath string, docsDir string, nixModulesDir string, rootCmd *cobra.Command) error {
 	dirs := map[Topic]string{
 		"reference": mkpath(DirnameReference, docsDir),
@@ -94,6 +88,8 @@ func RunWithCLI(optionsPath string, docsDir string, nixModulesDir string, rootCm
 	return nil
 }
 
+// generateOptionsDocs reads the nixosOptionsDoc JSON, groups options by their
+// declaring module, and writes one MDX page per category plus an index page.
 func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir string) error {
 	// Read and parse options JSON
 	fmt.Printf("Reading options from: %s\n", optionsPath)
@@ -127,7 +123,7 @@ func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir 
 
 	// Generate index
 	indexPath := filepath.Join(outputDir, "index.mdx")
-	if err := os.WriteFile(indexPath, []byte(generateIndexMdx(categories)), 0644); err != nil {
+	if err := os.WriteFile(indexPath, []byte(escapeMDX(generateIndexMdx(categories))), 0644); err != nil {
 		return fmt.Errorf("failed to write index: %w", err)
 	}
 	fmt.Printf("  ✓ %s\n", indexPath)
@@ -135,7 +131,7 @@ func generateOptionsDocs(optionsPath string, outputDir string, modulesOutputDir 
 	// Generate category pages
 	for category, opts := range groups {
 		categoryPath := filepath.Join(outputDir, category+".mdx")
-		if err := os.WriteFile(categoryPath, []byte(generateCategoryMdx(category, opts)), 0644); err != nil {
+		if err := os.WriteFile(categoryPath, []byte(escapeMDX(generateCategoryMdx(category, opts))), 0644); err != nil {
 			return fmt.Errorf("failed to write category %s: %w", category, err)
 		}
 		fmt.Printf("  ✓ %s (%d options)\n", categoryPath, len(opts))
@@ -154,7 +150,9 @@ func mkDirs(paths ...string) error {
 	return nil
 }
 
-// cleanDirectory removes all files and subdirectories except meta.json files
+// cleanDirectory removes all files and subdirectories except meta.json files.
+// meta.json files are preserved because they contain manually-maintained
+// Fumadocs navigation metadata that shouldn't be regenerated.
 func cleanDirectory(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {

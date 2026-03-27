@@ -55,6 +55,15 @@
     appModule = false;
   };
 
+  # Flake inputs required by this module
+  flakeInputs = [
+    {
+      name = "git-hooks";
+      url = "https://flakehub.com/f/cachix/git-hooks.nix/*";
+      followsNixpkgs = true;
+    }
+  ];
+
   # Priority for ordering (lower = higher priority)
   priority = 80;
 }

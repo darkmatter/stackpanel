@@ -14,9 +14,9 @@
 	"menuColor": "default",
 	"menuAccent": "subtle",
 	"aliases": {
-		"components": "../../packages/ui-web/src/components",
+		"components": "../../packages/ui/web/src/components",
 		"utils": "@stackpanel/ui-core",
-		"ui": "../../packages/ui-web/src/components",
+		"ui": "../../packages/ui/web/src/components",
 		"lib": "@/lib",
 		"hooks": "@/hooks"
 	},

@@ -1,0 +1,17 @@
+---
+title: Git Hooks Module Implementation
+description: Git hooks integration using stackpanel app tooling wrappers.
+---
+
+Git hooks integration using stackpanel app tooling wrappers.
+Consumes stackpanel.appsComputed.\<app\>.wrappedTooling.* and exposes a
+git-hooks configuration fragment suitable for git-hooks.nix.
+
+Also handles cleanup of stale git hooks that reference garbage-collected
+nix store paths.
+
+Modules can contribute extra linters/formatters via:
+```nix
+stackpanel.git-hooks.extraLinters = [ <derivation> ... ];
+stackpanel.git-hooks.extraFormatters = [ <derivation> ... ];
+```

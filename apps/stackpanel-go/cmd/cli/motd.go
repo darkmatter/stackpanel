@@ -1,3 +1,9 @@
+// motd.go renders the "message of the day" shown after devshell entry.
+//
+// The MOTD summarises project health at a glance: agent status, service status,
+// missing flake inputs, and healthcheck results. Output goes to stderr so it
+// doesn't interfere with pipelines. Three rendering modes are supported:
+// improved (default), legacy (backward-compat), and minimal (one-liner).
 package cmd
 
 import (
@@ -5,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/nixconfig"
@@ -73,13 +80,45 @@ func runMOTD(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Build options for local healthcheck execution
+	var motdOpts *tui.CollectMOTDDataOpts
+	if len(cfg.Healthchecks) > 0 {
+		stateDir := cfg.Paths.State
+		if stateDir == "" {
+			stateDir = ".stack/profile"
+		}
+		// Make stateDir absolute relative to project root
+		if cfg.ProjectRoot != "" && !filepath.IsAbs(stateDir) {
+			stateDir = filepath.Join(cfg.ProjectRoot, stateDir)
+		}
+		motdOpts = &tui.CollectMOTDDataOpts{
+			Healthchecks: cfg.Healthchecks,
+			StateDir:     stateDir,
+		}
+	}
+
 	// Collect all MOTD data
 	data := tui.CollectMOTDData(
 		cfg.ProjectName,
 		cfg.ProjectRoot,
 		Version,
 		9876, // Default agent port
+		motdOpts,
 	)
+
+	// Pass missing flake inputs from Nix config
+	if len(cfg.MissingFlakeInputs) > 0 {
+		for _, fi := range cfg.MissingFlakeInputs {
+			data.MissingFlakeInputs = append(data.MissingFlakeInputs, tui.MissingFlakeInput{
+				Name:           fi.Name,
+				URL:            fi.URL,
+				FollowsNixpkgs: fi.FollowsNixpkgs,
+				RequiredBy:     fi.RequiredBy,
+			})
+		}
+		// Re-collect issues now that we have missing flake inputs
+		data.Issues = tui.CollectIssues(data)
+	}
 
 	// Detect services from config and check their status
 	if cfg.Services != nil {
@@ -166,7 +205,9 @@ func renderLegacyMOTD(cfg *nixconfig.Config) error {
 	return nil
 }
 
-// checkDockerServiceStatus checks if a docker compose service is running
+// checkDockerServiceStatus is a best-effort probe — returns false on any error
+// (docker not installed, compose not configured, etc.) rather than failing the
+// entire MOTD render.
 func checkDockerServiceStatus(service string) bool {
 	cmd := exec.Command("docker", "compose", "ps", "--format", "{{.State}}", "--filter", fmt.Sprintf("name=%s", service))
 	output, err := cmd.Output()

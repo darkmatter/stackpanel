@@ -33,20 +33,22 @@ let
     "nixos-rebuild"
   ];
 
-  # Platforms that imply a non-NixOS backend (cloudflare → alchemy, fly → fly)
   cloudPlatforms = [
     "cloudflare"
     "fly"
   ];
 
-  # Apps that have NixOS deployment enabled.
-  # Exclude apps whose `deployment.host` identifies a cloud platform —
-  # those use alchemy/fly and don't need a NixOS module.
+  # Include an app in NixOS module generation when:
+  #   - deployment.enable is true
+  #   - deployment.backend is a NixOS backend (colmena or nixos-rebuild)
+  #   - deployment.targets is non-empty (actually assigned to machines)
+  # The `host` field is ignored here because an app can have both a cloud
+  # host (for Alchemy/Cloudflare) and NixOS targets (for Colmena).
   nixosApps = lib.filterAttrs (
     _: app:
     (app.deployment.enable or false)
     && builtins.elem (app.deployment.backend or "colmena") nixosBackends
-    && !(builtins.elem (app.deployment.host or "") cloudPlatforms)
+    && (app.deployment.targets or []) != []
   ) cfg.apps;
 in
 {
@@ -93,7 +95,7 @@ in
             default = "prod";
             description = ''
               Default environment name for deployment.
-              Used to look up secrets at .stackpanel/secrets/<env>.yaml.
+              Used to look up secrets at .stack/secrets/<env>.yaml.
             '';
           };
 
@@ -163,6 +165,26 @@ in
               description = "SSH user for deployment (used by colmena and nixos-rebuild).";
             };
 
+            sshPort = lib.mkOption {
+              type = lib.types.int;
+              default = 22;
+              description = "SSH port on the target machine.";
+            };
+
+            proxyJump = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = ''
+                SSH ProxyJump host for reaching machines behind NAT or on private
+                networks. The value is passed as-is to ssh -J and to colmena's
+                deployment.targetHost via an SSH config block.
+
+                Common use case: VMs on a private bridge that are only reachable
+                through a hypervisor host.
+              '';
+              example = "root@hypervisor.example.com";
+            };
+
             system = lib.mkOption {
               type = lib.types.str;
               default = "x86_64-linux";
@@ -189,7 +211,7 @@ in
                 partition layout, e.g. a cloud VPS rescue environment).
                 See: https://github.com/nix-community/disko
               '';
-              example = lib.literalExpression "./.stackpanel/machines/prod-server/disks.nix";
+              example = lib.literalExpression "./.stack/machines/prod-server/disks.nix";
             };
 
             modules = lib.mkOption {
@@ -198,7 +220,7 @@ in
               description = ''
                 Additional NixOS modules to include in this machine's configuration.
                 Use for arbitrary NixOS config (firewall, extra services, etc.).
-                SSH keys can also go here, but prefer `authorizedKeys` for discoverability.
+                SSH keys can also go here, but prefer authorizedKeys for discoverability.
               '';
               example = [ { networking.firewall.allowedTCPPorts = [ 80 443 ]; } ];
             };
@@ -208,10 +230,10 @@ in
               default = [ ];
               description = ''
                 SSH public keys authorized to connect to this machine as the deployment
-                user (see `user`, default "root"). Written to
-                `users.users.<user>.openssh.authorizedKeys.keys` in the NixOS config.
+                user (see user, default "root"). Written to
+                users.users.<user>.openssh.authorizedKeys.keys in the NixOS config.
 
-                These are plain public key strings — safe to commit to the repo.
+                These are plain public key strings -- safe to commit to the repo.
               '';
               example = [
                 "ssh-ed25519 AAAA... alice@laptop"

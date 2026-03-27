@@ -24,8 +24,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// GenerateProjectID creates a unique, stable ID for a project based on its path.
-// The ID is the first 8 characters of the SHA256 hash of the absolute path.
+// GenerateProjectID creates a stable, unique ID for a project based on its
+// absolute filesystem path. The 8-char hex prefix is short enough for CLI
+// display while having negligible collision probability for typical dev setups.
 func GenerateProjectID(path string) string {
 	// Normalize the path
 	absPath, err := filepath.Abs(path)
@@ -79,7 +80,9 @@ type UserConfig struct {
 	Version int `yaml:"version" json:"version"`
 }
 
-// Manager handles reading and writing user configuration.
+// Manager handles reading and writing user configuration. All public methods
+// are safe for concurrent use via an internal RWMutex. Writes are persisted
+// to disk immediately — there is no batch/flush mechanism.
 type Manager struct {
 	configPath string
 	config     *UserConfig
@@ -87,7 +90,8 @@ type Manager struct {
 }
 
 // DefaultConfigPath returns the default path for user config.
-// Uses XDG_CONFIG_HOME if set, otherwise ~/.config
+// Follows XDG Base Directory spec: uses XDG_CONFIG_HOME if set,
+// otherwise falls back to ~/.config/stackpanel/stackpanel.yaml.
 func DefaultConfigPath() string {
 	configDir := os.Getenv("XDG_CONFIG_HOME")
 	if configDir == "" {
@@ -100,7 +104,8 @@ func DefaultConfigPath() string {
 	return filepath.Join(configDir, "stackpanel", "stackpanel.yaml")
 }
 
-// GetConfigPath returns the config path, checking env var first.
+// GetConfigPath returns the config path, checking the STACKPANEL_USER_CONFIG
+// env var first for override. Supports ~ expansion in the env var value.
 func GetConfigPath() string {
 	if path := envvars.StackpanelUserConfig.Get(); path != "" {
 		// Expand ~ if present
@@ -115,7 +120,10 @@ func GetConfigPath() string {
 	return DefaultConfigPath()
 }
 
-// NewManager creates a new user config manager.
+// NewManager creates a new user config manager, loading existing config
+// from disk. If the config file doesn't exist or is corrupt, starts with
+// a fresh config (Version: 1) rather than failing — this lets first-run
+// work without any setup.
 func NewManager() (*Manager, error) {
 	configPath := GetConfigPath()
 
@@ -172,7 +180,10 @@ func (m *Manager) ConfigPath() string {
 	return m.configPath
 }
 
-// CurrentProject returns the currently active project, or nil if none.
+// CurrentProject returns the currently active project, or nil if none is set.
+// If the current project path is set but not in the known projects list
+// (e.g. after manual config editing), returns a minimal Project with just
+// the path and a derived name.
 func (m *Manager) CurrentProject() *Project {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -221,8 +232,9 @@ func (m *Manager) ListProjects() []Project {
 	return projects
 }
 
-// AddProject adds or updates a project in the list.
-// If the project already exists, updates its LastOpened time.
+// AddProject adds or updates a project in the list. If the project path
+// already exists, updates its LastOpened time and name (idempotent upsert).
+// Saves to disk immediately.
 func (m *Manager) AddProject(path, name string) (*Project, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -268,8 +280,9 @@ func (m *Manager) AddProject(path, name string) (*Project, error) {
 	return &proj, nil
 }
 
-// SetCurrentProject sets the current project path.
-// Also adds/updates the project in the list.
+// SetCurrentProject sets the active project and adds it to the known
+// projects list if not already present. This is the primary entry point
+// when the agent or CLI opens a project.
 func (m *Manager) SetCurrentProject(path string) (*Project, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -407,12 +420,10 @@ func (m *Manager) GetProjectByID(id string) *Project {
 	return nil
 }
 
-// ResolveProject resolves a project identifier to a Project.
-// The identifier can be:
-// - A project ID (8 character hash)
-// - A project name
-// - An absolute or relative path
-// - Empty string (returns default project, then current project)
+// ResolveProject resolves a flexible project identifier to a Project.
+// Tries multiple strategies in order: empty string returns the default
+// (then current) project; 8-char strings are tried as IDs; then name
+// match (case-insensitive); then path match. Returns nil if nothing matches.
 func (m *Manager) ResolveProject(identifier string) *Project {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -504,8 +515,10 @@ func (m *Manager) GetDefaultProjectPath() string {
 	return m.config.DefaultProject
 }
 
-// SetDefaultProject sets the default project by path.
-// The project must already be in the known projects list.
+// SetDefaultProject sets the default project by path. The project must
+// already be in the known projects list — pass empty string to clear.
+// The default project is used by ResolveProject("") as the first fallback,
+// before the current project.
 func (m *Manager) SetDefaultProject(path string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -566,7 +579,9 @@ func (m *Manager) IsDevModeEnabled() bool {
 	return m.config.DevMode.Enabled && m.config.DevMode.RepoPath != ""
 }
 
-// SetDevMode enables or disables development mode.
+// SetDevMode enables or disables development mode. When enabled, the agent
+// serves the web UI from the local stackpanel repo source instead of the
+// installed binary's embedded assets. Supports ~ expansion in repoPath.
 func (m *Manager) SetDevMode(enabled bool, repoPath string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -143,7 +143,7 @@ let
           default = null;
           description = ''
             Path where this service stores its data.
-            Typically under .stackpanel/state/services/<name>/.
+            Typically under .stack/state/services/<name>/.
           '';
         };
       };

@@ -8,7 +8,16 @@ import (
 	"strings"
 )
 
-// generateModuleDocs generates MDX docs from README files and .nix headers in module directories
+// generateModuleDocs discovers and generates MDX pages from README.md files and
+// .nix header comments found under modulesDir. The pipeline is:
+//
+//  1. Discover sources (README.md files first, then .nix headers for modules without a README)
+//  2. Parse frontmatter / @docgen directives and filter out skipped modules
+//  3. Group by output path — multiple sources with the same @docgen.output get merged
+//  4. Convert each group to MDX and write to outputDir
+//  5. Generate an index page linking to all default-path modules
+//
+// Returns the list of module names that were successfully generated.
 func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 	// Find README.md files
 	readmeFiles, err := findReadmeFiles(modulesDir, modulesDir)
@@ -22,7 +31,8 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 		return nil, err
 	}
 
-	// Combine and deduplicate (README takes precedence)
+	// Combine sources: README takes precedence over .nix headers for the same module path.
+	// This lets module authors choose their preferred documentation format.
 	seenModules := make(map[string]bool)
 	var allDocs []DocSource
 
@@ -95,7 +105,9 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 		})
 	}
 
-	// Group docs by output path for concatenation
+	// Group docs by output path — multiple sources can target the same file
+	// via @docgen.output directives, in which case they get concatenated
+	// into a single MDX page with horizontal rule separators.
 	outputGroups := make(map[string][]ParsedDoc)
 	for _, pd := range parsedDocs {
 		outputGroups[pd.OutputPath] = append(outputGroups[pd.OutputPath], pd)
@@ -156,7 +168,7 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 
 	if len(indexDocs) > 0 {
 		modulesIndexPath := filepath.Join(outputDir, "index.mdx")
-		modulesIndex := generateModulesIndexMdx(indexDocs)
+		modulesIndex := escapeMDX(generateModulesIndexMdx(indexDocs))
 		if err := os.WriteFile(modulesIndexPath, []byte(modulesIndex), 0644); err != nil {
 			return nil, err
 		}
@@ -166,7 +178,9 @@ func generateModuleDocs(modulesDir string, outputDir string) ([]string, error) {
 	return generatedModules, nil
 }
 
-// generateModulesIndexMdx generates the index page for modules
+// generateModulesIndexMdx generates the index page linking to all module docs.
+// Only modules using the default output path are included; modules with custom
+// @docgen.output paths are assumed to be placed elsewhere in the docs hierarchy.
 func generateModulesIndexMdx(docSources []DocSource) string {
 	// Sort by module name
 	sort.Slice(docSources, func(i, j int) bool {

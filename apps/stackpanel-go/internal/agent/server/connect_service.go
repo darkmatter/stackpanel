@@ -1,4 +1,7 @@
-// Package server provides the HTTP/SSE server for the stackpanel agent.
+// connect_service.go implements the core Connect-RPC AgentService handlers for
+// project info, AGE/KMS secrets management, file operations, command execution,
+// nix evaluation, process-compose service lifecycle, and devshell rebuild streaming.
+
 package server
 
 import (
@@ -18,7 +21,9 @@ import (
 )
 
 // AgentServiceServer implements the Connect-RPC AgentService interface.
-// This provides type-safe RPC handlers for all agent operations.
+// It delegates to the underlying *Server for all state and I/O, acting as a
+// thin proto-to-Go translation layer. The REST handlers in api_handlers.go
+// provide equivalent functionality for simpler endpoints.
 type AgentServiceServer struct {
 	server *Server
 }
@@ -32,6 +37,8 @@ func NewAgentServiceServer(s *Server) *AgentServiceServer {
 // Project
 // =============================================================================
 
+// GetProject returns the currently active project and its well-known directory paths.
+// The .stack/ subdirectories follow a fixed layout: data/, gen/, state/, secrets/.
 func (s *AgentServiceServer) GetProject(
 	ctx context.Context,
 	req *connect.Request[gopb.GetProjectRequest],
@@ -41,7 +48,7 @@ func (s *AgentServiceServer) GetProject(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no project selected"))
 	}
 
-	homeDir := filepath.Join(proj.Path, ".stackpanel")
+	homeDir := filepath.Join(proj.Path, ".stack")
 	return connect.NewResponse(&gopb.GetProjectResponse{
 		Project: &gopb.Project{
 			Path:   proj.Path,
@@ -78,6 +85,10 @@ func (s *AgentServiceServer) GetProject(
 // Age Identity Management
 // =============================================================================
 
+// GetAgeIdentity returns the current AGE identity used for SOPS secret decryption.
+// The identity can be either an inline key (stored in .stack/state/) or a path
+// to an external key file. When the variables backend is "chamber" (AWS SSM),
+// AGE is irrelevant and a "not_applicable" response is returned.
 func (s *AgentServiceServer) GetAgeIdentity(
 	ctx context.Context,
 	req *connect.Request[gopb.GetAgeIdentityRequest],
@@ -134,11 +145,15 @@ func (s *AgentServiceServer) GetAgeIdentity(
 	return connect.NewResponse(resp), nil
 }
 
+// SetAgeIdentity stores or clears the AGE identity. Accepts either:
+//   - An inline AGE-SECRET-KEY-... value (written to a dedicated key file)
+//   - A filesystem path to an existing key (tilde-expanded, validated for existence)
+//   - Empty string to clear both identity and key files
 func (s *AgentServiceServer) SetAgeIdentity(
 	ctx context.Context,
 	req *connect.Request[gopb.SetAgeIdentityRequest],
 ) (*connect.Response[gopb.AgeIdentityResponse], error) {
-	stateDir := filepath.Join(s.server.config.ProjectRoot, ".stackpanel", "state")
+	stateDir := filepath.Join(s.server.config.ProjectRoot, ".stack", "state")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create state dir: %w", err))
 	}
@@ -196,6 +211,8 @@ func (s *AgentServiceServer) SetAgeIdentity(
 // KMS Configuration
 // =============================================================================
 
+// GetKMSConfig returns the AWS KMS configuration used for SOPS envelope encryption.
+// When using the "chamber" backend, KMS is implicitly enabled via AWS SSM.
 func (s *AgentServiceServer) GetKMSConfig(
 	ctx context.Context,
 	req *connect.Request[gopb.GetKMSConfigRequest],
@@ -210,43 +227,25 @@ func (s *AgentServiceServer) GetKMSConfig(
 		}
 
 		// Try to get the actual KMS ARN from state if available
-		configFile := s.server.getKMSConfigPath()
-		data, err := os.ReadFile(configFile)
-		if err == nil {
-			var stateConfig KMSConfigResponse
-			if err := json.Unmarshal(data, &stateConfig); err == nil {
-				resp.KeyArn = stateConfig.KeyArn
-				resp.AwsProfile = stateConfig.AwsProfile
-			}
+		if stateConfig, err := s.server.readKMSConfig(); err == nil {
+			resp.KeyArn = stateConfig.KeyArn
+			resp.AwsProfile = stateConfig.AwsProfile
 		}
 
 		return connect.NewResponse(resp), nil
 	}
 
-	configFile := s.server.getKMSConfigPath()
-	resp := &gopb.KMSConfigResponse{
-		Enable:     false,
-		KeyArn:     "",
-		AwsProfile: "",
-		Source:     "",
-	}
-
-	data, err := os.ReadFile(configFile)
+	stateConfig, err := s.server.readKMSConfig()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return connect.NewResponse(resp), nil
-		}
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to read KMS config: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var stateConfig KMSConfigResponse
-	if err := json.Unmarshal(data, &stateConfig); err == nil {
-		resp.Enable = stateConfig.Enable
-		resp.KeyArn = stateConfig.KeyArn
-		resp.AwsProfile = stateConfig.AwsProfile
+	resp := &gopb.KMSConfigResponse{
+		Enable:     stateConfig.Enable,
+		KeyArn:     stateConfig.KeyArn,
+		AwsProfile: stateConfig.AwsProfile,
+		Source:     stateConfig.Source,
 	}
-
-	resp.Source = "state"
 	return connect.NewResponse(resp), nil
 }
 
@@ -261,23 +260,31 @@ func (s *AgentServiceServer) SetKMSConfig(
 		}
 	}
 
-	resp := &gopb.KMSConfigResponse{
+	resp, err := s.server.saveKMSConfig(KMSConfigRequest{
 		Enable:     req.Msg.Enable,
 		KeyArn:     req.Msg.KeyArn,
 		AwsProfile: req.Msg.AwsProfile,
-		Source:     "state",
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// TODO: Save to file
-	log.Info().Bool("enable", req.Msg.Enable).Str("keyArn", req.Msg.KeyArn).Msg("KMS config saved")
-
-	return connect.NewResponse(resp), nil
+	return connect.NewResponse(&gopb.KMSConfigResponse{
+		Enable:     resp.Enable,
+		KeyArn:     resp.KeyArn,
+		AwsProfile: resp.AwsProfile,
+		Source:     resp.Source,
+	}), nil
 }
 
 // =============================================================================
 // File Operations
 // =============================================================================
 
+// ReadFile reads a file's content, resolving relative paths against ProjectRoot.
+// Unlike the REST handleFiles, this does not use safeJoin — absolute paths are
+// passed through as-is, which is intentional for Connect-RPC clients that
+// already have the full path from other RPC responses.
 func (s *AgentServiceServer) ReadFile(
 	ctx context.Context,
 	req *connect.Request[gopb.ReadFileRequest],
@@ -372,7 +379,7 @@ func (s *AgentServiceServer) Exec(
 		cwd = req.Msg.Cwd
 	}
 
-	// Convert map[string]string env to []string ("KEY=value") for the executor
+	// Proto uses map[string]string; the executor expects KEY=value slices
 	var env []string
 	for k, v := range req.Msg.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -394,6 +401,9 @@ func (s *AgentServiceServer) Exec(
 // Nix Operations
 // =============================================================================
 
+// NixGenerate runs the flake's #gen output to regenerate derived files.
+// Unlike the REST handler (which uses .#generate), this uses .#gen — both
+// are aliases for the same generation target.
 func (s *AgentServiceServer) NixGenerate(
 	ctx context.Context,
 	req *connect.Request[gopb.NixGenerateRequest],
@@ -442,6 +452,10 @@ func (s *AgentServiceServer) NixEval(
 // Services (process-compose) - Uses HTTP API at localhost:$PC_PORT_NUM
 // =============================================================================
 
+// GetServicesStatus queries the process-compose HTTP API for running services.
+// Only processes in the "services" namespace are returned — other namespaces
+// (like "apps") are filtered out since the UI manages them separately.
+// Returns an empty list (not an error) when process-compose isn't running.
 func (s *AgentServiceServer) GetServicesStatus(
 	ctx context.Context,
 	req *connect.Request[gopb.GetServicesStatusRequest],
@@ -612,6 +626,9 @@ func (s *AgentServiceServer) RestartService(
 // Devshell Management
 // =============================================================================
 
+// GetShellStatus reports whether the Nix devshell is stale (nix files changed
+// since last build) or currently rebuilding. The web UI uses this to show a
+// "rebuild needed" banner.
 func (s *AgentServiceServer) GetShellStatus(
 	ctx context.Context,
 	req *connect.Request[gopb.GetShellStatusRequest],
@@ -642,6 +659,9 @@ func (s *AgentServiceServer) GetShellStatus(
 	}), nil
 }
 
+// RebuildShell triggers a devshell rebuild and streams progress events to the client.
+// This is a server-streaming RPC — the client receives events as the build progresses
+// (output lines, completion status, errors) rather than waiting for the full result.
 func (s *AgentServiceServer) RebuildShell(
 	ctx context.Context,
 	req *connect.Request[gopb.RebuildShellRequest],

@@ -1,10 +1,15 @@
+// Package tui provides the terminal user interface for the stackpanel CLI.
+// It contains Bubble Tea models, lipgloss styles, and shared rendering utilities
+// used across the interactive TUI (status dashboard, service management, MOTD, etc.).
 package tui
 
 import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Theme colors
+// Theme colors — shared palette used by all TUI components.
+// These intentionally use 8-character hex (with alpha) for some colors
+// to work with lipgloss's extended color support.
 var (
 	// Primary colors
 	ColorPrimary   = lipgloss.Color("#875fff") // Purple
@@ -106,7 +111,8 @@ const (
 	SymbolDot      = "•"
 )
 
-// Helper functions for consistent styling
+// Render helpers prepend a status symbol and apply the matching color.
+// Use these instead of manually combining symbols + styles for consistency.
 func RenderRunning(text string) string {
 	return StatusRunning.Render(SymbolRunning + " " + text)
 }
@@ -180,6 +186,8 @@ func RenderFrame(content string) string {
 	return FrameStyle.Render(content)
 }
 
+// Banner is the ASCII art displayed at the top of the TUI and MOTD.
+// Generated from "stackpanel" in a figlet-style font.
 const Banner = `
        |                 |                                |
   __|  __|   _' |   __|  |  /  __ \    _' |  __ \    _ \  |

@@ -1,0 +1,94 @@
+---
+title: Cloudflare
+description: Configure Cloudflare app settings and deploy through infra
+icon: cloud
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+Cloudflare deployment in Stackpanel is driven by app deployment config plus the infra deployment module.
+
+## How Cloudflare Deployment Works
+
+- Set `deployment.enable = true` on an app
+- Set `deployment.host = "cloudflare"` (or rely on `stackpanel.deployment.defaultHost`)
+- Enable one framework flag (for example `framework.tanstack-start.enable = true`)
+- Run `infra:deploy`
+
+The infra deployment module maps `framework × cloudflare` to the right Alchemy resource.
+
+## Configuration
+
+### Global Cloudflare Settings
+
+```nix
+stackpanel.deployment.cloudflare = {
+  accountId = "abc123def456";
+  compatibilityDate = "2024-12-01";
+  defaultRoute = "*.example.com/*";
+};
+```
+
+### Per-App Settings
+
+```nix
+stackpanel.apps.web = {
+  path = "apps/web";
+  framework.tanstack-start.enable = true;
+
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+
+    # Inputs resolved from process.env during infra deploy
+    bindings = [ "CORS_ORIGIN" "BETTER_AUTH_SECRET" "DATABASE_URL" ];
+    secrets = [ "BETTER_AUTH_SECRET" "DATABASE_URL" ];
+
+    cloudflare = {
+      workerName = "stackpanel-web";
+      route = "app.example.com/*";
+      compatibility = "node";
+      kvNamespaces = [ "CACHE" ];
+      d1Databases = [ "MAIN_DB" ];
+      r2Buckets = [ "UPLOADS" ];
+    };
+  };
+};
+```
+
+<Callout type="info">
+`deployment.cloudflare.type` is not a configuration option. Runtime behavior is determined by the app framework flags (`framework.*.enable`) plus `deployment.host`.
+</Callout>
+
+## Supported Framework Mapping
+
+Current Cloudflare mappings in the infra deployment module:
+
+- `tanstack-start` -> `TanStackStart`
+- `nextjs` -> `Nextjs`
+- `vite` -> `cloudflare.Vite`
+- `hono` -> `cloudflare.Worker`
+- `astro` -> `Astro`
+- `remix` -> `Remix`
+- `nuxt` -> `Nuxt`
+
+## Deploy Commands
+
+```bash
+# Deploy active infra modules (including Cloudflare deployment module)
+infra:deploy
+
+# Stage-specific deploy
+infra:deploy --stage staging
+
+# Destroy stage resources
+infra:destroy --stage staging
+```
+
+`bindings` are read from environment variables at deploy time; names listed in `secrets` are wrapped with `alchemy.secret(...)`.
+
+## Related Docs
+
+- [Infrastructure](./infrastructure)
+- [Deployment Overview](./)
+- [Fly.io](./fly)

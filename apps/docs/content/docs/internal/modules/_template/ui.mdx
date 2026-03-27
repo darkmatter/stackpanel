@@ -1,0 +1,24 @@
+---
+title: UI Panel Definitions
+description: This file defines the UI panels and fields that appear in the Stackpanel UI.
+---
+
+This file defines the UI panels and fields that appear in the Stackpanel UI.
+It's evaluated lazily - only when the UI needs to display this module's panels.
+
+Panel Types:
+- PANEL_TYPE_STATUS: Show status/health information
+- PANEL_TYPE_FORM: Editable configuration form
+- PANEL_TYPE_TABLE: Tabular data display
+- PANEL_TYPE_APPS_GRID: Grid of app cards
+- PANEL_TYPE_CUSTOM: Custom rendering (provide component name)
+
+Field Types:
+- FIELD_TYPE_STRING: Text input
+- FIELD_TYPE_NUMBER: Numeric input
+- FIELD_TYPE_BOOLEAN: Toggle/checkbox
+- FIELD_TYPE_SELECT: Single-select dropdown
+- FIELD_TYPE_MULTISELECT: Multi-select dropdown
+- FIELD_TYPE_APP_FILTER: App selector
+- FIELD_TYPE_COLUMNS: Multi-column layout
+- FIELD_TYPE_JSON: Raw JSON data

@@ -1,4 +1,9 @@
-// Package server provides SST infrastructure management handlers.
+// sst.go provides HTTP handlers for managing SST (Ion) infrastructure deployments.
+//
+// SST config is read from the Nix flake (.#stackpanelConfig.sst) and deployments
+// are executed via `bunx sst` in the directory containing the SST config file.
+// The handlers support reading config, checking deployment status, deploying,
+// fetching outputs/resources, and tearing down stacks.
 package server
 
 import (

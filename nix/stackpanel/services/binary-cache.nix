@@ -1,7 +1,9 @@
 # ==============================================================================
 # binary-cache.nix
 #
-# Configure binary cache tooling (Cachix) for development shells.
+# Binary cache module - configure Cachix for development shells.
+#
+# Options + implementation colocated in a single self-contained module.
 # ==============================================================================
 {
   pkgs,
@@ -15,6 +17,28 @@ let
   tokenPathValue = if cachixCfg.token-path == null then "" else toString cachixCfg.token-path;
 in
 {
+  # ── Options ──────────────────────────────────────────────────────────────────
+  options.stackpanel.binary-cache = {
+    enable = lib.mkEnableOption "Binary cache configuration";
+
+    cachix = {
+      enable = lib.mkEnableOption "Cachix integration";
+
+      cache = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Cachix cache name for pushing binaries";
+      };
+
+      token-path = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Path to a Cachix auth token file";
+      };
+    };
+  };
+
+  # ── Config ───────────────────────────────────────────────────────────────────
   config = lib.mkIf cfg.enable {
     stackpanel.devshell.packages = lib.mkIf cachixCfg.enable [ pkgs.cachix ];
 

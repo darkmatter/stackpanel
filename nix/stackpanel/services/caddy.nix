@@ -36,23 +36,21 @@
   lib,
   config,
   ...
-}:
-let
+}: let
   cfg = config.stackpanel.caddy;
-  stepCfg = config.stackpanel.step-ca or { enable = false; };
+  stepCfg = config.stackpanel.step-ca or {enable = false;};
 
   # Import util for debug logging
   util = config.stackpanel.util;
 
   # Import shared caddy library
-  caddyLib = import ./caddy { inherit pkgs lib; };
+  caddyLib = import ./caddy {inherit pkgs lib;};
 
   # Compute project port if not explicitly set
   projectPort =
-    if cfg.project-port != null then
-      cfg.project-port
-    else
-      caddyLib.mkProjectPort { name = cfg.project-name; };
+    if cfg.project-port != null
+    then cfg.project-port
+    else caddyLib.mkProjectPort {name = cfg.project-name;};
 
   # Create scripts using shared library
   caddyScripts = caddyLib.mkCaddyScripts {
@@ -72,11 +70,18 @@ let
     set -euo pipefail
 
     app_name="''${1:-app}"
+    is_apex=false
+    if [[ $app = "@" ]]; then
+      is_apex=true
+    fi
     project_name="''${2:-${cfg.project-name}}"
     port="''${3:-${toString projectPort}}"
     tld="${cfg.tld or "localhost"}"
 
     domain="$app_name.$project_name.$tld"
+    if $is_apex; then
+      domain="$project_name.$tld"
+    fi
     upstream="localhost:$port"
 
     echo "Setting up dev site:"
@@ -96,16 +101,17 @@ let
   '';
   # Get apps with domains configured
   appsWithDomains = lib.filterAttrs (_: app: (app.domain or null) != null) (
-    config.stackpanel.apps or { }
+    config.stackpanel.apps or {}
   );
   domainCount = lib.length (lib.attrNames appsWithDomains);
-in
-{
+in {
   config = lib.mkIf cfg.enable {
-    stackpanel.devshell.packages = caddyScripts.allPackages ++ [
-      projectPortScript
-      caddyDevSite
-    ];
+    stackpanel.devshell.packages =
+      caddyScripts.allPackages
+      ++ [
+        projectPortScript
+        caddyDevSite
+      ];
 
     stackpanel.devshell.hooks.after = lib.mkIf cfg.auto-start [
       ''
@@ -144,8 +150,14 @@ in
             }
             {
               label = "TLS";
-              value = if cfg.use-step-tls && stepCfg.enable then "Enabled (Step CA)" else "Disabled";
-              status = if cfg.use-step-tls && stepCfg.enable then "ok" else "warning";
+              value =
+                if cfg.use-step-tls && stepCfg.enable
+                then "Enabled (Step CA)"
+                else "Disabled";
+              status =
+                if cfg.use-step-tls && stepCfg.enable
+                then "ok"
+                else "warning";
             }
             {
               label = "Virtual Hosts";
@@ -174,14 +186,19 @@ in
         }
       ];
       # Per-app data for apps with domains
-      apps = lib.mapAttrs (name: app: {
-        enabled = true;
-        config = {
-          domain = app.domain or "";
-          url = app.url or "";
-          tls = if app.tls or false then "true" else "false";
-        };
-      }) appsWithDomains;
+      apps =
+        lib.mapAttrs (name: app: {
+          enabled = true;
+          config = {
+            domain = app.domain or "";
+            url = app.url or "";
+            tls =
+              if app.tls or false
+              then "true"
+              else "false";
+          };
+        })
+        appsWithDomains;
     };
   };
 }

@@ -27,108 +27,24 @@ let
 
   # Secrets groups for per-group checks
   secretsGroups = secretsCfg.groups or { };
-  secretsDir = secretsCfg.secrets-dir or ".stackpanel/secrets";
+  secretsDir = secretsCfg.secrets-dir or ".stack/secrets";
 
   # Infra config for checking if KMS/IAM is deployed
   infraCfg = config.stackpanel.infra or { enable = false; };
   infraAwsSecrets = infraCfg.aws.secrets or { enable = false; };
 
-  # Generate per-group SSM access healthchecks.
-  # Each group stores its AGE private key in SSM. This check verifies
-  # that the current AWS credentials can read that parameter.
-  # Red = AWS/SSM not set up or no permissions for the group's key path.
-  groupSsmChecks = lib.mapAttrs' (
-    name: group:
-    lib.nameValuePair "ssm-access-${name}" {
-      name = "SSM Access: ${name}";
-      description = "Check if the group key for '${name}' is readable from SSM at ${group.ssm-path}";
-      type = "script";
-      severity = "warning";
-      timeout = 15;
-      script = ''
-        SSM_PATH="${group.ssm-path}"
+  groupSsmChecks = { };
 
-        if ! command -v aws >/dev/null 2>&1; then
-          echo "AWS CLI not found in PATH"
-          echo "Install awscli2 or ensure it's in the devshell"
-          exit 1
-        fi
-
-        # Try to read the parameter (just verify access, don't output the secret)
-        if aws ssm get-parameter --name "$SSM_PATH" --with-decryption --query "Parameter.Name" --output text >/dev/null 2>&1; then
-          echo "SSM parameter accessible: $SSM_PATH"
-        else
-          # Try to distinguish between "not found" and "access denied"
-          error=$(aws ssm get-parameter --name "$SSM_PATH" --with-decryption 2>&1 || true)
-          if echo "$error" | grep -qi "ParameterNotFound"; then
-            echo "SSM parameter not found: $SSM_PATH"
-            echo ""
-            echo "The group key has not been stored in SSM yet."
-            echo "Run: secrets:init-group ${name}"
-          elif echo "$error" | grep -qi "ExpiredTokenException\|AccessDenied\|UnrecognizedClient\|InvalidSignature"; then
-            echo "AWS credentials not configured or insufficient permissions"
-            echo ""
-            echo "Ensure you have ssm:GetParameter permission for: $SSM_PATH"
-          else
-            echo "Cannot access SSM parameter: $SSM_PATH"
-            echo "$error"
-          fi
-          exit 1
-        fi
-      '';
-    }
-  ) secretsGroups;
-
-  # Generate per-group key file existence checks.
-  # Each group's AGE private key should be stored as a SOPS-encrypted
-  # .enc.age file in the keys/ directory.
-  groupKeyFileChecks = lib.mapAttrs' (
-    name: _group:
-    lib.nameValuePair "group-key-exists-${name}" {
-      name = "Group Key Exists: ${name}";
-      description = "Check if the encrypted AGE key file exists for group '${name}'";
-      type = "script";
-      severity = "critical";
-      timeout = 5;
-      tags = [
-        "secrets"
-        "groups"
-        "keys"
-      ];
-      script = ''
-        ENC_AGE_FILE="${secretsDir}/keys/${name}.enc.age"
-
-        if [ -f "$ENC_AGE_FILE" ]; then
-          # Verify it's not empty
-          if [ -s "$ENC_AGE_FILE" ]; then
-            echo "Group key file exists: $ENC_AGE_FILE"
-            size=$(wc -c < "$ENC_AGE_FILE" | tr -d ' ')
-            echo "Size: $size bytes"
-          else
-            echo "Group key file is empty: $ENC_AGE_FILE"
-            echo ""
-            echo "Re-initialize with: secrets:init-group ${name}"
-            exit 1
-          fi
-        else
-          echo "Group key file not found: $ENC_AGE_FILE"
-          echo ""
-          echo "The encrypted AGE private key for group '${name}' has not been created."
-          echo "Initialize with: secrets:init-group ${name}"
-          exit 1
-        fi
-      '';
-    }
-  ) secretsGroups;
+  groupKeyFileChecks = { };
 
   # Generate per-group decrypt checks.
   # For each group that has a SOPS-encrypted secrets file, verify we can
-  # actually decrypt it using the group key chain.
+  # actually decrypt it with the currently available recipient keys.
   groupDecryptChecks = lib.mapAttrs' (
     name: _group:
     lib.nameValuePair "group-decrypt-${name}" {
       name = "Decrypt Group: ${name}";
-      description = "Test decrypting the '${name}' group secrets file using the group key";
+      description = "Test decrypting the '${name}' group secrets file";
       type = "script";
       severity = "warning";
       timeout = 20;
@@ -138,38 +54,30 @@ let
         "decrypt"
       ];
       script = ''
-        GROUP_FILE="${secretsDir}/groups/${name}.yaml"
+                GROUP_FILE="${secretsDir}/vars/${name}.sops.yaml"
 
-        if [ ! -f "$GROUP_FILE" ]; then
-          echo "No secrets file for group '${name}' at $GROUP_FILE"
-          echo "This is OK if you haven't added secrets to this group yet"
-          exit 0
-        fi
+                if [ ! -f "$GROUP_FILE" ]; then
+                  echo "No secrets file for group '${name}' at $GROUP_FILE"
+                  echo "This is OK if you haven't added secrets to this group yet"
+                  exit 0
+                fi
 
-        # Check that the .enc.age key file exists first
-        ENC_AGE_FILE="${secretsDir}/keys/${name}.enc.age"
-        if [ ! -f "$ENC_AGE_FILE" ]; then
-          echo "Cannot decrypt: group key not found at $ENC_AGE_FILE"
-          echo "Initialize with: secrets:init-group ${name}"
-          exit 1
-        fi
+        		echo "Testing decryption of: $GROUP_FILE"
 
-        echo "Testing decryption of: $GROUP_FILE"
-
-        # Try to decrypt (validate only, don't output secrets)
-        if sops --decrypt "$GROUP_FILE" >/dev/null 2>&1; then
-          echo "Successfully decrypted $GROUP_FILE"
-        else
-          echo "Failed to decrypt $GROUP_FILE"
-          echo ""
-          echo "Possible causes:"
-          echo "  1. Local AGE key cannot decrypt the group .enc.age file"
-          echo "  2. Group key is not in the secrets file's recipients"
-          echo "  3. SOPS_AGE_KEY_CMD is not configured correctly"
-          echo ""
-          echo "Try manually: sops --decrypt \"$GROUP_FILE\""
-          exit 1
-        fi
+                # Try to decrypt (validate only, don't output secrets)
+                if sops --decrypt "$GROUP_FILE" >/dev/null 2>&1; then
+                  echo "Successfully decrypted $GROUP_FILE"
+                else
+                  echo "Failed to decrypt $GROUP_FILE"
+                  echo ""
+        		  echo "Possible causes:"
+        		  echo "  1. Your current key is not in the file's recipient list"
+        		  echo "  2. The file needs to be re-keyed after recipient changes"
+        		  echo "  3. SOPS_AGE_KEY_CMD is not configured correctly"
+                  echo ""
+                  echo "Try manually: sops --decrypt \"$GROUP_FILE\""
+                  exit 1
+                fi
       '';
     }
   ) secretsGroups;
@@ -190,6 +98,7 @@ in
           severity = "critical";
           timeout = 5;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
             KEY_PATH="$STACKPANEL_STATE_DIR/step/device.key"
 
@@ -215,6 +124,7 @@ in
           severity = "critical";
           timeout = 10;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
             if [ ! -f "$CERT_PATH" ]; then
@@ -243,6 +153,7 @@ in
           severity = "warning";
           timeout = 10;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="$STACKPANEL_STATE_DIR/step/device-root.chain.crt"
 
             if [ ! -f "$CERT_PATH" ]; then
@@ -320,6 +231,7 @@ in
           severity = "critical";
           timeout = 5;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
             KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
@@ -346,6 +258,7 @@ in
           severity = "critical";
           timeout = 30;
           script = ''
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
             CERT_PATH="''${AWS_CERT_PATH:-$STACKPANEL_STATE_DIR/step/device-root.chain.crt}"
             KEY_PATH="''${AWS_KEY_PATH:-$STACKPANEL_STATE_DIR/step/device.key}"
 
@@ -414,7 +327,7 @@ in
             if [ $errors -gt 0 ]; then
               echo ""
               echo "$errors configuration item(s) missing"
-              echo "Configure in .stackpanel/config.nix under aws.roles-anywhere"
+              echo "Configure in .stack/config.nix under aws.roles-anywhere"
               exit 1
             fi
 
@@ -430,9 +343,9 @@ in
     # =========================================================================
     # SOPS / Secrets Healthchecks
     # =========================================================================
-    stackpanel.healthchecks.modules.sops = lib.mkIf secretsCfg.enable {
+    stackpanel.healthchecks.modules.secrets = lib.mkIf secretsCfg.enable {
       enable = true;
-      displayName = "SOPS Secrets";
+      displayName = "Secrets";
       checks = {
         # Per-group checks (dynamically generated from secrets.groups)
       }
@@ -472,18 +385,18 @@ in
             "keys"
           ];
           script = ''
-            # Check common AGE key locations
-            found=0
+            STACKPANEL_STATE_DIR="''${STACKPANEL_STATE_DIR:-''${STACKPANEL_ROOT:-.}/.stack/profile}"
 
+            # Check common AGE key locations
             # Check SOPS_AGE_KEY_CMD first (lazy key command)
-            if [ -n "$SOPS_AGE_KEY_CMD" ]; then
-              echo "AGE key command configured: $SOPS_AGE_KEY_CMD"
+            if [ -n "''${SOPS_AGE_KEY_CMD:-}" ]; then
+              echo "AGE key command configured: ''${SOPS_AGE_KEY_CMD:-}"
               exit 0
             fi
 
             # Check SOPS_AGE_KEY_FILE
-            if [ -n "$SOPS_AGE_KEY_FILE" ] && [ -f "$SOPS_AGE_KEY_FILE" ]; then
-              echo "AGE key found at: $SOPS_AGE_KEY_FILE"
+            if [ -n "''${SOPS_AGE_KEY_FILE:-}" ] && [ -f "''${SOPS_AGE_KEY_FILE:-}" ]; then
+              echo "AGE key found at: ''${SOPS_AGE_KEY_FILE:-}"
               exit 0
             fi
 
@@ -505,8 +418,8 @@ in
             echo ""
             echo "Checked locations:"
             echo "  - \$SOPS_AGE_KEY_CMD (not set)"
-            if [ -n "$SOPS_AGE_KEY_FILE" ]; then
-              echo "  - \$SOPS_AGE_KEY_FILE ($SOPS_AGE_KEY_FILE)"
+            if [ -n "''${SOPS_AGE_KEY_FILE:-}" ]; then
+              echo "  - \$SOPS_AGE_KEY_FILE (''${SOPS_AGE_KEY_FILE:-})"
             else
               echo "  - \$SOPS_AGE_KEY_FILE (not set)"
             fi

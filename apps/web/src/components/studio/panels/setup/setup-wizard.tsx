@@ -10,33 +10,33 @@ import {
 	Database,
 	FileCog,
 	FolderOpen,
-	Key,
 	Loader2,
 	Shield,
+	ShieldCheck,
 	Terminal,
 	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-	type AgeIdentityResponse,
 	type KMSConfigResponse,
 	type Project,
 } from "@/lib/agent";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
-import { useNixConfig, useNixData, useVariablesBackend } from "@/lib/use-agent";
+import {
+	useNixConfig,
+	useNixData,
+	useRecipients,
+} from "@/lib/use-agent";
 import { HelpButton } from "../shared/help-button";
 
 import { SetupProvider } from "./setup-context";
 import {
 	ConnectAgentStep,
-	DecryptionKeyStep,
-	GenerateSopsStep,
 	InfrastructureStep,
-	KmsConfigStep,
 	ProjectInfoStep,
-	SecretsBackendStep,
-	TeamKeysStep,
+	SecretsStep,
+	VerifyConfigStep,
 } from "./steps";
 import type { SetupContextValue, SetupStep, SSTData } from "./types";
 
@@ -70,17 +70,14 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 	const [projectConfirmed, setProjectConfirmed] = useState(false);
 
 	// Step states
-	const [identityInfo, setIdentityInfo] = useState<AgeIdentityResponse | null>(
-		null,
-	);
 	const [kmsConfig, setKmsConfig] = useState<KMSConfigResponse | null>(null);
-	const [usersConfigured, setUsersConfigured] = useState(false);
-	const [sopsConfigGenerated, setSopsConfigGenerated] = useState(false);
-
-	// Form states
-	const [identityInput, setIdentityInput] = useState("");
-	const [isSaving, setIsSaving] = useState(false);
-	const [isGeneratingSops, setIsGeneratingSops] = useState(false);
+	const [groupsInitialized, setGroupsInitialized] = useState<
+		Record<string, boolean>
+	>({});
+	const [groupsVerified, setGroupsVerified] = useState<
+		Record<string, boolean>
+	>({});
+	const [configVerified, setConfigVerified] = useState(false);
 
 	// SST/Infrastructure state
 	const { data: sstData, mutate: setSstData } = useNixData<SSTData>("sst", {
@@ -88,6 +85,12 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 	});
 	const [sstFormData, setSstFormData] = useState<SSTData>({});
 	const [sstSaving, setSstSaving] = useState(false);
+
+	// Recipients
+	const { data: recipientsData } = useRecipients();
+	const recipientsCount =
+		(recipientsData as { recipients?: { length: number } } | undefined)
+			?.recipients?.length ?? 0;
 
 	// Derive values from config
 	const projectName =
@@ -122,10 +125,10 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 	// Check if AWS KMS is configured
 	const hasAwsKms = sstData?.kms?.enable ?? false;
 
-	// Secrets backend
-	const { data: backendData } = useVariablesBackend();
-	const secretsBackend: "vals" | "chamber" = backendData?.backend ?? "vals";
-	const isChamber = secretsBackend === "chamber";
+	// Chamber mode is determined solely by Nix config, not a UI selector
+	const nixSecrets = ((nixConfig as Record<string, unknown>)?.secrets as Record<string, unknown> | undefined);
+	const isChamber = (nixSecrets?.backend as string | undefined) === "chamber";
+	const secretsBackend: "vals" | "chamber" = isChamber ? "chamber" : "vals";
 
 	// ==========================================================================
 	// Data Loading
@@ -151,20 +154,6 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		const confirmed = localStorage.getItem("stackpanel-project-confirmed");
 		setProjectConfirmed(confirmed === "true");
 
-		// Load identity
-		try {
-			const identity = await client.getAgeIdentity();
-			setIdentityInfo(identity);
-			if (identity.type === "path") {
-				setIdentityInput(identity.value);
-			}
-			setUsersConfigured(identity.type !== "");
-		} catch {
-			// Identity endpoint may not be available - use defaults
-			setIdentityInfo(null);
-			setUsersConfigured(false);
-		}
-
 		// Load KMS config
 		try {
 			const kms = await client.getKMSConfig();
@@ -174,16 +163,20 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			setKmsConfig(null);
 		}
 
-		// Check if .sops.yaml exists
-		try {
-			await client.readFile(".sops.yaml");
-			setSopsConfigGenerated(true);
-		} catch {
-			setSopsConfigGenerated(false);
+		const configRoot = (nixConfig as Record<string, Record<string, unknown>>)
+			?.config;
+		const secretsConfig = configRoot?.secrets as
+			| Record<string, unknown>
+			| undefined;
+		const groupsConfig = (secretsConfig?.groups ?? {}) as Record<string, unknown>;
+		const initMap: Record<string, boolean> = {};
+		for (const groupName of Object.keys(groupsConfig)) {
+			initMap[groupName] = true;
 		}
+		setGroupsInitialized(initMap);
 
 		setIsLoading(false);
-	}, [token]);
+	}, [token, agentClient, nixConfig]);
 
 	useEffect(() => {
 		loadConfig();
@@ -244,40 +237,11 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		try {
 			await setSstData(sstFormData);
 			toast.success("Infrastructure configuration saved");
-			setExpandedStep("decryption-key");
+			setExpandedStep("init-groups");
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : "Failed to save");
 		} finally {
 			setSstSaving(false);
-		}
-	};
-
-	const handleSaveIdentity = async () => {
-		if (!token) return;
-		setIsSaving(true);
-		try {
-			const client = agentClient;
-			const result = await client.setAgeIdentity(identityInput);
-			setIdentityInfo(result);
-			setUsersConfigured(true);
-			toast.success("Decryption key saved");
-			setExpandedStep("generate-config");
-		} catch (err) {
-			const message = err instanceof Error ? err.message : "Failed to save";
-			// Check if the endpoint isn't implemented
-			if (
-				message === "Error" ||
-				message.includes("not found") ||
-				message.includes("404")
-			) {
-				toast.error(
-					"Identity endpoint not available. Please update the agent.",
-				);
-			} else {
-				toast.error(message);
-			}
-		} finally {
-			setIsSaving(false);
 		}
 	};
 
@@ -290,21 +254,6 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 
 	const goToStep = (stepId: string) => {
 		setExpandedStep(stepId);
-	};
-
-	const handleGenerateSopsConfig = async () => {
-		if (!token) return;
-		setIsGeneratingSops(true);
-		try {
-			const client = agentClient;
-			await client.nixGenerate();
-			setSopsConfigGenerated(true);
-			toast.success(".sops.yaml generated successfully");
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to generate");
-		} finally {
-			setIsGeneratingSops(false);
-		}
 	};
 
 	// ==========================================================================
@@ -356,27 +305,31 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			icon: <Cloud className="h-5 w-5" />,
 		},
 		{
-			id: "decryption-key",
-			title: "Local Decryption Key",
-			description: "Configure local key",
+			id: "init-groups",
+			title: "Review Groups",
+			description: "Review SOPS group files and recipients",
 			status: isChamber
-				? "complete" // Not needed for chamber
-				: identityInfo?.type
+				? "complete"
+				: groupsVerified
 					? "complete"
-					: hasAwsKms
-						? "optional"
-						: projectConfirmed
+					: groupsInitialized
+						? "incomplete"
+						: secretsBackend
 							? "incomplete"
 							: "blocked",
-			required: !isChamber && !hasAwsKms,
+			required: !isChamber,
 			dependsOn: ["secrets-backend"],
-			icon: <Key className="h-5 w-5" />,
+			icon: <ShieldCheck className="h-5 w-5" />,
 		},
 		{
-			id: "team-keys",
-			title: "Team Sync",
-			description: "Add team public keys",
-			status: isChamber ? "complete" : usersConfigured ? "complete" : "optional",
+			id: "team-access",
+			title: "Team Access",
+			description: "Manage encryption recipients",
+			status: isChamber
+				? "complete"
+				: recipientsCount > 0
+					? "complete"
+					: "optional",
 			required: false,
 			icon: <Users className="h-5 w-5" />,
 		},
@@ -389,18 +342,18 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 			icon: <Shield className="h-5 w-5" />,
 		},
 		{
-			id: "generate-config",
-			title: "Generate SOPS Config",
-			description: "Create .sops.yaml",
+			id: "verify-config",
+			title: "Verify Configuration",
+			description: "Confirm secrets are working",
 			status: isChamber
-				? "complete" // Not needed for chamber
-				: sopsConfigGenerated
+				? "complete"
+				: configVerified
 					? "complete"
-					: identityInfo?.type
+					: groupsVerified
 						? "incomplete"
 						: "blocked",
 			required: !isChamber,
-			dependsOn: ["decryption-key"],
+			dependsOn: ["init-groups"],
 			icon: <FileCog className="h-5 w-5" />,
 		},
 	];
@@ -444,26 +397,23 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 		sstSaving,
 		hasAwsKms,
 
-		// Identity/Keys
-		identityInfo,
-		identityInput,
-		setIdentityInput,
-		handleSaveIdentity,
-		isSaving,
+		// Groups
+		groupsInitialized,
+		setGroupsInitialized,
+		groupsVerified,
+		setGroupsVerified,
 
-		// Users/Team
-		usersConfigured,
+		// Team access
+		recipientsCount,
 
 		// KMS
 		kmsConfig,
 
-		// SOPS
-		sopsConfigGenerated,
-		handleGenerateSopsConfig,
-		isGeneratingSops,
+		// Config verification
+		configVerified,
+		setConfigVerified,
 
-		// Secrets backend
-		secretsBackend,
+		// Chamber mode (from Nix config)
 		isChamber,
 	};
 
@@ -522,17 +472,14 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 						</CardContent>
 					</Card>
 
-					{/* Steps */}
-					<div className="space-y-4">
-						<ConnectAgentStep />
-						<ProjectInfoStep />
-						<SecretsBackendStep />
-						<InfrastructureStep />
-						<DecryptionKeyStep />
-						<TeamKeysStep />
-						<KmsConfigStep />
-						<GenerateSopsStep />
-					</div>
+				{/* Steps */}
+				<div className="space-y-4">
+					<ConnectAgentStep />
+					<ProjectInfoStep />
+					<SecretsStep />
+					<InfrastructureStep />
+					<VerifyConfigStep />
+				</div>
 
 					{/* Next Steps */}
 					{requiredComplete === requiredSteps.length && (
@@ -565,12 +512,11 @@ export function SetupWizard({ initialStep }: SetupWizardProps) {
 										<>
 											<li className="flex items-center gap-2">
 												<Check className="h-4 w-4 text-emerald-100" />
-												Use <code>sops</code> to encrypt/decrypt files
+												Use <code>secrets:set KEY --group dev --value VALUE</code> via CLI
 											</li>
 											<li className="flex items-center gap-2">
 												<Check className="h-4 w-4 text-emerald-100" />
-												Run <code>generate-sops-secrets</code> to create environment
-												YAML files
+												New team members auto-register when entering the devshell
 											</li>
 										</>
 									)}

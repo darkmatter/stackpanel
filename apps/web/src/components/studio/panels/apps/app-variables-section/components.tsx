@@ -28,24 +28,19 @@ import {
 } from "@/components/ui/combobox";
 import { useMemo, useState, type RefObject } from "react";
 import type { AvailableVariable, DisplayVariable, EditMode } from "./types";
-import { isSopsReference, isValsReference } from "../utils";
+import {
+  buildVariableLinkReference,
+} from "../../variables/constants";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Build a vals reference for a variable ID.
- * E.g., "/dev/DATABASE_URL" → "ref+sops://.stackpanel/secrets/dev.yaml#/DATABASE_URL"
+ * Build the value stored in app env when linking a workspace variable.
  */
-function buildValsReference(variableId: string): string {
-  const parts = variableId.split("/").filter(Boolean);
-  if (parts.length >= 2) {
-    const env = parts[0];
-    const name = parts.slice(1).join("/");
-    return `ref+sops://.stackpanel/secrets/${env}.yaml#/${name}`;
-  }
-  return `ref+sops://.stackpanel/secrets/dev.yaml#${variableId}`;
+function getLinkedVariableValue(variableId: string): string {
+  return buildVariableLinkReference(variableId);
 }
 
 /**
@@ -119,7 +114,7 @@ export function EditInterface({
     (): ComboboxItemType[] => [
       {
         id: LITERAL_ID,
-        name: "Literal or ref+sops://...",
+        name: "Literal value...",
         typeName: "config" as AvailableVariable["typeName"],
         _isLiteral: true,
       },
@@ -131,7 +126,7 @@ export function EditInterface({
   const handleSelectVariable = (variableId: string) => {
     const variable = availableVariables?.find((v) => v.id === variableId);
     if (!variable) return;
-    setEditValue(buildValsReference(variable.id));
+    setEditValue(getLinkedVariableValue(variable.id));
     if (!newEnvKey) {
       setNewEnvKey(suggestEnvKey(variable.id));
     }
@@ -159,111 +154,121 @@ export function EditInterface({
     return item.name.toLowerCase().includes(query.toLowerCase());
   };
 
+  const showConfigFunctionHint = !isLiteralMode && (availableVariables?.length ?? 0) > 0;
+
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/30 bg-background text-xs w-full">
-      {/* ENV_KEY input */}
-      <Input
-        ref={envKeyInputRef}
-        value={newEnvKey}
-        onChange={(e) => setNewEnvKey(e.target.value.toUpperCase())}
-        placeholder="ENV_KEY"
-        className="h-7 w-45 border-0 bg-transparent! text-xs font-mono font-medium text-primary/80 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 p-0"
-      />
-
-      {/* Separator */}
-      <div className="w-px h-4 bg-border shrink-0" />
-
-      {/* Value area — combobox or literal input */}
-      {isLiteralMode ? (
+    <div className="w-full space-y-1.5">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/30 bg-background text-xs w-full">
+        {/* ENV_KEY input */}
         <Input
-          ref={literalInputRef}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          placeholder="literal value or ref+sops://..."
-          className="cursor-pointer h-7 flex-1 border-0 bg-transparent text-xs font-mono text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 p-0"
+          ref={envKeyInputRef}
+          value={newEnvKey}
+          onChange={(e) => setNewEnvKey(e.target.value.toUpperCase())}
+          placeholder="ENV_KEY"
+          className="h-7 w-45 border-0 bg-transparent! text-xs font-mono font-medium text-primary/80 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 p-0"
         />
-      ) : (
-        <div className="flex items-center gap-1 flex-1 min-w-0 outline-none focus:outline-none focus:shadow-none shadow-none!">
-          <Combobox
-            items={comboboxItems}
-            onValueChange={handleComboboxChange}
-            filter={filterItem}
-            itemToStringLabel={(item) => item.name}
-          >
-            <ComboboxInput
-              inputGroupVariant="flat"
-              placeholder="Select variable or literal..."
-              showClear
-              className="cursor-pointer outline-none border-none bg-transparent! min-w-96 focus:outline-none cursor-pointer !focus:shadow-none focus:bg-accent/20"
-            />
-            <ComboboxContent className="outline-none! focus:outline-none! shadow-none! focus:shadow-none! hover:bg-secondary">
-              <ComboboxEmpty>No items found.</ComboboxEmpty>
-              <ComboboxList className="shadow-none! outline-none! border-none! cursor-pointer bg-background">
-                {(item: ComboboxItemType) => {
-                  const isLiteral = item.id === LITERAL_ID;
-                  return (
-                    <ComboboxItem
-                      key={item.id}
-                      value={item}
-                      className="outline-none! focus:outline-none! cursor-pointer hover:bg-secondary/10 focus:bg-secondary/10 data-highlighted:bg-secondary"
-                    >
-                      <div className="flex items-center gap-2">
-                        {isLiteral ? (
-                          <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : (
-                          <VariableTypeIcon
-                            isSecret={item.typeName === "secret"}
-                            isComputed={item.typeName === "computed"}
-                          />
-                        )}
-                        <span
-                          className={`font-mono text-xs ${isLiteral ? "text-muted-foreground" : ""}`}
-                        >
-                          {item.name}
-                        </span>
-                      </div>
-                    </ComboboxItem>
-                  );
-                }}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </div>
-      )}
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-0.5 shrink-0">
-        {editMode === "edit" && onDelete && (
+        {/* Separator */}
+        <div className="w-px h-4 bg-border shrink-0" />
+
+        {/* Value area — combobox or literal input */}
+        {isLiteralMode ? (
+          <Input
+            ref={literalInputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            placeholder="literal value..."
+            className="cursor-pointer h-7 flex-1 border-0 bg-transparent text-xs font-mono text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 p-0"
+          />
+        ) : (
+          <div className="flex items-center gap-1 flex-1 min-w-0 outline-none focus:outline-none focus:shadow-none shadow-none!">
+            <Combobox
+              items={comboboxItems}
+              onValueChange={handleComboboxChange}
+              filter={filterItem}
+              itemToStringLabel={(item) => item.name}
+            >
+              <ComboboxInput
+                inputGroupVariant="flat"
+                placeholder="Select variable or literal..."
+                showClear
+                className="cursor-pointer outline-none border-none bg-transparent! min-w-96 focus:outline-none cursor-pointer !focus:shadow-none focus:bg-accent/20"
+              />
+              <ComboboxContent className="outline-none! focus:outline-none! shadow-none! focus:shadow-none! hover:bg-secondary">
+                <ComboboxEmpty>No items found.</ComboboxEmpty>
+                <ComboboxList className="shadow-none! outline-none! border-none! cursor-pointer bg-background">
+                  {(item: ComboboxItemType) => {
+                    const isLiteral = item.id === LITERAL_ID;
+                    return (
+                      <ComboboxItem
+                        key={item.id}
+                        value={item}
+                        className="outline-none! focus:outline-none! cursor-pointer hover:bg-secondary/10 focus:bg-secondary/10 data-highlighted:bg-secondary"
+                      >
+                        <div className="flex items-center gap-2">
+                          {isLiteral ? (
+                            <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <VariableTypeIcon
+                              isSecret={item.typeName === "secret"}
+                              isComputed={item.typeName === "computed"}
+                            />
+                          )}
+                          <span
+                            className={`font-mono text-xs ${isLiteral ? "text-muted-foreground" : ""}`}
+                          >
+                            {item.name}
+                          </span>
+                        </div>
+                      </ComboboxItem>
+                    );
+                  }}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {editMode === "edit" && onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={onDelete}
+              title="Delete variable"
+            >
+              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
             className="h-6 w-6"
-            onClick={onDelete}
-            title="Delete variable"
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            title={editMode === "edit" ? "Save changes" : "Add variable"}
           >
-            <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+            <Check className="h-3 w-3 text-emerald-500" />
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={onConfirm}
-          disabled={!canConfirm}
-          title={editMode === "edit" ? "Save changes" : "Add variable"}
-        >
-          <Check className="h-3 w-3 text-emerald-500" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={onCancel}
-          title="Cancel"
-        >
-          <X className="h-3 w-3 text-muted-foreground" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={onCancel}
+            title="Cancel"
+          >
+            <X className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        </div>
       </div>
+
+      {showConfigFunctionHint && (
+        <p className="px-1 text-[11px] text-muted-foreground">
+          Workspace variable refs write <span className="font-mono">config.variables."...".value</span> when possible. If your <span className="font-mono">config.nix</span> is a plain attrset, add <span className="font-mono">{`{ config, ... }:`}</span> above the root attrset first.
+        </p>
+      )}
     </div>
   );
 }
@@ -296,8 +301,7 @@ export function VariableRow({
   onStartEditing,
   renderEditInterface,
 }: VariableRowProps) {
-  const isComputed =
-    isValsReference(variable.value) && !isSopsReference(variable.value);
+  const isComputed = variable.value.startsWith("ref+");
 
   if (isCurrentlyEditing) {
     return <>{renderEditInterface()}</>;

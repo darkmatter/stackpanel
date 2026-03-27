@@ -30,7 +30,7 @@ interface SopsOutputArgs {
  * Usage:
  * ```ts
  * new SopsOutput("Secrets", {
- *   path: `.stackpanel/secrets/${stage}.yaml`,
+ *   path: `.stack/secrets/${stage}.yaml`,
  *   values: {
  *     database_url: secrets.databaseUrl.value,
  *     web_url: workers.us.url,

@@ -10,7 +10,7 @@ Team management syncs collaborator information from GitHub and manages who can d
 ## How It Works
 
 1. **Sync from GitHub** — Public keys fetched from repository collaborators
-2. **Store locally** — Keys saved in `.stackpanel/data/external/users.nix`
+2. **Store locally** — Keys saved in `.stack/data/external/users.nix`
 3. **Encrypt secrets** — Secrets encrypted with all team members' keys
 
 ## Syncing Keys
@@ -24,7 +24,7 @@ This fetches SSH public keys from all repository collaborators on GitHub.
 ## User Data
 
 ```nix
-# .stackpanel/data/external/users.nix
+# .stack/data/external/users.nix
 {
   alice = {
     github = "alice";

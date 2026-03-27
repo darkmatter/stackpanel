@@ -3,7 +3,7 @@
 #
 # Unified config value resolution with defined precedence.
 #
-# Problem: Scripts hardcode defaults like ".stackpanel/state" in multiple places.
+# Problem: Scripts hardcode defaults like ".stack/state" in multiple places.
 # If config overrides this path, scripts don't pick it up → drift and bugs.
 #
 # Solution: Single-identity variable resolution with precedence order:
@@ -29,27 +29,25 @@
 {
   lib,
   config ? null,
-}:
-let
+}: let
   # ===========================================================================
   # PATH UTILITIES
   # ===========================================================================
-
   # Convert a dot path to an env var name
   # "paths.state" → "STACKPANEL_PATHS_STATE"
-  pathToEnvVar = path: "STACKPANEL_${lib.toUpper (builtins.replaceStrings [ "." ] [ "_" ] path)}";
+  pathToEnvVar = path: "STACKPANEL_${lib.toUpper (builtins.replaceStrings ["."] ["_"] path)}";
 
   # Get default value from config by path
   # Returns empty string if config not available or path not found
-  getDefault =
-    path:
-    if config == null then
-      ""
-    else
-      let
-        val = lib.attrByPath (lib.splitString "." path) null config.stackpanel;
-      in
-      if val == null then "" else toString val;
+  getDefault = path:
+    if config == null
+    then ""
+    else let
+      val = lib.attrByPath (lib.splitString "." path) null config.stackpanel;
+    in
+      if val == null
+      then ""
+      else toString val;
 
   # ===========================================================================
   # BASH LIBRARY
@@ -67,19 +65,19 @@ let
     #   3. Default: passed as second argument
     #
     # Usage:
-    #   STATE_DIR=$(sp_get "paths.state" ".stackpanel/state")
-    #   KEYS_DIR=$(sp_get "paths.keys" ".stackpanel/state/keys")
+    #   STATE_DIR=$(sp_get "paths.state" ".stack/state")
+    #   KEYS_DIR=$(sp_get "paths.keys" ".stack/keys")
     #
     # ==========================================================================
     sp_get() {
       local path="$1"
       local default
       default="''${2:-}"
-      
+
       # Convert path to env var name: paths.local-key -> STACKPANEL_PATHS_LOCAL_KEY
       local env_var
       env_var="STACKPANEL_$(echo "$path" | tr '[:lower:].-' '[:upper:]__')"
-      
+
       # Try env var first (indirect expansion)
       local env_val
       env_val="''${!env_var:-}"
@@ -87,7 +85,7 @@ let
         echo "$env_val"
         return 0
       fi
-      
+
       # Try CLI query (if stackpanel is available)
       # NOTE: Disabled until 'stackpanel config get' subcommand is implemented.
       # Currently 'stackpanel config' only has 'check' and 'sync', so
@@ -100,7 +98,7 @@ let
       #     return 0
       #   fi
       # fi
-      
+
       # Fall back to default
       echo "$default"
     }
@@ -115,12 +113,11 @@ let
   # Main getter: $(sp_get "path" "default")
   # If config is available, default is derived from config.stackpanel.<path>
   # Otherwise, you must pass the default explicitly via getWithDefault
-  get =
-    path:
-    let
-      default = getDefault path;
-    in
-    if default == "" then
+  get = path: let
+    default = getDefault path;
+  in
+    if default == ""
+    then
       throw ''
         cfg.get: No default found for "${path}".
 
@@ -128,10 +125,9 @@ let
           1. Pass config when importing cfg.nix:
              cfg = import ./cfg.nix { inherit lib config; };
           2. Use cfg.getWithDefault to specify default explicitly:
-             cfg.getWithDefault "paths.state" ".stackpanel/state"
+             cfg.getWithDefault "paths.state" ".stack/state"
       ''
-    else
-      ''$(sp_get "${path}" "${default}")'';
+    else ''$(sp_get "${path}" "${default}")'';
 
   # Getter with explicit default (when config not available)
   getWithDefault = path: default: ''$(sp_get "${path}" "${default}")'';
@@ -145,31 +141,34 @@ let
 
   knownPaths = {
     # Core directories
-    "paths.root" = ".stackpanel";
-    "paths.state" = ".stackpanel/state";
-    "paths.keys" = ".stackpanel/state/keys";
-    "paths.gen" = ".stackpanel/gen";
+    "paths.root" = ".stack";
+    "paths.state" = ".stack/profile";
+    "paths.profile" = ".stack/profile";
+    "paths.keys" = ".stack/keys";
+    "paths.gen" = ".stack/gen";
 
     # Secrets
-    "secrets.secrets-dir" = ".stackpanel/secrets";
-    "secrets.keys-dir" = ".stackpanel/secrets/keys";
-    "secrets.groups-dir" = ".stackpanel/secrets/groups";
+    "secrets.secrets-dir" = ".stack/secrets";
+    "secrets.vars-dir" = ".stack/secrets/vars";
+    "secrets.bin-dir" = ".stack/secrets/bin";
 
     # Files
-    "paths.state-file" = ".stackpanel/state/stackpanel.json";
-    "paths.local-key" = ".stackpanel/state/keys/local.txt";
-    "paths.local-pub" = ".stackpanel/state/keys/local.pub";
+    "paths.state-file" = ".stack/profile/stackpanel.json";
+    "paths.local-key" = ".stack/keys/local.txt";
+    "paths.local-pub" = ".stack/keys/local.pub";
   };
 
   # Get a well-known path (uses registry default if config not available)
-  getKnown =
-    path:
-    let
-      configDefault = getDefault path;
-      registryDefault = knownPaths.${path} or null;
-      default = if configDefault != "" then configDefault else registryDefault;
-    in
-    if default == null then
+  getKnown = path: let
+    configDefault = getDefault path;
+    registryDefault = knownPaths.${path} or null;
+    default =
+      if configDefault != ""
+      then configDefault
+      else registryDefault;
+  in
+    if default == null
+    then
       throw ''
         cfg.getKnown: "${path}" is not a known path.
 
@@ -177,11 +176,8 @@ let
 
         Use cfg.getWithDefault for custom paths.
       ''
-    else
-      ''$(sp_get "${path}" "${default}")'';
-
-in
-{
+    else ''$(sp_get "${path}" "${default}")'';
+in {
   inherit bashLib;
   inherit get getWithDefault getKnown;
   inherit pathToEnvVar getDefault;

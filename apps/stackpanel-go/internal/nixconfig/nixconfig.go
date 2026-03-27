@@ -25,11 +25,42 @@ type Config struct {
 	ProjectRoot string `json:"projectRoot"`
 	BasePort    int    `json:"basePort"`
 
-	Paths    Paths              `json:"paths"`
-	Apps     map[string]App     `json:"apps"`
-	Services map[string]Service `json:"services"`
-	Network  Network            `json:"network"`
-	MOTD     MOTD               `json:"motd"`
+	Paths              Paths               `json:"paths"`
+	Apps               map[string]App      `json:"apps"`
+	Services           map[string]Service  `json:"services"`
+	Network            Network             `json:"network"`
+	MOTD               MOTD                `json:"motd"`
+	MissingFlakeInputs []MissingFlakeInput `json:"missingFlakeInputs"`
+	Healthchecks       []Healthcheck       `json:"healthchecks"`
+}
+
+// Healthcheck represents a healthcheck definition from Nix configuration.
+// These are the check definitions (not results) — they tell the CLI what to run.
+type Healthcheck struct {
+	ID                 string   `json:"id"`
+	Name               string   `json:"name"`
+	Description        *string  `json:"description"`
+	Module             string   `json:"module"`
+	Type               string   `json:"type"`     // HEALTHCHECK_TYPE_SCRIPT, _HTTP, _TCP, _NIX
+	Severity           string   `json:"severity"` // HEALTHCHECK_SEVERITY_CRITICAL, _WARNING, _INFO
+	ScriptPath         *string  `json:"scriptPath"`
+	HTTPUrl            *string  `json:"httpUrl"`
+	HTTPMethod         string   `json:"httpMethod"`
+	HTTPExpectedStatus int      `json:"httpExpectedStatus"`
+	TCPHost            *string  `json:"tcpHost"`
+	TCPPort            *int     `json:"tcpPort"`
+	Timeout            int      `json:"timeout"`
+	Tags               []string `json:"tags"`
+	Enabled            bool     `json:"enabled"`
+}
+
+// MissingFlakeInput represents a flake input that an enabled module requires
+// but is not present in the user's flake.nix inputs.
+type MissingFlakeInput struct {
+	Name           string `json:"name"`
+	URL            string `json:"url"`
+	FollowsNixpkgs bool   `json:"followsNixpkgs"`
+	RequiredBy     string `json:"requiredBy"`
 }
 
 // Paths contains directory paths
@@ -161,5 +192,5 @@ func (c *Config) DataDir() string {
 	}
 
 	// Default
-	return ".stackpanel/data"
+	return ".stack/data"
 }

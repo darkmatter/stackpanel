@@ -46,7 +46,7 @@ find_root() {
   # Walk up from current dir
   local d="$PWD"
   while [[ "$d" != "/" ]]; do
-    if [[ -d "$d/.stackpanel" ]]; then
+    if [[ -d "$d/.stack" ]]; then
       printf "%s\n" "$d"
       return 0
     fi
@@ -68,7 +68,7 @@ _sp_compute_shell_hash() {
   local files=(
     "$ROOT/flake.nix"
     "$ROOT/flake.lock"
-    "$ROOT/.stackpanel/config.nix"
+    "$ROOT/.stack/config.nix"
     "$ROOT/devenv.nix"
     "$ROOT/devenv.yaml"
   )
@@ -97,7 +97,7 @@ _sp_cache_is_fresh() {
 }
 
 # Use cached nix-print-dev-env.sh for fast loading, warn if stale
-_sp_cached_env="$ROOT/.stackpanel/gen/nix-print-dev-env.sh"
+_sp_cached_env="$ROOT/.stack/gen/nix-print-dev-env.sh"
 if [[ -f "$_sp_cached_env" ]]; then
   if ! _sp_cache_is_fresh "$_sp_cached_env"; then
     echo "⚠️  devshell: cached env is stale (run 'nix develop --impure' to refresh)" >&2

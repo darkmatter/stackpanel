@@ -1,6 +1,6 @@
 import alchemy from "alchemy";
 import { TanStackStart } from "alchemy/cloudflare";
-import { S3StateStore } from "alchemy/aws";
+import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 import type { StackpanelDB } from "@/lib/generated/nix-types";
 
@@ -16,10 +16,8 @@ config({ path: "./.env" });
 const app = await alchemy("stackpanel", {
   stage: "shared",
   stateStore: (scope) =>
-    new S3StateStore(scope, {
-      bucketName: "alchemy-darkmatter-stackpanel",
-      prefix: `${process.env.USER || "default"}`,
-      region: "us-west-2",
+    new CloudflareStateStore(scope, {
+      apiToken: alchemy.secret(process.env.CLOUDFLARE_API_TOKEN!),
     }),
 });
 

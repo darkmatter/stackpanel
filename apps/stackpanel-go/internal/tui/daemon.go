@@ -8,11 +8,11 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-// DaemonMode configures the TUI for daemon (non-interactive) operation
+// DaemonMode configures the TUI for headless operation (CI, background processes).
+// When enabled, Bubble Tea's renderer and input are disabled so the program
+// can run without a terminal. Logs go to LogOutput instead of the TUI.
 type DaemonMode struct {
-	// Enabled indicates daemon mode is active
-	Enabled bool
-	// LogOutput is where logs should be written in daemon mode
+	Enabled   bool
 	LogOutput io.Writer
 }
 
@@ -24,7 +24,8 @@ func DefaultDaemonMode() DaemonMode {
 	}
 }
 
-// IsInteractive returns true if the program is running in an interactive terminal
+// IsInteractive returns true if both stdin and stdout are connected to a terminal.
+// Both must be TTYs because Bubble Tea needs to read key events and render ANSI.
 func IsInteractive() bool {
 	return isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd())
 }
@@ -34,8 +35,9 @@ func IsTTY() bool {
 	return isatty.IsTerminal(os.Stdout.Fd())
 }
 
-// DaemonProgramOptions returns tea.ProgramOption slice for daemon mode
-// In daemon mode, we disable the renderer to avoid terminal manipulation
+// DaemonProgramOptions returns tea.ProgramOption slice for daemon mode.
+// Disabling the renderer and input prevents ANSI escape sequences from
+// polluting log files or non-TTY output.
 func DaemonProgramOptions(daemon DaemonMode) []tea.ProgramOption {
 	if daemon.Enabled {
 		return []tea.ProgramOption{
@@ -64,19 +66,19 @@ func NewInteractiveProgram(model tea.Model, opts ...tea.ProgramOption) *tea.Prog
 	return tea.NewProgram(model, allOpts...)
 }
 
-// RunMode determines how the TUI should run based on environment and flags
+// RunMode determines how the TUI should run. The three modes allow the same
+// Cobra commands to work in interactive terminals, CI pipelines, and as
+// background daemons without code changes at the call site.
 type RunMode int
 
 const (
-	// RunModeInteractive runs with full TUI (default when in TTY with no args)
-	RunModeInteractive RunMode = iota
-	// RunModeDaemon runs without TUI rendering (for background processes)
-	RunModeDaemon
-	// RunModeDirect runs the command directly without TUI wrapper
-	RunModeDirect
+	RunModeInteractive RunMode = iota // Full TUI with alt-screen
+	RunModeDaemon                     // No rendering, no input (background)
+	RunModeDirect                     // Plain stdout, no TUI wrapper (piped/CI)
 )
 
-// DetermineRunMode determines how the program should run based on flags and environment
+// DetermineRunMode selects the run mode with explicit flags taking precedence
+// over auto-detection. Fallback order: daemonFlag → noTUIFlag → TTY check.
 func DetermineRunMode(daemonFlag, noTUIFlag bool) RunMode {
 	// Explicit daemon mode
 	if daemonFlag {
@@ -96,9 +98,9 @@ func DetermineRunMode(daemonFlag, noTUIFlag bool) RunMode {
 	return RunModeInteractive
 }
 
-// LogWriter returns an appropriate writer for logs based on run mode
-// In interactive mode, logs should be discarded (TUI manages display)
-// In daemon/direct mode, logs should go to stderr
+// LogWriter returns an appropriate writer for logs based on run mode.
+// Interactive mode discards logs because the TUI manages its own display;
+// writing to stdout/stderr would corrupt the Bubble Tea rendering.
 func LogWriter(mode RunMode) io.Writer {
 	if mode == RunModeInteractive {
 		return io.Discard

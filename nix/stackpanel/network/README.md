@@ -28,7 +28,7 @@ Step CA provides secure TLS certificates for internal services. With a device ce
 
 ```nix
 # devenv.nix
-stackpanel.network.step = {
+stack.network.step = {
   enable = true;
   ca-url = "https://ca.internal:443";
   ca-fingerprint = "abc123...";

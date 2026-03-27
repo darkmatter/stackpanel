@@ -82,7 +82,7 @@ in
 
     compatibilityDate = lib.mkOption {
       type = lib.types.str;
-      default = "2024-01-01";
+      default = "2025-04-01";
       description = ''
         Workers API compatibility date. Use a recent date for new projects.
       '';

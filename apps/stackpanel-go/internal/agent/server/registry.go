@@ -1,3 +1,12 @@
+// registry.go implements the module registry: browsing, searching, and installing
+// external Stackpanel modules from a remote JSON registry.
+//
+// Installation uses tree-sitter (via flakeedit) to parse and modify flake.nix,
+// adding the required flake input and stackpanelImports entry. If auto-editing
+// fails, a fallback returns code snippets for manual installation.
+//
+// When the registry is unreachable, sample/builtin modules are returned so the
+// UI always has something to display.
 package server
 
 import (
@@ -5,11 +14,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/darkmatter/stackpanel/stackpanel-go/internal/flakeedit"
 )
 
 // Default registry URL - can be overridden via config
@@ -70,8 +84,13 @@ type InstallModuleRequest struct {
 
 // InstallModuleResponse is the response from installing a module
 type InstallModuleResponse struct {
-	Success          bool   `json:"success"`
-	Message          string `json:"message"`
+	Success            bool   `json:"success"`
+	Message            string `json:"message"`
+	InputAdded         bool   `json:"inputAdded,omitempty"`
+	ImportAdded        bool   `json:"importAdded,omitempty"`
+	InputAlreadyExists bool   `json:"inputAlreadyExists,omitempty"`
+	LockUpdated        bool   `json:"lockUpdated,omitempty"`
+	// Legacy fields — returned when auto-edit fails and the user must edit manually
 	FlakeInputCode   string `json:"flakeInputCode,omitempty"`
 	ModuleImportCode string `json:"moduleImportCode,omitempty"`
 }
@@ -185,7 +204,9 @@ func (s *Server) handleRegistryModules(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleRegistryInstall handles installing a module from the registry
+// handleRegistryInstall installs a module by editing flake.nix with tree-sitter.
+// On success it also runs `nix flake lock --update-input` to fetch the new input.
+// If any step fails, the original flake.nix is restored from a backup.
 func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -203,29 +224,136 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate the Nix code for flake input
-	inputName := sanitizeFlakeInputName(request.ModuleID)
-	ref := request.Ref
-	if ref == "" {
-		ref = "main"
+	// Skip auto-install for builtin modules
+	if request.FlakeURL == "builtin" {
+		s.writeAPI(w, http.StatusOK, InstallModuleResponse{
+			Success: true,
+			Message: fmt.Sprintf("Module %s is builtin — enable it in your stackpanel config", request.ModuleID),
+		})
+		return
 	}
 
-	flakeInputCode := fmt.Sprintf(`    %s = {
-      url = "%s";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };`, inputName, request.FlakeURL)
-
-	// Generate the module import code
+	inputName := sanitizeFlakeInputName(request.ModuleID)
 	flakePath := request.FlakePath
 	if flakePath == "" {
 		flakePath = "stackpanelModules.default"
 	}
 
+	// Determine project root
+	projectRoot := s.config.ProjectRoot
+	if projectRoot == "" {
+		s.handleRegistryInstallFallback(w, request, inputName, flakePath)
+		return
+	}
+
+	flakeNixPath := filepath.Join(projectRoot, "flake.nix")
+
+	// Read flake.nix
+	source, err := os.ReadFile(flakeNixPath)
+	if err != nil {
+		log.Warn().Err(err).Str("path", flakeNixPath).Msg("Could not read flake.nix, falling back to manual install")
+		s.handleRegistryInstallFallback(w, request, inputName, flakePath)
+		return
+	}
+
+	// Parse with tree-sitter
+	editor, err := flakeedit.NewFlakeEditor(source)
+	if err != nil {
+		log.Warn().Err(err).Msg("Could not parse flake.nix, falling back to manual install")
+		s.handleRegistryInstallFallback(w, request, inputName, flakePath)
+		return
+	}
+	defer editor.Close()
+
+	// Build the import expression
+	importExpr := fmt.Sprintf("inputs.%s.%s", inputName, flakePath)
+
+	// Perform the edit
+	editResult, err := editor.AddInputAndImport(
+		flakeedit.FlakeInput{
+			Name:           inputName,
+			URL:            request.FlakeURL,
+			FollowsNixpkgs: true,
+		},
+		importExpr,
+	)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to edit flake.nix, falling back to manual install")
+		s.handleRegistryInstallFallback(w, request, inputName, flakePath)
+		return
+	}
+
+	// Write backup
+	backupPath := flakeNixPath + ".bak"
+	if err := os.WriteFile(backupPath, source, 0o644); err != nil {
+		log.Warn().Err(err).Msg("Could not write flake.nix backup")
+	}
+
+	// Write modified flake.nix
+	if err := os.WriteFile(flakeNixPath, editResult.Modified, 0o644); err != nil {
+		s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("failed to write flake.nix: %v", err))
+		return
+	}
+
+	// Lock the new input
+	lockUpdated := false
+	if editResult.InputAdded {
+		lockCmd := exec.Command("nix", "flake", "lock", "--update-input", inputName)
+		lockCmd.Dir = projectRoot
+		if lockErr := lockCmd.Run(); lockErr != nil {
+			log.Warn().Err(lockErr).Str("input", inputName).Msg("nix flake lock failed, rolling back")
+			// Rollback
+			if rbErr := os.WriteFile(flakeNixPath, source, 0o644); rbErr != nil {
+				log.Error().Err(rbErr).Msg("Failed to rollback flake.nix")
+			}
+			s.writeAPIError(w, http.StatusInternalServerError, fmt.Sprintf("nix flake lock failed for input %s: %v", inputName, lockErr))
+			return
+		}
+		lockUpdated = true
+	}
+
+	// Clean up backup on success
+	os.Remove(backupPath)
+
+	// Broadcast SSE event
+	s.broadcastSSE(SSEEvent{
+		Event: "module.installed",
+		Data: map[string]any{
+			"moduleId":           request.ModuleID,
+			"flakeUrl":           request.FlakeURL,
+			"flakePath":          flakePath,
+			"inputAdded":         editResult.InputAdded,
+			"importAdded":        editResult.ImportAdded,
+			"inputAlreadyExists": editResult.InputAlreadyExists,
+			"lockUpdated":        lockUpdated,
+		},
+	})
+
+	message := fmt.Sprintf("Module %s installed successfully", request.ModuleID)
+	if editResult.InputAlreadyExists {
+		message = fmt.Sprintf("Input %s already exists; added module import", inputName)
+	}
+
+	s.writeAPI(w, http.StatusOK, InstallModuleResponse{
+		Success:            true,
+		Message:            message,
+		InputAdded:         editResult.InputAdded,
+		ImportAdded:        editResult.ImportAdded,
+		InputAlreadyExists: editResult.InputAlreadyExists,
+		LockUpdated:        lockUpdated,
+	})
+}
+
+// handleRegistryInstallFallback returns code snippets for manual installation
+// when auto-editing is not possible (no project root, parse failure, etc.).
+func (s *Server) handleRegistryInstallFallback(w http.ResponseWriter, request InstallModuleRequest, inputName, flakePath string) {
+	flakeInputCode := fmt.Sprintf(`    %s.url = "%s";
+    %s.inputs.nixpkgs.follows = "nixpkgs";`, inputName, request.FlakeURL, inputName)
+
 	moduleImportCode := fmt.Sprintf(`    inputs.%s.%s`, inputName, flakePath)
 
-	// Broadcast installation event
 	s.broadcastSSE(SSEEvent{
-		Event: "module.install.requested",
+		Event: "module.install.manual",
 		Data: map[string]any{
 			"moduleId":  request.ModuleID,
 			"flakeUrl":  request.FlakeURL,
@@ -235,7 +363,7 @@ func (s *Server) handleRegistryInstall(w http.ResponseWriter, r *http.Request) {
 
 	s.writeAPI(w, http.StatusOK, InstallModuleResponse{
 		Success:          true,
-		Message:          fmt.Sprintf("To install %s, add the following to your flake.nix:", request.ModuleID),
+		Message:          fmt.Sprintf("Auto-install not available. To install %s, add the following to your flake.nix:", request.ModuleID),
 		FlakeInputCode:   flakeInputCode,
 		ModuleImportCode: moduleImportCode,
 	})

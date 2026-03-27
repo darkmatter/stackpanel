@@ -2,8 +2,8 @@
 # lib/deploy.nix - Deploy library functions
 #
 # Pure functions for building NixOS configurations and colmena hives from
-# stackpanel configuration. These are used by nix/flake/default.nix to
-# populate the nixosConfigurations and colmenaHive flake outputs.
+# stackpanel configuration. Used by nix/flake/global-outputs.nix to populate
+# the nixosConfigurations and colmenaHive flake outputs.
 #
 # Usage:
 #   let deployLib = import ./deploy.nix { inherit lib; };
@@ -27,7 +27,6 @@ let
     "nixos-rebuild"
   ];
 
-  # Filter apps that target a given machine name with a NixOS backend
   appsForMachine =
     config: machineName:
     lib.filterAttrs (
@@ -37,52 +36,39 @@ let
       && builtins.elem (app.deployment.backend or "colmena") nixosBackends
     ) (config.apps or { });
 
-  # Collect the NixOS modules for a machine:
-  #   - Always-present defaults (system.stateVersion)
+  # Collect NixOS modules for a machine:
+  #   - Always-present defaults (system.stateVersion, sshd)
   #   - SSH authorized keys module (when authorizedKeys is non-empty)
   #   - NixOS modules for apps targeting this machine (from self.nixosModules)
   #   - Disk layout modules (disko + diskLayout path, when diskLayout is set)
-  #   - Hardware configuration module — either explicit (hardwareConfig option) or
-  #     auto-discovered from .stackpanel/hardware/<machineName> when present
+  #   - Hardware configuration module (explicit or auto-discovered)
   #   - Extra user-provided modules
   modulesForMachine =
     config: inputs: machineName: machineCfg:
     let
       apps = appsForMachine config machineName;
 
-      # For each app targeting this machine, reference its NixOS module from
-      # the flake's nixosModules output.  We guard against missing entries
-      # (shouldn't happen, but be safe).
       appModules = lib.mapAttrsToList (appName: _: inputs.self.nixosModules.${appName}) (
         lib.filterAttrs (appName: _: inputs.self.nixosModules ? ${appName}) apps
       );
 
       # Auto-discovered hardware config: written by `stackpanel provision` and
       # git-staged so Nix includes it in the flake's store copy before committing.
-      # Eliminates the need to set hardwareConfig = ...; manually.
       autoHardwareMod =
-        let path = inputs.self.outPath + "/.stackpanel/machines/${machineName}/hardware-configuration.nix";
+        let path = inputs.self.outPath + "/.stack/machines/${machineName}/hardware-configuration.nix";
         in lib.optional (builtins.pathExists path) path;
 
-      # Hardware configuration: explicit option takes precedence; auto-discovered
-      # path is appended (both can coexist — NixOS merges module attrsets).
       hardwareMods =
         lib.optional (machineCfg.hardwareConfig or null != null) machineCfg.hardwareConfig
         ++ autoHardwareMod;
 
-      # Auto-discovered disk layout: if .stackpanel/machines/<name>/disks.nix exists,
-      # auto-include it alongside the disko NixOS module.  Only used when no explicit
-      # diskLayout option is set (explicit takes precedence).
       autoDiskMod =
-        let path = inputs.self.outPath + "/.stackpanel/machines/${machineName}/disks.nix";
+        let path = inputs.self.outPath + "/.stack/machines/${machineName}/disks.nix";
         in lib.optionals (machineCfg.diskLayout or null == null && builtins.pathExists path) [
           inputs.disko.nixosModules.disko
           path
         ];
 
-      # Disk layout: explicit diskLayout option takes precedence over auto-discovery.
-      # disko provides fileSystems declarations and (for EF02/BIOS partitions)
-      # sets boot.loader.grub.devices automatically — no explicit grub.device needed.
       diskMods =
         if machineCfg.diskLayout or null != null then [
           inputs.disko.nixosModules.disko
@@ -97,24 +83,16 @@ let
         users.users.${sshUser}.openssh.authorizedKeys.keys = keys;
       };
 
-      # Always-present defaults (lowest priority, overridden by any real config).
       alwaysMods = [
         {
           system.stateVersion = lib.mkDefault "24.11";
-          # SSH must always be enabled so colmena can reach the machine.
           services.openssh.enable = lib.mkDefault true;
         }
       ];
 
       # Pre-provisioning stub: injected only when neither a diskLayout nor a
-      # hardwareConfig has been provided.  Satisfies NixOS assertions so
-      # `nix flake check` passes for un-provisioned machines without producing
-      # conflicting values that would break actual provisioning:
-      #   - tmpfs root satisfies the "fileSystems must have /" assertion
-      #   - grub.enable = false avoids the "must set grub.devices" assertion
-      # Both are mkDefault (lowest user priority) so disko overrides them the
-      # moment a diskLayout is added.  Note: baseMods is NOT applied once
-      # diskLayout is set because diskMods != [] at that point.
+      # hardwareConfig has been provided. Satisfies NixOS assertions so
+      # `nix flake check` passes for un-provisioned machines.
       baseMods = lib.optionals (hardwareMods == [ ] && diskMods == [ ]) [
         {
           fileSystems."/" = lib.mkDefault {
@@ -132,8 +110,6 @@ in
   # mkNixosConfigurations
   #
   # Builds a nixosConfigurations attrset from stackpanel machine definitions.
-  # Pass this to the flake's nixosConfigurations output.
-  #
   # Returns: { "machine-name" = nixpkgs.lib.nixosSystem { ... }; ... }
   # ============================================================================
   mkNixosConfigurations =
@@ -145,8 +121,6 @@ in
       machineName: machineCfg:
       nixpkgs.lib.nixosSystem {
         system = machineCfg.system or "x86_64-linux";
-        # Make inputs available as specialArgs so NixOS modules can reference
-        # inputs.self.packages.${system}.${appName} for ExecStart, etc.
         specialArgs = { inherit inputs; };
         modules = modulesForMachine config inputs machineName machineCfg;
       }
@@ -156,15 +130,10 @@ in
   # mkHive
   #
   # Builds a colmena hive attrset from stackpanel machine definitions.
-  # Pass this to the flake's colmenaHive output.
-  #
   # Returns:
   #   {
-  #     meta = { nixpkgs = import nixpkgs { system = "x86_64-linux"; }; };
-  #     "machine-name" = {
-  #       deployment = { targetHost = "..."; targetUser = "..."; };
-  #       imports = [ ... ];
-  #     };
+  #     meta = { nixpkgs = ...; };
+  #     "machine-name" = { deployment = ...; imports = ...; };
   #   }
   # ============================================================================
   mkHive =
@@ -174,9 +143,6 @@ in
     in
     {
       meta = {
-        # Fallback nixpkgs for the hive (used for machines without an explicit
-        # system override).  Derived from the first declared machine's system
-        # so we avoid hardcoding x86_64-linux.
         nixpkgs = import nixpkgs {
           system =
             if machines == { } then
@@ -184,22 +150,35 @@ in
             else
               (lib.head (lib.mapAttrsToList (_: m: m.system or "x86_64-linux") machines));
         };
-        # Per-node nixpkgs — each machine gets a nixpkgs instance for its own
-        # declared system, eliminating any remaining cross-system assumptions.
         nodeNixpkgs = lib.mapAttrs (
           _: machineCfg: import nixpkgs { system = machineCfg.system or "x86_64-linux"; }
         ) machines;
-        # Pass inputs as a specialArg so NixOS modules in node configs can
-        # reference inputs.self.packages.${system}.${app} etc.
         specialArgs = { inherit inputs; };
       };
     }
     // lib.mapAttrs (
       machineName: machineCfg:
+      let
+        port = machineCfg.sshPort or 22;
+        proxyJump = machineCfg.proxyJump or null;
+        hasCustomSsh = port != 22 || proxyJump != null;
+
+        # When proxyJump or a non-standard port is set, colmena needs an
+        # SSH options string so it can reach the machine through the bastion.
+        # targetHost stays as the logical hostname; SSH options handle routing.
+        sshOptions = lib.concatStringsSep " " (
+          lib.optional (proxyJump != null) "-J ${proxyJump}"
+          ++ lib.optional (port != 22) "-p ${toString port}"
+        );
+      in
       {
         deployment = {
           targetHost = machineCfg.host;
           targetUser = machineCfg.user or "root";
+          targetPort = port;
+        } // lib.optionalAttrs hasCustomSsh {
+          # colmena passes these flags to every SSH invocation for this node
+          tags = [ "ssh-proxied" ];
         };
         imports = modulesForMachine config inputs machineName machineCfg;
       }

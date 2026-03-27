@@ -1,0 +1,71 @@
+---
+title: outputs
+description: Configuration options for stackpanel.outputs
+icon: Settings
+---
+
+# Outputs Options
+
+## `flakeApps`
+
+Flake apps to expose via nix run .#\<name\>.
+
+Each app must have:
+
+Example: stackpanel.flakeApps = \{ web = \{ type = "app"; program = "$\{myPackage\}/bin/web"; \}; \};
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (submodule)` |
+| **Default** | `{ }` |
+
+---
+
+## `flakeApps.<name>.program`
+
+Path to the executable.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `flakeApps.<name>.type`
+
+App type (always 'app' for Nix apps).
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | `"app"` |
+
+---
+
+## `outputs`
+
+Output derivations to expose.
+
+These will be available as:
+
+Example: stackpanel.outputs = \{ my-docs = pkgs.runCommand "docs" \{\} "..."; my-script = pkgs.writeShellScriptBin "foo" "..."; # Grouped packages (available via nix run .#scripts.) scripts = \{ foo = pkgs.writeShellScriptBin "foo" "..."; \}; \};
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of (package or attribute set of package)` |
+| **Default** | `{ }` |
+
+**Example:**
+
+```nix
+{
+  docs-json = optionsDoc.optionsJSON;
+  docs-md = optionsDoc.optionsCommonMark;
+  scripts = { my-script = pkgs.writeShellScriptBin "test" "echo hello"; };
+}
+```
+
+
+---
+

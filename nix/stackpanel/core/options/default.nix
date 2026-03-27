@@ -18,12 +18,11 @@
 #
 # Imported by: ../default.nix
 # ==============================================================================
-{ ... }:
-{
+{...}: {
   imports = [
     ./apps.nix
-    ./aws.nix
-    ./binary-cache.nix
+    # aws.nix -- colocated into services/aws/options.nix
+    # binary-cache.nix -- colocated into services/binary-cache.nix
     ./caddy.nix
     ./checks.nix
     ./ci.nix
@@ -31,8 +30,8 @@
     ./codegen.nix
     ./core.nix
     ./devshell.nix
-    ./dns.nix
-    ./extensions.nix
+    # dns.nix -- colocated into network/dns.nix
+    # extensions.nix -- flattened into core/extensions.nix
     ./global-services.nix
     ./healthchecks.nix
     ./ide.nix
@@ -40,15 +39,16 @@
     ./motd.nix
     ./outputs.nix
     ./panels.nix
+    ./portless.nix
     ./step-ca.nix
     ./state.nix
-    ./tasks.nix
+    # tasks.nix -- flattened into core/tasks.nix
     ./ports.nix
     ./secrets.nix
     ./services.nix
-    ./theme.nix
+    # theme.nix -- colocated into tui/theme.nix
     ./user-packages.nix
-    ./users.nix
+    # users.nix -- flattened into core/users-options.nix
     ./variables.nix
     ./variables-backend.nix
   ];

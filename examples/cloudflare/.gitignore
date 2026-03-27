@@ -1,0 +1,8 @@
+result
+result-*
+.direnv/
+.stackpanel-root
+.stack/profile/
+.stack/keys/
+.stack/gen/
+.DS_Store

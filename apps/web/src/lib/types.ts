@@ -112,10 +112,6 @@ export interface GroupSecretWriteResponse {
   group: string;
   /** Relative path to the SOPS file (from project root) */
   path: string;
-  /** Vals reference for source project configs (uses configured secrets dir) */
-  valsRef: string;
-  /** Vals reference for deployed env package (uses relative path: ref+sops://groups/<group>.yaml#/<key>) */
-  envPackageRef: string;
   /** Number of AGE recipients the file is encrypted to */
   recipientCount: number;
 }
@@ -146,11 +142,88 @@ export interface AllGroupsListResponse {
   groups: Record<string, string[]>;
 }
 
-/** Response from generating the env package */
-export interface GenerateEnvPackageResponse {
+// =============================================================================
+// Recipients & team access
+// =============================================================================
+
+/** A recipient who can decrypt secrets */
+export interface Recipient {
+  /** Recipient name */
+  name: string;
+  /** AGE or SSH public key */
+  publicKey: string;
+  /** Tags used to match this recipient to secret groups */
+  tags?: string[];
+  /** Where this recipient comes from */
+  source?: "secrets" | "users";
+  /** Whether this recipient can be removed from the UI */
+  canDelete?: boolean;
+}
+
+/** Response from listing recipients */
+export interface RecipientListResponse {
+  recipients: Recipient[];
+}
+
+/** Request to add a new recipient */
+export interface AddRecipientRequest {
+  /** Name for the recipient */
+  name: string;
+  /** AGE public key (starts with age1...) */
+  publicKey?: string;
+  /** SSH public key (stored directly in SOPS config) */
+  sshPublicKey?: string;
+  /** Tags that determine which groups this recipient can decrypt */
+  tags?: string[];
+}
+
+export interface SecretsRecipientGroup {
+  recipients?: string[];
+}
+
+export interface SecretsCreationRule {
+  "path-regex": string;
+  recipients?: string[];
+  "recipient-groups"?: string[];
+  "unencrypted-comment-regex"?: string;
+}
+
+export interface SecretsConfigEntity {
+  recipients?: Record<string, {
+    "public-key": string;
+    tags?: string[];
+  }>;
+  "recipient-groups"?: Record<string, SecretsRecipientGroup>;
+  "creation-rules"?: SecretsCreationRule[];
+  [key: string]: unknown;
+}
+
+/** Status of the GitHub Actions rekey workflow */
+export interface RekeyWorkflowStatus {
+  /** Whether the workflow file exists */
+  exists: boolean;
+  /** Path to the workflow file */
   path: string;
-  apps: number;
-  groups: string[];
+  /** Most recent workflow run info (if available) */
+  lastRun?: {
+    status: string;
+    conclusion: string;
+    createdAt: string;
+  };
+}
+
+/** Request to verify secrets encrypt/decrypt round-trip */
+export interface SecretsVerifyRequest {
+  /** Group to verify (e.g., "dev") */
+  group: string;
+}
+
+/** Response from secrets verification */
+export interface SecretsVerifyResponse {
+  /** Whether the round-trip succeeded */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
 }
 
 /** Health information returned by the agent */

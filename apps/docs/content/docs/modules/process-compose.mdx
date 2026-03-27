@@ -1,0 +1,24 @@
+---
+title: Process Compose Module Entry Point
+description: "Process orchestration with auto-generated app processes."
+---
+
+Process orchestration with auto-generated app processes.
+
+## Components
+
+- meta.nix: Static metadata for discovery
+- module.nix: Options, process generation, devenv compatibility
+- ui.nix: UI panel definitions
+
+## Usage
+
+```nix
+# Apps automatically get dev processes
+stackpanel.apps.web.path = "apps/web";
+```
+
+
+```nix
+# Then run `dev` in the devshell
+```

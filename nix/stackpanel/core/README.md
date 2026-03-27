@@ -1,88 +1,45 @@
-# Stackpanel Core Module System
+# Core Module
 
-This directory contains the core module system for Stackpanel - a Nix-based development environment management framework.
+Foundational options and boot logic for the Stack module system.
 
 ## Overview
 
-The core module system provides:
+The core module defines the root configuration schema (project name, directories, root marker) and sets up the devshell environment: environment variables, directory creation, shell hooks, and CLI integration.
 
-- **Option definitions**: Declarative schema for all Stackpanel configuration
-- **Service management**: PostgreSQL, Redis, Minio, and Caddy integration
-- **Port computation**: Deterministic port assignment based on project name
-- **File generation**: State files, IDE configs, and JSON schemas
+Feature-specific options live in their own directories (`apps/`, `services/`, `network/`, `secrets/`, `ide/`, `tui/`, `variables/`).
 
-## Directory Structure
+## Files
 
-```
-core/
-├── default.nix          # Main entry point - imports options, sets up hooks
-├── cli.nix              # CLI-based file generation (invokes Go CLI)
-├── state.nix            # Legacy state file generation (when CLI disabled)
-├── lib/
-│   └── evalconfig.nix   # Configuration evaluator for Go CLI/agent
-├── options/             # Option definitions (schema only, no implementation)
-│   ├── default.nix      # Imports all option modules
-│   ├── core.nix         # Root paths, directories, basic settings
-│   ├── apps.nix         # Application port and domain configuration
-│   ├── ports.nix        # Deterministic port computation options
-│   ├── devshell.nix     # Shell environment (packages, hooks, commands)
-│   └── ...              # Additional feature-specific options
-└── services/            # Service configuration and helpers
-    ├── default.nix      # Core library functions
-    ├── services.nix     # Service registry and factory
-    ├── global-services.nix  # Global singleton services
-    ├── ports.nix        # Port computation utilities (pure functions)
-    └── <service>.nix    # Individual service definitions
-```
+| File | Description |
+|------|-------------|
+| `default.nix` | Entry point — imports all core modules, sets up hooks |
+| `options-core.nix` | Root options: enable, name, root, dirs, direnv, git-hooks, checks |
+| `outputs.nix` | Flake output derivations and apps |
+| `checks.nix` | Module check schema for `nix flake check` |
+| `motd.nix` | Message of the Day configuration |
+| `codegen.nix` | Code generator definitions |
+| `cli.nix` | CLI-based file generation (invokes Go CLI) |
+| `cli-options.nix` | CLI enable/quiet options |
+| `state.nix` | Legacy state file generation |
+| `state-options.nix` | State file options |
+| `user-packages.nix` | User-installed packages from `.stack/data/packages.nix` |
+| `users-options.nix` | Team member definitions |
+| `panels.nix` | UI panel system for the web studio |
+| `tasks.nix` | Turborepo task definitions |
+| `ci.nix` | CI/CD workflow generation |
+| `modules-options.nix` | Module registry schema |
+| `extensions.nix` | Extension system (backward compat alias to modules) |
+| `aliases.nix` | Shell alias management |
+| `util.nix` | Internal logging utilities |
 
 ## Usage
 
-The core module is typically imported by a devenv adapter:
+The core module is imported automatically via `nix/stack/default.nix`. Configure it in your project:
 
 ```nix
-# In devenv.nix or a flake module
-{
-  imports = [
-    ./nix/stackpanel/core
-  ];
-
-  stackpanel = {
-    enable = true;
-    ports.project-name = "myproject";
-    apps = {
-      web = {};
-      api = { domain = "api"; tls = true; };
-    };
-  };
-}
+stack = {
+  enable = true;
+  name = "my-project";
+  dirs.home = ".stack";
+};
 ```
-
-## Key Concepts
-
-### Port Computation
-
-Ports are computed deterministically from the project name:
-- Base port is derived from MD5 hash of project name
-- Apps get offsets 0-9 from base port
-- Services get offsets 10-99 from base port
-
-### File Generation
-
-Two modes are available:
-1. **CLI mode** (default): Nix exports config as JSON, Go CLI writes files
-2. **State mode** (legacy): Nix writes state file directly in enterShell
-
-### Global Services
-
-Development services (PostgreSQL, Redis, Minio) run as global singletons to avoid resource duplication. Projects register their databases/sites with the shared services.
-
-## Extending
-
-To add new options:
-1. Create a new file in `options/` following the existing pattern
-2. Import it in `options/default.nix`
-3. Implement the feature in the appropriate module
-
-To add new services:
-1. Create a new file in `services/<name>.nix`
-2. Register it in `services/services.nix`

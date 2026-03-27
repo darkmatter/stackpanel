@@ -1,3 +1,8 @@
+// logs.go surfaces shell-entry logs captured during devshell initialisation.
+//
+// The shell hook pipes its output to a log file so it doesn't clutter the
+// terminal on every shell entry. This command provides a way to inspect those
+// logs when debugging shell hook issues.
 package cmd
 
 import (
@@ -26,6 +31,9 @@ func init() {
 	rootCmd.AddCommand(logsCmd)
 }
 
+// runShellLogs reads the shell entry log. It tries STACKPANEL_SHELL_LOG first
+// (set directly by the shell hook), then falls back to constructing the path
+// from STACKPANEL_STATE_DIR. Both vars are only available inside the devshell.
 func runShellLogs(cmd *cobra.Command, args []string) error {
 	logPath := envvars.StackpanelShellLog.Get()
 	if logPath == "" {

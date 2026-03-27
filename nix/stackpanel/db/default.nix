@@ -22,7 +22,8 @@
 # │                                                                             │
 # │  3. Categorize it in STEP 2 below (dataSchemas, rootSchemas, etc.)          │
 # │                                                                             │
-# │  4. Run `nix run .#generate-protos` to regenerate Go/TS types               │
+# │  4. Run `nix develop --impure -c ./packages/proto/generate.sh`              │
+# │     to regenerate Go/TS types                                               │
 # │                                                                             │
 # │  Options are auto-generated via mkSchemaBundle. Access via db.extend.*      │
 # └─────────────────────────────────────────────────────────────────────────────┘
@@ -120,9 +121,9 @@ let
   #   STEP 2: SCHEMA CATEGORIZATION
   #
   #   Assign your schema to the appropriate category. This determines:
-  #     - dataSchemas: User-editable data in .stackpanel/data/<name>.nix
+  #     - dataSchemas: User-editable data in .stack/data/<name>.nix
   #     - internalSchemas: Module-computed, not user-editable (no data file)
-  #     - rootSchemas: Project config in .stackpanel/ root
+  #     - rootSchemas: Project config in .stack/ root
   #     - externalSchemas: Synced from external sources (read-only)
   #
   #   ALL schemas get auto-generated Nix options via mkSchemaBundle.
@@ -134,7 +135,7 @@ let
   #
   # ============================================================================
 
-  # Schemas that generate data files in .stackpanel/data/
+  # Schemas that generate data files in .stack/data/
   # NOTE: Only include schemas that have corresponding options in core/options/
   dataSchemas = {
     inherit (schemas)
@@ -177,7 +178,7 @@ let
       ;
   };
 
-  # Schemas for .stackpanel/ root (project-level config)
+  # Schemas for .stack/ root (project-level config)
   rootSchemas = {
     inherit (schemas) config;
   };
@@ -332,16 +333,15 @@ let
   #
   #   INTERNAL: Scaffolding / init file generation
   #
-  #   Generates the .stackpanel/ directory structure for new projects.
+  #   Generates the .stack/ directory structure for new projects.
   #   config.nix is the single source of truth (both user and agent editable).
   #
   # ============================================================================
   initFiles =
     let
-      # Config file uses the config schema's boilerplate
       configBoilerplate = schemas.config.boilerplate or null;
       configFile = {
-        ".stackpanel/config.nix" =
+        ".stack/config.nix" =
           if configBoilerplate != null then
             configBoilerplate
           else
@@ -356,18 +356,12 @@ let
             '';
       };
 
-      # Internal merging logic file (not user-editable)
-      internalBoilerplate = schemas.config.internalBoilerplate or null;
-      internalFile =
-        if internalBoilerplate != null then { ".stackpanel/_internal.nix" = internalBoilerplate; } else { };
-
-      # .gitignore file
       gitignoreBoilerplate = schemas.config.gitignoreBoilerplate or null;
       gitignoreFile =
-        if gitignoreBoilerplate != null then { ".stackpanel/.gitignore" = gitignoreBoilerplate; } else { };
+        if gitignoreBoilerplate != null then { ".stack/.gitignore" = gitignoreBoilerplate; } else { };
 
     in
-    configFile // internalFile // gitignoreFile;
+    configFile // gitignoreFile;
 in
 {
   # ============================================================================

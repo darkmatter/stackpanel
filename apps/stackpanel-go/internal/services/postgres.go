@@ -1,3 +1,7 @@
+// Package services implements dev service lifecycle management for local
+// development. Each service (postgres, redis, minio) self-registers via init()
+// into the global service registry so the CLI can discover and manage them
+// uniformly through the "stack services" commands.
 package services
 
 import (
@@ -11,7 +15,8 @@ import (
 	svc "github.com/darkmatter/stackpanel/stackpanel-go/pkg/services"
 )
 
-// PostgresService manages the PostgreSQL service
+// PostgresService manages a project-local PostgreSQL instance. Data is stored
+// under the service directory so each stack project gets an isolated cluster.
 type PostgresService struct {
 	svc.BaseService
 }
@@ -27,10 +32,14 @@ func NewPostgresService() *PostgresService {
 	}
 }
 
+// SocketDir returns the Unix socket directory. Postgres requires sockets in a
+// short path (< 107 chars on most systems) - ServiceDir is kept shallow for this.
 func (p *PostgresService) SocketDir() string {
 	return filepath.Join(p.ServiceDir(), "socket")
 }
 
+// DatabasesDir holds per-project .conf files listing databases to auto-create.
+// Format: one "database=<name>" per line.
 func (p *PostgresService) DatabasesDir() string {
 	return filepath.Join(p.ServiceDir(), "databases.d")
 }
@@ -69,7 +78,8 @@ func (p *PostgresService) Start() error {
 		return fmt.Errorf("pg_ctl start failed: %v\n%s", err, output)
 	}
 
-	// Read PID from postmaster.pid
+	// Read PID from postmaster.pid rather than trusting pg_ctl output.
+	// The first line of this file is always the PID.
 	postmasterPid := filepath.Join(p.DataDir(), "postmaster.pid")
 	if data, err := os.ReadFile(postmasterPid); err == nil {
 		lines := strings.Split(string(data), "\n")
@@ -99,6 +109,8 @@ func (p *PostgresService) Stop() error {
 	return nil
 }
 
+// Status checks liveness via PID file first, then falls back to port probing.
+// The fallback handles cases where postgres was started outside our control.
 func (p *PostgresService) Status() svc.ServiceStatus {
 	status := svc.ServiceStatus{
 		Port: p.Port(),
@@ -148,6 +160,9 @@ func (p *PostgresService) StatusInfo() map[string]string {
 	return info
 }
 
+// createRegisteredDatabases ensures all databases declared in databases.d/*.conf
+// exist. This is called on every start so new projects get their databases
+// without requiring a full service restart.
 func (p *PostgresService) createRegisteredDatabases() {
 	entries, _ := os.ReadDir(p.DatabasesDir())
 	for _, e := range entries {

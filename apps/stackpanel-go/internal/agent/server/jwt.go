@@ -12,42 +12,39 @@ import (
 )
 
 const (
-	// TokenExpiration is how long tokens are valid for
 	TokenExpiration = 30 * 24 * time.Hour // 30 days
-
-	// Issuer identifies tokens as coming from stackpanel agent
-	TokenIssuer = "stackpanel-agent"
+	TokenIssuer     = "stackpanel-agent"
 )
 
-// AgentClaims contains the JWT claims for agent tokens
+// AgentClaims extends standard JWT claims with agent-specific fields.
 type AgentClaims struct {
 	jwt.RegisteredClaims
 
-	// AgentID is a unique identifier for this agent instance
+	// AgentID binds this token to a specific agent instance. Tokens from
+	// previous agent sessions are rejected, forcing re-pairing on restart.
 	AgentID string `json:"agent_id"`
 
-	// Origin is the allowed origin for this token (optional)
+	// Origin restricts which browser origin can use this token (CORS enforcement).
 	Origin string `json:"origin,omitempty"`
 }
 
-// JWTManager handles JWT token generation and validation
+// JWTManager handles JWT token generation and validation.
+//
+// In normal mode, signing keys and agent IDs are randomly generated on each startup,
+// which means all tokens from previous sessions are automatically invalidated.
+// In test mode, keys are derived deterministically from a shared secret so that
+// tokens survive agent restarts (useful for E2E tests and CI).
 type JWTManager struct {
-	// signingKey is the secret key used to sign tokens
 	signingKey []byte
-
-	// agentID is a unique identifier for this agent instance
-	// It changes each time the agent restarts, invalidating old tokens
-	agentID string
-
-	// testMode indicates if this manager is using deterministic keys for testing
-	testMode bool
+	agentID    string // Changes per restart in normal mode, stable in test mode
+	testMode   bool
 }
 
-// JWTManagerOptions configures the JWT manager
+// JWTManagerOptions configures the JWT manager.
 type JWTManagerOptions struct {
-	// TestPairingToken enables test mode with deterministic signing key and agent ID.
-	// When set, the signing key and agent ID are derived from this secret,
-	// making tokens predictable and valid across agent restarts.
+	// TestPairingToken, when set, enables test mode: the signing key and agent ID
+	// are derived from this secret via SHA-256, making tokens deterministic and
+	// valid across agent restarts. Leave empty for production use.
 	TestPairingToken string
 }
 
@@ -141,8 +138,9 @@ func (m *JWTManager) GenerateTestToken(origin string) (string, error) {
 	return token.SignedString(m.signingKey)
 }
 
-// GenerateTestTokenStatic generates a deterministic test token without needing a JWTManager instance.
-// This is useful for CLI tools that need to output the test token.
+// GenerateTestTokenStatic generates a deterministic test token without needing
+// a JWTManager instance. Returns (token, agentID, error). Used by the CLI's
+// `agent test-token` command so E2E tests can obtain a valid token.
 func GenerateTestTokenStatic(testPairingSecret, origin string) (string, string, error) {
 	mgr, err := NewJWTManagerWithOptions(JWTManagerOptions{
 		TestPairingToken: testPairingSecret,
@@ -179,7 +177,8 @@ func (m *JWTManager) GenerateToken(origin string) (string, error) {
 	return token.SignedString(m.signingKey)
 }
 
-// ValidateToken validates a JWT token and returns the claims if valid
+// ValidateToken validates a JWT token and returns the claims if valid.
+// Rejects tokens from different agent instances (stale tokens after restart).
 func (m *JWTManager) ValidateToken(tokenString string) (*AgentClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &AgentClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Verify signing method
@@ -232,7 +231,7 @@ func generateJTI() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// TokenInfo contains information about a token for display purposes
+// TokenInfo is a human-readable summary of a token, used by debug/status endpoints.
 type TokenInfo struct {
 	Valid     bool      `json:"valid"`
 	AgentID   string    `json:"agent_id,omitempty"`
@@ -242,8 +241,8 @@ type TokenInfo struct {
 	Error     string    `json:"error,omitempty"`
 }
 
-// GetTokenInfo extracts information from a token without full validation
-// This is useful for debugging and displaying token status
+// GetTokenInfo extracts information from a token for debugging/display.
+// Unlike ValidateToken, it returns structured info even for invalid tokens.
 func (m *JWTManager) GetTokenInfo(tokenString string) TokenInfo {
 	claims, err := m.ValidateToken(tokenString)
 	if err != nil {

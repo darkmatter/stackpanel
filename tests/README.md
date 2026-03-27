@@ -1,4 +1,4 @@
-# Stackpanel Tests
+# Stack Tests
 
 Automated tests to prevent regressions in both devenv and native nix shell configurations.
 
@@ -22,6 +22,23 @@ Automated tests to prevent regressions in both devenv and native nix shell confi
 ```
 
 ## Test Suite
+
+### File Mutation Regression Coverage
+
+Source-aware file mutations are covered by targeted Go tests in
+`apps/stackpanel-go/internal/fileops/apply_test.go` and
+`apps/stackpanel-go/cmd/cli/nixify_test.go`.
+
+Deployment regressions around preflight-managed app manifests are covered by
+`tests/deploy-build-artifact-smoke.sh`.
+
+These cover:
+
+1. Backup-on-adopt for tracked files like `package.json`
+2. JSON path operations (`set`, `merge`, `remove`, `append`, `appendUnique`)
+3. Stale-path restoration when Stackpanel stops managing a JSON key
+4. Block-managed file insertion and cleanup
+5. `stackpanel nixify` generation for `json-ops`
 
 ### Smoke Tests (`smoke-test.sh`)
 
@@ -50,7 +67,7 @@ Options:
 
 ### Template Tests (`test-templates.sh`)
 
-Tests all stackpanel templates by:
+Tests all stack templates by:
 
 1. Creating temporary projects from each template
 2. Running smoke tests on the generated projects
@@ -151,7 +168,7 @@ This usually indicates:
 - Devenv-specific configuration issues
 - Module not imported in devenv context
 
-**Fix:** Check that `stackpanel.packages` are properly merged in `nix/internal/devshell.nix`
+**Fix:** Check that `stack.packages` are properly merged in `nix/internal/devshell.nix`
 
 ### Tests Fail in Native But Pass in Devenv
 
@@ -159,7 +176,7 @@ This usually indicates:
 - Native shell missing devenv-specific packages
 - Environment variable not set in native context
 
-**Fix:** Check that native shell properly evaluates stackpanel modules
+**Fix:** Check that native shell properly evaluates stack modules
 
 ### "Package Not Available" Errors
 
@@ -168,11 +185,11 @@ This usually indicates:
 # Check what packages are actually in the shell
 nix shell .#devShells.default --impure --command bash -c 'echo $PATH | tr ":" "\n"'
 
-# Check if package is in stackpanel config
-grep -r "your-package" .stackpanel/config.nix
+# Check if package is in stack config
+grep -r "your-package" .stack/config.nix
 ```
 
-**Fix:** Ensure package is in `stackpanel.packages` not just `devenv.packages`
+**Fix:** Ensure package is in `stack.packages` not just `devenv.packages`
 
 ### Template Tests Fail
 
@@ -199,4 +216,4 @@ cd /tmp/test-template
 
 - [Development Guide](../docs/development.md)
 - [Architecture](../docs/architecture.md)
-- [Module System](../nix/stackpanel/README.md)
+- [Module System](../nix/stack/README.md)

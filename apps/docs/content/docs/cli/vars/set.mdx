@@ -1,0 +1,50 @@
+---
+title: stackpanel vars set
+description: Set a variable
+icon: Terminal
+---
+
+# stackpanel vars set
+
+Create or update a workspace variable.
+
+The variable ID should be a path-based identifier (e.g., /my/VAR_NAME).
+A leading "/" is added automatically if omitted.
+
+The value can be:
+  - A literal string (stored as-is)
+  - A vals reference (ref+sops://..., ref+awsssm://..., etc.)
+
+Examples:
+  stackpanel vars set /my/api-host api.example.com
+  stackpanel vars set my/db-port 5432
+  stackpanel vars set /prod/api-url "ref+awsssm://prod/api-url"
+
+## Usage
+
+```bash
+stackpanel vars set <variable-id> <value>
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--force, -f` | `bool` | `false` | Overwrite an existing variable without prompting |
+| `--json` | `bool` | `false` | Output as JSON |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

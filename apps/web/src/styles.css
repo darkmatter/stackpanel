@@ -90,7 +90,7 @@
     @apply bg-background text-foreground;
   }
 }
-@import "../node_modules/@stackpanel/ui/src/styles/web.css";
+@import "../node_modules/@stackpanel/ui-core/src/styles/web.css";
 
 :root {
   --sidebar: hsl(0 0% 98%);

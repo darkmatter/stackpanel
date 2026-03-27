@@ -27,16 +27,16 @@
 let
   # Import shared libraries
   portsLib = import ../lib/ports.nix { inherit lib; };
-  globalServices = import ../core/services/global-services.nix { inherit pkgs lib; };
+  globalServices = import ../core/lib/global-services.nix { inherit pkgs lib; };
 
   # Default configuration
   # NOTE: stateDir, genDir, dataDir are FULL PATHS relative to project root
-  # (e.g., ".stackpanel/state", not just "state")
+  # (e.g., ".stack/state", not just "state")
   defaultConfig = {
     projectName = "default";
-    stateDir = ".stackpanel/state"; # Full path from project root
-    genDir = ".stackpanel/gen"; # Full path from project root
-    dataDir = ".stackpanel"; # Full path from project root
+    stateDir = ".stack/profile"; # Full path from project root
+    genDir = ".stack/gen"; # Full path from project root
+    dataDir = ".stack"; # Full path from project root
     ports = { };
     postgres = {
       enable = false;

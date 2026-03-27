@@ -18,9 +18,10 @@ The convention affords a couple of conveniences:
 The algorithm to compute a port is as follows:
   1. Define a range computation as follow:
 
-		range = int(md5("owner/repo")) % 7000
-		min = f - (f % 100)
-		project_port_min = min + 3000
+			// $\text\{range\} = \text\{int\}(\mathrm\{md5\}(\text\{"owner/repo"\})) \bmod 7000$
+			// $\text\{min\} = f - (f \bmod 100)$
+			// $\text\{project\_port\_min\} = \text\{min\} + 3000$
+
 
 	2. This gives us a base port like 5500 or 3200 - the base port is always rounded down to the nearest 100, and the last two digits are owned by this project, giving us 100 ports to assign to services.
 

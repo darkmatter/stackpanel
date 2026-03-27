@@ -6,6 +6,50 @@ icon: Terminal
 
 # Devshell Options
 
+## `devshell._commandsSerializable.<name>.description`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `null or string` |
+| **Default** | `null` |
+
+---
+
+## `devshell._commandsSerializable.<name>.env`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `attribute set of string` |
+| **Default** | `{ }` |
+
+---
+
+## `devshell._commandsSerializable.<name>.exec`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
+## `devshell._commandsSerializable.<name>.name`
+
+This option has no description.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `string` |
+| **Default** | _none_ |
+
+---
+
 ## `devshell.buildInputs`
 
 This option has no description.
@@ -17,9 +61,225 @@ This option has no description.
 
 ---
 
-<Callout type="info">
-Scripts are now defined via `stackpanel.scripts`. See the [scripts reference](/docs/reference/scripts) for details.
-</Callout>
+## `devshell.clean.aliases`
+
+List of shell aliases to unset when entering the devshell. Use this if you have aliases that conflict with stackpanel scripts (e.g., "dev").
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  "dev"
+  "start"
+]
+```
+
+
+---
+
+## `devshell.clean.enable`
+
+Whether to enable clean environment mode.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `false` |
+
+**Example:**
+
+`true`
+
+
+---
+
+## `devshell.clean.impure`
+
+Whether to use --impure flag when entering the devshell.
+
+--impure allows Nix to access environment variables and system state, but prevents effective caching between runs.
+
+Set to false if you want better caching and your devshell doesn't need access to parent environment state.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `boolean` |
+| **Default** | `true` |
+
+---
+
+## `devshell.clean.keep`
+
+Environment variables to preserve when clean.enable is true. These variables are passed through from the parent environment.
+
+Use nix develop --ignore-environment --impure with --keep flags for each variable in this list, or use the generated wrapper script.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "HOME"
+  "USER"
+  "LOGNAME"
+  "SHELL"
+  "TMPDIR"
+  "TERM"
+  "COLORTERM"
+  "TERM_PROGRAM"
+  "TERM_PROGRAM_VERSION"
+  "LANG"
+  "LC_ALL"
+  "LC_CTYPE"
+  "SSH_AUTH_SOCK"
+  "SSH_SOCKET_DIR"
+  "GPG_AGENT_INFO"
+  "GNUPGHOME"
+  "EDITOR"
+  "VISUAL"
+  "PAGER"
+  "__CF_USER_TEXT_ENCODING"
+  "COMMAND_MODE"
+]
+```
+
+
+**Example:**
+
+```nix
+[
+  "HOME"
+  "USER"
+  "SSH_AUTH_SOCK"
+  "DISPLAY"
+]
+```
+
+
+---
+
+## `devshell.clean.keepDirenv`
+
+Direnv state variables. Only needed if using direnv inside the clean shell.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "DIRENV_DIR"
+  "DIRENV_FILE"
+]
+```
+
+
+---
+
+## `devshell.clean.keepFzf`
+
+Environment variables for fzf configuration. Add to clean.keep if you want to preserve your fzf settings.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "FZF_DEFAULT_COMMAND"
+  "FZF_DEFAULT_OPTS"
+  "FZF_CTRL_T_COMMAND"
+  "FZF_ALT_C_COMMAND"
+]
+```
+
+
+---
+
+## `devshell.clean.keepGui`
+
+Additional environment variables to keep for GUI applications. These are NOT included by default. Add them to clean.keep if needed:
+
+stackpanel.devshell.clean.keep = config.stackpanel.devshell.clean.keep ++ config.stackpanel.devshell.clean.keepGui;
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "DISPLAY"
+  "WAYLAND_DISPLAY"
+  "XDG_RUNTIME_DIR"
+  "DBUS_SESSION_BUS_ADDRESS"
+]
+```
+
+
+---
+
+## `devshell.clean.keepWarp`
+
+Environment variables for Warp terminal features. Add to clean.keep if using Warp terminal.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "WARP_HONOR_PS1"
+  "WARP_IS_LOCAL_SHELL_SESSION"
+  "WARP_USE_SSH_WRAPPER"
+]
+```
+
+
+---
+
+## `devshell.clean.keepXdg`
+
+XDG base directory environment variables (often set by home-manager). Add to clean.keep if you want to preserve these paths.
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of string` |
+| **Default** | _see below_ |
+
+**Default:**
+
+```nix
+[
+  "XDG_CACHE_HOME"
+  "XDG_CONFIG_HOME"
+  "XDG_DATA_HOME"
+  "XDG_STATE_HOME"
+]
+```
+
+
+---
 
 ## `devshell.env`
 
@@ -106,6 +366,32 @@ This option has no description.
 |----------|-------|
 | **Type** | `list of string` |
 | **Default** | `[ ]` |
+
+---
+
+## `packages`
+
+Packages to include in the devshell.
+
+Can be either:
+
+String packages are resolved via nixpkgs attribute paths, supporting nested paths like "nodePackages.typescript".
+
+| Property | Value |
+|----------|-------|
+| **Type** | `list of (package or string)` |
+| **Default** | `[ ]` |
+
+**Example:**
+
+```nix
+[
+  pkgs.git
+  "ripgrep"
+  "nodePackages.typescript"
+]
+```
+
 
 ---
 

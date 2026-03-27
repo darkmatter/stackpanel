@@ -1,0 +1,6 @@
+{
+  "title": "Networking",
+  "description": "Ports, reverse proxy, DNS, and certificates",
+  "icon": "globe",
+  "pages": ["index", "ports", "caddy", "dns", "certificates"]
+}

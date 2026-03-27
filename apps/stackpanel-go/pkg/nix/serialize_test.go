@@ -261,16 +261,21 @@ func TestSerialize_JSONDecodedEnums(t *testing.T) {
 	assert.NotContains(t, result, "type = 2.0")
 }
 
-func TestSerialize_NixPath(t *testing.T) {
+// Nix path literals (./foo.nix, ../bar.nix) must be serialized as quoted
+// strings by the generic serializer. Preserving unquoted path literals
+// through a JSON round-trip was previously handled by a NixPath sentinel
+// type, but that approach was replaced by tree-sitter direct edits
+// (flakeedit.PatchNixPath). This test ensures the serializer treats path-
+// like strings the same as any other string — no special-casing.
+func TestSerialize_PathLikeStringsAreQuoted(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    NixPath
+		input    string
 		expected string
 	}{
-		{"relative path with ./", NixPath("./hardware/prod.nix"), "./hardware/prod.nix"},
-		{"relative path without ./", NixPath("hardware/prod.nix"), "./hardware/prod.nix"},
-		{"parent-relative path", NixPath("../other/prod.nix"), "../other/prod.nix"},
-		{"absolute path", NixPath("/etc/nixos/hardware-configuration.nix"), "/etc/nixos/hardware-configuration.nix"},
+		{"relative path", "./hardware/prod.nix", `"./hardware/prod.nix"`},
+		{"parent path", "../other/config.nix", `"../other/config.nix"`},
+		{"absolute path", "/etc/nixos/hardware-configuration.nix", `"/etc/nixos/hardware-configuration.nix"`},
 	}
 
 	for _, tt := range tests {
@@ -282,30 +287,14 @@ func TestSerialize_NixPath(t *testing.T) {
 	}
 }
 
-func TestSerialize_NixPathInStruct(t *testing.T) {
-	type Machine struct {
-		Host           string  `json:"host"`
-		HardwareConfig NixPath `json:"hardwareConfig"`
-	}
-	m := Machine{
-		Host:           "192.168.1.1",
-		HardwareConfig: NixPath("./hardware/server.nix"),
-	}
-	result, err := Serialize(m)
-	require.NoError(t, err)
-	assert.Contains(t, result, `host = "192.168.1.1"`)
-	assert.Contains(t, result, `hardwareConfig = ./hardware/server.nix`)
-	// Path should NOT be quoted
-	assert.NotContains(t, result, `hardwareConfig = "./hardware/server.nix"`)
-}
-
-func TestSerialize_NixPathInMap(t *testing.T) {
+func TestSerialize_PathLikeStringInMap(t *testing.T) {
 	m := map[string]any{
-		"diskLayout": NixPath("./hardware/disk-config.nix"),
+		"hardwareConfig": "./hardware/prod.nix",
 	}
 	result, err := Serialize(m)
 	require.NoError(t, err)
-	assert.Contains(t, result, `diskLayout = ./hardware/disk-config.nix`)
+	assert.Contains(t, result, `hardwareConfig = "./hardware/prod.nix"`)
+	assert.NotContains(t, result, `hardwareConfig = ./hardware/prod.nix;`)
 }
 
 func TestSerialize_StackpanelTypes(t *testing.T) {

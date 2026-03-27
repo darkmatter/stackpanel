@@ -11,11 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// -----------------------------
-// Security / CORS helpers
-// -----------------------------
-
-// withLogging logs all incoming requests with method, path, and duration
+// withLogging wraps a handler to log method, path, status, and duration.
+// Health checks are excluded to avoid log spam from the UI's polling.
 func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -42,8 +39,8 @@ func (s *Server) withLogging(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// responseWriter wraps http.ResponseWriter to capture the status code
-// It also implements http.Hijacker to support WebSocket upgrades
+// responseWriter wraps http.ResponseWriter to capture the status code for logging.
+// It also implements Hijacker (WebSocket upgrades) and Flusher (SSE streaming).
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
@@ -69,6 +66,12 @@ func (rw *responseWriter) Flush() {
 	}
 }
 
+// withCORS adds CORS headers for allowed origins. This is required because the
+// web UI may be served from a different origin (e.g., stackpanel.com or a Caddy
+// dev domain) while the agent runs on localhost:9876.
+//
+// Notable: includes Private Network Access (PNA) headers for Chrome, which
+// requires explicit opt-in for public websites to access localhost servers.
 func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -77,7 +80,7 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Vary", "Origin")
 			// Include Connect-RPC headers: connect-protocol-version, connect-timeout-ms
 			w.Header().Set("Access-Control-Allow-Headers", "content-type, authorization, x-stackpanel-token, connect-protocol-version, connect-timeout-ms")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			// Expose Connect-RPC headers in responses
 			w.Header().Set("Access-Control-Expose-Headers", "connect-protocol-version, grpc-status, grpc-message")
 			// Private Network Access (PNA) preflight support (Chrome)
@@ -93,6 +96,8 @@ func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// requireAuth enforces both origin allowlist and JWT token validation.
+// Origin is checked first to fast-fail cross-origin attacks before token parsing.
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -110,6 +115,10 @@ func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// hasValidToken checks for a valid token in three places (in priority order):
+// 1. X-Stackpanel-Token header (preferred, used by the web UI)
+// 2. Authorization: Bearer header (standard, used by API clients)
+// 3. ?token= query param (fallback for WebSocket connections that can't set headers)
 func (s *Server) hasValidToken(r *http.Request) bool {
 	if token := strings.TrimSpace(r.Header.Get("X-Stackpanel-Token")); token != "" {
 		return s.isValidToken(token)
@@ -129,6 +138,9 @@ func (s *Server) hasValidToken(r *http.Request) bool {
 	return false
 }
 
+// isValidToken checks a token against JWT validation first, then falls back to
+// a static auth token from config. The static token is used by CLI scripts and
+// automation that don't go through the browser pairing flow.
 func (s *Server) isValidToken(token string) bool {
 	if token == "" {
 		return false
@@ -147,20 +159,23 @@ func (s *Server) isValidToken(token string) bool {
 	return false
 }
 
+// isOriginAllowed determines if a browser origin can talk to the agent.
+// The check is layered:
+//  1. Always allow loopback and *.localhost (covers Caddy dev domains like myapp.localhost)
+//  2. Always allow *.ts.net (Tailscale remote access)
+//  3. If AllowedOrigins is configured, use that as a strict allowlist
+//  4. Otherwise, allow only the hosted UI domains (stackpanel.com/dev)
 func (s *Server) isOriginAllowed(origin string) bool {
-	// Always allow loopback + *.localhost (Caddy/dev domains).
 	if u, err := url.Parse(origin); err == nil {
 		host := strings.ToLower(u.Hostname())
 		if host == "localhost" || host == "127.0.0.1" || host == "::1" || strings.HasSuffix(host, ".localhost") {
 			return true
 		}
-		// Allow Tailscale domains (*.ts.net) for remote access
 		if strings.HasSuffix(host, ".ts.net") {
 			return true
 		}
 	}
 
-	// If configured, enforce allowlist.
 	if len(s.config.AllowedOrigins) > 0 {
 		for _, allowed := range s.config.AllowedOrigins {
 			if origin == allowed {
@@ -170,6 +185,5 @@ func (s *Server) isOriginAllowed(origin string) bool {
 		return false
 	}
 
-	// Default allowlist for hosted UI.
 	return origin == "https://stackpanel.com" || origin == "https://stackpanel.dev"
 }

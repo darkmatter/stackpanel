@@ -1,0 +1,393 @@
+---
+title: Infrastructure
+description: Provision cloud infrastructure with Alchemy and the infra module system
+icon: layers
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+Stackpanel includes a modular infrastructure provisioning system built on [Alchemy](https://alchemy.run). It provisions AWS resources (IAM roles, KMS keys, OIDC providers), databases (Neon), caches (Upstash), deployment targets (Cloudflare Workers), and machine inventories -- all declared in Nix and deployed with a single command.
+
+## How It Works
+
+The infra system has three parts:
+
+1. **Nix modules** declare what infrastructure you need (`.stack/config.nix`)
+2. **Code generation** produces TypeScript modules in `packages/infra/` with typed inputs
+3. **Alchemy runtime** provisions the actual cloud resources when you run `infra:deploy`
+
+Infrastructure outputs (ARNs, URLs, keys) are synced back to your storage backend (SOPS, SSM, or Chamber) so other parts of your stack can reference them.
+
+## Quick Start
+
+<Steps>
+<Step>
+
+### Enable infrastructure
+
+Add to `.stack/config.nix`:
+
+```nix
+stackpanel.infra = {
+  enable = true;
+
+  # Where to store provisioned outputs
+  storage-backend = {
+    type = "sops";
+    sops.group = "dev";
+  };
+};
+```
+
+</Step>
+<Step>
+
+### Enable modules
+
+Turn on the infrastructure modules you need:
+
+```nix
+# AWS IAM + KMS for secrets
+stackpanel.infra.aws.secrets = {
+  enable = true;
+  oidc.provider = "github-actions";
+  oidc.github-actions = {
+    org = "my-org";
+    repo = "my-repo";
+  };
+};
+
+# Database (Neon Postgres)
+stackpanel.infra.database = {
+  enable = true;
+  provider = "neon";
+  neon.region = "aws-us-east-1";
+};
+```
+
+</Step>
+<Step>
+
+### Reload and deploy
+
+```bash
+# Reload to pick up config changes
+exit && nix develop --impure
+
+# Deploy all infrastructure
+infra:deploy
+```
+
+</Step>
+</Steps>
+
+## Available Modules
+
+| Module | What it provisions | Key options |
+|--------|-------------------|-------------|
+| **aws-secrets** | IAM role, OIDC provider, KMS key + alias | `oidc.provider`, `iam.role-name`, `kms.alias` |
+| **deployment** | Cloudflare app hosting per app | Per-app `deployment.host = "cloudflare"` (or `defaultHost`) |
+| **database** | Neon Postgres or devenv/Docker Postgres | `provider` (neon/devenv/docker) |
+| **cache** | Upstash Redis or devenv/Docker Redis | `provider` (upstash/devenv/docker) |
+| **machines** | Machine inventory (static or AWS EC2) | `source` (static/aws-ec2) |
+
+## Deploying Infrastructure
+
+### Basic Deploy
+
+```bash
+# Deploy all modules
+infra:deploy
+```
+
+This runs `alchemy deploy` in the generated `packages/infra/` directory. Alchemy evaluates each module, creates or updates resources, and writes state to its `.alchemy/` directory.
+
+### Adopting Existing Resources
+
+If your AWS resources already exist (e.g., you created an IAM role manually), use the `--adopt` flag to bring them under Alchemy management without recreating them:
+
+```bash
+infra:deploy --adopt
+```
+
+This tells Alchemy to adopt existing resources instead of failing with "already exists" errors. The infra modules' custom resources (IAM roles, KMS keys) are built to handle adoption gracefully -- they detect existing resources and update them in place.
+
+<Callout type="info">
+The `--adopt` flag is an Alchemy CLI option, not a per-resource setting. However, the Stackpanel infra modules are written to be adopt-safe by default -- IAM roles use get-or-create logic, and KMS keys look up existing aliases before creating new keys.
+</Callout>
+
+### Stage Selection
+
+Deploy to a specific stage (environment):
+
+```bash
+infra:deploy --stage production
+infra:deploy --stage staging
+```
+
+Without `--stage`, Alchemy defaults to your username as the stage name. This lets each developer have isolated infrastructure for testing.
+
+### Destroying Infrastructure
+
+```bash
+# Remove all provisioned resources
+infra:destroy
+
+# Remove a specific stage
+infra:destroy --stage staging
+```
+
+<Callout type="warn">
+`infra:destroy` removes cloud resources permanently. Adopted resources (IAM roles, KMS keys) are not deleted -- they're only unlinked from Alchemy state.
+</Callout>
+
+## Storage Backends
+
+Infrastructure outputs (ARNs, URLs, connection strings) need to be stored somewhere accessible to your apps and CI. Stackpanel supports three backends:
+
+### SOPS (Recommended for teams)
+
+Outputs are written to a SOPS-encrypted YAML file in your repo:
+
+```nix
+stackpanel.infra.storage-backend = {
+  type = "sops";
+  sops.group = "dev";  # implementation-specific SOPS target group
+};
+```
+
+After `infra:deploy`, outputs like `aws-secrets-roleArn` appear in the configured SOPS file. They're decrypted at runtime using your configured SOPS recipients.
+
+### AWS SSM Parameter Store
+
+Outputs are written to SSM parameters:
+
+```nix
+stackpanel.infra.storage-backend = {
+  type = "ssm";
+  ssm.prefix = "/myapp/infra";
+};
+```
+
+### Chamber
+
+Outputs are written via Chamber:
+
+```nix
+stackpanel.infra.storage-backend = {
+  type = "chamber";
+  chamber.service = "myapp";
+};
+```
+
+### None
+
+Skip output sync entirely (outputs are only in Alchemy state):
+
+```nix
+stackpanel.infra.storage-backend.type = "none";
+```
+
+## Studio UI: Infrastructure Panel
+
+The Studio UI's **Infrastructure** panel (`/studio/infra`) provides a visual interface for managing your provisioned infrastructure. It has five tabs:
+
+### Status Tab
+
+Shows an overview of your infrastructure configuration:
+- SST project name and region
+- OIDC provider type
+- IAM role name and ARN
+- KMS key status
+- Config file path
+
+### Deploy Tab
+
+Deploy or destroy infrastructure from the UI:
+- Stage selector (dev, staging, production)
+- Deploy button (runs `sst deploy --stage <stage>`)
+- Remove button (runs `sst remove --stage <stage>`)
+- Live command output
+
+### Outputs Tab
+
+Displays all provisioned infrastructure outputs:
+- ARNs, URLs, and connection strings
+- Copy-to-clipboard for each value
+- Output source module
+
+### Resources Tab
+
+Lists all deployed AWS resources by type and URN.
+
+### Configure Tab
+
+Full configuration form for SST/infrastructure settings:
+- Enable toggle
+- Project name, region, account ID
+- KMS key settings
+- OIDC provider selection (GitHub Actions, Fly.io, Roles Anywhere)
+- IAM role name
+
+## AWS Secrets Module
+
+The `aws-secrets` module is the most commonly used infra module. It provisions:
+
+- **IAM Role** -- For CI/CD and local AWS access
+- **OIDC Provider** -- For passwordless authentication from GitHub Actions or Fly.io
+- **KMS Key + Alias** -- For encrypting secrets at rest
+- **KMS Access Policy** -- Grants the IAM role encrypt/decrypt permissions
+
+```nix
+stackpanel.infra.aws.secrets = {
+  enable = true;
+  region = "us-west-2";
+
+  iam = {
+    role-name = "myapp-secrets-role";
+    additional-policies = [
+      "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+    ];
+  };
+
+  kms = {
+    alias = "myapp-secrets";
+    deletion-window-days = 30;
+  };
+
+  oidc = {
+    provider = "github-actions";
+    github-actions = {
+      org = "my-org";
+      repo = "my-repo";
+      branch = "*";
+    };
+  };
+};
+```
+
+### OIDC Providers
+
+| Provider | Use case | Authentication flow |
+|----------|----------|-------------------|
+| `github-actions` | CI/CD from GitHub | GitHub OIDC token -> STS AssumeRoleWithWebIdentity |
+| `flyio` | Fly.io Machines | Fly OIDC token -> STS AssumeRoleWithWebIdentity |
+| `roles-anywhere` | Local dev with Step CA | mTLS certificate -> IAM Roles Anywhere |
+
+## Deployment Module
+
+The infra deployment module provisions hosting resources for apps targeting Cloudflare.
+
+```nix
+stackpanel.apps.web = {
+  port = 0;
+  framework.tanstack-start.enable = true;
+
+  deployment = {
+    enable = true;
+    host = "cloudflare";
+    bindings = [ "DATABASE_URL" "BETTER_AUTH_SECRET" ];
+    secrets = [ "DATABASE_URL" "BETTER_AUTH_SECRET" ];
+  };
+};
+```
+
+Host resolution uses app config first, then the global default:
+
+- `apps.<name>.deployment.host`
+- fallback: `stackpanel.deployment.defaultHost`
+
+Supported framework/host combinations in the infra deployment module:
+
+| Framework | Cloudflare resource |
+|-----------|---------------------|
+| `tanstack-start` | TanStackStart |
+| `nextjs` | Nextjs |
+| `vite` | cloudflare.Vite |
+| `hono` | cloudflare.Worker |
+| `astro` | Astro |
+| `remix` | Remix |
+| `nuxt` | Nuxt |
+
+Fly deployment is handled separately by the Fly deployment module (`flyctl` + generated `fly.toml`).
+
+## Generated Files
+
+The infra system generates a complete TypeScript package at `packages/infra/`:
+
+```
+packages/infra/
+  alchemy.run.ts          # Orchestrator (imports all modules, syncs outputs)
+  package.json            # Dependencies from all active modules
+  tsconfig.json           # TypeScript config
+  src/
+    index.ts              # Infra class (input resolution, output sync)
+    types.ts              # Per-module input TypeScript interfaces
+    resources/
+      iam-role.ts         # Custom adopt-safe IAM Role resource
+      kms-key.ts          # Custom adopt-safe KMS Key resource
+      kms-alias.ts        # Custom KMS Alias resource
+  modules/
+    aws-secrets/
+      index.ts            # AWS secrets provisioning
+      policies.ts         # IAM policy builders
+    deployment.ts         # App deployment to Cloudflare
+    database.ts           # Database provisioning
+```
+
+These files are regenerated on each devshell entry. The `alchemy.run.ts` orchestrator imports all active modules and runs `Infra.syncAll()` to write outputs to your storage backend.
+
+## Pulling Outputs
+
+After deploying, pull outputs from your storage backend into the local Nix state:
+
+```bash
+infra:pull-outputs
+```
+
+This reads outputs from Chamber/SSM and writes them to `.stack/data/infra-outputs.nix`, making them available as `config.stackpanel.infra.outputs.*` in your Nix config.
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `infra:deploy` | Deploy all infrastructure modules |
+| `infra:deploy --adopt` | Deploy, adopting existing resources |
+| `infra:deploy --stage <name>` | Deploy to a specific stage |
+| `infra:destroy` | Remove all provisioned resources |
+| `infra:dev` | Start infrastructure dev mode |
+| `infra:pull-outputs` | Pull outputs from storage backend |
+
+All commands accept additional Alchemy CLI options. Run `infra:deploy --help` for the full list.
+
+## Troubleshooting
+
+### "EntityAlreadyExists" on first deploy
+
+Your AWS resources already exist from a previous provisioning tool. Use `--adopt`:
+
+```bash
+infra:deploy --adopt
+```
+
+### "Resource already exists" Alchemy error
+
+This is different from the AWS error above. It means the Alchemy resource type is registered twice. This can happen if you have conflicting Alchemy versions. Check `packages/infra/package.json` and ensure a single `alchemy` version.
+
+### Outputs not showing up after deploy
+
+1. Check that `storage-backend` is configured (not `"none"`)
+2. Run `infra:pull-outputs` to sync outputs to local state
+3. Reload the devshell to pick up new outputs
+
+### "storage-bakend" typo error
+
+If you see `The option 'stackpanel.infra.storage-bakend' does not exist`, check your config for the typo. The correct option is `storage-backend` (with a `c`).
+
+## Reference
+
+- [Deployment Overview](/docs/deployment) for all deployment options
+- [Machines](/docs/deployment/machines) for machine inventory
+- [SST](/docs/deployment/sst) for the older SST-based infrastructure
+- [Secrets](/docs/secrets) for encrypted secrets management

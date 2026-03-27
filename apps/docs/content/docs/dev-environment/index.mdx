@@ -1,0 +1,76 @@
+---
+title: Dev Environment
+description: Packages, scripts, environment variables, and shell configuration
+icon: terminal
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+
+When you enter a Stackpanel dev shell, you get a fully configured environment: the right tools on your `PATH`, environment variables set, scripts registered, and files generated. Everything is reproducible—the same config produces the same environment on every machine.
+
+All of this is configured through `stackpanel.devshell.*` and `stackpanel.scripts.*` options, either in your `.stack/config.nix` or through the Studio UI.
+
+## What's in the Dev Shell
+
+A Stackpanel dev shell gives you:
+
+- **Packages** — CLI tools and language runtimes pinned to exact versions via Nix
+- **Scripts** — Project-specific commands available as executables in your `PATH`
+- **Environment variables** — Set at shell entry, available to all processes
+- **Shell hooks** — Code that runs when you enter the shell (e.g., `bun install`)
+- **Generated files** — Config files built from your Stackpanel config and written to disk
+
+These all compose through the [module system](/docs/concepts/module-system)—your config, builtin modules, and extensions each contribute their piece, and the result is merged into a single coherent environment.
+
+## Quick Example
+
+```nix
+# .stack/config.nix
+{ pkgs, ... }: {
+  # Packages on PATH
+  stackpanel.devshell.packages = with pkgs; [
+    nodejs
+    bun
+    jq
+    awscli2
+  ];
+
+  # Custom scripts
+  stackpanel.scripts.dev = {
+    exec = "bun run --filter './apps/*' dev";
+    description = "Start all app dev servers";
+  };
+
+  stackpanel.scripts.lint = {
+    exec = "oxlint .";
+    description = "Lint the codebase";
+  };
+
+  # Environment variables
+  stackpanel.devshell.env = {
+    NODE_ENV = "development";
+  };
+}
+```
+
+Enter the shell with `nix develop --impure` (or let direnv do it automatically), and you'll have `node`, `bun`, `jq`, and `aws` on your PATH, a `dev` command that starts your servers, and `NODE_ENV` set to `"development"`.
+
+## Sections
+
+<Cards>
+  <Card title="Packages & Scripts" href="./packages-scripts">
+    Add tools to your PATH and register project commands
+  </Card>
+  <Card title="Environment Variables" href="./environment-variables">
+    Set variables for your shell and application code
+  </Card>
+  <Card title="Shell Hooks & Files" href="./shell-hooks-files">
+    Run code on shell entry and generate config files
+  </Card>
+  <Card title="Managing Flake Inputs" href="./flake-inputs">
+    Add flake inputs from the CLI with tree-sitter-powered editing
+  </Card>
+  <Card title="Direnv" href="./direnv">
+    Automatic shell activation when you cd into the project
+  </Card>
+</Cards>

@@ -1,0 +1,800 @@
+---
+title: AWS Vault Integration
+description: Documentation for the vault module
+---
+
+Secure AWS credential management using [aws-vault](https://github.com/99designs/aws-vault) with support for multiple profiles and automatic fallback.
+
+## Overview
+
+The AWS Vault module provides:
+
+- **Secure credential storage** - Uses your system's keychain (macOS Keychain, Linux Secret Service, etc.)
+- **Multiple profile support** - Define multiple profiles and try them in order
+- **Automatic fallback** - If one profile fails, automatically try the next
+- **Wrapper scripts** - Transparently wrap AWS CLI, Terraform, and OpenTofu with aws-vault
+- **Session management** - Temporary credentials with automatic rotation
+
+## Quick Start
+
+### Basic Setup
+
+```nix
+# .stackpanel/config.nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    profile = "mycompany-dev";
+    
+    # Enable AWS CLI wrapper
+    awscliWrapper.enable = true;
+    
+    # Optional: Define AWS config
+    awsProfiles.default = {
+      region = "us-west-2";
+      output = "json";
+    };
+  };
+}
+```
+
+### With Multiple Profiles (Fallback)
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    profile = "production";  # Default profile
+    
+    # Try these profiles in order until one succeeds
+    profiles = [
+      "production"
+      "staging"
+      "readonly"
+    ];
+    
+    awscliWrapper.enable = true;
+    terraformWrapper.enable = true;
+  };
+}
+```
+
+## Configuration Reference
+
+### Core Options
+
+#### `stackpanel.aws-vault.enable`
+- **Type**: `bool`
+- **Default**: `false`
+- **Description**: Enable AWS Vault integration
+
+#### `stackpanel.aws-vault.package`
+- **Type**: `package`
+- **Default**: `pkgs.aws-vault`
+- **Description**: The aws-vault package to use
+
+#### `stackpanel.aws-vault.profile`
+- **Type**: `string`
+- **Default**: `"default"`
+- **Description**: Primary AWS profile to use
+
+#### `stackpanel.aws-vault.profiles`
+- **Type**: `listOf string`
+- **Default**: `[]`
+- **Description**: List of profiles to try in order (enables fallback behavior)
+- **Example**: `["production" "staging" "readonly"]`
+
+#### `stackpanel.aws-vault.stopOnFirstSuccess`
+- **Type**: `bool`
+- **Default**: `true`
+- **Description**: Stop trying profiles after first success
+
+#### `stackpanel.aws-vault.showProfileAttempts`
+- **Type**: `bool`
+- **Default**: `true`
+- **Description**: Show which profile is being attempted
+
+#### `stackpanel.aws-vault.debug`
+- **Type**: `bool`
+- **Default**: `false`
+- **Description**: Enable debug logging to `~/.aws-vault-debug.log` to diagnose issues
+
+### AWS Config File Options
+
+#### `stackpanel.aws-vault.awsProfiles.<name>`
+- **Type**: `submodule`
+- **Default**: `{}`
+- **Description**: Define AWS profiles programmatically (generates ~/.aws/config)
+
+Each profile supports:
+
+##### `region`
+- **Type**: `string`
+- **Default**: `"us-west-2"`
+- **Description**: AWS region
+
+##### `roleArn`
+- **Type**: `string | null`
+- **Default**: `null`
+- **Description**: IAM role ARN to assume
+- **Example**: `"arn:aws:iam::123456789012:role/MyRole"`
+
+##### `sourceProfile`
+- **Type**: `string | null`
+- **Default**: `null`
+- **Description**: Source profile for credentials
+
+##### `output`
+- **Type**: `"json" | "yaml" | "text" | "table" | null`
+- **Default**: `null`
+- **Description**: Default output format
+
+##### `mfaSerial`
+- **Type**: `string | null`
+- **Default**: `null`
+- **Description**: MFA device ARN
+
+##### `durationSeconds`
+- **Type**: `int | null`
+- **Default**: `null`
+- **Description**: Session duration in seconds
+
+##### `extraConfig`
+- **Type**: `attrsOf string`
+- **Default**: `{}`
+- **Description**: Additional configuration options
+
+#### `stackpanel.aws-vault.configFile`
+- **Type**: `lines | null`
+- **Default**: `null`
+- **Description**: Raw contents for ~/.aws/config (overrides awsProfiles)
+
+#### `stackpanel.aws-vault.generateConfigFile`
+- **Type**: `bool`
+- **Default**: `true`
+- **Description**: Auto-generate ~/.aws/config from awsProfiles
+
+### Wrapper Options
+
+#### `stackpanel.aws-vault.awscliWrapper.enable`
+- **Type**: `bool`
+- **Default**: `false`
+- **Description**: Wrap AWS CLI with aws-vault
+
+#### `stackpanel.aws-vault.awscliWrapper.package`
+- **Type**: `package`
+- **Default**: `pkgs.awscli2`
+- **Description**: AWS CLI package to wrap
+
+#### `stackpanel.aws-vault.terraformWrapper.enable`
+- **Type**: `bool`
+- **Default**: `false`
+- **Description**: Wrap Terraform with aws-vault
+
+#### `stackpanel.aws-vault.opentofuWrapper.enable`
+- **Type**: `bool`
+- **Default**: `false`
+- **Description**: Wrap OpenTofu with aws-vault
+
+## Usage
+
+### Initial Setup
+
+Add your AWS credentials to aws-vault:
+
+```bash
+# Add a profile
+aws-vault add production
+
+# List configured profiles
+aws-vault list
+```
+
+### Basic Commands
+
+```bash
+# Use AWS CLI (automatically wrapped)
+aws s3 ls
+
+# Check AWS config was generated
+cat ~/.aws/config
+
+# Use Terraform (if wrapper enabled)
+terraform plan
+terraform apply
+
+# Use OpenTofu (if wrapper enabled)
+tofu plan
+tofu apply
+```
+
+### Multi-Profile Commands
+
+When `profiles` is configured, additional helper commands are available:
+
+```bash
+# List all configured profiles
+aws-vault:list-profiles
+
+# Use a specific profile
+aws-vault:with-profile staging aws s3 ls
+aws-vault:with-profile readonly terraform plan
+```
+
+### Manual aws-vault Usage
+
+```bash
+# Execute command with specific profile
+aws-vault exec production -- aws s3 ls
+
+# Open a shell with credentials
+aws-vault exec production
+
+# Login with SSO
+aws-vault login production
+```
+
+## Examples
+
+### Single Profile (Simple)
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    profile = "mycompany";
+    awscliWrapper.enable = true;
+    terraformWrapper.enable = true;
+    
+    # Optional: Configure the profile
+    awsProfiles.mycompany = {
+      region = "us-east-1";
+      output = "json";
+    };
+  };
+}
+```
+
+**Usage:**
+```bash
+$ aws s3 ls
+# Uses mycompany profile automatically
+
+$ terraform apply
+# Uses mycompany profile automatically
+```
+
+### Multiple Profiles (with Fallback)
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    profile = "production";
+    
+    profiles = [
+      "production"      # Try first
+      "staging"         # Fallback if production fails
+      "readonly"        # Last resort
+    ];
+    
+    awscliWrapper.enable = true;
+    terraformWrapper.enable = true;
+  };
+}
+```
+
+**Usage:**
+```bash
+$ aws s3 ls
+→ Trying AWS profile: production
+✗ Failed with profile: production (exit code: 255)
+→ Trying AWS profile: staging
+✓ Success with profile: staging
+
+$ terraform plan
+→ Trying AWS profile: production
+✗ Failed with profile: production (exit code: 1)
+→ Trying AWS profile: staging
+✓ Success with profile: staging
+```
+
+### Team Workflow with AWS Config
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    profile = "team-dev";
+    
+    # Senior engineers have additional profiles
+    profiles = [
+      "team-prod"       # Production access (requires additional permissions)
+      "team-staging"    # Staging access
+      "team-dev"        # Development access (everyone has this)
+    ];
+    
+    # Define all profiles in AWS config
+    awsProfiles = {
+      team-prod = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/ProdRole";
+        sourceProfile = "default";
+        mfaSerial = "arn:aws:iam::123456789012:mfa/user";
+        durationSeconds = 3600;
+      };
+      team-staging = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/StagingRole";
+        sourceProfile = "default";
+      };
+      team-dev = {
+        region = "us-west-2";
+        output = "json";
+      };
+    };
+    
+    awscliWrapper.enable = true;
+    terraformWrapper.enable = true;
+  };
+}
+```
+
+**Behavior:**
+- Senior engineers with `team-prod` credentials will use production first
+- If they don't have prod access, falls back to staging
+- Everyone can at least use dev environment
+- AWS config is automatically generated on shell entry
+
+### Infrastructure Deployment
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    profiles = ["prod-deploy" "staging-deploy"];
+    awscliWrapper.enable = true;
+  };
+  
+  stackpanel.infra.enable = true;
+}
+```
+
+**Usage:**
+```bash
+$ infra:deploy --stage prod
+Using aws-vault with multi-profile fallback
+→ Trying AWS profile: prod-deploy
+✓ Success with profile: prod-deploy
+# Deployment continues...
+```
+
+### Multi-Region Setup
+
+```nix
+{ lib, ... }:
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    
+    # Different profiles for different regions
+    profiles = [
+      "myapp-us-east-1"
+      "myapp-us-west-2"
+      "myapp-eu-west-1"
+    ];
+    
+    # Dynamically generate profiles for each region
+    awsProfiles = lib.listToAttrs (
+      map (region: {
+        name = "myapp-${region}";
+        value = {
+          inherit region;
+          output = "json";
+        };
+      }) ["us-east-1" "us-west-2" "eu-west-1"]
+    );
+    
+    awscliWrapper.enable = true;
+  };
+}
+```
+
+## Integration with Infrastructure
+
+The `infra:deploy` and `infra:destroy` commands automatically work with aws-vault when enabled:
+
+```bash
+# Deploy with automatic profile fallback
+$ infra:deploy --stage prod
+Using aws-vault with multi-profile fallback
+# Tries profiles in order automatically
+```
+
+### Manual Profile Selection
+
+```bash
+# Use specific profile for deployment
+$ aws-vault:with-profile staging infra:deploy --stage staging
+```
+
+## Troubleshooting
+
+### Profile Not Found
+
+```
+aws-vault: error: profile "production" not found
+```
+
+**Solution:** Add the profile:
+```bash
+aws-vault add production
+```
+
+### All Profiles Failed
+
+```
+✗ All profiles failed
+Tried: production, staging, readonly
+```
+
+**Solution:**
+1. Check which profiles are configured:
+   ```bash
+   aws-vault:list-profiles
+   ```
+
+2. Verify credentials:
+   ```bash
+   aws-vault exec production -- aws sts get-caller-identity
+   ```
+
+3. Add missing profiles:
+   ```bash
+   aws-vault add production
+   ```
+
+### Credentials Expired
+
+```
+aws-vault: error: exec: Failed to get credentials for production: operation error STS
+```
+
+**Solution:** Refresh credentials:
+```bash
+aws-vault login production
+# or
+aws-vault exec production --duration=12h
+```
+
+### Multiple Password Prompts on Shell Entry
+
+If you're getting multiple keychain password prompts when entering the shell:
+
+**Cause:** Something is calling the `aws` wrapper multiple times during shell initialization.
+
+**Solution 1 - Enable Debug Logging:**
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    debug = true;  # Logs all aws-vault exec calls
+    profiles = ["sso-prod" "sso-staging"];
+  };
+}
+```
+
+Then check `~/.aws-vault-debug.log` to see what's calling aws-vault:
+```bash
+tail -f ~/.aws-vault-debug.log
+```
+
+**Solution 2 - Disable Wrappers:**
+If you don't need automatic wrapping, disable the wrappers:
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    awscliWrapper.enable = false;  # Disable automatic wrapping
+    profiles = ["sso-prod" "sso-staging"];
+  };
+}
+```
+
+Then use `aws-vault exec` manually when needed:
+```bash
+aws-vault exec sso-prod -- aws s3 ls
+```
+
+**Solution 3 - Use AWS SSO:**
+If using SSO profiles, ensure you're logged in before entering the shell:
+```bash
+aws-vault login sso-prod
+```
+
+### Wrong Profile Being Used
+
+Check the profile order:
+
+```bash
+$ aws-vault:list-profiles
+AWS Vault Profiles (in order):
+
+  production:
+    Status: ✓ Configured
+
+  staging:
+    Status: ✓ Configured
+```
+
+Override with specific profile:
+```bash
+aws-vault:with-profile staging aws s3 ls
+```
+
+## Security Best Practices
+
+1. **Use MFA**: Enable MFA for your AWS profiles
+   ```bash
+   aws-vault add production --mfa-serial arn:aws:iam::123456789012:mfa/user
+   ```
+
+2. **Short session durations**: Use shorter durations for production
+   ```bash
+   aws-vault exec production --duration=1h
+   ```
+
+3. **Separate profiles**: Use different profiles for different permission levels
+   - `*-readonly` - Read-only access
+   - `*-dev` - Development access
+   - `*-prod` - Production access (restricted)
+
+4. **Audit access**: Regularly review CloudTrail logs
+
+5. **Rotate credentials**: Regularly rotate IAM access keys
+
+## AWS Config File Management
+
+### Programmatic Profile Definition
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    
+    awsProfiles = {
+      default = {
+        region = "us-west-2";
+        output = "json";
+      };
+      
+      production = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/ProdRole";
+        sourceProfile = "default";
+        mfaSerial = "arn:aws:iam::123456789012:mfa/user";
+        durationSeconds = 3600;
+      };
+      
+      staging = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/StagingRole";
+        sourceProfile = "default";
+        durationSeconds = 7200;
+      };
+    };
+  };
+}
+```
+
+This generates `~/.aws/config`:
+
+```ini
+[default]
+region = us-west-2
+output = json
+
+[profile production]
+region = us-east-1
+role_arn = arn:aws:iam::123456789012:role/ProdRole
+source_profile = default
+mfa_serial = arn:aws:iam::123456789012:mfa/user
+duration_seconds = 3600
+
+[profile staging]
+region = us-east-1
+role_arn = arn:aws:iam::123456789012:role/StagingRole
+source_profile = default
+duration_seconds = 7200
+```
+
+### Raw Config File
+
+For complete control, use `configFile`:
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    
+    configFile = ''
+      [default]
+      region = us-west-2
+      output = json
+      
+      [profile production]
+      region = us-east-1
+      role_arn = arn:aws:iam::123456789012:role/ProdRole
+      source_profile = default
+      mfa_serial = arn:aws:iam::123456789012:mfa/user
+      
+      [profile staging]
+      region = us-east-1
+      role_arn = arn:aws:iam::123456789012:role/StagingRole
+      source_profile = default
+    '';
+  };
+}
+```
+
+### Disable Auto-Generation
+
+If you want to manage `~/.aws/config` manually:
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    generateConfigFile = false;
+  };
+}
+```
+
+## Advanced Configuration
+
+### Per-Profile Session Duration
+
+Configure using `awsProfiles`:
+
+```nix
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    
+    awsProfiles = {
+      production = {
+        region = "us-east-1";
+        mfaSerial = "arn:aws:iam::123456789012:mfa/user";
+        durationSeconds = 3600;  # 1 hour
+      };
+      staging = {
+        region = "us-east-1";
+        durationSeconds = 7200;  # 2 hours
+      };
+    };
+  };
+}
+```
+
+### SSO Integration
+
+```bash
+# Configure SSO profile
+aws configure sso
+
+# Use with aws-vault
+aws-vault login my-sso-profile
+```
+
+### Backend Configuration
+
+aws-vault supports multiple backends:
+
+```bash
+# Use a specific backend
+export AWS_VAULT_BACKEND=file
+export AWS_VAULT_FILE_PASSPHRASE="my-secure-passphrase"
+
+# Or use system keychain (default)
+export AWS_VAULT_BACKEND=keychain
+```
+
+### Conditional Profiles with Config
+
+```nix
+{ lib, ... }:
+let
+  user = builtins.getEnv "USER";
+  isAdmin = builtins.elem user ["alice" "bob"];
+in
+{
+  stackpanel.aws-vault = {
+    enable = true;
+    
+    profiles = lib.optionals isAdmin ["admin" "prod"]
+      ++ ["staging" "dev"];
+    
+    # Define profiles with different access levels
+    awsProfiles = {
+      admin = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/AdminRole";
+        sourceProfile = "default";
+      };
+      prod = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/ProdRole";
+        sourceProfile = "default";
+      };
+      staging = {
+        region = "us-east-1";
+        roleArn = "arn:aws:iam::123456789012:role/StagingRole";
+        sourceProfile = "default";
+      };
+      dev = {
+        region = "us-west-2";
+        output = "json";
+      };
+    };
+    
+    awscliWrapper.enable = true;
+  };
+}
+```
+
+## Commands Reference
+
+### aws-vault Commands
+
+| Command | Description |
+|---------|-------------|
+| `aws-vault add <profile>` | Add credentials for a profile |
+| `aws-vault list` | List all configured profiles |
+| `aws-vault exec <profile> -- <cmd>` | Execute command with profile credentials |
+| `aws-vault login <profile>` | Open AWS console with profile |
+| `aws-vault remove <profile>` | Remove profile credentials |
+| `aws-vault rotate <profile>` | Rotate credentials for profile |
+
+### Stackpanel Commands (when profiles configured)
+
+| Command | Description |
+|---------|-------------|
+| `aws-vault:list-profiles` | List profiles configured in Stackpanel |
+| `aws-vault:with-profile <profile> <cmd>` | Run command with specific profile |
+
+### Wrapped Commands (when wrappers enabled)
+
+| Command | Wraps | Description |
+|---------|-------|-------------|
+| `aws` | AWS CLI | Automatically uses aws-vault |
+| `terraform` | Terraform | Automatically uses aws-vault |
+| `tofu` | OpenTofu | Automatically uses aws-vault |
+
+## Comparison with Other Solutions
+
+### vs Raw AWS Credentials
+
+| Feature | aws-vault | Raw Credentials |
+|---------|-----------|-----------------|
+| Security | Encrypted in keychain | Plain text in `~/.aws/credentials` |
+| Rotation | Easy | Manual |
+| MFA Support | Built-in | Manual |
+| Temporary Creds | Yes | No |
+| Multi-profile | Easy | Manual switching |
+
+### vs AWS SSO
+
+| Feature | aws-vault | AWS SSO |
+|---------|-----------|---------|
+| Setup | Simple | Requires SSO configuration |
+| Local Dev | Excellent | Good |
+| MFA | Built-in | Built-in |
+| Fallback | Easy | Not built-in |
+| Offline | Works with cached creds | Requires internet |
+
+## See Also
+
+- [aws-vault GitHub](https://github.com/99designs/aws-vault)
+- [AWS CLI Configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+- [Stackpanel Infrastructure Module](../../infra/README.md)
+- [AWS Roles Anywhere](../roles-anywhere.nix)

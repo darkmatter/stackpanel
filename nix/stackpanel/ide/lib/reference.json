@@ -1,5 +1,4 @@
 {
-  // Rust Analyzer - configured to use devenv toolchain
   "[rust]": {
     "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
@@ -116,7 +115,7 @@
     "**/.zed": true,
     "**/.git": true,
     "**/gen": false,
-    "**/.stackpanel/gen": false,
+    "**/.stack/gen": false,
     "**/.svn": true,
     "**/.hg": true,
     "**/.DS_Store": true,

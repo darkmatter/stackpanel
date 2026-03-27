@@ -1,0 +1,101 @@
+---
+title: Networking
+description: Ports, reverse proxy, DNS, and TLS certificates for local development
+icon: globe
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel manages the networking layer of your local development environment—port assignments, reverse proxying, DNS resolution, and TLS certificates. The goal is the same as the rest of Stackpanel: configure once, and every team member gets an identical setup without manual coordination.
+
+## What's Included
+
+When you configure networking in Stackpanel, you get:
+
+- **Deterministic ports** — Every service and app gets a stable port computed from your project name. No more port conflicts between projects, no more "works on my machine" debugging.
+- **Caddy reverse proxy** — Access your local services through clean hostnames (`myapp.local`) instead of `localhost:4237`. Caddy handles routing, TLS termination, and automatic HTTPS.
+- **DNS resolution** — Local DNS entries so that `myapp.local`, `api.myapp.local`, and similar hostnames resolve to your machine.
+- **TLS certificates** — Internal certificates issued by Step CA, giving you real HTTPS in development. No browser warnings, no self-signed cert wrangling.
+
+## Quick Example
+
+A typical networking setup might look like this:
+
+```nix
+stackpanel = {
+  # Ports computed from project name — same on every machine
+  ports.projectName = "myapp";
+
+  # Apps get sequential ports from the computed base
+  apps.web.port = 0;
+  apps.api.port = 1;
+
+  # Caddy reverse proxy for clean local URLs
+  caddy = {
+    enable = true;
+    routes = {
+      "myapp.local" = "http://localhost:${toString config.stackpanel.ports.computed.web}";
+      "api.myapp.local" = "http://localhost:${toString config.stackpanel.ports.computed.api}";
+    };
+  };
+
+  # Internal CA for HTTPS
+  step-ca = {
+    enable = true;
+    ca-url = "https://ca.internal:443";
+    ca-fingerprint = "abc123...";
+  };
+};
+```
+
+With this configuration, every developer on the team can access the web app at `https://myapp.local` and the API at `https://api.myapp.local`—with valid TLS certificates, stable ports, and zero manual setup.
+
+## Sections
+
+<Cards>
+  <Card title="Ports" href="./ports">
+    Deterministic port assignment computed from your project name
+  </Card>
+  <Card title="Caddy Reverse Proxy" href="./caddy">
+    Clean local hostnames and automatic HTTPS for your services
+  </Card>
+  <Card title="DNS" href="./dns">
+    Local DNS resolution for custom development domains
+  </Card>
+  <Card title="Certificates" href="./certificates">
+    Internal TLS certificates via Step CA for HTTPS in development
+  </Card>
+</Cards>
+
+## How the Pieces Fit Together
+
+The networking features build on each other:
+
+```
+Deterministic Ports
+  → Each service gets a stable port (e.g., web=4200, api=4201, postgres=4237)
+
+Caddy Reverse Proxy
+  → Routes myapp.local → localhost:4200, api.myapp.local → localhost:4201
+
+DNS Resolution
+  → Makes myapp.local and api.myapp.local resolve to 127.0.0.1
+
+Step CA (Certificates)
+  → Issues TLS certs for myapp.local so HTTPS works without browser warnings
+```
+
+You can use any of these independently. Deterministic ports work without Caddy. Caddy works without Step CA (it'll use HTTP). But together they provide a development experience that closely mirrors production—real hostnames, real HTTPS, real routing.
+
+<Callout type="info">
+All networking configuration is managed through the CLI (`stackpanel caddy start`, `stackpanel port`) and through [Studio](/docs/studio). You don't need to interact with Caddy or Step CA directly unless you want to.
+</Callout>
+
+## Reference
+
+- [Options Reference → Ports](/docs/reference/ports) for port configuration options
+- [Options Reference → Caddy](/docs/reference/caddy) for reverse proxy options
+- [Options Reference → DNS](/docs/reference/dns) for DNS configuration
+- [Options Reference → Step CA](/docs/reference/step-ca) for certificate authority options
+- [CLI → Caddy](/docs/cli/caddy) for Caddy management commands

@@ -1,0 +1,196 @@
+---
+title: CLI / Agent
+description: The Stackpanel background agent — CLI, HTTP server, and bridge to your Nix environment
+icon: bot
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+The Stackpanel Agent is a Go binary that runs on your local machine and serves as the bridge between your Nix environment and the rest of the Stackpanel ecosystem. It powers the CLI, serves the [Studio](/docs/studio) web interface, manages services, watches for config changes, and provides a REST + Connect-RPC API for programmatic access.
+
+## Two Modes
+
+The Agent binary operates in two modes:
+
+### CLI Mode (Default)
+
+When you run `stackpanel` without arguments, you get an interactive TUI navigator. With arguments, it runs specific commands:
+
+```bash
+stackpanel                     # Interactive TUI
+stackpanel status              # Show service and environment status
+stackpanel services start      # Start all configured services
+stackpanel vars list           # List all variables
+```
+
+See the [CLI Reference](/docs/cli) for all available commands.
+
+### Server Mode
+
+When you run `stackpanel agent`, the binary starts a localhost HTTP server (default port 9876) that exposes 60+ API endpoints:
+
+```bash
+stackpanel agent               # Start the agent server
+```
+
+The server provides:
+
+| Feature | Protocol | Description |
+|---------|----------|-------------|
+| REST API | HTTP | CRUD operations for config, services, files, and more |
+| Connect-RPC | HTTP | Typed RPC for the Studio web app (via protobuf contracts) |
+| SSE Events | HTTP | Real-time event stream for config changes, service status |
+| File Watching | Filesystem | Monitors flake and config files for changes |
+| Process Management | process-compose | Start, stop, restart, and query services |
+| Nix Evaluation | CLI | Evaluates Nix expressions to read options, packages, and state |
+
+## What the Agent Does
+
+### Bridges Nix and the Web
+
+Nix evaluation is a command-line operation—you can't call it from a browser. The Agent wraps `nix eval` calls and exposes the results over HTTP, so [Studio](/docs/studio) can read your configuration, display options, and show computed values without ever touching Nix directly.
+
+### Manages Services
+
+The Agent wraps [process-compose](/docs/services/process-compose) to provide a unified interface for service lifecycle management. When you run `stackpanel services start`, the Agent starts process-compose, monitors health checks, and streams status updates.
+
+### Watches for Changes
+
+The Agent watches your `flake.nix`, `flake.lock`, and `.stack/` directory for changes. When a config file changes, it:
+
+1. Re-evaluates the Nix configuration
+2. Detects which generated files are stale
+3. Broadcasts an SSE event so Studio updates in real time
+4. Optionally regenerates files automatically
+
+### Resolves Secrets
+
+Runtime secrets (type `SECRET`, `VALS`, and `EXEC`) are resolved by the Agent at shell entry time. It decrypts AGE-encrypted values, fetches external references via [vals](https://github.com/helmfile/vals), and runs exec commands to produce dynamic values. See [Secrets](/docs/secrets) for details.
+
+### Generates Files
+
+When triggered by a config change or manual command, the Agent writes generated files to disk. It tracks which files it manages and can detect drift—when a file on disk doesn't match what the config says it should be.
+
+## Authentication
+
+The Agent runs on `localhost` and uses a JWT-based authentication flow:
+
+1. Studio opens in the browser and initiates a pairing request
+2. The Agent displays a confirmation prompt (or auto-approves in dev mode)
+3. A JWT token is issued for the session
+4. All subsequent API calls include the token
+
+This prevents other applications on your machine from accessing the Agent API without your consent.
+
+<Callout type="info">
+The Agent only listens on `localhost`—it's never exposed to the network. The JWT auth is an additional layer of protection for multi-user machines or shared environments.
+</Callout>
+
+## Starting the Agent
+
+The Agent is typically started automatically when you enter the dev shell or when Studio needs it. You can also start it manually:
+
+```bash
+# Start the agent in the foreground
+stackpanel agent
+
+# Start in daemon mode (background)
+stackpanel agent -d
+```
+
+### Default Port
+
+The Agent listens on port `9876` by default. If that port is occupied, it will report an error at startup.
+
+## API Overview
+
+The Agent exposes a comprehensive API that both the CLI and Studio use internally. Some key endpoint groups:
+
+| Group | What It Provides |
+|-------|-----------------|
+| **Config** | Read and write Stackpanel configuration |
+| **Options** | Query available Nix options and their current values |
+| **Services** | Start, stop, restart, query service status |
+| **Files** | List generated files, check staleness, trigger regeneration |
+| **Scripts** | List and execute registered scripts |
+| **Extensions** | Query enabled extensions, their panels and metadata |
+| **Variables** | Get, set, and delete variables and secrets |
+| **Events** | SSE stream for real-time status updates |
+
+The API contract is defined in [protobuf schemas](/docs/reference) (`packages/proto/`), ensuring type safety between the Go agent and the TypeScript Studio app.
+
+## Offline Support
+
+The Agent works entirely offline. It only needs network access when:
+
+- Fetching flake inputs for the first time (`nix flake update`)
+- Resolving external secret references (`ref+awsssm://...`)
+- Connecting to a remote [Step CA](/docs/networking/certificates) for certificate provisioning
+
+All other operations—Nix evaluation, file generation, service management, local secret decryption—work without an internet connection.
+
+## Logs
+
+View Agent logs through the CLI:
+
+```bash
+# View agent logs
+stackpanel logs
+
+# View logs for a specific service
+stackpanel logs postgres
+
+# Follow logs in real-time
+stackpanel logs -f
+```
+
+Or through [Studio](/docs/studio), which provides a log viewer with filtering and search.
+
+## Troubleshooting
+
+### Agent not starting
+
+Check if port 9876 is already in use:
+
+```bash
+lsof -i :9876
+```
+
+If another process is occupying the port, stop it or configure the Agent to use a different port.
+
+### "Connection refused" from Studio
+
+Studio connects to the Agent on `localhost:9876`. If the Agent isn't running, Studio will show a connection error. Start the Agent:
+
+```bash
+stackpanel agent
+```
+
+### Nix evaluation errors
+
+If the Agent reports Nix evaluation errors, the issue is in your Nix configuration—not the Agent itself. Check the error message for details:
+
+```bash
+# Run a manual Nix evaluation to see the full error
+nix eval .#stackpanel --impure 2>&1
+```
+
+Common causes: syntax errors in `.stack/config.nix`, missing flake inputs, or `--impure` flag not being used.
+
+### Stale state after config changes
+
+If the Agent doesn't pick up config changes automatically, trigger a manual refresh:
+
+```bash
+# Check current status (triggers a re-evaluation)
+stackpanel status
+```
+
+Or restart the Agent to force a clean state.
+
+## Reference
+
+- [CLI Reference](/docs/cli) for all CLI commands the Agent binary provides
+- [Studio](/docs/studio) for the web interface powered by the Agent
+- [Services → Process Compose](/docs/services/process-compose) for how the Agent manages services
+- [Secrets](/docs/secrets) for how the Agent resolves encrypted values

@@ -8,40 +8,43 @@ import SuperJSON from "superjson";
 
 import { makeTRPCClient, TRPCProvider } from "@/utils/trpc";
 import { routeTree } from "./routeTree.gen";
+import { StrictMode } from "react";
 
 export function getRouter() {
-	const queryClient = new QueryClient({
-		defaultOptions: {
-			dehydrate: { serializeData: SuperJSON.serialize },
-			hydrate: { deserializeData: SuperJSON.deserialize },
-		},
-	});
-	// Note: makeTRPCClient uses createIsomorphicFn which has different return types
-	// on server (async) vs client (sync). At runtime the build transform handles this,
-	// but TypeScript sees the union. Cast is safe because the transform ensures
-	// we get the right type in each environment.
-	const trpcClient = makeTRPCClient() as TRPCClient<AppRouter>;
-	const trpc = createTRPCOptionsProxy({
-		client: trpcClient,
-		queryClient,
-	});
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      dehydrate: { serializeData: SuperJSON.serialize },
+      hydrate: { deserializeData: SuperJSON.deserialize },
+    },
+  });
+  // Note: makeTRPCClient uses createIsomorphicFn which has different return types
+  // on server (async) vs client (sync). At runtime the build transform handles this,
+  // but TypeScript sees the union. Cast is safe because the transform ensures
+  // we get the right type in each environment.
+  const trpcClient = makeTRPCClient() as TRPCClient<AppRouter>;
+  const trpc = createTRPCOptionsProxy({
+    client: trpcClient,
+    queryClient,
+  });
 
-	const router = createRouter({
-		routeTree,
-		context: { queryClient, trpc },
-		defaultPreload: "intent",
-		Wrap: (props) => (
-			<TRPCProvider
-				trpcClient={trpcClient as TRPCClient<AppRouter>}
-				queryClient={queryClient}
-				{...props}
-			/>
-		),
-	});
-	setupRouterSsrQueryIntegration({
-		router,
-		queryClient,
-	});
+  const router = createRouter({
+    routeTree,
+    context: { queryClient, trpc },
+    defaultPreload: "intent",
+    Wrap: (props) => (
+      <StrictMode>
+        <TRPCProvider
+          trpcClient={trpcClient as TRPCClient<AppRouter>}
+          queryClient={queryClient}
+          {...props}
+        />
+      </StrictMode>
+    ),
+  });
+  setupRouterSsrQueryIntegration({
+    router,
+    queryClient,
+  });
 
-	return router;
+  return router;
 }

@@ -33,8 +33,8 @@ const BACKEND_CHOICES: BackendChoice[] = [
 		iconColor: "text-blue-500",
 		features: [
 			"Encrypted YAML files in your repo",
-			"AGE public/private key pairs per developer",
-			"Optional AWS KMS for team key management",
+			"Local AGE keys auto-generated per developer",
+			"Self-service team onboarding via GitHub Actions",
 			"Works offline - no cloud dependency",
 		],
 	},
@@ -107,8 +107,8 @@ export function SecretsBackendStep() {
 				// Chamber requires AWS infrastructure
 				setExpandedStep("infrastructure");
 			} else {
-				// Vals flow: go to decryption key
-				setExpandedStep("decryption-key");
+				// Vals flow: go to group initialization
+				setExpandedStep("init-groups");
 			}
 		} catch (err) {
 			toast.error(

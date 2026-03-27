@@ -19,7 +19,7 @@
 # Usage:
 #   let stepLib = import ./step.nix { inherit pkgs lib; };
 #   in stepLib.mkStepScripts {
-#     stateDir = ".stackpanel/state/step";
+#     stateDir = ".stack/state/step";
 #     caUrl = "https://ca.internal:443";
 #     caFingerprint = "abc123...";
 #   }

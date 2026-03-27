@@ -4,7 +4,7 @@
 # Adds the TypeScript compiler and optionally the language server.
 # This replaces devenv's languages.typescript module.
 #
-# Usage in .stackpanel/config.nix:
+# Usage in .stack/config.nix:
 #   languages.typescript.enable = true;
 # ==============================================================================
 {

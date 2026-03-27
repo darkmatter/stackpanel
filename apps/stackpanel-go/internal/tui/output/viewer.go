@@ -11,8 +11,9 @@ import (
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/tui"
 )
 
-// ViewerModel is a Bubble Tea model for displaying command output
-// with optional markdown rendering and scrolling support.
+// ViewerModel is a Bubble Tea model for displaying paged, scrollable command output.
+// Supports optional markdown rendering via glamour and sends a configurable
+// return message when dismissed, enabling integration with the navigation model.
 type ViewerModel struct {
 	viewport    viewport.Model
 	content     string
@@ -294,7 +295,8 @@ func RunMarkdownViewer(content string, opts ...ViewerOption) error {
 	return RunViewer(content, opts...)
 }
 
-// SimpleViewer provides a simpler non-scrolling view for short output
+// SimpleViewer provides a non-scrolling view for short output that fits on one screen.
+// Any keypress dismisses it. Use ViewerModel instead for long/scrollable content.
 type SimpleViewer struct {
 	content  string
 	title    string

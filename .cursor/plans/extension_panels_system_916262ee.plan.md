@@ -6,7 +6,7 @@ todos:
     content: Update extensions.proto.nix with ExtensionPanel message and PanelType enum
     status: pending
   - id: regenerate-proto
-    content: Regenerate protobuf files (nix run .#generate-protos)
+    content: Regenerate protobuf files (nix develop --impure -c ./packages/proto/generate.sh)
     status: pending
     dependencies:
       - proto-schema
@@ -42,7 +42,7 @@ todos:
 
 # Extension Panels System
 
-This plan adds a panels system to stackpanel extensions, allowing Nix modules to define UI components that render in the web interface.
+This plan adds a panels system to stack extensions, allowing Nix modules to define UI components that render in the web interface.
 
 ## Architecture Overview
 
@@ -87,11 +87,11 @@ flowchart LR
 
 |------|--------|---------|
 
-| [`nix/stackpanel/db/schemas/extensions.proto.nix`](nix/stackpanel/db/schemas/extensions.proto.nix) | Modify | Add `ExtensionPanel` message and `PanelType` enum |
+| [`nix/stack/db/schemas/extensions.proto.nix`](nix/stack/db/schemas/extensions.proto.nix) | Modify | Add `ExtensionPanel` message and `PanelType` enum |
 
-| [`nix/stackpanel/core/options/extensions.nix`](nix/stackpanel/core/options/extensions.nix) | Create | Define `stackpanel.extensions` options from proto |
+| [`nix/stack/core/options/extensions.nix`](nix/stack/core/options/extensions.nix) | Create | Define `stack.extensions` options from proto |
 
-| [`nix/stackpanel/core/cli.nix`](nix/stackpanel/core/cli.nix) | Modify | Include extensions in `fullConfig` JSON |
+| [`nix/stack/core/cli.nix`](nix/stack/core/cli.nix) | Modify | Include extensions in `fullConfig` JSON |
 
 | [`packages/proto/proto/extensions.proto`](packages/proto/proto/extensions.proto) | Regenerate | Run proto codegen |
 
@@ -103,7 +103,7 @@ flowchart LR
 
 ### 1. Proto Schema Changes
 
-Add to [`extensions.proto.nix`](nix/stackpanel/db/schemas/extensions.proto.nix):
+Add to [`extensions.proto.nix`](nix/stack/db/schemas/extensions.proto.nix):
 
 ```nix
 enums = {
@@ -146,18 +146,18 @@ messages = {
 
 ### 2. Nix Options Module
 
-Create `nix/stackpanel/core/options/extensions.nix`:
+Create `nix/stack/core/options/extensions.nix`:
 
-- Define `options.stackpanel.extensions` as attrsOf submodule
+- Define `options.stack.extensions` as attrsOf submodule
 - Derive options from proto schema using `db.extend.extension`
-- Allow modules to register via `stackpanel.extensions.<name>`
+- Allow modules to register via `stack.extensions.<name>`
 
 ### 3. Module Registration Pattern
 
 Existing modules (e.g., `go.nix`) can register panels:
 
 ```nix
-config.stackpanel.extensions.go = lib.mkIf hasGoApps {
+config.stack.extensions.go = lib.mkIf hasGoApps {
   name = "Go";
   enabled = true;
   panels = [
@@ -174,7 +174,7 @@ config.stackpanel.extensions.go = lib.mkIf hasGoApps {
 
 ### 4. CLI State Integration
 
-Modify [`cli.nix`](nix/stackpanel/core/cli.nix) to include extensions in `fullConfig`:
+Modify [`cli.nix`](nix/stack/core/cli.nix) to include extensions in `fullConfig`:
 
 ```nix
 fullConfig = {

@@ -1,0 +1,49 @@
+---
+title: stackpanel project default
+description: Set or show the default project
+icon: Terminal
+---
+
+# stackpanel project default
+
+Set or show the default project.
+
+The default project is used by the agent when no project is specified
+in API requests (via X-Stackpanel-Project header or 'project' query param).
+
+Without arguments, shows the current default project.
+With a path argument, sets that project as the default.
+
+Examples:
+  stackpanel project default              # Show default project
+  stackpanel project default .            # Set current directory as default
+  stackpanel project default ~/myproject  # Set specific project as default
+  stackpanel project default --clear      # Clear default project
+
+## Usage
+
+```bash
+stackpanel project default [path]
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--clear` | `bool` | `false` | Clear the default project |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

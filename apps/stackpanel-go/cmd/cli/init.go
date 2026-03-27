@@ -1,3 +1,7 @@
+// init.go implements `stackpanel init`, which scaffolds a new project by
+// evaluating the stackpanel flake's initFiles output and writing templates
+// into a .stack/ directory.
+
 package cmd
 
 import (
@@ -13,24 +17,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Default flake reference for stackpanel
-// Users can override with --flake flag or STACKPANEL_FLAKE env var
+// defaultStackpanelFlake is the remote flake used to fetch init templates.
+// Override with --flake or STACKPANEL_FLAKE for local development.
 const defaultStackpanelFlake = "github:darkmatter/stackpanel"
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a new stackpanel project",
-	Long: `Initialize creates the .stackpanel directory structure with boilerplate files.
+	Long: `Initialize creates the .stack directory structure with boilerplate files.
 
 This command evaluates the stackpanel flake to get the list of files to create,
 then writes them to the appropriate locations. Existing files are NOT overwritten
 unless --force is specified.
 
 The initialized structure includes:
-  - .stackpanel/config.nix       User-editable configuration file
-  - .stackpanel/_internal.nix    Internal merging logic (do not edit)
-  - .stackpanel/data.nix         Agent-editable data file
-  - .stackpanel/.gitignore       Gitignore for state and local config
+  - .stack/config.nix       User-editable configuration file
+  - .stack/_internal.nix    Internal merging logic (do not edit)
+  - .stack/data.nix         Agent-editable data file
+  - .stack/.gitignore       Gitignore for state and local config
 
 Example:
   stackpanel init                              # Create files in current directory
@@ -58,7 +62,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	ctx := context.Background()
 
-	// Determine target directory (where to create .stackpanel/)
+	// Determine target directory (where to create .stack/)
 	targetDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -170,8 +174,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 		if created > 0 {
 			fmt.Println()
 			output.Info("Next steps:")
-			output.Dimmed("  1. Review the generated files in .stackpanel/")
-			output.Dimmed("  2. Edit .stackpanel/config.nix to configure your project")
+			output.Dimmed("  1. Review the generated files in .stack/")
+			output.Dimmed("  2. Edit .stack/config.nix to configure your project")
 			output.Dimmed("  3. Create a flake.nix that imports stackpanel (or use 'nix flake init -t github:darkmatter/stackpanel')")
 			output.Dimmed("  4. Run 'nix develop --impure' to enter the dev shell")
 		}
@@ -180,7 +184,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// registerInitProject adds the initialized project to the user config.
+// registerInitProject adds the initialized project to the user-global config
+// (~/.config/stackpanel/stackpanel.yaml). This lets the agent discover and
+// serve this project without requiring the user to be in its directory.
 func registerInitProject(projectRoot string) error {
 	ucm, err := userconfig.NewManager()
 	if err != nil {
@@ -205,8 +211,9 @@ func registerInitProject(projectRoot string) error {
 //   - "git+file:///local/path/to/stackpanel" (faster local, uses git filtering)
 //   - Any valid Nix flake reference
 //
-// Note: "path:" references are automatically converted to "git+file://" for better
-// performance (uses git to filter files instead of copying everything).
+// Gotcha: "path:" references copy the entire directory tree into the Nix store,
+// which is very slow for large repos. "git+file://" uses git's index to filter
+// to tracked files only, making it dramatically faster for local development.
 func getInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
 	// Convert path: to git+file:// for better performance
 	// path: copies the entire directory, git+file:// uses git to filter
@@ -218,8 +225,9 @@ func getInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]str
 	return nixeval.GetInitFilesFromFlake(ctx, flakeRef)
 }
 
-// findProjectRoot walks up the directory tree to find a project root
-// (directory containing flake.nix or .stackpanel)
+// findProjectRoot walks up the directory tree to find the nearest project root.
+// A directory counts as a project root if it contains either flake.nix or
+// .stack/ — this covers both flake-based and standalone configurations.
 func findProjectRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -231,15 +239,15 @@ func findProjectRoot() (string, error) {
 		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
 			return dir, nil
 		}
-		// Check for .stackpanel
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
+		// Check for .stack
+		if _, err := os.Stat(filepath.Join(dir, ".stack")); err == nil {
 			return dir, nil
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			// Reached root without finding project
-			return "", fmt.Errorf("no project root found (looking for flake.nix or .stackpanel)")
+			return "", fmt.Errorf("no project root found (looking for flake.nix or .stack)")
 		}
 		dir = parent
 	}

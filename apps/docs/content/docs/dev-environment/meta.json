@@ -1,0 +1,13 @@
+{
+  "title": "Dev Environment",
+  "description": "Packages, scripts, environment variables, and shell configuration",
+  "icon": "terminal",
+  "pages": [
+    "index",
+    "packages-scripts",
+    "environment-variables",
+    "shell-hooks-files",
+    "flake-inputs",
+    "direnv"
+  ]
+}

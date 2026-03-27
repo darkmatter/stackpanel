@@ -23,7 +23,11 @@ stackpanel caddy add [domain] [upstream]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--tls` | `bool` | `false` | Enable internal TLS |
+| `--tls` | `bool` | `false` | Enable Caddy's built-in self-signed TLS |
+| `--tls-cert` | `string` | _none_ | Path to TLS certificate file (e.g., from step ca certificate) |
+| `--tls-key` | `string` | _none_ | Path to TLS private key file |
+| `--tls-step-ca-root` | `string` | _none_ | Path to Step CA root certificate |
+| `--tls-step-ca-url` | `string` | _none_ | Step CA ACME directory URL for TLS certs |
 
 
 ## Global Flags

@@ -1,0 +1,58 @@
+---
+title: stackpanel flake add-input
+description: Add a flake input to flake.nix
+icon: Terminal
+---
+
+# stackpanel flake add-input
+
+Add a new flake input to flake.nix using tree-sitter for robust parsing.
+
+This command parses the flake.nix file into a syntax tree, inserts the new
+input declaration, and optionally adds a module import to stackpanelImports.
+
+Comments, formatting, and whitespace are fully preserved.
+
+Examples:
+  # Add a basic input with nixpkgs follows
+  stackpanel flake add-input sops-nix github:Mic92/sops-nix
+
+  # Add without nixpkgs follows
+  stackpanel flake add-input process-compose github:Platonic-Systems/process-compose-flake --no-follows
+
+  # Add input and module import
+  stackpanel flake add-input my-module github:author/my-module --module-path stackpanelModules.default
+
+  # Dry run — show the modified file without writing
+  stackpanel flake add-input my-module github:author/my-module --dry-run
+
+## Usage
+
+```bash
+stackpanel flake add-input <name> <url>
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--dry-run` | `bool` | `false` | Print modified flake.nix without writing |
+| `--follows` | `bool` | `true` | Add inputs.nixpkgs.follows = "nixpkgs" |
+| `--module-path` | `string` | _none_ | Also add module import (e.g., stackpanelModules.default) |
+| `--no-lock` | `bool` | `false` | Skip running nix flake lock |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

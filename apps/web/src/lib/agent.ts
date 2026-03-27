@@ -1,7 +1,5 @@
 import {
-  kebabToSnake,
   kebabToSnakeValues,
-  snakeToKebab,
   snakeToKebabValues,
 } from "./nix-data";
 import type {
@@ -25,7 +23,11 @@ import type {
   GroupSecretReadResponse,
   GroupSecretListResponse,
   AllGroupsListResponse,
-  GenerateEnvPackageResponse,
+  RecipientListResponse,
+  AddRecipientRequest,
+  Recipient,
+  RekeyWorkflowStatus,
+  SecretsVerifyResponse,
 } from "./types";
 
 // The full Nix config is a dynamic object from nix eval, not the proto Config message
@@ -61,11 +63,12 @@ export interface DeleteResponse {
   error?: string;
 }
 
+export type AppVariableLinks = Record<string, Record<string, Record<string, string>>>;
+
 /**
  * EntityClient - CRUD client for a specific Nix entity file.
- * (Currently unused but kept for future use)
  */
-class _EntityClient<T> {
+class EntityClient<T> {
   constructor(
     private client: AgentHttpClient,
     private entityName: string,
@@ -78,13 +81,13 @@ class _EntityClient<T> {
       data: DataResponse<T>;
     }>(`/api/nix/data?entity=${encodeURIComponent(this.entityName)}`);
     const res = apiRes.data;
-    return res.exists && res.data ? kebabToSnake(res.data) : null;
+    return res.exists && res.data ? res.data : null;
   }
 
   async set(data: T): Promise<WriteResponse> {
     return this.client.post<WriteResponse>("/api/nix/data", {
       entity: this.entityName,
-      data: snakeToKebab(data),
+      data,
     });
   }
 
@@ -200,6 +203,26 @@ export interface AgeIdentityResponse {
   value: string;
   /** KeyPath is the actual file path used for decryption */
   keyPath: string;
+}
+
+export interface SopsAgeKeysStatusResponse {
+  available: boolean;
+  keyCount: number;
+  publicKeys: string[];
+  matchedPublicKeys: string[];
+  recipientMatch: boolean;
+  matchingRecipients: string[];
+  decryptableGroups: string[];
+  keychainService: string;
+  userKeyPath: string;
+  repoKeyPath: string;
+  configuredPaths: string[];
+  configuredOpRefs: string[];
+  localKeyPath: string;
+  localKeyExists: boolean;
+  storageTier: "none" | "local-only" | "external";
+  recommendation?: string;
+  error?: string;
 }
 
 /** Request to set KMS configuration */
@@ -513,7 +536,10 @@ export class AgentHttpClient {
     variables: new MapEntityClient<Variable>(this, "variables"),
     tasks: new MapEntityClient<Task>(this, "tasks"),
 
-    /** Generic entity client for custom paths */
+    /** Generic entity client for full-object entities */
+    objectEntity: <T>(name: string) => new EntityClient<T>(this, name),
+
+    /** Generic map client for custom paths */
     entity: <T>(name: string) => new MapEntityClient<T>(this, name),
 
     /** Alias for entity() to maintain compatibility with NixClient */
@@ -626,11 +652,27 @@ export class AgentHttpClient {
     return res.data as GeneratedFilesResponse;
   }
 
+  public async getAppVariableLinks(): Promise<AppVariableLinks> {
+    const res = await this.get<{
+      success: boolean;
+      data?: { links?: AppVariableLinks };
+      error?: string;
+    }>("/api/apps/links");
+    if (!res.success) {
+      throw new Error(res.error ?? "Failed to get app variable links");
+    }
+    return res.data?.links ?? {};
+  }
+
   /**
    * Compatibility helper to map Nix data entities.
    */
   public mapEntity<T>(name: string) {
     return this.nix.mapEntity<T>(name);
+  }
+
+  public entity<T>(name: string) {
+    return this.nix.objectEntity<T>(name);
   }
 
   /**
@@ -713,31 +755,6 @@ export class AgentHttpClient {
     return data.data;
   }
 
-  /**
-   * Regenerate the secrets package (sops config + secrets files).
-   * Call this after updating variables to ensure secrets are in sync.
-   * Uses nix run to access the script via flake output, works regardless of devshell.
-   * Returns null if regeneration fails.
-   */
-  async regenerateSecrets(): Promise<ExecResult | null> {
-    try {
-      // Try nix run first (works outside devshell via flake output)
-      // The script name has a colon, so we need to quote it in the attribute path
-      return await this.exec({
-        command: "nix",
-        args: ["run", "--impure", '.#scripts."secrets:generate"'],
-      });
-    } catch (err) {
-      // Fall back to direct command (works inside devshell)
-      try {
-        return await this.exec({ command: "secrets:generate" });
-      } catch {
-        console.debug("secrets:generate not available:", err);
-        return null;
-      }
-    }
-  }
-
   async readFile(path: string): Promise<FileContent> {
     const res = await fetch(
       `${this.baseUrl}/api/files?path=${encodeURIComponent(path)}`,
@@ -771,7 +788,7 @@ export class AgentHttpClient {
 
   /**
    * Write a secret to a group's SOPS-encrypted YAML file.
-   * Secrets are stored in .stackpanel/secrets/groups/<group>.yaml
+   * Secrets are stored in .stack/secrets/vars/<group>.sops.yaml
    */
   async writeAgenixSecret(
     request: AgenixSecretRequest,
@@ -913,6 +930,46 @@ export class AgentHttpClient {
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.data ?? { type: "", value: "", keyPath: "" };
+  }
+
+  async getSopsAgeKeysStatus(): Promise<SopsAgeKeysStatusResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/sops-age-keys/status`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data ?? {
+      available: false,
+      keyCount: 0,
+      publicKeys: [],
+      matchedPublicKeys: [],
+      recipientMatch: false,
+      matchingRecipients: [],
+      decryptableGroups: [],
+      keychainService: "stackpanel.sops-age-key",
+      userKeyPath: "",
+      repoKeyPath: ".stack/keys/local.txt",
+      configuredPaths: [],
+      configuredOpRefs: [],
+      localKeyPath: ".stack/keys/local.txt",
+      localKeyExists: false,
+      storageTier: "none",
+    };
+  }
+
+  async validateSopsAgeKeySource(source: {
+    type: string;
+    value: string;
+    account?: string;
+  }): Promise<SopsAgeKeysStatusResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/sops-age-keys/validate-source`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(source),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
   }
 
   /**
@@ -1458,18 +1515,40 @@ export class AgentHttpClient {
     return data.data;
   }
 
-  /**
-   * Generate the packages/env data directory.
-   * Creates:
-   * - apps/<app>/<env>.yaml - Plain YAML with vals references
-   * - groups/<group>.yaml - SOPS-encrypted files
-   * - .sops.yaml - SOPS configuration
-   */
-  async generateEnvPackage(): Promise<GenerateEnvPackageResponse> {
+  // ===========================================================================
+  // Recipients & team access
+  // ===========================================================================
+
+  /** List all recipients resolved from Nix-configured secrets state */
+  async listRecipients(): Promise<RecipientListResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Add a new recipient (AGE or SSH public key) */
+  async addRecipient(
+    request: AddRecipientRequest,
+  ): Promise<Recipient> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/recipients`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify(request),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Remove a recipient */
+  async removeRecipient(name: string): Promise<{ deleted: boolean }> {
     const res = await fetch(
-      `${this.baseUrl}/api/secrets/generate-env-package`,
+      `${this.baseUrl}/api/secrets/recipients?name=${encodeURIComponent(name)}`,
       {
-        method: "POST",
+        method: "DELETE",
         headers: this.getHeaders(false),
       },
     );
@@ -1477,6 +1556,31 @@ export class AgentHttpClient {
     if (!data.success) throw new Error(data.error);
     return data.data;
   }
+
+  /** Check the status of the GitHub Actions rekey workflow */
+  async getRekeyWorkflowStatus(): Promise<RekeyWorkflowStatus> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/rekey-workflow`, {
+      headers: this.getHeaders(false),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
+  /** Verify secrets encrypt/decrypt round-trip for a group */
+  async verifySecrets(
+    group: string,
+  ): Promise<SecretsVerifyResponse> {
+    const res = await fetch(`${this.baseUrl}/api/secrets/verify`, {
+      method: "POST",
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ group }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    return data.data;
+  }
+
 }
 
 // Default export singleton

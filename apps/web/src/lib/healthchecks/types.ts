@@ -179,6 +179,23 @@ export interface HealthchecksUpdatedEvent {
   data: HealthSummary;
 }
 
+/** Fired when a POST /api/healthchecks begins running checks */
+export interface HealthchecksRunningEvent {
+  type: "healthchecks.running";
+  data: {
+    /** IDs of checks that are about to be evaluated */
+    checkIds: string[];
+    /** Module filter (empty string if running all) */
+    module: string;
+  };
+}
+
+/** Fired for each individual check result as it completes */
+export interface HealthcheckResultEvent {
+  type: "healthcheck.result";
+  data: HealthcheckResult;
+}
+
 // =============================================================================
 // Component Props
 // =============================================================================

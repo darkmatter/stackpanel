@@ -6,13 +6,19 @@
 # Defines the base options that control Stackpanel behavior:
 #   - enable: Master switch for Stackpanel functionality
 #   - root: Absolute project root path (optional override)
+#   - root-marker: Filename for the root marker file (.stackpanel-root)
 #   - dirs: Directory configuration (home, state, gen, config)
 #   - direnv: Direnv integration settings
+#   - gitignore: Reserved options for managed .gitignore generation
+#
+# The root marker system allows tools to find the project root from any
+# subdirectory by walking up the tree looking for the marker file.
 #
 # Directory layout:
-#   .stackpanel/           (dirs.home)
-#   ├── state/             (dirs.state - gitignored, runtime state)
-#   └── gen/               (dirs.gen - checked in, generated files)
+#   .stack/               (dirs.home)
+#   ├── keys/             (dirs.keys - gitignored, persistent credentials)
+#   ├── profile/          (dirs.profile - gitignored, ephemeral runtime/cache)
+#   └── gen/              (dirs.gen - gitignored, generated files)
 # ==============================================================================
 {
   lib,
@@ -20,7 +26,7 @@
   ...
 }:
 {
-  # Base stackpanel options for devenv
+  # Base stackpanel options
   options.stackpanel = {
     enable = lib.mkEnableOption "Enable Stackpanel" // {
       default = true;
@@ -161,9 +167,10 @@
     };
     useDevenv = lib.mkOption {
       description = ''
-        DEPRECATED: This option is no longer used. Devenv is always the shell backend.
+        DEPRECATED: This option is no longer used.
 
-        The flakeModule now always uses devenv for shell creation.
+        Shell backend selection is now handled by the active integration layer
+        (for example, flake modules or shell adapters), not by this option.
         This option is kept for backwards compatibility but has no effect.
       '';
       type = lib.types.bool;
@@ -175,15 +182,109 @@
     # ----------------------------------------------------------------------------
     root = lib.mkOption {
       description = ''
-        Absolute path to the project root. If set, this overrides automatic detection.
+        Absolute path to the project root. If set, this overrides PWD-based detection.
 
-        Automatic detection uses (in order):
-        1. STACKPANEL_ROOT environment variable
-        2. Git repository root (.git directory)
-        3. flake.nix location
+        For pure flake evaluation (like `nix flake check`), use the readStackpanelRoot
+        flake module which reads this from a flake input:
+
+        ```nix
+        # flake.nix inputs
+        inputs.stackpanel-root = {
+          url = "file+file:///dev/null";
+          flake = false;
+        };
+
+        # imports
+        imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
+        ```
+
+        Then in .envrc: `echo "$PWD" > .stackpanel-root`
       '';
       type = lib.types.nullOr lib.types.str;
       default = null;
+    };
+    root-marker = lib.mkOption {
+      description = ''
+        Filename for the root marker file written to the project root.
+        Contains the absolute path to the project root, allowing tools
+        to find the project from any subdirectory. Add to .dockerignore
+        and .gitignore so containers create their own marker.
+      '';
+      type = lib.types.str;
+      default = ".stackpanel-root";
+    };
+    gitignore = lib.mkOption {
+      description = ''
+        Reserved options for managed `.gitignore` generation.
+
+        Stackpanel core owns a block-managed section in `.gitignore` and merges
+        entries from this option. This provides a stable, explicit API for common
+        `.gitignore` presets while still allowing modules to contribute entries.
+
+        The generated block is deduplicated and sorted.
+      '';
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = "Whether Stackpanel should manage a `.gitignore` block.";
+          };
+
+          entries = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = ''
+              Additional `.gitignore` entries to include in the managed block.
+
+              Example:
+                [ "dist/" ".env.local" ]
+            '';
+          };
+
+          defaults = lib.mkOption {
+            type = lib.types.submodule {
+              options = {
+                stackpanelState = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Include `${config.stackpanel.dirs.home}/state/`.";
+                };
+
+                localConfig = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Include `${config.stackpanel.dirs.home}/config.local.nix`.";
+                };
+
+                tasksDir = lib.mkOption {
+                  type = lib.types.bool;
+                  default = true;
+                  description = "Include `.tasks`.";
+                };
+
+                projectMarker = lib.mkOption {
+                  type = lib.types.bool;
+                  default = false;
+                  description = "Include the root marker file (`stackpanel.root-marker`).";
+                };
+
+                addProjectMarker = lib.mkOption {
+                  type = lib.types.bool;
+                  default = false;
+                  description = ''
+                    DEPRECATED: Use `stackpanel.gitignore.defaults.projectMarker` instead.
+                    Backward-compatible alias for including `stackpanel.root-marker` in `.gitignore`.
+                  '';
+                };
+              };
+            };
+            default = { };
+            description = "Toggle built-in `.gitignore` presets managed by Stackpanel.";
+          };
+        };
+      };
+      default = { };
     };
 
     # ----------------------------------------------------------------------------
@@ -197,7 +298,7 @@
             config = lib.mkOption {
               description = "Directory for stackpanel configuration files.";
               type = lib.types.path;
-              default = ../../../../.stackpanel/config.nix;
+              default = ../../../../.stack/config.nix;
             };
             home = lib.mkOption {
               description = ''
@@ -205,27 +306,45 @@
                 This is the ONLY configurable directory option.
 
                 Subdirectories are automatically computed:
-                  - state/ (gitignored) - runtime state files
-                  - gen/   (checked in) - generated IDE configs, schemas
+                  - keys/   (gitignored) - persistent credentials (AGE, AWS, step)
+                  - profile/ (gitignored) - ephemeral runtime/cache (safe to rm)
+                  - gen/   (gitignored) - generated IDE configs, schemas
                   - data/ (checked in) -  nix-backed configuration db
 
-                Example: ".stackpanel" → state at ".stackpanel/state"
+                Example: ".stack" → keys at ".stack/keys", profile at ".stack/profile"
               '';
               type = lib.types.str;
-              default = ".stackpanel";
+              default = ".stack";
             };
             # ================================================================
             # COMPUTED PATHS (read-only, derived from home)
             # These cannot be configured - change `home` instead.
             # ================================================================
-            state = lib.mkOption {
+            keys = lib.mkOption {
               description = ''
-                Full state directory path (relative to project root).
-                Computed as: dirs.home + "/state"
-                This is read-only - configure dirs.home instead.
+                Full keys directory path (relative to project root).
+                Persistent credentials only. Computed as: dirs.home + "/keys"
               '';
               type = lib.types.str;
-              default = "${config.home}/state";
+              default = "${config.home}/keys";
+              readOnly = true;
+            };
+            profile = lib.mkOption {
+              description = ''
+                Full profile directory path (relative to project root).
+                Ephemeral runtime/cache (safe to delete). Computed as: dirs.home + "/profile"
+                Replaces legacy state/ for stackpanel.json, shell.log, etc.
+              '';
+              type = lib.types.str;
+              default = "${config.home}/profile";
+              readOnly = true;
+            };
+            state = lib.mkOption {
+              description = ''
+                DEPRECATED: Use dirs.profile. Alias for profile for backward compatibility.
+              '';
+              type = lib.types.str;
+              default = "${config.home}/profile";
               readOnly = true;
             };
             data = lib.mkOption {
@@ -311,8 +430,8 @@
   #
   #   imports = [
   #     inputs.stackpanel.devenvModules.default
-  #   ] ++ stackpanelLib.optionalLocalConfig ./.stackpanel/config.local.nix;
+  #   ] ++ stackpanelLib.optionalLocalConfig ./.stack/config.local.nix;
   #
-  # The file .stackpanel/config.local.nix is automatically gitignored.
+  # The file .stack/config.local.nix is automatically gitignored.
   # ============================================================================
 }

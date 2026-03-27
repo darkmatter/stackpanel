@@ -1,3 +1,13 @@
+// nix_config.go manages evaluation and caching of the Stackpanel Nix config.
+//
+// Config is resolved through a waterfall of strategies:
+//  1. FlakeWatcher (preferred — watches files and caches intelligently)
+//  2. Direct `nix eval` on the flake output (slow but fresh)
+//  3. STACKPANEL_CONFIG_JSON env var (pre-computed JSON from devshell)
+//  4. .stack/gen/config.json on disk (last resort)
+//
+// The in-memory globalConfigCache provides a fast fallback when FlakeWatcher
+// is unavailable. A refresh can be forced via POST /api/nix/config.
 package server
 
 import (
@@ -181,7 +191,7 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 	}
 
 	// Strategy 3: Try to find a cached config in the project
-	cachedPath := filepath.Join(s.config.ProjectRoot, ".stackpanel", "gen", "config.json")
+	cachedPath := filepath.Join(s.config.ProjectRoot, ".stack", "gen", "config.json")
 	if config, err = s.loadConfigFromJSON(cachedPath); err == nil {
 		s.cacheConfig(config)
 		return config, nil
@@ -190,7 +200,9 @@ func (s *Server) evaluateConfig() (map[string]any, error) {
 	return nil, err
 }
 
-// evaluateConfigFromFlake evaluates the config by running nix eval on the flake
+// evaluateConfigFromFlake tries multiple flake attribute paths in priority order.
+// stackpanelFullConfig is intentionally avoided — it contains non-serializable
+// Nix values (functions, modules) that would break JSON serialization.
 func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	// Try paths in priority order:
 	// 1. devshell passthru (for user projects consuming stackpanel)
@@ -198,8 +210,8 @@ func (s *Server) evaluateConfigFromFlake() (map[string]any, error) {
 	// Note: Do NOT use stackpanelFullConfig - it contains non-serializable values (functions, modules)
 	attributePaths := []string{
 		// User projects: devshell passthru has the stackpanel config
-		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelSerializable",
-		".#devShells." + getCurrentSystem() + ".default.passthru.stackpanelConfig",
+		".#devShells." + getCurrentSystem() + ".default.passthru.stackSerializable",
+		".#devShells." + getCurrentSystem() + ".default.passthru.stackConfig",
 		// Stackpanel repo: direct flake outputs
 		".#stackpanelConfig",
 	}
@@ -260,7 +272,7 @@ func (s *Server) cacheConfig(config map[string]any) {
 
 // saveConfigToCache saves the config to a local JSON file for persistence
 func (s *Server) saveConfigToCache(config map[string]any) {
-	cacheDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "gen")
+	cacheDir := filepath.Join(s.config.ProjectRoot, ".stack", "gen")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		log.Warn().Err(err).Msg("Failed to create cache directory")
 		return

@@ -1,34 +1,116 @@
 # ==============================================================================
 # env-package.nix
 #
-# Generates the complete packages/gen/env structure from stackpanel.apps config:
-#   - packages/gen/env/data/.sops.yaml - SOPS creation rules per app/env
-#   - packages/gen/env/data/<app>/<env>.yaml - Boilerplate YAML files
-#   - packages/gen/env/data/shared/vars.yaml - Shared plaintext config
-#   - packages/gen/env/src/generated/<app>/<env>.ts - znv TypeScript modules
-#   - packages/gen/env/src/generated/<app>/index.ts - App barrel exports
-#   - packages/gen/env/src/generated/index.ts - Root barrel export
-#   - packages/gen/env/src/entrypoints/<app>.ts - App entrypoint loaders
+# Generates the env package directly in the target package directory.
+#   - Source files under packageDir/src/ are generated.
+#   - Root package.json and tsconfig.json are generated too.
+#   - Runtime payload metadata stays in Nix; encrypted env payloads are built
+#     by the host-side `stackpanel codegen build` command.
 #
-# This makes packages/gen/env self-contained and portable for Docker.
+# Structure:
+#   packageDir/
+#     package.json       — exports "." and "./<app>"
+#     tsconfig.json      — includes src/
+#     README.md          — generated package docs
+#     src/               — 100% generated (do not edit)
+#       apps/<app>/<env>.ts
+#       apps/<app>/index.ts
+#       exports/<app>.ts
+#       runtime/loader.ts, runtime/node-loader.ts, runtime/docker-entrypoint.ts
+#       runtime/generated-payloads/<app>/<env>.ts
+#       runtime/generated-payloads/registry.ts
+#       embedded-data.ts, index.ts
 # ==============================================================================
-{ lib, config, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stackpanel;
   apps = cfg.apps or { };
   users = cfg.users or { };
   secretsCfg = cfg.secrets or { };
+  variables = cfg.variables or { };
   packageName = cfg.env.package-name or "@gen/env";
+  explicitEnvReferences = cfg.env.references or { };
 
-  # Variables backend determines whether SOPS files are generated
-  variablesBackend = cfg.secrets.backend or "vals";
-  isChamber = variablesBackend == "chamber";
+  repoRoot = ../../../..;
+  projectRoot =
+    if config.stackpanel.root != null then
+      config.stackpanel.root
+    else if builtins.getEnv "PWD" != "" then
+      builtins.getEnv "PWD"
+    else
+      toString repoRoot;
+  resolveProjectPath = path: if lib.hasPrefix "/" path then path else "${projectRoot}/${path}";
 
-  # Output directories (configurable via stackpanel.env.output-dir)
+  getKeyGroup =
+    id:
+    let
+      cleaned = lib.removePrefix "/" id;
+      parts = lib.splitString "/" cleaned;
+    in
+    if parts != [ ] then builtins.head parts else "var";
+
+  getVarName =
+    id:
+    let
+      cleaned = lib.removePrefix "/" id;
+      parts = lib.splitString "/" cleaned;
+    in
+    if parts != [ ] then lib.last parts else id;
+
+  secretFileStem = id: builtins.replaceStrings [ "/" "\\" " " ] [ "-" "-" "-" ] (getVarName id);
+
+  secretYamlKey = id: builtins.replaceStrings [ "-" "." "/" " " ] [ "_" "_" "_" "_" ] (getVarName id);
+
+  parseVariableLink =
+    value:
+    if lib.hasPrefix "var://" value then
+      let
+        rawId = lib.removePrefix "var://" value;
+      in
+      if rawId == "" then
+        null
+      else if lib.hasPrefix "/" rawId then
+        rawId
+      else
+        "/${rawId}"
+    else
+      null;
+
+  parseSopsReference =
+    value:
+    let
+      matches = builtins.match "ref\\+sops://([^#]+)#/(.+)" value;
+    in
+    if matches == null then
+      null
+    else
+      {
+        path = builtins.elemAt matches 0;
+        key = builtins.elemAt matches 1;
+      };
+
+  inferSopsFileType =
+    path:
+    if lib.hasSuffix ".sops.json" path || lib.hasSuffix ".json" path then
+      "json"
+    else if lib.hasSuffix ".sops.env" path || lib.hasSuffix ".env" path then
+      "env"
+    else
+      "yaml";
+
+  # Output directories: generated package at packageDir/
   packageDir = cfg.env.output-dir or "packages/gen/env";
   dataDir = "${packageDir}/data";
-  generatedDir = "${packageDir}/src/generated";
-  entrypointsDir = "${packageDir}/src/entrypoints";
+  generatedDir = "${packageDir}/src";
+  appsDir = "${generatedDir}/apps";
+  exportsDir = "${generatedDir}/exports";
+  runtimeDir = "${generatedDir}/runtime";
+  payloadRuntimeDir = "${runtimeDir}/generated-payloads";
 
   # ===========================================================================
   # Templates — read from ./templates/env/ (no inlined TS/JSON in Nix)
@@ -41,8 +123,12 @@ let
   templates = {
     envModule = builtins.readFile "${templateDir}/env-module.tmpl.ts";
     barrel = builtins.readFile "${templateDir}/barrel.tmpl.ts";
-    entrypoint = builtins.readFile "${templateDir}/entrypoint.tmpl.ts";
+    envExport = builtins.readFile "${templateDir}/env-export.tmpl.ts";
     index = builtins.readFile "${templateDir}/index.ts";
+    loader = builtins.readFile "${templateDir}/loader.ts";
+    nodeLoader = builtins.readFile "${templateDir}/node-loader.ts";
+    payloadRegistry = builtins.readFile "${templateDir}/payload-registry.ts";
+    dockerEntrypoint = builtins.readFile "${templateDir}/docker-entrypoint.ts";
     packageJson = builtins.readFile "${templateDir}/package.json.tmpl";
     tsconfig = builtins.readFile "${templateDir}/tsconfig.json";
     readme = builtins.readFile "${templateDir}/README.tmpl.md";
@@ -63,19 +149,45 @@ let
   # Collect all user AGE keys
   userKeys = lib.mapAttrsToList (_: user: user.age-public-key or null) users;
   validUserKeys = lib.filter (k: k != null) userKeys;
+  configuredRecipients = secretsCfg.recipients or { };
+  configuredRecipientKeys = lib.filter (k: k != null) (
+    lib.mapAttrsToList (_: recipient: recipient.public-key or null) configuredRecipients
+  );
 
-  # Collect group public keys (only from initialized groups with age-pub set)
+  envRecipientTags =
+    envName:
+    lib.unique (
+      [ envName ]
+      ++ lib.optional (envName == "prod") "production"
+      ++ lib.optional (envName == "production") "prod"
+    );
+
+  envPayloadRecipients =
+    envName:
+    let
+      tags = envRecipientTags envName;
+      taggedRecipients = lib.filter (k: k != null) (
+        lib.mapAttrsToList (
+          _: recipient:
+          let
+            recipientTags = recipient.tags or [ ];
+          in
+          if recipientTags == [ ] || lib.any (tag: lib.elem tag recipientTags) tags then
+            recipient.public-key or null
+          else
+            null
+        ) configuredRecipients
+      );
+      fallbackRecipients = taggedRecipients ++ configuredRecipientKeys ++ validUserKeys;
+    in
+    lib.unique fallbackRecipients;
+
+  # Group names are still used for file organization, but Stackpanel no longer
+  # generates a dedicated AGE keypair per group.
   groups = secretsCfg.groups or { };
-  groupKeys = lib.pipe groups [
-    (lib.mapAttrsToList (_: g: g.age-pub or ""))
-    (lib.filter (k: k != ""))
-  ];
 
-  # Group keys indexed by name for environment-specific matching
-  groupsByName = lib.filterAttrs (_: g: (g.age-pub or "") != "") groups;
-
-  # All non-user keys (group keys only — no more global master key)
-  baseKeys = groupKeys;
+  # All non-user keys have been removed from the direct SOPS recipient set.
+  baseKeys = [ ];
 
   # ===========================================================================
   # SOPS Config Generation
@@ -85,25 +197,15 @@ let
   mkSopsRule =
     appName: envName: envCfg:
     let
-      # For prod, we might want restricted access
       isProd = envName == "prod" || envName == "production";
-      # Get environment-specific allowed keys (if configured)
       envAllowedUsers = envCfg.allowed-users or null;
-
-      # Match group by environment name (e.g., env "dev" → group "dev")
-      # This gives per-env access control: prod secrets only encrypted to prod group
-      matchingGroup = groupsByName.${envName} or null;
-      matchingGroupKey = if matchingGroup != null then [ matchingGroup.age-pub ] else [ ];
-
-      # Determine which keys to include
       keys =
         if envAllowedUsers != null then
           lib.filter (k: k != null) (map (u: (users.${u} or { }).age-public-key or null) envAllowedUsers)
-          ++ matchingGroupKey
         else if isProd then
-          matchingGroupKey # Prod: prod group key only (no user keys)
+          [ ]
         else
-          groupKeys ++ validUserKeys; # Dev/staging: all group keys + user keys
+          validUserKeys;
     in
     {
       path_regex = "^${appName}/${envName}\\.yaml$";
@@ -114,7 +216,6 @@ let
       ];
     };
 
-  # Collect all app/env combinations
   allEnvs = lib.concatLists (
     lib.mapAttrsToList (
       appName: appCfg:
@@ -124,7 +225,6 @@ let
     ) apps
   );
 
-  # Generate all SOPS rules
   sopsRules = map (
     {
       appName,
@@ -134,13 +234,11 @@ let
     mkSopsRule appName envName envCfg
   ) allEnvs;
 
-  # Shared vars rule (unencrypted)
   sharedVarsRule = {
     path_regex = "^shared/vars\\.yaml$";
     unencrypted_regex = ".*";
   };
 
-  # Catch-all rule for any other files
   catchAllRule = {
     path_regex = ".*\\.yaml$";
     key_groups = [
@@ -150,13 +248,9 @@ let
     ];
   };
 
-  # Generate .sops.yaml content
   sopsYamlContent =
     let
-      # Format a key group
       formatKeyGroup = kg: "      - age:\n" + lib.concatMapStringsSep "" (k: "          - ${k}\n") kg.age;
-
-      # Format a creation rule
       formatRule =
         rule:
         if rule ? unencrypted_regex then
@@ -164,7 +258,6 @@ let
         else
           "  - path_regex: ${rule.path_regex}\n    key_groups:\n"
           + lib.concatMapStringsSep "" formatKeyGroup rule.key_groups;
-
       allRules = [ sharedVarsRule ] ++ sopsRules ++ [ catchAllRule ];
     in
     ''
@@ -176,11 +269,6 @@ let
       #   <app>/<env>.yaml - Per-app per-env secrets (SOPS encrypted)
 
       keys:
-      ${lib.optionalString (groupKeys != [ ]) ''
-          # Group keys (per-environment access control)
-        ${lib.concatStringsSep "" (
-          lib.mapAttrsToList (name: g: "  - &group_${name} ${g.age-pub}\n") groupsByName
-        )}''}
       ${lib.optionalString (validUserKeys != [ ]) ''
           # Team member keys
         ${lib.concatMapStringsSep "" (k: "  - ${k}\n") validUserKeys}''}
@@ -190,87 +278,247 @@ let
     '';
 
   # ===========================================================================
-  # YAML Data File Generation (boilerplate)
+  # Runtime Payload Data
   # ===========================================================================
 
-  # Generate boilerplate YAML for an app/env
-  mkEnvYamlBoilerplate =
+  normalizeEnvVars = lib.mapAttrs (_: value: builtins.toString value);
+
+  computedVarsObject = lib.listToAttrs (
+    lib.concatMap (
+      variableId:
+      let
+        variable = variables.${variableId};
+        isComputedVariable =
+          if variable ? isComputed then variable.isComputed else getKeyGroup variable.id == "computed";
+      in
+      lib.optional isComputedVariable {
+        name = variable.id;
+        value = builtins.toString variable.value;
+      }
+    ) (lib.attrNames variables)
+  );
+
+  appEnvObjects = lib.listToAttrs (
+    lib.concatMap (
+      appName:
+      let
+        appCfg = apps.${appName};
+        envs = appCfg.environments or { };
+        envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs);
+      in
+      lib.optional (envNames != [ ]) {
+        name = appName;
+        value = envNames;
+      }
+    ) (lib.attrNames apps)
+  );
+
+  groupedVariables = lib.filterAttrs (
+    _: variable:
+    let
+      isComputedVariable =
+        if variable ? isComputed then variable.isComputed else getKeyGroup variable.id == "computed";
+    in
+    !isComputedVariable
+  ) variables;
+
+  groupFilePathForVariable =
+    variableId:
+    let
+      variable = groupedVariables.${variableId} or { };
+      configuredPath =
+        variable.sopsFile
+          or "${secretsCfg.secrets-dir or ".stack/secrets"}/vars/${getKeyGroup variableId}.sops.yaml";
+    in
+    configuredPath;
+
+  groupYamlKeyForVariable =
+    variableId:
+    let
+      variable = groupedVariables.${variableId} or { };
+    in
+    variable.secretYamlKey or (secretYamlKey variableId);
+
+  inferVariableIdForEmptyEnvValue =
+    envName: envKey:
+    let
+      normalizedEnvKey = builtins.replaceStrings [ "-" "." "/" " " ] [ "_" "_" "_" "_" ] (
+        lib.toLower envKey
+      );
+      candidates = lib.filter (variableId: groupYamlKeyForVariable variableId == normalizedEnvKey) (
+        lib.attrNames groupedVariables
+      );
+      envCandidates = lib.filter (variableId: getKeyGroup variableId == envName) candidates;
+      devCandidates = lib.filter (variableId: getKeyGroup variableId == "dev") candidates;
+      secretCandidates = lib.filter (variableId: getKeyGroup variableId == "secret") candidates;
+    in
+    if envCandidates != [ ] then
+      lib.head envCandidates
+    else if devCandidates != [ ] then
+      lib.head devCandidates
+    else if secretCandidates != [ ] then
+      lib.head secretCandidates
+    else if builtins.length candidates == 1 then
+      lib.head candidates
+    else
+      null;
+
+  inferVariableIdFromSourcePos =
+    envVars: envKey:
+    let
+      pos = builtins.unsafeGetAttrPos envKey envVars;
+      file = if pos != null && pos ? file then pos.file else null;
+      line = if pos != null && pos ? line then pos.line else null;
+    in
+    if file == null || line == null || !(builtins.pathExists file) then
+      null
+    else
+      let
+        lines = lib.splitString "\n" (builtins.readFile file);
+        start = if line > 0 then line - 1 else 0;
+        snippet = lib.concatStringsSep " " (lib.take 5 (lib.drop start lines));
+        match = builtins.match ''.*config\.variables\."([^"]+)"\.value.*'' snippet;
+      in
+      if match == null then null else builtins.elemAt match 0;
+
+  mkEnvResolutionEntries =
     appName: envName: envCfg:
     let
-      envVars = envCfg.env or { };
-      # Generate key placeholders
-      lines = lib.mapAttrsToList (
-        key: value:
-        let
-          # If it's a vals ref, extract the key name for the placeholder
-          isRef = lib.hasPrefix "ref+" value;
-          placeholder = if isRef then "PLACEHOLDER_${key}" else value;
-        in
-        "${key}: ${placeholder}"
-      ) envVars;
+      rawEnvVars = envCfg.env or { };
+      envVars = normalizeEnvVars rawEnvVars;
+      envReferences = (explicitEnvReferences.${appName} or { }).${envName} or { };
     in
-    ''
-      # ${appName} ${envName} environment secrets
-      # Auto-generated boilerplate - edit values, then encrypt with: sops ${appName}/${envName}.yaml
-      ${lib.concatStringsSep "\n" lines}
-    '';
+    lib.mapAttrs (
+      envKey: value:
+      let
+        variableId = parseVariableLink value;
+        sopsRef = parseSopsReference value;
+        explicitVariableId = envReferences.${envKey} or null;
+        sourceVariableId = if value == "" then inferVariableIdFromSourcePos rawEnvVars envKey else null;
+        inferredVariableId = if value == "" then inferVariableIdForEmptyEnvValue envName envKey else null;
+        variable =
+          if variableId != null && builtins.hasAttr variableId variables then
+            variables.${variableId}
+          else if explicitVariableId != null && builtins.hasAttr explicitVariableId variables then
+            variables.${explicitVariableId}
+          else if sourceVariableId != null && builtins.hasAttr sourceVariableId variables then
+            variables.${sourceVariableId}
+          else if inferredVariableId != null && builtins.hasAttr inferredVariableId variables then
+            variables.${inferredVariableId}
+          else
+            null;
+        isComputedVariable =
+          (
+            variableId != null
+            || explicitVariableId != null
+            || sourceVariableId != null
+            || inferredVariableId != null
+          )
+          && (
+            if variable != null && variable ? isComputed then
+              variable.isComputed
+            else
+              getKeyGroup (
+                if variableId != null then
+                  variableId
+                else if explicitVariableId != null then
+                  explicitVariableId
+                else if sourceVariableId != null then
+                  sourceVariableId
+                else
+                  inferredVariableId
+              ) == "computed"
+          );
+        effectiveVariableId =
+          if variableId != null then
+            variableId
+          else if explicitVariableId != null then
+            explicitVariableId
+          else if sourceVariableId != null then
+            sourceVariableId
+          else
+            inferredVariableId;
+      in
+      if sopsRef != null then
+        {
+          kind = "sopsRef";
+          path = sopsRef.path;
+          fileType = inferSopsFileType sopsRef.path;
+          key = sopsRef.key;
+        }
+      else if isComputedVariable then
+        {
+          kind = "literal";
+          value =
+            if builtins.hasAttr effectiveVariableId computedVarsObject then
+              computedVarsObject.${effectiveVariableId}
+            else if variable != null then
+              builtins.toString variable.value
+            else
+              throw "env-package: missing computed variable ${effectiveVariableId}";
+        }
+      else if effectiveVariableId != null then
+        {
+          kind = "group";
+          variableId = effectiveVariableId;
+          path = groupFilePathForVariable effectiveVariableId;
+          fileType = inferSopsFileType (groupFilePathForVariable effectiveVariableId);
+          key = groupYamlKeyForVariable effectiveVariableId;
+        }
+      else
+        {
+          kind = "literal";
+          value = value;
+        }
+    ) envVars;
 
-  # Shared vars boilerplate
-  sharedVarsBoilerplate = ''
-    # Shared configuration variables (NOT encrypted)
-    # Add non-sensitive config shared across apps/environments
+  envBuildManifest = {
+    schemaVersion = 1;
+    dataRoot = dataDir;
+    targets = map (
+      {
+        appName,
+        envName,
+        envCfg,
+      }:
+      {
+        app = appName;
+        environment = envName;
+        outputPath = "${dataDir}/${envName}/${appName}.sops.json";
+        recipients = lib.sort (a: b: a < b) (envPayloadRecipients envName);
+        vars = mkEnvResolutionEntries appName envName envCfg;
+      }
+    ) (lib.filter ({ envCfg, ... }: (envCfg.env or { }) != { }) allEnvs);
+  };
 
-    LOG_LEVEL: info
-    API_VERSION: v1
+  embeddedDataModule = ''
+    // Auto-generated by Stackpanel — do not edit manually.
+    export const AVAILABLE_APP_ENVS = ${builtins.toJSON appEnvObjects} as Record<string, string[]>;
   '';
 
   # ===========================================================================
   # TypeScript Codegen
   # ===========================================================================
 
-  # Infer Zod schema from value
-  inferZodSchema =
-    value:
-    let
-      isValsRef = lib.hasPrefix "ref+" value;
-      isNumericStr = builtins.match "^-?[0-9]+\\.?[0-9]*$" value != null;
-      isBooleanStr = value == "true" || value == "false";
-    in
-    if isValsRef then
-      "z.string()"
-    else if isNumericStr then
-      "z.coerce.number()"
-    else if isBooleanStr then
-      "z.coerce.boolean()"
-    else
-      "z.string()";
-
-  # Generate TypeScript module for an app/env
   mkEnvTsModule =
     appName: envName: envCfg:
     let
       envVars = envCfg.env or { };
       sortedKeys = lib.sort (a: b: a < b) (lib.attrNames envVars);
-      fields = lib.concatMapStringsSep "\n" (
-        key:
-        let
-          value = envVars.${key};
-          zodSchema = inferZodSchema value;
-        in
-        "  ${key}: ${zodSchema},"
-      ) sortedKeys;
+      fields = lib.concatMapStringsSep "\n" (key: "  ${key}: string;") sortedKeys;
     in
     if envVars == { } then
       null
     else
       builtins.replaceStrings [ "{{FIELDS}}" ] [ fields ] templates.envModule;
 
-  # Generate barrel export (used for both per-app and root barrels)
   mkBarrelExport =
-    names:
+    names: basePath:
     let
       sorted = lib.sort (a: b: a < b) names;
-      exports = lib.concatMapStringsSep "\n" (n: "export * as ${toJsIdentifier n} from './${n}';") sorted;
+      exports = lib.concatMapStringsSep "\n" (
+        n: "export * as ${toJsIdentifier n} from '${basePath}${n}';"
+      ) sorted;
     in
     builtins.replaceStrings [ "{{EXPORTS}}" ] [ exports ] templates.barrel;
 
@@ -278,14 +526,22 @@ let
   # Entrypoint Generation
   # ===========================================================================
 
-  # Generate entrypoint for an app
-  mkAppEntrypoint =
+  mkAppEnvExport =
     appName: appCfg:
     let
-      envNames = lib.attrNames (appCfg.environments or { });
+      envNames = lib.sort (a: b: a < b) (
+        lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) (appCfg.environments or { }))
+      );
+      defaultEnv = if envNames != [ ] then lib.head envNames else "dev";
+      envType = lib.concatMapStringsSep " | " (e: "app.${toJsIdentifier e}.Env") envNames;
+      envCases = lib.concatMapStringsSep "\n" (
+        e: "  if (envName === \"${e}\") return app.${toJsIdentifier e}.getEnv(processEnv);"
+      ) envNames;
     in
-    builtins.replaceStrings [ "{{APP_NAME}}" "{{VALID_ENVS}}" ] [ appName (builtins.toJSON envNames) ]
-      templates.entrypoint;
+    builtins.replaceStrings
+      [ "{{APP_NAME}}" "{{ENV_CASES}}" "{{ENV_TYPE}}" "{{DEFAULT_ENV}}" "{{DEFAULT_ENV_IDENT}}" ]
+      [ appName envCases envType defaultEnv (toJsIdentifier defaultEnv) ]
+      templates.envExport;
 
   # ===========================================================================
   # Collect All Generated Files
@@ -293,41 +549,6 @@ let
 
   generatedFiles =
     let
-      # .sops.yaml - skip when backend is chamber (secrets in SSM, not SOPS)
-      sopsFile = lib.optionalAttrs (!isChamber) {
-        "${dataDir}/.sops.yaml" = sopsYamlContent;
-      };
-
-      # Shared vars (always generate - these are plaintext /var/* variables)
-      sharedFiles = {
-        "${dataDir}/shared/vars.yaml" = sharedVarsBoilerplate;
-      };
-
-      # Per-app/env YAML boilerplates - skip when backend is chamber
-      yamlFiles =
-        if isChamber then
-          { }
-        else
-          lib.listToAttrs (
-            lib.concatMap (
-              {
-                appName,
-                envName,
-                envCfg,
-              }:
-              let
-                content = mkEnvYamlBoilerplate appName envName envCfg;
-                path = "${dataDir}/${appName}/${envName}.yaml";
-              in
-              # Only generate if env has variables defined
-              lib.optional ((envCfg.env or { }) != { }) {
-                name = path;
-                value = content;
-              }
-            ) allEnvs
-          );
-
-      # Per-app/env TypeScript modules
       tsModules = lib.listToAttrs (
         lib.concatMap (
           {
@@ -337,16 +558,18 @@ let
           }:
           let
             content = mkEnvTsModule appName envName envCfg;
-            path = "${generatedDir}/${appName}/${envName}.ts";
+            path = "${appsDir}/${appName}/${envName}.ts";
           in
           lib.optional (content != null) {
             name = path;
-            value = content;
+            value = {
+              kind = "text";
+              content = content;
+            };
           }
         ) allEnvs
       );
 
-      # Per-app barrel exports
       appBarrels = lib.listToAttrs (
         lib.concatMap (
           appName:
@@ -354,16 +577,18 @@ let
             appCfg = apps.${appName};
             envs = appCfg.environments or { };
             envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs);
-            path = "${generatedDir}/${appName}/index.ts";
+            path = "${appsDir}/${appName}/index.ts";
           in
           lib.optional (envNames != [ ]) {
             name = path;
-            value = mkBarrelExport envNames;
+            value = {
+              kind = "text";
+              content = mkBarrelExport envNames "./";
+            };
           }
         ) (lib.attrNames apps)
       );
 
-      # Root barrel export
       appsWithEnvs = lib.filter (
         appName:
         let
@@ -373,47 +598,123 @@ let
         lib.any (e: (e.env or { }) != { }) (lib.attrValues envs)
       ) (lib.attrNames apps);
 
+      manualExportNames =
+        lib.filter
+          (
+            name:
+            !(lib.elem name appsWithEnvs)
+            && builtins.pathExists (resolveProjectPath "${packageDir}/src/${name}.ts")
+          )
+          [
+            "web"
+            "web-client"
+            "web-server"
+            "auth"
+          ];
+
       rootBarrel = lib.optionalAttrs (appsWithEnvs != [ ]) {
-        "${generatedDir}/index.ts" = mkBarrelExport appsWithEnvs;
+        "${generatedDir}/index.ts" = {
+          kind = "text";
+          content = mkBarrelExport appsWithEnvs "./exports/";
+        };
       };
 
-      # Entrypoints
-      entrypoints = lib.listToAttrs (
+      appExports = lib.listToAttrs (
         lib.concatMap (
           appName:
           let
             appCfg = apps.${appName};
-            hasEnvs = (appCfg.environments or { }) != { };
-            path = "${entrypointsDir}/${appName}.ts";
+            envNames = lib.attrNames (
+              lib.filterAttrs (_: e: (e.env or { }) != { }) (appCfg.environments or { })
+            );
+            path = "${exportsDir}/${appName}.ts";
           in
-          lib.optional hasEnvs {
+          lib.optional (envNames != [ ]) {
             name = path;
-            value = mkAppEntrypoint appName appCfg;
+            value = {
+              kind = "text";
+              content = mkAppEnvExport appName appCfg;
+            };
           }
         ) (lib.attrNames apps)
       );
 
-      # Entrypoints barrel
-      entrypointsBarrel = lib.optionalAttrs (entrypoints != { }) {
-        "${entrypointsDir}/index.ts" = mkBarrelExport (lib.attrNames apps);
-      };
+      rootPackageJsonContent =
+        let
+          exportsAttrset = lib.listToAttrs (
+            [
+              {
+                name = ".";
+                value = {
+                  default = "./src/index.ts";
+                };
+              }
+            ]
+            ++ (map (app: {
+              name = "./${app}";
+              value = {
+                default = "./src/exports/${app}.ts";
+              };
+            }) (appsWithEnvs ++ manualExportNames))
+          );
+          packageJsonAttr = {
+            name = packageName;
+            type = "module";
+            bin = {
+              "docker-entrypoint" = "./src/runtime/docker-entrypoint.ts";
+            };
+            exports = exportsAttrset;
+            dependencies = {
+              "sops-age" = "^4.0.2";
+            };
+            devDependencies = {
+              typescript = "^5.9.3";
+            };
+          };
+        in
+        builtins.toJSON packageJsonAttr;
 
-      # Package scaffolding — static and templated files
       packageJson = {
-        "${packageDir}/package.json" =
-          builtins.replaceStrings [ "{{PACKAGE_NAME}}" ] [ packageName ]
-            templates.packageJson;
+        "${packageDir}/package.json" = {
+          kind = "text";
+          content = rootPackageJsonContent;
+        };
       };
 
       tsconfigJson = {
-        "${packageDir}/tsconfig.json" = templates.tsconfig;
+        "${packageDir}/tsconfig.json" = {
+          kind = "text";
+          content = builtins.toJSON {
+            compilerOptions = {
+              target = "ESNext";
+              module = "ESNext";
+              moduleResolution = "bundler";
+              lib = [ "ESNext" ];
+              verbatimModuleSyntax = true;
+              strict = true;
+              strictNullChecks = true;
+              skipLibCheck = true;
+              resolveJsonModule = true;
+              allowSyntheticDefaultImports = true;
+              esModuleInterop = true;
+              forceConsistentCasingInFileNames = true;
+              isolatedModules = true;
+              noUncheckedIndexedAccess = true;
+              declaration = true;
+              declarationMap = true;
+              sourceMap = true;
+              outDir = "dist";
+              composite = true;
+            };
+            include = [ "src" ];
+            exclude = [
+              "node_modules"
+              "dist"
+            ];
+          };
+        };
       };
 
-      rootIndex = {
-        "${packageDir}/src/index.ts" = templates.index;
-      };
-
-      # README — assemble dynamic sections, then substitute into template
       appSections = lib.concatMapStringsSep "\n" (
         appName:
         let
@@ -446,57 +747,110 @@ let
       appCountSuffix = if lib.length appsWithEnvs == 1 then "" else "s";
       firstAppJs = toJsIdentifier (lib.head appsWithEnvs);
 
-      readme = {
-        "${packageDir}/README.md" =
-          builtins.replaceStrings
-            [
-              "{{PACKAGE_NAME}}"
-              "{{APP_COUNT}}"
-              "{{APP_COUNT_SUFFIX}}"
-              "{{FIRST_APP_JS}}"
-              "{{APP_SECTIONS}}"
-            ]
-            [
-              packageName
-              appCount
-              appCountSuffix
-              firstAppJs
-              appSections
-            ]
-            templates.readme;
+      rootReadme = {
+        "${packageDir}/README.md" = {
+          kind = "text";
+          content =
+            builtins.replaceStrings
+              [
+                "{{PACKAGE_NAME}}"
+                "{{APP_COUNT}}"
+                "{{APP_COUNT_SUFFIX}}"
+                "{{FIRST_APP_JS}}"
+                "{{APP_SECTIONS}}"
+              ]
+              [
+                packageName
+                appCount
+                appCountSuffix
+                firstAppJs
+                appSections
+              ]
+              templates.readme;
+        };
+      };
+
+      embeddedDataFile = {
+        "${generatedDir}/embedded-data.ts" = {
+          kind = "text";
+          content = embeddedDataModule;
+        };
+      };
+
+      envManifestFile = {
+        ".stack/gen/codegen/env-manifest.json" = {
+          kind = "text";
+          content = builtins.toJSON envBuildManifest;
+        };
+      };
+
+      loader = {
+        "${runtimeDir}/loader.ts" = {
+          kind = "text";
+          content = templates.loader;
+        };
+      };
+
+      nodeLoader = {
+        "${runtimeDir}/node-loader.ts" = {
+          kind = "text";
+          content = templates.nodeLoader;
+        };
+      };
+
+      payloadRegistry = {
+        "${payloadRuntimeDir}/registry.ts" = {
+          kind = "text";
+          content = templates.payloadRegistry;
+        };
+      };
+
+      runtimeDockerEntrypoint = {
+        "${runtimeDir}/docker-entrypoint.ts" = {
+          kind = "text";
+          content = templates.dockerEntrypoint;
+        };
       };
     in
     packageJson
     // tsconfigJson
-    // rootIndex
-    // readme
-    // sopsFile
-    // sharedFiles
-    // yamlFiles
+    // rootReadme
+    // embeddedDataFile
+    // envManifestFile
+    // loader
+    // nodeLoader
+    // payloadRegistry
+    // runtimeDockerEntrypoint
     // tsModules
     // appBarrels
     // rootBarrel
-    // entrypoints
-    // entrypointsBarrel;
+    // appExports;
 
-  # Convert to stackpanel.files.entries format
-  fileEntries = lib.mapAttrs (path: content: {
-    type = "text";
-    text = content;
-    source = "codegen/env-package.nix";
-    description = "Auto-generated env package file";
-  }) generatedFiles;
-
+  fileEntries = lib.mapAttrs (
+    path: entry:
+    if entry.kind == "derivation" then
+      {
+        type = "derivation";
+        drv = entry.drv;
+        source = "codegen/env-package.nix";
+        description = "Auto-generated encrypted env payload";
+      }
+    else
+      {
+        type = "text";
+        text = entry.content;
+        source = "codegen/env-package.nix";
+        description = "Auto-generated env package file";
+      }
+  ) generatedFiles;
 in
 {
   inherit generatedFiles fileEntries;
 
-  # Individual parts for inspection
   sopsYaml = sopsYamlContent;
   sopsRules = sopsRules;
   allEnvs = allEnvs;
 
-  # Check if generation is needed
   enabled =
     apps != { } && lib.any (appCfg: (appCfg.environments or { }) != { }) (lib.attrValues apps);
 }

@@ -92,7 +92,7 @@ let
     cd "$(dirname "$0")"
 
     if [[ "''${1:-}" == "--logs" ]]; then
-      LOG_FILE="$(dirname "$0")/.stackpanel/state/shell.log"
+      LOG_FILE="$(dirname "$0")/.stack/profile/shell.log"
       if [[ -f "$LOG_FILE" ]]; then
         ''${PAGER:-less} "$LOG_FILE"
       else
@@ -110,7 +110,7 @@ let
       nix print-dev-env ${impureFlag} "$@"
 
       # Show hint about shell logs (to stderr so it doesn't interfere with eval)
-      LOG_FILE="$(dirname "$0")/.stackpanel/state/shell.log"
+      LOG_FILE="$(dirname "$0")/.stack/profile/shell.log"
       if [[ -f "$LOG_FILE" ]]; then
         # Calculate how long ago the log was created
         # Try GNU stat first (-c), fall back to BSD stat (-f) if it fails

@@ -1,3 +1,9 @@
+// deploy.go implements multi-backend deployment for stackpanel apps.
+//
+// Supported backends: colmena (NixOS multi-host), nixos-rebuild (single-host),
+// alchemy (Cloudflare Workers), and fly (Fly.io). The deploy config is loaded
+// live from the Nix flake via nix eval, not from the state file, so it always
+// reflects the current flake.
 package cmd
 
 import (
@@ -11,6 +17,7 @@ import (
 	"time"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
+	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/common"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/nixeval"
 	"github.com/spf13/cobra"
 )
@@ -19,29 +26,27 @@ import (
 // Config structs (deserialized from .#stackpanelConfig via nix eval)
 // ---------------------------------------------------------------------------
 
-// DeployMachineConfig holds the serializable fields of a deployment machine.
 type DeployMachineConfig struct {
 	Host           string   `json:"host"`
 	User           string   `json:"user"`
 	System         string   `json:"system"`
+	SSHPort        int      `json:"sshPort"`
+	ProxyJump      string   `json:"proxyJump"`
 	AuthorizedKeys []string `json:"authorizedKeys"`
 }
 
-// AppDeploymentOptions holds the serializable deployment options for an app.
 type AppDeploymentOptions struct {
 	Enable     bool     `json:"enable"`
-	Host       string   `json:"host"`       // legacy field from apps.nix (cloudflare, fly, …)
-	Backend    string   `json:"backend"`    // new: colmena/nixos-rebuild/alchemy/fly/custom
-	Targets    []string `json:"targets"`    // machine names for NixOS backends
-	DefaultEnv string   `json:"defaultEnv"` // environment name (prod, staging, …)
+	Host       string   `json:"host"`
+	Backend    string   `json:"backend"`
+	Targets    []string `json:"targets"`
+	DefaultEnv string   `json:"defaultEnv"`
 }
 
-// DeployAppConfig is the relevant subset of a single app's config.
 type DeployAppConfig struct {
 	Deployment AppDeploymentOptions `json:"deployment"`
 }
 
-// DeployStackpanelConfig is the top-level deploy config extracted from the flake.
 type DeployStackpanelConfig struct {
 	Apps       map[string]DeployAppConfig `json:"apps"`
 	Deployment struct {
@@ -50,19 +55,21 @@ type DeployStackpanelConfig struct {
 }
 
 // ---------------------------------------------------------------------------
-// State file structs (.stackpanel/state/deployments.json)
+// State file structs (.stack/state/deployments.json)
 // ---------------------------------------------------------------------------
 
-// DeploymentRecord captures the outcome of a single deploy operation.
+// DeploymentsState tracks the last deployment per app per environment.
+// Keyed as map[appName]map[envName]DeploymentRecord. Persisted to
+// .stack/state/deployments.json so `deploy status` can report history
+// without re-evaluating the flake.
+type DeploymentsState map[string]map[string]DeploymentRecord
+
 type DeploymentRecord struct {
 	Timestamp   string `json:"timestamp"`
 	Backend     string `json:"backend"`
 	Target      string `json:"target"`
 	NixRevision string `json:"nixRevision"`
 }
-
-// DeploymentsState is the full state file: map[appName]map[envName]DeploymentRecord
-type DeploymentsState map[string]map[string]DeploymentRecord
 
 // ---------------------------------------------------------------------------
 // Commands
@@ -85,7 +92,7 @@ Backends:
 Examples:
   stackpanel deploy                     # List configured deployments
   stackpanel deploy my-api              # Deploy my-api to all targets
-  stackpanel deploy my-api --dry-run    # Print command without executing`,
+  stackpanel deploy my-api --dry-run    # Print command without executing it`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -119,7 +126,7 @@ var deployStatusCmd = &cobra.Command{
 Without arguments, shows status for all apps.
 With an app name, shows status for that specific app.
 
-Status is read from .stackpanel/state/deployments.json`,
+Status is read from .stack/state/deployments.json`,
 	Run: func(cmd *cobra.Command, args []string) {
 		appFilter := ""
 		if len(args) > 0 {
@@ -143,16 +150,69 @@ func init() {
 // Config loading
 // ---------------------------------------------------------------------------
 
+// deployConfigExpr evaluates only the fields the deploy/provision commands
+// need, avoiding the full filterSerializable traversal that forces expensive
+// derivation instantiation (e.g. bun.nix with ~5000 fetchurl calls).
+const deployConfigExpr = `
+let
+  flake = builtins.getFlake (toString ./.);
+  sys = builtins.currentSystem;
+  sp = flake.legacyPackages.${sys}.stackpanelFullConfig;
+  serializeApp = name: app: {
+    deployment = {
+      enable = app.deployment.enable or false;
+      host = app.deployment.host or "";
+      backend = app.deployment.backend or "colmena";
+      targets = app.deployment.targets or [];
+      defaultEnv = app.deployment.defaultEnv or "prod";
+    };
+  };
+in builtins.toJSON {
+  apps = builtins.mapAttrs serializeApp (sp.apps or {});
+  deployment = {
+    machines = builtins.mapAttrs (name: m: {
+      host = m.host or "";
+      user = m.user or "root";
+      system = m.system or "x86_64-linux";
+      sshPort = m.sshPort or 22;
+      proxyJump = m.proxyJump or null;
+      authorizedKeys = m.authorizedKeys or [];
+    }) (sp.deployment.machines or {});
+  };
+}
+`
+
 func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
+	root := detectStackpanelProject()
+	if root == "" {
+		return nil, fmt.Errorf("could not find stackpanel project root (look for .stack/config.nix or flake.nix under cwd); try running from the repo root or set STACKPANEL_ROOT")
+	}
 	result, err := nixeval.EvalOnce(ctx, nixeval.EvalOnceParams{
-		Expression: nixeval.StackpanelSerializablePreset,
+		Expression:  deployConfigExpr,
+		ProjectRoot: root,
+		// Flake eval can exceed the default 10s on cold cache or large trees.
+		Timeout: 10 * time.Minute,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("nix eval failed: %w", err)
 	}
 
+	// The expression returns a JSON string via builtins.toJSON, so the
+	// outer result is a JSON-encoded string that we need to unwrap.
+	var jsonStr string
+	if err := json.Unmarshal(result, &jsonStr); err != nil {
+		// If it's not a wrapped string, try parsing directly
+		var cfg DeployStackpanelConfig
+		if err2 := json.Unmarshal(result, &cfg); err2 != nil {
+			return nil, fmt.Errorf("failed to parse deploy config: %w", err)
+		}
+		return &cfg, nil
+	}
+
+	common.L().Debug("using deploy config", "jsonStr", jsonStr)
+
 	var cfg DeployStackpanelConfig
-	if err := json.Unmarshal(result, &cfg); err != nil {
+	if err := json.Unmarshal([]byte(jsonStr), &cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse deploy config: %w", err)
 	}
 
@@ -164,7 +224,6 @@ func loadDeployConfig(ctx context.Context) (*DeployStackpanelConfig, error) {
 // ---------------------------------------------------------------------------
 
 func listDeployments(cfg *DeployStackpanelConfig) {
-	// Machines section
 	if len(cfg.Deployment.Machines) > 0 {
 		machineState, _ := readMachineState()
 		if machineState == nil {
@@ -196,7 +255,6 @@ func listDeployments(cfg *DeployStackpanelConfig) {
 		fmt.Println()
 	}
 
-	// Deployments section
 	deployableApps := []string{}
 	for name, app := range cfg.Apps {
 		if app.Deployment.Enable {
@@ -264,7 +322,6 @@ func runDeploy(ctx context.Context, cfg *DeployStackpanelConfig, appName string,
 
 	if !dryRun {
 		if err := recordDeployment(appName, env, backend, target); err != nil {
-			// Non-fatal: warn but don't fail the deploy
 			output.Warning(fmt.Sprintf("Failed to record deployment state: %v", err))
 		}
 		output.Success(fmt.Sprintf("Deployed %s (%s → %s)", appName, backend, target))
@@ -272,7 +329,6 @@ func runDeploy(ctx context.Context, cfg *DeployStackpanelConfig, appName string,
 	return nil
 }
 
-// joinTargets joins a list of targets into a comma-separated string.
 func joinTargets(targets []string) string {
 	result := ""
 	for i, t := range targets {
@@ -286,7 +342,7 @@ func joinTargets(targets []string) string {
 
 // resolveBackend derives the effective backend from the app's config.
 // New: uses deployment.backend directly.
-// Legacy fallback: maps deployment.host (cloudflare → alchemy, fly → fly).
+// Legacy fallback: maps deployment.host (cloudflare -> alchemy, fly -> fly).
 func resolveBackend(d AppDeploymentOptions) string {
 	if d.Backend != "" {
 		return d.Backend
@@ -305,7 +361,6 @@ func deployColmena(ctx context.Context, cfg *DeployStackpanelConfig, appName str
 		return fmt.Errorf("app %q has no deployment.targets configured", appName)
 	}
 
-	// colmena apply --on <target1,target2>
 	targetList := ""
 	for i, t := range app.Deployment.Targets {
 		if i > 0 {
@@ -314,8 +369,6 @@ func deployColmena(ctx context.Context, cfg *DeployStackpanelConfig, appName str
 		targetList += t
 	}
 
-	// --impure allows colmena to evaluate the flake with a dirty git tree.
-	// Without it, Nix rejects the unlocked git+file:// reference in pure mode.
 	var args []string
 	if dryRun {
 		args = []string{"--impure", "build", "--on", targetList}
@@ -361,7 +414,6 @@ func deployAlchemy(ctx context.Context, appName string, app DeployAppConfig, dry
 		env = "prod"
 	}
 
-	// alchemy entrypoint is conventionally infra/alchemy.ts or alchemy.run.ts
 	entrypoint := findAlchemyEntrypoint(appName)
 
 	args := []string{"run", entrypoint}
@@ -379,7 +431,10 @@ func deployAlchemy(ctx context.Context, appName string, app DeployAppConfig, dry
 	return cmd.Run()
 }
 
-// findAlchemyEntrypoint looks for the alchemy entrypoint in conventional locations.
+// findAlchemyEntrypoint searches common locations for the Alchemy deploy
+// script. Projects may place it at the repo root, in an infra/ subdirectory,
+// or nested under apps/<name>/. Falls back to "alchemy.run.ts" so the error
+// message from bun is clear about what's missing.
 func findAlchemyEntrypoint(appName string) string {
 	candidates := []string{
 		"alchemy.run.ts",
@@ -392,10 +447,9 @@ func findAlchemyEntrypoint(appName string) string {
 			return c
 		}
 	}
-	return "alchemy.run.ts" // default, will fail loudly if missing
+	return "alchemy.run.ts"
 }
 
-// runExternalCommand runs or prints an external command based on dryRun.
 func runExternalCommand(ctx context.Context, name string, args []string, dryRun bool) error {
 	if dryRun {
 		output.Info(fmt.Sprintf("dry-run: %s %v", name, args))
@@ -478,7 +532,7 @@ func deployStateFile() string {
 	if root == "" {
 		root = "."
 	}
-	return filepath.Join(root, ".stackpanel", "state", "deployments.json")
+	return filepath.Join(root, ".stack", "state", "deployments.json")
 }
 
 func readDeployState() (DeploymentsState, error) {
@@ -527,12 +581,11 @@ func recordDeployment(appName, env, backend, target string) error {
 	return writeDeployState(state)
 }
 
-// gitRevision returns the current git HEAD revision, or "" if unavailable.
 func gitRevision() string {
 	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
-	return string(out[:len(out)-1]) // trim newline
+	return string(out[:len(out)-1])
 }

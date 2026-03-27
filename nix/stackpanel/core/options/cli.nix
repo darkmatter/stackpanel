@@ -11,9 +11,9 @@
 #   - quiet: Suppress generation output messages
 #
 # When enabled, the CLI is invoked during enterShell to generate:
-#   - State files (.stackpanel/state/stackpanel.json)
-#   - IDE configurations (.stackpanel/gen/ide/)
-#   - JSON schemas (.stackpanel/gen/schemas/)
+#   - State files (.stack/state/stackpanel.json)
+#   - IDE configurations (.stack/gen/ide/)
+#   - JSON schemas (.stack/gen/schemas/)
 # ==============================================================================
 { lib, ... }:
 {

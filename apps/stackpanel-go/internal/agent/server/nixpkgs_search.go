@@ -1,3 +1,9 @@
+// nixpkgs_search.go provides package search and installed-package listing
+// for the studio UI's package browser.
+//
+// Search uses `nix search nixpkgs --json`, which can be slow (~5s) but
+// returns comprehensive results. Results are sorted by relevance:
+// installed > exact match > prefix match > alphabetical.
 package server
 
 import (
@@ -329,7 +335,9 @@ func (s *Server) getInstalledPackageSet() map[string]bool {
 	return nameSet
 }
 
-// searchWithNixSearch uses `nix search nixpkgs --json` to search packages
+// searchWithNixSearch shells out to `nix search nixpkgs --json` and post-processes
+// the results: stripping the "legacyPackages.<system>." prefix from attr paths,
+// marking installed packages, and sorting by relevance.
 func (s *Server) searchWithNixSearch(query string, limit, offset int, installedSet map[string]bool) ([]NixpkgsPackage, int, error) {
 	// Run nix search with JSON output
 	res, err := s.exec.RunNix("search", "nixpkgs", query, "--json")

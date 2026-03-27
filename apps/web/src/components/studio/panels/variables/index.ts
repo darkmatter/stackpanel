@@ -6,7 +6,6 @@ export {
 } from "./constants";
 export { EditVariableDialog } from "./edit-variable-dialog";
 export { GroupsSection } from "./groups-section";
-export { InitializeGroupDialog } from "./initialize-group-dialog";
 export { defaultFormState, type VariableFormState } from "./types";
 export { VariableUsageInfo } from "./variable-usage-info";
 export { VariablesPanel } from "./variables-panel";

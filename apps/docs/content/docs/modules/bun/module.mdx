@@ -1,0 +1,50 @@
+---
+title: Bun Module Implementation
+description: Provides Bun/TypeScript application support using bun2nix for packaging.
+---
+
+Provides Bun/TypeScript application support using bun2nix for packaging.
+
+## Features
+
+```nix
+- Automatic bun2nix CLI in devshell (converts bun.lock -> bun.nix)
+- Generated package.json with postinstall script that runs bun2nix
+- Hermetic app packaging via bun2nix.writeBunApplication
+- run-<app> and test-<app> wrapper scripts
+- Health checks for bun, bun2nix, and lockfile presence
+```
+
+
+## Prerequisites
+
+```nix
+- bun.nix lockfile (auto-generated via postinstall or: bun2nix)
+- package.json in the app or root directory
+```
+
+
+## Architecture
+
+```nix
+Generated files (package.json) are created via stackpanel.files system
+and materialized on shell entry. package.json uses type="json" for
+deep-merge support so other modules can contribute to the same file.
+```
+
+
+App definition example:
+```nix
+stackpanel.apps.my-app = {
+  path = "apps/web";
+  bun = {
+    enable = true;
+    buildPhase = "bun run build";
+    startScript = "bun run start";
+    generateFiles = true;  # Generates package.json with bun2nix postinstall
+  };
+};
+```
+
+
+See: https://nix-community.github.io/bun2nix/building-packages/writeBunApplication.html

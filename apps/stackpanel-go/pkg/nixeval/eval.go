@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// evalNixContent holds the embedded eval.nix evaluator script. This script is
+// written to a temp file and passed to `nix eval -f` so the Go binary is
+// fully self-contained -- it doesn't need the stackpanel source tree at runtime.
+//
 //go:embed eval.nix
 var evalNixContent []byte
 
@@ -38,16 +42,17 @@ func hasAbsoluteEnvPaths() bool {
 	return false
 }
 
-// EvalOnce performs a one-shot evaluation of the stackpanel config
-// This is useful for CLI commands that just need the config once.
+// GetConfigWithEval performs a one-shot evaluation of the stackpanel config by
+// shelling out to `nix eval` with the embedded eval.nix. This is the primary
+// config-loading path for CLI commands.
 //
-// projectRoot is optional if:
-//   - STACKPANEL_CONFIG_JSON is set to an absolute path, or
-//   - STACKPANEL_STATE_DIR is set to an absolute path, or
-//   - STACKPANEL_ROOT is set to an absolute path
+// The function has an aggressive fallback chain: nix eval -> state file -> env vars.
+// This means CLI commands work both inside and outside a devshell, and degrade
+// gracefully when Nix is slow or unavailable.
 //
-// If projectRoot is empty and no absolute env paths are set, it will
-// attempt to find the project root by searching for devenv.nix
+// projectRoot is optional when any of STACKPANEL_CONFIG_JSON, STACKPANEL_STATE_DIR,
+// or STACKPANEL_ROOT are set to absolute paths. Otherwise, it walks up from cwd
+// looking for .stackpanel-root.
 func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error) {
 	var absRoot string
 	var needsProjectRoot bool
@@ -98,10 +103,19 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Build nix eval command - only pass projectRoot if we have it
+	// Build nix eval command. We pass values as --argstr rather than relying on
+	// builtins.getEnv in eval.nix. This makes evaluation effectively pure (faster,
+	// more cacheable) while --impure is kept as a safety net for edge cases where
+	// root is unknown and eval.nix must fall back to reading env vars.
 	args := []string{"eval", "--impure", "--json", "-f", nixFile}
 	if absRoot != "" {
 		args = append(args, "--argstr", "root", absRoot)
+	}
+	if v := os.Getenv("STACKPANEL_CONFIG_JSON"); v != "" {
+		args = append(args, "--argstr", "configJson", v)
+	}
+	if v := os.Getenv("STACKPANEL_STATE_DIR"); v != "" {
+		args = append(args, "--argstr", "stateDir", v)
 	}
 
 	cmd := exec.CommandContext(ctx, "nix", args...)
@@ -163,20 +177,35 @@ func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error)
 	return &config, nil
 }
 
+// EvalOnceParams configures a generic one-shot nix eval invocation.
 type EvalOnceParams struct {
-	Expression  string
-	File        string
-	Args        map[string]string
+	Expression  string            // Nix expression or flake installable (e.g. ".#foo")
+	File        string            // Path to a .nix file (mutually exclusive with Expression)
+	Args        map[string]string // Passed as --argstr key value pairs
 	ProjectRoot string
 	Timeout     time.Duration
 }
 
+// EvalOnce runs a single `nix eval` invocation and returns raw JSON bytes.
+// It auto-detects whether Expression is a flake installable (starts with ".#",
+// "github:", etc.) or a plain Nix expression, and uses the appropriate CLI form.
 func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 	var absRoot string
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	if opts.ProjectRoot != "" {
+		var err error
+		absRoot, err = filepath.Abs(opts.ProjectRoot)
+		if err != nil {
+			return nil, fmt.Errorf("invalid project root %q: %w", opts.ProjectRoot, err)
+		}
+	}
+	timeout := opts.Timeout
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Build nix eval command - only pass projectRoot if we have it
+	// Build nix eval command; cwd matters for expressions that use ./. or relative paths.
 	args := []string{"eval", "--impure", "--json"}
 	if opts.Expression != "" {
 		// Check if expression is an installable (flake reference) vs a Nix expression
@@ -186,7 +215,7 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 			strings.HasPrefix(opts.Expression, "git+") ||
 			strings.HasPrefix(opts.Expression, "github:") ||
 			strings.HasPrefix(opts.Expression, "nixpkgs#")
-		
+
 		if isInstallable {
 			// Pass installable directly without --expr
 			args = append(args, opts.Expression)
@@ -212,11 +241,6 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("nix eval failed: %w\nstderr: %s", err, stderr.String())
-	}
-
-	var config Config
-	if err := json.Unmarshal(stdout.Bytes(), &config); err != nil {
-		return nil, fmt.Errorf("failed to parse nix eval output: %w", err)
 	}
 
 	return stdout.Bytes(), nil
@@ -246,71 +270,55 @@ func loadFromStateDirEnv(stateDir string) (*Config, error) {
 	return &config, nil
 }
 
-// loadFromStateFile loads config from the state.json file
+// loadFromStateFile loads config from a pre-generated state file on disk.
+// Tries the newer .stack/profile path first, then the legacy .stackpanel/state path.
+// This is the fast fallback when nix eval is unavailable or too slow.
 func loadFromStateFile(projectRoot string) (*Config, error) {
-	stateFile := filepath.Join(projectRoot, ".stackpanel", "state", "stackpanel.json")
-
-	data, err := os.ReadFile(stateFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read state file: %w", err)
+	for _, subpath := range []string{".stack/profile/stackpanel.json", ".stackpanel/state/stackpanel.json"} {
+		stateFile := filepath.Join(projectRoot, subpath)
+		if data, err := os.ReadFile(stateFile); err == nil {
+			var cfg Config
+			if err := json.Unmarshal(data, &cfg); err != nil {
+				continue
+			}
+			cfg.ProjectRoot = projectRoot
+			return &cfg, nil
+		}
 	}
-
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse state file: %w", err)
-	}
-
-	if config.ProjectRoot == "" {
-		config.ProjectRoot = projectRoot
-	}
-
-	return &config, nil
+	return nil, fmt.Errorf("no stackpanel state file found under .stack/profile or .stackpanel/state")
 }
 
-// findProjectRoot searches for the project root
+// findProjectRoot walks up from cwd looking for the .stackpanel-root sentinel file.
+// Returns "" if no root is found (e.g. running outside any project).
 func findProjectRoot() string {
 	// 1. Check STACKPANEL_ROOT env var (preferred)
 	if root := os.Getenv("STACKPANEL_ROOT"); root != "" && strings.HasPrefix(root, "/") {
 		return root
 	}
 
+	// 3. Search up from current directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return ""
 	}
 
-	// 2. Search up from current directory for .git
 	dir := cwd
-	for dir != "/" {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".stackpanel-root")); err == nil {
 			return dir
 		}
-		dir = filepath.Dir(dir)
-	}
-
-	// 3. Search up from current directory for .stackpanel directory
-	dir = cwd
-	for dir != "/" {
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
-			return dir
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
 		}
-		dir = filepath.Dir(dir)
-	}
-
-	// 4. Search up from current directory for flake.nix
-	dir = cwd
-	for dir != "/" {
-		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
-			return dir
-		}
-		dir = filepath.Dir(dir)
+		dir = parent
 	}
 
 	return ""
 }
 
-// MustEvalOnce is like EvalOnce but panics on error
-// Useful for initialization code
+// MustEvalOnceConfig is like GetConfigWithEval but panics on error.
+// Only appropriate for program init where failure is unrecoverable.
 func MustEvalOnceConfig(ctx context.Context, projectRoot string) *Config {
 	config, err := GetConfigWithEval(ctx, projectRoot)
 	if err != nil {
@@ -319,6 +327,7 @@ func MustEvalOnceConfig(ctx context.Context, projectRoot string) *Config {
 	return config
 }
 
+// MustEvalOnce is like EvalOnce but panics on error.
 func MustEvalOnce(ctx context.Context, opts EvalOnceParams) []byte {
 	result, err := EvalOnce(ctx, opts)
 	if err != nil {

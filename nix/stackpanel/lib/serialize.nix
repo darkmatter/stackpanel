@@ -89,6 +89,13 @@ let
     "modulesBuiltin"
     "modulesExternal"
     "userPackages"
+    # Skip outputs: contains Nix derivations (packages for `nix build`). Forcing
+    # them during serialization instantiates every input derivation — very slow
+    # for large lockfiles (e.g. bun.nix with ~5000 fetchurl calls).
+    "outputs"
+    # Skip bun: packages.apps contains stdenv.mkDerivation results that pull in
+    # fetchBunDeps, which instantiates thousands of FODs from bun.nix.
+    "bun"
   ];
 
   # Attributes within devshell that should be serialized

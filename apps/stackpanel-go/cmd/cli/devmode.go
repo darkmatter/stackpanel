@@ -1,9 +1,20 @@
+// devmode.go lets developers run the stackpanel CLI from source via `go run`.
+//
+// When debug/dev mode is enabled, `stackpanel debug <args>` replaces the current
+// process (via syscall.Exec) with `go run . <args>` in the stackpanel-go source
+// directory. This gives an instant feedback loop during CLI development without
+// needing to rebuild and reinstall the Nix package.
+//
+// Repo path resolution tries three sources in order: STACKPANEL_DEV_REPO env var,
+// user config file, then auto-detection by walking up from cwd.
 package cmd
 
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/output"
 	"github.com/darkmatter/stackpanel/stackpanel-go/pkg/userconfig"
@@ -12,22 +23,139 @@ import (
 )
 
 var debugCmd = &cobra.Command{
-	Use:     "debug",
+	Use:     "debug [args...]",
 	Aliases: []string{"dev"},
-	Short:   "Manage debug mode (run stackpanel from source)",
-	Long: `Manage debug mode settings for the stackpanel CLI.
+	Short:   "Run stackpanel from source via 'go run'",
+	Long: `Run the stackpanel CLI from source using 'go run'.
 
-When debug mode is enabled, the CLI will forward all commands to 'go run'
-in your local stackpanel repository. This allows you to test changes
-without rebuilding or reinstalling the binary.
+Without subcommands (enable/disable/status), this is equivalent to:
+  cd <repo-path>/apps/stackpanel-go && go run . [args...]
+
+The repo path is resolved in order:
+  1. STACKPANEL_DEV_REPO environment variable
+  2. dev_mode.repo_path from ~/.config/stackpanel/stackpanel.yaml
+  3. Auto-detected from the current working directory
+
+Any arguments after 'debug' are forwarded to the 'go run' invocation.
 
 Examples:
+  stackpanel debug                           # Run 'go run .' (shows help)
+  stackpanel debug nixify .gitignore         # Run 'go run . nixify .gitignore'
   stackpanel debug status                    # Show current debug mode settings
   stackpanel debug enable ~/projects/stackpanel  # Enable debug mode
-  stackpanel debug disable                   # Disable debug mode
+  stackpanel debug disable                   # Disable debug mode`,
+	// Disable flag parsing so all args after 'debug' are passed through
+	DisableFlagParsing: true,
+	RunE:               runDebug,
+}
 
-Alias:
-  stackpanel dev ... (legacy alias)`,
+// runDebug handles subcommand dispatch manually because DisableFlagParsing is
+// set — we need raw args to forward to `go run` without Cobra consuming flags
+// meant for the target command.
+func runDebug(cmd *cobra.Command, args []string) error {
+	// Check if the first arg is a known subcommand or help flag
+	if len(args) > 0 {
+		switch args[0] {
+		case "enable":
+			subArgs := args[1:]
+			if len(subArgs) != 1 {
+				return fmt.Errorf("'debug enable' requires exactly 1 argument: <repo-path>")
+			}
+			debugEnableCmd.Run(debugEnableCmd, subArgs)
+			return nil
+		case "disable":
+			debugDisableCmd.Run(debugDisableCmd, args[1:])
+			return nil
+		case "status":
+			debugStatusCmd.Run(debugStatusCmd, args[1:])
+			return nil
+		case "-h", "--help", "help":
+			return cmd.Help()
+		}
+	}
+
+	// Resolve the repo path
+	repoPath := resolveDevRepoPath()
+	if repoPath == "" {
+		return fmt.Errorf("no stackpanel repo path configured\n\n" +
+			"Set one of:\n" +
+			"  stackpanel debug enable <repo-path>\n" +
+			"  export STACKPANEL_DEV_REPO=<repo-path>")
+	}
+
+	goAppDir := filepath.Join(repoPath, "apps", "stackpanel-go")
+	mainGo := filepath.Join(goAppDir, "main.go")
+	if _, err := os.Stat(mainGo); os.IsNotExist(err) {
+		return fmt.Errorf("invalid stackpanel repo: %s\n  expected %s to exist", repoPath, mainGo)
+	}
+
+	// Build the command: go run . <args...>
+	goPath, err := exec.LookPath("go")
+	if err != nil {
+		return fmt.Errorf("'go' not found in PATH: %w", err)
+	}
+
+	// Use syscall.Exec to replace this process entirely, just like
+	// `cd <repo>/apps/stackpanel-go && go run . <args...>`
+	execArgs := []string{"go", "run", "."}
+	execArgs = append(execArgs, args...)
+
+	if os.Getenv("STACKPANEL_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "[debug-mode] cd %s && go run . %v\n", goAppDir, args)
+	}
+
+	// Change to the go app directory
+	if err := os.Chdir(goAppDir); err != nil {
+		return fmt.Errorf("failed to chdir to %s: %w", goAppDir, err)
+	}
+
+	// Exec replaces the current process
+	return syscall.Exec(goPath, execArgs, os.Environ())
+}
+
+// resolveDevRepoPath determines the stackpanel repo path from (in order):
+//  1. STACKPANEL_DEV_REPO env var
+//  2. user config dev_mode.repo_path (if enabled)
+//  3. auto-detect from cwd by walking up to find apps/stackpanel-go
+func resolveDevRepoPath() string {
+	// 1. Environment variable
+	if envPath := os.Getenv("STACKPANEL_DEV_REPO"); envPath != "" {
+		if len(envPath) > 0 && envPath[0] == '~' {
+			if home, err := os.UserHomeDir(); err == nil {
+				envPath = filepath.Join(home, envPath[1:])
+			}
+		}
+		if abs, err := filepath.Abs(envPath); err == nil {
+			return abs
+		}
+		return envPath
+	}
+
+	// 2. User config
+	if ucm, err := userconfig.NewManager(); err == nil {
+		dm := ucm.GetDevMode()
+		if dm.Enabled && dm.RepoPath != "" {
+			return dm.RepoPath
+		}
+	}
+
+	// 3. Auto-detect: walk up from cwd looking for apps/stackpanel-go/main.go
+	if cwd, err := os.Getwd(); err == nil {
+		dir := cwd
+		for {
+			candidate := filepath.Join(dir, "apps", "stackpanel-go", "main.go")
+			if _, err := os.Stat(candidate); err == nil {
+				return dir
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+
+	return ""
 }
 
 var debugEnableCmd = &cobra.Command{

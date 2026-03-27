@@ -6,12 +6,13 @@ import { DashboardSidebar } from "@/components/studio/dashboard-sidebar";
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AgentProvider, useAgentContext } from "@/lib/agent-provider";
 import { AgentSSEProvider } from "@/lib/agent-sse-provider";
+import { useAgentLiveQuerySync } from "@/lib/use-agent";
 import { ProjectProvider } from "@/lib/project-provider";
 import { cn } from "@/lib/utils";
+import { FeatureFlagProvider } from "@gen/featureflags";
 
 // Search params for optional project selection
 interface StudioSearchParams {
@@ -34,19 +35,27 @@ function StudioLayout() {
     // SSE provider is outside so AgentProvider can consume SSE status for health
     <AgentSSEProvider>
       <AgentProvider>
+        <AgentQuerySync />
         <ProjectProvider initialProjectId={project}>
-          <SidebarProvider>
-            <DashboardSidebar />
-            {/* <SidebarTrigger /> */}
-            <SidebarInset>
-              <DashboardHeader />
-              <EnsureAgent />
-            </SidebarInset>
-          </SidebarProvider>
+          <FeatureFlagProvider>
+            <SidebarProvider>
+              <DashboardSidebar />
+              {/* <SidebarTrigger /> */}
+              <SidebarInset>
+                <DashboardHeader />
+                <EnsureAgent />
+              </SidebarInset>
+            </SidebarProvider>
+          </FeatureFlagProvider>
         </ProjectProvider>
       </AgentProvider>
     </AgentSSEProvider>
   );
+}
+
+function AgentQuerySync() {
+  useAgentLiveQuerySync();
+  return null;
 }
 
 function EnsureAgent() {

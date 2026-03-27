@@ -1,0 +1,41 @@
+---
+title: stackpanel debug enable
+description: Enable debug mode with a local repository path
+icon: Terminal
+---
+
+# stackpanel debug enable
+
+Enable debug mode to run stackpanel from source.
+
+When enabled, all stackpanel commands will be forwarded to:
+  go run \<repo-path\>/apps/stackpanel-go \<args...\>
+
+This allows you to test local changes without rebuilding the binary.
+
+Examples:
+  stackpanel debug enable ~/projects/stackpanel
+  stackpanel debug enable /absolute/path/to/stackpanel
+  stackpanel debug enable .   # Use current directory
+
+## Usage
+
+```bash
+stackpanel debug enable <repo-path>
+```
+
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+

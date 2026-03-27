@@ -11,15 +11,19 @@ import (
 	"time"
 )
 
-// Preset Nix expressions for common evaluations
-// These are self-contained snippets that can be evaluated directly
+// Preset Nix expressions for common evaluations.
+// These are self-contained snippets passed to `nix eval --impure --expr`.
+// They rely on STACKPANEL_ROOT being set (via builtins.getEnv) to locate
+// project files. The .stack/ path is tried first with .stackpanel/ as legacy fallback.
 const (
-	// UsersPreset evaluates the users configuration from .stackpanel/data/users.nix
+	// UsersPreset evaluates the users configuration from .stack/data or .stackpanel/data
 	// Returns the users attrset in stackpanel.users format
 	UsersPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  usersPath = root + "/.stackpanel/data/users.nix";
+  usersStack = root + "/.stack/data/users.nix";
+  usersLegacy = root + "/.stackpanel/data/users.nix";
+  usersPath = if builtins.pathExists usersStack then usersStack else usersLegacy;
 in
   if builtins.pathExists usersPath
   then import usersPath
@@ -30,29 +34,50 @@ in
 	GitHubCollaboratorsPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  collabsPath = root + "/.stackpanel/data/github-collaborators.nix";
+  collabsStack = root + "/.stack/data/github-collaborators.nix";
+  collabsLegacy = root + "/.stackpanel/data/github-collaborators.nix";
+  collabsPath = if builtins.pathExists collabsStack then collabsStack else collabsLegacy;
 in
   if builtins.pathExists collabsPath
   then import collabsPath
   else { collaborators = {}; }
 `
 
-	// StackpanelConfigPreset evaluates the full stackpanel config from .stackpanel/config.nix
+	// StackpanelConfigPreset evaluates the full stackpanel config from .stack or .stackpanel.
+	// Note: config.nix may be a plain attrset or a function taking { pkgs, lib, ... }.
+	// We pass nulls for pkgs/lib since this lightweight eval can't provide them --
+	// configs that depend on pkgs won't work here (use the flake-based presets instead).
 	StackpanelConfigPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  configPath = root + "/.stackpanel/config.nix";
+  configStack = root + "/.stack/config.nix";
+  configLegacy = root + "/.stackpanel/config.nix";
+  configPath = if builtins.pathExists configStack then configStack else configLegacy;
+  rawConfig =
+    if builtins.pathExists configPath
+    then import configPath
+    else {};
+  evaluatedConfig =
+    if builtins.isFunction rawConfig
+    then rawConfig {
+      pkgs = null;
+      lib = null;
+      inputs = {};
+      self = null;
+      config = evaluatedConfig;
+    }
+    else rawConfig;
 in
-  if builtins.pathExists configPath
-  then (import configPath { pkgs = null; lib = null; config = {}; inputs = {}; }).stackpanel or {}
-  else {}
+  evaluatedConfig.stackpanel or evaluatedConfig or {}
 `
 
-	// StackpanelSerializablePreset evaluates the serializable config from the flake output
-	// This includes computed values like devshell._commandsSerializable
+	// StackpanelSerializablePreset evaluates the full config from the flake's top-level
+	// output. Unlike the preset above, this goes through the full module system and
+	// includes computed values (ports, URLs, commands). Requires a valid flake.nix.
 	StackpanelSerializablePreset = `.#stackpanelConfig`
 
-	// ActiveConfig returns the current active stackpanel configuration as JSON (evaluated)
+	// ActiveConfigPreset reads the config attached to the default devshell's passthru.
+	// This is the canonical path for user projects that consume stackpanel as a flake input.
 	ActiveConfigPreset = `.#devShells.${builtins.currentSystem}.default.passthru.moduleConfig.stackpanel`
 
 	// InitFilesPreset evaluates the db module to get boilerplate files for project scaffolding
@@ -76,11 +101,10 @@ in
 `
 )
 
-// InstalledPackagesExpr builds a Nix expression to get installed packages from a flake.
-// Tries devshell passthru first (for user projects consuming stackpanel), then falls back
-// to flake outputs (for stackpanel repo itself).
-// The projectRoot is baked directly into the expression to avoid relying on environment variables.
-// Uses git+file:// protocol to avoid copying untracked files (node_modules, etc.)
+// InstalledPackagesExpr builds a Nix expression that extracts the package list
+// from a flake. It bakes the absolute projectRoot into the expression as a
+// git+file:// URI -- this avoids copying the entire worktree into the Nix store
+// (which would include node_modules, .git, etc.) and makes evaluation much faster.
 func InstalledPackagesExpr(projectRoot string) string {
 	return fmt.Sprintf(`
 let
@@ -100,24 +124,25 @@ in
 `, projectRoot)
 }
 
-// EvalExprResult holds the raw JSON result of a Nix expression evaluation
+// EvalExprResult holds the raw JSON bytes from a nix eval invocation.
+// Use [EvalExprResult.Unmarshal] to decode into a typed Go struct.
 type EvalExprResult struct {
 	Raw json.RawMessage
 }
 
-// Unmarshal decodes the result into the provided type
+// Unmarshal decodes the raw JSON into the provided value.
 func (r *EvalExprResult) Unmarshal(v interface{}) error {
 	return json.Unmarshal(r.Raw, v)
 }
 
-// findNixBin locates the nix binary, checking PATH first then common locations
+// findNixBin locates the nix binary. PATH is checked first; if that fails
+// (e.g. running from a non-interactive context like launchd or systemd),
+// common Nix installation paths are tried as a fallback.
 func findNixBin() (string, error) {
-	// Check PATH first
 	if path, err := exec.LookPath("nix"); err == nil {
 		return path, nil
 	}
 
-	// Check common locations
 	commonPaths := []string{
 		"/nix/var/nix/profiles/default/bin/nix",
 		"/run/current-system/sw/bin/nix",
@@ -233,8 +258,9 @@ func GetGitHubCollaborators(ctx context.Context) (*GitHubCollaboratorsData, erro
 	return &data, nil
 }
 
-// GetStackpanelConfig evaluates the stackpanel section from .stackpanel/config.nix
-// Note: This is a simplified evaluation that doesn't have access to pkgs/lib
+// GetStackpanelConfig evaluates the stackpanel section from .stack/config.nix.
+// This is a lightweight eval that passes null for pkgs/lib, so configs using
+// pkgs (e.g. for package references) will fail. Use the flake-based path for full eval.
 func GetStackpanelConfig(ctx context.Context) (map[string]interface{}, error) {
 	result, err := EvalExpr(ctx, StackpanelConfigPreset)
 	if err != nil {
@@ -277,7 +303,7 @@ func GetInitFiles(ctx context.Context) (map[string]string, error) {
 // Example:
 //
 //	files, err := GetInitFilesFromFlake(ctx, "github:darkmatter/stackpanel")
-//	// files[".stackpanel/config.nix"] = "..."
+//	// files[".stack/config.nix"] = "..."
 func GetInitFilesFromFlake(ctx context.Context, flakeRef string) (map[string]string, error) {
 	// Evaluate <flakeRef>#lib.initFiles
 	flakeAttr := flakeRef + "#lib.initFiles"
@@ -339,12 +365,15 @@ func GetDbSchemas(ctx context.Context) (map[string]interface{}, error) {
 	return schemas, nil
 }
 
-// BuildExpr builds a Nix expression from a template with variables
-// Variables are substituted as string interpolations
+// BuildExpr performs simple ${key} substitution on a Nix expression template.
+// Values are escaped for safe embedding in Nix double-quoted strings (backslashes,
+// quotes, and ${ interpolation sequences are all escaped).
+//
+// This is intentionally not a full template engine -- for complex expressions,
+// prefer --argstr or build the expression programmatically.
 func BuildExpr(template string, vars map[string]string) string {
 	result := template
 	for k, v := range vars {
-		// Escape the value for Nix string embedding
 		escaped := strings.ReplaceAll(v, "\\", "\\\\")
 		escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
 		escaped = strings.ReplaceAll(escaped, "${", "\\${")
@@ -369,16 +398,19 @@ type GetInstalledPackagesOptions struct {
 	ConfigJSONPath string
 }
 
-// GetInstalledPackages returns the list of installed packages from the devshell configuration.
-// It tries multiple fast paths before falling back to slow nix eval:
-//  1. Explicit configJSONPath (if provided in options)
-//  2. STACKPANEL_CONFIG_JSON env var (pre-computed at shell entry)
-//  3. State file at .stackpanel/state/stackpanel.json
-//  4. Generated config at .stackpanel/gen/config.json
-//  5. Nix eval against the flake (slow, last resort)
+// GetInstalledPackages returns the list of packages in the devshell. It uses
+// a waterfall of increasingly expensive strategies:
 //
-// If projectRoot is empty, it will attempt to find it from STACKPANEL_ROOT env var
-// or by searching up from the current directory.
+//  1. Explicit configJSONPath (from options)
+//  2. STACKPANEL_CONFIG_JSON env var (pre-computed at shell entry)
+//  3. State file at .stack/profile/stackpanel.json
+//  4. Generated config at .stack/gen/config.json
+//  5. Raw packages.nix data file (user-installed only, no devshell packages)
+//  6. Full flake evaluation (slow -- may download from caches, 5min timeout)
+//
+// The fast paths (1-4) read pre-generated JSON from disk. The slow path (6)
+// evaluates the actual flake, which triggers a full Nix build if the evaluation
+// requires IFD (import-from-derivation).
 func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions) ([]InstalledPackage, error) {
 	projectRoot := opts.ProjectRoot
 
@@ -403,21 +435,23 @@ func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions)
 		}
 	}
 
-	// Fast path 3: try state file
+	// Fast path 3: try state file (.stack/profile then .stackpanel/state)
 	if projectRoot != "" {
-		stateFile := projectRoot + "/.stackpanel/state/stackpanel.json"
-		packages, err := getInstalledPackagesFromJSON(stateFile)
-		if err == nil && len(packages) > 0 {
-			return packages, nil
+		for _, p := range []string{projectRoot + "/.stack/profile/stackpanel.json", projectRoot + "/.stackpanel/state/stackpanel.json"} {
+			packages, err := getInstalledPackagesFromJSON(p)
+			if err == nil && len(packages) > 0 {
+				return packages, nil
+			}
 		}
 	}
 
-	// Fast path 4: try generated config
+	// Fast path 4: try generated config (.stack/gen then .stackpanel/gen)
 	if projectRoot != "" {
-		genConfig := projectRoot + "/.stackpanel/gen/config.json"
-		packages, err := getInstalledPackagesFromJSON(genConfig)
-		if err == nil && len(packages) > 0 {
-			return packages, nil
+		for _, p := range []string{projectRoot + "/.stack/gen/config.json", projectRoot + "/.stackpanel/gen/config.json"} {
+			packages, err := getInstalledPackagesFromJSON(p)
+			if err == nil && len(packages) > 0 {
+				return packages, nil
+			}
 		}
 	}
 
@@ -468,15 +502,16 @@ func getInstalledPackagesFromJSON(configPath string) ([]InstalledPackage, error)
 	return config.Packages, nil
 }
 
-// getUserPackagesFromDataFile reads user-installed packages from .stackpanel/data/packages.nix
+// getUserPackagesFromDataFile reads user-installed packages from .stack/data or .stackpanel/data
 // This is a fallback when the config JSON doesn't have packages or doesn't exist yet.
 // The file format is a simple Nix list of attribute path strings:
 //
 //	[ "ripgrep" "jq" "htop" ]
 func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error) {
-	packagesFile := projectRoot + "/.stackpanel/data/packages.nix"
-
-	// Check if file exists
+	packagesFile := projectRoot + "/.stack/data/packages.nix"
+	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {
+		packagesFile = projectRoot + "/.stackpanel/data/packages.nix"
+	}
 	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {
 		return nil, err
 	}
@@ -518,8 +553,9 @@ func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error)
 	return packages, nil
 }
 
-// GetInstalledPackageNames returns just the package names as a set for fast lookup.
-// If projectRoot is empty, it will attempt to find it automatically.
+// GetInstalledPackageNames returns a set of lowercased package names and attr
+// paths for O(1) membership checks. Both Name and AttrPath are indexed so
+// lookups work regardless of which identifier the caller has.
 func GetInstalledPackageNames(ctx context.Context, opts GetInstalledPackagesOptions) (map[string]bool, error) {
 	packages, err := GetInstalledPackages(ctx, opts)
 	if err != nil {

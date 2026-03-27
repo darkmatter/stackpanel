@@ -1,4 +1,10 @@
-// Package server provides the HTTP/SSE server for the stackpanel agent.
+// project_context.go implements per-request project resolution for multi-project support.
+// The web UI sends an X-Stackpanel-Project header to select which project each
+// request operates on. This allows a single agent to manage multiple projects
+// without requiring separate agent instances.
+//
+// Resolution priority: header > query param > default project > current project > none.
+
 package server
 
 import (
@@ -11,7 +17,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Context keys for project information
+// contextKey is an unexported type to prevent collisions with context keys
+// from other packages.
 type contextKey string
 
 const (
@@ -207,9 +214,9 @@ func (s *Server) requireProjectContext(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// getProjectForRequest returns the project path to use for the current request.
-// It first checks the request context (set by withProjectContext middleware),
-// then falls back to the server's config.ProjectRoot for backwards compatibility.
+// getProjectForRequest returns the project path for the current request.
+// Falls back to config.ProjectRoot for backwards compatibility with clients
+// that don't send X-Stackpanel-Project (e.g., the CLI or older UI versions).
 func (s *Server) getProjectForRequest(r *http.Request) string {
 	// Try context first (new per-request project support)
 	if path := GetProjectPath(r.Context()); path != "" {

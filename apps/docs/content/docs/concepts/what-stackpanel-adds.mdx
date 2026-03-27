@@ -1,0 +1,377 @@
+---
+title: What Stackpanel Adds
+description: Concrete examples of what you can do with Stackpanel that you can't do without it
+icon: plus-circle
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+Nix already gives you reproducible environments, hermetic builds, and a powerful module system. So what does Stackpanel actually add? This page answers that question feature by feature, with concrete examples of what becomes possible—and what stays painful without it.
+
+The pattern is the same in every case: **Stackpanel bridges the gap between what Nix can express and what your day-to-day development workflow actually needs.**
+
+---
+
+## Runtime Healthchecks vs. `nix flake check`
+
+Nix has a built-in mechanism for validating your flake: `nix flake check`. It runs derivations in a pure sandbox to verify that your packages build, your tests pass, and your configuration evaluates. This is invaluable for CI and structural validation.
+
+But it can't answer the question you actually care about at 9am: **is my local dev environment working right now?**
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+You run `nix flake check` and it tells you your flake evaluates cleanly. You enter `nix develop` and... PostgreSQL isn't running. Redis has the wrong port. Your API can't reach the database. You diagnose each problem manually, one at a time, every time you open a new shell.
+
+There's no standard way to ask "is everything healthy?" at runtime. `nix flake check` runs in a sandbox with no network access, no running services, and no local state—by design.
+</Tab>
+
+<Tab value="With Stackpanel">
+Stackpanel separates **build-time validation** from **runtime health monitoring**:
+
+- **`nix flake check`** — "Does my configuration evaluate? Do my packages build?" Runs in the Nix sandbox. Hermetic. For CI.
+- **`sp healthcheck`** — "Is PostgreSQL accepting connections? Is my API responding? Can I reach Redis?" Runs in your devshell. Has network access. For developers.
+
+```nix
+# In your module config — one definition, two execution contexts
+stackpanel.healthchecks = {
+  postgres-connection = {
+    type = "tcp";
+    host = "localhost";
+    port = config.stackpanel.services.postgres.port;
+    severity = "critical";
+    module = "postgres";
+  };
+
+  api-ready = {
+    type = "http";
+    url = "http://localhost:${toString config.stackpanel.apps.api.port}/health";
+    expectedStatus = 200;
+    severity = "warning";
+    module = "api";
+  };
+
+  migrations-current = {
+    type = "script";
+    script = "drizzle-kit check";
+    severity = "warning";
+    module = "db";
+  };
+};
+```
+
+When you enter the devshell, the MOTD shows cached healthcheck results—how long ago they ran, what passed, what failed—without blocking shell entry. If something's wrong, it tells you what to run:
+
+```
+  Health    ████████░░ 8/10  (5m ago)
+    ● postgres  3/3
+    ● api       2/3
+    ● db        3/4
+    run sp healthcheck to refresh
+```
+
+The `sp healthcheck` command only re-runs failed checks by default. Checks that already pass are skipped. Use `--force` to re-run everything.
+</Tab>
+</Tabs>
+
+<Callout type="info">
+Think of it this way: `nix flake check` is your **compile step** — "is the code valid?" `sp healthcheck` is your **smoke test** — "does the running system work?" You need both.
+</Callout>
+
+---
+
+## Deterministic Ports
+
+Every project that uses PostgreSQL wants port 5432. Every Redis instance wants 6379. Run two projects locally and you get conflicts. The usual fix is a spreadsheet, a wiki page, or just hoping for the best.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+```yaml
+# docker-compose.yml (project A)
+services:
+  postgres:
+    ports:
+      - "5432:5432"  # Hope nobody else is using this
+
+# docker-compose.yml (project B)
+services:
+  postgres:
+    ports:
+      - "5433:5432"  # Manually picked a different port
+```
+
+Every developer has to coordinate port assignments. When someone new joins, they discover the conflicts the hard way. Bookmarked URLs break when ports change. Database connection strings are different on every machine.
+</Tab>
+
+<Tab value="With Stackpanel">
+Ports are deterministically computed from your project name. The same project always gets the same ports on every machine, for every team member, with zero configuration:
+
+```nix
+stackpanel = {
+  name = "billing-service";
+  # That's it. Ports are derived automatically.
+  # billing-service → base port 4700
+  #   web      → 4700
+  #   api      → 4701
+  #   postgres → 4737
+  #   redis    → 4752
+};
+```
+
+Every developer gets identical ports. No coordination needed. Bookmarks work forever. The algorithm is a simple MD5 hash—you can reimplement it in any language if external tools need to compute ports without Nix.
+</Tab>
+</Tabs>
+
+---
+
+## Multi-Module File Generation
+
+Your `.gitignore` has entries from Node, from your IDE, from your build tool, from your secrets system. Your `tsconfig.json` has paths from your app, your test framework, your monorepo packages. Today you maintain all of this by hand in a single file, and nobody remembers which lines belong to which tool.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+```txt
+# .gitignore — maintained by hand, nobody remembers why half of this is here
+node_modules
+dist
+.turbo
+.env.local
+.stack/state/
+*.age
+.sst
+.state
+coverage
+.next
+```
+
+Remove the Turbo extension? You have to remember to also remove `.turbo` from `.gitignore`. Add a secrets system? You have to manually add `*.age` to `.gitignore`, update `.vscode/settings.json` for schema intellisense, and configure the codegen output path. Each tool's concerns are scattered across multiple files.
+</Tab>
+
+<Tab value="With Stackpanel">
+Each module declares its own file contributions. Enable the module and its entries appear. Disable it and they disappear. No orphaned config:
+
+```nix
+# The Turbo module declares its own gitignore entries
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  content = [ ".turbo" ];
+};
+
+# The secrets module independently declares its own
+stackpanel.files.entries.".gitignore" = {
+  type = "line-set";
+  content = [ "*.age" ".stack/keys/" ];
+};
+
+# Both merge into a single .gitignore automatically
+```
+
+The same pattern works for JSON, YAML, and TOML files. Multiple modules can contribute to the same `tsconfig.json`, `.vscode/settings.json`, or GitHub Actions workflow without knowing about each other.
+</Tab>
+</Tabs>
+
+---
+
+## Module Composition
+
+When you add a capability to your project—say, Go support—you need the compiler, a linter, VS Code settings, `.gitignore` entries, a `process-compose` config for the dev server, environment variables, and maybe a healthcheck. Without a module system, you wire all of this up manually.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+Adding Go to your project means:
+
+1. Install Go (and pin the version somehow)
+2. Add VS Code Go extension to recommendations
+3. Add `go.sum`, `vendor/` to `.gitignore`
+4. Set `GOPATH`, `GOBIN` environment variables
+5. Add a `process-compose` entry for `air` or your dev server
+6. Write a Makefile or script for building
+7. Add a CI workflow step for Go tests
+8. Hope everyone on the team does all of this the same way
+</Tab>
+
+<Tab value="With Stackpanel">
+```nix
+stackpanel.modules.go = {
+  enable = true;
+  app = "api";
+};
+```
+
+One line. The Go module handles the rest: compiler in the devshell, environment variables, VS Code extension recommendations, `.gitignore` entries, process-compose dev server, air hot-reload, and appropriate healthchecks. Disable it and everything it added is cleanly removed.
+
+Every module follows this pattern. Enable Bun, Turbo, OxLint, git-hooks, or any community extension—each one wires up everything it needs through the module system.
+</Tab>
+</Tabs>
+
+---
+
+## Secrets Management
+
+Development secrets—database URLs, API keys, service credentials—need to be shared across a team without ending up in plaintext in the repo. Most solutions involve a `.env` file that someone shares over Slack, or a third-party secrets manager that requires its own setup.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+```bash
+# Someone on Slack:
+# "Hey, here's the .env for the new project"
+# *pastes 47 lines of secrets in a DM*
+
+# .env.example — hopefully someone keeps this up to date
+DATABASE_URL=
+STRIPE_SECRET_KEY=
+REDIS_URL=
+AWS_ACCESS_KEY_ID=
+# ... 43 more lines
+```
+
+New team members ask for the `.env` file. Someone copies it from their machine. Half the values are stale. There's no way to know which secrets are for dev vs. staging. There's no schema validation. There's no codegen.
+</Tab>
+
+<Tab value="With Stackpanel">
+Secrets are AGE-encrypted per-environment YAML files with schema validation and codegen:
+
+```nix
+stackpanel.secrets = {
+  master-key.enable = true;
+
+  apps.api = {
+    dev = {
+      DATABASE_URL = "postgres://...";
+      STRIPE_SECRET_KEY = "secret:stripe-key";
+    };
+  };
+};
+```
+
+- Encrypted at rest with team member AGE keys
+- Per-environment schemas (`dev.yaml`, `staging.yaml`, `prod.yaml`)
+- JSON Schema generated for IDE intellisense in YAML files
+- TypeScript/Go/Python codegen so your app has typed access to secrets
+- New team members decrypt automatically if their key is in `users.yaml`
+</Tab>
+</Tabs>
+
+---
+
+## IDE Integration
+
+A reproducible dev environment isn't useful if your editor doesn't know about it. Language servers need to find the right compiler. Formatters need the right config. Debug configurations need the right ports.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+You commit a `.vscode/settings.json` and hope it works for everyone. But the Nix store paths are different on every machine. The TypeScript SDK path depends on which `node_modules` layout your package manager chose. Debug launch configurations have hardcoded ports that drift out of sync with your actual services.
+
+Someone on Linux has a different path than someone on macOS. The settings file becomes a merge conflict magnet.
+</Tab>
+
+<Tab value="With Stackpanel">
+```nix
+stackpanel.ide.vscode.enable = true;
+```
+
+VS Code workspace files are generated from your actual Nix configuration:
+
+- Extension recommendations match the tools in your devshell
+- TypeScript SDK path points to the correct Nix store path
+- Debug configurations use your deterministic ports
+- Settings match the formatters and linters you've actually enabled
+- A devshell loader script ensures the terminal environment matches Nix
+
+The generated workspace file is committed to Git, so it works for everyone. But its contents are derived from the single source of truth—your Nix config.
+</Tab>
+</Tabs>
+
+---
+
+## Process Orchestration with Healthchecks
+
+Development usually means running several processes: a web server, an API, a database, a file watcher. You need to start them, monitor them, and know when something goes wrong.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+```bash
+# Terminal 1: bun run dev
+# Terminal 2: air  (Go hot reload)
+# Terminal 3: docker compose up postgres redis
+# Terminal 4: bun run watch:types
+# "Wait, which one crashed?"
+```
+
+You manage multiple terminals or write a `Procfile`. There's no unified health view. If the API dies, you notice when a request fails—not before.
+</Tab>
+
+<Tab value="With Stackpanel">
+```bash
+dev  # starts everything via process-compose
+```
+
+All processes are declared in your Nix config and orchestrated by process-compose. The `sp healthcheck` command tells you what's actually running and what's broken. The Studio UI gives you a visual dashboard with logs, status, and controls for each process.
+
+Healthchecks can run in watch mode inside process-compose itself—periodically verifying that services are responding, without blocking your shell or requiring manual checks. Failed checks surface in the MOTD next time you open a terminal, with the exact command to investigate.
+</Tab>
+</Tabs>
+
+---
+
+## The Agent and Studio
+
+Nix is powerful but opaque. Discovering what options are available, what extensions exist, and what your current config actually produces requires reading Nix code. For many developers—especially those who didn't write the Nix config—this is a wall.
+
+<Tabs items={["Without Stackpanel", "With Stackpanel"]}>
+
+<Tab value="Without Stackpanel">
+```bash
+# "How do I enable PostgreSQL?"
+# "What port is my API on?"
+# "What options does this module have?"
+# Answer: read the Nix source, grep for mkOption, hope for comments
+```
+
+The full power of Nix is gated behind knowledge of the Nix language. Team members who aren't Nix-fluent can't self-serve.
+</Tab>
+
+<Tab value="With Stackpanel">
+The **Stackpanel Agent** is a background process that bridges your Nix environment to HTTP:
+
+- Watches your flake for changes and re-evaluates config automatically
+- Serves a REST + Connect-RPC API that any tool can consume
+- Broadcasts SSE events so the UI updates in real time
+
+The **Stackpanel Studio** is a local web UI at `localhost:9876` that gives you:
+
+- A visual dashboard of services, healthchecks, and environment status
+- An extension registry—add Nix capabilities with a single click
+- Config editing without touching Nix files directly
+- Log viewing, secret management, and generated file inspection
+
+The insight: **the full power of Nix should be accessible to everyone on the team**, not just the person who wrote the `flake.nix`.
+</Tab>
+</Tabs>
+
+---
+
+## Summary
+
+| Capability | Without Stackpanel | With Stackpanel |
+|---|---|---|
+| **Runtime healthchecks** | Manual diagnosis every time | `sp healthcheck` — cached, incremental, non-blocking |
+| **Build-time validation** | `nix flake check` (still works) | Same, plus runtime checks layered on top |
+| **Port assignments** | Manual coordination, conflicts | Deterministic from project name, zero config |
+| **Config file maintenance** | Hand-edited, scattered concerns | Generated from modules, co-located concerns |
+| **Adding capabilities** | 8 manual steps across 5 files | One `enable = true` line |
+| **Team secrets** | Slack DMs and stale `.env` files | Encrypted, per-environment, with codegen |
+| **IDE setup** | Committed settings that drift | Generated from your actual Nix config |
+| **Process management** | Multiple terminals, no health view | `dev` command, unified dashboard, healthchecks |
+| **Nix discoverability** | Read the source | Visual Studio UI, extension registry |
+
+<Callout type="info">
+None of these features require lock-in. Generated files are standard formats in standard locations. The Agent and Studio are optional—everything works from the CLI. If you eject tomorrow, you keep a normal codebase with normal config files.
+</Callout>

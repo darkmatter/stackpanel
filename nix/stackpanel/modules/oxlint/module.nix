@@ -205,7 +205,7 @@ in
           eval = {
             description = "OxLint module evaluates correctly";
             required = true;
-            derivation = pkgs.runCommand "${meta.id}-eval-check" {} ''
+            derivation = pkgs.runCommand "${meta.id}-eval-check" { } ''
               echo "✓ OxLint module evaluates successfully"
               touch $out
             '';
@@ -215,31 +215,42 @@ in
           packages = {
             description = "OxLint package is available";
             required = true;
-            derivation = pkgs.runCommand "${meta.id}-packages-check" {
-              nativeBuildInputs = [ pkgs.oxlint ];
-            } ''
-              oxlint --version > $out
-              echo "✓ OxLint package available"
-            '';
+            derivation =
+              pkgs.runCommand "${meta.id}-packages-check"
+                {
+                  nativeBuildInputs = [ pkgs.oxlint ];
+                }
+                ''
+                  oxlint --version > $out
+                  echo "✓ OxLint package available"
+                '';
           };
 
           # RECOMMENDED: Verify config generation works
           config = {
             description = "OxLint config generation works";
             required = false;
-            derivation = pkgs.runCommand "${meta.id}-config-check" {
-              nativeBuildInputs = [ pkgs.jq ];
-            } ''
-              # Test that we can generate valid JSON config
-              echo '${builtins.toJSON {
-                "$schema" = "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json";
-                plugins = [];
-                categories = { correctness = "error"; };
-                rules = {};
-                ignorePatterns = [ "node_modules" ];
-              }}' | jq . > $out
-              echo "✓ Config generation produces valid JSON"
-            '';
+            derivation =
+              pkgs.runCommand "${meta.id}-config-check"
+                {
+                  nativeBuildInputs = [ pkgs.jq ];
+                }
+                ''
+                  # Test that we can generate valid JSON config
+                  echo '${
+                    builtins.toJSON {
+                      "$schema" =
+                        "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json";
+                      plugins = [ ];
+                      categories = {
+                        correctness = "error";
+                      };
+                      rules = { };
+                      ignorePatterns = [ "node_modules" ];
+                    }
+                  }' | jq . > $out
+                  echo "✓ Config generation produces valid JSON"
+                '';
           };
         };
 
@@ -268,6 +279,7 @@ in
             oxlint-config = {
               description = "OxLint configuration files exist";
               script = ''
+                STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
                 missing=""
                 ${lib.concatMapStringsSep "\n" (
                   name:
@@ -298,6 +310,7 @@ in
             oxlint-passes = {
               description = "OxLint check passes on all apps";
               script = ''
+                STACKPANEL_ROOT="''${STACKPANEL_ROOT:-$(pwd)}"
                 failed=""
                 ${lib.concatMapStringsSep "\n" (
                   name:
@@ -340,6 +353,7 @@ in
           };
           source.type = "builtin";
           features = meta.features;
+          flakeInputs = meta.flakeInputs or [ ];
           tags = meta.tags;
           priority = meta.priority;
           healthcheckModule = meta.id;

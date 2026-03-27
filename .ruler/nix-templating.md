@@ -2,7 +2,7 @@
 
 ## Rule
 
-Do NOT embed large multi-line strings (shell scripts, TypeScript, JSON, YAML, config files, etc.) directly inside Nix expressions. Instead, use the **stackpanel files and scripts systems** which support reading content from real files on disk.
+Do NOT embed large multi-line strings (shell scripts, TypeScript, JSON, YAML, config files, etc.) directly inside Nix expressions. Instead, use the **stack files and scripts systems** which support reading content from real files on disk.
 
 Large inline strings in Nix:
 - Lose syntax highlighting and IDE support (linting, type-checking, formatting)
@@ -14,15 +14,15 @@ Large inline strings in Nix:
 
 Anything over ~5-10 lines of non-Nix content inlined in a Nix string should be extracted to a file. One-liners and short snippets are fine inline.
 
-## The Stackpanel File and Script Systems
+## The Stack File and Script Systems
 
-Stackpanel provides two systems that support loading content from real files:
+Stack provides two systems that support loading content from real files:
 
-### 1. `stackpanel.files.entries` -- Generate files into the repo
+### 1. `stack.files.entries` -- Generate files into the repo
 
 Use this to generate config files, scripts, workflows, etc. into the project tree on devshell entry.
 
-**Option reference** (defined in `nix/stackpanel/core/options/devshell.nix`):
+**Option reference** (defined in `nix/stack/core/options/devshell.nix`):
 
 | Field         | Type                                           | Description                                        |
 |---------------|------------------------------------------------|----------------------------------------------------|
@@ -38,7 +38,7 @@ Use this to generate config files, scripts, workflows, etc. into the project tre
 
 `text` and `path` are **mutually exclusive** for `type = "text"` entries.
 
-### 2. `stackpanel.scripts` -- Shell commands available in devshell
+### 2. `stack.scripts` -- Shell commands available in devshell
 
 Use this for shell commands that should be on `$PATH` inside the devshell.
 
@@ -68,7 +68,7 @@ For generated files that need dynamic values injected into otherwise-static cont
 Bad -- large inline YAML in Nix:
 
 ```nix
-stackpanel.files.entries.".github/workflows/ci.yml" = {
+stack.files.entries.".github/workflows/ci.yml" = {
   type = "text";
   text = ''
     name: CI
@@ -91,11 +91,11 @@ stackpanel.files.entries.".github/workflows/ci.yml" = {
 Good -- keep the YAML in a real file:
 
 ```nix
-# The YAML lives at .stackpanel/src/files/.github/workflows/ci.yml
+# The YAML lives at .stack/src/files/.github/workflows/ci.yml
 # where it gets full YAML syntax highlighting, schema validation, etc.
-stackpanel.files.entries.".github/workflows/ci.yml" = {
+stack.files.entries.".github/workflows/ci.yml" = {
   type = "text";
-  path = ./.stackpanel/src/files/.github/workflows/ci.yml;
+  path = ./.stack/src/files/.github/workflows/ci.yml;
   source = "ci";
   description = "CI workflow";
 };
@@ -106,7 +106,7 @@ stackpanel.files.entries.".github/workflows/ci.yml" = {
 Instead of building JSON as an inline Nix string, use `type = "json"` which gives you proper serialization and lets multiple modules contribute to the same file:
 
 ```nix
-stackpanel.files.entries."apps/web/package.json" = {
+stack.files.entries."apps/web/package.json" = {
   type = "json";
   jsonValue = {
     name = "web";
@@ -124,7 +124,7 @@ Another module can merge into the same file:
 
 ```nix
 # In a different module -- values are deep-merged automatically
-stackpanel.files.entries."apps/web/package.json" = {
+stack.files.entries."apps/web/package.json" = {
   type = "json";
   jsonValue = {
     scripts.test = "vitest";
@@ -138,7 +138,7 @@ stackpanel.files.entries."apps/web/package.json" = {
 Bad -- large inline shell script:
 
 ```nix
-stackpanel.scripts.deploy = {
+stack.scripts.deploy = {
   exec = ''
     set -euo pipefail
     echo "Building..."
@@ -159,10 +159,10 @@ stackpanel.scripts.deploy = {
 Good -- keep the script in a real file:
 
 ```nix
-# The script lives at .stackpanel/src/scripts/deploy.sh
+# The script lives at .stack/src/scripts/deploy.sh
 # where it gets shellcheck, syntax highlighting, etc.
-stackpanel.scripts.deploy = {
-  path = ./.stackpanel/src/scripts/deploy.sh;
+stack.scripts.deploy = {
+  path = ./.stack/src/scripts/deploy.sh;
   description = "Deploy to production";
   runtimeInputs = [ pkgs.wrangler pkgs.curl ];
 };
@@ -190,7 +190,7 @@ let
     [ sp.name (toString sp.apps.api.port) (builtins.toJSON cfg.features) ]
     template;
 in {
-  stackpanel.files.entries."src/generated/config.ts" = {
+  stack.files.entries."src/generated/config.ts" = {
     type = "text";
     text = rendered;
     source = "my-module";
@@ -204,7 +204,7 @@ in {
 When you need `pkgs` utilities (e.g., `writeText`, `runCommand`) to build file content:
 
 ```nix
-stackpanel.files.entries."scripts/setup.sh" = {
+stack.files.entries."scripts/setup.sh" = {
   type = "derivation";
   drv = pkgs.writeScript "setup" (builtins.readFile ./templates/setup.sh);
   mode = "0755";
@@ -215,10 +215,10 @@ stackpanel.files.entries."scripts/setup.sh" = {
 
 ## File organization convention
 
-Keep source files for templates and scripts under `.stackpanel/src/`:
+Keep source files for templates and scripts under `.stack/src/`:
 
 ```
-.stackpanel/
+.stack/
   src/
     files/           # Static files loaded via path = ...
     scripts/         # Shell scripts loaded via path = ...
@@ -228,7 +228,7 @@ Keep source files for templates and scripts under `.stackpanel/src/`:
 Or colocate them with the module that uses them:
 
 ```
-nix/stackpanel/modules/my-module/
+nix/stack/modules/my-module/
   module.nix
   templates/
     config.tmpl.ts

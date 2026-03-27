@@ -1,17 +1,17 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://stackpanel.dev/light.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://stackpanel.dev/dark.svg">
-    <img alt="stackpanel" src="https://stackpanel.dev/light.svg" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset="https://stack.dev/light.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://stack.dev/dark.svg">
+    <img alt="stack" src="https://stack.dev/light.svg" width="400">
   </picture>
 </p>
 
 <h3 align="center">Ship products, not plumbing.</h3>
 
 <p align="center">
-  <a href="https://github.com/darkmatter/stackpanel/actions/workflows/ci.yml"><img src="https://github.com/darkmatter/stackpanel/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://stackpanel.dev"><img src="https://img.shields.io/badge/docs-stackpanel.dev-blue" alt="Documentation"></a>
-  <a href="https://github.com/darkmatter/stackpanel/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+  <a href="https://github.com/darkmatter/stack/actions/workflows/ci.yml"><img src="https://github.com/darkmatter/stack/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://stack.dev"><img src="https://img.shields.io/badge/docs-stack.dev-blue" alt="Documentation"></a>
+  <a href="https://github.com/darkmatter/stack/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
 </p>
 
 <p align="center">
@@ -27,9 +27,9 @@ Configuration files, build tooling, environment setup - this is the bureaucracy 
 
 **The value of your application lives in your source code, not configuration.**
 
-## What Stackpanel Does
+## What Stack Does
 
-Stackpanel provides a complete development infrastructure toolkit:
+Stack provides a complete development infrastructure toolkit:
 
 - **Zero-config dev environments** - Automatic setup for popular stacks with deterministic ports
 - **Secrets management** - Team-based encrypted secrets with AGE/SOPS
@@ -40,7 +40,7 @@ Stackpanel provides a complete development infrastructure toolkit:
 
 **No lock-in.** Generated files are standard formats in standard locations. Eject anytime with a normal codebase.
 
-**No Nix knowledge required.** If you can write JSON, you can configure Stackpanel. Or just use the web UI.
+**No Nix knowledge required.** If you can write JSON, you can configure Stack. Or just use the web UI.
 
 ## Quick Start
 
@@ -53,7 +53,7 @@ Stackpanel provides a complete development infrastructure toolkit:
 
 ```bash
 # Create a new project with the default template
-nix flake init -t github:darkmatter/stackpanel
+nix flake init -t github:darkmatter/stack
 
 # Set up direnv
 echo 'use flake . --impure' > .envrc
@@ -72,24 +72,24 @@ nix develop --impure
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     devenv.url = "github:cachix/devenv";
-    stackpanel.url = "github:darkmatter/stackpanel";
+    stack.url = "github:darkmatter/stack";
   };
 
   outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;} {
       imports = [
         inputs.devenv.flakeModule
-        inputs.stackpanel.flakeModules.default
+        inputs.stack.flakeModules.default
       ];
 
       systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
 
       perSystem = {pkgs, ...}: {
         devenv.shells.default = {
-          imports = [inputs.stackpanel.devenvModules.default];
+          imports = [inputs.stack.devenvModules.default];
           
           # Your config
-          stackpanel.enable = true;
+          stack.enable = true;
           packages = [pkgs.nodejs pkgs.bun];
         };
       };
@@ -99,7 +99,7 @@ nix develop --impure
 
 ## Configuration
 
-Edit `.stackpanel/config.nix` to configure your environment:
+Edit `.stack/config.nix` to configure your environment:
 
 ```nix
 {
@@ -141,7 +141,7 @@ my-project → base port 4200
 Team-based secrets with AGE encryption:
 
 ```nix
-stackpanel.secrets = {
+stack.secrets = {
   master-key.enable = true;
   
   apps.api = {
@@ -171,13 +171,13 @@ Local web UI at `localhost:9876` for:
 
 ## Documentation
 
-Full documentation is available at [stackpanel.dev](https://stackpanel.dev/docs):
+Full documentation is available at [stack.dev](https://stack.dev/docs):
 
-- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
-- [Concepts](https://stackpanel.dev/docs/concepts)
-- [Configuration Reference](https://stackpanel.dev/docs/reference)
-- [Secrets Management](https://stackpanel.dev/docs/features/secrets)
-- [AWS Integration](https://stackpanel.dev/docs/features/aws)
+- [Quick Start Guide](https://stack.dev/docs/quick-start)
+- [Concepts](https://stack.dev/docs/concepts)
+- [Configuration Reference](https://stack.dev/docs/reference)
+- [Secrets Management](https://stack.dev/docs/features/secrets)
+- [AWS Integration](https://stack.dev/docs/features/aws)
 
 ## Architecture
 

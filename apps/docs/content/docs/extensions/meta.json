@@ -1,0 +1,6 @@
+{
+  "title": "Extensions",
+  "description": "Add capabilities to your project with extensions",
+  "icon": "puzzle",
+  "pages": ["index", "using-extensions", "writing-extensions", "flake-inputs", "registry"]
+}

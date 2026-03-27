@@ -12,34 +12,39 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// SSEEvent represents a server-sent event.
+// SSEEvent represents a server-sent event. Event types include:
+//   - "connected": initial event with project info (sent on SSE connect)
+//   - "config.changed": a file in .stack/ was modified on disk (fsnotify)
+//   - "flake.config.updated": stackpanelConfig re-evaluated after nix file change
+//   - "flake.packages.updated": stackpanelPackages re-evaluated
+//   - "shell.stale": nix files changed, devshell may need rebuild
+//   - "shell.rebuilding" / "shell.rebuilt": rebuild lifecycle
+//   - "ping": keepalive heartbeat (every 5s)
 type SSEEvent struct {
 	Event string `json:"event"`
 	Data  any    `json:"data"`
 }
 
-// watchConfigFiles watches for changes to stackpanel config files and broadcasts SSE events.
+// watchConfigFiles uses fsnotify to watch .stack/state, .stack/gen, and .stack/data
+// for changes, broadcasting "config.changed" SSE events. This is separate from
+// FlakeWatcher — it handles simple file change notifications without re-evaluating Nix.
+// Changes are debounced at 100ms to coalesce rapid file writes (e.g., during codegen).
 func (s *Server) watchConfigFiles() {
-	// Watch the state file
 	stateFile := envvars.StackpanelStateFile.Get()
 	if err := s.watcher.Add(filepath.Dir(stateFile)); err != nil {
 		log.Warn().Err(err).Str("path", stateFile).Msg("failed to watch state directory")
 	}
 
-	// Watch the gen directory for file changes
 	genDir := envvars.StackpanelGenDir.Get()
 	if err := s.watcher.Add(genDir); err != nil {
 		log.Warn().Err(err).Str("path", genDir).Msg("failed to watch gen directory")
 	}
 
-	// Watch the data directory for Nix data file changes
-	dataDir := filepath.Join(s.config.ProjectRoot, ".stackpanel", "data")
+	dataDir := filepath.Join(s.config.ProjectRoot, ".stack", "data")
 	if err := s.watcher.Add(dataDir); err != nil {
-		// Data dir might not exist yet, that's fine
 		log.Debug().Err(err).Str("path", dataDir).Msg("failed to watch data directory (may not exist yet)")
 	}
 
-	// Debounce rapid file changes
 	var debounceTimer *time.Timer
 	debounceDuration := 100 * time.Millisecond
 
@@ -75,6 +80,8 @@ func (s *Server) watchConfigFiles() {
 }
 
 // handleSSE handles Server-Sent Events connections for real-time updates.
+// The web UI's AgentSSEProvider maintains a persistent connection to this endpoint,
+// using received events to invalidate TanStack Query caches and trigger refetches.
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -104,7 +111,8 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send initial connection event with project info (eliminates need for health polling)
+	// Send initial "connected" event with project info so the UI can immediately
+	// render project state without a separate health poll round-trip.
 	hasProject := s.config.ProjectRoot != ""
 	connectedData := map[string]any{
 		"status":      "ok",
@@ -141,7 +149,9 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// broadcastSSE sends an event to all connected SSE subscribers.
+// broadcastSSE fans out an event to all connected SSE subscribers.
+// Uses non-blocking sends — if a subscriber's channel is full (buffer=10),
+// the event is dropped for that subscriber rather than blocking all others.
 func (s *Server) broadcastSSE(event SSEEvent) {
 	s.sseSubscribersMu.RLock()
 	defer s.sseSubscribersMu.RUnlock()

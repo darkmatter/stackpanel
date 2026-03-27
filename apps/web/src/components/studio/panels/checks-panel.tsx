@@ -25,13 +25,17 @@ export function ChecksPanel() {
 		isLoading,
 		error,
 		isRefreshing,
+		runningCheckIds,
 		refetch,
 		runChecks,
 	} = useHealthchecks({ enabled: true });
 
 
 
-	if (isLoading) {
+	// Only show the full-page loader on the very first load (no data yet).
+	// Subsequent refetches/re-runs keep the existing UI mounted so that
+	// collapsible open/closed state is preserved.
+	if (isLoading && !summary) {
 		return (
 			<Card>
 				<CardContent className="flex items-center justify-center py-12">
@@ -41,7 +45,7 @@ export function ChecksPanel() {
 		);
 	}
 
-	if (error) {
+	if (error && !summary) {
 		return (
 			<Card className="border-destructive/50">
 				<CardContent className="py-6">
@@ -80,7 +84,7 @@ export function ChecksPanel() {
 							className="pl-9"
 						/>
 					</div>
-					<HealthSummaryPanelView summary={summary ?? null} isLoading={isLoading} error={error ?? undefined} isRefreshing={isRefreshing} onRunChecks={runChecks} />
+					<HealthSummaryPanelView summary={summary ?? null} isLoading={isLoading} error={error ?? undefined} isRefreshing={isRefreshing} runningCheckIds={runningCheckIds} onRunChecks={runChecks} />
 
 					{/* Info Card */}
 					<Card className="border-accent/30 bg-accent/5">

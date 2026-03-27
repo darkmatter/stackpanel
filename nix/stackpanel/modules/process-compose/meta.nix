@@ -46,14 +46,23 @@
   # Feature flags
   features = {
     files = false;
-    scripts = true;       # Provides `dev` command
+    scripts = true; # Provides `dev` command
     healthchecks = false;
-    packages = true;      # Creates dev wrapper package
+    packages = true; # Creates dev wrapper package
     services = false;
     secrets = false;
     tasks = false;
-    appModule = true;     # Adds per-app process-compose.* options
+    appModule = true; # Adds per-app process-compose.* options
   };
+
+  # Flake inputs required by this module
+  flakeInputs = [
+    {
+      name = "process-compose-flake";
+      url = "github:Platonic-Systems/process-compose-flake";
+      followsNixpkgs = false;
+    }
+  ];
 
   # Priority for ordering (lower = higher priority)
   priority = 25;

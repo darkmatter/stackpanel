@@ -1,5 +1,6 @@
 {
 	"name": "@stackpanel/config",
+	"description": "Shared TypeScript configuration (tsconfig.base.json). No source code.",
 	"version": "0.0.0",
 	"private": true
 }

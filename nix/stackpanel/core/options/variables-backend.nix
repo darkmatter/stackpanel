@@ -4,7 +4,7 @@
 # Unified variables backend configuration.
 #
 # Options defined here:
-#   stackpanel.secrets.backend          - "vals" or "chamber"
+#   stackpanel.secrets.backend          - "sops", "vals", or "chamber"
 #   stackpanel.secrets.chamber.service-prefix - Chamber SSM path prefix
 #
 # NOTE: These options live under stackpanel.secrets (not stackpanel.variables)
@@ -15,9 +15,12 @@
 # injected via entrypoints, and surfaced in the UI.
 #
 # Supported backends:
-#   vals    - AGE/SOPS encryption with vals for external store references.
+#   sops    - Direct SOPS/AGE encryption using the generated `.sops.yaml`.
+#             Secrets are stored as SOPS-encrypted YAML files.
+#             This is the default.
+#
+#   vals    - Legacy AGE/SOPS mode with vals for external store references.
 #             Secrets are stored as .age files or SOPS-encrypted YAML.
-#             This is the default and preserves existing behavior.
 #
 #   chamber - AWS Systems Manager Parameter Store via the chamber CLI.
 #             Secrets are stored in SSM Parameter Store, encrypted with KMS.
@@ -50,15 +53,13 @@
 }:
 let
   projectName = config.stackpanel.name or "my-project";
-  projectCfg = config.stackpanel.project or {};
+  projectCfg = config.stackpanel.project or { };
   owner = projectCfg.owner or "";
   repo = projectCfg.repo or "";
 
   # Prefer owner/repo for chamber prefix (better SSM path namespacing),
   # fall back to project name for backwards compatibility
-  defaultPrefix = if owner != "" && repo != ""
-    then "${owner}/${repo}"
-    else projectName;
+  defaultPrefix = if owner != "" && repo != "" then "${owner}/${repo}" else projectName;
 in
 {
   # NOTE: Backend options live under stackpanel.secrets (not stackpanel.variables)
@@ -68,16 +69,18 @@ in
   options.stackpanel.secrets = {
     backend = lib.mkOption {
       type = lib.types.enum [
+        "sops"
         "vals"
         "chamber"
       ];
-      default = "vals";
+      default = "sops";
       description = ''
         Secret storage backend. This is the single source of truth that controls
         how secrets are stored, how entrypoints inject them, how the agent
         reads/writes them, and what options are available in the UI.
 
-        "vals" (default): AGE/SOPS encryption with vals for external references.
+        "sops" (default): direct SOPS/AGE encryption using generated `.sops.yaml` files.
+        "vals": legacy AGE/SOPS encryption with vals for external references.
         "chamber": AWS SSM Parameter Store via the chamber CLI.
       '';
     };

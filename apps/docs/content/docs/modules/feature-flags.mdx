@@ -1,0 +1,54 @@
+---
+title: Feature Flags Module
+description: Generates shared Studio feature-flag logic and context exports.
+---
+
+Generates the `packages/gen/featureflags` package from `stackpanel.feature-flags`
+configuration and makes feature flags available to Studio via
+`@gen/featureflags`.
+
+## Components
+
+- **meta.nix**: Static metadata for discovery
+- **module.nix**: Options, codegen wiring, healthchecks
+
+## Generated Files
+
+```
+packages/gen/featureflags/
+  package.json
+  src/feature-flags.tsx
+  src/index.ts
+  tsconfig.json
+  README.md
+```
+
+## Options
+
+| Option | Default | Description |
+|---|---|---|
+| `stackpanel."feature-flags".definitions` | `null` | Optional override list of feature-flag definitions |
+| `stackpanel."feature-flags".output-dir` | `"packages/gen/featureflags"` | Output directory for generated package |
+| `stackpanel."feature-flags".package-name` | `"@gen/featureflags"` | Package name written to `package.json` |
+
+## Usage
+
+```nix
+stackpanel."feature-flags".definitions = [
+  {
+    key = "studio.overview.layout";
+    kind = "variant";
+    label = "Overview layout";
+    description = "Select between classic and compact studio overview layouts";
+    defaultValue = "classic";
+    rollout = 100;
+    variants = [ "classic" "compact" ];
+  }
+];
+```
+
+In web code:
+
+```tsx
+import { FeatureFlagProvider, useFeatureFlags } from "@gen/featureflags";
+```

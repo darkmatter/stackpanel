@@ -1,0 +1,87 @@
+---
+title: Containers & Deployment
+description: Host-aware deployment for Cloudflare and Fly.io
+icon: cloud
+---
+
+import { Cards, Card } from "fumadocs-ui/components/card";
+import { Callout } from "fumadocs-ui/components/callout";
+
+Stackpanel deployment is app-first: each app opts into deployment, chooses a host, and then host-specific modules generate the files/scripts needed for that host.
+
+## Routing Model
+
+Deployment selection is resolved in this order:
+
+1. `stackpanel.apps.<name>.deployment.host` (explicit per app)
+2. `stackpanel.deployment.defaultHost` (global fallback, default: `"cloudflare"`)
+
+An app is deployable when:
+
+- `stackpanel.apps.<name>.deployment.enable = true`
+- one framework flag is enabled (for example `framework.tanstack-start.enable = true`)
+
+## What Runs Where
+
+| Host | Provisioning path | Notes |
+|------|-------------------|-------|
+| `cloudflare` | `infra:deploy` (Alchemy infra module) | Framework × host maps to a Cloudflare Alchemy resource |
+| `fly` | Fly module workflow (`flyctl`, generated `fly.toml`) | Container-based deploy flow; not managed by infra deployment module |
+
+<Callout type="info">
+The infra deployment module currently provisions Cloudflare apps only. Fly apps are handled by the Fly deployment module.
+</Callout>
+
+## Minimal Example
+
+```nix
+{
+  stackpanel.deployment.defaultHost = "cloudflare";
+
+  stackpanel.apps.web = {
+    path = "apps/web";
+    framework.tanstack-start.enable = true;
+    deployment = {
+      enable = true;
+      # host omitted -> uses defaultHost (cloudflare)
+      bindings = [ "CORS_ORIGIN" "BETTER_AUTH_SECRET" ];
+      secrets = [ "BETTER_AUTH_SECRET" ];
+      cloudflare.workerName = "stackpanel-web";
+    };
+  };
+
+  stackpanel.apps.api = {
+    path = "apps/server";
+    framework.hono.enable = true;
+    deployment = {
+      enable = true;
+      host = "fly";
+      fly.appName = "stackpanel-api";
+      container = {
+        type = "bun";
+        port = 3000;
+      };
+    };
+  };
+}
+```
+
+## Provider Guides
+
+<Cards>
+  <Card title="Cloudflare" href="./cloudflare">
+    Configure per-app Cloudflare options and deploy with `infra:deploy`
+  </Card>
+  <Card title="Fly.io" href="./fly">
+    Generate `fly.toml`, use wrapped `fly-<app>` commands, and deploy containers
+  </Card>
+  <Card title="Infrastructure" href="./infrastructure">
+    Understand infra modules, Alchemy generation, stages, and output sync
+  </Card>
+  <Card title="Machines" href="./machines">
+    Define machine inventory for Colmena and infrastructure-aware workflows
+  </Card>
+  <Card title="Writing Infra Modules" href="./infra-modules">
+    Scaffold and develop custom Alchemy modules for the infra system
+  </Card>
+</Cards>

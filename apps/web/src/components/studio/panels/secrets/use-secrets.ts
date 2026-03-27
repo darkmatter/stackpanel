@@ -2,7 +2,7 @@
  * Hook for managing secrets panel state.
  *
  * Uses the SOPS endpoints (/api/sops/*) to read/write/delete secrets
- * from per-environment YAML files (e.g., .stackpanel/secrets/dev.yaml).
+ * from per-environment YAML files (e.g., .stack/secrets/dev.yaml).
  */
 import { useCallback, useEffect, useState } from "react";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";

@@ -1,3 +1,13 @@
+// chamber.go implements the secrets backend dispatch layer and the AWS SSM
+// Parameter Store ("chamber") backend.
+//
+// The dispatch handlers (handleSecretsWriteDispatch, etc.) route secret
+// operations to either the SOPS/agenix backend or the chamber backend based
+// on the stackpanel.variables.backend config setting ("vals" or "chamber").
+//
+// Chamber maps variable IDs to SSM paths:
+//
+//	/{env}/{KEY}  →  chamber service: {servicePrefix}/{env}, key: {KEY}
 package server
 
 import (

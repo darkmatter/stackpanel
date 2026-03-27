@@ -11,15 +11,8 @@ import {
 } from "@ui/dialog";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@ui/select";
 import { Textarea } from "@ui/textarea";
-import { Eye, EyeOff, Key, Loader2, Settings, Shield } from "lucide-react";
+import { Eye, EyeOff, Key, Loader2, Settings } from "lucide-react";
 import { useEditSecretDialog } from "./edit-secret-dialog/use-edit-secret-dialog";
 import type { EditSecretDialogProps } from "./edit-secret-dialog/types";
 
@@ -46,16 +39,12 @@ export function EditSecretDialog({
     setValue,
     newDescription,
     setNewDescription,
-    group,
-    setGroup,
-    availableGroups,
     identityPath,
     setIdentityPath,
     showSettings,
     setShowSettings,
     decryptError,
     isChamber,
-    useGroupSecrets,
 
     // Handlers
     handleSave,
@@ -70,10 +59,7 @@ export function EditSecretDialog({
     onSuccess,
   });
 
-  // Build the vals reference preview
-  const valsRefPreview = useGroupSecrets
-    ? `ref+sops://.stackpanel/secrets/groups/${group}.yaml#/${secretKey}`
-    : null;
+  const sopsFilePreview = `.stack/secrets/vars/${secretKey}.sops.yaml`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,40 +76,17 @@ export function EditSecretDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Group Selector (for group-based secrets) */}
-        {useGroupSecrets && (
-          <div className="border rounded-lg p-3 bg-muted/30">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4" />
-              <span className="text-sm font-medium">Access Control Group</span>
-            </div>
-            <Select value={group} onValueChange={setGroup}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a group" />
-              </SelectTrigger>
-              <SelectContent>
-                {(availableGroups.length > 0
-                  ? availableGroups
-                  : ["dev", "staging", "prod"]
-                ).map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-2">
-              Secrets are encrypted per group. Only users with access to this
-              group's keys can decrypt.
-            </p>
-            {valsRefPreview && (
-              <div className="mt-2 p-2 bg-muted rounded text-xs font-mono break-all">
-                <span className="text-muted-foreground">Reference: </span>
-                {valsRefPreview}
-              </div>
-            )}
+        <div className="border rounded-lg p-3 bg-muted/30">
+          <div className="text-sm font-medium mb-2">Secret File</div>
+          <p className="text-xs text-muted-foreground">
+            This secret is stored in its own SOPS file. Explicit <code>var://</code>
+            links determine which tagged recipients can decrypt it.
+          </p>
+          <div className="mt-2 p-2 bg-muted rounded text-xs font-mono break-all">
+            <span className="text-muted-foreground">SOPS file: </span>
+            {sopsFilePreview}
           </div>
-        )}
+        </div>
 
         {/* Settings Panel (vals/SOPS backend only — chamber uses AWS credentials) */}
         {!isChamber && (
@@ -208,9 +171,7 @@ export function EditSecretDialog({
                     onChange={(e) => setValue(e.target.value)}
                     className="font-mono pr-10"
                     rows={4}
-                    placeholder={
-                      useGroupSecrets ? "Enter secret value..." : undefined
-                    }
+                      placeholder="Enter secret value..."
                     style={
                       {
                         WebkitTextSecurity: showValue ? "none" : "disc",

@@ -2,7 +2,7 @@
 # config.proto.nix
 #
 # Protobuf schema for Stackpanel project configuration.
-# This is the root configuration file at .stackpanel/config.nix
+# This is the root configuration file at .stack/config.nix
 #
 # This file also contains boilerplate templates for scaffolding new projects.
 # The `stackpanel scaffold` command and `nix flake init` templates use these.
@@ -86,8 +86,8 @@ proto.mkProtoFile {
 
       # ---------------------------------------------------------------------------
       # Users - Team members with project access
-      # GitHub team members are auto-imported via _internal.nix.
-      # Add overrides or additional users here.
+    # GitHub team members are auto-imported from data/github-collaborators.nix.
+    # Add overrides or additional users here.
       # See: https://stackpanel.dev/docs/users
       # ---------------------------------------------------------------------------
       # users = {
@@ -134,13 +134,13 @@ proto.mkProtoFile {
       # ---------------------------------------------------------------------------
       # secrets = {
       #   enable = true;
-      #   input-directory = ".stackpanel/secrets";
+      #   input-directory = ".stack/secrets";
       #
       #   # Code generation for type-safe env access
       #   codegen = {
       #     typescript = {
       #       name = "env";
-      #       directory = "packages/gen/env/src/generated";
+      #       directory = "packages/gen/env/src";
       #       language = "typescript";
       #     };
       #   };
@@ -190,104 +190,6 @@ proto.mkProtoFile {
       #   project-name = "myproject";
       # };
     }
-  '';
-
-  # ==========================================================================
-  # Internal entry point (_internal.nix) boilerplate
-  # This handles merging config.nix with GitHub collaborators and overrides
-  # ==========================================================================
-  internalBoilerplate = ''
-    # ==============================================================================
-    # _internal.nix
-    #
-    # INTERNAL ENTRY POINT - DO NOT EDIT
-    #
-    # This file imports config.nix (user-editable) and handles:
-    #   - Processing `imports` directive for config composition
-    #   - Merging GitHub collaborators into users
-    #   - Loading config.local.nix for per-user overrides (gitignored)
-    #
-    # Merge priority (lowest to highest):
-    #   1. User config (config.nix)
-    #   2. GitHub collaborators (auto-synced)
-    #   3. Local overrides (config.local.nix - gitignored)
-    #
-    # Usage:
-    #   stackpanel = import ./.stackpanel/_internal.nix { inherit pkgs lib; };
-    #
-    # Users should edit config.nix instead.
-    # For local overrides, use config.local.nix (gitignored).
-    # ==============================================================================
-    { pkgs, lib }:
-    let
-      # ---------------------------------------------------------------------------
-      # Import user config
-      # Handles both plain attrset and function ({ pkgs }: ...) formats
-      # ---------------------------------------------------------------------------
-      rawConfig = import ./config.nix;
-      baseUserConfig = if builtins.isFunction rawConfig then rawConfig { inherit pkgs; } else rawConfig;
-
-      # ---------------------------------------------------------------------------
-      # Import local config overrides (per-user, gitignored)
-      # ---------------------------------------------------------------------------
-      localConfigPath = ./config.local.nix;
-      hasLocalConfig = builtins.pathExists localConfigPath;
-      rawLocalConfig = if hasLocalConfig then import localConfigPath else { };
-      localConfig =
-        if builtins.isFunction rawLocalConfig then rawLocalConfig { inherit pkgs lib; } else rawLocalConfig;
-
-      # ---------------------------------------------------------------------------
-      # Process imports directive in config.nix
-      # ---------------------------------------------------------------------------
-      processImports =
-        config:
-        let
-          imports = config.imports or [ ];
-          configWithoutImports = builtins.removeAttrs config [ "imports" ];
-          importModule =
-            path:
-            let
-              imported = import path;
-              result = if builtins.isFunction imported then imported { inherit pkgs lib; } else imported;
-            in
-            processImports result;
-          importedConfigs = map importModule imports;
-        in
-        lib.foldl lib.recursiveUpdate { } (importedConfigs ++ [ configWithoutImports ]);
-
-      userConfig = processImports baseUserConfig;
-
-      # ---------------------------------------------------------------------------
-      # GitHub collaborators transformation
-      # ---------------------------------------------------------------------------
-      ghCollabsPath = ./external/github-collaborators.nix;
-      ghCollabs =
-        if builtins.pathExists ghCollabsPath then import ghCollabsPath else { collaborators = { }; };
-
-      toUser = name: collab: {
-        inherit name;
-        github = collab.login or name;
-        public-keys = collab.publicKeys or [ ];
-        secrets-allowed-environments =
-          if collab.isAdmin or false then
-            [ "dev" "staging" "production" ]
-          else
-            [ "dev" ];
-      };
-
-      github-team = lib.mapAttrs (name: user: toUser name user) ghCollabs.collaborators;
-
-      # ---------------------------------------------------------------------------
-      # Merge configs
-      # ---------------------------------------------------------------------------
-      configWithUsers = userConfig // {
-        users = lib.recursiveUpdate github-team (userConfig.users or { });
-      };
-
-      finalConfig = lib.recursiveUpdate configWithUsers localConfig;
-
-    in
-    finalConfig
   '';
 
   # ==========================================================================

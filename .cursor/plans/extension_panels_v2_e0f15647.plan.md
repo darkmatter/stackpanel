@@ -62,9 +62,9 @@ The agent evaluates Nix live via `nix eval --impure --json .#stackpanelConfig`, 
 ```mermaid
 flowchart TB
     subgraph nix [Nix Layer]
-        Apps[stackpanel.apps]
+        Apps[stack.apps]
         GoMod[go.nix module]
-        ExtReg[stackpanel.extensions]
+        ExtReg[stack.extensions]
         Computed[appsComputed]
         FlakeOut[flake output: stackpanelConfig]
     end
@@ -107,7 +107,7 @@ flowchart TB
 
 ## 1. Proto Schema: Panel Field Types
 
-Add to [`extensions.proto.nix`](nix/stackpanel/db/schemas/extensions.proto.nix):
+Add to [`extensions.proto.nix`](nix/stack/db/schemas/extensions.proto.nix):
 
 ```nix
 enums = {
@@ -182,7 +182,7 @@ Modules serialize their computed app data. Example for `go.nix`:
 
 ```nix
 # In go.nix config section
-stackpanel.extensions.go = lib.mkIf (goApps != {}) {
+stack.extensions.go = lib.mkIf (goApps != {}) {
   name = "Go";
   enabled = true;
   
@@ -231,11 +231,11 @@ The agent calls `nix eval --impure --json .#stackpanelConfig` to get live config
 
 ### Option A: Add to existing stackpanelConfig
 
-In [`merged-config.nix`](nix/flake/merged-config.nix), the `stackpanelConfig` already includes the full evaluated config. Extensions would be part of `stackpanelEval.config.stackpanel.extensions`.
+In [`merged-config.nix`](nix/flake/merged-config.nix), the `stackpanelConfig` already includes the full evaluated config. Extensions would be part of `stackpanelEval.config.stack.extensions`.
 
 ### Option B: Expose via devShell passthru
 
-The agent also tries `.#devShells.{system}.default.passthru.moduleConfig.stackpanel`. Extensions would be included automatically once the options module exists.
+The agent also tries `.#devShells.{system}.default.passthru.moduleConfig.stack`. Extensions would be included automatically once the options module exists.
 
 ### Serialized JSON structure (from nix eval):
 
@@ -257,12 +257,12 @@ The agent also tries `.#devShells.{system}.default.passthru.moduleConfig.stackpa
         }
       ],
       "apps": {
-        "stackpanel-go": {
+        "stack-go": {
           "enabled": true,
           "config": {
-            "path": "apps/stackpanel-go",
+            "path": "apps/stack-go",
             "version": "0.1.0",
-            "binaryName": "stackpanel"
+            "binaryName": "stack"
           }
         }
       }
@@ -523,13 +523,13 @@ export function ExtensionsPage() {
 
 |------|--------|
 
-| `nix/stackpanel/db/schemas/extensions.proto.nix` | Add PanelField, FieldType, ExtensionAppData |
+| `nix/stack/db/schemas/extensions.proto.nix` | Add PanelField, FieldType, ExtensionAppData |
 
-| `nix/stackpanel/core/options/extensions.nix` | Create options module |
+| `nix/stack/core/options/extensions.nix` | Create options module |
 
 | `nix/flake/merged-config.nix` | Verify extensions are in stackpanelConfig output |
 
-| `nix/stackpanel/modules/go.nix` | Add example extension registration |
+| `nix/stack/modules/go.nix` | Add example extension registration |
 
 | `apps/web/src/lib/extension-panels/types.ts` | TypeScript types |
 

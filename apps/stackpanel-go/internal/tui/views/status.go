@@ -27,8 +27,9 @@ type ServiceInfo struct {
 	Details     string
 }
 
-// StatusView is the Bubble Tea model for the status dashboard
-// Refactored to integrate with the navigation system
+// StatusView is the Bubble Tea model for the status dashboard.
+// Unlike tui.StatusModel, this version integrates with the navigation system
+// by supporting a returnMsg for back-navigation via esc.
 type StatusView struct {
 	services    []ServiceInfo
 	caddyInfo   ServiceInfo
@@ -410,7 +411,9 @@ func (m StatusView) View() string {
 	return tui.RenderFrame(b.String())
 }
 
-// Helper functions
+// Helper functions — duplicated from tui/status.go because the views package
+// can't import tui without creating a cycle. Consider extracting to a shared
+// internal/pidfile or internal/caddy package if this grows.
 
 func readPidFile(path string) int {
 	data, err := os.ReadFile(path)
@@ -436,15 +439,26 @@ func countSites() string {
 	return ""
 }
 
+// findStateDir walks up from cwd looking for a .stack directory.
+// BUG: stackDir and stackpanelDir are identical — the second check is redundant.
+// See the same bug in tui/status.go's findStepStateDir.
 func findStateDir() string {
 	cwd, _ := os.Getwd()
 	dir := cwd
 	for {
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel")); err == nil {
-			return filepath.Join(dir, ".stackpanel", "state", "step")
+		stackDir := filepath.Join(dir, ".stack")
+		stackpanelDir := filepath.Join(dir, ".stack")
+		if info, err := os.Stat(stackDir); err == nil && info.IsDir() {
+			return filepath.Join(stackDir, "profile", "step")
+		}
+		if info, err := os.Stat(stackpanelDir); err == nil && info.IsDir() {
+			return filepath.Join(stackpanelDir, "state", "step")
 		}
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return filepath.Join(dir, ".stackpanel", "state", "step")
+			if _, err := os.Stat(stackDir); err == nil {
+				return filepath.Join(stackDir, "profile", "step")
+			}
+			return filepath.Join(stackpanelDir, "state", "step")
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -452,7 +466,10 @@ func findStateDir() string {
 		}
 		dir = parent
 	}
-	return filepath.Join(cwd, ".stackpanel", "state", "step")
+	if info, err := os.Stat(filepath.Join(cwd, ".stack")); err == nil && info.IsDir() {
+		return filepath.Join(cwd, ".stack", "profile", "step")
+	}
+	return filepath.Join(cwd, ".stack", "state", "step")
 }
 
 // RunStatusView launches the status dashboard as a standalone program

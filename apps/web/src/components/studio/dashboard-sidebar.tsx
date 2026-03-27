@@ -28,14 +28,13 @@ import {
 } from "@ui/sidebar";
 import {
   Activity,
+  AlertTriangle,
   AppWindow,
   BookOpen,
-  Check,
   CheckCircle2,
   ChevronRight,
   ChevronUp,
   Cloud,
-  Cog,
   FileCode,
   Home,
   LayoutDashboard,
@@ -46,6 +45,7 @@ import {
   Puzzle,
   Rocket,
   Search,
+  SlidersHorizontal,
   Server,
   Settings,
   SquareTerminal,
@@ -55,7 +55,7 @@ import {
   Variable,
 } from "lucide-react";
 import type React from "react";
-import { type SetupStep, useSetupProgress } from "@/lib/use-setup-progress";
+import { useSetupProgress } from "@/lib/use-setup-progress";
 import { cn } from "@/lib/utils";
 import { ProjectSelector } from "../project-selector";
 import {
@@ -68,9 +68,9 @@ import {
   CONFIGURATION_SECTIONS,
   type ConfigurationSection,
 } from "./panels/configuration";
+import { useSopsConfigStatus } from "./panels/variables/use-sops-config-status";
 import { useAllPanelsGroupedByModule } from "./panels/panels-panel";
 import { getModuleIconById } from "./panels/shared";
-import type { Module } from "@stackpanel/proto";
 
 export type PanelType =
   | "overview"
@@ -97,6 +97,7 @@ export type PanelType =
   | "terminal"
   | "services"
   | "inspector"
+  | "feature-flags"
   | "roadmap";
 
 interface NavItem {
@@ -133,6 +134,7 @@ const toolsNavItems: NavItem[] = [
 ];
 
 const otherNavItems: NavItem[] = [
+  { id: "feature-flags", label: "Feature Flags", icon: SlidersHorizontal },
   { id: "roadmap", label: "Roadmap", icon: Map },
   { id: "docs", label: "Docs", icon: BookOpen },
 ];
@@ -147,7 +149,7 @@ const coceptsNavItems: NavItem[] = [
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
 ];
 
-function NavMenuItem({ item }: { item: NavItem }) {
+function NavMenuItem({ item, showBadge = false }: { item: NavItem; showBadge?: boolean }) {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
   const { state } = useSidebar();
@@ -171,47 +173,14 @@ function NavMenuItem({ item }: { item: NavItem }) {
         >
           <Icon className="size-3 text-sidebar-foreground" />
           <span className="flex-1">{item.label}</span>
+          {showBadge && !isCollapsed ? (
+            <Badge variant="outline" className="px-1.5 py-0 border-amber-500/40 text-amber-600">
+              <AlertTriangle className="h-3 w-3" />
+            </Badge>
+          ) : null}
         </SidebarMenuButton>
       </Link>
     </SidebarMenuItem>
-  );
-}
-
-// Setup step sub-item (currently unused but kept for future use)
-function _SetupStepItem({
-  step,
-  isCollapsed,
-  active,
-}: {
-  step: SetupStep;
-  isCollapsed: boolean;
-  active: boolean;
-}) {
-  const Icon = step.icon;
-  const isComplete = step.status === "complete";
-  const isOptional = step.status === "optional";
-
-  return (
-    <SidebarMenuSubItem>
-      <SidebarMenuSubButton
-        asChild
-        className={cn(
-          "gap-2 text-sidebar-foreground/50 text-[13px]",
-          isOptional && "text-muted-foreground",
-          active && "bg-sidebar-accent/50 text-sidebar-accent-foreground",
-          isComplete && " [&>svg]:text-emerald-300 text-emerald-300",
-        )}
-      >
-        <Link to="/studio/setup" search={{ step: step.id }}>
-          {isComplete ? (
-            <Check className="size-3 text-emerald-300 [&>svg]:text-emerald-300" />
-          ) : (
-            <Icon className="size-3" />
-          )}
-          {!isCollapsed && <span className="truncate">{step.shortTitle}</span>}
-        </Link>
-      </SidebarMenuSubButton>
-    </SidebarMenuSubItem>
   );
 }
 
@@ -331,23 +300,13 @@ function ModulePanelsMenuItem() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isActive = pathname === "/studio/panels" || pathname.startsWith("/studio/panels/");
-  const { modules, byModule, appIds, isLoading } =
-    useAllPanelsGroupedByModule();
+  const { modules, byModule } = useAllPanelsGroupedByModule();
   const activeModule = activeModuleId ?? modules[0]?.id ?? null;
-  const activeData = activeModule ? byModule[activeModule] : null;
-  const activeModuleMeta = modules.find((m) => m.id === activeModule);
   const panelCount = (moduleId: string) => {
     const data = byModule[moduleId];
     if (!data) return 0;
     return data.infoPanels.length + data.appConfigPanels.length;
   };
-
-  // Collect app IDs that have config for the active module
-  const activeAppIds = activeData
-    ? appIds.filter((appId) =>
-      activeData.appConfigPanels.some((p) => p.apps[appId]?.enabled),
-    )
-    : [];
 
   // When collapsed, just show a simple button
   if (isCollapsed) {
@@ -425,8 +384,6 @@ function SetupMenuItem() {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
   const progress = useSetupProgress();
-  const search = routerState.location.search;
-  const _activeStepId = search ? new URLSearchParams(search).get("step") : null;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -501,19 +458,6 @@ function SetupMenuItem() {
           </Link>
         </CollapsibleTrigger>
         <CollapsibleContent>
-
-          {/* TODO: Re-enable when setup steps are ready
-          <SidebarMenuSub>
-            {progress?.steps.map((step) => (
-              <_SetupStepItem
-                key={step.id}
-                step={step}
-                active={activeStepId === step.id}
-                isCollapsed={isCollapsed}
-              />
-            ))}
-          </SidebarMenuSub>
-          */}
         </CollapsibleContent>
       </SidebarMenuItem>
     </Collapsible>
@@ -523,6 +467,7 @@ function SetupMenuItem() {
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const sopsConfigStatus = useSopsConfigStatus();
 
   return (
     <Sidebar collapsible="icon">
@@ -580,7 +525,7 @@ export function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
-                <NavMenuItem key={item.id} item={item} />
+                <NavMenuItem key={item.id} item={item} showBadge={item.id === "variables" && sopsConfigStatus.needsAttention} />
               ))}
               <ModulePanelsMenuItem />
             </SidebarMenu>
@@ -653,11 +598,17 @@ export function DashboardSidebar() {
                 className="w-[--radix-popper-anchor-width]"
               >
                 {otherNavItems.map((item) => (
-                  <DropdownMenuItem>
+                  <DropdownMenuItem key={item.id}>
                     <Link
-                      to={item.id === "docs" ? "/docs" : "/studio/roadmap"}
-                      className="flex items-center"
-                    >
+                      to={
+                        item.id === "docs"
+                        ? "/docs"
+                        : item.id === "feature-flags"
+                          ? "/studio/feature-flags"
+                          : "/studio/roadmap"
+                    }
+                    className="flex items-center"
+                  >
                       <item.icon className="mr-2 h-4 w-4" />
                       {item.label}
                     </Link>

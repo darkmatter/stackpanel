@@ -142,6 +142,18 @@ let
         placeholder = "A Bun/TypeScript application";
       };
     };
+
+    # Build output directory to install into the final package
+    outputDir = sp.string {
+      index = 11;
+      description = "Build output directory copied into the packaged artifact";
+      default = ".output";
+      example = "dist";
+      ui = {
+        label = "Output Directory";
+        placeholder = ".output";
+      };
+    };
   };
 
 in

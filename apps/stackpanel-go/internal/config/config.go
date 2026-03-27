@@ -7,7 +7,7 @@ import (
 
 // Config holds the agent configuration.
 type Config struct {
-	// Project root directory (contains .stackpanel/config.nix)
+	// Project root directory (contains .stack/config.nix)
 	ProjectRoot string
 
 	// Port to listen on for HTTP/WebSocket connections
@@ -22,7 +22,7 @@ type Config struct {
 	// Allowed commands (empty = all allowed)
 	AllowedCommands []string
 
-	// Data directory for agent state (~/.stackpanel)
+	// Data directory for agent state (~/.stack)
 	DataDir string
 
 	// Allowed web UI origins (CORS + WebSocket Origin)
@@ -44,7 +44,7 @@ func (c *Config) ApplyDefaults() error {
 		if err != nil {
 			return err
 		}
-		c.DataDir = filepath.Join(home, ".stackpanel")
+		c.DataDir = filepath.Join(home, ".stack")
 	}
 
 	// Ensure data directory exists

@@ -25,7 +25,7 @@ For VS Code, this module creates:
 
 ```nix
 # devenv.nix
-stackpanel.ide = {
+stack.ide = {
   enable = true;
   vscode = {
     enable = true;

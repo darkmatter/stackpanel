@@ -1,0 +1,41 @@
+---
+title: stackpanel vars list
+description: List all workspace variables
+icon: Terminal
+---
+
+# stackpanel vars list
+
+List all variables defined in stackpanel.variables.
+
+Variables are grouped by their path prefix (e.g., /apps, /services, /dev, /prod).
+Use --type to filter by variable type.
+
+## Usage
+
+```bash
+stackpanel vars list
+```
+
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--json` | `bool` | `false` | Output as JSON |
+| `--type, -t` | `string` | _none_ | Filter by type (LITERAL, SECRET, VALS, EXEC) |
+
+
+## Global Flags
+
+These flags are inherited from parent commands.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--daemon, -d` | `bool` | `false` | Run in daemon mode (no TUI, for background processes) |
+| `--no-color` | `bool` | `false` | Disable color output |
+| `--no-tui` | `bool` | `false` | Disable interactive TUI mode |
+| `--verbose, -v` | `bool` | `false` | Enable verbose output |
+
+
+
