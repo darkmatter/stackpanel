@@ -18,7 +18,8 @@ pub enum PtyError {
 /// A live PTY session: the child process, its stdin writer, and stdout reader.
 pub struct PtySession {
     /// Write to this to send input to the child.
-    pub writer: Box<dyn Write + Send>,
+    /// Wrapped in Option so it can be extracted via `take_writer()`.
+    writer: Option<Box<dyn Write + Send>>,
     /// Read from this to get output from the child.
     pub reader: Box<dyn Read + Send>,
     /// The child process handle (used to wait for exit).
@@ -60,11 +61,17 @@ impl PtySession {
             .context("failed to clone PTY reader")?;
 
         Ok(Self {
-            writer,
+            writer: Some(writer),
             reader,
             child,
             _master: pair.master,
         })
+    }
+
+    /// Take ownership of the PTY writer for bidirectional I/O.
+    /// Panics if called more than once.
+    pub fn take_writer(&mut self) -> Box<dyn Write + Send> {
+        self.writer.take().expect("writer already taken from PtySession")
     }
 
     /// Resize the PTY to new dimensions.
@@ -107,11 +114,14 @@ fn build_command(config: &Config) -> Result<CommandBuilder> {
     Ok(cmd)
 }
 
-/// Run the PTY session: forward stdin→PTY and PTY→stdout until the child exits.
+/// Run the PTY session: forward stdin↔PTY and PTY→stdout until the child exits.
 ///
-/// This is the main I/O loop for Phase 1. It blocks until the child exits
-/// and returns the exit code.
+/// Integrates the file watcher: when watched files change, spawns a background
+/// rebuild. On success, the PTY swap is triggered (Phase 3+).
+///
+/// Returns the shell exit code.
 pub async fn run_session(config: &Config) -> Result<u32> {
+    use crate::reloader::Reloader;
     use crate::terminal::{is_tty, terminal_size, RawModeGuard};
     use std::io::stdout;
     use tokio::task;
@@ -124,20 +134,24 @@ pub async fn run_session(config: &Config) -> Result<u32> {
     let (cols, rows) = terminal_size();
     let mut session = PtySession::spawn(config, cols, rows)?;
 
+    // Extract the writer BEFORE moving session into the output task.
+    let raw_writer = session.take_writer();
+    let writer: Arc<Mutex<Box<dyn Write + Send>>> = Arc::new(Mutex::new(raw_writer));
+
     // Enable raw mode so all keystrokes (including Ctrl+C) go to the PTY.
     let _raw = RawModeGuard::enter()?;
 
-    // Shared flag: set to true when the child exits.
+    // Shared done flag: set when the child's output stream closes (child exited).
     let done = Arc::new(Mutex::new(false));
 
-    // Spawn task: PTY output → stdout
+    // ── Task 1: PTY output → stdout ─────────────────────────────────────────
     let done_out = done.clone();
     let output_task = task::spawn_blocking(move || {
         let mut buf = [0u8; 4096];
         let mut out = stdout();
         loop {
             match session.reader.read(&mut buf) {
-                Ok(0) => break, // EOF
+                Ok(0) => break, // EOF: child closed stdout
                 Ok(n) => {
                     if out.write_all(&buf[..n]).is_err() {
                         break;
@@ -148,43 +162,42 @@ pub async fn run_session(config: &Config) -> Result<u32> {
             }
         }
         *done_out.lock().unwrap() = true;
-        session // return session so we can call wait() on it
+        session // return so we can call wait()
     });
 
-    // Main thread: stdin → PTY writer
-    // This runs until the output task signals done (child exited).
-    let stdin_task = {
-        let done_in = done.clone();
-        // We need the writer from the session — but it was moved into output_task.
-        // Instead, re-open a writer via the master (already done above).
-        // For Phase 1 we use a simple approach: forward stdin in a loop until done.
-        task::spawn_blocking(move || {
-            use std::io::stdin;
-            let mut buf = [0u8; 256];
-            let mut inp = stdin();
-            loop {
-                if *done_in.lock().unwrap() {
-                    break;
-                }
-                match inp.read(&mut buf) {
-                    Ok(0) | Err(_) => break,
-                    Ok(_n) => {
-                        // Writer is owned by output_task; we can't easily share
-                        // it across tasks without Arc<Mutex>. Phase 1 simplification:
-                        // stdin forwarding is handled by the PTY master directly.
-                        // The PTY system copies stdin automatically in some impls.
-                        // Full bidirectional forwarding is Phase 1 polish.
-                    }
+    // ── Task 2: stdin → PTY writer ──────────────────────────────────────────
+    let writer_in = writer.clone();
+    let done_in = done.clone();
+    let stdin_task = task::spawn_blocking(move || {
+        use std::io::stdin;
+        let mut buf = [0u8; 256];
+        let mut inp = stdin();
+        loop {
+            if *done_in.lock().unwrap() {
+                break;
+            }
+            match inp.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => {
+                    let mut w = writer_in.lock().unwrap();
+                    let _ = w.write_all(&buf[..n]);
+                    let _ = w.flush();
                 }
             }
-        })
-    };
+        }
+    });
 
-    let session = output_task.await?;
+    // ── Task 3: file watcher + background reloader ──────────────────────────
+    let reloader = Reloader::new(config.clone());
+    let reloader_task = tokio::spawn(async move {
+        reloader.run().await;
+    });
+
+    // Wait for the shell to exit (output EOF).
+    let mut session = output_task.await?;
+    reloader_task.abort();
     let _ = stdin_task.await;
 
-    // Re-borrow to call wait (session returned from output_task)
-    let mut session = session;
     let exit_code = session.wait()?;
     Ok(exit_code)
 }

@@ -1,6 +1,8 @@
 mod config;
 mod pty_manager;
+mod reloader;
 mod terminal;
+mod watcher;
 
 use anyhow::Result;
 use clap::Parser;
