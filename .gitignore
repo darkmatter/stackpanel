@@ -93,3 +93,8 @@ logs
 node_modules
 temp
 tmp# ── END stackpanel ──
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

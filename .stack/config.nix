@@ -353,12 +353,29 @@
       organization = "darkmatter";
     };
     machines = {
-      volt-2 = {
+      volt-1 = {
         host = "10.0.100.11";
         user = "root";
         system = "x86_64-linux";
         proxyJump = "root@runner-hz-hel-slate";
-        diskLayout = ./machines/volt-2/disks.nix;
+        authorizedKeys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
+        ];
+      };
+      volt-2 = {
+        host = "10.0.100.12";
+        user = "root";
+        system = "x86_64-linux";
+        proxyJump = "root@runner-hz-hel-slate";
+        authorizedKeys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
+        ];
+      };
+      volt-3 = {
+        host = "10.0.100.13";
+        user = "root";
+        system = "x86_64-linux";
+        proxyJump = "root@runner-hz-hel-slate";
         authorizedKeys = [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
         ];
