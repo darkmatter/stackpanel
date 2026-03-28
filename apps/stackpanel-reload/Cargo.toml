@@ -10,8 +10,8 @@ name = "stackpanel-reload"
 path = "src/main.rs"
 
 [dependencies]
-# PTY management
-portable-pty = "0.9"
+# PTY management (direct libc – avoids fork+exec crash in multi-threaded processes on macOS)
+libc = "0.2"
 
 # Terminal I/O and raw mode
 crossterm = "0.28"

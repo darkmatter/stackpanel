@@ -387,6 +387,7 @@
   # Devshell
   # ---------------------------------------------------------------------------
   devshell = {
+    reload.enable = true;
     clean = {
       impure = false;
     };
