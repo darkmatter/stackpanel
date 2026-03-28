@@ -1,0 +1,24 @@
+#json
+{
+  "deploymentAlchemyOptionNames": [
+    "app-name",
+    "deploy",
+    "enable",
+    "helpers",
+    "package",
+    "secrets",
+    "stage",
+    "state-store",
+    "version"
+  ],
+  "deploymentOptionNames": [
+    "alchemy",
+    "aws",
+    "cloudflare",
+    "defaultHost",
+    "enable",
+    "fly",
+    "machines"
+  ],
+  "topLevelHasAlchemy": false
+}

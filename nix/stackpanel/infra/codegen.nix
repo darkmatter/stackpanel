@@ -293,9 +293,9 @@ let
           },''
       ) moduleIds;
 
-      # Use @gen/alchemy if the alchemy module is enabled, otherwise fall back
-      # to inline alchemy initialization for backward compatibility.
-      alchemyCfg = config.stackpanel.alchemy;
+      # Use @gen/alchemy when the deployment Alchemy module is enabled.
+      # Otherwise fall back to inline alchemy initialization.
+      alchemyCfg = config.stackpanel.deployment.alchemy;
       useGenAlchemy = alchemyCfg.enable;
     in
     if useGenAlchemy then
@@ -614,10 +614,10 @@ in
       dependencies =
         let
           packageDeps = {
-            alchemy = config.stackpanel.alchemy.version;
+            alchemy = config.stackpanel.deployment.alchemy.version;
           }
-          // lib.optionalAttrs config.stackpanel.alchemy.enable {
-            ${config.stackpanel.alchemy.package.name} = "workspace:*";
+          // lib.optionalAttrs config.stackpanel.deployment.alchemy.enable {
+            ${config.stackpanel.deployment.alchemy.package.name} = "workspace:*";
           }
           // validatedDeps
           // cfg.package.dependencies;

@@ -179,10 +179,10 @@ in
         };
       };
       dependencies = {
-        "alchemy" = config.stackpanel.alchemy.version;
+        "alchemy" = config.stackpanel.deployment.alchemy.version;
       }
-      // lib.optionalAttrs (config.stackpanel.alchemy.enable) {
-        ${config.stackpanel.alchemy.package.name} = "workspace:*";
+      // lib.optionalAttrs (config.stackpanel.deployment.alchemy.enable) {
+        ${config.stackpanel.deployment.alchemy.package.name} = "workspace:*";
       };
       outputs = {
         redisUrl = {

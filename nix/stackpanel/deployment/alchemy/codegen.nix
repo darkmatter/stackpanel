@@ -1,5 +1,5 @@
 # ==============================================================================
-# alchemy/codegen.nix
+# deployment/alchemy/codegen.nix
 #
 # Code generation engine for the @gen/alchemy shared package.
 #
@@ -15,7 +15,7 @@
 # Also:
 #   - Registers .alchemy in .gitignore
 #   - Sets ALCHEMY_STATE_TOKEN + CLOUDFLARE_API_TOKEN env vars if sops-path configured
-#   - Registers alchemy:setup and deploy scripts (if deploy enabled)
+#   - Registers alchemy:setup and alchemy:deploy scripts (if deploy enabled)
 #   - Registers as a stackpanel module for UI
 #   - Serializes config for the agent
 # ==============================================================================
@@ -25,7 +25,7 @@
   ...
 }:
 let
-  cfg = config.stackpanel.alchemy;
+  cfg = config.stackpanel.deployment.alchemy;
   deployCfg = cfg.deploy;
   outputDir = cfg.package.output-dir;
 
@@ -418,9 +418,9 @@ in
         ];
       };
 
-      "deploy" = {
+      "alchemy:deploy" = {
         exec = deploySh;
-        description = "Deploy via alchemy (auto-runs setup if Cloudflare is not configured)";
+        description = "Provider-scoped alchemy deploy helper (stackpanel deploy is canonical)";
         args = [
           {
             name = "stage";
@@ -439,8 +439,8 @@ in
     # ==========================================================================
     stackpanel.motd.commands = lib.mkIf deployCfg.enable [
       {
-        name = "deploy <stage>";
-        description = "Deploy to Cloudflare";
+        name = "alchemy:deploy <stage>";
+        description = "Run the provider-scoped alchemy deploy helper";
       }
       {
         name = "alchemy:setup";
@@ -488,7 +488,7 @@ in
     # ==========================================================================
     # Agent serialization
     # ==========================================================================
-    stackpanel.serializable.alchemy = {
+    stackpanel.serializable.deployment.alchemy = {
       inherit (cfg)
         enable
         version
