@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "stackpanel.db.CaddySite.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Caddy site configuration",
+      "properties": {
+        "tls": {
+          "type": "boolean"
+        },
+        "upstream": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "upstream",
+        "tls"
+      ],
+      "title": "Caddy Site",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.CaddySite.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.CaddySite.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

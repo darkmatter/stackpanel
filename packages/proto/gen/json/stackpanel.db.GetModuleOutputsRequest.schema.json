@@ -1,0 +1,20 @@
+{
+  "$id": "stackpanel.db.GetModuleOutputsRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Request to get module outputs",
+  "patternProperties": {
+    "^(moduleId)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "module_id": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Get Module Outputs Request",
+  "type": "object"
+}

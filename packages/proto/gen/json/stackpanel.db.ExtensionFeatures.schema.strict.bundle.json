@@ -1,0 +1,50 @@
+{
+  "$defs": {
+    "stackpanel.db.ExtensionFeatures.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Flags indicating which core stackpanel features this extension configures",
+      "properties": {
+        "checks": {
+          "type": "boolean"
+        },
+        "files": {
+          "type": "boolean"
+        },
+        "packages": {
+          "type": "boolean"
+        },
+        "scripts": {
+          "type": "boolean"
+        },
+        "secrets": {
+          "type": "boolean"
+        },
+        "services": {
+          "type": "boolean"
+        },
+        "shell_hooks": {
+          "type": "boolean"
+        },
+        "tasks": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "files",
+        "scripts",
+        "tasks",
+        "secrets",
+        "shell_hooks",
+        "packages",
+        "services",
+        "checks"
+      ],
+      "title": "Extension Features",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ExtensionFeatures.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ExtensionFeatures.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

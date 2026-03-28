@@ -1,0 +1,28 @@
+{
+  "$id": "stackpanel.db.Services.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Global development services configuration",
+  "properties": {
+    "caddy": {
+      "$ref": "stackpanel.db.Caddy.jsonschema.strict.json"
+    },
+    "minio": {
+      "$ref": "stackpanel.db.Minio.jsonschema.strict.json"
+    },
+    "postgres": {
+      "$ref": "stackpanel.db.Postgres.jsonschema.strict.json"
+    },
+    "projectName": {
+      "type": "string"
+    },
+    "redis": {
+      "$ref": "stackpanel.db.Redis.jsonschema.strict.json"
+    }
+  },
+  "required": [
+    "projectName"
+  ],
+  "title": "Services",
+  "type": "object"
+}

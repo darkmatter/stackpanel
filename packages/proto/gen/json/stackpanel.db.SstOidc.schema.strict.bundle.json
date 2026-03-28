@@ -1,0 +1,84 @@
+{
+  "$defs": {
+    "stackpanel.db.SstFlyio.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io OIDC configuration",
+      "properties": {
+        "app_name": {
+          "type": "string"
+        },
+        "org_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "org_id",
+        "app_name"
+      ],
+      "title": "Sst Flyio",
+      "type": "object"
+    },
+    "stackpanel.db.SstGithubActions.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "GitHub Actions OIDC configuration",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "org",
+        "repo"
+      ],
+      "title": "Sst Github Actions",
+      "type": "object"
+    },
+    "stackpanel.db.SstOidc.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OIDC provider configuration for IAM role assumption",
+      "properties": {
+        "flyio": {
+          "$ref": "#/$defs/stackpanel.db.SstFlyio.schema.strict.json"
+        },
+        "github_actions": {
+          "$ref": "#/$defs/stackpanel.db.SstGithubActions.schema.strict.json"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "roles_anywhere": {
+          "$ref": "#/$defs/stackpanel.db.SstRolesAnywhere.schema.strict.json"
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "title": "Sst Oidc",
+      "type": "object"
+    },
+    "stackpanel.db.SstRolesAnywhere.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "AWS Roles Anywhere configuration",
+      "properties": {
+        "trust_anchor_arn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "trust_anchor_arn"
+      ],
+      "title": "Sst Roles Anywhere",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstOidc.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstOidc.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

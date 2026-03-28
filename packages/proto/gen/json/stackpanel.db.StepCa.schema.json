@@ -1,0 +1,13 @@
+{
+  "$id": "stackpanel.db.StepCa.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Step CA certificate management configuration for local HTTPS",
+  "properties": {
+    "config": {
+      "$ref": "stackpanel.db.StepCaConfig.schema.json"
+    }
+  },
+  "title": "Step Ca",
+  "type": "object"
+}

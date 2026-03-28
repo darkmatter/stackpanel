@@ -1,0 +1,30 @@
+{
+  "$id": "stackpanel.db.Hook.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Shell hook configuration",
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "order": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "script": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "script",
+    "order",
+    "enabled"
+  ],
+  "title": "Hook",
+  "type": "object"
+}

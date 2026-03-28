@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.agent.ListFilesRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "pattern": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "pattern"
+  ],
+  "title": "List Files Request",
+  "type": "object"
+}

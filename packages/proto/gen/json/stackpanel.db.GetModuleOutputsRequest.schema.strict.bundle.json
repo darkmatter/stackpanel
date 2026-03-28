@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "stackpanel.db.GetModuleOutputsRequest.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Request to get module outputs",
+      "properties": {
+        "module_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "module_id"
+      ],
+      "title": "Get Module Outputs Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.GetModuleOutputsRequest.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.GetModuleOutputsRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

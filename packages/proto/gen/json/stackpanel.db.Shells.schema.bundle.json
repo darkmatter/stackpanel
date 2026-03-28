@@ -1,0 +1,254 @@
+{
+  "$defs": {
+    "stackpanel.db.Alias.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Shell alias configuration",
+      "properties": {
+        "command": {
+          "default": "",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "title": "Alias",
+      "type": "object"
+    },
+    "stackpanel.db.EnvVar.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Environment variable configuration",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "secret": {
+          "default": false,
+          "type": "boolean"
+        },
+        "value": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Env Var",
+      "type": "object"
+    },
+    "stackpanel.db.Hook.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Shell hook configuration",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "order": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "script": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Hook",
+      "type": "object"
+    },
+    "stackpanel.db.Profile.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Shell profile configuration",
+      "patternProperties": {
+        "^(historyIgnore)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(historySize)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "^(initExtra)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "aliases": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.Alias.schema.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "env": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.EnvVar.schema.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "history_ignore": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "history_size": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "init_extra": {
+          "type": "string"
+        }
+      },
+      "title": "Profile",
+      "type": "object"
+    },
+    "stackpanel.db.Shells.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Shell-specific settings and configurations",
+      "patternProperties": {
+        "^(defaultShell)$": {
+          "anyOf": [
+            {
+              "pattern": "^SHELL_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SHELL_TYPE_BASH",
+                "SHELL_TYPE_ZSH",
+                "SHELL_TYPE_FISH",
+                "SHELL_TYPE_NUSHELL"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Shell Type"
+        },
+        "^(pathAppend)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(pathPrepend)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "properties": {
+        "bash": {
+          "$ref": "#/$defs/stackpanel.db.Profile.schema.json"
+        },
+        "common": {
+          "$ref": "#/$defs/stackpanel.db.Profile.schema.json"
+        },
+        "default_shell": {
+          "anyOf": [
+            {
+              "pattern": "^SHELL_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SHELL_TYPE_BASH",
+                "SHELL_TYPE_ZSH",
+                "SHELL_TYPE_FISH",
+                "SHELL_TYPE_NUSHELL"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Shell Type"
+        },
+        "fish": {
+          "$ref": "#/$defs/stackpanel.db.Profile.schema.json"
+        },
+        "hooks": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.Hook.schema.json"
+          },
+          "type": "array"
+        },
+        "path_append": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path_prepend": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "zsh": {
+          "$ref": "#/$defs/stackpanel.db.Profile.schema.json"
+        }
+      },
+      "title": "Shells",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Shells.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Shells.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

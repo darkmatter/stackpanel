@@ -1,5 +1,3 @@
-packages/proto/gen
-packages/gen
 release.tar.gz
 .worktrees/
 # Dependencies

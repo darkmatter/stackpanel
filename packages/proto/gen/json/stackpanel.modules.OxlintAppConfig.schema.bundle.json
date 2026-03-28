@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "stackpanel.modules.OxlintAppConfig.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OxLint per-app linting configuration",
+      "patternProperties": {
+        "^(configPath)$": {
+          "type": "string"
+        },
+        "^(gitHook)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(ignorePatterns)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(turboTask)$": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "properties": {
+        "categories": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "config_path": {
+          "type": "string"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "fix": {
+          "default": false,
+          "type": "boolean"
+        },
+        "git_hook": {
+          "default": false,
+          "type": "boolean"
+        },
+        "ignore_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "plugins": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rules": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "turbo_task": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Oxlint App Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.modules.OxlintAppConfig.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.modules.OxlintAppConfig.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

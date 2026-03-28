@@ -1,0 +1,38 @@
+{
+  "$defs": {
+    "stackpanel.agent.WriteFileRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "default": "",
+          "type": "string"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "maximum": 4294967295,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "pattern": "^[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Mode is the file permission (e.g., 0644). If 0, uses default."
+        },
+        "path": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Write File Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.WriteFileRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.WriteFileRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

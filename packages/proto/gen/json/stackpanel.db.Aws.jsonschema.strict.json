@@ -1,0 +1,23 @@
+{
+  "$id": "stackpanel.db.Aws.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "AWS configuration including Roles Anywhere for certificate-based authentication",
+  "properties": {
+    "defaultProfile": {
+      "type": "string"
+    },
+    "extraConfig": {
+      "type": "string"
+    },
+    "rolesAnywhere": {
+      "$ref": "stackpanel.db.RolesAnywhere.jsonschema.strict.json"
+    }
+  },
+  "required": [
+    "defaultProfile",
+    "extraConfig"
+  ],
+  "title": "Aws",
+  "type": "object"
+}

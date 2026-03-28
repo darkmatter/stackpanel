@@ -1,0 +1,32 @@
+{
+  "$id": "stackpanel.db.Minio.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Minio S3-compatible service configuration",
+  "properties": {
+    "buckets": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "consolePort": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "port": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "enable"
+  ],
+  "title": "Minio",
+  "type": "object"
+}

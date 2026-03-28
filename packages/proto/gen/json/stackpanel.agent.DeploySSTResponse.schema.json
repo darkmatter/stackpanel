@@ -1,0 +1,30 @@
+{
+  "$id": "stackpanel.agent.DeploySSTResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "default": "",
+      "type": "string"
+    },
+    "output": {
+      "default": "",
+      "type": "string"
+    },
+    "outputs": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "success": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "DeploySST Response",
+  "type": "object"
+}

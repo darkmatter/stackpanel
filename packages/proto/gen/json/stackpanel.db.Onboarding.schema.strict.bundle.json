@@ -1,0 +1,160 @@
+{
+  "$defs": {
+    "stackpanel.db.Category.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Onboarding category configuration",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "order": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "order"
+      ],
+      "title": "Category",
+      "type": "object"
+    },
+    "stackpanel.db.Onboarding.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Onboarding configuration for new team members",
+      "properties": {
+        "auto_run": {
+          "type": "boolean"
+        },
+        "categories": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.Category.schema.strict.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "completion_message": {
+          "type": "string"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "persist_state": {
+          "type": "boolean"
+        },
+        "state_file": {
+          "type": "string"
+        },
+        "steps": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.Step.schema.strict.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "welcome_message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "welcome_message",
+        "completion_message",
+        "auto_run",
+        "persist_state",
+        "state_file"
+      ],
+      "title": "Onboarding",
+      "type": "object"
+    },
+    "stackpanel.db.Step.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Onboarding step configuration",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "check_command": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "order": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "skip_if": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "STEP_TYPE_UNSPECIFIED",
+            "STEP_TYPE_COMMAND",
+            "STEP_TYPE_MANUAL",
+            "STEP_TYPE_CHECK",
+            "STEP_TYPE_LINK",
+            "STEP_TYPE_PROMPT"
+          ],
+          "title": "Step Type",
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "type",
+        "required",
+        "order",
+        "category"
+      ],
+      "title": "Step",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Onboarding.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Onboarding.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

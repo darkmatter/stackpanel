@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetServicesStatusRequest.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Get Services Status Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetServicesStatusRequest.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetServicesStatusRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

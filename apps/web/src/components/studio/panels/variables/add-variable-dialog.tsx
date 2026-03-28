@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import { formatSecretKeyError, getVariableName, resolveGroup } from "./constants";
+import { useOptimisticVariables } from "./hooks/use-optimistic-variables";
 
 type VariableMode = "plaintext" | "secret";
 
@@ -48,6 +49,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
   const { token } = useAgentContext();
   const agentClient = useAgentClient();
   const { data: backendData } = useVariablesBackend();
+  const { optimisticAdd } = useOptimisticVariables();
   const isChamber = backendData?.backend === "chamber";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -160,16 +162,15 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
           description: varDescription.trim() || undefined,
         });
 
-        // Create a variable entry with empty value -- the SOPS file is the source of truth
         const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
         const newVariable = {
           value: "",
         };
         await variablesClient.set(fullId, newVariable);
 
+        optimisticAdd(fullId, "");
         toast.success(`Created secret "${fullId}"`);
       } else {
-        // Plaintext variable (either "shared" → /var/ or a group like /dev/)
         const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
         const existing = await variablesClient.get(fullId);
@@ -184,6 +185,7 @@ export function AddVariableDialog({ onSuccess }: AddVariableDialogProps) {
         };
 
         await variablesClient.set(fullId, newVariable);
+        optimisticAdd(fullId, trimmedValue);
         toast.success(`Created variable "${fullId}"`);
       }
 

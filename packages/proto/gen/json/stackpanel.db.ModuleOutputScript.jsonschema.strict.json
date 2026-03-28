@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.db.ModuleOutputScript.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A script provided by a module",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "Module Output Script",
+  "type": "object"
+}

@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "stackpanel.agent.RebuildShellRequest.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "description": "Which command to use: \"devshell\" (./devshell) or \"nix\" (nix develop --impure)\n Defaults to \"devshell\" if not specified",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "Rebuild Shell Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.RebuildShellRequest.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.RebuildShellRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

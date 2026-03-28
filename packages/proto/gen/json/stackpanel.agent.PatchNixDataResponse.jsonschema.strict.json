@@ -1,0 +1,25 @@
+{
+  "$id": "stackpanel.agent.PatchNixDataResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "description": "Error message if success is false",
+      "type": "string"
+    },
+    "success": {
+      "type": "boolean"
+    },
+    "updatedJson": {
+      "description": "The updated entity data as JSON (for UI cache invalidation)",
+      "type": "string"
+    }
+  },
+  "required": [
+    "success",
+    "updatedJson",
+    "error"
+  ],
+  "title": "Patch Nix Data Response",
+  "type": "object"
+}

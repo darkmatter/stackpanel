@@ -1,0 +1,34 @@
+{
+  "$id": "stackpanel.db.ColorScheme.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Color scheme configuration",
+  "properties": {
+    "error": {
+      "default": "",
+      "type": "string"
+    },
+    "muted": {
+      "default": "",
+      "type": "string"
+    },
+    "primary": {
+      "default": "",
+      "type": "string"
+    },
+    "secondary": {
+      "default": "",
+      "type": "string"
+    },
+    "success": {
+      "default": "",
+      "type": "string"
+    },
+    "warning": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Color Scheme",
+  "type": "object"
+}

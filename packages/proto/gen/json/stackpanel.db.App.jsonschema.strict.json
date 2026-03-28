@@ -1,0 +1,47 @@
+{
+  "$id": "stackpanel.db.App.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Configuration for a single application in the workspace",
+  "properties": {
+    "deploy": {
+      "$ref": "stackpanel.db.AppDeploy.jsonschema.strict.json"
+    },
+    "description": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "environments": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.AppEnvironment.jsonschema.strict.json"
+      },
+      "description": "Environment configurations (key = environment name like \"dev\", \"prod\").",
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "name": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "port": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "type": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "path"
+  ],
+  "title": "App",
+  "type": "object"
+}

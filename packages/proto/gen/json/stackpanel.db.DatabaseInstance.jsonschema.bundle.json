@@ -1,0 +1,264 @@
+{
+  "$defs": {
+    "stackpanel.db.Connection.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database connection settings",
+      "patternProperties": {
+        "^(password_env)$": {
+          "type": "string"
+        },
+        "^(ssl_mode)$": {
+          "anyOf": [
+            {
+              "pattern": "^SSL_MODE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SSL_MODE_DISABLE",
+                "SSL_MODE_ALLOW",
+                "SSL_MODE_PREFER",
+                "SSL_MODE_REQUIRE",
+                "SSL_MODE_VERIFY_CA",
+                "SSL_MODE_VERIFY_FULL"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "SSL Mode"
+        }
+      },
+      "properties": {
+        "database": {
+          "default": "",
+          "type": "string"
+        },
+        "host": {
+          "default": "",
+          "type": "string"
+        },
+        "passwordEnv": {
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "ssl": {
+          "default": false,
+          "type": "boolean"
+        },
+        "sslMode": {
+          "anyOf": [
+            {
+              "pattern": "^SSL_MODE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "SSL_MODE_DISABLE",
+                "SSL_MODE_ALLOW",
+                "SSL_MODE_PREFER",
+                "SSL_MODE_REQUIRE",
+                "SSL_MODE_VERIFY_CA",
+                "SSL_MODE_VERIFY_FULL"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "SSL Mode"
+        },
+        "username": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Connection",
+      "type": "object"
+    },
+    "stackpanel.db.DatabaseInstance.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database instance configuration for a specific environment",
+      "patternProperties": {
+        "^(auto_migrate)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(migrations_path)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(seeds_path)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "autoMigrate": {
+          "default": false,
+          "type": "boolean"
+        },
+        "connection": {
+          "$ref": "#/$defs/stackpanel.db.Connection.jsonschema.json"
+        },
+        "migrationsPath": {
+          "default": "",
+          "type": "string"
+        },
+        "pool": {
+          "$ref": "#/$defs/stackpanel.db.Pool.jsonschema.json"
+        },
+        "seedsPath": {
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^DATABASE_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "DATABASE_TYPE_POSTGRESQL",
+                "DATABASE_TYPE_MYSQL",
+                "DATABASE_TYPE_SQLITE",
+                "DATABASE_TYPE_MONGODB"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Database Type"
+        }
+      },
+      "title": "Database Instance",
+      "type": "object"
+    },
+    "stackpanel.db.Pool.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Connection pool settings",
+      "patternProperties": {
+        "^(connection_timeout)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "^(idle_timeout)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "properties": {
+        "connectionTimeout": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "idleTimeout": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "max": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "min": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "title": "Pool",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.DatabaseInstance.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.DatabaseInstance.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

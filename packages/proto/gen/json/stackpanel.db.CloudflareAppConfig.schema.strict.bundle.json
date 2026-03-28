@@ -1,0 +1,73 @@
+{
+  "$defs": {
+    "stackpanel.db.CloudflareAppConfig.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Cloudflare per-app deployment configuration",
+      "properties": {
+        "bindings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "compatibility": {
+          "type": "string"
+        },
+        "d1_databases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kv_namespaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "r2_buckets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "route": {
+          "type": "string"
+        },
+        "secrets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "CLOUDFLARE_WORKER_TYPE_UNSPECIFIED",
+            "CLOUDFLARE_WORKER_TYPE_VITE",
+            "CLOUDFLARE_WORKER_TYPE_WORKER",
+            "CLOUDFLARE_WORKER_TYPE_PAGES"
+          ],
+          "title": "Cloudflare Worker Type",
+          "type": "string"
+        },
+        "worker_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_name",
+        "type",
+        "compatibility"
+      ],
+      "title": "Cloudflare App Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.CloudflareAppConfig.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.CloudflareAppConfig.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

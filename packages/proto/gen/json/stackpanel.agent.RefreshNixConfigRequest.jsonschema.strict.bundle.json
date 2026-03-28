@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.RefreshNixConfigRequest.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Refresh Nix Config Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.RefreshNixConfigRequest.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.RefreshNixConfigRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

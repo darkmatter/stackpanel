@@ -1,0 +1,73 @@
+{
+  "$defs": {
+    "stackpanel.modules.OxlintAppConfig.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OxLint per-app linting configuration",
+      "properties": {
+        "categories": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "config_path": {
+          "type": "string"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "fix": {
+          "type": "boolean"
+        },
+        "git_hook": {
+          "type": "boolean"
+        },
+        "ignore_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "plugins": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rules": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "turbo_task": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enable",
+        "fix",
+        "git_hook",
+        "turbo_task"
+      ],
+      "title": "Oxlint App Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.modules.OxlintAppConfig.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.modules.OxlintAppConfig.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

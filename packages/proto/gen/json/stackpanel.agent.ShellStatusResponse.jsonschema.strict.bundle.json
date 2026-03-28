@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "stackpanel.agent.ShellStatusResponse.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "changedFiles": {
+          "description": "List of files that changed since last build",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lastBuilt": {
+          "description": "Timestamp of when the shell was last built (RFC3339)",
+          "type": "string"
+        },
+        "lastNixChange": {
+          "description": "Timestamp of the most recent nix file change (RFC3339)",
+          "type": "string"
+        },
+        "rebuilding": {
+          "description": "Whether a rebuild is currently in progress",
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Whether the shell is stale (nix files changed since last rebuild)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "stale",
+        "rebuilding",
+        "lastBuilt",
+        "lastNixChange"
+      ],
+      "title": "Shell Status Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ShellStatusResponse.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ShellStatusResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

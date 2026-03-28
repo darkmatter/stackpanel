@@ -1,0 +1,54 @@
+{
+  "$id": "stackpanel.db.Onboarding.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Onboarding configuration for new team members",
+  "properties": {
+    "autoRun": {
+      "type": "boolean"
+    },
+    "categories": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Category.jsonschema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "completionMessage": {
+      "type": "string"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "persistState": {
+      "type": "boolean"
+    },
+    "stateFile": {
+      "type": "string"
+    },
+    "steps": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Step.jsonschema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "welcomeMessage": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "enable",
+    "welcomeMessage",
+    "completionMessage",
+    "autoRun",
+    "persistState",
+    "stateFile"
+  ],
+  "title": "Onboarding",
+  "type": "object"
+}

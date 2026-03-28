@@ -1,0 +1,32 @@
+{
+  "$defs": {
+    "stackpanel.db.Config.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Stackpanel project configuration",
+      "properties": {
+        "debug": {
+          "default": false,
+          "type": "boolean"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "github": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Config.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Config.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

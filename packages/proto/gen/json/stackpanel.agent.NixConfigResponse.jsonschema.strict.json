@@ -1,0 +1,28 @@
+{
+  "$id": "stackpanel.agent.NixConfigResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cached": {
+      "type": "boolean"
+    },
+    "configJson": {
+      "description": "The full config is a dynamic JSON object, stored as string",
+      "type": "string"
+    },
+    "lastUpdated": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "configJson",
+    "lastUpdated",
+    "cached",
+    "source"
+  ],
+  "title": "Nix Config Response",
+  "type": "object"
+}

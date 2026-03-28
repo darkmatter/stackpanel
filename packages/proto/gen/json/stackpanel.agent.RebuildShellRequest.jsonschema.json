@@ -1,0 +1,14 @@
+{
+  "$id": "stackpanel.agent.RebuildShellRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "method": {
+      "default": "",
+      "description": "Which command to use: \"devshell\" (./devshell) or \"nix\" (nix develop --impure)\n Defaults to \"devshell\" if not specified",
+      "type": "string"
+    }
+  },
+  "title": "Rebuild Shell Request",
+  "type": "object"
+}

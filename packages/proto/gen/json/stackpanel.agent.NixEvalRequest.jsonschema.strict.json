@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.agent.NixEvalRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "expression": {
+      "type": "string"
+    },
+    "json": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "expression",
+    "json"
+  ],
+  "title": "Nix Eval Request",
+  "type": "object"
+}

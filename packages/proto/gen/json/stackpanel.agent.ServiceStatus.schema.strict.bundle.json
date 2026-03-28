@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "stackpanel.agent.ServiceStatus.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "pid": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "uptime": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "pid",
+        "uptime"
+      ],
+      "title": "Service Status",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ServiceStatus.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ServiceStatus.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

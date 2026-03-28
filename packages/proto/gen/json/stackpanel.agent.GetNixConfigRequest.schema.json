@@ -1,0 +1,13 @@
+{
+  "$id": "stackpanel.agent.GetNixConfigRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "refresh": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "Get Nix Config Request",
+  "type": "object"
+}

@@ -1,0 +1,41 @@
+{
+  "$id": "stackpanel.db.Sst.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "SST infrastructure configuration for AWS provisioning",
+  "properties": {
+    "accountId": {
+      "type": "string"
+    },
+    "configPath": {
+      "type": "string"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "iam": {
+      "$ref": "stackpanel.db.SstIam.jsonschema.strict.json"
+    },
+    "kms": {
+      "$ref": "stackpanel.db.SstKms.jsonschema.strict.json"
+    },
+    "oidc": {
+      "$ref": "stackpanel.db.SstOidc.jsonschema.strict.json"
+    },
+    "projectName": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "enable",
+    "projectName",
+    "region",
+    "accountId",
+    "configPath"
+  ],
+  "title": "Sst",
+  "type": "object"
+}

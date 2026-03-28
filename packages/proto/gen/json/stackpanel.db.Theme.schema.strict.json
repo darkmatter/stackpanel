@@ -1,0 +1,30 @@
+{
+  "$id": "stackpanel.db.Theme.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Theme and Starship prompt configuration",
+  "properties": {
+    "colors": {
+      "$ref": "stackpanel.db.ColorScheme.schema.strict.json"
+    },
+    "minimal": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "nerd_font": {
+      "type": "boolean"
+    },
+    "starship": {
+      "$ref": "stackpanel.db.Starship.schema.strict.json"
+    }
+  },
+  "required": [
+    "name",
+    "nerd_font",
+    "minimal"
+  ],
+  "title": "Theme",
+  "type": "object"
+}

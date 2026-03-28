@@ -1,0 +1,23 @@
+{
+  "$id": "stackpanel.agent.SSTResource.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "urn": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "urn",
+    "id"
+  ],
+  "title": "SST Resource",
+  "type": "object"
+}

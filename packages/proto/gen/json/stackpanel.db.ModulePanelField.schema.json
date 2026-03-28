@@ -1,0 +1,52 @@
+{
+  "$id": "stackpanel.db.ModulePanelField.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A field in a module panel",
+  "properties": {
+    "name": {
+      "default": "",
+      "type": "string"
+    },
+    "options": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "pattern": "^MODULE_FIELD_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "MODULE_FIELD_TYPE_STRING",
+            "MODULE_FIELD_TYPE_NUMBER",
+            "MODULE_FIELD_TYPE_BOOLEAN",
+            "MODULE_FIELD_TYPE_SELECT",
+            "MODULE_FIELD_TYPE_MULTISELECT",
+            "MODULE_FIELD_TYPE_APP_FILTER",
+            "MODULE_FIELD_TYPE_COLUMNS",
+            "MODULE_FIELD_TYPE_JSON"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Module Field Type"
+    },
+    "value": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Module Panel Field",
+  "type": "object"
+}

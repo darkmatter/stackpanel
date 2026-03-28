@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "stackpanel.db.GeneratedFile.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A file to be generated into the project workspace",
+      "patternProperties": {
+        "^(store_path)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "path": {
+          "default": "",
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "storePath": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^FILE_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "FILE_TYPE_TEXT",
+                "FILE_TYPE_DERIVATION",
+                "FILE_TYPE_JSON"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "File Type"
+        }
+      },
+      "title": "Generated File",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.GeneratedFile.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.GeneratedFile.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

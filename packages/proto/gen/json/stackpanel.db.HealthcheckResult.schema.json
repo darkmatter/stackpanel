@@ -1,0 +1,82 @@
+{
+  "$id": "stackpanel.db.HealthcheckResult.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The result of executing a healthcheck",
+  "patternProperties": {
+    "^(checkId)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(durationMs)$": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "properties": {
+    "check_id": {
+      "default": "",
+      "type": "string"
+    },
+    "duration_ms": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "error": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "output": {
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "pattern": "^HEALTH_STATUS_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "HEALTH_STATUS_HEALTHY",
+            "HEALTH_STATUS_DEGRADED",
+            "HEALTH_STATUS_UNHEALTHY",
+            "HEALTH_STATUS_UNKNOWN",
+            "HEALTH_STATUS_DISABLED"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Health Status"
+    },
+    "timestamp": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Healthcheck Result",
+  "type": "object"
+}

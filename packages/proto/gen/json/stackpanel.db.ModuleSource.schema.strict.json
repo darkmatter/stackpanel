@@ -1,0 +1,36 @@
+{
+  "$id": "stackpanel.db.ModuleSource.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Where the module comes from",
+  "properties": {
+    "flake_input": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "ref": {
+      "type": "string"
+    },
+    "registry_id": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "MODULE_SOURCE_TYPE_UNSPECIFIED",
+        "MODULE_SOURCE_TYPE_BUILTIN",
+        "MODULE_SOURCE_TYPE_LOCAL",
+        "MODULE_SOURCE_TYPE_FLAKE_INPUT",
+        "MODULE_SOURCE_TYPE_REGISTRY"
+      ],
+      "title": "Module Source Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "title": "Module Source",
+  "type": "object"
+}

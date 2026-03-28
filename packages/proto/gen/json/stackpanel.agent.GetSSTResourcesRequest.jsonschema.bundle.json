@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetSSTResourcesRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "GetSST Resources Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetSSTResourcesRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetSSTResourcesRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

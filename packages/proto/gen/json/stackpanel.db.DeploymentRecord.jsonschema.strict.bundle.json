@@ -1,0 +1,76 @@
+{
+  "$defs": {
+    "stackpanel.db.DeploymentRecord.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Record of a deployment",
+      "properties": {
+        "appName": {
+          "type": "string"
+        },
+        "commitSha": {
+          "type": "string"
+        },
+        "completedAt": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "provider": {
+          "enum": [
+            "DEPLOYMENT_PROVIDER_UNSPECIFIED",
+            "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+            "DEPLOYMENT_PROVIDER_FLY",
+            "DEPLOYMENT_PROVIDER_AWS_ECS",
+            "DEPLOYMENT_PROVIDER_RAILWAY",
+            "DEPLOYMENT_PROVIDER_RENDER"
+          ],
+          "title": "Deployment Provider",
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "DEPLOYMENT_STATUS_UNSPECIFIED",
+            "DEPLOYMENT_STATUS_PENDING",
+            "DEPLOYMENT_STATUS_BUILDING",
+            "DEPLOYMENT_STATUS_DEPLOYING",
+            "DEPLOYMENT_STATUS_DEPLOYED",
+            "DEPLOYMENT_STATUS_FAILED",
+            "DEPLOYMENT_STATUS_ROLLED_BACK"
+          ],
+          "title": "Deployment Status",
+          "type": "string"
+        },
+        "triggeredBy": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "appName",
+        "provider",
+        "status",
+        "version",
+        "startedAt"
+      ],
+      "title": "Deployment Record",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.DeploymentRecord.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.DeploymentRecord.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

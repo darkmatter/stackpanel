@@ -1,0 +1,34 @@
+{
+  "$id": "stackpanel.db.User.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A team member with access to the project",
+  "properties": {
+    "email": {
+      "type": "string"
+    },
+    "github": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "publicKeys": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "secretsAllowedEnvironments": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "User",
+  "type": "object"
+}

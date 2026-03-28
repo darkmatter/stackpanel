@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "stackpanel.db.SstFlyio.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io OIDC configuration",
+      "properties": {
+        "app_name": {
+          "type": "string"
+        },
+        "org_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "org_id",
+        "app_name"
+      ],
+      "title": "Sst Flyio",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstFlyio.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstFlyio.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

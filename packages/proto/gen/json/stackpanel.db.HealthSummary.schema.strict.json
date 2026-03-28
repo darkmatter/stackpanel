@@ -1,0 +1,50 @@
+{
+  "$id": "stackpanel.db.HealthSummary.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Overall health summary across all modules",
+  "properties": {
+    "last_updated": {
+      "type": "string"
+    },
+    "modules": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.ModuleHealth.schema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "overall_status": {
+      "enum": [
+        "HEALTH_STATUS_UNSPECIFIED",
+        "HEALTH_STATUS_HEALTHY",
+        "HEALTH_STATUS_DEGRADED",
+        "HEALTH_STATUS_UNHEALTHY",
+        "HEALTH_STATUS_UNKNOWN",
+        "HEALTH_STATUS_DISABLED"
+      ],
+      "title": "Health Status",
+      "type": "string"
+    },
+    "total_checks": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "total_healthy": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "overall_status",
+    "total_healthy",
+    "total_checks",
+    "last_updated"
+  ],
+  "title": "Health Summary",
+  "type": "object"
+}

@@ -1,0 +1,50 @@
+{
+  "$defs": {
+    "stackpanel.db.RolesAnywhere.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "AWS Roles Anywhere configuration for certificate-based authentication",
+      "properties": {
+        "account_id": {
+          "type": "string"
+        },
+        "cache_buffer_seconds": {
+          "type": "string"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "profile_arn": {
+          "type": "string"
+        },
+        "prompt_on_shell": {
+          "type": "boolean"
+        },
+        "region": {
+          "type": "string"
+        },
+        "role_name": {
+          "type": "string"
+        },
+        "trust_anchor_arn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "region",
+        "account_id",
+        "role_name",
+        "trust_anchor_arn",
+        "profile_arn",
+        "cache_buffer_seconds",
+        "prompt_on_shell"
+      ],
+      "title": "Roles Anywhere",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.RolesAnywhere.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.RolesAnywhere.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

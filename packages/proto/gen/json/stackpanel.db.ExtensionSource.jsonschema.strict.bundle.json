@@ -1,0 +1,49 @@
+{
+  "$defs": {
+    "stackpanel.db.ExtensionSource.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Extension source configuration",
+      "properties": {
+        "modulePath": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "EXTENSION_SOURCE_TYPE_UNSPECIFIED",
+            "EXTENSION_SOURCE_TYPE_BUILTIN",
+            "EXTENSION_SOURCE_TYPE_LOCAL",
+            "EXTENSION_SOURCE_TYPE_GITHUB",
+            "EXTENSION_SOURCE_TYPE_NPM",
+            "EXTENSION_SOURCE_TYPE_URL"
+          ],
+          "title": "Extension Source Type",
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Extension Source",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ExtensionSource.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ExtensionSource.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

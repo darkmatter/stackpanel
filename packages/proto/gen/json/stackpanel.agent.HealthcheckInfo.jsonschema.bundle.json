@@ -1,0 +1,36 @@
+{
+  "$defs": {
+    "stackpanel.agent.HealthcheckInfo.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Simple healthcheck info for RPC responses (distinct from db.HealthcheckResult)",
+      "properties": {
+        "details": {
+          "default": "",
+          "type": "string"
+        },
+        "healthy": {
+          "default": false,
+          "type": "boolean"
+        },
+        "message": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Healthcheck Info",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.HealthcheckInfo.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.HealthcheckInfo.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

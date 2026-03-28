@@ -1,0 +1,28 @@
+{
+  "$id": "stackpanel.agent.KMSConfigResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "aws_profile": {
+      "type": "string"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "key_arn": {
+      "type": "string"
+    },
+    "source": {
+      "description": "Source indicates where the config came from: \"state\" or \"nix\"",
+      "type": "string"
+    }
+  },
+  "required": [
+    "enable",
+    "key_arn",
+    "aws_profile",
+    "source"
+  ],
+  "title": "KMS Config Response",
+  "type": "object"
+}

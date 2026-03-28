@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "stackpanel.db.ColorScheme.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Color scheme configuration",
+      "properties": {
+        "error": {
+          "default": "",
+          "type": "string"
+        },
+        "muted": {
+          "default": "",
+          "type": "string"
+        },
+        "primary": {
+          "default": "",
+          "type": "string"
+        },
+        "secondary": {
+          "default": "",
+          "type": "string"
+        },
+        "success": {
+          "default": "",
+          "type": "string"
+        },
+        "warning": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Color Scheme",
+      "type": "object"
+    },
+    "stackpanel.db.Starship.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Starship prompt configuration",
+      "patternProperties": {
+        "^(addNewline)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(commandTimeout)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "^(continuationPrompt)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(rightFormat)$": {
+          "type": "string"
+        },
+        "^(scanTimeout)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "properties": {
+        "add_newline": {
+          "default": false,
+          "type": "boolean"
+        },
+        "command_timeout": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "continuation_prompt": {
+          "default": "",
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "right_format": {
+          "type": "string"
+        },
+        "scan_timeout": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "title": "Starship",
+      "type": "object"
+    },
+    "stackpanel.db.Theme.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Theme and Starship prompt configuration",
+      "patternProperties": {
+        "^(nerdFont)$": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "properties": {
+        "colors": {
+          "$ref": "#/$defs/stackpanel.db.ColorScheme.schema.json"
+        },
+        "minimal": {
+          "default": false,
+          "type": "boolean"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "nerd_font": {
+          "default": false,
+          "type": "boolean"
+        },
+        "starship": {
+          "$ref": "#/$defs/stackpanel.db.Starship.schema.json"
+        }
+      },
+      "title": "Theme",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Theme.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Theme.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

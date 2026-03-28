@@ -1,0 +1,60 @@
+{
+  "$id": "stackpanel.modules.AppBuildConfig.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Build configuration for Nix packaging",
+  "patternProperties": {
+    "^(depsLockfile)$": {
+      "type": "string"
+    },
+    "^(outputName)$": {
+      "type": "string"
+    },
+    "^(outputVersion)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(srcInclude)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "^(srcLayout)$": {
+      "type": "string"
+    },
+    "^(srcRoot)$": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "deps_lockfile": {
+      "type": "string"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "output_name": {
+      "type": "string"
+    },
+    "output_version": {
+      "default": "",
+      "type": "string"
+    },
+    "src_include": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "src_layout": {
+      "type": "string"
+    },
+    "src_root": {
+      "type": "string"
+    }
+  },
+  "title": "App Build Config",
+  "type": "object"
+}

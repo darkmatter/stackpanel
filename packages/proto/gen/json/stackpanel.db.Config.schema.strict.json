@@ -1,0 +1,28 @@
+{
+  "$id": "stackpanel.db.Config.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Stackpanel project configuration",
+  "properties": {
+    "debug": {
+      "type": "boolean"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "github": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "enable",
+    "name",
+    "github",
+    "debug"
+  ],
+  "title": "Config",
+  "type": "object"
+}
