@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 # PTY management
-portable-pty = "0.8"
+portable-pty = "0.9"
 
 # Terminal I/O and raw mode
 crossterm = "0.28"
