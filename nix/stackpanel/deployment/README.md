@@ -1,34 +1,34 @@
 # Deployment Module
 
-Deployment providers for shipping apps to production.
+> **Canonical specification:** `docs/superpowers/specs/2026-03-28-deployment-system.md`
+>
+> This README is a directory-level note for the hosted deployment helpers under `nix/stackpanel/deployment/`. It is not the canonical deployment-system spec.
 
-## Overview
+## Scope of this directory
 
-Aggregates deployment providers (Fly.io, Cloudflare Workers) with per-app configuration. Each app can specify its deployment target, and the module generates the necessary config files and scripts.
+This directory contains the hosted deployment module surface for:
 
-## Providers
+- shared Alchemy deployment plumbing
+- Cloudflare
+- AWS
+- Fly.io
 
-| Provider | Directory | Description |
-|----------|-----------|-------------|
-| Fly.io | `fly/` | Container-based deployment with `fly.toml` generation |
-| Cloudflare | `cloudflare/` | Workers/Pages deployment via Alchemy IaC |
+`stackpanel deploy` is the canonical execution path. The modules in this
+directory define the hosted deployment configuration and generated helpers that
+feed that CLI flow.
 
-## Usage
+## For the full deployment contract, see
 
-```nix
-stack.deployment.defaultProvider = "fly";
+- `docs/superpowers/specs/2026-03-28-deployment-system.md`
+- `nix/stackpanel/modules/deploy/module.nix`
+- `nix/stackpanel/lib/deploy.nix`
+- `apps/stackpanel-go/cmd/cli/deploy.go`
+- `apps/stackpanel-go/cmd/cli/provision.go`
 
-stack.apps.web.deployment = {
-  enable = true;
-  provider = "fly";
-  fly.appName = "my-web-app";
-  fly.region = "iad";
-  container = { type = "bun"; port = 3000; };
-};
+## Documentation hierarchy
 
-stack.apps.api.deployment = {
-  enable = true;
-  provider = "cloudflare";
-  cloudflare = { workerName = "my-api"; type = "worker"; };
-};
-```
+- **Canonical maintainer/agent spec:** `docs/superpowers/specs/2026-03-28-deployment-system.md`
+- **Public deployment guides:** `apps/docs/content/docs/deployment/`
+- **Historical design rationale:** `docs/design/deploy-command.md`, `docs/design/provisioning.md`
+
+If this README disagrees with the canonical deployment-system spec, follow the canonical spec.
