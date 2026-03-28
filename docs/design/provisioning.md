@@ -1,5 +1,9 @@
 # Design: Machine Provisioning
 
+> **Superseded by:** `docs/superpowers/specs/2026-03-28-deployment-system.md`
+>
+> This document is kept as historical design rationale. If it conflicts with the canonical deployment-system spec, follow the canonical spec.
+
 **Status:** Draft
 **Date:** 2026-03-21
 
