@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "stackpanel",
+  "project_id": "afecc8ed-a8f3-4463-9223-01e77bc28226"
+}

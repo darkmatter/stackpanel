@@ -135,6 +135,15 @@ func machineHardwareConfigPaths(projectRoot, machineName string) (string, string
 	return filepath.Join(projectRoot, relPath), relPath, nil
 }
 
+func machineDiskLayoutPaths(projectRoot, machineName string) (string, string, error) {
+	if projectRoot == "" {
+		return "", "", fmt.Errorf("could not find stackpanel project root")
+	}
+
+	relPath := filepath.Join(".stack", "machines", machineName, "disks.nix")
+	return filepath.Join(projectRoot, relPath), relPath, nil
+}
+
 // runProvisionMachine provisions a single machine. The --reprovision guard exists
 // because re-provisioning is destructive (wipes the root filesystem), and users
 // who just want to update an existing NixOS machine should use `stackpanel deploy`.
@@ -169,12 +178,17 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 	if err != nil {
 		return fmt.Errorf("%w; try running from the repo root or set STACKPANEL_ROOT", err)
 	}
+	diskLayoutPath, diskLayoutRelPath, err := machineDiskLayoutPaths(projectRoot, machineName)
+	if err != nil {
+		return fmt.Errorf("%w; try running from the repo root or set STACKPANEL_ROOT", err)
+	}
 
 	var hwConfigGenerated bool
+	var diskLayoutGenerated bool
 	var provisionErr error
 
 	if format {
-		hwConfigGenerated, provisionErr = runDiskoInstall(machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
+		hwConfigGenerated, diskLayoutGenerated, provisionErr = runDiskoInstall(machineName, target, machine, hwConfigPath, diskLayoutPath, diskLayoutRelPath, noHardwareConfig, dryRun)
 	} else {
 		hwConfigGenerated, provisionErr = runKexecInstall(machineName, target, machine, hwConfigPath, noHardwareConfig, dryRun)
 	}
@@ -187,9 +201,10 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 	// without a "host key has changed" error. The machine is rebooting at this
 	// point so we retry until it comes back up (up to 3 minutes).
 	output.Info("Waiting for machine to come back up and updating known_hosts...")
-	if err := updateKnownHosts(target, dryRun); err != nil {
+	if err := updateKnownHosts(target, machine, dryRun); err != nil {
+		_, keygenTarget, sshArgs := knownHostsUpdateSSHArgs(target, machine)
 		output.Warning(fmt.Sprintf("Could not update known_hosts: %v", err))
-		output.Dimmed("  Run manually: ssh-keygen -R " + target + " && ssh-keyscan " + target + " >> ~/.ssh/known_hosts")
+		output.Dimmed("  Run manually: ssh-keygen -R " + keygenTarget + " && ssh " + strings.Join(sshArgs, " "))
 	}
 
 	rec := MachineRecord{
@@ -207,10 +222,21 @@ func runProvisionMachine(cfg *DeployStackpanelConfig, machineName, installTarget
 
 	output.Success(fmt.Sprintf("Provisioned %s", machineName))
 	fmt.Println()
+	if diskLayoutGenerated {
+		fmt.Printf("Disk layout: %s\n", diskLayoutRelPath)
+	}
 	if hwConfigGenerated {
 		fmt.Printf("Hardware config: %s\n", hwConfigRelPath)
+	}
+	if diskLayoutGenerated || hwConfigGenerated {
 		fmt.Println("Auto-included in future deploys. Commit to make it permanent:")
-		fmt.Printf("  git commit -m 'Add hardware config for %s'\n", machineName)
+		if diskLayoutGenerated && hwConfigGenerated {
+			fmt.Printf("  git commit -m 'Add machine disk and hardware config for %s'\n", machineName)
+		} else if diskLayoutGenerated {
+			fmt.Printf("  git commit -m 'Add disk layout for %s'\n", machineName)
+		} else {
+			fmt.Printf("  git commit -m 'Add hardware config for %s'\n", machineName)
+		}
 	}
 
 	return nil
@@ -266,6 +292,13 @@ func runKexecInstall(machineName, target string, machine DeployMachineConfig, hw
 			hwInfo, err = detectHardwareInfo(ctx, installHost, machine)
 			if err != nil {
 				return false, fmt.Errorf("hardware detection: %w", err)
+			}
+			if hwInfo.needsFormatProvisioning() {
+				return false, fmt.Errorf(
+					"detected BIOS install on whole-disk filesystem %s; this layout often fails GRUB installation without a BIOS boot partition.\nRetry with: stackpanel provision %s --reprovision --format",
+					hwInfo.RootDisk,
+					machineName,
+				)
 			}
 			if hwInfo.InInstaller {
 				output.Dimmed("  Target is in NixOS installer — detecting from block devices")
@@ -339,14 +372,44 @@ func runKexecInstall(machineName, target string, machine DeployMachineConfig, hw
 // runDiskoInstall — --format path
 //
 // Uses nixos-anywhere with disko to partition and format the disk before
-// installing NixOS. Requires diskLayout to be set in the machine config.
+// installing NixOS. If no explicit diskLayout is configured, a starter
+// .stack/machines/<machine>/disks.nix is generated from detected hardware facts.
 // Best for bare metal or when a custom partition layout is needed.
 // ===========================================================================
 
-func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hwConfigPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, err error) {
+func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hwConfigPath, diskLayoutPath, diskLayoutRelPath string, noHardwareConfig, dryRun bool) (hwConfigGenerated bool, diskLayoutGenerated bool, err error) {
 	installHost := machine.User + "@" + target
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
+
+	if !machine.HasDiskLayout {
+		if _, err := os.Stat(diskLayoutPath); err == nil {
+			if !dryRun {
+				exec.Command("git", "add", diskLayoutPath).Run()
+			}
+		} else if os.IsNotExist(err) {
+			if dryRun {
+				output.Dimmed("dry-run: would detect hardware and generate " + diskLayoutRelPath)
+			} else {
+				output.Info("Detecting hardware for starter disk layout...")
+				hwInfo, detectErr := detectHardwareInfo(ctx, installHost, machine)
+				if detectErr != nil {
+					return false, false, fmt.Errorf("hardware detection for disk layout: %w", detectErr)
+				}
+				if err := os.MkdirAll(filepath.Dir(diskLayoutPath), 0o755); err != nil {
+					return false, false, fmt.Errorf("creating disk layout dir: %w", err)
+				}
+				if err := os.WriteFile(diskLayoutPath, []byte(hwInfo.toDiskoConfig()), 0o644); err != nil {
+					return false, false, fmt.Errorf("writing starter disk layout: %w", err)
+				}
+				exec.Command("git", "add", diskLayoutPath).Run()
+				diskLayoutGenerated = true
+				output.Success(fmt.Sprintf("Disk layout written to %s", diskLayoutRelPath))
+			}
+		} else {
+			return false, false, fmt.Errorf("checking disk layout path: %w", err)
+		}
+	}
 
 	var args []string
 	args = append(args, "--flake", ".#"+machineName)
@@ -358,12 +421,12 @@ func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hw
 
 	if !noHardwareConfig && !dryRun {
 		if err := os.MkdirAll(filepath.Dir(hwConfigPath), 0o755); err != nil {
-			return false, fmt.Errorf("creating machine dir: %w", err)
+			return false, diskLayoutGenerated, fmt.Errorf("creating machine dir: %w", err)
 		}
 	}
 	output.Info(fmt.Sprintf("Provisioning %s via nixos-anywhere", machineName))
 	if err := runExternalCommand(ctx, "nixos-anywhere", args, dryRun); err != nil {
-		return false, fmt.Errorf("nixos-anywhere: %w", err)
+		return false, diskLayoutGenerated, fmt.Errorf("nixos-anywhere: %w", err)
 	}
 
 	if !noHardwareConfig && !dryRun {
@@ -373,7 +436,7 @@ func runDiskoInstall(machineName, target string, machine DeployMachineConfig, hw
 		}
 	}
 
-	return hwConfigGenerated, nil
+	return hwConfigGenerated, diskLayoutGenerated, nil
 }
 
 // ===========================================================================
@@ -389,6 +452,12 @@ type hardwareInfo struct {
 	IsUEFI      bool   // true = UEFI (systemd-boot), false = BIOS (GRUB)
 	IsVM        bool   // true = KVM/QEMU → include qemu-guest.nix profile
 	InInstaller bool   // true = already running the NixOS kexec installer (tmpfs root)
+}
+
+// needsFormatProvisioning catches the BIOS whole-disk layout that later causes
+// GRUB to fail with blocklist/embedding errors on the non-format path.
+func (info *hardwareInfo) needsFormatProvisioning() bool {
+	return !info.IsUEFI && info.RootDevice != "" && info.RootDevice == info.RootDisk
 }
 
 // hwDetectScript gathers hardware facts from the target.
@@ -527,6 +596,67 @@ func (info *hardwareInfo) toNixConfig() string {
 `, importsBlock, bootBlock, rootRef, info.RootFSType)
 }
 
+func (info *hardwareInfo) toDiskoConfig() string {
+	rootDisk := info.RootDisk
+	if rootDisk == "" {
+		rootDisk = "/dev/vda"
+	}
+
+	var partitions string
+	if info.IsUEFI {
+		partitions = `
+          esp = {
+            size = "512M";
+            type = "EF00";
+            content = {
+              type = "filesystem";
+              format = "vfat";
+              mountpoint = "/boot";
+            };
+          };
+
+          root = {
+            size = "100%";
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/";
+            };
+          };`
+	} else {
+		partitions = `
+          bios = {
+            size = "1M";
+            type = "EF02";
+          };
+
+          root = {
+            size = "100%";
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/";
+            };
+          };`
+	}
+
+	return fmt.Sprintf(`{ lib, ... }:
+{
+  disko.devices = {
+    disk.main = {
+      type = "disk";
+      device = lib.mkDefault %q;
+      content = {
+        type = "gpt";
+        partitions = {%s
+        };
+      };
+    };
+  };
+}
+`, rootDisk, partitions)
+}
+
 // mountScript returns a shell script to prepare and mount the root filesystem
 // at /mnt in the NixOS installer environment (after kexec).
 //
@@ -567,47 +697,59 @@ func (info *hardwareInfo) mountScript() string {
 // SSH helpers
 // ===========================================================================
 
-// updateKnownHosts removes any stale known_hosts entry for host and waits for
-// the machine to come back up (it reboots at the end of provisioning), then
-// scans the new host key and appends it. This prevents "host key has changed"
-// errors on the first colmena deploy after provisioning.
-func updateKnownHosts(host string, dryRun bool) error {
+// knownHostsUpdateSSHArgs derives the hostnames and ssh command used to refresh
+// known_hosts after provisioning. We probe with ssh instead of ssh-keyscan so
+// ProxyJump and non-standard ports work the same way they do during provision.
+func knownHostsUpdateSSHArgs(host string, machine DeployMachineConfig) (target string, keygenTarget string, args []string) {
 	// Strip user@ prefix — known_hosts uses bare host/IP.
-	target := host
+	target = host
 	if idx := strings.LastIndex(host, "@"); idx >= 0 {
 		target = host[idx+1:]
 	}
 
+	keygenTarget = target
+	if machine.SSHPort != 0 && machine.SSHPort != 22 {
+		keygenTarget = fmt.Sprintf("[%s]:%d", target, machine.SSHPort)
+	}
+
+	args = []string{
+		"-o", "StrictHostKeyChecking=accept-new",
+		"-o", "BatchMode=yes",
+		"-o", "ConnectTimeout=8",
+	}
+	if machine.ProxyJump != "" {
+		args = append(args, "-J", machine.ProxyJump)
+	}
+	if machine.SSHPort != 0 && machine.SSHPort != 22 {
+		args = append(args, "-p", fmt.Sprintf("%d", machine.SSHPort))
+	}
+	args = append(args, target, "true")
+	return target, keygenTarget, args
+}
+
+// updateKnownHosts removes any stale known_hosts entry for host and waits for
+// the machine to come back up (it reboots at the end of provisioning), then
+// performs a real SSH handshake to repopulate known_hosts. This works for
+// direct SSH as well as ProxyJump/private-network setups.
+func updateKnownHosts(host string, machine DeployMachineConfig, dryRun bool) error {
+	target, keygenTarget, sshArgs := knownHostsUpdateSSHArgs(host, machine)
+
 	if dryRun {
-		output.Dimmed("dry-run: would run ssh-keygen -R " + target + " && ssh-keyscan -H " + target)
+		output.Dimmed("dry-run: would run ssh-keygen -R " + keygenTarget + " && ssh " + strings.Join(sshArgs, " "))
 		return nil
 	}
 
 	// Remove old entry (ignore errors — entry may not exist).
-	exec.Command("ssh-keygen", "-R", target).Run()
-
-	knownHostsPath := filepath.Join(os.Getenv("HOME"), ".ssh", "known_hosts")
+	exec.Command("ssh-keygen", "-R", keygenTarget).Run()
 
 	// Retry until the machine comes back up (max 3 minutes).
 	deadline := time.Now().Add(3 * time.Minute)
 	var lastErr error
 	for time.Now().Before(deadline) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		out, err := exec.CommandContext(ctx, "ssh-keyscan", "-T", "8", "-H", target).Output()
+		err := exec.CommandContext(ctx, "ssh", sshArgs...).Run()
 		cancel()
-		if err == nil && len(strings.TrimSpace(string(out))) > 0 {
-			if err := os.MkdirAll(filepath.Dir(knownHostsPath), 0o700); err != nil {
-				return err
-			}
-			f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-			if err != nil {
-				return err
-			}
-			_, writeErr := f.WriteString(string(out))
-			f.Close()
-			if writeErr != nil {
-				return writeErr
-			}
+		if err == nil {
 			output.Success("known_hosts updated for " + target)
 			return nil
 		}
