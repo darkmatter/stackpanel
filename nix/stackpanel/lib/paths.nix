@@ -40,6 +40,7 @@
   defaults = {
     rootDir = ".stack";
     stateDir = "state";
+    keysDir = "keys";
     genDir = "gen";
   };
 
@@ -93,6 +94,7 @@
   mkShellResolvePaths = {
     rootDir ? defaults.rootDir,
     stateDir ? defaults.stateDir,
+    keysDir ? defaults.keysDir,
     genDir ? defaults.genDir,
   }: ''
     stackpanel_resolve_paths() {
@@ -108,6 +110,7 @@
       export STACKPANEL_ROOT="$root"
       export STACKPANEL_ROOT_DIR="$root/${rootDir}"
       export STACKPANEL_STATE_DIR="$root/${rootDir}/${stateDir}"
+      export STACKPANEL_KEYS_DIR="$root/${rootDir}/${keysDir}"
       export STACKPANEL_GEN_DIR="$root/${rootDir}/${genDir}"
     }
   '';
@@ -119,6 +122,7 @@ in {
   mkShellPathUtils = cfg: let
     rootDir = cfg.rootDir or defaults.rootDir;
     stateDir = cfg.stateDir or defaults.stateDir;
+    keysDir = cfg.keysDir or defaults.keysDir;
     genDir = cfg.genDir or defaults.genDir;
 
     # Validate that stateDir doesn't look like a full path (starts with ".")
@@ -132,7 +136,14 @@ in {
           The full path is computed as: $root/${rootDir}/${stateDir}
         ''
       else stateDir;
-
+    validatedKeysDir =
+        if lib.hasPrefix "." keysDir && keysDir != "." then
+          throw ''
+            paths.nix: keysDir should be a subdirectory name (e.g., "keys"), not a full path!
+            Got: "${keysDir}"
+          ''
+        else
+          keysDir;
     # Validate that genDir doesn't look like a full path (starts with ".")
     validatedGenDir =
       if lib.hasPrefix "." genDir && genDir != "."
@@ -150,6 +161,7 @@ in {
     ${mkShellResolvePaths {
       rootDir = rootDir;
       stateDir = validatedStateDir;
+      keysDir = validatedKeysDir;
       genDir = validatedGenDir;
     }}
   '';
@@ -164,11 +176,13 @@ in {
     rootDir ? defaults.rootDir,
     stateDir ? defaults.stateDir,
     genDir ? defaults.genDir,
+          keysDir ? defaults.keysDir,
     configDir ? null,
   }: {
     root = rootDir;
     state = "${rootDir}/${stateDir}";
     gen = "${rootDir}/${genDir}";
+    keys = "${rootDir}/${keysDir}";
     config =
       if configDir != null
       then toString configDir
