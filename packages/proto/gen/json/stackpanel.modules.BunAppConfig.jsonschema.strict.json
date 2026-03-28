@@ -1,0 +1,60 @@
+{
+  "$id": "stackpanel.modules.BunAppConfig.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Bun-specific per-app configuration",
+  "properties": {
+    "binaryName": {
+      "type": "string"
+    },
+    "buildPhase": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "generateFiles": {
+      "type": "boolean"
+    },
+    "inheritPath": {
+      "type": "boolean"
+    },
+    "mainPackage": {
+      "type": "string"
+    },
+    "outputDir": {
+      "type": "string"
+    },
+    "runtimeEnv": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "startScript": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "enable",
+    "mainPackage",
+    "version",
+    "buildPhase",
+    "startScript",
+    "inheritPath",
+    "generateFiles",
+    "description",
+    "outputDir"
+  ],
+  "title": "Bun App Config",
+  "type": "object"
+}

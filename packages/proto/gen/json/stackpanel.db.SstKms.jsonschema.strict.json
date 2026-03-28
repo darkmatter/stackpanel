@@ -1,0 +1,26 @@
+{
+  "$id": "stackpanel.db.SstKms.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "KMS key configuration for secrets encryption",
+  "properties": {
+    "alias": {
+      "type": "string"
+    },
+    "deletionWindowDays": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "enable": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "enable",
+    "alias",
+    "deletionWindowDays"
+  ],
+  "title": "Sst Kms",
+  "type": "object"
+}

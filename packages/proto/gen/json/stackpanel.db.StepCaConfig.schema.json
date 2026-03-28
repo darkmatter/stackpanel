@@ -1,0 +1,52 @@
+{
+  "$id": "stackpanel.db.StepCaConfig.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Step CA certificate management configuration",
+  "patternProperties": {
+    "^(caFingerprint)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(caUrl)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(certName)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(promptOnShell)$": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "properties": {
+    "ca_fingerprint": {
+      "default": "",
+      "type": "string"
+    },
+    "ca_url": {
+      "default": "",
+      "type": "string"
+    },
+    "cert_name": {
+      "default": "",
+      "type": "string"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "prompt_on_shell": {
+      "default": false,
+      "type": "boolean"
+    },
+    "provisioner": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Step Ca Config",
+  "type": "object"
+}

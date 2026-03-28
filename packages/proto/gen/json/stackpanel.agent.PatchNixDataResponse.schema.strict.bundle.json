@@ -1,0 +1,31 @@
+{
+  "$defs": {
+    "stackpanel.agent.PatchNixDataResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "description": "Error message if success is false",
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        },
+        "updated_json": {
+          "description": "The updated entity data as JSON (for UI cache invalidation)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "success",
+        "updated_json",
+        "error"
+      ],
+      "title": "Patch Nix Data Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.PatchNixDataResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.PatchNixDataResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

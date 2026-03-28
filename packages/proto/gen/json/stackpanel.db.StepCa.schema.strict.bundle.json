@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "stackpanel.db.StepCa.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Step CA certificate management configuration for local HTTPS",
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/stackpanel.db.StepCaConfig.schema.strict.json"
+        }
+      },
+      "title": "Step Ca",
+      "type": "object"
+    },
+    "stackpanel.db.StepCaConfig.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Step CA certificate management configuration",
+      "properties": {
+        "ca_fingerprint": {
+          "type": "string"
+        },
+        "ca_url": {
+          "type": "string"
+        },
+        "cert_name": {
+          "type": "string"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "prompt_on_shell": {
+          "type": "boolean"
+        },
+        "provisioner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "ca_url",
+        "ca_fingerprint",
+        "provisioner",
+        "cert_name",
+        "prompt_on_shell"
+      ],
+      "title": "Step Ca Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.StepCa.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.StepCa.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

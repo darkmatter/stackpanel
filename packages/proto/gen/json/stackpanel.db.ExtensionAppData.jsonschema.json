@@ -1,0 +1,23 @@
+{
+  "$id": "stackpanel.db.ExtensionAppData.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Extension data specific to an application",
+  "properties": {
+    "config": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "enabled": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "Extension App Data",
+  "type": "object"
+}

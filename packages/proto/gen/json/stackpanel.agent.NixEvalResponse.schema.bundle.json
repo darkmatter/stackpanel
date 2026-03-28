@@ -1,0 +1,19 @@
+{
+  "$defs": {
+    "stackpanel.agent.NixEvalResponse.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Nix Eval Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.NixEvalResponse.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.NixEvalResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

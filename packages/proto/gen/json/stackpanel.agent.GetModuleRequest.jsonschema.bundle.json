@@ -1,0 +1,25 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetModuleRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(module_id)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "moduleId": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Get Module Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetModuleRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetModuleRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

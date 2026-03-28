@@ -1,0 +1,44 @@
+{
+  "$id": "stackpanel.db.ModuleFeatures.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Which stackpanel features this module uses",
+  "properties": {
+    "app_module": {
+      "type": "boolean"
+    },
+    "files": {
+      "type": "boolean"
+    },
+    "healthchecks": {
+      "type": "boolean"
+    },
+    "packages": {
+      "type": "boolean"
+    },
+    "scripts": {
+      "type": "boolean"
+    },
+    "secrets": {
+      "type": "boolean"
+    },
+    "services": {
+      "type": "boolean"
+    },
+    "tasks": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "files",
+    "scripts",
+    "tasks",
+    "healthchecks",
+    "services",
+    "secrets",
+    "packages",
+    "app_module"
+  ],
+  "title": "Module Features",
+  "type": "object"
+}

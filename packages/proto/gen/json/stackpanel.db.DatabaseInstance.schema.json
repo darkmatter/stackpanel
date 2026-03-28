@@ -1,0 +1,64 @@
+{
+  "$id": "stackpanel.db.DatabaseInstance.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Database instance configuration for a specific environment",
+  "patternProperties": {
+    "^(autoMigrate)$": {
+      "default": false,
+      "type": "boolean"
+    },
+    "^(migrationsPath)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(seedsPath)$": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "auto_migrate": {
+      "default": false,
+      "type": "boolean"
+    },
+    "connection": {
+      "$ref": "stackpanel.db.Connection.schema.json"
+    },
+    "migrations_path": {
+      "default": "",
+      "type": "string"
+    },
+    "pool": {
+      "$ref": "stackpanel.db.Pool.schema.json"
+    },
+    "seeds_path": {
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "pattern": "^DATABASE_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "DATABASE_TYPE_POSTGRESQL",
+            "DATABASE_TYPE_MYSQL",
+            "DATABASE_TYPE_SQLITE",
+            "DATABASE_TYPE_MONGODB"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Database Type"
+    }
+  },
+  "title": "Database Instance",
+  "type": "object"
+}

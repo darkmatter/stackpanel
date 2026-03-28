@@ -1,0 +1,21 @@
+{
+  "$defs": {
+    "stackpanel.agent.ReadFileRequest.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "Read File Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ReadFileRequest.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ReadFileRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

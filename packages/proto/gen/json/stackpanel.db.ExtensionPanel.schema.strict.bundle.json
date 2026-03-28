@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "stackpanel.db.ExtensionPanel.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "UI panel configuration for the web interface",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.PanelField.schema.strict.json"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "order": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "PANEL_TYPE_UNSPECIFIED",
+            "PANEL_TYPE_STATUS",
+            "PANEL_TYPE_APPS_GRID",
+            "PANEL_TYPE_FORM",
+            "PANEL_TYPE_TABLE",
+            "PANEL_TYPE_CUSTOM"
+          ],
+          "title": "Panel Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "type",
+        "order"
+      ],
+      "title": "Extension Panel",
+      "type": "object"
+    },
+    "stackpanel.db.PanelField.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Configuration field for a panel",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "FIELD_TYPE_UNSPECIFIED",
+            "FIELD_TYPE_STRING",
+            "FIELD_TYPE_NUMBER",
+            "FIELD_TYPE_BOOLEAN",
+            "FIELD_TYPE_SELECT",
+            "FIELD_TYPE_MULTISELECT",
+            "FIELD_TYPE_APP_FILTER",
+            "FIELD_TYPE_COLUMNS",
+            "FIELD_TYPE_JSON"
+          ],
+          "title": "Field Type",
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "value"
+      ],
+      "title": "Panel Field",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ExtensionPanel.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ExtensionPanel.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

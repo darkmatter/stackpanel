@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "stackpanel.agent.PatchNixDataRequest.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Example: Update a Go app's mainPackage:\n   entity = \"apps\"\n   key = \"stackpanel-go\"\n   path = \"go.mainPackage\"\n   value = \"./cmd/api\"\n   value_type = \"string\"\n\n The path uses camelCase (matching the SpField/panel editPath convention).\n The handler converts to kebab-case when writing to the Nix data file.",
+      "properties": {
+        "entity": {
+          "description": "Entity name (e.g., \"apps\", \"config\", \"secrets\")",
+          "type": "string"
+        },
+        "key": {
+          "description": "Top-level key within the entity (e.g., app name \"web\" for apps entity)\n Empty string for non-map entities (e.g., \"config\")",
+          "type": "string"
+        },
+        "path": {
+          "description": "Dot-separated path to the field within the key (e.g., \"go.mainPackage\")\n Uses camelCase convention (zero conversion from UI editPath)",
+          "type": "string"
+        },
+        "value": {
+          "description": "JSON-encoded value to set (e.g., \"\\\"./cmd/api\\\"\", \"true\", \"[\\\"a\\\",\\\"b\\\"]\")",
+          "type": "string"
+        },
+        "valueType": {
+          "description": "Value type hint for proper Nix serialization\n Supported: \"string\", \"bool\", \"number\", \"list\", \"object\", \"null\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity",
+        "key",
+        "path",
+        "value",
+        "valueType"
+      ],
+      "title": "PatchNixDataRequest updates a single value within a Nix data entity at a\n dot-separated path. This enables editing individual fields from UI panels\n without replacing the entire entity.",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.PatchNixDataRequest.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.PatchNixDataRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

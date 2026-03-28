@@ -1,0 +1,16 @@
+{
+  "$id": "stackpanel.agent.SetAgeIdentityRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "value": {
+      "description": "Value can be a file path (e.g., ~/.ssh/id_ed25519) or key content",
+      "type": "string"
+    }
+  },
+  "required": [
+    "value"
+  ],
+  "title": "Set Age Identity Request",
+  "type": "object"
+}

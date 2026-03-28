@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "stackpanel.modules.AppBuildConfig.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Build configuration for Nix packaging",
+      "properties": {
+        "depsLockfile": {
+          "type": "string"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "outputName": {
+          "type": "string"
+        },
+        "outputVersion": {
+          "type": "string"
+        },
+        "srcInclude": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "srcLayout": {
+          "type": "string"
+        },
+        "srcRoot": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "outputVersion"
+      ],
+      "title": "App Build Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.modules.AppBuildConfig.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.modules.AppBuildConfig.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

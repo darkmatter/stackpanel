@@ -1,0 +1,82 @@
+{
+  "$id": "stackpanel.modules.GoAppConfig.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Go-specific per-app configuration",
+  "patternProperties": {
+    "^(binaryName)$": {
+      "type": "string"
+    },
+    "^(devArgs)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "^(generateFiles)$": {
+      "default": false,
+      "type": "boolean"
+    },
+    "^(mainPackage)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(watchDirs)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "properties": {
+    "binary_name": {
+      "type": "string"
+    },
+    "description": {
+      "default": "",
+      "type": "string"
+    },
+    "dev_args": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "generate_files": {
+      "default": false,
+      "type": "boolean"
+    },
+    "ldflags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "main_package": {
+      "default": "",
+      "type": "string"
+    },
+    "tools": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "version": {
+      "default": "",
+      "type": "string"
+    },
+    "watch_dirs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "title": "Go App Config",
+  "type": "object"
+}

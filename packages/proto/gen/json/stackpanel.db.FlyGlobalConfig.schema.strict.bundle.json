@@ -1,0 +1,29 @@
+{
+  "$defs": {
+    "stackpanel.db.FlyGlobalConfig.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io global settings",
+      "properties": {
+        "default_region": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "registry_prefix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "default_region",
+        "registry_prefix"
+      ],
+      "title": "Fly Global Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.FlyGlobalConfig.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.FlyGlobalConfig.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

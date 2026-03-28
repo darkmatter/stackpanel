@@ -1,0 +1,60 @@
+{
+  "$defs": {
+    "stackpanel.db.Record.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "DNS record configuration",
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "priority": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "proxied": {
+          "type": "boolean"
+        },
+        "ttl": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "RECORD_TYPE_UNSPECIFIED",
+            "RECORD_TYPE_A",
+            "RECORD_TYPE_AAAA",
+            "RECORD_TYPE_CNAME",
+            "RECORD_TYPE_TXT",
+            "RECORD_TYPE_MX",
+            "RECORD_TYPE_NS",
+            "RECORD_TYPE_SRV",
+            "RECORD_TYPE_CAA"
+          ],
+          "title": "Record Type",
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "value",
+        "ttl",
+        "proxied"
+      ],
+      "title": "Record",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Record.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Record.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

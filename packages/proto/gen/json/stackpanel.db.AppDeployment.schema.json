@@ -1,0 +1,45 @@
+{
+  "$id": "stackpanel.db.AppDeployment.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Per-app deployment configuration",
+  "properties": {
+    "cloudflare": {
+      "$ref": "stackpanel.db.CloudflareAppConfig.schema.json"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "fly": {
+      "$ref": "stackpanel.db.FlyAppConfig.schema.json"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "pattern": "^DEPLOYMENT_PROVIDER_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+            "DEPLOYMENT_PROVIDER_FLY",
+            "DEPLOYMENT_PROVIDER_AWS_ECS",
+            "DEPLOYMENT_PROVIDER_RAILWAY",
+            "DEPLOYMENT_PROVIDER_RENDER"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Deployment Provider"
+    }
+  },
+  "title": "App Deployment",
+  "type": "object"
+}

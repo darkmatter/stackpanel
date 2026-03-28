@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "stackpanel.db.AppDeployment.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Per-app deployment configuration",
+      "properties": {
+        "cloudflare": {
+          "$ref": "#/$defs/stackpanel.db.CloudflareAppConfig.schema.strict.json"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "fly": {
+          "$ref": "#/$defs/stackpanel.db.FlyAppConfig.schema.strict.json"
+        },
+        "provider": {
+          "enum": [
+            "DEPLOYMENT_PROVIDER_UNSPECIFIED",
+            "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+            "DEPLOYMENT_PROVIDER_FLY",
+            "DEPLOYMENT_PROVIDER_AWS_ECS",
+            "DEPLOYMENT_PROVIDER_RAILWAY",
+            "DEPLOYMENT_PROVIDER_RENDER"
+          ],
+          "title": "Deployment Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "provider"
+      ],
+      "title": "App Deployment",
+      "type": "object"
+    },
+    "stackpanel.db.CloudflareAppConfig.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Cloudflare per-app deployment configuration",
+      "properties": {
+        "bindings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "compatibility": {
+          "type": "string"
+        },
+        "d1_databases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kv_namespaces": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "r2_buckets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "route": {
+          "type": "string"
+        },
+        "secrets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "CLOUDFLARE_WORKER_TYPE_UNSPECIFIED",
+            "CLOUDFLARE_WORKER_TYPE_VITE",
+            "CLOUDFLARE_WORKER_TYPE_WORKER",
+            "CLOUDFLARE_WORKER_TYPE_PAGES"
+          ],
+          "title": "Cloudflare Worker Type",
+          "type": "string"
+        },
+        "worker_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_name",
+        "type",
+        "compatibility"
+      ],
+      "title": "Cloudflare App Config",
+      "type": "object"
+    },
+    "stackpanel.db.FlyAppConfig.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io per-app deployment configuration",
+      "properties": {
+        "app_name": {
+          "type": "string"
+        },
+        "auto_start": {
+          "type": "boolean"
+        },
+        "auto_stop": {
+          "enum": [
+            "FLY_AUTO_STOP_UNSPECIFIED",
+            "FLY_AUTO_STOP_OFF",
+            "FLY_AUTO_STOP_STOP",
+            "FLY_AUTO_STOP_SUSPEND"
+          ],
+          "title": "Fly Auto Stop",
+          "type": "string"
+        },
+        "cpu_kind": {
+          "enum": [
+            "FLY_MACHINE_CPU_KIND_UNSPECIFIED",
+            "FLY_MACHINE_CPU_KIND_SHARED",
+            "FLY_MACHINE_CPU_KIND_PERFORMANCE"
+          ],
+          "title": "Fly Machine Cpu Kind",
+          "type": "string"
+        },
+        "cpus": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "force_https": {
+          "type": "boolean"
+        },
+        "health_check_interval": {
+          "type": "string"
+        },
+        "health_check_path": {
+          "type": "string"
+        },
+        "memory": {
+          "type": "string"
+        },
+        "min_machines": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "region": {
+          "type": "string"
+        },
+        "secrets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "app_name",
+        "region",
+        "memory",
+        "cpu_kind",
+        "cpus",
+        "auto_stop",
+        "auto_start",
+        "min_machines",
+        "force_https"
+      ],
+      "title": "Fly App Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.AppDeployment.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.AppDeployment.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

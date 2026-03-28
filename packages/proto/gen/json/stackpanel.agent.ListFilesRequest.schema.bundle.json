@@ -1,0 +1,23 @@
+{
+  "$defs": {
+    "stackpanel.agent.ListFilesRequest.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "default": "",
+          "type": "string"
+        },
+        "pattern": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "List Files Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ListFilesRequest.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ListFilesRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

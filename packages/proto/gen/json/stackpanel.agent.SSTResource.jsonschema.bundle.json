@@ -1,0 +1,27 @@
+{
+  "$defs": {
+    "stackpanel.agent.SSTResource.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "default": "",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "type": "string"
+        },
+        "urn": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "SST Resource",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.SSTResource.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.SSTResource.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

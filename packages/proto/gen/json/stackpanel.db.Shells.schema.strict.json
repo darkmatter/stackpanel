@@ -1,0 +1,54 @@
+{
+  "$id": "stackpanel.db.Shells.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Shell-specific settings and configurations",
+  "properties": {
+    "bash": {
+      "$ref": "stackpanel.db.Profile.schema.strict.json"
+    },
+    "common": {
+      "$ref": "stackpanel.db.Profile.schema.strict.json"
+    },
+    "default_shell": {
+      "enum": [
+        "SHELL_TYPE_UNSPECIFIED",
+        "SHELL_TYPE_BASH",
+        "SHELL_TYPE_ZSH",
+        "SHELL_TYPE_FISH",
+        "SHELL_TYPE_NUSHELL"
+      ],
+      "title": "Shell Type",
+      "type": "string"
+    },
+    "fish": {
+      "$ref": "stackpanel.db.Profile.schema.strict.json"
+    },
+    "hooks": {
+      "items": {
+        "$ref": "stackpanel.db.Hook.schema.strict.json"
+      },
+      "type": "array"
+    },
+    "path_append": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "path_prepend": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "zsh": {
+      "$ref": "stackpanel.db.Profile.schema.strict.json"
+    }
+  },
+  "required": [
+    "default_shell"
+  ],
+  "title": "Shells",
+  "type": "object"
+}

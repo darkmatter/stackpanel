@@ -1,0 +1,29 @@
+{
+  "$defs": {
+    "stackpanel.db.ScriptArg.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Documentation for a script argument.\n \n Arguments are purely for documentation purposes - they describe what\n positional or named arguments the script accepts. The script itself\n is responsible for parsing these arguments.",
+      "properties": {
+        "default": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "title": "Script Arg",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ScriptArg.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ScriptArg.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

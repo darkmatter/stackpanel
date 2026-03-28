@@ -1,0 +1,23 @@
+{
+  "$id": "stackpanel.agent.InstalledPackagesResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "packages": {
+      "items": {
+        "$ref": "stackpanel.agent.InstalledPackage.jsonschema.strict.json"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "count"
+  ],
+  "title": "Installed Packages Response",
+  "type": "object"
+}

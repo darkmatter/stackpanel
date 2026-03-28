@@ -1,0 +1,19 @@
+{
+  "$defs": {
+    "stackpanel.agent.WriteFileResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "success": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Write File Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.WriteFileResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.WriteFileResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

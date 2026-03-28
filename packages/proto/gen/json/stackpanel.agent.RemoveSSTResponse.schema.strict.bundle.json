@@ -1,0 +1,29 @@
+{
+  "$defs": {
+    "stackpanel.agent.RemoveSSTResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "success": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "success",
+        "output",
+        "error"
+      ],
+      "title": "RemoveSST Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.RemoveSSTResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.RemoveSSTResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

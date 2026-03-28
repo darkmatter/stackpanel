@@ -1,0 +1,36 @@
+{
+  "$id": "stackpanel.db.Pool.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Connection pool settings",
+  "properties": {
+    "connection_timeout": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "idle_timeout": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "max": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "min": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "min",
+    "max",
+    "idle_timeout",
+    "connection_timeout"
+  ],
+  "title": "Pool",
+  "type": "object"
+}

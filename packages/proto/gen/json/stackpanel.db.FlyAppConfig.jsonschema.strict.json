@@ -1,0 +1,86 @@
+{
+  "$id": "stackpanel.db.FlyAppConfig.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Fly.io per-app deployment configuration",
+  "properties": {
+    "appName": {
+      "type": "string"
+    },
+    "autoStart": {
+      "type": "boolean"
+    },
+    "autoStop": {
+      "enum": [
+        "FLY_AUTO_STOP_UNSPECIFIED",
+        "FLY_AUTO_STOP_OFF",
+        "FLY_AUTO_STOP_STOP",
+        "FLY_AUTO_STOP_SUSPEND"
+      ],
+      "title": "Fly Auto Stop",
+      "type": "string"
+    },
+    "cpuKind": {
+      "enum": [
+        "FLY_MACHINE_CPU_KIND_UNSPECIFIED",
+        "FLY_MACHINE_CPU_KIND_SHARED",
+        "FLY_MACHINE_CPU_KIND_PERFORMANCE"
+      ],
+      "title": "Fly Machine Cpu Kind",
+      "type": "string"
+    },
+    "cpus": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "env": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "forceHttps": {
+      "type": "boolean"
+    },
+    "healthCheckInterval": {
+      "type": "string"
+    },
+    "healthCheckPath": {
+      "type": "string"
+    },
+    "memory": {
+      "type": "string"
+    },
+    "minMachines": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "region": {
+      "type": "string"
+    },
+    "secrets": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "appName",
+    "region",
+    "memory",
+    "cpuKind",
+    "cpus",
+    "autoStop",
+    "autoStart",
+    "minMachines",
+    "forceHttps"
+  ],
+  "title": "Fly App Config",
+  "type": "object"
+}

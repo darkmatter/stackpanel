@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "stackpanel.agent.FileInfo.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(is_dir)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(mod_time)$": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "properties": {
+        "isDir": {
+          "default": false,
+          "type": "boolean"
+        },
+        "modTime": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "path": {
+          "default": "",
+          "type": "string"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "title": "File Info",
+      "type": "object"
+    },
+    "stackpanel.agent.ListFilesResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.FileInfo.jsonschema.json"
+          },
+          "type": "array"
+        }
+      },
+      "title": "List Files Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ListFilesResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ListFilesResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

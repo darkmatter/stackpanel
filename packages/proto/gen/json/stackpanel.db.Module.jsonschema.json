@@ -1,0 +1,100 @@
+{
+  "$id": "stackpanel.db.Module.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Configuration for a stackpanel module",
+  "patternProperties": {
+    "^(config_schema)$": {
+      "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.",
+      "type": "string"
+    },
+    "^(healthcheck_module)$": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "apps": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.ModuleAppData.jsonschema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "configSchema": {
+      "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.",
+      "type": "string"
+    },
+    "conflicts": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "features": {
+      "$ref": "stackpanel.db.ModuleFeatures.jsonschema.json"
+    },
+    "healthcheckModule": {
+      "type": "string"
+    },
+    "id": {
+      "default": "",
+      "type": "string"
+    },
+    "meta": {
+      "$ref": "stackpanel.db.ModuleMeta.jsonschema.json"
+    },
+    "panels": {
+      "items": {
+        "$ref": "stackpanel.db.ModulePanel.jsonschema.json"
+      },
+      "type": "array"
+    },
+    "priority": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "requires": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "settings": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Module-level settings (key-value pairs).\n These are passed to the Nix module configuration.",
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "source": {
+      "$ref": "stackpanel.db.ModuleSource.jsonschema.json"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "title": "Module",
+  "type": "object"
+}

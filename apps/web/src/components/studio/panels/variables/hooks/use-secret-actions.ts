@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useAgentClient, useAgentContext } from "@/lib/agent-provider";
 import { useVariablesUIStore } from "../store/variables-ui-store";
 import { useSecretOperationsStore } from "../store/use-secret-operations";
+import { useOptimisticVariables } from "./use-optimistic-variables";
 
 /**
  * Hook for managing secret reveal and delete operations
@@ -11,6 +12,7 @@ import { useSecretOperationsStore } from "../store/use-secret-operations";
 export function useSecretActions(onSuccess?: () => void) {
   const { token } = useAgentContext();
   const agentClient = useAgentClient();
+  const { optimisticRemove } = useOptimisticVariables();
 
   // UI store selectors
   const revealedSecrets = useVariablesUIStore(
@@ -120,6 +122,7 @@ export function useSecretActions(onSuccess?: () => void) {
       try {
         agentClient.setToken(token);
         await agentClient.deleteAgenixSecret(variableId);
+        optimisticRemove(variableId);
         toast.success(`Deleted secret "${variableId}"`);
         onSuccess?.();
       } catch (err) {
@@ -136,6 +139,7 @@ export function useSecretActions(onSuccess?: () => void) {
       token,
       agentClient,
       onSuccess,
+      optimisticRemove,
       setDeletingSecretId,
       setDeleteError,
       clearDeleteState,

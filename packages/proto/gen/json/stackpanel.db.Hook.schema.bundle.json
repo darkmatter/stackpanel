@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "stackpanel.db.Hook.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Shell hook configuration",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "order": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "script": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Hook",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Hook.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Hook.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "stackpanel.agent.Directories.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "default": "",
+          "type": "string"
+        },
+        "gen": {
+          "default": "",
+          "type": "string"
+        },
+        "home": {
+          "default": "",
+          "type": "string"
+        },
+        "secrets": {
+          "default": "",
+          "type": "string"
+        },
+        "state": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Directories",
+      "type": "object"
+    },
+    "stackpanel.agent.Project.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "dirs": {
+          "$ref": "#/$defs/stackpanel.agent.Directories.jsonschema.json"
+        },
+        "github": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "path": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Project",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.Project.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.Project.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

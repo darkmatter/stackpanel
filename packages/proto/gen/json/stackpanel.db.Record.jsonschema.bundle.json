@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "stackpanel.db.Record.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "DNS record configuration",
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "proxied": {
+          "default": false,
+          "type": "boolean"
+        },
+        "ttl": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^RECORD_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "RECORD_TYPE_A",
+                "RECORD_TYPE_AAAA",
+                "RECORD_TYPE_CNAME",
+                "RECORD_TYPE_TXT",
+                "RECORD_TYPE_MX",
+                "RECORD_TYPE_NS",
+                "RECORD_TYPE_SRV",
+                "RECORD_TYPE_CAA"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Record Type"
+        },
+        "value": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Record",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Record.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Record.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

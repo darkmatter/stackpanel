@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "stackpanel.db.PanelField.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Configuration field for a panel",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "FIELD_TYPE_UNSPECIFIED",
+            "FIELD_TYPE_STRING",
+            "FIELD_TYPE_NUMBER",
+            "FIELD_TYPE_BOOLEAN",
+            "FIELD_TYPE_SELECT",
+            "FIELD_TYPE_MULTISELECT",
+            "FIELD_TYPE_APP_FILTER",
+            "FIELD_TYPE_COLUMNS",
+            "FIELD_TYPE_JSON"
+          ],
+          "title": "Field Type",
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "value"
+      ],
+      "title": "Panel Field",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.PanelField.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.PanelField.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

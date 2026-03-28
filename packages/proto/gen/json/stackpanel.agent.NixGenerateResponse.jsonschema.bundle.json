@@ -1,0 +1,23 @@
+{
+  "$defs": {
+    "stackpanel.agent.NixGenerateResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "output": {
+          "default": "",
+          "type": "string"
+        },
+        "success": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Nix Generate Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.NixGenerateResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.NixGenerateResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

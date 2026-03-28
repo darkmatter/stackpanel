@@ -1,0 +1,33 @@
+{
+  "$defs": {
+    "stackpanel.db.Environment.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Environment-specific secrets configuration",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "publicKeys": {
+          "description": "AGE public keys that can decrypt secrets for this environment.\n New secrets for this env are encrypted to these recipients.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "description": "List of SOPS-encrypted source files for this environment (without .yaml extension).\n These files are decrypted and merged to provide secrets for the environment.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Environment",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Environment.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Environment.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "stackpanel.db.DisableModuleRequest.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Request to disable a module",
+      "properties": {
+        "moduleId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "moduleId"
+      ],
+      "title": "Disable Module Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.DisableModuleRequest.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.DisableModuleRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

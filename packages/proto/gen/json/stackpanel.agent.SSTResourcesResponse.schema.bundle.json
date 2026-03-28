@@ -1,0 +1,41 @@
+{
+  "$defs": {
+    "stackpanel.agent.SSTResource.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "default": "",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "type": "string"
+        },
+        "urn": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "SST Resource",
+      "type": "object"
+    },
+    "stackpanel.agent.SSTResourcesResponse.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.SSTResource.schema.json"
+          },
+          "type": "array"
+        }
+      },
+      "title": "SST Resources Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.SSTResourcesResponse.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.SSTResourcesResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

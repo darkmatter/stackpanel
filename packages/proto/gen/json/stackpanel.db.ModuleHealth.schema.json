@@ -1,0 +1,111 @@
+{
+  "$id": "stackpanel.db.ModuleHealth.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Aggregated health status for a module",
+  "patternProperties": {
+    "^(healthyCount)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "^(lastUpdated)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(totalCount)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "properties": {
+    "checks": {
+      "items": {
+        "$ref": "stackpanel.db.HealthcheckResult.schema.json"
+      },
+      "type": "array"
+    },
+    "healthy_count": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "last_updated": {
+      "default": "",
+      "type": "string"
+    },
+    "module": {
+      "default": "",
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "pattern": "^HEALTH_STATUS_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "HEALTH_STATUS_HEALTHY",
+            "HEALTH_STATUS_DEGRADED",
+            "HEALTH_STATUS_UNHEALTHY",
+            "HEALTH_STATUS_UNKNOWN",
+            "HEALTH_STATUS_DISABLED"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Health Status"
+    },
+    "total_count": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "title": "Module Health",
+  "type": "object"
+}

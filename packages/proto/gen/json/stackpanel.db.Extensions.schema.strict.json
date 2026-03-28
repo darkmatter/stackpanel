@@ -1,0 +1,32 @@
+{
+  "$id": "stackpanel.db.Extensions.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Extensions and plugins configuration",
+  "properties": {
+    "auto_update": {
+      "type": "boolean"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Extension.schema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "registry": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "enabled",
+    "auto_update"
+  ],
+  "title": "Extensions",
+  "type": "object"
+}

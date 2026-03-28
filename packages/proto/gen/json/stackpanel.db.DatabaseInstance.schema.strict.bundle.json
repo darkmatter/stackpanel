@@ -1,0 +1,132 @@
+{
+  "$defs": {
+    "stackpanel.db.Connection.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database connection settings",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "password_env": {
+          "type": "string"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "ssl": {
+          "type": "boolean"
+        },
+        "ssl_mode": {
+          "enum": [
+            "SSL_MODE_UNSPECIFIED",
+            "SSL_MODE_DISABLE",
+            "SSL_MODE_ALLOW",
+            "SSL_MODE_PREFER",
+            "SSL_MODE_REQUIRE",
+            "SSL_MODE_VERIFY_CA",
+            "SSL_MODE_VERIFY_FULL"
+          ],
+          "title": "SSL Mode",
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "port",
+        "database",
+        "username",
+        "ssl",
+        "ssl_mode"
+      ],
+      "title": "Connection",
+      "type": "object"
+    },
+    "stackpanel.db.DatabaseInstance.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database instance configuration for a specific environment",
+      "properties": {
+        "auto_migrate": {
+          "type": "boolean"
+        },
+        "connection": {
+          "$ref": "#/$defs/stackpanel.db.Connection.schema.strict.json"
+        },
+        "migrations_path": {
+          "type": "string"
+        },
+        "pool": {
+          "$ref": "#/$defs/stackpanel.db.Pool.schema.strict.json"
+        },
+        "seeds_path": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "DATABASE_TYPE_UNSPECIFIED",
+            "DATABASE_TYPE_POSTGRESQL",
+            "DATABASE_TYPE_MYSQL",
+            "DATABASE_TYPE_SQLITE",
+            "DATABASE_TYPE_MONGODB"
+          ],
+          "title": "Database Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "migrations_path",
+        "auto_migrate"
+      ],
+      "title": "Database Instance",
+      "type": "object"
+    },
+    "stackpanel.db.Pool.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Connection pool settings",
+      "properties": {
+        "connection_timeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "idle_timeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "max": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "min": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max",
+        "idle_timeout",
+        "connection_timeout"
+      ],
+      "title": "Pool",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.DatabaseInstance.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.DatabaseInstance.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

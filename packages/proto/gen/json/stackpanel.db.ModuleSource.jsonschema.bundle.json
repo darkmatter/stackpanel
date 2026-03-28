@@ -1,0 +1,60 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleSource.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Where the module comes from",
+      "patternProperties": {
+        "^(flake_input)$": {
+          "type": "string"
+        },
+        "^(registry_id)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "flakeInput": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "registryId": {
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^MODULE_SOURCE_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "MODULE_SOURCE_TYPE_BUILTIN",
+                "MODULE_SOURCE_TYPE_LOCAL",
+                "MODULE_SOURCE_TYPE_FLAKE_INPUT",
+                "MODULE_SOURCE_TYPE_REGISTRY"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Module Source Type"
+        }
+      },
+      "title": "Module Source",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleSource.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleSource.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

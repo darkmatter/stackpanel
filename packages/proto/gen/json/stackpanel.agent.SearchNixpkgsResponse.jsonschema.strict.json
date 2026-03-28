@@ -1,0 +1,15 @@
+{
+  "$id": "stackpanel.agent.SearchNixpkgsResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "packages": {
+      "items": {
+        "$ref": "stackpanel.agent.NixpkgsPackage.jsonschema.strict.json"
+      },
+      "type": "array"
+    }
+  },
+  "title": "Search Nixpkgs Response",
+  "type": "object"
+}

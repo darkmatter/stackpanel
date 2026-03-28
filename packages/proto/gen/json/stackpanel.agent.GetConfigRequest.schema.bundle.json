@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetConfigRequest.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Get Config Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetConfigRequest.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetConfigRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

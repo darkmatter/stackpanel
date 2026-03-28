@@ -1,0 +1,66 @@
+{
+  "$id": "stackpanel.db.ModulePanel.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A UI panel provided by a module",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "fields": {
+      "items": {
+        "$ref": "stackpanel.db.ModulePanelField.schema.json"
+      },
+      "type": "array"
+    },
+    "id": {
+      "default": "",
+      "type": "string"
+    },
+    "order": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "title": {
+      "default": "",
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "pattern": "^MODULE_PANEL_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "MODULE_PANEL_TYPE_STATUS",
+            "MODULE_PANEL_TYPE_APPS_GRID",
+            "MODULE_PANEL_TYPE_FORM",
+            "MODULE_PANEL_TYPE_TABLE",
+            "MODULE_PANEL_TYPE_CUSTOM"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Module Panel Type"
+    }
+  },
+  "title": "Module Panel",
+  "type": "object"
+}

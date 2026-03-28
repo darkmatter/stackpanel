@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "stackpanel.agent.SSTStatusResponse.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "configPath": {
+          "type": "string"
+        },
+        "configValid": {
+          "type": "boolean"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "deployed": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        },
+        "lastDeploy": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "configured",
+        "configPath",
+        "configValid",
+        "deployed",
+        "stage",
+        "lastDeploy",
+        "error"
+      ],
+      "title": "SST Status Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.SSTStatusResponse.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.SSTStatusResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

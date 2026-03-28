@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetProcessesRequest.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Get Processes Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetProcessesRequest.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetProcessesRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

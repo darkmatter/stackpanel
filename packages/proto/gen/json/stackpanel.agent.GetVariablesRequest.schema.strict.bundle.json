@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetVariablesRequest.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Get Variables Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetVariablesRequest.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetVariablesRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

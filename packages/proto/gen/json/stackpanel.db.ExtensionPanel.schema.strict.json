@@ -1,0 +1,48 @@
+{
+  "$id": "stackpanel.db.ExtensionPanel.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "UI panel configuration for the web interface",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "fields": {
+      "items": {
+        "$ref": "stackpanel.db.PanelField.schema.strict.json"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "order": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "title": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "PANEL_TYPE_UNSPECIFIED",
+        "PANEL_TYPE_STATUS",
+        "PANEL_TYPE_APPS_GRID",
+        "PANEL_TYPE_FORM",
+        "PANEL_TYPE_TABLE",
+        "PANEL_TYPE_CUSTOM"
+      ],
+      "title": "Panel Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "type",
+    "order"
+  ],
+  "title": "Extension Panel",
+  "type": "object"
+}

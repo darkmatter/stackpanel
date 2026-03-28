@@ -1,0 +1,22 @@
+{
+  "$id": "stackpanel.db.CloudflareGlobalConfig.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Cloudflare global settings",
+  "properties": {
+    "account_id": {
+      "type": "string"
+    },
+    "compatibility_date": {
+      "type": "string"
+    },
+    "default_route": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "compatibility_date"
+  ],
+  "title": "Cloudflare Global Config",
+  "type": "object"
+}

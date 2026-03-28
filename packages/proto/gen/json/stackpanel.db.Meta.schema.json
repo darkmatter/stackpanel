@@ -1,0 +1,24 @@
+{
+  "$id": "stackpanel.db.Meta.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Metadata about this generated file",
+  "patternProperties": {
+    "^(generatedAt)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "generated_at": {
+      "default": "",
+      "type": "string"
+    },
+    "source": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Meta",
+  "type": "object"
+}

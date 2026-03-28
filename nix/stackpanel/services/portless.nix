@@ -190,7 +190,8 @@ let
         repo = repoKey;
         service = appName;
       };
-      portlessName = "${app.domain}.${cfg.project-name or portsCfg.project-name}";
+      namePart = if app.domain == "@" then "" else "${app.domain}.";
+      portlessName = "${namePart}${cfg.project-name or portsCfg.project-name}";
       portlessPrefix = "portless ${portlessName} --app-port ${toString appPort} ";
       packageJsonPath =
         if (app.path or null) != null then repoRoot + "/${app.path}/package.json" else null;
@@ -214,6 +215,7 @@ let
       path = app.path or null;
       packageJson = existingPackageJson;
       devScript = "${portlessPrefix}${baseDevScript}";
+      portlessDevScript = "${portlessPrefix} bun run dev";
     }
   ) appsWithDomains;
   domainCount = lib.length (lib.attrNames appsWithDomains);
@@ -252,9 +254,9 @@ in
                 op = "set";
                 path = [
                   "scripts"
-                  "dev"
+                  "dev:portless"
                 ];
-                value = portlessApp.devScript;
+                value = portlessApp.portlessDevScript;
               }
             ];
           };

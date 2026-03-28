@@ -1,0 +1,23 @@
+{
+  "$defs": {
+    "stackpanel.agent.ReadFileResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "default": "",
+          "type": "string"
+        },
+        "exists": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Read File Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ReadFileResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ReadFileResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

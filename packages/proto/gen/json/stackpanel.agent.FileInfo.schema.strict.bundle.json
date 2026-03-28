@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "stackpanel.agent.FileInfo.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "is_dir": {
+          "type": "boolean"
+        },
+        "mod_time": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "is_dir",
+        "size",
+        "mod_time"
+      ],
+      "title": "File Info",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.FileInfo.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.FileInfo.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

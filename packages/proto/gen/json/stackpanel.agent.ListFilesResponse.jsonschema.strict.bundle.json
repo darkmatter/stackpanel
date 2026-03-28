@@ -1,0 +1,51 @@
+{
+  "$defs": {
+    "stackpanel.agent.FileInfo.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "isDir": {
+          "type": "boolean"
+        },
+        "modTime": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "isDir",
+        "size",
+        "modTime"
+      ],
+      "title": "File Info",
+      "type": "object"
+    },
+    "stackpanel.agent.ListFilesResponse.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.FileInfo.jsonschema.strict.json"
+          },
+          "type": "array"
+        }
+      },
+      "title": "List Files Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ListFilesResponse.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ListFilesResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

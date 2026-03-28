@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "stackpanel.db.ColorScheme.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Color scheme configuration",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "muted": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "string"
+        },
+        "success": {
+          "type": "string"
+        },
+        "warning": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary",
+        "secondary",
+        "success",
+        "warning",
+        "error",
+        "muted"
+      ],
+      "title": "Color Scheme",
+      "type": "object"
+    },
+    "stackpanel.db.Starship.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Starship prompt configuration",
+      "properties": {
+        "add_newline": {
+          "type": "boolean"
+        },
+        "command_timeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "continuation_prompt": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "right_format": {
+          "type": "string"
+        },
+        "scan_timeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "continuation_prompt",
+        "scan_timeout",
+        "command_timeout",
+        "add_newline"
+      ],
+      "title": "Starship",
+      "type": "object"
+    },
+    "stackpanel.db.Theme.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Theme and Starship prompt configuration",
+      "properties": {
+        "colors": {
+          "$ref": "#/$defs/stackpanel.db.ColorScheme.schema.strict.json"
+        },
+        "minimal": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nerd_font": {
+          "type": "boolean"
+        },
+        "starship": {
+          "$ref": "#/$defs/stackpanel.db.Starship.schema.strict.json"
+        }
+      },
+      "required": [
+        "name",
+        "nerd_font",
+        "minimal"
+      ],
+      "title": "Theme",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Theme.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Theme.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

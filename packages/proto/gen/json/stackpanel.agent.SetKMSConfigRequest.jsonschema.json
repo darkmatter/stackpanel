@@ -1,0 +1,31 @@
+{
+  "$id": "stackpanel.agent.SetKMSConfigRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^(aws_profile)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(key_arn)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "awsProfile": {
+      "default": "",
+      "type": "string"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "keyArn": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "SetKMS Config Request",
+  "type": "object"
+}
