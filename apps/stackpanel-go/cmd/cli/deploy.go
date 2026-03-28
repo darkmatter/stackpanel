@@ -32,6 +32,7 @@ type DeployMachineConfig struct {
 	System         string   `json:"system"`
 	SSHPort        int      `json:"sshPort"`
 	ProxyJump      string   `json:"proxyJump"`
+	HasDiskLayout  bool     `json:"hasDiskLayout"`
 	AuthorizedKeys []string `json:"authorizedKeys"`
 }
 
@@ -176,6 +177,7 @@ in builtins.toJSON {
       system = m.system or "x86_64-linux";
       sshPort = m.sshPort or 22;
       proxyJump = m.proxyJump or null;
+      hasDiskLayout = (m.diskLayout or null) != null;
       authorizedKeys = m.authorizedKeys or [];
     }) (sp.deployment.machines or {});
   };
