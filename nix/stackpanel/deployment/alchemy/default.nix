@@ -1,5 +1,5 @@
 # ==============================================================================
-# alchemy/default.nix
+# deployment/alchemy/default.nix
 #
 # Lower-level primitive module for Alchemy IaC configuration.
 #
@@ -15,15 +15,15 @@
 #   - .gitignore for .alchemy directories
 #
 # Usage:
-#   stackpanel.alchemy = {
+#   stackpanel.deployment.alchemy = {
 #     enable = true;
 #     stateStore.provider = "auto";
 #   };
 #
 # Other modules consume this via:
-#   config.stackpanel.alchemy.version      (npm version)
-#   config.stackpanel.alchemy.package.*    (generated package config)
-#   config.stackpanel.alchemy.deploy.*     (setup + deploy scripts)
+#   config.stackpanel.deployment.alchemy.version      (npm version)
+#   config.stackpanel.deployment.alchemy.package.*    (generated package config)
+#   config.stackpanel.deployment.alchemy.deploy.*     (setup + deploy scripts)
 #   @gen/alchemy                          (TypeScript import)
 # ==============================================================================
 { ... }:

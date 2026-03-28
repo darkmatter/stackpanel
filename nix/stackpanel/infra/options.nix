@@ -147,8 +147,8 @@ in
       default = "alchemy";
       description = ''
         IaC framework to use for infrastructure provisioning.
-        Currently only "alchemy" is supported. The alchemy module at
-        config.stackpanel.alchemy provides the shared SDK configuration
+        Currently only "alchemy" is supported. The deployment Alchemy module at
+        config.stackpanel.deployment.alchemy provides the shared SDK configuration
         (version, state store, helpers) that this module consumes.
       '';
     };

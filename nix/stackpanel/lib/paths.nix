@@ -65,7 +65,7 @@
         fi
       fi
 
-      # Fallback 2: look for .stackpanel directory by walking up from PWD
+      # Fallback 2: look for .stack directory by walking up from PWD
       dir="$PWD"
       while [[ "$dir" != "/" ]]; do
         if [[ -d "$dir/${rootDir}" ]]; then

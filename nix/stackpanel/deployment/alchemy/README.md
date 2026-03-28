@@ -1,26 +1,26 @@
-# Alchemy Module
+# Deployment Alchemy Module
 
-Centralized Alchemy IaC module for stack.
+Shared Alchemy runtime and codegen for hosted deployments.
 
 This module provides:
 
-- Shared Alchemy configuration under `stack.alchemy.*`
+- Shared Alchemy configuration under `stackpanel.deployment.alchemy.*`
 - Generated `@gen/alchemy` package (`createApp`, state store factory, helpers, SOPS-aware file module)
 - First-run Cloudflare setup script (`alchemy:setup`)
-- One-command deploy wrapper (`deploy`)
+- Provider-scoped deploy helper (`alchemy:deploy`)
 - Optional bootstrap flow to solve Cloudflare state-store chicken-and-egg
 
 ## Files
 
 - `default.nix` - module entrypoint (imports options + codegen)
-- `options.nix` - option schema for `stack.alchemy.*`
+- `options.nix` - option schema for `stackpanel.deployment.alchemy.*`
 - `codegen.nix` - generates package files/scripts and wires devshell env
 - `templates/` - TypeScript and shell templates used by codegen (including `file.tmpl.ts`)
 
 ## Core Options
 
 ```nix
-stack.alchemy = {
+stackpanel.deployment.alchemy = {
   enable = true;
 
   # Shared app defaults
@@ -45,7 +45,7 @@ stack.alchemy = {
 When these paths are set, values are injected into the devshell environment:
 
 ```nix
-stack.alchemy.secrets = {
+stackpanel.deployment.alchemy.secrets = {
   cloudflare-token-sops-path = "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token";
   state-token-sops-path = "ref+sops://.stack/secrets/vars/common.sops.yaml#/alchemy-state-token";
   sops-group = "common";
@@ -54,7 +54,7 @@ stack.alchemy.secrets = {
 
 ## Generated Scripts
 
-When `stack.alchemy.deploy.enable = true`:
+When `stackpanel.deployment.alchemy.deploy.enable = true`:
 
 - `alchemy:setup`
   - Runs `alchemy configure` + `alchemy login`
@@ -63,7 +63,7 @@ When `stack.alchemy.deploy.enable = true`:
   - Stores both tokens via `secrets:set`
   - Optionally bootstraps Cloudflare state store worker
 
-- `deploy`
+- `alchemy:deploy`
   - Loads tokens from env/secrets
   - Auto-runs `alchemy:setup` if Cloudflare is not configured
   - Executes `bunx alchemy deploy <run-file> --stage <stage>`
@@ -121,7 +121,8 @@ state.
 
 ```bash
 nix develop --impure
-deploy staging
+alchemy:deploy staging
 ```
 
-First run triggers setup automatically; later runs go straight to deploy.
+Use `stackpanel deploy` for the canonical deploy flow. `alchemy:deploy` is a
+provider-scoped helper for working directly with the generated Alchemy runtime.
