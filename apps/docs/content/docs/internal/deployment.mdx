@@ -1,37 +1,39 @@
 ---
 title: Deployment Module
-description: Documentation for the deployment module
+description: Internal note for the deployment module and where its canonical specification lives
 ---
 
-Deployment providers for shipping apps to production.
+## Canonical Specification
 
-## Overview
+The canonical deployment-system specification now lives at:
 
-Aggregates deployment providers (Fly.io, Cloudflare Workers) with per-app configuration. Each app can specify its deployment target, and the module generates the necessary config files and scripts.
+- `docs/superpowers/specs/2026-03-28-deployment-system.md`
 
-## Providers
+That document supersedes the older design-era deployment docs and defines the authoritative maintainer/agent contract for:
 
-| Provider | Directory | Description |
-|----------|-----------|-------------|
-| Fly.io | `fly/` | Container-based deployment with `fly.toml` generation |
-| Cloudflare | `cloudflare/` | Workers/Pages deployment via Alchemy IaC |
+- provisioning vs deployment
+- `stackpanel.deployment.machines`
+- app deployment configuration
+- flake deployment outputs (`nixosModules`, `nixosConfigurations`, `colmenaHive`)
+- CLI workflows (`stackpanel deploy`, `stackpanel provision`)
+- local deploy/provision state files
 
-## Usage
+## What this module documentation should cover
 
-```nix
-stackpanel.deployment.defaultProvider = "fly";
+This internal page should be read as a directory/module entrypoint, not as the full deployment architecture spec.
 
-stackpanel.apps.web.deployment = {
-  enable = true;
-  provider = "fly";
-  fly.appName = "my-web-app";
-  fly.region = "iad";
-  container = { type = "bun"; port = 3000; };
-};
+The code under `nix/stackpanel/deployment/` is primarily about provider-specific hosted deployment helpers such as:
 
-stackpanel.apps.api.deployment = {
-  enable = true;
-  provider = "cloudflare";
-  cloudflare = { workerName = "my-api"; type = "worker"; };
-};
-```
+- Fly.io
+- Cloudflare / Alchemy
+
+It is **not** the whole deployment story by itself. The NixOS machine deploy/provision path also depends on:
+
+- `nix/stackpanel/modules/deploy/module.nix`
+- `nix/stackpanel/lib/deploy.nix`
+- `apps/stackpanel-go/cmd/cli/deploy.go`
+- `apps/stackpanel-go/cmd/cli/provision.go`
+
+## Relationship to public docs
+
+Public deployment guides remain under `apps/docs/content/docs/deployment/`. They are user-facing guides and references, while the canonical deployment-system specification is the internal source of truth.
