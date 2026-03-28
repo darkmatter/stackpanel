@@ -1,7 +1,11 @@
 use crate::config::Config;
 use anyhow::{Context, Result};
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use std::ffi::CString;
+use std::fs::File;
 use std::io::{Read, Write};
+use std::mem;
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::ptr;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -15,62 +19,112 @@ pub enum PtyError {
     Io(#[from] std::io::Error),
 }
 
+/// `POSIX_SPAWN_SETSID` makes the child a new session leader.
+/// Value 0x80 is consistent across macOS and Linux (glibc 2.26+).
+/// This is required for PTY job control to work correctly.
+const POSIX_SPAWN_SETSID: libc::c_short = 0x0080;
+
 /// A live PTY session: the child process, its stdin writer, and stdout reader.
 pub struct PtySession {
     /// Write to this to send input to the child.
-    /// Wrapped in Option so it can be extracted via `take_writer()`.
     writer: Option<Box<dyn Write + Send>>,
     /// Read from this to get output from the child.
-    /// Wrapped in Option so it can be extracted via `take_reader()`.
     reader: Option<Box<dyn Read + Send>>,
-    /// The child process handle (used to wait for exit).
-    child: Box<dyn portable_pty::Child + Send>,
-    /// The master side of the PTY (kept alive to avoid SIGHUP).
-    _master: Box<dyn portable_pty::MasterPty + Send>,
+    /// PID of the child process.
+    pid: libc::pid_t,
+    /// Master side of the PTY — kept alive to prevent SIGHUP on the child.
+    _master: OwnedFd,
 }
 
 impl PtySession {
     /// Spawn a new PTY session running the given command at the given size.
+    ///
+    /// Uses `posix_spawn` instead of `fork+exec` so it is safe to call from
+    /// multi-threaded programs (e.g. inside a Tokio runtime on macOS, where
+    /// `fork` in a multi-threaded process triggers an abort in the child).
     pub fn spawn(config: &Config, cols: u16, rows: u16) -> Result<Self> {
-        let pty_system = native_pty_system();
+        // ── 1. Open master/slave PTY pair ────────────────────────────────────
+        let (master_fd, slave_fd) = open_pty(cols, rows)?;
+        let slave_raw = slave_fd.as_raw_fd();
 
-        let pair = pty_system
-            .openpty(PtySize {
-                rows,
-                cols,
-                pixel_width: 0,
-                pixel_height: 0,
-            })
-            .map_err(|e| PtyError::Open(e.to_string()))?;
+        // Set CLOEXEC on both so the child only inherits the dup2'd copies
+        // (fd 0/1/2) and not the raw fd numbers.
+        set_cloexec(master_fd.as_raw_fd()).context("set CLOEXEC on master")?;
+        set_cloexec(slave_raw).context("set CLOEXEC on slave")?;
 
-        let mut cmd = build_command(config)?;
-        cmd.cwd(&config.project_root);
+        // ── 2. Build argv: /bin/sh -c "cd '<root>' && exec '<cmd>' ..." ──────
+        let sh_cmd = build_sh_command(config)?;
+        let program = CString::new("/bin/sh").unwrap();
+        let flag    = CString::new("-c").unwrap();
+        let cmd_str = CString::new(sh_cmd).context("NUL byte in shell command")?;
+        let mut argv: Vec<*mut libc::c_char> = vec![
+            program.as_ptr() as *mut _,
+            flag.as_ptr()    as *mut _,
+            cmd_str.as_ptr() as *mut _,
+            ptr::null_mut(),
+        ];
 
-        let child = pair
-            .slave
-            .spawn_command(cmd)
-            .map_err(|e| PtyError::Spawn(e.to_string()))?;
+        // ── 3. Build envp from current process environment ───────────────────
+        // Collect before acquiring any locks; posix_spawn is thread-safe.
+        let env_strings: Vec<CString> = std::env::vars()
+            .filter_map(|(k, v)| CString::new(format!("{}={}", k, v)).ok())
+            .collect();
+        let mut envp: Vec<*mut libc::c_char> = env_strings
+            .iter()
+            .map(|s| s.as_ptr() as *mut _)
+            .chain(std::iter::once(ptr::null_mut()))
+            .collect();
 
-        let writer = pair
-            .master
-            .take_writer()
-            .context("failed to take PTY writer")?;
+        // ── 4. File actions: dup2 slave → stdin/stdout/stderr ────────────────
+        let mut fa: libc::posix_spawn_file_actions_t = unsafe { mem::zeroed() };
+        unsafe { libc::posix_spawn_file_actions_init(&mut fa) };
+        unsafe { libc::posix_spawn_file_actions_adddup2(&mut fa, slave_raw, libc::STDIN_FILENO) };
+        unsafe { libc::posix_spawn_file_actions_adddup2(&mut fa, slave_raw, libc::STDOUT_FILENO) };
+        unsafe { libc::posix_spawn_file_actions_adddup2(&mut fa, slave_raw, libc::STDERR_FILENO) };
+        // CLOEXEC on slave means it's gone after exec, but dup2'd copies survive.
 
-        let reader = pair
-            .master
-            .try_clone_reader()
-            .context("failed to clone PTY reader")?;
+        // ── 5. Spawn attributes: SETSID for PTY job control ─────────────────
+        let mut attr: libc::posix_spawnattr_t = unsafe { mem::zeroed() };
+        unsafe { libc::posix_spawnattr_init(&mut attr) };
+        unsafe { libc::posix_spawnattr_setflags(&mut attr, POSIX_SPAWN_SETSID) };
+
+        // ── 6. posix_spawn (no fork — safe in multi-threaded processes) ──────
+        let mut pid: libc::pid_t = 0;
+        let rc = unsafe {
+            libc::posix_spawn(
+                &mut pid,
+                program.as_ptr(),
+                &fa,
+                &attr,
+                argv.as_mut_ptr(),
+                envp.as_mut_ptr(),
+            )
+        };
+
+        unsafe { libc::posix_spawn_file_actions_destroy(&mut fa) };
+        unsafe { libc::posix_spawnattr_destroy(&mut attr) };
+        drop(slave_fd); // close slave in parent
+
+        if rc != 0 {
+            return Err(PtyError::Spawn(
+                std::io::Error::from_raw_os_error(rc).to_string(),
+            )
+            .into());
+        }
+
+        // ── 7. Set up master reader / writer ─────────────────────────────────
+        let writer_fd = master_fd.try_clone().context("clone master fd for writer")?;
+        let reader_fd = master_fd.try_clone().context("clone master fd for reader")?;
 
         Ok(Self {
-            writer: Some(writer),
-            reader: Some(reader),
-            child,
-            _master: pair.master,
+            writer: Some(Box::new(File::from(writer_fd))),
+            reader: Some(Box::new(File::from(reader_fd))),
+            pid,
+            _master: master_fd,
         })
     }
 
-    /// Take ownership of the PTY writer for bidirectional I/O.
-    /// Panics if called more than once.
+    /// Take ownership of the PTY writer. Panics if called more than once.
     pub fn take_writer(&mut self) -> Box<dyn Write + Send> {
         self.writer.take().expect("writer already taken from PtySession")
     }
@@ -82,42 +136,120 @@ impl PtySession {
 
     /// Resize the PTY to new dimensions.
     pub fn resize(&mut self, cols: u16, rows: u16) -> Result<()> {
-        self._master
-            .resize(PtySize {
-                rows,
-                cols,
-                pixel_width: 0,
-                pixel_height: 0,
-            })
-            .context("failed to resize PTY")
-    }
-
-    /// Wait for the child process to exit. Returns the exit code.
-    pub fn wait(&mut self) -> Result<u32> {
-        let status = self.child.wait().context("failed to wait for child")?;
-        Ok(status.exit_code())
-    }
-
-    /// Returns true if the child has already exited.
-    pub fn try_wait(&mut self) -> Result<Option<u32>> {
-        match self.child.try_wait().context("failed to try_wait on child")? {
-            Some(status) => Ok(Some(status.exit_code())),
-            None => Ok(None),
+        let ws = libc::winsize {
+            ws_row: rows,
+            ws_col: cols,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        let rc = unsafe {
+            libc::ioctl(self._master.as_raw_fd(), libc::TIOCSWINSZ, &ws as *const _)
+        };
+        if rc == -1 {
+            return Err(std::io::Error::last_os_error().into());
         }
+        Ok(())
+    }
+
+    /// Block until the child exits. Returns its exit code.
+    pub fn wait(&mut self) -> Result<u32> {
+        loop {
+            let mut status = 0i32;
+            let rc = unsafe { libc::waitpid(self.pid, &mut status, 0) };
+            if rc == -1 {
+                let err = std::io::Error::last_os_error();
+                if err.kind() == std::io::ErrorKind::Interrupted {
+                    continue;
+                }
+                return Err(err.into());
+            }
+            if libc::WIFEXITED(status) {
+                return Ok(libc::WEXITSTATUS(status) as u32);
+            }
+            if libc::WIFSIGNALED(status) {
+                return Ok((128 + libc::WTERMSIG(status)) as u32);
+            }
+        }
+    }
+
+    /// Non-blocking check whether the child has exited.
+    pub fn try_wait(&mut self) -> Result<Option<u32>> {
+        let mut status = 0i32;
+        let rc = unsafe { libc::waitpid(self.pid, &mut status, libc::WNOHANG) };
+        if rc == -1 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        if rc == 0 {
+            return Ok(None); // still running
+        }
+        if libc::WIFEXITED(status) {
+            return Ok(Some(libc::WEXITSTATUS(status) as u32));
+        }
+        if libc::WIFSIGNALED(status) {
+            return Ok(Some((128 + libc::WTERMSIG(status)) as u32));
+        }
+        Ok(None)
     }
 }
 
-/// Build a `CommandBuilder` from a `Config`.
-fn build_command(config: &Config) -> Result<CommandBuilder> {
+/// Open a master/slave PTY pair with the given terminal size.
+fn open_pty(cols: u16, rows: u16) -> Result<(OwnedFd, OwnedFd)> {
+    let mut ws = libc::winsize {
+        ws_row: rows,
+        ws_col: cols,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    let mut master: libc::c_int = -1;
+    let mut slave: libc::c_int = -1;
+    let rc = unsafe {
+        libc::openpty(
+            &mut master,
+            &mut slave,
+            ptr::null_mut(),
+            ptr::null_mut(), // termp: use default terminal settings
+            &mut ws,
+        )
+    };
+    if rc == -1 {
+        return Err(PtyError::Open(std::io::Error::last_os_error().to_string()).into());
+    }
+    // SAFETY: openpty returned 0, both fds are valid and we now own them.
+    Ok(unsafe { (OwnedFd::from_raw_fd(master), OwnedFd::from_raw_fd(slave)) })
+}
+
+/// Set the FD_CLOEXEC flag on a file descriptor.
+fn set_cloexec(fd: libc::c_int) -> Result<()> {
+    let rc = unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) };
+    if rc == -1 {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    Ok(())
+}
+
+/// Build the shell command string that runs inside the PTY.
+///
+/// Wraps the user command in `cd '<root>' && exec '<arg0>' '<arg1>' ...` so
+/// the child starts in the project root without needing posix_spawn chdir
+/// extensions (which vary across platforms).
+fn build_sh_command(config: &Config) -> Result<String> {
     let args = &config.shell_command;
     if args.is_empty() {
         anyhow::bail!("shell_command must not be empty");
     }
-    let mut cmd = CommandBuilder::new(&args[0]);
-    for arg in &args[1..] {
-        cmd.arg(arg);
-    }
-    Ok(cmd)
+    let cwd = config
+        .project_root
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("project_root contains non-UTF-8 bytes"))?;
+
+    let escaped_cwd = shell_single_quote(cwd);
+    let escaped_args: Vec<String> = args.iter().map(|a| shell_single_quote(a)).collect();
+    Ok(format!("cd {} && exec {}", escaped_cwd, escaped_args.join(" ")))
+}
+
+/// Wrap a string in single quotes, escaping any embedded single quotes.
+fn shell_single_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''" ))
 }
 
 /// Events flowing through the main session event loop.
@@ -433,19 +565,27 @@ mod tests {
     }
 
     #[test]
-    fn build_command_uses_first_arg_as_binary() {
-        let cfg = make_config(vec!["echo", "hello"]);
-        let cmd = build_command(&cfg).unwrap();
-        // CommandBuilder doesn't expose the program directly in public API,
-        // but we verify it doesn't error and builds without panicking.
-        let _ = cmd;
+    fn build_sh_command_includes_cwd_and_all_args() {
+        let cfg = make_config(vec!["echo", "hello world"]);
+        let cmd = build_sh_command(&cfg).unwrap();
+        assert!(cmd.contains("echo"), "should contain the binary");
+        // args are single-quoted
+        assert!(cmd.contains("'hello world'"), "should contain the quoted arg");
+        // cwd should appear after 'cd'
+        assert!(cmd.starts_with("cd '"), "should start with cd");
     }
 
     #[test]
-    fn build_command_rejects_empty_args() {
+    fn build_sh_command_rejects_empty_args() {
         let cfg = make_config(vec![]);
-        let result = build_command(&cfg);
+        let result = build_sh_command(&cfg);
         assert!(result.is_err(), "expected error for empty shell_command");
+    }
+
+    #[test]
+    fn shell_single_quote_escapes_embedded_quotes() {
+        assert_eq!(shell_single_quote("it's"), "'it'\\''s'");
+        assert_eq!(shell_single_quote("plain"), "'plain'");
     }
 
     // ── keybinding tests ──────────────────────────────────────────────────
@@ -479,14 +619,22 @@ mod tests {
         assert!(rx.try_recv().is_err(), "should not send event for ordinary input");
     }
 
+    /// Regression test for the macOS multi-threaded fork crash.
+    ///
+    /// Before the posix_spawn fix, calling PtySession::spawn from inside a
+    /// multi-threaded tokio runtime would abort the process with:
+    ///   EXC_CRASH / SIGABRT — "crashed on child side of fork pre-exec"
+    ///
+    /// Gate behind `test-pty` because it requires a real PTY (not available in CI).
     #[cfg(feature = "test-pty")]
-    #[test]
-    fn pty_session_spawns_and_exits() {
-        // Only run in environments with a real PTY (not CI).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn pty_session_spawns_and_exits_multi_thread() {
         let cfg = make_config(vec!["bash", "-c", "exit 42"]);
-        let (cols, rows) = (80, 24);
-        let mut session = PtySession::spawn(&cfg, cols, rows).unwrap();
-        let code = session.wait().unwrap();
-        assert_eq!(code, 42);
+        // Spawn directly from the async context (multi-threaded tokio runtime).
+        // With fork+exec this aborted; with posix_spawn it must succeed.
+        let mut session = PtySession::spawn(&cfg, 80, 24)
+            .expect("PTY spawn must not crash in multi-threaded tokio runtime");
+        let code = session.wait().expect("wait must not fail");
+        assert_eq!(code, 42, "child should exit with code 42");
     }
 }
