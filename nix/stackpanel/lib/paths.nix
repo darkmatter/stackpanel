@@ -7,14 +7,14 @@
 # IMPORTANT: NAMING CONVENTIONS
 # -----------------------------
 # This library uses SUBDIRECTORY NAMES, not full paths:
-#   - rootDir = ".stackpanel"  (the stackpanel home directory)
-#   - stateDir = "state"       (subdirectory name, NOT ".stackpanel/state")
-#   - genDir = "gen"           (subdirectory name, NOT ".stackpanel/gen")
+#   - rootDir = ".stack"  (the stackpanel home directory)
+#   - stateDir = "state"       (subdirectory name, NOT ".stack/state")
+#   - genDir = "gen"           (subdirectory name, NOT ".stack/gen")
 #
 # Full paths are computed as: $root/${rootDir}/${stateDir}
-# For example: /path/to/project/.stackpanel/state
+# For example: /path/to/project/.stack/state
 #
-# If you're getting duplicate path segments like ".stackpanel/.stackpanel/state",
+# If you're getting duplicate path segments like ".stack/.stack/state",
 # you're passing a full path where a subdirectory name is expected!
 #
 # Features:
@@ -26,7 +26,7 @@
 # Usage in Nix modules:
 #   let pathsLib = import ./paths.nix { inherit lib; };
 #   in pathsLib.mkShellPathUtils {
-#     rootDir = ".stackpanel";    # The home directory
+#     rootDir = ".stack";    # The home directory
 #     stateDir = "state";         # SUBDIRECTORY NAME, not full path!
 #     genDir = "gen";             # SUBDIRECTORY NAME, not full path!
 #   }
@@ -38,7 +38,7 @@
 {lib}: let
   # Default configuration (can be overridden)
   defaults = {
-    rootDir = ".stackpanel";
+    rootDir = ".stack";
     stateDir = "state";
     genDir = "gen";
   };
