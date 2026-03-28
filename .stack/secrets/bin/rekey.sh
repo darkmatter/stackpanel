@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT=''
+PROJECT_ROOT=/Users/cm/.mux/src/stackpanel/stackpanel-71sc
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -d "$PROJECT_ROOT/.stack/secrets/vars" ]]; then
   SECRETS_DIR="$PROJECT_ROOT/.stack/secrets"
@@ -13,7 +13,7 @@ SOPS_CONFIG="$SECRETS_DIR/.sops.yaml"
 FILTER="${1:-}"
 REKEY_COUNT=0
 
-export SOPS_AGE_KEY_CMD="${SOPS_AGE_KEY_CMD:-/nix/store/r10qifx43ql6c6zb9sxwv9a775jl7v5z-sops-age-keys/bin/sops-age-keys}"
+export SOPS_AGE_KEY_CMD="${SOPS_AGE_KEY_CMD:-/nix/store/afa15yhl99dmy3cl2z1zrkxpmvz5450v-sops-age-keys/bin/sops-age-keys}"
 
 if [[ ! -d "$VARS_DIR" ]]; then
   echo "No vars directory found at $VARS_DIR"

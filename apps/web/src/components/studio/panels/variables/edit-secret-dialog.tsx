@@ -63,7 +63,7 @@ export function EditSecretDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg overflow-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
@@ -79,7 +79,8 @@ export function EditSecretDialog({
         <div className="border rounded-lg p-3 bg-muted/30">
           <div className="text-sm font-medium mb-2">Secret File</div>
           <p className="text-xs text-muted-foreground">
-            This secret is stored in its own SOPS file. Explicit <code>var://</code>
+            This secret is stored in its own SOPS file. Explicit{" "}
+            <code>var://</code>
             links determine which tagged recipients can decrypt it.
           </p>
           <div className="mt-2 p-2 bg-muted rounded text-xs font-mono break-all">
@@ -143,7 +144,7 @@ export function EditSecretDialog({
         )}
 
         {/* Content */}
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -171,7 +172,7 @@ export function EditSecretDialog({
                     onChange={(e) => setValue(e.target.value)}
                     className="font-mono pr-10"
                     rows={4}
-                      placeholder="Enter secret value..."
+                    placeholder="Enter secret value..."
                     style={
                       {
                         WebkitTextSecurity: showValue ? "none" : "disc",
