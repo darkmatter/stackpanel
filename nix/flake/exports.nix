@@ -245,11 +245,20 @@ in
     #   { ".stack/config.nix" = "..."; ... }
     #
     # Usage from CLI:
-    #   nix eval github:darkmatter/stackpanel#lib.initFiles --json
+    #   nix eval git+ssh://git@github.com/darkmatter/stackpanel#lib.initFiles --json
     #
     # Usage from Nix:
     #   inputs.stackpanel.lib.initFiles
-    initFiles = (import ../stackpanel/db { }).initFiles;
+    initFiles =
+      let
+        templateDir = ../flake/templates/default/.stackpanel;
+      in
+      {
+        ".stackpanel/config.nix" = builtins.readFile (templateDir + "/config.nix");
+        ".stackpanel/_internal.nix" = builtins.readFile (templateDir + "/_internal.nix");
+        ".stackpanel/.gitignore" = builtins.readFile (templateDir + "/.gitignore");
+        ".stackpanel/data.nix" = builtins.readFile (templateDir + "/data.nix");
+      };
 
     # All schemas for codegen/introspection
     # Usage: inputs.stackpanel.lib.schemas

@@ -9,12 +9,12 @@ icon: heart
 ```bash
 tmpdir=$(mktemp -d)
 cd $tmpdir
-nix flake init -t github:darkmatter/stackpanel#minimal
+nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
 # or locally
 nix flake init -t /Users/coopermaruyama/darkmatter/stackpanel#default
 git init && git add -A
 
-# 4. Update the flake to use local stackpanel (since github:darkmatter/stackpanel isn't public)
-sed 's|github:darkmatter/stackpanel|path:/Users/coopermaruyama/darkmatter/stackpanel|' flake.nix > flake.nix.tmp && mv flake.nix.tmp flake.nix
+# 4. Update the flake to use local stackpanel (since git+ssh://git@github.com/darkmatter/stackpanel isn't public)
+sed 's|git+ssh://git@github.com/darkmatter/stackpanel|path:/Users/coopermaruyama/darkmatter/stackpanel|' flake.nix > flake.nix.tmp && mv flake.nix.tmp flake.nix
 
 ```
