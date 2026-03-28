@@ -3,15 +3,17 @@
 #
 # Aggregates all deployment provider modules.
 #
-# Supported hosts:
+# Includes:
+#   - alchemy: shared Alchemy SDK/codegen/runtime for hosted deploy backends
 #   - cloudflare: Cloudflare Workers (edge, serverless)
 #   - fly: Fly.io (containers, VMs)
-#   - vercel: Vercel (Next.js, etc.) [planned]
-#   - aws: AWS (Lambda, ECS, etc.) [planned]
+#   - aws: AWS EC2 deployments
 #
-# Each host module defines its own global options and adds per-app options
-# via appModules. See fly/module.nix and cloudflare/module.nix for
-# host-specific options.
+# Each deployment submodule defines its own options and wiring:
+#   - deployment/alchemy: shared Alchemy runtime and generated helpers
+#   - deployment/cloudflare: Cloudflare-specific deployment options
+#   - deployment/aws: AWS-specific deployment options
+#   - deployment/fly: Fly-specific deployment options
 #
 # The actual deployment is handled by the deployment infra module at
 # infra/modules/deployment/, which reads each app's `framework` × `host`
@@ -32,6 +34,7 @@
 # ==============================================================================
 {
   imports = [
+    ./alchemy # Shared hosted-deploy Alchemy plumbing
     ./fly # Fly.io (container-based)
     ./cloudflare # Cloudflare Workers (edge)
     ./aws # AWS EC2 deployments

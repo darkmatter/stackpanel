@@ -1,0 +1,7 @@
+dir = "../../../../"
+
+[check]
+cmd = ["nix", "eval", "./#deploymentSnapshots"]
+
+[eval]
+cmd = ["nix", "eval", "./#deploymentSnapshots"]

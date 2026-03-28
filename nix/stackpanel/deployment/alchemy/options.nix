@@ -1,18 +1,18 @@
 # ==============================================================================
-# alchemy/options.nix
+# deployment/alchemy/options.nix
 #
 # Nix options for centralized Alchemy IaC configuration.
 #
 # Defines:
-#   - stackpanel.alchemy.enable
-#   - stackpanel.alchemy.version (npm version constraint)
-#   - stackpanel.alchemy.state-store (provider, cloudflare, filesystem config)
-#   - stackpanel.alchemy.app-name (default alchemy app name)
-#   - stackpanel.alchemy.stage (default stage)
-#   - stackpanel.alchemy.package (generated @gen/alchemy config)
-#   - stackpanel.alchemy.secrets (ALCHEMY_STATE_TOKEN + CLOUDFLARE_API_TOKEN management)
-#   - stackpanel.alchemy.helpers (which helpers to include in generated package)
-#   - stackpanel.alchemy.deploy (setup scripts, token provisioning, deploy wrapper)
+#   - stackpanel.deployment.alchemy.enable
+#   - stackpanel.deployment.alchemy.version (npm version constraint)
+#   - stackpanel.deployment.alchemy.state-store (provider, cloudflare, filesystem config)
+#   - stackpanel.deployment.alchemy.app-name (default alchemy app name)
+#   - stackpanel.deployment.alchemy.stage (default stage)
+#   - stackpanel.deployment.alchemy.package (generated @gen/alchemy config)
+#   - stackpanel.deployment.alchemy.secrets (ALCHEMY_STATE_TOKEN + CLOUDFLARE_API_TOKEN management)
+#   - stackpanel.deployment.alchemy.helpers (which helpers to include in generated package)
+#   - stackpanel.deployment.alchemy.deploy (setup scripts, token provisioning, deploy wrapper)
 # ==============================================================================
 {
   lib,
@@ -23,14 +23,14 @@ let
   projectName = config.stackpanel.name or "my-project";
 in
 {
-  options.stackpanel.alchemy = {
+  options.stackpanel.deployment.alchemy = {
     # ==========================================================================
     # Core
     # ==========================================================================
     enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Enable the Alchemy IaC module (generates @gen/alchemy shared package)";
+      description = "Enable the hosted-deployment Alchemy module (generates @gen/alchemy shared package)";
     };
 
     version = lib.mkOption {
@@ -217,11 +217,11 @@ in
         type = lib.types.bool;
         default = true;
         description = ''
-          Enable deploy scripts (alchemy:setup, deploy).
+          Enable deploy scripts (alchemy:setup, alchemy:deploy).
 
           When enabled, registers:
             - alchemy:setup: Interactive Cloudflare authentication and token provisioning
-            - deploy: Smart deploy wrapper that auto-runs setup if needed
+            - alchemy:deploy: Provider-scoped deploy helper that auto-runs setup if needed
 
           The setup flow uses alchemy's OAuth to authenticate, creates a
           properly-scoped API token via `alchemy util create-cloudflare-token`,

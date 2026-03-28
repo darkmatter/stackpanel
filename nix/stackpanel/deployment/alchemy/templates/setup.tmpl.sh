@@ -228,6 +228,7 @@ if [ "$SKIP_SECRETS" != "true" ]; then
 	info "Load them with:   secrets:env"
 	info ""
 fi
-info "Deploy with:      deploy staging"
+info "Alchemy helper:   alchemy:deploy staging"
+info "Canonical path:   stackpanel deploy <app>"
 info "                  deploy prod"
 echo ""
