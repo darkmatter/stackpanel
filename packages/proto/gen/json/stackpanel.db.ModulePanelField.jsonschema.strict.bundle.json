@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "stackpanel.db.ModulePanelField.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A field in a module panel",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "MODULE_FIELD_TYPE_UNSPECIFIED",
+            "MODULE_FIELD_TYPE_STRING",
+            "MODULE_FIELD_TYPE_NUMBER",
+            "MODULE_FIELD_TYPE_BOOLEAN",
+            "MODULE_FIELD_TYPE_SELECT",
+            "MODULE_FIELD_TYPE_MULTISELECT",
+            "MODULE_FIELD_TYPE_APP_FILTER",
+            "MODULE_FIELD_TYPE_COLUMNS",
+            "MODULE_FIELD_TYPE_JSON"
+          ],
+          "title": "Module Field Type",
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "value"
+      ],
+      "title": "Module Panel Field",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModulePanelField.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModulePanelField.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

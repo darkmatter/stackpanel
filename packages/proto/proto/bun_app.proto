@@ -15,4 +15,5 @@ message BunAppConfig {
   bool inherit_path = 8; // Whether to inherit PATH from environment at runtime
   bool generate_files = 9; // Generate package.json with bun2nix postinstall and standard scripts
   string description = 10; // App description
+  string output_dir = 11; // Build output directory copied into the packaged artifact
 }

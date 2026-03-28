@@ -1,0 +1,103 @@
+{
+  "$id": "stackpanel.db.Extension.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Extension configuration and metadata",
+  "properties": {
+    "apps": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.ExtensionAppData.schema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "builtin": {
+      "default": false,
+      "type": "boolean"
+    },
+    "category": {
+      "anyOf": [
+        {
+          "pattern": "^EXTENSION_CATEGORY_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "EXTENSION_CATEGORY_INFRASTRUCTURE",
+            "EXTENSION_CATEGORY_CI_CD",
+            "EXTENSION_CATEGORY_DATABASE",
+            "EXTENSION_CATEGORY_SECRETS",
+            "EXTENSION_CATEGORY_DEPLOYMENT",
+            "EXTENSION_CATEGORY_DEVELOPMENT",
+            "EXTENSION_CATEGORY_MONITORING",
+            "EXTENSION_CATEGORY_INTEGRATION"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Extension Category"
+    },
+    "dependencies": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "description": {
+      "type": "string"
+    },
+    "enabled": {
+      "default": false,
+      "type": "boolean"
+    },
+    "features": {
+      "$ref": "stackpanel.db.ExtensionFeatures.schema.json"
+    },
+    "name": {
+      "default": "",
+      "type": "string"
+    },
+    "panels": {
+      "items": {
+        "$ref": "stackpanel.db.ExtensionPanel.schema.json"
+      },
+      "type": "array"
+    },
+    "priority": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "source": {
+      "$ref": "stackpanel.db.ExtensionSource.schema.json"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "title": "Extension",
+  "type": "object"
+}

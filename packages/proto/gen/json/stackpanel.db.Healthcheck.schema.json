@@ -1,0 +1,222 @@
+{
+  "$id": "stackpanel.db.Healthcheck.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A healthcheck definition that can verify module functionality",
+  "patternProperties": {
+    "^(httpExpectedStatus)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    },
+    "^(httpMethod)$": {
+      "type": "string"
+    },
+    "^(httpUrl)$": {
+      "type": "string"
+    },
+    "^(intervalSeconds)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    },
+    "^(nixExpr)$": {
+      "type": "string"
+    },
+    "^(scriptBinPath)$": {
+      "type": "string"
+    },
+    "^(scriptSource)$": {
+      "type": "string"
+    },
+    "^(tcpHost)$": {
+      "type": "string"
+    },
+    "^(tcpPort)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    },
+    "^(timeoutSeconds)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "http_expected_status": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    },
+    "http_method": {
+      "type": "string"
+    },
+    "http_url": {
+      "type": "string"
+    },
+    "id": {
+      "default": "",
+      "type": "string"
+    },
+    "interval_seconds": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    },
+    "module": {
+      "default": "",
+      "type": "string"
+    },
+    "name": {
+      "default": "",
+      "type": "string"
+    },
+    "nix_expr": {
+      "type": "string"
+    },
+    "script_bin_path": {
+      "type": "string"
+    },
+    "script_source": {
+      "type": "string"
+    },
+    "severity": {
+      "anyOf": [
+        {
+          "pattern": "^HEALTHCHECK_SEVERITY_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "HEALTHCHECK_SEVERITY_CRITICAL",
+            "HEALTHCHECK_SEVERITY_WARNING",
+            "HEALTHCHECK_SEVERITY_INFO"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Healthcheck Severity"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "tcp_host": {
+      "type": "string"
+    },
+    "tcp_port": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    },
+    "timeout_seconds": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "type": {
+      "anyOf": [
+        {
+          "pattern": "^HEALTHCHECK_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "HEALTHCHECK_TYPE_SCRIPT",
+            "HEALTHCHECK_TYPE_NIX",
+            "HEALTHCHECK_TYPE_HTTP",
+            "HEALTHCHECK_TYPE_TCP"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Healthcheck Type"
+    }
+  },
+  "title": "Healthcheck",
+  "type": "object"
+}

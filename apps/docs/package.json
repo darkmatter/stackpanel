@@ -44,6 +44,7 @@
   "scripts": {
     "build": "next build",
     "dev": "portless docs.stackpanel --app-port 5738 bun run dev",
+    "dev:portless": "portless docs.stackpanel --app-port 5738  bun run dev",
     "postinstall": "fumadocs-mdx",
     "start": "next start",
     "types:check": "fumadocs-mdx \u0026\u0026 tsc --noEmit"

@@ -1,0 +1,85 @@
+{
+  "$id": "stackpanel.db.Module.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Configuration for a stackpanel module",
+  "properties": {
+    "apps": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.ModuleAppData.jsonschema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "configSchema": {
+      "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.",
+      "type": "string"
+    },
+    "conflicts": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "enable": {
+      "type": "boolean"
+    },
+    "features": {
+      "$ref": "stackpanel.db.ModuleFeatures.jsonschema.strict.json"
+    },
+    "healthcheckModule": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "meta": {
+      "$ref": "stackpanel.db.ModuleMeta.jsonschema.strict.json"
+    },
+    "panels": {
+      "items": {
+        "$ref": "stackpanel.db.ModulePanel.jsonschema.strict.json"
+      },
+      "type": "array"
+    },
+    "priority": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "requires": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "settings": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Module-level settings (key-value pairs).\n These are passed to the Nix module configuration.",
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "source": {
+      "$ref": "stackpanel.db.ModuleSource.jsonschema.strict.json"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "enable",
+    "priority"
+  ],
+  "title": "Module",
+  "type": "object"
+}

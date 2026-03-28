@@ -1,0 +1,25 @@
+{
+  "$id": "stackpanel.db.UpdateModuleSettingsRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Request to update module settings",
+  "properties": {
+    "moduleId": {
+      "type": "string"
+    },
+    "settings": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "moduleId"
+  ],
+  "title": "Update Module Settings Request",
+  "type": "object"
+}

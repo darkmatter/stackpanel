@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "stackpanel.db.SstKms.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "KMS key configuration for secrets encryption",
+      "patternProperties": {
+        "^(deletion_window_days)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "properties": {
+        "alias": {
+          "default": "",
+          "type": "string"
+        },
+        "deletionWindowDays": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Sst Kms",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstKms.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstKms.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

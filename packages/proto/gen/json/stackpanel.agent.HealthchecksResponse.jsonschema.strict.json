@@ -1,0 +1,21 @@
+{
+  "$id": "stackpanel.agent.HealthchecksResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allHealthy": {
+      "type": "boolean"
+    },
+    "checks": {
+      "items": {
+        "$ref": "stackpanel.agent.HealthcheckInfo.jsonschema.strict.json"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "allHealthy"
+  ],
+  "title": "Healthchecks Response",
+  "type": "object"
+}

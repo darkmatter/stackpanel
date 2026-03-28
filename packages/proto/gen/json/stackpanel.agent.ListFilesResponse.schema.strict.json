@@ -1,0 +1,15 @@
+{
+  "$id": "stackpanel.agent.ListFilesResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "files": {
+      "items": {
+        "$ref": "stackpanel.agent.FileInfo.schema.strict.json"
+      },
+      "type": "array"
+    }
+  },
+  "title": "List Files Response",
+  "type": "object"
+}

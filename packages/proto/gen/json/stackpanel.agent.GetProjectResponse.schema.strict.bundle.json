@@ -1,0 +1,73 @@
+{
+  "$defs": {
+    "stackpanel.agent.Directories.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "gen": {
+          "type": "string"
+        },
+        "home": {
+          "type": "string"
+        },
+        "secrets": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "home",
+        "data",
+        "gen",
+        "state",
+        "secrets"
+      ],
+      "title": "Directories",
+      "type": "object"
+    },
+    "stackpanel.agent.GetProjectResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/stackpanel.agent.Project.schema.strict.json"
+        }
+      },
+      "title": "Get Project Response",
+      "type": "object"
+    },
+    "stackpanel.agent.Project.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "dirs": {
+          "$ref": "#/$defs/stackpanel.agent.Directories.schema.strict.json"
+        },
+        "github": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "name",
+        "github"
+      ],
+      "title": "Project",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetProjectResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetProjectResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

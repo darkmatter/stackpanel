@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useVariablesBackend } from "@/lib/use-agent";
 import { isEncryptedKeyGroup, getKeyGroup } from "./constants";
+import { useOptimisticVariables } from "./hooks/use-optimistic-variables";
 
 interface EditVariableDialogProps {
 	variable: {
@@ -41,6 +42,7 @@ export function EditVariableDialog({
 	const { token } = useAgentContext();
 	const agentClient = useAgentClient();
 	const { data: backendData } = useVariablesBackend();
+	const { optimisticUpdate, optimisticRemove } = useOptimisticVariables();
 	const isChamber = backendData?.backend === "chamber";
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
@@ -81,6 +83,7 @@ export function EditVariableDialog({
 
 			await variablesClient.set(variable.id, updatedVariable);
 
+			optimisticUpdate(variable.id, trimmedValue);
 			const isSecret = isEncryptedKeyGroup(getKeyGroup(variable.id));
 			toast.success(`Updated ${isSecret ? "secret" : "variable"} "${variable.id}"`);
 
@@ -113,6 +116,7 @@ export function EditVariableDialog({
 			const variablesClient = client.nix.mapEntity<{ value: string }>("variables");
 
 			await variablesClient.remove(variable.id);
+			optimisticRemove(variable.id);
 			toast.success(`Deleted variable "${variable.id}"`);
 			handleOpenChange(false);
 			onSuccess();

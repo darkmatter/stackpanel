@@ -1,0 +1,42 @@
+{
+  "$id": "stackpanel.db.Zone.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "DNS zone configuration",
+  "properties": {
+    "domain": {
+      "type": "string"
+    },
+    "managed": {
+      "type": "boolean"
+    },
+    "provider": {
+      "enum": [
+        "DNS_PROVIDER_UNSPECIFIED",
+        "DNS_PROVIDER_CLOUDFLARE",
+        "DNS_PROVIDER_ROUTE53",
+        "DNS_PROVIDER_NAMECHEAP",
+        "DNS_PROVIDER_DIGITALOCEAN",
+        "DNS_PROVIDER_MANUAL"
+      ],
+      "title": "Dns Provider",
+      "type": "string"
+    },
+    "records": {
+      "items": {
+        "$ref": "stackpanel.db.Record.jsonschema.strict.json"
+      },
+      "type": "array"
+    },
+    "zoneId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "domain",
+    "provider",
+    "managed"
+  ],
+  "title": "Zone",
+  "type": "object"
+}

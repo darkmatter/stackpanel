@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "stackpanel.agent.RebuildShellEvent.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(exitCode)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Exit code (for type=\"completed\")"
+        }
+      },
+      "properties": {
+        "error": {
+          "default": "",
+          "description": "Error message (for type=\"error\")",
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0,
+          "description": "Exit code (for type=\"completed\")"
+        },
+        "output": {
+          "default": "",
+          "description": "Output line (for type=\"output\")",
+          "type": "string"
+        },
+        "timestamp": {
+          "default": "",
+          "description": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "default": "",
+          "description": "Event type: \"started\", \"output\", \"completed\", \"error\"",
+          "type": "string"
+        }
+      },
+      "title": "Rebuild Shell Event",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.RebuildShellEvent.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.RebuildShellEvent.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

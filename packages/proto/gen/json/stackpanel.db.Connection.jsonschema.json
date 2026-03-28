@@ -1,0 +1,100 @@
+{
+  "$id": "stackpanel.db.Connection.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Database connection settings",
+  "patternProperties": {
+    "^(password_env)$": {
+      "type": "string"
+    },
+    "^(ssl_mode)$": {
+      "anyOf": [
+        {
+          "pattern": "^SSL_MODE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "SSL_MODE_DISABLE",
+            "SSL_MODE_ALLOW",
+            "SSL_MODE_PREFER",
+            "SSL_MODE_REQUIRE",
+            "SSL_MODE_VERIFY_CA",
+            "SSL_MODE_VERIFY_FULL"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "SSL Mode"
+    }
+  },
+  "properties": {
+    "database": {
+      "default": "",
+      "type": "string"
+    },
+    "host": {
+      "default": "",
+      "type": "string"
+    },
+    "passwordEnv": {
+      "type": "string"
+    },
+    "port": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "ssl": {
+      "default": false,
+      "type": "boolean"
+    },
+    "sslMode": {
+      "anyOf": [
+        {
+          "pattern": "^SSL_MODE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "SSL_MODE_DISABLE",
+            "SSL_MODE_ALLOW",
+            "SSL_MODE_PREFER",
+            "SSL_MODE_REQUIRE",
+            "SSL_MODE_VERIFY_CA",
+            "SSL_MODE_VERIFY_FULL"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "SSL Mode"
+    },
+    "username": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Connection",
+  "type": "object"
+}

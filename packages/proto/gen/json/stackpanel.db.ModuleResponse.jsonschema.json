@@ -1,0 +1,20 @@
+{
+  "$id": "stackpanel.db.ModuleResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Response containing a single module",
+  "properties": {
+    "message": {
+      "type": "string"
+    },
+    "module": {
+      "$ref": "stackpanel.db.Module.jsonschema.json"
+    },
+    "success": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "Module Response",
+  "type": "object"
+}

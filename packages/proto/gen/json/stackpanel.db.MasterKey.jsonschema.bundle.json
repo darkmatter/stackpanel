@@ -1,0 +1,41 @@
+{
+  "$defs": {
+    "stackpanel.db.MasterKey.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A master key for encrypting/decrypting secrets",
+      "patternProperties": {
+        "^(age_pub)$": {
+          "default": "",
+          "description": "AGE public key for encrypting secrets to this key.\n Format: age1... (bech32-encoded)",
+          "type": "string"
+        },
+        "^(resolve_cmd)$": {
+          "description": "Custom command to resolve the private key (overrides ref).\n The command should output the AGE private key to stdout.\n Example: op read 'op://vault/stackpanel/age-key'",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "agePub": {
+          "default": "",
+          "description": "AGE public key for encrypting secrets to this key.\n Format: age1... (bech32-encoded)",
+          "type": "string"
+        },
+        "ref": {
+          "default": "",
+          "description": "Vals reference that resolves to the AGE private key.\n Examples:\n   - ref+file://.stack/keys/local.txt (local file)\n   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)\n   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)",
+          "type": "string"
+        },
+        "resolveCmd": {
+          "description": "Custom command to resolve the private key (overrides ref).\n The command should output the AGE private key to stdout.\n Example: op read 'op://vault/stackpanel/age-key'",
+          "type": "string"
+        }
+      },
+      "title": "Master Key",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.MasterKey.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.MasterKey.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

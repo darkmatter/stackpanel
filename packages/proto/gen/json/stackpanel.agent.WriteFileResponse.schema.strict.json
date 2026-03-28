@@ -1,0 +1,15 @@
+{
+  "$id": "stackpanel.agent.WriteFileResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "success": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "success"
+  ],
+  "title": "Write File Response",
+  "type": "object"
+}

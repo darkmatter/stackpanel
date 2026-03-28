@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "stackpanel.db.SstRolesAnywhere.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "AWS Roles Anywhere configuration",
+      "properties": {
+        "trustAnchorArn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "trustAnchorArn"
+      ],
+      "title": "Sst Roles Anywhere",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstRolesAnywhere.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstRolesAnywhere.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

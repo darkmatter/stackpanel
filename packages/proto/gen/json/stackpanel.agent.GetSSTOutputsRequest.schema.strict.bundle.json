@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetSSTOutputsRequest.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "GetSST Outputs Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetSSTOutputsRequest.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetSSTOutputsRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

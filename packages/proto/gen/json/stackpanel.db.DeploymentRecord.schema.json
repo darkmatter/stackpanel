@@ -1,0 +1,111 @@
+{
+  "$id": "stackpanel.db.DeploymentRecord.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Record of a deployment",
+  "patternProperties": {
+    "^(appName)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(commitSha)$": {
+      "type": "string"
+    },
+    "^(completedAt)$": {
+      "type": "string"
+    },
+    "^(startedAt)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(triggeredBy)$": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "app_name": {
+      "default": "",
+      "type": "string"
+    },
+    "commit_sha": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": "string"
+    },
+    "error": {
+      "type": "string"
+    },
+    "id": {
+      "default": "",
+      "type": "string"
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "pattern": "^DEPLOYMENT_PROVIDER_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+            "DEPLOYMENT_PROVIDER_FLY",
+            "DEPLOYMENT_PROVIDER_AWS_ECS",
+            "DEPLOYMENT_PROVIDER_RAILWAY",
+            "DEPLOYMENT_PROVIDER_RENDER"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Deployment Provider"
+    },
+    "started_at": {
+      "default": "",
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "pattern": "^DEPLOYMENT_STATUS_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "DEPLOYMENT_STATUS_PENDING",
+            "DEPLOYMENT_STATUS_BUILDING",
+            "DEPLOYMENT_STATUS_DEPLOYING",
+            "DEPLOYMENT_STATUS_DEPLOYED",
+            "DEPLOYMENT_STATUS_FAILED",
+            "DEPLOYMENT_STATUS_ROLLED_BACK"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Deployment Status"
+    },
+    "triggered_by": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "version": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Deployment Record",
+  "type": "object"
+}

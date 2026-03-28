@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.db.Users.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Map of username to user configuration",
+  "properties": {
+    "users": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.User.jsonschema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    }
+  },
+  "title": "Users",
+  "type": "object"
+}

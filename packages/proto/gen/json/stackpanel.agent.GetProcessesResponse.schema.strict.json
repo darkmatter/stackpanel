@@ -1,0 +1,29 @@
+{
+  "$id": "stackpanel.agent.GetProcessesResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "available": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": "string"
+    },
+    "processes": {
+      "items": {
+        "$ref": "stackpanel.agent.ProcessInfo.schema.strict.json"
+      },
+      "type": "array"
+    },
+    "running": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "available",
+    "running",
+    "error"
+  ],
+  "title": "Get Processes Response",
+  "type": "object"
+}

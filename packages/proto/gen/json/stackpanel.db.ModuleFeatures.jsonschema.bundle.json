@@ -1,0 +1,54 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleFeatures.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Which stackpanel features this module uses",
+      "patternProperties": {
+        "^(app_module)$": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "properties": {
+        "appModule": {
+          "default": false,
+          "type": "boolean"
+        },
+        "files": {
+          "default": false,
+          "type": "boolean"
+        },
+        "healthchecks": {
+          "default": false,
+          "type": "boolean"
+        },
+        "packages": {
+          "default": false,
+          "type": "boolean"
+        },
+        "scripts": {
+          "default": false,
+          "type": "boolean"
+        },
+        "secrets": {
+          "default": false,
+          "type": "boolean"
+        },
+        "services": {
+          "default": false,
+          "type": "boolean"
+        },
+        "tasks": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Module Features",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleFeatures.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleFeatures.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

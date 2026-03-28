@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "stackpanel.db.SstGithubActions.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "GitHub Actions OIDC configuration",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "org",
+        "repo"
+      ],
+      "title": "Sst Github Actions",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstGithubActions.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstGithubActions.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,76 @@
+{
+  "$id": "stackpanel.db.Profile.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Shell profile configuration",
+  "patternProperties": {
+    "^(historyIgnore)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "^(historySize)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "^(initExtra)$": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "aliases": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Alias.schema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "env": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.EnvVar.schema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "history_ignore": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "history_size": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "init_extra": {
+      "type": "string"
+    }
+  },
+  "title": "Profile",
+  "type": "object"
+}

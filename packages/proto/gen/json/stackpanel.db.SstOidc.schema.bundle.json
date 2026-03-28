@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "stackpanel.db.SstFlyio.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io OIDC configuration",
+      "patternProperties": {
+        "^(appName)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(orgId)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "app_name": {
+          "default": "",
+          "type": "string"
+        },
+        "org_id": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Flyio",
+      "type": "object"
+    },
+    "stackpanel.db.SstGithubActions.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "GitHub Actions OIDC configuration",
+      "properties": {
+        "org": {
+          "default": "",
+          "type": "string"
+        },
+        "repo": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Github Actions",
+      "type": "object"
+    },
+    "stackpanel.db.SstOidc.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OIDC provider configuration for IAM role assumption",
+      "patternProperties": {
+        "^(githubActions)$": {
+          "$ref": "#/$defs/stackpanel.db.SstGithubActions.schema.json"
+        },
+        "^(rolesAnywhere)$": {
+          "$ref": "#/$defs/stackpanel.db.SstRolesAnywhere.schema.json"
+        }
+      },
+      "properties": {
+        "flyio": {
+          "$ref": "#/$defs/stackpanel.db.SstFlyio.schema.json"
+        },
+        "github_actions": {
+          "$ref": "#/$defs/stackpanel.db.SstGithubActions.schema.json"
+        },
+        "provider": {
+          "default": "",
+          "type": "string"
+        },
+        "roles_anywhere": {
+          "$ref": "#/$defs/stackpanel.db.SstRolesAnywhere.schema.json"
+        }
+      },
+      "title": "Sst Oidc",
+      "type": "object"
+    },
+    "stackpanel.db.SstRolesAnywhere.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "AWS Roles Anywhere configuration",
+      "patternProperties": {
+        "^(trustAnchorArn)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "trust_anchor_arn": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Roles Anywhere",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstOidc.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstOidc.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

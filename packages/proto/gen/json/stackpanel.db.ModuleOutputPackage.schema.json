@@ -1,0 +1,20 @@
+{
+  "$id": "stackpanel.db.ModuleOutputPackage.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A package added by a module",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "name": {
+      "default": "",
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "title": "Module Output Package",
+  "type": "object"
+}

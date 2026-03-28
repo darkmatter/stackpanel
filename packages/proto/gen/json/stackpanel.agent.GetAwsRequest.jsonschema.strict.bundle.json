@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetAwsRequest.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Get Aws Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetAwsRequest.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetAwsRequest.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

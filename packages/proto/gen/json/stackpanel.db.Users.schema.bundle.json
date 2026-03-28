@@ -1,0 +1,70 @@
+{
+  "$defs": {
+    "stackpanel.db.User.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A team member with access to the project",
+      "patternProperties": {
+        "^(publicKeys)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(secretsAllowedEnvironments)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "github": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "public_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "secrets_allowed_environments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "User",
+      "type": "object"
+    },
+    "stackpanel.db.Users.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Map of username to user configuration",
+      "properties": {
+        "users": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.User.schema.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "title": "Users",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Users.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Users.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

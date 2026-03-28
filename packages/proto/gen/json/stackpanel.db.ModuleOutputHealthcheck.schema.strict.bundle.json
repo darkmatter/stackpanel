@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleOutputHealthcheck.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A healthcheck defined by a module",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "severity",
+        "type"
+      ],
+      "title": "Module Output Healthcheck",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleOutputHealthcheck.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleOutputHealthcheck.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

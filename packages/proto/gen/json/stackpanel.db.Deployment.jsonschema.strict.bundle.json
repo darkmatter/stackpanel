@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "stackpanel.db.CloudflareGlobalConfig.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Cloudflare global settings",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "compatibilityDate": {
+          "type": "string"
+        },
+        "defaultRoute": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "compatibilityDate"
+      ],
+      "title": "Cloudflare Global Config",
+      "type": "object"
+    },
+    "stackpanel.db.Deployment.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Global deployment configuration",
+      "properties": {
+        "cloudflare": {
+          "$ref": "#/$defs/stackpanel.db.CloudflareGlobalConfig.jsonschema.strict.json"
+        },
+        "defaultProvider": {
+          "enum": [
+            "DEPLOYMENT_PROVIDER_UNSPECIFIED",
+            "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+            "DEPLOYMENT_PROVIDER_FLY",
+            "DEPLOYMENT_PROVIDER_AWS_ECS",
+            "DEPLOYMENT_PROVIDER_RAILWAY",
+            "DEPLOYMENT_PROVIDER_RENDER"
+          ],
+          "title": "Deployment Provider",
+          "type": "string"
+        },
+        "fly": {
+          "$ref": "#/$defs/stackpanel.db.FlyGlobalConfig.jsonschema.strict.json"
+        }
+      },
+      "required": [
+        "defaultProvider"
+      ],
+      "title": "Deployment",
+      "type": "object"
+    },
+    "stackpanel.db.FlyGlobalConfig.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io global settings",
+      "properties": {
+        "defaultRegion": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "registryPrefix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "defaultRegion",
+        "registryPrefix"
+      ],
+      "title": "Fly Global Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Deployment.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Deployment.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

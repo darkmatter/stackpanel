@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "stackpanel.agent.NixpkgsPackage.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "attr_path": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "license": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nixpkgs_url": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "attr_path",
+        "version",
+        "description",
+        "installed",
+        "license",
+        "homepage",
+        "nixpkgs_url"
+      ],
+      "title": "Nixpkgs Package",
+      "type": "object"
+    },
+    "stackpanel.agent.SearchNixpkgsResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "packages": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.NixpkgsPackage.schema.strict.json"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Search Nixpkgs Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.SearchNixpkgsResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.SearchNixpkgsResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

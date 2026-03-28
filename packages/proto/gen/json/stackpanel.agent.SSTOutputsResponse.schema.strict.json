@@ -1,0 +1,18 @@
+{
+  "$id": "stackpanel.agent.SSTOutputsResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "outputs": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    }
+  },
+  "title": "SST Outputs Response",
+  "type": "object"
+}

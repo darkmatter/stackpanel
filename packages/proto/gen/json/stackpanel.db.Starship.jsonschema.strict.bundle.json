@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "stackpanel.db.Starship.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Starship prompt configuration",
+      "properties": {
+        "addNewline": {
+          "type": "boolean"
+        },
+        "commandTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "continuationPrompt": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "rightFormat": {
+          "type": "string"
+        },
+        "scanTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "continuationPrompt",
+        "scanTimeout",
+        "commandTimeout",
+        "addNewline"
+      ],
+      "title": "Starship",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Starship.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Starship.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

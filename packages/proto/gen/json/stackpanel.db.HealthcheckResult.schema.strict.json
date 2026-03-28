@@ -1,0 +1,46 @@
+{
+  "$id": "stackpanel.db.HealthcheckResult.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The result of executing a healthcheck",
+  "properties": {
+    "check_id": {
+      "type": "string"
+    },
+    "duration_ms": {
+      "type": "integer"
+    },
+    "error": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "output": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "HEALTH_STATUS_UNSPECIFIED",
+        "HEALTH_STATUS_HEALTHY",
+        "HEALTH_STATUS_DEGRADED",
+        "HEALTH_STATUS_UNHEALTHY",
+        "HEALTH_STATUS_UNKNOWN",
+        "HEALTH_STATUS_DISABLED"
+      ],
+      "title": "Health Status",
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "check_id",
+    "status",
+    "duration_ms",
+    "timestamp"
+  ],
+  "title": "Healthcheck Result",
+  "type": "object"
+}

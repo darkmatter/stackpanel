@@ -1,0 +1,21 @@
+{
+  "$id": "stackpanel.agent.RemoveSSTResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "default": "",
+      "type": "string"
+    },
+    "output": {
+      "default": "",
+      "type": "string"
+    },
+    "success": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "RemoveSST Response",
+  "type": "object"
+}

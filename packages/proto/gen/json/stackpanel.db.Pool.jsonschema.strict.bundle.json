@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "stackpanel.db.Pool.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Connection pool settings",
+      "properties": {
+        "connectionTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "idleTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "max": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "min": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max",
+        "idleTimeout",
+        "connectionTimeout"
+      ],
+      "title": "Pool",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Pool.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Pool.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

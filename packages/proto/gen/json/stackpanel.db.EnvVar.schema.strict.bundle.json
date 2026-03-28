@@ -1,0 +1,29 @@
+{
+  "$defs": {
+    "stackpanel.db.EnvVar.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Environment variable configuration",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "secret"
+      ],
+      "title": "Env Var",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.EnvVar.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.EnvVar.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

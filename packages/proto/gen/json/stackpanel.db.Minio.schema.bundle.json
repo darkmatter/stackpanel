@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "stackpanel.db.Minio.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Minio S3-compatible service configuration",
+      "patternProperties": {
+        "^(consolePort)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "properties": {
+        "buckets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "console_port": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "title": "Minio",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Minio.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Minio.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "stackpanel.agent.KMSConfigResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(aws_profile)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(key_arn)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "awsProfile": {
+          "default": "",
+          "type": "string"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "keyArn": {
+          "default": "",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "description": "Source indicates where the config came from: \"state\" or \"nix\"",
+          "type": "string"
+        }
+      },
+      "title": "KMS Config Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.KMSConfigResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.KMSConfigResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

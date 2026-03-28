@@ -1,0 +1,20 @@
+{
+  "$id": "stackpanel.db.Variables.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Map of variable ID to Variable",
+  "properties": {
+    "variables": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Variable.schema.strict.json"
+      },
+      "description": "Map of variable ID to Variable object.\n Each Variable contains at minimum a value field.",
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    }
+  },
+  "title": "Variables",
+  "type": "object"
+}

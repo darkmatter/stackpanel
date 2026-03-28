@@ -1,0 +1,95 @@
+{
+  "$id": "stackpanel.db.Healthcheck.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A healthcheck definition that can verify module functionality",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "httpExpectedStatus": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "httpMethod": {
+      "type": "string"
+    },
+    "httpUrl": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "intervalSeconds": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "module": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "nixExpr": {
+      "type": "string"
+    },
+    "scriptBinPath": {
+      "type": "string"
+    },
+    "scriptSource": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "HEALTHCHECK_SEVERITY_UNSPECIFIED",
+        "HEALTHCHECK_SEVERITY_CRITICAL",
+        "HEALTHCHECK_SEVERITY_WARNING",
+        "HEALTHCHECK_SEVERITY_INFO"
+      ],
+      "title": "Healthcheck Severity",
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "tcpHost": {
+      "type": "string"
+    },
+    "tcpPort": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "timeoutSeconds": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "type": {
+      "enum": [
+        "HEALTHCHECK_TYPE_UNSPECIFIED",
+        "HEALTHCHECK_TYPE_SCRIPT",
+        "HEALTHCHECK_TYPE_NIX",
+        "HEALTHCHECK_TYPE_HTTP",
+        "HEALTHCHECK_TYPE_TCP"
+      ],
+      "title": "Healthcheck Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "type",
+    "severity",
+    "timeoutSeconds",
+    "module"
+  ],
+  "title": "Healthcheck",
+  "type": "object"
+}

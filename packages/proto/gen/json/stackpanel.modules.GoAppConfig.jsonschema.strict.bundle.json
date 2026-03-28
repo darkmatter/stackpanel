@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "stackpanel.modules.GoAppConfig.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Go-specific per-app configuration",
+      "properties": {
+        "binaryName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "devArgs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "generateFiles": {
+          "type": "boolean"
+        },
+        "ldflags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mainPackage": {
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": "string"
+        },
+        "watchDirs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "enable",
+        "mainPackage",
+        "version",
+        "generateFiles",
+        "description"
+      ],
+      "title": "Go App Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.modules.GoAppConfig.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.modules.GoAppConfig.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

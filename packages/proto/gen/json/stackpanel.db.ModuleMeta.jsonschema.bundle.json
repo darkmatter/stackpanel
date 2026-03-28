@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleMeta.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Display metadata for a module",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "pattern": "^MODULE_CATEGORY_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "MODULE_CATEGORY_INFRASTRUCTURE",
+                "MODULE_CATEGORY_CI_CD",
+                "MODULE_CATEGORY_DATABASE",
+                "MODULE_CATEGORY_SECRETS",
+                "MODULE_CATEGORY_DEPLOYMENT",
+                "MODULE_CATEGORY_DEVELOPMENT",
+                "MODULE_CATEGORY_MONITORING",
+                "MODULE_CATEGORY_INTEGRATION",
+                "MODULE_CATEGORY_LANGUAGE",
+                "MODULE_CATEGORY_SERVICE"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Module Category"
+        },
+        "description": {
+          "type": "string"
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "title": "Module Meta",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleMeta.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleMeta.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,57 @@
+{
+  "$defs": {
+    "stackpanel.db.Connection.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database connection settings",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "passwordEnv": {
+          "type": "string"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "ssl": {
+          "type": "boolean"
+        },
+        "sslMode": {
+          "enum": [
+            "SSL_MODE_UNSPECIFIED",
+            "SSL_MODE_DISABLE",
+            "SSL_MODE_ALLOW",
+            "SSL_MODE_PREFER",
+            "SSL_MODE_REQUIRE",
+            "SSL_MODE_VERIFY_CA",
+            "SSL_MODE_VERIFY_FULL"
+          ],
+          "title": "SSL Mode",
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "port",
+        "database",
+        "username",
+        "ssl",
+        "sslMode"
+      ],
+      "title": "Connection",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Connection.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Connection.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

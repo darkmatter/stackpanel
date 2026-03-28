@@ -1,0 +1,28 @@
+{
+  "$id": "stackpanel.db.Category.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Onboarding category configuration",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "order": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "order"
+  ],
+  "title": "Category",
+  "type": "object"
+}

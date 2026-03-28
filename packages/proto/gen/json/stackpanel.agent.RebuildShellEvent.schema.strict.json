@@ -1,0 +1,38 @@
+{
+  "$id": "stackpanel.agent.RebuildShellEvent.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "description": "Error message (for type=\"error\")",
+      "type": "string"
+    },
+    "exit_code": {
+      "description": "Exit code (for type=\"completed\")",
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "output": {
+      "description": "Output line (for type=\"output\")",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Timestamp",
+      "type": "string"
+    },
+    "type": {
+      "description": "Event type: \"started\", \"output\", \"completed\", \"error\"",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "output",
+    "exit_code",
+    "error",
+    "timestamp"
+  ],
+  "title": "Rebuild Shell Event",
+  "type": "object"
+}

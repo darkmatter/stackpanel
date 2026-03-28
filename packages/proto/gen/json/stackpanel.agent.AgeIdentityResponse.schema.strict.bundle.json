@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "stackpanel.agent.AgeIdentityResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "key_path": {
+          "description": "KeyPath is the actual file path used for decryption",
+          "type": "string"
+        },
+        "public_key": {
+          "description": "PublicKey is the derived public key (for AGE keys)",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type is \"path\", \"key\", or \"\" (not configured)",
+          "type": "string"
+        },
+        "value": {
+          "description": "Value is the path (if type=path) or \"(key stored)\" (if type=key)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value",
+        "key_path",
+        "public_key"
+      ],
+      "title": "Age Identity Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.AgeIdentityResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.AgeIdentityResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

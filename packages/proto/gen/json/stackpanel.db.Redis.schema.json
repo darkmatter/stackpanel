@@ -1,0 +1,41 @@
+{
+  "$id": "stackpanel.db.Redis.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Redis service configuration",
+  "patternProperties": {
+    "^(maxmemoryPolicy)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "maxmemory": {
+      "default": "",
+      "type": "string"
+    },
+    "maxmemory_policy": {
+      "default": "",
+      "type": "string"
+    },
+    "port": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "title": "Redis",
+  "type": "object"
+}

@@ -1,0 +1,106 @@
+{
+  "$id": "stackpanel.db.Step.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Onboarding step configuration",
+  "patternProperties": {
+    "^(check_command)$": {
+      "type": "string"
+    },
+    "^(depends_on)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "^(skip_if)$": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "category": {
+      "default": "",
+      "type": "string"
+    },
+    "checkCommand": {
+      "type": "string"
+    },
+    "command": {
+      "type": "string"
+    },
+    "dependsOn": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "description": {
+      "type": "string"
+    },
+    "env": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "default": "",
+      "type": "string"
+    },
+    "order": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "required": {
+      "default": false,
+      "type": "boolean"
+    },
+    "skipIf": {
+      "type": "string"
+    },
+    "title": {
+      "default": "",
+      "type": "string"
+    },
+    "type": {
+      "anyOf": [
+        {
+          "pattern": "^STEP_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "STEP_TYPE_COMMAND",
+            "STEP_TYPE_MANUAL",
+            "STEP_TYPE_CHECK",
+            "STEP_TYPE_LINK",
+            "STEP_TYPE_PROMPT"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Step Type"
+    },
+    "url": {
+      "type": "string"
+    }
+  },
+  "title": "Step",
+  "type": "object"
+}

@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "stackpanel.agent.NixGenerateRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {},
+      "title": "Nix Generate Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.NixGenerateRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.NixGenerateRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

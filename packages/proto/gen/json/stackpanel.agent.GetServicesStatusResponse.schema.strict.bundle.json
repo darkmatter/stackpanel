@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetServicesStatusResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "running": {
+          "type": "boolean"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.ServiceStatus.schema.strict.json"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "running"
+      ],
+      "title": "Get Services Status Response",
+      "type": "object"
+    },
+    "stackpanel.agent.ServiceStatus.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "pid": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "uptime": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "status",
+        "pid",
+        "uptime"
+      ],
+      "title": "Service Status",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetServicesStatusResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetServicesStatusResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

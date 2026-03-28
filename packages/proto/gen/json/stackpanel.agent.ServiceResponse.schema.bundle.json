@@ -1,0 +1,23 @@
+{
+  "$defs": {
+    "stackpanel.agent.ServiceResponse.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "default": "",
+          "type": "string"
+        },
+        "success": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Service Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ServiceResponse.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ServiceResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

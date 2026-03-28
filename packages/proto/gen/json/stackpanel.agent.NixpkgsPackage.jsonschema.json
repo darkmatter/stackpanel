@@ -1,0 +1,51 @@
+{
+  "$id": "stackpanel.agent.NixpkgsPackage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^(attr_path)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(nixpkgs_url)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "attrPath": {
+      "default": "",
+      "type": "string"
+    },
+    "description": {
+      "default": "",
+      "type": "string"
+    },
+    "homepage": {
+      "default": "",
+      "type": "string"
+    },
+    "installed": {
+      "default": false,
+      "type": "boolean"
+    },
+    "license": {
+      "default": "",
+      "type": "string"
+    },
+    "name": {
+      "default": "",
+      "type": "string"
+    },
+    "nixpkgsUrl": {
+      "default": "",
+      "type": "string"
+    },
+    "version": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Nixpkgs Package",
+  "type": "object"
+}

@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "stackpanel.agent.ProcessInfo.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(exitCode)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "^(isRunning)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(systemTime)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "exit_code": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "is_running": {
+          "default": false,
+          "type": "boolean"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "namespace": {
+          "default": "",
+          "type": "string"
+        },
+        "pid": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "restarts": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "status": {
+          "default": "",
+          "type": "string"
+        },
+        "system_time": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Process Info",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ProcessInfo.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ProcessInfo.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

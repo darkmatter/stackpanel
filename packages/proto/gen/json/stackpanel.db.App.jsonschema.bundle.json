@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "stackpanel.db.App.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Configuration for a single application in the workspace",
+      "properties": {
+        "deploy": {
+          "$ref": "#/$defs/stackpanel.db.AppDeploy.jsonschema.json"
+        },
+        "description": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "environments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.AppEnvironment.jsonschema.json"
+          },
+          "description": "Environment configurations (key = environment name like \"dev\", \"prod\").",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "path": {
+          "default": "",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "title": "App",
+      "type": "object"
+    },
+    "stackpanel.db.AppDeploy.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Deployment mapping for Colmena (targets, roles, and modules)",
+      "patternProperties": {
+        "^(nixos_modules)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "properties": {
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "nixosModules": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "role": {
+          "type": "string"
+        },
+        "secrets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "system": {
+          "type": "string"
+        },
+        "targets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "App Deploy",
+      "type": "object"
+    },
+    "stackpanel.db.AppEnvironment.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Environment configuration (e.g., dev, staging, production)",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables for this environment.\n Key: Environment variable name (e.g., DATABASE_URL)\n Value: Literal string or vals reference (e.g., ref+sops://...)",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "extends": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "App Environment",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.App.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.App.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

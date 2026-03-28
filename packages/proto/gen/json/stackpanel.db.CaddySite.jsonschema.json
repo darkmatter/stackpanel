@@ -1,0 +1,18 @@
+{
+  "$id": "stackpanel.db.CaddySite.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Caddy site configuration",
+  "properties": {
+    "tls": {
+      "default": false,
+      "type": "boolean"
+    },
+    "upstream": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Caddy Site",
+  "type": "object"
+}

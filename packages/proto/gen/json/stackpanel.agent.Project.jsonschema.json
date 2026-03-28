@@ -1,0 +1,24 @@
+{
+  "$id": "stackpanel.agent.Project.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "dirs": {
+      "$ref": "stackpanel.agent.Directories.jsonschema.json"
+    },
+    "github": {
+      "default": "",
+      "type": "string"
+    },
+    "name": {
+      "default": "",
+      "type": "string"
+    },
+    "path": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Project",
+  "type": "object"
+}

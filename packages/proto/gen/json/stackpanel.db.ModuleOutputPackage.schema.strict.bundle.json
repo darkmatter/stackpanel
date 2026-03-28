@@ -1,0 +1,28 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleOutputPackage.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A package added by a module",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Module Output Package",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleOutputPackage.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleOutputPackage.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

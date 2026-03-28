@@ -1,0 +1,19 @@
+{
+  "$defs": {
+    "stackpanel.agent.RemoveSSTRequest.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "stage": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "RemoveSST Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.RemoveSSTRequest.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.RemoveSSTRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

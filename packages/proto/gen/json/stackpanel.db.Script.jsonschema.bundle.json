@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "stackpanel.db.Script.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A development shell script definition.\n \n Scripts are compiled to Nix derivations via writeShellApplication and\n bundled into a single package with all scripts in bin/. The script\n name (attribute key) becomes the command name.\n \n Scripts are simpler than tasks - they don't have build dependencies,\n caching, or pipeline integration. Use them for ad-hoc utilities like\n `db-seed`, `format`, or `generate-types`.",
+      "patternProperties": {
+        "^(bin_path)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "args": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.ScriptArg.jsonschema.json"
+          },
+          "type": "array"
+        },
+        "binPath": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "exec": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "title": "Script",
+      "type": "object"
+    },
+    "stackpanel.db.ScriptArg.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Documentation for a script argument.\n \n Arguments are purely for documentation purposes - they describe what\n positional or named arguments the script accepts. The script itself\n is responsible for parsing these arguments.",
+      "properties": {
+        "default": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "title": "Script Arg",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Script.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Script.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

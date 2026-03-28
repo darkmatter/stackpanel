@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.agent.GetServicesStatusResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "running": {
+      "default": false,
+      "type": "boolean"
+    },
+    "services": {
+      "items": {
+        "$ref": "stackpanel.agent.ServiceStatus.jsonschema.json"
+      },
+      "type": "array"
+    }
+  },
+  "title": "Get Services Status Response",
+  "type": "object"
+}

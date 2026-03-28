@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "stackpanel.db.HealthcheckResult.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "The result of executing a healthcheck",
+      "properties": {
+        "checkId": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "integer"
+        },
+        "error": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "HEALTH_STATUS_UNSPECIFIED",
+            "HEALTH_STATUS_HEALTHY",
+            "HEALTH_STATUS_DEGRADED",
+            "HEALTH_STATUS_UNHEALTHY",
+            "HEALTH_STATUS_UNKNOWN",
+            "HEALTH_STATUS_DISABLED"
+          ],
+          "title": "Health Status",
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "checkId",
+        "status",
+        "durationMs",
+        "timestamp"
+      ],
+      "title": "Healthcheck Result",
+      "type": "object"
+    },
+    "stackpanel.db.ModuleHealth.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Aggregated health status for a module",
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.HealthcheckResult.jsonschema.strict.json"
+          },
+          "type": "array"
+        },
+        "healthyCount": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "lastUpdated": {
+          "type": "string"
+        },
+        "module": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "HEALTH_STATUS_UNSPECIFIED",
+            "HEALTH_STATUS_HEALTHY",
+            "HEALTH_STATUS_DEGRADED",
+            "HEALTH_STATUS_UNHEALTHY",
+            "HEALTH_STATUS_UNKNOWN",
+            "HEALTH_STATUS_DISABLED"
+          ],
+          "title": "Health Status",
+          "type": "string"
+        },
+        "totalCount": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "module",
+        "status",
+        "healthyCount",
+        "totalCount",
+        "lastUpdated"
+      ],
+      "title": "Module Health",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleHealth.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleHealth.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "stackpanel.modules.BunAppConfig.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Bun-specific per-app configuration",
+      "patternProperties": {
+        "^(binaryName)$": {
+          "type": "string"
+        },
+        "^(buildPhase)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(generateFiles)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(inheritPath)$": {
+          "default": false,
+          "type": "boolean"
+        },
+        "^(mainPackage)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(outputDir)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(runtimeEnv)$": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "^(startScript)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "binary_name": {
+          "type": "string"
+        },
+        "build_phase": {
+          "default": "",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "generate_files": {
+          "default": false,
+          "type": "boolean"
+        },
+        "inherit_path": {
+          "default": false,
+          "type": "boolean"
+        },
+        "main_package": {
+          "default": "",
+          "type": "string"
+        },
+        "output_dir": {
+          "default": "",
+          "type": "string"
+        },
+        "runtime_env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "start_script": {
+          "default": "",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Bun App Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.modules.BunAppConfig.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.modules.BunAppConfig.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

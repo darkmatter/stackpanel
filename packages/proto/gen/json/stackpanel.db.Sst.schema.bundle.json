@@ -1,0 +1,218 @@
+{
+  "$defs": {
+    "stackpanel.db.Sst.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "SST infrastructure configuration for AWS provisioning",
+      "patternProperties": {
+        "^(accountId)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(configPath)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(projectName)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "account_id": {
+          "default": "",
+          "type": "string"
+        },
+        "config_path": {
+          "default": "",
+          "type": "string"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "iam": {
+          "$ref": "#/$defs/stackpanel.db.SstIam.schema.json"
+        },
+        "kms": {
+          "$ref": "#/$defs/stackpanel.db.SstKms.schema.json"
+        },
+        "oidc": {
+          "$ref": "#/$defs/stackpanel.db.SstOidc.schema.json"
+        },
+        "project_name": {
+          "default": "",
+          "type": "string"
+        },
+        "region": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst",
+      "type": "object"
+    },
+    "stackpanel.db.SstFlyio.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io OIDC configuration",
+      "patternProperties": {
+        "^(appName)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(orgId)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "app_name": {
+          "default": "",
+          "type": "string"
+        },
+        "org_id": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Flyio",
+      "type": "object"
+    },
+    "stackpanel.db.SstGithubActions.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "GitHub Actions OIDC configuration",
+      "properties": {
+        "org": {
+          "default": "",
+          "type": "string"
+        },
+        "repo": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Github Actions",
+      "type": "object"
+    },
+    "stackpanel.db.SstIam.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "IAM role configuration",
+      "patternProperties": {
+        "^(roleName)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "role_name": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Iam",
+      "type": "object"
+    },
+    "stackpanel.db.SstKms.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "KMS key configuration for secrets encryption",
+      "patternProperties": {
+        "^(deletionWindowDays)$": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        }
+      },
+      "properties": {
+        "alias": {
+          "default": "",
+          "type": "string"
+        },
+        "deletion_window_days": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Sst Kms",
+      "type": "object"
+    },
+    "stackpanel.db.SstOidc.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "OIDC provider configuration for IAM role assumption",
+      "patternProperties": {
+        "^(githubActions)$": {
+          "$ref": "#/$defs/stackpanel.db.SstGithubActions.schema.json"
+        },
+        "^(rolesAnywhere)$": {
+          "$ref": "#/$defs/stackpanel.db.SstRolesAnywhere.schema.json"
+        }
+      },
+      "properties": {
+        "flyio": {
+          "$ref": "#/$defs/stackpanel.db.SstFlyio.schema.json"
+        },
+        "github_actions": {
+          "$ref": "#/$defs/stackpanel.db.SstGithubActions.schema.json"
+        },
+        "provider": {
+          "default": "",
+          "type": "string"
+        },
+        "roles_anywhere": {
+          "$ref": "#/$defs/stackpanel.db.SstRolesAnywhere.schema.json"
+        }
+      },
+      "title": "Sst Oidc",
+      "type": "object"
+    },
+    "stackpanel.db.SstRolesAnywhere.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "AWS Roles Anywhere configuration",
+      "patternProperties": {
+        "^(trustAnchorArn)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "trust_anchor_arn": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Sst Roles Anywhere",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Sst.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Sst.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,93 @@
+{
+  "$id": "stackpanel.db.Starship.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Starship prompt configuration",
+  "patternProperties": {
+    "^(add_newline)$": {
+      "default": false,
+      "type": "boolean"
+    },
+    "^(command_timeout)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "^(continuation_prompt)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(right_format)$": {
+      "type": "string"
+    },
+    "^(scan_timeout)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "properties": {
+    "addNewline": {
+      "default": false,
+      "type": "boolean"
+    },
+    "commandTimeout": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "continuationPrompt": {
+      "default": "",
+      "type": "string"
+    },
+    "format": {
+      "type": "string"
+    },
+    "rightFormat": {
+      "type": "string"
+    },
+    "scanTimeout": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "title": "Starship",
+  "type": "object"
+}

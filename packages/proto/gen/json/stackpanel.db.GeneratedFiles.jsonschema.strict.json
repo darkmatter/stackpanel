@@ -1,0 +1,25 @@
+{
+  "$id": "stackpanel.db.GeneratedFiles.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Collection of all generated file entries",
+  "properties": {
+    "enable": {
+      "type": "boolean"
+    },
+    "entries": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.GeneratedFile.jsonschema.strict.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "enable"
+  ],
+  "title": "Generated Files",
+  "type": "object"
+}

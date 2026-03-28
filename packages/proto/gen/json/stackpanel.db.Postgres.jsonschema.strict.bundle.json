@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "stackpanel.db.Postgres.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "PostgreSQL service configuration",
+      "properties": {
+        "databases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "extensions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "version"
+      ],
+      "title": "Postgres",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Postgres.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Postgres.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

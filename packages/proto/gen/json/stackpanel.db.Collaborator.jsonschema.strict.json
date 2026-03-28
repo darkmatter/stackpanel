@@ -1,0 +1,43 @@
+{
+  "$id": "stackpanel.db.Collaborator.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A GitHub collaborator",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "isAdmin": {
+      "type": "boolean"
+    },
+    "login": {
+      "type": "string"
+    },
+    "publicKeys": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "role": {
+      "enum": [
+        "COLLABORATOR_ROLE_UNSPECIFIED",
+        "COLLABORATOR_ROLE_READ",
+        "COLLABORATOR_ROLE_TRIAGE",
+        "COLLABORATOR_ROLE_WRITE",
+        "COLLABORATOR_ROLE_MAINTAIN",
+        "COLLABORATOR_ROLE_ADMIN"
+      ],
+      "title": "Collaborator Role",
+      "type": "string"
+    }
+  },
+  "required": [
+    "login",
+    "id",
+    "role",
+    "isAdmin"
+  ],
+  "title": "Collaborator",
+  "type": "object"
+}

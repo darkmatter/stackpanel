@@ -1,0 +1,23 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleOutputScript.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A script provided by a module",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Module Output Script",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleOutputScript.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleOutputScript.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

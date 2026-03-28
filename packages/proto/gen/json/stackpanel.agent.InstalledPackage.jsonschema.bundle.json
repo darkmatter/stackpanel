@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "stackpanel.agent.InstalledPackage.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(attr_path)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "attrPath": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Installed Package",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.InstalledPackage.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.InstalledPackage.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

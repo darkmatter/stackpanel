@@ -1,0 +1,28 @@
+{
+  "$id": "stackpanel.db.SstFlyio.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Fly.io OIDC configuration",
+  "patternProperties": {
+    "^(appName)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(orgId)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "app_name": {
+      "default": "",
+      "type": "string"
+    },
+    "org_id": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Sst Flyio",
+  "type": "object"
+}

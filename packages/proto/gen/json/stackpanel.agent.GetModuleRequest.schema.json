@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.agent.GetModuleRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^(moduleId)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "module_id": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Get Module Request",
+  "type": "object"
+}

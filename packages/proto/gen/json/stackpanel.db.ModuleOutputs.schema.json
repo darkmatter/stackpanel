@@ -1,0 +1,44 @@
+{
+  "$id": "stackpanel.db.ModuleOutputs.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Aggregated outputs of what a module creates",
+  "patternProperties": {
+    "^(moduleId)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "files": {
+      "items": {
+        "$ref": "stackpanel.db.ModuleOutputFile.schema.json"
+      },
+      "type": "array"
+    },
+    "healthchecks": {
+      "items": {
+        "$ref": "stackpanel.db.ModuleOutputHealthcheck.schema.json"
+      },
+      "type": "array"
+    },
+    "module_id": {
+      "default": "",
+      "type": "string"
+    },
+    "packages": {
+      "items": {
+        "$ref": "stackpanel.db.ModuleOutputPackage.schema.json"
+      },
+      "type": "array"
+    },
+    "scripts": {
+      "items": {
+        "$ref": "stackpanel.db.ModuleOutputScript.schema.json"
+      },
+      "type": "array"
+    }
+  },
+  "title": "Module Outputs",
+  "type": "object"
+}

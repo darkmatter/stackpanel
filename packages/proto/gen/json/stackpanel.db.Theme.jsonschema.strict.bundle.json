@@ -1,0 +1,108 @@
+{
+  "$defs": {
+    "stackpanel.db.ColorScheme.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Color scheme configuration",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "muted": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "string"
+        },
+        "success": {
+          "type": "string"
+        },
+        "warning": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary",
+        "secondary",
+        "success",
+        "warning",
+        "error",
+        "muted"
+      ],
+      "title": "Color Scheme",
+      "type": "object"
+    },
+    "stackpanel.db.Starship.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Starship prompt configuration",
+      "properties": {
+        "addNewline": {
+          "type": "boolean"
+        },
+        "commandTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "continuationPrompt": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "rightFormat": {
+          "type": "string"
+        },
+        "scanTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "continuationPrompt",
+        "scanTimeout",
+        "commandTimeout",
+        "addNewline"
+      ],
+      "title": "Starship",
+      "type": "object"
+    },
+    "stackpanel.db.Theme.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Theme and Starship prompt configuration",
+      "properties": {
+        "colors": {
+          "$ref": "#/$defs/stackpanel.db.ColorScheme.jsonschema.strict.json"
+        },
+        "minimal": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nerdFont": {
+          "type": "boolean"
+        },
+        "starship": {
+          "$ref": "#/$defs/stackpanel.db.Starship.jsonschema.strict.json"
+        }
+      },
+      "required": [
+        "name",
+        "nerdFont",
+        "minimal"
+      ],
+      "title": "Theme",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Theme.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Theme.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "stackpanel.db.CloudflareGlobalConfig.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Cloudflare global settings",
+      "patternProperties": {
+        "^(accountId)$": {
+          "type": "string"
+        },
+        "^(compatibilityDate)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(defaultRoute)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "account_id": {
+          "type": "string"
+        },
+        "compatibility_date": {
+          "default": "",
+          "type": "string"
+        },
+        "default_route": {
+          "type": "string"
+        }
+      },
+      "title": "Cloudflare Global Config",
+      "type": "object"
+    },
+    "stackpanel.db.Deployment.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Global deployment configuration",
+      "patternProperties": {
+        "^(defaultProvider)$": {
+          "anyOf": [
+            {
+              "pattern": "^DEPLOYMENT_PROVIDER_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+                "DEPLOYMENT_PROVIDER_FLY",
+                "DEPLOYMENT_PROVIDER_AWS_ECS",
+                "DEPLOYMENT_PROVIDER_RAILWAY",
+                "DEPLOYMENT_PROVIDER_RENDER"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Deployment Provider"
+        }
+      },
+      "properties": {
+        "cloudflare": {
+          "$ref": "#/$defs/stackpanel.db.CloudflareGlobalConfig.schema.json"
+        },
+        "default_provider": {
+          "anyOf": [
+            {
+              "pattern": "^DEPLOYMENT_PROVIDER_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "DEPLOYMENT_PROVIDER_CLOUDFLARE",
+                "DEPLOYMENT_PROVIDER_FLY",
+                "DEPLOYMENT_PROVIDER_AWS_ECS",
+                "DEPLOYMENT_PROVIDER_RAILWAY",
+                "DEPLOYMENT_PROVIDER_RENDER"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Deployment Provider"
+        },
+        "fly": {
+          "$ref": "#/$defs/stackpanel.db.FlyGlobalConfig.schema.json"
+        }
+      },
+      "title": "Deployment",
+      "type": "object"
+    },
+    "stackpanel.db.FlyGlobalConfig.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Fly.io global settings",
+      "patternProperties": {
+        "^(defaultRegion)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(registryPrefix)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "default_region": {
+          "default": "",
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "registry_prefix": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Fly Global Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Deployment.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Deployment.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

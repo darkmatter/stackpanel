@@ -1,0 +1,31 @@
+{
+  "$defs": {
+    "stackpanel.db.ModuleAppData.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Module data for a specific app",
+      "properties": {
+        "config": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "title": "Module App Data",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleAppData.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleAppData.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "stackpanel.db.Step.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Onboarding step configuration",
+      "properties": {
+        "category": {
+          "type": "string"
+        },
+        "checkCommand": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "dependsOn": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "order": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "skipIf": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "STEP_TYPE_UNSPECIFIED",
+            "STEP_TYPE_COMMAND",
+            "STEP_TYPE_MANUAL",
+            "STEP_TYPE_CHECK",
+            "STEP_TYPE_LINK",
+            "STEP_TYPE_PROMPT"
+          ],
+          "title": "Step Type",
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "type",
+        "required",
+        "order",
+        "category"
+      ],
+      "title": "Step",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Step.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Step.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,74 @@
+{
+  "$id": "stackpanel.db.Onboarding.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Onboarding configuration for new team members",
+  "patternProperties": {
+    "^(auto_run)$": {
+      "default": false,
+      "type": "boolean"
+    },
+    "^(completion_message)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(persist_state)$": {
+      "default": false,
+      "type": "boolean"
+    },
+    "^(state_file)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(welcome_message)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "autoRun": {
+      "default": false,
+      "type": "boolean"
+    },
+    "categories": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Category.jsonschema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "completionMessage": {
+      "default": "",
+      "type": "string"
+    },
+    "enable": {
+      "default": false,
+      "type": "boolean"
+    },
+    "persistState": {
+      "default": false,
+      "type": "boolean"
+    },
+    "stateFile": {
+      "default": "",
+      "type": "string"
+    },
+    "steps": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.Step.jsonschema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "welcomeMessage": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Onboarding",
+  "type": "object"
+}

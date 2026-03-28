@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "stackpanel.db.ScriptsConfig.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Configuration for scripts package generation",
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enable"
+      ],
+      "title": "Scripts Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ScriptsConfig.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ScriptsConfig.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

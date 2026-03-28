@@ -1,0 +1,34 @@
+{
+  "$defs": {
+    "stackpanel.agent.NixConfigResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "cached": {
+          "type": "boolean"
+        },
+        "config_json": {
+          "description": "The full config is a dynamic JSON object, stored as string",
+          "type": "string"
+        },
+        "last_updated": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "config_json",
+        "last_updated",
+        "cached",
+        "source"
+      ],
+      "title": "Nix Config Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.NixConfigResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.NixConfigResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

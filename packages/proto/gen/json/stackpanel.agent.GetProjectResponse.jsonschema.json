@@ -1,0 +1,12 @@
+{
+  "$id": "stackpanel.agent.GetProjectResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "project": {
+      "$ref": "stackpanel.agent.Project.jsonschema.json"
+    }
+  },
+  "title": "Get Project Response",
+  "type": "object"
+}

@@ -1,0 +1,156 @@
+{
+  "$defs": {
+    "stackpanel.db.Connection.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database connection settings",
+      "properties": {
+        "database": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "passwordEnv": {
+          "type": "string"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "ssl": {
+          "type": "boolean"
+        },
+        "sslMode": {
+          "enum": [
+            "SSL_MODE_UNSPECIFIED",
+            "SSL_MODE_DISABLE",
+            "SSL_MODE_ALLOW",
+            "SSL_MODE_PREFER",
+            "SSL_MODE_REQUIRE",
+            "SSL_MODE_VERIFY_CA",
+            "SSL_MODE_VERIFY_FULL"
+          ],
+          "title": "SSL Mode",
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "host",
+        "port",
+        "database",
+        "username",
+        "ssl",
+        "sslMode"
+      ],
+      "title": "Connection",
+      "type": "object"
+    },
+    "stackpanel.db.DatabaseInstance.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database instance configuration for a specific environment",
+      "properties": {
+        "autoMigrate": {
+          "type": "boolean"
+        },
+        "connection": {
+          "$ref": "#/$defs/stackpanel.db.Connection.jsonschema.strict.json"
+        },
+        "migrationsPath": {
+          "type": "string"
+        },
+        "pool": {
+          "$ref": "#/$defs/stackpanel.db.Pool.jsonschema.strict.json"
+        },
+        "seedsPath": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "DATABASE_TYPE_UNSPECIFIED",
+            "DATABASE_TYPE_POSTGRESQL",
+            "DATABASE_TYPE_MYSQL",
+            "DATABASE_TYPE_SQLITE",
+            "DATABASE_TYPE_MONGODB"
+          ],
+          "title": "Database Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "migrationsPath",
+        "autoMigrate"
+      ],
+      "title": "Database Instance",
+      "type": "object"
+    },
+    "stackpanel.db.Databases.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Database connection and configuration settings",
+      "properties": {
+        "databases": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.DatabaseInstance.jsonschema.strict.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "default": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "default"
+      ],
+      "title": "Databases",
+      "type": "object"
+    },
+    "stackpanel.db.Pool.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Connection pool settings",
+      "properties": {
+        "connectionTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "idleTimeout": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "max": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "min": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max",
+        "idleTimeout",
+        "connectionTimeout"
+      ],
+      "title": "Pool",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Databases.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Databases.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,0 +1,142 @@
+{
+  "$defs": {
+    "stackpanel.db.Record.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "DNS record configuration",
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "proxied": {
+          "default": false,
+          "type": "boolean"
+        },
+        "ttl": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^RECORD_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "RECORD_TYPE_A",
+                "RECORD_TYPE_AAAA",
+                "RECORD_TYPE_CNAME",
+                "RECORD_TYPE_TXT",
+                "RECORD_TYPE_MX",
+                "RECORD_TYPE_NS",
+                "RECORD_TYPE_SRV",
+                "RECORD_TYPE_CAA"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Record Type"
+        },
+        "value": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Record",
+      "type": "object"
+    },
+    "stackpanel.db.Zone.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "DNS zone configuration",
+      "patternProperties": {
+        "^(zoneId)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "domain": {
+          "default": "",
+          "type": "string"
+        },
+        "managed": {
+          "default": false,
+          "type": "boolean"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "pattern": "^DNS_PROVIDER_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "DNS_PROVIDER_CLOUDFLARE",
+                "DNS_PROVIDER_ROUTE53",
+                "DNS_PROVIDER_NAMECHEAP",
+                "DNS_PROVIDER_DIGITALOCEAN",
+                "DNS_PROVIDER_MANUAL"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Dns Provider"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.Record.schema.json"
+          },
+          "type": "array"
+        },
+        "zone_id": {
+          "type": "string"
+        }
+      },
+      "title": "Zone",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Zone.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Zone.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

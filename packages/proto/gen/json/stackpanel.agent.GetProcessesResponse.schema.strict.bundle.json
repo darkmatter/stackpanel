@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "stackpanel.agent.GetProcessesResponse.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        },
+        "processes": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.ProcessInfo.schema.strict.json"
+          },
+          "type": "array"
+        },
+        "running": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "available",
+        "running",
+        "error"
+      ],
+      "title": "Get Processes Response",
+      "type": "object"
+    },
+    "stackpanel.agent.ProcessInfo.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "is_running": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "pid": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "restarts": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "system_time": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "namespace",
+        "status",
+        "pid",
+        "exit_code",
+        "is_running",
+        "restarts",
+        "system_time"
+      ],
+      "title": "Process Info",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.GetProcessesResponse.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.GetProcessesResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

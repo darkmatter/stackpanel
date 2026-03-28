@@ -1,0 +1,421 @@
+{
+  "$defs": {
+    "stackpanel.db.Module.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Configuration for a stackpanel module",
+      "patternProperties": {
+        "^(config_schema)$": {
+          "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.",
+          "type": "string"
+        },
+        "^(healthcheck_module)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "apps": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.ModuleAppData.jsonschema.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "configSchema": {
+          "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.",
+          "type": "string"
+        },
+        "conflicts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "features": {
+          "$ref": "#/$defs/stackpanel.db.ModuleFeatures.jsonschema.json"
+        },
+        "healthcheckModule": {
+          "type": "string"
+        },
+        "id": {
+          "default": "",
+          "type": "string"
+        },
+        "meta": {
+          "$ref": "#/$defs/stackpanel.db.ModuleMeta.jsonschema.json"
+        },
+        "panels": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.ModulePanel.jsonschema.json"
+          },
+          "type": "array"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "requires": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "settings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Module-level settings (key-value pairs).\n These are passed to the Nix module configuration.",
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "source": {
+          "$ref": "#/$defs/stackpanel.db.ModuleSource.jsonschema.json"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Module",
+      "type": "object"
+    },
+    "stackpanel.db.ModuleAppData.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Module data for a specific app",
+      "properties": {
+        "config": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "enabled": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Module App Data",
+      "type": "object"
+    },
+    "stackpanel.db.ModuleFeatures.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Which stackpanel features this module uses",
+      "patternProperties": {
+        "^(app_module)$": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "properties": {
+        "appModule": {
+          "default": false,
+          "type": "boolean"
+        },
+        "files": {
+          "default": false,
+          "type": "boolean"
+        },
+        "healthchecks": {
+          "default": false,
+          "type": "boolean"
+        },
+        "packages": {
+          "default": false,
+          "type": "boolean"
+        },
+        "scripts": {
+          "default": false,
+          "type": "boolean"
+        },
+        "secrets": {
+          "default": false,
+          "type": "boolean"
+        },
+        "services": {
+          "default": false,
+          "type": "boolean"
+        },
+        "tasks": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Module Features",
+      "type": "object"
+    },
+    "stackpanel.db.ModuleMeta.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Display metadata for a module",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "pattern": "^MODULE_CATEGORY_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "MODULE_CATEGORY_INFRASTRUCTURE",
+                "MODULE_CATEGORY_CI_CD",
+                "MODULE_CATEGORY_DATABASE",
+                "MODULE_CATEGORY_SECRETS",
+                "MODULE_CATEGORY_DEPLOYMENT",
+                "MODULE_CATEGORY_DEVELOPMENT",
+                "MODULE_CATEGORY_MONITORING",
+                "MODULE_CATEGORY_INTEGRATION",
+                "MODULE_CATEGORY_LANGUAGE",
+                "MODULE_CATEGORY_SERVICE"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Module Category"
+        },
+        "description": {
+          "type": "string"
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "title": "Module Meta",
+      "type": "object"
+    },
+    "stackpanel.db.ModulePanel.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A UI panel provided by a module",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.db.ModulePanelField.jsonschema.json"
+          },
+          "type": "array"
+        },
+        "id": {
+          "default": "",
+          "type": "string"
+        },
+        "order": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "title": {
+          "default": "",
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^MODULE_PANEL_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "MODULE_PANEL_TYPE_STATUS",
+                "MODULE_PANEL_TYPE_APPS_GRID",
+                "MODULE_PANEL_TYPE_FORM",
+                "MODULE_PANEL_TYPE_TABLE",
+                "MODULE_PANEL_TYPE_CUSTOM"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Module Panel Type"
+        }
+      },
+      "title": "Module Panel",
+      "type": "object"
+    },
+    "stackpanel.db.ModulePanelField.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A field in a module panel",
+      "properties": {
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^MODULE_FIELD_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "MODULE_FIELD_TYPE_STRING",
+                "MODULE_FIELD_TYPE_NUMBER",
+                "MODULE_FIELD_TYPE_BOOLEAN",
+                "MODULE_FIELD_TYPE_SELECT",
+                "MODULE_FIELD_TYPE_MULTISELECT",
+                "MODULE_FIELD_TYPE_APP_FILTER",
+                "MODULE_FIELD_TYPE_COLUMNS",
+                "MODULE_FIELD_TYPE_JSON"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Module Field Type"
+        },
+        "value": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Module Panel Field",
+      "type": "object"
+    },
+    "stackpanel.db.ModuleResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Response containing a single module",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "$ref": "#/$defs/stackpanel.db.Module.jsonschema.json"
+        },
+        "success": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "title": "Module Response",
+      "type": "object"
+    },
+    "stackpanel.db.ModuleSource.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Where the module comes from",
+      "patternProperties": {
+        "^(flake_input)$": {
+          "type": "string"
+        },
+        "^(registry_id)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "flakeInput": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "registryId": {
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "pattern": "^MODULE_SOURCE_TYPE_UNSPECIFIED$",
+              "type": "string"
+            },
+            {
+              "enum": [
+                "MODULE_SOURCE_TYPE_BUILTIN",
+                "MODULE_SOURCE_TYPE_LOCAL",
+                "MODULE_SOURCE_TYPE_FLAKE_INPUT",
+                "MODULE_SOURCE_TYPE_REGISTRY"
+              ],
+              "type": "string"
+            },
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            }
+          ],
+          "default": 0,
+          "title": "Module Source Type"
+        }
+      },
+      "title": "Module Source",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.ModuleResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.ModuleResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

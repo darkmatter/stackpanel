@@ -1,0 +1,40 @@
+{
+  "$id": "stackpanel.db.AppDeploy.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Deployment mapping for Colmena (targets, roles, and modules)",
+  "properties": {
+    "enable": {
+      "type": "boolean"
+    },
+    "nixos_modules": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "role": {
+      "type": "string"
+    },
+    "secrets": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "system": {
+      "type": "string"
+    },
+    "targets": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "enable"
+  ],
+  "title": "App Deploy",
+  "type": "object"
+}

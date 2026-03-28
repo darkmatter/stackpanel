@@ -1,0 +1,27 @@
+{
+  "$id": "stackpanel.agent.InstalledPackage.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attrPath": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "attrPath",
+    "source"
+  ],
+  "title": "Installed Package",
+  "type": "object"
+}

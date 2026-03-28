@@ -1,0 +1,25 @@
+{
+  "$id": "stackpanel.db.EnableModuleRequest.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Request to enable a module",
+  "properties": {
+    "module_id": {
+      "type": "string"
+    },
+    "settings": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "module_id"
+  ],
+  "title": "Enable Module Request",
+  "type": "object"
+}

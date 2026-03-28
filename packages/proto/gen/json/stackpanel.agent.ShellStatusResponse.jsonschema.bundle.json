@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "stackpanel.agent.ShellStatusResponse.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(changed_files)$": {
+          "description": "List of files that changed since last build",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(last_built)$": {
+          "default": "",
+          "description": "Timestamp of when the shell was last built (RFC3339)",
+          "type": "string"
+        },
+        "^(last_nix_change)$": {
+          "default": "",
+          "description": "Timestamp of the most recent nix file change (RFC3339)",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "changedFiles": {
+          "description": "List of files that changed since last build",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lastBuilt": {
+          "default": "",
+          "description": "Timestamp of when the shell was last built (RFC3339)",
+          "type": "string"
+        },
+        "lastNixChange": {
+          "default": "",
+          "description": "Timestamp of the most recent nix file change (RFC3339)",
+          "type": "string"
+        },
+        "rebuilding": {
+          "default": false,
+          "description": "Whether a rebuild is currently in progress",
+          "type": "boolean"
+        },
+        "stale": {
+          "default": false,
+          "description": "Whether the shell is stale (nix files changed since last rebuild)",
+          "type": "boolean"
+        }
+      },
+      "title": "Shell Status Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.ShellStatusResponse.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.ShellStatusResponse.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

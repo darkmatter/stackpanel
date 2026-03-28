@@ -1,0 +1,102 @@
+{
+  "$id": "stackpanel.db.Shells.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Shell-specific settings and configurations",
+  "patternProperties": {
+    "^(default_shell)$": {
+      "anyOf": [
+        {
+          "pattern": "^SHELL_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "SHELL_TYPE_BASH",
+            "SHELL_TYPE_ZSH",
+            "SHELL_TYPE_FISH",
+            "SHELL_TYPE_NUSHELL"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Shell Type"
+    },
+    "^(path_append)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "^(path_prepend)$": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "properties": {
+    "bash": {
+      "$ref": "stackpanel.db.Profile.jsonschema.json"
+    },
+    "common": {
+      "$ref": "stackpanel.db.Profile.jsonschema.json"
+    },
+    "defaultShell": {
+      "anyOf": [
+        {
+          "pattern": "^SHELL_TYPE_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "SHELL_TYPE_BASH",
+            "SHELL_TYPE_ZSH",
+            "SHELL_TYPE_FISH",
+            "SHELL_TYPE_NUSHELL"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Shell Type"
+    },
+    "fish": {
+      "$ref": "stackpanel.db.Profile.jsonschema.json"
+    },
+    "hooks": {
+      "items": {
+        "$ref": "stackpanel.db.Hook.jsonschema.json"
+      },
+      "type": "array"
+    },
+    "pathAppend": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "pathPrepend": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "zsh": {
+      "$ref": "stackpanel.db.Profile.jsonschema.json"
+    }
+  },
+  "title": "Shells",
+  "type": "object"
+}

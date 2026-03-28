@@ -1,0 +1,25 @@
+{
+  "$defs": {
+    "stackpanel.db.Alias.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Shell alias configuration",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "Alias",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Alias.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Alias.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

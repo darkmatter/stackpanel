@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "stackpanel.agent.SetKMSConfigRequest.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(awsProfile)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(keyArn)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "aws_profile": {
+          "default": "",
+          "type": "string"
+        },
+        "enable": {
+          "default": false,
+          "type": "boolean"
+        },
+        "key_arn": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "SetKMS Config Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.SetKMSConfigRequest.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.SetKMSConfigRequest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

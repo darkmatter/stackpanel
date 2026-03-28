@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "stackpanel.db.SstIam.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "IAM role configuration",
+      "properties": {
+        "roleName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "roleName"
+      ],
+      "title": "Sst Iam",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.SstIam.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.SstIam.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

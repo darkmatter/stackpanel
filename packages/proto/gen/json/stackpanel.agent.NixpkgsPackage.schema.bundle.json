@@ -1,0 +1,57 @@
+{
+  "$defs": {
+    "stackpanel.agent.NixpkgsPackage.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(attrPath)$": {
+          "default": "",
+          "type": "string"
+        },
+        "^(nixpkgsUrl)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "attr_path": {
+          "default": "",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "type": "string"
+        },
+        "homepage": {
+          "default": "",
+          "type": "string"
+        },
+        "installed": {
+          "default": false,
+          "type": "boolean"
+        },
+        "license": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "nixpkgs_url": {
+          "default": "",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Nixpkgs Package",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.NixpkgsPackage.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.NixpkgsPackage.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

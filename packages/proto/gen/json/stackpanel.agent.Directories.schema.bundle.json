@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "stackpanel.agent.Directories.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "default": "",
+          "type": "string"
+        },
+        "gen": {
+          "default": "",
+          "type": "string"
+        },
+        "home": {
+          "default": "",
+          "type": "string"
+        },
+        "secrets": {
+          "default": "",
+          "type": "string"
+        },
+        "state": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Directories",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.Directories.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.Directories.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

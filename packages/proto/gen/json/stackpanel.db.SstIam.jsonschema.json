@@ -1,0 +1,20 @@
+{
+  "$id": "stackpanel.db.SstIam.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "IAM role configuration",
+  "patternProperties": {
+    "^(role_name)$": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "roleName": {
+      "default": "",
+      "type": "string"
+    }
+  },
+  "title": "Sst Iam",
+  "type": "object"
+}

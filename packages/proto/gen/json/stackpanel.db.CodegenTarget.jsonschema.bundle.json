@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "stackpanel.db.CodegenTarget.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Code generation target for secrets/env access",
+      "properties": {
+        "directory": {
+          "type": "string"
+        },
+        "language": {
+          "description": "Target language for generated code (e.g., \"typescript\", \"go\", \"python\").\n Informational only for now; codegen selection is based on the target key.",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "Codegen Target",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.CodegenTarget.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.CodegenTarget.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

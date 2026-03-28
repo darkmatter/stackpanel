@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "stackpanel.db.Command.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A workspace command definition",
+      "patternProperties": {
+        "^(configArg)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(configPath)$": {
+          "type": "string"
+        }
+      },
+      "properties": {
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "bin": {
+          "type": "string"
+        },
+        "config_arg": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "config_path": {
+          "type": "string"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "package": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Command",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Command.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Command.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

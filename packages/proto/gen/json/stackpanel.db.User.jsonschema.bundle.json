@@ -1,0 +1,52 @@
+{
+  "$defs": {
+    "stackpanel.db.User.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A team member with access to the project",
+      "patternProperties": {
+        "^(public_keys)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "^(secrets_allowed_environments)$": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "github": {
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "publicKeys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "secretsAllowedEnvironments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "User",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.User.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.User.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

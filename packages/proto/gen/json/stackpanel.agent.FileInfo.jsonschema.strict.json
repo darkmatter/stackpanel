@@ -1,0 +1,31 @@
+{
+  "$id": "stackpanel.agent.FileInfo.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "isDir": {
+      "type": "boolean"
+    },
+    "modTime": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "size": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "name",
+    "path",
+    "isDir",
+    "size",
+    "modTime"
+  ],
+  "title": "File Info",
+  "type": "object"
+}

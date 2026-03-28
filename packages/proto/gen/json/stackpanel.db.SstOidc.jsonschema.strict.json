@@ -1,0 +1,25 @@
+{
+  "$id": "stackpanel.db.SstOidc.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "OIDC provider configuration for IAM role assumption",
+  "properties": {
+    "flyio": {
+      "$ref": "stackpanel.db.SstFlyio.jsonschema.strict.json"
+    },
+    "githubActions": {
+      "$ref": "stackpanel.db.SstGithubActions.jsonschema.strict.json"
+    },
+    "provider": {
+      "type": "string"
+    },
+    "rolesAnywhere": {
+      "$ref": "stackpanel.db.SstRolesAnywhere.jsonschema.strict.json"
+    }
+  },
+  "required": [
+    "provider"
+  ],
+  "title": "Sst Oidc",
+  "type": "object"
+}

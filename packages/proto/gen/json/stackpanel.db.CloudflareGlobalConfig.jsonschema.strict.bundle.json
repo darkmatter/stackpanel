@@ -1,0 +1,28 @@
+{
+  "$defs": {
+    "stackpanel.db.CloudflareGlobalConfig.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Cloudflare global settings",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "compatibilityDate": {
+          "type": "string"
+        },
+        "defaultRoute": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "compatibilityDate"
+      ],
+      "title": "Cloudflare Global Config",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.CloudflareGlobalConfig.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.CloudflareGlobalConfig.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

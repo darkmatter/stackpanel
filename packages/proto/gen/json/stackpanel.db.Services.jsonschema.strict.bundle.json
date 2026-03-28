@@ -1,0 +1,172 @@
+{
+  "$defs": {
+    "stackpanel.db.Caddy.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Caddy reverse proxy configuration",
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "sites": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.CaddySite.jsonschema.strict.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "enable"
+      ],
+      "title": "Caddy",
+      "type": "object"
+    },
+    "stackpanel.db.CaddySite.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Caddy site configuration",
+      "properties": {
+        "tls": {
+          "type": "boolean"
+        },
+        "upstream": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "upstream",
+        "tls"
+      ],
+      "title": "Caddy Site",
+      "type": "object"
+    },
+    "stackpanel.db.Minio.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Minio S3-compatible service configuration",
+      "properties": {
+        "buckets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "consolePort": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enable"
+      ],
+      "title": "Minio",
+      "type": "object"
+    },
+    "stackpanel.db.Postgres.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "PostgreSQL service configuration",
+      "properties": {
+        "databases": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "enable": {
+          "type": "boolean"
+        },
+        "extensions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enable",
+        "version"
+      ],
+      "title": "Postgres",
+      "type": "object"
+    },
+    "stackpanel.db.Redis.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Redis service configuration",
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "maxmemory": {
+          "type": "string"
+        },
+        "maxmemoryPolicy": {
+          "type": "string"
+        },
+        "port": {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enable",
+        "maxmemory",
+        "maxmemoryPolicy"
+      ],
+      "title": "Redis",
+      "type": "object"
+    },
+    "stackpanel.db.Services.jsonschema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Global development services configuration",
+      "properties": {
+        "caddy": {
+          "$ref": "#/$defs/stackpanel.db.Caddy.jsonschema.strict.json"
+        },
+        "minio": {
+          "$ref": "#/$defs/stackpanel.db.Minio.jsonschema.strict.json"
+        },
+        "postgres": {
+          "$ref": "#/$defs/stackpanel.db.Postgres.jsonschema.strict.json"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "redis": {
+          "$ref": "#/$defs/stackpanel.db.Redis.jsonschema.strict.json"
+        }
+      },
+      "required": [
+        "projectName"
+      ],
+      "title": "Services",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Services.jsonschema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Services.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

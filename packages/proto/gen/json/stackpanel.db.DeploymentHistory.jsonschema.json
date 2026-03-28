@@ -1,0 +1,16 @@
+{
+  "$id": "stackpanel.db.DeploymentHistory.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Collection of deployment records",
+  "properties": {
+    "deployments": {
+      "items": {
+        "$ref": "stackpanel.db.DeploymentRecord.jsonschema.json"
+      },
+      "type": "array"
+    }
+  },
+  "title": "Deployment History",
+  "type": "object"
+}

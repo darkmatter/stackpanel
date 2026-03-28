@@ -1,0 +1,19 @@
+{
+  "$id": "stackpanel.agent.ReadFileResponse.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "type": "string"
+    },
+    "exists": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "content",
+    "exists"
+  ],
+  "title": "Read File Response",
+  "type": "object"
+}

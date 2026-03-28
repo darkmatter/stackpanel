@@ -1,0 +1,44 @@
+{
+  "$id": "stackpanel.db.ExtensionFeatures.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Flags indicating which core stackpanel features this extension configures",
+  "properties": {
+    "checks": {
+      "type": "boolean"
+    },
+    "files": {
+      "type": "boolean"
+    },
+    "packages": {
+      "type": "boolean"
+    },
+    "scripts": {
+      "type": "boolean"
+    },
+    "secrets": {
+      "type": "boolean"
+    },
+    "services": {
+      "type": "boolean"
+    },
+    "shellHooks": {
+      "type": "boolean"
+    },
+    "tasks": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "files",
+    "scripts",
+    "tasks",
+    "secrets",
+    "shellHooks",
+    "packages",
+    "services",
+    "checks"
+  ],
+  "title": "Extension Features",
+  "type": "object"
+}

@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "stackpanel.agent.InstalledPackage.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(attrPath)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "attr_path": {
+          "default": "",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Installed Package",
+      "type": "object"
+    },
+    "stackpanel.agent.InstalledPackagesResponse.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": -2147483648,
+              "type": "integer"
+            },
+            {
+              "pattern": "^-?[0-9]+$",
+              "type": "string"
+            }
+          ],
+          "default": 0
+        },
+        "packages": {
+          "items": {
+            "$ref": "#/$defs/stackpanel.agent.InstalledPackage.schema.json"
+          },
+          "type": "array"
+        }
+      },
+      "title": "Installed Packages Response",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.agent.InstalledPackagesResponse.schema.bundle.json",
+  "$ref": "#/$defs/stackpanel.agent.InstalledPackagesResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

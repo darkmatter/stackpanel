@@ -1,0 +1,135 @@
+{
+  "$id": "stackpanel.db.HealthSummary.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Overall health summary across all modules",
+  "patternProperties": {
+    "^(last_updated)$": {
+      "default": "",
+      "type": "string"
+    },
+    "^(overall_status)$": {
+      "anyOf": [
+        {
+          "pattern": "^HEALTH_STATUS_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "HEALTH_STATUS_HEALTHY",
+            "HEALTH_STATUS_DEGRADED",
+            "HEALTH_STATUS_UNHEALTHY",
+            "HEALTH_STATUS_UNKNOWN",
+            "HEALTH_STATUS_DISABLED"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Health Status"
+    },
+    "^(total_checks)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "^(total_healthy)$": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "properties": {
+    "lastUpdated": {
+      "default": "",
+      "type": "string"
+    },
+    "modules": {
+      "additionalProperties": {
+        "$ref": "stackpanel.db.ModuleHealth.jsonschema.json"
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "overallStatus": {
+      "anyOf": [
+        {
+          "pattern": "^HEALTH_STATUS_UNSPECIFIED$",
+          "type": "string"
+        },
+        {
+          "enum": [
+            "HEALTH_STATUS_HEALTHY",
+            "HEALTH_STATUS_DEGRADED",
+            "HEALTH_STATUS_UNHEALTHY",
+            "HEALTH_STATUS_UNKNOWN",
+            "HEALTH_STATUS_DISABLED"
+          ],
+          "type": "string"
+        },
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        }
+      ],
+      "default": 0,
+      "title": "Health Status"
+    },
+    "totalChecks": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    },
+    "totalHealthy": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": -2147483648,
+          "type": "integer"
+        },
+        {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        }
+      ],
+      "default": 0
+    }
+  },
+  "title": "Health Summary",
+  "type": "object"
+}

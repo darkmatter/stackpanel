@@ -1,0 +1,41 @@
+{
+  "$id": "stackpanel.db.DatabaseInstance.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Database instance configuration for a specific environment",
+  "properties": {
+    "autoMigrate": {
+      "type": "boolean"
+    },
+    "connection": {
+      "$ref": "stackpanel.db.Connection.jsonschema.strict.json"
+    },
+    "migrationsPath": {
+      "type": "string"
+    },
+    "pool": {
+      "$ref": "stackpanel.db.Pool.jsonschema.strict.json"
+    },
+    "seedsPath": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "DATABASE_TYPE_UNSPECIFIED",
+        "DATABASE_TYPE_POSTGRESQL",
+        "DATABASE_TYPE_MYSQL",
+        "DATABASE_TYPE_SQLITE",
+        "DATABASE_TYPE_MONGODB"
+      ],
+      "title": "Database Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "migrationsPath",
+    "autoMigrate"
+  ],
+  "title": "Database Instance",
+  "type": "object"
+}

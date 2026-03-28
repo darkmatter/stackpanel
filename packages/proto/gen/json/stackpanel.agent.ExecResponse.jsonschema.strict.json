@@ -1,0 +1,25 @@
+{
+  "$id": "stackpanel.agent.ExecResponse.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exitCode": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "stderr": {
+      "type": "string"
+    },
+    "stdout": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "exitCode",
+    "stdout",
+    "stderr"
+  ],
+  "title": "Exec Response",
+  "type": "object"
+}

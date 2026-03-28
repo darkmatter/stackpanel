@@ -1,0 +1,49 @@
+{
+  "$id": "stackpanel.agent.ProcessInfo.jsonschema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "exitCode": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "isRunning": {
+      "type": "boolean"
+    },
+    "name": {
+      "type": "string"
+    },
+    "namespace": {
+      "type": "string"
+    },
+    "pid": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "restarts": {
+      "maximum": 2147483647,
+      "minimum": -2147483648,
+      "type": "integer"
+    },
+    "status": {
+      "type": "string"
+    },
+    "systemTime": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "namespace",
+    "status",
+    "pid",
+    "exitCode",
+    "isRunning",
+    "restarts",
+    "systemTime"
+  ],
+  "title": "Process Info",
+  "type": "object"
+}

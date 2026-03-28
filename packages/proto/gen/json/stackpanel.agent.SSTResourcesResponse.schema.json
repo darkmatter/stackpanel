@@ -1,0 +1,15 @@
+{
+  "$id": "stackpanel.agent.SSTResourcesResponse.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "resources": {
+      "items": {
+        "$ref": "stackpanel.agent.SSTResource.schema.json"
+      },
+      "type": "array"
+    }
+  },
+  "title": "SST Resources Response",
+  "type": "object"
+}

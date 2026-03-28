@@ -1,0 +1,30 @@
+{
+  "$defs": {
+    "stackpanel.db.Meta.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Metadata about this generated file",
+      "patternProperties": {
+        "^(generated_at)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "generatedAt": {
+          "default": "",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "title": "Meta",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Meta.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Meta.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

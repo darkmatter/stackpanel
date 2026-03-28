@@ -1,0 +1,27 @@
+{
+  "$defs": {
+    "stackpanel.db.Variable.schema.strict.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "A workspace variable (secret, literal, or vals reference)",
+      "properties": {
+        "id": {
+          "description": "Path-based identifier. Format: /\u003ckeygroup\u003e/\u003cVARNAME\u003e\n \n Examples:\n   /dev/DATABASE_URL      → Secret in dev.yaml\n   /prod/API_KEY          → Secret in prod.yaml\n   /computed/apps/web/port → Computed by Nix module",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value - either a literal string or a vals reference.\n \n Literals:\n   \"postgresql://localhost:5432/dev\"\n   \"3000\"\n \n Vals references:\n   \"ref+sops://.stack/secrets/dev.yaml#/DATABASE_URL\"\n   \"ref+awsssm://prod/api-key\"\n   \"ref+exec://echo $RANDOM\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "Variable",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.Variable.schema.strict.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.Variable.schema.strict.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

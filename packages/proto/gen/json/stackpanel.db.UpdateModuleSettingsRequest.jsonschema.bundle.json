@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "stackpanel.db.UpdateModuleSettingsRequest.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Request to update module settings",
+      "patternProperties": {
+        "^(module_id)$": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "moduleId": {
+          "default": "",
+          "type": "string"
+        },
+        "settings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "title": "Update Module Settings Request",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.UpdateModuleSettingsRequest.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.UpdateModuleSettingsRequest.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
