@@ -86,15 +86,23 @@ in
     };
   };
 
-  config = lib.mkIf (config.stackpanel.enable && cfg.enable && binDirPaths != [ ]) {
-    # Run the bin generator script on shell entry
-    stackpanel.devshell.hooks.after = [
-      "${generateBinScript}"
-    ];
+  config = lib.mkMerge [
+    # Keep .stackpanel/bin out of git — unconditional to avoid a recursion cycle:
+    # the bin-generation mkIf depends on devshell.packages → files → gitignore → cycle.
+    (lib.mkIf (config.stackpanel.enable && cfg.enable) {
+      stackpanel.gitignore.entries = [ ".stackpanel/bin/" ];
+    })
 
-    # Optionally add .stack/bin to PATH
-    stackpanel.devshell.path.prepend = lib.mkIf cfg.addToPath [
-      "$STACKPANEL_ROOT/.stack/bin"
-    ];
-  };
+    (lib.mkIf (config.stackpanel.enable && cfg.enable && binDirPaths != [ ]) {
+      # Run the bin generator script on shell entry
+      stackpanel.devshell.hooks.after = [
+        "${generateBinScript}"
+      ];
+
+      # Optionally add .stackpanel/bin to PATH
+      stackpanel.devshell.path.prepend = lib.mkIf cfg.addToPath [
+        "$STACKPANEL_ROOT/.stackpanel/bin"
+      ];
+    })
+  ];
 }

@@ -40,7 +40,7 @@ If you're new to Nix, we recommend using the [Determinate Nix Installer](https:/
 
 <Tab value="flake-parts (recommended)">
 ```bash
-nix flake init -t github:darkmatter/stackpanel
+nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 ```
 
 This creates:
@@ -51,7 +51,7 @@ This creates:
 
 <Tab value="devenv standalone">
 ```bash
-nix flake init -t github:darkmatter/stackpanel#devenv
+nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#devenv
 ```
 
 This creates:
@@ -64,7 +64,7 @@ For users who prefer `devenv shell` over `nix develop`.
 
 <Tab value="minimal">
 ```bash
-nix flake init -t github:darkmatter/stackpanel#minimal
+nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
 ```
 
 This creates:
@@ -86,7 +86,7 @@ Or add to an existing project manually:
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     devenv.url = "github:cachix/devenv";
-    stackpanel.url = "github:darkmatter/stackpanel";
+    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
     mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";

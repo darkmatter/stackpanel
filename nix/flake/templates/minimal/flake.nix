@@ -5,7 +5,7 @@
 # Uses standard Nix flake structure with flake-utils.
 #
 # Getting started:
-#   1. Run: nix flake init -t github:darkmatter/stackpanel#minimal
+#   1. Run: nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel#minimal
 #   2. Run: direnv allow
 #   3. Configure stackpanel in ./.stack/config.nix
 # ==============================================================================
@@ -15,11 +15,17 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    stackpanel.url = "github:darkmatter/stackpanel";
+    stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
   outputs =
-    { self, nixpkgs, flake-utils, stackpanel, ... }@inputs:
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      stackpanel,
+      ...
+    }@inputs:
     # Simple usage: just call mkFlake
     stackpanel.lib.mkFlake { inherit inputs self; }
     # Merge with your own outputs
