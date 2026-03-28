@@ -1,9 +1,0 @@
-{
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    }
-  },
-  "name": "@gen/config",
-  "type": "module"
-}
