@@ -11,7 +11,7 @@ inputs:
   nixpkgs:
     url: github:NixOS/nixpkgs/nixos-unstable
   stackpanel:
-    url: github:darkmatter/stackpanel
+    url: git+ssh://git@github.com/darkmatter/stackpanel
 
 imports:
   - stackpanel/devenvModules/default

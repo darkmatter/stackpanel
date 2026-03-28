@@ -200,7 +200,7 @@ func EvalOnce(ctx context.Context, opts EvalOnceParams) ([]byte, error) {
 	}
 	timeout := opts.Timeout
 	if timeout <= 0 {
-		timeout = 10 * time.Second
+		timeout = 10 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
