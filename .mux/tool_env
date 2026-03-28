@@ -1,0 +1,5 @@
+# Mux tool_env (sourced before bash tool calls)
+# BEGIN BEADS MUX HOOK
+# Ensure bd installed in ~/bin is discoverable.
+export PATH="$HOME/bin:$PATH"
+# END BEADS MUX HOOK
