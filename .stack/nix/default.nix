@@ -14,6 +14,7 @@
 # ==============================================================================
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -36,6 +37,11 @@ in
   config = lib.mkIf config.stackpanel.enable {
     # PostgreSQL package - requires pkgs, so lives here instead of config.nix
     stackpanel.globalServices.postgres.package = pkgs.postgresql_17;
+
+    # Snapshot review tooling for Nix deployment regression tests.
+    stackpanel.devshell.packages = [
+      inputs.namaka.packages.${pkgs.system}.default
+    ];
 
     # Runtime dependencies of `stackpanel` CLI.
     # Declaring them as runtimeInputs has two effects:

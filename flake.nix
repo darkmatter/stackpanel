@@ -36,6 +36,9 @@
     gomod2nix.inputs.flake-utils.follows = "flake-utils";
     bun2nix.url = "github:nix-community/bun2nix";
     bun2nix.inputs.nixpkgs.follows = "nixpkgs";
+    nixtest.url = "github:jetify-com/nixtest";
+    namaka.url = "github:nix-community/namaka/v0.2.1";
+    namaka.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs";
@@ -63,6 +66,23 @@
 
       # Overlays for nixpkgs
       overlays = exports.lib.requiredOverlays;
+      deploymentTestSystem = "x86_64-linux";
+
+      deploymentTestInputs =
+        let
+          pkgs = import nixpkgs {
+            system = deploymentTestSystem;
+            inherit overlays;
+          };
+          options = exports.lib.getOptions { inherit pkgs; };
+        in
+        {
+          topLevelOptionNames = builtins.attrNames options;
+          deploymentOptionNames = builtins.attrNames options.deployment;
+          deploymentAlchemyOptionNames = builtins.attrNames options.deployment.alchemy;
+        };
+
+      nixtestLib = import "${inputs.nixtest.outPath}/src";
 
       # Global outputs (nixosModules, nixosConfigurations, colmenaHive).
       # Evaluated once using lib only -- no per-system pkgs instantiation.
@@ -129,6 +149,17 @@
         devenvModules
         templates
         ;
+
+      tests = {
+        deployment = nixtestLib.assertTests (
+          nixtestLib.runTests (import ./nix/stackpanel/deployment/tests/unit deploymentTestInputs)
+        );
+      };
+
+      deploymentSnapshots = inputs.namaka.lib.load {
+        src = ./nix/stackpanel/deployment/tests/snapshots;
+        inputs = deploymentTestInputs;
+      };
 
       # nixosModules merges framework modules from exports with
       # per-app generated service modules from globalOutputs
