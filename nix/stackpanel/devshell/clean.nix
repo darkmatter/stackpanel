@@ -212,6 +212,9 @@ in
         description = "Clean devshell entry script";
       };
 
+      # Gitignore the generated devshell script
+      stackpanel.gitignore.entries = [ "devshell" ];
+
       # Export marker for clean environment detection
       stackpanel.devshell.env.__STACKPANEL_CLEAN_ENV = lib.mkDefault "";
     })
