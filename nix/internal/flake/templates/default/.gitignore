@@ -9,7 +9,9 @@ result-*
 .stackpanel-root
 .stack/profile/
 .stack/keys/
+.stack/config.local.nix
 .stack/gen/
+.stack/state/
 
 # devenv
 .devenv/
