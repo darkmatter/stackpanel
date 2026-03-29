@@ -476,6 +476,7 @@
           "/.devenv-root"
           "/result"
           ".stack/state/"
+          "apps/stackpanel-go/.stack/keys/"
         ];
         managed = "block";
         sort = true;

@@ -61,8 +61,10 @@ in
       sort = true;
       lines =
         (lib.optionals cfg.gitignore.defaults.stackpanelState [
+          "${cfg.dirs.home}/gen/"
           "${cfg.dirs.home}/keys/"
           "${cfg.dirs.home}/profile/"
+          "${cfg.dirs.home}/state/"
         ])
         ++ (lib.optionals cfg.gitignore.defaults.localConfig [
           "${cfg.dirs.home}/config.local.nix"
