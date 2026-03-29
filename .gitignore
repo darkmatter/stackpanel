@@ -78,9 +78,11 @@ tmp
 .stack/config.local.nix
 .stack/keys/
 .stack/profile/
+.stack/secrets/bin/
 .stack/secrets/state/
 .stack/secrets/vars/.sops.yaml
 .stack/state/
+.stackpanel/bin/
 .tasks
 .turbo
 /.devenv*
@@ -94,79 +96,10 @@ dist
 logs
 node_modules
 temp
-tmp# ── END stackpanel ──
+tmp
+# ── END stackpanel ──
 
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
-# Stackpanel generated files (cache)
-.stackpanel/state/
-.stackpanel/bin/
-.sst
-.tmp
-.envrc.local
-
-
-# START Stackpanel Generated Files
-# DO NOT EDIT - managed by stackpanel. Changes will be overwritten.
-/.envrc.local
-/.stackpanel/gen/direnv-wrapper.sh
-/.stackpanel/gen/vscode/devshell-loader.sh
-/.stackpanel/gen/zed/devshell-loader.sh
-/.stackpanel/gen/zed/settings.json
-/.stackpanel/state/infra-inputs.json
-/.tasks/bin/build
-/.tasks/bin/clean
-/.tasks/bin/db:migrate
-/.tasks/bin/db:push
-/.tasks/bin/db:studio
-/.tasks/bin/dev
-/.tasks/bin/format
-/.tasks/bin/generate:proto
-/.tasks/bin/generate:types
-/.tasks/bin/lint
-/.tasks/bin/test
-/.tasks/bin/test:coverage
-/.tasks/bin/test:watch
-/.tasks/bin/typecheck
-/.vscode/settings.json
-/apps/docs/.oxlintrc.json
-/apps/web/.oxlintrc.json
-/devshell
-/packages/gen/env/README.md
-/packages/gen/env/data/shared/vars.yaml
-/packages/gen/env/package.json
-/packages/gen/env/src/entrypoints/docs.ts
-/packages/gen/env/src/entrypoints/index.ts
-/packages/gen/env/src/entrypoints/stackpanel-go.ts
-/packages/gen/env/src/entrypoints/web.ts
-/packages/gen/env/src/generated/docs/dev.ts
-/packages/gen/env/src/generated/docs/index.ts
-/packages/gen/env/src/generated/index.ts
-/packages/gen/env/src/generated/stackpanel-go/dev.ts
-/packages/gen/env/src/generated/stackpanel-go/index.ts
-/packages/gen/env/src/generated/web/dev.ts
-/packages/gen/env/src/generated/web/index.ts
-/packages/gen/env/src/generated/web/prod.ts
-/packages/gen/env/src/index.ts
-/packages/gen/env/tsconfig.json
-/packages/infra/README.md
-/packages/infra/alchemy.run.ts
-/packages/infra/modules/aws-secrets.ts
-/packages/infra/modules/deployment.ts
-/packages/infra/package.json
-/packages/infra/src/index.ts
-/packages/infra/src/resources/kms-alias.ts
-/packages/infra/src/resources/kms-key.ts
-/packages/infra/src/types.ts
-/packages/infra/sst.config.ts
-/packages/infra/tsconfig.json
-/packages/scripts/entrypoints/docs.sh
-/packages/scripts/entrypoints/stackpanel-go.sh
-/packages/scripts/entrypoints/web.sh
-/process-compose.yaml
-/turbo.json
-/.stackpanel/bin/
-/.stackpanel/secrets/keys/.sops.yaml
-# END Stackpanel Generated Files
