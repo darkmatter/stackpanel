@@ -77,7 +77,7 @@
         };
         test = {
           env = {
-            POSTGRES_URL = config.variables."/test/postgres-url".value;
+            POSTGRES_URL = "/dev/postgres-url";
           };
           name = "test";
         };
@@ -171,7 +171,7 @@
             CORS_ORIGIN = "";
             POLAR_ACCESS_TOKEN = "";
             POLAR_SUCCESS_URL = "";
-            POSTGRES_URL = "var://secret/postgres-url";
+            POSTGRES_URL = "/dev/postgres-url";
           };
           name = "dev";
         };
@@ -182,7 +182,7 @@
             CORS_ORIGIN = "";
             POLAR_ACCESS_TOKEN = "";
             POLAR_SUCCESS_URL = "";
-            POSTGRES_URL = "var://secret/postgres-url";
+            POSTGRES_URL = "/dev/postgres-url";
           };
           name = "prod";
         };
@@ -193,7 +193,7 @@
             CORS_ORIGIN = "";
             POLAR_ACCESS_TOKEN = "";
             POLAR_SUCCESS_URL = "";
-            POSTGRES_URL = "var://secret/postgres-url";
+            POSTGRES_URL = "/dev/postgres-url";
           };
           name = "staging";
         };
