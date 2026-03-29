@@ -90,7 +90,7 @@ in
     # Keep .stackpanel/bin out of git — unconditional to avoid a recursion cycle:
     # the bin-generation mkIf depends on devshell.packages → files → gitignore → cycle.
     (lib.mkIf (config.stackpanel.enable && cfg.enable) {
-      stackpanel.gitignore.entries = [ ".stackpanel/bin/" ];
+      stackpanel.gitignore.entries = [ ".stack/bin/" ];
     })
 
     (lib.mkIf (config.stackpanel.enable && cfg.enable && binDirPaths != [ ]) {
