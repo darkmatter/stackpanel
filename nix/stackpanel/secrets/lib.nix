@@ -123,7 +123,7 @@ rec {
 
         resolved="$(resolve_target_path "$arg" 2>/dev/null || true)"
         case "$resolved" in
-          "$PROJECT_ROOT/.stack/secrets"/*|"$PROJECT_ROOT/.stackpanel/secrets"/*|"$SECRETS_DIR"/*)
+          "$PROJECT_ROOT/.stack/secrets"/*|"$PROJECT_ROOT/.stack/secrets"/*|"$SECRETS_DIR"/*)
             if [[ -f "$SOPS_CONFIG_PATH" ]]; then
               EXTRA_ARGS+=(--config "$SOPS_CONFIG_PATH")
             fi
