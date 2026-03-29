@@ -101,7 +101,7 @@ in
 
       # Optionally add .stackpanel/bin to PATH
       stackpanel.devshell.path.prepend = lib.mkIf cfg.addToPath [
-        "$STACKPANEL_ROOT/.stackpanel/bin"
+        "$STACKPANEL_ROOT/.stack/bin"
       ];
     })
   ];

@@ -89,7 +89,7 @@
   # setup (PS1, DEVENV_STATE dirs, profile linking) that conflicts with ours.
   # ===================================================================
 
-  devenvConfigPath = self + "/.stackpanel/devenv.nix";
+  devenvConfigPath = self + "/.stack/devenv.nix";
   hasDevenvConfig = builtins.pathExists devenvConfigPath;
 
   devenvModule = args: let

@@ -115,7 +115,7 @@ let
     else if effectiveRoot != null then
       [
         (effectiveRoot + "/.stack/profile/stackpanel.json")
-        (effectiveRoot + "/.stackpanel/state/stackpanel.json")
+        (effectiveRoot + "/.stack/state/stackpanel.json")
       ]
     else
       [ ];
