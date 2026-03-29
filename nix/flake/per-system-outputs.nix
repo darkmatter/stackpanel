@@ -100,9 +100,15 @@
     # imports, but only the parts that we find useful.
     imports = devenv-toplevel.imports;
     config = lib.recursiveUpdate devenv-toplevel.config {
-      # Set devenv.root for pure evaluation (required by devenv)
-      # Uses toString self which works in pure flake evaluation
-      devenv.root = toString self;
+      # Set devenv.root to the actual working directory so devenv submodule
+      # enterShells (git-hooks, languages, etc.) write to the project dir,
+      # not the read-only Nix store copy of the source. builtins.getEnv is
+      # available because nix develop --impure is required for this flake.
+      devenv.root =
+        let
+          pwd = builtins.getEnv "PWD";
+        in
+        if pwd != "" then pwd else toString self;
       # We can not get away without this anymore
       devenv.cli.version = inputs.devenv.packages.${pkgs.stdenv.hostPlatform.system}.default.version;
       # Fails checking cliVersion otherwise
