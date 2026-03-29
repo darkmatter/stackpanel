@@ -333,7 +333,7 @@ let
         _no_edit=${q noEditNotice}
 
         # Build the full managed block (markers + content)
-        _block_content="$(printf '%s\n%s\n%s%s' "$_begin_marker" "$_no_edit" "$(cat "$_src")" "$_end_marker")"
+        _block_content="$(printf '%s\n%s\n%s\n%s' "$_begin_marker" "$_no_edit" "$(cat "$_src")" "$_end_marker")"
 
         mkdir -p "$(dirname "$_dst")"
 
