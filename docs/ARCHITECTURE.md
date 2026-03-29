@@ -53,9 +53,9 @@ All stackpanel logic lives in `nix/stackpanel/` and has zero dependency on deven
 ```
 User's flake.nix
   -> imports flakeModules.default (nix/flake/default.nix)
-    -> auto-loads .stackpanel/_internal.nix
+    -> auto-loads .stack/_internal.nix
     -> lib.evalModules with nix/stackpanel/ (the core)
-    -> optionally imports .stackpanel/devenv.nix into devenv.shells.default
+    -> optionally imports .stack/devenv.nix into devenv.shells.default
     -> creates devShells.default via pkgs.mkShell
 ```
 
@@ -146,7 +146,7 @@ Three-tier system:
 2. **SOPS-encrypted YAML**: Per-environment files (`dev.yaml`, `staging.yaml`, `prod.yaml`)
 3. **Agenix**: Per-secret `.age` files encrypted to team member SSH public keys
 
-## .stackpanel/ Configuration
+## .stack/ Configuration
 
 ### Files
 

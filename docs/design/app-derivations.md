@@ -31,7 +31,7 @@ all designs:
 Stackpanel has a web-based Studio UI backed by a Go agent. The agent reads
 configuration via `nix eval --json` on the **serializable** subset of config
 (`filterSerializable` in `lib/serialize.nix`), and writes changes back by
-patching `.stackpanel/config.nix` via the `PatchNixData` RPC.
+patching `.stack/config.nix` via the `PatchNixData` RPC.
 
 The serialization boundary is strict:
 
