@@ -220,6 +220,13 @@ in
             description = "Zed tasks configuration";
           };
         };
+
+      # Gitignore IDE settings files that are written directly into the repo root
+      # (as opposed to .stack/gen/ which is already gitignored). These files contain
+      # machine-specific Nix store paths that differ per developer.
+      stackpanel.gitignore.entries =
+        lib.optional (cfg.vscode.enable && cfg.vscode.output-mode == "settingsJson") ".vscode/settings.json"
+        ++ lib.optional (cfg.zed.enable && cfg.zed.output-mode == "dotZed") ".zed/settings.json";
     }
   );
 }

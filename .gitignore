@@ -22,7 +22,6 @@ build
 .env*.local
 
 # IDEs and editors
-!.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -85,6 +84,8 @@ tmp
 .stackpanel/bin/
 .tasks
 .turbo
+.vscode/settings.json
+.zed/settings.json
 /.devenv*
 /.devenv-root
 /.stack/state
@@ -95,6 +96,7 @@ devenv.local.yaml
 dist
 logs
 node_modules
+process-compose.yaml
 temp
 tmp
 # ── END stackpanel ──
