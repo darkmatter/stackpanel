@@ -75,6 +75,7 @@ tmp
 .stack/.token
 .stack/bin
 .stack/config.local.nix
+.stack/gen/
 .stack/keys/
 .stack/profile/
 .stack/secrets/bin/
@@ -90,6 +91,7 @@ tmp
 /.devenv-root
 /.stack/state
 /result
+apps/stackpanel-go/.stack/keys/
 build
 devenv.local.nix
 devenv.local.yaml
