@@ -175,7 +175,6 @@ nixos-target := env("DEPLOY_SYSTEM", "x86_64-linux")
 nixos-cache := env("CACHIX_CACHE_NAME", "darkmatter")
 
 # Build the NixOS package for the target system (cross-build if needed)
-[script]
 nixos-build app='web' *args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -220,7 +219,6 @@ nixos-push:
     bash "{{ rootdir }}/scripts/deploy/push-cachix.sh" "{{ nixos-cache }}" ./result
 
 # Run Alchemy infra for NixOS (provisions EC2, SG, IAM, SSM — no instance replace)
-[script]
 nixos-infra app='web':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -231,7 +229,6 @@ nixos-infra app='web':
     bash "{{ rootdir }}/scripts/deploy/run-alchemy-infra.sh" "{{ rootdir }}" "{{ app }}"
 
 # Apply the NixOS configuration via Colmena
-[script]
 nixos-apply:
     #!/usr/bin/env bash
     set -euo pipefail
