@@ -150,11 +150,14 @@
           "POLAR_SUCCESS_URL"
         ];
         enable = true;
+        cloudflare = {
+          workerName = "stackpanel-web";
+        };
         fly = {
           appName = "stackpanel-web";
           region = "iad";
         };
-        host = "aws";
+        host = "cloudflare";
         secrets = [
           "DATABASE_URL"
           "BETTER_AUTH_SECRET"
