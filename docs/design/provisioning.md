@@ -84,7 +84,7 @@ This directory is gitignored by default (generated files). After generation and 
      → hardware-configuration.nix generated to .stackpanel/hardware/prod-server/
 
 2. User reviews and commits .stackpanel/hardware/prod-server/hardware-configuration.nix
-     → Updates config.nix: hardwareConfig = ./.stackpanel/hardware/prod-server/hardware-configuration.nix;
+     → Updates config.nix: hardwareConfig = ./.stack/hardware/prod-server/hardware-configuration.nix;
      → git commit
 
 3. stackpanel deploy my-api  (or colmena apply --on prod-server)
@@ -102,7 +102,7 @@ Generated hardware config:
 Next steps:
   1. Review the generated hardware config
   2. Add it to config.nix:
-       hardwareConfig = ./.stackpanel/hardware/prod-server/hardware-configuration.nix;
+       hardwareConfig = ./.stack/hardware/prod-server/hardware-configuration.nix;
   3. Commit and run: stackpanel deploy my-api
 ```
 
