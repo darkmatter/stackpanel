@@ -588,6 +588,9 @@ in
           description = "Process-compose configuration (symlink to Nix store)";
         };
 
+        # Gitignore the symlink — it points to a Nix store path that changes on every rebuild
+        stackpanel.gitignore.entries = [ "process-compose.yaml" ];
+
         # Auto-clean the command alias to avoid conflicts with user's shell aliases
         stackpanel.devshell.clean.aliases = [ pcCfg.commandName ];
 

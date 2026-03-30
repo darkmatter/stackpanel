@@ -92,7 +92,7 @@
     options.turbo = {
       enable = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = "Whether to include this app in turbo.json generation.";
       };
     };
