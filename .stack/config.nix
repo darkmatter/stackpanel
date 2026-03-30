@@ -368,6 +368,8 @@
         authorizedKeys = [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
         ];
+        # microvm.nix host config: bridge networking, dnsmasq, VM definitions
+        modules = [ ../nix/hosts/ovh-usw-1/default.nix ];
       };
       hzcloud-usw-1 = {
         host = "5.78.188.99";
@@ -404,6 +406,25 @@
         authorizedKeys = [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
         ];
+      };
+
+      # ---------------------------------------------------------------------------
+      # Hetzner Cloud Helsinki — microvm.nix hypervisor host
+      # IP: provisioning-pending — update `host` once the server is created.
+      #     The public IP of runner-hz-hel-slate is the current Helsinki bastion;
+      #     hzcloud-hel-1 is a NEW dedicated server to be provisioned separately.
+      # External interface assumption: eth0 (Hetzner Cloud VPS default).
+      #     Verify with `ip link` after first boot and update if needed.
+      # ---------------------------------------------------------------------------
+      hzcloud-hel-1 = {
+        host = "provisioning-pending";
+        user = "root";
+        system = "x86_64-linux";
+        authorizedKeys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA+M/DHDlKgayM6wsiX6r704pE+2qENOsKcytC7sBhKA"
+        ];
+        # microvm.nix host config: bridge networking, dnsmasq, VM definitions
+        modules = [ ../nix/hosts/hzcloud-hel-1/default.nix ];
       };
     };
   };
