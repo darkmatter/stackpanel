@@ -519,12 +519,14 @@ func loadJSONObject(path string) (map[string]any, bool, error) {
 }
 
 func writeCanonicalJSON(path string, doc map[string]any, mode string) (bool, error) {
-	data, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(doc); err != nil {
 		return false, fmt.Errorf("fileops: marshal %s: %w", path, err)
 	}
-	data = append(data, '\n')
-	return writeBytes(path, data, mode)
+	return writeBytes(path, buf.Bytes(), mode)
 }
 
 // writeBytes writes content to path, returning false if the file already has
