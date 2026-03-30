@@ -10,7 +10,7 @@
 #
 # Shell options:
 #   nix develop     # Pure stackpanel shell (fast, reproducible)
-#   devenv shell    # Devenv shell with languages/services (if devenv.nix exists)
+#   devenv shell    # Devenv shell with languages/services (if .stack/devenv.nix exists)
 #
 # The lib.mkFlake function:
 #   - Auto-loads .stack/config.nix
@@ -24,6 +24,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
+    devenv.url = "github:cachix/devenv";
+    devenv.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

@@ -91,7 +91,7 @@ let
       projectRoot ? null,
       stackpanelImports ? [ ],
     }@args:
-    import ./default.nix args;
+    import ./per-system-outputs.nix args;
 
 in
 {

@@ -6,7 +6,12 @@
 #
 # Documentation: https://devenv.sh/reference/options/
 # ==============================================================================
-{ pkgs }:
+{
+  pkgs,
+  lib,
+  inputs,
+  ...
+}:
 {
   # ---------------------------------------------------------------------------
   # Packages - Available in the dev shell

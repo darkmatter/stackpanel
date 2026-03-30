@@ -19,7 +19,7 @@ const (
 	UsersPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  usersPath = root + "/.stackpanel/data/users.nix";
+  usersPath = root + "/.stack/data/users.nix";
 in
   if builtins.pathExists usersPath
   then import usersPath
@@ -30,7 +30,7 @@ in
 	GitHubCollaboratorsPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  collabsPath = root + "/.stackpanel/data/github-collaborators.nix";
+  collabsPath = root + "/.stack/data/github-collaborators.nix";
 in
   if builtins.pathExists collabsPath
   then import collabsPath
@@ -41,7 +41,7 @@ in
 	StackpanelConfigPreset = `
 let
   root = builtins.getEnv "STACKPANEL_ROOT";
-  configPath = root + "/.stackpanel/config.nix";
+  configPath = root + "/.stack/config.nix";
 in
   if builtins.pathExists configPath
   then (import configPath { pkgs = null; lib = null; config = {}; inputs = {}; }).stackpanel or {}
@@ -378,7 +378,7 @@ func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions)
 
 	// Fast path 3: try state file
 	if projectRoot != "" {
-		stateFile := projectRoot + "/.stackpanel/state/stackpanel.json"
+		stateFile := projectRoot + "/.stack/state/stackpanel.json"
 		packages, err := getInstalledPackagesFromJSON(stateFile)
 		if err == nil && len(packages) > 0 {
 			return packages, nil
@@ -387,7 +387,7 @@ func GetInstalledPackages(ctx context.Context, opts GetInstalledPackagesOptions)
 
 	// Fast path 4: try generated config
 	if projectRoot != "" {
-		genConfig := projectRoot + "/.stackpanel/gen/config.json"
+		genConfig := projectRoot + "/.stack/gen/config.json"
 		packages, err := getInstalledPackagesFromJSON(genConfig)
 		if err == nil && len(packages) > 0 {
 			return packages, nil
@@ -447,7 +447,7 @@ func getInstalledPackagesFromJSON(configPath string) ([]InstalledPackage, error)
 //
 //	[ "ripgrep" "jq" "htop" ]
 func getUserPackagesFromDataFile(projectRoot string) ([]InstalledPackage, error) {
-	packagesFile := projectRoot + "/.stackpanel/data/packages.nix"
+	packagesFile := projectRoot + "/.stack/data/packages.nix"
 
 	// Check if file exists
 	if _, err := os.Stat(packagesFile); os.IsNotExist(err) {

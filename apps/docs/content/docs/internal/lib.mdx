@@ -90,7 +90,7 @@ let
 in {
   # Generate VS Code settings for devshell terminal
   settings = ideLib.mkVscodeSettings {
-    loaderPath = "\${workspaceFolder}/.stackpanel/gen/ide/vscode/devshell-loader.sh";
+    loaderPath = "\${workspaceFolder}/.stack/gen/ide/vscode/devshell-loader.sh";
   };
 
   # Create devshell loader script

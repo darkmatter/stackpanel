@@ -35,7 +35,7 @@ let
   pkgs = import <nixpkgs> {};
   lib = pkgs.lib;
   stackPath = ./.stack/config.nix;
-  legacyPath = ./.stackpanel/config.nix;
+  legacyPath = ./.stack/config.nix;
   stackExists = builtins.pathExists stackPath;
   legacyExists = builtins.pathExists legacyPath;
   configPath = if stackExists then stackPath else legacyPath;
@@ -64,7 +64,7 @@ let
   pkgs = import <nixpkgs> {};
   lib = pkgs.lib;
   stackPath = ./.stack/config.local.nix;
-  legacyPath = ./.stackpanel/config.local.nix;
+  legacyPath = ./.stack/config.local.nix;
   stackExists = builtins.pathExists stackPath;
   legacyExists = builtins.pathExists legacyPath;
   configPath = if stackExists then stackPath else legacyPath;
