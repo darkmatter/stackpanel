@@ -402,8 +402,8 @@ in {
       stackpanel.appModules = [taskAppModule];
     }
 
-    # When stackpanel is enabled and has tasks, generate outputs
-    (lib.mkIf (cfg.enable && hasTasks) {
+    # When stackpanel is enabled, turbo is enabled, and has tasks, generate outputs
+    (lib.mkIf (cfg.enable && cfg.turbo.enable && hasTasks) {
       # Expose computed values
       stackpanel.turbo.config = turboConfig;
       stackpanel.turbo.scripts = taskScripts;
@@ -493,7 +493,7 @@ in {
             // (mkAppFileEntries appsWithTasks appTaskScripts appTurboConfigs appName appsWithTasks.${appName})
         ) {} (lib.attrNames appsWithTasks);
       in
-        lib.mkIf (cfg.enable && hasAppsWithTasks) {
+        lib.mkIf (cfg.enable && cfg.turbo.enable && hasAppsWithTasks) {
           stackpanel.files.entries = appFileEntries;
         }
     )
