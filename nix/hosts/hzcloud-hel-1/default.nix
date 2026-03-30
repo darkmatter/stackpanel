@@ -142,6 +142,8 @@ in
 
     firewall = {
       trustedInterfaces = [ "tailscale0" "br-vms" ];
+      # Open 80 (ACME HTTP challenge) and 443 (HTTPS) for Caddy on the host
+      allowedTCPPorts = [ 80 443 ];
     };
 
     # NAT: VMs reach the internet through the host's public interface
@@ -175,6 +177,21 @@ in
       bind-interfaces = true;
       dhcp-range = [ "10.0.100.10,10.0.100.50,24h" ];
       dhcp-option = [ "option:router,10.0.100.1" ];
+    };
+  };
+
+  # ---------------------------------------------------------------------------
+  # Caddy: TLS termination on the host, reverse-proxying to the API VM
+  #
+  # Caddy uses ACME (Let's Encrypt) auto-HTTPS by default.
+  # Port 80 must be open externally for the HTTP-01 challenge.
+  # ---------------------------------------------------------------------------
+  services.caddy = {
+    enable = true;
+    virtualHosts."api.stackpanel.com" = {
+      extraConfig = ''
+        reverse_proxy 10.0.100.11:3000
+      '';
     };
   };
 
