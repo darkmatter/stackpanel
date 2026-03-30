@@ -1,3 +1,4 @@
+.artifacts
 release.tar.gz
 .stackpanel-root
 *.local.json
