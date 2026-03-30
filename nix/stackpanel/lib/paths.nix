@@ -60,23 +60,15 @@ let
         local dir="$PWD"
         local marker="${rootMarker}"
 
-        # First, try to find the marker file by walking up the directory tree
-        while [[ "$dir" != "/" ]]; do
-          if [[ -f "$dir/$marker" ]]; then
-            cat "$dir/$marker"
-            return 0
-          fi
-          dir="$(dirname "$dir")"
-        done
-
-        # Fallback 1: check if STACKPANEL_ROOT is already set
+        # First, honor an explicit override from the parent shell.
         if [[ -n "''${STACKPANEL_ROOT:-}" ]]; then
           echo "$STACKPANEL_ROOT"
           return 0
         fi
 
-        # Fallback 2: use git repository root if available
-        # This handles running `nix develop` from subdirectories before marker exists
+        # Fallback 1: use git repository root when available.
+        # This keeps nested git worktrees from inheriting a parent checkout's
+        # marker file when they live under .worktrees/.
         if command -v git >/dev/null 2>&1; then
           local git_root
           git_root="$(git rev-parse --show-toplevel 2>/dev/null)" || true
@@ -86,7 +78,18 @@ let
           fi
         fi
 
-        # Fallback 3: look for flake.nix by walking up from PWD
+        # Fallback 2: look for the stackpanel home directory by walking up from
+        # PWD. This still prefers the current checkout over any parent repo.
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -d "$dir/${rootDir}" ]]; then
+            echo "$dir"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
+
+        # Fallback 3: look for flake.nix by walking up from PWD.
         dir="$PWD"
         while [[ "$dir" != "/" ]]; do
           if [[ -f "$dir/flake.nix" ]]; then
@@ -96,7 +99,17 @@ let
           dir="$(dirname "$dir")"
         done
 
-        echo "Error: Could not find stackpanel root (no $marker, git repo, or flake.nix found)" >&2
+        # Fallback 4: honor the root marker for non-git contexts.
+        dir="$PWD"
+        while [[ "$dir" != "/" ]]; do
+          if [[ -f "$dir/$marker" ]]; then
+            cat "$dir/$marker"
+            return 0
+          fi
+          dir="$(dirname "$dir")"
+        done
+
+        echo "Error: Could not find stackpanel root (no STACKPANEL_ROOT env var, git repo, ${rootDir} dir, $marker, or flake.nix found)" >&2
         return 1
       }
     '';
