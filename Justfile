@@ -52,6 +52,30 @@ test-provision-hetzner *args:
 test-provision-hetzner-setup-check:
     {{ nix-run }}bash "{{ rootdir }}/tests/provision-hetzner-e2e.sh" --setup-check
 
+# ── Scenario tests (provision/deploy framework) ─────────────────────────────
+
+# Run a named scenario from tests/scenarios/.
+#   e.g. just test-scenario provision-hetzner-setup-check
+#        just test-scenario provision-hetzner-dry-run
+#        just test-scenario provision-hetzner-full
+#        just test-scenario deploy-colmena-dry-run
+#        just test-scenario deploy-nixos-rebuild-dry-run
+#        just test-scenario deploy-alchemy-smoke
+test-scenario name *args:
+    {{ nix-run }}bash "{{ rootdir }}/tests/scenarios/{{ name }}.sh" {{ args }}
+
+# Run all safe scenarios (no cloud resources destroyed/created, no remote actions).
+# Suitable for local or CI quick checks without credentials.
+test-scenarios-safe:
+    {{ nix-run }}bash "{{ rootdir }}/tests/scenarios/deploy-colmena-dry-run.sh"
+    {{ nix-run }}bash "{{ rootdir }}/tests/scenarios/deploy-nixos-rebuild-dry-run.sh"
+    {{ nix-run }}bash "{{ rootdir }}/tests/scenarios/deploy-alchemy-smoke.sh"
+
+# Run the full provision scenario suite (requires hetzner_api_key in SOPS).
+test-scenarios-provision:
+    {{ nix-run }}bash "{{ rootdir }}/tests/scenarios/provision-hetzner-setup-check.sh"
+    {{ nix-run }}bash "{{ rootdir }}/tests/scenarios/provision-hetzner-dry-run.sh"
+
 # ── Nix ────────────────────────────────────────────────────────────────────────
 
 # Run nix flake check
