@@ -2,7 +2,7 @@
 
 > **Status:** Draft — 2026-03-30
 >
-> **Scope:** Deploy `stackpanel.com` and `docs.stackpanel.com` to Cloudflare Workers; deploy the stackpanel API on NixOS microVMs hosted on OVH US-West and Hetzner Helsinki; connect them via Cloudflare geo-routing / load balancing.
+> **Scope:** Deploy `stackpanel.com` and `docs.stackpanel.com` to Cloudflare Workers; deploy long-running API services on NixOS microVMs hosted on OVH US-West and Hetzner Helsinki; geo-route API traffic via Cloudflare; run self-hosted PostgreSQL + Redis on each host with cross-site replication.
 
 ---
 
@@ -12,9 +12,18 @@ Stackpanel currently has no cohesive production deployment:
 
 - `stackpanel.com` (web app) is configured for AWS EC2 but not reliably deployed to Cloudflare Workers where it belongs.
 - `docs.stackpanel.com` is configured for Alchemy/Cloudflare but not deployed end-to-end.
-- The `stackpanel-go` API agent runs only as a local per-developer daemon; there is no production API node for hosted/team use.
+- There is no production API service for long-running backend work. (The Go agent is a local per-user daemon, not a production service.)
 - No geo-routing exists — a single region serves all traffic.
-- There is no microvm.nix integration; the existing Helsinki (volt-*) and OVH bare-metal machines are unused for production services.
+- The existing bare-metal machines (OVH, Hetzner) already run microvm.nix VMs (see `~/git/darkmatter/infra`), but the stackpanel project does not yet use them for production workloads.
+- There is no self-hosted database or cache; Neon Serverless is the only database path.
+
+---
+
+## Architecture Model: Agent vs API
+
+**stackpanel agent** is a per-user local daemon — architecturally similar to Drizzle's `local.drizzle.studio`. The user runs `stackpanel agent` on their own machine (eventually installed as a launchctl service on macOS). The web app at `local.stackpanel.com` is the same as `stackpanel.com` but with CORS headers pre-configured so the browser can communicate with the local agent at `localhost:9876`.
+
+The **production API** is a separate concern: long-running backend services for features that cannot run inside a user's local agent. This is a new **Bun-based TypeScript worker** (`apps/api/`), not the Go agent binary. The Go agent stays local.
 
 ---
 
@@ -22,63 +31,69 @@ Stackpanel currently has no cohesive production deployment:
 
 1. Deploy `stackpanel.com` to Cloudflare Workers globally.
 2. Deploy `docs.stackpanel.com` to Cloudflare Workers globally.
-3. Run the Stackpanel API on NixOS microVMs:
-   - One microVM on OVH US-West (`ovh-usw-1`).
-   - One microVM on Hetzner Helsinki (new dedicated machine or `volt-1`).
-4. Geo-route API traffic via Cloudflare Load Balancer: Americas → OVH US-West; Europe/Asia → Hetzner Helsinki.
-5. Use the existing Stackpanel deployment system (Alchemy for Cloudflare, Colmena for NixOS) throughout.
-6. Use microvm.nix as the VM abstraction layer on each bare-metal host.
+3. Scaffold and deploy a new Bun-based API worker (`apps/api/`) on NixOS microVMs:
+   - One API microVM on OVH US-West (`ovh-usw-1`).
+   - One API microVM on Hetzner Helsinki (`hzcloud-hel-1`).
+4. Run self-hosted PostgreSQL + Redis microVMs on each host, with cross-site replication.
+5. Geo-route API traffic via Cloudflare Workers: Americas → OVH US-West; Europe/Asia → Hetzner Helsinki.
+6. Use the existing Stackpanel deployment system (Alchemy for Cloudflare, Colmena for NixOS) throughout.
+7. Use microvm.nix as the VM abstraction layer, following the proven pattern in `~/git/darkmatter/infra/nix/nixos/hosts/ovh-usw-1/system.nix`.
 
 ---
 
 ## Non-Goals
 
-- Replacing the local Go agent with the production API (they coexist: local agent = per-developer, production API = hosted/team service).
+- Deploying the Go agent to production (it stays local per-user).
 - Full multi-tenancy isolation per customer at the VM level.
-- Building a new tRPC backend — the production API runs the existing `stackpanel-go` binary in agent mode.
-- High-availability database clustering (Neon Serverless handles that).
+- Replacing Neon Serverless immediately — self-hosted Postgres is additive and may coexist.
+- Building a complete API surface in wave 1 — the Bun worker is a scaffold for future services.
 
 ---
 
 ## Architecture Overview
 
 ```
-                    Browser
-                       │
-         ┌─────────────┴──────────────┐
-         │     Cloudflare Edge (CF)   │
-         │  Workers KV / CDN / Proxy  │
-         ├────────────────────────────┤
-         │   stackpanel.com           │  → CF Worker: web app (TanStack Start)
-         │   docs.stackpanel.com      │  → CF Worker: docs (Fumadocs/Next.js)
-         │   api.stackpanel.com       │  → CF Load Balancer (geo-routed)
-         └──────────┬────────┬────────┘
-                    │        │
-         ┌──────────┘        └─────────────┐
-         │                                 │
-         ▼ Americas                        ▼ Europe / Asia
- ┌───────────────────┐            ┌─────────────────────┐
- │  OVH US-West      │            │  Hetzner Helsinki   │
- │  ovh-usw-1        │            │  hzcloud-hel-1      │
- │  (15.204.104.4)   │            │  (new public node)  │
- │                   │            │                     │
- │  ┌─────────────┐  │            │  ┌───────────────┐  │
- │  │ microvm     │  │            │  │ microvm       │  │
- │  │ sp-api-vm   │  │            │  │ sp-api-vm     │  │
- │  │             │  │            │  │               │  │
- │  │ stackpanel  │  │            │  │ stackpanel    │  │
- │  │ agent mode  │  │            │  │ agent mode    │  │
- │  │ :9876       │  │            │  │ :9876         │  │
- │  └──────┬──────┘  │            │  └───────┬───────┘  │
- │         │  Caddy  │            │          │   Caddy  │
- │  :443 ──┘ (TLS)  │            │  :443 ───┘  (TLS)  │
- └───────────────────┘            └─────────────────────┘
-                    │                        │
-                    └────────────────────────┘
-                           Neon PostgreSQL
-                      (serverless, accessed
-                       via pooler from both)
+                         Browser
+                            │
+              ┌─────────────┴──────────────┐
+              │     Cloudflare Edge (CF)    │
+              ├────────────────────────────┤
+              │  stackpanel.com            │ → CF Worker: web app (TanStack Start)
+              │  local.stackpanel.com      │ → same Worker, CORS → localhost agent
+              │  docs.stackpanel.com       │ → CF Worker: docs (Fumadocs/Next.js)
+              │  api.stackpanel.com        │ → CF geo-router Worker
+              └──────────┬────────┬────────┘
+                         │        │
+              ┌──────────┘        └──────────────┐
+              │                                  │
+              ▼ Americas                         ▼ Europe / Asia
+   ┌─────────────────────────┐       ┌─────────────────────────┐
+   │  OVH US-West            │       │  Hetzner Helsinki       │
+   │  ovh-usw-1              │       │  hzcloud-hel-1          │
+   │  (15.204.104.4)         │       │  (existing/new node)    │
+   │  128GB RAM, AMD EPYC    │       │  128GB RAM              │
+   │                         │       │                         │
+   │  ┌───────────────────┐  │       │  ┌───────────────────┐  │
+   │  │ microvm: api      │  │       │  │ microvm: api      │  │
+   │  │ 8GB, Bun worker   │  │       │  │ 8GB, Bun worker   │  │
+   │  │ :3000 (HTTP)      │  │       │  │ :3000 (HTTP)      │  │
+   │  └───────────────────┘  │       │  └───────────────────┘  │
+   │  ┌───────────────────┐  │       │  ┌───────────────────┐  │
+   │  │ microvm: db       │  │       │  │ microvm: db       │  │
+   │  │ 8GB, PG + Redis   │  │       │  │ 8GB, PG + Redis   │  │
+   │  │ :5432, :6379      │  │       │  │ :5432, :6379      │  │
+   │  └───────────────────┘  │       │  └───────────────────┘  │
+   │  Caddy on host :443     │       │  Caddy on host :443     │
+   │  TLS → api VM :3000     │       │  TLS → api VM :3000     │
+   └─────────────────────────┘       └─────────────────────────┘
+              │                                  │
+              └─── PG logical replication ───────┘
+              └─── Redis replication ────────────┘
 ```
+
+### local.stackpanel.com
+
+`local.stackpanel.com` serves the exact same Cloudflare Worker as `stackpanel.com`. The difference is CORS: the local variant allows the browser to communicate with the user's local `stackpanel agent` daemon at `localhost:9876`. This is how users interact with their own dev environment from the web Studio UI — same pattern as `local.drizzle.studio`.
 
 ---
 
@@ -102,65 +117,62 @@ Stackpanel currently has no cohesive production deployment:
 
 ### 3. API microVMs
 
-#### 3a. microvm.nix integration
+#### 3a. microvm.nix integration — follow existing infra pattern
 
-Add `microvm` to `flake.nix` inputs:
+The OVH host already runs microvm.nix with a proven pattern in `~/git/darkmatter/infra/nix/nixos/hosts/ovh-usw-1/system.nix`. That config defines:
 
-```nix
-microvm = {
-  url = "github:astro/microvm.nix";
-  inputs.nixpkgs.follows = "nixpkgs";
-};
-```
+- TAP+bridge networking (`br-vms` bridge, `10.0.100.0/24` subnet, NAT through host)
+- `cloud-hypervisor` hypervisor
+- virtiofs shares for `/nix/store` (read-only) and `/var/lib/vm-secrets` (secrets injection)
+- `mkVM` helper for consistent VM definitions
+- `dnsmasq` for DHCP/DNS on the bridge
+- Tailscale on each VM via shared auth key
+- systemd services to bridge TAP interfaces after microvm creates them
 
-The host machine (OVH or Hetzner bare-metal) becomes a **microvm host** via the NixOS module:
+The stackpanel project should adopt this same pattern. No additional public IPv4 addresses are needed — VMs get private IPs on the bridge, the host's existing public IP handles inbound traffic, and Caddy on the host reverse-proxies to the correct VM port.
 
-```nix
-microvm.host  # Host-side: manages VMs via systemd services
-```
+#### 3b. Guest VM: API worker
 
-The guest VM is defined as a **microvm guest** NixOS configuration:
+Each API microVM guest runs:
 
-```nix
-microvm.vms.sp-api-vm = {
-  # NixOS module for the API VM
-};
-```
+- **Bun-based API worker** (`apps/api/`) — a TypeScript HTTP service scaffolded for future long-running backend features
+- **Tailscale** — for inter-VM and management access
+- **Minimal NixOS** — standard `vm-general.nix` pattern (ssh, tools, Tailscale)
 
-#### 3b. Guest VM NixOS configuration
+The API worker is a new app: `apps/api/`. It is a scaffold Bun HTTP server (likely Hono) that responds to health checks and will grow to serve production backend needs. It is NOT the Go agent.
 
-Each microVM guest runs:
+#### 3c. Guest VM: Database + cache
 
-- **stackpanel-go in agent mode** — the production API binary
-- **Caddy** — TLS termination, reverse proxy to agent port 9876
-- **sops-nix** — decrypt secrets (DATABASE_URL, BETTER_AUTH_SECRET, Cloudflare tokens)
-- **Minimal NixOS** — no desktop, no dev tooling
+Each host also runs a **db microVM**:
 
-The guest NixOS config is defined at:
-- `nix/hosts/sp-api-vm/default.nix` — shared guest config
-- `nix/hosts/ovh-usw-1/microvm.nix` — OVH host + vm override
-- `nix/hosts/hzcloud-hel-1/microvm.nix` — Hetzner Helsinki host + vm override
+- **PostgreSQL** — self-hosted, with logical replication between the two hosts
+- **Redis** — self-hosted, with replication between the two hosts
+- **sops-nix secrets** — database passwords, replication credentials
 
-#### 3c. Networking model
+This adds a self-hosted database option alongside the existing Neon Serverless path.
 
-- **Host option A (recommended): macvtap networking**
-  - The VM gets a real MAC + IP on the host's public-facing network segment
-  - The host routes traffic directly (no NAT)
-  - Caddy inside the VM terminates TLS on port 443
+#### 3d. Networking model — TAP + bridge + NAT
 
-- **Host option B: TAP + NAT**
-  - VM has a private IP (e.g., 10.0.0.2)
-  - Host NATs and forwards port 443 → VM:443
-  - Simpler but adds an extra hop
+Following the proven infra pattern:
 
-Recommendation: **macvtap** — makes the VM a first-class internet endpoint with its own IP. OVH and Hetzner both support additional IPs / virtual MACs.
+- Host creates `br-vms` bridge with `10.0.100.0/24` subnet
+- Each VM gets a TAP interface bridged into `br-vms`
+- Host runs NAT so VMs can reach the internet
+- `dnsmasq` provides DHCP to VMs on the bridge
+- External traffic arrives at the host's public IP; Caddy on the host terminates TLS and proxies to the VM's private IP
 
-#### 3d. API VM sizing
+No additional IPv4 addresses required. The host's domain name resolves to its existing public IP.
 
-- **Hypervisor:** `cloud-hypervisor` (best for x86_64 production VMs with virtio)
-- **vCPUs:** 2 per VM (host can spare these on OVH/Hetzner dedicated)
-- **RAM:** 1 GB per VM (stackpanel-go agent + Caddy is lightweight)
-- **Disk:** 10 GB virtio-blk backed by a file on the host
+#### 3e. VM sizing
+
+Hosts have 128GB RAM each. Generous sizing:
+
+| VM | vCPUs | RAM | Disk | Ports |
+|---|---|---|---|---|
+| `api` | 4 | 8 GB | 20 GB | 3000 (HTTP) |
+| `db` | 8 | 8 GB | 60 GB | 5432 (PG), 6379 (Redis) |
+
+Hypervisor: `cloud-hypervisor` on both hosts (proven in the existing infra config).
 
 ### 4. Cloudflare Load Balancer (geo-routing)
 
@@ -244,32 +256,36 @@ stackpanel deploy sp-api-vm --target hzcloud-hel-1
 
 ## Secrets
 
-The API microVM needs access to production secrets. Using **sops-nix** on the NixOS guest:
+Secrets are injected into VMs via the existing virtiofs `/var/lib/vm-secrets` → `/run/vm-secrets` pattern (proven in the infra repo). The host decrypts secrets via sops-nix and copies them to the shared mount before VM startup.
 
-- The host machine's SSH host key (after provisioning) is enrolled in `.sops.yaml`
-- The VM's AGE key (derived or passed from host) is also enrolled
-- sops-nix decrypts `.stack/secrets/vars/prod.sops.yaml` at activation time
-- Secrets exposed as environment files read by the `stackpanel-go` agent
-
-Required secrets (new, to be added):
-- `DATABASE_URL` — Neon PostgreSQL connection string (prod pool)
+Required secrets (new, to be added to SOPS):
+- `DATABASE_URL` — self-hosted PG connection string (or Neon fallback)
 - `BETTER_AUTH_SECRET` — auth signing secret
 - `POLAR_ACCESS_TOKEN` — billing
-- `CLOUDFLARE_API_TOKEN` — for Caddy DNS challenge or Alchemy
-- `AGENT_JWT_SECRET` — stackpanel agent JWT signing key (if in hosted mode)
+- `CLOUDFLARE_API_TOKEN` — for Alchemy deploy and Caddy DNS challenge
+- `PG_REPLICATION_PASSWORD` — for cross-site PostgreSQL logical replication
+- `REDIS_REPLICATION_PASSWORD` — for cross-site Redis replication
 
 ---
 
 ## microvm.nix Hypervisor Choice
 
-| Option | Pros | Cons |
-|---|---|---|
-| `qemu` | Most compatible, broad hardware | Slightly heavier |
-| `cloud-hypervisor` | Fast, production-grade, virtio | Needs Intel TDX or KVM |
-| `firecracker` | AWS Lambda-proven, ultra-fast startup | No PCI, limited virtio devices |
-| `kvmtool` | Simple | Minimal community |
+**Decision: `cloud-hypervisor`** — already proven on OVH in the existing infra repo. Both hosts are x86_64 dedicated servers with KVM support.
 
-**Recommendation: `cloud-hypervisor`** for both OVH and Hetzner. Both are x86_64 dedicated servers with KVM support. cloud-hypervisor is already used in production by major cloud providers and is the most sensible choice for a small long-running service VM.
+## Database Replication Strategy
+
+### PostgreSQL: Logical Replication
+
+- OVH US-West runs the **primary** PostgreSQL instance
+- Hetzner Helsinki runs a **logical replica** (read-only for local API queries, writable for local-first patterns if needed later)
+- Replication over Tailscale (encrypted, no public exposure of PG ports)
+- Publications/subscriptions defined via NixOS config
+
+### Redis: Active Replication
+
+- One Redis primary (OVH), one replica (Hetzner Helsinki)
+- Connected over Tailscale
+- Eventual switch to Redis Cluster if needed, but simple primary/replica is sufficient for wave 1
 
 ---
 
@@ -284,32 +300,45 @@ Required secrets (new, to be added):
 - Set Cloudflare DNS: `stackpanel.com` + `docs.stackpanel.com`
 - Estimated effort: small (mostly config + a real deploy run)
 
-### Phase 2: microvm.nix integration
+### Phase 2: Scaffold the Bun API worker (`apps/api/`)
+
+- Create `apps/api/` with a minimal Hono-based Bun HTTP server
+- Health check endpoint: `GET /health`
+- Placeholder routes for future backend services
+- Add to monorepo workspace, Turborepo build config
+- Test locally with `bun run dev`
+
+### Phase 3: microvm.nix integration
 
 - Add `microvm` flake input to `flake.nix`
-- Create `nix/hosts/sp-api-vm/default.nix` — the shared guest NixOS config
-- Create host-side NixOS modules for `ovh-usw-1` and `hzcloud-hel-1`
-- Define `stackpanel-api-vm` app in `.stack/config.nix` targeting both machines
+- Create host-side NixOS modules for microvm definitions (following the `mkVM` pattern from `~/git/darkmatter/infra`)
+- Define API VM + DB VM per host
 - Deploy host configs via Colmena to `ovh-usw-1` (already provisioned)
-- Provision `hzcloud-hel-1` (new Helsinki machine) → install NixOS via `stackpanel provision`
+- Provision `hzcloud-hel-1` if needed → `stackpanel provision`
 - Deploy host + VM configs to both machines
-- Verify VM boots and `stackpanel-go` agent is reachable on each host
+- Verify VMs boot, Tailscale connects, and API health check responds
 
-### Phase 3: TLS and certificates
+### Phase 4: TLS and certificates
 
-- Set up Caddy inside each VM to reverse-proxy `:443` → `localhost:9876`
-- ACME / Let's Encrypt cert for `api-usw.stackpanel.com` and `api-hel.stackpanel.com`
-- Or: use the existing step-ca integration in the project for internal TLS
+- Set up Caddy on each host to reverse-proxy `:443` → API VM `:3000`
+- ACME / Let's Encrypt cert for `api.stackpanel.com` (both hosts serve the same domain via geo-routing)
 - Verify HTTPS health endpoints from outside
 
-### Phase 4: Geo-routing Worker
+### Phase 5: Database + cache microVMs
+
+- Define db VMs with PostgreSQL + Redis per host
+- Configure PostgreSQL logical replication (OVH primary → Helsinki replica) over Tailscale
+- Configure Redis primary/replica over Tailscale
+- Update API worker to connect to local PG/Redis VM
+
+### Phase 6: Geo-routing Worker
 
 - Write `packages/infra/api-router/` CF Worker (TypeScript, Hono)
 - Deploy via Alchemy to `api.stackpanel.com`
 - Bind `API_ORIGIN_OVH` and `API_ORIGIN_HEL` environment variables
 - Test geo-routing from Americas and Europe
 
-### Phase 5: Wire web app to geo-routed API
+### Phase 7: Wire web app to geo-routed API
 
 - Update web app config: `STACKPANEL_API_URL = "https://api.stackpanel.com"`
 - Test connectivity: web app → Cloudflare Worker router → nearest API VM
