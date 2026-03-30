@@ -2,8 +2,14 @@
 # ==============================================================================
 # provision-hetzner-e2e.sh
 #
-# End-to-end regression test for `stackpanel provision` using ephemeral
-# Hetzner Cloud instances.
+# Compatibility wrapper — delegates to tests/scenarios/provision-hetzner-*.sh
+#
+# This script is preserved for backwards compatibility with existing Justfile
+# recipes and documentation.  New code should call the scenario scripts
+# directly via `just test-scenario <name>`.
+#
+# Original end-to-end regression test for `stackpanel provision` using
+# ephemeral Hetzner Cloud instances.
 #
 # Usage:
 #   ./tests/provision-hetzner-e2e.sh [OPTIONS]
