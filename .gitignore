@@ -75,6 +75,7 @@ tmp
 .idea
 .stack/.token
 .stack/bin
+.stack/bin/
 .stack/config.local.nix
 .stack/gen/
 .stack/keys/
@@ -83,7 +84,6 @@ tmp
 .stack/secrets/state/
 .stack/secrets/vars/.sops.yaml
 .stack/state/
-.stackpanel/bin/
 .tasks
 .turbo
 .vscode/settings.json
@@ -96,9 +96,12 @@ apps/stackpanel-go/.stack/keys/
 build
 devenv.local.nix
 devenv.local.yaml
+devshell
 dist
 logs
 node_modules
+packages/infra/
+packages/scripts/entrypoints/
 process-compose.yaml
 temp
 tmp
