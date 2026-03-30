@@ -91,12 +91,12 @@ tmp
 /.devenv*
 /.devenv-root
 /.stack/state
+/devshell
 /result
 apps/stackpanel-go/.stack/keys/
 build
 devenv.local.nix
 devenv.local.yaml
-devshell
 dist
 logs
 node_modules
