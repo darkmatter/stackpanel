@@ -45,6 +45,7 @@
   lib,
   config,
   pkgs,
+  self,
   ...
 }: let
   meta = import ./meta.nix;
@@ -100,7 +101,7 @@
     # repoRoot resolves to the flake's store path at eval time (not the working
     # directory). In a Nix flake, relative paths in .nix files are anchored to
     # the file's location in the store copy of the source tree.
-    repoRoot = ../../../..;
+    repoRoot = self.outPath;
 
     # ---------------------------------------------------------------------------
     # Layout selection: per-app vs. workspace
