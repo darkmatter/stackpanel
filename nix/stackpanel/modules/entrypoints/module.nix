@@ -262,6 +262,8 @@ in
           }) appsWithEntrypoints
         );
 
+        stackpanel.gitignore.entries = [ "packages/scripts/entrypoints/" ];
+
         # Also create as Nix derivations for flake outputs
         stackpanel.outputs = lib.mapAttrs' (name: app: {
           name = "${name}-entrypoint";
