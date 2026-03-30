@@ -44,6 +44,8 @@
     disko.inputs.nixpkgs.follows = "nixpkgs";
     colmena.url = "github:zhaofengli/colmena";
     colmena.inputs.nixpkgs.follows = "nixpkgs";
+    microvm.url = "github:astro/microvm.nix";
+    microvm.inputs.nixpkgs.follows = "nixpkgs";
     # stackpanel-root contains the absolute path to the project root
     # Created by .envrc: echo "$PWD" > .stackpanel-root
     # This enables pure evaluation (nix flake check, nix flake show)
