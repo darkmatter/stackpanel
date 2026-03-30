@@ -22,6 +22,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 let
@@ -50,6 +51,15 @@ let
     && builtins.elem (app.deployment.backend or "colmena") nixosBackends
     && (app.deployment.targets or []) != []
   ) cfg.apps;
+
+  # Any app with a NixOS backend configured (even without targets yet).
+  # Used to gate devshell package injection so users don't get colmena/
+  # nixos-anywhere unless they actually intend to do NixOS deployments.
+  hasNixosBackend = lib.any (
+    app:
+    (app.deployment.enable or false)
+    && builtins.elem (app.deployment.backend or "colmena") nixosBackends
+  ) (lib.attrValues cfg.apps);
 in
 {
   # ===========================================================================
@@ -262,6 +272,16 @@ in
       '';
     };
   };
+
+  # ===========================================================================
+  # Inject colmena + nixos-anywhere into the devshell when any app uses a
+  # NixOS deployment backend.  This ensures `stackpanel deploy` and
+  # `stackpanel provision` work in any repo without manual configuration.
+  # ===========================================================================
+  config.stackpanel.devshell.packages = lib.optionals hasNixosBackend [
+    pkgs.colmena
+    pkgs.nixos-anywhere
+  ];
 
   # ===========================================================================
   # Compute stackpanel.nixosModules from apps with NixOS backends
