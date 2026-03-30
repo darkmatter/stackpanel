@@ -43,11 +43,11 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "portless docs.stackpanel --app-port 5738 bun run dev",
+    "dev": "next dev --port=${PORT_DOCS:-4000}",
     "dev:portless": "portless docs.stackpanel --app-port 5738  bun run dev",
     "postinstall": "fumadocs-mdx",
     "start": "next start",
-    "types:check": "fumadocs-mdx \u0026\u0026 tsc --noEmit"
+    "types:check": "fumadocs-mdx && tsc --noEmit"
   },
   "version": "0.0.0"
 }
