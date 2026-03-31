@@ -8,13 +8,14 @@
   lib,
   config,
   pkgs,
+  self,
   ...
 }:
 let
   meta = import ./meta.nix;
   cfg = config.stackpanel;
   appsComputed = cfg.appsComputed or { };
-  repoRoot = ../../../..;
+  repoRoot = self.outPath;
 
   formatters = lib.flatten (
     lib.mapAttrsToList (_: app: app.wrappedTooling.formatters or [ ]) appsComputed
