@@ -49,6 +49,7 @@
   lib,
   config,
   pkgs,
+  self,
   ...
 }:
 let
@@ -208,7 +209,7 @@ let
     name: app:
     let
       goCfg = app.go;
-      repoRoot = ../../../..;
+      repoRoot = self.outPath;
       generatedFiles = mkGeneratedFiles name app;
     in
     pkgs.runCommand "${name}-src-with-generated" { } ''
@@ -268,7 +269,7 @@ let
     name: app:
     let
       goCfg = app.go;
-      repoRoot = ../../../..;
+      repoRoot = self.outPath;
       appPath = app.path;
 
       # Check if app has its own go.mod (per-app layout)
@@ -344,7 +345,7 @@ let
     name: app:
     let
       goCfg = app.go;
-      repoRoot = ../../../..;
+      repoRoot = self.outPath;
       appPath = app.path;
 
       # Check if app has its own go.mod (per-app layout)
@@ -369,7 +370,7 @@ let
     name: app:
     let
       goCfg = app.go;
-      repoRoot = ../../../..;
+      repoRoot = self.outPath;
     in
     pkgs.runCommand "${name}-tests"
       {

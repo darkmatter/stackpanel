@@ -49,9 +49,8 @@ Dependencies: `alchemy`
 
 ### App Deployment (`deployment`)
 
-Deploys apps to their configured hosts (cloudflare, aws)
+Deploys apps to their configured hosts (cloudflare)
 
-Dependencies: `@aws-sdk/client-ssm`
 
 **Outputs:**
   - `docsUrl` — Deployed URL for docs *(synced)*

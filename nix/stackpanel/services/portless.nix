@@ -35,12 +35,13 @@
   pkgs,
   lib,
   config,
+  self,
   ...
 }:
 let
   cfg = config.stackpanel.portless;
   stepCfg = config.stackpanel.step-ca or { enable = false; };
-  repoRoot = ../../..;
+  repoRoot = self.outPath;
 
   # Import util for debug logging
   util = config.stackpanel.util;

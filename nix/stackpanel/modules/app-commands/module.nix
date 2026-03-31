@@ -36,6 +36,7 @@
   lib,
   config,
   pkgs,
+  self,
   ...
 }: let
   meta = import ./meta.nix;
@@ -210,7 +211,7 @@
   # Build a check derivation (runs command and fails if non-zero exit)
   mkCheckDerivation = appName: appCfg: cmdName: cmdCfg: let
     appPath = appCfg.path or ".";
-    repoRoot = ../../../..;
+    repoRoot = self.outPath;
     envExports = lib.concatStringsSep "\n" (
       lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") (cmdCfg.env or {})
     );

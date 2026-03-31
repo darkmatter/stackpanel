@@ -43,11 +43,11 @@ in
       inputs.namaka.packages.${pkgs.system}.default
     ];
 
-    # Runtime dependencies of `stackpanel` CLI.
-    # Declaring them as runtimeInputs has two effects:
-    #   1. nix build .#stackpanel-go → binary is wrapped so it finds these tools
-    #      at their Nix store paths, no PATH setup required.
-    #   2. devshell → tools are in PATH for `go run .` and interactive use.
+    # Wrap the stackpanel-go binary so it finds colmena and nixos-anywhere at
+    # their Nix store paths even outside of a devshell (e.g. nix run / nix build).
+    # The deploy module separately injects these into the devshell of any repo
+    # that configures a NixOS deployment backend, so users don't need to add them
+    # manually in their own .stack/nix/.
     #
     # Use pkgs.colmena (from nixpkgs, binary-cached) for the CLI tool.
     # The flake input's colmena.lib.makeHive is only needed at eval time
