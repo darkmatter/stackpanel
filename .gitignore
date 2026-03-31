@@ -100,7 +100,6 @@ devenv.local.yaml
 dist
 logs
 node_modules
-packages/infra/
 packages/scripts/entrypoints/
 process-compose.yaml
 temp
