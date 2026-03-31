@@ -492,25 +492,12 @@ export interface DeploymentInputs {
   secrets: string[];
 };
   web: {
-  aws: {
-  availabilityZone: any;
-  httpCidrBlocks: string[];
-  imageId: any;
-  instanceType: any;
-  keyName: any;
-  osType: string;
-  parameterPath: any;
-  port: any;
-  region: string;
-  rootVolumeSize: any;
-  sshCidrBlocks: string[];
-  subnetCidrBlock: any;
-  tags: {
-
-};
-  vpcCidrBlock: any;
-};
   bindings: string[];
+  cloudflare: {
+  compatibility: string;
+  route: any;
+  workerName: string;
+};
   framework: string;
   host: string;
   path: string;

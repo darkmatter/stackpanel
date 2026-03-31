@@ -606,8 +606,6 @@ in
       STACKPANEL_INFRA_INPUTS = "${stateDir}/infra-inputs.json";
     };
 
-    # Gitignore the generated infra package directory
-    stackpanel.gitignore.entries = [ "${outputDir}/" ];
 
     # Turbo workspace package (generates package.json + turbo.json tasks)
     # ==========================================================================
