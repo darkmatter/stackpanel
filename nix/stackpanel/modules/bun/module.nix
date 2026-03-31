@@ -45,6 +45,7 @@
   lib,
   config,
   pkgs,
+  self,
   ...
 }: let
   meta = import ./meta.nix;
@@ -100,7 +101,7 @@
     # repoRoot resolves to the flake's store path at eval time (not the working
     # directory). In a Nix flake, relative paths in .nix files are anchored to
     # the file's location in the store copy of the source tree.
-    repoRoot = ../../../..;
+    repoRoot = self.outPath;
 
     # ---------------------------------------------------------------------------
     # Layout selection: per-app vs. workspace
@@ -129,7 +130,7 @@
 
     # Runtime PATH for the generated wrapper script.
     # nodejs is always included so `node` is available when startScript uses it.
-    runtimePath = lib.makeBinPath ([pkgs.nodejs] ++ bunCfg.runtimeInputs);
+    runtimePath = lib.makeBinPath ([pkgs.nodejs pkgs.bun] ++ bunCfg.runtimeInputs);
 
     # Shell fragment that exports any statically-declared runtime env vars.
     # Interpolated directly into the wrapper heredoc by Nix.
@@ -230,13 +231,13 @@
         # Write a thin launcher that sets up the runtime environment and delegates
         # to startScript. Using a heredoc keeps the Nix string escaping clean;
         # ''${...} here is Nix interpolation (resolved at eval time, not at runtime).
-        cat > "$out/bin/${binaryName}" <<'WRAPPER'
+        cat > "$out/bin/${binaryName}" <<WRAPPER
         #!/usr/bin/env bash
         set -euo pipefail
         ${runtimeEnvExports}
         ${pathExport}
         cd "$out"
-        exec ${bunCfg.startScript} "$@"
+        exec ${bunCfg.startScript} "\$@"
         WRAPPER
         chmod +x "$out/bin/${binaryName}"
 
