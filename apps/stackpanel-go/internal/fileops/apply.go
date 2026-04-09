@@ -312,10 +312,16 @@ func applyBlockEntry(projectRoot string, entry Entry, summary *Summary) (stateEn
 
 // applyFullCopyEntry overwrites the target with content from a Nix store path.
 // If adopt="backup" and this is the first run, the existing file is backed up.
+// CreatedByUs is set to true when the file did not exist before the first apply,
+// so that revert knows whether to delete the file or leave it alone.
 func applyFullCopyEntry(projectRoot string, entry Entry, prev stateEntry, hasPrev bool, summary *Summary) (stateEntry, error) {
 	targetPath := filepath.Join(projectRoot, entry.Path)
-	if !hasPrev && entry.Adopt == "backup" {
-		if _, err := os.Stat(targetPath); err == nil {
+
+	createdByUs := prev.CreatedByUs // carry forward on subsequent runs
+	if !hasPrev {
+		if _, statErr := os.Stat(targetPath); os.IsNotExist(statErr) {
+			createdByUs = true // file didn't exist — stackpanel is creating it
+		} else if statErr == nil && entry.Adopt == "backup" {
 			backupPath, wroteBackup, err := backupFile(targetPath)
 			if err != nil {
 				return stateEntry{}, err
@@ -343,8 +349,9 @@ func applyFullCopyEntry(projectRoot string, entry Entry, prev stateEntry, hasPre
 	}
 
 	return stateEntry{
-		Type:       "full-copy",
-		BackupPath: prev.BackupPath,
+		Type:        "full-copy",
+		BackupPath:  prev.BackupPath,
+		CreatedByUs: createdByUs,
 	}, nil
 }
 
@@ -411,6 +418,23 @@ func revertStateEntry(projectRoot, path string, prev stateEntry, summary *Summar
 		return nil
 	case "full-copy":
 		targetPath := filepath.Join(projectRoot, path)
+		if prev.BackupPath != "" {
+			content, err := os.ReadFile(prev.BackupPath)
+			if err != nil && !os.IsNotExist(err) {
+				return fmt.Errorf("fileops: read backup for %s: %w", path, err)
+			}
+			if err == nil {
+				if _, writeErr := writeBytes(targetPath, content, ""); writeErr != nil {
+					return fmt.Errorf("fileops: restore %s from backup: %w", path, writeErr)
+				}
+				summary.Restored = append(summary.Restored, targetPath)
+				return nil
+			}
+		}
+		if !prev.CreatedByUs {
+			// File predated stackpanel management; no backup — leave as-is.
+			return nil
+		}
 		if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("fileops: remove stale %s: %w", path, err)
 		}
