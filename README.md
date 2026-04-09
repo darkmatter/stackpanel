@@ -15,32 +15,41 @@
 </p>
 
 <p align="center">
-  Reproducible dev environments, service orchestration, and secrets management.<br>
-  Powered by Nix. No Nix knowledge required.
+  Reproducible dev environments, service orchestration, secrets management, and deployment —<br>
+  powered by Nix, driven by a local agent, managed through a web studio or CLI.<br>
+  No Nix knowledge required.
 </p>
 
 ---
 
-## The Problem
+## Why Stackpanel?
 
-Configuration files, build tooling, environment setup - this is the bureaucracy of software development. Every new project means re-establishing the same foundations. Every config file represents a decision someone already made thousands of times.
+Every new project means re-establishing the same foundations: database setup, environment variables, IDE config, deployment boilerplate. The value of your application lives in your source code, not in the glue around it.
 
-**The value of your application lives in your source code, not configuration.**
+Stackpanel replaces that glue with a single `config.nix` file. Deterministic ports, encrypted secrets, service orchestration, VS Code integration, TLS certificates, and deployment — all computed from one config. No lock-in: generated files are standard formats in standard locations. Eject anytime.
 
-## What Stackpanel Does
+## How It Works
 
-Stackpanel provides a complete development infrastructure toolkit:
+Stackpanel runs on three planes:
 
-- **Zero-config dev environments** - Automatic setup for popular stacks with deterministic ports
-- **Secrets management** - Team-based encrypted secrets with AGE/SOPS
-- **IDE integration** - Auto-generated VS Code workspaces and settings
-- **Global services** - PostgreSQL, Redis, Minio with one-line config
-- **AWS integration** - Passwordless AWS access via certificate authentication
-- **Web Studio** - Local web UI for managing your entire stack
+```
+Browser (Studio UI)
+  │
+  ├── tRPC ──→ Cloud API (Hono on Cloudflare Workers)
+  │                ├── Auth (Better Auth + Polar payments)
+  │                └── Drizzle ORM → Neon PostgreSQL
+  │
+  └── HTTP/Connect-RPC ──→ Go Agent (localhost)
+                              ├── nix eval (config, options, packages)
+                              ├── process-compose (service lifecycle)
+                              ├── file system (secrets, config, codegen)
+                              ├── Caddy (reverse proxy, TLS)
+                              └── Step CA (certificates)
+```
 
-**No lock-in.** Generated files are standard formats in standard locations. Eject anytime with a normal codebase.
-
-**No Nix knowledge required.** If you can write JSON, you can configure Stackpanel. Or just use the web UI.
+1. **Nix plane** — evaluates your config, computes ports, provisions the devshell, generates files. Runs once on shell entry.
+2. **Go agent** — a localhost HTTP server that bridges the Studio web UI to the local environment. REST + Connect-RPC APIs, SSE events, file watching, process management.
+3. **Web Studio** — a React app (TanStack Start) for managing your entire stack visually: services, secrets, config, deploys, and more.
 
 ## Quick Start
 
@@ -52,15 +61,10 @@ Stackpanel provides a complete development infrastructure toolkit:
 ### Create a New Project
 
 ```bash
-# Create a new project with the default template
 nix flake init -t git+ssh://git@github.com/darkmatter/stackpanel
 
-# Set up direnv
 echo 'use flake . --impure' > .envrc
 direnv allow
-
-# Or manually enter the shell
-nix develop --impure
 ```
 
 ### Add to an Existing Project
@@ -71,24 +75,17 @@ nix develop --impure
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    devenv.url = "github:cachix/devenv";
     stackpanel.url = "git+ssh://git@github.com/darkmatter/stackpanel";
   };
 
   outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        inputs.devenv.flakeModule
-        inputs.stackpanel.flakeModules.default
-      ];
-
+      imports = [inputs.stackpanel.flakeModules.default];
       systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
 
       perSystem = {pkgs, ...}: {
         devenv.shells.default = {
           imports = [inputs.stackpanel.devenvModules.default];
-
-          # Your config
           stackpanel.enable = true;
           packages = [pkgs.nodejs pkgs.bun];
         };
@@ -99,26 +96,52 @@ nix develop --impure
 
 ## Configuration
 
-Edit `.stackpanel/config.nix` to configure your environment:
+Everything lives in `.stack/config.nix`:
 
 ```nix
+{ config, ... }:
 {
-  enable = true;
+  stackpanel = {
+    enable = true;
 
-  # Themed shell prompt
-  theme.enable = true;
+    # Apps — ports are computed deterministically from the project name
+    apps.web.port = 3000;
+    apps.api.port = 3001;
 
-  # VS Code integration
-  ide.vscode.enable = true;
+    # Services
+    globalServices = {
+      postgres.enable = true;
+      redis.enable = true;
+      minio.enable = true;
+    };
 
-  # Global services
-  globalServices = {
-    postgres.enable = true;
-    redis.enable = true;
+    # Secrets (AGE/SOPS encrypted, team-based)
+    secrets = {
+      master-key.enable = true;
+      apps.api.dev = {
+        DATABASE_URL = "postgres://...";
+        API_KEY = "secret:api-key";
+      };
+    };
+
+    # IDE integration
+    ide.vscode.enable = true;
+
+    # Shell prompt theming
+    theme.enable = true;
+
+    # TLS via Step CA
+    # step-ca.enable = true;
+
+    # AWS Roles Anywhere
+    # aws.roles-anywhere.enable = true;
+
+    # Deployment
+    deployment.alchemy = {
+      deploy.enable = true;
+      deploy.auto-provision-state-store = true;
+    };
   };
-
-  # AWS certificate auth
-  # aws.roles-anywhere.enable = true;
 }
 ```
 
@@ -126,7 +149,7 @@ Edit `.stackpanel/config.nix` to configure your environment:
 
 ### Deterministic Ports
 
-Ports are computed from your project name, ensuring everyone on the team gets the same ports without configuration:
+Ports are computed from a hash of your project name — the same ports on every machine, no manual assignment:
 
 ```
 my-project → base port 4200
@@ -138,71 +161,140 @@ my-project → base port 4200
 
 ### Secrets Management
 
-Team-based secrets with AGE encryption:
+Team-based encrypted secrets with AGE/SOPS. Secrets are encrypted at rest, decrypted on shell entry, and injected as environment variables:
 
 ```nix
 stackpanel.secrets = {
   master-key.enable = true;
-
-  apps.api = {
-    dev = {
-      DATABASE_URL = "postgres://...";
-      API_KEY = "secret:api-key";
-    };
+  apps.api.dev = {
+    DATABASE_URL = "postgres://...";
+    STRIPE_KEY = "secret:stripe-key";
   };
 };
 ```
 
 ### IDE Integration
 
-Auto-generated VS Code workspace with:
-- Correct terminal environment
-- Extension recommendations
-- Debugger configurations
-- Task runners
+Auto-generated VS Code workspace with correct terminal environment, extension recommendations, debugger configurations, and task runners. Zed support coming soon.
 
 ### Web Studio
 
-Local web UI at `localhost:9876` for:
-- Managing services
-- Viewing logs
-- Editing configuration
-- Installing extensions
+A local web UI for managing your entire stack:
 
-## Documentation
+- **Dashboard** — overview of all apps, services, and health checks
+- **Services** — start/stop/restart databases and services
+- **Secrets** — manage encrypted environment variables
+- **Configuration** — edit `config.nix` with a visual editor
+- **Deploy** — trigger deployments to cloud infrastructure
+- **Processes** — view and manage running processes
+- **Terminal** — embedded terminal with devshell environment
+- **Packages** — browse and add nixpkgs packages
+- **Extensions** — install stackpanel extension modules
 
-Full documentation is available at [stackpanel.dev](https://stackpanel.dev/docs):
+### CLI (`stackpanel`)
 
-- [Quick Start Guide](https://stackpanel.dev/docs/quick-start)
-- [Concepts](https://stackpanel.dev/docs/concepts)
-- [Configuration Reference](https://stackpanel.dev/docs/reference)
-- [Secrets Management](https://stackpanel.dev/docs/features/secrets)
-- [AWS Integration](https://stackpanel.dev/docs/features/aws)
+The Go-based CLI provides everything the Studio does, plus more:
 
-## Architecture
+```bash
+stackpanel commands          # List/run devshell scripts (interactive TUI)
+stackpanel config show       # Print resolved configuration
+stackpanel config example    # Generate example config
+stackpanel env               # Show environment variables
+stackpanel logs              # Tail service logs
+stackpanel deploy            # Deploy to cloud
+stackpanel agent             # Start the localhost agent server
+stackpanel caddy             # Manage the shared Caddy reverse proxy
+stackpanel init              # Initialize a new project
+stackpanel nixify            # Generate Nix config for an existing project
+stackpanel healthcheck       # Run health checks
+stackpanel codegen           # Run host-side code generators
+stackpanel flake             # Manage the Nix flake
+```
 
-For details on the internal architecture, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+### Nix Module System
+
+Stackpanel's core is an adapter-agnostic Nix module system. All logic lives in `nix/stack/` with zero dependency on devenv, NixOS, or any specific module host. Thin adapters translate to each target:
+
+| Namespace | Purpose |
+|-----------|---------|
+| `stackpanel.apps` | App definitions with computed ports and URLs |
+| `stackpanel.services` | Canonical service type system |
+| `stackpanel.globalServices` | Convenience services (postgres, redis, minio) |
+| `stackpanel.devshell` | Shell environment, packages, hooks, env vars, generated files |
+| `stackpanel.scripts` | Shell commands (shown in TUI and Studio) |
+| `stackpanel.modules` | Extension module registry |
+| `stackpanel.secrets` | Master-key secrets management |
+| `stackpanel.ide` | VS Code and Zed integration |
+| `stackpanel.theme` | Starship prompt theming |
+| `stackpanel.step-ca` | Certificate management |
+| `stackpanel.aws` | AWS Roles Anywhere |
+| `stackpanel.process-compose` | Process orchestration |
+| `stackpanel.deployment` | Alchemy / cloud deployment |
+
+### Deployment
+
+Stackpanel supports deploying to cloud infrastructure via [Alchemy](https://alchemy.run), with support for Cloudflare Workers, microVMs (NixOS on OVH/Hetzner), and more. Colmena and nixos-anywhere are available for bare-metal NixOS deployments.
+
+## Project Structure
+
+```
+stackpanel/
+├── apps/
+│   ├── web/              # Studio UI (React + TanStack Start)
+│   ├── api/              # Cloud API (Hono on Cloudflare Workers)
+│   ├── docs/             # Documentation site (Next.js + Fumadocs)
+│   ├── stackpanel-go/    # CLI + localhost agent (Go + Cobra + Bubble Tea)
+│   └── tui/              # Terminal UI components (TypeScript + Ink)
+├── packages/
+│   ├── api/              # Shared business logic
+│   ├── auth/             # Better-Auth config
+│   ├── db/               # Drizzle ORM + Neon PostgreSQL
+│   ├── ui/               # Shared UI components
+│   ├── config/           # Config utilities
+│   ├── infra/            # Infrastructure-as-code (Alchemy)
+│   ├── proto/            # Connect-RPC protocol definitions
+│   ├── sdk/              # Stackpanel SDK
+│   ├── gen/              # Generated types
+│   ├── agent-client/     # Go agent HTTP client
+│   ├── scripts/          # Build and CI scripts
+│   ├── docs-content/     # Shared documentation content
+│   └── znv/              # Zod + env parsing
+├── nix/
+│   ├── stack/            # Core Nix module system (adapter-agnostic)
+│   ├── flake/            # Flake outputs (devenvModules, templates, devshells)
+│   └── internal/         # Internal config for developing stackpanel itself
+├── docs/                 # Architecture docs, specs, and design notes
+└── examples/             # Example projects
+```
 
 ## Development
 
 ```bash
 # Enter the dev shell
 nix develop --impure
+# or with direnv
+direnv allow
 
 # Start all services
 dev
 
-# Run the web app only
-bun run dev:web
-
-# Run the Go agent
-bun run dev:agent
+# Individual apps
+bun run dev:web       # Studio UI
+bun run dev:server    # Cloud API
+bun run dev:agent     # Go agent (alias for stackpanel agent)
 ```
 
-## Contributing
+## Documentation
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+Full docs at [stackpanel.dev](https://stackpanel.dev/docs):
+
+- [Quick Start](https://stackpanel.dev/docs/quick-start)
+- [Concepts](https://stackpanel.dev/docs/concepts)
+- [Configuration Reference](https://stackpanel.dev/docs/reference)
+- [Secrets Management](https://stackpanel.dev/docs/features/secrets)
+- [AWS Integration](https://stackpanel.dev/docs/features/aws)
+- [Architecture](docs/ARCHITECTURE.md)
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE) for details.
+MIT — see [LICENSE](./LICENSE) for details.
