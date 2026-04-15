@@ -59,9 +59,14 @@ type stateFile struct {
 // stateEntry records per-file state from the previous apply.
 // For json-ops: OriginalJSON is the baseline before our edits, ManagedPaths
 // lists every JSON path we own. This lets us restore user content on removal.
+// For full-copy: CreatedByUs is true when stackpanel created the file (it did
+// not exist before the first apply). On revert, we only delete the file when
+// CreatedByUs is true. Existing state files deserialize CreatedByUs as false,
+// meaning files are left alone — the safe direction for backward compatibility.
 type stateEntry struct {
 	Type          string     `json:"type"`
 	BackupPath    string     `json:"backupPath,omitempty"`
+	CreatedByUs   bool       `json:"createdByUs,omitempty"`
 	OriginalJSON  any        `json:"originalJson,omitempty"`
 	ManagedPaths  [][]string `json:"managedPaths,omitempty"`
 	BlockLabel    string     `json:"blockLabel,omitempty"`
