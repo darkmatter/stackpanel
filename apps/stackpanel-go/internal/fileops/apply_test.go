@@ -505,3 +505,88 @@ func nestedMapValue(t *testing.T, root map[string]any, path ...string) any {
 	}
 	return current
 }
+
+func TestFullCopyRevertDeletesFileCreatedByUs(t *testing.T) {
+	t.Parallel()
+
+	projectRoot := t.TempDir()
+	stateDir := filepath.Join(projectRoot, ".stack", "profile")
+	targetPath := filepath.Join(projectRoot, "turbo.json")
+
+	// Write content to a "store path" (simulates a Nix store file).
+	storePath := filepath.Join(projectRoot, "turbo.json.managed")
+	if err := os.WriteFile(storePath, []byte(`{"pipeline":{}}`+"\n"), 0644); err != nil {
+		t.Fatalf("write store path: %v", err)
+	}
+
+	// File does NOT exist before first apply — stackpanel creates it.
+	manifest := Manifest{
+		Version: 1,
+		Files: []Entry{
+			{Path: "turbo.json", Type: "full-copy", StorePath: storePath},
+		},
+	}
+	if _, err := ApplyManifest(projectRoot, stateDir, manifest); err != nil {
+		t.Fatalf("first apply: %v", err)
+	}
+	if _, err := os.Stat(targetPath); err != nil {
+		t.Fatalf("file should exist after first apply: %v", err)
+	}
+
+	// Remove the entry from the manifest — simulates turbo.enable = false.
+	empty := Manifest{Version: 1}
+	summary, err := ApplyManifest(projectRoot, stateDir, empty)
+	if err != nil {
+		t.Fatalf("revert apply: %v", err)
+	}
+
+	if _, err := os.Stat(targetPath); !os.IsNotExist(err) {
+		t.Fatalf("file should have been deleted on revert (createdByUs=true), err=%v", err)
+	}
+	if !slices.Contains(summary.Removed, targetPath) {
+		t.Fatalf("expected %s in summary.Removed, got %#v", targetPath, summary)
+	}
+}
+
+func TestFullCopyRevertPreservesPreExistingFile(t *testing.T) {
+	t.Parallel()
+
+	projectRoot := t.TempDir()
+	stateDir := filepath.Join(projectRoot, ".stack", "profile")
+	targetPath := filepath.Join(projectRoot, "turbo.json")
+
+	// File EXISTS before first apply — user wrote it themselves.
+	original := []byte(`{"pipeline":{"build":{}}}`+"\n")
+	if err := os.WriteFile(targetPath, original, 0644); err != nil {
+		t.Fatalf("write pre-existing file: %v", err)
+	}
+
+	storePath := filepath.Join(projectRoot, "turbo.json.managed")
+	if err := os.WriteFile(storePath, []byte(`{"pipeline":{}}`+"\n"), 0644); err != nil {
+		t.Fatalf("write store path: %v", err)
+	}
+
+	manifest := Manifest{
+		Version: 1,
+		Files: []Entry{
+			{Path: "turbo.json", Type: "full-copy", StorePath: storePath},
+		},
+	}
+	if _, err := ApplyManifest(projectRoot, stateDir, manifest); err != nil {
+		t.Fatalf("first apply: %v", err)
+	}
+
+	// Remove the entry — stackpanel should NOT delete the pre-existing file.
+	empty := Manifest{Version: 1}
+	summary, err := ApplyManifest(projectRoot, stateDir, empty)
+	if err != nil {
+		t.Fatalf("revert apply: %v", err)
+	}
+
+	if _, err := os.Stat(targetPath); err != nil {
+		t.Fatalf("pre-existing file should NOT have been deleted on revert: %v", err)
+	}
+	if slices.Contains(summary.Removed, targetPath) {
+		t.Fatalf("expected %s NOT in summary.Removed, got %#v", targetPath, summary)
+	}
+}
