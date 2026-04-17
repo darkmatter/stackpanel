@@ -42,7 +42,8 @@
     secretFilesMeta;
 in {
   config = lib.mkIf cfg.enable {
-    stackpanel.devshell.packages = lib.mkBefore (
+    stackpanel = {
+      devshell.packages = lib.mkBefore (
       [
         sopsWrapped
         sopsAgeKeys
@@ -58,12 +59,14 @@ in {
         secretsRekey
         secretsLoad
       ]
-      ++ lib.optional isChamber pkgs.chamber
-    );
-
-    stackpanel.devshell.env = lib.optionalAttrs isChamber {
-      CHAMBER_KMS_KEY_ALIAS = "alias/${config.stackpanel.name or "my-project"}-secrets";
+        ++ lib.optional isChamber pkgs.chamber
+      );
+      devshell.env = lib.optionalAttrs isChamber {
+        CHAMBER_KMS_KEY_ALIAS = "alias/${config.stackpanel.name or "my-project"}-secrets";
+      };
     };
+
+
 
     stackpanel.devshell.hooks.before = [
       ''
@@ -189,13 +192,13 @@ in {
       };
     };
 
-    stackpanel.devshell.hooks.main = [
+    stackpanel = {
+      devshell.hooks.main = [
       ''
         export SOPS_AGE_KEY_CMD="${sopsAgeKeys}/bin/sops-age-keys"
-      ''
-    ];
-
-    stackpanel.files.entries = lib.mkMerge [
+        ''
+      ];
+      files.entries = lib.mkMerge [
       {
         ".gitignore" = {
           type = "line-set";
@@ -203,12 +206,11 @@ in {
           dedupe = true;
           lines = [
             "${cfg.secrets-dir}/state/"
-            "${cfg.secrets-dir}/vars/.sops.yaml"
             "${cfg.secrets-dir}/bin/"
           ];
         };
 
-        "${cfg.secrets-dir}/.sops.yaml" = {
+        ".sops.yaml" = {
           type = "text";
           source = "secrets";
           text = sopsConfigText;
@@ -249,6 +251,8 @@ in {
         };
       }
     ];
+    };
+
 
     stackpanel.serializable.secrets = {
       enable = cfg.enable;

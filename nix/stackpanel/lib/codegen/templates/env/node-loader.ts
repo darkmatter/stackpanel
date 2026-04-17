@@ -10,7 +10,7 @@ import { decryptSops } from "sops-age";
 import { AVAILABLE_APP_ENVS } from "../embedded-data";
 import type { LoadEnvOptions } from "./loader";
 import { normalizeEnvPayload, normalizeRuntimeEnv } from "./loader";
-import { loadGeneratedPayload } from "./generated-payloads/registry";
+import { loadGeneratedPayload } from "../generated-payloads/registry";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

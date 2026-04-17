@@ -155,7 +155,7 @@ in
 
     output-dir = lib.mkOption {
       type = lib.types.str;
-      default = "packages/infra";
+      default = "packages/gen/infra";
       description = "Directory for generated infrastructure files (relative to project root)";
     };
 
@@ -250,7 +250,7 @@ in
     package = {
       name = lib.mkOption {
         type = lib.types.str;
-        default = "@${projectName}/infra";
+        default = "@gen/infra";
         description = "NPM package name for the generated infrastructure package";
       };
 

@@ -18,14 +18,22 @@
 #   remix          × cloudflare → Remix (Worker-based)
 #   *              × fly        → Fly container (handled separately)
 #
+# Bindings and secrets are auto-derived from `environments` by default:
+#   - bindings = union of all env var names across all environments
+#   - secrets  = union of all `secrets` lists across all environments
+# Set deployment.bindings/secrets explicitly only to override.
+#
 # Usage:
 #   stackpanel.apps.web = {
 #     framework = "tanstack-start";
 #     deployment = {
 #       enable = true;
 #       host = "cloudflare";
-#       bindings = [ "DATABASE_URL" "CORS_ORIGIN" "BETTER_AUTH_SECRET" ];
-#       secrets = [ "DATABASE_URL" "BETTER_AUTH_SECRET" ];
+#       # bindings/secrets auto-derived from environments
+#     };
+#     environments.prod = {
+#       env = { DATABASE_URL = ""; CORS_ORIGIN = ""; };
+#       secrets = [ "DATABASE_URL" ];
 #     };
 #   };
 # ==============================================================================

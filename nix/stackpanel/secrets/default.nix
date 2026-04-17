@@ -62,5 +62,5 @@ in
   imports = [
   ];
 
-  config = cfgPart.config;
+  inherit (cfgPart) config;
 }

@@ -1,5 +1,5 @@
 {
-	"include": ["**/*.ts", "**/*.tsx"],
+	"include": ["**/*.ts", "**/*.tsx", "*.ts"],
 	"compilerOptions": {
 		"target": "ES2022",
 		"jsx": "react-jsx",
@@ -20,13 +20,12 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
-		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
 			"@ui": ["./src/components/ui"],
 			"@ui/*": ["./src/components/ui/*"],
 			"@gen/featureflags": ["../../packages/gen/featureflags/src/index.ts"],
-			"@gen/featureflags/*": ["../../packages/gen/featureflags/src/*"]
+			"@gen/featureflags/*": ["../../packages/gen/featureflags/src/*"],
 		}
 	}
 }

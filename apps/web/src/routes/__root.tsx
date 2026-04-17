@@ -1,4 +1,4 @@
-/// <reference types="vite/client" />
+/// <reference types="vite-plus/client" />
 
 import type { AppRouter } from "@stackpanel/api/routers/index";
 import type { QueryClient } from "@tanstack/react-query";

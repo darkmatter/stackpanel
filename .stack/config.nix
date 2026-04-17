@@ -8,11 +8,11 @@
 # For config that needs pkgs/lib (computed values, custom packages),
 # use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
 # ==============================================================================
-{ config, ... }:
+{ config, ... }@args:
 {
   deployment.alchemy = {
     deploy = {
-      enable = true;
+      enable = false;
       auto-provision-state-store = true;
     };
     secrets.cloudflare-token-sops-path = "ref+sops://.stack/secrets/vars/common.sops.yaml#/cloudflare-api-token";
@@ -29,203 +29,7 @@
   # ---------------------------------------------------------------------------
   # Apps
   # ---------------------------------------------------------------------------
-  apps = {
-    docs = {
-      bun = {
-        generateFiles = false;
-      };
-      description = "Documentation site";
-      deployment = {
-        enable = true;
-        backend = "alchemy";
-        targets = [ "ovh-usw-1" ];
-        command = "bun serve.ts";
-        cloudflare = {
-          workerName = "stackpanel-docs";
-        };
-        host = "cloudflare";
-        modules = [
-          {
-            networking.firewall.allowedTCPPorts = [ 3000 ];
-          }
-        ];
-      };
-      domain = "docs";
-      environments = {
-        shared = {
-          env = {
-            PORT = "var://computed/apps/docs/port";
-          };
-          name = "shared";
-        };
-        dev = {
-          env = {
-            PORT = "var://computed/apps/docs/port";
-            HOSTNAME = "stackpanel.lan";
-          };
-          name = "dev";
-          extends = [ "common" ];
-        };
-        prod = {
-          env = { };
-          name = "prod";
-        };
-        staging = {
-          env = {
-          };
-          name = "staging";
-        };
-        test = {
-          env = {
-            POSTGRES_URL = "/dev/postgres-url";
-          };
-          name = "test";
-        };
-      };
-      framework = {
-        nextjs = {
-          enable = true;
-        };
-      };
-      linting = {
-        oxlint = {
-          enable = true;
-        };
-      };
-      name = "docs";
-      path = "apps/docs";
-      tls = true;
-      type = "bun";
-    };
-    stackpanel-go = {
-      description = "Stackpanel CLI and agent (Go)";
-      environments = {
-        dev = {
-          env = {
-            STACKPANEL_TEST_PAIRING_TOKEN = "token123";
-          };
-          name = "dev";
-        };
-      };
-      go = {
-        binaryName = "stackpanel";
-        enable = true;
-        generateFiles = false;
-        ldflags = [
-          "-s"
-          "-w"
-        ];
-      };
-      name = "stackpanel";
-      path = "apps/stackpanel-go";
-      type = "go";
-    };
-    web = {
-      bun = {
-        enable = true;
-        buildPhase = "./node_modules/.bin/vite build";
-        startScript = "node .output/server/index.mjs";
-        generateFiles = false;
-      };
-      commands = {
-        dev = {
-          command = "bun run -F web dev";
-        };
-      };
-      container = {
-        enable = true;
-        type = "bun";
-      };
-      deployment = {
-        aws = {
-          region = "us-west-2";
-          os-type = "nixos";
-        };
-        bindings = [
-          "DATABASE_URL"
-          "CORS_ORIGIN"
-          "BETTER_AUTH_SECRET"
-          "BETTER_AUTH_URL"
-          "POLAR_ACCESS_TOKEN"
-          "POLAR_SUCCESS_URL"
-        ];
-        enable = true;
-        cloudflare = {
-          workerName = "stackpanel-web";
-        };
-        fly = {
-          appName = "stackpanel-web";
-          region = "iad";
-        };
-        host = "cloudflare";
-        secrets = [
-          "DATABASE_URL"
-          "BETTER_AUTH_SECRET"
-          "POLAR_ACCESS_TOKEN"
-        ];
-      };
-      description = "Main web application";
-      domain = "@";
-      environments = {
-        dev = {
-          env = {
-            BETTER_AUTH_SECRET = "";
-            BETTER_AUTH_URL = "";
-            CORS_ORIGIN = "";
-            POLAR_ACCESS_TOKEN = "";
-            POLAR_SUCCESS_URL = "";
-            POSTGRES_URL = "/dev/postgres-url";
-          };
-          name = "dev";
-        };
-        prod = {
-          env = {
-            BETTER_AUTH_SECRET = "";
-            BETTER_AUTH_URL = "";
-            CORS_ORIGIN = "";
-            POLAR_ACCESS_TOKEN = "";
-            POLAR_SUCCESS_URL = "";
-            POSTGRES_URL = "/dev/postgres-url";
-          };
-          name = "prod";
-        };
-        staging = {
-          env = {
-            BETTER_AUTH_SECRET = "";
-            BETTER_AUTH_URL = "";
-            CORS_ORIGIN = "";
-            POLAR_ACCESS_TOKEN = "";
-            POLAR_SUCCESS_URL = "";
-            POSTGRES_URL = "/dev/postgres-url";
-          };
-          name = "staging";
-        };
-      };
-      framework = {
-        tanstack-start = {
-          enable = true;
-        };
-      };
-      linting = {
-        oxlint = {
-          categories = {
-            correctness = "error";
-            suspicious = "warn";
-          };
-          enable = true;
-          fix = true;
-          plugins = [
-            "react"
-            "typescript"
-          ];
-        };
-      };
-      name = "web";
-      path = "apps/web";
-      tls = true;
-      type = "bun";
-    };
-  };
+  apps = import ./config.apps.nix args;
 
   # ---------------------------------------------------------------------------
   # AWS
@@ -1155,6 +959,18 @@
     };
     "/var/aws-sandbox-access-key-id" = {
       value = "AKIAR2JIUPISAIEYJAYQ";
+    };
+    "/shared/cloudflare-account-id" = {
+      value = "";
+    };
+    "/shared/cloudflare-api-token" = {
+      value = "";
+    };
+    "/shared/aws-sandbox-access-key-id" = {
+      value = "";
+    };
+    "/shared/aws-sandbox-secret-access-key" = {
+      value = "";
     };
     "/shared/cloudflare-service-account-client-id" = {
       value = "";

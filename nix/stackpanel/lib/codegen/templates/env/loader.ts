@@ -3,7 +3,7 @@
 
 import { decryptSops } from "sops-age";
 import { AVAILABLE_APP_ENVS } from "../embedded-data";
-import { loadGeneratedPayload } from "./generated-payloads/registry";
+import { loadGeneratedPayload } from "../generated-payloads/registry";
 
 const AGE_SECRET_KEY_PREFIX = "AGE-SECRET-KEY-";
 const payloadCache = new Map<string, Record<string, string>>();
