@@ -795,9 +795,9 @@ let
 
       appCount = toString (lib.length appsWithEnvs);
       appCountSuffix = if lib.length appsWithEnvs == 1 then "" else "s";
-      firstAppJs = toJsIdentifier (lib.head appsWithEnvs);
+      firstAppJs = if appsWithEnvs != [ ] then toJsIdentifier (lib.head appsWithEnvs) else "app";
 
-      rootReadme = {
+      rootReadme = lib.optionalAttrs (appsWithEnvs != [ ]) {
         "${packageDir}/README.md" = {
           kind = "text";
           content =
