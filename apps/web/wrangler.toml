@@ -1,17 +1,17 @@
 name = "stackpanel-web"
-main = ".output/server/index.mjs"
+main = "src/server.ts"
 compatibility_date = "2025-12-17"
 compatibility_flags = ["nodejs_compat"]
 
 [assets]
-directory = ".output/public"
+  directory = ".output/public"
 
 [vars]
-CORS_ORIGIN = "https://stackpanel.com"
-BETTER_AUTH_URL = "https://stackpanel.com"
-POLAR_SUCCESS_URL = "https://stackpanel.com/success?checkout_id={CHECKOUT_ID}"
+  CORS_ORIGIN = "https://stackpanel.com"
+  BETTER_AUTH_URL = "https://stackpanel.com"
+  POLAR_SUCCESS_URL = "https://stackpanel.com/success?checkout_id={CHECKOUT_ID}"
 
-# Secrets are set via `wrangler secret put`:
-# wrangler secret put DATABASE_URL
-# wrangler secret put BETTER_AUTH_SECRET
-# wrangler secret put POLAR_ACCESS_TOKEN
+  # Secrets are set via `wrangler secret put`:
+  # wrangler secret put DATABASE_URL
+  # wrangler secret put BETTER_AUTH_SECRET
+  # wrangler secret put POLAR_ACCESS_TOKEN

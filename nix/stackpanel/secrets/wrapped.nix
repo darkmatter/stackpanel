@@ -240,6 +240,7 @@ let
 
 in
 {
+  # App Module
   options.stackpanel.secrets.wrapped = {
     enable = lib.mkOption {
       type = lib.types.bool;

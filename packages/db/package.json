@@ -5,30 +5,44 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./hyperdrive": {
+      "default": "./src/index.hyperdrive.ts"
+    },
+    "./schema": {
+      "default": "./src/schema/auth.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
   },
   "scripts": {
+    "db:up": "alchemy deploy",
+    "db:down": "alchemy destroy",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.8",
-    "@types/ws": "^8.18.1",
+    "@distilled.cloud/neon": "^0.7.11",
+    "@gen/env": "workspace:*",
     "@stackpanel/config": "workspace:*",
-    "@gen/env": "workspace:*"
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.14",
+    "alchemy-effect": "catalog:",
+    "drizzle-kit": "^0.31.8",
+    "effect": "catalog:",
+    "wrangler": "^4.81.1"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.18.1",
     "drizzle-orm": "^0.45.1",
-    "@neondatabase/serverless": "^1.0.2",
-    "ws": "^8.18.3",
-    "dotenv": "catalog:",
+    "pg": "^8.20.0",
+    "react": "^19.2.5",
     "zod": "catalog:"
   }
 }

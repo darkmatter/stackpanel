@@ -6,7 +6,7 @@
  *   src/test/integration/agent.integration.test.ts
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { TurboPackageGraphResult } from "./agent";
 
 describe("Agent client utilities", () => {

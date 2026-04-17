@@ -3,6 +3,7 @@
 #
 # Set NIX_SKIP_DEVELOP=1 to bypass the `nix develop --impure -c` wrapper and
 # run commands directly in the current shell (useful inside CI or a devshell).
+set shell := ["bash", "-euo", "pipefail", "-c"]
 
 rootdir := `git rev-parse --show-toplevel`
 
@@ -13,6 +14,18 @@ nix-run := if env("NIX_SKIP_DEVELOP", "") != "" { "" } else { "nix develop --imp
 # Default recipe — list available recipes
 default:
     @just --list
+
+# ── Env ──────────────────────────────────────────────────────────────────────
+run env='dev' *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [ -n "$IN_NIX_SHELL" ] && ! [ flake.lock -nt .nix-shell-stamp ]; then
+        exec {{args}}
+    else
+        touch .nix-shell-stamp
+        exec nix develop --command {{args}}
+    fi
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
@@ -154,7 +167,7 @@ deploy-alchemy region='us-west-2':
         EC2_ARTIFACT_KEY=$(printf '%q' "${EC2_ARTIFACT_KEY:-}") \
         EC2_ARTIFACT_VERSION=$(printf '%q' "${EC2_ARTIFACT_VERSION:-}") \
         bun $(printf '%q' "$ALCHEMY_ENTRY")"
-
+    echo "==> Deploy completed"
 # Full web deploy: build artifact → publish to S3 → Alchemy infra
 deploy region='us-west-2':
     @just deploy-build-artifact {{ region }}

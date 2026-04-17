@@ -1,0 +1,4 @@
+[submodule "packages/vendor/alchemy-effect"]
+	path = packages/vendor/alchemy-effect
+	url = https://github.com/alchemy-run/alchemy-effect.git
+	shallow = true

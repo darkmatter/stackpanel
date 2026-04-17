@@ -8,7 +8,7 @@
  * Debug with: DEBUG_AGENT=1 bun run test:integration
  */
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vite-plus/test";
 import { createSharedTestProject, withTestProject } from "./test-project";
 
 // Skip integration tests in CI unless explicitly enabled

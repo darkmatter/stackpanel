@@ -1,0 +1,117 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/docs/**"
+      - "packages/**"
+      - "bun.lock"
+      - "package.json"
+      - ".github/workflows/deploy-docs.yaml"
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    paths:
+      - "apps/docs/**"
+      - "packages/**"
+      - "bun.lock"
+      - "package.json"
+      - ".github/workflows/deploy-docs.yaml"
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Stage to deploy (e.g. production, staging, pr-42)"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-docs-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    outputs:
+      stage: ${{ steps.resolve.outputs.stage }}
+      action: ${{ steps.resolve.outputs.action }}
+    steps:
+      - id: resolve
+        run: |
+          set -euo pipefail
+          event="${{ github.event_name }}"
+          if [[ "$event" == "workflow_dispatch" ]]; then
+            stage="${{ inputs.stage }}"
+            action="deploy"
+          elif [[ "$event" == "push" ]]; then
+            case "${{ github.ref_name }}" in
+              main)    stage="production" ;;
+              develop) stage="staging" ;;
+              *)       echo "Unexpected ref ${{ github.ref_name }}" >&2; exit 1 ;;
+            esac
+            action="deploy"
+          elif [[ "$event" == "pull_request" ]]; then
+            stage="pr-${{ github.event.pull_request.number }}"
+            if [[ "${{ github.event.action }}" == "closed" ]]; then
+              action="destroy"
+            else
+              action="deploy"
+            fi
+          fi
+          echo "stage=$stage" >> "$GITHUB_OUTPUT"
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "Resolved: $action stage=$stage"
+
+  deploy:
+    needs: stage
+    if: needs.stage.outputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    environment:
+      name: docs-${{ needs.stage.outputs.stage }}
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Deploy
+        id: deploy
+        working-directory: apps/docs
+        env:
+          STAGE: ${{ needs.stage.outputs.stage }}
+        run: |
+          set -euo pipefail
+          bunx alchemy deploy
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview-docs
+          message: |
+            Docs preview deployed to `${{ needs.stage.outputs.stage }}`
+
+  destroy:
+    needs: stage
+    if: needs.stage.outputs.action == 'destroy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Destroy PR preview
+        working-directory: apps/docs
+        env:
+          STAGE: ${{ needs.stage.outputs.stage }}
+        run: |
+          set -euo pipefail
+          bunx alchemy destroy
+      - name: Mark preview comment as torn down
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview-docs
+          message: |
+            Docs preview `${{ needs.stage.outputs.stage }}` has been destroyed.
