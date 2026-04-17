@@ -122,6 +122,14 @@
             else if builtins.pathExists (self + "/.stackpanel/modules") then [ (self + "/.stackpanel/modules") ]
             else [ ];
         };
+        treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
+          projectRootFile = "flake.nix";
+          programs = {
+            nixfmt.enable = true;
+            deadnix.enable = true;
+            statix.enable = true;
+          };
+        };
       in
       {
         # Merge stackpanel packages with outputs packages
@@ -134,8 +142,12 @@
         checks = {
           stackpanel = packages.stackpanel;
           default-package = packages.default;
+          formatting = treefmtEval.config.build.check self;
         }
         // spOutputs.checks;
+
+        # Formatter
+        formatter = treefmtEval.config.build.wrapper;
 
         # Apps from stackpanel
         apps = spOutputs.apps;

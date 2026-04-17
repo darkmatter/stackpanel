@@ -7,8 +7,18 @@
     "@aws-sdk/client-kms": "^3.953.0",
     "@aws-sdk/client-ssm": "^3.953.0",
     "@aws-sdk/client-sts": "^3.953.0",
+    "@distilled.cloud/cloudflare": "^0.7.11",
+    "@distilled.cloud/neon": "^0.7.12",
+    "@docker/node-sdk": "^0.0.17",
+    "@effect/platform": "^0.96.0",
+    "@gen/config": "workspace:*",
+    "@gen/env": "workspace:*",
     "@pulumi/aws": "^7.15.0",
+    "@stackpanel/config": "workspace:*",
     "alchemy": "^0.81.2",
+    "alchemy-effect": "catalog:",
+    "better-auth": "^1.6.1",
+    "effect": "catalog:",
     "sst": "^3.17.25"
   },
   "devDependencies": {
@@ -28,14 +38,15 @@
     "alchemy:deploy": "alchemy deploy",
     "alchemy:destroy": "alchemy destroy",
     "alchemy:dev": "alchemy dev",
-    "container:build:web": "cd ../.. && nix build --impure .#packages.x86_64-linux.container-web",
-    "container:push:web": "cd ../.. && nix run --impure .#copy-container-web -- docker://registry.fly.io/ --dest-creds x:$(flyctl auth token)",
-    "deploy:web": "cd ../.. && (flyctl status -a stackpanel-web > /dev/null 2>&1 || flyctl apps create stackpanel-web --org darkmatter) && flyctl deploy --config apps/web/fly.toml --image registry.fly.io/stackpanel-web:latest",
-    "postinstall": "test -f bun.lock && bun2nix -o bun.nix || true",
-    "ship:web": "turbo run deploy:web",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy",
+    "dev": "alchemy dev",
+    "postinstall": "test -f bun.lock \u0026\u0026 bun2nix -o bun.nix || true",
     "sst:deploy": "bunx sst deploy",
     "sst:dev": "bunx sst dev",
-    "sst:remove": "bunx sst remove"
+    "sst:remove": "bunx sst remove",
+    "test": "echo 'Add test script here'"
   },
-  "type": "module"
+  "type": "module",
+  "version": "0.0.0"
 }

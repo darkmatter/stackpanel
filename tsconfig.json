@@ -1,0 +1,15 @@
+{
+  "files": [],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".alchemy"
+  ],
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@effect/language-service"
+      }
+    ]
+  }
+}

@@ -1,37 +1,21 @@
 import alchemy from "alchemy";
-import { execSync } from "node:child_process";
-import { Nextjs, KVNamespace } from "alchemy/cloudflare";
-import { CloudflareStateStore } from "alchemy/state";
-import { Exec } from "alchemy/os";
-import { createAlchemyFileModule } from "@stackpanel/sdk/sops";
+import { Nextjs } from "alchemy/cloudflare";
 
-const CLOUDFLARE_API_TOKEN = execSync(
-  "chamber read infra cloudflare-api-token -q",
-)
-  .toString()
-  .trim();
+if (!process.env.CLOUDFLARE_API_TOKEN) {
+  throw new Error(`
+!! Missing required environment variable: CLOUDFLARE_API_TOKEN !!
+- Export the variable directly or pass it via CI secrets.`);
+}
 
-const files = createAlchemyFileModule();
+const stage = process.env.STAGE ?? "production";
 
-const stateToken = await files.readSecret(
-  "ref+sops://.stack/secrets/vars/common.sops.yaml#/alchemy-state-token",
-);
-
-const app = await alchemy("docs", {
-  stateStore: (scope) =>
-    new CloudflareStateStore(scope, {
-      stateToken,
-      apiToken: alchemy.secret(CLOUDFLARE_API_TOKEN),
-    }),
+const app = await alchemy("stackpanel-docs", {
+  stage,
+  phase: process.argv.includes("destroy") ? "destroy" : "up",
 });
-
-export const kv = await KVNamespace("kv");
 
 export const website = await Nextjs("docs", {
   adopt: true,
-  bindings: {
-    KV: kv,
-  },
 });
 
 console.log(`deployed to ${website.url}`);

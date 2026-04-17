@@ -17,7 +17,9 @@
 		"incremental": true,
 		"paths": {
 			"@/*": ["./src/*"],
-			"fumadocs-mdx:collections/*": [".source/*"]
+			"fumadocs-mdx:collections/*": [".source/*"],
+			"alchemy-effect": ["../../packages/vendor/alchemy-effect/alchemy-effect/src/index.ts"],
+      "alchemy-effect/*": ["../../packages/vendor/alchemy-effect/alchemy-effect/src/*"]
 		},
 		"plugins": [
 			{

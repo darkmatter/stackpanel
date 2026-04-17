@@ -105,7 +105,7 @@ let
   # These are runtime/devenv options that don't belong in serialized data
   # Note: port and domain are defined in the proto schema (db.extend.app)
   nixAppOptionsModule =
-    { lib, ... }:
+    { lib, config, ... }:
     {
       options = {
         framework = {
@@ -194,7 +194,10 @@ let
             description = ''
               Environment variable names to bind to the deployed app.
               Each name is read from `process.env` at deploy time.
-              Mark sensitive ones in `secrets`.
+
+              When empty (default), auto-derived from env var names across
+              all `environments`. Set explicitly only when deploy-time names
+              differ from development names (e.g., DATABASE_URL vs POSTGRES_URL).
             '';
             example = [
               "DATABASE_URL"
@@ -209,6 +212,9 @@ let
             description = ''
               Subset of `bindings` that contain sensitive values.
               These are wrapped with `alchemy.secret()` at deploy time.
+
+              When empty (default), auto-derived from `secrets` lists in
+              each environment under `environments`. Set explicitly to override.
             '';
             example = [
               "DATABASE_URL"
@@ -278,6 +284,35 @@ let
           example = "@myorg/web";
         };
       };
+
+      # =========================================================================
+      # Auto-derive deployment.bindings and deployment.secrets from
+      # environments + environmentVariables.
+      #
+      # bindings = union of all env var names across all environments
+      #            + all keys from environmentVariables
+      # secrets  = union of all `secrets` lists across all environments
+      #            + environmentVariables entries where secret = true
+      #
+      # Uses mkDefault so explicit user values take precedence.
+      # =========================================================================
+      config =
+        let
+          envs = config.environments or { };
+          envVarsMeta = config.environmentVariables or { };
+          allEnvNames = lib.unique (
+            lib.concatMap (envCfg: lib.attrNames (envCfg.env or { })) (lib.attrValues envs)
+            ++ lib.attrNames envVarsMeta
+          );
+          allSecretNames = lib.unique (
+            lib.concatMap (envCfg: envCfg.secrets or [ ]) (lib.attrValues envs)
+            ++ lib.attrNames (lib.filterAttrs (_: m: m.secret or false) envVarsMeta)
+          );
+        in
+        {
+          deployment.bindings = lib.mkDefault allEnvNames;
+          deployment.secrets = lib.mkDefault allSecretNames;
+        };
     };
 
   # ===========================================================================
