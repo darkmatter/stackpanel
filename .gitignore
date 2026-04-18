@@ -82,7 +82,6 @@ tmp
 .stack/profile/
 .stack/secrets/bin/
 .stack/secrets/state/
-.stack/secrets/vars/.sops.yaml
 .stack/state/
 .tasks
 .turbo
@@ -97,7 +96,8 @@ apps/stackpanel-go/.stack/keys/
 build
 devenv.local.nix
 devenv.local.yaml
-devshell
+/devshell
+/.vscode/devshell
 dist
 logs
 node_modules

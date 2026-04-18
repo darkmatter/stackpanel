@@ -10,17 +10,24 @@ Type-safe generated environment access for {{APP_COUNT}} app{{APP_COUNT_SUFFIX}}
 ```typescript
 import { {{FIRST_APP_JS}} } from "{{PACKAGE_NAME}}";
 
-// Reads process.env on first call and returns a typed object
-const env = {{FIRST_APP_JS}}.dev.getEnv();
+// Async, decrypts the embedded SOPS payload for the chosen environment.
+// Return type is inferred against the per-app `Env` shape, so all keys
+// (and their availability per env) are statically discoverable.
+const env = await {{FIRST_APP_JS}}.dev();
+console.log(env.PORT);
 ```
 
-For non-Node environments (Cloudflare Workers, Deno, etc.), pass a custom env object:
+Each app exposes the environments declared via `app.environmentIds` as
+async loaders (`{{FIRST_APP_JS}}.dev`, `{{FIRST_APP_JS}}.prod`, …). Pass
+`LoadEnvOptions` to override the SOPS secret key, disable injection into
+`process.env`, etc.
+
+For sync access against `process.env` (no decryption), import the per-app
+module directly:
 
 ```typescript
-const env = {{FIRST_APP_JS}}.dev.getEnv({
-  DATABASE_URL: "postgres://...",
-  PORT: "3000",
-});
+import { env } from "{{PACKAGE_NAME}}/{{FIRST_APP_JS}}";
+console.log(env.PORT);
 ```
 
 ## Apps
@@ -29,12 +36,16 @@ const env = {{FIRST_APP_JS}}.dev.getEnv({
 
 ## How It Works
 
-Each app/environment combination exports a typed `getEnv()` singleton:
+Each app/environment combination is an async loader that decrypts the
+embedded SOPS payload and returns the typed `Env` shape:
 
-- **Lazy** — nothing is parsed until you call `getEnv()`
-- **Singleton** — first call parses and caches, subsequent calls return the cached result
-- **Portable** — pass any `Record<string, string | undefined>` as input
-- **Import-backed** — encrypted runtime payloads are also generated as importable modules for non-Node runtimes
+- **Typed by environment** — `web.dev` and `web.prod` both resolve to
+  `Env`, but only the environments you declared are exposed
+- **Cached** — first call decrypts, subsequent calls return the cached payload
+- **Process-env injection** — by default the resolved values are written into
+  `process.env`; pass `{ inject: false }` to disable
+- **Portable secrets** — set `SOPS_AGE_KEY` (or pass `secretKey`) for
+  Workers/edge; `SOPS_AGE_KEY_CMD` and `SOPS_KEYSERVICE` are honoured under Node/Bun
 
 ## Runtime Requirements
 

@@ -12,8 +12,11 @@
     ./aws
     ./binary-cache.nix
     ./caddy.nix
+    ./caddy/options.nix
     ./global-services.nix
+    ./global-services-options.nix
     ./portless.nix
     ./security-healthchecks.nix
+    ./services-options.nix
   ];
 }

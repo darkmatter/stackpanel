@@ -9,8 +9,12 @@
 # ==============================================================================
 let
   schema = import ./bun/schema.nix { lib = (import <nixpkgs> { }).lib; };
-  flake = builtins.getFlake (toString ../../..);
-  currentSystem = builtins.currentSystem;
+  # @impure — `getFlake` on a string path and `currentSystem` both require
+  # --impure. This is a unit-test harness invoked manually as
+  # `nix eval --impure -f nix/stackpanel/modules/bun.test.nix`, so impurity is
+  # acceptable here; production evaluation does not load this file.
+  flake = builtins.getFlake (toString ../../..); # @impure
+  currentSystem = builtins.currentSystem; # @impure
   webPkg = flake.packages.${currentSystem}.web;
   installPhase = webPkg.drvAttrs.installPhase or "";
   nativeBuildInputs = webPkg.drvAttrs.nativeBuildInputs or [ ];

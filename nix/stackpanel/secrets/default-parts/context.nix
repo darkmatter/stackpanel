@@ -8,8 +8,13 @@ let
   variablesBackend = config.stackpanel.secrets.backend;
   isChamber = variablesBackend == "chamber";
   chamberCfg = config.stackpanel.secrets.chamber;
+  # @impure — falls back to PWD when `config.stackpanel.root` isn't set.
+  # The fallback only fires when the secrets module is evaluated outside the
+  # normal flake entry (which always sets `stackpanel.root`). If you ever load
+  # this module from `nix eval` without setting `stackpanel.root`, you'll need
+  # `--impure` to read PWD.
   projectRoot =
-    if config.stackpanel.root != null then config.stackpanel.root else builtins.getEnv "PWD";
+    if config.stackpanel.root != null then config.stackpanel.root else builtins.getEnv "PWD"; # @impure
   kmsConfigPath = if projectRoot != "" then "${projectRoot}/.stack/state/kms-config.json" else "";
   kmsStateConfig =
     let
@@ -348,19 +353,25 @@ let
 
   sopsConfigText =
     let
+      # Default: treat every comment as plaintext metadata. Comments next to
+      # values in `.sops.yaml` files double as descriptions in the studio UI
+      # and must therefore remain unencrypted.
+      defaultUnencryptedCommentRegex = ".*";
+
       explicitRuleStrings = lib.concatMap (
         rule:
         mkRuleLines rule.path-regex (expandRuleRecipients rule) (
-          rule.unencrypted-comment-regex or ''^\s?(safe|plaintext)''
+          rule.unencrypted-comment-regex or defaultUnencryptedCommentRegex
         )
         ++ [ "" ]
       ) creationRulesConfig;
 
       legacyRuleStrings = lib.concatMap (
-        file: mkRuleLines "^${file}$" secretFilesByGroup.${file} ''^\s?(safe|plaintext)'' ++ [ "" ]
+        file:
+        mkRuleLines "^${file}$" secretFilesByGroup.${file} defaultUnencryptedCommentRegex ++ [ "" ]
       ) (lib.sort lib.lessThan (lib.attrNames secretFilesByGroup));
 
-      defaultRuleStrings = mkRuleLines ".*" recipientNames ''^\s?(safe|plaintext)'' ++ [ "" ];
+      defaultRuleStrings = mkRuleLines ".*" recipientNames defaultUnencryptedCommentRegex ++ [ "" ];
 
       nonEmptyExplicitRuleStrings = lib.filter (line: line != "") explicitRuleStrings;
 
@@ -384,7 +395,8 @@ let
     else
       ''
         # Auto-generated from stackpanel secrets config - DO NOT EDIT.
-        # Values preceded by a '# safe' or '# plaintext' comment are stored in plaintext.
+        # All YAML comments inside encrypted files are stored in plaintext and
+        # double as descriptions in the studio UI.
         keys:${if recipientNames == [ ] then " []" else ""}
         ${lib.optionalString (recipientNames != [ ]) (
           lib.concatMapStringsSep "\n" (

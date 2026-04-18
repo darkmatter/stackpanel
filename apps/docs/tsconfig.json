@@ -15,11 +15,10 @@
 		"isolatedModules": true,
 		"jsx": "react-jsx",
 		"incremental": true,
+		"customConditions": ["bun"],
 		"paths": {
 			"@/*": ["./src/*"],
-			"fumadocs-mdx:collections/*": [".source/*"],
-			"alchemy-effect": ["../../packages/vendor/alchemy-effect/alchemy-effect/src/index.ts"],
-      "alchemy-effect/*": ["../../packages/vendor/alchemy-effect/alchemy-effect/src/*"]
+			"fumadocs-mdx:collections/*": [".source/*"]
 		},
 		"plugins": [
 			{

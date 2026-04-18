@@ -9,5 +9,8 @@
     ./dns.nix
     ./network.nix
     ./ports.nix
+    ./ports-options.nix
+    ./portless-options.nix
+    ./step-ca-options.nix
   ];
 }

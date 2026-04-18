@@ -41,6 +41,7 @@ in
 
     # App-level features (Caddy vhost registration, CI)
     ./apps/apps.nix
+    ./apps/ci.nix
 
     # Feature modules (all adapter-agnostic)
     ./network # step-ca, ports
