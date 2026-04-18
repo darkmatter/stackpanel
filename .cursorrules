@@ -1,8 +1,7 @@
 Always use bun to install dependencies.
 
-All dependencies must be peer dependencies.
 
-Always use alchemy.secret() instead of new Secret() to create secrets.
+Always use SOPS for secrets.
 
 # Running Tests with Vitest
 

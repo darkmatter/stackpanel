@@ -1,3 +1,5 @@
+import { loadAppEnv } from "@gen/env/runtime";
+await loadAppEnv("web", "dev", { inject: true });
 import * as Stack from "alchemy-effect/Stack";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

@@ -7,9 +7,6 @@
 		"outDir": "dist",
 		"composite": true,
 		"strictNullChecks": true,
-		"paths": {
-			"alchemy-effect": ["../vendor/alchemy-effect/alchemy-effect/src/index.ts"],
-			"alchemy-effect/*": ["../vendor/alchemy-effect/alchemy-effect/src/*"]
-		}
+		"customConditions": ["bun"]
 	}
 }

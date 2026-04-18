@@ -104,6 +104,13 @@ in
     # Register generated files
     stackpanel.files.entries = envPackage.fileEntries;
 
+    # Auto-populate `stackpanel.envs.<env>.<KEY>` from `apps.<app>.env`,
+    # OR-merging across all apps that target the same environment. Other
+    # modules can layer on top by writing `stackpanel.envs.<env>.<KEY> = …`
+    # — those declarations merge with these via the option's submodule
+    # semantics (later definitions take precedence per attribute).
+    stackpanel.envs = envPackage.mergedAppEnvs;
+
     # Register module
     stackpanel.modules.${meta.id} = {
       enable = true;

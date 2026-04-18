@@ -1,4 +1,4 @@
 # Auto-import module.nix
 { ... }: {
-  imports = [ ./module.nix ];
+  imports = [ ./options.nix ./module.nix ];
 }

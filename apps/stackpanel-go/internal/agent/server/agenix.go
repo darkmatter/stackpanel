@@ -1762,7 +1762,8 @@ func (s *Server) renderSecretsSopsConfig(serializable *SerializableSecretsConfig
 
 	var sb strings.Builder
 	sb.WriteString("# Auto-generated from stackpanel secrets config - DO NOT EDIT.\n")
-	sb.WriteString("# Values preceded by a '# safe' or '# plaintext' comment are stored in plaintext.\n")
+	sb.WriteString("# All YAML comments inside encrypted files are stored in plaintext and\n")
+	sb.WriteString("# double as descriptions in the studio UI.\n")
 	if len(recipientNames) == 0 {
 		sb.WriteString("keys: []\n")
 	} else {
@@ -1814,7 +1815,7 @@ func (s *Server) renderSecretsSopsRule(pathRegex string, serializable *Serializa
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("  - path_regex: %s\n", pathRegex))
-	sb.WriteString("    unencrypted_comment_regex: '^\\s?(safe|plaintext)'\n")
+	sb.WriteString("    unencrypted_comment_regex: '.*'\n")
 
 	seenAnchors := map[string]struct{}{}
 	if len(recipients) > 0 {

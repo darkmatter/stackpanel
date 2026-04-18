@@ -1,1 +1,33 @@
-{"bin":{"docker-entrypoint":"./src/runtime/docker-entrypoint.ts"},"dependencies":{"sops-age":"^4.0.2"},"devDependencies":{"typescript":"^5.9.3"},"exports":{".":{"default":"./src/index.ts"},"./docs":{"default":"./src/exports/docs.ts"},"./stackpanel-go":{"default":"./src/exports/stackpanel-go.ts"},"./web":{"default":"./src/exports/web.ts"}},"name":"@gen/env","type":"module"}
+{
+  "bin": {
+    "docker-entrypoint": "./src/runtime/docker-entrypoint.ts"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-beta.43",
+    "@effect/platform-node": "4.0.0-beta.43",
+    "effect": "4.0.0-beta.43",
+    "sops-age": "^4.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./docs": {
+      "default": "./src/exports/docs.ts"
+    },
+    "./runtime": {
+      "default": "./src/runtime/node-loader.ts"
+    },
+    "./stackpanel-go": {
+      "default": "./src/exports/stackpanel-go.ts"
+    },
+    "./web": {
+      "default": "./src/exports/web.ts"
+    }
+  },
+  "name": "@gen/env",
+  "type": "module"
+}

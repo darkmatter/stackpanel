@@ -1,25 +1,37 @@
 # ==============================================================================
 # env-package.nix
 #
-# Generates the env package directly in the target package directory.
-#   - Source files under packageDir/src/ are generated.
-#   - Root package.json and tsconfig.json are generated too.
-#   - Runtime payload metadata stays in Nix; encrypted env payloads are built
-#     by the host-side `stackpanel codegen build` command.
+# Generates the @gen/env package directly in the target package directory.
 #
-# Structure:
+# This codegen is driven entirely by `stackpanel.apps.<app>.env`, which maps
+# each environment variable name to an `EnvironmentVariable` (see
+# `nix/stackpanel/db/schemas/apps.proto.nix`):
+#
+#   stackpanel.apps.web.env = {
+#     PORT          = { value = "3000"; };
+#     DATABASE_URL  = { secret = true; sops = "/dev/database-url"; };
+#     LOG_LEVEL     = { defaultValue = "info"; };
+#   };
+#
+# A `sops` field of the form `/<group>/<name>` resolves to:
+#   - file: <secrets-dir>/vars/<group>.sops.yaml
+#   - key:  snake_case form of <name> (hyphens become underscores)
+#
+# Generated structure:
 #   packageDir/
-#     package.json       — exports "." and "./<app>"
-#     tsconfig.json      — includes src/
-#     README.md          — generated package docs
-#     src/               — 100% generated (do not edit)
-#       apps/<app>/<env>.ts
-#       apps/<app>/index.ts
-#       exports/<app>.ts
-#       runtime/loader.ts, runtime/node-loader.ts, runtime/docker-entrypoint.ts
-#       runtime/generated-payloads/<app>/<env>.ts
-#       runtime/generated-payloads/registry.ts
-#       embedded-data.ts, index.ts
+#     package.json
+#     tsconfig.json
+#     README.md
+#     src/
+#       embedded-data.ts        — runtime metadata (ENVIRONMENT_VARIABLES)
+#       index.ts                — barrel re-export of all per-app modules
+#       exports/<app>.ts        — typed env accessor for each app
+#       runtime/
+#         loader.ts             — generic env loader runtime
+#         node-loader.ts        — Node-specific entrypoint
+#         docker-entrypoint.ts  — Docker entrypoint helper
+#         generated-payloads/registry.ts — payload registry stub
+#   .stack/gen/codegen/env-manifest.json — Go consumer manifest
 # ==============================================================================
 {
   lib,
@@ -32,128 +44,59 @@ let
   apps = cfg.apps or { };
   users = cfg.users or { };
   secretsCfg = cfg.secrets or { };
-  variables = cfg.variables or { };
+  explicitRecipients = secretsCfg.recipients or { };
   packageName = cfg.env.package-name or "@gen/env";
-  explicitEnvReferences = cfg.env.references or { };
 
-  # Per-app environment variable metadata (from environmentVariables field)
-  getAppEnvVarMeta = appCfg: appCfg.environmentVariables or { };
-  isSecretEnvVar = appCfg: envKey:
-    let
-      meta = getAppEnvVarMeta appCfg;
-      varMeta = meta.${envKey} or null;
-    in
-    varMeta != null && (varMeta.secret or false);
-  getEnvVarDefault = appCfg: envKey:
-    let
-      meta = getAppEnvVarMeta appCfg;
-      varMeta = meta.${envKey} or null;
-    in
-    if varMeta != null then varMeta.defaultValue or null else null;
+  # Default environments when an app does not declare `environmentIds`.
+  defaultEnvironments = [
+    "dev"
+    "prod"
+    "staging"
+    "test"
+  ];
 
-  repoRoot = ../../../..;
-  projectRoot =
-    if config.stackpanel.root != null then
-      config.stackpanel.root
-    else if builtins.getEnv "PWD" != "" then
-      builtins.getEnv "PWD"
-    else
-      toString repoRoot;
-  resolveProjectPath = path: if lib.hasPrefix "/" path then path else "${projectRoot}/${path}";
+  # Runtime aliases (mirrors `normalizeRuntimeEnv` in runtime/loader.ts).
+  # Used so a recipient tagged `production` still matches an app env `prod`.
+  envAliases = env:
+    if env == "prod" then [ "prod" "production" ]
+    else if env == "dev" then [ "dev" "development" ]
+    else [ env ];
 
-  getKeyGroup =
-    id:
-    let
-      cleaned = lib.removePrefix "/" id;
-      parts = lib.splitString "/" cleaned;
-    in
-    if parts != [ ] then builtins.head parts else "var";
+  # Normalize whatever the user wrote in `app.environmentIds` to the canonical
+  # short form used on disk and at runtime.
+  normalizeEnvName = env:
+    if env == "production" then "prod"
+    else if env == "development" then "dev"
+    else env;
 
-  getVarName =
-    id:
-    let
-      cleaned = lib.removePrefix "/" id;
-      parts = lib.splitString "/" cleaned;
-    in
-    if parts != [ ] then lib.last parts else id;
-
-  secretFileStem = id: builtins.replaceStrings [ "/" "\\" " " ] [ "-" "-" "-" ] (getVarName id);
-
-  secretYamlKey = id: builtins.replaceStrings [ "-" "." "/" " " ] [ "_" "_" "_" "_" ] (getVarName id);
-
-  parseVariableLink =
-    value:
-    if lib.hasPrefix "var://" value then
-      let
-        rawId = lib.removePrefix "var://" value;
-      in
-      if rawId == "" then
-        null
-      else if lib.hasPrefix "/" rawId then
-        rawId
-      else
-        "/${rawId}"
-    # Bare /<group>/<key> paths are shorthand for var://<group>/<key>
-    else if lib.hasPrefix "/" value && builtins.stringLength value > 1 then
-      value
-    else
-      null;
-
-  parseSopsReference =
-    value:
-    let
-      matches = builtins.match "ref\\+sops://([^#]+)#/(.+)" value;
-    in
-    if matches == null then
-      null
-    else
-      {
-        path = builtins.elemAt matches 0;
-        key = builtins.elemAt matches 1;
-      };
-
-  inferSopsFileType =
-    path:
-    if lib.hasSuffix ".sops.json" path || lib.hasSuffix ".json" path then
-      "json"
-    else if lib.hasSuffix ".sops.env" path || lib.hasSuffix ".env" path then
-      "env"
-    else
-      "yaml";
-
-  # Output directories: generated package at packageDir/
+  # Output paths (all relative to project root)
   packageDir = cfg.env.output-dir or "packages/gen/env";
-  dataDir = "${packageDir}/data";
   generatedDir = "${packageDir}/src";
-  appsDir = "${generatedDir}/apps";
   exportsDir = "${generatedDir}/exports";
   runtimeDir = "${generatedDir}/runtime";
   payloadRuntimeDir = "${runtimeDir}/generated-payloads";
+  secretsDir = secretsCfg.secrets-dir or ".stack/secrets";
 
   # ===========================================================================
-  # Templates — read from ./templates/env/ (no inlined TS/JSON in Nix)
-  #
-  #   *.tmpl.*  — template files with {{PLACEHOLDER}} substitution
-  #   *.*       — static files copied verbatim
+  # Templates
   # ===========================================================================
   templateDir = ./templates/env;
-
   templates = {
-    envModule = builtins.readFile "${templateDir}/env-module.tmpl.ts";
     barrel = builtins.readFile "${templateDir}/barrel.tmpl.ts";
-    envExport = builtins.readFile "${templateDir}/env-export.tmpl.ts";
-    index = builtins.readFile "${templateDir}/index.ts";
+    envExportMeta = builtins.readFile "${templateDir}/env-export-meta.tmpl.ts";
     loader = builtins.readFile "${templateDir}/loader.ts";
     nodeLoader = builtins.readFile "${templateDir}/node-loader.ts";
     payloadRegistry = builtins.readFile "${templateDir}/payload-registry.ts";
     dockerEntrypoint = builtins.readFile "${templateDir}/docker-entrypoint.ts";
-    packageJson = builtins.readFile "${templateDir}/package.json.tmpl";
-    tsconfig = builtins.readFile "${templateDir}/tsconfig.json";
     readme = builtins.readFile "${templateDir}/README.tmpl.md";
   };
 
-  # Convert hyphenated names to valid JS identifiers (camelCase)
-  # e.g., "stackpanel-go" -> "stackpanelGo"
+  # ===========================================================================
+  # Helpers
+  # ===========================================================================
+
+  # Convert kebab-case package/app names to a JS identifier.
+  #   "stackpanel-go" -> "stackpanelGo"
   toJsIdentifier =
     name:
     let
@@ -164,370 +107,420 @@ let
     in
     lib.concatStrings ([ first ] ++ rest);
 
-  # Collect all user AGE keys
-  userKeys = lib.mapAttrsToList (_: user: user.age-public-key or null) users;
-  validUserKeys = lib.filter (k: k != null) userKeys;
-  configuredRecipients = secretsCfg.recipients or { };
-  configuredRecipientKeys = lib.filter (k: k != null) (
-    lib.mapAttrsToList (_: recipient: recipient.public-key or null) configuredRecipients
-  );
-
-  envRecipientTags =
-    envName:
-    lib.unique (
-      [ envName ]
-      ++ lib.optional (envName == "prod") "production"
-      ++ lib.optional (envName == "production") "prod"
-    );
-
-  envPayloadRecipients =
-    envName:
+  # ---------------------------------------------------------------------------
+  # SOPS reference resolution
+  #
+  # `sops = "/group/name"` resolves to:
+  #   - file: <secrets-dir>/vars/<group>.sops.yaml
+  #   - key:  snake_case of <name> (final path segment)
+  #
+  # Hyphens, dots, and spaces in the final segment become underscores so the
+  # YAML key matches conventional snake_case used inside SOPS files.
+  # ---------------------------------------------------------------------------
+  sopsRefParts =
+    sopsPath:
     let
-      tags = envRecipientTags envName;
-      taggedRecipients = lib.filter (k: k != null) (
-        lib.mapAttrsToList (
-          _: recipient:
-          let
-            recipientTags = recipient.tags or [ ];
-          in
-          if recipientTags == [ ] || lib.any (tag: lib.elem tag recipientTags) tags then
-            recipient.public-key or null
-          else
-            null
-        ) configuredRecipients
-      );
-      fallbackRecipients = taggedRecipients ++ configuredRecipientKeys ++ validUserKeys;
-    in
-    lib.unique fallbackRecipients;
-
-  # Group names are still used for file organization, but Stackpanel no longer
-  # generates a dedicated AGE keypair per group.
-  groups = secretsCfg.groups or { };
-
-  # All non-user keys have been removed from the direct SOPS recipient set.
-  baseKeys = [ ];
-
-  # ===========================================================================
-  # SOPS Config Generation
-  # ===========================================================================
-
-  # Generate SOPS creation rule for an app/env
-  mkSopsRule =
-    appName: envName: envCfg:
-    let
-      isProd = envName == "prod" || envName == "production";
-      envAllowedUsers = envCfg.allowed-users or null;
-      keys =
-        if envAllowedUsers != null then
-          lib.filter (k: k != null) (map (u: (users.${u} or { }).age-public-key or null) envAllowedUsers)
-        else if isProd then
-          [ ]
-        else
-          validUserKeys;
+      cleaned = lib.removePrefix "/" sopsPath;
+      parts = lib.splitString "/" cleaned;
+      group = if parts != [ ] then builtins.head parts else "shared";
+      lastSegment = if parts != [ ] then lib.last parts else cleaned;
+      key = builtins.replaceStrings [ "-" "." " " ] [ "_" "_" "_" ] lastSegment;
     in
     {
-      path_regex = "^${appName}/${envName}\\.yaml$";
-      key_groups = [
-        {
-          age = lib.unique keys;
-        }
-      ];
+      inherit group key;
+      file = "${secretsDir}/vars/${group}.sops.yaml";
     };
 
-  allEnvs = lib.concatLists (
-    lib.mapAttrsToList (
-      appName: appCfg:
-      lib.mapAttrsToList (envName: envCfg: {
-        inherit appName envName envCfg;
-      }) (appCfg.environments or { })
-    ) apps
-  );
-
-  sopsRules = map (
+  resolveSopsEntry =
+    sopsPath:
+    let
+      parts = sopsRefParts sopsPath;
+    in
     {
-      appName,
-      envName,
-      envCfg,
-    }:
-    mkSopsRule appName envName envCfg
-  ) allEnvs;
+      kind = "sopsRef";
+      path = parts.file;
+      fileType = "yaml";
+      key = parts.key;
+    };
 
-  sharedVarsRule = {
-    path_regex = "^shared/vars\\.yaml$";
-    unencrypted_regex = ".*";
-  };
-
-  catchAllRule = {
-    path_regex = ".*\\.yaml$";
-    key_groups = [
-      {
-        age = lib.unique (baseKeys ++ validUserKeys);
-      }
-    ];
-  };
-
-  sopsYamlContent =
+  # ---------------------------------------------------------------------------
+  # Per-app env normalisation
+  #
+  # Returns the resolved env attrset for a given app, where each value is an
+  # `EnvironmentVariable` submodule. We always default missing optional fields
+  # to safe values so downstream codegen never has to second-guess.
+  # ---------------------------------------------------------------------------
+  normalizeEnvVar =
+    envKey: rawVar:
     let
-      formatKeyGroup = kg: "      - age:\n" + lib.concatMapStringsSep "" (k: "          - ${k}\n") kg.age;
-      formatRule =
-        rule:
-        if rule ? unencrypted_regex then
-          "  - path_regex: ${rule.path_regex}\n    unencrypted_regex: \"${rule.unencrypted_regex}\"\n"
+      value = rawVar.value or null;
+      sops = rawVar.sops or null;
+      defaultValue = rawVar.defaultValue or null;
+      hasValue = value != null && value != "";
+      hasSops = sops != null && sops != "";
+      hasDefault = defaultValue != null && defaultValue != "";
+    in
+    {
+      key = if (rawVar.key or "") != "" then rawVar.key else envKey;
+      required = rawVar.required or false;
+      # A SOPS reference always implies a sensitive value.
+      secret = (rawVar.secret or false) || hasSops;
+      value = if hasValue then value else null;
+      sops = if hasSops then sops else null;
+      defaultValue = if hasDefault then defaultValue else null;
+    };
+
+  getAppEnv =
+    appCfg:
+    let
+      raw = appCfg.env or { };
+    in
+    lib.mapAttrs normalizeEnvVar raw;
+
+  # ---------------------------------------------------------------------------
+  # Apps that should produce a generated env export.
+  # ---------------------------------------------------------------------------
+  appsWithEnv = lib.filter (
+    appName: (getAppEnv apps.${appName}) != { }
+  ) (lib.attrNames apps);
+
+  # ---------------------------------------------------------------------------
+  # "Loader-guaranteed" predicate: a key is treated as always-present in the
+  # generated TypeScript `Env` type when the runtime loader can produce a value
+  # without the caller supplying anything. That covers the obvious cases —
+  # marked `required`, has a literal `value`, has a `defaultValue`, or is
+  # backed by `sops` — and also acts as the rule for whether `validate(input)`
+  # needs to enforce its presence (only `required` does, defaults are applied).
+  # ---------------------------------------------------------------------------
+  isLoaderGuaranteed =
+    meta:
+    meta.required
+    || meta.value != null
+    || meta.defaultValue != null
+    || meta.sops != null;
+
+  # ---------------------------------------------------------------------------
+  # Per-environment OR-merged variable map derived from `apps.<app>.env`.
+  #
+  # For every (env, KEY) pair we collect contributions across all apps that
+  # include `env` in their `environmentIds` and reduce them as follows:
+  #   required, secret           → boolean OR (any-true wins)
+  #   value, sops, defaultValue  → unanimous non-null wins; conflicting
+  #                                 non-null values become `null` and emit a
+  #                                 `lib.warn` (root-level envs don't try to
+  #                                 reconcile per-app value differences like
+  #                                 `PORT=3000` vs `PORT=4000` — those stay
+  #                                 in the per-app payload).
+  #
+  # The result is shaped as the same submodule used by
+  # `options.stackpanel.envs.<env>.<KEY>`, so it can be assigned directly:
+  #
+  #   config.stackpanel.envs = mergedAppEnvs;
+  #
+  # Other modules can layer on top by writing
+  # `stackpanel.envs.<env>.<KEY> = …` directly. Since the root-level env is
+  # primarily a registry of "what variables exist in environment X" plus the
+  # SOPS-only payload at `<packageDir>/data/_envs/<env>.sops.json`, dropping
+  # conflicting literal values is the correct trade-off — the per-app payloads
+  # remain the source of truth for app-specific configuration.
+  # ---------------------------------------------------------------------------
+  mergedAppEnvs =
+    let
+      contributions = lib.concatMap (
+        appName:
+        let
+          envIds = appEnvironmentIds appName;
+          envVars = getAppEnv apps.${appName};
+        in
+        lib.concatMap (
+          env:
+          lib.mapAttrsToList (key: meta: {
+            inherit env key meta appName;
+          }) envVars
+        ) envIds
+      ) appsWithEnv;
+
+      pickField =
+        field: contribs:
+        let
+          values = lib.unique (
+            lib.filter (v: v != null) (map (c: c.meta.${field}) contribs)
+          );
+          conflictApps = lib.unique (
+            map (c: c.appName)
+              (lib.filter (c: c.meta.${field} != null) contribs)
+          );
+          warnMsg = (
+            "stackpanel.envs: conflicting `${field}` for "
+            + "`${(lib.head contribs).env}.${(lib.head contribs).key}` "
+            + "across apps "
+            + lib.concatStringsSep ", " conflictApps
+            + " — dropped from root env (set `stackpanel.envs.${(lib.head contribs).env}.${(lib.head contribs).key}.${field}` "
+            + "explicitly to override). Per-app payloads are unaffected."
+          );
+        in
+        if values == [ ] then
+          null
+        else if lib.length values == 1 then
+          lib.head values
         else
-          "  - path_regex: ${rule.path_regex}\n    key_groups:\n"
-          + lib.concatMapStringsSep "" formatKeyGroup rule.key_groups;
-      allRules = [ sharedVarsRule ] ++ sopsRules ++ [ catchAllRule ];
-    in
-    ''
-      # Auto-generated by Stackpanel - do not edit manually
-      # Regenerate with: write-files or restart devshell
-      #
-      # Structure:
-      #   shared/vars.yaml - Plaintext shared config (NOT encrypted)
-      #   <app>/<env>.yaml - Per-app per-env secrets (SOPS encrypted)
+          lib.warn warnMsg null;
 
-      keys:
-      ${lib.optionalString (validUserKeys != [ ]) ''
-          # Team member keys
-        ${lib.concatMapStringsSep "" (k: "  - ${k}\n") validUserKeys}''}
+      mergeKeyContribs =
+        key: contribs:
+        {
+          inherit key;
+          required = lib.any (c: c.meta.required) contribs;
+          secret = lib.any (c: c.meta.secret) contribs;
+          value = pickField "value" contribs;
+          sops = pickField "sops" contribs;
+          defaultValue = pickField "defaultValue" contribs;
+        };
 
-      creation_rules:
-      ${lib.concatMapStringsSep "" formatRule allRules}
-    '';
-
-  # ===========================================================================
-  # Runtime Payload Data
-  # ===========================================================================
-
-  normalizeEnvVars = lib.mapAttrs (_: value: builtins.toString value);
-
-  computedVarsObject = lib.listToAttrs (
-    lib.concatMap (
-      variableId:
-      let
-        variable = variables.${variableId};
-        isComputedVariable =
-          if variable ? isComputed then variable.isComputed else getKeyGroup variable.id == "computed";
-      in
-      lib.optional isComputedVariable {
-        name = variable.id;
-        value = builtins.toString variable.value;
-      }
-    ) (lib.attrNames variables)
-  );
-
-  appEnvObjects = lib.listToAttrs (
-    lib.concatMap (
-      appName:
-      let
-        appCfg = apps.${appName};
-        envs = appCfg.environments or { };
-        envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs);
-      in
-      lib.optional (envNames != [ ]) {
-        name = appName;
-        value = envNames;
-      }
-    ) (lib.attrNames apps)
-  );
-
-  groupedVariables = lib.filterAttrs (
-    _: variable:
-    let
-      isComputedVariable =
-        if variable ? isComputed then variable.isComputed else getKeyGroup variable.id == "computed";
-    in
-    !isComputedVariable
-  ) variables;
-
-  groupFilePathForVariable =
-    variableId:
-    let
-      variable = groupedVariables.${variableId} or { };
-      configuredPath =
-        variable.sopsFile
-          or "${secretsCfg.secrets-dir or ".stack/secrets"}/vars/${getKeyGroup variableId}.sops.yaml";
-    in
-    configuredPath;
-
-  groupYamlKeyForVariable =
-    variableId:
-    let
-      variable = groupedVariables.${variableId} or { };
-    in
-    variable.secretYamlKey or (secretYamlKey variableId);
-
-  inferVariableIdForEmptyEnvValue =
-    envName: envKey:
-    let
-      normalizedEnvKey = builtins.replaceStrings [ "-" "." "/" " " ] [ "_" "_" "_" "_" ] (
-        lib.toLower envKey
-      );
-      candidates = lib.filter (variableId: groupYamlKeyForVariable variableId == normalizedEnvKey) (
-        lib.attrNames groupedVariables
-      );
-      envCandidates = lib.filter (variableId: getKeyGroup variableId == envName) candidates;
-      devCandidates = lib.filter (variableId: getKeyGroup variableId == "dev") candidates;
-      secretCandidates = lib.filter (variableId: getKeyGroup variableId == "secret") candidates;
-    in
-    if envCandidates != [ ] then
-      lib.head envCandidates
-    else if devCandidates != [ ] then
-      lib.head devCandidates
-    else if secretCandidates != [ ] then
-      lib.head secretCandidates
-    else if builtins.length candidates == 1 then
-      lib.head candidates
-    else
-      null;
-
-  inferVariableIdFromSourcePos =
-    envVars: envKey:
-    let
-      pos = builtins.unsafeGetAttrPos envKey envVars;
-      file = if pos != null && pos ? file then pos.file else null;
-      line = if pos != null && pos ? line then pos.line else null;
-    in
-    if file == null || line == null || !(builtins.pathExists file) then
-      null
-    else
-      let
-        lines = lib.splitString "\n" (builtins.readFile file);
-        start = if line > 0 then line - 1 else 0;
-        snippet = lib.concatStringsSep " " (lib.take 5 (lib.drop start lines));
-        match = builtins.match ''.*config\.variables\."([^"]+)"\.value.*'' snippet;
-      in
-      if match == null then null else builtins.elemAt match 0;
-
-  mkEnvResolutionEntries =
-    appName: envName: envCfg:
-    let
-      rawEnvVars = envCfg.env or { };
-      envVars = normalizeEnvVars rawEnvVars;
-      envReferences = (explicitEnvReferences.${appName} or { }).${envName} or { };
+      byEnv = lib.groupBy (c: c.env) contributions;
     in
     lib.mapAttrs (
-      envKey: value:
+      _env: contribs:
       let
-        variableId = parseVariableLink value;
-        sopsRef = parseSopsReference value;
-        explicitVariableId = envReferences.${envKey} or null;
-        sourceVariableId = if value == "" then inferVariableIdFromSourcePos rawEnvVars envKey else null;
-        inferredVariableId = if value == "" then inferVariableIdForEmptyEnvValue envName envKey else null;
-        variable =
-          if variableId != null && builtins.hasAttr variableId variables then
-            variables.${variableId}
-          else if explicitVariableId != null && builtins.hasAttr explicitVariableId variables then
-            variables.${explicitVariableId}
-          else if sourceVariableId != null && builtins.hasAttr sourceVariableId variables then
-            variables.${sourceVariableId}
-          else if inferredVariableId != null && builtins.hasAttr inferredVariableId variables then
-            variables.${inferredVariableId}
-          else
-            null;
-        isComputedVariable =
-          (
-            variableId != null
-            || explicitVariableId != null
-            || sourceVariableId != null
-            || inferredVariableId != null
-          )
-          && (
-            if variable != null && variable ? isComputed then
-              variable.isComputed
-            else
-              getKeyGroup (
-                if variableId != null then
-                  variableId
-                else if explicitVariableId != null then
-                  explicitVariableId
-                else if sourceVariableId != null then
-                  sourceVariableId
-                else
-                  inferredVariableId
-              ) == "computed"
-          );
-        effectiveVariableId =
-          if variableId != null then
-            variableId
-          else if explicitVariableId != null then
-            explicitVariableId
-          else if sourceVariableId != null then
-            sourceVariableId
-          else
-            inferredVariableId;
+        byKey = lib.groupBy (c: c.key) contribs;
       in
-      if sopsRef != null then
-        {
-          kind = "sopsRef";
-          path = sopsRef.path;
-          fileType = inferSopsFileType sopsRef.path;
-          key = sopsRef.key;
+      lib.mapAttrs mergeKeyContribs byKey
+    ) byEnv;
+
+  # All envs known to the system. The env-codegen module publishes
+  # `mergedAppEnvs` to `config.stackpanel.envs`, and other modules can layer
+  # additional `stackpanel.envs.<env>.<KEY>` declarations on top — so
+  # `cfg.envs` is the full fix-point once the module system has resolved.
+  rootEnvs = cfg.envs or { };
+
+  rootEnvNames = lib.attrNames rootEnvs;
+
+  # ===========================================================================
+  # Manifest construction
+  # ===========================================================================
+
+  # Per-app metadata used by both the runtime (`embedded-data.ts`) and the Go
+  # codegen consumer.
+  appEnvVarsMeta = lib.listToAttrs (
+    map (appName: {
+      name = appName;
+      value = lib.mapAttrs (
+        _envKey: meta: {
+          inherit (meta) key required secret defaultValue;
         }
-      else if isComputedVariable then
+      ) (getAppEnv apps.${appName});
+    }) appsWithEnv
+  );
+
+  # Build the var resolution entries for the Go codegen pipeline.
+  mkResolutionEntries =
+    appName:
+    let
+      appEnv = getAppEnv apps.${appName};
+    in
+    lib.mapAttrs (
+      _envKey: meta:
+      if meta.sops != null then
+        resolveSopsEntry meta.sops
+      else if meta.value != null then
         {
           kind = "literal";
-          value =
-            if builtins.hasAttr effectiveVariableId computedVarsObject then
-              computedVarsObject.${effectiveVariableId}
-            else if variable != null then
-              builtins.toString variable.value
-            else
-              throw "env-package: missing computed variable ${effectiveVariableId}";
+          value = meta.value;
         }
-      else if effectiveVariableId != null then
+      else if meta.defaultValue != null then
         {
-          kind = "group";
-          variableId = effectiveVariableId;
-          path = groupFilePathForVariable effectiveVariableId;
-          fileType = inferSopsFileType (groupFilePathForVariable effectiveVariableId);
-          key = groupYamlKeyForVariable effectiveVariableId;
+          kind = "literal";
+          value = meta.defaultValue;
         }
       else
         {
           kind = "literal";
-          value = value;
+          value = "";
         }
-    ) envVars;
+    ) appEnv;
 
-  # Per-app environmentVariables metadata for the build manifest
-  appEnvVarsMeta = lib.filterAttrs (_: v: v != { }) (
-    lib.mapAttrs (_appName: appCfg: getAppEnvVarMeta appCfg) apps
+  # ---------------------------------------------------------------------------
+  # Recipient resolution
+  #
+  # Two sources of recipients are merged:
+  #   1. `stackpanel.users.<name>.public-keys` — each public key becomes a
+  #      recipient tagged with the user's `secrets-allowed-environments`.
+  #      Multiple keys per user are disambiguated with a `_2`, `_3` suffix.
+  #   2. `stackpanel.secrets.recipients` — explicit `{ public-key; tags; }`
+  #      entries, useful for service accounts (CI, keyservice, …).
+  #
+  # For every (app, env) target we build a tag set:
+  #   [ env, normalize(env), <env aliases…>, "<app>/<env>", "<app>/<alias>" ]
+  # and select recipients whose own tags intersect that set. Empty-tag
+  # recipients are not treated as catch-alls — to participate in any payload
+  # a recipient must opt in via tags.
+  # ---------------------------------------------------------------------------
+
+  # Recipients derived from `stackpanel.users.*`. Each user's public keys are
+  # exploded into individual recipient entries with deterministic names.
+  userRecipients = lib.foldl' lib.recursiveUpdate { } (
+    lib.mapAttrsToList (
+      userName: user:
+      let
+        keys = user.public-keys or [ ];
+        tags = user.secrets-allowed-environments or [ ];
+        mkRecipientName = i: if i == 0 then userName else "${userName}_${toString (i + 1)}";
+      in
+      lib.listToAttrs (
+        lib.imap0 (i: publicKey: {
+          name = mkRecipientName i;
+          value = {
+            public-key = publicKey;
+            inherit tags;
+          };
+        }) keys
+      )
+    ) users
+  );
+
+  # Final recipient registry. Explicit `secrets.recipients` entries override
+  # user-derived recipients of the same name (matches behaviour in
+  # `nix/stackpanel/secrets/default-parts/context.nix`).
+  recipientRegistry = userRecipients // explicitRecipients;
+
+  recipientTagsFor = name: (recipientRegistry.${name}.tags or [ ]);
+  recipientPublicKey = name: (recipientRegistry.${name}.public-key or null);
+
+  # Build the candidate tag set for a (app, env) pair so recipient filtering
+  # can match any of the equivalent forms used across the configuration.
+  targetTagsFor = appName: env:
+    let
+      aliases = envAliases env;
+      composites = map (a: "${appName}/${a}") aliases;
+    in
+    lib.unique (aliases ++ composites);
+
+  selectRecipientsFor = appName: env:
+    let
+      wanted = targetTagsFor appName env;
+      matches = name:
+        let userTags = recipientTagsFor name; in
+        userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
+      names = lib.filter matches (lib.attrNames recipientRegistry);
+      keys = lib.filter (k: k != null && k != "") (map recipientPublicKey names);
+    in
+    lib.unique keys;
+
+  # ---------------------------------------------------------------------------
+  # Per-app environment fan-out
+  # ---------------------------------------------------------------------------
+  appEnvironmentIds = appName:
+    let
+      raw = apps.${appName}.environmentIds or [ ];
+      normalized = map normalizeEnvName raw;
+    in
+    lib.unique (if normalized == [ ] then defaultEnvironments else normalized);
+
+  # Targets are dropped when no recipient is eligible — the Go codegen would
+  # otherwise fail with "no recipients configured". A buildable but partial
+  # set of targets is preferable to a hard failure for an unrelated env.
+  appEnvironmentTargets = appName:
+    let
+      envs = appEnvironmentIds appName;
+      vars = mkResolutionEntries appName;
+    in
+    lib.filter (t: t.recipients != [ ]) (
+      map (env: {
+        app = appName;
+        environment = env;
+        outputPath = "${packageDir}/data/${env}/${appName}.sops.json";
+        recipients = selectRecipientsFor appName env;
+        inherit vars;
+      }) envs
+    );
+
+  # ---------------------------------------------------------------------------
+  # Root-level env targets
+  #
+  # Every environment surfaced by `rootEnvs` (apps + module-contributed) gets
+  # one SOPS payload at `<packageDir>/data/_envs/<env>.sops.json`. The Go
+  # codegen pipeline treats `_envs` as a synthetic "app" so the existing
+  # SOPS encryption + payload writer is reused; no TypeScript loader is
+  # emitted for these targets yet (manifest-only scaffolding).
+  # ---------------------------------------------------------------------------
+  rootEnvResolutionEntries =
+    envName:
+    let
+      vars = rootEnvs.${envName} or { };
+    in
+    lib.mapAttrs (
+      _envKey: meta:
+      if meta.sops != null then
+        resolveSopsEntry meta.sops
+      else if meta.value != null then
+        {
+          kind = "literal";
+          value = meta.value;
+        }
+      else if meta.defaultValue != null then
+        {
+          kind = "literal";
+          value = meta.defaultValue;
+        }
+      else
+        {
+          kind = "literal";
+          value = "";
+        }
+    ) vars;
+
+  # Recipients eligible for a root env: union of recipients across every app
+  # that targets that env, plus any recipient explicitly tagged with the
+  # bare env name (so module-only envs without a backing app still encrypt).
+  rootEnvRecipients =
+    envName:
+    let
+      aliases = envAliases envName;
+      appComposites = lib.concatMap (a: map (al: "${a}/${al}") aliases) appsWithEnv;
+      wanted = lib.unique (aliases ++ appComposites);
+      matches = name:
+        let userTags = recipientTagsFor name; in
+        userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
+      names = lib.filter matches (lib.attrNames recipientRegistry);
+      keys = lib.filter (k: k != null && k != "") (map recipientPublicKey names);
+    in
+    lib.unique keys;
+
+  rootEnvTargets = lib.filter (t: t.recipients != [ ] && t.vars != { }) (
+    map (envName: {
+      app = "_envs";
+      environment = envName;
+      outputPath = "${packageDir}/data/_envs/${envName}.sops.json";
+      recipients = rootEnvRecipients envName;
+      vars = rootEnvResolutionEntries envName;
+    }) rootEnvNames
   );
 
   envBuildManifest = {
-    schemaVersion = 1;
-    dataRoot = dataDir;
-    environmentVariables = lib.mapAttrs (
-      _appName: meta:
-      lib.mapAttrs (
-        _varName: varMeta: {
-          key = varMeta.key or _varName;
-          required = varMeta.required or false;
-          secret = varMeta.secret or false;
-          defaultValue = varMeta.defaultValue or null;
-        }
-      ) meta
-    ) appEnvVarsMeta;
-    targets = map (
-      {
-        appName,
-        envName,
-        envCfg,
-      }:
-      {
-        app = appName;
-        environment = envName;
-        outputPath = "${dataDir}/${envName}/${appName}.sops.json";
-        recipients = lib.sort (a: b: a < b) (envPayloadRecipients envName);
-        vars = mkEnvResolutionEntries appName envName envCfg;
-      }
-    ) (lib.filter ({ envCfg, ... }: (envCfg.env or { }) != { }) allEnvs);
+    schemaVersion = 2;
+    dataRoot = "${packageDir}/data";
+    environmentVariables = appEnvVarsMeta;
+    targets = (lib.concatMap appEnvironmentTargets appsWithEnv) ++ rootEnvTargets;
   };
+
+  # Map every app to the environments that successfully produced a target.
+  # The runtime payload registry only knows about (app, env) pairs that were
+  # actually generated, so `AVAILABLE_APP_ENVS` must mirror that set.
+  availableAppEnvs = lib.listToAttrs (
+    map (appName: {
+      name = appName;
+      value = lib.unique (map (t: t.environment) (appEnvironmentTargets appName));
+    }) appsWithEnv
+  );
 
   embeddedDataModule = ''
     // Auto-generated by Stackpanel — do not edit manually.
-    export const AVAILABLE_APP_ENVS = ${builtins.toJSON appEnvObjects} as Record<string, string[]>;
+    //
+    // This module exposes runtime metadata for every environment variable
+    // declared via `stackpanel.apps.<app>.env`. The studio UI and any
+    // tooling that needs to introspect env shape consumes it directly.
+
+    export const AVAILABLE_APP_ENVS = ${builtins.toJSON availableAppEnvs} as Record<string, string[]>;
 
     export interface EnvVarMeta {
       key: string;
@@ -535,24 +528,89 @@ let
       secret: boolean;
       defaultValue: string | null;
     }
+
     export const ENVIRONMENT_VARIABLES = ${builtins.toJSON appEnvVarsMeta} as Record<string, Record<string, EnvVarMeta>>;
   '';
 
+  # Type registry consumed by the runtime loaders so `loadEnv("web", env)`
+  # returns the typed `Env` shape from `exports/web.ts` rather than a loose
+  # `Record<string, string>`. Falls back to `Record<string, string>` for app
+  # names that aren't statically known (e.g., values pulled from runtime
+  # config), preserving backward compatibility.
+  appEnvTypesModule =
+    let
+      sortedApps = lib.sort (a: b: a < b) appsWithEnv;
+      capitalize = s: lib.toUpper (lib.substring 0 1 s) + lib.substring 1 (-1) s;
+      pascalCase = name:
+        lib.concatStrings (map capitalize (lib.splitString "-" name));
+      typeAliasFor = appName: "${pascalCase appName}Env";
+      importLines = lib.concatMapStringsSep "\n" (
+        appName: "import type { Env as ${typeAliasFor appName} } from \"../exports/${appName}\";"
+      ) sortedApps;
+      mapEntries = lib.concatMapStringsSep "\n" (
+        appName: "  ${builtins.toJSON appName}: ${typeAliasFor appName};"
+      ) sortedApps;
+      bodyImports = if sortedApps == [ ] then "" else importLines + "\n\n";
+      mapBody = if sortedApps == [ ] then "" else "\n" + mapEntries + "\n";
+    in
+    ''
+      // Auto-generated by Stackpanel — do not edit manually.
+      // Maps each app declared in `stackpanel.apps.<app>.env` to its typed
+      // `Env` shape. The runtime loaders use this so callers get typed
+      // results without losing the loose `Record<string, string>` fallback
+      // for unknown app names.
+
+      ${bodyImports}export interface AppEnvMap {${mapBody}}
+
+      export type AppName = keyof AppEnvMap;
+
+      // When `App` is a known app key, `EnvFor<App>` is its typed `Env`.
+      // Otherwise it falls back to `Record<string, string>` so callers
+      // passing an arbitrary `string` (e.g., from runtime config) still
+      // type-check.
+      export type EnvFor<App extends string> = App extends keyof AppEnvMap
+        ? AppEnvMap[App]
+        : Record<string, string>;
+    '';
+
   # ===========================================================================
-  # TypeScript Codegen
+  # TypeScript codegen
   # ===========================================================================
 
-  mkEnvTsModule =
-    appName: envName: envCfg:
+  mkAppEnvExport =
+    appName:
     let
-      envVars = envCfg.env or { };
-      sortedKeys = lib.sort (a: b: a < b) (lib.attrNames envVars);
-      fields = lib.concatMapStringsSep "\n" (key: "  ${key}: string;") sortedKeys;
+      appEnv = getAppEnv apps.${appName};
+      sortedKeys = lib.sort (a: b: a < b) (lib.attrNames appEnv);
+      # `?` makes the field optional in the emitted TypeScript interface for
+      # any key the loader can't guarantee — i.e. nothing about it (no
+      # required, no value, no default, no sops) was declared.
+      fieldFor =
+        key:
+        let
+          meta = appEnv.${key};
+          opt = if isLoaderGuaranteed meta then "" else "?";
+        in
+        "  ${key}${opt}: string;";
+      fields = lib.concatMapStringsSep "\n" fieldFor sortedKeys;
+      requiredKeys = lib.filter (k: appEnv.${k}.required) sortedKeys;
+      requiredKeysList = lib.concatMapStringsSep ", " (k: builtins.toJSON k) requiredKeys;
+      defaultsAttrs = lib.listToAttrs (
+        lib.concatMap (
+          k:
+          let meta = appEnv.${k}; in
+          if meta.defaultValue != null then
+            [ { name = k; value = meta.defaultValue; } ]
+          else
+            [ ]
+        ) sortedKeys
+      );
+      defaultsJson = builtins.toJSON defaultsAttrs;
     in
-    if envVars == { } then
-      null
-    else
-      builtins.replaceStrings [ "{{FIELDS}}" ] [ fields ] templates.envModule;
+    builtins.replaceStrings
+      [ "{{FIELDS}}" "{{REQUIRED_KEYS}}" "{{DEFAULTS}}" ]
+      [ fields requiredKeysList defaultsJson ]
+      templates.envExportMeta;
 
   mkBarrelExport =
     names: basePath:
@@ -564,347 +622,295 @@ let
     in
     builtins.replaceStrings [ "{{EXPORTS}}" ] [ exports ] templates.barrel;
 
-  # ===========================================================================
-  # Entrypoint Generation
-  # ===========================================================================
-
-  mkAppEnvExport =
-    appName: appCfg:
+  # ---------------------------------------------------------------------------
+  # Root index.ts — typed per-app/per-env loader registry.
+  #
+  #   import { web } from "@gen/env";
+  #   const env = await web.dev();
+  #   console.log(env.SOME_KEY); // typed against `EnvFor<"web">`
+  #
+  # Each app exports an object whose keys are the environments declared via
+  # `app.environmentIds` (filtered to the set that has eligible recipients,
+  # i.e. the same set surfaced in `AVAILABLE_APP_ENVS`). Each value is an
+  # async loader that delegates to `loadEnv(<app>, <env>, options)`. The
+  # `loadEnv` generic preserves the literal `<app>` so the returned promise
+  # is typed as `Promise<EnvFor<"<app>">>` automatically.
+  # ---------------------------------------------------------------------------
+  mkRootIndexModule =
     let
-      envNames = lib.sort (a: b: a < b) (
-        lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) (appCfg.environments or { }))
-      );
-      defaultEnv = if envNames != [ ] then lib.head envNames else "dev";
-      envType = lib.concatMapStringsSep " | " (e: "app.${toJsIdentifier e}.Env") envNames;
-      envCases = lib.concatMapStringsSep "\n" (
-        e: "  if (envName === \"${e}\") return app.${toJsIdentifier e}.getEnv(processEnv);"
-      ) envNames;
-    in
-    builtins.replaceStrings
-      [ "{{APP_NAME}}" "{{ENV_CASES}}" "{{ENV_TYPE}}" "{{DEFAULT_ENV}}" "{{DEFAULT_ENV_IDENT}}" ]
-      [ appName envCases envType defaultEnv (toJsIdentifier defaultEnv) ]
-      templates.envExport;
-
-  # ===========================================================================
-  # Collect All Generated Files
-  # ===========================================================================
-
-  generatedFiles =
-    let
-      tsModules = lib.listToAttrs (
-        lib.concatMap (
-          {
-            appName,
-            envName,
-            envCfg,
-          }:
-          let
-            content = mkEnvTsModule appName envName envCfg;
-            path = "${appsDir}/${appName}/${envName}.ts";
-          in
-          lib.optional (content != null) {
-            name = path;
-            value = {
-              kind = "text";
-              content = content;
-            };
-          }
-        ) allEnvs
-      );
-
-      appBarrels = lib.listToAttrs (
-        lib.concatMap (
-          appName:
-          let
-            appCfg = apps.${appName};
-            envs = appCfg.environments or { };
-            envNames = lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs);
-            path = "${appsDir}/${appName}/index.ts";
-          in
-          lib.optional (envNames != [ ]) {
-            name = path;
-            value = {
-              kind = "text";
-              content = mkBarrelExport envNames "./";
-            };
-          }
-        ) (lib.attrNames apps)
-      );
-
-      appsWithEnvs = lib.filter (
+      sortedApps = lib.sort (a: b: a < b) appsWithEnv;
+      mkAppBlock =
         appName:
         let
-          appCfg = apps.${appName};
-          envs = appCfg.environments or { };
+          jsName = toJsIdentifier appName;
+          envs = availableAppEnvs.${appName} or [ ];
+          sortedEnvs = lib.sort (a: b: a < b) envs;
+          envLines = lib.concatMapStringsSep "\n" (
+            env:
+            "  ${env}: (options?: LoadEnvOptions) => loadEnv(${builtins.toJSON appName}, ${builtins.toJSON env}, options),"
+          ) sortedEnvs;
+          body = if sortedEnvs == [ ] then "" else "\n" + envLines + "\n";
         in
-        lib.any (e: (e.env or { }) != { }) (lib.attrValues envs)
-      ) (lib.attrNames apps);
+        "export const ${jsName} = {${body}} as const;";
+      blocks = lib.concatMapStringsSep "\n\n" mkAppBlock sortedApps;
+    in
+    ''
+      // Auto-generated by Stackpanel — do not edit manually.
+      //
+      // Per-app, per-environment env loaders. Each property is an async
+      // function that resolves to the typed `Env` shape declared in
+      // `./exports/<app>.ts` (via `EnvFor<"<app>">`).
+      //
+      //   import { web } from "@gen/env";
+      //   const env = await web.dev();
+      //   console.log(env.SOME_KEY);
+      //
+      // For non-Node runtimes (Workers, edge, …) import the no-Node loader
+      // directly: `import { loadEnv } from "@gen/env/runtime"` — but note
+      // that `@gen/env/runtime` resolves to the Node/Bun loader; portable
+      // callers can `import { loadEnv } from "@gen/env/runtime"` with a
+      // pre-supplied `secretKey` to avoid the platform layer entirely.
+      //
+      // To inspect the static `process.env`-backed shape for a single app
+      // synchronously, import its per-app module directly:
+      //
+      //   import { env } from "@gen/env/web";
+      //   console.log(env.PORT);
 
-      manualExportNames =
-        lib.filter
-          (
-            name:
-            !(lib.elem name appsWithEnvs)
-            && builtins.pathExists (resolveProjectPath "${packageDir}/src/${name}.ts")
-          )
-          [
-            "web"
-            "web-client"
-            "web-server"
-            "auth"
-          ];
+      import { loadEnv, type LoadEnvOptions } from "./runtime/node-loader";
 
-      rootBarrel = lib.optionalAttrs (appsWithEnvs != [ ]) {
-        "${generatedDir}/index.ts" = {
-          kind = "text";
-          content = mkBarrelExport appsWithEnvs "./exports/";
-        };
-      };
+      ${blocks}
+    '';
 
-      appExports = lib.listToAttrs (
-        lib.concatMap (
-          appName:
-          let
-            appCfg = apps.${appName};
-            envNames = lib.attrNames (
-              lib.filterAttrs (_: e: (e.env or { }) != { }) (appCfg.environments or { })
-            );
-            path = "${exportsDir}/${appName}.ts";
-          in
-          lib.optional (envNames != [ ]) {
-            name = path;
+  # ===========================================================================
+  # File entries
+  # ===========================================================================
+
+  packageJsonValue =
+    let
+      exportsAttrset =
+        {
+          "." = {
+            default = "./src/index.ts";
+          };
+          "./runtime" = {
+            default = "./src/runtime/node-loader.ts";
+          };
+        }
+        // lib.listToAttrs (
+          map (app: {
+            name = "./${app}";
             value = {
-              kind = "text";
-              content = mkAppEnvExport appName appCfg;
+              default = "./src/exports/${app}.ts";
             };
-          }
-        ) (lib.attrNames apps)
-      );
-
-      rootPackageJsonContent =
-        let
-          exportsAttrset = lib.listToAttrs (
-            [
-              {
-                name = ".";
-                value = {
-                  default = "./src/index.ts";
-                };
-              }
-            ]
-            ++ [
-              {
-                name = "./runtime";
-                value = {
-                  default = "./src/runtime/node-loader.ts";
-                };
-              }
-            ]
-            ++ (map (app: {
-              name = "./${app}";
-              value = {
-                default = "./src/exports/${app}.ts";
-              };
-            }) (appsWithEnvs ++ manualExportNames))
-          );
-          packageJsonAttr = {
-            name = packageName;
-            type = "module";
-            bin = {
-              "docker-entrypoint" = "./src/runtime/docker-entrypoint.ts";
-            };
-            exports = exportsAttrset;
-            dependencies = {
-              "sops-age" = "^4.0.2";
-            };
-            devDependencies = {
-              typescript = "^5.9.3";
-            };
-          };
-        in
-        builtins.toJSON packageJsonAttr;
-
-      packageJson = {
-        "${packageDir}/package.json" = {
-          kind = "text";
-          content = rootPackageJsonContent;
-        };
+          }) appsWithEnv
+        );
+    in
+    {
+      name = packageName;
+      type = "module";
+      bin = {
+        "docker-entrypoint" = "./src/runtime/docker-entrypoint.ts";
       };
-
-      tsconfigJson = {
-        "${packageDir}/tsconfig.json" = {
-          kind = "text";
-          content = builtins.toJSON {
-            compilerOptions = {
-              target = "ESNext";
-              module = "ESNext";
-              moduleResolution = "bundler";
-              lib = [ "ESNext" ];
-              verbatimModuleSyntax = true;
-              strict = true;
-              strictNullChecks = true;
-              skipLibCheck = true;
-              resolveJsonModule = true;
-              allowSyntheticDefaultImports = true;
-              esModuleInterop = true;
-              forceConsistentCasingInFileNames = true;
-              isolatedModules = true;
-              noUncheckedIndexedAccess = true;
-              declaration = true;
-              declarationMap = true;
-              sourceMap = true;
-              outDir = "dist";
-              composite = true;
-            };
-            include = [ "src" ];
-            exclude = [
-              "node_modules"
-              "dist"
-            ];
-          };
-        };
+      exports = exportsAttrset;
+      dependencies = {
+        "sops-age" = "^4.0.2";
+        # Effect powers the runtime loaders (loader.ts + node-loader.ts).
+        # `@effect/platform-{node,bun}` are loaded lazily by node-loader.ts —
+        # the unused one is never imported at runtime, but both must resolve.
+        effect = "4.0.0-beta.43";
+        "@effect/platform-node" = "4.0.0-beta.43";
+        "@effect/platform-bun" = "4.0.0-beta.43";
       };
+      devDependencies = {
+        typescript = "^5.9.3";
+      };
+    };
 
+  tsconfigValue = {
+    compilerOptions = {
+      target = "ESNext";
+      module = "ESNext";
+      moduleResolution = "bundler";
+      lib = [ "ESNext" ];
+      verbatimModuleSyntax = true;
+      strict = true;
+      strictNullChecks = true;
+      skipLibCheck = true;
+      resolveJsonModule = true;
+      allowSyntheticDefaultImports = true;
+      esModuleInterop = true;
+      forceConsistentCasingInFileNames = true;
+      isolatedModules = true;
+      noUncheckedIndexedAccess = true;
+      declaration = true;
+      declarationMap = true;
+      sourceMap = true;
+      outDir = "dist";
+      composite = true;
+    };
+    include = [ "src" ];
+    exclude = [
+      "node_modules"
+      "dist"
+    ];
+  };
+
+  readmeContent =
+    let
       appSections = lib.concatMapStringsSep "\n" (
         appName:
         let
-          appCfg = apps.${appName};
-          envs = appCfg.environments or { };
-          envNames = lib.sort (a: b: a < b) (
-            lib.attrNames (lib.filterAttrs (_: e: (e.env or { }) != { }) envs)
-          );
-          envList = lib.concatMapStringsSep ", " (e: "`${e}`") envNames;
-          jsName = toJsIdentifier appName;
-          firstEnv = if envNames != [ ] then lib.head envNames else "dev";
-          firstEnvCfg = envs.${firstEnv} or { };
-          envVarKeys = lib.sort (a: b: a < b) (lib.attrNames (firstEnvCfg.env or { }));
+          appEnv = getAppEnv apps.${appName};
+          envVarKeys = lib.sort (a: b: a < b) (lib.attrNames appEnv);
           envVarList = lib.concatMapStringsSep ", " (k: "`${k}`") envVarKeys;
+          jsName = toJsIdentifier appName;
+          firstKey = if envVarKeys != [ ] then lib.head envVarKeys else "PORT";
+          envs = availableAppEnvs.${appName} or [ ];
+          firstEnv = if envs != [ ] then lib.head (lib.sort (a: b: a < b) envs) else "dev";
+          envList = lib.concatMapStringsSep ", " (e: "`${e}`") (lib.sort (a: b: a < b) envs);
         in
         ''
           ### ${appName}
 
           Environments: ${envList}
+
           Variables: ${envVarList}
 
           ```typescript
           import { ${jsName} } from "${packageName}";
-          const env = ${jsName}.${firstEnv}.getEnv();
+          const env = await ${jsName}.${firstEnv}();
+          console.log(env.${firstKey});
           ```
         ''
-      ) appsWithEnvs;
+      ) appsWithEnv;
+      appCount = toString (lib.length appsWithEnv);
+      appCountSuffix = if lib.length appsWithEnv == 1 then "" else "s";
+      firstAppJs = if appsWithEnv != [ ] then toJsIdentifier (lib.head appsWithEnv) else "app";
+    in
+    builtins.replaceStrings
+      [
+        "{{PACKAGE_NAME}}"
+        "{{APP_COUNT}}"
+        "{{APP_COUNT_SUFFIX}}"
+        "{{FIRST_APP_JS}}"
+        "{{APP_SECTIONS}}"
+      ]
+      [
+        packageName
+        appCount
+        appCountSuffix
+        firstAppJs
+        appSections
+      ]
+      templates.readme;
 
-      appCount = toString (lib.length appsWithEnvs);
-      appCountSuffix = if lib.length appsWithEnvs == 1 then "" else "s";
-      firstAppJs = if appsWithEnvs != [ ] then toJsIdentifier (lib.head appsWithEnvs) else "app";
-
-      rootReadme = lib.optionalAttrs (appsWithEnvs != [ ]) {
-        "${packageDir}/README.md" = {
-          kind = "text";
-          content =
-            builtins.replaceStrings
-              [
-                "{{PACKAGE_NAME}}"
-                "{{APP_COUNT}}"
-                "{{APP_COUNT_SUFFIX}}"
-                "{{FIRST_APP_JS}}"
-                "{{APP_SECTIONS}}"
-              ]
-              [
-                packageName
-                appCount
-                appCountSuffix
-                firstAppJs
-                appSections
-              ]
-              templates.readme;
+  generatedFiles =
+    let
+      packageJsonEntry = {
+        "${packageDir}/package.json" = {
+          kind = "json";
+          jsonValue = packageJsonValue;
         };
       };
 
-      embeddedDataFile = {
+      tsconfigEntry = {
+        "${packageDir}/tsconfig.json" = {
+          kind = "json";
+          jsonValue = tsconfigValue;
+        };
+      };
+
+      readmeEntry = lib.optionalAttrs (appsWithEnv != [ ]) {
+        "${packageDir}/README.md" = {
+          kind = "text";
+          content = readmeContent;
+        };
+      };
+
+      embeddedDataEntry = {
         "${generatedDir}/embedded-data.ts" = {
           kind = "text";
           content = embeddedDataModule;
         };
       };
 
-      envManifestFile = {
+      manifestEntry = {
         ".stack/gen/codegen/env-manifest.json" = {
-          kind = "text";
-          content = builtins.toJSON envBuildManifest;
+          kind = "json";
+          jsonValue = envBuildManifest;
         };
       };
 
-      loader = {
+      runtimeEntries = {
         "${runtimeDir}/loader.ts" = {
           kind = "text";
           content = templates.loader;
         };
-      };
-
-      nodeLoader = {
         "${runtimeDir}/node-loader.ts" = {
           kind = "text";
           content = templates.nodeLoader;
         };
-      };
-
-      payloadRegistry = {
+        "${runtimeDir}/docker-entrypoint.ts" = {
+          kind = "text";
+          content = templates.dockerEntrypoint;
+        };
+        "${runtimeDir}/app-env-types.ts" = {
+          kind = "text";
+          content = appEnvTypesModule;
+        };
         "${payloadRuntimeDir}/registry.ts" = {
           kind = "text";
           content = templates.payloadRegistry;
         };
       };
 
-      runtimeDockerEntrypoint = {
-        "${runtimeDir}/docker-entrypoint.ts" = {
+      perAppExports = lib.listToAttrs (
+        map (appName: {
+          name = "${exportsDir}/${appName}.ts";
+          value = {
+            kind = "text";
+            content = mkAppEnvExport appName;
+          };
+        }) appsWithEnv
+      );
+
+      rootBarrel = lib.optionalAttrs (appsWithEnv != [ ]) {
+        "${generatedDir}/index.ts" = {
           kind = "text";
-          content = templates.dockerEntrypoint;
+          content = mkRootIndexModule;
         };
       };
     in
-    packageJson
-    // tsconfigJson
-    // rootReadme
-    // embeddedDataFile
-    // envManifestFile
-    // loader
-    // nodeLoader
-    // payloadRegistry
-    // runtimeDockerEntrypoint
-    // tsModules
-    // appBarrels
-    // rootBarrel
-    // appExports;
+    packageJsonEntry
+    // tsconfigEntry
+    // readmeEntry
+    // embeddedDataEntry
+    // manifestEntry
+    // runtimeEntries
+    // perAppExports
+    // rootBarrel;
 
   fileEntries = lib.mapAttrs (
-    path: entry:
-    if entry.kind == "derivation" then
-      {
-        type = "derivation";
-        drv = entry.drv;
-        source = "codegen/env-package.nix";
-        description = "Auto-generated encrypted env payload";
-      }
-    else
-      {
-        type = "text";
-        text = entry.content;
-        source = "codegen/env-package.nix";
-        description = "Auto-generated env package file";
-      }
+    _path: entry:
+      if entry.kind or "text" == "json" then
+        {
+          type = "json";
+          jsonValue = entry.jsonValue;
+          source = "codegen/env-package.nix";
+          description = "Auto-generated env package file";
+        }
+      else
+        {
+          type = "text";
+          text = entry.content;
+          source = "codegen/env-package.nix";
+          description = "Auto-generated env package file";
+        }
   ) generatedFiles;
 in
 {
-  inherit generatedFiles fileEntries;
+  inherit generatedFiles fileEntries mergedAppEnvs;
 
-  sopsYaml = sopsYamlContent;
-  sopsRules = sopsRules;
-  allEnvs = allEnvs;
-
-  enabled =
-    apps != { }
-    && lib.any (
-      appCfg:
-      (appCfg.environments or { }) != { } || (appCfg.environmentVariables or { }) != { }
-    ) (lib.attrValues apps);
+  enabled = apps != { } && lib.any (appCfg: (appCfg.env or { }) != { }) (lib.attrValues apps);
 }

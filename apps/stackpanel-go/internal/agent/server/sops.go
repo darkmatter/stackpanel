@@ -1,12 +1,10 @@
-// sops.go implements a legacy SOPS secrets API that operates on per-environment
-// YAML files (e.g., .stack/secrets/dev.yaml). This predates the group-based
-// system in secrets_groups.go and is kept for backwards compatibility.
-// New code should prefer the group-based endpoints.
+// sops.go implements a SOPS secrets API that operates on per-environment
+// YAML files at .stack/secrets/vars/<name>.sops.yaml. This is the canonical
+// secrets layout consumed by the env codegen and runtime loaders.
 package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,6 +12,20 @@ import (
 
 	"github.com/rs/zerolog/log"
 )
+
+// secretsVarsDir is the canonical directory for per-environment SOPS-encrypted
+// YAML secret files. Each file is named <env>.sops.yaml (e.g. dev.sops.yaml).
+const secretsVarsDir = ".stack/secrets/vars"
+
+// secretsVarsSuffix is the canonical filename suffix for SOPS-encrypted env
+// secret files in `secretsVarsDir`.
+const secretsVarsSuffix = ".sops.yaml"
+
+// secretsVarsPath returns the absolute path to an environment's SOPS-encrypted
+// YAML file under .stack/secrets/vars/.
+func (s *Server) secretsVarsPath(env string) string {
+	return filepath.Join(s.config.ProjectRoot, secretsVarsDir, env+secretsVarsSuffix)
+}
 
 // SOPSSecret represents a secret in SOPS format
 type SOPSSecret struct {
@@ -40,10 +52,8 @@ func (s *Server) handleSecretsRead(w http.ResponseWriter, r *http.Request) {
 		env = "dev"
 	}
 
-	// Construct path to secrets file
-	secretsPath := filepath.Join(s.config.ProjectRoot, ".stack", "secrets", fmt.Sprintf("%s.yaml", env))
+	secretsPath := s.secretsVarsPath(env)
 
-	// Check if file exists
 	if _, err := os.Stat(secretsPath); os.IsNotExist(err) {
 		s.writeJSON(w, http.StatusOK, apiResponse{
 			Success: true,
@@ -132,11 +142,9 @@ func (s *Server) handleSecretsWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Construct path to secrets file
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stack", "secrets")
-	secretsPath := filepath.Join(secretsDir, fmt.Sprintf("%s.yaml", req.Environment))
+	secretsPath := s.secretsVarsPath(req.Environment)
+	secretsDir := filepath.Dir(secretsPath)
 
-	// Ensure directory exists
 	if err := os.MkdirAll(secretsDir, 0755); err != nil {
 		s.writeJSON(w, http.StatusOK, apiResponse{Success: false, Error: "Failed to create secrets directory"})
 		return
@@ -290,7 +298,7 @@ func (s *Server) handleSecretsDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsPath := filepath.Join(s.config.ProjectRoot, ".stack", "secrets", fmt.Sprintf("%s.yaml", env))
+	secretsPath := s.secretsVarsPath(env)
 
 	// Decrypt existing secrets
 	result, err := s.exec.Run("sops", "-d", "--output-type", "json", secretsPath)
@@ -353,9 +361,9 @@ func (s *Server) handleSecretsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	secretsDir := filepath.Join(s.config.ProjectRoot, ".stack", "secrets")
+	secretsDir := filepath.Join(s.config.ProjectRoot, secretsVarsDir)
 
-	// List all .yaml files in the secrets directory
+	// List all *.sops.yaml files in the secrets vars directory.
 	entries, err := os.ReadDir(secretsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -374,16 +382,11 @@ func (s *Server) handleSecretsList(w http.ResponseWriter, r *http.Request) {
 	environments := make(map[string][]string)
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), secretsVarsSuffix) {
 			continue
 		}
 
-		// Skip special files
-		if entry.Name() == "users.yaml" || entry.Name() == "config.yaml" {
-			continue
-		}
-
-		env := strings.TrimSuffix(entry.Name(), ".yaml")
+		env := strings.TrimSuffix(entry.Name(), secretsVarsSuffix)
 		secretsPath := filepath.Join(secretsDir, entry.Name())
 
 		// Try to decrypt and list keys

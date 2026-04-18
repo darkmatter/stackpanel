@@ -104,9 +104,17 @@
       # enterShells (git-hooks, languages, etc.) write to the project dir,
       # not the read-only Nix store copy of the source. builtins.getEnv is
       # available because nix develop --impure is required for this flake.
+      #
+      # @impure (PRIMARY) — this is THE reason `nix develop` needs `--impure`.
+      # devenv submodules (git-hooks, languages.*, processes) need to write
+      # state into the user's working directory; without PWD we can only see
+      # the read-only `self` store path, which would make those writes go to
+      # /nix/store. Removing this requires either passing PWD via flake input
+      # (e.g. an indirection file written by .envrc) or accepting that the
+      # standalone `nix develop` flow loses devenv's enterShell side effects.
       devenv.root =
         let
-          pwd = builtins.getEnv "PWD";
+          pwd = builtins.getEnv "PWD"; # @impure
         in
         if pwd != "" then pwd else toString self;
       # We can not get away without this anymore
@@ -163,15 +171,31 @@
       after = [];
     };
 
+  # When debug is enabled, wrap each hook entry with timing
+  wrapWithTimer = label: hookStr:
+    if spConfig.debug or false
+    then ''
+      TIMEFORMAT=$'⏱  ${label} completed in %3Rs'
+      time {
+      ${hookStr}
+      }
+    ''
+    else hookStr;
+
+  timedHookList = phase: hooks':
+    lib.imap0 (idx: hookStr: wrapWithTimer "hooks.${phase}[${toString idx}]" hookStr) hooks';
+
   stackpanelHook = lib.concatStringsSep "\n\n" (
     lib.flatten [
-      hooks.before
-      hooks.main
+      (timedHookList "before" hooks.before)
+      (timedHookList "main" hooks.main)
       (lib.optionals (devenvConfig != null) [
-        "echo \"⚙️  Entering devenv shell...\""
-        devenvConfig.enterShell
+        (wrapWithTimer "devenv.enterShell" ''
+          echo "⚙️  Entering devenv shell..."
+          ${devenvConfig.enterShell}
+        '')
       ])
-      hooks.after
+      (timedHookList "after" hooks.after)
     ]
   );
 

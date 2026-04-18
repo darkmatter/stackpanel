@@ -101,11 +101,9 @@ proto.mkProtoFile {
         key = proto.string 1 "ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment";
         required = proto.bool 2 "Whether the environment variable is required";
         secret = proto.bool 3 "Whether the environment variable is sensitive";
-        description = proto.optional (proto.string 4 "Description of the environment variable");
-        defaultValue = proto.optional (proto.string 5 "Default value of the environment variable");
-        defaultValueRef = proto.optional (
-          proto.string 6 "Reference to the default value of the environment variable"
-        );
+        value = proto.optional (proto.string 4 "Value of the environment variable");
+        sops = proto.optional (proto.string 5 "Path to the SOPS file for this variable's group");
+        defaultValue = proto.optional (proto.string 6 "Default value of the environment variable");
       };
     };
 
@@ -122,13 +120,11 @@ proto.mkProtoFile {
         domain = proto.optional (proto.string 6 "Local development domain");
         # Per-environment configuration
         environments = proto.map "string" "AppEnvironment" 7 ''
-          deprecated: use environmentVariables instead
+          deprecated: use env instead
           Environment configurations (key = environment name like "dev", "prod").
         '';
         deploy = proto.message "AppDeploy" 8 "Colmena deployment mapping for this app";
-        environmentVariables =
-          proto.map "string" "EnvironmentVariable" 9
-            "Environment variables for this app";
+        env = proto.map "string" "EnvironmentVariable" 9 "Environment variables for this app";
         environmentIds = proto.repeated (
           proto.string 10 ''
             Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".

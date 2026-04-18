@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "projectRoot": "/Users/cm/git/darkmatter/stackpanel/apps/stackpanel-go",
+  "modules": [
+    {
+      "name": "env",
+      "description": "Build encrypted runtime env payloads from the generated env manifest"
+    },
+    {
+      "name": "manifest",
+      "description": "Write the registered codegen module manifest"
+    }
+  ]
+}

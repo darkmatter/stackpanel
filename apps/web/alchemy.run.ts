@@ -1,3 +1,4 @@
+import { loadAppEnv } from "@gen/env/runtime";
 import { NeonProject, neonProviders } from "@stackpanel/infra/resources/neon";
 import { Cloudflare, Output, Stage } from "alchemy-effect";
 import * as Stack from "alchemy-effect/Stack";
@@ -5,17 +6,21 @@ import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
-if (!process.env.CLOUDFLARE_API_TOKEN) {
+
+const APP_ENV = process.env.APP_ENV || "dev";
+const PROJECT = "stackpanel";
+const SERVICE = "web";
+const env = await loadAppEnv(SERVICE, APP_ENV, { inject: true });
+
+if (!env.CLOUDFLARE_API_TOKEN) {
   throw new Error(`
 !! Missing required environment variable: CLOUDFLARE_API_TOKEN !!
 - Most likely, you need to wrap your command, for example:
-   \`sops exec-env .secrets.enc.yaml 'bun run -F web alchemy.run.ts'\`
+   \`sops exec-env .secrets.enc.yaml 'bun run -F ${PROJECT} alchemy.run.ts'\`
 - Or export the variable directly.`);
 }
 
-const PROJECT = "stackpanel";
-const SERVICE = "web";
-const STACKPANEL_ZONE = process.env.CLOUDFLARE_ZONE_ID!; // stackpanel.com
+const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec"; // stackpanel.com
 
 const program = Effect.gen(function* () {
   const stage = yield* Stage;

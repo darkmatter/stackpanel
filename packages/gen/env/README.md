@@ -10,60 +10,77 @@ Type-safe generated environment access for 3 apps.
 ```typescript
 import { docs } from "@gen/env";
 
-// Reads process.env on first call and returns a typed object
-const env = docs.dev.getEnv();
+// Async, decrypts the embedded SOPS payload for the chosen environment.
+// Return type is inferred against the per-app `Env` shape, so all keys
+// (and their availability per env) are statically discoverable.
+const env = await docs.dev();
+console.log(env.PORT);
 ```
 
-For non-Node environments (Cloudflare Workers, Deno, etc.), pass a custom env object:
+Each app exposes the environments declared via `app.environmentIds` as
+async loaders (`docs.dev`, `docs.prod`, …). Pass
+`LoadEnvOptions` to override the SOPS secret key, disable injection into
+`process.env`, etc.
+
+For sync access against `process.env` (no decryption), import the per-app
+module directly:
 
 ```typescript
-const env = docs.dev.getEnv({
-  DATABASE_URL: "postgres://...",
-  PORT: "3000",
-});
+import { env } from "@gen/env/docs";
+console.log(env.PORT);
 ```
 
 ## Apps
 
 ### docs
 
-Environments: `dev`, `shared`, `test`
-Variables: `HOSTNAME`, `PORT`
+Environments: `dev`, `prod`, `staging`
+
+Variables: `PORT`
 
 ```typescript
 import { docs } from "@gen/env";
-const env = docs.dev.getEnv();
+const env = await docs.dev();
+console.log(env.PORT);
 ```
 
 ### stackpanel-go
 
-Environments: `dev`
+Environments: `dev`, `prod`, `staging`
+
 Variables: `STACKPANEL_TEST_PAIRING_TOKEN`
 
 ```typescript
 import { stackpanelGo } from "@gen/env";
-const env = stackpanelGo.dev.getEnv();
+const env = await stackpanelGo.dev();
+console.log(env.STACKPANEL_TEST_PAIRING_TOKEN);
 ```
 
 ### web
 
 Environments: `dev`, `prod`, `staging`
-Variables: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `POLAR_ACCESS_TOKEN`, `POLAR_SUCCESS_URL`, `POSTGRES_URL`
+
+Variables: `AWS_SANDBOX_ACCESS_KEY_ID`, `AWS_SANDBOX_SECRET_ACCESS_KEY`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID`, `CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET`, `CORS_ORIGIN`, `HETZNER_API_KEY`, `HOSTNAME`, `POLAR_ACCESS_TOKEN`, `POLAR_SUCCESS_URL`, `PORT`, `POSTGRES_URL`
 
 ```typescript
 import { web } from "@gen/env";
-const env = web.dev.getEnv();
+const env = await web.dev();
+console.log(env.AWS_SANDBOX_ACCESS_KEY_ID);
 ```
 
 
 ## How It Works
 
-Each app/environment combination exports a typed `getEnv()` singleton:
+Each app/environment combination is an async loader that decrypts the
+embedded SOPS payload and returns the typed `Env` shape:
 
-- **Lazy** — nothing is parsed until you call `getEnv()`
-- **Singleton** — first call parses and caches, subsequent calls return the cached result
-- **Portable** — pass any `Record<string, string | undefined>` as input
-- **Import-backed** — encrypted runtime payloads are also generated as importable modules for non-Node runtimes
+- **Typed by environment** — `web.dev` and `web.prod` both resolve to
+  `Env`, but only the environments you declared are exposed
+- **Cached** — first call decrypts, subsequent calls return the cached payload
+- **Process-env injection** — by default the resolved values are written into
+  `process.env`; pass `{ inject: false }` to disable
+- **Portable secrets** — set `SOPS_AGE_KEY` (or pass `secretKey`) for
+  Workers/edge; `SOPS_AGE_KEY_CMD` and `SOPS_KEYSERVICE` are honoured under Node/Bun
 
 ## Runtime Requirements
 
