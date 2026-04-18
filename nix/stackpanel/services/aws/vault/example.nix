@@ -172,7 +172,10 @@
   # Different profiles for different team members
   conditional = { lib, ... }:
   let
-    user = builtins.getEnv "USER";
+    # @impure — example only. If a user copies this pattern into their
+    # config.nix, evaluation will require --impure. Documented here so it's
+    # obvious why.
+    user = builtins.getEnv "USER"; # @impure
     isSenior = builtins.elem user ["alice" "bob" "carol"];
     isAdmin = user == "alice";
   in

@@ -10,6 +10,7 @@
 { ... }:
 {
   imports = [
+    ./motd-options.nix
     ./schema.nix
     ./scripts.nix
     ./codegen.nix

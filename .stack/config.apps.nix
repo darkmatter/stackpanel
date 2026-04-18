@@ -1,34 +1,38 @@
-{ config, ... }:
+{ config, lib, ... }:
 let
   # Shared across all web deployment environments
-  shared = {
-    vars = {
-      BETTER_AUTH_SECRET = "";
-      BETTER_AUTH_URL = "";
-      CORS_ORIGIN = "";
-      POLAR_ACCESS_TOKEN = "";
-      POLAR_SUCCESS_URL = "";
-      POSTGRES_URL = "/dev/postgres-url";
-      CLOUDFLARE_ACCOUNT_ID = "/shared/cloudflare-account-id";
-      CLOUDFLARE_API_TOKEN = "/shared/cloudflare-api-token";
-      AWS_SANDBOX_ACCESS_KEY_ID = "/shared/aws-sandbox-access-key-id";
-      AWS_SANDBOX_SECRET_ACCESS_KEY = "/shared/aws-sandbox-secret-access-key";
-      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID = "/shared/cloudflare-service-account-client-id";
-      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET = "/shared/cloudflare-service-account-client-secret";
-      HETZNER_API_KEY = "/shared/hetzner-api-key";
+  envs = {
+    shared = {
+      BETTER_AUTH_SECRET = { };
+      BETTER_AUTH_URL = { };
+      CORS_ORIGIN = { };
+      POLAR_ACCESS_TOKEN = { };
+      POLAR_SUCCESS_URL = { };
+      POSTGRES_URL = {
+        sops = "/dev/postgres-url";
+      };
+      CLOUDFLARE_ACCOUNT_ID = {
+        sops = "/shared/cloudflare-account-id";
+      };
+      CLOUDFLARE_API_TOKEN = {
+        sops = "/shared/cloudflare-api-token";
+      };
+      AWS_SANDBOX_ACCESS_KEY_ID = {
+        sops = "/shared/aws-sandbox-access-key-id";
+      };
+      AWS_SANDBOX_SECRET_ACCESS_KEY = {
+        sops = "/shared/aws-sandbox-secret-access-key";
+      };
+      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID = {
+        sops = "/shared/cloudflare-service-account-client-id";
+      };
+      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET = {
+        sops = "/shared/cloudflare-service-account-client-secret";
+      };
+      HETZNER_API_KEY = {
+        sops = "/shared/hetzner-api-key";
+      };
     };
-    secrets = [
-      "BETTER_AUTH_SECRET"
-      "POLAR_ACCESS_TOKEN"
-      "POSTGRES_URL"
-      "CLOUDFLARE_ACCOUNT_ID"
-      "CLOUDFLARE_API_TOKEN"
-      "AWS_SANDBOX_ACCESS_KEY_ID"
-      "AWS_SANDBOX_SECRET_ACCESS_KEY"
-      "CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID"
-      "CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET"
-      "HETZNER_API_KEY"
-    ];
   };
 in
 {
@@ -45,11 +49,9 @@ in
     framework.nextjs.enable = true;
     linting.oxlint.enable = true;
 
-    environmentVariables = {
+    env = {
       PORT = {
-        key = "PORT";
-        secret = false;
-        defaultValue = "3001";
+        value = "3001";
       };
     };
 
@@ -83,11 +85,9 @@ in
       ];
     };
 
-    environmentVariables = {
+    env = {
       STACKPANEL_TEST_PAIRING_TOKEN = {
-        key = "STACKPANEL_TEST_PAIRING_TOKEN";
-        secret = false;
-        defaultValue = "token123";
+        value = "token123";
       };
     };
   };
@@ -128,22 +128,15 @@ in
       type = "bun";
     };
 
-    environmentVariables = {
+    env = {
       PORT = {
-        key = "PORT";
-        secret = false;
-        defaultValue = "3000";
+        value = "3000";
       };
       HOSTNAME = {
-        key = "HOSTNAME";
-        secret = false;
-        defaultValue = "stackpanel.lan";
+        value = "stackpanel.lan";
       };
-    } // builtins.mapAttrs (name: value: {
-      key = name;
-      secret = builtins.elem name shared.secrets;
-      defaultValue = value;
-    }) shared.vars;
+    }
+    // envs.shared;
 
     deployment = {
       # Bindings and secrets are auto-derived from environments.

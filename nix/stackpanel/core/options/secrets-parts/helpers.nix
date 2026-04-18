@@ -94,8 +94,12 @@ let
 
         unencrypted-comment-regex = lib.mkOption {
           type = lib.types.str;
-          default = ''^\s?(safe|plaintext)'';
-          description = "Regex for comments that mark plaintext values in SOPS files.";
+          default = ".*";
+          description = ''
+            Regex for comments that should be stored in plaintext inside SOPS
+            files. Defaults to ".*" so every comment is preserved as plaintext
+            metadata; the studio UI surfaces these comments as descriptions.
+          '';
         };
       };
     };

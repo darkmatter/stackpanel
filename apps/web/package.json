@@ -118,7 +118,6 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.0.16",
-    "alchemy": "^0.81.2",
     "alchemy-effect": "catalog:",
     "babel-plugin-react-compiler": "^1.0.0",
     "happy-dom": "^20.1.0",

@@ -287,27 +287,23 @@ let
 
       # =========================================================================
       # Auto-derive deployment.bindings and deployment.secrets from
-      # environments + environmentVariables.
+      # the unified `env` field (map<string, EnvironmentVariable>).
       #
-      # bindings = union of all env var names across all environments
-      #            + all keys from environmentVariables
-      # secrets  = union of all `secrets` lists across all environments
-      #            + environmentVariables entries where secret = true
+      # bindings = all env var names declared under `env`
+      # secrets  = subset of bindings considered sensitive: either
+      #   `secret = true` is set explicitly, or a `sops` reference is provided.
       #
       # Uses mkDefault so explicit user values take precedence.
       # =========================================================================
       config =
         let
-          envs = config.environments or { };
-          envVarsMeta = config.environmentVariables or { };
-          allEnvNames = lib.unique (
-            lib.concatMap (envCfg: lib.attrNames (envCfg.env or { })) (lib.attrValues envs)
-            ++ lib.attrNames envVarsMeta
-          );
-          allSecretNames = lib.unique (
-            lib.concatMap (envCfg: envCfg.secrets or [ ]) (lib.attrValues envs)
-            ++ lib.attrNames (lib.filterAttrs (_: m: m.secret or false) envVarsMeta)
-          );
+          envVars = config.env or { };
+          allEnvNames = lib.attrNames envVars;
+          isSecret =
+            m:
+            (m.secret or false)
+            || ((m.sops or null) != null && (m.sops or "") != "");
+          allSecretNames = lib.attrNames (lib.filterAttrs (_: isSecret) envVars);
         in
         {
           deployment.bindings = lib.mkDefault allEnvNames;

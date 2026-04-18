@@ -34,8 +34,11 @@ let
   # ===========================================================================
 
   # Project root: arg > STACKPANEL_ROOT env > PWD-based search
-  envRoot = builtins.getEnv "STACKPANEL_ROOT";
-  envPwd = builtins.getEnv "PWD";
+  # @impure — only triggered when this file is evaluated without --argstr root.
+  # The Go agent always passes `--argstr root`, so the env-var fallback is a
+  # legacy path retained for ad-hoc `nix eval --impure -f eval.nix`.
+  envRoot = builtins.getEnv "STACKPANEL_ROOT"; # @impure
+  envPwd = builtins.getEnv "PWD"; # @impure
 
   findProjectRoot =
     dir:
@@ -67,7 +70,7 @@ let
       findProjectRoot envPwd;
 
   # Config JSON path: arg > STACKPANEL_CONFIG_JSON env
-  envConfigJson = builtins.getEnv "STACKPANEL_CONFIG_JSON";
+  envConfigJson = builtins.getEnv "STACKPANEL_CONFIG_JSON"; # @impure (legacy fallback)
   effectiveConfigJson =
     if configJson != null then
       configJson
@@ -77,7 +80,7 @@ let
       null;
 
   # State dir: arg > STACKPANEL_STATE_DIR env > derived from root
-  envStateDir = builtins.getEnv "STACKPANEL_STATE_DIR";
+  envStateDir = builtins.getEnv "STACKPANEL_STATE_DIR"; # @impure (legacy fallback)
   effectiveStateDir =
     if stateDir != null then
       stateDir
