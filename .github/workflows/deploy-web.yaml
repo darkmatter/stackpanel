@@ -91,6 +91,8 @@ jobs:
       - name: Deploy
         id: deploy
         working-directory: apps/web
+        env:
+          STAGE: ${{ needs.stage.outputs.stage }}
         run: |
           set -euo pipefail
           bunx alchemy-effect deploy --stage ${{ needs.stage.outputs.stage }} --yes
@@ -124,6 +126,8 @@ jobs:
           key: alchemy-state-web-${{ needs.stage.outputs.stage }}
       - name: Destroy PR preview
         working-directory: apps/web
+        env:
+          STAGE: ${{ needs.stage.outputs.stage }}
         run: |
           set -euo pipefail
           bunx alchemy-effect destroy --stage ${{ needs.stage.outputs.stage }} --yes
