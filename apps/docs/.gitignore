@@ -10,7 +10,6 @@
 /out/
 /build
 /.open-next/
-wrangler.jsonc
 *.tsbuildinfo
 
 # misc

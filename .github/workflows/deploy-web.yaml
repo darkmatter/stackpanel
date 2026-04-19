@@ -93,6 +93,10 @@ jobs:
         working-directory: apps/web
         env:
           STAGE: ${{ needs.stage.outputs.stage }}
+          # SOPS AGE key used by `loadAppEnv` (sops-age) to decrypt the
+          # generated per-app payloads. `production` uses the prod key;
+          # everything else (staging, pr-*, dev) uses the dev key.
+          SOPS_AGE_KEY: ${{ needs.stage.outputs.stage == 'production' && secrets.SECRETS_AGE_KEY_PROD || secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
           bunx alchemy-effect deploy --stage ${{ needs.stage.outputs.stage }} --yes
@@ -128,6 +132,8 @@ jobs:
         working-directory: apps/web
         env:
           STAGE: ${{ needs.stage.outputs.stage }}
+          # PR previews always use the dev key.
+          SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
           bunx alchemy-effect destroy --stage ${{ needs.stage.outputs.stage }} --yes
