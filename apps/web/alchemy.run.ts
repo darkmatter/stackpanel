@@ -10,17 +10,21 @@ import * as Layer from "effect/Layer";
 const APP_ENV = process.env.APP_ENV || "dev";
 const PROJECT = "stackpanel";
 const SERVICE = "web";
+
+// Decrypts the per-app SOPS payload (CLOUDFLARE_*, POSTGRES_URL, etc.) and
+// injects it into process.env so downstream Cloudflare/Neon providers see it.
 const env = await loadAppEnv(SERVICE, APP_ENV, { inject: true });
 
 if (!env.CLOUDFLARE_API_TOKEN) {
   throw new Error(`
 !! Missing required environment variable: CLOUDFLARE_API_TOKEN !!
-- Most likely, you need to wrap your command, for example:
-   \`sops exec-env .secrets.enc.yaml 'bun run -F ${PROJECT} alchemy.run.ts'\`
-- Or export the variable directly.`);
+- Confirm /shared/cloudflare-api-token is set in .stack/secrets/vars/shared.sops.yaml
+- Confirm @gen/env codegen has been run (devshell entry or 'stackpanel preflight run')
+- Or export CLOUDFLARE_API_TOKEN directly to bypass the SOPS loader.`);
 }
 
-const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec"; // stackpanel.com
+// stackpanel.com
+const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
 
 const program = Effect.gen(function* () {
   const stage = yield* Stage;
