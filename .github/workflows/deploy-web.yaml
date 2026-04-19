@@ -79,6 +79,15 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      # Persist alchemy-effect's LocalState (.alchemy/state/<stack>/<stage>/) across
+      # runners so the destroy job on PR close can find the resources to tear down.
+      # alchemy-effect 0.9.1 ships only a filesystem state backend; without this
+      # cache, every runner starts blind and orphans Workers + Neon projects.
+      - name: Restore alchemy state
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.alchemy
+          key: alchemy-state-web-${{ needs.stage.outputs.stage }}
       - name: Deploy
         id: deploy
         working-directory: apps/web
@@ -97,16 +106,34 @@ jobs:
     needs: stage
     if: needs.stage.outputs.action == 'destroy'
     runs-on: ubuntu-latest
+    permissions:
+      actions: write          # gh cache delete
+      contents: read
+      pull-requests: write    # sticky comment
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      # Restore-only — we never want the destroy job's post-step to write the
+      # (now-empty) state back to the cache.
+      - name: Restore alchemy state
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/web/.alchemy
+          key: alchemy-state-web-${{ needs.stage.outputs.stage }}
       - name: Destroy PR preview
         working-directory: apps/web
         run: |
           set -euo pipefail
           bunx alchemy-effect destroy --stage ${{ needs.stage.outputs.stage }} --yes
+      - name: Delete cached alchemy state
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh cache delete "alchemy-state-web-${{ needs.stage.outputs.stage }}" \
+            --repo "${{ github.repository }}" || true
       - name: Mark preview comment as torn down
         uses: marocchino/sticky-pull-request-comment@v2
         with:

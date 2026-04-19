@@ -50,18 +50,19 @@
     "build": "next build",
     "build:worker": "opennextjs-cloudflare build",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "deploy": "bunx alchemy deploy",
-    "deploy:opennext": "opennextjs-cloudflare build \u0026\u0026 opennextjs-cloudflare deploy",
-    "deploy:production": "STAGE=production bunx alchemy deploy",
-    "deploy:staging": "STAGE=staging bunx alchemy deploy",
+    "deploy": "bun run build:worker && bunx alchemy deploy",
+    "deploy:dev": "APP_ENV=dev bun run build:worker && bunx alchemy deploy --stage dev",
+    "deploy:opennext": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy:production": "APP_ENV=prod STAGE=production bun run build:worker && bunx alchemy deploy --stage production",
+    "deploy:staging": "APP_ENV=staging STAGE=staging bun run build:worker && bunx alchemy deploy --stage staging",
     "destroy": "bunx alchemy destroy",
     "dev": "next dev --port=${PORT:-4000}",
     "dev:portless": "portless docs.stackpanel --app-port 5738  bun run dev",
     "postinstall": "fumadocs-mdx",
-    "preview": "opennextjs-cloudflare build \u0026\u0026 opennextjs-cloudflare preview",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "start": "next start",
-    "types:check": "fumadocs-mdx \u0026\u0026 tsc --noEmit",
-    "upload": "opennextjs-cloudflare build \u0026\u0026 opennextjs-cloudflare upload"
+    "types:check": "fumadocs-mdx && tsc --noEmit",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "version": "0.0.0"
 }
