@@ -86,6 +86,11 @@ jobs:
         with:
           path: apps/docs/.alchemy
           key: alchemy-state-docs-${{ needs.stage.outputs.stage }}
+      - name: Build worker
+        working-directory: apps/docs
+        run: |
+          set -euo pipefail
+          bun run build:worker
       - name: Deploy
         id: deploy
         working-directory: apps/docs
