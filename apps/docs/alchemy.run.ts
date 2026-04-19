@@ -4,7 +4,13 @@ import * as Stack from "alchemy-effect/Stack";
 import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 
-const APP_ENV = process.env.APP_ENV || "dev";
+// Map alchemy --stage / $STAGE onto our SOPS env namespaces:
+//   production -> prod, staging -> staging, anything else (pr-*, dev, ...) -> dev.
+// Allow APP_ENV to override explicitly for one-off runs.
+const STAGE = process.env.STAGE || process.env.ALCHEMY_STAGE || "dev";
+const APP_ENV =
+  process.env.APP_ENV ||
+  (STAGE === "production" ? "prod" : STAGE === "staging" ? "staging" : "dev");
 const PROJECT = "stackpanel";
 const SERVICE = "docs";
 
