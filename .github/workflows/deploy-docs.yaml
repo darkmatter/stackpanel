@@ -96,9 +96,13 @@ jobs:
         working-directory: apps/docs
         env:
           STAGE: ${{ needs.stage.outputs.stage }}
+          # SOPS AGE key used by `loadAppEnv` (sops-age) to decrypt the
+          # generated per-app payloads. `production` uses the prod key;
+          # everything else (staging, pr-*, dev) uses the dev key.
+          SOPS_AGE_KEY: ${{ needs.stage.outputs.stage == 'production' && secrets.SECRETS_AGE_KEY_PROD || secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy deploy
+          bunx alchemy deploy --stage ${{ needs.stage.outputs.stage }} --yes
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
@@ -131,9 +135,11 @@ jobs:
         working-directory: apps/docs
         env:
           STAGE: ${{ needs.stage.outputs.stage }}
+          # PR previews always use the dev key.
+          SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy destroy
+          bunx alchemy destroy --stage ${{ needs.stage.outputs.stage }} --yes
       - name: Delete cached alchemy state
         if: always()
         env:
