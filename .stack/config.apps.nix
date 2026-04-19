@@ -53,18 +53,16 @@ in
       PORT = {
         value = "3001";
       };
-    };
+    }
+    // envs.shared;
 
     deployment = {
-      enable = false;
+      # Bindings and secrets are auto-derived from environments.
+      # Override only when deploy-time names differ from dev names.
+      enable = true;
       backend = "alchemy";
       host = "cloudflare";
-      targets = [ "ovh-usw-1" ];
-      command = "bun serve.ts";
       cloudflare.workerName = "stackpanel-docs";
-      modules = [
-        { networking.firewall.allowedTCPPorts = [ 3001 ]; }
-      ];
     };
   };
 
@@ -141,7 +139,7 @@ in
     deployment = {
       # Bindings and secrets are auto-derived from environments.
       # Override only when deploy-time names differ from dev names.
-      enable = false;
+      enable = true;
       host = "cloudflare";
       aws = {
         region = "us-west-2";
