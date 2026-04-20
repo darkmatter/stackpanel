@@ -10,6 +10,8 @@
 
 # Testing
 /coverage
+/playwright-report
+/test-results
 
 # Build outputs
 /.next/
