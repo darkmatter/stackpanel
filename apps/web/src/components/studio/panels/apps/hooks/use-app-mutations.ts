@@ -1,11 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import type { App } from "@/lib/types";
 import { usePatchNixData } from "@/lib/use-agent";
-import {
-	flattenEnvironmentVariables,
-	getEnvironmentNames,
-} from "../utils";
 import {
 	buildVariableConfigExpression,
 	isVariableLinkReference,
@@ -14,13 +9,11 @@ import {
 
 interface UseAppMutationsOptions {
 	token: string | null;
-	resolvedApps: Record<string, App> | undefined;
 	refetch: () => void;
 }
 
 export function useAppMutations({
 	token,
-	resolvedApps,
 	refetch,
 }: UseAppMutationsOptions) {
 	const patchNixData = usePatchNixData();
@@ -62,26 +55,12 @@ export function useAppMutations({
 		[patchAppPath],
 	);
 
-	const ensureEnvironment = useCallback(
-		async (appId: string, envName: string) => {
-			const existingEnv = resolvedApps?.[appId]?.environments?.[envName];
-			if (existingEnv) return;
-			await patchAppPath(
-				appId,
-				`environments.${envName}`,
-				JSON.stringify({ name: envName, env: {} }),
-				"object",
-			);
-		},
-		[patchAppPath, resolvedApps],
-	);
-
 	const handleAddVariableToApp = useCallback(
 		async (
 			appId: string,
 			envKey: string,
 			value: string,
-			environments: string[],
+			_environments: string[],
 		) => {
 			if (!token) {
 				toast.error("Not connected to agent");
@@ -90,15 +69,12 @@ export function useAppMutations({
 
 			try {
 				const patchPayload = toPatchPayload(value);
-				for (const environment of environments) {
-					await ensureEnvironment(appId, environment);
-					await patchAppPath(
-						appId,
-						`environments.${environment}.env.${envKey}`,
-						patchPayload.value,
-						patchPayload.valueType,
-					);
-				}
+				await patchAppPath(
+					appId,
+					`env.${envKey}.value`,
+					patchPayload.value,
+					patchPayload.valueType,
+				);
 				toast.success(`Added ${envKey} to app`);
 				refetch();
 			} catch (err) {
@@ -107,7 +83,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[ensureEnvironment, patchAppPath, refetch, toPatchPayload, token],
+		[patchAppPath, refetch, toPatchPayload, token],
 	);
 
 	const handleUpdateVariableInApp = useCallback(
@@ -116,7 +92,7 @@ export function useAppMutations({
 			oldEnvKey: string,
 			newEnvKey: string,
 			value: string,
-			environments: string[],
+			_environments: string[],
 		) => {
 			if (!token) {
 				toast.error("Not connected to agent");
@@ -124,29 +100,18 @@ export function useAppMutations({
 			}
 
 			try {
-				const existingApp = resolvedApps?.[appId];
-				const existingEnvironments = existingApp?.environments ?? {};
-				const existingMappings = flattenEnvironmentVariables(existingEnvironments);
-				const existingMapping = existingMappings.find((m) => m.envKey === oldEnvKey);
-				const currentEnvironments = new Set(existingMapping?.environments ?? []);
-				const nextEnvironments = new Set(environments);
 				const patchPayload = toPatchPayload(value);
 
-				for (const environment of currentEnvironments) {
-					if (oldEnvKey !== newEnvKey || !nextEnvironments.has(environment)) {
-						await deleteAppPath(appId, `environments.${environment}.env.${oldEnvKey}`);
-					}
+				if (oldEnvKey !== newEnvKey) {
+					await deleteAppPath(appId, `env.${oldEnvKey}`);
 				}
 
-				for (const environment of nextEnvironments) {
-					await ensureEnvironment(appId, environment);
-					await patchAppPath(
-						appId,
-						`environments.${environment}.env.${newEnvKey}`,
-						patchPayload.value,
-						patchPayload.valueType,
-					);
-				}
+				await patchAppPath(
+					appId,
+					`env.${newEnvKey}.value`,
+					patchPayload.value,
+					patchPayload.valueType,
+				);
 
 				toast.success(`Updated ${newEnvKey}`);
 				refetch();
@@ -158,10 +123,8 @@ export function useAppMutations({
 		},
 		[
 			deleteAppPath,
-			ensureEnvironment,
 			patchAppPath,
 			refetch,
-			resolvedApps,
 			toPatchPayload,
 			token,
 		],
@@ -175,22 +138,15 @@ export function useAppMutations({
 			}
 
 			try {
-				const existingApp = resolvedApps?.[appId];
-				const existingEnvironments = existingApp?.environments ?? {};
-				const existingEnvNames = new Set(getEnvironmentNames(existingEnvironments));
-				const nextEnvNames = new Set(newEnvNames);
-
-				for (const envName of newEnvNames) {
-					if (!existingEnvNames.has(envName)) {
-						await ensureEnvironment(appId, envName);
-					}
-				}
-
-				for (const envName of existingEnvNames) {
-					if (!nextEnvNames.has(envName)) {
-						await deleteAppPath(appId, `environments.${envName}`);
-					}
-				}
+				const nextEnvNames = Array.from(
+					new Set(newEnvNames.map((name) => name.trim()).filter(Boolean)),
+				);
+				await patchAppPath(
+					appId,
+					"environmentIds",
+					JSON.stringify(nextEnvNames),
+					"list",
+				);
 
 				toast.success("Updated environments");
 				refetch();
@@ -202,7 +158,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[deleteAppPath, ensureEnvironment, refetch, resolvedApps, token],
+		[patchAppPath, refetch, token],
 	);
 
 	const handleDeleteVariableFromApp = useCallback(
@@ -213,14 +169,7 @@ export function useAppMutations({
 			}
 
 			try {
-				const existingApp = resolvedApps?.[appId];
-				const existingEnvironments = existingApp?.environments ?? {};
-				const existingMappings = flattenEnvironmentVariables(existingEnvironments);
-				const existingMapping = existingMappings.find((m) => m.envKey === envKey);
-
-				for (const environment of existingMapping?.environments ?? []) {
-					await deleteAppPath(appId, `environments.${environment}.env.${envKey}`);
-				}
+				await deleteAppPath(appId, `env.${envKey}`);
 
 				toast.success(`Removed ${envKey}`);
 				refetch();
@@ -230,7 +179,7 @@ export function useAppMutations({
 				);
 			}
 		},
-		[deleteAppPath, refetch, resolvedApps, token],
+		[deleteAppPath, refetch, token],
 	);
 
 	const handleUpdateFramework = useCallback(

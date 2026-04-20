@@ -27,6 +27,7 @@ import (
 //
 // These are references from app env bindings to global variables.
 var configVariableExprPattern = regexp.MustCompile(`^\s*config\.variables\.("(?:[^"\\]|\\.)+").value\s*$`)
+var nixStringLiteralPattern = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
 // parseConfigVariableExpr extracts the quoted variable ID from a
 // config.variables."<id>".value expression, returning the unquoted ID.
@@ -42,6 +43,24 @@ func parseConfigVariableExpr(expr string) (string, bool) {
 	}
 
 	return variableID, true
+}
+
+func parseNixStringList(expr string) []string {
+	matches := nixStringLiteralPattern.FindAllString(expr, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	values := make([]string, 0, len(matches))
+	for _, match := range matches {
+		value, err := strconv.Unquote(match)
+		if err != nil {
+			continue
+		}
+		values = append(values, value)
+	}
+
+	return values
 }
 
 // newParserAndTree creates a parser configured for Nix and parses source bytes.

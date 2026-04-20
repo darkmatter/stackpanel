@@ -369,7 +369,7 @@ func (s *Server) handleNixDataList(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleAppVariableLinks returns app/env/envKey -> variable ID link mappings
-// parsed from raw config.nix source.
+// parsed from raw app config sources such as config.nix and config.apps.nix.
 func (s *Server) handleAppVariableLinks(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		s.writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")

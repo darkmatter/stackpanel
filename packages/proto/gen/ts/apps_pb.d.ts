@@ -60,6 +60,7 @@ export declare type App = Message<"stackpanel.db.App"> & {
 
   /**
    *
+   * deprecated: use env instead
    * Environment configurations (key = environment name like "dev", "prod").
    *
    *
@@ -73,6 +74,22 @@ export declare type App = Message<"stackpanel.db.App"> & {
    * @generated from field: stackpanel.db.AppDeploy deploy = 8;
    */
   deploy?: AppDeploy;
+
+  /**
+   * Environment variables for this app
+   *
+   * @generated from field: map<string, stackpanel.db.EnvironmentVariable> env = 9;
+   */
+  env: { [key: string]: EnvironmentVariable };
+
+  /**
+   *
+   * Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
+   *
+   *
+   * @generated from field: repeated string environmentIds = 10;
+   */
+  environmentIds: string[];
 };
 
 /**
@@ -173,6 +190,17 @@ export declare type AppEnvironment = Message<"stackpanel.db.AppEnvironment"> & {
    * @generated from field: repeated string extends = 4;
    */
   extends: string[];
+
+  /**
+   *
+   * Env var names in this environment that contain sensitive values.
+   * Used to auto-derive deployment.secrets — these are wrapped with
+   * alchemy.secret() at deploy time.
+   *
+   *
+   * @generated from field: repeated string secrets = 5;
+   */
+  secrets: string[];
 };
 
 /**
@@ -200,4 +228,59 @@ export declare type Apps = Message<"stackpanel.db.Apps"> & {
  * Use `create(AppsSchema)` to create a new message.
  */
 export declare const AppsSchema: GenMessage<Apps>;
+
+/**
+ * Environment variable for this app
+ *
+ * @generated from message stackpanel.db.EnvironmentVariable
+ */
+export declare type EnvironmentVariable = Message<"stackpanel.db.EnvironmentVariable"> & {
+  /**
+   * ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
+   *
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * Whether the environment variable is required
+   *
+   * @generated from field: bool required = 2;
+   */
+  required: boolean;
+
+  /**
+   * Whether the environment variable is sensitive
+   *
+   * @generated from field: bool secret = 3;
+   */
+  secret: boolean;
+
+  /**
+   * Value of the environment variable
+   *
+   * @generated from field: optional string value = 4;
+   */
+  value?: string;
+
+  /**
+   * Path to the SOPS file for this variable's group
+   *
+   * @generated from field: optional string sops = 5;
+   */
+  sops?: string;
+
+  /**
+   * Default value of the environment variable
+   *
+   * @generated from field: optional string defaultValue = 6;
+   */
+  defaultValue?: string;
+};
+
+/**
+ * Describes the message stackpanel.db.EnvironmentVariable.
+ * Use `create(EnvironmentVariableSchema)` to create a new message.
+ */
+export declare const EnvironmentVariableSchema: GenMessage<EnvironmentVariable>;
 

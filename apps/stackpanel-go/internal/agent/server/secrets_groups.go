@@ -325,11 +325,12 @@ func (s *Server) readGroupSecrets(group string) (map[string]interface{}, error) 
 }
 
 // sopsConfigPath returns the absolute path to the generated .sops.yaml if it exists.
-// Checks .stack/secrets/.sops.yaml first (Nix-generated), then project root.
+// Prefers the repo-root .sops.yaml (current location); falls back to the legacy
+// .stack/secrets/.sops.yaml for projects that haven't re-run preflight.
 func (s *Server) sopsConfigPath() string {
 	candidates := []string{
-		filepath.Join(s.config.ProjectRoot, ".stack", "secrets", ".sops.yaml"),
 		filepath.Join(s.config.ProjectRoot, ".sops.yaml"),
+		filepath.Join(s.config.ProjectRoot, ".stack", "secrets", ".sops.yaml"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {

@@ -782,6 +782,63 @@ func TestExtractAppVariableLinksFromSource(t *testing.T) {
 	assert.False(t, exists)
 }
 
+// Test that we can read from any arbitrary nix module, not just .stack/config.nix
+func TestExtractAppVariableLinksFromSource_AppSetRoot(t *testing.T) {
+	source := `{ config, ... }:
+{
+  web = {
+    environments = {
+      dev = {
+        name = "dev";
+        env = {
+          PORT = config.variables."/computed/apps/web/port".value;
+          API_KEY = config.variables."/dev/api-key".value;
+          HOST = "localhost";
+        };
+      };
+    };
+  };
+}
+`
+
+	links, err := ExtractAppVariableLinksFromSource([]byte(source))
+	require.NoError(t, err)
+	require.Equal(t, "/computed/apps/web/port", links["web"]["dev"]["PORT"])
+	require.Equal(t, "/dev/api-key", links["web"]["dev"]["API_KEY"])
+	_, exists := links["web"]["dev"]["HOST"]
+	assert.False(t, exists)
+}
+
+func TestExtractAppVariableLinksFromSource_AppEnvUsesDefaultEnvironments(t *testing.T) {
+	source := `{ config, ... }:
+{
+  web = {
+    env = {
+      PORT = {
+        value = config.variables."/computed/apps/web/port".value;
+      };
+      API_KEY = {
+        value = config.variables."/dev/api-key".value;
+      };
+      HOST = {
+        value = "localhost";
+      };
+    };
+  };
+}
+`
+
+	links, err := ExtractAppVariableLinksFromSource([]byte(source))
+	require.NoError(t, err)
+
+	for _, envName := range []string{"dev", "prod", "staging", "test"} {
+		require.Equal(t, "/computed/apps/web/port", links["web"][envName]["PORT"])
+		require.Equal(t, "/dev/api-key", links["web"][envName]["API_KEY"])
+		_, exists := links["web"][envName]["HOST"]
+		assert.False(t, exists)
+	}
+}
+
 func TestPatchNixPath_IntoInlineEmptyAttrset(t *testing.T) {
 	source := `{ config, ... }: {
   variables = {};

@@ -85,8 +85,8 @@ rec {
         sopsKeyservices != [ ]
       ) ''export SOPS_KEYSERVICE="${lib.concatStringsSep "," sopsKeyservices}"''}
       SECRETS_DIR=${cfg.getKnown "secrets.secrets-dir"}
-      SOPS_CONFIG_PATH="$SECRETS_DIR/.sops.yaml"
       PROJECT_ROOT=${cfg.getKnown "paths.root"}
+      SOPS_CONFIG_PATH="$PROJECT_ROOT/.sops.yaml"
 
       resolve_target_path() {
         local candidate="$1"

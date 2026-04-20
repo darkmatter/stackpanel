@@ -74,9 +74,9 @@ func ReplaceNixEditableAttrset(source []byte, attrsetExpr string) ([]byte, error
 	return editor.ReplaceEditableAttrset(attrsetExpr)
 }
 
-// ExtractAppVariableLinksFromSource scans a config.nix for env bindings that
-// reference global variables (config.variables."<id>".value) and returns a
-// nested map: appID -> envName -> envKey -> variableID.
+// ExtractAppVariableLinksFromSource scans raw app config source for env
+// bindings that reference global variables (config.variables."<id>".value)
+// and returns a nested map: appID -> envName -> envKey -> variableID.
 func ExtractAppVariableLinksFromSource(source []byte) (map[string]map[string]map[string]string, error) {
 	editor, err := NewNixEditor(source)
 	if err != nil {
@@ -132,11 +132,38 @@ func (e *NixEditor) ReplaceEditableAttrset(attrsetExpr string) ([]byte, error) {
 
 // ExtractAppVariableLinks returns app/env/envKey -> variable ID mappings.
 func (e *NixEditor) ExtractAppVariableLinks() map[string]map[string]map[string]string {
-	links := make(map[string]map[string]map[string]string)
 	appsNode := e.findAttrsetAtPath([]string{"apps"})
 	if appsNode == nil {
-		return links
+		root := e.findEditableAttrset()
+		if root == nil || !e.looksLikeAppsAttrset(root) {
+			return map[string]map[string]map[string]string{}
+		}
+		appsNode = root
 	}
+
+	return e.extractAppVariableLinksFromAppsAttrset(appsNode)
+}
+
+func (e *NixEditor) looksLikeAppsAttrset(attrset *tree_sitter.Node) bool {
+	for _, binding := range e.bindings(attrset) {
+		if len(e.bindingAttrpath(binding)) != 1 {
+			continue
+		}
+		appAttrset := e.bindingAttrsetValue(binding)
+		if appAttrset == nil {
+			continue
+		}
+		if e.findAttrsetWithin(appAttrset, []string{"environments"}) != nil ||
+			e.findAttrsetWithin(appAttrset, []string{"env"}) != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *NixEditor) extractAppVariableLinksFromAppsAttrset(appsNode *tree_sitter.Node) map[string]map[string]map[string]string {
+	links := make(map[string]map[string]map[string]string)
 
 	for _, appBinding := range e.bindings(appsNode) {
 		appPath := e.bindingAttrpath(appBinding)
@@ -150,58 +177,166 @@ func (e *NixEditor) ExtractAppVariableLinks() map[string]map[string]map[string]s
 			continue
 		}
 
-		envsNode := e.findAttrsetWithin(appAttrset, []string{"environments"})
-		if envsNode == nil {
-			continue
-		}
-
-		for _, envBinding := range e.bindings(envsNode) {
-			envPath := e.bindingAttrpath(envBinding)
-			if len(envPath) != 1 {
-				continue
-			}
-
-			envName := envPath[0]
-			envAttrset := e.bindingAttrsetValue(envBinding)
-			if envAttrset == nil {
-				continue
-			}
-
-			envVarsNode := e.findAttrsetWithin(envAttrset, []string{"env"})
-			if envVarsNode == nil {
-				continue
-			}
-
-			for _, envVarBinding := range e.bindings(envVarsNode) {
-				envKeyPath := e.bindingAttrpath(envVarBinding)
-				if len(envKeyPath) != 1 {
-					continue
-				}
-				envKey := envKeyPath[0]
-
-				valueNode := e.bindingValue(envVarBinding)
-				if valueNode == nil {
-					continue
-				}
-
-				variableID, ok := parseConfigVariableExpr(e.nodeText(valueNode))
-				if !ok {
-					continue
-				}
-
-				if links[appID] == nil {
-					links[appID] = make(map[string]map[string]string)
-				}
-				if links[appID][envName] == nil {
-					links[appID][envName] = make(map[string]string)
-				}
-
-				links[appID][envName][envKey] = variableID
-			}
-		}
+		appEnvironments := e.appEnvironmentIDs(appAttrset)
+		e.extractAppEnvVariableLinks(links, appID, appEnvironments, appAttrset)
+		e.extractLegacyAppEnvironmentLinks(links, appID, appAttrset)
 	}
 
 	return links
+}
+
+func (e *NixEditor) extractLegacyAppEnvironmentLinks(
+	links map[string]map[string]map[string]string,
+	appID string,
+	appAttrset *tree_sitter.Node,
+) {
+	envsNode := e.findAttrsetWithin(appAttrset, []string{"environments"})
+	if envsNode == nil {
+		return
+	}
+
+	for _, envBinding := range e.bindings(envsNode) {
+		envPath := e.bindingAttrpath(envBinding)
+		if len(envPath) != 1 {
+			continue
+		}
+
+		envName := envPath[0]
+		envAttrset := e.bindingAttrsetValue(envBinding)
+		if envAttrset == nil {
+			continue
+		}
+
+		envVarsNode := e.findAttrsetWithin(envAttrset, []string{"env"})
+		if envVarsNode == nil {
+			continue
+		}
+
+		for _, envVarBinding := range e.bindings(envVarsNode) {
+			envKeyPath := e.bindingAttrpath(envVarBinding)
+			if len(envKeyPath) != 1 {
+				continue
+			}
+			envKey := envKeyPath[0]
+
+			valueNode := e.bindingValue(envVarBinding)
+			if valueNode == nil {
+				continue
+			}
+
+			variableID, ok := parseConfigVariableExpr(e.nodeText(valueNode))
+			if !ok {
+				continue
+			}
+
+			e.setAppVariableLink(links, appID, envName, envKey, variableID)
+		}
+	}
+}
+
+func (e *NixEditor) extractAppEnvVariableLinks(
+	links map[string]map[string]map[string]string,
+	appID string,
+	envNames []string,
+	appAttrset *tree_sitter.Node,
+) {
+	envNode := e.findAttrsetWithin(appAttrset, []string{"env"})
+	if envNode == nil {
+		return
+	}
+
+	for _, envVarBinding := range e.bindings(envNode) {
+		envKeyPath := e.bindingAttrpath(envVarBinding)
+		if len(envKeyPath) != 1 {
+			continue
+		}
+
+		envKey := envKeyPath[0]
+		envVarAttrset := e.bindingAttrsetValue(envVarBinding)
+		if envVarAttrset == nil {
+			continue
+		}
+
+		valueBinding, matched, valueNode := e.findBestBinding(envVarAttrset, []string{"value"})
+		if valueBinding == nil || len(matched) != 1 || valueNode == nil {
+			continue
+		}
+
+		variableID, ok := parseConfigVariableExpr(e.nodeText(valueNode))
+		if !ok {
+			continue
+		}
+
+		for _, envName := range envNames {
+			e.setAppVariableLink(links, appID, envName, envKey, variableID)
+		}
+	}
+}
+
+func (e *NixEditor) appEnvironmentIDs(appAttrset *tree_sitter.Node) []string {
+	for _, path := range [][]string{
+		{"environmentIds"},
+		{"environment-ids"},
+	} {
+		binding, matched, valueNode := e.findBestBinding(appAttrset, path)
+		if binding == nil || len(matched) != 1 || valueNode == nil {
+			continue
+		}
+
+		rawNames := parseNixStringList(e.nodeText(valueNode))
+		if len(rawNames) == 0 {
+			continue
+		}
+
+		names := make([]string, 0, len(rawNames))
+		for _, rawName := range rawNames {
+			name := strings.TrimSpace(rawName)
+			if name == "" {
+				continue
+			}
+			if name == "production" {
+				name = "prod"
+			} else if name == "development" {
+				name = "dev"
+			}
+			names = append(names, name)
+		}
+		if len(names) > 0 {
+			return uniqueStrings(names)
+		}
+	}
+
+	return []string{"dev", "prod", "staging", "test"}
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
+}
+
+func (e *NixEditor) setAppVariableLink(
+	links map[string]map[string]map[string]string,
+	appID string,
+	envName string,
+	envKey string,
+	variableID string,
+) {
+	if links[appID] == nil {
+		links[appID] = make(map[string]map[string]string)
+	}
+	if links[appID][envName] == nil {
+		links[appID][envName] = make(map[string]string)
+	}
+
+	links[appID][envName][envKey] = variableID
 }
 
 // patchWithinAttrset recursively descends into nested attrsets to find the target

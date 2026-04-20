@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "stackpanel.db.EnvironmentVariable.jsonschema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Environment variable for this app",
+      "properties": {
+        "defaultValue": {
+          "type": "string"
+        },
+        "key": {
+          "default": "",
+          "type": "string"
+        },
+        "required": {
+          "default": false,
+          "type": "boolean"
+        },
+        "secret": {
+          "default": false,
+          "type": "boolean"
+        },
+        "sops": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "title": "Environment Variable",
+      "type": "object"
+    }
+  },
+  "$id": "stackpanel.db.EnvironmentVariable.jsonschema.bundle.json",
+  "$ref": "#/$defs/stackpanel.db.EnvironmentVariable.jsonschema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

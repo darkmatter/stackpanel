@@ -19,6 +19,21 @@ interface StudioSearchParams {
   project?: string;
 }
 
+function getStudioAgentConfig() {
+  const host = import.meta.env.VITE_STACKPANEL_AGENT_HOST || "localhost";
+  const parsedPort = Number.parseInt(
+    import.meta.env.VITE_STACKPANEL_AGENT_PORT || "",
+    10,
+  );
+  const token = import.meta.env.VITE_STACKPANEL_AGENT_TOKEN || undefined;
+
+  return {
+    host,
+    port: Number.isFinite(parsedPort) ? parsedPort : 9876,
+    token,
+  };
+}
+
 export const Route = createFileRoute("/studio")({
   component: StudioLayout,
   validateSearch: (search: Record<string, unknown>): StudioSearchParams => {
@@ -30,11 +45,12 @@ export const Route = createFileRoute("/studio")({
 
 function StudioLayout() {
   const { project } = Route.useSearch();
+  const { host, port, token } = getStudioAgentConfig();
 
   return (
     // SSE provider is outside so AgentProvider can consume SSE status for health
-    <AgentSSEProvider>
-      <AgentProvider>
+    <AgentSSEProvider host={host} port={port} token={token}>
+      <AgentProvider host={host} port={port} token={token}>
         <AgentQuerySync />
         <ProjectProvider initialProjectId={project}>
           <FeatureFlagProvider>

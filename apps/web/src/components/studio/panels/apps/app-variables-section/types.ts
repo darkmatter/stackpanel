@@ -20,6 +20,13 @@ export interface DisplayVariable {
 	isSecret: boolean;
 	/** UI-derived: type name for display */
 	typeName: VariableTypeName;
+	/**
+	 * SOPS reference of the form "/<group>/<key>" (e.g. "/dev/postgres-url").
+	 * Used by the per-secret reveal toggle to invoke `sops decrypt --extract`
+	 * against the resolved group file. Only present for secrets that were
+	 * declared with an explicit `sops` field on the env entry.
+	 */
+	sops?: string;
 }
 
 /**

@@ -96,8 +96,6 @@ apps/stackpanel-go/.stack/keys/
 build
 devenv.local.nix
 devenv.local.yaml
-/devshell
-/.vscode/devshell
 dist
 logs
 node_modules

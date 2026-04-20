@@ -50,6 +50,13 @@ func (p *Paths) ConfigFilePath() string {
 	return filepath.Join(p.Dir(), "config.nix")
 }
 
+// ConfigAppsFilePath returns the path to the optional split apps config file.
+// Some projects keep app definitions in config.apps.nix and import that from
+// config.nix, so readers that need raw app source should check this file too.
+func (p *Paths) ConfigAppsFilePath() string {
+	return filepath.Join(p.Dir(), "config.apps.nix")
+}
+
 // LegacyDataDir returns the path to the legacy data/ directory where
 // individual per-entity .nix files were stored before the migration to
 // consolidated config.nix. Still checked for backward compatibility.

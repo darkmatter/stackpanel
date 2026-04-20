@@ -314,7 +314,13 @@ rec {
       SECRETS_DIR="$(dirname "$SCRIPT_DIR")"
     fi
     VARS_DIR="$SECRETS_DIR/vars"
-    SOPS_CONFIG="$SECRETS_DIR/.sops.yaml"
+    # SOPS config lives at repo root so `sops` and editor plugins find it via
+    # default discovery. Keep the legacy `$SECRETS_DIR/.sops.yaml` location as a
+    # fallback for projects that haven't run preflight after the path migration.
+    SOPS_CONFIG="$PROJECT_ROOT/.sops.yaml"
+    if [[ ! -f "$SOPS_CONFIG" && -f "$SECRETS_DIR/.sops.yaml" ]]; then
+      SOPS_CONFIG="$SECRETS_DIR/.sops.yaml"
+    fi
     FILTER="''${1:-}"
     REKEY_COUNT=0
 

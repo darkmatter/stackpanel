@@ -31,7 +31,6 @@
   ...
 }:
 let
-  cfg = config.stackpanel;
   envOutputDir = config.stackpanel.env.output-dir;
 
   # Import the codegen library
@@ -104,11 +103,10 @@ in
     # Register generated files
     stackpanel.files.entries = envPackage.fileEntries;
 
-    # Auto-populate `stackpanel.envs.<env>.<KEY>` from `apps.<app>.env`,
-    # OR-merging across all apps that target the same environment. Other
-    # modules can layer on top by writing `stackpanel.envs.<env>.<KEY> = …`
-    # — those declarations merge with these via the option's submodule
-    # semantics (later definitions take precedence per attribute).
+    # Auto-populate `stackpanel.envs."<app-path>/<env>".<KEY>` from
+    # `apps.<app>.env` so app-specific values never collide at the root env
+    # registry. Other modules can still layer on top by writing their own
+    # `stackpanel.envs.<scope>.<KEY> = …` entries.
     stackpanel.envs = envPackage.mergedAppEnvs;
 
     # Register module

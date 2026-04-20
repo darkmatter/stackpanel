@@ -4,7 +4,7 @@ Stack secrets now rely on Nix-configured SOPS recipients and explicit creation r
 
 - Recipients live in `stack.secrets.recipients` (with a fallback from `stack.users`).
 - Recipient groups live in `stack.secrets.recipient-groups`.
-- `.stack/secrets/.sops.yaml` is generated from recipients, recipient groups, and `stack.secrets.creation-rules`.
+- `<repo-root>/.sops.yaml` is generated from recipients, recipient groups, and `stack.secrets.creation-rules`. Lives at the repo root so `sops` and editor extensions discover it without `--config`.
 - There is no extra per-group private key layer in the secrets flow.
 - `sops-age-keys` supports configurable ordered key discovery through
   `stack.secrets.sops-age-keys.sources`.

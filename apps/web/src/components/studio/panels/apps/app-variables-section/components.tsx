@@ -11,7 +11,10 @@ import { Input } from "@ui/input";
 import {
   Calculator,
   Check,
+  Eye,
+  EyeOff,
   KeyRound,
+  Loader2,
   Lock,
   Pencil,
   Trash2,
@@ -192,7 +195,7 @@ export function EditInterface({
                 inputGroupVariant="flat"
                 placeholder="Select variable or literal..."
                 showClear
-                className="cursor-pointer outline-none border-none bg-transparent! min-w-96 focus:outline-none cursor-pointer !focus:shadow-none focus:bg-accent/20"
+                className="cursor-pointer outline-none border-none bg-transparent! min-w-96 focus:outline-none !focus:shadow-none focus:bg-accent/20"
               />
               <ComboboxContent className="outline-none! focus:outline-none! shadow-none! focus:shadow-none! hover:bg-secondary">
                 <ComboboxEmpty>No items found.</ComboboxEmpty>
@@ -266,7 +269,7 @@ export function EditInterface({
 
       {showConfigFunctionHint && (
         <p className="px-1 text-[11px] text-muted-foreground">
-          Workspace variable refs write <span className="font-mono">config.variables."...".value</span> when possible. If your <span className="font-mono">config.nix</span> is a plain attrset, add <span className="font-mono">{`{ config, ... }:`}</span> above the root attrset first.
+          Workspace variable refs write <span className="font-mono">config.variables."...".value</span> when possible. If your app envs live in <span className="font-mono">config.apps.nix</span>, keep that file function-wrapped with <span className="font-mono">{`{ config, ... }:`}</span> so the configured refs can be read correctly.
         </p>
       )}
     </div>

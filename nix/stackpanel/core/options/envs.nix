@@ -1,20 +1,21 @@
 # ==============================================================================
 # envs.nix
 #
-# Root-level, per-environment variable registry.
+# Root-level, scoped environment variable registry.
 #
 # This is the canonical source of truth for "what variables exist in
-# environment X". Apps automatically contribute their declared `app.env`
-# entries here for each of their `environmentIds`, and other modules
-# (infra, custom Nix code, deploy targets, …) can also write directly:
+# scope X". Apps automatically contribute their declared `app.env`
+# entries here under an app-scoped key such as `"apps/web/dev"`, and
+# other modules (infra, custom Nix code, deploy targets, …) can also
+# write directly:
 #
-#   stackpanel.envs.dev.DATABASE_URL = {
+#   stackpanel.envs."apps/web/dev".DATABASE_URL = {
 #     required = true;
 #     secret = true;
 #     sops = "/dev/database-url";
 #   };
 #
-#   stackpanel.envs.prod.PORT = { value = "443"; required = true; };
+#   stackpanel.envs."deploy/prod".PORT = { value = "443"; required = true; };
 #
 # Codegen reads from this attrset to produce the per-env SOPS payloads
 # (under `<env-package>/data/_envs/<env>.sops.json`). The same shape is
@@ -44,7 +45,7 @@ let
           default = name;
           description = ''
             The actual environment variable name. Defaults to the attribute key,
-            so `stackpanel.envs.dev.DATABASE_URL` exposes `$DATABASE_URL`.
+            so `stackpanel.envs."apps/web/dev".DATABASE_URL` exposes `$DATABASE_URL`.
           '';
         };
         required = lib.mkOption {
@@ -94,12 +95,13 @@ in
     type = lib.types.attrsOf (lib.types.attrsOf (lib.types.submodule envVarSubmodule));
     default = { };
     description = ''
-      Environment variables grouped by environment name.
+      Environment variables grouped by scope name.
 
       Auto-populated from `apps.<app>.env` for each environment listed in
-      that app's `environmentIds`. Other modules can also write directly
-      (e.g., `stackpanel.envs.dev.MY_INFRA_KEY = { ... }`) without owning
-      an app — useful for one-off envs like deploy-only secrets.
+      that app's `environmentIds`, using an app-scoped key like
+      `stackpanel.envs."apps/web/dev"`. Other modules can also write directly
+      (for example `stackpanel.envs."deploy/prod".MY_INFRA_KEY = { ... }`)
+      without owning an app — useful for one-off envs like deploy-only secrets.
 
       Codegen reads from this attrset to produce per-env SOPS payloads
       under `<env-package>/data/_envs/<env>.sops.json` (one file per env,
@@ -107,12 +109,12 @@ in
     '';
     example = lib.literalExpression ''
       {
-        dev = {
+        "apps/web/dev" = {
           DATABASE_URL = { secret = true; sops = "/dev/database-url"; required = true; };
           PORT         = { value = "3000"; required = true; };
           LOG_LEVEL    = { defaultValue = "info"; };
         };
-        prod = {
+        "apps/web/prod" = {
           DATABASE_URL = { secret = true; sops = "/prod/database-url"; required = true; };
           PORT         = { value = "443"; required = true; };
         };

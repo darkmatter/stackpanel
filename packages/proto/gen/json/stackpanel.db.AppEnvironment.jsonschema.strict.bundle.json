@@ -26,6 +26,13 @@
         },
         "name": {
           "type": "string"
+        },
+        "secrets": {
+          "description": "Env var names in this environment that contain sensitive values.\n Used to auto-derive deployment.secrets — these are wrapped with\n alchemy.secret() at deploy time.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [

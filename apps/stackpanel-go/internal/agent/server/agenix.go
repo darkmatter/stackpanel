@@ -1862,11 +1862,9 @@ func (s *Server) regenerateSecretsSopsConfig(kmsCfg KMSConfigResponse) error {
 
 	sopsConfigPath := serializable.SopsConfigFile
 	if strings.TrimSpace(sopsConfigPath) == "" {
-		secretsDir := serializable.SecretsDir
-		if strings.TrimSpace(secretsDir) == "" {
-			secretsDir = ".stack/secrets"
-		}
-		sopsConfigPath = filepath.Join(secretsDir, ".sops.yaml")
+		// Default to the repo-root .sops.yaml so editor extensions and the
+		// `sops` CLI discover it without a `--config` flag.
+		sopsConfigPath = ".sops.yaml"
 	}
 	if !filepath.IsAbs(sopsConfigPath) {
 		sopsConfigPath = filepath.Join(s.config.ProjectRoot, sopsConfigPath)
