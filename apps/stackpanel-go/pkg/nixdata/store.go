@@ -624,21 +624,55 @@ func serializePatchedValue(value any) (string, bool, error) {
 	}
 }
 
-// ReadAppVariableLinks parses raw config.nix source (not evaluated output) to
+// ReadAppVariableLinks parses raw app config sources (not evaluated output) to
 // extract app/env/envKey -> variable ID mappings. These links are Nix
 // expressions like `config.variables.myVar.value` that connect app environment
 // variables to centrally-defined variables. They must be extracted from source
 // because evaluation resolves the references, losing the link information.
 func (s *Store) ReadAppVariableLinks() (map[string]map[string]map[string]string, error) {
-	dataPath := s.paths.ConfigFilePath()
-	if _, err := os.Stat(dataPath); os.IsNotExist(err) {
-		return map[string]map[string]map[string]string{}, nil
+	links := map[string]map[string]map[string]string{}
+	sources := []string{
+		s.paths.ConfigAppsFilePath(),
+		s.paths.ConfigFilePath(),
 	}
-	source, err := os.ReadFile(dataPath)
-	if err != nil {
-		return nil, fmt.Errorf("read config.nix: %w", err)
+
+	for _, dataPath := range sources {
+		if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+			continue
+		} else if err != nil {
+			return nil, fmt.Errorf("stat %s: %w", dataPath, err)
+		}
+
+		source, err := os.ReadFile(dataPath)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", dataPath, err)
+		}
+
+		extracted, err := flakeedit.ExtractAppVariableLinksFromSource(source)
+		if err != nil {
+			return nil, fmt.Errorf("extract app variable links from %s: %w", dataPath, err)
+		}
+
+		mergeAppVariableLinks(links, extracted)
 	}
-	return flakeedit.ExtractAppVariableLinksFromSource(source)
+
+	return links, nil
+}
+
+func mergeAppVariableLinks(dst, src map[string]map[string]map[string]string) {
+	for appID, envs := range src {
+		if dst[appID] == nil {
+			dst[appID] = map[string]map[string]string{}
+		}
+		for envName, vars := range envs {
+			if dst[appID][envName] == nil {
+				dst[appID][envName] = map[string]string{}
+			}
+			for envKey, variableID := range vars {
+				dst[appID][envName][envKey] = variableID
+			}
+		}
+	}
 }
 
 // NormalizeConfigPathParts converts a dotted UI/config path into Nix attribute

@@ -27,6 +27,8 @@ const aws_secretsOutputs = (await import("./modules/aws-secrets/index.ts")).defa
 
 const databaseOutputs = (await import("./modules/database.ts")).default;
 
+const deploymentOutputs = (await import("./modules/deployment/index.ts")).default;
+
 const machinesOutputs = (await import("./modules/machines.ts")).default;
 
 
@@ -43,6 +45,10 @@ await Infra.syncAll({
 "database": {
   outputs: databaseOutputs,
   syncKeys: ["databaseUrl","provider"],
+},
+"deployment": {
+  outputs: deploymentOutputs,
+  syncKeys: ["docsUrl","webUrl"],
 },
 "machines": {
   outputs: machinesOutputs,

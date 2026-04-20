@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "dev": "portless stackpanel.stackpanel --app-port 5775 bun run dev"
-  }
-}

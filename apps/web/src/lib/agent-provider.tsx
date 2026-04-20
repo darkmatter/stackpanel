@@ -47,7 +47,8 @@ function decodeJWT(token: string): { agent_id?: string; exp?: number } | null {
 		const payload = parts[1];
 		// Handle URL-safe base64
 		const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-		const jsonPayload = atob(base64);
+		const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+		const jsonPayload = atob(`${base64}${padding}`);
 		return JSON.parse(jsonPayload);
 	} catch {
 		return null;
@@ -77,6 +78,7 @@ type AgentProviderProps = {
 	children: ReactNode;
 	host?: string;
 	port?: number;
+	token?: string | null;
 };
 
 type AgentContextValue = {
@@ -110,19 +112,33 @@ export function AgentProvider({
 	children,
 	host = "localhost",
 	port = 9876,
+	token: providedToken,
 }: AgentProviderProps) {
 	// Initialize token synchronously to prevent flash of "Connect to Agent"
-	const [token, setToken] = useState<string | null>(getInitialToken);
+	const [token, setToken] = useState<string | null>(
+		() => providedToken ?? getInitialToken(),
+	);
 	const cleanupRef = useRef<(() => void) | null>(null);
+	const effectiveToken = providedToken ?? token;
 
 	// Handle query token persistence and URL cleanup (runs after initial render)
 	useEffect(() => {
+		if (providedToken !== undefined) {
+			return () => {
+				cleanupRef.current?.();
+				cleanupRef.current = null;
+			};
+		}
+
 		const urlParams = new URLSearchParams(window.location.search);
 		const queryToken = urlParams.get("token");
 
 		if (queryToken && queryToken.length >= 10) {
 			// Token provided via query parameter - persist to localStorage
 			localStorage.setItem(STORAGE_KEY, queryToken);
+			if (token !== queryToken) {
+				setToken(queryToken);
+			}
 
 			// Clean up URL by removing the token parameter
 			urlParams.delete("token");
@@ -131,6 +147,18 @@ export function AgentProvider({
 					? `${window.location.pathname}?${urlParams.toString()}`
 					: window.location.pathname;
 			window.history.replaceState({}, "", newUrl);
+		} else if (!token) {
+			const storedToken = localStorage.getItem(STORAGE_KEY);
+			if (!storedToken) {
+				return;
+			}
+
+			if (!isTokenNotExpired(storedToken)) {
+				localStorage.removeItem(STORAGE_KEY);
+				return;
+			}
+
+			setToken(storedToken);
 		} else if (token) {
 			// Check if stored token is expired
 			if (!isTokenNotExpired(token)) {
@@ -144,7 +172,7 @@ export function AgentProvider({
 			cleanupRef.current?.();
 			cleanupRef.current = null;
 		};
-	}, [token]);
+	}, [providedToken, token]);
 
 	// Use SSE for health status when available (provides instant disconnect detection)
 	const sse = useAgentSSEOptional();
@@ -180,7 +208,7 @@ export function AgentProvider({
 	const agent = useAgent({
 		host,
 		port,
-		token: token ?? undefined,
+		token: effectiveToken ?? undefined,
 		autoConnect: true,
 	});
 
@@ -207,13 +235,13 @@ export function AgentProvider({
 	// This catches cases where the token is stale (e.g., agent restarted with new keys)
 	// before the user makes any API call that would trigger a 401.
 	useEffect(() => {
-		if (healthStatus !== "available" || !token) return;
+		if (healthStatus !== "available" || !effectiveToken) return;
 
 		let cancelled = false;
 		const validateToken = async () => {
 			try {
 				const res = await fetch(`http://${host}:${port}/api/auth/validate`, {
-					headers: { "X-Stackpanel-Token": token },
+					headers: { "X-Stackpanel-Token": effectiveToken },
 				});
 				if (!cancelled && res.status === 401) {
 					console.log("Stored token is invalid (agent may have restarted), clearing for re-pairing");
@@ -226,7 +254,7 @@ export function AgentProvider({
 		};
 		validateToken();
 		return () => { cancelled = true; };
-	}, [healthStatus, token, host, port]);
+	}, [effectiveToken, healthStatus, host, port]);
 
 	const pair = useCallback(() => {
 		// Open the local agent pairing page (localhost) in a popup.
@@ -277,7 +305,7 @@ export function AgentProvider({
 	// When SSE is connected and alive, we get instant disconnect detection.
 	// The server validates the token on each request - if the token is invalid
 	// (e.g., agent was restarted), the server will reject it and we'll get an error.
-	const isConnected = healthStatus === "available" && !!token;
+	const isConnected = healthStatus === "available" && !!effectiveToken;
 
 	const value = useMemo<AgentContextValue>(
 		() => ({
@@ -285,7 +313,7 @@ export function AgentProvider({
 			port,
 			healthStatus,
 			projectRoot,
-			token,
+			token: effectiveToken,
 			isConnected,
 			isConnecting: agent.isConnecting,
 			error: agent.error,
@@ -318,7 +346,7 @@ export function AgentProvider({
 			pair,
 			port,
 			projectRoot,
-			token,
+			effectiveToken,
 		],
 	);
 

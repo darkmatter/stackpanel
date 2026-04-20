@@ -6,7 +6,20 @@ const processEnv = typeof process === "undefined"
   : (process.env as Record<string, string | undefined>);
 
 export interface Env {
+  AWS_SANDBOX_ACCESS_KEY_ID: string;
+  AWS_SANDBOX_SECRET_ACCESS_KEY: string;
+  BETTER_AUTH_SECRET?: string;
+  BETTER_AUTH_URL?: string;
+  CLOUDFLARE_ACCOUNT_ID: string;
+  CLOUDFLARE_API_TOKEN: string;
+  CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID: string;
+  CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET: string;
+  CORS_ORIGIN?: string;
+  HETZNER_API_KEY: string;
+  POLAR_ACCESS_TOKEN?: string;
+  POLAR_SUCCESS_URL?: string;
   PORT: string;
+  POSTGRES_URL: string;
 }
 
 const REQUIRED_KEYS: readonly (keyof Env)[] = [];
