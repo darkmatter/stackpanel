@@ -6,6 +6,7 @@ import { Check, Eye, EyeOff, Pencil, Plus, X } from "lucide-react";
 import type { AppVariablesSectionProps } from "./app-variables-section/types";
 import { EditInterface, VariableRow } from "./app-variables-section/components";
 import { useAppVariablesSection } from "./app-variables-section/use-app-variables-section";
+import { useRevealSecret } from "./app-variables-section/use-reveal-secret";
 
 /**
  * Component to display and manage the variables section for an app.
@@ -77,6 +78,16 @@ export function AppVariablesSection({
 		onDeleteVariable,
 		onUpdateEnvironments,
 	});
+
+	// Per-secret one-at-a-time reveal: parent owns the active row so the
+	// previously revealed secret is automatically hidden when another is opened.
+	const {
+		revealedEnvKey,
+		revealedValue,
+		revealError,
+		isRevealing,
+		reveal,
+	} = useRevealSecret();
 
 	// Render the edit/add interface
 	const renderEditInterface = () => (
@@ -234,21 +245,29 @@ export function AppVariablesSection({
 				))}
 
 				{/* Render filtered secrets */}
-				{filteredSecrets.map((secret) => (
-					<VariableRow
-						key={`secret-${secret.envKey}`}
-						variable={secret}
-						isSecret={true}
-						isCurrentlyEditing={
-							editMode === "edit" && editingEnvKey === secret.envKey
-						}
-						showEnvValues={showEnvValues}
-						disabled={disabled}
-						isEditing={isEditing}
-						onStartEditing={handleStartEditing}
-						renderEditInterface={renderEditInterface}
-					/>
-				))}
+				{filteredSecrets.map((secret) => {
+					const isRevealed = revealedEnvKey === secret.envKey;
+					return (
+						<VariableRow
+							key={`secret-${secret.envKey}`}
+							variable={secret}
+							isSecret={true}
+							isCurrentlyEditing={
+								editMode === "edit" && editingEnvKey === secret.envKey
+							}
+							showEnvValues={showEnvValues}
+							disabled={disabled}
+							isEditing={isEditing}
+							onStartEditing={handleStartEditing}
+							renderEditInterface={renderEditInterface}
+							revealValue={isRevealed ? revealedValue : null}
+							revealError={isRevealed ? revealError : null}
+							revealLoading={isRevealed && isRevealing}
+							canReveal={Boolean(secret.sops)}
+							onToggleReveal={() => reveal(secret.envKey, secret.sops)}
+						/>
+					);
+				})}
 
 				{/* Add interface (when adding new) */}
 				{editMode === "add" && renderEditInterface()}

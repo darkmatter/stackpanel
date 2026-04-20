@@ -432,21 +432,29 @@ func TestTransformPreservesMapFieldKeysRoundTrip(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPaths(t *testing.T) {
-	p := NewPaths("/home/user/myproject")
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".stack"), 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
 
-	if got := p.Dir(); got != "/home/user/myproject/.stack" {
+	p := NewPaths(root)
+
+	if got := p.Dir(); got != filepath.Join(root, ".stack") {
 		t.Errorf("Dir() = %q", got)
 	}
-	if got := p.ConfigFilePath(); got != "/home/user/myproject/.stack/config.nix" {
+	if got := p.ConfigFilePath(); got != filepath.Join(root, ".stack", "config.nix") {
 		t.Errorf("ConfigFilePath() = %q", got)
 	}
-	if got := p.LegacyDataDir(); got != "/home/user/myproject/.stack/data" {
+	if got := p.ConfigAppsFilePath(); got != filepath.Join(root, ".stack", "config.apps.nix") {
+		t.Errorf("ConfigAppsFilePath() = %q", got)
+	}
+	if got := p.LegacyDataDir(); got != filepath.Join(root, ".stack", "data") {
 		t.Errorf("LegacyDataDir() = %q", got)
 	}
-	if got := p.ExternalDataDir(); got != "/home/user/myproject/.stack/data" {
+	if got := p.ExternalDataDir(); got != filepath.Join(root, ".stack", "data") {
 		t.Errorf("ExternalDataDir() = %q", got)
 	}
-	if got := p.ExternalEntityPath("external-github-collaborators"); got != "/home/user/myproject/.stack/data/github-collaborators.nix" {
+	if got := p.ExternalEntityPath("external-github-collaborators"); got != filepath.Join(root, ".stack", "data", "github-collaborators.nix") {
 		t.Errorf("ExternalEntityPath() = %q", got)
 	}
 }
@@ -580,6 +588,59 @@ func TestDeleteKey_ConsolidatedConfigEscapesDots(t *testing.T) {
 	}
 	if strings.Contains(string(updated), `"/dev/foo.bar"`) {
 		t.Fatalf("expected variable binding to be removed, got:\n%s", string(updated))
+	}
+}
+
+func TestReadAppVariableLinks_UsesConfigAppsFile(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.nix")
+	configAppsPath := filepath.Join(configDir, "config.apps.nix")
+
+	configSource := `{ config, ... }@args:
+{
+  apps = import ./config.apps.nix args;
+}
+`
+	appsSource := `{ config, ... }:
+{
+  web = {
+    environments = {
+      dev = {
+        name = "dev";
+        env = {
+          PORT = config.variables."/computed/apps/web/port".value;
+          HOST = "localhost";
+        };
+      };
+    };
+  };
+}
+`
+
+	if err := os.WriteFile(configPath, []byte(configSource), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+	if err := os.WriteFile(configAppsPath, []byte(appsSource), 0o644); err != nil {
+		t.Fatalf("write config.apps.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	links, err := store.ReadAppVariableLinks()
+	if err != nil {
+		t.Fatalf("ReadAppVariableLinks() error = %v", err)
+	}
+
+	got := links["web"]["dev"]["PORT"]
+	if got != "/computed/apps/web/port" {
+		t.Fatalf("ReadAppVariableLinks() PORT = %q, want %q", got, "/computed/apps/web/port")
+	}
+	if _, exists := links["web"]["dev"]["HOST"]; exists {
+		t.Fatalf("ReadAppVariableLinks() should ignore literal HOST binding, got: %#v", links["web"]["dev"])
 	}
 }
 

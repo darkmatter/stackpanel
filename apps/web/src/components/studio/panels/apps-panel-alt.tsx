@@ -23,9 +23,13 @@ import {
   type ProcessComposeStatusResponse,
   type TurboPackage,
 } from "@/lib/agent";
+import {
+  DEFAULT_APP_ENVIRONMENT_IDS,
+  flattenConfiguredAppVariables,
+  getAppEnvironmentNames,
+} from "@/lib/app-env";
 import { useAgentContext, useAgentClient } from "@/lib/agent-provider";
 import { useAgentSSEEvent } from "@/lib/agent-sse-provider";
-import type { App } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   useAppVariableLinks,
@@ -42,11 +46,7 @@ import type { AppModulePanel } from "./shared/panel-types";
 import { useAppMutations } from "./apps/hooks";
 import type { DisplayVariable, TaskWithCommand } from "./apps/types";
 import type { AvailableVariable } from "./apps/app-variables-section/types";
-import {
-  computeStablePort,
-  flattenEnvironmentVariables,
-  getEnvironmentNames,
-} from "./apps/utils";
+import { computeStablePort } from "./apps/utils";
 import {
   buildVariableLinkReference,
   getVariableType,
@@ -148,9 +148,10 @@ export function AppsPanelAlt() {
   // Transform apps data to include id, stablePort, and isRunning fields
   const resolvedApps = useMemo(() => {
     if (!rawApps) return null;
+    type RawApp = NonNullable<typeof rawApps>[string];
     const result: Record<
       string,
-      App & { id: string; stablePort: number; isRunning: boolean }
+      RawApp & { id: string; stablePort: number; isRunning: boolean }
     > = {};
     for (const [id, app] of Object.entries(rawApps)) {
       result[id] = {
@@ -189,16 +190,14 @@ export function AppsPanelAlt() {
     handleDeleteApp,
   } = useAppMutations({
     token,
-    resolvedApps: resolvedApps ?? undefined,
     refetch,
   });
 
   const environmentOptions = useMemo(() => {
-    const defaults = ["dev", "staging", "prod"];
     const appDefined = Object.values(resolvedApps ?? {}).flatMap((app) =>
-      getEnvironmentNames(app.environments),
+      getAppEnvironmentNames(app),
     );
-    return Array.from(new Set([...defaults, ...appDefined]));
+    return Array.from(new Set([...DEFAULT_APP_ENVIRONMENT_IDS, ...appDefined]));
   }, [resolvedApps]);
 
   const warningsByApp = useMemo(() => {
@@ -332,9 +331,7 @@ export function AppsPanelAlt() {
       // Compute stable port for this app
       const stablePort = computeStablePort(projectName, appId);
 
-      // Convert environments to display format - flatten variables from all environments
-      // With simplified schema: env is map<string, string> (key -> value)
-      const flattenedVars = flattenEnvironmentVariables(app.environments);
+      const flattenedVars = flattenConfiguredAppVariables(app);
       const appVariables: DisplayVariable[] = flattenedVars.map((mapping) => {
         const linkedVariableId =
           mapping.environments
@@ -350,8 +347,10 @@ export function AppsPanelAlt() {
             : (linkedVariable?.value ?? "");
         const typeName = linkedVariableId
           ? getVariableType(linkedVariableId, linkedValue)
-          : "config";
-        const isSecret = typeName === "secret";
+          : mapping.isSecret
+            ? "secret"
+            : "config";
+        const isSecret = mapping.isSecret || typeName === "secret";
         return {
           envKey: mapping.envKey,
           value: linkedVariableId
@@ -360,6 +359,7 @@ export function AppsPanelAlt() {
           environments: mapping.environments,
           isSecret,
           typeName,
+          sops: mapping.sops,
         };
       });
 
@@ -380,7 +380,7 @@ export function AppsPanelAlt() {
         port: app.port ?? stablePort,
         stablePort,
         description: app.description,
-        environments: getEnvironmentNames(app.environments),
+        environments: getAppEnvironmentNames(app),
         tasks,
         secrets,
         variables,

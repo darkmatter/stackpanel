@@ -14,11 +14,27 @@
         "domain": {
           "type": "string"
         },
+        "env": {
+          "additionalProperties": {
+            "$ref": "#/$defs/stackpanel.db.EnvironmentVariable.schema.json"
+          },
+          "propertyNames": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "environmentIds": {
+          "description": "Environment IDs for this app. Defaults to \"dev\", \"prod\", \"staging\", \"test\".",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "environments": {
           "additionalProperties": {
             "$ref": "#/$defs/stackpanel.db.AppEnvironment.schema.json"
           },
-          "description": "Environment configurations (key = environment name like \"dev\", \"prod\").",
+          "description": "deprecated: use env instead\n Environment configurations (key = environment name like \"dev\", \"prod\").",
           "propertyNames": {
             "type": "string"
           },
@@ -124,6 +140,13 @@
         "name": {
           "default": "",
           "type": "string"
+        },
+        "secrets": {
+          "description": "Env var names in this environment that contain sensitive values.\n Used to auto-derive deployment.secrets — these are wrapped with\n alchemy.secret() at deploy time.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "title": "App Environment",
@@ -145,6 +168,36 @@
         }
       },
       "title": "Apps",
+      "type": "object"
+    },
+    "stackpanel.db.EnvironmentVariable.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "description": "Environment variable for this app",
+      "properties": {
+        "defaultValue": {
+          "type": "string"
+        },
+        "key": {
+          "default": "",
+          "type": "string"
+        },
+        "required": {
+          "default": false,
+          "type": "boolean"
+        },
+        "secret": {
+          "default": false,
+          "type": "boolean"
+        },
+        "sops": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "title": "Environment Variable",
       "type": "object"
     }
   },

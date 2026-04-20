@@ -36,12 +36,12 @@ console.log(env.PORT);
 
 Environments: `dev`, `prod`, `staging`
 
-Variables: `PORT`
+Variables: `AWS_SANDBOX_ACCESS_KEY_ID`, `AWS_SANDBOX_SECRET_ACCESS_KEY`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID`, `CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET`, `CORS_ORIGIN`, `HETZNER_API_KEY`, `POLAR_ACCESS_TOKEN`, `POLAR_SUCCESS_URL`, `PORT`, `POSTGRES_URL`
 
 ```typescript
 import { docs } from "@gen/env";
 const env = await docs.dev();
-console.log(env.PORT);
+console.log(env.AWS_SANDBOX_ACCESS_KEY_ID);
 ```
 
 ### stackpanel-go

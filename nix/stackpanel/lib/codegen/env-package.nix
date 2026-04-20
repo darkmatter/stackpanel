@@ -36,7 +36,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 let
@@ -184,6 +183,21 @@ let
     appName: (getAppEnv apps.${appName}) != { }
   ) (lib.attrNames apps);
 
+  appPathFor =
+    appName:
+    let
+      rawPath = apps.${appName}.path or appName;
+      trimmedDot = lib.removePrefix "./" rawPath;
+      trimmedPath =
+        if trimmedDot != "" && lib.hasSuffix "/" trimmedDot then
+          lib.substring 0 ((builtins.stringLength trimmedDot) - 1) trimmedDot
+        else
+          trimmedDot;
+    in
+    if trimmedPath != "" then trimmedPath else appName;
+
+  scopedRootEnvName = appName: env: "${appPathFor appName}/${env}";
+
   # ---------------------------------------------------------------------------
   # "Loader-guaranteed" predicate: a key is treated as always-present in the
   # generated TypeScript `Env` type when the runtime loader can produce a value
@@ -200,96 +214,31 @@ let
     || meta.sops != null;
 
   # ---------------------------------------------------------------------------
-  # Per-environment OR-merged variable map derived from `apps.<app>.env`.
+  # App-scoped root env registry derived from `apps.<app>.env`.
   #
-  # For every (env, KEY) pair we collect contributions across all apps that
-  # include `env` in their `environmentIds` and reduce them as follows:
-  #   required, secret           → boolean OR (any-true wins)
-  #   value, sops, defaultValue  → unanimous non-null wins; conflicting
-  #                                 non-null values become `null` and emit a
-  #                                 `lib.warn` (root-level envs don't try to
-  #                                 reconcile per-app value differences like
-  #                                 `PORT=3000` vs `PORT=4000` — those stay
-  #                                 in the per-app payload).
-  #
-  # The result is shaped as the same submodule used by
-  # `options.stackpanel.envs.<env>.<KEY>`, so it can be assigned directly:
-  #
-  #   config.stackpanel.envs = mergedAppEnvs;
-  #
-  # Other modules can layer on top by writing
-  # `stackpanel.envs.<env>.<KEY> = …` directly. Since the root-level env is
-  # primarily a registry of "what variables exist in environment X" plus the
-  # SOPS-only payload at `<packageDir>/data/_envs/<env>.sops.json`, dropping
-  # conflicting literal values is the correct trade-off — the per-app payloads
-  # remain the source of truth for app-specific configuration.
+  # Each app contributes one entry per environment ID, keyed by the app path
+  # plus environment name (for example `apps/web/dev`). This avoids collisions
+  # when multiple apps target the same environment with different values like
+  # `PORT`, while still publishing the same env variable submodule shape as
+  # `options.stackpanel.envs.<scope>.<KEY>`.
   # ---------------------------------------------------------------------------
-  mergedAppEnvs =
-    let
-      contributions = lib.concatMap (
-        appName:
-        let
-          envIds = appEnvironmentIds appName;
-          envVars = getAppEnv apps.${appName};
-        in
-        lib.concatMap (
-          env:
-          lib.mapAttrsToList (key: meta: {
-            inherit env key meta appName;
-          }) envVars
-        ) envIds
-      ) appsWithEnv;
-
-      pickField =
-        field: contribs:
-        let
-          values = lib.unique (
-            lib.filter (v: v != null) (map (c: c.meta.${field}) contribs)
-          );
-          conflictApps = lib.unique (
-            map (c: c.appName)
-              (lib.filter (c: c.meta.${field} != null) contribs)
-          );
-          warnMsg = (
-            "stackpanel.envs: conflicting `${field}` for "
-            + "`${(lib.head contribs).env}.${(lib.head contribs).key}` "
-            + "across apps "
-            + lib.concatStringsSep ", " conflictApps
-            + " — dropped from root env (set `stackpanel.envs.${(lib.head contribs).env}.${(lib.head contribs).key}.${field}` "
-            + "explicitly to override). Per-app payloads are unaffected."
-          );
-        in
-        if values == [ ] then
-          null
-        else if lib.length values == 1 then
-          lib.head values
-        else
-          lib.warn warnMsg null;
-
-      mergeKeyContribs =
-        key: contribs:
-        {
-          inherit key;
-          required = lib.any (c: c.meta.required) contribs;
-          secret = lib.any (c: c.meta.secret) contribs;
-          value = pickField "value" contribs;
-          sops = pickField "sops" contribs;
-          defaultValue = pickField "defaultValue" contribs;
-        };
-
-      byEnv = lib.groupBy (c: c.env) contributions;
-    in
-    lib.mapAttrs (
-      _env: contribs:
+  mergedAppEnvs = lib.listToAttrs (
+    lib.concatMap (
+      appName:
       let
-        byKey = lib.groupBy (c: c.key) contribs;
+        envIds = appEnvironmentIds appName;
+        envVars = getAppEnv apps.${appName};
       in
-      lib.mapAttrs mergeKeyContribs byKey
-    ) byEnv;
+      map (env: {
+        name = scopedRootEnvName appName env;
+        value = envVars;
+      }) envIds
+    ) appsWithEnv
+  );
 
   # All envs known to the system. The env-codegen module publishes
   # `mergedAppEnvs` to `config.stackpanel.envs`, and other modules can layer
-  # additional `stackpanel.envs.<env>.<KEY>` declarations on top — so
+  # additional `stackpanel.envs.<scope>.<KEY>` declarations on top — so
   # `cfg.envs` is the full fix-point once the module system has resolved.
   rootEnvs = cfg.envs or { };
 
@@ -469,22 +418,49 @@ let
         }
     ) vars;
 
-  # Recipients eligible for a root env: union of recipients across every app
-  # that targets that env, plus any recipient explicitly tagged with the
-  # bare env name (so module-only envs without a backing app still encrypt).
+  parseScopedRootEnvName =
+    envName:
+    let
+      matchingApps = lib.filter (
+        appName: lib.hasPrefix "${appPathFor appName}/" envName
+      ) appsWithEnv;
+      sortedMatches = lib.sort (
+        a: b: builtins.stringLength (appPathFor a) > builtins.stringLength (appPathFor b)
+      ) matchingApps;
+    in
+    if sortedMatches == [ ] then
+      null
+    else
+      let
+        appName = lib.head sortedMatches;
+        prefix = "${appPathFor appName}/";
+      in
+      {
+        inherit appName;
+        env = lib.removePrefix prefix envName;
+      };
+
+  # App-scoped root envs inherit the same recipients as the matching per-app
+  # payload. Bare env names remain available for module-only env registries.
   rootEnvRecipients =
     envName:
     let
-      aliases = envAliases envName;
-      appComposites = lib.concatMap (a: map (al: "${a}/${al}") aliases) appsWithEnv;
-      wanted = lib.unique (aliases ++ appComposites);
-      matches = name:
-        let userTags = recipientTagsFor name; in
-        userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
-      names = lib.filter matches (lib.attrNames recipientRegistry);
-      keys = lib.filter (k: k != null && k != "") (map recipientPublicKey names);
+      scoped = parseScopedRootEnvName envName;
     in
-    lib.unique keys;
+    if scoped != null then
+      selectRecipientsFor scoped.appName scoped.env
+    else
+      let
+        aliases = envAliases envName;
+        appComposites = lib.concatMap (a: map (al: "${a}/${al}") aliases) appsWithEnv;
+        wanted = lib.unique (aliases ++ appComposites);
+        matches = name:
+          let userTags = recipientTagsFor name; in
+          userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
+        names = lib.filter matches (lib.attrNames recipientRegistry);
+        keys = lib.filter (k: k != null && k != "") (map recipientPublicKey names);
+      in
+      lib.unique keys;
 
   rootEnvTargets = lib.filter (t: t.recipients != [ ] && t.vars != { }) (
     map (envName: {
@@ -611,16 +587,6 @@ let
       [ "{{FIELDS}}" "{{REQUIRED_KEYS}}" "{{DEFAULTS}}" ]
       [ fields requiredKeysList defaultsJson ]
       templates.envExportMeta;
-
-  mkBarrelExport =
-    names: basePath:
-    let
-      sorted = lib.sort (a: b: a < b) names;
-      exports = lib.concatMapStringsSep "\n" (
-        n: "export * as ${toJsIdentifier n} from '${basePath}${n}';"
-      ) sorted;
-    in
-    builtins.replaceStrings [ "{{EXPORTS}}" ] [ exports ] templates.barrel;
 
   # ---------------------------------------------------------------------------
   # Root index.ts — typed per-app/per-env loader registry.

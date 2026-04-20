@@ -30,11 +30,15 @@ type App struct {
 	Type        *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`               // App type/runtime (bun, go, python, rust, etc.)
 	Port        *int32                 `protobuf:"varint,5,opt,name=port,proto3,oneof" json:"port,omitempty"`              // Development server port
 	Domain      *string                `protobuf:"bytes,6,opt,name=domain,proto3,oneof" json:"domain,omitempty"`           // Local development domain
+	// deprecated: use env instead
 	// Environment configurations (key = environment name like "dev", "prod").
-	Environments  map[string]*AppEnvironment `protobuf:"bytes,7,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Deploy        *AppDeploy                 `protobuf:"bytes,8,opt,name=deploy,proto3" json:"deploy,omitempty"` // Colmena deployment mapping for this app
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Environments map[string]*AppEnvironment      `protobuf:"bytes,7,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Deploy       *AppDeploy                      `protobuf:"bytes,8,opt,name=deploy,proto3" json:"deploy,omitempty"`                                                                     // Colmena deployment mapping for this app
+	Env          map[string]*EnvironmentVariable `protobuf:"bytes,9,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Environment variables for this app
+	// Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
+	EnvironmentIds []string `protobuf:"bytes,10,rep,name=environmentIds,proto3" json:"environmentIds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *App) Reset() {
@@ -119,6 +123,20 @@ func (x *App) GetEnvironments() map[string]*AppEnvironment {
 func (x *App) GetDeploy() *AppDeploy {
 	if x != nil {
 		return x.Deploy
+	}
+	return nil
+}
+
+func (x *App) GetEnv() map[string]*EnvironmentVariable {
+	if x != nil {
+		return x.Env
+	}
+	return nil
+}
+
+func (x *App) GetEnvironmentIds() []string {
+	if x != nil {
+		return x.EnvironmentIds
 	}
 	return nil
 }
@@ -216,8 +234,12 @@ type AppEnvironment struct {
 	// Environment variables for this environment.
 	// Key: Environment variable name (e.g., DATABASE_URL)
 	// Value: Literal string or vals reference (e.g., ref+sops://...)
-	Env           map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Extends       []string          `protobuf:"bytes,4,rep,name=extends,proto3" json:"extends,omitempty"` // Inherit these environments - useful for sharing environment variables between environments.
+	Env     map[string]string `protobuf:"bytes,3,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Extends []string          `protobuf:"bytes,4,rep,name=extends,proto3" json:"extends,omitempty"` // Inherit these environments - useful for sharing environment variables between environments.
+	// Env var names in this environment that contain sensitive values.
+	// Used to auto-derive deployment.secrets — these are wrapped with
+	// alchemy.secret() at deploy time.
+	Secrets       []string `protobuf:"bytes,5,rep,name=secrets,proto3" json:"secrets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -280,6 +302,13 @@ func (x *AppEnvironment) GetExtends() []string {
 	return nil
 }
 
+func (x *AppEnvironment) GetSecrets() []string {
+	if x != nil {
+		return x.Secrets
+	}
+	return nil
+}
+
 // Map of app identifier to app configuration
 type Apps struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -325,12 +354,97 @@ func (x *Apps) GetApps() map[string]*App {
 	return nil
 }
 
+// Environment variable for this app
+type EnvironmentVariable struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`                         // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
+	Required      bool                   `protobuf:"varint,2,opt,name=required,proto3" json:"required,omitempty"`              // Whether the environment variable is required
+	Secret        bool                   `protobuf:"varint,3,opt,name=secret,proto3" json:"secret,omitempty"`                  // Whether the environment variable is sensitive
+	Value         *string                `protobuf:"bytes,4,opt,name=value,proto3,oneof" json:"value,omitempty"`               // Value of the environment variable
+	Sops          *string                `protobuf:"bytes,5,opt,name=sops,proto3,oneof" json:"sops,omitempty"`                 // Path to the SOPS file for this variable's group
+	DefaultValue  *string                `protobuf:"bytes,6,opt,name=defaultValue,proto3,oneof" json:"defaultValue,omitempty"` // Default value of the environment variable
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnvironmentVariable) Reset() {
+	*x = EnvironmentVariable{}
+	mi := &file_apps_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnvironmentVariable) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnvironmentVariable) ProtoMessage() {}
+
+func (x *EnvironmentVariable) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnvironmentVariable.ProtoReflect.Descriptor instead.
+func (*EnvironmentVariable) Descriptor() ([]byte, []int) {
+	return file_apps_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *EnvironmentVariable) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *EnvironmentVariable) GetRequired() bool {
+	if x != nil {
+		return x.Required
+	}
+	return false
+}
+
+func (x *EnvironmentVariable) GetSecret() bool {
+	if x != nil {
+		return x.Secret
+	}
+	return false
+}
+
+func (x *EnvironmentVariable) GetValue() string {
+	if x != nil && x.Value != nil {
+		return *x.Value
+	}
+	return ""
+}
+
+func (x *EnvironmentVariable) GetSops() string {
+	if x != nil && x.Sops != nil {
+		return *x.Sops
+	}
+	return ""
+}
+
+func (x *EnvironmentVariable) GetDefaultValue() string {
+	if x != nil && x.DefaultValue != nil {
+		return *x.DefaultValue
+	}
+	return ""
+}
+
 var File_apps_proto protoreflect.FileDescriptor
 
 const file_apps_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"apps.proto\x12\rstackpanel.db\"\xac\x03\n" +
+	"apps.proto\x12\rstackpanel.db\"\xdf\x04\n" +
 	"\x03App\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x12\n" +
@@ -339,10 +453,16 @@ const file_apps_proto_rawDesc = "" +
 	"\x04port\x18\x05 \x01(\x05H\x02R\x04port\x88\x01\x01\x12\x1b\n" +
 	"\x06domain\x18\x06 \x01(\tH\x03R\x06domain\x88\x01\x01\x12H\n" +
 	"\fenvironments\x18\a \x03(\v2$.stackpanel.db.App.EnvironmentsEntryR\fenvironments\x120\n" +
-	"\x06deploy\x18\b \x01(\v2\x18.stackpanel.db.AppDeployR\x06deploy\x1a^\n" +
+	"\x06deploy\x18\b \x01(\v2\x18.stackpanel.db.AppDeployR\x06deploy\x12-\n" +
+	"\x03env\x18\t \x03(\v2\x1b.stackpanel.db.App.EnvEntryR\x03env\x12&\n" +
+	"\x0eenvironmentIds\x18\n" +
+	" \x03(\tR\x0eenvironmentIds\x1a^\n" +
 	"\x11EnvironmentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
-	"\x05value\x18\x02 \x01(\v2\x1d.stackpanel.db.AppEnvironmentR\x05value:\x028\x01B\x0e\n" +
+	"\x05value\x18\x02 \x01(\v2\x1d.stackpanel.db.AppEnvironmentR\x05value:\x028\x01\x1aZ\n" +
+	"\bEnvEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x128\n" +
+	"\x05value\x18\x02 \x01(\v2\".stackpanel.db.EnvironmentVariableR\x05value:\x028\x01B\x0e\n" +
 	"\f_descriptionB\a\n" +
 	"\x05_typeB\a\n" +
 	"\x05_portB\t\n" +
@@ -355,12 +475,13 @@ const file_apps_proto_rawDesc = "" +
 	"\x06system\x18\x05 \x01(\tH\x01R\x06system\x88\x01\x01\x12\x18\n" +
 	"\asecrets\x18\x06 \x03(\tR\asecretsB\a\n" +
 	"\x05_roleB\t\n" +
-	"\a_system\"\xe7\x01\n" +
+	"\a_system\"\x81\x02\n" +
 	"\x0eAppEnvironment\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x128\n" +
 	"\x03env\x18\x03 \x03(\v2&.stackpanel.db.AppEnvironment.EnvEntryR\x03env\x12\x18\n" +
-	"\aextends\x18\x04 \x03(\tR\aextends\x1a6\n" +
+	"\aextends\x18\x04 \x03(\tR\aextends\x12\x18\n" +
+	"\asecrets\x18\x05 \x03(\tR\asecrets\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0e\n" +
@@ -369,7 +490,17 @@ const file_apps_proto_rawDesc = "" +
 	"\x04apps\x18\x01 \x03(\v2\x1d.stackpanel.db.Apps.AppsEntryR\x04apps\x1aK\n" +
 	"\tAppsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12(\n" +
-	"\x05value\x18\x02 \x01(\v2\x12.stackpanel.db.AppR\x05value:\x028\x01B:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
+	"\x05value\x18\x02 \x01(\v2\x12.stackpanel.db.AppR\x05value:\x028\x01\"\xdc\x01\n" +
+	"\x13EnvironmentVariable\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n" +
+	"\brequired\x18\x02 \x01(\bR\brequired\x12\x16\n" +
+	"\x06secret\x18\x03 \x01(\bR\x06secret\x12\x19\n" +
+	"\x05value\x18\x04 \x01(\tH\x00R\x05value\x88\x01\x01\x12\x17\n" +
+	"\x04sops\x18\x05 \x01(\tH\x01R\x04sops\x88\x01\x01\x12'\n" +
+	"\fdefaultValue\x18\x06 \x01(\tH\x02R\fdefaultValue\x88\x01\x01B\b\n" +
+	"\x06_valueB\a\n" +
+	"\x05_sopsB\x0f\n" +
+	"\r_defaultValueB:Z8github.com/darkmatter/stackpanel/packages/proto/gen/gopbb\x06proto3"
 
 var (
 	file_apps_proto_rawDescOnce sync.Once
@@ -383,28 +514,32 @@ func file_apps_proto_rawDescGZIP() []byte {
 	return file_apps_proto_rawDescData
 }
 
-var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_apps_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_apps_proto_goTypes = []any{
-	(*App)(nil),            // 0: stackpanel.db.App
-	(*AppDeploy)(nil),      // 1: stackpanel.db.AppDeploy
-	(*AppEnvironment)(nil), // 2: stackpanel.db.AppEnvironment
-	(*Apps)(nil),           // 3: stackpanel.db.Apps
-	nil,                    // 4: stackpanel.db.App.EnvironmentsEntry
-	nil,                    // 5: stackpanel.db.AppEnvironment.EnvEntry
-	nil,                    // 6: stackpanel.db.Apps.AppsEntry
+	(*App)(nil),                 // 0: stackpanel.db.App
+	(*AppDeploy)(nil),           // 1: stackpanel.db.AppDeploy
+	(*AppEnvironment)(nil),      // 2: stackpanel.db.AppEnvironment
+	(*Apps)(nil),                // 3: stackpanel.db.Apps
+	(*EnvironmentVariable)(nil), // 4: stackpanel.db.EnvironmentVariable
+	nil,                         // 5: stackpanel.db.App.EnvironmentsEntry
+	nil,                         // 6: stackpanel.db.App.EnvEntry
+	nil,                         // 7: stackpanel.db.AppEnvironment.EnvEntry
+	nil,                         // 8: stackpanel.db.Apps.AppsEntry
 }
 var file_apps_proto_depIdxs = []int32{
-	4, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
+	5, // 0: stackpanel.db.App.environments:type_name -> stackpanel.db.App.EnvironmentsEntry
 	1, // 1: stackpanel.db.App.deploy:type_name -> stackpanel.db.AppDeploy
-	5, // 2: stackpanel.db.AppEnvironment.env:type_name -> stackpanel.db.AppEnvironment.EnvEntry
-	6, // 3: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
-	2, // 4: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
-	0, // 5: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	6, // 2: stackpanel.db.App.env:type_name -> stackpanel.db.App.EnvEntry
+	7, // 3: stackpanel.db.AppEnvironment.env:type_name -> stackpanel.db.AppEnvironment.EnvEntry
+	8, // 4: stackpanel.db.Apps.apps:type_name -> stackpanel.db.Apps.AppsEntry
+	2, // 5: stackpanel.db.App.EnvironmentsEntry.value:type_name -> stackpanel.db.AppEnvironment
+	4, // 6: stackpanel.db.App.EnvEntry.value:type_name -> stackpanel.db.EnvironmentVariable
+	0, // 7: stackpanel.db.Apps.AppsEntry.value:type_name -> stackpanel.db.App
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_apps_proto_init() }
@@ -415,13 +550,14 @@ func file_apps_proto_init() {
 	file_apps_proto_msgTypes[0].OneofWrappers = []any{}
 	file_apps_proto_msgTypes[1].OneofWrappers = []any{}
 	file_apps_proto_msgTypes[2].OneofWrappers = []any{}
+	file_apps_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_apps_proto_rawDesc), len(file_apps_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -12,11 +12,18 @@ message App {
   optional int32 port = 5; // Development server port
   optional string domain = 6; // Local development domain
   /*
+   * deprecated: use env instead
    * Environment configurations (key = environment name like "dev", "prod").
    * 
    */
   map<string, AppEnvironment> environments = 7;
   AppDeploy deploy = 8; // Colmena deployment mapping for this app
+  map<string, EnvironmentVariable> env = 9; // Environment variables for this app
+  /*
+   * Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
+   * 
+   */
+  repeated string environmentIds = 10;
 }
 
 // Deployment mapping for Colmena (targets, roles, and modules)
@@ -41,9 +48,26 @@ message AppEnvironment {
    */
   map<string, string> env = 3;
   repeated string extends = 4; // Inherit these environments - useful for sharing environment variables between environments.
+  /*
+   * Env var names in this environment that contain sensitive values.
+   * Used to auto-derive deployment.secrets — these are wrapped with
+   * alchemy.secret() at deploy time.
+   * 
+   */
+  repeated string secrets = 5;
 }
 
 // Map of app identifier to app configuration
 message Apps {
   map<string, App> apps = 1; // Map of app ID to app config
+}
+
+// Environment variable for this app
+message EnvironmentVariable {
+  string key = 1; // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
+  bool required = 2; // Whether the environment variable is required
+  bool secret = 3; // Whether the environment variable is sensitive
+  optional string value = 4; // Value of the environment variable
+  optional string sops = 5; // Path to the SOPS file for this variable's group
+  optional string defaultValue = 6; // Default value of the environment variable
 }

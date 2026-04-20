@@ -26,7 +26,7 @@
     "alchemy:deploy": "alchemy deploy",
     "alchemy:destroy": "alchemy destroy",
     "alchemy:dev": "alchemy dev",
-    "postinstall": "test -f bun.lock \u0026\u0026 bun2nix -o bun.nix || true"
+    "postinstall": "test -f bun.lock && bun2nix -o bun.nix || true"
   },
   "type": "module"
 }
