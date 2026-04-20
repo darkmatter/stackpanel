@@ -40,6 +40,7 @@ import type {
 } from "@stackpanel/proto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { flattenConfiguredAppVariables } from "./app-env";
 import { useAgentContext, useAgentClient } from "./agent-provider";
 import { createAgentTransport } from "./connect-transport";
 import { useAgentSSEEvent } from "./agent-sse-provider";
@@ -226,13 +227,13 @@ export function useAgentHealth(
  * Returns null if not connected.
  */
 export function useAgentRpcClient() {
-  const { token, isConnected } = useAgentContext();
+  const { host, port, token, isConnected } = useAgentContext();
 
   return useMemo(() => {
     if (!isConnected || !token) return null;
-    const transport = createAgentTransport(token);
+    const transport = createAgentTransport(token, host, port);
     return createClient(AgentService, transport);
-  }, [token, isConnected]);
+  }, [host, isConnected, port, token]);
 }
 
 // =============================================================================
@@ -1498,10 +1499,8 @@ export function useAppsWithVariable(variableName: string) {
 
     return Object.entries(apps)
       .filter(([_, app]) => {
-        // Check if any environment has this variable in its env object
-        const environments = app.environments ?? {};
-        return Object.values(environments).some(
-          (env) => variableName in (env.env ?? {}),
+        return flattenConfiguredAppVariables(app).some(
+          (mapping) => mapping.envKey === variableName,
         );
       })
       .map(([id, app]) => ({ ...app, id }));
