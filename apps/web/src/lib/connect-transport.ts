@@ -14,9 +14,14 @@ import { AGENT_AUTH_ERROR_EVENT } from "./agent";
  * Creates a Connect transport configured for the local agent.
  *
  * @param token - JWT auth token for the agent
+ * @param host - Agent host (default localhost)
  * @param port - Agent port (default 9876)
  */
-export function createAgentTransport(token: string, port: number = 9876) {
+export function createAgentTransport(
+	token: string,
+	host: string = "localhost",
+	port: number = 9876,
+) {
 	const authInterceptor: Interceptor = (next) => async (req) => {
 		req.header.set("Authorization", `Bearer ${token}`);
 		try {
@@ -33,7 +38,7 @@ export function createAgentTransport(token: string, port: number = 9876) {
 	};
 
 	return createConnectTransport({
-		baseUrl: `http://localhost:${port}`,
+		baseUrl: `http://${host}:${port}`,
 		// Use JSON for easier debugging (can switch to binary for production)
 		useBinaryFormat: false,
 		// Add auth header to all requests

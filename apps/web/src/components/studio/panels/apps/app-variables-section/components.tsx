@@ -289,10 +289,26 @@ interface VariableRowProps {
   isEditing: boolean;
   onStartEditing: (variable: DisplayVariable) => void;
   renderEditInterface: () => React.ReactNode;
+  /** Reveal state for secret rows. When `revealValue` is non-null, the row
+   *  shows the decrypted value in place of the masked placeholder. Only one
+   *  secret should be revealed at a time — the parent enforces that by only
+   *  passing a non-null value to a single row. */
+  revealValue?: string | null;
+  revealError?: string | null;
+  revealLoading?: boolean;
+  /** Whether this secret has a sops reference and can therefore be revealed. */
+  canReveal?: boolean;
+  /** Toggle the reveal state for this row (open if hidden, hide if open). */
+  onToggleReveal?: () => void;
 }
 
 /**
  * Full-width variable row matching the task row style.
+ *
+ * Secret rows additionally render an inline eye/eye-off toggle when a sops
+ * reference is available. Clicking the toggle shells out to
+ * `sops decrypt --extract` via the agent and replaces the masked placeholder
+ * with the decrypted value (or an inline error message on failure).
  */
 export function VariableRow({
   variable,
@@ -303,12 +319,50 @@ export function VariableRow({
   isEditing,
   onStartEditing,
   renderEditInterface,
+  revealValue,
+  revealError,
+  revealLoading,
+  canReveal,
+  onToggleReveal,
 }: VariableRowProps) {
   const isComputed = variable.value.startsWith("ref+");
+  const isRevealed = isSecret && revealValue !== null && revealValue !== undefined;
+  // Any active reveal state (success, in-flight, or error) flips the toggle to
+  // its "Hide" affordance so the user can dismiss the error and try a different
+  // secret without it staying stuck on the row.
+  const isRevealActive = isSecret && (isRevealed || Boolean(revealLoading) || Boolean(revealError));
 
   if (isCurrentlyEditing) {
     return <>{renderEditInterface()}</>;
   }
+
+  const renderValue = () => {
+    if (isSecret) {
+      if (revealLoading) {
+        return (
+          <span className="inline-flex items-center gap-1 text-muted-foreground/80">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            decrypting…
+          </span>
+        );
+      }
+      if (revealError) {
+        return (
+          <span
+            className="text-destructive truncate"
+            title={revealError}
+          >
+            {revealError}
+          </span>
+        );
+      }
+      if (isRevealed) {
+        return <span className="text-foreground" data-testid="revealed-secret">{revealValue}</span>;
+      }
+      return "••••••";
+    }
+    return showEnvValues ? variable.value : "••••••";
+  };
 
   return (
     <div
@@ -320,8 +374,28 @@ export function VariableRow({
         {variable.envKey}
       </span>
       <span className="text-xs text-muted-foreground font-mono truncate flex-1 border-l pl-4">
-        {isSecret ? "••••••" : showEnvValues ? variable.value : "••••••"}
+        {renderValue()}
       </span>
+      {isSecret && canReveal && onToggleReveal && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleReveal();
+          }}
+          disabled={revealLoading}
+          className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+          title={isRevealActive ? "Hide secret value" : "Reveal secret value (runs sops)"}
+          aria-label={isRevealActive ? `Hide ${variable.envKey}` : `Reveal ${variable.envKey}`}
+          aria-pressed={isRevealActive}
+        >
+          {isRevealActive ? (
+            <EyeOff className="h-3 w-3" />
+          ) : (
+            <Eye className="h-3 w-3" />
+          )}
+        </button>
+      )}
       <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
     </div>
   );
