@@ -45,10 +45,15 @@
       "name": "api",
       "version": "0.0.1",
       "dependencies": {
+        "@stackpanel/api": "workspace:*",
+        "@stackpanel/auth": "workspace:*",
+        "@stackpanel/db": "workspace:*",
+        "@trpc/server": "catalog:",
         "hono": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "@types/node": "^22.13.11",
         "typescript": "^5",
       },
     },
