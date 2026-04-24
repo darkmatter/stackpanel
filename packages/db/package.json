@@ -25,7 +25,7 @@
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "devDependencies": {
-    "@distilled.cloud/neon": "^0.7.11",
+    "@distilled.cloud/neon": "^0.10.0",
     "@gen/env": "workspace:*",
     "@stackpanel/config": "workspace:*",
     "@types/pg": "^8.20.0",
