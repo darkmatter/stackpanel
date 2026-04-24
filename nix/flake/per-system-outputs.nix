@@ -43,7 +43,7 @@
   # Auto-load stackpanel config from .stackpanel/
   # Always use `self` for file discovery (works in pure evaluation)
   # ===================================================================
-  configLoader = import ./load-config.nix { inherit self; };
+  configLoader = import ./load-config.nix { inherit self inputs; };
 
   stackpanelConfigModule = configLoader.mkStackpanelModule {
     inherit lib pkgs;
