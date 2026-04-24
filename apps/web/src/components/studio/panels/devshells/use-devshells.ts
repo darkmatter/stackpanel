@@ -11,6 +11,7 @@ import type {
 	AvailableTool,
 	DevShell,
 	Script,
+	ScriptValue,
 	StackpanelConfigData,
 } from "./types";
 
@@ -105,31 +106,29 @@ export function useDevShells() {
 	);
 
 	const scripts = useMemo<Script[]>(() => {
-		const sources: Array<
-			Record<string, { exec?: string; command?: string } | string> | undefined
-		> = [
+		const sources: Array<Record<string, ScriptValue | string> | undefined> = [
 			stackpanelConfig.scripts,
 			devshellConfig.commands,
 			devshellConfig._scripts,
 			devshellConfig._tasks,
 		];
-		const collected = new Map<string, string>();
+		const collected = new Map<string, Script>();
 		for (const source of sources) {
 			if (!source) continue;
 			for (const [name, value] of Object.entries(source)) {
 				if (collected.has(name)) continue;
 				if (typeof value === "string") {
-					collected.set(name, value);
+					collected.set(name, { name, description: "", exec: value });
 					continue;
 				}
-				const description = value.exec ?? value.command;
-				collected.set(name, description ?? "Defined in stackpanel config");
+				collected.set(name, {
+					name,
+					description: value.description ?? "",
+					exec: value.exec ?? value.command ?? "",
+				});
 			}
 		}
-		return Array.from(collected, ([name, description]) => ({
-			name,
-			description,
-		}));
+		return Array.from(collected.values());
 	}, [stackpanelConfig.scripts, devshellConfig]);
 
 	const devShells = useMemo<DevShell[]>(() => {
