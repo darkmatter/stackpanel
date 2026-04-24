@@ -81,7 +81,7 @@ jobs:
         run: bun install --frozen-lockfile
       # Persist alchemy-effect's LocalState (.alchemy/state/<stack>/<stage>/) across
       # runners so the destroy job on PR close can find the resources to tear down.
-      # alchemy-effect 0.9.1 ships only a filesystem state backend; without this
+      # alchemy-effect currently ships only a filesystem state backend; without this
       # cache, every runner starts blind and orphans Workers + Neon projects.
       - name: Restore alchemy state
         uses: actions/cache@v4
