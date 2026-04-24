@@ -18,6 +18,21 @@
     "./docs": {
       "default": "./src/exports/docs.ts"
     },
+    "./effect": {
+      "default": "./src/effect/index.ts"
+    },
+    "./effect/docs": {
+      "default": "./src/effect/docs.ts"
+    },
+    "./effect/scope/deploy": {
+      "default": "./src/effect/scope/deploy.ts"
+    },
+    "./effect/stackpanel-go": {
+      "default": "./src/effect/stackpanel-go.ts"
+    },
+    "./effect/web": {
+      "default": "./src/effect/web.ts"
+    },
     "./runtime": {
       "default": "./src/runtime/node-loader.ts"
     },
