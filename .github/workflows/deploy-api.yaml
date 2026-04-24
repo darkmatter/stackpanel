@@ -109,3 +109,15 @@ jobs:
           curl -fsS --retry 5 --retry-delay 5 \
             https://stackpanel-api.fly.dev/health
 
+      # Idempotent ACME cert + Cloudflare A/AAAA records pointing at the
+      # Fly app's IPs. Skipped on dev (the .fly.dev hostname is enough)
+      # and only kicks in for production / staging / pr-N stages — see
+      # apps/api/alchemy.run.ts.
+      - name: Bind public hostname
+        if: github.ref_name == 'main' || github.ref_name == 'develop' || github.event_name == 'pull_request'
+        env:
+          FLY_IO_API_KEY: ${{ secrets.FLY_API_TOKEN }}
+          STAGE: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' || format('pr-{0}', github.event.pull_request.number) }}
+        working-directory: apps/api
+        run: bunx alchemy-effect deploy --stage "$STAGE"
+

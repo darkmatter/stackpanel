@@ -12,7 +12,11 @@
     "@stackpanel/api": "workspace:*",
     "@stackpanel/auth": "workspace:*",
     "@stackpanel/db": "workspace:*",
+    "@distilled.cloud/cloudflare": "catalog:",
+    "@distilled.cloud/fly-io": "catalog:",
     "@trpc/server": "catalog:",
+    "alchemy-effect": "catalog:",
+    "effect": "catalog:",
     "hono": "catalog:"
   },
   "devDependencies": {

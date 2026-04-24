@@ -26,6 +26,7 @@
       "@distilled.cloud/cloudflare-bundler": "0.2.1",
       "@distilled.cloud/cloudflare": "^0.10.0",
       "@distilled.cloud/core": "^0.10.0",
+      "@distilled.cloud/fly-io": "^0.11.0",
       "@effect/language-service": "^0.85.1",
       "@effect/platform-node-shared": "4.0.0-beta.48",
       "@effect/platform-node": "4.0.0-beta.48",

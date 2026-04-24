@@ -45,10 +45,14 @@
       "name": "api",
       "version": "0.0.1",
       "dependencies": {
+        "@distilled.cloud/cloudflare": "catalog:",
+        "@distilled.cloud/fly-io": "catalog:",
         "@stackpanel/api": "workspace:*",
         "@stackpanel/auth": "workspace:*",
         "@stackpanel/db": "workspace:*",
         "@trpc/server": "catalog:",
+        "alchemy-effect": "catalog:",
+        "effect": "catalog:",
         "hono": "catalog:",
       },
       "devDependencies": {
@@ -567,6 +571,7 @@
     "@distilled.cloud/cloudflare": "^0.10.0",
     "@distilled.cloud/cloudflare-bundler": "0.2.1",
     "@distilled.cloud/core": "^0.10.0",
+    "@distilled.cloud/fly-io": "^0.11.0",
     "@effect/language-service": "^0.85.1",
     "@effect/platform-bun": "4.0.0-beta.48",
     "@effect/platform-node": "4.0.0-beta.48",
@@ -952,6 +957,8 @@
     "@distilled.cloud/cloudflare-vite-plugin": ["@distilled.cloud/cloudflare-vite-plugin@0.1.0", "", { "dependencies": { "@distilled.cloud/cloudflare-rolldown-plugin": "0.2.0" }, "peerDependencies": { "vite": "^8.0.0" } }, "sha512-Brluigro6OXOmGKea8LCbs43u+pI7NsxtvEFLU8eO2Go2hDqcwLQ3fc4YiXq4Y6nRYUpkoiGV2ITynttV+/suA=="],
 
     "@distilled.cloud/core": ["@distilled.cloud/core@0.10.2", "", { "dependencies": { "effect": "4.0.0-beta.48" } }, "sha512-j7phS+p6yx4pyacMe1askeJ8v/mu8etwUvAH/9RlUYJYP9vuY+U38XwEO6KLFXWFGT6Y9xXdH8El3BjiYwQlRQ=="],
+
+    "@distilled.cloud/fly-io": ["@distilled.cloud/fly-io@0.11.0", "", { "dependencies": { "@distilled.cloud/core": "0.11.0", "effect": "4.0.0-beta.48" } }, "sha512-zJHd0lDSMrnQlgX1BaGNFUvt3wuHTDvmw/v6O0a53dMfHonWnJW5H2RkUG31MZl42bxiHsaF7aFr0bTFuR7YeA=="],
 
     "@distilled.cloud/neon": ["@distilled.cloud/neon@0.10.2", "", { "dependencies": { "@distilled.cloud/core": "0.10.2", "effect": "4.0.0-beta.48" } }, "sha512-XjDJufRnESqdguy10cecnJjSeMwqZAKbqorBg92rLVWEit9XuciUea/SMGLr1HEHTukBp5qnar50u9iNkPj8Sg=="],
 
@@ -5116,6 +5123,8 @@
     "@cloudflare/vite-plugin/ws": ["ws@8.18.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw=="],
 
     "@cspotcode/source-map-support/@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.9", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.0.3", "@jridgewell/sourcemap-codec": "^1.4.10" } }, "sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ=="],
+
+    "@distilled.cloud/fly-io/@distilled.cloud/core": ["@distilled.cloud/core@0.11.0", "", { "dependencies": { "effect": "4.0.0-beta.48" } }, "sha512-nts4YpsKjUrwofiLu7xTcyfdQGVbIXr5Z+6uAg7b/lFiyl11XW8Ccto7aUVtcuv5gmpavj+qE0Kzt+EjssRbGg=="],
 
     "@docker/node-sdk/undici": ["undici@6.25.0", "", {}, "sha512-ZgpWDC5gmNiuY9CnLVXEH8rl50xhRCuLNA97fAUnKi8RRuV4E6KG31pDTsLVUKnohJE0I3XDrTeEydAXRw47xg=="],
 
