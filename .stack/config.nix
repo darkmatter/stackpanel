@@ -144,7 +144,13 @@
       warnIfMissing = true;
     };
     settings = {
-      backend = "nix2container";
+      # dockerTools emits a standard docker-archive tarball that the
+      # system skopeo can push without patches. nix2container's
+      # skopeo-nix2container currently fails to build against skopeo 1.20
+      # (upstream patches `vendor/go.podman.io/image/v5` but that path no
+      # longer exists in the vendored tree). Switch back once the
+      # upstream bug is fixed.
+      backend = "dockerTools";
     };
   };
 
