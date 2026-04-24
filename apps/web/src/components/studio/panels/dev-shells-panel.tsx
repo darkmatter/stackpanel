@@ -358,21 +358,32 @@ export function DevShellsPanel() {
                 ) : (
                   scripts.map((script) => (
                     <div
-                      className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3"
+                      className="rounded-lg border border-border bg-secondary/30 p-3"
                       key={script.name}
                     >
-                      <div className="flex items-center gap-3">
-                        <code className="font-medium text-accent text-sm">
-                          {script.name}
-                        </code>
-                        <span className="text-muted-foreground text-sm">
-                          {script.description}
-                        </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3">
+                            <code className="font-medium text-accent text-sm">
+                              {script.name}
+                            </code>
+                            {script.description && (
+                              <span className="text-muted-foreground text-sm">
+                                {script.description}
+                              </span>
+                            )}
+                          </div>
+                          {script.exec && (
+                            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre rounded border border-border bg-background/60 p-2 font-mono text-foreground/80 text-xs">
+                              {script.exec}
+                            </pre>
+                          )}
+                        </div>
+                        <Button className="shrink-0 gap-2" size="sm" variant="ghost">
+                          <Play className="h-4 w-4" />
+                          Run
+                        </Button>
                       </div>
-                      <Button className="gap-2" size="sm" variant="ghost">
-                        <Play className="h-4 w-4" />
-                        Run
-                      </Button>
                     </div>
                   ))
                 )}
