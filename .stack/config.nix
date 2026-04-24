@@ -270,6 +270,43 @@
     };
   };
 
+  envs = {
+    deploy = {
+      CLOUDFLARE_API_TOKEN = {
+        secret = true;
+        sops = "/shared/cloudflare-api-token";
+      };
+      CLOUDFLARE_ACCOUNT_ID = {
+        secret = true;
+        sops = "/shared/cloudflare-account-id";
+      };
+      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID = {
+        secret = true;
+        sops = "/shared/cloudflare-service-account-client-id";
+      };
+      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET = {
+        secret = true;
+        sops = "/shared/cloudflare-service-account-client-secret";
+      };
+      HETZNER_API_KEY = {
+        secret = true;
+        sops = "/shared/hetzner-api-key";
+      };
+      AWS_SANDBOX_ACCESS_KEY_ID = {
+        secret = true;
+        sops = "/shared/aws-sandbox-access-key-id";
+      };
+      AWS_SANDBOX_SECRET_ACCESS_KEY = {
+        secret = true;
+        sops = "/shared/aws-sandbox-secret-access-key";
+      };
+      POSTGRES_URL = {
+        secret = true;
+        sops = "/dev/postgres-url";
+      };
+    };
+  };
+
   files = {
     entries = {
       ".gitignore" = {
@@ -979,6 +1016,9 @@
       value = "";
     };
     "/shared/hetzner-api-key" = {
+      value = "";
+    };
+    "/shared/neon-api-token" = {
       value = "";
     };
   };
