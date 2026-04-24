@@ -39,6 +39,11 @@
     nixtest.url = "github:jetify-com/nixtest";
     namaka.url = "github:nix-community/namaka/v0.2.1";
     namaka.inputs.nixpkgs.follows = "nixpkgs";
+    # Filesystem-based module loader. Powers the optional "tree" config
+    # layout (see nix/flake/load-config.nix). Pinned because the main branch
+    # may introduce breaking changes per their versioning policy.
+    haumea.url = "github:nix-community/haumea/v0.2.2";
+    haumea.inputs.nixpkgs.follows = "nixpkgs";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     disko.url = "github:nix-community/disko";
     disko.inputs.nixpkgs.follows = "nixpkgs";
