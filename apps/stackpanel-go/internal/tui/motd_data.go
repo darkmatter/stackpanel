@@ -63,10 +63,30 @@ type MOTDFullData struct {
 	// Missing flake inputs (from Nix config)
 	MissingFlakeInputs []MissingFlakeInput
 
+	// EnvWarnings is the parsed contents of .stack/gen/codegen/env-warnings.json
+	// (written by the env codegen module). Surfaces as Issues in the MOTD so
+	// `required = true` variables that aren't set get an "Action Required" line
+	// with a copy-pasteable `sp secrets edit <group>` command.
+	EnvWarnings []EnvWarning
+
 	// Computed
 	Issues          []Issue
 	UpdateAvailable *UpdateInfo
 	ShellFreshness  ShellFreshness
+}
+
+// EnvWarning mirrors the schema written by the Go env codegen module to
+// .stack/gen/codegen/env-warnings.json. Severity "error" indicates a
+// `required = true` variable with no resolved value (blocks deploys),
+// "warning" indicates a referenced SOPS key is missing from its source file.
+type EnvWarning struct {
+	App         string `json:"app"`
+	Environment string `json:"environment"`
+	EnvKey      string `json:"envKey"`
+	Severity    string `json:"severity,omitempty"`
+	Description string `json:"description,omitempty"`
+	Sops        string `json:"sops,omitempty"`
+	Message     string `json:"message"`
 }
 
 // MissingFlakeInput represents a flake input that a module needs but isn't in flake.nix
@@ -132,11 +152,17 @@ type ToolInfo struct {
 	Version string
 }
 
-// Issue represents something requiring user action
+// Issue represents something requiring user action.
+//
+// `Details` is an optional list of sub-lines rendered indented under
+// `Message`. Used for grouped issues like "missing env vars" where many
+// related items share a single fix command, to avoid one repetitive line
+// per item.
 type Issue struct {
 	Severity   string // "error", "warning", "info"
 	Message    string
 	FixCommand string
+	Details    []string
 }
 
 // ShellFreshness detects whether the Nix config has changed since the shell was entered.
