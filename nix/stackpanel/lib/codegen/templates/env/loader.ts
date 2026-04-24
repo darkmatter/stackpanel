@@ -6,22 +6,58 @@
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 import { decryptSops } from "sops-age";
-import { AVAILABLE_APP_ENVS } from "../embedded-data";
+import {
+  AVAILABLE_APP_ENVS,
+  ENVIRONMENT_VARIABLES,
+  type EnvVarMeta,
+  ROOT_ENV_VARIABLES,
+} from "../embedded-data";
 import type { AppEnvMap, AppName, EnvFor } from "./app-env-types";
 import { loadGeneratedPayload } from "./generated-payloads/registry";
 
 const AGE_SECRET_KEY_PREFIX = "AGE-SECRET-KEY-";
 const payloadCache = new Map<string, Record<string, string>>();
 
+/**
+ * Synthetic "app" name used by codegen for root env scopes (entries in
+ * `stackpanel.envs.<scope>` that aren't tied to a specific app). Stays in
+ * sync with `rootEnvTargets` in `nix/stackpanel/lib/codegen/env-package.nix`,
+ * which writes payloads to `<env-package>/data/_envs/<scope>.sops.json`.
+ */
+const ROOT_ENV_APP = "_envs";
+
 export interface LoadEnvOptions {
   inject?: boolean;
   skipDecrypt?: boolean;
   secretKey?: string;
+  /**
+   * When true, after the payload is loaded (and optionally injected), every
+   * variable declared with `required = true` in the Nix `apps.<app>.env`
+   * config is checked against `process.env` and the resolved payload. If any
+   * are missing or empty, an {@link EnvValidationError} is thrown listing all
+   * missing keys and exactly how to add each one (sops path, env var, etc.).
+   *
+   * Default: `false` so dev workflows aren't surprised. Deploy entrypoints
+   * (e.g. `apps/web/alchemy.run.ts`) should pass `validate: true`.
+   */
+  validate?: boolean;
 }
 
 export class EnvLoadError extends Data.TaggedError("EnvLoadError")<{
   readonly message: string;
   readonly cause?: unknown;
+}> {}
+
+export class EnvValidationError extends Data.TaggedError("EnvValidationError")<{
+  readonly message: string;
+  /**
+   * For per-app payloads, the app name. For root env scopes
+   * (`loadEnvScope("deploy")`), the synthetic app `_envs`. Always pair with
+   * `env`/`scope` to know which payload was being validated.
+   */
+  readonly app: string;
+  readonly env: string;
+  readonly missing: ReadonlyArray<string>;
 }> {}
 
 type SopsFileType = "json";
@@ -35,13 +71,64 @@ export const loadEnvEffect = <App extends string>(
   app: App,
   env: string,
   options: LoadEnvOptions = {},
-): Effect.Effect<EnvFor<App>, EnvLoadError> =>
-  (Effect.gen(function* () {
+): Effect.Effect<EnvFor<App>, EnvLoadError | EnvValidationError> =>
+  loadPayloadEffect(app, env, options, (payload, normalizedEnv) =>
+    checkRequiredEnv(app, normalizedEnv, payload),
+  ) as Effect.Effect<EnvFor<App>, EnvLoadError | EnvValidationError>;
+
+export const loadAppEnvEffect = loadEnvEffect;
+
+/**
+ * Load a non-app root env scope (entries in `stackpanel.envs.<scope>` keyed
+ * by a bare name, e.g. `deploy`). Resolves the payload at
+ * `<env-package>/data/_envs/<scope>.sops.json`, decrypts it, optionally
+ * injects it into `process.env`, and — when `validate: true` — fails with
+ * an actionable {@link EnvValidationError} if any variable declared
+ * `required = true` in the scope is still missing.
+ *
+ * Use this for cross-cutting deploy-time secrets that aren't tied to a
+ * single app:
+ *
+ * ```ts
+ * import { loadEnvScope } from "@gen/env/runtime";
+ * await loadEnvScope("deploy", { inject: true, validate: true });
+ * ```
+ */
+export const loadEnvScopeEffect = (
+  scope: string,
+  options: LoadEnvOptions = {},
+): Effect.Effect<Record<string, string>, EnvLoadError | EnvValidationError> =>
+  loadPayloadEffect(ROOT_ENV_APP, scope, options, (payload, _normalizedEnv) =>
+    checkRequiredEnvScope(scope, payload),
+  );
+
+/**
+ * Shared decrypt/cache/inject pipeline used by both `loadEnvEffect` (per-app
+ * payloads, typed as `EnvFor<App>`) and `loadEnvScopeEffect` (root scopes,
+ * untyped `Record<string, string>`). The caller supplies a `validateFn` that
+ * knows how to look up required-var metadata for its flavour of payload.
+ */
+const loadPayloadEffect = (
+  app: string,
+  env: string,
+  options: LoadEnvOptions,
+  validateFn: (
+    payload: Record<string, string>,
+    normalizedEnv: string,
+  ) => EnvValidationError | null,
+): Effect.Effect<Record<string, string>, EnvLoadError | EnvValidationError> =>
+  Effect.gen(function* () {
     const normalizedEnv = normalizeRuntimeEnv(env);
     const cacheKey = `${app}/${normalizedEnv}`;
     const cached = payloadCache.get(cacheKey);
     if (cached) {
       injectIntoProcessEnv(cached, options.inject);
+      if (options.validate) {
+        const failure = validateFn(cached, normalizedEnv);
+        if (failure) {
+          return yield* Effect.fail(failure);
+        }
+      }
       return cached;
     }
 
@@ -55,12 +142,9 @@ export const loadEnvEffect = <App extends string>(
     });
 
     if (!encryptedPayload) {
-      const knownEnvs = AVAILABLE_APP_ENVS[app] || [];
-      const hint =
-        knownEnvs.length > 0 ? ` Available environments: ${knownEnvs.join(", ")}.` : "";
       return yield* Effect.fail(
         new EnvLoadError({
-          message: `Environment data not found for ${app}/${normalizedEnv}.${hint}`,
+          message: missingPayloadMessage(app, normalizedEnv),
         }),
       );
     }
@@ -80,10 +164,29 @@ export const loadEnvEffect = <App extends string>(
     const payload = normalizeEnvPayload(decrypted);
     payloadCache.set(cacheKey, payload);
     injectIntoProcessEnv(payload, options.inject);
-    return payload;
-  }) as Effect.Effect<EnvFor<App>, EnvLoadError>);
 
-export const loadAppEnvEffect = loadEnvEffect;
+    if (options.validate) {
+      const failure = validateFn(payload, normalizedEnv);
+      if (failure) {
+        return yield* Effect.fail(failure);
+      }
+    }
+
+    return payload;
+  });
+
+function missingPayloadMessage(app: string, env: string): string {
+  if (app === ROOT_ENV_APP) {
+    const scopes = Object.keys(ROOT_ENV_VARIABLES);
+    const hint =
+      scopes.length > 0 ? ` Available scopes: ${scopes.join(", ")}.` : "";
+    return `Env scope data not found for "${env}".${hint}`;
+  }
+  const knownEnvs = AVAILABLE_APP_ENVS[app] || [];
+  const hint =
+    knownEnvs.length > 0 ? ` Available environments: ${knownEnvs.join(", ")}.` : "";
+  return `Environment data not found for ${app}/${env}.${hint}`;
+}
 
 // ---------------------------------------------------------------------------
 // Promise-returning facade. Backward-compatible with the previous loader API.
@@ -94,9 +197,26 @@ export const loadEnv = <App extends string>(
   env: string,
   options: LoadEnvOptions = {},
 ): Promise<EnvFor<App>> =>
-  Effect.runPromise(loadEnvEffect(app, env, options));
+  Effect.runPromise(
+    loadEnvEffect(app, env, options) as Effect.Effect<
+      EnvFor<App>,
+      EnvLoadError | EnvValidationError
+    >,
+  );
 
 export const loadAppEnv = loadEnv;
+
+/**
+ * Promise-returning facade for {@link loadEnvScopeEffect}. Loads a non-app
+ * root env scope (e.g. `loadEnvScope("deploy")`) and, when
+ * `validate: true`, throws an {@link EnvValidationError} with a multi-line
+ * remediation message listing every missing required variable in the scope.
+ */
+export const loadEnvScope = (
+  scope: string,
+  options: LoadEnvOptions = {},
+): Promise<Record<string, string>> =>
+  Effect.runPromise(loadEnvScopeEffect(scope, options));
 
 export type { AppEnvMap, AppName, EnvFor };
 
@@ -190,6 +310,131 @@ function getProcessEnv(): Record<string, string | undefined> {
 
 function missingKeyMaterialMessage(): string {
   return "No SOPS decryption key is configured. Set SOPS_AGE_KEY or pass a secretKey option.";
+}
+
+/**
+ * Walks every variable declared `required = true` for `app` and returns an
+ * {@link EnvValidationError} listing the ones that are still missing/empty in
+ * the resolved payload (and, for safety, in `process.env`). The error message
+ * is intentionally verbose: it tells the user the exact remediation for each
+ * missing key (sops file + key, env var, defaultValue), so they don't have to
+ * grep the codebase to figure out what to do.
+ *
+ * Returns `null` when nothing is missing.
+ */
+export function checkRequiredEnv(
+  app: string,
+  env: string,
+  payload: Record<string, string>,
+): EnvValidationError | null {
+  const meta = ENVIRONMENT_VARIABLES[app];
+  if (!meta) return null;
+  return validateRequired({
+    meta,
+    payload,
+    app,
+    env,
+    label: `${app}/${env}`,
+  });
+}
+
+/**
+ * Validate that every variable declared `required = true` in the root env
+ * scope `scope` (`stackpanel.envs.<scope>` in Nix) has a non-empty value in
+ * `payload` or `process.env`. Returns `null` when nothing is missing, or an
+ * {@link EnvValidationError} with a multi-line remediation message
+ * otherwise. Used by {@link loadEnvScope} when called with `validate: true`.
+ */
+export function checkRequiredEnvScope(
+  scope: string,
+  payload: Record<string, string>,
+): EnvValidationError | null {
+  const meta = ROOT_ENV_VARIABLES[scope];
+  if (!meta) return null;
+  return validateRequired({
+    meta,
+    payload,
+    app: ROOT_ENV_APP,
+    env: scope,
+    label: `env scope "${scope}"`,
+  });
+}
+
+function validateRequired(args: {
+  meta: Record<string, EnvVarMeta>;
+  payload: Record<string, string>;
+  app: string;
+  env: string;
+  label: string;
+}): EnvValidationError | null {
+  const { meta, payload, app, env, label } = args;
+  const processEnv = getProcessEnv();
+  const missing: string[] = [];
+  for (const [envKey, info] of Object.entries(meta)) {
+    if (!info.required) continue;
+    const fromPayload = payload[envKey];
+    const fromProcess = processEnv[envKey];
+    const value =
+      fromPayload !== undefined && fromPayload !== ""
+        ? fromPayload
+        : fromProcess;
+    if (value === undefined || value === "") {
+      missing.push(envKey);
+    }
+  }
+
+  if (missing.length === 0) return null;
+
+  const lines: string[] = [];
+  lines.push(
+    `Missing ${missing.length} required environment variable${missing.length === 1 ? "" : "s"} for ${label}:`,
+  );
+  lines.push("");
+  for (const envKey of missing) {
+    const info = meta[envKey];
+    lines.push(`  • ${envKey}`);
+    if (info?.description) {
+      lines.push(`      ${info.description}`);
+    }
+    const fixes = remediationLines(envKey, info);
+    for (const fix of fixes) {
+      lines.push(`      → ${fix}`);
+    }
+    lines.push("");
+  }
+  lines.push(
+    "After updating SOPS files, run `sp preflight run` (or re-enter the devshell) to regenerate the @gen/env payloads, then re-run this command.",
+  );
+
+  return new EnvValidationError({
+    app,
+    env,
+    missing,
+    message: lines.join("\n"),
+  });
+}
+
+function remediationLines(
+  envKey: string,
+  info: EnvVarMeta | undefined,
+): string[] {
+  const out: string[] = [];
+  if (info?.sops) {
+    const parts = info.sops.split("/").filter(Boolean);
+    if (parts.length >= 2) {
+      const group = parts[0];
+      const key = parts.slice(1).join("/");
+      out.push(
+        `Add \`${key}: <value>\` under the \`${group}:\` block of \`.stack/secrets/vars/${group}.sops.yaml\` (use \`sp secrets edit ${group}\`).`,
+      );
+    } else {
+      out.push(
+        `Add \`${envKey.toLowerCase()}\` to the SOPS file referenced by \`${info.sops}\`.`,
+      );
+    }
+  }
+  out.push(`Or export \`${envKey}=...\` in your shell before running this command.`);
+  return out;
 }
 
 function formatError(error: unknown): string {
