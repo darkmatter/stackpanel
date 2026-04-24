@@ -104,9 +104,9 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.17.1",
     "@cloudflare/workers-types": "4.20251225.0",
-    "@effect/platform-bun": "4.0.0-beta.43",
-    "@effect/platform-node": "4.0.0-beta.43",
-    "@effect/platform-node-shared": "4.0.0-beta.43",
+    "@effect/platform-bun": "4.0.0-beta.48",
+    "@effect/platform-node": "4.0.0-beta.48",
+    "@effect/platform-node-shared": "4.0.0-beta.48",
     "@faker-js/faker": "^10.2.0",
     "@playwright/test": "^1.59.1",
     "@stackpanel/config": "workspace:*",
