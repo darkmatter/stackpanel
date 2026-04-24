@@ -37,9 +37,9 @@ concurrency:
   group: deploy-api-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+# CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID aren't set as GH secrets —
+# they live in the SOPS-encrypted deploy scope and `loadDeployEnv` injects
+# them into process.env at the start of alchemy.run.ts.
 
 jobs:
   stage:
@@ -103,6 +103,11 @@ jobs:
           # payloads. Production uses the prod key; everything else (staging,
           # pr-*, dev) uses the dev key.
           SOPS_AGE_KEY: ${{ needs.stage.outputs.stage == 'production' && secrets.SECRETS_AGE_KEY_PROD || secrets.SECRETS_AGE_KEY_DEV }}
+          # stackpanel.deployment.alchemy declares ALCHEMY_STATE_TOKEN in the
+          # deploy env scope for its CloudflareStateStore — we use the local
+          # filesystem state (cached across runners) instead. Passing a
+          # placeholder satisfies the required-env validator.
+          ALCHEMY_STATE_TOKEN: ci-local-state-placeholder
         run: |
           set -euo pipefail
           bunx alchemy-effect deploy --stage ${{ needs.stage.outputs.stage }}
