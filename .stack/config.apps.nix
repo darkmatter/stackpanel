@@ -14,19 +14,29 @@ let
   # message and in the studio Variables UI.
   envs = {
     shared = {
+      # These vars are declared so the per-app `Env` interface and the studio
+      # Variables UI know about them, but they're not yet wired to a SOPS group
+      # or process.env source. Mark `required = false` until a source is added,
+      # otherwise `loadDeployEnv` fails with a missing-required error at the
+      # top of every `alchemy.run.ts`.
       BETTER_AUTH_SECRET = {
+        required = false;
         description = "Better Auth signing secret. Generate with `openssl rand -hex 32`.";
       };
       BETTER_AUTH_URL = {
+        required = false;
         description = "Public URL the auth server is reachable at (used for OAuth redirects).";
       };
       CORS_ORIGIN = {
+        required = false;
         description = "Comma-separated allowed origins for the API.";
       };
       POLAR_ACCESS_TOKEN = {
+        required = false;
         description = "Polar.sh API access token used for billing.";
       };
       POLAR_SUCCESS_URL = {
+        required = false;
         description = "Redirect URL Polar sends customers to after a successful checkout.";
       };
       POSTGRES_URL = {
