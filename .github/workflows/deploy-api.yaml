@@ -81,7 +81,11 @@ jobs:
 
       - name: Build container image
         if: inputs.skip_build != true
-        run: nix build --impure .#packages.x86_64-linux.container-api
+        # --rebuild forces a fresh build locally instead of pulling a stale
+        # image layer from magic-nix-cache. The mkAppDir derivation reads
+        # apps/api/.output via builtins.path; cache hits can resurrect an
+        # older copy even after `bun run build` refreshed the contents.
+        run: nix build --impure --rebuild .#packages.x86_64-linux.container-api
 
       - name: Push container image to Fly registry
         if: inputs.skip_build != true
