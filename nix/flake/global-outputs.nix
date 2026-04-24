@@ -32,7 +32,7 @@ let
   # ===================================================================
   # Auto-load stackpanel config from .stackpanel/
   # ===================================================================
-  configLoader = import ./load-config.nix { inherit self; };
+  configLoader = import ./load-config.nix { inherit self inputs; };
 
 
   # ===================================================================
