@@ -853,6 +853,7 @@
         "nixpkgs": "nixpkgs",
         "nixtest": "nixtest",
         "process-compose-flake": "process-compose-flake",
+        "stackpanel-root": "stackpanel-root",
         "treefmt-nix": "treefmt-nix_4"
       }
     },
@@ -887,6 +888,18 @@
         "repo": "nixpkgs",
         "type": "github"
       }
+    },
+    "stackpanel-root": {
+      "flake": false,
+      "locked": {
+        "path": "./.stackpanel-root",
+        "type": "path"
+      },
+      "original": {
+        "path": "./.stackpanel-root",
+        "type": "path"
+      },
+      "parent": []
     },
     "systems": {
       "locked": {

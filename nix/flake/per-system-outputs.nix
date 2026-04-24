@@ -25,6 +25,9 @@
   system,
   # Optional: additional stackpanel module imports
   stackpanelImports ? [],
+  # Optional: project root for pure eval (containers, fly deploy, etc.).
+  # Read by exports.readStackpanelRoot from the stackpanel-root flake input.
+  projectRoot ? null,
 }: let
   lib = pkgs.lib;
 
@@ -66,6 +69,11 @@
         ../stackpanel
         stackpanelConfigModule
       ]
+      ++ lib.optional (projectRoot != null) {
+        # Injected so containers + infra modules resolve files relative
+        # to the user's working tree, not the read-only Nix store copy.
+        stackpanel.root = projectRoot;
+      }
       ++ stackpanelImports;
     specialArgs = {
       inherit

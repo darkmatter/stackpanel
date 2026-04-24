@@ -28,6 +28,8 @@ export class DeployScopeSchema extends Schema.Class<DeployScopeSchema>("DeploySc
   HETZNER_API_KEY: Schema.RedactedFromValue(Schema.String),
   NEON_API_KEY: Schema.RedactedFromValue(Schema.String),
   POSTGRES_URL: Schema.RedactedFromValue(Schema.String),
+  STACKPANEL_API_URL: Schema.String,
+  STACKPANEL_STATE_BACKEND: Schema.String,
 }) {}
 
 export type DeployScope = DeployScopeSchema;

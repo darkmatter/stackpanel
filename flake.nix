@@ -53,9 +53,10 @@
     microvm.inputs.nixpkgs.follows = "nixpkgs";
     # stackpanel-root contains the absolute path to the project root
     # Created by .envrc: echo "$PWD" > .stackpanel-root
-    # This enables pure evaluation (nix flake check, nix flake show)
-    # stackpanel-root.url = "path:./.stackpanel-root";
-    # stackpanel-root.flake = false;
+    # Read by exports.readStackpanelRoot so the containers/fly modules can
+    # locate the project root without relying on PWD at evaluation time.
+    stackpanel-root.url = "path:./.stackpanel-root";
+    stackpanel-root.flake = false;
 		#inputs.sops-nix.url = "github:Mic92/sops-nix";
 		#inputs.sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -121,6 +122,10 @@
             self
             system
             ;
+          # Project root for containers + infra modules. Read from the
+          # `stackpanel-root` flake input (which points at .stackpanel-root)
+          # so eval is pure — no reliance on $PWD or impure paths.
+          projectRoot = exports.lib.readStackpanelRoot { inherit inputs; };
           stackpanelImports =
             if builtins.pathExists (self + "/.stack/nix") then [ (self + "/.stack/nix") ]
             else if builtins.pathExists (self + "/.stackpanel/nix") then [ (self + "/.stackpanel/nix") ]
