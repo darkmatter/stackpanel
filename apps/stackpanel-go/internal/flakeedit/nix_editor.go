@@ -74,6 +74,34 @@ func ReplaceNixEditableAttrset(source []byte, attrsetExpr string) ([]byte, error
 	return editor.ReplaceEditableAttrset(attrsetExpr)
 }
 
+// ImportTargetForTopLevelBinding inspects the editable attrset and, if its
+// binding for attrName has the form `attrName = import <path> ...;` (i.e. the
+// value delegates to another file), returns the unquoted path string. Used by
+// callers that need to redirect writes from a delegating file (e.g.
+// .stack/config.nix `apps = import ./config.apps.nix args;`) into the actual
+// data file. Returns ("", false, nil) when the binding is missing or its value
+// is not an import expression.
+func ImportTargetForTopLevelBinding(source []byte, attrName string) (string, bool, error) {
+	editor, err := NewNixEditor(source)
+	if err != nil {
+		return "", false, err
+	}
+	defer editor.Close()
+
+	root := editor.findEditableAttrset()
+	if root == nil {
+		return "", false, nil
+	}
+
+	binding, matched, valueNode := editor.findBestBinding(root, []string{attrName})
+	if binding == nil || len(matched) != 1 || valueNode == nil {
+		return "", false, nil
+	}
+
+	target, ok := parseImportTarget(editor.nodeText(valueNode))
+	return target, ok, nil
+}
+
 // ExtractAppVariableLinksFromSource scans raw app config source for env
 // bindings that reference global variables (config.variables."<id>".value)
 // and returns a nested map: appID -> envName -> envKey -> variableID.
