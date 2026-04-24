@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/darkmatter/stackpanel/stackpanel-go/internal/flakeedit"
@@ -214,6 +215,19 @@ func (s *Store) WriteEntity(entity string, data any) (string, error) {
 
 	if err := s.paths.EnsureDir(); err != nil {
 		return "", fmt.Errorf("create data directory: %w", err)
+	}
+
+	// Tree-layout map entity: replace the per-entity directory contents
+	// (file-per-entry). New keys -> write file, removed keys -> delete
+	// file, changed keys -> overwrite file. Only kicks in when the user
+	// has opted that entity into tree layout by creating its directory
+	// (.stack/config/<entity>/). Non-map entities never use tree layout.
+	if IsMapEntity(entity) && s.paths.TreeEntityDirExists(entity) {
+		dataPath, err := s.writeMapEntityTree(entity, data)
+		if err != nil {
+			return "", err
+		}
+		return dataPath, nil
 	}
 
 	// For consolidated config, update only this entity's key within the
@@ -516,6 +530,11 @@ func (s *Store) WriteConsolidatedData(data map[string]any) error {
 // attribute names. Segments immediately after map field names (e.g. the app
 // name after "apps.") are preserved verbatim since they're user-defined keys.
 //
+// When config.nix delegates a top-level entity to another file via an import
+// expression (e.g. `apps = import ./config.apps.nix args;`), the patch is
+// transparently redirected into that file so writes land where the data
+// actually lives instead of failing with "path segment is not an attrset".
+//
 // Pass a DeleteValue{} to remove the binding at the given path.
 // Intermediate attribute sets are created automatically if they do not exist.
 func (s *Store) PatchConsolidatedData(path string, value any) error {
@@ -539,6 +558,39 @@ func (s *Store) PatchConsolidatedData(path string, value any) error {
 	}
 
 	parts := NormalizeConfigPathParts(path)
+
+	// Tree-layout redirect (highest priority). When the path targets a
+	// map entry whose entity has been opted into tree layout by the
+	// presence of <treeDir>/<entity>/, route the patch to the per-entry
+	// file (e.g. apps.web.deployment.host -> .stack/config/apps/web.nix
+	// patched at [deployment, host]). This bypasses both config.nix and
+	// any import-redirected file like config.apps.nix entirely.
+	if len(parts) >= 2 && IsMapEntity(parts[0]) && s.paths.TreeEntityDirExists(parts[0]) {
+		return s.patchTreeEntry(parts[0], parts[1], parts[2:], value)
+	}
+
+	// If we're descending into a binding that delegates to another file,
+	// rewrite the target file instead. We only redirect when there's an
+	// inner path to apply (len(parts) >= 2); patching the binding itself
+	// (len(parts) == 1) should still rewrite config.nix so callers can
+	// replace the import with an inline value when they choose to.
+	targetPath := dataPath
+	targetSource := source
+	targetParts := parts
+	if len(parts) >= 2 {
+		if redirect, ok, redirErr := resolveImportRedirect(dataPath, source, parts[0]); redirErr != nil {
+			return fmt.Errorf("resolve import redirect: %w", redirErr)
+		} else if ok {
+			redirSource, readErr := os.ReadFile(redirect)
+			if readErr != nil {
+				return fmt.Errorf("read %s: %w", filepath.Base(redirect), readErr)
+			}
+			targetPath = redirect
+			targetSource = redirSource
+			targetParts = parts[1:]
+		}
+	}
+
 	valueExpr, shouldDelete, err := serializePatchedValue(value)
 	if err != nil {
 		return err
@@ -546,19 +598,188 @@ func (s *Store) PatchConsolidatedData(path string, value any) error {
 
 	var modified []byte
 	if shouldDelete {
-		modified, err = flakeedit.DeleteNixPath(source, parts)
+		modified, err = flakeedit.DeleteNixPath(targetSource, targetParts)
 	} else {
-		modified, err = flakeedit.PatchNixPath(source, parts, valueExpr)
+		modified, err = flakeedit.PatchNixPath(targetSource, targetParts, valueExpr)
 	}
 	if err != nil {
-		return fmt.Errorf("patch config.nix: %w", err)
+		return fmt.Errorf("patch %s: %w", filepath.Base(targetPath), err)
 	}
 
 	formatted := nixser.FormatSource(string(modified), "  ")
-	if err := os.WriteFile(dataPath, []byte(formatted), 0o644); err != nil {
-		return fmt.Errorf("write config.nix: %w", err)
+	if err := os.WriteFile(targetPath, []byte(formatted), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", filepath.Base(targetPath), err)
 	}
 	return nil
+}
+
+// patchTreeEntry applies a value to a single map entry stored as a
+// per-entry file under the tree layout. The shape of the operation
+// depends on innerParts (the remaining path beneath the entity key):
+//
+//   - innerParts is empty: the entire file represents the entry's value.
+//     A delete removes the file; any other value rewrites the file with
+//     the serialised expression.
+//   - innerParts is non-empty: the file is treated as an attrset and the
+//     value at the inner path is patched (or deleted) via flakeedit. The
+//     file is created with `{}` if it does not yet exist.
+//
+// Encodes the entry key with EncodeTreeFileKey so that map keys
+// containing characters illegal in filenames (e.g. "/") map to a stable
+// on-disk filename. The Nix loader applies the inverse decode at read
+// time so the runtime sees the original key.
+func (s *Store) patchTreeEntry(entity, entryKey string, innerParts []string, value any) error {
+	if err := s.paths.EnsureTreeEntityDir(entity); err != nil {
+		return fmt.Errorf("create tree entity dir: %w", err)
+	}
+
+	entryPath := s.paths.TreeEntityKeyFilePath(entity, entryKey)
+
+	valueExpr, shouldDelete, err := serializePatchedValue(value)
+	if err != nil {
+		return err
+	}
+
+	// Whole-entry replace or delete.
+	if len(innerParts) == 0 {
+		if shouldDelete {
+			if removeErr := os.Remove(entryPath); removeErr != nil && !os.IsNotExist(removeErr) {
+				return fmt.Errorf("remove %s: %w", filepath.Base(entryPath), removeErr)
+			}
+			log.Info().
+				Str("entity", entity).
+				Str("key", entryKey).
+				Str("path", entryPath).
+				Msg("nixdata.Store: deleted tree entry")
+			return nil
+		}
+		formatted := nixser.FormatSource(valueExpr+"\n", "  ")
+		if err := os.WriteFile(entryPath, []byte(formatted), 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", filepath.Base(entryPath), err)
+		}
+		log.Info().
+			Str("entity", entity).
+			Str("key", entryKey).
+			Str("path", entryPath).
+			Msg("nixdata.Store: wrote tree entry")
+		return nil
+	}
+
+	// Inner-path patch: ensure the entry file exists, then AST-patch.
+	source, err := os.ReadFile(entryPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("read %s: %w", filepath.Base(entryPath), err)
+		}
+		// Seed an empty attrset so flakeedit has something to patch.
+		source = []byte("{ }\n")
+	}
+
+	var modified []byte
+	if shouldDelete {
+		modified, err = flakeedit.DeleteNixPath(source, innerParts)
+	} else {
+		modified, err = flakeedit.PatchNixPath(source, innerParts, valueExpr)
+	}
+	if err != nil {
+		return fmt.Errorf("patch %s: %w", filepath.Base(entryPath), err)
+	}
+
+	formatted := nixser.FormatSource(string(modified), "  ")
+	if err := os.WriteFile(entryPath, []byte(formatted), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", filepath.Base(entryPath), err)
+	}
+	log.Info().
+		Str("entity", entity).
+		Str("key", entryKey).
+		Str("inner_path", strings.Join(innerParts, ".")).
+		Str("path", entryPath).
+		Msg("nixdata.Store: patched tree entry")
+	return nil
+}
+
+// writeMapEntityTree replaces the contents of a tree-layout map entity
+// with `data`. Each top-level key in `data` becomes a per-entry file;
+// any existing per-entry file whose key is absent from `data` is
+// removed. Keys are encoded for filesystem safety (see EncodeTreeFileKey).
+//
+// Used by WriteEntity for full-entity rewrites against tree-layout
+// entities. Per-entry edits should go through SetKey/PatchConsolidatedData
+// instead so they preserve formatting.
+func (s *Store) writeMapEntityTree(entity string, data any) (string, error) {
+	dataMap, ok := data.(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("tree-layout entity %q expects a map; got %T", entity, data)
+	}
+
+	dir := s.paths.TreeEntityDir(entity)
+	if err := s.paths.EnsureTreeEntityDir(entity); err != nil {
+		return "", fmt.Errorf("create tree entity dir: %w", err)
+	}
+
+	wantedFiles := make(map[string]struct{}, len(dataMap))
+	for entryKey, entryValue := range dataMap {
+		fileName := EncodeTreeFileKey(entryKey) + ".nix"
+		wantedFiles[fileName] = struct{}{}
+
+		nixExpr, err := nixser.SerializeIndented(entryValue, "  ")
+		if err != nil {
+			return "", fmt.Errorf("serialize %s/%s: %w", entity, entryKey, err)
+		}
+		if writeErr := os.WriteFile(filepath.Join(dir, fileName), []byte(nixExpr+"\n"), 0o644); writeErr != nil {
+			return "", fmt.Errorf("write %s/%s: %w", entity, fileName, writeErr)
+		}
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("list %s: %w", dir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".nix") || strings.HasPrefix(name, "_") {
+			continue
+		}
+		if _, keep := wantedFiles[name]; keep {
+			continue
+		}
+		if removeErr := os.Remove(filepath.Join(dir, name)); removeErr != nil {
+			return "", fmt.Errorf("remove stale %s: %w", name, removeErr)
+		}
+	}
+
+	log.Info().
+		Str("entity", entity).
+		Str("path", dir).
+		Int("entries", len(dataMap)).
+		Msg("nixdata.Store: wrote tree map entity")
+	return dir, nil
+}
+
+// resolveImportRedirect checks whether the binding for attrName in source is
+// of the form `attrName = import <path> ...;`, resolves <path> relative to
+// the directory containing source, and returns the absolute target path if
+// the file exists. Returns ("", false, nil) when there is no redirect.
+func resolveImportRedirect(sourcePath string, source []byte, attrName string) (string, bool, error) {
+	target, ok, err := flakeedit.ImportTargetForTopLevelBinding(source, attrName)
+	if err != nil || !ok {
+		return "", false, err
+	}
+	resolved := target
+	if !filepath.IsAbs(resolved) {
+		resolved = filepath.Join(filepath.Dir(sourcePath), resolved)
+	}
+	resolved = filepath.Clean(resolved)
+	if _, statErr := os.Stat(resolved); statErr != nil {
+		if os.IsNotExist(statErr) {
+			return "", false, nil
+		}
+		return "", false, statErr
+	}
+	return resolved, true, nil
 }
 
 // importExpr builds a Nix expression that imports a data file. config.nix may

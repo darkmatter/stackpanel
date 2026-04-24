@@ -14,6 +14,13 @@ type Paths struct {
 	ProjectRoot string
 }
 
+// TreeDirName is the name of the optional "tree layout" config directory
+// under the project's stackpanel folder (e.g. .stack/config/). Its presence
+// is what opts a project (or a single map entity inside it) into the tree
+// layout — no schema flag is required because the layout is implied by
+// what's on disk.
+const TreeDirName = "config"
+
 // configDir probes the filesystem to determine which config directory name
 // to use. Prefers .stack (current convention), falls back to .stackpanel
 // (legacy). This probe runs on every call — it's cheap (single stat) and
@@ -119,6 +126,87 @@ func (p *Paths) IsUsingConsolidatedConfig(entity string) bool {
 // directories if they do not already exist.
 func (p *Paths) EnsureDir() error {
 	return os.MkdirAll(p.Dir(), 0o755)
+}
+
+// ---------------------------------------------------------------------------
+// Tree layout
+// ---------------------------------------------------------------------------
+
+// TreeRoot returns the absolute path to the optional tree-layout config
+// directory (.stack/config/). Always returns the path, even when the
+// directory does not exist on disk — callers should pair this with
+// HasTreeLayout/TreeEntityDirExists to decide whether to use it.
+func (p *Paths) TreeRoot() string {
+	return filepath.Join(p.Dir(), TreeDirName)
+}
+
+// HasTreeLayout returns true when the optional tree-layout directory
+// (.stack/config/) exists on disk. A project can use the tree layout
+// alongside a regular config.nix; the two are merged at evaluation time
+// (tree wins for overlapping top-level keys).
+func (p *Paths) HasTreeLayout() bool {
+	info, err := os.Stat(p.TreeRoot())
+	return err == nil && info.IsDir()
+}
+
+// TreeEntityDir returns the directory under .stack/config/ that holds
+// per-entry files for a map entity (e.g. .stack/config/apps/). Always
+// returns a path; the caller should check existence when deciding
+// whether to route writes here.
+func (p *Paths) TreeEntityDir(entity string) string {
+	return filepath.Join(p.TreeRoot(), entity)
+}
+
+// TreeEntityDirExists reports whether the per-entity tree directory
+// exists. When true, that entity is in tree layout and individual
+// entries live in <treeDir>/<entity>/<encoded-key>.nix files.
+func (p *Paths) TreeEntityDirExists(entity string) bool {
+	info, err := os.Stat(p.TreeEntityDir(entity))
+	return err == nil && info.IsDir()
+}
+
+// TreeEntityKeyFilePath returns the path to a single map-entry file
+// inside the tree layout (e.g. .stack/config/apps/web.nix). The key is
+// encoded so that characters illegal in filenames are escaped.
+func (p *Paths) TreeEntityKeyFilePath(entity, key string) string {
+	return filepath.Join(p.TreeEntityDir(entity), EncodeTreeFileKey(key)+".nix")
+}
+
+// EnsureTreeEntityDir creates <treeDir>/<entity>/ if it does not already
+// exist. Used by writers that need to materialise a per-entity directory
+// the first time it sees a key for that entity in tree mode.
+func (p *Paths) EnsureTreeEntityDir(entity string) error {
+	return os.MkdirAll(p.TreeEntityDir(entity), 0o755)
+}
+
+// EncodeTreeFileKey converts a map-entry key into a filename-safe form
+// for the tree layout. Currently encodes:
+//
+//	"/" -> "--"   (variables keyed by paths like "/dev/postgres-url"
+//	               become "--dev--postgres-url.nix")
+//
+// "--" is chosen over "__" because haumea reserves single-underscore
+// and double-underscore filename prefixes for visibility scoping
+// (single-underscore = private to parent dir, double-underscore =
+// private to same dir). Encoding "/dev/database-url" with "__" would
+// produce "__dev__database-url.nix", which haumea would silently hide
+// from the loaded attrset.
+//
+// "--" is filename-safe across macOS, Linux, and Windows, doesn't
+// conflict with any haumea convention, and can't appear in a Nix
+// attribute name (so the decode is unambiguous).
+//
+// SYNC: Must stay in sync with `decodeKey` in nix/flake/load-config.nix
+// and the agent's tree loader in pkg/nixdata/store.go.
+func EncodeTreeFileKey(key string) string {
+	return strings.ReplaceAll(key, "/", "--")
+}
+
+// DecodeTreeFileKey is the inverse of EncodeTreeFileKey: it decodes a
+// filename (without the .nix suffix) back into the original Nix
+// attribute key.
+func DecodeTreeFileKey(name string) string {
+	return strings.ReplaceAll(name, "--", "/")
 }
 
 // ---------------------------------------------------------------------------
