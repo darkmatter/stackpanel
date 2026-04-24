@@ -778,6 +778,42 @@ func computeConfigHash(projectRoot string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// CheckEnvWarnings reads .stack/gen/codegen/env-warnings.json (written by the
+// env codegen module). Returns nil if the file is missing — that's the happy
+// path: no warnings means nothing to surface.
+func CheckEnvWarnings(projectRoot string) []EnvWarning {
+	if projectRoot == "" {
+		return nil
+	}
+	path := filepath.Join(projectRoot, ".stack", "gen", "codegen", "env-warnings.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var parsed struct {
+		SchemaVersion int          `json:"schemaVersion"`
+		Warnings      []EnvWarning `json:"warnings"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return nil
+	}
+	return parsed.Warnings
+}
+
+// envWarningFix turns a SOPS reference into a `sp secrets edit <group>` command
+// when the path is well-formed (`/group/name`). Falls back to a generic message
+// when no SOPS path is present (the var is set via `value`/env-only).
+func envWarningFix(w EnvWarning) string {
+	sops := strings.TrimPrefix(w.Sops, "/")
+	if sops != "" {
+		parts := strings.SplitN(sops, "/", 2)
+		if len(parts) >= 1 && parts[0] != "" {
+			return fmt.Sprintf("sp secrets edit %s", parts[0])
+		}
+	}
+	return fmt.Sprintf("export %s=...", w.EnvKey)
+}
+
 // CollectIssues aggregates issues from all status checks into a flat list
 // for the MOTD's "Action Required" section. Issues include fix commands
 // so users can resolve them without looking up documentation.
@@ -857,7 +893,117 @@ func CollectIssues(data *MOTDFullData) []Issue {
 		})
 	}
 
+	// Env warnings (required-but-missing variables, missing SOPS keys). These
+	// come from .stack/gen/codegen/env-warnings.json, written by the env
+	// codegen module after each `sp preflight run` / devshell entry.
+	//
+	// Group by `(severity, fix command)` so a single block summarises all
+	// vars that the same `sp secrets edit <group>` would resolve, instead
+	// of emitting one repetitive line per (app, env) tuple.
+	issues = append(issues, groupEnvWarnings(data.EnvWarnings)...)
+
 	return issues
+}
+
+// groupEnvWarnings collapses per-(app, env, key) warnings into one Issue per
+// `(severity, fix command)` bucket. The Issue Message is a one-line summary
+// ("Required env vars missing (N)") and Details lists each unique env key with
+// its description and the apps/envs that referenced it.
+func groupEnvWarnings(warnings []EnvWarning) []Issue {
+	if len(warnings) == 0 {
+		return nil
+	}
+	type bucketKey struct {
+		severity string
+		fix      string
+	}
+	type keyEntry struct {
+		envKey      string
+		description string
+		// scopes is the sorted, de-duplicated list of "app/env" strings that
+		// reported this key as missing.
+		scopes []string
+	}
+	type bucket struct {
+		// keys preserves first-seen order for stable rendering, while
+		// `index` allows O(1) lookup when we accumulate scopes.
+		order []string
+		index map[string]*keyEntry
+	}
+	buckets := map[bucketKey]*bucket{}
+	bucketOrder := []bucketKey{}
+	for _, w := range warnings {
+		sev := w.Severity
+		if sev == "" {
+			sev = "warning"
+		}
+		bk := bucketKey{severity: sev, fix: envWarningFix(w)}
+		b, ok := buckets[bk]
+		if !ok {
+			b = &bucket{index: map[string]*keyEntry{}}
+			buckets[bk] = b
+			bucketOrder = append(bucketOrder, bk)
+		}
+		entry, ok := b.index[w.EnvKey]
+		if !ok {
+			entry = &keyEntry{envKey: w.EnvKey, description: w.Description}
+			b.index[w.EnvKey] = entry
+			b.order = append(b.order, w.EnvKey)
+		} else if entry.description == "" && w.Description != "" {
+			entry.description = w.Description
+		}
+		scope := fmt.Sprintf("%s/%s", w.App, w.Environment)
+		if !containsString(entry.scopes, scope) {
+			entry.scopes = append(entry.scopes, scope)
+		}
+	}
+
+	// Compute the column width for env keys so descriptions line up.
+	pad := 0
+	for _, b := range buckets {
+		for _, k := range b.order {
+			if len(k) > pad {
+				pad = len(k)
+			}
+		}
+	}
+
+	out := make([]Issue, 0, len(bucketOrder))
+	for _, bk := range bucketOrder {
+		b := buckets[bk]
+		details := make([]string, 0, len(b.order))
+		for _, k := range b.order {
+			entry := b.index[k]
+			sort.Strings(entry.scopes)
+			line := fmt.Sprintf("%-*s", pad, entry.envKey)
+			if entry.description != "" {
+				line += "  " + entry.description
+			}
+			line += fmt.Sprintf("  (%s)", strings.Join(entry.scopes, ", "))
+			details = append(details, line)
+		}
+		noun := "env vars"
+		if len(b.order) == 1 {
+			noun = "env var"
+		}
+		summary := fmt.Sprintf("Required %s missing (%d)", noun, len(b.order))
+		out = append(out, Issue{
+			Severity:   bk.severity,
+			Message:    summary,
+			FixCommand: bk.fix,
+			Details:    details,
+		})
+	}
+	return out
+}
+
+func containsString(xs []string, s string) bool {
+	for _, x := range xs {
+		if x == s {
+			return true
+		}
+	}
+	return false
 }
 
 // CollectMOTDDataOpts configures what data CollectMOTDData collects.
@@ -924,6 +1070,7 @@ func CollectMOTDData(projectName, projectRoot, version string, agentPort int, op
 	data.Environment = GetEnvironmentInfo()
 	data.StudioURL = GetStudioURL(projectRoot, 3000)
 	data.ShellFreshness = CheckShellFreshness(projectRoot)
+	data.EnvWarnings = CheckEnvWarnings(projectRoot)
 
 	// Check for updates (can be slow, do last)
 	data.UpdateAvailable = CheckForUpdates(version)
