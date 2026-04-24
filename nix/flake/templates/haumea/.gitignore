@@ -1,0 +1,31 @@
+# Nix
+result
+result-*
+
+# direnv
+.direnv/
+
+# stackpanel state (regenerated on shell entry)
+.stackpanel-root
+.stack/profile/
+.stack/keys/
+.stack/config.local.nix
+.stack/gen/
+.stack/state/
+
+# devenv
+.devenv/
+.devenv.flake.nix
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
