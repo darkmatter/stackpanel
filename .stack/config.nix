@@ -304,6 +304,31 @@
         secret = true;
         sops = "/dev/postgres-url";
       };
+
+      # Fly api deploy secrets — routed through the CI-accessible deploy
+      # scope so the deploy workflow can decrypt them. push-secrets.sh
+      # reads from the rendered deploy payload, not shared.sops.yaml
+      # directly (which is encrypted only for human users' AGE keys).
+      BETTER_AUTH_SECRET = {
+        secret = true;
+        sops = "/shared/better-auth-secret";
+      };
+      POLAR_ACCESS_TOKEN = {
+        secret = true;
+        sops = "/shared/polar-access-token";
+      };
+      POLAR_WEBHOOK_SECRET = {
+        secret = true;
+        sops = "/shared/polar-webhook-secret";
+      };
+      POLAR_PRO_PRODUCT_ID_PRODUCTION = {
+        secret = true;
+        sops = "/shared/polar-pro-product-id-production";
+      };
+      POLAR_FREE_PRODUCT_ID_PRODUCTION = {
+        secret = true;
+        sops = "/shared/polar-free-product-id-production";
+      };
     };
   };
 
