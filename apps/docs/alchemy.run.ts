@@ -1,32 +1,22 @@
-import { loadAppEnv } from "@gen/env/runtime";
+import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
 import { Cloudflare, Output, Stage } from "alchemy-effect";
 import * as Stack from "alchemy-effect/Stack";
 import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 
-// Map alchemy --stage / $STAGE onto our SOPS env namespaces:
-//   production -> prod, staging -> staging, anything else (pr-*, dev, ...) -> dev.
-// Allow APP_ENV to override explicitly for one-off runs.
-const STAGE = process.env.STAGE || process.env.ALCHEMY_STAGE || "dev";
-const APP_ENV =
-  process.env.APP_ENV ||
-  (STAGE === "production" ? "prod" : STAGE === "staging" ? "staging" : "dev");
 const PROJECT = "stackpanel";
 const SERVICE = "docs";
 
-// Decrypts the per-app SOPS payload and injects it into process.env so the
-// downstream Cloudflare provider (and `wrangler`/opennext build) can read
-// CLOUDFLARE_* credentials without requiring the operator to wrap the command
-// in `sops exec-env`.
-const env = await loadAppEnv(SERVICE, APP_ENV, { inject: true });
+// `appEnv` is our SOPS namespace (`prod` | `staging` | `dev`); the raw `stage`
+// remains visible via alchemy's `Stage` service inside the program. Both are
+// derived from one source so the secrets we decrypt match the deploy target.
+const { appEnv } = resolveDeployStage();
 
-if (!env.CLOUDFLARE_API_TOKEN) {
-  throw new Error(`
-!! Missing required environment variable: CLOUDFLARE_API_TOKEN !!
-- Confirm /shared/cloudflare-api-token is set in .stack/secrets/vars/shared.sops.yaml
-- Confirm @gen/env codegen has been run (devshell entry or 'stackpanel preflight run')
-- Or export CLOUDFLARE_API_TOKEN directly to bypass the SOPS loader.`);
-}
+// Decrypts the per-app SOPS payload and injects it into process.env so
+// `wrangler`/opennext and the Cloudflare provider can read CLOUDFLARE_*
+// credentials without `sops exec-env`. Hard-fails with a copy-pasteable
+// message listing every missing required env var.
+await loadDeployEnv(SERVICE, appEnv);
 
 // stackpanel.com — same zone used by apps/web for the apex deployment.
 const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
@@ -91,7 +81,7 @@ const program = Effect.gen(function* () {
       ),
     );
   }
-   console.log('deployed url', url);
+
   return { url };
 });
 
