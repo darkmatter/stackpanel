@@ -659,6 +659,11 @@ func RenderImprovedMOTD(data *MOTDFullData) string {
 			}
 			content.WriteString(line)
 			content.WriteString("\n")
+
+			for _, d := range issue.Details {
+				content.WriteString("      " + motdLabelStyle.Render(d))
+				content.WriteString("\n")
+			}
 		}
 	}
 
