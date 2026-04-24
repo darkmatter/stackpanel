@@ -1,36 +1,37 @@
 { config, lib, ... }:
 let
-  # Shared across all web deployment environments
+  # App-runtime environment variables shared across our web apps.
+  #
+  # Deploy-time secrets (Cloudflare, Neon, Alchemy state, ...) are NOT here:
+  # they live in the `deploy` root env scope (`stackpanel.envs.deploy`),
+  # contributed automatically by the deploy module based on each app's
+  # `deployment.host` / `deployment.backend`. Loaded at deploy time via
+  # `loadEnvScope("deploy")` in `packages/infra/src/lib/deploy.ts`.
+  #
+  # `required = true` makes `loadAppEnv(..., { validate: true })` (used by
+  # `alchemy.run.ts`) hard-fail with an actionable, copy-pasteable message
+  # when the variable is missing. `description` shows up in that error
+  # message and in the studio Variables UI.
   envs = {
     shared = {
-      BETTER_AUTH_SECRET = { };
-      BETTER_AUTH_URL = { };
-      CORS_ORIGIN = { };
-      POLAR_ACCESS_TOKEN = { };
-      POLAR_SUCCESS_URL = { };
+      BETTER_AUTH_SECRET = {
+        description = "Better Auth signing secret. Generate with `openssl rand -hex 32`.";
+      };
+      BETTER_AUTH_URL = {
+        description = "Public URL the auth server is reachable at (used for OAuth redirects).";
+      };
+      CORS_ORIGIN = {
+        description = "Comma-separated allowed origins for the API.";
+      };
+      POLAR_ACCESS_TOKEN = {
+        description = "Polar.sh API access token used for billing.";
+      };
+      POLAR_SUCCESS_URL = {
+        description = "Redirect URL Polar sends customers to after a successful checkout.";
+      };
       POSTGRES_URL = {
         sops = "/dev/postgres-url";
-      };
-      CLOUDFLARE_ACCOUNT_ID = {
-        sops = "/shared/cloudflare-account-id";
-      };
-      CLOUDFLARE_API_TOKEN = {
-        sops = "/shared/cloudflare-api-token";
-      };
-      AWS_SANDBOX_ACCESS_KEY_ID = {
-        sops = "/shared/aws-sandbox-access-key-id";
-      };
-      AWS_SANDBOX_SECRET_ACCESS_KEY = {
-        sops = "/shared/aws-sandbox-secret-access-key";
-      };
-      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID = {
-        sops = "/shared/cloudflare-service-account-client-id";
-      };
-      CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET = {
-        sops = "/shared/cloudflare-service-account-client-secret";
-      };
-      HETZNER_API_KEY = {
-        sops = "/shared/hetzner-api-key";
+        description = "Postgres connection string. For deploy this is auto-bound from the NeonProject and does not need to be pre-set.";
       };
     };
   };
