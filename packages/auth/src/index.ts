@@ -3,10 +3,19 @@ import { db } from "@stackpanel/db";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { organization } from "better-auth/plugins";
 import { polarClient } from "./lib/payments";
 
 // Build plugins array - only include Polar if configured
-const plugins: BetterAuthPlugin[] = [];
+const plugins: BetterAuthPlugin[] = [
+	organization({
+		// A user's first login auto-creates a personal organization so every
+		// session has an active organization. Paid features are scoped to the
+		// active organization, not the user.
+		allowUserToCreateOrganization: true,
+		organizationLimit: 10,
+	}),
+];
 
 if (polarClient) {
   plugins.push(
