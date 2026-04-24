@@ -48,6 +48,12 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
+      # mkAppDir reads .output via this absolute path so freshly-built
+      # untracked output (apps/api/.output/server/index.mjs) lands in the
+      # nix store. Must be visible to BOTH `nix build` and the push step
+      # (each re-evaluates the flake separately) — set at job scope so
+      # the derivation hash matches across steps.
+      STACKPANEL_ROOT_ABSOLUTE: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,16 +87,7 @@ jobs:
 
       - name: Build container image
         if: inputs.skip_build != true
-        # STACKPANEL_ROOT_ABSOLUTE tells mkAppDir to resolve .output via
-        # an absolute path into the live workspace instead of the flake's
-        # git-filtered store copy (which excludes untracked build output).
-        # See nix/stackpanel/lib/containers.nix.
-        env:
-          STACKPANEL_ROOT_ABSOLUTE: ${{ github.workspace }}
-        run: |
-          set -eux
-          ls -la apps/api/.output/server/
-          nix build --impure --print-build-logs .#packages.x86_64-linux.container-api
+        run: nix build --impure .#packages.x86_64-linux.container-api
 
       - name: Push container image to Fly registry
         if: inputs.skip_build != true
