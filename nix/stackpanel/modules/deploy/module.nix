@@ -60,6 +60,23 @@ let
     (app.deployment.enable or false)
     && builtins.elem (app.deployment.backend or "colmena") nixosBackends
   ) (lib.attrValues cfg.apps);
+
+  # Any app whose deploy backend is Alchemy. Used to gate the deploy-time env
+  # registry below so e.g. `NEON_API_KEY` only shows up as a missing-required
+  # warning in projects that actually use Alchemy.
+  hasAlchemyBackend = lib.any (
+    app:
+    (app.deployment.enable or false)
+    && (app.deployment.backend or "colmena") == "alchemy"
+  ) (lib.attrValues cfg.apps);
+
+  # Any app that targets Cloudflare (Workers / Pages / DNS) for hosting.
+  # Drives the CF API token + account-id deploy-env declarations.
+  hasCloudflareHost = lib.any (
+    app:
+    (app.deployment.enable or false)
+    && (app.deployment.host or null) == "cloudflare"
+  ) (lib.attrValues cfg.apps);
 in
 {
   # ===========================================================================
@@ -281,6 +298,47 @@ in
   config.stackpanel.devshell.packages = lib.optionals hasNixosBackend [
     pkgs.colmena
     pkgs.nixos-anywhere
+  ];
+
+  # ===========================================================================
+  # Cross-cutting deploy-time env registry — `stackpanel.envs.deploy`.
+  #
+  # Variables here are consumed by `loadEnvScope("deploy")` from the deploy
+  # entrypoints (apps/*/alchemy.run.ts via `packages/infra/src/lib/deploy.ts`)
+  # rather than being copied into every app's `apps.<app>.env`. This is the
+  # canonical example of "modules contributing envs they need": the deploy
+  # module knows which credentials are required to actually deploy and
+  # registers them in one place, conditionally on detected app targets.
+  #
+  # Only declared when at least one app has the relevant backend / host
+  # configured, so projects that don't deploy via Alchemy / Cloudflare don't
+  # see spurious "missing required" warnings.
+  # ===========================================================================
+  config.stackpanel.envs.deploy = lib.mkMerge [
+    (lib.mkIf hasCloudflareHost {
+      CLOUDFLARE_ACCOUNT_ID = {
+        sops = "/shared/cloudflare-account-id";
+        required = true;
+        description = "Cloudflare account ID that owns the Workers/Pages/DNS resources we deploy. Find it at https://dash.cloudflare.com (right sidebar of any zone).";
+      };
+      CLOUDFLARE_API_TOKEN = {
+        sops = "/shared/cloudflare-api-token";
+        required = true;
+        description = "Cloudflare API token with Workers Scripts:Edit + Workers Routes:Edit. Create one at https://dash.cloudflare.com/profile/api-tokens.";
+      };
+    })
+    (lib.mkIf hasAlchemyBackend {
+      NEON_API_KEY = {
+        sops = "/shared/neon-api-key";
+        required = true;
+        description = "Neon API key used by alchemy to provision Postgres projects. Create one at https://console.neon.tech/app/settings/api-keys.";
+      };
+      ALCHEMY_STATE_TOKEN = {
+        sops = "/common/alchemy-state-token";
+        required = true;
+        description = "Token used by Alchemy's CloudflareStateStore to encrypt/decrypt deploy state. Generated automatically by `sp alchemy:setup`.";
+      };
+    })
   ];
 
   # ===========================================================================
