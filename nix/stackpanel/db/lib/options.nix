@@ -180,17 +180,30 @@ let
   # ---------------------------------------------------------------------------
 
   # Build a single Nix option from a proto field
+  #
+  # If the field has an explicit `default` (set via proto.mkField's attribute
+  # API or proto.withDefault), that wins over the proto-inferred default.
   mkOptionFromField =
     {
       field,
       allMessages ? { },
       allEnums ? { },
     }:
-    lib.mkOption {
-      type = protoTypeToNix { inherit field allMessages allEnums; };
-      description = field.description or "";
-      default = getFieldDefault { inherit field allEnums; };
-    };
+    let
+      protoDefault = getFieldDefault { inherit field allEnums; };
+      explicitDefault = field.default or null;
+      finalDefault = if explicitDefault != null then explicitDefault else protoDefault;
+    in
+    lib.mkOption (
+      {
+        type = protoTypeToNix { inherit field allMessages allEnums; };
+        description = field.description or "";
+        default = finalDefault;
+      }
+      // lib.optionalAttrs ((field.example or null) != null) {
+        example = field.example;
+      }
+    );
 
   # Build Nix options attrset from a proto message's fields
   # Converts field names from snake_case to kebab-case by default
