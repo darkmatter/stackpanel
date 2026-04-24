@@ -44,8 +44,13 @@ const program = Effect.gen(function* () {
   let url: Output.Output<string | undefined> = website.url;
 
   if (stage !== "dev") {
+    // Studio is local-agent first (mirrors local.drizzle.studio): the
+    // browser app at local.stackpanel.com talks to the user's machine via
+    // http://127.0.0.1:9876. Apex stackpanel.com is reserved for marketing.
     const hostname =
-      stage === "production" ? "stackpanel.com" : `${stage}.stackpanel.com`;
+      stage === "production"
+        ? "local.stackpanel.com"
+        : `local.${stage}.stackpanel.com`;
     url = Output.all(website.accountId, website.workerName).pipe(
       Output.mapEffect(([accountId, workerName]) =>
         Effect.gen(function* () {
