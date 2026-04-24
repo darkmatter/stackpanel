@@ -10,7 +10,8 @@
 //   - Producing a consistent `https://...` URL for `console.log`-ing the
 //     deployment result.
 
-import { EnvValidationError, loadAppEnv, loadEnvScope } from "@gen/env/runtime";
+import { loaders } from "@gen/env";
+import { EnvValidationError } from "@gen/env/runtime";
 
 export type DeployAppEnv = "dev" | "staging" | "prod";
 
@@ -58,14 +59,28 @@ export function resolveDeployStage(): ResolvedStage {
 }
 
 /**
+ * Apps known to the typed loader registry — i.e. anything that exposes a
+ * `loaders.<app>.<env>()` accessor in `@gen/env`. Excludes the bare scope
+ * accessors (`loaders.deploy`) which are loaded separately.
+ */
+type AppLoaders = {
+  [K in keyof typeof loaders as (typeof loaders)[K] extends (
+    options?: unknown,
+  ) => Promise<unknown>
+    ? never
+    : K]: (typeof loaders)[K];
+};
+export type DeployApp = keyof AppLoaders;
+
+/**
  * Decrypt the per-app SOPS payload AND the cross-cutting `deploy` env scope,
  * inject them into `process.env` for downstream provider SDKs, and validate
  * every `required = true` variable is set in both.
  *
  * Two payloads are loaded:
- *   - `loadAppEnv(app, appEnv)`           — runtime env for the app being
- *     deployed (DATABASE_URL, BETTER_AUTH_SECRET, …).
- *   - `loadEnvScope("deploy")`            — cross-cutting deploy-time secrets
+ *   - `loaders.<app>.<appEnv>()`  — runtime env for the app being deployed
+ *     (DATABASE_URL, BETTER_AUTH_SECRET, …).
+ *   - `loaders.deploy()`          — cross-cutting deploy-time secrets
  *     contributed by the deploy module (CLOUDFLARE_API_TOKEN, NEON_API_KEY,
  *     ALCHEMY_STATE_TOKEN, …) — exists so these credentials don't need to be
  *     copied into every app's `apps.<app>.env`.
@@ -74,20 +89,27 @@ export function resolveDeployStage(): ResolvedStage {
  * conflict, matching the env injection order). Throws `EnvValidationError`
  * (re-wrapped as `Error` so alchemy/Effect doesn't swallow the message)
  * with a multi-line, copy-pasteable list of every missing variable.
+ *
+ * `app` is constrained to the known typed app loaders so callers get IDE
+ * autocomplete (`loaders.web` / `loaders.docs` / …) instead of having to
+ * remember the literal app name. `appEnv` is constrained per-app to the
+ * environments declared in `apps.<app>.environmentIds`.
  */
-export async function loadDeployEnv<App extends string>(
+export async function loadDeployEnv<App extends DeployApp>(
   app: App,
-  appEnv: string,
+  appEnv: keyof AppLoaders[App] & string,
 ): Promise<Record<string, string>> {
   try {
-    const appPayload = await loadAppEnv(app, appEnv, {
-      inject: true,
-      validate: true,
-    });
+    const appLoader = (loaders as AppLoaders)[app][
+      appEnv as keyof AppLoaders[App]
+    ] as (options?: { inject?: boolean; validate?: boolean }) => Promise<
+      Record<string, string>
+    >;
+    const appPayload = await appLoader({ inject: true, validate: true });
     // Load the `deploy` scope after the app payload so deploy-time secrets
     // (which are project-wide and never overridden per-app) take precedence
     // if the same key is somehow declared in both places.
-    const deployPayload = await loadEnvScope("deploy", {
+    const deployPayload = await loaders.deploy({
       inject: true,
       validate: true,
     });
