@@ -29,6 +29,7 @@
     ./cli.nix
     # codegen.nix -- colocated into modules/env-codegen/options.nix
     ./core.nix
+    ./deploy.nix
     ./devshell.nix
     # dns.nix -- colocated into network/dns.nix
     ./envs.nix
