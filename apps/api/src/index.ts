@@ -7,30 +7,21 @@ import { cors } from "hono/cors";
 /**
  * Cloud API for stackpanel — mounted at api.stackpanel.com.
  *
- * Runs as a Cloudflare Worker. Hosts Better-Auth (email/password + Polar
- * payments + webhooks), gated tRPC procedures for hosted alchemy state,
- * and (future) marketplace catalog endpoints.
- *
- * Encryption uses Web Crypto + aws4fetch so everything works in the Workers
- * runtime without Node-specific SDKs.
+ * Hosts Better-Auth (email/password + Polar payments + webhooks),
+ * gated tRPC procedures for hosted alchemy state, and (future) marketplace
+ * catalog endpoints. Runs on Fly (Node/Bun), not Cloudflare Workers —
+ * needs real Node APIs for AWS KMS + AES-GCM envelope encryption.
  */
 
-type Env = {
-	CORS_ALLOWED_ORIGINS?: string;
-	CORS_ORIGIN?: string;
-	BETTER_AUTH_URL?: string;
-	BETTER_AUTH_SECRET?: string;
-	DATABASE_URL?: string;
-	AWS_ACCESS_KEY_ID?: string;
-	AWS_SECRET_ACCESS_KEY?: string;
-	AWS_REGION?: string;
-	STACKPANEL_KMS_ALIAS?: string;
-	POLAR_ACCESS_TOKEN?: string;
-	POLAR_WEBHOOK_SECRET?: string;
-	POLAR_SUCCESS_URL?: string;
-	POLAR_PRO_PRODUCT_ID_PRODUCTION?: string;
-	POLAR_FREE_PRODUCT_ID_PRODUCTION?: string;
-};
+const app = new Hono();
+
+// Origins allowed to call this API with credentials. The studio lives on
+// local.stackpanel.com (production) or localhost during dev, so both need
+// to be in the allowlist — `credentials: true` requires exact-match origins.
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+	.split(",")
+	.map((s: string) => s.trim())
+	.filter(Boolean);
 
 const defaultOrigins = [
 	"http://localhost:3000",
@@ -39,48 +30,48 @@ const defaultOrigins = [
 	"https://stackpanel.com",
 ];
 
-const app = new Hono<{ Bindings: Env }>();
+const origins = allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins;
 
-app.use("*", async (c, next) => {
-	// Hand the Worker's bindings to library code that reads process.env style
-	// names (encryption helpers, Better-Auth, Polar). A per-request assignment
-	// is fine: Workers isolate requests, no cross-request leakage.
-	(globalThis as { __env?: Record<string, string | undefined> }).__env = {
-		...c.env,
-	};
-	return cors({
-		origin: (c.env.CORS_ALLOWED_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean))
-			?? defaultOrigins,
+app.use(
+	"*",
+	cors({
+		origin: origins,
 		credentials: true,
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization", "Cookie"],
 		exposeHeaders: ["Set-Cookie"],
-	})(c, next);
-});
+	}),
+);
 
-app.get("/", (c) => c.json({ name: "stackpanel-api", version: "0.0.1" }));
+app.get("/", (c) =>
+	c.json({ name: "stackpanel-api", version: "0.0.1" }),
+);
 
 app.get("/health", (c) =>
 	c.json({
 		status: "ok",
-		region: ((c.req.raw as unknown as { cf?: { colo?: string } }).cf?.colo) ?? "unknown",
+		region: process.env.FLY_REGION ?? process.env.REGION ?? "unknown",
 		timestamp: Date.now(),
 	}),
 );
 
-// Better-Auth handles sign-in, sign-up, session, Polar checkout/portal,
-// and the /polar/webhooks mount. Every route emitted by the plugin tree
-// flows through this single handler.
+// Better-Auth handler — covers /api/auth/* (sign-in, sign-up, session,
+// social OAuth, Polar checkout/portal, and webhook mount). All routes
+// emitted by the plugin tree are handled here.
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
-// tRPC handler — studio talks here via @trpc/client httpBatchStreamLink.
+// tRPC handler. Studio talks to this via @trpc/client httpBatchStreamLink.
 app.all("/trpc/*", (c) =>
 	fetchRequestHandler({
 		endpoint: "/trpc",
 		req: c.req.raw,
 		router: appRouter,
-		createContext: () => createTRPCContext({ headers: c.req.raw.headers, auth }),
+		createContext: () =>
+			createTRPCContext({ headers: c.req.raw.headers, auth }),
 	}),
 );
 
-export default app;
+export default {
+	port: Number(process.env.PORT ?? 3000),
+	fetch: app.fetch,
+};
