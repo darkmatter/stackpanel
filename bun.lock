@@ -86,6 +86,8 @@
       },
       "devDependencies": {
         "@distilled.cloud/cloudflare": "^0.7.11",
+        "@gen/env": "workspace:*",
+        "@stackpanel/infra": "workspace:*",
         "@tailwindcss/postcss": "^4.1.16",
         "@types/mdast": "^4.0.4",
         "@types/mdx": "^2.0.13",
