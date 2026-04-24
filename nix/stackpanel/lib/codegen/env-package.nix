@@ -258,10 +258,36 @@ let
       name = appName;
       value = lib.mapAttrs (
         _envKey: meta: {
-          inherit (meta) key required secret defaultValue;
+          inherit (meta) key required secret defaultValue description;
+          # Echo the SOPS path so the runtime error message can tell the user
+          # exactly where to add the missing secret.
+          sops = meta.sops;
         }
       ) (getAppEnv apps.${appName});
     }) appsWithEnv
+  );
+
+  # Cross-cutting (non-app) root env scopes — entries in `cfg.envs` keyed by
+  # a bare name like `deploy` rather than `apps/<app>/<env>`. These are the
+  # scopes the runtime exposes via `loadEnvScope("deploy")` and that modules
+  # contribute to via `config.stackpanel.envs.<scope>.<KEY> = { ... };`.
+  rootScopeNames = lib.filter (name: ! lib.hasPrefix "apps/" name) rootEnvNames;
+
+  # Same shape as `appEnvVarsMeta` but keyed by root scope name. Surfaced in
+  # the generated `embedded-data.ts` as `ROOT_ENV_VARIABLES` so the runtime
+  # `checkRequiredEnv` can validate root-scope payloads, and consumed by the
+  # Go codegen pipeline so MOTD / studio warnings cover deploy-time vars too.
+  rootScopeVarsMeta = lib.listToAttrs (
+    map (scope: {
+      name = scope;
+      value = lib.mapAttrs (
+        _envKey: rawVar:
+        let meta = normalizeEnvVar _envKey rawVar; in
+        {
+          inherit (meta) key required secret defaultValue description sops;
+        }
+      ) (rootEnvs.${scope} or { });
+    }) rootScopeNames
   );
 
   # Build the var resolution entries for the Go codegen pipeline.
@@ -443,8 +469,28 @@ let
         env = lib.removePrefix prefix envName;
       };
 
-  # App-scoped root envs inherit the same recipients as the matching per-app
-  # payload. Bare env names remain available for module-only env registries.
+  # Recipient resolution for root env scopes.
+  #
+  # Two regimes:
+  #
+  #   - App-scoped names (`apps/<app>/<env>`) are auto-populated from
+  #     `apps.<app>.env` by `mergedAppEnvs`. They get the same recipients as
+  #     the matching per-app payload so the SOPS file ends up encrypted to
+  #     the same set of keys as `data/<env>/<app>.sops.json`. (See note on
+  #     `rootScopeNames` below — these never reach `rootEnvTargets` anymore;
+  #     they're intentionally redundant duplicates that we don't write.)
+  #
+  #   - Bare cross-cutting scopes (`deploy`, `infra`, `ci`, …) are not tied
+  #     to a single app or env. They hold deploy-time / project-wide secrets
+  #     used by `loadEnvScope("<scope>")` from deploy entrypoints. Defaulting
+  #     these to "no recipients" silently drops the payload and breaks the
+  #     runtime — which is exactly the bug the fallback below fixes.
+  #
+  #     The natural reader of a bare scope is "anyone who can ship to prod",
+  #     because deploy-time credentials are by definition production
+  #     credentials. So in addition to recipients explicitly tagged with the
+  #     scope name (e.g. `tags = [ "deploy" ]` for fine-grained control), we
+  #     also include anyone tagged with `prod`/`production`.
   rootEnvRecipients =
     envName:
     let
@@ -454,9 +500,12 @@ let
       selectRecipientsFor scoped.appName scoped.env
     else
       let
-        aliases = envAliases envName;
-        appComposites = lib.concatMap (a: map (al: "${a}/${al}") aliases) appsWithEnv;
-        wanted = lib.unique (aliases ++ appComposites);
+        # Tags that grant read access to this bare scope:
+        #   - the scope name itself + its env aliases (opt-in via tags)
+        #   - `prod` / `production` (default: deploy = prod credentials)
+        scopeTags = envAliases envName;
+        prodTags = [ "prod" "production" ];
+        wanted = lib.unique (scopeTags ++ prodTags);
         matches = name:
           let userTags = recipientTagsFor name; in
           userTags != [ ] && lib.any (t: lib.elem t wanted) userTags;
@@ -465,6 +514,15 @@ let
       in
       lib.unique keys;
 
+  # Only emit SOPS payloads for bare cross-cutting scopes. App-scoped entries
+  # in `cfg.envs` (the `apps/<app>/<env>` keys auto-populated from
+  # `mergedAppEnvs`) would otherwise produce duplicate `_envs/apps/<app>/<env>`
+  # SOPS files that are byte-equivalent to the per-app payloads at
+  # `data/<env>/<app>.sops.json` — wasted codegen, wasted bundle size, and a
+  # confusing public surface for `loadEnvScope`. The bare-scope filter
+  # (`rootScopeNames`) is the same one used to publish `ROOT_ENV_VARIABLES`,
+  # keeping the on-disk layout, the runtime metadata, and the loader API in
+  # lockstep.
   rootEnvTargets = lib.filter (t: t.recipients != [ ] && t.vars != { }) (
     map (envName: {
       app = "_envs";
@@ -472,13 +530,14 @@ let
       outputPath = "${packageDir}/data/_envs/${envName}.sops.json";
       recipients = rootEnvRecipients envName;
       vars = rootEnvResolutionEntries envName;
-    }) rootEnvNames
+    }) rootScopeNames
   );
 
   envBuildManifest = {
     schemaVersion = 2;
     dataRoot = "${packageDir}/data";
     environmentVariables = appEnvVarsMeta;
+    rootScopeVariables = rootScopeVarsMeta;
     targets = (lib.concatMap appEnvironmentTargets appsWithEnv) ++ rootEnvTargets;
   };
 
