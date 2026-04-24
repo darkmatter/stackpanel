@@ -591,6 +591,71 @@ func TestDeleteKey_ConsolidatedConfigEscapesDots(t *testing.T) {
 	}
 }
 
+func TestPatchConsolidatedData_RedirectsImportToTargetFile(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("mkdir .stack: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.nix")
+	configAppsPath := filepath.Join(configDir, "config.apps.nix")
+
+	configSource := `{ config, ... }@args:
+{
+  apps = import ./config.apps.nix args;
+}
+`
+	appsSource := `{ config, ... }:
+{
+  web = {
+    env = {
+      PORT = {
+        value = "3000";
+      };
+    };
+  };
+}
+`
+
+	if err := os.WriteFile(configPath, []byte(configSource), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+	if err := os.WriteFile(configAppsPath, []byte(appsSource), 0o644); err != nil {
+		t.Fatalf("write config.apps.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	if err := store.PatchConsolidatedData(
+		`apps.web.env.DATABASE_URL.value`,
+		RawExpr(`config.variables."/dev/database-url".value`),
+	); err != nil {
+		t.Fatalf("PatchConsolidatedData() error = %v", err)
+	}
+
+	configAfter, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config.nix: %v", err)
+	}
+	if !strings.Contains(string(configAfter), `apps = import ./config.apps.nix args;`) {
+		t.Fatalf("expected config.nix import to be preserved, got:\n%s", string(configAfter))
+	}
+	if strings.Contains(string(configAfter), "DATABASE_URL") {
+		t.Fatalf("did not expect DATABASE_URL to land in config.nix, got:\n%s", string(configAfter))
+	}
+
+	appsAfter, err := os.ReadFile(configAppsPath)
+	if err != nil {
+		t.Fatalf("read config.apps.nix: %v", err)
+	}
+	if !strings.Contains(string(appsAfter), `DATABASE_URL = {`) {
+		t.Fatalf("expected DATABASE_URL binding in config.apps.nix, got:\n%s", string(appsAfter))
+	}
+	if !strings.Contains(string(appsAfter), `value = config.variables."/dev/database-url".value;`) {
+		t.Fatalf("expected variable ref binding in config.apps.nix, got:\n%s", string(appsAfter))
+	}
+}
+
 func TestReadAppVariableLinks_UsesConfigAppsFile(t *testing.T) {
 	root := t.TempDir()
 	configDir := filepath.Join(root, ".stack")
@@ -641,6 +706,242 @@ func TestReadAppVariableLinks_UsesConfigAppsFile(t *testing.T) {
 	}
 	if _, exists := links["web"]["dev"]["HOST"]; exists {
 		t.Fatalf("ReadAppVariableLinks() should ignore literal HOST binding, got: %#v", links["web"]["dev"])
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Tree layout (.stack/config/<entity>/<key>.nix)
+// ---------------------------------------------------------------------------
+
+func TestEncodeDecodeTreeFileKey(t *testing.T) {
+	cases := []struct {
+		key      string
+		filename string
+	}{
+		{"web", "web"},
+		{"/dev/database-url", "--dev--database-url"},
+		{"shared/api-key", "shared--api-key"},
+		{"plain-key", "plain-key"},
+	}
+	for _, c := range cases {
+		if got := EncodeTreeFileKey(c.key); got != c.filename {
+			t.Errorf("EncodeTreeFileKey(%q) = %q, want %q", c.key, got, c.filename)
+		}
+		if got := DecodeTreeFileKey(c.filename); got != c.key {
+			t.Errorf("DecodeTreeFileKey(%q) = %q, want %q", c.filename, got, c.key)
+		}
+	}
+}
+
+func TestPatchConsolidatedData_RoutesIntoTreeEntry(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	appsDir := filepath.Join(configDir, "config", "apps")
+	if err := os.MkdirAll(appsDir, 0o755); err != nil {
+		t.Fatalf("mkdir tree apps dir: %v", err)
+	}
+
+	// config.nix exists but doesn't define apps; the directory's mere
+	// presence opts the apps entity into tree layout.
+	configPath := filepath.Join(configDir, "config.nix")
+	if err := os.WriteFile(configPath, []byte("{ }\n"), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+
+	// Patch a brand-new app: should create apps/web.nix from scratch.
+	if err := store.PatchConsolidatedData(
+		`apps.web.deployment.host`,
+		"localhost",
+	); err != nil {
+		t.Fatalf("PatchConsolidatedData(create) error = %v", err)
+	}
+
+	webPath := filepath.Join(appsDir, "web.nix")
+	body, err := os.ReadFile(webPath)
+	if err != nil {
+		t.Fatalf("read apps/web.nix: %v", err)
+	}
+	if !strings.Contains(string(body), "host = \"localhost\";") {
+		t.Fatalf("expected host binding in apps/web.nix, got:\n%s", body)
+	}
+	if !strings.Contains(string(body), "deployment = {") {
+		t.Fatalf("expected deployment block in apps/web.nix, got:\n%s", body)
+	}
+
+	// config.nix must not have absorbed the new app entry.
+	configBody, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read config.nix: %v", err)
+	}
+	if strings.Contains(string(configBody), "web") {
+		t.Fatalf("did not expect apps.web to land in config.nix, got:\n%s", configBody)
+	}
+
+	// Patch an inner field on the same entry: should AST-patch the existing file.
+	if err := store.PatchConsolidatedData(
+		`apps.web.deployment.host`,
+		"prod.example.com",
+	); err != nil {
+		t.Fatalf("PatchConsolidatedData(update) error = %v", err)
+	}
+	body2, err := os.ReadFile(webPath)
+	if err != nil {
+		t.Fatalf("re-read apps/web.nix: %v", err)
+	}
+	if !strings.Contains(string(body2), "host = \"prod.example.com\";") {
+		t.Fatalf("expected updated host, got:\n%s", body2)
+	}
+
+	// Whole-entry delete: should remove the file entirely.
+	if err := store.PatchConsolidatedData(
+		`apps.web`,
+		DeleteValue{},
+	); err != nil {
+		t.Fatalf("PatchConsolidatedData(delete) error = %v", err)
+	}
+	if _, err := os.Stat(webPath); !os.IsNotExist(err) {
+		t.Fatalf("expected apps/web.nix to be deleted, stat err = %v", err)
+	}
+}
+
+func TestPatchConsolidatedData_TreeRedirectBeatsImportRedirect(t *testing.T) {
+	// When BOTH a config.apps.nix import AND a tree directory exist, the
+	// tree wins — that's the documented opt-in semantic. This guards
+	// against a regression where the import redirect would silently
+	// shadow the tree path.
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	if err := os.MkdirAll(filepath.Join(configDir, "config", "apps"), 0o755); err != nil {
+		t.Fatalf("mkdir tree apps dir: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.nix")
+	configAppsPath := filepath.Join(configDir, "config.apps.nix")
+
+	configSource := `{ config, ... }@args:
+{
+  apps = import ./config.apps.nix args;
+}
+`
+	appsSource := `{ config, ... }:
+{
+  legacy-app = { name = "legacy"; };
+}
+`
+
+	if err := os.WriteFile(configPath, []byte(configSource), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+	if err := os.WriteFile(configAppsPath, []byte(appsSource), 0o644); err != nil {
+		t.Fatalf("write config.apps.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	if err := store.PatchConsolidatedData(
+		`apps.web.deployment.host`,
+		"localhost",
+	); err != nil {
+		t.Fatalf("PatchConsolidatedData() error = %v", err)
+	}
+
+	webPath := filepath.Join(configDir, "config", "apps", "web.nix")
+	if _, err := os.Stat(webPath); err != nil {
+		t.Fatalf("expected tree file to be created, stat err = %v", err)
+	}
+
+	appsAfter, err := os.ReadFile(configAppsPath)
+	if err != nil {
+		t.Fatalf("read config.apps.nix: %v", err)
+	}
+	if strings.Contains(string(appsAfter), "web") {
+		t.Fatalf("did not expect apps.web to land in config.apps.nix, got:\n%s", appsAfter)
+	}
+}
+
+func TestWriteEntity_TreeLayoutFullRewrite(t *testing.T) {
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	appsDir := filepath.Join(configDir, "config", "apps")
+	if err := os.MkdirAll(appsDir, 0o755); err != nil {
+		t.Fatalf("mkdir tree apps dir: %v", err)
+	}
+
+	stalePath := filepath.Join(appsDir, "old.nix")
+	if err := os.WriteFile(stalePath, []byte("{ name = \"old\"; }\n"), 0o644); err != nil {
+		t.Fatalf("seed old.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	data := map[string]any{
+		"web": map[string]any{
+			"name": "web",
+			"port": 3000,
+		},
+		"docs": map[string]any{
+			"name": "docs",
+		},
+	}
+	dataPath, err := store.WriteEntity("apps", data)
+	if err != nil {
+		t.Fatalf("WriteEntity() error = %v", err)
+	}
+	if dataPath != appsDir {
+		t.Fatalf("WriteEntity() returned %q, want %q", dataPath, appsDir)
+	}
+
+	for _, name := range []string{"web.nix", "docs.nix"} {
+		if _, err := os.Stat(filepath.Join(appsDir, name)); err != nil {
+			t.Fatalf("expected %s to exist after rewrite: %v", name, err)
+		}
+	}
+	if _, err := os.Stat(stalePath); !os.IsNotExist(err) {
+		t.Fatalf("expected stale old.nix to be removed, stat err = %v", err)
+	}
+
+	web, err := os.ReadFile(filepath.Join(appsDir, "web.nix"))
+	if err != nil {
+		t.Fatalf("read apps/web.nix: %v", err)
+	}
+	if !strings.Contains(string(web), "port = 3000;") {
+		t.Fatalf("expected port binding in apps/web.nix, got:\n%s", web)
+	}
+}
+
+func TestPatchConsolidatedData_TreeEncodesSlashKey(t *testing.T) {
+	// Variables are keyed by paths like "/dev/database-url"; the writer
+	// must encode "/" as "__" in the filename so the file is readable on
+	// disk. The Nix loader in load-config.nix performs the inverse decode
+	// at eval time so the runtime sees the original key.
+	root := t.TempDir()
+	configDir := filepath.Join(root, ".stack")
+	varsDir := filepath.Join(configDir, "config", "variables")
+	if err := os.MkdirAll(varsDir, 0o755); err != nil {
+		t.Fatalf("mkdir tree variables dir: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.nix")
+	if err := os.WriteFile(configPath, []byte("{ }\n"), 0o644); err != nil {
+		t.Fatalf("write config.nix: %v", err)
+	}
+
+	store := NewStore(root, nil)
+	if _, err := store.SetKey(
+		"variables",
+		"/dev/database-url",
+		map[string]any{"value": "postgres://...", "description": "db"},
+	); err != nil {
+		t.Fatalf("SetKey() error = %v", err)
+	}
+
+	expected := filepath.Join(varsDir, "--dev--database-url.nix")
+	body, err := os.ReadFile(expected)
+	if err != nil {
+		t.Fatalf("read encoded tree file: %v (looked at %s)", err, expected)
+	}
+	if !strings.Contains(string(body), `value = "postgres://...";`) {
+		t.Fatalf("expected value binding in encoded tree file, got:\n%s", body)
 	}
 }
 
