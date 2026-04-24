@@ -1,4 +1,4 @@
-import { loadAppEnv } from "@gen/env/runtime";
+import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
 import { NeonProject, neonProviders } from "@stackpanel/infra/resources/neon";
 import { Cloudflare, Output, Stage } from "alchemy-effect";
 import * as Stack from "alchemy-effect/Stack";
@@ -6,28 +6,18 @@ import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
-
-// Map alchemy --stage / $STAGE onto our SOPS env namespaces:
-//   production -> prod, staging -> staging, anything else (pr-*, dev, ...) -> dev.
-// Allow APP_ENV to override explicitly for one-off runs.
-const STAGE = process.env.STAGE || process.env.ALCHEMY_STAGE || "dev";
-const APP_ENV =
-  process.env.APP_ENV ||
-  (STAGE === "production" ? "prod" : STAGE === "staging" ? "staging" : "dev");
 const PROJECT = "stackpanel";
 const SERVICE = "web";
 
-// Decrypts the per-app SOPS payload (CLOUDFLARE_*, POSTGRES_URL, etc.) and
-// injects it into process.env so downstream Cloudflare/Neon providers see it.
-const env = await loadAppEnv(SERVICE, APP_ENV, { inject: true });
+// `appEnv` is our SOPS namespace (`prod` | `staging` | `dev`); `stage` is what
+// alchemy itself sees and mirrors into `Stage`. Both are derived from a single
+// source of truth so the secrets we decrypt match the resources we provision.
+const { appEnv } = resolveDeployStage();
 
-if (!env.CLOUDFLARE_API_TOKEN) {
-  throw new Error(`
-!! Missing required environment variable: CLOUDFLARE_API_TOKEN !!
-- Confirm /shared/cloudflare-api-token is set in .stack/secrets/vars/shared.sops.yaml
-- Confirm @gen/env codegen has been run (devshell entry or 'stackpanel preflight run')
-- Or export CLOUDFLARE_API_TOKEN directly to bypass the SOPS loader.`);
-}
+// Decrypts the per-app SOPS payload (CLOUDFLARE_*, NEON_API_KEY, …) and injects
+// it into process.env so downstream Cloudflare/Neon providers see it. Hard-fails
+// with a copy-pasteable message listing every missing required env var.
+await loadDeployEnv(SERVICE, appEnv);
 
 // stackpanel.com
 const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
