@@ -1,0 +1,88 @@
+name: deploy-api
+
+# Deploys apps/api to Fly.
+#
+# Linux runners because skopeo-nix2container doesn't build on darwin (upstream
+# bug in the vendored go.podman.io path). The whole container pipeline — build,
+# push, deploy — runs on ubuntu-latest where the standard nix2container
+# toolchain works without patches.
+#
+# Triggers:
+#   - push to main touching apps/api/** or packages/api/**
+#   - manual via workflow_dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/api/**"
+      - "packages/auth/**"
+      - "packages/db/**"
+      - ".stack/config.apps.nix"
+      - "nix/**"
+      - ".github/workflows/deploy-api.yaml"
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: "Skip container build/push (deploy last-pushed image)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-api-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            accept-flake-config = true
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Install sops
+        run: |
+          curl -LO https://github.com/getsops/sops/releases/download/v3.11.0/sops-v3.11.0.linux.amd64
+          chmod +x sops-v3.11.0.linux.amd64
+          sudo mv sops-v3.11.0.linux.amd64 /usr/local/bin/sops
+
+      - name: Stage Fly secrets from SOPS
+        run: bash apps/api/scripts/push-secrets.sh
+
+      - name: Build container image
+        if: inputs.skip_build != true
+        run: nix build --impure .#packages.x86_64-linux.container-api
+
+      - name: Push container image to Fly registry
+        if: inputs.skip_build != true
+        run: |
+          nix run --impure .#copy-container-api -- \
+            docker://registry.fly.io/ \
+            --dest-creds "x:${FLY_API_TOKEN}"
+
+      - name: Deploy
+        run: |
+          flyctl deploy \
+            --config apps/api/fly.toml \
+            --app stackpanel-api \
+            --image registry.fly.io/stackpanel-api:latest \
+            --wait-timeout 300
+
+      - name: Verify health
+        run: |
+          curl -fsS --retry 5 --retry-delay 5 \
+            https://stackpanel-api.fly.dev/health
