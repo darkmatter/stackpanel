@@ -2,20 +2,26 @@
  * Type definitions for the dev shells panel.
  */
 
+export type ScriptValue = {
+	exec?: string;
+	command?: string;
+	description?: string;
+};
+
 export type DevshellConfig = {
 	hooks?: {
 		before?: string[];
 		main?: string[];
 		after?: string[];
 	};
-	commands?: Record<string, { exec?: string; command?: string } | string>;
-	_scripts?: Record<string, { exec?: string; command?: string } | string>;
-	_tasks?: Record<string, { exec?: string; command?: string } | string>;
+	commands?: Record<string, ScriptValue | string>;
+	_scripts?: Record<string, ScriptValue | string>;
+	_tasks?: Record<string, ScriptValue | string>;
 };
 
 export type StackpanelConfigData = {
 	devshell?: DevshellConfig;
-	scripts?: Record<string, { exec?: string; command?: string } | string>;
+	scripts?: Record<string, ScriptValue | string>;
 };
 
 export type AgentStatus = {
@@ -47,4 +53,5 @@ export type DevShell = {
 export type Script = {
 	name: string;
 	description: string;
+	exec: string;
 };
