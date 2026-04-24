@@ -10,17 +10,28 @@ import * as Stream from "effect/Stream";
 import { ChildProcess } from "effect/unstable/process";
 import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner";
 import { decryptSops } from "sops-age";
-import { AVAILABLE_APP_ENVS } from "../embedded-data";
+import { AVAILABLE_APP_ENVS, ROOT_ENV_VARIABLES } from "../embedded-data";
 import type { AppEnvMap, AppName, EnvFor } from "./app-env-types";
 import {
   AGE_SECRET_KEY_PREFIX,
+  checkRequiredEnv,
+  checkRequiredEnvScope,
   EnvLoadError,
+  EnvValidationError,
   type LoadEnvOptions,
   normalizeEnvPayload,
   normalizeRuntimeEnv,
   parseAgeSecretKeys,
 } from "./loader";
 import { loadGeneratedPayload } from "./generated-payloads/registry";
+
+/**
+ * Synthetic "app" name used by codegen for root env scopes (entries in
+ * `stackpanel.envs.<scope>` that aren't tied to a specific app). Stays in
+ * sync with `rootEnvTargets` in `nix/stackpanel/lib/codegen/env-package.nix`,
+ * which writes payloads to `<env-package>/data/_envs/<scope>.sops.json`.
+ */
+const ROOT_ENV_APP = "_envs";
 
 const payloadCache = new Map<string, Record<string, string>>();
 
@@ -33,7 +44,10 @@ type SopsFileType = "json";
 
 export {
   AGE_SECRET_KEY_PREFIX,
+  checkRequiredEnv,
+  checkRequiredEnvScope,
   EnvLoadError,
+  EnvValidationError,
   type LoadEnvOptions,
   normalizeEnvPayload,
   normalizeRuntimeEnv,
@@ -53,13 +67,61 @@ export const loadEnvEffect = <App extends string>(
   app: App,
   env: string,
   options: LoadEnvOptions = {},
-): Effect.Effect<EnvFor<App>, EnvLoadError, EnvLoadServices> =>
-  (Effect.gen(function* () {
+): Effect.Effect<EnvFor<App>, EnvLoadError | EnvValidationError, EnvLoadServices> =>
+  loadPayloadEffect(app, env, options, (payload, normalizedEnv) =>
+    checkRequiredEnv(app, normalizedEnv, payload),
+  ) as Effect.Effect<
+    EnvFor<App>,
+    EnvLoadError | EnvValidationError,
+    EnvLoadServices
+  >;
+
+export const loadAppEnvEffect = loadEnvEffect;
+
+/**
+ * Effect-native loader for a non-app root env scope (entries in
+ * `stackpanel.envs.<scope>` keyed by a bare name like `deploy`). Resolves
+ * the payload at `<env-package>/data/_envs/<scope>.sops.json`, decrypts via
+ * the same SOPS path used for per-app payloads, optionally injects into
+ * `process.env`, and validates required vars when `validate: true`.
+ *
+ * See {@link loadEnvScope} for the Promise-returning variant.
+ */
+export const loadEnvScopeEffect = (
+  scope: string,
+  options: LoadEnvOptions = {},
+): Effect.Effect<
+  Record<string, string>,
+  EnvLoadError | EnvValidationError,
+  EnvLoadServices
+> =>
+  loadPayloadEffect(ROOT_ENV_APP, scope, options, (payload, _normalizedEnv) =>
+    checkRequiredEnvScope(scope, payload),
+  );
+
+const loadPayloadEffect = (
+  app: string,
+  env: string,
+  options: LoadEnvOptions,
+  validateFn: (
+    payload: Record<string, string>,
+    normalizedEnv: string,
+  ) => EnvValidationError | null,
+): Effect.Effect<
+  Record<string, string>,
+  EnvLoadError | EnvValidationError,
+  EnvLoadServices
+> =>
+  Effect.gen(function* () {
     const normalizedEnv = normalizeRuntimeEnv(env);
     const cacheKey = `${app}/${normalizedEnv}`;
     const cached = payloadCache.get(cacheKey);
     if (cached) {
       injectIntoProcessEnv(cached, options.inject);
+      if (options.validate) {
+        const failure = validateFn(cached, normalizedEnv);
+        if (failure) return yield* Effect.fail(failure);
+      }
       return cached;
     }
 
@@ -73,12 +135,9 @@ export const loadEnvEffect = <App extends string>(
     });
 
     if (!encryptedPayload) {
-      const knownEnvs = AVAILABLE_APP_ENVS[app] || [];
-      const hint =
-        knownEnvs.length > 0 ? ` Available environments: ${knownEnvs.join(", ")}.` : "";
       return yield* Effect.fail(
         new EnvLoadError({
-          message: `Environment data not found for ${app}/${normalizedEnv}.${hint}`,
+          message: missingPayloadMessage(app, normalizedEnv),
         }),
       );
     }
@@ -91,10 +150,27 @@ export const loadEnvEffect = <App extends string>(
     const payload = normalizeEnvPayload(decrypted);
     payloadCache.set(cacheKey, payload);
     injectIntoProcessEnv(payload, options.inject);
-    return payload;
-  }) as Effect.Effect<EnvFor<App>, EnvLoadError, EnvLoadServices>);
 
-export const loadAppEnvEffect = loadEnvEffect;
+    if (options.validate) {
+      const failure = validateFn(payload, normalizedEnv);
+      if (failure) return yield* Effect.fail(failure);
+    }
+
+    return payload;
+  });
+
+function missingPayloadMessage(app: string, env: string): string {
+  if (app === ROOT_ENV_APP) {
+    const scopes = Object.keys(ROOT_ENV_VARIABLES);
+    const hint =
+      scopes.length > 0 ? ` Available scopes: ${scopes.join(", ")}.` : "";
+    return `Env scope data not found for "${env}".${hint}`;
+  }
+  const knownEnvs = AVAILABLE_APP_ENVS[app] || [];
+  const hint =
+    knownEnvs.length > 0 ? ` Available environments: ${knownEnvs.join(", ")}.` : "";
+  return `Environment data not found for ${app}/${env}.${hint}`;
+}
 
 // ---------------------------------------------------------------------------
 // Promise-returning facade. Backward-compatible with the previous API; runs
@@ -109,6 +185,18 @@ export const loadEnv = <App extends string>(
 
 export const loadAppEnv = loadEnv;
 
+/**
+ * Promise-returning facade for {@link loadEnvScopeEffect}. Loads a non-app
+ * root env scope (e.g. `loadEnvScope("deploy")`) and, when
+ * `validate: true`, throws an {@link EnvValidationError} with a multi-line
+ * remediation message listing every missing required variable in the scope.
+ */
+export const loadEnvScope = (
+  scope: string,
+  options: LoadEnvOptions = {},
+): Promise<Record<string, string>> =>
+  runWithPlatform(loadEnvScopeEffect(scope, options));
+
 // ---------------------------------------------------------------------------
 // Internal Effect helpers
 // ---------------------------------------------------------------------------
@@ -119,11 +207,28 @@ const decryptStructuredContentEffect = (
   explicitSecretKey?: string,
 ): Effect.Effect<Record<string, unknown>, EnvLoadError, EnvLoadServices> =>
   Effect.gen(function* () {
-    const secretKeys = yield* resolveRuntimeSecretKeysEffect(explicitSecretKey);
+    const runtimeEnv = readRuntimeEnv();
+    const secretKeys = yield* resolveRuntimeSecretKeysEffect(
+      runtimeEnv,
+      explicitSecretKey,
+    );
+    const hasKeyservice = !!runtimeEnv.sopsKeyservice;
+
     if (secretKeys.length > 0) {
-      return yield* decryptWithJsKeysEffect(content, fileType, secretKeys);
+      const result = yield* decryptWithJsKeysEffect(
+        content,
+        fileType,
+        secretKeys,
+      ).pipe(Effect.result);
+      if (result._tag === "Success") return result.success;
+      // Local age keys exist but none are recipients of this payload (common
+      // for cross-environment payloads encrypted only to prod-tagged keys).
+      // Fall back to the keyservice if configured, otherwise surface the
+      // original key-mismatch error.
+      if (!hasKeyservice) return yield* Effect.fail(result.failure);
+      return yield* decryptWithSopsBinaryEffect(content, fileType);
     }
-    if (process.env.SOPS_KEYSERVICE) {
+    if (hasKeyservice) {
       return yield* decryptWithSopsBinaryEffect(content, fileType);
     }
     return yield* Effect.fail(
@@ -228,21 +333,22 @@ const decryptWithSopsBinaryEffect = (
   }).pipe(Effect.scoped);
 
 const resolveRuntimeSecretKeysEffect = (
+  runtimeEnv: RuntimeEnv,
   explicitSecretKey?: string,
 ): Effect.Effect<string[], EnvLoadError, EnvLoadServices> =>
   Effect.gen(function* () {
     if (explicitSecretKey) return parseAgeSecretKeys(explicitSecretKey);
 
-    const envKeys = parseAgeSecretKeys(process.env.SOPS_AGE_KEY);
+    const envKeys = parseAgeSecretKeys(runtimeEnv.sopsAgeKey);
     if (envKeys.length > 0) return envKeys;
 
-    const repoLocalKey = yield* readRepoLocalAgeKeyEffect();
+    const repoLocalKey = yield* readRepoLocalAgeKeyEffect(runtimeEnv);
     if (repoLocalKey) {
       const repoKeys = parseAgeSecretKeys(repoLocalKey);
       if (repoKeys.length > 0) return repoKeys;
     }
 
-    const command = process.env.SOPS_AGE_KEY_CMD;
+    const command = runtimeEnv.sopsAgeKeyCmd;
     if (!command) return [];
 
     const { exitCode, stdout, stderr } = yield* runCapture("sh", [
@@ -266,16 +372,13 @@ const resolveRuntimeSecretKeysEffect = (
     return parseAgeSecretKeys(stdout);
   });
 
-const readRepoLocalAgeKeyEffect = (): Effect.Effect<
-  string | null,
-  never,
-  FileSystem.FileSystem
-> =>
+const readRepoLocalAgeKeyEffect = (
+  runtimeEnv: RuntimeEnv,
+): Effect.Effect<string | null, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const explicitKeysDir = process.env.STACKPANEL_KEYS_DIR;
-    const candidate = explicitKeysDir
-      ? `${explicitKeysDir}/local.txt`
+    const candidate = runtimeEnv.stackpanelKeysDir
+      ? `${runtimeEnv.stackpanelKeysDir}/local.txt`
       : `${process.cwd()}/.stack/keys/local.txt`;
     return yield* fs.readFileString(candidate).pipe(
       Effect.catchCause(() => Effect.succeed(null as string | null)),
@@ -308,13 +411,40 @@ const runCapture = (
   }).pipe(Effect.scoped);
 
 // ---------------------------------------------------------------------------
-// Pure helpers
+// Runtime env access — every read of `process.env` lives here so the rest of
+// the loader takes a typed snapshot instead of poking the global at random.
+// Writes (env injection) also funnel through this module.
 // ---------------------------------------------------------------------------
+
+interface RuntimeEnv {
+  /** Inline age secret key material (`SOPS_AGE_KEY`). */
+  readonly sopsAgeKey: string | undefined;
+  /** Shell command that prints age secret key material on stdout (`SOPS_AGE_KEY_CMD`). */
+  readonly sopsAgeKeyCmd: string | undefined;
+  /** Comma-separated keyservice URIs, e.g. `tcp://host:5000` (`SOPS_KEYSERVICE`). */
+  readonly sopsKeyservice: string | undefined;
+  /** Override directory for the repo-local key file (`STACKPANEL_KEYS_DIR`). */
+  readonly stackpanelKeysDir: string | undefined;
+}
+
+function readRuntimeEnv(): RuntimeEnv {
+  const env = process.env;
+  return {
+    sopsAgeKey: env.SOPS_AGE_KEY,
+    sopsAgeKeyCmd: env.SOPS_AGE_KEY_CMD,
+    sopsKeyservice: env.SOPS_KEYSERVICE,
+    stackpanelKeysDir: env.STACKPANEL_KEYS_DIR,
+  };
+}
 
 function injectIntoProcessEnv(payload: Record<string, string>, inject = true) {
   if (inject === false) return;
   Object.assign(process.env, payload);
 }
+
+// ---------------------------------------------------------------------------
+// Pure helpers
+// ---------------------------------------------------------------------------
 
 function missingKeyMaterialMessage(): string {
   return "No SOPS decryption method is configured. Set SOPS_AGE_KEY or SOPS_AGE_KEY_CMD, or set SOPS_KEYSERVICE and install the `sops` binary.";
@@ -350,7 +480,7 @@ function getPlatformLayer(): Promise<PlatformLayer> {
 }
 
 const runWithPlatform = async <A>(
-  effect: Effect.Effect<A, EnvLoadError, EnvLoadServices>,
+  effect: Effect.Effect<A, EnvLoadError | EnvValidationError, EnvLoadServices>,
 ): Promise<A> => {
   const layer = await getPlatformLayer();
   return Effect.runPromise(effect.pipe(Effect.provide(layer)));
