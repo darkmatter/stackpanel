@@ -777,7 +777,7 @@
           tags = [ "dev" ];
         };
         github-actions = {
-          public-key = "age1eqcj2g0fdekj2wpqp4y0fg9c5myydjdt9zlr5scr0grk6fxszymqkpw5jf";
+          public-key = "age1d9h9mm3u5qalmpl2pf62pyzqj8t654n435emn93rutv0cg9sr32sg64fdj";
           tags = [
             "dev"
             "staging"
