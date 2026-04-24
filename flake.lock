@@ -526,6 +526,27 @@
     "haumea": {
       "inputs": {
         "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1685133229,
+        "narHash": "sha256-FePm/Gi9PBSNwiDFq3N+DWdfxFq0UKsVVTJS3cQPn94=",
+        "owner": "nix-community",
+        "repo": "haumea",
+        "rev": "34dd58385092a23018748b50f9b23de6266dffc2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "ref": "v0.2.2",
+        "repo": "haumea",
+        "type": "github"
+      }
+    },
+    "haumea_2": {
+      "inputs": {
+        "nixpkgs": [
           "namaka",
           "nixpkgs"
         ]
@@ -604,7 +625,7 @@
     },
     "namaka": {
       "inputs": {
-        "haumea": "haumea",
+        "haumea": "haumea_2",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -825,6 +846,7 @@
         "flake-utils": "flake-utils_2",
         "git-hooks": "git-hooks_2",
         "gomod2nix": "gomod2nix",
+        "haumea": "haumea",
         "microvm": "microvm",
         "namaka": "namaka",
         "nix2container": "nix2container",
