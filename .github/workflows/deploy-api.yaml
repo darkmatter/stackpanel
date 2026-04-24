@@ -87,7 +87,10 @@ jobs:
         # See nix/stackpanel/lib/containers.nix.
         env:
           STACKPANEL_ROOT_ABSOLUTE: ${{ github.workspace }}
-        run: nix build --impure .#packages.x86_64-linux.container-api
+        run: |
+          set -eux
+          ls -la apps/api/.output/server/
+          nix build --impure --print-build-logs .#packages.x86_64-linux.container-api
 
       - name: Push container image to Fly registry
         if: inputs.skip_build != true
