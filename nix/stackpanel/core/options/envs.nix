@@ -107,11 +107,37 @@ in
     description = ''
       Environment variables grouped by scope name.
 
-      Auto-populated from `apps.<app>.env` for each environment listed in
-      that app's `environmentIds`, using an app-scoped key like
-      `stackpanel.envs."apps/web/dev"`. Other modules can also write directly
-      (for example `stackpanel.envs."deploy/prod".MY_INFRA_KEY = { ... }`)
-      without owning an app — useful for one-off envs like deploy-only secrets.
+      Three usage patterns:
+
+      1. App-scoped (auto-populated). Each app's `apps.<app>.env` is exploded
+         into one entry per environment ID, keyed `apps/<app>/<env>`:
+           `stackpanel.envs."apps/web/dev".DATABASE_URL = { ... };`
+         You don't write these directly — they're contributed by env-codegen.
+
+      2. Cross-cutting scopes (you write these). A bare scope name like
+         `deploy`, `infra`, or `ci` is meant for variables that are not
+         tied to any single app:
+           `stackpanel.envs.deploy.CLOUDFLARE_API_TOKEN = { sops = "..."; };`
+         Loaded at runtime via `loadEnvScope("deploy")` (see
+         `packages/gen/env/src/runtime/loader.ts`).
+
+      3. Module-contributed (modules write these). Stackpanel modules can
+         declare envs they need by writing to `stackpanel.envs.<scope>`
+         from their own `config = { ... };`. For example, a Cloudflare
+         deployment module that's only enabled when an app sets
+         `deployment.host = "cloudflare"` can do:
+
+           config.stackpanel.envs.deploy = lib.mkIf hasCloudflareApp {
+             CLOUDFLARE_ACCOUNT_ID = {
+               sops = "/shared/cloudflare-account-id";
+               required = true;
+               description = "...";
+             };
+           };
+
+         Module-contributed entries merge cleanly with user-written ones
+         thanks to NixOS submodule semantics (declaring the same key from
+         two places is a no-op as long as the values agree).
 
       Codegen reads from this attrset to produce per-env SOPS payloads
       under `<env-package>/data/_envs/<env>.sops.json` (one file per env,
@@ -119,14 +145,18 @@ in
     '';
     example = lib.literalExpression ''
       {
+        # App-scoped (usually auto-populated):
         "apps/web/dev" = {
           DATABASE_URL = { secret = true; sops = "/dev/database-url"; required = true; };
           PORT         = { value = "3000"; required = true; };
           LOG_LEVEL    = { defaultValue = "info"; };
         };
-        "apps/web/prod" = {
-          DATABASE_URL = { secret = true; sops = "/prod/database-url"; required = true; };
-          PORT         = { value = "443"; required = true; };
+
+        # Cross-cutting deploy-time secrets (declared by you and/or modules):
+        deploy = {
+          CLOUDFLARE_API_TOKEN  = { sops = "/shared/cloudflare-api-token"; required = true; };
+          CLOUDFLARE_ACCOUNT_ID = { sops = "/shared/cloudflare-account-id"; required = true; };
+          NEON_API_KEY          = { sops = "/shared/neon-api-key";          required = true; };
         };
       }
     '';
