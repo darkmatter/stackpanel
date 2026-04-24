@@ -53,6 +53,6 @@ POLAR_SUCCESS_URL=https://local.stackpanel.com/checkout/success
 CORS_ORIGIN=https://local.stackpanel.com
 CORS_ALLOWED_ORIGINS=https://local.stackpanel.com,https://stackpanel.com,https://studio.stackpanel.com
 EOF
-} | fly secrets import --app "$FLY_APP" --stage
+} | "${FLY_BIN:-flyctl}" secrets import --app "$FLY_APP" --stage
 
 echo "✓ Pushed secrets to $FLY_APP (staged, will apply on next deploy)"
