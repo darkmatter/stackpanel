@@ -50,7 +50,7 @@ let
         };
         required = lib.mkOption {
           type = lib.types.bool;
-          default = false;
+          default = true;
           description = "Whether the variable must be present at runtime.";
         };
         secret = lib.mkOption {
@@ -85,6 +85,16 @@ let
             Fallback value used when neither `value` nor `sops` resolves.
             A defaulted key is treated as guaranteed-present in the per-app
             TypeScript `Env` interface (i.e., not optional).
+          '';
+        };
+        description = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            Human-readable description of what this variable is for and where
+            to obtain it. Surfaced in the studio Variables UI and in the
+            actionable error message thrown by `loadAppEnv(..., { validate: true })`
+            when the variable is missing.
           '';
         };
       };
