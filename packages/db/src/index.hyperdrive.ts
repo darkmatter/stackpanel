@@ -2,7 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { cache } from "react";
 import { getDb as getDbBase } from "./index";
 
-export { auth } from "./index";
+export { auth, organization } from "./index";
 
 declare global {
   interface CloudflareEnv {
