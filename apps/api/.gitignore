@@ -1,0 +1,4 @@
+.alchemy/
+.output/
+.wrangler/
+node_modules/
