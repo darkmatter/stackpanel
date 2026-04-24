@@ -3,23 +3,17 @@ import {
 	subscription as subSchema,
 } from "@stackpanel/db";
 import { eq } from "drizzle-orm";
+import { planForProduct as resolvePlan } from "./polar-products";
 
 /**
- * Polar product id → internal plan mapping. Decouples gating code from
- * Polar's product ids so we can rename / re-price without touching the
- * paidProcedure middleware.
- *
- * Override via env so different deploy stages can point at sandbox vs
- * production products without a code change.
+ * Narrow the shared plan lookup to { free | pro }. The shared helper
+ * reports "unknown" for products not in the env map (forward-compat for
+ * future paid tiers); we fold that into "free" for the webhook handler
+ * because an unrecognized product should never unlock paid access.
  */
-const PLAN_BY_PRODUCT: Record<string, "free" | "pro"> = {
-	"5fb4014e-d879-4b28-966a-9efcf60b6c24": "pro",
-	"70acf138-0b13-4fd0-8c25-78c63f09a122": "free",
-};
-
 function planForProduct(productId: string | undefined | null): "free" | "pro" {
-	if (!productId) return "free";
-	return PLAN_BY_PRODUCT[productId] ?? "free";
+	const plan = resolvePlan(productId);
+	return plan === "pro" ? "pro" : "free";
 }
 
 function resolveUserId(customer: {
