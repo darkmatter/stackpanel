@@ -691,19 +691,64 @@ export function AppsPanelAlt() {
                   {isExpanded && (
                     <>
                       {hasWarnings && (
-                        <div className="mx-6 mb-4 rounded-md border border-amber-300/70 bg-amber-50/70 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100">
-                          <div className="mb-1 flex items-center gap-2 font-medium">
-                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                            Generated env warnings
-                          </div>
-                          <ul className="space-y-1 text-xs font-mono sm:text-sm">
-                            {appWarnings.map((warning, index) => (
-                              <li key={`${warning.message}-${index}`}>
-                                {warning.message}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                        (() => {
+                          const groups = groupAppWarnings(appWarnings);
+                          return (
+                            <div className="mx-6 mb-4 space-y-2">
+                              {groups.map((group, gi) => {
+                                const isError = group.severity === "error";
+                                const palette = isError
+                                  ? "border-red-300/70 bg-red-50/70 text-red-900 dark:border-red-900 dark:bg-red-950/20 dark:text-red-100"
+                                  : "border-amber-300/70 bg-amber-50/70 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100";
+                                const iconColor = isError
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-amber-600 dark:text-amber-400";
+                                const noun =
+                                  group.keys.length === 1 ? "env var" : "env vars";
+                                const heading = isError
+                                  ? `Required ${noun} missing (${group.keys.length})`
+                                  : `Env ${noun} warning (${group.keys.length})`;
+                                return (
+                                  <div
+                                    key={`${group.severity}-${group.fix}-${gi}`}
+                                    className={`rounded-md border px-3 py-2 text-sm ${palette}`}
+                                  >
+                                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                      <AlertTriangle className={`h-4 w-4 ${iconColor}`} />
+                                      <span className="font-medium">{heading}</span>
+                                      <span className="text-xs opacity-70">→</span>
+                                      <code className="font-mono text-xs">
+                                        {group.fix}
+                                      </code>
+                                    </div>
+                                    <ul className="space-y-1.5 text-xs sm:text-sm">
+                                      {group.keys.map((entry) => (
+                                        <li
+                                          key={entry.envKey}
+                                          className="grid grid-cols-[max-content_1fr] gap-x-3"
+                                        >
+                                          <span className="font-mono font-semibold">
+                                            {entry.envKey}
+                                          </span>
+                                          <span className="space-y-0.5">
+                                            {entry.description && (
+                                              <span className="block opacity-80">
+                                                {entry.description}
+                                              </span>
+                                            )}
+                                            <span className="block text-xs opacity-60">
+                                              {entry.environments.join(", ")}
+                                            </span>
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
                       )}
                       <AppExpandedContent
                         app={app}
