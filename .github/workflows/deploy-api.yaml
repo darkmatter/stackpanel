@@ -13,7 +13,10 @@ name: deploy-api
 
 on:
   push:
-    branches: [main]
+    # Include feature branches matching feat/cloud-gate-* so we can verify
+    # the deploy pipeline before merging to main. Production deploys still
+    # gate on main.
+    branches: [main, "feat/cloud-gate-**"]
     paths:
       - "apps/api/**"
       - "packages/api/**"
