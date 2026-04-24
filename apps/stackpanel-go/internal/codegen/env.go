@@ -21,10 +21,40 @@ type envModule struct{}
 // envManifest is the Nix-generated input that drives env codegen. Nix evaluates
 // secret schemas from .stack/secrets/apps/ and writes this to
 // .stack/gen/codegen/env-manifest.json on each devshell entry.
+//
+// `EnvironmentVariables` is keyed by app name (`web`, `docs`, …);
+// `RootScopeVariables` is keyed by cross-cutting scope name (`deploy`, `ci`, …)
+// and surfaces missing-required warnings for variables declared in
+// `stackpanel.envs.<scope>` rather than `apps.<app>.env`. Internally these
+// scopes are represented as targets with `app == "_envs"` and
+// `environment == "<scope>"`, but the warning lookup uses the scope-keyed map
+// so the manifest stays self-describing.
 type envManifest struct {
-	SchemaVersion int             `json:"schemaVersion"`
-	DataRoot      string          `json:"dataRoot"`
-	Targets       []envTargetSpec `json:"targets"`
+	SchemaVersion        int                              `json:"schemaVersion"`
+	DataRoot             string                           `json:"dataRoot"`
+	EnvironmentVariables map[string]map[string]envVarMeta `json:"environmentVariables"`
+	RootScopeVariables   map[string]map[string]envVarMeta `json:"rootScopeVariables"`
+	Targets              []envTargetSpec                  `json:"targets"`
+}
+
+// rootEnvSyntheticApp is the synthetic "app" name used in env targets for
+// root-level / cross-cutting env scopes (e.g. `stackpanel.envs.deploy`).
+// Must stay in sync with `rootEnvApp` in
+// `nix/stackpanel/lib/codegen/env-package.nix` and `ROOT_ENV_APP` in the
+// runtime loaders.
+const rootEnvSyntheticApp = "_envs"
+
+// envVarMeta mirrors the per-app metadata emitted by env-package.nix
+// (appEnvVarsMeta). Used to surface required-but-missing variables as
+// actionable warnings in env-warnings.json (consumed by the studio UI and
+// the shell MOTD).
+type envVarMeta struct {
+	Key          string  `json:"key"`
+	Required     bool    `json:"required"`
+	Secret       bool    `json:"secret"`
+	DefaultValue *string `json:"defaultValue"`
+	Description  *string `json:"description"`
+	Sops         *string `json:"sops"`
 }
 
 // envTargetSpec defines one (app, environment) pair to generate. Each target
@@ -50,8 +80,9 @@ type envVarResolver struct {
 }
 
 // envWarning captures a non-fatal issue (e.g., a referenced key missing from
-// a SOPS file). Warnings are collected per-target and written to a JSON file
-// so the studio UI and CLI can surface them.
+// a SOPS file, or a `required = true` variable that has no resolved value).
+// Warnings are collected per-target and written to a JSON file so the studio
+// UI and shell MOTD can surface them with actionable remediation.
 type envWarning struct {
 	App         string `json:"app"`
 	Environment string `json:"environment"`
@@ -59,7 +90,16 @@ type envWarning struct {
 	VariableID  string `json:"variableId,omitempty"`
 	Path        string `json:"path,omitempty"`
 	Key         string `json:"key,omitempty"`
-	Message     string `json:"message"`
+	// Severity is "warning" by default. Set to "error" for required-but-empty
+	// variables so the MOTD/studio can render them as blocking issues.
+	Severity string `json:"severity,omitempty"`
+	// Description is copied from the Nix `description` field when available,
+	// so consumers don't need to load `ENVIRONMENT_VARIABLES` separately.
+	Description string `json:"description,omitempty"`
+	// Sops echoes the `sops = "/group/name"` reference when present, so the
+	// studio UI can render a "edit this file" affordance.
+	Sops    string `json:"sops,omitempty"`
+	Message string `json:"message"`
 }
 
 type envWarningsFile struct {
@@ -121,6 +161,7 @@ func (envModule) Build(ctx context.Context, req BuildRequest) (*BuildOutput, err
 			return nil, fmt.Errorf("build %s/%s payload: %w", target.App, target.Environment, err)
 		}
 		warnings = append(warnings, targetWarnings...)
+		warnings = append(warnings, collectMissingRequiredWarnings(target, manifest.EnvironmentVariables, manifest.RootScopeVariables, flatEnv)...)
 
 		plaintext, err := json.MarshalIndent(flatEnv, "", "  ")
 		if err != nil {
@@ -250,6 +291,26 @@ func buildFlatEnvPayload(
 		case "literal":
 			result[envKey] = resolver.Value
 		case "group", "sopsRef":
+			// A missing source file means the user hasn't provisioned this
+			// secret yet (e.g. they haven't run `sp alchemy:setup` so
+			// `.stack/secrets/vars/common.sops.yaml` doesn't exist). Treat
+			// it the same as a missing key: empty value + warning, so
+			// codegen still produces a payload and the runtime
+			// `EnvValidationError` is the canonical surface for "required
+			// secret not provisioned" instead of an opaque codegen crash.
+			if _, statErr := os.Stat(resolveProjectPath(projectRoot, resolver.Path)); os.IsNotExist(statErr) {
+				result[envKey] = ""
+				warnings = append(warnings, envWarning{
+					App:         target.App,
+					Environment: target.Environment,
+					EnvKey:      envKey,
+					VariableID:  resolver.VariableID,
+					Path:        resolver.Path,
+					Key:         resolver.Key,
+					Message:     fmt.Sprintf("%s/%s: %s source file %s does not exist", target.App, target.Environment, envKey, resolver.Path),
+				})
+				continue
+			}
 			parsed, err := decryptSourceFile(ctx, projectRoot, resolver, decryptCache)
 			if err != nil {
 				return nil, nil, fmt.Errorf("resolve %s: %w", envKey, err)
@@ -275,6 +336,73 @@ func buildFlatEnvPayload(
 	}
 
 	return result, warnings, nil
+}
+
+// collectMissingRequiredWarnings emits one warning per `required = true`
+// variable on the target whose resolved value is empty. The warning carries
+// the description and SOPS path so the consumer (studio UI / MOTD) can render
+// a copy-pasteable remediation instead of just "missing key".
+//
+// Looks up metadata in two places depending on the target type:
+//   - Per-app targets (`target.App == "web"`, etc.): `appMeta[target.App]`.
+//   - Root-scope targets (`target.App == rootEnvSyntheticApp`): the scope name
+//     is encoded in `target.Environment`, so lookup is
+//     `rootScopeMeta[target.Environment]`. This is what makes
+//     `stackpanel.envs.deploy.NEON_API_KEY = { required = true; }` show up in
+//     the studio / MOTD as a missing-required warning when not set.
+//
+// Targets without matching metadata (legacy or external) are silently skipped.
+func collectMissingRequiredWarnings(
+	target envTargetSpec,
+	appMetaByApp map[string]map[string]envVarMeta,
+	rootScopeMetaByScope map[string]map[string]envVarMeta,
+	resolved map[string]string,
+) []envWarning {
+	var meta map[string]envVarMeta
+	if target.App == rootEnvSyntheticApp {
+		if rootScopeMetaByScope == nil {
+			return nil
+		}
+		meta = rootScopeMetaByScope[target.Environment]
+	} else {
+		if appMetaByApp == nil {
+			return nil
+		}
+		meta = appMetaByApp[target.App]
+	}
+	if len(meta) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(meta))
+	for k := range meta {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]envWarning, 0)
+	for _, envKey := range keys {
+		entry := meta[envKey]
+		if !entry.Required {
+			continue
+		}
+		if value, present := resolved[envKey]; present && value != "" {
+			continue
+		}
+		w := envWarning{
+			App:         target.App,
+			Environment: target.Environment,
+			EnvKey:      envKey,
+			Severity:    "error",
+			Message:     fmt.Sprintf("%s/%s: required env var %s is empty", target.App, target.Environment, envKey),
+		}
+		if entry.Description != nil && *entry.Description != "" {
+			w.Description = *entry.Description
+		}
+		if entry.Sops != nil && *entry.Sops != "" {
+			w.Sops = *entry.Sops
+		}
+		out = append(out, w)
+	}
+	return out
 }
 
 // decryptSourceFile shells out to `sops --decrypt` and caches the result.
