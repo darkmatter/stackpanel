@@ -18,8 +18,8 @@
 	},
 	"dependencies": {
 		"@ai-sdk/google": "catalog:",
-		"@aws-sdk/client-kms": "catalog:",
 		"@prisma/client": "catalog:",
+		"aws4fetch": "^1.0.20",
 		"@stackpanel/auth": "workspace:*",
 		"@stackpanel/db": "workspace:*",
 		"@trpc/client": "catalog:",

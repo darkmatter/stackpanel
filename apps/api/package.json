@@ -1,18 +1,25 @@
 {
-  "name": "api",
+  "name": "@stackpanel/api-worker",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "mkdir -p .output/server && bun build src/index.ts --outfile .output/server/index.mjs --target bun",
-    "start": "bun run src/index.ts"
+    "deploy": "bunx alchemy-effect deploy",
+    "deploy:dev": "bunx alchemy-effect deploy --stage dev",
+    "deploy:staging": "APP_ENV=staging STAGE=staging bunx alchemy-effect deploy --stage staging",
+    "deploy:production": "APP_ENV=prod STAGE=production bunx alchemy-effect deploy --stage production",
+    "destroy": "bunx alchemy-effect destroy"
   },
   "dependencies": {
     "@stackpanel/api": "workspace:*",
     "@stackpanel/auth": "workspace:*",
     "@stackpanel/db": "workspace:*",
+    "@stackpanel/infra": "workspace:*",
+    "@distilled.cloud/cloudflare": "catalog:",
     "@trpc/server": "catalog:",
+    "alchemy-effect": "catalog:",
+    "effect": "catalog:",
     "hono": "catalog:"
   },
   "devDependencies": {
