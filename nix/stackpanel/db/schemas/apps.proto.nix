@@ -104,6 +104,12 @@ proto.mkProtoFile {
         value = proto.optional (proto.string 4 "Value of the environment variable");
         sops = proto.optional (proto.string 5 "Path to the SOPS file for this variable's group");
         defaultValue = proto.optional (proto.string 6 "Default value of the environment variable");
+        description = proto.optional (proto.string 7 ''
+          Human-readable description of what this variable is for and where to
+          obtain it. Surfaced in the studio Variables UI and in the actionable
+          error message thrown by `loadAppEnv(..., { validate: true })` when
+          the variable is missing.
+        '');
       };
     };
 
