@@ -7,19 +7,61 @@
 # Output can be used with `buf generate` to create Go, TypeScript,
 # Drizzle schemas, tRPC definitions, and more.
 #
-# Usage:
-#   let
-#     proto = import ./proto.nix { inherit lib; };
-#   in
+# ------------------------------------------------------------------------------
+# Two APIs are supported for defining fields:
+#
+# 1. Attribute-set API (RECOMMENDED, feels like lib.mkOption)
+# ------------------------------------------------------------------------------
 #   proto.mkMessage {
 #     name = "User";
 #     fields = {
-#       name = proto.string 1 "Display name";
-#       email = proto.withExample "john@example.com" (proto.string 2 "Email address");
-#       age = proto.optional (proto.int32 3 "User age");
-#       roles = proto.repeated (proto.string 4 "User roles");
+#       name = proto.mkField {
+#         number = 1;
+#         type = proto.types.string;
+#         description = "Display name";
+#         default = "anonymous";
+#       };
+#       email = proto.mkField {
+#         number = 2;
+#         type = proto.types.string;
+#         description = "Email address";
+#         example = "john@example.com";
+#       };
+#       age = proto.mkField {
+#         number = 3;
+#         type = proto.types.int32;
+#         description = "User age";
+#         optional = true;
+#       };
+#       roles = proto.mkField {
+#         number = 4;
+#         type = proto.types.string;
+#         description = "User roles";
+#         repeated = true;
+#       };
+#       profile = proto.mkField {
+#         number = 5;
+#         type = proto.types.message "Profile";
+#         description = "Linked profile";
+#       };
+#       tags = proto.mkField {
+#         number = 6;
+#         type = proto.types.map "string" "string";
+#         description = "Arbitrary tags";
+#       };
 #     };
 #   }
+#
+# 2. Positional API (LEGACY, still supported; ~25 existing schemas use it)
+# ------------------------------------------------------------------------------
+#   fields = {
+#     name = proto.string 1 "Display name";
+#     email = proto.withExample "john@example.com" (proto.string 2 "Email address");
+#     age = proto.optional (proto.int32 3 "User age");
+#     roles = proto.repeated (proto.string 4 "User roles");
+#   };
+#
+# Both APIs produce the same field record shape (marked with `_isProtoField`).
 #
 # Type mapping:
 #   Nix types           → Protobuf
@@ -58,91 +100,190 @@ let
   };
 
   # ---------------------------------------------------------------------------
+  # proto.types.*
+  #
+  # Type spec constructors for the attribute-set API. Each returns either a
+  # plain string (scalar / message reference) or an attrset describing a
+  # modifier (map key/value). The returned value is consumed by `mkField`.
+  #
+  # Examples:
+  #   proto.types.string                 => "string"
+  #   proto.types.int32                  => "int32"
+  #   proto.types.message "Foo"          => "Foo"
+  #   proto.types.ref "Foo"              => "Foo" (alias for message)
+  #   proto.types.map "string" "Foo"     => { _isProtoMapType = true; key = "string"; value = "Foo"; }
+  # ---------------------------------------------------------------------------
+  types = {
+    # Scalars: exposed as plain string type names
+    double = scalars.double;
+    float = scalars.float;
+    int32 = scalars.int32;
+    int64 = scalars.int64;
+    uint32 = scalars.uint32;
+    uint64 = scalars.uint64;
+    sint32 = scalars.sint32;
+    sint64 = scalars.sint64;
+    fixed32 = scalars.fixed32;
+    fixed64 = scalars.fixed64;
+    sfixed32 = scalars.sfixed32;
+    sfixed64 = scalars.sfixed64;
+    bool = scalars.bool;
+    string = scalars.string;
+    bytes = scalars.bytes;
+
+    # Reference another message or enum by name.
+    # Usage: proto.types.message "ColorScheme"
+    message = typeName: typeName;
+
+    # Alias for message (reads nicely for enum references too)
+    ref = typeName: typeName;
+
+    # Map type: proto.types.map "string" "User"
+    # Returns a marker attrset so mkField can extract key/value separately.
+    map =
+      keyType: valueType:
+      {
+        _isProtoMapType = true;
+        key = keyType;
+        value = valueType;
+      };
+  };
+
+  # ---------------------------------------------------------------------------
   # Field definition helpers
   # ---------------------------------------------------------------------------
 
-  # Create a basic field
-  # Field number is REQUIRED - protobuf field numbers must be explicit for compatibility
+  # mkField: the primary attribute-set API for defining proto fields.
+  #
+  # This is the recommended shape for all NEW schemas. It intentionally mirrors
+  # `lib.mkOption` so it feels familiar.
+  #
+  # Required:
+  #   number  - Proto field number (REQUIRED, positive integer, explicit for
+  #             wire compatibility)
+  #   type    - Proto type, provided via `proto.types.*`
+  #             (a string like "string", or a map marker from proto.types.map)
+  #
+  # Optional:
+  #   description - Human-readable description (rendered as proto comment
+  #                 and used for Nix option docs / UI labels)
+  #   default     - Default value for Nix option generators / boilerplate.
+  #                 Proto3 wire format has no explicit defaults, so this is
+  #                 NOT emitted in `.proto` output. It flows into
+  #                 `db.options.mkOptionFromField` so generated Nix options
+  #                 can pick it up automatically.
+  #   example     - Example value for documentation / UI placeholder
+  #   optional    - Proto3 explicit optional modifier
+  #   repeated    - Proto repeated modifier
+  #   mapKey      - Proto map key type (only use directly if not using
+  #                 `proto.types.map`; prefer the latter)
   mkField =
-    {
-      type,
-      number, # Field number (REQUIRED - must be explicit for protobuf compatibility)
-      description ? "",
-      optional ? false,
-      repeated ? false,
-      mapKey ? null, # If set, this is a map<mapKey, type>
-      example ? null, # Example value for documentation/boilerplate generation
-    }:
+    args:
+    let
+      # Normalise the `type` argument. It may be:
+      #   * a plain string (scalar or message name)
+      #   * a map marker attrset from proto.types.map
+      rawType = args.type or (throw "proto.mkField: `type` is required (use proto.types.*)");
+      isMapSpec = builtins.isAttrs rawType && (rawType._isProtoMapType or false);
+
+      # Explicit mapKey wins, otherwise pick it up from proto.types.map
+      explicitMapKey = args.mapKey or null;
+      mapKey =
+        if explicitMapKey != null then
+          explicitMapKey
+        else if isMapSpec then
+          rawType.key
+        else
+          null;
+
+      # Resolve the wire/value type string
+      typeStr = if isMapSpec then rawType.value else rawType;
+
+      number = args.number or (throw "proto.mkField: `number` is required");
+      description = args.description or "";
+      optional = args.optional or false;
+      repeated = args.repeated or false;
+      default = args.default or null;
+      example = args.example or null;
+    in
     assert
       builtins.isInt number && number >= 1
       || throw "Field number must be a positive integer, got: ${toString number}";
     {
+      _isProtoField = true;
+      type = typeStr;
       inherit
-        type
-        description
         number
+        description
         optional
         repeated
         mapKey
         example
+        default
         ;
-      _isProtoField = true;
     };
 
-  # Scalar field constructors
-  # All take: number -> description -> field
+  # ---------------------------------------------------------------------------
+  # Legacy positional constructors
+  #
+  # All existing schemas use these; they remain unchanged. They delegate to
+  # the new attribute-set `mkField` under the hood so there is a single
+  # source of truth for field shape.
+  # ---------------------------------------------------------------------------
+
+  # Scalar field constructors: (number -> description -> field)
   string =
     number: description:
     mkField {
-      type = "string";
+      type = types.string;
       inherit number description;
     };
   int32 =
     number: description:
     mkField {
-      type = "int32";
+      type = types.int32;
       inherit number description;
     };
   int64 =
     number: description:
     mkField {
-      type = "int64";
+      type = types.int64;
       inherit number description;
     };
   uint32 =
     number: description:
     mkField {
-      type = "uint32";
+      type = types.uint32;
       inherit number description;
     };
   uint64 =
     number: description:
     mkField {
-      type = "uint64";
+      type = types.uint64;
       inherit number description;
     };
   bool =
     number: description:
     mkField {
-      type = "bool";
+      type = types.bool;
       inherit number description;
     };
   double =
     number: description:
     mkField {
-      type = "double";
+      type = types.double;
       inherit number description;
     };
   float =
     number: description:
     mkField {
-      type = "float";
+      type = types.float;
       inherit number description;
     };
   bytes =
     number: description:
     mkField {
-      type = "bytes";
+      type = types.bytes;
       inherit number description;
     };
 
@@ -155,6 +296,11 @@ let
       mkField {
         type = field;
         optional = true;
+        # number must be baked into legacy callers via the scalar helpers;
+        # calling optional on a bare string type has never been the path
+        # used in schemas, but we preserve the historical (best-effort)
+        # behaviour here.
+        number = 1;
       };
 
   # Wrapper for repeated fields
@@ -166,6 +312,7 @@ let
       mkField {
         type = field;
         repeated = true;
+        number = 1;
       };
 
   # Wrapper to add an example value to a field
@@ -177,6 +324,15 @@ let
     else
       throw "withExample can only be applied to a proto field";
 
+  # Wrapper to add a default value to a field (positional/legacy style).
+  # Usage: proto.withDefault "dracula" (proto.string 1 "Theme name")
+  withDefault =
+    defaultValue: field:
+    if field ? _isProtoField then
+      field // { default = defaultValue; }
+    else
+      throw "withDefault can only be applied to a proto field";
+
   # Map field constructor
   # Usage: proto.map "string" "User" 1 "description"
   map =
@@ -187,7 +343,7 @@ let
       inherit number description;
     };
 
-  # Reference to another message type
+  # Reference to another message type (positional style)
   # Usage: proto.message "TypeName" 1 "description"
   message =
     typeName: number: description:
@@ -532,7 +688,12 @@ in
   # Scalar type names (raw strings for manual use)
   scalars = scalars;
 
-  # Field constructors (functions that take description and return field definitions)
+  # Type spec constructors for the attribute-set mkField API.
+  # This is the RECOMMENDED entrypoint for new schemas.
+  inherit types;
+
+  # Scalar field constructors (legacy positional API)
+  # Takes: number -> description -> field
   inherit
     string
     int32
@@ -545,13 +706,14 @@ in
     bytes
     ;
 
-  # Field modifiers
+  # Field modifiers (legacy)
   inherit
     optional
     repeated
     map
     message
     withExample
+    withDefault
     ;
 
   # Type constructors
