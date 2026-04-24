@@ -18,6 +18,7 @@
 	},
 	"dependencies": {
 		"@ai-sdk/google": "catalog:",
+		"@aws-sdk/client-kms": "catalog:",
 		"@prisma/client": "catalog:",
 		"@stackpanel/auth": "workspace:*",
 		"@stackpanel/db": "workspace:*",

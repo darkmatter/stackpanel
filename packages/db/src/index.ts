@@ -2,9 +2,10 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as auth from "./schema/auth";
 import * as organization from "./schema/organization";
+import * as state from "./schema/state";
 import * as subscription from "./schema/subscription";
 
-const schema = { ...auth, ...organization, ...subscription };
+const schema = { ...auth, ...organization, ...subscription, ...state };
 
 let _db: ReturnType<typeof drizzle> | undefined;
 
@@ -34,4 +35,4 @@ export const db = new Proxy({} as ReturnType<typeof drizzle>, {
   },
 });
 
-export { auth, organization, subscription };
+export { auth, organization, state, subscription };
