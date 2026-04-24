@@ -216,15 +216,11 @@ let
         absolutePath =
           if absoluteRoot != "" then "${absoluteRoot}/${buildOutputPath}" else null;
         chosenPath =
-          builtins.trace
-            "mkAppDir[${name}]: absoluteRoot=${absoluteRoot} buildOutputPath=${buildOutputPath} abs.exists=${toString (absolutePath != null && builtins.pathExists absolutePath)} flake.exists=${toString (builtins.pathExists fullBuildPath)}"
-            (
-              if absolutePath != null && builtins.pathExists absolutePath
-              then absolutePath
-              else if builtins.pathExists fullBuildPath
-              then fullBuildPath
-              else null
-            );
+          if absolutePath != null && builtins.pathExists absolutePath
+          then absolutePath
+          else if builtins.pathExists fullBuildPath
+          then fullBuildPath
+          else null;
         buildOutputExists = chosenPath != null;
 
         webOutput =
