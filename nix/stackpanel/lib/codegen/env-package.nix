@@ -565,9 +565,23 @@ let
       required: boolean;
       secret: boolean;
       defaultValue: string | null;
+      description: string | null;
+      /** SOPS reference of the form `/group/name`, when the variable is
+       * sourced from a SOPS file. Used by error messages and the studio
+       * UI to point users at the file/key that needs to be set. */
+      sops: string | null;
     }
 
     export const ENVIRONMENT_VARIABLES = ${builtins.toJSON appEnvVarsMeta} as Record<string, Record<string, EnvVarMeta>>;
+
+    /**
+     * Cross-cutting root env scopes (anything keyed by a bare name in
+     * `stackpanel.envs.<scope>`, as opposed to the auto-populated
+     * `apps/<app>/<env>` entries). Surfaces things like the `deploy` scope
+     * (`CLOUDFLARE_API_TOKEN`, `NEON_API_KEY`, ...). Used by
+     * `loadEnvScope(scope)` and `checkRequiredEnvScope` for validation.
+     */
+    export const ROOT_ENV_VARIABLES = ${builtins.toJSON rootScopeVarsMeta} as Record<string, Record<string, EnvVarMeta>>;
   '';
 
   # Type registry consumed by the runtime loaders so `loadEnv("web", env)`
