@@ -86,7 +86,13 @@ export const alchemyStateRouter = createTRPCRouter({
 				stack: stackInput,
 				stage: stageInput,
 				fqn: fqnInput,
-				expectedVersion: z.number().int().min(0),
+				/**
+				 * Optional optimistic-concurrency check. When provided and the
+				 * server's stored version differs, throws CONFLICT so the caller
+				 * can refetch + retry. Omit for last-writer-wins semantics
+				 * (matches alchemy-effect's LocalState behavior).
+				 */
+				expectedVersion: z.number().int().min(0).optional(),
 				payload: z.unknown(),
 			}),
 		)
@@ -114,7 +120,10 @@ export const alchemyStateRouter = createTRPCRouter({
 
 			const prior = existing[0];
 			if (prior) {
-				if (prior.version !== input.expectedVersion) {
+				if (
+					input.expectedVersion !== undefined &&
+					prior.version !== input.expectedVersion
+				) {
 					throw new TRPCError({
 						code: "CONFLICT",
 						message: `Version mismatch: expected ${input.expectedVersion}, server is at ${prior.version}`,
@@ -133,10 +142,10 @@ export const alchemyStateRouter = createTRPCRouter({
 				return { version: updated[0]?.version ?? prior.version + 1 };
 			}
 
-			if (input.expectedVersion !== 0) {
+			if (input.expectedVersion !== undefined && input.expectedVersion !== 0) {
 				throw new TRPCError({
 					code: "CONFLICT",
-					message: `Entry does not exist — expectedVersion must be 0 for first write`,
+					message: "Entry does not exist — expectedVersion must be 0 for first write",
 					cause: { currentVersion: 0 },
 				});
 			}
@@ -194,32 +203,45 @@ export const alchemyStateRouter = createTRPCRouter({
 				stack: stackInput,
 				stage: stageInput,
 				fqn: fqnInput,
-				expectedVersion: z.number().int().min(1),
+				/** Optional concurrency check; omit for unconditional delete. */
+				expectedVersion: z.number().int().min(1).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const organizationId = requireActiveOrg(ctx.session as never);
+			const conditions = [
+				eq(stateSchema.organizationState.organizationId, organizationId),
+				eq(stateSchema.organizationState.stack, input.stack),
+				eq(stateSchema.organizationState.stage, input.stage),
+				eq(stateSchema.organizationState.fqn, input.fqn),
+			];
+			if (input.expectedVersion !== undefined) {
+				conditions.push(
+					eq(stateSchema.organizationState.version, input.expectedVersion),
+				);
+			}
 			const deleted = await getDb()
 				.delete(stateSchema.organizationState)
-				.where(
-					and(
-						eq(stateSchema.organizationState.organizationId, organizationId),
-						eq(stateSchema.organizationState.stack, input.stack),
-						eq(stateSchema.organizationState.stage, input.stage),
-						eq(stateSchema.organizationState.fqn, input.fqn),
-						eq(stateSchema.organizationState.version, input.expectedVersion),
-					),
-				)
+				.where(and(...conditions))
 				.returning({ id: stateSchema.organizationState.id });
 
-			if (deleted.length === 0) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "State entry not found or version mismatch",
-				});
-			}
-			return { deleted: true };
+			// Idempotent: deleting a non-existent entry is a no-op, not an error.
+			return { deleted: deleted.length > 0 };
 		}),
+
+	/**
+	 * Enumerate all distinct stacks that have any state entries for the
+	 * calling organization. Mirrors `StateService.listStacks` in the
+	 * alchemy-effect contract.
+	 */
+	listStacks: paidProcedure.query(async ({ ctx }) => {
+		const organizationId = requireActiveOrg(ctx.session as never);
+		const rows = await getDb()
+			.selectDistinct({ stack: stateSchema.organizationState.stack })
+			.from(stateSchema.organizationState)
+			.where(eq(stateSchema.organizationState.organizationId, organizationId));
+		return rows.map((r) => r.stack);
+	}),
 
 	/**
 	 * Enumerate the distinct stages that have state under a given stack.
