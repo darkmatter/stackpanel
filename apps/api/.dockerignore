@@ -1,0 +1,21 @@
+node_modules
+dist
+.alchemy
+.output
+.stack
+.stackpanel
+.wrangler
+.tasks
+.turbo
+.devenv
+.tanstack
+.git
+.DS_Store
+*.log
+# Workspaces we don't need
+apps/docs
+apps/web
+apps/stackpanel-go
+apps/tui
+# Generated source that gets re-materialized at build time
+packages/proto/gen
