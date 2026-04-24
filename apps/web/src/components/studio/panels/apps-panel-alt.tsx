@@ -62,6 +62,12 @@ interface CodegenWarning {
   variableId?: string;
   path?: string;
   key?: string;
+  /** "error" for required-but-missing, "warning" for SOPS key not found. */
+  severity?: "error" | "warning";
+  /** Description copied from `apps.<app>.env.<KEY>.description` in Nix. */
+  description?: string;
+  /** Original `sops = "/group/name"` reference, when the var is SOPS-backed. */
+  sops?: string;
   message: string;
 }
 
