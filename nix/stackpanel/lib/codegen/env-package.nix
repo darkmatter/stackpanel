@@ -155,9 +155,11 @@ let
       value = rawVar.value or null;
       sops = rawVar.sops or null;
       defaultValue = rawVar.defaultValue or null;
+      description = rawVar.description or null;
       hasValue = value != null && value != "";
       hasSops = sops != null && sops != "";
       hasDefault = defaultValue != null && defaultValue != "";
+      hasDescription = description != null && description != "";
     in
     {
       key = if (rawVar.key or "") != "" then rawVar.key else envKey;
@@ -167,6 +169,7 @@ let
       value = if hasValue then value else null;
       sops = if hasSops then sops else null;
       defaultValue = if hasDefault then defaultValue else null;
+      description = if hasDescription then description else null;
     };
 
   getAppEnv =
