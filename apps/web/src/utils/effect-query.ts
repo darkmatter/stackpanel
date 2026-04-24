@@ -1,9 +1,9 @@
 // src/utils/effect-query.ts
 import { useQuery } from "@tanstack/react-query";
 import { createEffectQuery } from "effect-query";
-import { Effect, Layer, ManagedRuntime, ServiceMap } from "effect";
+import { Context, Effect, Layer, ManagedRuntime } from "effect";
 
-export class GreetingApi extends ServiceMap.Service<
+export class GreetingApi extends Context.Service<
   GreetingApi,
   {
     readonly loadGreeting: () => Effect.Effect<string>;

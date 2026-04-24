@@ -3,9 +3,9 @@
     "docker-entrypoint": "./src/runtime/docker-entrypoint.ts"
   },
   "dependencies": {
-    "@effect/platform-bun": "4.0.0-beta.43",
-    "@effect/platform-node": "4.0.0-beta.43",
-    "effect": "4.0.0-beta.43",
+    "@effect/platform-bun": "4.0.0-beta.48",
+    "@effect/platform-node": "4.0.0-beta.48",
+    "effect": "4.0.0-beta.48",
     "sops-age": "^4.0.2"
   },
   "devDependencies": {

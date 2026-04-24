@@ -4,11 +4,11 @@ import type { HttpEffect } from "alchemy-effect/Http";
 import { betterAuth, type Auth } from "better-auth";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as ServiceMap from "effect/ServiceMap";
+import * as Context from "effect/Context";
 import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 
-export class BetterAuth extends ServiceMap.Service<
+export class BetterAuth extends Context.Service<
   BetterAuth,
   {
     auth: Effect.Effect<Auth<any>>;
