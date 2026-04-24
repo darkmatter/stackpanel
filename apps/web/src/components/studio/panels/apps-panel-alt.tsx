@@ -76,6 +76,91 @@ interface CodegenWarningsFile {
   warnings: CodegenWarning[];
 }
 
+/**
+ * Build the "how to fix" command shown next to each warning. Mirrors the
+ * remediation logic in the runtime loader (`remediationLines` in
+ * `packages/gen/env/src/runtime/loader.ts`) and the MOTD (`envWarningFix`
+ * in `apps/stackpanel-go/internal/tui/motd_data.go`) so the same advice
+ * appears in the shell, the deploy error, and the studio.
+ */
+function envWarningFix(warning: CodegenWarning): string {
+  const sops = warning.sops?.replace(/^\//, "") ?? "";
+  if (sops) {
+    const [group] = sops.split("/", 1);
+    if (group) return `sp secrets edit ${group}`;
+  }
+  return `export ${warning.envKey}=...`;
+}
+
+interface GroupedEnvWarning {
+  severity: "error" | "warning";
+  fix: string;
+  /** One entry per unique env key, with the environments it was missing in. */
+  keys: Array<{
+    envKey: string;
+    description?: string;
+    environments: string[];
+  }>;
+}
+
+/**
+ * Collapse per-(envKey, environment) warnings for a single app into one entry
+ * per `(severity, fix command)` bucket. Mirrors `groupEnvWarnings` in
+ * `apps/stackpanel-go/internal/tui/motd_data.go` so the studio and the shell
+ * MOTD show the same grouped output.
+ */
+function groupAppWarnings(warnings: CodegenWarning[]): GroupedEnvWarning[] {
+  const buckets = new Map<
+    string,
+    {
+      severity: "error" | "warning";
+      fix: string;
+      order: string[];
+      byKey: Map<
+        string,
+        { envKey: string; description?: string; environments: string[] }
+      >;
+    }
+  >();
+  for (const w of warnings) {
+    const severity: "error" | "warning" =
+      w.severity === "error" ? "error" : "warning";
+    const fix = envWarningFix(w);
+    const bucketKey = `${severity}|${fix}`;
+    let bucket = buckets.get(bucketKey);
+    if (!bucket) {
+      bucket = { severity, fix, order: [], byKey: new Map() };
+      buckets.set(bucketKey, bucket);
+    }
+    let entry = bucket.byKey.get(w.envKey);
+    if (!entry) {
+      entry = {
+        envKey: w.envKey,
+        description: w.description,
+        environments: [],
+      };
+      bucket.byKey.set(w.envKey, entry);
+      bucket.order.push(w.envKey);
+    } else if (!entry.description && w.description) {
+      entry.description = w.description;
+    }
+    if (!entry.environments.includes(w.environment)) {
+      entry.environments.push(w.environment);
+    }
+  }
+  return Array.from(buckets.values()).map((b) => ({
+    severity: b.severity,
+    fix: b.fix,
+    keys: b.order.map((k) => {
+      const entry = b.byKey.get(k);
+      if (!entry) {
+        return { envKey: k, environments: [] };
+      }
+      return { ...entry, environments: [...entry.environments].sort() };
+    }),
+  }));
+}
+
 export function AppsPanelAlt() {
   const { token, readFile } = useAgentContext();
   const agentClient = useAgentClient();
