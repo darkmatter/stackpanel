@@ -29,6 +29,30 @@ import (
 var configVariableExprPattern = regexp.MustCompile(`^\s*config\.variables\.("(?:[^"\\]|\\.)+").value\s*$`)
 var nixStringLiteralPattern = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
 
+// importExprPattern matches a Nix `import <path> [args...]` expression where
+// <path> is either an unquoted path literal (./foo, ../bar/baz.nix, /abs) or a
+// quoted string. Captures the path token in group 1 and the quoted form in
+// group 2 (if quoted) so callers can decide whether to unquote.
+var importExprPattern = regexp.MustCompile(`^\s*import\s+(("(?:[^"\\]|\\.)*")|([^\s;]+))(?:\s|$|;)`)
+
+// parseImportTarget extracts the path argument from an `import <path> ...`
+// expression. Returns ("", false) for anything that isn't a top-level import
+// call. Quoted paths are unquoted; bare path literals are returned as-is.
+func parseImportTarget(expr string) (string, bool) {
+	matches := importExprPattern.FindStringSubmatch(strings.TrimSpace(expr))
+	if len(matches) == 0 {
+		return "", false
+	}
+	if quoted := matches[2]; quoted != "" {
+		unquoted, err := strconv.Unquote(quoted)
+		if err != nil {
+			return "", false
+		}
+		return unquoted, true
+	}
+	return matches[3], true
+}
+
 // parseConfigVariableExpr extracts the quoted variable ID from a
 // config.variables."<id>".value expression, returning the unquoted ID.
 func parseConfigVariableExpr(expr string) (string, bool) {
