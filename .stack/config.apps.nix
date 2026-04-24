@@ -141,6 +141,7 @@ in
       # Bindings and secrets are auto-derived from environments.
       # Override only when deploy-time names differ from dev names.
       enable = true;
+      backend = "alchemy";
       host = "cloudflare";
       aws = {
         region = "us-west-2";
