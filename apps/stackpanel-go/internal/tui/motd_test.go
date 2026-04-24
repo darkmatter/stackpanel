@@ -219,6 +219,55 @@ func TestCollectIssues(t *testing.T) {
 		}
 	})
 
+	t.Run("env warnings are grouped by fix command", func(t *testing.T) {
+		data := &MOTDFullData{
+			Agent: AgentStatus{Running: true},
+			EnvWarnings: []EnvWarning{
+				{App: "web", Environment: "dev", EnvKey: "NEON_API_KEY", Severity: "error", Sops: "/shared/neon-api-key", Description: "Neon API key"},
+				{App: "web", Environment: "staging", EnvKey: "NEON_API_KEY", Severity: "error", Sops: "/shared/neon-api-key", Description: "Neon API key"},
+				{App: "web", Environment: "prod", EnvKey: "NEON_API_KEY", Severity: "error", Sops: "/shared/neon-api-key", Description: "Neon API key"},
+				{App: "web", Environment: "dev", EnvKey: "CLOUDFLARE_API_TOKEN", Severity: "error", Sops: "/shared/cloudflare-api-token"},
+				{App: "docs", Environment: "prod", EnvKey: "DATABASE_URL", Severity: "error"},
+			},
+		}
+		issues := CollectIssues(data)
+		var envIssues []Issue
+		for _, i := range issues {
+			if strings.HasPrefix(i.Message, "Required env var") {
+				envIssues = append(envIssues, i)
+			}
+		}
+		if len(envIssues) != 2 {
+			t.Fatalf("Expected 2 grouped env issues (one per unique fix), got %d: %+v", len(envIssues), envIssues)
+		}
+		var sharedIssue *Issue
+		for i := range envIssues {
+			if envIssues[i].FixCommand == "sp secrets edit shared" {
+				sharedIssue = &envIssues[i]
+			}
+		}
+		if sharedIssue == nil {
+			t.Fatalf("Expected a `sp secrets edit shared` group, got %+v", envIssues)
+		}
+		if len(sharedIssue.Details) != 2 {
+			t.Errorf("Expected 2 detail lines (NEON_API_KEY + CLOUDFLARE_API_TOKEN), got %d: %+v", len(sharedIssue.Details), sharedIssue.Details)
+		}
+		neonLine := ""
+		for _, d := range sharedIssue.Details {
+			if strings.Contains(d, "NEON_API_KEY") {
+				neonLine = d
+			}
+		}
+		if neonLine == "" {
+			t.Fatalf("NEON_API_KEY missing from grouped details: %+v", sharedIssue.Details)
+		}
+		for _, env := range []string{"web/dev", "web/staging", "web/prod"} {
+			if !strings.Contains(neonLine, env) {
+				t.Errorf("Expected scope %q in NEON_API_KEY line %q", env, neonLine)
+			}
+		}
+	})
+
 	t.Run("no issues when everything is fine", func(t *testing.T) {
 		data := &MOTDFullData{
 			Agent: AgentStatus{Running: true},
