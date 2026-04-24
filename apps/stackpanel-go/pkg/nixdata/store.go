@@ -804,8 +804,97 @@ in
 `, quotedPath)
 }
 
+// configEvalExpr returns a Nix expression that evaluates to the project's
+// raw top-level config attrset. When the optional tree layout is in use
+// (.stack/config/ exists), tree-derived entries are overlaid on top of
+// any same-named keys from config.nix using a self-contained pure
+// expression (no flake context, no haumea dependency at eval time).
+//
+// Tree-mode constraint: per-entry files inside .stack/config/<entity>/
+// must be plain attrsets (or scalar values), NOT functions of
+// {config, lib, pkgs, ...}. Anything that needs module context belongs
+// in .stack/nix/. The flake-side loader (load-config.nix) does support
+// function-form files via haumea; this loader is intentionally
+// dependency-free so the agent can read the merged view without a
+// flake build.
 func (s *Store) configEvalExpr() string {
-	return s.importExpr(s.paths.ConfigFilePath())
+	fileExpr := s.importExpr(s.paths.ConfigFilePath())
+	if !s.paths.HasTreeLayout() {
+		return fileExpr
+	}
+	treeExpr := s.treeLoadExpr(s.paths.TreeRoot())
+	return fmt.Sprintf("(%s) // (%s)", fileExpr, treeExpr)
+}
+
+// treeLoadExpr returns a self-contained Nix expression that walks
+// treeDir and produces an attrset matching the haumea-loaded shape:
+//
+//   - <treeDir>/<key>.nix             -> attrs.<key>
+//   - <treeDir>/<entity>/<key>.nix    -> attrs.<entity>.<decoded-key>
+//   - <treeDir>/<entity>/             -> attrs.<entity> = { ... } even
+//     when the directory is empty (so callers can detect "opted-in but
+//     no entries yet" without a missing-key error)
+//
+// Filenames starting with "_" are hidden (matches haumea visibility).
+// Keys are decoded via the inverse of EncodeTreeFileKey ("__" -> "/")
+// so that disk-safe filenames map back to their canonical attribute
+// names. Files that evaluate to functions are called with all-null
+// arguments (mirroring how config.nix is loaded above) so simple
+// data-only files work even when the user keeps the function form.
+func (s *Store) treeLoadExpr(treeDir string) string {
+	return fmt.Sprintf(`
+let
+  treeDir = %q;
+  decode = name: builtins.replaceStrings [ "--" ] [ "/" ] name;
+  stripExt = name:
+    let n = builtins.stringLength name; in
+    if n > 4 && builtins.substring (n - 4) 4 name == ".nix"
+    then builtins.substring 0 (n - 4) name
+    else name;
+  isVisibleNix = name: type:
+    type == "regular"
+    && builtins.substring 0 1 name != "_"
+    && builtins.match ".+\\.nix" name != null;
+  loadFile = path:
+    let raw = import path; in
+    if builtins.isFunction raw
+    then raw {
+      pkgs = null;
+      lib = null;
+      inputs = { };
+      self = null;
+      config = { };
+    }
+    else raw;
+  loadEntityDir = entityDir:
+    let
+      entries = builtins.readDir entityDir;
+      filtered = builtins.filter (n: isVisibleNix n entries.${n}) (builtins.attrNames entries);
+    in
+      builtins.listToAttrs (map (n: {
+        name = decode (stripExt n);
+        value = loadFile (entityDir + "/${n}");
+      }) filtered);
+  loadTopLevel = topDir:
+    let
+      entries = builtins.readDir topDir;
+      names = builtins.attrNames entries;
+      onEntry = name:
+        let type = entries.${name}; in
+        if type == "directory" then {
+          name = name;
+          value = loadEntityDir (topDir + "/${name}");
+        } else if isVisibleNix name type then {
+          name = decode (stripExt name);
+          value = loadFile (topDir + "/${name}");
+        } else null;
+      mapped = map onEntry names;
+      kept = builtins.filter (e: e != null) mapped;
+    in
+      builtins.listToAttrs kept;
+in
+  if builtins.pathExists treeDir then loadTopLevel treeDir else { }
+`, treeDir)
 }
 
 // configEntityEvalExpr builds a Nix expression that extracts a single entity
