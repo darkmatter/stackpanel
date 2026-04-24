@@ -298,6 +298,7 @@
         "@stackpanel/db": "workspace:*",
         "better-auth": "catalog:",
         "dotenv": "catalog:",
+        "drizzle-orm": "^0.45.1",
         "zod": "^4.1.11",
       },
       "devDependencies": {
