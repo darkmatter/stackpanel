@@ -1,4 +1,5 @@
 import { Resource } from "alchemy-effect/Resource";
+import * as Provider from "alchemy-effect/Provider";
 import * as Neon from "@distilled.cloud/neon";
 import {
   createProject,
@@ -34,9 +35,10 @@ export interface NeonProject extends Resource<
 export const NeonProject = Resource<NeonProject>("Neon.Project");
 
 export const NeonProjectProvider = () =>
-  NeonProject.provider.effect(
+  Provider.effect(
+    NeonProject,
     Effect.succeed(
-      NeonProject.provider.of({
+      NeonProject.Provider.of({
         stables: ["projectId"],
 
         read: Effect.fnUntraced(function* ({ output }) {
