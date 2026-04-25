@@ -106,7 +106,7 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy-effect deploy --stage ${{ needs.stage.outputs.stage }}
+          bunx alchemy-effect deploy --stage ${{ needs.stage.outputs.stage }} --yes
       - name: Comment preview URL on PR
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
@@ -143,7 +143,7 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
-          bunx alchemy-effect destroy --stage ${{ needs.stage.outputs.stage }}
+          bunx alchemy-effect destroy --stage ${{ needs.stage.outputs.stage }} --yes
       - name: Delete cached alchemy state
         if: always()
         env:
