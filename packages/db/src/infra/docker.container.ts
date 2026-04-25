@@ -1,3 +1,4 @@
+import * as Provider from "alchemy-effect/Provider";
 import { Resource } from "alchemy-effect/Resource";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -69,9 +70,10 @@ function buildRunArgs(props: ContainerProps): string[] {
  * @returns A provider that creates a Docker container.
  */
 export const ContainerProvider = () =>
-  Container.provider.effect(
+  Provider.effect(
+    Container,
     Effect.succeed(
-      Container.provider.of({
+      Container.Provider.of({
         stables: ["containerId"],
         create: Effect.fnUntraced(function* ({ news }) {
           yield* docker("rm", "-f", news.name).pipe(Effect.ignore);
