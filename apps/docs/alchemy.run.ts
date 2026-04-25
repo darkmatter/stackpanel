@@ -36,6 +36,12 @@ const program = Effect.gen(function* () {
   // resource only handles upload + binding wiring.
   const website = yield* Cloudflare.Worker("Docs", {
     main: ".open-next/worker.js",
+    // OpenNext emits a plain Workers default export `{ fetch }` — the alchemy
+    // bootstrap that wraps `main` in `Layer.effect(tag, entry)` mis-handles
+    // that shape and the deployed worker throws CF 1101 on first request.
+    // `isExternal: true` skips the wrapper so the bundle keeps OpenNext's own
+    // entrypoint.
+    isExternal: true,
     // Mirror apps/docs/wrangler.jsonc — OpenNext serves its own routing so the
     // worker must run for missed asset paths, and we want the SPA-style
     // trailing-slash handling for static MDX routes.
