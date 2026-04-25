@@ -54,6 +54,12 @@ const program = Effect.gen(function* () {
       },
     },
     compatibility: {
+      // Must be >= 2026-03-17 — that's the date Cloudflare started providing
+      // node:perf_hooks as a native module. OpenNext (via Next.js's edge
+      // runtime) imports it transitively, and on earlier dates the unenv
+      // polyfill itself references node:perf_hooks, so the worker throws
+      // `No such module "node:perf_hooks"` on first request (CF error 1101).
+      date: "2026-03-17",
       flags: [
         "nodejs_compat",
         "nodejs_compat_populate_process_env",
