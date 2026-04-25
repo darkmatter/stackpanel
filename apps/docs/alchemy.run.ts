@@ -36,7 +36,17 @@ const program = Effect.gen(function* () {
   // resource only handles upload + binding wiring.
   const website = yield* Cloudflare.Worker("Docs", {
     main: ".open-next/worker.js",
-    assets: ".open-next/assets",
+    // Mirror apps/docs/wrangler.jsonc — OpenNext serves its own routing so the
+    // worker must run for missed asset paths, and we want the SPA-style
+    // trailing-slash handling for static MDX routes.
+    assets: {
+      directory: ".open-next/assets",
+      config: {
+        notFoundHandling: "none",
+        htmlHandling: "auto-trailing-slash",
+        runWorkerFirst: false,
+      },
+    },
     compatibility: {
       flags: [
         "nodejs_compat",
