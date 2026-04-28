@@ -35,7 +35,8 @@ Manage development services and infrastructure
 from a single command-line interface.
 
 Run without arguments to launch the interactive TUI.`,
-	Version: Version,
+	Version:      Version,
+	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get flags
 		noTUI, _ := cmd.Flags().GetBool("no-tui")
