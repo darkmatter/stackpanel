@@ -8,7 +8,7 @@
 # For config that needs pkgs/lib (computed values, custom packages),
 # use .stack/nix/ (or .stackpanel/nix/) which has full NixOS module context.
 # ==============================================================================
-{ config, ... }@args:
+{ config, lib, ... }@args:
 {
   deployment.alchemy = {
     deploy = {
@@ -746,7 +746,27 @@
       let
         ghdata = import ./data/external/github-collaborators.nix;
         isEd25519 = key: builtins.substring 0 11 key == "ssh-ed25519";
-        collaboratorRecipients = builtins.listToAttrs (
+        droppedCollaborators = lib.filter (
+          name:
+          let
+            keys = ghdata.collaborators.${name}.publicKeys;
+          in
+          keys != [ ] && lib.filter isEd25519 keys == [ ]
+        ) (builtins.attrNames ghdata.collaborators);
+        warnDropped =
+          if droppedCollaborators == [ ] then
+            x: x
+          else
+            lib.warn ''
+              SOPS recipients: the following GitHub collaborators have public keys
+              registered but none are ssh-ed25519 (the only type age can derive an
+              identity from). They will not receive access to encrypted secrets:
+                ${lib.concatStringsSep ", " droppedCollaborators}
+              Have them add an ed25519 key to their GitHub account and re-run
+              `stackpanel users sync`, or register their AGE pubkey explicitly
+              under `stackpanel.secrets.recipients` in .stack/config.nix.
+            '';
+        collaboratorRecipients = warnDropped (builtins.listToAttrs (
           builtins.concatLists (
             builtins.attrValues (
               builtins.mapAttrs (
@@ -768,7 +788,7 @@
               ) ghdata.collaborators
             )
           )
-        );
+        ));
       in
       {
         keyservice = {

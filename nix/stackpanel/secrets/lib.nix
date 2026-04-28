@@ -40,34 +40,64 @@ rec {
   # Local Key Management
   # ===========================================================================
 
-  # Script to auto-generate the local AGE key if it doesn't exist.
-  autoGenerateLocalKeyScript = ''
-    # syntax: bash
-        ${cfg.bashLib}
+  # Script to auto-generate the local AGE key if it doesn't exist, and warn if
+  # the resulting pubkey isn't registered as a SOPS recipient (in which case
+  # decryption of any existing .sops.yaml file will fail). Pass the full list
+  # of configured recipient pubkeys so the script can compare.
+  autoGenerateLocalKeyScript =
+    { configuredRecipientPubkeys }:
+    ''
+      # syntax: bash
+          ${cfg.bashLib}
 
-        STATE_DIR=${cfg.getKnown "paths.state"}
-        KEYS_DIR=${cfg.getKnown "paths.keys"}
-        LOCAL_KEY=${cfg.getKnown "paths.local-key"}
-        LOCAL_PUB=${cfg.getKnown "paths.local-pub"}
+          STATE_DIR=${cfg.getKnown "paths.state"}
+          KEYS_DIR=${cfg.getKnown "paths.keys"}
+          LOCAL_KEY=${cfg.getKnown "paths.local-key"}
+          LOCAL_PUB=${cfg.getKnown "paths.local-pub"}
 
-        if [[ ! -f "$LOCAL_KEY" ]]; then
-          echo "Generating local AGE key..." >&2
+          if [[ ! -f "$LOCAL_KEY" ]]; then
+            echo "Generating local AGE key..." >&2
 
-          mkdir -p "$KEYS_DIR"
-          chmod 700 "$KEYS_DIR"
+            mkdir -p "$KEYS_DIR"
+            chmod 700 "$KEYS_DIR"
 
-          ${pkgs.age}/bin/age-keygen -o "$LOCAL_KEY" 2>/dev/null
-          chmod 600 "$LOCAL_KEY"
+            ${pkgs.age}/bin/age-keygen -o "$LOCAL_KEY" 2>/dev/null
+            chmod 600 "$LOCAL_KEY"
 
-          PUBLIC_KEY=$(${pkgs.age}/bin/age-keygen -y "$LOCAL_KEY")
-          echo "$PUBLIC_KEY" > "$LOCAL_PUB"
+            PUBLIC_KEY=$(${pkgs.age}/bin/age-keygen -y "$LOCAL_KEY")
+            echo "$PUBLIC_KEY" > "$LOCAL_PUB"
 
-          echo "" >&2
-          echo "Local AGE key generated:" >&2
-          echo "   Private: $LOCAL_KEY" >&2
-          echo "   Public:  $PUBLIC_KEY" >&2
-        fi
-  '';
+            echo "" >&2
+            echo "Local AGE key generated:" >&2
+            echo "   Private: $LOCAL_KEY" >&2
+            echo "   Public:  $PUBLIC_KEY" >&2
+          fi
+
+          local_pub=""
+          if [[ -f "$LOCAL_PUB" ]]; then
+            local_pub=$(tr -d '[:space:]' < "$LOCAL_PUB")
+          fi
+
+          if [[ -n "$local_pub" ]]; then
+            recipient_match=0
+            for recipient in ${lib.escapeShellArgs configuredRecipientPubkeys}; do
+              if [[ "$recipient" == "$local_pub" ]]; then
+                recipient_match=1
+                break
+              fi
+            done
+
+            if [[ "$recipient_match" -eq 0 ]]; then
+              echo "" >&2
+              echo "⚠ Local AGE key is not a registered SOPS recipient." >&2
+              echo "   Public:  $local_pub" >&2
+              echo "   Decryption of .sops.yaml files will fail until someone with" >&2
+              echo "   access adds this key under stackpanel.secrets.recipients in" >&2
+              echo "   .stack/config.nix and re-encrypts (\`secrets:rekey\`)." >&2
+              echo "" >&2
+            fi
+          fi
+    '';
 
   # Wrapped SOPS that exports SOPS_AGE_KEY_CMD so the generated .sops.yaml can be
   # used directly for both encryption and decryption.

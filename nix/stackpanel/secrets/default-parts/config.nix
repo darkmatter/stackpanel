@@ -71,7 +71,9 @@ in {
     stackpanel.devshell.hooks.before = [
       ''
         (
-        ${secretsLib.autoGenerateLocalKeyScript}
+        ${secretsLib.autoGenerateLocalKeyScript {
+          configuredRecipientPubkeys = lib.mapAttrsToList (_: r: r.public-key) recipientsConfig;
+        }}
         )
       ''
       ''
