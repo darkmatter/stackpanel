@@ -1,0 +1,310 @@
+<h2>Configuration Maintenance Receipt</h2>
+<p class="subtitle">A calmer version: treat setup files like recurring line items. Stackpanel’s promise is that these stop being hand-managed costs.</p>
+
+<style>
+  .receipt-shell {
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 28px;
+    overflow: hidden;
+    background: #0b0d0c;
+    box-shadow: 0 28px 100px rgba(0,0,0,0.28);
+  }
+  .receipt-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 26px 28px 20px;
+    border-bottom: 1px dashed rgba(255,255,255,0.16);
+  }
+  .receipt-kicker {
+    color: rgba(255,255,255,0.46);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .receipt-title {
+    margin-top: 6px;
+    color: white;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 850;
+  }
+  .receipt-note {
+    max-width: 280px;
+    color: rgba(255,255,255,0.56);
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: right;
+  }
+  .receipt-table {
+    padding: 18px 28px 8px;
+  }
+  .receipt-row,
+  .receipt-columns {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.25fr) minmax(180px, 0.9fr) 96px 96px;
+    gap: 18px;
+    align-items: baseline;
+  }
+  .receipt-columns {
+    padding: 0 0 10px;
+    color: rgba(255,255,255,0.36);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .receipt-row {
+    padding: 11px 0;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+  .receipt-row:first-of-type {
+    border-top-color: rgba(255,255,255,0.12);
+  }
+  .file-path {
+    color: rgba(255,212,176,0.92);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+  }
+  .reason {
+    color: rgba(255,255,255,0.56);
+    font-size: 13px;
+  }
+  .number {
+    color: rgba(255,255,255,0.72);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    text-align: right;
+  }
+  .receipt-divider {
+    margin: 14px 28px 0;
+    border-top: 1px dashed rgba(255,255,255,0.18);
+  }
+  .receipt-total {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 22px;
+    padding: 22px 28px 28px;
+    align-items: end;
+  }
+  .total-copy strong {
+    display: block;
+    color: white;
+    font-size: 18px;
+    margin-bottom: 5px;
+  }
+  .total-copy span {
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .total-number {
+    text-align: right;
+  }
+  .total-number strong {
+    display: block;
+    color: #ffbd7a;
+    font-size: 44px;
+    letter-spacing: -0.07em;
+    line-height: 0.95;
+  }
+  .total-number span {
+    color: rgba(255,255,255,0.48);
+    font-size: 12px;
+  }
+  .receipt-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px 28px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.025);
+    color: rgba(255,255,255,0.48);
+    font-size: 12px;
+  }
+  .receipt-footer b {
+    color: rgba(255,255,255,0.72);
+  }
+  @media (max-width: 900px) {
+    .receipt-header,
+    .receipt-total,
+    .receipt-footer {
+      display: block;
+    }
+    .receipt-note,
+    .total-number {
+      margin-top: 14px;
+      text-align: left;
+    }
+    .receipt-row,
+    .receipt-columns {
+      grid-template-columns: minmax(180px, 1fr) 72px 72px;
+    }
+    .receipt-columns span:nth-child(2),
+    .receipt-row .reason {
+      display: none;
+    }
+  }
+  @media (max-width: 480px) {
+    .receipt-shell {
+      border-radius: 20px;
+    }
+    .receipt-header {
+      padding: 22px 18px 18px;
+    }
+    .receipt-title {
+      font-size: 24px;
+    }
+    .receipt-note {
+      max-width: none;
+      margin-top: 12px;
+      text-align: left;
+    }
+    .receipt-table {
+      padding: 12px 18px 4px;
+    }
+    .receipt-columns {
+      display: none;
+    }
+    .receipt-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      padding: 13px 0;
+    }
+    .receipt-row .reason {
+      display: block;
+      order: 2;
+    }
+    .receipt-row .number {
+      text-align: left;
+    }
+    .receipt-row .number:nth-of-type(2) {
+      order: 3;
+    }
+    .receipt-row .number:nth-of-type(3) {
+      order: 4;
+    }
+    .receipt-row .number:nth-of-type(2)::before {
+      content: "Commits: ";
+      color: rgba(255,255,255,0.38);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .receipt-row .number:nth-of-type(3)::before {
+      content: "Time: ";
+      color: rgba(255,255,255,0.38);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .receipt-divider {
+      margin: 12px 18px 0;
+    }
+    .receipt-total {
+      padding: 20px 18px 24px;
+    }
+    .total-number strong {
+      font-size: 38px;
+    }
+    .receipt-footer {
+      padding: 15px 18px;
+    }
+    .receipt-footer span + span {
+      display: block;
+      margin-top: 10px;
+    }
+  }
+</style>
+
+<div class="receipt-shell option" data-choice="maintenance-receipt" onclick="toggleSelect(this)">
+  <div class="receipt-header">
+    <div>
+      <div class="receipt-kicker">illustrative setup tax</div>
+      <div class="receipt-title">Files your team keeps paying to maintain</div>
+    </div>
+    <div class="receipt-note">
+      Not product code. Not differentiating. Just the conventional glue every repo needs.
+    </div>
+  </div>
+
+  <div class="receipt-table">
+    <div class="receipt-columns">
+      <span>File</span>
+      <span>Maintenance reason</span>
+      <span class="number">Commits</span>
+      <span class="number">Time</span>
+    </div>
+
+    <div class="receipt-row">
+      <span class="file-path">process-compose.yml</span>
+      <span class="reason">services, readiness, scripts</span>
+      <span class="number">14</span>
+      <span class="number">2.8h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">.sops.yaml</span>
+      <span class="reason">recipients, keys, environments</span>
+      <span class="number">9</span>
+      <span class="number">1.6h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">packages/env/</span>
+      <span class="reason">typed env drift across apps</span>
+      <span class="number">18</span>
+      <span class="number">3.4h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">Caddyfile</span>
+      <span class="reason">local domains and reverse proxy</span>
+      <span class="number">7</span>
+      <span class="number">1.2h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">Dockerfile</span>
+      <span class="reason">runtime defaults and build context</span>
+      <span class="number">11</span>
+      <span class="number">2.1h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">docker-compose.yml</span>
+      <span class="reason">dev databases, queues, object storage</span>
+      <span class="number">13</span>
+      <span class="number">2.5h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">.vscode/settings.json</span>
+      <span class="reason">team editor and schema setup</span>
+      <span class="number">8</span>
+      <span class="number">1.1h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">tsconfig.json</span>
+      <span class="reason">tooling defaults and path aliases</span>
+      <span class="number">10</span>
+      <span class="number">1.7h</span>
+    </div>
+    <div class="receipt-row">
+      <span class="file-path">.gitignore</span>
+      <span class="reason">generated files and local state</span>
+      <span class="number">6</span>
+      <span class="number">45m</span>
+    </div>
+  </div>
+
+  <div class="receipt-divider"></div>
+
+  <div class="receipt-total">
+    <div class="total-copy">
+      <strong>Stackpanel moves this into conventions.</strong>
+      <span>You still get the familiar files. You just stop hand-editing the same boilerplate every time the repo grows.</span>
+    </div>
+    <div class="total-number">
+      <strong>17h</strong>
+      <span>illustrative maintenance avoided per project</span>
+    </div>
+  </div>
+
+  <div class="receipt-footer">
+    <span><b>You maintain:</b> app code, app definitions, secret schemas, project choices</span>
+    <span><b>Stackpanel handles:</b> generated env, service glue, local routes, IDE/tooling defaults</span>
+  </div>
+</div>

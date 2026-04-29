@@ -14,6 +14,7 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { Toaster } from "@ui/sonner";
 import Header from "@/components/header";
+import { WaitlistProvider } from "@/components/landing/waitlist-dialog";
 import { ThemeProvider } from "@/components/theme-provider";
 import "@fontsource-variable/montserrat";
 import "@fontsource-variable/source-code-pro";
@@ -94,8 +95,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					<Scripts />
 				</head>
 				<body className={isStudio ? "studio" : ""}>
-					{!isFullScreenPage && <Header />}
-					<div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
+					<WaitlistProvider>
+						{!isFullScreenPage && <Header />}
+						<div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
+					</WaitlistProvider>
 					<Toaster richColors />
 					<TanStackRouterDevtools position="bottom-left" />
 					<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />

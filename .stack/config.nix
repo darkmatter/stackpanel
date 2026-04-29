@@ -780,7 +780,10 @@
         };
         local = {
           public-key = "age16rkvks3tljju3y6xu0l7luhjzx634et97g3xe58xf2dgfn2865rqkq6t8f";
-          tags = [ "dev" ];
+          tags = [
+            "dev"
+            "deploy"
+          ];
         };
         github-actions = {
           public-key = "age1d9h9mm3u5qalmpl2pf62pyzqj8t654n435emn93rutv0cg9sr32sg64fdj";

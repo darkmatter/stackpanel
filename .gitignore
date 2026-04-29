@@ -5,6 +5,7 @@ release.tar.gz
 # tracked so the flake input can read it during pure evaluation.
 *.local.json
 .worktrees/
+.patch-work/
 # Dependencies
 node_modules
 .pnp
