@@ -102,10 +102,6 @@ func runPreflightRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := writeProjectRootMarker(projectRoot); err != nil {
-		return err
-	}
-
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	summary, err := buildCodegenModules(cmd.Context(), projectRoot, args, preflightCodegenForce, verbose)
 	if err != nil {
@@ -194,10 +190,6 @@ func runPreflightImportEnv(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if err := writeProjectRootMarker(projectRoot); err != nil {
-		return err
-	}
-
 	configPath := filepath.Join(projectRoot, ".stack", "config.local.nix")
 	if !preflightImportEnvForce {
 		if _, statErr := os.Stat(configPath); statErr == nil {
@@ -227,17 +219,6 @@ func resolvePreflightProjectRoot(flagValue string) (string, error) {
 		return envRoot, nil
 	}
 	return findProjectRoot()
-}
-
-// writeProjectRootMarker drops a .stackpanel-root sentinel file so that
-// findProjectRoot() can locate the project from nested directories without
-// walking all the way up to a flake.nix or .stack/ directory.
-func writeProjectRootMarker(projectRoot string) error {
-	markerPath := filepath.Join(projectRoot, ".stackpanel-root")
-	if err := os.WriteFile(markerPath, []byte(projectRoot+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write .stackpanel-root marker: %w", err)
-	}
-	return nil
 }
 
 // envConfig holds environment variable configuration.

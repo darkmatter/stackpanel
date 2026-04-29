@@ -94,7 +94,6 @@ in
 
           ${pathsLib.mkShellPathUtils {
             rootDir = cfg.dirs.home;
-            rootMarker = cfg.root-marker;
             stateDir = "profile";
             keysDir = "keys";
             genDir = "gen";
@@ -114,11 +113,6 @@ in
           # if [[ -z "''${STACKPANEL_SHELL_LOG:-}" ]]; then
           #   export STACKPANEL_SHELL_LOG="$STACKPANEL_STATE_DIR/shell.log"
           # fi
-
-          # Ensure marker exists at repo root
-          if [[ ! -f "$STACKPANEL_ROOT/${cfg.root-marker}" ]]; then
-            echo "$STACKPANEL_ROOT" > "$STACKPANEL_ROOT/${cfg.root-marker}"
-          fi
 
           # Compute shell freshness hash from config files
           # This is used to detect when the shell is stale (config changed but shell not reloaded)
