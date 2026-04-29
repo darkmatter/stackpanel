@@ -52,7 +52,7 @@ func hasAbsoluteEnvPaths() bool {
 //
 // projectRoot is optional when any of STACKPANEL_CONFIG_JSON, STACKPANEL_STATE_DIR,
 // or STACKPANEL_ROOT are set to absolute paths. Otherwise, it walks up from cwd
-// looking for .stackpanel-root.
+// looking for flake.nix or a .stack/ directory.
 func GetConfigWithEval(ctx context.Context, projectRoot string) (*Config, error) {
 	var absRoot string
 	var needsProjectRoot bool
@@ -288,7 +288,7 @@ func loadFromStateFile(projectRoot string) (*Config, error) {
 	return nil, fmt.Errorf("no stackpanel state file found under .stack/profile or .stackpanel/state")
 }
 
-// findProjectRoot walks up from cwd looking for the .stackpanel-root sentinel file.
+// findProjectRoot walks up from cwd looking for a flake.nix or .stack/ directory.
 // Returns "" if no root is found (e.g. running outside any project).
 func findProjectRoot() string {
 	// 1. Check STACKPANEL_ROOT env var (preferred)
@@ -296,7 +296,7 @@ func findProjectRoot() string {
 		return root
 	}
 
-	// 3. Search up from current directory
+	// 2. Search up from current directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return ""
@@ -304,7 +304,10 @@ func findProjectRoot() string {
 
 	dir := cwd
 	for {
-		if _, err := os.Stat(filepath.Join(dir, ".stackpanel-root")); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, "flake.nix")); err == nil {
+			return dir
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".stack")); err == nil {
 			return dir
 		}
 		parent := filepath.Dir(dir)

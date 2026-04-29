@@ -183,21 +183,11 @@
       description = ''
         Absolute path to the project root. If set, this overrides PWD-based detection.
 
-        For pure flake evaluation (like `nix flake check`), use the readStackpanelRoot
-        flake module which reads this from a flake input:
-
-        ```nix
-        # flake.nix inputs
-        inputs.stackpanel-root = {
-          url = "file+file:///dev/null";
-          flake = false;
-        };
-
-        # imports
-        imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
-        ```
-
-        Then in .envrc: `echo "$PWD" > .stackpanel-root`
+        The stackpanel flake module sets this automatically to `toString self`
+        — the flake source as copied into the Nix store — which works for both
+        pure and impure evaluation. Override it only if you need a different
+        path (for example to point at the user's working tree to read
+        gitignored build artifacts).
       '';
       type = lib.types.nullOr lib.types.str;
       default = null;
