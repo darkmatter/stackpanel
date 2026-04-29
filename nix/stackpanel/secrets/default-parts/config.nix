@@ -74,6 +74,7 @@ in {
         (
         ${secretsLib.autoGenerateLocalKeyScript {
           configuredRecipientPubkeys = normalizedRecipientPubkeys;
+          inherit sopsAgeKeys;
         }}
         )
       ''
