@@ -1,6 +1,6 @@
-import * as Cloudflare from "alchemy-effect/Cloudflare";
-import * as D1 from "alchemy-effect/Cloudflare/D1";
-import type { HttpEffect } from "alchemy-effect/Http";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as D1 from "alchemy/Cloudflare/D1";
+import type { HttpEffect } from "alchemy/Http";
 import { betterAuth, type Auth } from "better-auth";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";

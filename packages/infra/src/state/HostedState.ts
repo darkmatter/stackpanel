@@ -3,7 +3,7 @@ import {
 	State,
 	StateStoreError,
 	type StateService,
-} from "alchemy-effect/State";
+} from "alchemy/State";
 import {
 	createTRPCClient,
 	httpBatchLink,
@@ -16,7 +16,7 @@ import superjson from "superjson";
 /**
  * Hosted alchemy state backend (Pro tier).
  *
- * Swaps alchemy-effect's filesystem `LocalState` Layer for one backed by
+ * Swaps alchemy's filesystem `LocalState` Layer for one backed by
  * api.stackpanel.com. Every operation becomes an authenticated tRPC call;
  * the cloud refuses callers without an active Pro subscription.
  *
@@ -118,7 +118,7 @@ function liftPromise<A>(thunk: () => Promise<A>) {
  * StateService implementation. Most methods are a direct translation of
  * a tRPC procedure. `getReplacedResources` is the exception — the cloud
  * router doesn't filter by status (keeping it generic), so we compose
- * list + get here exactly like alchemy-effect's LocalState does.
+ * list + get here exactly like alchemy's LocalState does.
  */
 function buildService(client: HostedStateClient): StateService {
 	const service: StateService = {

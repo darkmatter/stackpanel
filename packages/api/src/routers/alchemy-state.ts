@@ -90,7 +90,7 @@ export const alchemyStateRouter = createTRPCRouter({
 				 * Optional optimistic-concurrency check. When provided and the
 				 * server's stored version differs, throws CONFLICT so the caller
 				 * can refetch + retry. Omit for last-writer-wins semantics
-				 * (matches alchemy-effect's LocalState behavior).
+				 * (matches alchemy's LocalState behavior).
 				 */
 				expectedVersion: z.number().int().min(0).optional(),
 				payload: z.unknown(),
@@ -232,7 +232,7 @@ export const alchemyStateRouter = createTRPCRouter({
 	/**
 	 * Enumerate all distinct stacks that have any state entries for the
 	 * calling organization. Mirrors `StateService.listStacks` in the
-	 * alchemy-effect contract.
+	 * alchemy contract.
 	 */
 	listStacks: paidProcedure.query(async ({ ctx }) => {
 		const organizationId = requireActiveOrg(ctx.session as never);
