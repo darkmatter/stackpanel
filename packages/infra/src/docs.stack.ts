@@ -1,6 +1,8 @@
 // packages/infra/src/docs.stack.ts
-import { Stack, Build, Cloudflare } from "alchemy-effect";
-import * as Output from "alchemy-effect/Output";
+import * as Alchemy from "alchemy";
+import * as Build from "alchemy/Build";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 import * as Path from "effect/Path";
 
@@ -53,10 +55,12 @@ const DocsWorker = Effect.gen(function* () {
 });
 
 // 3. Stack that wires it all together
-export default Stack.make(
+export default Alchemy.Stack(
   "DocsStack",
-  Cloudflare.providers(),
-)(
+  {
+    providers: Cloudflare.providers(),
+    state: Cloudflare.state(),
+  },
   Effect.gen(function* () {
     const { worker } = yield* DocsWorker;
 
