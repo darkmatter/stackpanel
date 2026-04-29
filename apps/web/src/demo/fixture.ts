@@ -115,3 +115,59 @@ export const demoHealth = {
 	agentId: "demo-agent",
 	version: "demo",
 };
+
+/**
+ * Synthetic "project" entries returned for `/api/project/list` and
+ * `/api/project/current` in demo mode. Shape mirrors the agent's actual
+ * response so `ProjectProvider` and `ProjectSelector` work unchanged.
+ */
+export const demoProject = {
+	id: "demo",
+	name: "stackpanel-demo",
+	path: "/home/demo/stackpanel-demo",
+	active: true,
+	is_default: true,
+	last_opened: new Date().toISOString(),
+} as const;
+
+/** Process-compose snapshot for the overview panel's ProcessStateCard */
+export const demoProcessComposeProcesses = {
+	processes: [
+		{
+			name: "web",
+			namespace: "default",
+			status: "Running",
+			is_running: true,
+			restarts: 0,
+			pid: 12_345,
+			age_ms: 1_800_000,
+		},
+		{
+			name: "server",
+			namespace: "default",
+			status: "Running",
+			is_running: true,
+			restarts: 0,
+			pid: 12_346,
+			age_ms: 1_800_000,
+		},
+		{
+			name: "postgres",
+			namespace: "services",
+			status: "Running",
+			is_running: true,
+			restarts: 0,
+			pid: 12_347,
+			age_ms: 3_600_000,
+		},
+		{
+			name: "redis",
+			namespace: "services",
+			status: "Running",
+			is_running: true,
+			restarts: 0,
+			pid: 12_348,
+			age_ms: 3_600_000,
+		},
+	],
+} as const;

@@ -22,9 +22,10 @@ import {
   SelectValue,
 } from "@ui/select";
 import { Badge } from "@ui/badge";
-import { Check, FolderOpen, Loader2, Plus } from "lucide-react";
+import { Check, FolderOpen, Loader2, LogOut, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAgentEndpoint } from "@/lib/agent-endpoint";
 import { useAgentContext } from "@/lib/agent-provider";
 import { useTRPC } from "@/utils/trpc";
 
@@ -45,6 +46,7 @@ interface ProjectSelectorProps {
 
 export function ProjectSelector(_props: ProjectSelectorProps) {
   const { host, port, token, healthStatus } = useAgentContext();
+  const { isDemo, useLocal } = useAgentEndpoint();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newProjectPath, setNewProjectPath] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -53,12 +55,14 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  // Query for listing projects (public endpoint)
+  // Query for listing projects (public endpoint).
+  // Disabled in demo mode — the picker doesn't need a project list because
+  // there's only one (the synthetic demo project).
   const projectsQuery = useQuery(
     trpc.agent.listProjects.queryOptions(
       { host, port },
       {
-        enabled: healthStatus === "available",
+        enabled: !isDemo && healthStatus === "available",
         staleTime: 5000,
       },
     ),
@@ -69,7 +73,7 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
     trpc.agent.currentProject.queryOptions(
       { host, port },
       {
-        enabled: healthStatus === "available",
+        enabled: !isDemo && healthStatus === "available",
         staleTime: 5000,
       },
     ),
@@ -189,6 +193,30 @@ export function ProjectSelector(_props: ProjectSelectorProps) {
       );
     }
   };
+
+  if (isDemo) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/[0.06] px-3 py-1.5 text-xs">
+        <FolderOpen className="h-3.5 w-3.5 text-amber-400" />
+        <span className="font-medium text-amber-100">stackpanel-demo</span>
+        <Badge
+          variant="outline"
+          className="border-amber-500/40 bg-transparent px-1.5 py-0 text-[10px] text-amber-200"
+        >
+          demo
+        </Badge>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 px-1.5 text-amber-200 hover:bg-amber-500/15 hover:text-amber-50"
+          onClick={() => useLocal()}
+          aria-label="Exit demo mode"
+        >
+          <LogOut className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
 
   if (healthStatus !== "available") {
     return null;

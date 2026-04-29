@@ -1,15 +1,19 @@
 "use client";
 
 import { Button } from "@ui/button";
-import { ArrowRight, Sparkles, X } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, LogOut, Sparkles } from "lucide-react";
 import { useWaitlist } from "@/components/landing/waitlist-dialog";
+import { useAgentEndpoint } from "@/lib/agent-endpoint";
 
+/**
+ * Persistent banner shown above the studio header whenever the active agent
+ * endpoint is the in-browser MSW mock. Communicates the limitations of demo
+ * mode (no real execution, fixture data) and offers two escape hatches:
+ * sign up for the beta, or switch back to the local agent.
+ */
 export function DemoBanner() {
-	const [dismissed, setDismissed] = useState(false);
 	const waitlist = useWaitlist();
-
-	if (dismissed) return null;
+	const { useLocal } = useAgentEndpoint();
 
 	return (
 		<div className="border-b border-amber-500/30 bg-amber-500/[0.06]">
@@ -18,8 +22,8 @@ export function DemoBanner() {
 					<Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-400" />
 					<span className="truncate">
 						<span className="font-semibold text-amber-100">Demo mode.</span>{" "}
-						Realistic fixture data. Actions are no-ops. Pair a real local
-						agent to use the actual Studio.
+						You're running the real Studio against fixture data. Writes are
+						no-ops; install the CLI to use a live local agent.
 					</span>
 				</div>
 				<div className="flex items-center gap-1">
@@ -35,11 +39,12 @@ export function DemoBanner() {
 					<Button
 						size="sm"
 						variant="ghost"
-						className="h-7 w-7 p-0 text-amber-200 hover:bg-amber-500/15 hover:text-amber-50"
-						aria-label="Dismiss"
-						onClick={() => setDismissed(true)}
+						className="h-7 px-2 text-xs text-amber-200 hover:bg-amber-500/15 hover:text-amber-50"
+						onClick={() => useLocal()}
+						aria-label="Exit demo mode"
 					>
-						<X className="h-3.5 w-3.5" />
+						<LogOut className="mr-1 h-3 w-3" />
+						Exit demo
 					</Button>
 				</div>
 			</div>
