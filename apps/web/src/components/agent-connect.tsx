@@ -22,14 +22,17 @@ import { Label } from "@ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";
 import {
 	AlertCircle,
+	ArrowRight,
 	CheckCircle2,
 	Loader2,
+	Play,
 	Settings,
 	Terminal,
 	Unplug,
 	Wifi,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAgentEndpoint } from "@/lib/agent-endpoint";
 import { useAgentContext } from "@/lib/agent-provider";
 
 const AGENT_CONFIG_KEY = "stackpanel-agent-config";
@@ -78,6 +81,7 @@ export function AgentConnect({ onConnected }: AgentConnectProps) {
 		clearPairing,
 		connect,
 	} = useAgentContext();
+	const { useDemo: enterDemo, bootingDemo } = useAgentEndpoint();
 
 	const [pairingToken, setPairingToken] = useState("");
 	const [isPairing, setIsPairing] = useState(false);
@@ -258,17 +262,39 @@ export function AgentConnect({ onConnected }: AgentConnectProps) {
 						</div>
 					</div>
 
-					<Button
-						onClick={() => {
-							clearPairing();
-							connect();
-						}}
-						size="sm"
-						variant="outline"
-					>
-						<Wifi className="mr-2 h-4 w-4" />
-						Retry Connection
-					</Button>
+					<div className="flex flex-wrap items-center gap-2">
+						<Button
+							onClick={() => {
+								clearPairing();
+								connect();
+							}}
+							size="sm"
+							variant="outline"
+						>
+							<Wifi className="mr-2 h-4 w-4" />
+							Retry Connection
+						</Button>
+						<Button
+							className="bg-amber-500 text-amber-950 hover:bg-amber-500/90"
+							disabled={bootingDemo}
+							onClick={() => {
+								void enterDemo();
+							}}
+							size="sm"
+						>
+							{bootingDemo ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<Play className="mr-2 h-4 w-4" />
+							)}
+							Try the Demo
+							<ArrowRight className="ml-2 h-3 w-3" />
+						</Button>
+					</div>
+					<p className="text-muted-foreground text-xs">
+						No install required. The demo runs entirely in your browser
+						against fixture data.
+					</p>
 				</CardContent>
 			</Card>
 		);

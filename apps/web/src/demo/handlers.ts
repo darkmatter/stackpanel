@@ -1,15 +1,20 @@
 /**
  * MSW request handlers for the demo agent.
  *
- * The studio talks to the agent over two protocols, and both terminate as
- * `fetch()` calls so MSW can intercept them:
- *   - REST  (AgentHttpClient)         GET/POST `${baseUrl}/api/...`
- *   - Connect-RPC (createAgentTransport) POST `${baseUrl}/<service>/<method>`
+ * The studio talks to the agent over two protocols, both of which terminate
+ * as `fetch()` calls inside the browser so MSW can intercept them:
  *
- * For now we hand-write a handful of high-traffic REST handlers and a
- * Connect-RPC catch-all that returns empty-but-shaped responses. The longer-
- * term plan is to generate handler stubs from the same `.proto` files that
- * already drive the Go agent and the TS client.
+ *   - REST          (AgentHttpClient)         GET/POST/DELETE `${baseUrl}/api/...`
+ *   - Connect-RPC   (createAgentTransport)    POST `${baseUrl}/<service>/<method>`
+ *
+ * Endpoints below are hand-written stubs for the surface the studio actually
+ * hits on first paint. The longer-term plan is to generate handlers from the
+ * same `.proto.nix` schemas that already drive the Go agent and TS client —
+ * tracked in beads under "proto-driven MSW handlers".
+ *
+ * Anything not handled here falls through `passthrough` and will fail; the
+ * Studio panel that issued the request is responsible for surfacing a
+ * sensible empty/error state. Add handlers as panels expose new gaps.
  */
 
 import { http, HttpResponse, passthrough } from "msw";
@@ -18,11 +23,12 @@ import {
 	demoEntities,
 	demoHealth,
 	demoNixConfig,
+	demoProcessComposeProcesses,
+	demoProject,
 	demoStateJson,
 } from "./fixture";
 
 const url = (path: string) => `${DEMO_BASE_URL}${path}`;
-
 const ok = <T>(data: T) => HttpResponse.json({ success: true, data });
 
 export const demoHandlers = [
@@ -34,9 +40,43 @@ export const demoHandlers = [
 		HttpResponse.json({ valid: true, agentId: demoHealth.agentId }),
 	),
 
-	// SSE: respond 204 so the EventSource fails fast and the provider falls
-	// back to polling. Mocking a real event-stream is possible but noisier.
+	// SSE: respond 204 so the EventSource fails fast and the AgentProvider
+	// falls back to polling. Mocking a real event-stream is possible but noisy
+	// and not required for the static demo.
 	http.get(url("/api/events"), () => new HttpResponse(null, { status: 204 })),
+
+	// ---------------------------------------------------------------------------
+	// Projects (used by ProjectProvider on mount)
+	// ---------------------------------------------------------------------------
+	http.get(url("/api/project/list"), () =>
+		HttpResponse.json({
+			projects: [demoProject],
+			default_path: demoProject.path,
+		}),
+	),
+	http.get(url("/api/project/current"), () =>
+		HttpResponse.json({
+			has_project: true,
+			project: demoProject,
+			default_project: demoProject,
+		}),
+	),
+	http.post(url("/api/project/open"), () =>
+		HttpResponse.json({
+			success: true,
+			project: demoProject,
+			devshell: { in_devshell: true, has_devshell_env: true },
+		}),
+	),
+	http.post(url("/api/project/validate"), () =>
+		HttpResponse.json({ valid: true, message: "demo project (read-only)" }),
+	),
+	http.post(url("/api/project/close"), () =>
+		HttpResponse.json({ success: true }),
+	),
+	http.delete(url("/api/project/remove"), () =>
+		HttpResponse.json({ success: true }),
+	),
 
 	// ---------------------------------------------------------------------------
 	// Nix config + entity data
@@ -57,7 +97,6 @@ export const demoHandlers = [
 			source: "demo",
 		}),
 	),
-
 	http.get(url("/api/nix/data"), ({ request }) => {
 		const entity = new URL(request.url).searchParams.get("entity") ?? "";
 		const data = demoEntities[entity];
@@ -70,8 +109,14 @@ export const demoHandlers = [
 	http.post(url("/api/nix/data"), () =>
 		HttpResponse.json({ success: true, path: "demo (read-only)" }),
 	),
-
 	http.get(url("/api/state"), () => HttpResponse.json(demoStateJson)),
+
+	// ---------------------------------------------------------------------------
+	// Process-compose (overview panel)
+	// ---------------------------------------------------------------------------
+	http.get(url("/api/process-compose/processes"), () =>
+		HttpResponse.json(demoProcessComposeProcesses),
+	),
 
 	// ---------------------------------------------------------------------------
 	// Process / service control: accept and no-op so the UI feels responsive
