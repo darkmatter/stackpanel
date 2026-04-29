@@ -26,6 +26,12 @@
 
 import { loadEnv, loadEnvScope, type LoadEnvOptions } from "./runtime/node-loader";
 
+export const api = {
+  dev: (options?: LoadEnvOptions) => loadEnv("api", "dev", options),
+  prod: (options?: LoadEnvOptions) => loadEnv("api", "prod", options),
+  staging: (options?: LoadEnvOptions) => loadEnv("api", "staging", options),
+} as const;
+
 export const docs = {
   dev: (options?: LoadEnvOptions) => loadEnv("docs", "dev", options),
   prod: (options?: LoadEnvOptions) => loadEnv("docs", "prod", options),
@@ -47,6 +53,7 @@ export const web = {
 export const deploy = (options?: LoadEnvOptions) => loadEnvScope("deploy", options);
 
 export const loaders = {
+  api,
   docs,
   stackpanelGo,
   web,

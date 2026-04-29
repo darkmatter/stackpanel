@@ -96,7 +96,11 @@ jobs:
           # SOPS AGE key used by `loadAppEnv` (sops-age) to decrypt the
           # generated per-app payloads. `production` uses the prod key;
           # everything else (staging, pr-*, dev) uses the dev key.
-          SOPS_AGE_KEY: ${{ needs.stage.outputs.stage == 'production' && secrets.SECRETS_AGE_KEY_PROD || secrets.SECRETS_AGE_KEY_DEV }}
+          # All stages encrypt with the github_actions age recipient
+          # (SECRETS_AGE_KEY_DEV's pubkey). The previous prod/dev split
+          # was stale — SECRETS_AGE_KEY_PROD's pubkey isn't on the prod
+          # payloads, so production deploys failed at decrypt time.
+          SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
         run: |
           set -euo pipefail
           bunx alchemy-effect deploy --stage ${{ needs.stage.outputs.stage }} --yes

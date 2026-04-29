@@ -1,0 +1,75 @@
+---
+title: Production Stacks
+description: Maintained Nix flakes that take your apps from devshell to production
+icon: rocket
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+**Production Stacks** are opinionated, maintained Nix flakes that handle a complete deployment pipeline — Terraform you don't have to write or maintain. The core Stackpanel framework is MIT and free forever; Production Stacks ship as managed subscriptions on top.
+
+<Callout type="info">
+  Stackpanel core (devshells, services, secrets, IDE integration) is and will
+  always be MIT-licensed and free. Production Stacks are an optional layer for
+  teams that want to outsource deployment maintenance to us.
+</Callout>
+
+## What you get
+
+When you subscribe to a Production Stack, you get:
+
+1. **A Nix flake** you import as a normal flake input — no code generation, no vendor lock-in.
+2. **Composable modules** that follow the Stackpanel convention. Set `apps.<myapp>.<stack>.enable = true` and the module wires up the rest.
+3. **Maintained recipes** — when Cloudflare ships a breaking change, when AWS bumps an IAM API version, when Fly.io rolls out a new machine class, we update the recipe so you don't have to.
+4. **A patch SLA** appropriate to your tier (best-effort on Community, 30-day on Team, 7-day on Business, 24-hour critical CVE on Enterprise).
+
+## The three stacks
+
+Stackpanel ships and maintains three Production Stacks today:
+
+### [Alchemy](./alchemy)
+
+**Resource-graph IaC for the full TypeScript stack.** Type-safe bindings for Cloudflare, AWS, Vercel, GitHub, Stripe, and more. Per-PR preview environments. Secrets pulled from your Stackpanel SOPS files. Flexible state storage (filesystem, S3, R2, DO).
+
+Best for: TypeScript teams shipping to Cloudflare Workers / Pages, or hybrid Cloudflare + AWS architectures.
+
+### [Colmena](./colmena)
+
+**Real Nix deployments to bare metal.** Atomic rollbacks via `nixos-rebuild`, machine groups, agenix-encrypted secrets, Caddy + Step CA wired up automatically.
+
+Best for: Hetzner / OVH / on-prem teams who want NixOS hosts without writing the operator playbook themselves.
+
+### [Fly.io](./fly)
+
+**Containerized apps at the edge.** Multi-region machines, health probes, autoscale rules, Fly secrets sync, built-in observability. Stackpanel generates `fly.toml` + a per-app deploy task and wraps `flyctl` for you.
+
+Best for: Bun / Hono / long-running workers that need to be near users globally.
+
+## Pricing
+
+| Tier | Branch | Patch SLA | Support |
+| --- | --- | --- | --- |
+| Community ($0) | `community` | Best-effort | GitHub Discussions |
+| Team ($19/seat/mo) | `stable` | 30 days | Email · next business day |
+| Business ($49/seat/mo) | `stable` + `early` | 7 days | Discord + 4-hour email |
+| Enterprise (from $5k/mo) | `stable` + `early` | 24h critical CVE | Slack channel · on-call · named CSM |
+
+See the [pricing page](/pricing) for the full breakdown.
+
+## How updates work
+
+Every Production Stack is published as a Nix flake on a versioned branch. To pull a fix you bump the input:
+
+```bash
+nix flake update stack-alchemy
+```
+
+You get the full diff in your PR — no surprise changes, no auto-applied patches. We treat your `flake.lock` as the source of truth for what's actually running.
+
+<Callout type="warn">
+  Subscriptions cover **maintenance and updates**, not access. If your subscription lapses you keep using whatever version of the flake your `flake.lock` is pinned to. You just stop receiving new updates from us.
+</Callout>
+
+## Marketplace (planned)
+
+Third-party authors will be able to publish Production Stacks of their own through the Stackpanel marketplace, with a 80/20 revenue split (creator/Stackpanel). If you maintain a popular open-source deployment recipe and want a sustainable way to get paid for it, [get in touch](mailto:hello@stackpanel.dev).

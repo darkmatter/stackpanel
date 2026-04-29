@@ -1,0 +1,123 @@
+name: deploy-api
+
+# Deploys apps/api to Fly.
+#
+# Linux runners because skopeo-nix2container doesn't build on darwin (upstream
+# bug in the vendored go.podman.io path). The whole container pipeline — build,
+# push, deploy — runs on ubuntu-latest where the standard nix2container
+# toolchain works without patches.
+#
+# Triggers:
+#   - push to main touching apps/api/** or packages/api/**
+#   - manual via workflow_dispatch
+
+on:
+  push:
+    # Include feature branches matching feat/cloud-gate-* so we can verify
+    # the deploy pipeline before merging to main. Production deploys still
+    # gate on main.
+    branches: [main, "feat/cloud-gate-**"]
+    paths:
+      - "apps/api/**"
+      - "packages/api/**"
+      - "packages/auth/**"
+      - "packages/db/**"
+      - "packages/gen/env/**"
+      - ".sops.yaml"
+      - ".stack/config.nix"
+      - ".stack/config.apps.nix"
+      - "nix/**"
+      - ".github/workflows/deploy-api.yaml"
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: "Skip container build/push (deploy last-pushed image)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-api-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      SOPS_AGE_KEY: ${{ secrets.SECRETS_AGE_KEY_DEV }}
+      # mkAppDir reads .output via this absolute path so freshly-built
+      # untracked output (apps/api/.output/server/index.mjs) lands in the
+      # nix store. Must be visible to BOTH `nix build` and the push step
+      # (each re-evaluates the flake separately) — set at job scope so
+      # the derivation hash matches across steps.
+      STACKPANEL_ROOT_ABSOLUTE: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            accept-flake-config = true
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Install sops
+        run: |
+          curl -LO https://github.com/getsops/sops/releases/download/v3.11.0/sops-v3.11.0.linux.amd64
+          chmod +x sops-v3.11.0.linux.amd64
+          sudo mv sops-v3.11.0.linux.amd64 /usr/local/bin/sops
+
+      - name: Stage Fly secrets from SOPS
+        run: bash apps/api/scripts/push-secrets.sh
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - name: Build api bundle (produces apps/api/.output for the container)
+        if: inputs.skip_build != true
+        run: |
+          bun install --frozen-lockfile
+          cd apps/api && bun run build
+
+      - name: Build container image
+        if: inputs.skip_build != true
+        run: nix build --impure .#packages.x86_64-linux.container-api
+
+      - name: Push container image to Fly registry
+        if: inputs.skip_build != true
+        run: |
+          nix run --impure .#copy-container-api -- \
+            docker://registry.fly.io/ \
+            --dest-creds "x:${FLY_API_TOKEN}"
+
+      - name: Deploy
+        run: |
+          flyctl deploy \
+            --config apps/api/fly.toml \
+            --app stackpanel-api \
+            --image registry.fly.io/stackpanel-api:latest \
+            --wait-timeout 300
+
+      - name: Verify health
+        run: |
+          curl -fsS --retry 5 --retry-delay 5 \
+            https://stackpanel-api.fly.dev/health
+
+      # Idempotent ACME cert + Cloudflare A/AAAA records pointing at the
+      # Fly app's IPs. Skipped on dev (the .fly.dev hostname is enough)
+      # and only kicks in for production / staging / pr-N stages — see
+      # apps/api/alchemy.run.ts.
+      - name: Bind public hostname
+        if: github.ref_name == 'main' || github.ref_name == 'develop' || github.event_name == 'pull_request'
+        env:
+          FLY_IO_API_KEY: ${{ secrets.FLY_API_TOKEN }}
+          STAGE: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' || format('pr-{0}', github.event.pull_request.number) }}
+        working-directory: apps/api
+        run: bunx alchemy-effect deploy --stage "$STAGE"
+
