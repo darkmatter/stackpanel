@@ -47,6 +47,43 @@ let
   };
 in
 {
+  # apps/api
+  api = {
+    name = "api";
+    description = "Cloud API (Better-Auth, Polar webhooks, hosted alchemy state).";
+    path = "apps/api";
+    type = "bun";
+
+    bun.generateFiles = false;
+
+    env = {
+      PORT = {
+        value = "3000";
+      };
+    }
+    // envs.shared;
+
+    container = {
+      enable = true;
+      type = "bun";
+      port = 3000;
+    };
+
+    deployment = {
+      enable = true;
+      host = "fly";
+      fly = {
+        appName = "stackpanel-api";
+        region = "iad";
+        memory = "512mb";
+        cpus = 1;
+        autoStop = "stop";
+        minMachines = 1;
+        forceHttps = true;
+      };
+    };
+  };
+
   # apps/docs
   docs = {
     name = "docs";

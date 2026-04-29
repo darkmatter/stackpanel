@@ -14,12 +14,15 @@
     "@gen/config": "workspace:*",
     "@gen/env": "workspace:*",
     "@pulumi/aws": "^7.15.0",
+    "@stackpanel/api": "workspace:*",
     "@stackpanel/config": "workspace:*",
+    "@trpc/client": "catalog:",
     "alchemy": "^0.81.2",
     "alchemy-effect": "catalog:",
     "better-auth": "^1.6.1",
     "effect": "catalog:",
-    "sst": "^3.17.25"
+    "sst": "^3.17.25",
+    "superjson": "^2.2.6"
   },
   "devDependencies": {
     "bun2nix": "latest"
@@ -38,10 +41,14 @@
     "alchemy:deploy": "alchemy deploy",
     "alchemy:destroy": "alchemy destroy",
     "alchemy:dev": "alchemy dev",
+    "container:build:api": "cd ../.. && nix build --impure .#packages.x86_64-linux.container-api",
+    "container:push:api": "cd ../.. && nix run --impure .#copy-container-api -- docker://registry.fly.io/ --dest-creds x:$(flyctl auth token)",
     "deploy": "alchemy deploy",
+    "deploy:api": "cd ../.. && (flyctl status -a stackpanel-api > /dev/null 2>&1 || flyctl apps create stackpanel-api --org darkmatter) && flyctl deploy --config apps/api/fly.toml --image registry.fly.io/stackpanel-api:latest",
     "destroy": "alchemy destroy",
     "dev": "alchemy dev",
     "postinstall": "test -f bun.lock && bun2nix -o bun.nix || true",
+    "ship:api": "turbo run deploy:api",
     "sst:deploy": "bunx sst deploy",
     "sst:dev": "bunx sst dev",
     "sst:remove": "bunx sst remove",

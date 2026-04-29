@@ -1,0 +1,6 @@
+{
+  "title": "Production Stacks",
+  "description": "Maintained Nix flakes that get your apps from devshell to production",
+  "icon": "rocket",
+  "pages": ["index", "alchemy", "colmena", "fly"]
+}

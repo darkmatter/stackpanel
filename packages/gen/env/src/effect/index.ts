@@ -13,12 +13,18 @@
 //
 // Use with `Effect.provide(program, effectLoaders.<app>.<env>)`.
 
+import { dev as api_dev, prod as api_prod, staging as api_staging } from "./api";
 import { dev as docs_dev, prod as docs_prod, staging as docs_staging } from "./docs";
 import { dev as stackpanelGo_dev, prod as stackpanelGo_prod, staging as stackpanelGo_staging } from "./stackpanel-go";
 import { dev as web_dev, prod as web_prod, staging as web_staging } from "./web";
 import { layer as deployScope } from "./scope/deploy";
 
 export const effectLoaders = {
+  api: {
+    dev: api_dev,
+    prod: api_prod,
+    staging: api_staging,
+  },
   docs: {
     dev: docs_dev,
     prod: docs_prod,

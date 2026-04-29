@@ -44,35 +44,49 @@ const program = Effect.gen(function* () {
   let url: Output.Output<string | undefined> = website.url;
 
   if (stage !== "dev") {
-    const hostname =
-      stage === "production" ? "stackpanel.com" : `${stage}.stackpanel.com`;
+    // Production binds two hostnames to the same worker:
+    //   - apex stackpanel.com → marketing/landing (`/`, `/login`, …)
+    //   - local.stackpanel.com → studio (mirrors local.drizzle.studio: the
+    //     `/studio/*` routes talk to the user's machine via
+    //     http://127.0.0.1:9876).
+    // Both ship the same bundle today; auth cookies are scoped to
+    // `.stackpanel.com` so a session from the apex carries into the studio.
+    // Non-prod stages only get the studio hostname — there's no marketing
+    // preview to host on the apex.
+    const hostnames =
+      stage === "production"
+        ? ["local.stackpanel.com", "stackpanel.com"]
+        : [`local.${stage}.stackpanel.com`];
+    const primary = hostnames[0]!;
     url = Output.all(website.accountId, website.workerName).pipe(
       Output.mapEffect(([accountId, workerName]) =>
         Effect.gen(function* () {
-          const existing = yield* Workers.listDomains({
-            accountId,
-            hostname,
-          });
-          const stale = existing.result.filter(
-            (d) => d.hostname === hostname && d.id,
-          );
-          if (stale.length > 0) {
-            yield* Effect.log(
-              `[alchemy] purging ${stale.length} existing binding(s) at ${hostname}: ${stale
-                .map((d) => `${d.service ?? "?"}#${d.id}`)
-                .join(", ")}`,
+          for (const hostname of hostnames) {
+            const existing = yield* Workers.listDomains({
+              accountId,
+              hostname,
+            });
+            const stale = existing.result.filter(
+              (d) => d.hostname === hostname && d.id,
             );
+            if (stale.length > 0) {
+              yield* Effect.log(
+                `[alchemy] purging ${stale.length} existing binding(s) at ${hostname}: ${stale
+                  .map((d) => `${d.service ?? "?"}#${d.id}`)
+                  .join(", ")}`,
+              );
+            }
+            for (const d of stale) {
+              yield* Workers.deleteDomain({ accountId, domainId: d.id! });
+            }
+            yield* Workers.putDomain({
+              accountId,
+              hostname,
+              service: workerName,
+              zoneId: STACKPANEL_ZONE,
+            });
           }
-          for (const d of stale) {
-            yield* Workers.deleteDomain({ accountId, domainId: d.id! });
-          }
-          yield* Workers.putDomain({
-            accountId,
-            hostname,
-            service: workerName,
-            zoneId: STACKPANEL_ZONE,
-          });
-          return `https://${hostname}` as string | undefined;
+          return `https://${primary}` as string | undefined;
         }).pipe(Effect.orDie),
       ),
     );

@@ -5,14 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build": "mkdir -p .output/server && bun build src/index.ts --outfile .output/server/index.mjs --target bun",
     "start": "bun run src/index.ts"
   },
   "dependencies": {
+    "@stackpanel/api": "workspace:*",
+    "@stackpanel/auth": "workspace:*",
+    "@stackpanel/db": "workspace:*",
+    "@distilled.cloud/cloudflare": "catalog:",
+    "@distilled.cloud/fly-io": "catalog:",
+    "@trpc/server": "catalog:",
+    "alchemy-effect": "catalog:",
+    "effect": "catalog:",
     "hono": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/node": "^22.13.11",
     "typescript": "^5"
   }
 }

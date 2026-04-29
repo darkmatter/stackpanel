@@ -1,9 +1,14 @@
+export { ComparisonSection } from "./comparison-section";
+export { ConfigShowcaseSection } from "./config-showcase-section";
 export { CTASection } from "./cta-section";
 export { DevExperienceSection } from "./dev-experience-section";
 export { FeaturesSection } from "./features-section";
 export { Footer } from "./footer";
 export { Header } from "./header";
 export { HeroSection } from "./hero-section";
+export { HowItWorksSection } from "./how-it-works-section";
 export { InfrastructureSection } from "./infrastructure-section";
+export { PricingSection } from "./pricing-section";
+export { ProductionStacksSection } from "./production-stacks-section";
 export { StatsSection } from "./stats-section";
 export { TerminalSection } from "./terminal-section";

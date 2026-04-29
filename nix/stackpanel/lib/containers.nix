@@ -201,13 +201,32 @@ let
       null
     else
       let
+        # The flake's store copy lives at `projectRoot`. It excludes git-
+        # ignored directories like `.output` (produced by `bun build`,
+        # `vite build`, OpenNext). So `${projectRoot}/apps/<app>/.output`
+        # typically doesn't exist in the store even when the build has
+        # just run on the host filesystem.
+        #
+        # Fall back to an absolute path injected via STACKPANEL_ROOT_ABSOLUTE
+        # (set by the deploy workflow to ${GITHUB_WORKSPACE}) so the nix
+        # build can import freshly-built output without requiring it to be
+        # committed to git. Requires `--impure` which we already use.
         fullBuildPath = "${projectRoot}/${buildOutputPath}";
-        buildOutputExists = builtins.pathExists fullBuildPath;
+        absoluteRoot = builtins.getEnv "STACKPANEL_ROOT_ABSOLUTE";
+        absolutePath =
+          if absoluteRoot != "" then "${absoluteRoot}/${buildOutputPath}" else null;
+        chosenPath =
+          if absolutePath != null && builtins.pathExists absolutePath
+          then absolutePath
+          else if builtins.pathExists fullBuildPath
+          then fullBuildPath
+          else null;
+        buildOutputExists = chosenPath != null;
 
         webOutput =
           if buildOutputExists then
             builtins.path {
-              path = /. + fullBuildPath;
+              path = /. + chosenPath;
               name = "${name}-output";
             }
           else

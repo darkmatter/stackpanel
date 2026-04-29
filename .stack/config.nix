@@ -144,7 +144,13 @@
       warnIfMissing = true;
     };
     settings = {
-      backend = "nix2container";
+      # dockerTools emits a standard docker-archive tarball that the
+      # system skopeo can push without patches. nix2container's
+      # skopeo-nix2container currently fails to build against skopeo 1.20
+      # (upstream patches `vendor/go.podman.io/image/v5` but that path no
+      # longer exists in the vendored tree). Switch back once the
+      # upstream bug is fixed.
+      backend = "dockerTools";
     };
   };
 
@@ -303,6 +309,31 @@
       POSTGRES_URL = {
         secret = true;
         sops = "/dev/postgres-url";
+      };
+
+      # Fly api deploy secrets — routed through the CI-accessible deploy
+      # scope so the deploy workflow can decrypt them. push-secrets.sh
+      # reads from the rendered deploy payload, not shared.sops.yaml
+      # directly (which is encrypted only for human users' AGE keys).
+      BETTER_AUTH_SECRET = {
+        secret = true;
+        sops = "/shared/better-auth-secret";
+      };
+      POLAR_ACCESS_TOKEN = {
+        secret = true;
+        sops = "/shared/polar-access-token";
+      };
+      POLAR_WEBHOOK_SECRET = {
+        secret = true;
+        sops = "/shared/polar-webhook-secret";
+      };
+      POLAR_PRO_PRODUCT_ID_PRODUCTION = {
+        secret = true;
+        sops = "/shared/polar-pro-product-id-production";
+      };
+      POLAR_FREE_PRODUCT_ID_PRODUCTION = {
+        secret = true;
+        sops = "/shared/polar-free-product-id-production";
       };
     };
   };
@@ -749,10 +780,13 @@
         };
         local = {
           public-key = "age16rkvks3tljju3y6xu0l7luhjzx634et97g3xe58xf2dgfn2865rqkq6t8f";
-          tags = [ "dev" ];
+          tags = [
+            "dev"
+            "deploy"
+          ];
         };
         github-actions = {
-          public-key = "age1eqcj2g0fdekj2wpqp4y0fg9c5myydjdt9zlr5scr0grk6fxszymqkpw5jf";
+          public-key = "age1d9h9mm3u5qalmpl2pf62pyzqj8t654n435emn93rutv0cg9sr32sg64fdj";
           tags = [
             "dev"
             "staging"

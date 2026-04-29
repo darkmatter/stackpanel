@@ -12,6 +12,7 @@ import { db } from "@stackpanel/db";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError, z } from "zod/v4";
+import { getUserEntitlement } from "./lib/subscription";
 
 /**
  * 1. CONTEXT
@@ -38,6 +39,7 @@ export const createTRPCContext = async (opts: {
 		authApi,
 		session,
 		db,
+		headers: opts.headers,
 	};
 };
 /**
@@ -126,3 +128,31 @@ export const protectedProcedure = t.procedure
 			},
 		});
 	});
+
+/**
+ * Paid procedure — gates cloud features to users on an active paid plan.
+ *
+ * Extends `protectedProcedure`: reads the local subscription mirror
+ * (populated by Polar webhooks) and refuses when `plan === "free"` or
+ * status is inactive. Callers receive a 402-shaped TRPCError carrying the
+ * upgrade URL in `cause`.
+ *
+ * `entitlement` is injected into ctx so downstream procedures can branch
+ * on tier without a second lookup.
+ */
+export const paidProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+	const entitlement = await getUserEntitlement(ctx.session.user.id);
+	if (!entitlement.paid) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "This feature requires an active Pro subscription.",
+			cause: {
+				reason: "subscription_required",
+				plan: entitlement.plan,
+				status: entitlement.status,
+				upgradeUrl: "/pricing",
+			},
+		});
+	}
+	return next({ ctx: { ...ctx, entitlement } });
+});

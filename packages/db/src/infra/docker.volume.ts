@@ -1,3 +1,4 @@
+import * as Provider from "alchemy-effect/Provider";
 import { Resource } from "alchemy-effect/Resource";
 import * as Effect from "effect/Effect";
 import { docker } from "./exec";
@@ -19,9 +20,10 @@ export const Volume = Resource<Volume>("Docker.Volume");
  * @returns A provider that creates a Docker volume.
  */
 export const VolumeProvider = () =>
-  Volume.provider.effect(
+  Provider.effect(
+    Volume,
     Effect.succeed(
-      Volume.provider.of({
+      Volume.Provider.of({
         stables: ["volumeName"],
         create: Effect.fnUntraced(function* ({ news }) {
           yield* docker("volume", "create", news.name);

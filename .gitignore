@@ -1,8 +1,11 @@
 .artifacts
 release.tar.gz
-.stackpanel-root
+# `.stackpanel-root` holds a single "." so the stackpanel-root flake
+# input resolves to the flake source dir across machines. Must be
+# tracked so the flake input can read it during pure evaluation.
 *.local.json
 .worktrees/
+.patch-work/
 # Dependencies
 node_modules
 .pnp

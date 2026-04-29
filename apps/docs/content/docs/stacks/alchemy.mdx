@@ -1,0 +1,104 @@
+---
+title: Alchemy
+description: Resource-graph IaC for Cloudflare, AWS, Vercel, GitHub and Stripe — without managing Terraform yourself
+icon: workflow
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+The **Alchemy** Production Stack ships a maintained Nix flake that wires the [Alchemy](https://distilled.cloud) resource graph into your Stackpanel project. You declare resources in TypeScript, Stackpanel handles the deploy machinery, and we maintain the modules so you don't have to.
+
+## What's in the flake
+
+- **Per-app modules** that auto-wire your apps: `apps.<myapp>.alchemy.cloudflareWorker.enable = true` is enough to get a deploy.
+- **Provider modules** for Cloudflare (Workers, Pages, R2, KV, Durable Objects, Queues, Hyperdrive), AWS (Lambda, S3, DynamoDB, IAM, KMS, ECR), Vercel, GitHub, and Stripe.
+- **State storage** wired to filesystem (dev), S3 / R2 (staging + prod), or DO (per-PR preview environments).
+- **Secrets bridge** that pulls SOPS-encrypted variables from your Stackpanel project and provisions them as worker bindings, env vars, or Secret resources.
+- **Per-PR preview environments** — each PR branch deploys to a uniquely named stage and tears down on PR close.
+
+## Installation
+
+Add the flake input to your root `flake.nix`:
+
+```nix
+{
+  inputs = {
+    stackpanel.url = "github:darkmatter/stackpanel";
+    stack-alchemy.url = "github:darkmatter/stack-alchemy";
+  };
+}
+```
+
+Then enable the stack in `.stack/config.nix`:
+
+```nix
+{
+  stackpanel.stacks.alchemy = {
+    enable = true;
+    branch = "stable";  # community | stable | early
+    state = {
+      kind = "r2";
+      bucket = "acme-alchemy-state";
+    };
+  };
+}
+```
+
+## A minimal example
+
+```nix
+{
+  stackpanel.apps.web = {
+    path = "apps/web";
+    framework.tanstack-start.enable = true;
+
+    alchemy.cloudflareWorker = {
+      enable = true;
+      domain = "app.acme.com";
+      previewDomain = "*.preview.acme.dev";
+      bindings = {
+        DB = { kind = "hyperdrive"; project = "acme-prod"; };
+        SESSIONS = { kind = "kv"; namespace = "sessions"; };
+        UPLOADS = { kind = "r2"; bucket = "acme-uploads"; };
+      };
+    };
+  };
+}
+```
+
+That's it. Stackpanel generates the Alchemy script, wires bindings to env vars in your `@gen/env/web` package, and gives you `bun run deploy:web` (and a per-PR preview pipeline in CI).
+
+## What we maintain
+
+The Alchemy stack covers a moving surface — providers ship breaking changes regularly. Subscriptions get patches for:
+
+- **Cloudflare**: new bindings, Wrangler API changes, `routes` semantics, the Pages → Workers migration, etc.
+- **AWS**: API version bumps, IAM policy hardening, KMS / Secrets Manager interactions.
+- **Vercel**: project / deployment API changes, build-output API.
+- **State backends**: R2 + DO compatibility as both move forward.
+- **Alchemy core**: tracking upstream releases, deprecation notices, type changes.
+
+See [the SLA matrix](./#pricing) for patch turnaround by tier.
+
+## Tier differences
+
+| Resource family | Community | Team | Business | Enterprise |
+| --- | --- | --- | --- | --- |
+| Cloudflare Workers / Pages / R2 / KV | ✓ | ✓ | ✓ | ✓ |
+| Cloudflare Durable Objects / Queues | ✓ | ✓ | ✓ | ✓ |
+| AWS Lambda / S3 / DynamoDB | ✓ | ✓ | ✓ | ✓ |
+| Vercel | — | ✓ | ✓ | ✓ |
+| Stripe products & prices | — | ✓ | ✓ | ✓ |
+| GitHub repo / secrets | — | ✓ | ✓ | ✓ |
+| Custom AWS resources via raw SDK | — | — | ✓ | ✓ |
+| Indemnification | — | — | — | ✓ |
+
+<Callout type="info">
+  All tiers get the same source code. The differences above describe which modules we **maintain** for which tiers — not what you're allowed to use.
+</Callout>
+
+## Related
+
+- [Production Stacks overview](./)
+- [Deployment / Cloudflare](../deployment/cloudflare)
+- [Deployment / Containers](../deployment/containers)

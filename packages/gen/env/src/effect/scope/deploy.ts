@@ -21,13 +21,20 @@ export class DeployScopeSchema extends Schema.Class<DeployScopeSchema>("DeploySc
   ALCHEMY_STATE_TOKEN: Schema.RedactedFromValue(Schema.String),
   AWS_SANDBOX_ACCESS_KEY_ID: Schema.RedactedFromValue(Schema.String),
   AWS_SANDBOX_SECRET_ACCESS_KEY: Schema.RedactedFromValue(Schema.String),
+  BETTER_AUTH_SECRET: Schema.RedactedFromValue(Schema.String),
   CLOUDFLARE_ACCOUNT_ID: Schema.RedactedFromValue(Schema.String),
   CLOUDFLARE_API_TOKEN: Schema.RedactedFromValue(Schema.String),
   CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_ID: Schema.RedactedFromValue(Schema.String),
   CLOUDFLARE_SERVICE_ACCOUNT_CLIENT_SECRET: Schema.RedactedFromValue(Schema.String),
   HETZNER_API_KEY: Schema.RedactedFromValue(Schema.String),
   NEON_API_KEY: Schema.RedactedFromValue(Schema.String),
+  POLAR_ACCESS_TOKEN: Schema.RedactedFromValue(Schema.String),
+  POLAR_FREE_PRODUCT_ID_PRODUCTION: Schema.RedactedFromValue(Schema.String),
+  POLAR_PRO_PRODUCT_ID_PRODUCTION: Schema.RedactedFromValue(Schema.String),
+  POLAR_WEBHOOK_SECRET: Schema.RedactedFromValue(Schema.String),
   POSTGRES_URL: Schema.RedactedFromValue(Schema.String),
+  STACKPANEL_API_URL: Schema.String,
+  STACKPANEL_STATE_BACKEND: Schema.String,
 }) {}
 
 export type DeployScope = DeployScopeSchema;
