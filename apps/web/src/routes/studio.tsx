@@ -17,9 +17,16 @@ import { cn } from "@/lib/utils";
 import { FeatureFlagProvider } from "@gen/featureflags";
 
 // Search params for optional project selection or auto-demo entry.
+//
+// `demo` is intentionally typed as `string` (rather than `boolean`) so the
+// search-params record stays a `Record<string, string | undefined>` — that
+// shape is what `new URLSearchParams(search)` callers elsewhere in the
+// sidebar/panels code rely on. The truthiness check inside `StudioLayout`
+// treats any present value as "enable demo", so `?demo=1` (the marketing
+// link) and `?demo=true` both work.
 interface StudioSearchParams {
 	project?: string;
-	demo?: boolean;
+	demo?: string;
 }
 
 export const Route = createFileRoute("/studio")({
@@ -27,7 +34,10 @@ export const Route = createFileRoute("/studio")({
 	validateSearch: (search: Record<string, unknown>): StudioSearchParams => {
 		return {
 			project: typeof search.project === "string" ? search.project : undefined,
-			demo: search.demo === "1" || search.demo === true,
+			demo:
+				search.demo === "1" || search.demo === true || search.demo === "true"
+					? "1"
+					: undefined,
 		};
 	},
 });
