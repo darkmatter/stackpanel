@@ -119,5 +119,5 @@ jobs:
           FLY_IO_API_KEY: ${{ secrets.FLY_API_TOKEN }}
           STAGE: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' || format('pr-{0}', github.event.pull_request.number) }}
         working-directory: apps/api
-        run: bunx alchemy-effect deploy --stage "$STAGE"
+        run: bunx alchemy deploy --stage "$STAGE"
 

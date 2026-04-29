@@ -1,5 +1,5 @@
-import * as Provider from "alchemy-effect/Provider";
-import { Resource } from "alchemy-effect/Resource";
+import * as Provider from "alchemy/Provider";
+import { Resource } from "alchemy/Resource";
 import * as Effect from "effect/Effect";
 import { docker } from "./exec";
 

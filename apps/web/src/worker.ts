@@ -1,5 +1,5 @@
-import * as Cloudflare from "alchemy-effect/Cloudflare"
-import * as D1 from "alchemy-effect/Cloudflare/D1"
+import * as Cloudflare from "alchemy/Cloudflare"
+import * as D1 from "alchemy/Cloudflare/D1"
 import * as Effect from "effect/Effect"
 import { HttpServerRequest } from "effect/unstable/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse"

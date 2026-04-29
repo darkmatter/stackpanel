@@ -1,17 +1,23 @@
 // Shared helpers for `apps/*/alchemy.run.ts` deploy entrypoints.
 //
-// Centralises three pieces of logic that previously diverged across apps:
+// Centralises four pieces of logic that previously diverged across apps:
 //   - Mapping `--stage` / `STAGE` onto the SOPS env namespace name we use on
 //     disk (`prod`, `staging`, `dev`).
 //   - Loading the per-app encrypted env payload via `@gen/env` and validating
 //     that every variable declared `required = true` in `apps.<app>.env` is
 //     actually present (so the deploy fails *before* any provider call with a
 //     copy-pasteable error message instead of an opaque `Unauthorized`).
+//   - Selecting the alchemy state backend by `appEnv` so dev/PR previews use
+//     local filesystem state (no Cloudflare creds required) while
+//     staging/prod share the Cloudflare-hosted state store.
 //   - Producing a consistent `https://...` URL for `console.log`-ing the
 //     deployment result.
 
 import { loaders } from "@gen/env";
 import { EnvValidationError } from "@gen/env/runtime";
+import * as Cloudflare from "alchemy/Cloudflare";
+import { localState } from "alchemy/State";
+import type * as Layer from "effect/Layer";
 
 export type DeployAppEnv = "dev" | "staging" | "prod";
 
@@ -120,6 +126,32 @@ export async function loadDeployEnv<App extends DeployApp>(
     }
     throw err;
   }
+}
+
+/**
+ * Pick the alchemy state backend for a given `appEnv`.
+ *
+ *   - `dev`              → `localState()` — per-runner filesystem state under
+ *                          `.alchemy/state/`. PR previews persist this via
+ *                          GitHub Actions cache (`alchemy-state-<svc>-<stage>`).
+ *                          Lets `bun run db:up`-style local entrypoints work
+ *                          without loading deploy-scope Cloudflare creds.
+ *   - `staging` / `prod` → `Cloudflare.state()` — durable, team-shared state
+ *                          stored in a single account-wide Worker (deployed
+ *                          on first interactive use; CI relies on it
+ *                          existing). Reads creds from `process.env` —
+ *                          callers must `await loadDeployEnv(...)` first.
+ *
+ * Returned as `Layer.Layer<any, never, any>` to match the style used for
+ * `providers` in the deploy scripts, since the two branches have different
+ * service requirements that the caller's stack will already provide.
+ */
+export function selectStateBackend(
+  appEnv: DeployAppEnv,
+): Layer.Layer<any, never, any> {
+  return appEnv === "dev"
+    ? (localState() as Layer.Layer<any, never, any>)
+    : (Cloudflare.state() as Layer.Layer<any, never, any>);
 }
 
 /**

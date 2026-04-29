@@ -1,6 +1,7 @@
 import { loadAppEnv } from "@gen/env/runtime";
 await loadAppEnv("web", "dev", { inject: true });
-import * as Stack from "alchemy-effect/Stack";
+import * as Alchemy from "alchemy";
+import { localState } from "alchemy/State";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import {
@@ -114,10 +115,18 @@ const dbEffect =
       ? neonManagedPostgres
       : cloudflareHyperdrive;
 
-export default Stack.make(
+export default Alchemy.Stack(
   "stackpanel-db",
-  allProviders,
-)(
+  {
+    providers: allProviders,
+    // `db:up` is a local-only entrypoint (Docker / Neon project / Hyperdrive
+    // binding) and only loads `loadAppEnv("web", "dev")` — it deliberately
+    // doesn't pull deploy-scope Cloudflare creds, so picking
+    // `Cloudflare.state()` here would fail to authenticate. Filesystem state
+    // under `.alchemy/` matches the previous behaviour and works without
+    // any cloud credentials.
+    state: localState(),
+  },
   Effect.gen(function* () {
     return yield* dbEffect;
   }),

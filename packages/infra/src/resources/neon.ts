@@ -1,5 +1,5 @@
-import { Resource } from "alchemy-effect/Resource";
-import * as Provider from "alchemy-effect/Provider";
+import { Resource } from "alchemy/Resource";
+import * as Provider from "alchemy/Provider";
 import * as Neon from "@distilled.cloud/neon";
 import {
   createProject,
