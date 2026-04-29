@@ -192,6 +192,15 @@ let
   ) enabledSopsAgeSources;
   recipientNames = lib.sort lib.lessThan (lib.attrNames recipientsConfig);
 
+  # AGE pubkeys for every configured recipient, with SSH ed25519 keys converted
+  # via ssh-to-age. Used both to render .sops.yaml and to compare against the
+  # local AGE key in the devshell warning — the raw `r.public-key` strings can
+  # be in SSH format (collaborators synced from GitHub), so a literal string
+  # match against the local AGE key would always miss.
+  normalizedRecipientPubkeys = lib.unique (
+    lib.mapAttrsToList (_: r: normalizeRecipientPublicKey r.public-key) recipientsConfig
+  );
+
   # Normalize a recipient public key to AGE format for .sops.yaml.
   # SSH Ed25519 public keys are converted at eval time using ssh-to-age.
   # Other formats (RSA, ECDSA) are kept as-is since ssh-to-age only supports Ed25519.
@@ -477,6 +486,7 @@ in
     secretsLib
     recipientNames
     recipientsConfig
+    normalizedRecipientPubkeys
     recipientGroupsConfig
     creationRulesConfig
     sopsAgeSources
