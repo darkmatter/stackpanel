@@ -40,12 +40,16 @@ rec {
   # Local Key Management
   # ===========================================================================
 
-  # Script to auto-generate the local AGE key if it doesn't exist, and warn if
-  # the resulting pubkey isn't registered as a SOPS recipient (in which case
-  # decryption of any existing .sops.yaml file will fail). Pass the full list
+  # Script to auto-generate the local AGE key if it doesn't exist, then warn
+  # if NO configured AGE source produces a key that's registered as a SOPS
+  # recipient (in which case decryption of any existing .sops.yaml file will
+  # fail). `sops-age-keys --public` enumerates the effective AGE pubkeys
+  # across every configured source — local file, user file, ssh-to-age'd SSH
+  # key, 1Password ref, AWS KMS, etc. — so a match against any of them means
+  # SOPS has at least one usable identity at decrypt time. Pass the full list
   # of configured recipient pubkeys so the script can compare.
   autoGenerateLocalKeyScript =
-    { configuredRecipientPubkeys }:
+    { configuredRecipientPubkeys, sopsAgeKeys }:
     ''
       # syntax: bash
           ${cfg.bashLib}
@@ -73,29 +77,43 @@ rec {
             echo "   Public:  $PUBLIC_KEY" >&2
           fi
 
-          local_pub=""
-          if [[ -f "$LOCAL_PUB" ]]; then
-            local_pub=$(tr -d '[:space:]' < "$LOCAL_PUB")
-          fi
+          # Collect every effective AGE pubkey reachable through the configured
+          # sops-age-keys sources. Stderr is suppressed because the resolver is
+          # noisy when individual sources fail (op not signed in, SSH key with
+          # passphrase, etc.) — at this point we only care whether *some*
+          # source gives us a registered identity.
+          effective_pubkeys="$(${sopsAgeKeys}/bin/sops-age-keys --public 2>/dev/null || true)"
 
-          if [[ -n "$local_pub" ]]; then
-            recipient_match=0
+          recipient_match=0
+          while IFS= read -r effective_pub; do
+            [[ -z "$effective_pub" ]] && continue
             for recipient in ${lib.escapeShellArgs configuredRecipientPubkeys}; do
-              if [[ "$recipient" == "$local_pub" ]]; then
+              if [[ "$recipient" == "$effective_pub" ]]; then
                 recipient_match=1
-                break
+                break 2
               fi
             done
+          done <<< "$effective_pubkeys"
 
-            if [[ "$recipient_match" -eq 0 ]]; then
-              echo "" >&2
-              echo "⚠ Local AGE key is not a registered SOPS recipient." >&2
-              echo "   Public:  $local_pub" >&2
-              echo "   Decryption of .sops.yaml files will fail until someone with" >&2
-              echo "   access adds this key under stackpanel.secrets.recipients in" >&2
-              echo "   .stack/config.nix and re-encrypts (\`secrets:rekey\`)." >&2
-              echo "" >&2
+          if [[ "$recipient_match" -eq 0 ]]; then
+            local_pub=""
+            if [[ -f "$LOCAL_PUB" ]]; then
+              local_pub=$(tr -d '[:space:]' < "$LOCAL_PUB")
             fi
+            echo "" >&2
+            echo "⚠ No configured AGE identity matches any registered SOPS recipient." >&2
+            echo "   Decryption of .sops.yaml files will fail until either:" >&2
+            echo "     • someone registers one of your AGE pubkeys under" >&2
+            echo "       stackpanel.secrets.recipients in .stack/config.nix and re-encrypts" >&2
+            echo "       (\`secrets:rekey\`), or" >&2
+            echo "     • you configure an additional source under" >&2
+            echo "       stackpanel.secrets.sops-age-keys (e.g. an SSH key, 1Password ref," >&2
+            echo "       or keyservice) that yields a registered recipient." >&2
+            if [[ -n "$local_pub" ]]; then
+              echo "" >&2
+              echo "   Auto-generated local pubkey: $local_pub" >&2
+            fi
+            echo "" >&2
           fi
     '';
 
