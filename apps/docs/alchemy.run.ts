@@ -1,6 +1,11 @@
-import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
-import { Cloudflare, Output, Stage } from "alchemy-effect";
-import * as Stack from "alchemy-effect/Stack";
+import {
+  loadDeployEnv,
+  resolveDeployStage,
+  selectStateBackend,
+} from "@stackpanel/infra/lib/deploy";
+import * as Alchemy from "alchemy";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
 import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 
@@ -29,7 +34,7 @@ const hostnameFor = (stage: string): string =>
   stage === "production" ? "docs.stackpanel.com" : `docs.${stage}.stackpanel.com`;
 
 const program = Effect.gen(function* () {
-  const stage = yield* Stage;
+  const stage = yield* Alchemy.Stage;
 
   // OpenNext-on-Cloudflare emits the worker entrypoint and assets directory.
   // The build is expected to have already run (`bun run build:worker`); this
@@ -47,12 +52,13 @@ const program = Effect.gen(function* () {
     // trailing-slash handling for static MDX routes.
     assets: {
       directory: ".open-next/assets",
-      // OpenNext static incremental cache lives under `.open-next/cache`; preview
-      // copies it into assets, but CI `build:worker` does not. Mount the cache
-      // tree at the URL prefix OpenNext expects (`alchemy-effect` asset sources).
-      sources: [
-        { directory: ".open-next/cache", prefix: "cdn-cgi/_next_cache" },
-      ],
+      // TODO(stackpanel): re-enable the `.open-next/cache` overlay once
+      // `alchemy@2` natively supports `AssetsProps.sources` (or vendor a
+      // v2-compatible patch). The 0.12.x vendored overlay was removed during
+      // the alchemy-effect → alchemy@2 rename; see follow-up bd issue.
+      // Without it, OpenNext incremental cache misses for `cdn-cgi/_next_cache`
+      // paths fall back to ISR revalidation — degraded cache hit rate, not
+      // a hard breakage.
       config: {
         notFoundHandling: "none",
         htmlHandling: "auto-trailing-slash",
@@ -113,4 +119,13 @@ const program = Effect.gen(function* () {
   return { url };
 });
 
-export default Stack.make(`${PROJECT}-${SERVICE}`, Cloudflare.providers())(program);
+export default Alchemy.Stack(
+  `${PROJECT}-${SERVICE}`,
+  {
+    providers: Cloudflare.providers(),
+    // dev/PR previews → filesystem state (cached across CI runs);
+    // staging/prod → shared Cloudflare-hosted state store.
+    state: selectStateBackend(appEnv),
+  },
+  program,
+);

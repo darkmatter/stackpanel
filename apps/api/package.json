@@ -15,7 +15,7 @@
     "@distilled.cloud/cloudflare": "catalog:",
     "@distilled.cloud/fly-io": "catalog:",
     "@trpc/server": "catalog:",
-    "alchemy-effect": "catalog:",
+    "alchemy": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:"
   },

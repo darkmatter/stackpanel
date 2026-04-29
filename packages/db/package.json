@@ -30,7 +30,7 @@
     "@stackpanel/config": "workspace:*",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
-    "alchemy-effect": "catalog:",
+    "alchemy": "catalog:",
     "drizzle-kit": "^0.31.8",
     "effect": "catalog:",
     "wrangler": "^4.81.1"
