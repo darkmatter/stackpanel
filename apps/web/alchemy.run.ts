@@ -1,4 +1,8 @@
-import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
+import {
+  loadDeployEnv,
+  resolveDeployStage,
+  selectStateBackend,
+} from "@stackpanel/infra/lib/deploy";
 import { NeonProject, neonProviders } from "@stackpanel/infra/resources/neon";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
@@ -108,7 +112,9 @@ export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
   {
     providers,
-    state: Cloudflare.state(),
+    // dev/PR previews → filesystem state (cached across CI runs);
+    // staging/prod → shared Cloudflare-hosted state store.
+    state: selectStateBackend(appEnv),
   },
   program,
 );
