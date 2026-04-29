@@ -1,37 +1,51 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import {
-	SidebarInset,
-	SidebarProvider,
-} from "@/components/ui/sidebar";
-import { DemoBanner } from "@/components/demo/demo-banner";
-import { DemoHeader } from "@/components/demo/demo-header";
-import { DemoSidebar } from "@/components/demo/demo-sidebar";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useAgentEndpoint } from "@/lib/agent-endpoint";
 
+/**
+ * `/demo` is a thin redirect into the real Studio in demo mode.
+ *
+ * The actual demo experience lives at `/studio`; this route exists so
+ * marketing CTAs and external links can deep-link into the demo with a
+ * predictable URL. It boots the MSW worker, swaps the agent endpoint to
+ * the in-browser mock, then bounces the user to `/studio/dashboard`.
+ */
 export const Route = createFileRoute("/demo")({
-	component: DemoLayout,
+	component: DemoRedirect,
 	head: () => ({
 		meta: [
 			{ title: "Stackpanel Studio · Live demo" },
 			{
 				name: "description",
 				content:
-					"Click around a fully interactive Stackpanel Studio with realistic fixture data. No install required.",
+					"Click around the real Stackpanel Studio against an in-browser mocked agent. No install required.",
 			},
 		],
 	}),
 });
 
-function DemoLayout() {
+function DemoRedirect() {
+	const { useDemo } = useAgentEndpoint();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		let cancelled = false;
+		void (async () => {
+			await useDemo();
+			if (cancelled) return;
+			void navigate({
+				to: "/studio/dashboard",
+				replace: true,
+			});
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [useDemo, navigate]);
+
 	return (
-		<SidebarProvider>
-			<DemoSidebar />
-			<SidebarInset>
-				<DemoBanner />
-				<DemoHeader />
-				<main className="flex-1 overflow-auto">
-					<Outlet />
-				</main>
-			</SidebarInset>
-		</SidebarProvider>
+		<div className="flex h-svh items-center justify-center text-muted-foreground">
+			Booting demo agent…
+		</div>
 	);
 }
