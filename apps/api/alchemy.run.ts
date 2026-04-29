@@ -16,7 +16,11 @@
 // dance. Same Effect-native pattern as apps/web's domain binding via
 // `@distilled.cloud/cloudflare` Workers.
 
-import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
+import {
+  loadDeployEnv,
+  resolveDeployStage,
+  selectStateBackend,
+} from "@stackpanel/infra/lib/deploy";
 import {
   AppCertificatesAcmeCreate,
   AppIPAssignmentsList,
@@ -121,7 +125,9 @@ export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
   {
     providers,
-    state: Cloudflare.state(),
+    // dev/PR previews → filesystem state (no Cloudflare creds required);
+    // staging/prod → shared Cloudflare-hosted state store.
+    state: selectStateBackend(appEnv),
   },
   program,
 );
