@@ -35,6 +35,7 @@ let
       variablesBackend
       recipientNames
       recipientsConfig
+      normalizedRecipientPubkeys
       secretFilesMeta
       manifestJson
       cfgLib

@@ -10,6 +10,7 @@
   sopsAgeKeyOpRefs,
   recipientNames,
   recipientsConfig,
+  normalizedRecipientPubkeys,
   secretFilesMeta,
   manifestJson,
   cfgLib,
@@ -72,7 +73,7 @@ in {
       ''
         (
         ${secretsLib.autoGenerateLocalKeyScript {
-          configuredRecipientPubkeys = lib.mapAttrsToList (_: r: r.public-key) recipientsConfig;
+          configuredRecipientPubkeys = normalizedRecipientPubkeys;
         }}
         )
       ''
