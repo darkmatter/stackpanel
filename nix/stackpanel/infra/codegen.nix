@@ -630,9 +630,7 @@ in
           builtins.throw "infra package dependencies must declare explicit versions (found catalog: for ${lib.concatStringsSep ", " invalidCatalogDeps})"
         else
           packageDeps;
-      devDependencies = {
-        bun2nix = "latest";
-      };
+      devDependencies = {};
       exports = {
         "." = {
           default = "./src/index.ts";
