@@ -16,6 +16,7 @@ import { Toaster } from "@ui/sonner";
 import Header from "@/components/header";
 import { WaitlistProvider } from "@/components/landing/waitlist-dialog";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AgentEndpointProvider } from "@/lib/agent-endpoint";
 import "@fontsource-variable/montserrat";
 import "@fontsource-variable/source-code-pro";
 import appCss from "@/styles.css?url";
@@ -95,10 +96,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					<Scripts />
 				</head>
 				<body className={isStudio ? "studio" : ""}>
-					<WaitlistProvider>
-						{!isFullScreenPage && <Header />}
-						<div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
-					</WaitlistProvider>
+					<AgentEndpointProvider>
+						<WaitlistProvider>
+							{!isFullScreenPage && <Header />}
+							<div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
+						</WaitlistProvider>
+					</AgentEndpointProvider>
 					<Toaster richColors />
 					<TanStackRouterDevtools position="bottom-left" />
 					<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
