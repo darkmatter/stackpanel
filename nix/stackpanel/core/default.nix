@@ -72,6 +72,18 @@ in
         ++ (lib.optionals cfg.gitignore.defaults.tasksDir [
           ".tasks"
         ])
+        # Files registered with `adopt = "backup"` move the prior user-owned
+        # content to `<path>.backup` on first preflight run. These backup
+        # paths are deterministic, so emit explicit gitignore entries instead
+        # of a `*.backup` wildcard.
+        ++ (
+          let
+            backupPaths = lib.mapAttrsToList (path: _entry: "/${path}.backup") (
+              lib.filterAttrs (_path: entry: (entry.adopt or "none") == "backup") config.stackpanel.files.entries
+            );
+          in
+          backupPaths
+        )
         ++ (lib.optional (
           cfg.gitignore.defaults.projectMarker || cfg.gitignore.defaults.addProjectMarker
         ) cfg.root-marker)
