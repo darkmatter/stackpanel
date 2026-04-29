@@ -1,4 +1,8 @@
-import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
+import {
+  loadDeployEnv,
+  resolveDeployStage,
+  selectStateBackend,
+} from "@stackpanel/infra/lib/deploy";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
@@ -119,7 +123,9 @@ export default Alchemy.Stack(
   `${PROJECT}-${SERVICE}`,
   {
     providers: Cloudflare.providers(),
-    state: Cloudflare.state(),
+    // dev/PR previews → filesystem state (cached across CI runs);
+    // staging/prod → shared Cloudflare-hosted state store.
+    state: selectStateBackend(appEnv),
   },
   program,
 );
