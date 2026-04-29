@@ -19,7 +19,6 @@ import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudioIndexRouteImport } from './routes/studio/index'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
-import { Route as DemoIndexRouteImport } from './routes/demo/index'
 import { Route as StudioVariablesRouteImport } from './routes/studio/variables'
 import { Route as StudioTerminalRouteImport } from './routes/studio/terminal'
 import { Route as StudioTeamRouteImport } from './routes/studio/team'
@@ -47,11 +46,6 @@ import { Route as StudioConfigurationRouteImport } from './routes/studio/configu
 import { Route as StudioChecksRouteImport } from './routes/studio/checks'
 import { Route as StudioAppsRouteImport } from './routes/studio/apps'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
-import { Route as DemoVariablesRouteImport } from './routes/demo/variables'
-import { Route as DemoServicesRouteImport } from './routes/demo/services'
-import { Route as DemoNetworkRouteImport } from './routes/demo/network'
-import { Route as DemoFilesRouteImport } from './routes/demo/files'
-import { Route as DemoAppsRouteImport } from './routes/demo/apps'
 import { Route as ApiSeedSnapshotsRouteImport } from './routes/api/seed-snapshots'
 import { Route as ApiProvisionDbRouteImport } from './routes/api/provision-db'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
@@ -106,11 +100,6 @@ const DocsIndexRoute = DocsIndexRouteImport.update({
   id: '/docs/',
   path: '/docs/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DemoIndexRoute = DemoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DemoRoute,
 } as any)
 const StudioVariablesRoute = StudioVariablesRouteImport.update({
   id: '/variables',
@@ -247,31 +236,6 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DemoVariablesRoute = DemoVariablesRouteImport.update({
-  id: '/variables',
-  path: '/variables',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoServicesRoute = DemoServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoNetworkRoute = DemoNetworkRouteImport.update({
-  id: '/network',
-  path: '/network',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoFilesRoute = DemoFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => DemoRoute,
-} as any)
-const DemoAppsRoute = DemoAppsRouteImport.update({
-  id: '/apps',
-  path: '/apps',
-  getParentRoute: () => DemoRoute,
-} as any)
 const ApiSeedSnapshotsRoute = ApiSeedSnapshotsRouteImport.update({
   id: '/api/seed-snapshots',
   path: '/api/seed-snapshots',
@@ -297,18 +261,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
-  '/demo': typeof DemoRouteWithChildren
+  '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/studio': typeof StudioRouteWithChildren
   '/success': typeof SuccessRoute
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
-  '/demo/apps': typeof DemoAppsRoute
-  '/demo/files': typeof DemoFilesRoute
-  '/demo/network': typeof DemoNetworkRoute
-  '/demo/services': typeof DemoServicesRoute
-  '/demo/variables': typeof DemoVariablesRoute
   '/docs/$': typeof DocsSplatRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/checks': typeof StudioChecksRoute
@@ -336,7 +295,6 @@ export interface FileRoutesByFullPath {
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
   '/studio/variables': typeof StudioVariablesRoute
-  '/demo/': typeof DemoIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -346,16 +304,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/success': typeof SuccessRoute
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
-  '/demo/apps': typeof DemoAppsRoute
-  '/demo/files': typeof DemoFilesRoute
-  '/demo/network': typeof DemoNetworkRoute
-  '/demo/services': typeof DemoServicesRoute
-  '/demo/variables': typeof DemoVariablesRoute
   '/docs/$': typeof DocsSplatRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/checks': typeof StudioChecksRoute
@@ -383,7 +337,6 @@ export interface FileRoutesByTo {
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
   '/studio/variables': typeof StudioVariablesRoute
-  '/demo': typeof DemoIndexRoute
   '/docs': typeof DocsIndexRoute
   '/studio': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -394,18 +347,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ai': typeof AiRoute
   '/dashboard': typeof DashboardRoute
-  '/demo': typeof DemoRouteWithChildren
+  '/demo': typeof DemoRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/studio': typeof StudioRouteWithChildren
   '/success': typeof SuccessRoute
   '/api/provision-db': typeof ApiProvisionDbRoute
   '/api/seed-snapshots': typeof ApiSeedSnapshotsRoute
-  '/demo/apps': typeof DemoAppsRoute
-  '/demo/files': typeof DemoFilesRoute
-  '/demo/network': typeof DemoNetworkRoute
-  '/demo/services': typeof DemoServicesRoute
-  '/demo/variables': typeof DemoVariablesRoute
   '/docs/$': typeof DocsSplatRoute
   '/studio/apps': typeof StudioAppsRoute
   '/studio/checks': typeof StudioChecksRoute
@@ -433,7 +381,6 @@ export interface FileRoutesById {
   '/studio/team': typeof StudioTeamRoute
   '/studio/terminal': typeof StudioTerminalRoute
   '/studio/variables': typeof StudioVariablesRoute
-  '/demo/': typeof DemoIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/studio/': typeof StudioIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -452,11 +399,6 @@ export interface FileRouteTypes {
     | '/success'
     | '/api/provision-db'
     | '/api/seed-snapshots'
-    | '/demo/apps'
-    | '/demo/files'
-    | '/demo/network'
-    | '/demo/services'
-    | '/demo/variables'
     | '/docs/$'
     | '/studio/apps'
     | '/studio/checks'
@@ -484,7 +426,6 @@ export interface FileRouteTypes {
     | '/studio/team'
     | '/studio/terminal'
     | '/studio/variables'
-    | '/demo/'
     | '/docs/'
     | '/studio/'
     | '/api/auth/$'
@@ -494,16 +435,12 @@ export interface FileRouteTypes {
     | '/'
     | '/ai'
     | '/dashboard'
+    | '/demo'
     | '/login'
     | '/pricing'
     | '/success'
     | '/api/provision-db'
     | '/api/seed-snapshots'
-    | '/demo/apps'
-    | '/demo/files'
-    | '/demo/network'
-    | '/demo/services'
-    | '/demo/variables'
     | '/docs/$'
     | '/studio/apps'
     | '/studio/checks'
@@ -531,7 +468,6 @@ export interface FileRouteTypes {
     | '/studio/team'
     | '/studio/terminal'
     | '/studio/variables'
-    | '/demo'
     | '/docs'
     | '/studio'
     | '/api/auth/$'
@@ -548,11 +484,6 @@ export interface FileRouteTypes {
     | '/success'
     | '/api/provision-db'
     | '/api/seed-snapshots'
-    | '/demo/apps'
-    | '/demo/files'
-    | '/demo/network'
-    | '/demo/services'
-    | '/demo/variables'
     | '/docs/$'
     | '/studio/apps'
     | '/studio/checks'
@@ -580,7 +511,6 @@ export interface FileRouteTypes {
     | '/studio/team'
     | '/studio/terminal'
     | '/studio/variables'
-    | '/demo/'
     | '/docs/'
     | '/studio/'
     | '/api/auth/$'
@@ -591,7 +521,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiRoute: typeof AiRoute
   DashboardRoute: typeof DashboardRoute
-  DemoRoute: typeof DemoRouteWithChildren
+  DemoRoute: typeof DemoRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   StudioRoute: typeof StudioRouteWithChildren
@@ -675,13 +605,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/docs/'
       preLoaderRoute: typeof DocsIndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/demo/': {
-      id: '/demo/'
-      path: '/'
-      fullPath: '/demo/'
-      preLoaderRoute: typeof DemoIndexRouteImport
-      parentRoute: typeof DemoRoute
     }
     '/studio/variables': {
       id: '/studio/variables'
@@ -872,41 +795,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/demo/variables': {
-      id: '/demo/variables'
-      path: '/variables'
-      fullPath: '/demo/variables'
-      preLoaderRoute: typeof DemoVariablesRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/services': {
-      id: '/demo/services'
-      path: '/services'
-      fullPath: '/demo/services'
-      preLoaderRoute: typeof DemoServicesRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/network': {
-      id: '/demo/network'
-      path: '/network'
-      fullPath: '/demo/network'
-      preLoaderRoute: typeof DemoNetworkRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/files': {
-      id: '/demo/files'
-      path: '/files'
-      fullPath: '/demo/files'
-      preLoaderRoute: typeof DemoFilesRouteImport
-      parentRoute: typeof DemoRoute
-    }
-    '/demo/apps': {
-      id: '/demo/apps'
-      path: '/apps'
-      fullPath: '/demo/apps'
-      preLoaderRoute: typeof DemoAppsRouteImport
-      parentRoute: typeof DemoRoute
-    }
     '/api/seed-snapshots': {
       id: '/api/seed-snapshots'
       path: '/api/seed-snapshots'
@@ -937,26 +825,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface DemoRouteChildren {
-  DemoAppsRoute: typeof DemoAppsRoute
-  DemoFilesRoute: typeof DemoFilesRoute
-  DemoNetworkRoute: typeof DemoNetworkRoute
-  DemoServicesRoute: typeof DemoServicesRoute
-  DemoVariablesRoute: typeof DemoVariablesRoute
-  DemoIndexRoute: typeof DemoIndexRoute
-}
-
-const DemoRouteChildren: DemoRouteChildren = {
-  DemoAppsRoute: DemoAppsRoute,
-  DemoFilesRoute: DemoFilesRoute,
-  DemoNetworkRoute: DemoNetworkRoute,
-  DemoServicesRoute: DemoServicesRoute,
-  DemoVariablesRoute: DemoVariablesRoute,
-  DemoIndexRoute: DemoIndexRoute,
-}
-
-const DemoRouteWithChildren = DemoRoute._addFileChildren(DemoRouteChildren)
 
 interface StudioRouteChildren {
   StudioAppsRoute: typeof StudioAppsRoute
@@ -1025,7 +893,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiRoute: AiRoute,
   DashboardRoute: DashboardRoute,
-  DemoRoute: DemoRouteWithChildren,
+  DemoRoute: DemoRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   StudioRoute: StudioRouteWithChildren,
