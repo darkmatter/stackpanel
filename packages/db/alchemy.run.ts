@@ -1,6 +1,7 @@
 import { loadAppEnv } from "@gen/env/runtime";
 await loadAppEnv("web", "dev", { inject: true });
-import * as Stack from "alchemy-effect/Stack";
+import * as Alchemy from "alchemy";
+import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import {
@@ -114,10 +115,12 @@ const dbEffect =
       ? neonManagedPostgres
       : cloudflareHyperdrive;
 
-export default Stack.make(
+export default Alchemy.Stack(
   "stackpanel-db",
-  allProviders,
-)(
+  {
+    providers: allProviders,
+    state: Cloudflare.state(),
+  },
   Effect.gen(function* () {
     return yield* dbEffect;
   }),

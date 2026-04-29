@@ -9,7 +9,7 @@
 # The toggle contributes entries to `stackpanel.envs.deploy` so the codegen
 # pipeline serializes them into the deploy-scope env loader. At deploy time
 # (both local and CI) those values are exported as env vars, which the
-# HostedState alchemy-effect adapter in packages/infra reads.
+# HostedState alchemy adapter in packages/infra reads.
 # ==============================================================================
 { lib, config, ... }:
 let
@@ -22,7 +22,7 @@ in
       type = lib.types.enum [ "hosted" "local" ];
       default = "local";
       description = ''
-        Which backend alchemy-effect uses for deploy state.
+        Which backend alchemy uses for deploy state.
 
         - `local`: filesystem at .alchemy/state/ (default). No network,
           no account, works offline. State lives on whichever machine
@@ -40,7 +40,7 @@ in
       default = "https://api.stackpanel.com";
       description = ''
         Base URL of the stackpanel cloud API. Override for self-hosted
-        or staging environments. The alchemy-effect adapter reads this
+        or staging environments. The alchemy adapter reads this
         from STACKPANEL_API_URL at deploy time.
       '';
     };
