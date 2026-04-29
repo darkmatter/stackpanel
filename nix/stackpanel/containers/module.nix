@@ -187,12 +187,11 @@ let
           throw ''
             stackpanel.containers: cfg.root is not set. Cannot build containers without a project root.
 
-            Fix: set stackpanel.root in your devenv.nix or .stack/config.local.nix:
-              stackpanel.root = "/absolute/path/to/project";
+            Normally `stackpanel.root` is set automatically to the flake source
+            (`toString self`) by the stackpanel flake module. If you're calling
+            `lib.evalModules` directly, set it explicitly:
 
-            Or use the readStackpanelRoot flake module (recommended):
-              imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
-            Then in .envrc: echo "$PWD" > .stackpanel-root
+              stackpanel.root = toString self;
           '';
       backend = settingsCfg.backend;
       # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
