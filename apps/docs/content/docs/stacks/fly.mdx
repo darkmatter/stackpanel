@@ -1,0 +1,125 @@
+---
+title: Fly.io
+description: Containerized apps on Fly machines — multi-region, autoscale, secrets sync, observability
+icon: globe
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+The **Fly.io** Production Stack ships maintained modules that turn your Stackpanel apps into Fly Machines, complete with multi-region distribution, autoscale, health probes, secret sync, and observability dashboards.
+
+If you want apps close to users in many places without running your own bare-metal fleet, this is the stack for you.
+
+<Callout type="info">
+  Fly itself ships an excellent CLI (`flyctl`). The Fly Production Stack adds the **maintained Nix module + image build pipeline** on top — so you get reproducible OCI images from Nix and a unified deploy flow with the rest of your Stackpanel apps.
+</Callout>
+
+## What's in the flake
+
+- **Per-app Fly modules** that auto-generate `apps/<app>/fly.toml`, a per-app deploy task, and wrapped `flyctl` commands like `fly-api status`.
+- **Container builds** via [nix2container](https://github.com/nlewo/nix2container) — minimal, reproducible OCI images with no Dockerfile required.
+- **Secrets sync** that pushes SOPS-encrypted Stackpanel variables into Fly secrets on deploy.
+- **Multi-region machine layouts**: declare regions, machine sizes, autoscale rules, and minimum machines per region.
+- **Health probes** wired to your app's `/healthz` (or custom path).
+- **Observability**: Fly's built-in metrics shipped to your dashboards; optional OpenTelemetry exporters.
+- **PR preview apps** with auto-cleanup on PR close (Business tier and above).
+
+## Installation
+
+Add the flake input:
+
+```nix
+{
+  inputs = {
+    stackpanel.url = "github:darkmatter/stackpanel";
+    stack-fly.url = "github:darkmatter/stack-fly";
+  };
+}
+```
+
+Enable the stack:
+
+```nix
+{
+  stackpanel.stacks.fly = {
+    enable = true;
+    branch = "stable";
+    organization = "acme";
+    defaultRegion = "iad";
+  };
+}
+```
+
+## A minimal example
+
+```nix
+{
+  stackpanel.apps.api = {
+    path = "apps/server";
+    framework.hono.enable = true;
+
+    fly = {
+      enable = true;
+      appName = "acme-api";
+      regions = [ "iad" "fra" "syd" ];
+      machine = {
+        cpus = 1;
+        memory = "512mb";
+      };
+      autoscale = {
+        minMachines = 1;
+        maxMachines = 6;
+        autoStop = "suspend";
+        autoStart = true;
+      };
+      health = {
+        path = "/healthz";
+        intervalSeconds = 15;
+      };
+      env = [ "DATABASE_URL" "STRIPE_SECRET_KEY" ];
+    };
+  };
+}
+```
+
+Deploy:
+
+```bash
+# Wrapped flyctl commands generated per deployable app
+fly-api status
+fly-api logs
+fly-api deploy
+
+# Or via the per-app deploy task
+bun --cwd packages/infra run deploy:api
+```
+
+## What we maintain
+
+Fly ships features fast — autoscale rules, machine classes, regional features. Subscriptions get patches for:
+
+- **Fly Machines API**: when Fly bumps their REST API or `flyctl` flags.
+- **`fly.toml` schema**: tracking new fields (vm sizing, services, mounts, etc.).
+- **nix2container**: rebuilding minimal OCI images as the base layers evolve.
+- **Health probe semantics**: as Fly tightens the liveness / readiness contract.
+- **Secret rotation**: automated re-sync on SOPS recipient changes.
+- **Observability exporters**: Prometheus, OpenTelemetry collector configs.
+
+## Tier differences
+
+| Capability | Community | Team | Business | Enterprise |
+| --- | --- | --- | --- | --- |
+| Single-region deploys | ✓ | ✓ | ✓ | ✓ |
+| Multi-region machines | ✓ | ✓ | ✓ | ✓ |
+| Autoscale rules | ✓ | ✓ | ✓ | ✓ |
+| Health probes + restart policies | ✓ | ✓ | ✓ | ✓ |
+| Secret sync | ✓ | ✓ | ✓ | ✓ |
+| PR preview apps with auto-cleanup | — | ✓ | ✓ | ✓ |
+| OpenTelemetry exporter wiring | — | — | ✓ | ✓ |
+| Custom machine class advice | — | — | — | ✓ |
+
+## Related
+
+- [Production Stacks overview](./)
+- [Deployment / Fly.io](../deployment/fly) — the underlying Fly module reference
+- [Deployment / Containers](../deployment/containers)

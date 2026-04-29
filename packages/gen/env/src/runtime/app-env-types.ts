@@ -4,11 +4,13 @@
 // results without losing the loose `Record<string, string>` fallback
 // for unknown app names.
 
+import type { Env as ApiEnv } from "../exports/api";
 import type { Env as DocsEnv } from "../exports/docs";
 import type { Env as StackpanelGoEnv } from "../exports/stackpanel-go";
 import type { Env as WebEnv } from "../exports/web";
 
 export interface AppEnvMap {
+  "api": ApiEnv;
   "docs": DocsEnv;
   "stackpanel-go": StackpanelGoEnv;
   "web": WebEnv;

@@ -36,8 +36,36 @@ const program = Effect.gen(function* () {
   // resource only handles upload + binding wiring.
   const website = yield* Cloudflare.Worker("Docs", {
     main: ".open-next/worker.js",
-    assets: ".open-next/assets",
+    // OpenNext emits a plain Workers default export `{ fetch }` — the alchemy
+    // bootstrap that wraps `main` in `Layer.effect(tag, entry)` mis-handles
+    // that shape and the deployed worker throws CF 1101 on first request.
+    // `isExternal: true` skips the wrapper so the bundle keeps OpenNext's own
+    // entrypoint.
+    isExternal: true,
+    // Mirror apps/docs/wrangler.jsonc — OpenNext serves its own routing so the
+    // worker must run for missed asset paths, and we want the SPA-style
+    // trailing-slash handling for static MDX routes.
+    assets: {
+      directory: ".open-next/assets",
+      // OpenNext static incremental cache lives under `.open-next/cache`; preview
+      // copies it into assets, but CI `build:worker` does not. Mount the cache
+      // tree at the URL prefix OpenNext expects (`alchemy-effect` asset sources).
+      sources: [
+        { directory: ".open-next/cache", prefix: "cdn-cgi/_next_cache" },
+      ],
+      config: {
+        notFoundHandling: "none",
+        htmlHandling: "auto-trailing-slash",
+        runWorkerFirst: false,
+      },
+    },
     compatibility: {
+      // Must be >= 2026-03-17 — that's the date Cloudflare started providing
+      // node:perf_hooks as a native module. OpenNext (via Next.js's edge
+      // runtime) imports it transitively, and on earlier dates the unenv
+      // polyfill itself references node:perf_hooks, so the worker throws
+      // `No such module "node:perf_hooks"` on first request (CF error 1101).
+      date: "2026-03-17",
       flags: [
         "nodejs_compat",
         "nodejs_compat_populate_process_env",
