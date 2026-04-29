@@ -4,6 +4,7 @@
 keys:
   - &CasLinden age14vpdar7vzznyxgskp9772zjar95n8l2f36w6tzk980889t7kjdqsc5a50q
   - &CasLinden_1 age1ugmyh9qcz05ehtkgnt2nn3jfz2rf2umnmqx69pgp2ue82dn7vpuqlc3g7v
+  - &arximboldi age1a99dvwfqr0xem06qaz3smxzdwjrqrqlxtprgv8ug9k540cpg9alqr2k0yl
   - &callumelvidge age16ymszt6hmv7p3w596w5wlzng7wgk6mwcchr8s2nvwutnx2nrzyqsvn678s
   - &callumelvidge_1 age12vnpyjwhnnm85vktfmg6jwzn55fcg0lmgn6q0wx2z4wawnwgm5cqt6yf2f
   - &cooper age1ruav09tz635tt3sgq55pgn83qnte0j2nx0jd6gvjxelkqqdtygcqgcam2t
@@ -25,6 +26,7 @@ creation_rules:
     age:
       - *CasLinden
       - *CasLinden_1
+      - *arximboldi
       - *callumelvidge
       - *callumelvidge_1
       - *cooper
@@ -46,6 +48,7 @@ creation_rules:
     age:
       - *CasLinden
       - *CasLinden_1
+      - *arximboldi
       - *callumelvidge
       - *callumelvidge_1
       - *cooper
