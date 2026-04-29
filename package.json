@@ -55,7 +55,6 @@
     }
   },
   "scripts": {
-    "postinstall": "bun scripts/apply-alchemy-effect-opennext-assets.ts",
     "check": "vp lint && vp fmt --write",
     "lint": "vp lint .",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",

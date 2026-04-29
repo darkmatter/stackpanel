@@ -16,14 +16,19 @@
 // dance. Same Effect-native pattern as apps/web's domain binding via
 // `@distilled.cloud/cloudflare` Workers.
 
-import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
+import {
+  loadDeployEnv,
+  resolveDeployStage,
+  selectStateBackend,
+} from "@stackpanel/infra/lib/deploy";
 import {
   AppCertificatesAcmeCreate,
   AppIPAssignmentsList,
 } from "@distilled.cloud/fly-io/Operations";
 import { CredentialsFromEnv as FlyCredentialsFromEnv } from "@distilled.cloud/fly-io";
 import * as DNS from "@distilled.cloud/cloudflare/dns";
-import * as Stack from "alchemy-effect/Stack";
+import * as Alchemy from "alchemy";
+import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
@@ -116,4 +121,13 @@ const providers = Layer.mergeAll(FlyCredentialsFromEnv) as unknown as Layer.Laye
   any
 >;
 
-export default Stack.make(`${PROJECT}-${SERVICE}`, providers)(program);
+export default Alchemy.Stack(
+  `${PROJECT}-${SERVICE}`,
+  {
+    providers,
+    // dev/PR previews → filesystem state (no Cloudflare creds required);
+    // staging/prod → shared Cloudflare-hosted state store.
+    state: selectStateBackend(appEnv),
+  },
+  program,
+);

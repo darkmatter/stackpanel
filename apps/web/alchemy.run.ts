@@ -1,7 +1,12 @@
-import { loadDeployEnv, resolveDeployStage } from "@stackpanel/infra/lib/deploy";
+import {
+  loadDeployEnv,
+  resolveDeployStage,
+  selectStateBackend,
+} from "@stackpanel/infra/lib/deploy";
 import { NeonProject, neonProviders } from "@stackpanel/infra/resources/neon";
-import { Cloudflare, Output, Stage } from "alchemy-effect";
-import * as Stack from "alchemy-effect/Stack";
+import * as Alchemy from "alchemy";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
 import * as Workers from "@distilled.cloud/cloudflare/workers";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -23,7 +28,7 @@ await loadDeployEnv(SERVICE, appEnv);
 const STACKPANEL_ZONE = "d34628a3ab639230ff1f6dc1eb640eec";
 
 const program = Effect.gen(function* () {
-  const stage = yield* Stage;
+  const stage = yield* Alchemy.Stage;
 
   const db = yield* NeonProject("postgres", {
     name: `${PROJECT}-${stage}`,
@@ -103,4 +108,13 @@ const providers = Layer.mergeAll(
   neonProviders(),
 ) as Layer.Layer<any, never, any>;
 
-export default Stack.make(`${PROJECT}-${SERVICE}`, providers)(program);
+export default Alchemy.Stack(
+  `${PROJECT}-${SERVICE}`,
+  {
+    providers,
+    // dev/PR previews → filesystem state (cached across CI runs);
+    // staging/prod → shared Cloudflare-hosted state store.
+    state: selectStateBackend(appEnv),
+  },
+  program,
+);
