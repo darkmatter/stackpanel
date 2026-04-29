@@ -4,8 +4,15 @@ import * as auth from "./schema/auth";
 import * as organization from "./schema/organization";
 import * as state from "./schema/state";
 import * as subscription from "./schema/subscription";
+import * as waitlist from "./schema/waitlist";
 
-const schema = { ...auth, ...organization, ...subscription, ...state };
+const schema = {
+  ...auth,
+  ...organization,
+  ...subscription,
+  ...state,
+  ...waitlist,
+};
 
 let _db: ReturnType<typeof drizzle> | undefined;
 
@@ -35,4 +42,4 @@ export const db = new Proxy({} as ReturnType<typeof drizzle>, {
   },
 });
 
-export { auth, organization, state, subscription };
+export { auth, organization, state, subscription, waitlist };

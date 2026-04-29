@@ -47,6 +47,12 @@ const program = Effect.gen(function* () {
     // trailing-slash handling for static MDX routes.
     assets: {
       directory: ".open-next/assets",
+      // OpenNext static incremental cache lives under `.open-next/cache`; preview
+      // copies it into assets, but CI `build:worker` does not. Mount the cache
+      // tree at the URL prefix OpenNext expects (`alchemy-effect` asset sources).
+      sources: [
+        { directory: ".open-next/cache", prefix: "cdn-cgi/_next_cache" },
+      ],
       config: {
         notFoundHandling: "none",
         htmlHandling: "auto-trailing-slash",

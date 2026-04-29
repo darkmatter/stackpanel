@@ -1,0 +1,114 @@
+---
+title: Colmena
+description: Real Nix deployments to bare metal — atomic rollbacks, agenix secrets, Caddy + Step CA wired up
+icon: server
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+The **Colmena** Production Stack ships maintained NixOS modules and a [Colmena](https://colmena.cli.rs) deployment topology that take your Stackpanel apps to bare metal — Hetzner, OVH, your own datacenter — with the same atomic rollback semantics you'd expect from `nixos-rebuild switch`.
+
+If you already love NixOS for production but don't want to write the Caddy / Step CA / agenix glue yourself, this is the stack for you.
+
+## What's in the flake
+
+- **Per-app modules** that turn `apps.<myapp>.colmena.enable = true` into a systemd unit, a Caddy site, and (optionally) a database role.
+- **Machine groups**: declare classes of hosts (`web`, `worker`, `db`) with shared base packages and group-level overrides.
+- **agenix** wired to the same recipients as your Stackpanel SOPS files, so deployment secrets re-use the keys you already manage.
+- **Caddy** configured with on-host TLS (Let's Encrypt) or per-machine Step CA certs.
+- **Process supervision**: long-running workers ship as `systemd.services.<app>` with restart policies and journal-based logging.
+- **Atomic rollbacks**: every deploy uses `nixos-rebuild switch`. Roll back with `colmena rollback`.
+- **Hetzner Cloud helper modules** for provisioning servers via the Hetzner API.
+
+## Installation
+
+Add the flake input:
+
+```nix
+{
+  inputs = {
+    stackpanel.url = "github:darkmatter/stackpanel";
+    stack-colmena.url = "github:darkmatter/stack-colmena";
+  };
+}
+```
+
+Enable the stack:
+
+```nix
+{
+  stackpanel.stacks.colmena = {
+    enable = true;
+    branch = "stable";
+    hosts = {
+      "web-1.acme.io" = { group = "web"; ipv4 = "5.75.190.10"; };
+      "web-2.acme.io" = { group = "web"; ipv4 = "5.75.190.11"; };
+      "db-1.acme.io"  = { group = "db";  ipv4 = "5.75.190.20"; };
+    };
+  };
+}
+```
+
+## A minimal example
+
+```nix
+{
+  stackpanel.apps.api = {
+    path = "apps/server";
+    framework.hono.enable = true;
+
+    colmena = {
+      enable = true;
+      group = "web";       # deploys to all hosts in the "web" group
+      port = 3000;          # port the app binds to internally
+      domain = "api.acme.io";
+      tls = {
+        provider = "letsencrypt";  # or "step-ca"
+        email = "ops@acme.io";
+      };
+      env = [ "DATABASE_URL" "STRIPE_SECRET_KEY" ];  # pulled from SOPS via agenix
+    };
+  };
+}
+```
+
+Stackpanel generates the Colmena hive, the systemd unit, the Caddy site, and the agenix secret bindings. Deploy with:
+
+```bash
+colmena apply switch --on @web
+```
+
+## What we maintain
+
+NixOS modules are the easy part — keeping the deployment glue working as upstream evolves is the work. Subscriptions get patches for:
+
+- **NixOS releases**: tracking 23.11 / 24.05 / 24.11 etc. with timely module updates.
+- **Caddy module**: as `caddy` upstream changes its configuration semantics.
+- **agenix integration**: tracking the agenix module + tooling.
+- **Hetzner Cloud module**: as the Hetzner API evolves.
+- **systemd hardening**: enabling new sandboxing options as they ship in systemd.
+- **Step CA bridge**: as your Step CA root rotates, host certs are re-issued automatically.
+
+## Tier differences
+
+| Capability | Community | Team | Business | Enterprise |
+| --- | --- | --- | --- | --- |
+| Single-host deploys | ✓ | ✓ | ✓ | ✓ |
+| Multi-host machine groups | ✓ | ✓ | ✓ | ✓ |
+| Caddy + Let's Encrypt | ✓ | ✓ | ✓ | ✓ |
+| Step CA TLS | — | ✓ | ✓ | ✓ |
+| Hetzner Cloud provisioning | — | ✓ | ✓ | ✓ |
+| Multi-region rollouts (canary) | — | — | ✓ | ✓ |
+| Air-gapped binary cache mirror | — | — | — | ✓ |
+| Custom NixOS module review | — | — | — | ✓ |
+
+<Callout type="warn">
+  Colmena deploys assume you have SSH access to the target hosts. Stackpanel does not provision underlying servers for you (except via the optional Hetzner Cloud module). For fully managed compute, use the [Fly.io stack](./fly).
+</Callout>
+
+## Related
+
+- [Production Stacks overview](./)
+- [Deployment / Containers](../deployment/containers) — for OCI images instead of NixOS hosts
+- [Networking / Caddy](../networking)
+- [Secrets / agenix](../secrets)

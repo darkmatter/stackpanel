@@ -1,0 +1,369 @@
+<h2>Visual Treatments for “What You Stop Managing”</h2>
+<p class="subtitle">Three ways to make the same idea concrete: Stackpanel turns scattered setup chores into a small source of truth that generates ordinary, inspectable files.</p>
+
+<style>
+  .prototype-grid {
+    display: grid;
+    gap: 22px;
+  }
+  .prototype {
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 28px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.035);
+    cursor: pointer;
+    transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+  }
+  .prototype:hover {
+    transform: translateY(-2px);
+    border-color: rgba(130,246,190,0.45);
+    background: rgba(255,255,255,0.055);
+  }
+  .prototype.selected {
+    border-color: #82f6be;
+    box-shadow: 0 0 0 1px rgba(130,246,190,0.6), 0 28px 90px rgba(27,255,170,0.12);
+  }
+  .prototype-body {
+    padding: 24px;
+  }
+  .prototype-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .prototype-title h3 {
+    margin: 0;
+    font-size: 22px;
+    color: white;
+  }
+  .tag {
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: rgba(255,255,255,0.64);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .caption {
+    color: rgba(255,255,255,0.62);
+    line-height: 1.55;
+    margin: 14px 0 0;
+  }
+  .green { color: #82f6be; }
+  .blue { color: #80c7ff; }
+  .amber { color: #f8d37b; }
+
+  /* 2. Scatter -> Source of Truth */
+  .scatter-canvas {
+    position: relative;
+    min-height: 430px;
+    border-radius: 22px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(130,246,190,0.16), transparent 24%),
+      radial-gradient(circle at 8% 20%, rgba(255,255,255,0.07), transparent 18%),
+      radial-gradient(circle at 90% 82%, rgba(128,199,255,0.12), transparent 20%),
+      #07110d;
+    border: 1px solid rgba(255,255,255,0.11);
+  }
+  .scatter-label {
+    position: absolute;
+    top: 18px;
+    color: rgba(255,255,255,0.72);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .scatter-label.left { left: 22px; }
+  .scatter-label.right { right: 22px; }
+  .loose-file {
+    position: absolute;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 16px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.055);
+    color: rgba(255,255,255,0.72);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.22);
+  }
+  .source-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 220px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(130,246,190,0.5);
+    border-radius: 22px;
+    background: rgba(4,18,12,0.92);
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 0 80px rgba(130,246,190,0.16);
+  }
+  .source-card strong {
+    display: block;
+    color: white;
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+  .source-card span {
+    color: rgba(255,255,255,0.62);
+    font-size: 12px;
+  }
+  .generated-pill {
+    position: absolute;
+    right: 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(130,246,190,0.28);
+    background: rgba(130,246,190,0.08);
+    color: rgba(255,255,255,0.82);
+    padding: 9px 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+  }
+  .line {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(130,246,190,0.42), rgba(255,255,255,0.08));
+    transform-origin: left center;
+  }
+
+  /* 4. Timeline */
+  .timeline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .timeline-card {
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 22px;
+    padding: 18px;
+    background: rgba(0,0,0,0.22);
+  }
+  .timeline-card h4 {
+    color: white;
+    margin: 0 0 16px;
+    font-size: 15px;
+  }
+  .step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+    padding-bottom: 15px;
+  }
+  .step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    top: 29px;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.12);
+  }
+  .step-dot {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.05);
+    font-size: 12px;
+    z-index: 1;
+  }
+  .short .step-dot {
+    border-color: rgba(130,246,190,0.45);
+    color: #82f6be;
+    background: rgba(130,246,190,0.08);
+  }
+  .step-title {
+    color: rgba(255,255,255,0.86);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .step-copy {
+    color: rgba(255,255,255,0.55);
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 3px;
+  }
+  .time-badge {
+    display: inline-flex;
+    margin-top: 10px;
+    border-radius: 999px;
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.64);
+    font-size: 12px;
+  }
+  .short .time-badge {
+    background: rgba(130,246,190,0.1);
+    color: #82f6be;
+  }
+
+  /* 5. Exploded Blueprint */
+  .blueprint {
+    position: relative;
+    min-height: 460px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.11);
+    overflow: hidden;
+    background:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+      radial-gradient(circle at 50% 46%, rgba(128,199,255,0.12), transparent 28%),
+      #07101d;
+    background-size: 36px 36px, 36px 36px, auto, auto;
+  }
+  .blueprint-center {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    transform: translate(-50%, -50%);
+    width: 230px;
+    border: 1px solid rgba(128,199,255,0.5);
+    border-radius: 22px;
+    padding: 18px;
+    background: rgba(4,13,25,0.94);
+    text-align: center;
+    box-shadow: 0 0 80px rgba(128,199,255,0.18);
+  }
+  .blueprint-center strong {
+    display: block;
+    color: white;
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .blueprint-center span {
+    color: rgba(255,255,255,0.62);
+    font-size: 12px;
+  }
+  .artifact {
+    position: absolute;
+    width: 172px;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 18px;
+    padding: 12px;
+    background: rgba(255,255,255,0.055);
+    backdrop-filter: blur(12px);
+  }
+  .artifact strong {
+    color: white;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 5px;
+  }
+  .artifact span {
+    color: rgba(255,255,255,0.54);
+    font-size: 11px;
+  }
+  .connector {
+    position: absolute;
+    height: 1px;
+    background: rgba(128,199,255,0.45);
+    transform-origin: left center;
+  }
+  @media (max-width: 900px) {
+    .timeline { grid-template-columns: 1fr; }
+    .scatter-canvas, .blueprint { min-height: 620px; }
+  }
+</style>
+
+<div class="prototype-grid">
+  <div class="prototype" data-choice="scatter-source" onclick="toggleSelect(this)">
+    <div class="prototype-body">
+      <div class="prototype-title">
+        <h3>#2 Scatter → Source of Truth</h3>
+        <span class="tag">best for “no lock-in”</span>
+      </div>
+      <div class="scatter-canvas">
+        <div class="scatter-label left">scattered chores</div>
+        <div class="scatter-label right">plain generated files</div>
+
+        <div class="loose-file" style="left:26px; top:74px;">.env.example</div>
+        <div class="loose-file" style="left:84px; top:143px;">docker-compose.yml</div>
+        <div class="loose-file" style="left:35px; top:230px;">scripts/devshell.sh</div>
+        <div class="loose-file" style="left:130px; top:312px;">.vscode/settings.json</div>
+        <div class="loose-file" style="left:44px; top:356px;">Caddyfile</div>
+
+        <div class="line" style="left:210px; top:100px; width:225px; transform:rotate(18deg);"></div>
+        <div class="line" style="left:260px; top:173px; width:160px; transform:rotate(6deg);"></div>
+        <div class="line" style="left:230px; top:258px; width:185px; transform:rotate(-11deg);"></div>
+        <div class="line" style="left:300px; top:330px; width:125px; transform:rotate(-22deg);"></div>
+
+        <div class="source-card">
+          <strong>.stack/config.nix</strong>
+          <span>codify conventions once</span>
+        </div>
+
+        <div class="generated-pill" style="top:82px;">packages/gen/env/*</div>
+        <div class="generated-pill" style="top:145px;">process-compose services</div>
+        <div class="generated-pill" style="top:208px;">.stack/gen/ide/*</div>
+        <div class="generated-pill" style="top:271px;">local Caddy routes</div>
+        <div class="generated-pill" style="top:334px;">.stack/state/stack.json</div>
+      </div>
+      <p class="caption">This one makes the “scattered files become a source of truth” story instantly visible. It also preserves the no-lock-in claim because the right side is still made of normal files.</p>
+    </div>
+  </div>
+
+  <div class="prototype" data-choice="timeline" onclick="toggleSelect(this)">
+    <div class="prototype-body">
+      <div class="prototype-title">
+        <h3>#4 Manual Work Timeline</h3>
+        <span class="tag">best for “stop wasting time”</span>
+      </div>
+      <div class="timeline">
+        <div class="timeline-card">
+          <h4>Every new repo today</h4>
+          <div class="step"><div class="step-dot">1</div><div><div class="step-title">Pick tool versions</div><div class="step-copy">Node, Bun, Go, Postgres, Redis, linters, CLIs.</div></div></div>
+          <div class="step"><div class="step-dot">2</div><div><div class="step-title">Wire local services</div><div class="step-copy">Ports, domains, health checks, process commands.</div></div></div>
+          <div class="step"><div class="step-dot">3</div><div><div class="step-title">Write env glue</div><div class="step-copy">Secrets, examples, generated types, app-specific loaders.</div></div></div>
+          <div class="step"><div class="step-dot">4</div><div><div class="step-title">Document setup</div><div class="step-copy">Then debug every teammate’s machine anyway.</div></div></div>
+          <span class="time-badge">Repeated by hand, every project</span>
+        </div>
+        <div class="timeline-card short">
+          <h4>With Stackpanel</h4>
+          <div class="step"><div class="step-dot">1</div><div><div class="step-title">Describe the stack once</div><div class="step-copy">Apps, services, secrets, packages, modules.</div></div></div>
+          <div class="step"><div class="step-dot">2</div><div><div class="step-title">Enter the devshell</div><div class="step-copy"><span class="green">nix develop --impure</span> generates the boring parts.</div></div></div>
+          <div class="step"><div class="step-dot">3</div><div><div class="step-title">Open Studio</div><div class="step-copy">See ports, processes, files, services, and config state.</div></div></div>
+          <span class="time-badge">Same outcome, fewer chores</span>
+        </div>
+      </div>
+      <p class="caption">This version is the clearest emotional sell: the left side feels tedious, the right side feels obvious. It is less strong on no-lock-in unless paired with generated-file labels below.</p>
+    </div>
+  </div>
+
+  <div class="prototype" data-choice="blueprint" onclick="toggleSelect(this)">
+    <div class="prototype-body">
+      <div class="prototype-title">
+        <h3>#5 Exploded Blueprint</h3>
+        <span class="tag">best for “how it works”</span>
+      </div>
+      <div class="blueprint">
+        <div class="connector" style="left:50%; top:48%; width:210px; transform:rotate(-37deg);"></div>
+        <div class="connector" style="left:50%; top:48%; width:220px; transform:rotate(2deg);"></div>
+        <div class="connector" style="left:50%; top:48%; width:205px; transform:rotate(38deg);"></div>
+        <div class="connector" style="left:50%; top:48%; width:220px; transform:rotate(145deg);"></div>
+        <div class="connector" style="left:50%; top:48%; width:210px; transform:rotate(182deg);"></div>
+        <div class="connector" style="left:50%; top:48%; width:210px; transform:rotate(222deg);"></div>
+
+        <div class="blueprint-center">
+          <strong>.stack/</strong>
+          <span>apps + services + secrets + conventions</span>
+        </div>
+
+        <div class="artifact" style="right:44px; top:38px;"><strong>typed env modules</strong><span>plain TypeScript exports</span></div>
+        <div class="artifact" style="right:28px; top:196px;"><strong>process config</strong><span>services, readiness, tasks</span></div>
+        <div class="artifact" style="right:54px; bottom:42px;"><strong>local domains</strong><span>Caddy routes + ports</span></div>
+        <div class="artifact" style="left:46px; bottom:48px;"><strong>IDE workspaces</strong><span>VS Code, Zed, schemas</span></div>
+        <div class="artifact" style="left:28px; top:198px;"><strong>state JSON</strong><span>agent-readable config</span></div>
+        <div class="artifact" style="left:52px; top:42px;"><strong>Nix devshell</strong><span>packages, hooks, scripts</span></div>
+      </div>
+      <p class="caption">This is the most “productized” visual. It explains that Stackpanel is not hiding the system; it is projecting one source of truth into the files and surfaces developers already know.</p>
+    </div>
+  </div>
+</div>
