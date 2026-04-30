@@ -19,19 +19,19 @@ export interface Extension {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Display name of the extension
+    name: string; // Display name of the extension (example: "SST")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Human-readable description of what the extension does
+    description?: string; // Human-readable description of what the extension does (example: "Serverless Stack infrastructure-as-code integration")
     /**
      * @generated from protobuf field: bool enabled = 3
      */
-    enabled: boolean; // Whether this extension is enabled
+    enabled: boolean; // Whether this extension is enabled (example: true)
     /**
      * @generated from protobuf field: bool builtin = 4
      */
-    builtin: boolean; // Whether this is a built-in extension shipped with stackpanel
+    builtin: boolean; // Whether this is a built-in extension shipped with stackpanel (example: true)
     /**
      * @generated from protobuf field: stackpanel.db.ExtensionSource source = 5
      */
@@ -39,7 +39,7 @@ export interface Extension {
     /**
      * @generated from protobuf field: optional string version = 6
      */
-    version?: string; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest')
+    version?: string; // Version constraint (e.g., '^1.0.0', '~2.3', 'latest') (example: "^1.0.0")
     /**
      * @generated from protobuf field: stackpanel.db.ExtensionCategory category = 7
      */
@@ -47,15 +47,15 @@ export interface Extension {
     /**
      * @generated from protobuf field: int32 priority = 8
      */
-    priority: number; // Load order priority (lower = earlier)
+    priority: number; // Load order priority (lower = earlier) (example: 100)
     /**
      * @generated from protobuf field: repeated string tags = 9
      */
-    tags: string[]; // Tags for filtering extensions
+    tags: string[]; // Tags for filtering extensions (example: "infra")
     /**
      * @generated from protobuf field: repeated string dependencies = 10
      */
-    dependencies: string[]; // Other extensions this depends on
+    dependencies: string[]; // Other extensions this depends on (example: "secrets")
     /**
      * @generated from protobuf field: repeated stackpanel.db.ExtensionPanel panels = 11
      */
@@ -80,7 +80,7 @@ export interface ExtensionAppData {
     /**
      * @generated from protobuf field: bool enabled = 1
      */
-    enabled: boolean; // Whether extension is enabled for this app
+    enabled: boolean; // Whether extension is enabled for this app (example: true)
     /**
      * @generated from protobuf field: map<string, string> config = 2
      */
@@ -97,35 +97,35 @@ export interface ExtensionFeatures {
     /**
      * @generated from protobuf field: bool files = 1
      */
-    files: boolean; // Extension generates files via stackpanel.files
+    files: boolean; // Extension generates files via stackpanel.files (example: true)
     /**
      * @generated from protobuf field: bool scripts = 2
      */
-    scripts: boolean; // Extension provides shell scripts/commands
+    scripts: boolean; // Extension provides shell scripts/commands (example: true)
     /**
      * @generated from protobuf field: bool tasks = 3
      */
-    tasks: boolean; // Extension defines tasks
+    tasks: boolean; // Extension defines tasks (example: false)
     /**
      * @generated from protobuf field: bool secrets = 4
      */
-    secrets: boolean; // Extension manages secrets/variables
+    secrets: boolean; // Extension manages secrets/variables (example: false)
     /**
      * @generated from protobuf field: bool shell_hooks = 5
      */
-    shell_hooks: boolean; // Extension adds shell hooks
+    shell_hooks: boolean; // Extension adds shell hooks (example: true)
     /**
      * @generated from protobuf field: bool packages = 6
      */
-    packages: boolean; // Extension adds devshell packages
+    packages: boolean; // Extension adds devshell packages (example: true)
     /**
      * @generated from protobuf field: bool services = 7
      */
-    services: boolean; // Extension configures services/processes
+    services: boolean; // Extension configures services/processes (example: false)
     /**
      * @generated from protobuf field: bool checks = 8
      */
-    checks: boolean; // Extension defines checks/validations
+    checks: boolean; // Extension defines checks/validations (example: false)
 }
 /**
  * UI panel configuration for the web interface
@@ -136,15 +136,15 @@ export interface ExtensionPanel {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Unique panel identifier
+    id: string; // Unique panel identifier (example: "sst-status")
     /**
      * @generated from protobuf field: string title = 2
      */
-    title: string; // Display title
+    title: string; // Display title (example: "SST Deployment Status")
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Panel description
+    description?: string; // Panel description (example: "Live status of SST stacks across environments")
     /**
      * @generated from protobuf field: stackpanel.db.PanelType type = 4
      */
@@ -152,7 +152,7 @@ export interface ExtensionPanel {
     /**
      * @generated from protobuf field: int32 order = 5
      */
-    order: number; // Display order (lower = first)
+    order: number; // Display order (lower = first) (example: 10)
     /**
      * @generated from protobuf field: repeated stackpanel.db.PanelField fields = 6
      */
@@ -171,27 +171,27 @@ export interface ExtensionSource {
     /**
      * @generated from protobuf field: optional string repo = 2
      */
-    repo?: string; // GitHub repository (owner/repo) for github source type
+    repo?: string; // GitHub repository (owner/repo) for github source type (example: "darkmatter/stackpanel-sst")
     /**
      * @generated from protobuf field: optional string package = 3
      */
-    package?: string; // NPM package name for npm source type
+    package?: string; // NPM package name for npm source type (example: "@stackpanel/extension-sst")
     /**
      * @generated from protobuf field: optional string path = 4
      */
-    path?: string; // Local path for local source type
+    path?: string; // Local path for local source type (example: "./extensions/sst")
     /**
      * @generated from protobuf field: optional string url = 5
      */
-    url?: string; // URL for url source type
+    url?: string; // URL for url source type (example: "https://example.com/sst.tar.gz")
     /**
      * @generated from protobuf field: optional string ref = 6
      */
-    ref?: string; // Git ref (branch, tag, commit) for github source type
+    ref?: string; // Git ref (branch, tag, commit) for github source type (example: "main")
     /**
      * @generated from protobuf field: optional string module_path = 7
      */
-    module_path?: string; // Path to the Nix module within the source
+    module_path?: string; // Path to the Nix module within the source (example: "./module.nix")
 }
 /**
  * Extensions and plugins configuration
@@ -202,15 +202,15 @@ export interface Extensions {
     /**
      * @generated from protobuf field: bool enabled = 1
      */
-    enabled: boolean; // Enable extensions system
+    enabled: boolean; // Enable extensions system (example: true)
     /**
      * @generated from protobuf field: bool auto_update = 2
      */
-    auto_update: boolean; // Automatically check for extension updates
+    auto_update: boolean; // Automatically check for extension updates (example: false)
     /**
      * @generated from protobuf field: optional string registry = 3
      */
-    registry?: string; // Default extension registry URL
+    registry?: string; // Default extension registry URL (example: "https://registry.stackpanel.dev")
     /**
      * @generated from protobuf field: map<string, stackpanel.db.Extension> extensions = 4
      */
@@ -227,7 +227,7 @@ export interface PanelField {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Field name (maps to component prop)
+    name: string; // Field name (maps to component prop) (example: "stage")
     /**
      * @generated from protobuf field: stackpanel.db.FieldType type = 2
      */
@@ -235,11 +235,11 @@ export interface PanelField {
     /**
      * @generated from protobuf field: string value = 3
      */
-    value: string; // Field value (JSON-encoded for complex types)
+    value: string; // Field value (JSON-encoded for complex types) (example: "production")
     /**
      * @generated from protobuf field: repeated string options = 4
      */
-    options: string[]; // Options for select fields
+    options: string[]; // Options for select fields (example: "production")
 }
 /**
  * Category of extension for grouping in UI

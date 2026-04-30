@@ -88,10 +88,10 @@ proto.mkProtoFile {
         is responsible for parsing these arguments.
       '';
       fields = {
-        name = proto.string 1 "Argument name (e.g., 'file', '--output', '-v')";
-        description = proto.optional (proto.string 2 "Human-readable description of the argument");
-        required = proto.optional (proto.bool 3 "Whether the argument is required (default: false)");
-        default = proto.optional (proto.string 4 "Default value if not provided");
+        name = proto.withExample "--dry-run" (proto.string 1 "Argument name (e.g., 'file', '--output', '-v')");
+        description = proto.optional (proto.withExample "Preview changes without applying" (proto.string 2 "Human-readable description of the argument"));
+        required = proto.optional (proto.withExample false (proto.bool 3 "Whether the argument is required (default: false)"));
+        default = proto.optional (proto.withExample "production" (proto.string 4 "Default value if not provided"));
       };
     };
 
@@ -110,15 +110,15 @@ proto.mkProtoFile {
       '';
       fields = {
         # Input options (for defining scripts in Nix)
-        exec = proto.optional (proto.string 1 "Shell command to execute (mutually exclusive with path)");
-        description = proto.optional (proto.string 2 "Human-readable description of the script");
+        exec = proto.optional (proto.withExample "bun run dev" (proto.string 1 "Shell command to execute (mutually exclusive with path)"));
+        description = proto.optional (proto.withExample "Start the API server" (proto.string 2 "Human-readable description of the script"));
         env = proto.map "string" "string" 3 "Environment variables to set when running the script";
         args = proto.repeated (proto.message "ScriptArg" 6 "Documented arguments for this script");
-        timeout = proto.optional (proto.int32 7 "Maximum execution time in seconds (0 = no timeout, default: 300)");
+        timeout = proto.optional (proto.withExample 300 (proto.int32 7 "Maximum execution time in seconds (0 = no timeout, default: 300)"));
 
         # Output options (serialized to agent - agent executes binPath directly)
-        bin_path = proto.optional (proto.string 4 "Path to script executable in Nix store (computed)");
-        source = proto.optional (proto.string 5 "Source type: inline or path (for debugging)");
+        bin_path = proto.optional (proto.withExample "/nix/store/abc123-scripts/bin/db-seed" (proto.string 4 "Path to script executable in Nix store (computed)"));
+        source = proto.optional (proto.withExample "inline" (proto.string 5 "Source type: inline or path (for debugging)"));
 
         # Note: path and runtimeInputs are Nix-only (path type, packages), not in proto
       };
@@ -136,7 +136,7 @@ proto.mkProtoFile {
       name = "ScriptsConfig";
       description = "Configuration for scripts package generation";
       fields = {
-        enable = proto.bool 1 "Whether to add the scripts package to the devshell";
+        enable = proto.withExample true (proto.bool 1 "Whether to add the scripts package to the devshell");
       };
     };
   };

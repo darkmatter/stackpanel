@@ -10,10 +10,10 @@ message StepCa {
 
 // Step CA certificate management configuration
 message StepCaConfig {
-  bool enable = 1; // Enable Step CA certificate management
-  string ca_url = 2; // Step CA server URL (e.g., https://ca.internal:443)
-  string ca_fingerprint = 3; // Step CA root certificate fingerprint for verification
-  string provisioner = 4; // Step CA provisioner name
-  string cert_name = 5; // Common name for the device certificate
-  bool prompt_on_shell = 6; // Prompt for certificate setup on shell entry if not configured
+  bool enable = 1; // Enable Step CA certificate management (example: true)
+  string ca_url = 2; // Step CA server URL (e.g., https://ca.internal:443) (example: "https://ca.internal:443")
+  string ca_fingerprint = 3; // Step CA root certificate fingerprint for verification (example: "abc123def456abc123def456abc123def456abc123def456abc123def456")
+  string provisioner = 4; // Step CA provisioner name (example: "admin")
+  string cert_name = 5; // Common name for the device certificate (example: "dev-workstation")
+  bool prompt_on_shell = 6; // Prompt for certificate setup on shell entry if not configured (example: true)
 }

@@ -29,11 +29,11 @@ export interface Script {
     /**
      * @generated from protobuf field: optional string exec = 1
      */
-    exec?: string; // Shell command to execute (mutually exclusive with path)
+    exec?: string; // Shell command to execute (mutually exclusive with path) (example: "bun run dev")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Human-readable description of the script
+    description?: string; // Human-readable description of the script (example: "Start the API server")
     /**
      * @generated from protobuf field: map<string, string> env = 3
      */
@@ -43,11 +43,11 @@ export interface Script {
     /**
      * @generated from protobuf field: optional string bin_path = 4
      */
-    bin_path?: string; // Path to script executable in Nix store (computed)
+    bin_path?: string; // Path to script executable in Nix store (computed) (example: "/nix/store/abc123-scripts/bin/db-seed")
     /**
      * @generated from protobuf field: optional string source = 5
      */
-    source?: string; // Source type: inline or path (for debugging)
+    source?: string; // Source type: inline or path (for debugging) (example: "inline")
     /**
      * @generated from protobuf field: repeated stackpanel.db.ScriptArg args = 6
      */
@@ -55,7 +55,7 @@ export interface Script {
     /**
      * @generated from protobuf field: optional int32 timeout = 7
      */
-    timeout?: number; // Maximum execution time in seconds (0 = no timeout, default: 300)
+    timeout?: number; // Maximum execution time in seconds (0 = no timeout, default: 300) (example: 300)
 }
 /**
  *
@@ -72,19 +72,19 @@ export interface ScriptArg {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Argument name (e.g., 'file', '--output', '-v')
+    name: string; // Argument name (e.g., 'file', '--output', '-v') (example: "--dry-run")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Human-readable description of the argument
+    description?: string; // Human-readable description of the argument (example: "Preview changes without applying")
     /**
      * @generated from protobuf field: optional bool required = 3
      */
-    required?: boolean; // Whether the argument is required (default: false)
+    required?: boolean; // Whether the argument is required (default: false) (example: false)
     /**
      * @generated from protobuf field: optional string default = 4
      */
-    default?: string; // Default value if not provided
+    default?: string; // Default value if not provided (example: "production")
 }
 /**
  * Collection of development shell scripts
@@ -108,7 +108,7 @@ export interface ScriptsConfig {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Whether to add the scripts package to the devshell
+    enable: boolean; // Whether to add the scripts package to the devshell (example: true)
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class Script$Type extends MessageType<Script> {

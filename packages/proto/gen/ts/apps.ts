@@ -19,27 +19,27 @@ export interface App {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Display name of the app
+    name: string; // Display name of the app (example: "Web App")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Description of the app
+    description?: string; // Description of the app (example: "Frontend web application")
     /**
      * @generated from protobuf field: string path = 3
      */
-    path: string; // Relative path to the app directory
+    path: string; // Relative path to the app directory (example: "apps/web")
     /**
      * @generated from protobuf field: optional string type = 4
      */
-    type?: string; // App type/runtime (bun, go, python, rust, etc.)
+    type?: string; // App type/runtime (bun, go, python, rust, etc.) (example: "bun")
     /**
      * @generated from protobuf field: optional int32 port = 5
      */
-    port?: number; // Development server port
+    port?: number; // Development server port (example: 3000)
     /**
      * @generated from protobuf field: optional string domain = 6
      */
-    domain?: string; // Local development domain
+    domain?: string; // Local development domain (example: "web.localhost")
     /**
      *
      * deprecated: use env instead
@@ -64,7 +64,7 @@ export interface App {
     /**
      *
      * Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
-     *
+     *  (example: "dev")
      *
      * @generated from protobuf field: repeated string environmentIds = 10
      */
@@ -79,27 +79,27 @@ export interface AppDeploy {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable deployment mapping for this app
+    enable: boolean; // Enable deployment mapping for this app (example: true)
     /**
      * @generated from protobuf field: repeated string targets = 2
      */
-    targets: string[]; // Target machine ids or tag selectors
+    targets: string[]; // Target machine ids or tag selectors (example: "prod-web-01")
     /**
      * @generated from protobuf field: optional string role = 3
      */
-    role?: string; // Deployment role label for this app
+    role?: string; // Deployment role label for this app (example: "web")
     /**
      * @generated from protobuf field: repeated string nixos_modules = 4
      */
-    nixos_modules: string[]; // Extra NixOS modules to import for this app
+    nixos_modules: string[]; // Extra NixOS modules to import for this app (example: "./modules/nginx.nix")
     /**
      * @generated from protobuf field: optional string system = 5
      */
-    system?: string; // Target system/architecture (e.g., x86_64-linux)
+    system?: string; // Target system/architecture (e.g., x86_64-linux) (example: "x86_64-linux")
     /**
      * @generated from protobuf field: repeated string secrets = 6
      */
-    secrets: string[]; // Secret references required by this app during deploy
+    secrets: string[]; // Secret references required by this app during deploy (example: "DATABASE_URL")
 }
 /**
  * Environment configuration (e.g., dev, staging, production)
@@ -110,11 +110,11 @@ export interface AppEnvironment {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Name of the environment
+    name: string; // Name of the environment (example: "dev")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // (optional) Description of the environment
+    description?: string; // (optional) Description of the environment (example: "Local development environment")
     /**
      *
      * Environment variables for this environment.
@@ -130,13 +130,13 @@ export interface AppEnvironment {
     /**
      * @generated from protobuf field: repeated string extends = 4
      */
-    extends: string[]; // Inherit these environments - useful for sharing environment variables between environments.
+    extends: string[]; // Inherit these environments - useful for sharing environment variables between environments. (example: "common")
     /**
      *
      * Env var names in this environment that contain sensitive values.
      * Used to auto-derive deployment.secrets — these are wrapped with
      * alchemy.secret() at deploy time.
-     *
+     *  (example: "DATABASE_URL")
      *
      * @generated from protobuf field: repeated string secrets = 5
      */
@@ -164,27 +164,38 @@ export interface EnvironmentVariable {
     /**
      * @generated from protobuf field: string key = 1
      */
-    key: string; // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment
+    key: string; // ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment (example: "DATABASE_URL")
     /**
      * @generated from protobuf field: bool required = 2
      */
-    required: boolean; // Whether the environment variable is required
+    required: boolean; // Whether the environment variable is required (example: true)
     /**
      * @generated from protobuf field: bool secret = 3
      */
-    secret: boolean; // Whether the environment variable is sensitive
+    secret: boolean; // Whether the environment variable is sensitive (example: false)
     /**
      * @generated from protobuf field: optional string value = 4
      */
-    value?: string; // Value of the environment variable
+    value?: string; // Value of the environment variable (example: "postgres://localhost:5432/app")
     /**
      * @generated from protobuf field: optional string sops = 5
      */
-    sops?: string; // Path to the SOPS file for this variable's group
+    sops?: string; // Path to the SOPS file for this variable's group (example: ".stack/secrets/dev.yaml")
     /**
      * @generated from protobuf field: optional string defaultValue = 6
      */
-    defaultValue?: string; // Default value of the environment variable
+    defaultValue?: string; // Default value of the environment variable (example: "postgres://localhost:5432/app")
+    /**
+     *
+     * Human-readable description of what this variable is for and where to
+     * obtain it. Surfaced in the studio Variables UI and in the actionable
+     * error message thrown by `loadAppEnv(..., { validate: true })` when
+     * the variable is missing.
+     *  (example: "Postgres connection string used by the API server")
+     *
+     * @generated from protobuf field: optional string description = 7
+     */
+    description?: string;
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class App$Type extends MessageType<App> {
@@ -595,7 +606,8 @@ class EnvironmentVariable$Type extends MessageType<EnvironmentVariable> {
             { no: 3, name: "secret", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 4, name: "value", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "sops", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "defaultValue", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 6, name: "defaultValue", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 7, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<EnvironmentVariable>): EnvironmentVariable {
@@ -630,6 +642,9 @@ class EnvironmentVariable$Type extends MessageType<EnvironmentVariable> {
                 case /* optional string defaultValue */ 6:
                     message.defaultValue = reader.string();
                     break;
+                case /* optional string description */ 7:
+                    message.description = reader.string();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -660,6 +675,9 @@ class EnvironmentVariable$Type extends MessageType<EnvironmentVariable> {
         /* optional string defaultValue = 6; */
         if (message.defaultValue !== undefined)
             writer.tag(6, WireType.LengthDelimited).string(message.defaultValue);
+        /* optional string description = 7; */
+        if (message.description !== undefined)
+            writer.tag(7, WireType.LengthDelimited).string(message.description);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

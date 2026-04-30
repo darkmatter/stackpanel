@@ -19,7 +19,7 @@ export interface AppDeployment {
     /**
      * @generated from protobuf field: bool enable = 1
      */
-    enable: boolean; // Enable deployment for this app
+    enable: boolean; // Enable deployment for this app (example: true)
     /**
      * @generated from protobuf field: stackpanel.db.DeploymentProvider provider = 2
      */
@@ -42,7 +42,7 @@ export interface CloudflareAppConfig {
     /**
      * @generated from protobuf field: string worker_name = 1
      */
-    worker_name: string; // Worker name
+    worker_name: string; // Worker name (example: "stackpanel-web")
     /**
      * @generated from protobuf field: stackpanel.db.CloudflareWorkerType type = 2
      */
@@ -50,11 +50,11 @@ export interface CloudflareAppConfig {
     /**
      * @generated from protobuf field: optional string route = 3
      */
-    route?: string; // Custom domain route pattern
+    route?: string; // Custom domain route pattern (example: "stackpanel.com/*")
     /**
      * @generated from protobuf field: string compatibility = 4
      */
-    compatibility: string; // Compatibility mode (node/browser)
+    compatibility: string; // Compatibility mode (node/browser) (example: "node")
     /**
      * @generated from protobuf field: map<string, string> bindings = 5
      */
@@ -64,19 +64,19 @@ export interface CloudflareAppConfig {
     /**
      * @generated from protobuf field: repeated string secrets = 6
      */
-    secrets: string[]; // Secret names to inject
+    secrets: string[]; // Secret names to inject (example: "API_KEY")
     /**
      * @generated from protobuf field: repeated string kv_namespaces = 7
      */
-    kv_namespaces: string[]; // KV namespace bindings
+    kv_namespaces: string[]; // KV namespace bindings (example: "SESSIONS")
     /**
      * @generated from protobuf field: repeated string d1_databases = 8
      */
-    d1_databases: string[]; // D1 database bindings
+    d1_databases: string[]; // D1 database bindings (example: "DB")
     /**
      * @generated from protobuf field: repeated string r2_buckets = 9
      */
-    r2_buckets: string[]; // R2 bucket bindings
+    r2_buckets: string[]; // R2 bucket bindings (example: "ASSETS")
 }
 /**
  * Cloudflare global settings
@@ -87,15 +87,15 @@ export interface CloudflareGlobalConfig {
     /**
      * @generated from protobuf field: optional string account_id = 1
      */
-    account_id?: string; // Cloudflare account ID
+    account_id?: string; // Cloudflare account ID (example: "abcd1234abcd1234abcd1234abcd1234")
     /**
      * @generated from protobuf field: string compatibility_date = 2
      */
-    compatibility_date: string; // Workers compatibility date
+    compatibility_date: string; // Workers compatibility date (example: "2026-04-01")
     /**
      * @generated from protobuf field: optional string default_route = 3
      */
-    default_route?: string; // Default custom domain route pattern
+    default_route?: string; // Default custom domain route pattern (example: "*.stackpanel.com/*")
 }
 /**
  * Global deployment configuration
@@ -136,11 +136,11 @@ export interface DeploymentRecord {
     /**
      * @generated from protobuf field: string id = 1
      */
-    id: string; // Unique deployment ID
+    id: string; // Unique deployment ID (example: "deploy-2026-04-30-001")
     /**
      * @generated from protobuf field: string app_name = 2
      */
-    app_name: string; // App that was deployed
+    app_name: string; // App that was deployed (example: "web")
     /**
      * @generated from protobuf field: stackpanel.db.DeploymentProvider provider = 3
      */
@@ -152,31 +152,31 @@ export interface DeploymentRecord {
     /**
      * @generated from protobuf field: string version = 5
      */
-    version: string; // Version/tag deployed
+    version: string; // Version/tag deployed (example: "v1.4.2")
     /**
      * @generated from protobuf field: string started_at = 6
      */
-    started_at: string; // ISO timestamp of deployment start
+    started_at: string; // ISO timestamp of deployment start (example: "2026-04-30T18:21:04Z")
     /**
      * @generated from protobuf field: optional string completed_at = 7
      */
-    completed_at?: string; // ISO timestamp of completion
+    completed_at?: string; // ISO timestamp of completion (example: "2026-04-30T18:23:51Z")
     /**
      * @generated from protobuf field: optional string error = 8
      */
-    error?: string; // Error message if failed
+    error?: string; // Error message if failed (example: "build failed: missing DATABASE_URL")
     /**
      * @generated from protobuf field: optional string url = 9
      */
-    url?: string; // Deployed URL
+    url?: string; // Deployed URL (example: "https://stackpanel.com")
     /**
      * @generated from protobuf field: optional string commit_sha = 10
      */
-    commit_sha?: string; // Git commit SHA
+    commit_sha?: string; // Git commit SHA (example: "ba6e3d245")
     /**
      * @generated from protobuf field: optional string triggered_by = 11
      */
-    triggered_by?: string; // User or system that triggered
+    triggered_by?: string; // User or system that triggered (example: "cooper@darkmatter.io")
 }
 /**
  * Fly.io per-app deployment configuration
@@ -187,15 +187,15 @@ export interface FlyAppConfig {
     /**
      * @generated from protobuf field: string app_name = 1
      */
-    app_name: string; // Fly.io app name
+    app_name: string; // Fly.io app name (example: "stackpanel-web")
     /**
      * @generated from protobuf field: string region = 2
      */
-    region: string; // Primary deployment region
+    region: string; // Primary deployment region (example: "iad")
     /**
      * @generated from protobuf field: string memory = 3
      */
-    memory: string; // Memory allocation (e.g., '512mb', '1gb')
+    memory: string; // Memory allocation (e.g., '512mb', '1gb') (example: "512mb")
     /**
      * @generated from protobuf field: stackpanel.db.FlyMachineCpuKind cpu_kind = 4
      */
@@ -203,7 +203,7 @@ export interface FlyAppConfig {
     /**
      * @generated from protobuf field: int32 cpus = 5
      */
-    cpus: number; // Number of CPUs
+    cpus: number; // Number of CPUs (example: 1)
     /**
      * @generated from protobuf field: stackpanel.db.FlyAutoStop auto_stop = 6
      */
@@ -211,15 +211,15 @@ export interface FlyAppConfig {
     /**
      * @generated from protobuf field: bool auto_start = 7
      */
-    auto_start: boolean; // Auto-start on request
+    auto_start: boolean; // Auto-start on request (example: true)
     /**
      * @generated from protobuf field: int32 min_machines = 8
      */
-    min_machines: number; // Minimum machines to keep running
+    min_machines: number; // Minimum machines to keep running (example: 0)
     /**
      * @generated from protobuf field: bool force_https = 9
      */
-    force_https: boolean; // Force HTTPS for all requests
+    force_https: boolean; // Force HTTPS for all requests (example: true)
     /**
      * @generated from protobuf field: map<string, string> env = 10
      */
@@ -229,15 +229,15 @@ export interface FlyAppConfig {
     /**
      * @generated from protobuf field: repeated string secrets = 11
      */
-    secrets: string[]; // Secret names to inject
+    secrets: string[]; // Secret names to inject (example: "DATABASE_URL")
     /**
      * @generated from protobuf field: optional string health_check_path = 12
      */
-    health_check_path?: string; // Health check endpoint path
+    health_check_path?: string; // Health check endpoint path (example: "/health")
     /**
      * @generated from protobuf field: optional string health_check_interval = 13
      */
-    health_check_interval?: string; // Health check interval
+    health_check_interval?: string; // Health check interval (example: "30s")
 }
 /**
  * Fly.io global settings
@@ -248,15 +248,15 @@ export interface FlyGlobalConfig {
     /**
      * @generated from protobuf field: optional string organization = 1
      */
-    organization?: string; // Fly.io organization name
+    organization?: string; // Fly.io organization name (example: "darkmatter-io")
     /**
      * @generated from protobuf field: string default_region = 2
      */
-    default_region: string; // Default region for new apps
+    default_region: string; // Default region for new apps (example: "iad")
     /**
      * @generated from protobuf field: string registry_prefix = 3
      */
-    registry_prefix: string; // Container registry prefix
+    registry_prefix: string; // Container registry prefix (example: "registry.fly.io/darkmatter")
 }
 /**
  * Type of Cloudflare Worker deployment

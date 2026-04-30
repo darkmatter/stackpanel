@@ -8,7 +8,7 @@ message AppBuildConfig {
   bool enable = 1; // Enable Nix packaging for this app
   optional string src_root = 2; // Source root relative to repo
   optional string src_layout = 3; // Source layout (workspace or standalone, null for auto-detect)
-  repeated string src_include = 4; // Glob patterns for source filter
+  repeated string src_include = 4; // Glob patterns for source filter (example: ["src/**", "package.json"])
   optional string deps_lockfile = 5; // Lockfile path relative to repo
   optional string output_name = 6; // Override output package name
   string output_version = 7; // Package version

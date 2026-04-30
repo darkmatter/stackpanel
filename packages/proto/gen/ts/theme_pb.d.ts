@@ -17,42 +17,42 @@ export declare const file_theme: GenFile;
  */
 export declare type ColorScheme = Message<"stackpanel.db.ColorScheme"> & {
   /**
-   * Primary accent color
+   * Primary accent color (example: "#7aa2f7")
    *
    * @generated from field: string primary = 1;
    */
   primary: string;
 
   /**
-   * Secondary accent color
+   * Secondary accent color (example: "#bb9af7")
    *
    * @generated from field: string secondary = 2;
    */
   secondary: string;
 
   /**
-   * Success/positive color
+   * Success/positive color (example: "#9ece6a")
    *
    * @generated from field: string success = 3;
    */
   success: string;
 
   /**
-   * Warning color
+   * Warning color (example: "#e0af68")
    *
    * @generated from field: string warning = 4;
    */
   warning: string;
 
   /**
-   * Error/negative color
+   * Error/negative color (example: "#f7768e")
    *
    * @generated from field: string error = 5;
    */
   error: string;
 
   /**
-   * Muted/subtle color
+   * Muted/subtle color (example: "#565f89")
    *
    * @generated from field: string muted = 6;
    */
@@ -127,7 +127,7 @@ export declare const StarshipSchema: GenMessage<Starship>;
  */
 export declare type Theme = Message<"stackpanel.db.Theme"> & {
   /**
-   * Theme name
+   * Theme name (example: "tokyo-night")
    *
    * @generated from field: string name = 1;
    */

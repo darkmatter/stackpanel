@@ -24,10 +24,12 @@ const (
 // Code generation target for secrets/env access
 type CodegenTarget struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
-	Name      *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`           // Name of the generated package/module (defaults to the target key)
-	Directory *string                `protobuf:"bytes,2,opt,name=directory,proto3,oneof" json:"directory,omitempty"` // Output directory for generated code (repo-relative)
+	Name      *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`           // Name of the generated package/module (defaults to the target key) (example: "env")
+	Directory *string                `protobuf:"bytes,2,opt,name=directory,proto3,oneof" json:"directory,omitempty"` // Output directory for generated code (repo-relative) (example: "packages/gen/env/src")
 	// Target language for generated code (e.g., "typescript", "go", "python").
 	// Informational only for now; codegen selection is based on the target key.
+	//
+	//	(example: "typescript")
 	Language      *string `protobuf:"bytes,3,opt,name=language,proto3,oneof" json:"language,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -87,12 +89,16 @@ func (x *CodegenTarget) GetLanguage() string {
 // Environment-specific secrets configuration
 type Environment struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Name  *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"` // Name of the environment (e.g., dev, staging, production)
+	Name  *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"` // Name of the environment (e.g., dev, staging, production) (example: "dev")
 	// List of SOPS-encrypted source files for this environment (without .yaml extension).
 	// These files are decrypted and merged to provide secrets for the environment.
+	//
+	//	(example: "shared")
 	Sources []string `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
 	// AGE public keys that can decrypt secrets for this environment.
 	// New secrets for this env are encrypted to these recipients.
+	//
+	//	(example: "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1")
 	PublicKeys    []string `protobuf:"bytes,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -154,16 +160,21 @@ type MasterKey struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// AGE public key for encrypting secrets to this key.
 	// Format: age1... (bech32-encoded)
+	//
+	//	(example: "age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1")
 	AgePub string `protobuf:"bytes,1,opt,name=age_pub,json=agePub,proto3" json:"age_pub,omitempty"`
 	// Vals reference that resolves to the AGE private key.
 	// Examples:
 	//   - ref+file://.stack/keys/local.txt (local file)
 	//   - ref+awsssm://stackpanel/keys/dev (AWS SSM Parameter Store)
 	//   - ref+vault://secret/data/stackpanel/prod#key (HashiCorp Vault)
+	//     (example: "ref+file://.stack/keys/local.txt")
 	Ref string `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
 	// Custom command to resolve the private key (overrides ref).
 	// The command should output the AGE private key to stdout.
 	// Example: op read 'op://vault/stackpanel/age-key'
+	//
+	//	(example: "op read 'op://vault/stackpanel/age-key'")
 	ResolveCmd    *string `protobuf:"bytes,3,opt,name=resolve_cmd,json=resolveCmd,proto3,oneof" json:"resolve_cmd,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -223,17 +234,21 @@ func (x *MasterKey) GetResolveCmd() string {
 // Secrets management configuration
 type Secrets struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
-	Enable bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Enable secrets management
+	Enable bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"` // Enable secrets management (example: true)
 	// Master keys for encrypting/decrypting secrets.
 	// Each secret specifies which master keys can decrypt it via the master-keys field.
 	// A default "local" key is auto-generated if no keys are configured.
 	MasterKeys map[string]*MasterKey `protobuf:"bytes,2,rep,name=master_keys,json=masterKeys,proto3" json:"master_keys,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Directory containing SOPS-encrypted secrets (legacy SOPS layout).
 	// Used when decrypting/merging YAML sources defined under environments.
+	//
+	//	(example: ".stack/secrets")
 	InputDirectory *string `protobuf:"bytes,3,opt,name=input_directory,json=inputDirectory,proto3,oneof" json:"input_directory,omitempty"`
-	SecretsDir     *string `protobuf:"bytes,4,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"` // Directory where secret .age files are stored (default: .stack/secrets)
+	SecretsDir     *string `protobuf:"bytes,4,opt,name=secrets_dir,json=secretsDir,proto3,oneof" json:"secrets_dir,omitempty"` // Directory where secret .age files are stored (default: .stack/secrets) (example: ".stack/secrets")
 	// System-level AGE public keys (CI, deploy servers, etc.).
 	// These keys can decrypt all secrets regardless of environment restrictions.
+	//
+	//	(example: "age1ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1234ci1")
 	SystemKeys []string `protobuf:"bytes,5,rep,name=system_keys,json=systemKeys,proto3" json:"system_keys,omitempty"`
 	// Legacy environment-specific secrets configuration.
 	Environments map[string]*Environment `protobuf:"bytes,6,rep,name=environments,proto3" json:"environments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`

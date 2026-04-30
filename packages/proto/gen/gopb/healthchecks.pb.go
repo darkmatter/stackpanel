@@ -194,9 +194,9 @@ type HealthSummary struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	OverallStatus HealthStatus             `protobuf:"varint,1,opt,name=overall_status,json=overallStatus,proto3,enum=stackpanel.db.HealthStatus" json:"overall_status,omitempty"`         // Overall system health status
 	Modules       map[string]*ModuleHealth `protobuf:"bytes,2,rep,name=modules,proto3" json:"modules,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Health status per module
-	TotalHealthy  int32                    `protobuf:"varint,3,opt,name=total_healthy,json=totalHealthy,proto3" json:"total_healthy,omitempty"`                                            // Total healthy checks across all modules
-	TotalChecks   int32                    `protobuf:"varint,4,opt,name=total_checks,json=totalChecks,proto3" json:"total_checks,omitempty"`                                               // Total checks across all modules
-	LastUpdated   string                   `protobuf:"bytes,5,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`                                                // When summary was last computed (RFC3339)
+	TotalHealthy  int32                    `protobuf:"varint,3,opt,name=total_healthy,json=totalHealthy,proto3" json:"total_healthy,omitempty"`                                            // Total healthy checks across all modules (example: 12)
+	TotalChecks   int32                    `protobuf:"varint,4,opt,name=total_checks,json=totalChecks,proto3" json:"total_checks,omitempty"`                                               // Total checks across all modules (example: 14)
+	LastUpdated   string                   `protobuf:"bytes,5,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`                                                // When summary was last computed (RFC3339) (example: "2026-04-30T18:21:04Z")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,23 +269,23 @@ func (x *HealthSummary) GetLastUpdated() string {
 // A healthcheck definition that can verify module functionality
 type Healthcheck struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                                     // Unique identifier for the healthcheck
-	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                                 // Display name for the healthcheck
-	Description        *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                                             // Description of what this check verifies
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                                     // Unique identifier for the healthcheck (example: "postgres-port")
+	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                                 // Display name for the healthcheck (example: "PostgreSQL listening")
+	Description        *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`                                             // Description of what this check verifies (example: "Verifies the PostgreSQL service is accepting connections on its assigned port")
 	Type               HealthcheckType        `protobuf:"varint,4,opt,name=type,proto3,enum=stackpanel.db.HealthcheckType" json:"type,omitempty"`                             // Type of healthcheck (script, nix, http, tcp)
 	Severity           HealthcheckSeverity    `protobuf:"varint,5,opt,name=severity,proto3,enum=stackpanel.db.HealthcheckSeverity" json:"severity,omitempty"`                 // How critical this check is
-	ScriptBinPath      *string                `protobuf:"bytes,6,opt,name=script_bin_path,json=scriptBinPath,proto3,oneof" json:"script_bin_path,omitempty"`                  // Path to script executable in Nix store
-	ScriptSource       *string                `protobuf:"bytes,7,opt,name=script_source,json=scriptSource,proto3,oneof" json:"script_source,omitempty"`                       // Source type: inline, path, scriptRef, package
-	NixExpr            *string                `protobuf:"bytes,8,opt,name=nix_expr,json=nixExpr,proto3,oneof" json:"nix_expr,omitempty"`                                      // Nix expression to evaluate (for NIX type)
-	HttpUrl            *string                `protobuf:"bytes,9,opt,name=http_url,json=httpUrl,proto3,oneof" json:"http_url,omitempty"`                                      // URL to check (for HTTP type)
-	HttpMethod         *string                `protobuf:"bytes,10,opt,name=http_method,json=httpMethod,proto3,oneof" json:"http_method,omitempty"`                            // HTTP method (GET, POST, etc.)
-	HttpExpectedStatus *int32                 `protobuf:"varint,11,opt,name=http_expected_status,json=httpExpectedStatus,proto3,oneof" json:"http_expected_status,omitempty"` // Expected HTTP status code
-	TcpHost            *string                `protobuf:"bytes,12,opt,name=tcp_host,json=tcpHost,proto3,oneof" json:"tcp_host,omitempty"`                                     // Host to connect to (for TCP type)
-	TcpPort            *int32                 `protobuf:"varint,13,opt,name=tcp_port,json=tcpPort,proto3,oneof" json:"tcp_port,omitempty"`                                    // Port to connect to (for TCP type)
-	TimeoutSeconds     int32                  `protobuf:"varint,14,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`                     // Timeout for the check in seconds
-	IntervalSeconds    *int32                 `protobuf:"varint,15,opt,name=interval_seconds,json=intervalSeconds,proto3,oneof" json:"interval_seconds,omitempty"`            // How often to run this check (optional)
-	Module             string                 `protobuf:"bytes,16,opt,name=module,proto3" json:"module,omitempty"`                                                            // Module that registered this healthcheck
-	Tags               []string               `protobuf:"bytes,17,rep,name=tags,proto3" json:"tags,omitempty"`                                                                // Tags for filtering/grouping checks
+	ScriptBinPath      *string                `protobuf:"bytes,6,opt,name=script_bin_path,json=scriptBinPath,proto3,oneof" json:"script_bin_path,omitempty"`                  // Path to script executable in Nix store (example: "/nix/store/abc123-pg-check/bin/pg-check")
+	ScriptSource       *string                `protobuf:"bytes,7,opt,name=script_source,json=scriptSource,proto3,oneof" json:"script_source,omitempty"`                       // Source type: inline, path, scriptRef, package (example: "scriptRef")
+	NixExpr            *string                `protobuf:"bytes,8,opt,name=nix_expr,json=nixExpr,proto3,oneof" json:"nix_expr,omitempty"`                                      // Nix expression to evaluate (for NIX type) (example: "config.services.postgres.enable")
+	HttpUrl            *string                `protobuf:"bytes,9,opt,name=http_url,json=httpUrl,proto3,oneof" json:"http_url,omitempty"`                                      // URL to check (for HTTP type) (example: "http://localhost:6402/health")
+	HttpMethod         *string                `protobuf:"bytes,10,opt,name=http_method,json=httpMethod,proto3,oneof" json:"http_method,omitempty"`                            // HTTP method (GET, POST, etc.) (example: "GET")
+	HttpExpectedStatus *int32                 `protobuf:"varint,11,opt,name=http_expected_status,json=httpExpectedStatus,proto3,oneof" json:"http_expected_status,omitempty"` // Expected HTTP status code (example: 200)
+	TcpHost            *string                `protobuf:"bytes,12,opt,name=tcp_host,json=tcpHost,proto3,oneof" json:"tcp_host,omitempty"`                                     // Host to connect to (for TCP type) (example: "localhost")
+	TcpPort            *int32                 `protobuf:"varint,13,opt,name=tcp_port,json=tcpPort,proto3,oneof" json:"tcp_port,omitempty"`                                    // Port to connect to (for TCP type) (example: 6410)
+	TimeoutSeconds     int32                  `protobuf:"varint,14,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`                     // Timeout for the check in seconds (example: 5)
+	IntervalSeconds    *int32                 `protobuf:"varint,15,opt,name=interval_seconds,json=intervalSeconds,proto3,oneof" json:"interval_seconds,omitempty"`            // How often to run this check (optional) (example: 30)
+	Module             string                 `protobuf:"bytes,16,opt,name=module,proto3" json:"module,omitempty"`                                                            // Module that registered this healthcheck (example: "postgres")
+	Tags               []string               `protobuf:"bytes,17,rep,name=tags,proto3" json:"tags,omitempty"`                                                                // Tags for filtering/grouping checks (example: "service")
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -442,13 +442,13 @@ func (x *Healthcheck) GetTags() []string {
 // The result of executing a healthcheck
 type HealthcheckResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CheckId       string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`                 // ID of the healthcheck that was run
+	CheckId       string                 `protobuf:"bytes,1,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`                 // ID of the healthcheck that was run (example: "postgres-port")
 	Status        HealthStatus           `protobuf:"varint,2,opt,name=status,proto3,enum=stackpanel.db.HealthStatus" json:"status,omitempty"` // Result status of this check
-	Message       *string                `protobuf:"bytes,3,opt,name=message,proto3,oneof" json:"message,omitempty"`                          // Human-readable result message
-	Error         *string                `protobuf:"bytes,4,opt,name=error,proto3,oneof" json:"error,omitempty"`                              // Error message if check failed to execute
-	Output        *string                `protobuf:"bytes,5,opt,name=output,proto3,oneof" json:"output,omitempty"`                            // Raw output from script/command
-	DurationMs    int64                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`       // How long the check took to run in milliseconds
-	Timestamp     string                 `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                            // When the check was run (RFC3339)
+	Message       *string                `protobuf:"bytes,3,opt,name=message,proto3,oneof" json:"message,omitempty"`                          // Human-readable result message (example: "PostgreSQL responded in 12ms")
+	Error         *string                `protobuf:"bytes,4,opt,name=error,proto3,oneof" json:"error,omitempty"`                              // Error message if check failed to execute (example: "connection refused")
+	Output        *string                `protobuf:"bytes,5,opt,name=output,proto3,oneof" json:"output,omitempty"`                            // Raw output from script/command (example: "psql: connected to localhost:6410")
+	DurationMs    int64                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`       // How long the check took to run in milliseconds (example: 12)
+	Timestamp     string                 `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                            // When the check was run (RFC3339) (example: "2026-04-30T18:21:04Z")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -535,12 +535,12 @@ func (x *HealthcheckResult) GetTimestamp() string {
 // Aggregated health status for a module
 type ModuleHealth struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Module        string                 `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`                                  // Module name
+	Module        string                 `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`                                  // Module name (example: "postgres")
 	Status        HealthStatus           `protobuf:"varint,2,opt,name=status,proto3,enum=stackpanel.db.HealthStatus" json:"status,omitempty"` // Aggregated health status
 	Checks        []*HealthcheckResult   `protobuf:"bytes,3,rep,name=checks,proto3" json:"checks,omitempty"`                                  // Individual check results
-	HealthyCount  int32                  `protobuf:"varint,4,opt,name=healthy_count,json=healthyCount,proto3" json:"healthy_count,omitempty"` // Number of passing checks
-	TotalCount    int32                  `protobuf:"varint,5,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`       // Total number of checks
-	LastUpdated   string                 `protobuf:"bytes,6,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`     // When health was last evaluated (RFC3339)
+	HealthyCount  int32                  `protobuf:"varint,4,opt,name=healthy_count,json=healthyCount,proto3" json:"healthy_count,omitempty"` // Number of passing checks (example: 3)
+	TotalCount    int32                  `protobuf:"varint,5,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`       // Total number of checks (example: 3)
+	LastUpdated   string                 `protobuf:"bytes,6,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`     // When health was last evaluated (RFC3339) (example: "2026-04-30T18:21:04Z")
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
