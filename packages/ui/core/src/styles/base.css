@@ -7,13 +7,16 @@
 @custom-variant auto (&:where(.auto, .auto *));
 
 /* google-sans-code-latin-wght-normal */
+/* Use format("woff2") rather than the legacy format("woff2-variations") — Safari
+   (and iOS Safari in particular) does not recognize "woff2-variations" and skips
+   the entire src, leaving the font unloaded. WOFF2 inherently supports variations. */
 @font-face {
   font-family: "Google Sans Code Variable";
   font-style: normal;
   font-display: swap;
   font-weight: 300 800;
   src: url(@fontsource-variable/google-sans-code/files/google-sans-code-latin-wght-normal.woff2)
-    format("woff2-variations");
+    format("woff2");
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
     U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
