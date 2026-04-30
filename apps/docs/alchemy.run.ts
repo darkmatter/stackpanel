@@ -40,29 +40,43 @@ const program = Effect.gen(function* () {
   // The build is expected to have already run (`bun run build:worker`); this
   // resource only handles upload + binding wiring.
   const website = yield* Cloudflare.Worker("Docs", {
-    main: ".open-next/worker.js",
+    // `.open-next/worker.js` is OpenNext's tiny ~2KB entrypoint — it expects to
+    // be passed through a wrangler-style bundler that resolves the relative
+    // `./cloudflare/*.js` imports and inlines them. Two viable bundlers:
+    //
+    //   1. wrangler (esbuild under the hood) — bundles statics, *preserves*
+    //      runtime `import()` paths. This is what `opennextjs-cloudflare deploy`
+    //      uses internally and what OpenNext is designed against.
+    //   2. alchemy's built-in cloudflareRolldown — also bundles statics, but
+    //      mangles OpenNext's dynamic `import("./server-functions/default/
+    //      handler.mjs")` so its `resolveWrapper(...)` returns `undefined` at
+    //      request time. The deployed Worker then throws
+    //        `TypeError: Cannot destructure property 'name' of '(intermediate
+    //         value)'`
+    //      inside `createGenericHandler` and every dynamic Next route
+    //      (`/docs/*`, …) returns 500. Static routes (`/`, `/api/search`)
+    //      survive because they're served by the ASSETS binding without
+    //      entering the broken handler.
+    //
+    // We pre-bundle with wrangler in `bun run build:worker`
+    // (`wrangler deploy --dry-run --outdir=.open-next/dist`) and point
+    // `main:` at the resulting self-contained file, then tell alchemy to skip
+    // its own bundling pass with `bundle: false` so the byte-for-byte upload
+    // is the wrangler artifact.
+    main: ".open-next/dist/worker.js",
     // OpenNext emits a plain Workers default export `{ fetch }` — the alchemy
     // bootstrap that wraps `main` in `Layer.effect(tag, entry)` mis-handles
     // that shape and the deployed worker throws CF 1101 on first request.
     // `isExternal: true` skips the wrapper so the bundle keeps OpenNext's own
     // entrypoint.
     isExternal: true,
-    // `isExternal: true` is not enough — alchemy's `prepareBundle` still runs
-    // `.open-next/worker.js` through `cloudflareRolldown`, which rewrites the
-    // dynamic `import("./server-functions/default/handler.mjs")` (and friends)
-    // in ways that make OpenNext's `resolveWrapper(...)` return `undefined`
-    // at request time. The deployed Worker then throws
-    //   `TypeError: Cannot destructure property 'name' of '(intermediate value)'`
-    // inside `createGenericHandler`, and every dynamic Next route (`/docs/*`,
-    // …) returns 500. Static routes (`/`, `/api/search`) keep working because
-    // they don't reach the wrapper resolver.
-    //
     // The `bundle: false` opt-out is added by patches/alchemy@2.0.0-beta.20.patch
     // (a backport of the proposed upstream change at
     //  https://github.com/alchemy-run/alchemy-effect — the
     //  `feat(cloudflare/Worker): add bundle: false …` commit). It short-
     // circuits `prepareBundle` to upload `props.main` byte-for-byte. Drop the
-    // patch + this prop once the upstream feature ships in alchemy.
+    // patch + this prop once cloudflareRolldown's dynamic-import handling is
+    // fixed upstream and we can bundle through alchemy directly.
     bundle: false,
     // Mirror apps/docs/wrangler.jsonc — OpenNext serves its own routing so the
     // worker must run for missed asset paths, and we want the SPA-style
