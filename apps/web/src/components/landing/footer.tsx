@@ -13,7 +13,6 @@ const linkGroups: LinkGroup[] = [
 			{ label: "Features", href: "/#features" },
 			{ label: "How it works", href: "/#how-it-works" },
 			{ label: "Production Stacks", href: "/#stacks" },
-			{ label: "Pricing", href: "/pricing" },
 			{ label: "Studio", href: "/studio" },
 		],
 	},
