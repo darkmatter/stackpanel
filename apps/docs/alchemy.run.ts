@@ -47,6 +47,23 @@ const program = Effect.gen(function* () {
     // `isExternal: true` skips the wrapper so the bundle keeps OpenNext's own
     // entrypoint.
     isExternal: true,
+    // `isExternal: true` is not enough — alchemy's `prepareBundle` still runs
+    // `.open-next/worker.js` through `cloudflareRolldown`, which rewrites the
+    // dynamic `import("./server-functions/default/handler.mjs")` (and friends)
+    // in ways that make OpenNext's `resolveWrapper(...)` return `undefined`
+    // at request time. The deployed Worker then throws
+    //   `TypeError: Cannot destructure property 'name' of '(intermediate value)'`
+    // inside `createGenericHandler`, and every dynamic Next route (`/docs/*`,
+    // …) returns 500. Static routes (`/`, `/api/search`) keep working because
+    // they don't reach the wrapper resolver.
+    //
+    // The `bundle: false` opt-out is added by patches/alchemy@2.0.0-beta.20.patch
+    // (a backport of the proposed upstream change at
+    //  https://github.com/alchemy-run/alchemy-effect — the
+    //  `feat(cloudflare/Worker): add bundle: false …` commit). It short-
+    // circuits `prepareBundle` to upload `props.main` byte-for-byte. Drop the
+    // patch + this prop once the upstream feature ships in alchemy.
+    bundle: false,
     // Mirror apps/docs/wrangler.jsonc — OpenNext serves its own routing so the
     // worker must run for missed asset paths, and we want the SPA-style
     // trailing-slash handling for static MDX routes.
