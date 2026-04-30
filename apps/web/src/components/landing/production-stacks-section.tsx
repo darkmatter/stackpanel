@@ -1,7 +1,5 @@
-import { Link } from "@tanstack/react-router";
 import { Button } from "@ui/button";
 import {
-	ArrowRight,
 	CheckCircle2,
 	Cloud,
 	Globe2,
@@ -240,15 +238,6 @@ export function ProductionStacksSection() {
 						</p>
 
 						<div className="mt-6 flex flex-wrap gap-3">
-							<Button
-								asChild
-								className="bg-foreground text-background hover:bg-foreground/90"
-							>
-								<Link to="/pricing">
-									See pricing
-									<ArrowRight className="ml-2 h-4 w-4" />
-								</Link>
-							</Button>
 							<Button asChild variant="outline">
 								<a href="/docs/stacks">Browse all stacks</a>
 							</Button>
