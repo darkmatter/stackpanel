@@ -149,7 +149,8 @@ in
 
             stackpanelConfigModule = {
               stackpanel = loadedConfig // {
-                # Set root from flake-level projectRoot (set by readStackpanelRoot module)
+                # Defaults to the flake source store path; users can override
+                # via the flake-level `stackpanel.projectRoot` option.
                 root = lib.mkDefault effectiveRoot;
               };
             };

@@ -62,46 +62,6 @@ in
       localFlake = self;
       inherit withSystem;
     };
-
-    # Helper module for pure flake evaluation (like `nix flake check`)
-    # Reads stackpanel root from a file input for impure-free evaluation
-    #
-    # The file can contain:
-    #   - An absolute path (written by .envrc for impure evaluation)
-    #   - "." to use the flake source directory (for pure evaluation)
-    #
-    # For pure evaluation to work, the file must be tracked by git (not in .gitignore)
-    #
-    # This module sets config.stackpanel.projectRoot at the flake level.
-    # Users who need devenv.root for pure evaluation should set it separately.
-    readStackpanelRoot =
-      {
-        inputs,
-        lib,
-        ...
-      }:
-      let
-        hasInput = inputs ? stackpanel-root;
-        rawContent = if hasInput then builtins.readFile inputs.stackpanel-root.outPath else "";
-        rootContent = lib.strings.trim rawContent;
-        # The input's outPath points to the file itself, so get its directory
-        # which is the flake source root
-        flakeSourceDir = if hasInput then builtins.dirOf inputs.stackpanel-root.outPath else "";
-        # If content is "." use the flake source directory
-        # Otherwise use the absolute path from the file
-        effectiveRoot =
-          if rootContent == "." then
-            flakeSourceDir
-          else if rootContent != "" then
-            rootContent
-          else
-            null;
-      in
-      {
-        # Set the flake-level stackpanel.projectRoot option
-        # The main flakeModule will read this and set devenv.root
-        config.stackpanel.projectRoot = lib.mkIf (effectiveRoot != null) effectiveRoot;
-      };
   };
 
   # ===========================================================================

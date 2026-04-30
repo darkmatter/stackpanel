@@ -23,9 +23,7 @@
     "sst": "^3.17.25",
     "superjson": "^2.2.6"
   },
-  "devDependencies": {
-    "bun2nix": "latest"
-  },
+  "devDependencies": {},
   "exports": {
     ".": {
       "default": "./src/index.ts"

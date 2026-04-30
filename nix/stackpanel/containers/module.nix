@@ -187,12 +187,11 @@ let
           throw ''
             stackpanel.containers: cfg.root is not set. Cannot build containers without a project root.
 
-            Fix: set stackpanel.root in your devenv.nix or .stack/config.local.nix:
-              stackpanel.root = "/absolute/path/to/project";
+            Normally `stackpanel.root` is set automatically to the flake source
+            (`toString self`) by the stackpanel flake module. If you're calling
+            `lib.evalModules` directly, set it explicitly:
 
-            Or use the readStackpanelRoot flake module (recommended):
-              imports = [ inputs.stackpanel.flakeModules.readStackpanelRoot ];
-            Then in .envrc: echo "$PWD" > .stackpanel-root
+              stackpanel.root = toString self;
           '';
       backend = settingsCfg.backend;
       # Use containerCfg.name for the actual image name (e.g., stackpanel-web)
@@ -231,10 +230,15 @@ let
   # deployment host (the Fly module only generates deploy scripts).
   # ---------------------------------------------------------------------------
   mkContainerScriptDerivations = appName: _appCfg: {
+    # `STACKPANEL_ROOT_ABSOLUTE` is read by `lib/containers.nix:mkAppDir` so
+    # the build can pull `apps/<app>/.output` straight from the working tree
+    # — `.output` is gitignored, so it isn't in the flake's store copy. CI
+    # sets the same env var (see .github/workflows/deploy-api.yaml).
     "container-build" = pkgs.writeShellScriptBin "container-build" ''
       set -euo pipefail
       ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
       cd "$ROOT"
+      export STACKPANEL_ROOT_ABSOLUTE="''${STACKPANEL_ROOT_ABSOLUTE:-$ROOT}"
       echo "📦 Building container for ${appName}..."
       nix build --impure ".#packages.x86_64-linux.container-${appName}"
       echo "✅ Container built: ./result"
@@ -244,6 +248,7 @@ let
       set -euo pipefail
       ROOT="''${STACKPANEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
       cd "$ROOT"
+      export STACKPANEL_ROOT_ABSOLUTE="''${STACKPANEL_ROOT_ABSOLUTE:-$ROOT}"
       echo "📤 Pushing container for ${appName}..."
       nix run --impure ".#copy-container-${appName}"
       echo "✅ Container pushed"

@@ -94,31 +94,11 @@ Stackpanel needs `--impure` evaluation because it reads the current working dire
 If you omit `--impure`, you'll get errors like _"devenv was not able to determine the current directory"_ or missing attribute errors during `nix flake check`.
 </Callout>
 
-## The `.stackpanel-root` Workaround
+## Pure Evaluation
 
-Some CI environments and Nix commands (like `nix flake check`) run in pure mode where the current directory isn't available. The `.stackpanel-root` file provides a workaround:
+Stackpanel's flake module sets `stackpanel.root` to `toString self` automatically — i.e. the flake source as copied into the Nix store — so containers, infra, and other modules that need a project root work in both pure and impure evaluation without any extra wiring.
 
-```bash
-# Add this to your .envrc, before the use flake line
-echo "$PWD" > .stackpanel-root
-use flake . --impure
-```
-
-Then add the `readStackpanelRoot` module to your flake:
-
-```nix
-# flake.nix
-imports = [
-  inputs.stackpanel.flakeModules.readStackpanelRoot
-  inputs.stackpanel.flakeModules.default
-];
-```
-
-This writes the absolute project path to a file that Stackpanel can read during pure evaluation, unblocking CI and `nix flake check`.
-
-<Callout type="info">
-The `.stackpanel-root` file is gitignored by default since it contains a machine-specific absolute path.
-</Callout>
+If you need a different root (for example, to read gitignored build artifacts from the user's working tree), set `stackpanel.root` explicitly in your config.
 
 ## Nix Configuration Options
 
@@ -132,7 +112,7 @@ stackpanel.direnv = {
 };
 ```
 
-When enabled, Stackpanel ensures that direnv-related files (`.envrc`, `.stackpanel-root`) are managed correctly and that the generated `.gitignore` includes any machine-specific files.
+When enabled, Stackpanel ensures that direnv-related files (`.envrc`) are managed correctly and that the generated `.gitignore` includes any machine-specific files.
 
 ## Speeding Up Direnv Reloads
 
