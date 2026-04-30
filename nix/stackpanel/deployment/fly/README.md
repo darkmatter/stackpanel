@@ -9,9 +9,13 @@ Container-based deployment to [Fly.io](https://fly.io) with generated `fly.toml`
 | `default.nix` | Entry point |
 | `module.nix` | Per-app deployment options and config generation |
 | `schema.nix` | Proto-derived Fly.io config schema |
-| `container.nix` | Container build integration |
 | `ui.nix` | Web studio panel |
-| `lib/fly-oidc.nix` | Fly.io OIDC authentication helpers |
+
+Container builds for Fly-deployed apps are produced by
+`stackpanel.containers` (see `nix/stackpanel/containers/`) — this module
+just contributes per-app entries to `stackpanel.containers.images`. The
+shared `flyOidc` helpers live at `nix/stackpanel/lib/services/fly-oidc.nix`
+and are re-exported as `inputs.stackpanel.lib.flyOidc`.
 
 ## Usage
 
