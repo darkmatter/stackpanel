@@ -23,7 +23,7 @@ export interface GoAppConfig {
     /**
      * @generated from protobuf field: string main_package = 2
      */
-    main_package: string; // Go main package path
+    main_package: string; // Go main package path (example: "./cmd/server")
     /**
      * @generated from protobuf field: string version = 3
      */
@@ -35,7 +35,7 @@ export interface GoAppConfig {
     /**
      * @generated from protobuf field: repeated string ldflags = 5
      */
-    ldflags: string[]; // Go linker flags
+    ldflags: string[]; // Go linker flags (example: ["-X main.version=1.0.0"])
     /**
      * @generated from protobuf field: repeated string watch_dirs = 6
      */
@@ -43,11 +43,11 @@ export interface GoAppConfig {
     /**
      * @generated from protobuf field: repeated string dev_args = 7
      */
-    dev_args: string[]; // Arguments to pass to binary during development
+    dev_args: string[]; // Arguments to pass to binary during development (example: ["serve", "--port=3000"])
     /**
      * @generated from protobuf field: repeated string tools = 8
      */
-    tools: string[]; // Additional Go tool dependencies
+    tools: string[]; // Additional Go tool dependencies (example: ["github.com/golangci/golangci-lint/cmd/golangci-lint"])
     /**
      * @generated from protobuf field: bool generate_files = 9
      */

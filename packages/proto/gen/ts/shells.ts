@@ -19,11 +19,11 @@ export interface Alias {
     /**
      * @generated from protobuf field: string command = 1
      */
-    command: string; // Command to alias to
+    command: string; // Command to alias to (example: "git status")
     /**
      * @generated from protobuf field: optional string description = 2
      */
-    description?: string; // Description of the alias
+    description?: string; // Description of the alias (example: "Show working tree status")
 }
 /**
  * Environment variable configuration
@@ -34,15 +34,15 @@ export interface EnvVar {
     /**
      * @generated from protobuf field: string value = 1
      */
-    value: string; // Environment variable value
+    value: string; // Environment variable value (example: "development")
     /**
      * @generated from protobuf field: bool secret = 2
      */
-    secret: boolean; // Whether this value should be treated as a secret
+    secret: boolean; // Whether this value should be treated as a secret (example: false)
     /**
      * @generated from protobuf field: optional string description = 3
      */
-    description?: string; // Description of what this variable is for
+    description?: string; // Description of what this variable is for (example: "Set by stackpanel for the local devshell")
 }
 /**
  * Shell hook configuration
@@ -53,19 +53,19 @@ export interface Hook {
     /**
      * @generated from protobuf field: string name = 1
      */
-    name: string; // Hook name/identifier
+    name: string; // Hook name/identifier (example: "stackpanel-init")
     /**
      * @generated from protobuf field: string script = 2
      */
-    script: string; // Shell script to execute
+    script: string; // Shell script to execute (example: "stack init --config $STACKPANEL_CONFIG_JSON")
     /**
      * @generated from protobuf field: int32 order = 3
      */
-    order: number; // Execution order (lower runs first)
+    order: number; // Execution order (lower runs first) (example: 100)
     /**
      * @generated from protobuf field: bool enabled = 4
      */
-    enabled: boolean; // Whether this hook is enabled
+    enabled: boolean; // Whether this hook is enabled (example: true)
 }
 /**
  * Shell profile configuration
@@ -88,15 +88,15 @@ export interface Profile {
     /**
      * @generated from protobuf field: optional string init_extra = 3
      */
-    init_extra?: string; // Extra shell initialization script
+    init_extra?: string; // Extra shell initialization script (example: "source $PROJECT_ROOT/.stack/state/shellhook.sh")
     /**
      * @generated from protobuf field: int32 history_size = 4
      */
-    history_size: number; // Number of history entries to keep
+    history_size: number; // Number of history entries to keep (example: 10000)
     /**
      * @generated from protobuf field: repeated string history_ignore = 5
      */
-    history_ignore: string[]; // Patterns to ignore in history
+    history_ignore: string[]; // Patterns to ignore in history (example: "ls")
 }
 /**
  * Shell-specific settings and configurations
@@ -131,11 +131,11 @@ export interface Shells {
     /**
      * @generated from protobuf field: repeated string path_prepend = 7
      */
-    path_prepend: string[]; // Directories to prepend to PATH
+    path_prepend: string[]; // Directories to prepend to PATH (example: "$PROJECT_ROOT/bin")
     /**
      * @generated from protobuf field: repeated string path_append = 8
      */
-    path_append: string[]; // Directories to append to PATH
+    path_append: string[]; // Directories to append to PATH (example: "$PROJECT_ROOT/.stack/state/bin")
 }
 /**
  * Supported shell types

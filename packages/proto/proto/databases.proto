@@ -25,12 +25,12 @@ enum SSLMode {
 
 // Database connection settings
 message Connection {
-  string host = 1; // Database host
-  int32 port = 2; // Database port
-  string database = 3; // Database name
-  string username = 4; // Database username
-  optional string password_env = 5; // Environment variable containing the password
-  bool ssl = 6; // Enable SSL/TLS connection
+  string host = 1; // Database host (example: "localhost")
+  int32 port = 2; // Database port (example: 5432)
+  string database = 3; // Database name (example: "stackpanel")
+  string username = 4; // Database username (example: "postgres")
+  optional string password_env = 5; // Environment variable containing the password (example: "DATABASE_PASSWORD")
+  bool ssl = 6; // Enable SSL/TLS connection (example: false)
   SSLMode ssl_mode = 7; // SSL mode for PostgreSQL connections
 }
 
@@ -39,21 +39,21 @@ message DatabaseInstance {
   DatabaseType type = 1; // Database type
   Connection connection = 2; // Database connection settings
   Pool pool = 3; // Connection pool settings
-  string migrations_path = 4; // Path to migrations directory
-  optional string seeds_path = 5; // Path to seed data directory
-  bool auto_migrate = 6; // Run migrations on startup
+  string migrations_path = 4; // Path to migrations directory (example: "./apps/server/migrations")
+  optional string seeds_path = 5; // Path to seed data directory (example: "./apps/server/seeds")
+  bool auto_migrate = 6; // Run migrations on startup (example: true)
 }
 
 // Database connection and configuration settings
 message Databases {
-  string default = 1; // Default database configuration to use
+  string default = 1; // Default database configuration to use (example: "primary")
   map<string, DatabaseInstance> databases = 2; // Database configurations by environment/name
 }
 
 // Connection pool settings
 message Pool {
-  int32 min = 1; // Minimum connections in pool
-  int32 max = 2; // Maximum connections in pool
-  int32 idle_timeout = 3; // Idle connection timeout in seconds
-  int32 connection_timeout = 4; // Connection timeout in seconds
+  int32 min = 1; // Minimum connections in pool (example: 2)
+  int32 max = 2; // Maximum connections in pool (example: 10)
+  int32 idle_timeout = 3; // Idle connection timeout in seconds (example: 30)
+  int32 connection_timeout = 4; // Connection timeout in seconds (example: 5)
 }

@@ -38,7 +38,7 @@ export declare type AppBuildConfig = Message<"stackpanel.modules.AppBuildConfig"
   srcLayout?: string;
 
   /**
-   * Glob patterns for source filter
+   * Glob patterns for source filter (example: ["src/**", "package.json"])
    *
    * @generated from field: repeated string src_include = 4;
    */

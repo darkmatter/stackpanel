@@ -14,7 +14,7 @@
       "type": "object"
     },
     "config_schema": {
-      "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.",
+      "description": "JSON Schema for generating configuration forms.\n Describes the module's configurable options.\n  (example: \"{ \\\"type\\\": \\\"object\\\", \\\"properties\\\": { \\\"version\\\": { \\\"type\\\": \\\"string\\\" } } }\")",
       "type": "string"
     },
     "conflicts": {

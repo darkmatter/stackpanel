@@ -8,14 +8,14 @@
       "type": "string"
     },
     "publicKeys": {
-      "description": "AGE public keys that can decrypt secrets for this environment.\n New secrets for this env are encrypted to these recipients.",
+      "description": "AGE public keys that can decrypt secrets for this environment.\n New secrets for this env are encrypted to these recipients.\n  (example: \"age1abc1234abc1234abc1234abc1234abc1234abc1234abc1234abc1\")",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "sources": {
-      "description": "List of SOPS-encrypted source files for this environment (without .yaml extension).\n These files are decrypted and merged to provide secrets for the environment.",
+      "description": "List of SOPS-encrypted source files for this environment (without .yaml extension).\n These files are decrypted and merged to provide secrets for the environment.\n  (example: \"shared\")",
       "items": {
         "type": "string"
       },

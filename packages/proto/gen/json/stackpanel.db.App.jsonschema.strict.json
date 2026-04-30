@@ -23,7 +23,7 @@
       "type": "object"
     },
     "environmentIds": {
-      "description": "Environment IDs for this app. Defaults to \"dev\", \"prod\", \"staging\", \"test\".",
+      "description": "Environment IDs for this app. Defaults to \"dev\", \"prod\", \"staging\", \"test\".\n  (example: \"dev\")",
       "items": {
         "type": "string"
       },

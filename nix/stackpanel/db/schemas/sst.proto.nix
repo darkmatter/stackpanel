@@ -52,11 +52,11 @@ proto.mkProtoFile {
       name = "Sst";
       description = "SST infrastructure configuration for AWS provisioning";
       fields = {
-        enable = proto.bool 1 "Enable SST infrastructure provisioning";
-        project_name = proto.string 2 "SST project name";
-        region = proto.string 3 "AWS region";
-        account_id = proto.string 4 "AWS account ID";
-        config_path = proto.string 5 "Path to generate sst.config.ts";
+        enable = proto.withExample true (proto.bool 1 "Enable SST infrastructure provisioning");
+        project_name = proto.withExample "stackpanel" (proto.string 2 "SST project name");
+        region = proto.withExample "us-west-2" (proto.string 3 "AWS region");
+        account_id = proto.withExample "123456789012" (proto.string 4 "AWS account ID");
+        config_path = proto.withExample "packages/infra/sst.config.ts" (proto.string 5 "Path to generate sst.config.ts");
         kms = proto.message "SstKms" 6 "KMS configuration";
         oidc = proto.message "SstOidc" 7 "OIDC provider configuration";
         iam = proto.message "SstIam" 8 "IAM configuration";
@@ -68,9 +68,9 @@ proto.mkProtoFile {
       name = "SstKms";
       description = "KMS key configuration for secrets encryption";
       fields = {
-        enable = proto.bool 1 "Create a KMS key for secrets";
-        alias = proto.string 2 "KMS key alias";
-        deletion_window_days = proto.int32 3 "Days before key deletion";
+        enable = proto.withExample true (proto.bool 1 "Create a KMS key for secrets");
+        alias = proto.withExample "stackpanel-secrets" (proto.string 2 "KMS key alias");
+        deletion_window_days = proto.withExample 30 (proto.int32 3 "Days before key deletion");
       };
     };
 
@@ -79,7 +79,7 @@ proto.mkProtoFile {
       name = "SstOidc";
       description = "OIDC provider configuration for IAM role assumption";
       fields = {
-        provider = proto.string 1 "OIDC provider type (github-actions, flyio, roles-anywhere)";
+        provider = proto.withExample "github-actions" (proto.string 1 "OIDC provider type (github-actions, flyio, roles-anywhere)");
         github_actions = proto.message "SstGithubActions" 2 "GitHub Actions OIDC settings";
         flyio = proto.message "SstFlyio" 3 "Fly.io OIDC settings";
         roles_anywhere = proto.message "SstRolesAnywhere" 4 "Roles Anywhere settings";
@@ -91,8 +91,8 @@ proto.mkProtoFile {
       name = "SstGithubActions";
       description = "GitHub Actions OIDC configuration";
       fields = {
-        org = proto.string 1 "GitHub organization";
-        repo = proto.string 2 "GitHub repository (or * for all)";
+        org = proto.withExample "darkmatter" (proto.string 1 "GitHub organization");
+        repo = proto.withExample "stackpanel" (proto.string 2 "GitHub repository (or * for all)");
       };
     };
 
@@ -101,8 +101,8 @@ proto.mkProtoFile {
       name = "SstFlyio";
       description = "Fly.io OIDC configuration";
       fields = {
-        org_id = proto.string 1 "Fly.io organization ID";
-        app_name = proto.string 2 "Fly.io app name (or * for all)";
+        org_id = proto.withExample "darkmatter-io" (proto.string 1 "Fly.io organization ID");
+        app_name = proto.withExample "*" (proto.string 2 "Fly.io app name (or * for all)");
       };
     };
 
@@ -111,7 +111,7 @@ proto.mkProtoFile {
       name = "SstRolesAnywhere";
       description = "AWS Roles Anywhere configuration";
       fields = {
-        trust_anchor_arn = proto.string 1 "Trust anchor ARN";
+        trust_anchor_arn = proto.withExample "arn:aws:rolesanywhere:us-west-2:123456789012:trust-anchor/abcd1234" (proto.string 1 "Trust anchor ARN");
       };
     };
 
@@ -120,7 +120,7 @@ proto.mkProtoFile {
       name = "SstIam";
       description = "IAM role configuration";
       fields = {
-        role_name = proto.string 1 "IAM role name";
+        role_name = proto.withExample "stackpanel-secrets-role" (proto.string 1 "IAM role name");
       };
     };
   };

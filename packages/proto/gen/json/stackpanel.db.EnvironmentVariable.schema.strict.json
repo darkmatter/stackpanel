@@ -7,6 +7,10 @@
     "defaultValue": {
       "type": "string"
     },
+    "description": {
+      "description": "Human-readable description of what this variable is for and where to\n obtain it. Surfaced in the studio Variables UI and in the actionable\n error message thrown by `loadAppEnv(..., { validate: true })` when\n the variable is missing.\n  (example: \"Postgres connection string used by the API server\")",
+      "type": "string"
+    },
     "key": {
       "type": "string"
     },

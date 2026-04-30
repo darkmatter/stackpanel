@@ -59,12 +59,12 @@ proto.mkProtoFile {
       name = "AppDeploy";
       description = "Deployment mapping for Colmena (targets, roles, and modules)";
       fields = {
-        enable = proto.bool 1 "Enable deployment mapping for this app";
-        targets = proto.repeated (proto.string 2 "Target machine ids or tag selectors");
-        role = proto.optional (proto.string 3 "Deployment role label for this app");
-        nixos_modules = proto.repeated (proto.string 4 "Extra NixOS modules to import for this app");
-        system = proto.optional (proto.string 5 "Target system/architecture (e.g., x86_64-linux)");
-        secrets = proto.repeated (proto.string 6 "Secret references required by this app during deploy");
+        enable = proto.withExample true (proto.bool 1 "Enable deployment mapping for this app");
+        targets = proto.repeated (proto.withExample "prod-web-01" (proto.string 2 "Target machine ids or tag selectors"));
+        role = proto.optional (proto.withExample "web" (proto.string 3 "Deployment role label for this app"));
+        nixos_modules = proto.repeated (proto.withExample "./modules/nginx.nix" (proto.string 4 "Extra NixOS modules to import for this app"));
+        system = proto.optional (proto.withExample "x86_64-linux" (proto.string 5 "Target system/architecture (e.g., x86_64-linux)"));
+        secrets = proto.repeated (proto.withExample "DATABASE_URL" (proto.string 6 "Secret references required by this app during deploy"));
       };
     };
 
@@ -73,8 +73,8 @@ proto.mkProtoFile {
       name = "AppEnvironment";
       description = "Environment configuration (e.g., dev, staging, production)";
       fields = {
-        name = proto.string 1 "Name of the environment";
-        description = proto.optional (proto.string 2 "(optional) Description of the environment");
+        name = proto.withExample "dev" (proto.string 1 "Name of the environment");
+        description = proto.optional (proto.withExample "Local development environment" (proto.string 2 "(optional) Description of the environment"));
         # Simple map of ENV_VAR_NAME to value (literal or vals reference)
         env = proto.map "string" "string" 3 ''
           Environment variables for this environment.
@@ -82,14 +82,14 @@ proto.mkProtoFile {
           Value: Literal string or vals reference (e.g., ref+sops://...)
         '';
         extends = proto.repeated (
-          proto.string 4 "Inherit these environments - useful for sharing environment variables between environments."
+          proto.withExample "common" (proto.string 4 "Inherit these environments - useful for sharing environment variables between environments.")
         );
         secrets = proto.repeated (
-          proto.string 5 ''
+          proto.withExample "DATABASE_URL" (proto.string 5 ''
             Env var names in this environment that contain sensitive values.
             Used to auto-derive deployment.secrets — these are wrapped with
             alchemy.secret() at deploy time.
-          ''
+          '')
         );
       };
     };
@@ -98,18 +98,18 @@ proto.mkProtoFile {
       name = "EnvironmentVariable";
       description = "Environment variable for this app";
       fields = {
-        key = proto.string 1 "ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment";
-        required = proto.bool 2 "Whether the environment variable is required";
-        secret = proto.bool 3 "Whether the environment variable is sensitive";
-        value = proto.optional (proto.string 4 "Value of the environment variable");
-        sops = proto.optional (proto.string 5 "Path to the SOPS file for this variable's group");
-        defaultValue = proto.optional (proto.string 6 "Default value of the environment variable");
-        description = proto.optional (proto.string 7 ''
+        key = proto.withExample "DATABASE_URL" (proto.string 1 "ID of the environment variable - defaults to key used in the attribute path. KEY will be read from $KEY in the environment");
+        required = proto.withExample true (proto.bool 2 "Whether the environment variable is required");
+        secret = proto.withExample false (proto.bool 3 "Whether the environment variable is sensitive");
+        value = proto.optional (proto.withExample "postgres://localhost:5432/app" (proto.string 4 "Value of the environment variable"));
+        sops = proto.optional (proto.withExample ".stack/secrets/dev.yaml" (proto.string 5 "Path to the SOPS file for this variable's group"));
+        defaultValue = proto.optional (proto.withExample "postgres://localhost:5432/app" (proto.string 6 "Default value of the environment variable"));
+        description = proto.optional (proto.withExample "Postgres connection string used by the API server" (proto.string 7 ''
           Human-readable description of what this variable is for and where to
           obtain it. Surfaced in the studio Variables UI and in the actionable
           error message thrown by `loadAppEnv(..., { validate: true })` when
           the variable is missing.
-        '');
+        ''));
       };
     };
 
@@ -118,12 +118,12 @@ proto.mkProtoFile {
       name = "App";
       description = "Configuration for a single application in the workspace";
       fields = {
-        name = proto.string 1 "Display name of the app";
-        description = proto.optional (proto.string 2 "Description of the app");
-        path = proto.string 3 "Relative path to the app directory";
-        type = proto.optional (proto.string 4 "App type/runtime (bun, go, python, rust, etc.)");
-        port = proto.optional (proto.int32 5 "Development server port");
-        domain = proto.optional (proto.string 6 "Local development domain");
+        name = proto.withExample "Web App" (proto.string 1 "Display name of the app");
+        description = proto.optional (proto.withExample "Frontend web application" (proto.string 2 "Description of the app"));
+        path = proto.withExample "apps/web" (proto.string 3 "Relative path to the app directory");
+        type = proto.optional (proto.withExample "bun" (proto.string 4 "App type/runtime (bun, go, python, rust, etc.)"));
+        port = proto.optional (proto.withExample 3000 (proto.int32 5 "Development server port"));
+        domain = proto.optional (proto.withExample "web.localhost" (proto.string 6 "Local development domain"));
         # Per-environment configuration
         environments = proto.map "string" "AppEnvironment" 7 ''
           deprecated: use env instead
@@ -132,9 +132,9 @@ proto.mkProtoFile {
         deploy = proto.message "AppDeploy" 8 "Colmena deployment mapping for this app";
         env = proto.map "string" "EnvironmentVariable" 9 "Environment variables for this app";
         environmentIds = proto.repeated (
-          proto.string 10 ''
+          proto.withExample "dev" (proto.string 10 ''
             Environment IDs for this app. Defaults to "dev", "prod", "staging", "test".
-          ''
+          '')
         );
       };
     };
