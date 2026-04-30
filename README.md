@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://stackpanel.dev/light.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://stackpanel.dev/dark.svg">
-    <img alt="stackpanel" src="https://stackpanel.dev/light.svg" width="400">
+    <source media="(prefers-color-scheme: dark)" srcset="https://stackpanel.com/light.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://stackpanel.com/dark.png">
+    <img alt="stackpanel" src="https://stackpanel.com/light.svg" width="400">
   </picture>
 </p>
 

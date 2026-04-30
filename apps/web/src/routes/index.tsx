@@ -10,7 +10,6 @@ import {
 	HeroSection,
 	HowItWorksSection,
 	InfrastructureSection,
-	PricingSection,
 	ProductionStacksSection,
 	StatsSection,
 	TerminalSection,
@@ -35,7 +34,6 @@ function LandingPage() {
 				<DevExperienceSection />
 				<TerminalSection />
 				<ComparisonSection />
-				<PricingSection />
 				<CTASection />
 			</main>
 			<Footer />
