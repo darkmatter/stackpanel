@@ -1,5 +1,65 @@
 @import "./base.css";
 
+/* Safari iOS-compatible overrides for Fontsource variable fonts.
+   The @fontsource-variable/* packages imported in apps/web emit
+   src: ... format("woff2-variations"), which Safari iOS does not recognize.
+   Safari skips the unknown-format src and the font fails to load. Re-declaring
+   the same family/style/weight with format("woff2") overrides the broken rule
+   (later @font-face wins) and restores fonts on Safari iOS. */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(@fontsource-variable/inter/files/inter-latin-wght-normal.woff2)
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(@fontsource-variable/inter/files/inter-latin-wght-italic.woff2)
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Montserrat Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2)
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Montserrat Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(@fontsource-variable/montserrat/files/montserrat-latin-wght-italic.woff2)
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Source Code Pro Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url(@fontsource-variable/source-code-pro/files/source-code-pro-latin-wght-normal.woff2)
+    format("woff2");
+}
+
+@font-face {
+  font-family: "Source Code Pro Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url(@fontsource-variable/source-code-pro/files/source-code-pro-latin-wght-italic.woff2)
+    format("woff2");
+}
+
 @theme inline {
   --font-montserrat:
     "Montserrat Variable", "Montserrat", "Helvetica Neue", Helvetica, Arial,
